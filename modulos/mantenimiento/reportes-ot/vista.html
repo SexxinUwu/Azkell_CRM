@@ -382,16 +382,16 @@
     right: auto !important;
     transform: translateX(-50%) translateY(100%);
     width: 100% !important;
-    max-width: 700px !important;
+    max-width: 720px !important;
     height: 92vh !important;
     max-height: 92vh !important;
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
+    background: var(--surface, #ffffff) !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
     border-bottom: none !important;
     border-radius: 28px 28px 0 0 !important;
-    box-shadow: 0 -12px 48px rgba(0,0,0,.22) !important;
-    transition: transform .25s ease !important;
-    z-index: 1100 !important;
+    box-shadow: 0 -16px 56px rgba(0,0,0,.35) !important;
+    transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    z-index: 1150 !important;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -401,6 +401,7 @@
 .rot-sub-drawer.open {
     transform: translateX(-50%) translateY(0) !important;
     visibility: visible !important;
+    display: flex !important;
 }
 
 /* ── Responsive móvil ─────────────────────────────────────────── */
@@ -592,286 +593,445 @@
 </div>
 
 
-<!-- ═══════════════ SUB-DRAWER: Agregar / Editar Trabajo ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-trabajo">
-    <div class="rot-drawer-hd">
-        <div>
-            <div class="rot-drawer-title" id="rot-tr-drawer-titulo">Agregar Trabajo</div>
-            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="rot-tr-ot-lbl"></div>
+<!-- ═══════════════ SUB-DRAWER: Agregar / Editar Trabajo (MODERNO BENTO) ═══════════════ -->
+<div class="rot-sub-drawer" id="rot-drawer-trabajo" style="max-width: 720px; width: 100%;">
+    <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
+                    onclick="window.rotCerrarSubDrawer('rot-drawer-trabajo')" 
+                    title="Volver" 
+                    style="width: 34px; height: 34px; color: var(--subtext);">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <div>
+                <span class="rot-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;" id="rot-tr-drawer-titulo">
+                    <i class="bi bi-tools text-primary"></i> Agregar Trabajo
+                </span>
+                <small class="text-muted d-block" style="font-size: 0.72rem;" id="rot-tr-ot-lbl">Registro de labor realizada</small>
+            </div>
         </div>
-        <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-trabajo')" style="color:var(--subtext)">
+        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.rotCerrarSubDrawer('rot-drawer-trabajo')" style="color:var(--subtext);">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div class="rot-drawer-body">
+    <div class="rot-drawer-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc;">
         <input type="hidden" id="rot-tr-ot-id">
         <input type="hidden" id="rot-tr-ticket-hid">
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Descripción del Trabajo *</label>
-            <textarea class="form-control form-control-sm" id="rot-tr-desc" rows="3" placeholder="Detalla el trabajo realizado..."></textarea>
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Personal / Técnico</label>
-            <input type="hidden" id="rot-tr-personal">
-            <div style="position:relative;" id="rot-ms-wrapper">
-                <div id="rot-ms-box" onclick="rotMsToggle()"
-                    style="background:var(--bg); border:1.5px solid var(--border); border-radius:8px; min-height:40px; padding:6px 36px 6px 10px; cursor:pointer; display:flex; flex-wrap:wrap; gap:5px; align-items:center; transition:border-color .2s;">
-                    <span style="color:var(--subtext); font-size:.85rem;">Selecciona técnico(s)...</span>
-                </div>
-                <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--subtext); pointer-events:none; font-size:.8rem;">▾</span>
-                <div id="rot-ms-dropdown" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); background:var(--surface); border:1.5px solid var(--border); border-radius:8px; z-index:1200; box-shadow:0 8px 24px rgba(0,0,0,.18); overflow:hidden;">
-                    <input type="text" id="rot-ms-search" placeholder="Buscar técnico..." autocomplete="off"
-                        oninput="rotMsFiltrar(this.value)"
-                        style="width:100%; border:none; border-bottom:1px solid var(--border); background:var(--bg); color:var(--text); padding:9px 12px; font-size:.84rem; outline:none;">
-                    <div id="rot-ms-options" style="max-height:190px; overflow-y:auto;"></div>
-                    <div style="padding:7px 12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-                        <span id="rot-ms-count" style="font-size:.76rem; color:var(--subtext);">0 seleccionados</span>
-                        <span onclick="rotMsLimpiar()" style="font-size:.76rem; color:#f87171; cursor:pointer;">Limpiar todo</span>
+
+        <!-- Card 1: Descripción y Personal -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="mb-3">
+                <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">
+                    Descripción del Trabajo Realizado (*)
+                </label>
+                <textarea class="form-control form-control-sm text-uppercase fw-semibold bg-white" 
+                          id="rot-tr-desc" rows="3" 
+                          style="border-radius: 8px; font-size: 0.82rem;" 
+                          placeholder="DETALLA LA LABOR, CAMBIO O REPARACIÓN REALIZADA..."></textarea>
+            </div>
+
+            <div>
+                <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">
+                    Personal / Técnico(s) Ejecutores
+                </label>
+                <input type="hidden" id="rot-tr-personal">
+                <div style="position:relative;" id="rot-ms-wrapper">
+                    <div id="rot-ms-box" onclick="rotMsToggle()"
+                        style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; min-height:40px; padding:6px 36px 6px 10px; cursor:pointer; display:flex; flex-wrap:wrap; gap:5px; align-items:center; transition:border-color .2s;">
+                        <span style="color:#94a3b8; font-size:.82rem;">Seleccionar técnico(s)...</span>
+                    </div>
+                    <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#64748b; pointer-events:none; font-size:.8rem;"><i class="bi bi-chevron-down"></i></span>
+                    <div id="rot-ms-dropdown" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); background:#fff; border:1px solid #cbd5e1; border-radius:8px; z-index:1200; box-shadow:0 10px 30px rgba(0,0,0,.15); overflow:hidden;">
+                        <input type="text" id="rot-ms-search" placeholder="Buscar técnico..." autocomplete="off"
+                            oninput="rotMsFiltrar(this.value)"
+                            style="width:100%; border:none; border-bottom:1px solid #e2e8f0; background:#f8fafc; color:#1e293b; padding:9px 12px; font-size:.84rem; outline:none;">
+                        <div id="rot-ms-options" style="max-height:190px; overflow-y:auto;"></div>
+                        <div style="padding:7px 12px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
+                            <span id="rot-ms-count" style="font-size:.76rem; color:#64748b; font-weight:600;">0 seleccionados</span>
+                            <span onclick="rotMsLimpiar()" style="font-size:.76rem; color:#ef4444; font-weight:700; cursor:pointer;">Limpiar todo</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Fecha y Hora Inicio</label>
-                <input type="datetime-local" class="form-control form-control-sm" id="rot-tr-fecha-ini">
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Fecha y Hora Fin</label>
-                <input type="datetime-local" class="form-control form-control-sm" id="rot-tr-fecha-fin">
-            </div>
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Costo del Trabajo (S/)</label>
-            <input type="number" class="form-control form-control-sm" id="rot-tr-costo" value="0" min="0" step="0.01">
-        </div>
-        <button class="btn btn-primary w-100 fw-bold" onclick="window.rotGuardarTrabajo()">
-            <i class="bi bi-check-lg me-1"></i>Guardar Trabajo
-        </button>
-        <button class="btn btn-outline-danger w-100 fw-bold mt-2" id="rot-tr-btn-eliminar" style="display:none;" onclick="window.rotEliminarTrabajo()">
-            <i class="bi bi-trash me-1"></i>Eliminar Trabajo
-        </button>
-    </div>
-</div>
 
-
-<!-- ═══════════════ SUB-DRAWER: Agregar Material / Salida ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-material">
-    <div class="rot-drawer-hd">
-        <div>
-            <span class="rot-drawer-title"><i class="bi bi-arrow-up-circle-fill text-primary me-2"></i>Nueva Solicitud de Materiales</span>
-            <div style="font-size:.75rem;color:var(--subtext);margin-top:4px;" id="rot-mat-ot-lbl"></div>
-        </div>
-        <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-material')" style="color:var(--subtext)">
-            <i class="bi bi-x-lg"></i>
-        </button>
-    </div>
-    <div class="rot-drawer-body">
-        <input type="hidden" id="rot-mat-ot-id">
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">N° OT *</label>
-                <input type="text" class="form-control form-control-sm" id="rot-mat-ot-vis" readonly style="border-radius:12px;min-height:44px;background:var(--bg);color:var(--subtext);">
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Fecha *</label>
-                <input type="date" class="form-control form-control-sm" id="rot-mat-fecha" style="border-radius:12px;min-height:44px;">
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Tipo Destino</label>
-                <select class="form-select form-select-sm" id="rot-mat-tipo" style="border-radius:12px;min-height:44px;">
-                    <option value="Vehiculo">Vehículo</option>
-                    <option value="Personal">Personal</option>
-                </select>
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Placa</label>
-                <div class="position-relative">
-                  <input type="text" id="rot-mat-placa-txt" class="form-control form-control-sm"
-                         placeholder="Buscar placa…" autocomplete="off"
-                         style="border-radius:12px;min-height:44px;text-transform:uppercase;"
-                         oninput="this.value=this.value.toUpperCase();window._cbFiltrar('rot-mat-placa')"
-                         onfocus="window._cbFiltrar('rot-mat-placa')"
-                         onblur="window._cbHide('rot-mat-placa')">
-                  <input type="hidden" id="rot-mat-placa" name="rot-mat-placa">
-                  <div id="rot-mat-placa-dd" class="cb-dropdown"></div>
+        <!-- Card 2: Horarios y Costo -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">
+                        Fecha y Hora Inicio
+                    </label>
+                    <input type="datetime-local" class="form-control form-control-sm bg-white" id="rot-tr-fecha-ini" style="min-height: 40px; border-radius: 8px;">
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">
+                        Fecha y Hora Fin
+                    </label>
+                    <input type="datetime-local" class="form-control form-control-sm bg-white" id="rot-tr-fecha-fin" style="min-height: 40px; border-radius: 8px;">
                 </div>
             </div>
-            <div class="col-12">
-                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Responsable</label>
-                <input type="text" class="form-control form-control-sm" id="rot-mat-solicitante" placeholder="Buscar responsable..." list="rot-mat-list-personal" autocomplete="off" style="border-radius:12px;min-height:44px;">
-                <datalist id="rot-mat-list-personal"></datalist>
-            </div>
-            <div class="col-12">
-                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Observaciones</label>
-                <input type="text" class="form-control form-control-sm" id="rot-mat-obs" placeholder="Motivo, referencia, notas…" style="border-radius:12px;min-height:44px;">
+            <div>
+                <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">
+                    Costo Estimado del Trabajo (S/)
+                </label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light fw-bold text-success border" style="border-radius: 8px 0 0 8px;">S/</span>
+                    <input type="number" class="form-control form-control-sm fw-bold text-success" id="rot-tr-costo" value="0" min="0" step="0.01" style="min-height: 40px; border-radius: 0 8px 8px 0;">
+                </div>
             </div>
         </div>
-        <hr style="border-color:var(--border);">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="fw-bold" style="font-size:.83rem;color:var(--text);">
-              <i class="bi bi-list-ul me-1"></i>Artículos
-            </span>
-            <button type="button"
-                    style="padding:.4rem .9rem;border-radius:12px;border:1.5px solid #5865F2;
-                           background:transparent;color:#5865F2;font-weight:700;font-size:.78rem;cursor:pointer;"
-                    onclick="window._rotAgregarItemMat()">
-              <i class="bi bi-plus-lg me-1"></i>Agregar
+    </div>
+    <div class="rot-drawer-footer bg-white border-top px-3 py-2 d-flex justify-content-between align-items-center gap-2">
+        <button type="button" class="btn btn-outline-danger btn-sm fw-bold rounded-3 px-3 py-2" id="rot-tr-btn-eliminar" style="display:none;" onclick="window.rotEliminarTrabajo()">
+            <i class="bi bi-trash3-fill me-1"></i> Eliminar
+        </button>
+        <div class="d-flex gap-2 ms-auto">
+            <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" onclick="window.rotCerrarSubDrawer('rot-drawer-trabajo')">
+                Cancelar
+            </button>
+            <button type="button" class="btn btn-primary fw-bold rounded-3 px-4 py-2 shadow-2xs" onclick="window.rotGuardarTrabajo()">
+                <i class="bi bi-check-lg me-1"></i> Guardar Trabajo
             </button>
         </div>
-        <div style="border-radius:12px;border:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;">
-            <table class="table table-sm mb-0" style="font-size:.8rem;min-width:480px;">
-                <thead style="background:var(--bg);">
-                    <tr>
-                        <th style="min-width:220px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Artículo</th>
-                        <th style="width:80px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Cantidad</th>
-                        <th style="width:110px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Costo Unit.</th>
-                        <th style="width:100px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Importe</th>
-                        <th style="width:38px;"></th>
-                    </tr>
-                </thead>
-                <tbody id="rot-mat-items-tbody"></tbody>
-                <tfoot style="background:var(--bg);">
-                    <tr>
-                        <td colspan="3" style="text-align:right;font-weight:700;padding:10px 12px;font-size:.82rem;color:var(--subtext);">Total:</td>
-                        <td style="font-weight:800;color:#16a34a;padding:10px 12px;" id="rot-mat-items-total">S/. 0.00</td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
+    </div>
+</div>
+
+
+<!-- ═══════════════ SUB-DRAWER: Agregar Material / Salida (MODERNO BENTO) ═══════════════ -->
+<div class="rot-sub-drawer" id="rot-drawer-material" style="max-width: 720px; width: 100%;">
+    <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
+                    onclick="window.rotCerrarSubDrawer('rot-drawer-material')" 
+                    title="Volver" 
+                    style="width: 34px; height: 34px; color: var(--subtext);">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <div>
+                <span class="rot-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+                    <i class="bi bi-box-seam-fill text-success"></i> Salida de Almacén (Repuestos)
+                </span>
+                <small class="text-muted d-block" style="font-size: 0.72rem;" id="rot-mat-ot-lbl">Solicitud de piezas y materiales para la OT</small>
+            </div>
         </div>
-        <datalist id="rot-mat-inv-list"></datalist>
-        <button class="btn fw-bold w-100 mt-3"
-                style="border-radius:14px;border:none;background:#5865F2;color:#fff;font-size:.9rem;min-height:48px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;"
-                onclick="window.rotGuardarMaterial()">
-            <i class="bi bi-save"></i>Guardar Solicitud
+        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.rotCerrarSubDrawer('rot-drawer-material')" style="color:var(--subtext);">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="rot-drawer-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc;">
+        <input type="hidden" id="rot-mat-ot-id">
+
+        <!-- Card 1: Datos de la Solicitud -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">N° OT (*)</label>
+                    <input type="text" class="form-control form-control-sm fw-bold bg-light" id="rot-mat-ot-vis" readonly style="min-height: 40px; border-radius: 8px;">
+                </div>
+                <div class="col-6">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Fecha de Salida (*)</label>
+                    <input type="date" class="form-control form-control-sm bg-white" id="rot-mat-fecha" style="min-height: 40px; border-radius: 8px;">
+                </div>
+                <div class="col-6">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo Destino</label>
+                    <select class="form-select form-select-sm fw-bold bg-white" id="rot-mat-tipo" style="min-height: 40px; border-radius: 8px;">
+                        <option value="Vehiculo">Vehículo / Unidad</option>
+                        <option value="Personal">Personal / Taller</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Placa Destino</label>
+                    <div class="position-relative">
+                        <input type="text" id="rot-mat-placa-txt" class="form-control form-control-sm text-uppercase fw-bold bg-white"
+                               placeholder="BUSCAR PLACA…" autocomplete="off"
+                               style="min-height: 40px; border-radius: 8px;"
+                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('rot-mat-placa')"
+                               onfocus="window._cbFiltrar('rot-mat-placa')"
+                               onblur="window._cbHide('rot-mat-placa')">
+                        <input type="hidden" id="rot-mat-placa" name="rot-mat-placa">
+                        <div id="rot-mat-placa-dd" class="cb-dropdown"></div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Solicitante / Responsable</label>
+                    <input type="text" class="form-control form-control-sm bg-white" id="rot-mat-solicitante" placeholder="Nombre del solicitante..." list="rot-mat-list-personal" autocomplete="off" style="min-height: 40px; border-radius: 8px;">
+                    <datalist id="rot-mat-list-personal"></datalist>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Observaciones / Motivo</label>
+                    <input type="text" class="form-control form-control-sm bg-white" id="rot-mat-obs" placeholder="Referencia o notas de la salida…" style="min-height: 40px; border-radius: 8px;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Artículos y Materiales -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                <span class="fw-bold d-flex align-items-center gap-1" style="font-size: 0.76rem; color: #475569; text-transform: uppercase;">
+                    <i class="bi bi-list-check text-success"></i> Lista de Artículos / Repuestos:
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold" style="font-size: 0.72rem;" onclick="window._rotAgregarItemMat()">
+                    <i class="bi bi-plus-lg me-1"></i> Agregar Ítem
+                </button>
+            </div>
+            <div class="table-responsive rounded-3 border">
+                <table class="table table-sm align-middle mb-0" style="font-size: 0.8rem; min-width: 480px;">
+                    <thead style="background: #f8fafc;">
+                        <tr>
+                            <th style="min-width:200px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Artículo</th>
+                            <th style="width:75px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Cant.</th>
+                            <th style="width:105px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">P. Unit</th>
+                            <th style="width:100px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Importe</th>
+                            <th style="width:38px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="rot-mat-items-tbody"></tbody>
+                    <tfoot style="background: #f8fafc;">
+                        <tr>
+                            <td colspan="3" style="text-align:right; font-weight:700; padding:8px 10px; font-size:.82rem; color:#64748b;">Total Solicitud:</td>
+                            <td style="font-weight:800; color:#16a34a; font-size:.9rem; padding:8px 10px;" id="rot-mat-items-total">S/. 0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <datalist id="rot-mat-inv-list"></datalist>
+        </div>
+    </div>
+    <div class="rot-drawer-footer bg-white border-top px-3 py-2 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" onclick="window.rotCerrarSubDrawer('rot-drawer-material')">
+            Cancelar
+        </button>
+        <button type="button" class="btn btn-success fw-bold rounded-3 px-4 py-2 shadow-2xs" onclick="window.rotGuardarMaterial()">
+            <i class="bi bi-check-lg me-1"></i> Guardar Solicitud
         </button>
     </div>
 </div>
 
 
-<!-- ═══════════════ SUB-DRAWER: Agregar Mantenimiento Pendiente ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-backlog">
-    <div class="rot-drawer-hd">
-        <div>
-            <div class="rot-drawer-title">Nuevo Mantenimiento Pendiente</div>
-            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="rot-bkg-placa-lbl"></div>
+<!-- ═══════════════ SUB-DRAWER: Agregar Mantenimiento Pendiente (MODERNO BENTO) ═══════════════ -->
+<div class="rot-sub-drawer" id="rot-drawer-backlog" style="max-width: 720px; width: 100%;">
+    <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
+                    onclick="window.rotCerrarSubDrawer('rot-drawer-backlog')" 
+                    title="Volver" 
+                    style="width: 34px; height: 34px; color: var(--subtext);">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <div>
+                <span class="rot-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+                    <i class="bi bi-exclamation-triangle-fill text-warning"></i> Nuevo Mantenimiento Pendiente
+                </span>
+                <small class="text-muted d-block" style="font-size: 0.72rem;" id="rot-bkg-placa-lbl">Registro de backlog para futura atención</small>
+            </div>
         </div>
-        <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-backlog')" style="color:var(--subtext)">
+        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.rotCerrarSubDrawer('rot-drawer-backlog')" style="color:var(--subtext);">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div class="rot-drawer-body">
+    <div class="rot-drawer-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc;">
         <input type="hidden" id="rot-bkg-placa-hid">
         <input type="hidden" id="rot-bkg-ticket-ot">
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Kilometraje</label>
-                <input type="number" class="form-control form-control-sm" id="rot-bkg-km" placeholder="0" min="0">
+
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Kilometraje Actual</label>
+                    <input type="number" class="form-control form-control-sm bg-white" id="rot-bkg-km" placeholder="0" min="0" style="min-height: 40px; border-radius: 8px;">
+                </div>
+                <div class="col-6">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Categoría / Tema (*)</label>
+                    <select class="form-select form-select-sm fw-bold bg-white" id="rot-bkg-tema" style="min-height: 40px; border-radius: 8px;">
+                        <option value="Mantenimiento" selected>Mantenimiento</option>
+                        <option value="Logística">Logística</option>
+                        <option value="Flota">Flota</option>
+                    </select>
+                </div>
             </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Categoría / Tema</label>
-                <select class="form-select form-select-sm" id="rot-bkg-tema">
-                    <option value="" disabled selected>Seleccione...</option>
-                    <option value="Mantenimiento">Mantenimiento</option>
-                    <option value="Logística">Logística</option>
+
+            <div class="mb-3">
+                <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">
+                    Descripción del Mantenimiento Pendiente (*)
+                </label>
+                <textarea class="form-control form-control-sm text-uppercase fw-semibold bg-white" id="rot-bkg-tarea" rows="3" style="border-radius: 8px; font-size: 0.82rem;" placeholder="DESCRIPCIÓN DETALLADA DEL TRABAJO O FALLA PENDIENTE…"></textarea>
+            </div>
+
+            <div>
+                <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Reportado Por</label>
+                <select class="form-select form-select-sm fw-bold bg-white" id="rot-bkg-reportado-por" style="min-height: 40px; border-radius: 8px;">
+                    <option value="Mantenimiento" selected>Mantenimiento</option>
                     <option value="Flota">Flota</option>
+                    <option value="Conductor">Conductor</option>
                 </select>
             </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Descripción del Mantenimiento *</label>
-            <textarea class="form-control form-control-sm" id="rot-bkg-tarea" rows="3" placeholder="Describe el trabajo pendiente…"></textarea>
-        </div>
-        <div class="mb-4">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Reportado por</label>
-            <select class="form-select form-select-sm" id="rot-bkg-reportado-por">
-                <option value="" disabled selected>Seleccione...</option>
-                <option value="Mantenimiento">Mantenimiento</option>
-                <option value="Flota">Flota</option>
-            </select>
-        </div>
-        <button class="btn btn-warning w-100 fw-bold" style="color:#fff;" onclick="window.rotGuardarBacklog()">
-            <i class="bi bi-plus-lg me-1"></i>Agregar Pendiente
+    </div>
+    <div class="rot-drawer-footer bg-white border-top px-3 py-2 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" onclick="window.rotCerrarSubDrawer('rot-drawer-backlog')">
+            Cancelar
+        </button>
+        <button type="button" class="btn btn-warning text-dark fw-bold rounded-3 px-4 py-2 shadow-2xs" onclick="window.rotGuardarBacklog()">
+            <i class="bi bi-plus-lg me-1"></i> Agregar Pendiente
         </button>
     </div>
 </div>
 
 
-<!-- ═══════════════ SUB-DRAWER: Editar OT ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-editar-ot">
-    <div class="rot-drawer-hd">
-        <div>
-            <div class="rot-drawer-title">Editar Orden de Trabajo</div>
-            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="rot-eot-id-lbl"></div>
+<!-- ═══════════════ SUB-DRAWER: Editar OT (MODERNO BENTO) ═══════════════ -->
+<div class="rot-sub-drawer" id="rot-drawer-editar-ot" style="max-width: 720px; width: 100%;">
+    <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
+                    onclick="window.rotCerrarSubDrawer('rot-drawer-editar-ot')" 
+                    title="Volver" 
+                    style="width: 34px; height: 34px; color: var(--subtext);">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <div>
+                <span class="rot-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+                    <i class="bi bi-pencil-square text-primary"></i> Editar Orden de Trabajo
+                </span>
+                <small class="text-muted d-block" style="font-size: 0.72rem;" id="rot-eot-id-lbl">Actualizar tipo, supervisor y trabajos</small>
+            </div>
         </div>
-        <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-editar-ot')" style="color:var(--subtext)">
+        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.rotCerrarSubDrawer('rot-drawer-editar-ot')" style="color:var(--subtext);">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div class="rot-drawer-body">
+    <div class="rot-drawer-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc;">
         <input type="hidden" id="rot-eot-id">
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Tipo OT</label>
-                <select class="form-select form-select-sm" id="rot-eot-tipo" onchange="window.rotCambiarTipoEOT()">
-                    <option value="">— Seleccionar —</option>
-                    <option value="Preventivo">Preventivo</option>
-                    <option value="Correctivo">Correctivo</option>
-                    <option value="Predictivo">Predictivo</option>
-                    <option value="Proactivo">Proactivo</option>
-                    <option value="Servicio">Servicio</option>
-                </select>
+
+        <!-- Card 1: Configuración de la Orden -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge px-3 py-2 fw-bold text-uppercase rounded-3 shadow-2xs" style="font-size: 0.82rem; color: #ffffff !important; background-color: #0f172a !important;">
+                        <i class="bi bi-file-earmark-text-fill text-warning me-1"></i> <span id="rot-eot-badge-id" style="color:#ffffff !important;">OT</span>
+                    </span>
+                    <span class="text-muted fw-semibold small">Configuración de Orden</span>
+                </div>
             </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Sub Tipo</label>
-                <select class="form-select form-select-sm" id="rot-eot-subtipo" disabled>
-                    <option value="">— Seleccionar tipo primero —</option>
-                </select>
+
+            <!-- Fila 1: Tipo y Sub Tipo -->
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de OT (*)</label>
+                    <select class="form-select form-select-sm fw-bold bg-white" id="rot-eot-tipo" style="min-height: 40px; border-radius: 8px;" onchange="window.rotCambiarTipoEOT()">
+                        <option value="Correctivo">Correctivo</option>
+                        <option value="Preventivo">Preventivo</option>
+                        <option value="Predictivo">Predictivo</option>
+                        <option value="Proactivo">Proactivo</option>
+                        <option value="Servicio">Servicio</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Sub Tipo de OT (*)</label>
+                    <select class="form-select form-select-sm fw-bold bg-white" id="rot-eot-subtipo" style="min-height: 40px; border-radius: 8px;">
+                    </select>
+                </div>
+            </div>
+
+            <!-- Fila 2: Supervisor y Situación -->
+            <div class="row g-2 mb-2">
+                <div class="col-12 col-md-7">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Supervisor Responsable (*)</label>
+                    <div class="position-relative">
+                        <input type="text" id="rot-eot-sup-txt" 
+                               class="form-control form-control-sm bg-white text-uppercase fw-bold" 
+                               style="min-height: 40px; border-radius: 8px;"
+                               placeholder="SELECCIONE SUPERVISOR..." 
+                               autocomplete="off" 
+                               oninput="window._cbFiltrar('rot-eot-sup')" 
+                               onfocus="window._cbFiltrar('rot-eot-sup')" 
+                               onblur="window._cbHide('rot-eot-sup')">
+                        <input type="hidden" id="rot-eot-supervisor">
+                        <div id="rot-eot-sup-dd" class="cb-dropdown"></div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-5">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Situación de la Unidad (*)</label>
+                    <select class="form-select form-select-sm fw-bold bg-white" id="rot-eot-situacion" style="min-height: 40px; border-radius: 8px;">
+                    </select>
+                </div>
             </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Supervisor</label>
-            <input type="text" class="form-control form-control-sm" id="rot-eot-supervisor" placeholder="Nombre del supervisor">
+
+        <!-- Card 2: Trabajos y Técnicos Asignados -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                <label class="form-label mb-0 d-flex align-items-center gap-1" style="font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase;">
+                    <i class="bi bi-tools text-primary"></i> Trabajos / Fallas & Técnicos Asignados:
+                </label>
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" style="font-size: 0.72rem;" onclick="window.rotEotAgregarTrabajoFila()">
+                    <i class="bi bi-plus-lg me-1"></i> Agregar Trabajo
+                </button>
+            </div>
+            <div id="rot-eot-fallas-container" class="d-flex flex-column gap-2 mt-2">
+            </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Situación Inicial</label>
-            <select class="form-select form-select-sm" id="rot-eot-situacion">
-                <option value="">— Seleccionar —</option>
-            </select>
+
+        <!-- Card 3: Observaciones Adicionales -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Notas / Observaciones Adicionales</label>
+            <textarea class="form-control form-control-sm bg-white" id="rot-eot-motivo" rows="2" style="border-radius: 8px;" placeholder="Detalles u observaciones adicionales de la OT..."></textarea>
         </div>
-        <div class="mb-4">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Motivo / Observaciones</label>
-            <textarea class="form-control form-control-sm" id="rot-eot-motivo" rows="3" placeholder="Describe el motivo de la OT..."></textarea>
-        </div>
-        <button class="btn btn-primary w-100 fw-bold" onclick="window.rotGuardarEdicionOT()">
-            <i class="bi bi-check-lg me-1"></i>Guardar Cambios
+    </div>
+    <div class="rot-drawer-footer bg-white border-top px-3 py-2 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" onclick="window.rotCerrarSubDrawer('rot-drawer-editar-ot')">
+            Cancelar
+        </button>
+        <button type="button" class="btn btn-primary fw-bold rounded-3 px-4 py-2 shadow-2xs" onclick="window.rotGuardarEdicionOT()">
+            <i class="bi bi-check-lg me-1"></i> Guardar Cambios
         </button>
     </div>
 </div>
 
-<!-- ═══════════════ SUB-DRAWER: Editar Fechas ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-editar-fechas">
-    <div class="rot-drawer-hd">
-        <div>
-            <div class="rot-drawer-title">Editar Fechas de OT</div>
-            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;">Modifica el inicio y término manual</div>
+
+<!-- ═══════════════ SUB-DRAWER: Editar Fechas (MODERNO BENTO) ═══════════════ -->
+<div class="rot-sub-drawer" id="rot-drawer-editar-fechas" style="max-width: 720px; width: 100%;">
+    <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
+                    onclick="window.rotCerrarSubDrawer('rot-drawer-editar-fechas')" 
+                    title="Volver" 
+                    style="width: 34px; height: 34px; color: var(--subtext);">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <div>
+                <span class="rot-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+                    <i class="bi bi-calendar-range-fill text-info"></i> Editar Fechas de OT
+                </span>
+                <small class="text-muted d-block" style="font-size: 0.72rem;">Modificar tiempos de inicio y cierre de orden</small>
+            </div>
         </div>
-        <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-editar-fechas')" style="color:var(--subtext)">
+        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.rotCerrarSubDrawer('rot-drawer-editar-fechas')" style="color:var(--subtext);">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div class="rot-drawer-body">
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Fecha de Inicio (En Proceso)</label>
-            <input type="datetime-local" class="form-control form-control-sm" id="rot-ef-inicio">
+    <div class="rot-drawer-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc;">
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="mb-3">
+                <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">
+                    Fecha y Hora de Inicio (En Proceso)
+                </label>
+                <input type="datetime-local" class="form-control form-control-sm bg-white" id="rot-ef-inicio" style="min-height: 40px; border-radius: 8px;">
+            </div>
+            <div class="mb-2">
+                <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">
+                    Fecha y Hora de Término (Cierre)
+                </label>
+                <input type="datetime-local" class="form-control form-control-sm bg-white" id="rot-ef-termino" style="min-height: 40px; border-radius: 8px;">
+            </div>
         </div>
-        <div class="mb-4">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Fecha de Término (Cierre)</label>
-            <input type="datetime-local" class="form-control form-control-sm" id="rot-ef-termino">
-        </div>
-        <button class="btn btn-primary w-100 fw-bold" onclick="window.rotGuardarFechas()">
-            <i class="bi bi-check-lg me-1"></i>Guardar Cambios
+    </div>
+    <div class="rot-drawer-footer bg-white border-top px-3 py-2 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" onclick="window.rotCerrarSubDrawer('rot-drawer-editar-fechas')">
+            Cancelar
+        </button>
+        <button type="button" class="btn btn-primary fw-bold rounded-3 px-4 py-2 shadow-2xs" onclick="window.rotGuardarFechas()">
+            <i class="bi bi-check-lg me-1"></i> Guardar Cambios
         </button>
     </div>
 </div>
