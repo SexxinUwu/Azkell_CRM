@@ -901,14 +901,14 @@
           </div>
 
           <!-- ── CARD 3: CONTENEDOR DINÁMICO DE ÓRDENES DE TRABAJO (OTs) ──── -->
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <div>
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-1 border-bottom">
+            <div style="min-width: 180px;" class="flex-grow-1">
               <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size: 1rem;">
                 <i class="bi bi-tools text-primary"></i> Órdenes de Trabajo a Generar
               </h6>
-              <small class="text-muted" style="font-size: 0.76rem;">Distribuye las fallas reportadas y asigna el técnico responsable para cada motivo</small>
+              <small class="text-muted d-block" style="font-size: 0.76rem;">Distribuye las fallas reportadas y asigna el técnico responsable para cada motivo</small>
             </div>
-            <button type="button" class="btn btn-outline-primary btn-sm fw-bold rounded-3 d-flex align-items-center gap-1 shadow-2xs" onclick="window.ckAgregarTarjetaOT()">
+            <button type="button" class="btn btn-outline-primary btn-sm fw-bold rounded-pill px-3 py-2 d-flex align-items-center gap-1 shadow-2xs flex-shrink-0" style="white-space: nowrap !important;" onclick="window.ckAgregarTarjetaOT()">
               <i class="bi bi-plus-lg"></i> <span>Agregar otra OT</span>
             </button>
           </div>
@@ -919,9 +919,9 @@
         </div>
 
         <!-- Modal Footer -->
-        <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-between align-items-center">
-          <button type="button" class="btn btn-light border px-4 py-2 fw-semibold rounded-3" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-success px-4 py-2 fw-bold rounded-3 d-flex align-items-center gap-2 shadow-sm" id="btnConfirmarGenerarOTs">
+        <div class="modal-footer bg-white border-top px-3 px-md-4 py-3 d-flex flex-row justify-content-between align-items-center gap-2">
+          <button type="button" class="btn btn-light border px-3 px-md-4 py-2 fw-semibold rounded-3 text-nowrap" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success px-3 px-md-4 py-2 fw-bold rounded-3 d-flex align-items-center justify-content-center gap-2 shadow-sm text-nowrap" id="btnConfirmarGenerarOTs">
             <i class="bi bi-rocket-takeoff-fill"></i> <span>Confirmar y Generar OTs</span>
           </button>
         </div>
