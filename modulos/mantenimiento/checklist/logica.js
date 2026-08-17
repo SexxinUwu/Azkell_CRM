@@ -2175,31 +2175,37 @@ window.ckRenderTarjetasOT = function() {
                     ` : ''}
                 </div>
 
-                <div class="row g-2 g-md-3 mb-3">
-                    <div class="col-12 col-md-3">
-                        <label class="form-label">Unidad Destino</label>
-                        <select class="form-select bg-white fw-bold" onchange="window.ckOnCambiarUnidadOT(${cIdx}, this)">
+                <!-- Fila 1: Unidad, Tipo y Subtipo de OT (3 columnas uniformes) -->
+                <div class="row g-2 g-md-3 mb-2">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px; white-space: nowrap;">Unidad Destino</label>
+                        <select class="form-select bg-white fw-bold" style="min-height: 42px !important; height: 42px !important; border-radius: 10px !important;" onchange="window.ckOnCambiarUnidadOT(${cIdx}, this)">
                             ${r.placa_tracto ? `<option value="Tracto" ${card.unidad === 'Tracto' ? 'selected' : ''}>🚛 Tracto (${r.placa_tracto})</option>` : ''}
                             ${r.placa_remolque ? `<option value="Remolque" ${card.unidad === 'Remolque' ? 'selected' : ''}>🚚 Carreta (${r.placa_remolque})</option>` : ''}
                         </select>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <label class="form-label">Tipo de OT</label>
-                        <select class="form-select bg-white fw-bold" onchange="window.ckOnCambiarTipoOT(${cIdx}, this.value)">
+                    <div class="col-6 col-md-4">
+                        <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px; white-space: nowrap;">Tipo de OT</label>
+                        <select class="form-select bg-white fw-bold" style="min-height: 42px !important; height: 42px !important; border-radius: 10px !important;" onchange="window.ckOnCambiarTipoOT(${cIdx}, this.value)">
                             ${tipos.map(t => `<option value="${t}" ${t === currentTipo ? 'selected' : ''}>${t}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <label class="form-label">Sub Tipo de OT</label>
-                        <select class="form-select bg-white fw-bold" id="gen_subtipo_${cIdx}" onchange="window.ckOnCambiarCampoOT(${cIdx}, 'subtipo_ot', this.value)">
+                    <div class="col-6 col-md-4">
+                        <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px; white-space: nowrap;">Sub Tipo de OT</label>
+                        <select class="form-select bg-white fw-bold" id="gen_subtipo_${cIdx}" style="min-height: 42px !important; height: 42px !important; border-radius: 10px !important;" onchange="window.ckOnCambiarCampoOT(${cIdx}, 'subtipo_ot', this.value)">
                             ${subtipos.map(s => `<option value="${s}" ${s === card.subtipo_ot ? 'selected' : ''}>${s}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label">Supervisor Responsable (<span class="text-danger">*</span>)</label>
+                </div>
+
+                <!-- Fila 2: Supervisor Responsable y Situación (2 columnas amplias y alineadas) -->
+                <div class="row g-2 g-md-3 mb-3">
+                    <div class="col-12 col-md-7">
+                        <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px; white-space: nowrap;">Supervisor Responsable (<span class="text-danger">*</span>)</label>
                         <div class="position-relative">
                             <input type="text" id="${supInputId}-txt" 
                                    class="form-control bg-white text-uppercase fw-bold" 
+                                   style="min-height: 42px !important; height: 42px !important; border-radius: 10px !important;"
                                    placeholder="SELECCIONE SUPERVISOR..." 
                                    autocomplete="off" 
                                    oninput="window._cbFiltrar('${supInputId}')" 
@@ -2209,9 +2215,9 @@ window.ckRenderTarjetasOT = function() {
                             <div id="${supInputId}-dd" class="cb-dropdown"></div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <label class="form-label">Situación (Rampa)</label>
-                        <select class="form-select bg-white fw-bold" onchange="window.ckOnCambiarCampoOT(${cIdx}, 'situacion', this.value)">
+                    <div class="col-12 col-md-5">
+                        <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px; white-space: nowrap;">Situación (Status Rampa)</label>
+                        <select class="form-select bg-white fw-bold" style="min-height: 42px !important; height: 42px !important; border-radius: 10px !important;" onchange="window.ckOnCambiarCampoOT(${cIdx}, 'situacion', this.value)">
                             <option value="En atención" ${card.situacion === 'En atención' ? 'selected' : ''}>En atención</option>
                             <option value="Finalizado" ${card.situacion === 'Finalizado' ? 'selected' : ''}>Finalizado</option>
                             <option value="En espera de reparación" ${card.situacion === 'En espera de reparación' ? 'selected' : ''}>En espera de reparación</option>
