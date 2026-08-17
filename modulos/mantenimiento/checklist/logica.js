@@ -1904,36 +1904,22 @@ window.abrirModalGenerarOTs = async function(id) {
         console.warn('Error al cargar cat_rampas:', e);
     }
 
-    const dlRampas = document.getElementById('gen_lista_rampas');
-    if (dlRampas) {
-        let rampaOptions = '';
-        if (window._genOT_Rampas && window._genOT_Rampas.length > 0) {
-            window._genOT_Rampas.forEach(rmp => {
-                const nombre = rmp.nombre_rampa || rmp.nombre || rmp.rampa || `Rampa ${rmp.id}`;
-                rampaOptions += `<option value="${nombre}">${nombre}</option>`;
-            });
-        } else {
-            rampaOptions = `
-                <option value="Rampa 1">Rampa 1</option>
-                <option value="Rampa 2">Rampa 2</option>
-                <option value="Rampa 3">Rampa 3</option>
-                <option value="Zona Lavado">Zona Lavado</option>
-                <option value="Zona de Espera">Zona de Espera</option>
-                <option value="Taller Tercero">Taller Tercero</option>
-                <option value="Auxilio Mecanico">Auxilio Mecánico</option>
-            `;
-        }
-        dlRampas.innerHTML = rampaOptions;
+    // Inicializar combobox moderno para Rampa
+    const rampaItems = (window._genOT_Rampas || []).map(rmp => {
+        const nombre = rmp.nombre_rampa || rmp.nombre || rmp.rampa || `Rampa ${rmp.id}`;
+        return { value: nombre, label: nombre };
+    });
+    if (!rampaItems.length) {
+        ['Rampa 1', 'Rampa 2', 'Rampa 3', 'Zona Lavado', 'Zona de Espera', 'Taller Tercero', 'Auxilio Mecánico'].forEach(n => {
+            rampaItems.push({ value: n, label: n });
+        });
     }
-
-    const inputRampa = document.getElementById('gen_id_rampa');
-    if (inputRampa) {
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('gen_id_rampa', rampaItems, 'SELECCIONE RAMPA...');
         if (r.id_rampa && r.id_rampa !== 'En Espera' && r.id_rampa !== 'En Ruta') {
-            inputRampa.value = r.id_rampa;
-        } else if (window._genOT_Rampas && window._genOT_Rampas.length > 0) {
-            inputRampa.value = window._genOT_Rampas[0].nombre_rampa || window._genOT_Rampas[0].nombre || 'Rampa 1';
+            window._cbSet('gen_id_rampa', r.id_rampa, r.id_rampa);
         } else {
-            inputRampa.value = 'Rampa 1';
+            window._cbSet('gen_id_rampa', '', '');
         }
     }
 
@@ -1957,12 +1943,6 @@ window.abrirModalGenerarOTs = async function(id) {
         if (window.dataGlobalConductores && Array.isArray(window.dataGlobalConductores)) {
             window._genOT_Tecnicos = window.dataGlobalConductores.map(c => (c[1] || c.nombre || '').trim()).filter(Boolean);
         }
-    }
-
-    // Actualizar datalist global de personal
-    const dlPersonal = document.getElementById('gen_lista_personal');
-    if (dlPersonal) {
-        dlPersonal.innerHTML = window._genOT_Tecnicos.map(t => `<option value="${t}">${t}</option>`).join('');
     }
 
     // 5. Extraer todas las fallas reportadas
@@ -2012,9 +1992,7 @@ window.abrirModalGenerarOTs = async function(id) {
         });
     }
 
-    const defaultSupervisor = window._USUARIO_NOMBRE || localStorage.getItem('fleet_user_name') || 'Supervisor de Taller';
-
-    // 6. Inicializar tarjetas de OT
+    // 6. Inicializar tarjetas de OT (Supervisor vacío por defecto)
     window._genOT_Cards = [];
     if (r.placa_tracto && fallasT.length > 0) {
         window._genOT_Cards.push({
@@ -2022,7 +2000,7 @@ window.abrirModalGenerarOTs = async function(id) {
             unidad: 'Tracto',
             placa: r.placa_tracto,
             tipo_ot: 'Correctivo',
-            supervisor: defaultSupervisor,
+            supervisor: '',
             situacion: 'En atención',
             fallasSeleccionadas: fallasT.map((_, idx) => `ft_${idx}`),
             tecnicoPorFalla: {}
@@ -2034,7 +2012,7 @@ window.abrirModalGenerarOTs = async function(id) {
             unidad: 'Remolque',
             placa: r.placa_remolque,
             tipo_ot: 'Correctivo',
-            supervisor: defaultSupervisor,
+            supervisor: '',
             situacion: 'En atención',
             fallasSeleccionadas: fallasR.map((_, idx) => `fr_${idx}`),
             tecnicoPorFalla: {}
@@ -2046,7 +2024,7 @@ window.abrirModalGenerarOTs = async function(id) {
             unidad: r.placa_tracto ? 'Tracto' : 'Remolque',
             placa: r.placa_tracto || r.placa_remolque || 'TRACTO',
             tipo_ot: 'Correctivo',
-            supervisor: defaultSupervisor,
+            supervisor: '',
             situacion: 'En atención',
             fallasSeleccionadas: window._genOT_TodasFallas.map(f => f.id),
             tecnicoPorFalla: {}
@@ -2090,13 +2068,7 @@ window.ckRenderTarjetasOT = function() {
         const fallasUnidad = window._genOT_TodasFallas.filter(f => f.unidad === card.unidad || !f.unidad);
         const fallasMostrar = fallasUnidad.length > 0 ? fallasUnidad : window._genOT_TodasFallas;
 
-        // Opciones de Técnicos
-        let tecOptions = '<option value="">-- Seleccionar Técnico --</option>';
-        tecnicos.forEach(t => {
-            tecOptions += `<option value="${t}">${t}</option>`;
-        });
-
-        // Generar lista de fallas con checkboxes y selector de técnico
+        // Generar lista de fallas con checkboxes y cb-dropdown para técnico
         let fallasHtml = '';
         if (fallasMostrar.length === 0) {
             fallasHtml = '<div class="text-muted small py-2 px-3 bg-white rounded-3 border">Sin fallas específicas observadas en el checklist. Se generará OT general.</div>';
@@ -2114,6 +2086,7 @@ window.ckRenderTarjetasOT = function() {
                 });
 
                 const isDisabled = asignadaEnOtra !== null;
+                const tecInputId = `gen_tec_${cIdx}_${f.id}`;
 
                 fallasHtml += `
                     <div class="p-2 mb-2 rounded-3 border ${isChecked ? (isTracto ? 'bg-primary bg-opacity-10 border-primary-subtle' : 'bg-warning bg-opacity-15 border-warning-subtle') : (isDisabled ? 'bg-light opacity-50' : 'bg-white')} d-flex flex-wrap align-items-center justify-content-between gap-2" id="falla_row_${cIdx}_${f.id}">
@@ -2132,21 +2105,28 @@ window.ckRenderTarjetasOT = function() {
                             </label>
                         </div>
                         
-                        <!-- Selector individual de Técnico Responsable con Datalist Autocomplete -->
+                        <!-- Selector individual de Técnico Responsable con cb-dropdown -->
                         <div class="d-flex align-items-center gap-1 ${isChecked ? '' : 'd-none'}" id="tec_wrap_${cIdx}_${f.id}" style="min-width: 200px; max-width: 280px;">
                             <i class="bi bi-person-gear text-secondary" style="font-size: 0.85rem;"></i>
-                            <input type="text" list="gen_lista_personal" 
-                                   class="form-control form-control-sm bg-white text-uppercase fw-bold" 
-                                   style="font-size: 0.8rem; min-height: 36px !important; border-radius: 8px !important;"
-                                   placeholder="SELECCIONE TÉCNICO..." 
-                                   value="${tecAsignado}" 
-                                   autocomplete="off" 
-                                   oninput="window.ckOnCambiarTecnicoFalla(${cIdx}, '${f.id}', this.value)">
+                            <div class="position-relative flex-grow-1">
+                                <input type="text" id="${tecInputId}-txt" 
+                                       class="form-control form-control-sm bg-white text-uppercase fw-bold" 
+                                       style="font-size: 0.8rem; min-height: 36px !important; border-radius: 8px !important;"
+                                       placeholder="SELECCIONE TÉCNICO..." 
+                                       autocomplete="off" 
+                                       oninput="window._cbFiltrar('${tecInputId}')" 
+                                       onfocus="window._cbFiltrar('${tecInputId}')" 
+                                       onblur="window._cbHide('${tecInputId}')">
+                                <input type="hidden" id="${tecInputId}" value="${tecAsignado}">
+                                <div id="${tecInputId}-dd" class="cb-dropdown"></div>
+                            </div>
                         </div>
                     </div>
                 `;
             });
         }
+
+        const supInputId = `gen_sup_${cIdx}`;
 
         html += `
             <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 border-start border-4 ${borderCls}" style="background: ${cardBg} !important; border: 1px solid ${cardBorder} !important;" id="card_ot_${cIdx}">
@@ -2185,7 +2165,17 @@ window.ckRenderTarjetasOT = function() {
                     </div>
                     <div class="col-6 col-md-3">
                         <label class="form-label">Supervisor Responsable</label>
-                        <input type="text" list="gen_lista_personal" class="form-control bg-white text-uppercase fw-bold" value="${card.supervisor || ''}" placeholder="SELECCIONE SUPERVISOR..." autocomplete="off" oninput="window.ckOnCambiarCampoOT(${cIdx}, 'supervisor', this.value)">
+                        <div class="position-relative">
+                            <input type="text" id="${supInputId}-txt" 
+                                   class="form-control bg-white text-uppercase fw-bold" 
+                                   placeholder="SELECCIONE SUPERVISOR..." 
+                                   autocomplete="off" 
+                                   oninput="window._cbFiltrar('${supInputId}')" 
+                                   onfocus="window._cbFiltrar('${supInputId}')" 
+                                   onblur="window._cbHide('${supInputId}')">
+                            <input type="hidden" id="${supInputId}" value="${card.supervisor || ''}">
+                            <div id="${supInputId}-dd" class="cb-dropdown"></div>
+                        </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <label class="form-label">Situación (Status Rampa)</label>
@@ -2216,6 +2206,40 @@ window.ckRenderTarjetasOT = function() {
     });
 
     wrap.innerHTML = html;
+
+    // Inicializar comboboxes de Supervisor y Técnicos con el componente cb-dropdown
+    const personalItems = (window._genOT_Tecnicos || []).map(t => ({ value: t, label: t }));
+    window._genOT_Cards.forEach((card, cIdx) => {
+        const supId = `gen_sup_${cIdx}`;
+        if (typeof window._cbInit === 'function') {
+            window._cbInit(supId, personalItems, 'SELECCIONE SUPERVISOR...');
+            if (card.supervisor) {
+                window._cbSet(supId, card.supervisor, card.supervisor);
+            } else {
+                window._cbSet(supId, '', '');
+            }
+            window._cbOnSelect(supId, function(val, lbl) {
+                card.supervisor = val || lbl || '';
+            });
+
+            const fallasUnidad = window._genOT_TodasFallas.filter(f => f.unidad === card.unidad || !f.unidad);
+            const fallasMostrar = fallasUnidad.length > 0 ? fallasUnidad : window._genOT_TodasFallas;
+            fallasMostrar.forEach(f => {
+                const tecId = `gen_tec_${cIdx}_${f.id}`;
+                const tecVal = (card.tecnicoPorFalla && card.tecnicoPorFalla[f.id]) || '';
+                window._cbInit(tecId, personalItems, 'SELECCIONE TÉCNICO...');
+                if (tecVal) {
+                    window._cbSet(tecId, tecVal, tecVal);
+                } else {
+                    window._cbSet(tecId, '', '');
+                }
+                window._cbOnSelect(tecId, function(val, lbl) {
+                    if (!card.tecnicoPorFalla) card.tecnicoPorFalla = {};
+                    card.tecnicoPorFalla[f.id] = val || lbl || '';
+                });
+            });
+        }
+    });
 };
 
 window.ckAgregarTarjetaOT = function() {
@@ -2240,14 +2264,12 @@ window.ckAgregarTarjetaOT = function() {
         .filter(f => (f.unidad === defUnidad || !f.unidad) && !yaAsignadas.includes(f.id))
         .map(f => f.id);
 
-    const defaultSupervisor = window._USUARIO_NOMBRE || localStorage.getItem('fleet_user_name') || 'Supervisor de Taller';
-
     window._genOT_Cards.push({
         cardId: `ot_card_${Date.now()}`,
         unidad: defUnidad,
         placa: defPlaca,
         tipo_ot: 'Correctivo',
-        supervisor: defaultSupervisor,
+        supervisor: '',
         situacion: 'En atención',
         fallasSeleccionadas: fallasDisponibles,
         tecnicoPorFalla: {}
@@ -2322,7 +2344,7 @@ window.ckOnCambiarTecnicoFalla = function(cardIndex, fallaId, tecnicoVal) {
 window.enviarGeneracionOTs = function(e) {
     e.preventDefault();
     const id = document.getElementById('gen_reporte_id').value;
-    const rampa = document.getElementById('gen_id_rampa').value;
+    const rampa = (typeof window._cbGet === 'function' ? window._cbGet('gen_id_rampa') : '') || (document.getElementById('gen_id_rampa-txt') || {}).value || (document.getElementById('gen_id_rampa') || {}).value || '';
     const fIngreso = document.getElementById('gen_fecha_ingreso').value;
     const fSalida = document.getElementById('gen_fecha_salida').value;
     const r = window._genOT_Reporte || {};
@@ -2346,7 +2368,7 @@ window.enviarGeneracionOTs = function(e) {
         const fallasObjs = window._genOT_TodasFallas.filter(f => (c.fallasSeleccionadas || []).includes(f.id));
         
         const motivosArray = fallasObjs.map(f => {
-            const tec = (c.tecnicoPorFalla && c.tecnicoPorFalla[f.id]) || '';
+            const tec = (typeof window._cbGet === 'function' ? window._cbGet(`gen_tec_${i}_${f.id}`) : '') || (document.getElementById(`gen_tec_${i}_${f.id}-txt`) || {}).value || (c.tecnicoPorFalla && c.tecnicoPorFalla[f.id]) || '';
             return {
                 motivo: `${f.item}: ${f.obs}`,
                 sistema: f.sistema,
@@ -2359,6 +2381,7 @@ window.enviarGeneracionOTs = function(e) {
 
         // Lista de técnicos únicos seleccionados para esta OT
         const tecnicosUnicos = Array.from(new Set(motivosArray.map(m => m.tecnico).filter(Boolean)));
+        const supervisorFinal = (typeof window._cbGet === 'function' ? window._cbGet(`gen_sup_${i}`) : '') || (document.getElementById(`gen_sup_${i}-txt`) || {}).value || c.supervisor || 'Por Asignar';
 
         otsPayload.push({
             unidad: c.unidad,
@@ -2366,7 +2389,7 @@ window.enviarGeneracionOTs = function(e) {
             km: c.unidad === 'Tracto' ? (r.km_inicial || 0) : 0,
             horas_motor: (c.unidad === 'Remolque' || c.unidad === 'Carreta') ? (r.horas_motor || null) : null,
             tipo_ot: c.tipo_ot || 'Correctivo',
-            supervisor: c.supervisor || 'Por Asignar',
+            supervisor: supervisorFinal,
             situacion: c.situacion || 'En atención',
             fallas_seleccionadas: fallasObjs.map(f => `${f.item}: ${f.obs}`),
             motivos_array: motivosArray,

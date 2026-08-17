@@ -788,6 +788,27 @@
   </div>
 </div>
 
+<style>
+  #modalGenerarOTsFromChecklist .cb-dropdown {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    z-index: 1065 !important;
+  }
+  #modalGenerarOTsFromChecklist .cb-opt {
+    color: #1e293b !important;
+    font-size: 0.84rem !important;
+    font-weight: 600 !important;
+    padding: 9px 14px !important;
+    border-bottom: 1px solid #f8fafc;
+  }
+  #modalGenerarOTsFromChecklist .cb-opt:hover {
+    background-color: #f0f9ff !important;
+    color: #0284c7 !important;
+  }
+</style>
+
 <!-- ================================================================= -->
 <!-- ⚡ MODAL: GENERAR ÓRDENES DE TRABAJO (OTs) - BENTO FLOATING DRAWER -->
 <!-- ================================================================= -->
@@ -856,9 +877,11 @@
             <div class="row g-2 g-md-3">
               <div class="col-12">
                 <label class="form-label">Ubicación / Rampa de Taller (<span class="text-danger">*</span>)</label>
-                <input type="text" id="gen_id_rampa" list="gen_lista_rampas" class="form-control fw-bold border-primary shadow-sm text-uppercase" placeholder="SELECCIONAR RAMPA / UBICACIÓN..." autocomplete="off" required>
-                <datalist id="gen_lista_rampas"></datalist>
-                <datalist id="gen_lista_personal"></datalist>
+                <div class="position-relative">
+                  <input type="text" id="gen_id_rampa-txt" class="form-control fw-bold border-primary shadow-sm text-uppercase" placeholder="SELECCIONE RAMPA..." autocomplete="off" oninput="window._cbFiltrar('gen_id_rampa')" onfocus="window._cbFiltrar('gen_id_rampa')" onblur="window._cbHide('gen_id_rampa')">
+                  <input type="hidden" id="gen_id_rampa" name="id_rampa">
+                  <div id="gen_id_rampa-dd" class="cb-dropdown"></div>
+                </div>
               </div>
               <div class="col-12 col-md-6">
                 <label class="form-label">Fecha / Hora Ingreso a Rampa</label>
