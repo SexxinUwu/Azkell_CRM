@@ -722,6 +722,29 @@ window.srCerrarDetalle = function() {
     srRenderTabla();
 };
 
+function srLimpiarFormRegistro() {
+    var set = function(eid, val) { var el = document.getElementById(eid); if (el) el.value = val || ''; };
+    set('sr-f-idx', '');
+    set('sr-f-rampa-id', '');
+    set('sr-f-km', '');
+    set('sr-f-fecha-sal', '');
+    set('sr-f-hora-sal', '');
+    set('sr-f-obs', '');
+    set('sr-f-obs-extra', '');
+    set('sr-f-evidencia-url', '');
+    var iEvid = document.getElementById('sr-f-evidencia'); if (iEvid) iEvid.value = '';
+    var aEvid = document.getElementById('sr-f-evidencia-link'); if (aEvid) aEvid.style.display = 'none';
+    if (typeof window._cbSet === 'function') {
+        window._cbSet('sr-f-placa', '', '');
+        window._cbSet('sr-f-conductor', '', '');
+    }
+    var tc = document.getElementById('sr-f-trabajos-container');
+    if (tc) tc.innerHTML = '';
+    if (typeof window.srAgregarFilaTrabajo === 'function') {
+        window.srAgregarFilaTrabajo('');
+    }
+}
+
 // ── Registrar nueva unidad ───────────────────────────────────────
 window.srRegistrar = function(rampaNr) {
     srLimpiarFormRegistro();
@@ -742,6 +765,17 @@ window.srRegistrar = function(rampaNr) {
     if (fecIng) fecIng.value = hoy.toISOString().split('T')[0];
     var horIng = document.getElementById('sr-f-hora-ing');
     if (horIng) horIng.value = hoy.toTimeString().slice(0, 5);
+
+    var personalList = (window.dataGlobalConductores || []).map(function(c) {
+        var n = (typeof c === 'string') ? c : (c[1] || c.nombre || c.conductor || '');
+        return n.trim();
+    }).filter(Boolean);
+    if (!personalList.length && window._genOT_Tecnicos) personalList = window._genOT_Tecnicos;
+    var personalItems = Array.from(new Set(personalList)).map(function(p) { return { value: p, label: p }; });
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('sr-f-conductor', personalItems, 'SELECCIONE CHOFER...');
+    }
+
     srAbrirDrawer('sr-drawer-registro');
 };
 
@@ -763,8 +797,10 @@ window.srEditarRampa = function(id) {
     var set = function(eid, val) { var el = document.getElementById(eid); if (el) el.value = val || ''; };
     if (typeof window._cbSet === 'function') {
         window._cbSet('sr-f-placa', e.placa, e.placa);
+        window._cbSet('sr-f-conductor', e.conductor || e.chofer || e.reportado_por || '', e.conductor || e.chofer || e.reportado_por || '');
     } else {
         var el = document.getElementById('sr-f-placa'); if (el) el.value = e.placa || '';
+        var elC = document.getElementById('sr-f-conductor'); if (elC) elC.value = e.conductor || e.chofer || e.reportado_por || '';
     }
     set('sr-f-km',        e.km);
     set('sr-f-fecha-ing', e.fechaIngreso);
@@ -1190,10 +1226,13 @@ window.srGuardarRegistro = function() {
     var obsCompilada = window.srObtenerTextoObsFormulario();
     if (sObs) sObs.value = obsCompilada;
 
+    var sConductor = ((typeof window._cbGet === 'function' ? window._cbGet('sr-f-conductor') : '') || (document.getElementById('sr-f-conductor-txt') || {}).value || (document.getElementById('sr-f-conductor') || {}).value || '').trim();
+
     var payload = {
         rampa:        rampaNum,
         placa:        placa,
         km:           sKm     ? (sKm.value     || '') : '',
+        conductor:    sConductor,
         fecha_ingreso: sFecIng ? (sFecIng.value || null) : null,
         hora_ingreso:  sHorIng ? (sHorIng.value || null) : null,
         fecha_salida:  sFecSal ? (sFecSal.value || null) : null,
@@ -1259,39 +1298,124 @@ window.srGuardarRegistro = function() {
     }
 };
 
-// ── Generar OT ───────────────────────────────────────────────────
+// ── Generar OT desde Rampa (MODERNO BENTO Y TRABAJOS CON TÉCNICO) ──
+window._srOT_TrabajosCount = 0;
+
 window.srGenerarOT = function(id) {
-    var e = window.srEntradas.find(function(x) { return x._id === id; });
+    var e = (window.srEntradas || []).find(function(x) { return x._id === id || String(x.id) === String(id) || String(x._id) === String(id); });
+    if (!e && window.srData) {
+        e = window.srData.find(function(x) { return x._id === id || String(x.id) === String(id) || String(x._id) === String(id); });
+    }
     if (!e) return;
 
-    var pDisp = document.getElementById('sr-ot-placa-disp'); if (pDisp) pDisp.textContent = e.placa;
-    var rIdx = window.srCatRampas.findIndex(function(r) { return r.id === e.rampa; });
+    var pDisp = document.getElementById('sr-ot-placa-disp'); if (pDisp) pDisp.textContent = e.placa || '—';
+    var rIdx = (window.srCatRampas || []).findIndex(function(r) { return r.id === e.rampa || String(r.id) === String(e.rampa); });
     var rObj = rIdx >= 0 ? window.srCatRampas[rIdx] : null;
-    var rNom = rObj ? (rObj.nombre_rampa || rObj.descripcion || 'Rampa ' + e.rampa) : ('Rampa ' + e.rampa);
-    var rDisp = document.getElementById('sr-ot-rampa-disp'); if (rDisp) rDisp.textContent = rNom;
+    var rNom = rObj ? (rObj.nombre_rampa || rObj.descripcion || 'Rampa ' + e.rampa) : ('Rampa ' + (e.rampa || '1'));
+    var rDisp = document.getElementById('sr-ot-rampa-disp'); if (rDisp) rDisp.innerHTML = '<i class="bi bi-geo-alt-fill text-danger me-1"></i> ' + rNom;
     var pHid  = document.getElementById('sr-ot-placa-hid');  if (pHid)  pHid.value = e.placa;
-    var rHid  = document.getElementById('sr-ot-rampa-hid');  if (rHid)  rHid.value = String(e.rampa);
+    var rHid  = document.getElementById('sr-ot-rampa-hid');  if (rHid)  rHid.value = String(e.rampa || '');
     var idRHid = document.getElementById('sr-ot-id-rampa-hid'); if (idRHid) idRHid.value = e._id || e.id;
 
     var hoy = new Date();
     var fechaHora = (e.fechaIngreso || hoy.toISOString().split('T')[0]) + ' ' + (e.horaIngreso || hoy.toTimeString().slice(0, 5));
     var fhEl = document.getElementById('sr-ot-fecha-ing'); if (fhEl) fhEl.value = fechaHora;
     var kmEl = document.getElementById('sr-ot-km');        if (kmEl) kmEl.value = e.km || '0';
-    var moEl = document.getElementById('sr-ot-motivo');    if (moEl) moEl.value = e.obs || '';
+    var chEl = document.getElementById('sr-ot-chofer');    if (chEl) chEl.value = e.conductor || e.chofer || e.reportado_por || '';
 
     var tipoEl = document.getElementById('sr-ot-tipo');
-    if (tipoEl) tipoEl.value = '';
-    var subEl  = document.getElementById('sr-ot-subtipo');
-    if (subEl)  { subEl.innerHTML = '<option value="">— Seleccionar tipo primero —</option>'; subEl.disabled = true; }
-    // Limpiar supervisor y situación
-    var supInp = document.getElementById('sr-ot-supervisor-inp'); if (supInp) supInp.value = '';
-    var supHid = document.getElementById('sr-ot-supervisor');     if (supHid) supHid.value = '';
-    var sitInp = document.getElementById('sr-ot-situacion-inp');  if (sitInp) sitInp.value = '';
-    var sitHid = document.getElementById('sr-ot-situacion');      if (sitHid) sitHid.value = '';
-    var sisEl  = document.getElementById('sr-ot-sistema');        if (sisEl)  sisEl.value  = '';
-    var subSEl = document.getElementById('sr-ot-subsistema');     if (subSEl) subSEl.value = '';
+    if (tipoEl) tipoEl.value = 'Correctivo';
+    window.srCambiarTipoOT();
+
+    // Inicializar Supervisor Combobox
+    var personalList = (window.dataGlobalConductores || []).map(function(c) {
+        var n = (typeof c === 'string') ? c : (c[1] || c.nombre || c.conductor || '');
+        return n.trim();
+    }).filter(Boolean);
+    if (!personalList.length && window._genOT_Tecnicos) personalList = window._genOT_Tecnicos;
+    window._srPersonalItems = Array.from(new Set(personalList)).map(function(p) { return { value: p, label: p }; });
+
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('sr-ot-supervisor', window._srPersonalItems, 'SELECCIONE SUPERVISOR...');
+        window._cbSet('sr-ot-supervisor', '', '');
+    }
+
+    var sitEl = document.getElementById('sr-ot-situacion');
+    if (sitEl) sitEl.value = e.situacion || 'En atención';
+
+    // Desglosar trabajos desde e.obs de forma limpia
+    var listaCont = document.getElementById('sr-ot-trabajos-lista');
+    if (listaCont) listaCont.innerHTML = '';
+    window._srOT_TrabajosCount = 0;
+
+    var rawObs = (e.obs || '').trim();
+    var tareas = [];
+    if (rawObs) {
+        var lines = rawObs.split('\n');
+        lines.forEach(function(line) {
+            var clean = line.replace(/^[•\-\*]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').trim();
+            if (clean) tareas.push(clean);
+        });
+    }
+
+    if (!tareas.length) {
+        tareas.push('MANTENIMIENTO / REVISIÓN GENERAL');
+    }
+
+    tareas.forEach(function(t) {
+        window.srAgregarFilaTrabajoOT(t);
+    });
 
     srAbrirDrawer('sr-drawer-ot');
+};
+
+window.srAgregarFilaTrabajoOT = function(textoDefecto) {
+    var listaCont = document.getElementById('sr-ot-trabajos-lista');
+    if (!listaCont) return;
+
+    var idx = window._srOT_TrabajosCount++;
+    var rowId = 'sr_ot_job_' + idx;
+    var tecId = 'sr_ot_tec_' + idx;
+    var desc = textoDefecto || '';
+
+    var div = document.createElement('div');
+    div.className = 'p-2 rounded-3 border bg-white shadow-2xs d-flex flex-wrap align-items-center justify-content-between gap-2';
+    div.id = rowId;
+    div.style.overflow = 'visible';
+
+    div.innerHTML = `
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width: 220px;">
+            <input type="checkbox" class="form-check-input mt-0 sr-ot-job-chk" id="chk_${rowId}" checked style="cursor:pointer; width:18px; height:18px;">
+            <input type="text" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" 
+                   id="txt_${rowId}" value="${desc}" placeholder="Descripción del trabajo / motivo..." 
+                   style="font-size: 0.82rem; min-height: 38px; border-radius: 8px;">
+        </div>
+        <div class="d-flex align-items-center gap-1" style="min-width: 200px; max-width: 260px; position: relative;">
+            <i class="bi bi-person-gear text-secondary" style="font-size: 0.85rem;"></i>
+            <div class="position-relative flex-grow-1">
+                <input type="text" id="${tecId}-txt" 
+                       class="form-control form-control-sm bg-white text-uppercase fw-bold" 
+                       style="font-size: 0.78rem; min-height: 38px; border-radius: 8px;"
+                       placeholder="SELECCIONE TÉCNICO..." 
+                       autocomplete="off" 
+                       oninput="window._cbFiltrar('${tecId}')" 
+                       onfocus="window._cbFiltrar('${tecId}')" 
+                       onblur="window._cbHide('${tecId}')">
+                <input type="hidden" id="${tecId}">
+                <div id="${tecId}-dd" class="cb-dropdown"></div>
+            </div>
+            <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1 border-0" onclick="document.getElementById('${rowId}').remove();" title="Eliminar fila">
+                <i class="bi bi-trash-fill"></i>
+            </button>
+        </div>
+    `;
+
+    listaCont.appendChild(div);
+
+    if (typeof window._cbInit === 'function' && window._srPersonalItems) {
+        window._cbInit(tecId, window._srPersonalItems, 'SELECCIONE TÉCNICO...');
+        window._cbSet(tecId, '', '');
+    }
 };
 
 // ── Cascade Sub Tipo ─────────────────────────────────────────────
@@ -1312,6 +1436,7 @@ window.srCambiarTipoOT = function() {
         return '<option value="' + s + '">' + s + '</option>';
     }).join('');
     sel.disabled = !opts.length;
+    if (opts.length) sel.value = opts[0];
 };
 
 // ── Enviar OT ────────────────────────────────────────────────────
@@ -1319,22 +1444,70 @@ window.srEnviarOT = function() {
     var placa      = (document.getElementById('sr-ot-placa-hid') || {}).value || '';
     var rampaId    = (document.getElementById('sr-ot-rampa-hid') || {}).value || '';
     var idRampa    = (document.getElementById('sr-ot-id-rampa-hid') || {}).value || null;
-    var rIdx = window.srCatRampas.findIndex(function(r) { return r.id == rampaId; });
+    var rIdx = (window.srCatRampas || []).findIndex(function(r) { return r.id == rampaId; });
     var rObj = rIdx >= 0 ? window.srCatRampas[rIdx] : null;
     var rampa = rObj ? (rObj.nombre_rampa || rObj.descripcion || 'Rampa ' + rampaId) : ('Rampa ' + rampaId);
     var tipo       = (document.getElementById('sr-ot-tipo')       || {}).value || '';
     var subtipo    = (document.getElementById('sr-ot-subtipo')    || {}).value || '';
-    var supervisor = (document.getElementById('sr-ot-supervisor') || {}).value || '';
-    var motivo     = (document.getElementById('sr-ot-motivo')     || {}).value || '';
+    var supervisor = ((typeof window._cbGet === 'function' ? window._cbGet('sr-ot-supervisor') : '') || (document.getElementById('sr-ot-supervisor-inp') || {}).value || '').trim();
     var km         = (document.getElementById('sr-ot-km')         || {}).value || '0';
-    var sitIni     = (document.getElementById('sr-ot-situacion')  || {}).value || '';
-    var sistema    = ((document.getElementById('sr-ot-sistema')   || {}).value || '').trim();
-    var subsistema = ((document.getElementById('sr-ot-subsistema')|| {}).value || '').trim();
+    var chofer     = (document.getElementById('sr-ot-chofer')     || {}).value || '';
+    var sitIni     = (document.getElementById('sr-ot-situacion')  || {}).value || 'En atención';
     var fechaIng   = (document.getElementById('sr-ot-fecha-ing')  || {}).value || '';
 
-    if (!tipo)    { alert('Selecciona el tipo de OT.');     return; }
-    if (!subtipo) { alert('Selecciona el sub tipo de OT.'); return; }
-    if (!placa)   { alert('No se encontró la placa. Abre el detalle de la rampa y usa el botón "Generar OT".'); return; }
+    if (!tipo)    { alert('⚠️ Por favor selecciona el Tipo de OT.'); return; }
+    if (!subtipo) { alert('⚠️ Por favor selecciona el Sub Tipo de OT.'); return; }
+    if (!supervisor) { alert('⚠️ Por favor selecciona el Supervisor Responsable.'); return; }
+
+    var personalNombres = (window._srPersonalItems || []).map(function(p){ return p.value.toLowerCase(); });
+    if (personalNombres.length && !personalNombres.includes(supervisor.toLowerCase())) {
+        alert('⚠️ El supervisor "' + supervisor + '" no existe en el directorio de personal.\nPor favor selecciona un personal válido.');
+        return;
+    }
+
+    // Extraer motivos y técnicos asignados
+    var motivosArray = [];
+    var rows = document.querySelectorAll('#sr-ot-trabajos-lista > div');
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var chk = row.querySelector('.sr-ot-job-chk');
+        if (chk && !chk.checked) continue;
+
+        var txt = (row.querySelector('input[type="text"]') || {}).value || '';
+        var cleanTxt = txt.replace(/^[•\-\*]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').trim();
+        if (!cleanTxt) continue;
+
+        var tecInput = row.querySelector('input[type="hidden"]');
+        var tecId = tecInput ? tecInput.id : '';
+        var tecVal = ((typeof window._cbGet === 'function' && tecId ? window._cbGet(tecId) : '') || (row.querySelector('.cb-dropdown')?.previousElementSibling?.value) || '').trim();
+
+        if (tecVal && personalNombres.length && !personalNombres.includes(tecVal.toLowerCase())) {
+            alert('⚠️ El técnico "' + tecVal + '" asignado a "' + cleanTxt + '" no existe en el directorio de personal.');
+            return;
+        }
+
+        motivosArray.push({
+            motivo: cleanTxt,
+            item: cleanTxt,
+            obs: cleanTxt,
+            tecnico: tecVal,
+            tecnico_nombre: tecVal
+        });
+    }
+
+    if (!motivosArray.length) {
+        alert('⚠️ Debes incluir al menos un trabajo o motivo para esta OT.');
+        return;
+    }
+
+    var cleanMotivoStr = motivosArray.map(function(m){ return '• ' + m.motivo; }).join('\n');
+    var tecnicosUnicos = Array.from(new Set(motivosArray.map(function(m){ return m.tecnico; }).filter(Boolean)));
+
+    var btnSubmit = document.getElementById('sr-btn-confirmar-ot');
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando OT...';
+    }
 
     fetch('/api/ordenes-trabajo', {
         method: 'POST',
@@ -1346,26 +1519,44 @@ window.srEnviarOT = function() {
             id_rampa:     idRampa,
             detalles_json: JSON.stringify({
                 tipo_ot:           tipo,
+                tipo_mantenimiento: tipo,
                 sub_tipo:          subtipo,
-                motivo:            motivo,
+                subtipo_ot:        subtipo,
+                motivo:            cleanMotivoStr,
+                observaciones:     cleanMotivoStr,
+                motivos_array:     motivosArray,
+                conductor:         chofer,
+                chofer:            chofer,
+                reportado_por:     chofer,
                 rampa_origen:      rampa,
+                rampa:             rampa,
                 supervisor:        supervisor,
+                tecnico_lider:     supervisor,
+                tecnicos:          tecnicosUnicos.length ? tecnicosUnicos : [supervisor],
+                tecnicos_str:      tecnicosUnicos.join(', '),
                 km:                km,
                 situacion_inicial: sitIni,
-                sistema:           sistema,
-                sub_sistema:       subsistema
+                situacion:         sitIni,
+                sistema:           subtipo,
+                sub_sistema:       subtipo
             })
         })
     })
     .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
     .then(function(d) {
         srCerrarDrawers();
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT ' + (d.id_ot || '') + ' generada correctamente', 'success');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('🚀 ¡Éxito! OT ' + (d.id_ot || '') + ' generada correctamente', 'success');
         srCargarOTs();
     })
     .catch(function(err) {
         console.error('Error generando OT:', err);
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al generar la OT', 'danger');
+        alert('Error al generar la OT: ' + err.message);
+    })
+    .finally(function() {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="bi bi-rocket-takeoff-fill"></i> <span>Confirmar y Generar OT</span>';
+        }
     });
 };
 
