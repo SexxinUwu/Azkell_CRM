@@ -41,7 +41,14 @@ module.exports = function globalRBAC(req, res, next) {
         '/conductores',
         '/conductores-lista',
         '/roles',
-        '/usuarios-v2'
+        '/usuarios-v2',
+        '/almacen/entradas',
+        '/almacen/salidas',
+        '/almacen/inventario',
+        '/ot-trabajos',
+        '/ot-materiales',
+        '/ot-backlog',
+        '/inspecciones-por-ot'
     ];
     if (req.method === 'GET' && globalReferenceGets.some(p => path === p || path.startsWith(p))) {
         return next();
