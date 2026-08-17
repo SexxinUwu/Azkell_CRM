@@ -1992,6 +1992,28 @@ window.abrirModalGenerarOTs = async function(id) {
         });
     }
 
+// Diccionario oficial de subtipos en cascada por Tipo de OT
+window.CK_OT_SUBTIPOS = {
+    'Correctivo': ['Falla', 'Varado', 'Programado', 'Garantía', 'Accidentabilidad', 'Mala Operación'],
+    'Preventivo': ['Inspección Pre-PM', 'Campaña', 'Limpieza Integral', 'Rutina', 'Programado', 'Oportuno'],
+    'Predictivo': ['Por condición', 'Prueba'],
+    'Proactivo':  ['Mejora'],
+    'Servicio':   ['Stock', 'Taller']
+};
+
+window.ckOnCambiarTipoOT = function(cardIndex, nuevoTipo) {
+    const card = window._genOT_Cards[cardIndex];
+    if (!card) return;
+    card.tipo_ot = nuevoTipo;
+    const subs = window.CK_OT_SUBTIPOS[nuevoTipo] || [];
+    card.subtipo_ot = subs[0] || '';
+
+    const selSub = document.getElementById(`gen_subtipo_${cardIndex}`);
+    if (selSub) {
+        selSub.innerHTML = subs.map(s => `<option value="${s}" ${s === card.subtipo_ot ? 'selected' : ''}>${s}</option>`).join('');
+    }
+};
+
     // 6. Inicializar tarjetas de OT (Supervisor vacío por defecto)
     window._genOT_Cards = [];
     if (r.placa_tracto && fallasT.length > 0) {
@@ -2000,6 +2022,7 @@ window.abrirModalGenerarOTs = async function(id) {
             unidad: 'Tracto',
             placa: r.placa_tracto,
             tipo_ot: 'Correctivo',
+            subtipo_ot: 'Falla',
             supervisor: '',
             situacion: 'En atención',
             fallasSeleccionadas: fallasT.map((_, idx) => `ft_${idx}`),
@@ -2012,6 +2035,7 @@ window.abrirModalGenerarOTs = async function(id) {
             unidad: 'Remolque',
             placa: r.placa_remolque,
             tipo_ot: 'Correctivo',
+            subtipo_ot: 'Falla',
             supervisor: '',
             situacion: 'En atención',
             fallasSeleccionadas: fallasR.map((_, idx) => `fr_${idx}`),
@@ -2024,6 +2048,7 @@ window.abrirModalGenerarOTs = async function(id) {
             unidad: r.placa_tracto ? 'Tracto' : 'Remolque',
             placa: r.placa_tracto || r.placa_remolque || 'TRACTO',
             tipo_ot: 'Correctivo',
+            subtipo_ot: 'Falla',
             supervisor: '',
             situacion: 'En atención',
             fallasSeleccionadas: window._genOT_TodasFallas.map(f => f.id),
@@ -2063,6 +2088,11 @@ window.ckRenderTarjetasOT = function() {
         const metricaBadge = isTracto 
             ? `<span class="badge bg-white text-primary border border-primary-subtle fw-bold shadow-2xs"><i class="bi bi-speedometer2 me-1"></i> ${r.km_inicial ? Number(r.km_inicial).toLocaleString() + ' KM' : 'Sin KM'}</span>`
             : `<span class="badge bg-white text-warning-emphasis border border-warning-subtle fw-bold shadow-2xs"><i class="bi bi-clock-history me-1"></i> ${r.horas_motor ? r.horas_motor + ' Hrs' : 'Sin Horas'}</span>`;
+
+        const tipos = ['Correctivo', 'Preventivo', 'Predictivo', 'Proactivo', 'Servicio'];
+        const currentTipo = card.tipo_ot || 'Correctivo';
+        const subtipos = window.CK_OT_SUBTIPOS[currentTipo] || [];
+        if (!card.subtipo_ot && subtipos.length) card.subtipo_ot = subtipos[0];
 
         // Filtrar fallas relevantes para esta unidad (o todas si no hay filtro estricto)
         const fallasUnidad = window._genOT_TodasFallas.filter(f => f.unidad === card.unidad || !f.unidad);
@@ -2106,7 +2136,7 @@ window.ckRenderTarjetasOT = function() {
                         </div>
                         
                         <!-- Selector individual de Técnico Responsable con cb-dropdown -->
-                        <div class="d-flex align-items-center gap-1 ${isChecked ? '' : 'd-none'}" id="tec_wrap_${cIdx}_${f.id}" style="min-width: 200px; max-width: 280px;">
+                        <div class="d-flex align-items-center gap-1 ${isChecked ? '' : 'd-none'}" id="tec_wrap_${cIdx}_${f.id}" style="min-width: 200px; max-width: 280px; position: relative;">
                             <i class="bi bi-person-gear text-secondary" style="font-size: 0.85rem;"></i>
                             <div class="position-relative flex-grow-1">
                                 <input type="text" id="${tecInputId}-txt" 
@@ -2129,7 +2159,7 @@ window.ckRenderTarjetasOT = function() {
         const supInputId = `gen_sup_${cIdx}`;
 
         html += `
-            <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 border-start border-4 ${borderCls}" style="background: ${cardBg} !important; border: 1px solid ${cardBorder} !important;" id="card_ot_${cIdx}">
+            <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 border-start border-4 ${borderCls}" style="background: ${cardBg} !important; border: 1px solid ${cardBorder} !important; overflow: visible !important;" id="card_ot_${cIdx}">
                 <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge ${badgeCls} px-3 py-2 fw-bold text-uppercase rounded-3 shadow-2xs" style="font-size: 0.82rem;">
@@ -2146,25 +2176,27 @@ window.ckRenderTarjetasOT = function() {
                 </div>
 
                 <div class="row g-2 g-md-3 mb-3">
-                    <div class="col-6 col-md-3">
+                    <div class="col-12 col-md-3">
                         <label class="form-label">Unidad Destino</label>
-                        <select class="form-select bg-white" onchange="window.ckOnCambiarUnidadOT(${cIdx}, this)">
+                        <select class="form-select bg-white fw-bold" onchange="window.ckOnCambiarUnidadOT(${cIdx}, this)">
                             ${r.placa_tracto ? `<option value="Tracto" ${card.unidad === 'Tracto' ? 'selected' : ''}>🚛 Tracto (${r.placa_tracto})</option>` : ''}
                             ${r.placa_remolque ? `<option value="Remolque" ${card.unidad === 'Remolque' ? 'selected' : ''}>🚚 Carreta (${r.placa_remolque})</option>` : ''}
                         </select>
                     </div>
-                    <div class="col-6 col-md-3">
+                    <div class="col-6 col-md-2">
                         <label class="form-label">Tipo de OT</label>
-                        <select class="form-select bg-white" onchange="window.ckOnCambiarCampoOT(${cIdx}, 'tipo_ot', this.value)">
-                            <option value="Correctivo" ${card.tipo_ot === 'Correctivo' ? 'selected' : ''}>Correctivo</option>
-                            <option value="Preventivo" ${card.tipo_ot === 'Preventivo' ? 'selected' : ''}>Preventivo</option>
-                            <option value="Auxilio Mecánico" ${card.tipo_ot === 'Auxilio Mecánico' ? 'selected' : ''}>Auxilio Mecánico</option>
-                            <option value="Modificación / Carrocería" ${card.tipo_ot === 'Modificación / Carrocería' ? 'selected' : ''}>Modificación / Carrocería</option>
-                            <option value="Inspección General" ${card.tipo_ot === 'Inspección General' ? 'selected' : ''}>Inspección General</option>
+                        <select class="form-select bg-white fw-bold" onchange="window.ckOnCambiarTipoOT(${cIdx}, this.value)">
+                            ${tipos.map(t => `<option value="${t}" ${t === currentTipo ? 'selected' : ''}>${t}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label">Sub Tipo de OT</label>
+                        <select class="form-select bg-white fw-bold" id="gen_subtipo_${cIdx}" onchange="window.ckOnCambiarCampoOT(${cIdx}, 'subtipo_ot', this.value)">
+                            ${subtipos.map(s => `<option value="${s}" ${s === card.subtipo_ot ? 'selected' : ''}>${s}</option>`).join('')}
                         </select>
                     </div>
                     <div class="col-6 col-md-3">
-                        <label class="form-label">Supervisor Responsable</label>
+                        <label class="form-label">Supervisor Responsable (<span class="text-danger">*</span>)</label>
                         <div class="position-relative">
                             <input type="text" id="${supInputId}-txt" 
                                    class="form-control bg-white text-uppercase fw-bold" 
@@ -2177,8 +2209,8 @@ window.ckRenderTarjetasOT = function() {
                             <div id="${supInputId}-dd" class="cb-dropdown"></div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label">Situación (Status Rampa)</label>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label">Situación (Rampa)</label>
                         <select class="form-select bg-white fw-bold" onchange="window.ckOnCambiarCampoOT(${cIdx}, 'situacion', this.value)">
                             <option value="En atención" ${card.situacion === 'En atención' ? 'selected' : ''}>En atención</option>
                             <option value="Finalizado" ${card.situacion === 'Finalizado' ? 'selected' : ''}>Finalizado</option>
@@ -2197,7 +2229,7 @@ window.ckRenderTarjetasOT = function() {
                             Selecciona los Trabajos / Motivos para esta OT (${card.fallasSeleccionadas.length} seleccionados):
                         </span>
                     </div>
-                    <div class="border rounded-3 p-2 bg-white overflow-auto" style="max-height: 220px;">
+                    <div class="border rounded-3 p-2 bg-white" style="overflow: visible !important;">
                         ${fallasHtml}
                     </div>
                 </div>
@@ -2269,6 +2301,7 @@ window.ckAgregarTarjetaOT = function() {
         unidad: defUnidad,
         placa: defPlaca,
         tipo_ot: 'Correctivo',
+        subtipo_ot: 'Falla',
         supervisor: '',
         situacion: 'En atención',
         fallasSeleccionadas: fallasDisponibles,
@@ -2344,13 +2377,29 @@ window.ckOnCambiarTecnicoFalla = function(cardIndex, fallaId, tecnicoVal) {
 window.enviarGeneracionOTs = function(e) {
     e.preventDefault();
     const id = document.getElementById('gen_reporte_id').value;
-    const rampa = (typeof window._cbGet === 'function' ? window._cbGet('gen_id_rampa') : '') || (document.getElementById('gen_id_rampa-txt') || {}).value || (document.getElementById('gen_id_rampa') || {}).value || '';
+    const rampaRaw = (typeof window._cbGet === 'function' ? window._cbGet('gen_id_rampa') : '') || (document.getElementById('gen_id_rampa-txt') || {}).value || (document.getElementById('gen_id_rampa') || {}).value || '';
+    const rampa = rampaRaw.trim();
     const fIngreso = document.getElementById('gen_fecha_ingreso').value;
     const fSalida = document.getElementById('gen_fecha_salida').value;
     const r = window._genOT_Reporte || {};
 
     if (!rampa) {
         alert('⚠️ Por favor selecciona una ubicación o rampa de taller.');
+        const rTxt = document.getElementById('gen_id_rampa-txt');
+        if (rTxt) rTxt.focus();
+        return;
+    }
+
+    // Validación estricta de Rampa en catálogo
+    const rampaValida = (window._genOT_Rampas || []).some(rm => {
+        const n = (rm.nombre_rampa || rm.nombre || rm.rampa || '').trim().toLowerCase();
+        return n === rampa.toLowerCase();
+    }) || ['rampa 1', 'rampa 2', 'rampa 3', 'zona lavado', 'zona de espera', 'taller tercero', 'auxilio mecánico', 'auxilio mecanico'].includes(rampa.toLowerCase());
+
+    if (!rampaValida) {
+        alert(`⚠️ La ubicación/rampa "${rampa}" no existe en el catálogo de rampas configuradas.\nPor favor selecciona una rampa válida de la lista.`);
+        const rTxt = document.getElementById('gen_id_rampa-txt');
+        if (rTxt) rTxt.focus();
         return;
     }
 
@@ -2363,25 +2412,62 @@ window.enviarGeneracionOTs = function(e) {
     const otsPayload = [];
     for (let i = 0; i < window._genOT_Cards.length; i++) {
         const c = window._genOT_Cards[i];
+
+        // Validar Supervisor Obligatorio y Existencia Estricta
+        const supVal = ((typeof window._cbGet === 'function' ? window._cbGet(`gen_sup_${i}`) : '') || (document.getElementById(`gen_sup_${i}-txt`) || {}).value || c.supervisor || '').trim();
+        
+        if (!supVal) {
+            alert(`⚠️ Por favor selecciona el Supervisor Responsable para la OT #${i + 1} (${c.unidad}).`);
+            const supTxt = document.getElementById(`gen_sup_${i}-txt`);
+            if (supTxt) supTxt.focus();
+            return;
+        }
+
+        const supValido = (window._genOT_Tecnicos || []).some(t => t.trim().toLowerCase() === supVal.toLowerCase());
+        if (!supValido) {
+            alert(`⚠️ El supervisor "${supVal}" asignado en la OT #${i + 1} no existe en el directorio de personal.\nPor favor selecciona un personal válido de la lista desplegable.`);
+            const supTxt = document.getElementById(`gen_sup_${i}-txt`);
+            if (supTxt) supTxt.focus();
+            return;
+        }
+
+        // Validar Subtipo de OT
+        if (!c.subtipo_ot) {
+            alert(`⚠️ Por favor selecciona el Sub Tipo de OT para la OT #${i + 1} (${c.unidad}).`);
+            return;
+        }
         
         // Obtener motivos y técnicos específicos seleccionados
         const fallasObjs = window._genOT_TodasFallas.filter(f => (c.fallasSeleccionadas || []).includes(f.id));
         
-        const motivosArray = fallasObjs.map(f => {
-            const tec = (typeof window._cbGet === 'function' ? window._cbGet(`gen_tec_${i}_${f.id}`) : '') || (document.getElementById(`gen_tec_${i}_${f.id}-txt`) || {}).value || (c.tecnicoPorFalla && c.tecnicoPorFalla[f.id]) || '';
-            return {
+        const motivosArray = [];
+        for (let j = 0; j < fallasObjs.length; j++) {
+            const f = fallasObjs[j];
+            const tecRaw = (typeof window._cbGet === 'function' ? window._cbGet(`gen_tec_${i}_${f.id}`) : '') || (document.getElementById(`gen_tec_${i}_${f.id}-txt`) || {}).value || (c.tecnicoPorFalla && c.tecnicoPorFalla[f.id]) || '';
+            const tec = tecRaw.trim();
+
+            if (tec) {
+                const tecValido = (window._genOT_Tecnicos || []).some(t => t.trim().toLowerCase() === tec.toLowerCase());
+                if (!tecValido) {
+                    alert(`⚠️ El técnico "${tec}" asignado al trabajo "${f.item}" en la OT #${i + 1} no existe en el directorio de personal.\nPor favor selecciona un técnico válido de la lista.`);
+                    const tecTxt = document.getElementById(`gen_tec_${i}_${f.id}-txt`);
+                    if (tecTxt) tecTxt.focus();
+                    return;
+                }
+            }
+
+            motivosArray.push({
                 motivo: `${f.item}: ${f.obs}`,
                 sistema: f.sistema,
                 item: f.item,
                 obs: f.obs,
                 tecnico: tec,
                 tecnico_nombre: tec
-            };
-        });
+            });
+        }
 
         // Lista de técnicos únicos seleccionados para esta OT
         const tecnicosUnicos = Array.from(new Set(motivosArray.map(m => m.tecnico).filter(Boolean)));
-        const supervisorFinal = (typeof window._cbGet === 'function' ? window._cbGet(`gen_sup_${i}`) : '') || (document.getElementById(`gen_sup_${i}-txt`) || {}).value || c.supervisor || 'Por Asignar';
 
         otsPayload.push({
             unidad: c.unidad,
@@ -2389,11 +2475,12 @@ window.enviarGeneracionOTs = function(e) {
             km: c.unidad === 'Tracto' ? (r.km_inicial || 0) : 0,
             horas_motor: (c.unidad === 'Remolque' || c.unidad === 'Carreta') ? (r.horas_motor || null) : null,
             tipo_ot: c.tipo_ot || 'Correctivo',
-            supervisor: supervisorFinal,
+            subtipo_ot: c.subtipo_ot || 'Falla',
+            supervisor: supVal,
             situacion: c.situacion || 'En atención',
             fallas_seleccionadas: fallasObjs.map(f => `${f.item}: ${f.obs}`),
             motivos_array: motivosArray,
-            tecnicos: tecnicosUnicos.length > 0 ? tecnicosUnicos : ['Por Asignar']
+            tecnicos: tecnicosUnicos.length > 0 ? tecnicosUnicos : [supVal]
         });
     }
 
