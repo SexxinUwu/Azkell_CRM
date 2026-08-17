@@ -2903,19 +2903,99 @@ window.actualizarBadgesSidebar = function() {
 
 // ── Pull-to-refresh (mobile) — ELIMINADO ──────────────────────────────────────
 
-// ── History API — botón atrás nativo en móvil ─────────────────────────────────
+// ── History API — Gestión jerárquica de botón atrás (LIFO) ─────────────────
 window._navFromPopstate = false;
+window.registrarAperturaDrawer = function(nombre) {
+    var ruta = sessionStorage.getItem('fleet_rutaActual') || 'dashboard';
+    history.pushState({ ruta: ruta, drawer: nombre || 'drawer', t: Date.now() }, '', window.location.hash);
+};
+
 window.addEventListener('popstate', function(e) {
-    // Si hay un offcanvas o modal abierto, cerrarlo en lugar de navegar
+    // 1. Sub-drawers de OT / inspecciones / comentarios (Nivel 3)
+    var subDrawers = ['rot-drawer-trabajo', 'rot-drawer-material', 'drawerInspeccion', 'rot-drawer-backlog', 'rot-drawer-editar-ot', 'rot-drawer-editar-fechas'];
+    for (var i = 0; i < subDrawers.length; i++) {
+        var sd = document.getElementById(subDrawers[i]);
+        if (sd && (sd.classList.contains('open') || sd.classList.contains('active'))) {
+            if (typeof window.rotCerrarSubDrawer === 'function') {
+                window.rotCerrarSubDrawer(subDrawers[i]);
+            } else {
+                sd.classList.remove('open');
+                sd.classList.remove('active');
+            }
+            return;
+        }
+    }
+
+    // 2. Detalle principal de OT (Nivel 2)
+    var rotDetalle = document.getElementById('rot-drawer-detalle');
+    if (rotDetalle && (rotDetalle.classList.contains('open') || rotDetalle.classList.contains('active'))) {
+        if (typeof window.rotCerrarDetalle === 'function') {
+            window.rotCerrarDetalle();
+        } else {
+            rotDetalle.classList.remove('open');
+            var rotBd = document.getElementById('rotDrawerBackdrop');
+            if (rotBd) rotBd.classList.remove('open');
+        }
+        return;
+    }
+
+    // 3. Drawers secundarios / formularios de Status Rampa (Nivel 2)
+    var srDrawerOT = document.getElementById('sr-drawer-ot');
+    if (srDrawerOT && srDrawerOT.classList.contains('open')) {
+        if (typeof window.srCerrarDrawers === 'function') window.srCerrarDrawers();
+        else srDrawerOT.classList.remove('open');
+        return;
+    }
+    var srDrawerReg = document.getElementById('sr-drawer-registro');
+    if (srDrawerReg && srDrawerReg.classList.contains('open')) {
+        if (typeof window.srCerrarDrawers === 'function') window.srCerrarDrawers();
+        else srDrawerReg.classList.remove('open');
+        return;
+    }
+    var srCfg = document.getElementById('sr-config-rampas');
+    if (srCfg && srCfg.classList.contains('open')) {
+        if (typeof window.srCerrarConfigRampas === 'function') window.srCerrarConfigRampas();
+        else srCfg.classList.remove('open');
+        return;
+    }
+
+    // 4. Detalle principal de Status Rampa / Historial (Nivel 1)
+    var srDetalle = document.getElementById('sr-panel-detalle');
+    if (srDetalle && srDetalle.classList.contains('open')) {
+        if (typeof window.srCerrarDetalle === 'function') window.srCerrarDetalle();
+        else srDetalle.classList.remove('open');
+        return;
+    }
+    var srDetalleHist = document.getElementById('sr-panel-detalle-hist');
+    if (srDetalleHist && srDetalleHist.classList.contains('open')) {
+        if (typeof window.srCerrarDetalleHist === 'function') window.srCerrarDetalleHist();
+        else srDetalleHist.classList.remove('open');
+        return;
+    }
+
+    // 5. Otros drawers genéricos o modales abiertos
+    var genDrawer = document.querySelector('.rot-drawer.open, .sr-drawer-global.open, .sr-drawer.open, .panel-drawer.open');
+    if (genDrawer) {
+        genDrawer.classList.remove('open');
+        var anyBack = document.querySelector('.rot-backdrop.open, #srDrawerBackdrop.open, #rotDrawerBackdrop.open');
+        if (anyBack) anyBack.classList.remove('open');
+        return;
+    }
+
     var openOffcanvas = document.querySelector('.offcanvas.show');
     if (openOffcanvas) {
         var bsOffcanvas = bootstrap.Offcanvas.getInstance(openOffcanvas);
         if (bsOffcanvas) { bsOffcanvas.hide(); }
-        // Reinsert state para no retroceder más
-        var ruta = sessionStorage.getItem('fleet_rutaActual') || 'dashboard';
-        history.pushState({ ruta: ruta }, '', '#' + ruta.replace(/\//g, '-'));
         return;
     }
+    var openModal = document.querySelector('.modal.show');
+    if (openModal) {
+        var bsModal = bootstrap.Modal.getInstance(openModal);
+        if (bsModal) { bsModal.hide(); }
+        return;
+    }
+
+    // 6. Navegar entre módulos cuando no hay nada superpuesto
     var ruta = (e.state && e.state.ruta) ? e.state.ruta : (sessionStorage.getItem('fleet_rutaActual') || 'dashboard');
     window._navFromPopstate = true;
     cargarModuloAislado(ruta);
