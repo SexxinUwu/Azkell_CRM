@@ -566,16 +566,29 @@
 </div><!-- fin moduloReportesOT -->
 
 
-<!-- ═══════════════ DRAWER: Detalle de OT ═══════════════ -->
-<div class="rot-drawer" id="rot-drawer-detalle">
-    <div class="rot-drawer-hd">
-        <span class="rot-drawer-title">Detalle de Orden de Trabajo</span>
-        <button class="btn btn-sm" onclick="window.rotCerrarDetalle()" style="color:var(--subtext)">
+<!-- ═══════════════ DRAWER: Detalle de OT (MODERNO BENTO) ═══════════════ -->
+<div class="rot-drawer" id="rot-drawer-detalle" style="max-width: 720px; width: 100%;">
+    <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
+                    onclick="window.rotCerrarDetalle()" 
+                    title="Volver" 
+                    style="width: 34px; height: 34px; color: var(--subtext);">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <div>
+                <span class="rot-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+                    <i class="bi bi-file-earmark-text-fill text-primary"></i> Detalle de Orden de Trabajo
+                </span>
+                <small class="text-muted d-block" style="font-size: 0.72rem;">Ficha integral, control de tiempos, repuestos y costos</small>
+            </div>
+        </div>
+        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.rotCerrarDetalle()" style="color:var(--subtext);">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div class="rot-drawer-body" id="rot-drawer-body"></div>
-    <div class="rot-drawer-footer" id="rot-drawer-footer"></div>
+    <div class="rot-drawer-body p-3 overflow-auto custom-scrollbar" id="rot-drawer-body" style="background: #f8fafc;"></div>
+    <div class="rot-drawer-footer bg-white border-top px-3 py-2" id="rot-drawer-footer"></div>
 </div>
 
 

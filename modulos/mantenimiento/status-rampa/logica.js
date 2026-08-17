@@ -83,6 +83,7 @@ function srCargarEntradas() {
                     rampa:        r.rampa,
                     placa:        r.placa,
                     km:           r.km || '',
+                    conductor:    r.conductor || r.chofer || r.reportado_por || '',
                     fechaIngreso: r.fecha_ingreso ? String(r.fecha_ingreso).split('T')[0] : '',
                     horaIngreso:  r.hora_ingreso  ? String(r.hora_ingreso).slice(0,5) : '',
                     fechaSalida:  r.fecha_salida  ? String(r.fecha_salida).split('T')[0] : '',
@@ -802,7 +803,7 @@ window.srAbrirDetalle = function(id) {
                     <div>
                         <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                             <span class="fw-bold text-primary" style="font-size: 0.92rem;">${window.srFormatID(idOt)}</span>
-                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle fw-bold text-uppercase" style="font-size: 0.68rem;">${tipoStr}${subStr ? ' • ' + subStr : ''}</span>
+                            <span class="badge rounded-pill fw-bold text-uppercase" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-size: 0.7rem; padding: 3px 9px; letter-spacing: 0.03em;">${tipoStr}${subStr ? ' • ' + subStr : ''}</span>
                         </div>
                         <div class="d-flex align-items-center gap-2 text-muted small">
                             ${supStr ? `<span><i class="bi bi-person-gear text-secondary me-1"></i>${_srEsc(supStr)}</span> • ` : ''}
@@ -884,6 +885,20 @@ function srLimpiarFormRegistro() {
         window._cbSet('sr-f-placa', '', '');
         window._cbSet('sr-f-conductor', '', '');
     }
+    if (typeof window._cbReset === 'function') {
+        window._cbReset('sr-f-placa');
+        window._cbReset('sr-f-conductor');
+    }
+    var cTxt = document.getElementById('sr-f-conductor-txt'); if (cTxt) cTxt.value = '';
+    var cHid = document.getElementById('sr-f-conductor'); if (cHid) cHid.value = '';
+    var pTxt = document.getElementById('sr-f-placa-txt'); if (pTxt) pTxt.value = '';
+    var pHid = document.getElementById('sr-f-placa'); if (pHid) pHid.value = '';
+
+    var sSit = document.getElementById('sr-f-situacion');
+    if (sSit && sSit.options && sSit.options[0]) sSit.value = sSit.options[0].value;
+    var sR = document.getElementById('sr-f-rampa');
+    if (sR) { sR.value = ''; sR.disabled = false; }
+
     var tc = document.getElementById('sr-f-trabajos-container');
     if (tc) tc.innerHTML = '';
     if (typeof window.srAgregarFilaTrabajo === 'function') {
@@ -940,13 +955,24 @@ window.srEditarRampa = function(id) {
     var hidR = document.getElementById('sr-f-rampa-id');
     if (hidR) hidR.value = '';
 
+    var personalList = (window.dataGlobalConductores || []).map(function(c) {
+        var n = (typeof c === 'string') ? c : (c[1] || c.nombre || c.conductor || '');
+        return n.trim();
+    }).filter(Boolean);
+    if (!personalList.length && window._genOT_Tecnicos) personalList = window._genOT_Tecnicos;
+    var personalItems = Array.from(new Set(personalList)).map(function(p) { return { value: p, label: p }; });
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('sr-f-conductor', personalItems, 'SELECCIONE CHOFER...');
+    }
+
+    var conductorVal = (e.conductor || e.chofer || e.reportado_por || '').trim();
     var set = function(eid, val) { var el = document.getElementById(eid); if (el) el.value = val || ''; };
     if (typeof window._cbSet === 'function') {
         window._cbSet('sr-f-placa', e.placa, e.placa);
-        window._cbSet('sr-f-conductor', e.conductor || e.chofer || e.reportado_por || '', e.conductor || e.chofer || e.reportado_por || '');
+        window._cbSet('sr-f-conductor', conductorVal, conductorVal);
     } else {
         var el = document.getElementById('sr-f-placa'); if (el) el.value = e.placa || '';
-        var elC = document.getElementById('sr-f-conductor'); if (elC) elC.value = e.conductor || e.chofer || e.reportado_por || '';
+        var elC = document.getElementById('sr-f-conductor'); if (elC) elC.value = conductorVal;
     }
     set('sr-f-km',        e.km);
     set('sr-f-fecha-ing', e.fechaIngreso);
@@ -1646,7 +1672,7 @@ window.srGenerarOT = async function(id) {
     if (rawObs) {
         var lines = rawObs.split('\n');
         lines.forEach(function(line) {
-            var clean = line.replace(/^[•\-\*]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').trim();
+            var clean = line.replace(/^[•\-\*]\s*/, '').replace(/^\d+[\.\)\-]?\s*/, '').replace(/^(?:FALLA\s*MANUAL|MANUAL)\s*:\s*/i, '').trim();
             if (clean) {
                 window._srOT_TodasFallas.push({
                     id: 'sr_f_' + (window._srOT_TrabajosCount++),
@@ -1761,7 +1787,7 @@ window.srQuitarTarjetaOT = function(cIdx) {
 window.srAgregarNuevoTrabajoGeneral = function() {
     var nuevoTexto = prompt('Ingresa la descripción del nuevo trabajo / motivo:');
     if (!nuevoTexto || !nuevoTexto.trim()) return;
-    var clean = nuevoTexto.replace(/^[•\-\*]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').trim();
+    var clean = nuevoTexto.replace(/^[•\-\*]\s*/, '').replace(/^\d+[\.\)\-]?\s*/, '').replace(/^(?:FALLA\s*MANUAL|MANUAL)\s*:\s*/i, '').trim();
     var fObj = {
         id: 'sr_f_' + (window._srOT_TrabajosCount++),
         desc: clean
@@ -1819,11 +1845,11 @@ window.srRenderTarjetasOT = function() {
                 <div class="p-2 mb-2 rounded-3 border ${isChecked ? 'bg-primary bg-opacity-10 border-primary-subtle' : (isDisabled ? 'bg-light opacity-50' : 'bg-white')} d-flex flex-wrap align-items-center justify-content-between gap-2" id="sr_falla_row_${cIdx}_${f.id}" style="overflow:visible !important;">
                     <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width: 220px;">
                         <input type="checkbox" class="form-check-input mt-0 sr-falla-chk" 
-                               id="chk_sr_${cIdx}_${f.id}" 
-                               ${isChecked ? 'checked' : ''} 
-                               ${isDisabled ? 'disabled' : ''} 
-                               onchange="window.srToggleFallaOT(${cIdx}, '${f.id}', this.checked)"
-                               style="cursor:pointer; width:18px; height:18px;">
+                                id="chk_sr_${cIdx}_${f.id}" 
+                                ${isChecked ? 'checked' : ''} 
+                                ${isDisabled ? 'disabled' : ''} 
+                                onchange="window.srToggleFallaOT(${cIdx}, '${f.id}', this.checked)"
+                                style="cursor:pointer; width:18px; height:18px;">
                         <label class="form-check-label small m-0 flex-grow-1" for="chk_sr_${cIdx}_${f.id}" style="cursor: pointer;">
                             <strong class="text-dark d-block text-uppercase">${f.desc}</strong>
                             ${isDisabled ? `<span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.68rem;">Asignado en OT #${asignadaEnOtra}</span>` : ''}
@@ -1855,8 +1881,8 @@ window.srRenderTarjetasOT = function() {
             <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1.5px solid #e2e8f0 !important; overflow: visible !important;">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-dark px-3 py-2 fw-bold text-uppercase rounded-3 shadow-2xs" style="font-size: 0.82rem;">
-                            <i class="bi bi-file-earmark-text-fill text-warning me-1"></i> OT #${cIdx + 1}
+                        <span class="badge px-3 py-2 fw-bold text-uppercase rounded-3 shadow-2xs" style="font-size: 0.82rem; color: #ffffff !important; background-color: #0f172a !important;">
+                            <i class="bi bi-file-earmark-text-fill text-warning me-1"></i> <span style="color: #ffffff !important;">OT #${cIdx + 1}</span>
                         </span>
                         <span class="text-muted fw-semibold small">Configuración de Orden</span>
                     </div>
@@ -3064,19 +3090,6 @@ window.srGuardarEdicionOT = function() {
     });
 };
 
-function srLimpiarFormRegistro() {
-    ['sr-f-idx','sr-f-km','sr-f-fecha-ing','sr-f-hora-ing',
-     'sr-f-fecha-sal','sr-f-hora-sal','sr-f-obs','sr-f-obs-extra','sr-f-rampa-id'].forEach(function(id) {
-        var el = document.getElementById(id); if (el) el.value = '';
-    });
-    if (typeof window._cbReset === 'function') window._cbReset('sr-f-placa');
-    var sSit = document.getElementById('sr-f-situacion');
-    if (sSit) sSit.value = sSit.options[0] ? sSit.options[0].value : '';
-    var sR = document.getElementById('sr-f-rampa');
-    if (sR) { sR.value = ''; sR.disabled = false; }
-    window.srResetTrabajosFormulario();
-}
-
 window.srEliminarRegistroGeneral = function(idRampa) {
     srConfirmModerno(
         '¿Eliminar registro de rampa?',
@@ -3278,7 +3291,7 @@ window.srParsearTareasArray = function(texto) {
             var nVal = trimmed.replace(/^(nota|obs):\s*/i, '').trim();
             if (nVal) notas.push(nVal);
         } else {
-            var tVal = trimmed.replace(/^[-*•]\s*/, '').replace(/^\d+[\.\)]\s*/, '').trim();
+            var tVal = trimmed.replace(/^[-*•]\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/^(?:FALLA\s*MANUAL|MANUAL)\s*:\s*/i, '').trim();
             if (tVal) tareas.push(tVal);
         }
     });

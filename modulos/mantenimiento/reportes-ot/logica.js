@@ -254,6 +254,10 @@ function rotCleanObsText(text) {
     return String(text)
         .replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '')
         .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
+        .replace(/(?:^|\n)\s*(?:\d+[\.\)\-]?\s*)?(?:FALLA\s*MANUAL|MANUAL)\s*:\s*/gim, function(match) {
+            return match.startsWith('\n') ? '\n' : '';
+        })
+        .replace(/^(?:FALLA\s*MANUAL|MANUAL)\s*:\s*/gim, '')
         .trim();
 }
 
@@ -285,57 +289,73 @@ window.rotRenderTabla = function(lista) {
 
     var html = '';
     var mobileHtml = '';
-    
-    for (var i = 0; i < lista.length; i++) {
-        var ot  = lista[i];
+    lista.forEach(function(ot) {
+        var idOT = ot.ticket_entrada || ot.id_ot || '—';
         var det = rotDetalles(ot);
-        var esActiva = (window.rotDetalleId !== null && String(window.rotDetalleId) === String(ot.ticket_entrada || ot.id_ot));
-        var idOT = ot.ticket_entrada || ot.id_ot || '?';
+        var subTipo = det.sub_tipo || det.subtipo_ot || '—';
+        var esActiva = (window.rotDetalleId === idOT);
+        var rId = det.rampa_origen || det.rampa || det.situacion_inicial || ot.id_rampa || '';
+        var rObj = (window._rotCatRampas || []).find(function(x) { return x.id == rId; });
+        var rName = rObj ? (rObj.descripcion || rObj.nombre_rampa || rObj.nombre || rId) : (rId ? 'Rampa ' + rId : '—');
+        var tecsStr = det.tecnicos ? (Array.isArray(det.tecnicos) ? det.tecnicos.join(', ') : det.tecnicos) : (det.tecnicos_str || det.tecnico_lider || '—');
+
         var rawObs = rotCleanObsText(det.motivo || ot.observaciones || '');
-        var obs  = rotEscHtml(rawObs.substring(0, 80)) + (rawObs.length > 80 ? '...' : '');
 
-        // --- DESKTOP ROW ---
-        html += '<tr class="' + (esActiva ? 'rot-row-activa' : '') + '" onclick="window.rotAbrirDetalle(\'' + rotEscHtml(String(idOT)) + '\')">';
-        html += '<td onclick="event.stopPropagation();" style="white-space:nowrap;padding:8px 10px;">' + rotBotonesAccion(ot) + '</td>';
-        html += '<td style="font-weight:800;color:var(--primary,#5865F2);white-space:nowrap;">' + rotEscHtml(String(idOT)) + '</td>';
-        html += '<td style="font-weight:700;">' + rotEscHtml(ot.placa || '?') + '</td>';
-        html += '<td style="font-size:0.85rem;color:var(--text);">' + rotFmtKmCol(det) + '</td>';
-        html += '<td>' + rotBadgeTipo(det.tipo_ot || ot.tipo || '') + (det.sub_tipo ? '<span style="color:var(--subtext);font-size:0.78rem;margin-left:5px;">' + rotEscHtml(det.sub_tipo) + '</span>' : '') + '</td>';
-        html += '<td style="font-size:0.8rem;">' + rotEscHtml(det.supervisor || ot.supervisor || '?') + '</td>';
-        html += '<td>' + rotBadgeSituacion(det.situacion || det.situacion_inicial || 'En Atención') + '</td>';
-        html += '<td style="font-size:0.78rem;color:var(--subtext);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + rotEscHtml(rawObs) + '">' + (obs || '?') + '</td>';
-        html += '<td style="font-weight:700;color:#16a34a;">' + rotFmtMoney(ot.costo_total) + '</td>';
-        html += '<td style="font-size:0.78rem;color:var(--subtext);white-space:nowrap;">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>';
-        html += '<td style="text-align:center;"><button class="btn btn-sm" style="background:#f1f5f9;border:1px solid #e2e8f0;color:#3b82f6;border-radius:6px;padding:3px 8px;" onclick="event.stopPropagation(); window.rotVerFormatoOT(\'' + rotEscHtml(String(idOT)) + '\')"><i class="bi bi-eye-fill"></i></button></td>';
-        html += '</tr>';
-    }
-    
+        html += '<tr class="' + (esActiva ? 'rot-tr-activa' : '') + '" data-id="' + rotEscHtml(idOT) + '" onclick="window.rotAbrirDetalle(\'' + rotEscHtml(idOT) + '\')">'
+              + '<td style="font-weight:700;color:var(--primary,#5865F2);white-space:nowrap;">' + rotEscHtml(idOT) + '</td>'
+              + '<td>' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>'
+              + '<td style="font-weight:700;">' + rotEscHtml(ot.placa || '—') + '</td>'
+              + '<td>' + rotEscHtml(rName) + '</td>'
+              + '<td>' + rotEscHtml(det.tipo_ot || ot.tipo || '—') + '</td>'
+              + '<td>' + rotEscHtml(subTipo) + '</td>'
+              + '<td>' + rotBadgeEstado(ot.estado) + '</td>'
+              + '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + rotEscHtml(rawObs) + '">' + rotEscHtml(rawObs || '—') + '</td>'
+              + '<td>' + rotEscHtml(det.supervisor || ot.supervisor || '—') + '</td>'
+              + '<td>' + rotEscHtml(tecsStr) + '</td>'
+              + '</tr>';
+
+        // Tarjeta móvil
+        mobileHtml += '<div class="rot-mobile-card ' + (esActiva ? 'border-primary' : '') + '" onclick="window.rotAbrirDetalle(\'' + rotEscHtml(idOT) + '\')">'
+                    + '<div class="d-flex justify-content-between align-items-center mb-2">'
+                    + '  <span class="rot-mobile-card-title">' + rotEscHtml(idOT) + '</span>'
+                    + '  <span>' + rotBadgeEstado(ot.estado) + '</span>'
+                    + '</div>'
+                    + '<div class="rot-mobile-card-row mb-1">'
+                    + '  <span class="rot-mobile-card-label">Placa:</span>'
+                    + '  <span class="rot-mobile-card-val fw-bold text-primary">' + rotEscHtml(ot.placa || '—') + '</span>'
+                    + '</div>'
+                    + '<div class="rot-mobile-card-row mb-1">'
+                    + '  <span class="rot-mobile-card-label">Rampa:</span>'
+                    + '  <span class="rot-mobile-card-val">' + rotEscHtml(rName) + '</span>'
+                    + '</div>'
+                    + '<div class="rot-mobile-card-row mb-1">'
+                    + '  <span class="rot-mobile-card-label">Tipo:</span>'
+                    + '  <span class="rot-mobile-card-val">' + rotEscHtml(det.tipo_ot || ot.tipo || '—') + (subTipo !== '—' ? ' (' + rotEscHtml(subTipo) + ')' : '') + '</span>'
+                    + '</div>'
+                    + '<div class="rot-mobile-card-row mb-1">'
+                    + '  <span class="rot-mobile-card-label">Supervisor:</span>'
+                    + '  <span class="rot-mobile-card-val">' + rotEscHtml(det.supervisor || ot.supervisor || '—') + '</span>'
+                    + '</div>'
+                    + '<div class="rot-mobile-card-row mb-1">'
+                    + '  <span class="rot-mobile-card-label">Técnicos:</span>'
+                    + '  <span class="rot-mobile-card-val">' + rotEscHtml(tecsStr) + '</span>'
+                    + '</div>'
+                    + (rawObs ? '<div class="rot-mobile-card-row mt-2 pt-2 border-top"><span class="text-muted small text-truncate" style="max-width:100%">' + rotEscHtml(rawObs) + '</span></div>' : '')
+                    + '</div>';
+    });
+
     tbody.innerHTML = html;
-}
+    if (mobileList) mobileList.innerHTML = mobileHtml;
+};
 
+// ── Abrir drawer de detalle (MODERNO BENTO UI) ──────────────────────────────────────
 window.rotAbrirDetalle = function(idOT) {
     if (!idOT) return;
-    var ot = (window.rotData || []).find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
-    if (!ot) {
-        fetch('/api/ordenes-trabajo')
-            .then(function(r){ return r.json(); })
-            .then(function(data){
-                window.rotData = Array.isArray(data) ? data : [];
-                var found = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
-                if (found) {
-                    window.rotAbrirDetalle(idOT);
-                } else if (typeof window.mostrarAlerta === 'function') {
-                    window.mostrarAlerta('No se encontró la Orden de Trabajo ' + idOT, 'warning');
-                }
-            })
-            .catch(function(err){ console.error('Error al cargar OT:', err); });
-        return;
-    }
-    
-    window.rotCurrentOt = ot;
+    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
+    if (!ot) return;
 
-    window.rotDetalleId  = idOT;
-    window.rotOtActivaId = idOT;
+    window.rotDetalleId = idOT;
+    if (typeof window.registrarAperturaDrawer === 'function') window.registrarAperturaDrawer('rot-drawer-detalle');
     if (typeof window.rotRenderTabla === 'function' && document.getElementById('rot-tbody')) {
         window.rotRenderTabla(window.rotDatosFiltrados);
     }
@@ -347,149 +367,303 @@ window.rotAbrirDetalle = function(idOT) {
     var puedeEditar = window.checkPerm('ot', 'e');
 
     function esc(s) { return rotEscHtml(String(s||'')); }
-    function fld(lbl, val) {
-        return '<div class="rot-field"><span class="rot-field-lbl">' + esc(lbl) + '</span><span class="rot-field-val">' + val + '</span></div>';
-    }
-    function badge(e) {
-        var map = {
-            'Pendiente':  ['rot-b-pendiente',  'Pendiente'],
-            'En Proceso': ['rot-b-en-proceso', 'En Proceso'],
-            'Pausada':    ['rot-b-pausada',    'Pausada'],
-            'Aprobada':   ['rot-b-aprobada',   'Aprobada'],
-            'Cerrada':    ['rot-b-finalizado', 'Cerrada'],
-            'Finalizado': ['rot-b-finalizado', 'Finalizado'],
-            'Anulado':    ['rot-b-anulado',    'Anulado']
-        };
-        var v = map[e] || ['rot-b-pendiente', e || '—'];
-        return '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>';
-    }
 
-    var html = '';
-    // ID bar
-    html += '<div class="rot-id-bar">';
-    html += '<div><div class="rot-id-lbl">N° Orden de Trabajo</div><div class="rot-id-num">' + esc(idOT) + '</div></div>';
-    html += '<div style="text-align:right;">' + badge(estado)
-          + '<div style="font-size:0.72rem;color:var(--subtext);margin-top:4px;">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</div></div>';
-    html += '</div>';
-
-    // Datos Generales
-    html += '<div class="rot-sec"><div class="rot-sec-hd">Datos Generales</div>';
-    html += fld('Placa',      esc(ot.placa || '-'));
+    var labelKm = det.horas_motor ? 'Horas Motor' : 'Kilometraje';
+    var tipoOtStr = (det.tipo_ot || ot.tipo || 'Correctivo');
+    var subTipoOtStr = (det.sub_tipo || '');
     var rId = det.rampa_origen || det.rampa || det.situacion_inicial || ot.id_rampa || '';
     var rObj = (window._rotCatRampas || []).find(function(x) { return x.id == rId; });
-    var rName = rObj ? (rObj.descripcion || rObj.nombre || rId) : rId;
-    html += fld('Rampa',      esc(rName || '-'));
-    html += fld('Tipo OT',    esc(det.tipo_ot   || ot.tipo      || '-'));
-    html += fld('Sub Tipo',   esc(det.sub_tipo   || '—'));
-    html += fld('Supervisor', esc(det.supervisor || ot.supervisor|| '—'));
+    var rName = rObj ? (rObj.descripcion || rObj.nombre_rampa || rObj.nombre || rId) : (rId ? 'Rampa ' + rId : 'Sin Rampa');
     var tecsStr = det.tecnicos ? (Array.isArray(det.tecnicos) ? det.tecnicos.join(', ') : det.tecnicos) : (det.tecnicos_str || det.tecnico_lider || '—');
-    html += fld('Técnicos Asignados', esc(tecsStr));
-    html += fld('Status Rampa',  rotBadgeSituacion(det.situacion || det.situacion_inicial || 'En Atención'));
-    html += fld('Costo Total','<span id="rot-ot-costo-total" style="font-weight:800;color:#16a34a;">S/' + parseFloat(ot.costo_total||0).toFixed(2) + '</span>');
-    html += '</div>';
-
-    // Tiempos de la OT
     var t = rotCalcularTiempos(ot);
-    html += '<div class="rot-sec"><div class="rot-sec-hd">Tiempos de la Orden</div>';
-    html += fld('Ingreso a Taller', rotFmtFecha(ot.fecha_ingreso || ot.creado_en));
-    var labelKm = det.horas_motor ? 'Horas Motor' : 'Kilometraje';
-    var kmHtml = '<div style="display:flex;align-items:center;gap:10px;">'
-               + '<span id="rot-ot-km-txt">' + rotFmtKmCol(det) + '</span>'
-               + (puedeEditar ? '<button class="btn btn-sm rot-btn-agregar" onclick="window.rotEditarKm(\'' + esc(idOT) + '\', ' + (det.km || det.horas_motor || 0) + ')" style="padding:1px 6px;font-size:0.7rem;background:rgba(14,165,233,0.1);color:#0ea5e9;border-radius:12px;"><i class="bi bi-pencil"></i></button>' : '')
-               + '</div>';
-    html += fld(labelKm, kmHtml);
-    html += fld('Estado OT', rotBadgeEstado(ot.estado));
-    if (t.inicio) {
-        html += fld('Inicio OT', rotFmtFechaHora(t.inicio) + (ot.iniciado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.iniciado_por)) + '</span>' : ''));
-    }
-    if (t.fin) {
-        html += fld('Cierre OT', rotFmtFechaHora(t.fin) + (ot.cerrado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.cerrado_por)) + '</span>' : ''));
-    }
-    if (t.inicio) {
-        html += '<div style="display:flex;gap:8px;padding:8px 12px 10px;flex-wrap:wrap;">'
-              + '<span style="background:rgba(14,165,233,0.12);color:#0ea5e9;border-radius:8px;padding:5px 12px;font-size:0.75rem;font-weight:700;"><i class="bi bi-play-fill me-1"></i>Trabajado: ' + rotFmtDuracion(t.tiempoTrabajadoMs) + '</span>'
-              + '<span style="background:rgba(239,68,68,0.1);color:#ef4444;border-radius:8px;padding:5px 12px;font-size:0.75rem;font-weight:700;"><i class="bi bi-pause-fill me-1"></i>T. Muerto: ' + rotFmtDuracion(t.tiempoMuertoMs) + '</span>'
-              + '</div>';
-    }
-    if (t.pausas.length > 0) {
-        html += '<div style="padding:4px 12px 12px;">'
-              + '<div style="font-size:0.68rem;font-weight:800;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Detalle de pausas</div>';
-        t.pausas.forEach(function(p, idx) {
-            var dur = p.fin ? rotFmtDuracion(p.fin - p.inicio) : 'En curso';
-            html += '<div style="border-left:3px solid #f59e0b;padding:5px 10px;margin-bottom:6px;background:rgba(245,158,11,0.05);border-radius:0 8px 8px 0;">'
-                  + '<div style="font-size:0.74rem;font-weight:700;color:#f59e0b;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
-                  + '<span>' + rotFmtFechaHora(p.inicio) + '</span>'
-                  + '<span style="opacity:0.6;"><i class="bi bi-arrow-right"></i></span>'
-                  + '<span>' + (p.fin ? rotFmtFechaHora(p.fin) : '<em>Sin reanudar</em>') + '</span>'
-                  + '<span style="background:rgba(245,158,11,0.2);border-radius:6px;padding:1px 7px;">' + dur + '</span>'
-                  + '</div>'
-                  + (p.motivo ? '<div style="font-size:0.73rem;color:var(--subtext);margin-top:3px;"><i class="bi bi-chat-left-text me-1"></i>' + esc(p.motivo) + '</div>' : '')
-                  + '</div>';
-        });
-        html += '</div>';
-    }
-    if (ot.comentario_cierre) {
-        html += fld('Comentario Cierre', '<span style="font-style:italic;color:var(--subtext);">' + esc(ot.comentario_cierre) + '</span>');
-    }
-    html += '</div>';
 
-    // Motivo
-    if (det.motivo || ot.observaciones) {
-        html += '<div class="rot-sec"><div class="rot-sec-hd">Motivo / Observaciones</div>';
-        html += '<div style="padding:10px 12px;font-size:0.82rem;color:var(--text);white-space:pre-line;line-height:1.5;">' + esc(rotCleanObsText(det.motivo || ot.observaciones || '')) + '</div>';
-        html += '</div>';
-    }
+    var html = `
+        <!-- Hero Card -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1.5px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-4 d-flex justify-content-center align-items-center fw-bold text-white shadow-sm" 
+                         style="width: 54px; height: 54px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); font-size: 1.5rem; flex-shrink: 0;">
+                        <i class="bi bi-file-earmark-ruled-fill text-white"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <h4 class="m-0 fw-bold text-dark" style="letter-spacing: 0.5px; font-size: 1.35rem;">
+                                ${esc(idOT)}
+                            </h4>
+                            <span class="badge rounded-pill fw-bold text-uppercase" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-size:0.72rem; padding:3px 9px;">
+                                ${esc(tipoOtStr)}${subTipoOtStr ? ' • ' + esc(subTipoOtStr) : ''}
+                            </span>
+                            ${rotBadgeEstado(estado)}
+                        </div>
+                        <div class="d-flex align-items-center gap-2 text-muted small fw-semibold">
+                            <span><i class="bi bi-truck text-secondary me-1"></i><strong class="text-dark">${esc(ot.placa || '—')}</strong></span>
+                            <span>•</span>
+                            <span><i class="bi bi-geo-alt-fill text-danger me-1"></i>${esc(rName)}</span>
+                            <span>•</span>
+                            <span class="badge bg-light text-secondary border fw-bold" style="font-size: 0.68rem;">${rotFmtFecha(ot.fecha_ingreso || ot.creado_en)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    // Acciones Rápidas (Plantillas)
-    html += '<div class="rot-sec" style="display:flex; gap:15px; padding:15px; align-items:center;">';
-    html += '<button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);" onclick="event.stopPropagation();window.descargarPlantillaVaciaOT(\'' + rotEscHtml(idOT) + '\', \'' + rotEscHtml(ot.placa) + '\', \'' + rotEscHtml(ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || '') + '\', \'' + (det.km||'') + '\', \'' + rotEscHtml(det.rampa_origen||'') + '\')">'
-          + '<div style="background:#16a34a;color:white;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;"><i class="bi bi-card-checklist" style="font-size:1.2rem;"></i></div>'
-          + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>Inspecciones</span></button>'
-          + "<button class=\"btn btn-sm\" style=\"display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);\" onclick=\"event.stopPropagation(); window.rotDescargarPlantillaOT('" + rotEscHtml(idOT) + "', '" + rotEscHtml(ot.placa) + "');\">"
-          + '<div style="width:40px;height:40px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:1.1rem;"><i class="bi bi-file-earmark-text"></i></div>'
-          + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>OT</span>'
-          + '</button>';
-    html += '</div>';
+        <!-- Bento Grid Metrics (4 Columnas) -->
+        <div class="row g-2 mb-3">
+            <div class="col-6 col-md-3">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <div class="d-flex align-items-center gap-1">
+                            <div class="rounded-3 p-1 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width:24px; height:24px;">
+                                <i class="bi bi-speedometer2" style="font-size:0.8rem;"></i>
+                            </div>
+                            <span class="text-muted fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">${labelKm}</span>
+                        </div>
+                        ${puedeEditar ? `<button class="btn btn-sm btn-light border-0 p-0 text-primary" onclick="window.rotEditarKm('${esc(idOT)}', ${det.km || det.horas_motor || 0})" title="Editar"><i class="bi bi-pencil-square"></i></button>` : ''}
+                    </div>
+                    <div class="fw-bold text-dark text-truncate" style="font-size: 0.85rem;" id="rot-ot-km-txt">
+                        ${rotFmtKmCol(det)}
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center gap-1 mb-1">
+                        <div class="rounded-3 p-1 text-purple d-flex align-items-center justify-content-center" style="width:24px; height:24px; background: rgba(124, 58, 237, 0.1); color: #7c3aed;">
+                            <i class="bi bi-person-badge-fill" style="font-size:0.8rem;"></i>
+                        </div>
+                        <span class="text-muted fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Supervisor</span>
+                    </div>
+                    <div class="fw-bold text-dark text-truncate text-uppercase" style="font-size: 0.82rem;" title="${esc(det.supervisor || ot.supervisor || '—')}">
+                        ${esc(det.supervisor || ot.supervisor || 'Sin asignar')}
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center gap-1 mb-1">
+                        <div class="rounded-3 p-1 bg-info bg-opacity-10 text-info d-flex align-items-center justify-content-center" style="width:24px; height:24px;">
+                            <i class="bi bi-people-fill" style="font-size:0.8rem;"></i>
+                        </div>
+                        <span class="text-muted fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Técnicos</span>
+                    </div>
+                    <div class="fw-bold text-dark text-truncate text-uppercase" style="font-size: 0.82rem;" title="${esc(tecsStr)}">
+                        ${esc(tecsStr)}
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center gap-1 mb-1">
+                        <div class="rounded-3 p-1 bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width:24px; height:24px;">
+                            <i class="bi bi-cash-stack" style="font-size:0.8rem;"></i>
+                        </div>
+                        <span class="text-muted fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Costo Total</span>
+                    </div>
+                    <div class="fw-bold text-success text-truncate" style="font-size: 0.88rem;" id="rot-ot-costo-total">
+                        S/ ${parseFloat(ot.costo_total||0).toFixed(2)}
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    // Trabajos (placeholder)
-    html += '<div class="rot-sec" id="rot-sec-trabajos">'
-          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:var(--primary,#5865F2);">Trabajos <span id="rot-tr-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
-          + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(88,101,242,0.1);color:#5865F2;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAgregarTrabajo(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
-          + '<div id="rot-tr-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
-          + '</div>';
+        <!-- Cronología y Tiempos de Servicio -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                    <i class="bi bi-clock-history text-primary"></i> Tiempos y Ciclo de Orden
+                </h6>
+                ${t.inicio ? `
+                    <div class="d-flex gap-2">
+                        <span class="badge rounded-pill fw-bold" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.72rem;">
+                            <i class="bi bi-play-fill me-1"></i>Trabajado: ${rotFmtDuracion(t.tiempoTrabajadoMs)}
+                        </span>
+                        <span class="badge rounded-pill fw-bold" style="background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-size:0.72rem;">
+                            <i class="bi bi-pause-fill me-1"></i>T. Muerto: ${rotFmtDuracion(t.tiempoMuertoMs)}
+                        </span>
+                    </div>
+                ` : ''}
+            </div>
 
-    
-      // Salidas de Almacén (placeholder)
-      html += '<div class="rot-sec" id="rot-sec-materiales">'
-            + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:var(--primary,#5865F2);">Salidas de Almacén <span id="rot-mat-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
-            + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(88,101,242,0.1);color:#5865F2;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAgregarSalida(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
-            + '<div id="rot-mat-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
-            + '</div>';
+            <div class="position-relative ps-2">
+                <div style="position:absolute; left:21px; top:20px; bottom:20px; width:2px; background:#e2e8f0; z-index:1;"></div>
+                
+                <div class="d-flex align-items-start gap-3 position-relative mb-3" style="z-index:2;">
+                    <div class="rounded-circle d-flex justify-content-center align-items-center text-white shadow-2xs" 
+                         style="width:28px; height:28px; background:#10b981; flex-shrink:0;">
+                        <i class="bi bi-box-arrow-in-right" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-muted" style="font-size: 0.68rem; text-transform: uppercase;">Ingreso a Taller</div>
+                        <div class="fw-bold text-dark" style="font-size: 0.88rem;">${rotFmtFecha(ot.fecha_ingreso || ot.creado_en)}</div>
+                    </div>
+                </div>
 
-      // Órdenes de Servicio de Terceros
-      html += '<div class="rot-sec" id="rot-sec-servicios">'
-            + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#0ea5e9;">Servicios de Terceros <span id="rot-srv-count" style="background:rgba(14,165,233,0.12);color:#0ea5e9;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
-            + '</div>'
-            + '<div id="rot-srv-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
-            + '</div>';
+                <div class="d-flex align-items-start gap-3 position-relative mb-3" style="z-index:2;">
+                    <div class="rounded-circle d-flex justify-content-center align-items-center text-white shadow-2xs" 
+                         style="width:28px; height:28px; background:#3b82f6; flex-shrink:0;">
+                        <i class="bi bi-play-circle-fill" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-muted" style="font-size: 0.68rem; text-transform: uppercase;">Inicio de Trabajos</div>
+                        <div class="fw-bold text-dark" style="font-size: 0.88rem;">
+                            ${t.inicio ? rotFmtFechaHora(t.inicio) + (ot.iniciado_por ? `<span class="text-muted fw-normal small ms-1">(por ${esc(rotGetNombreUsuario(ot.iniciado_por))})</span>` : '') : '<span class="text-muted fw-normal">Aún no iniciado</span>'}
+                        </div>
+                    </div>
+                </div>
 
+                <div class="d-flex align-items-start gap-3 position-relative" style="z-index:2;">
+                    <div class="rounded-circle d-flex justify-content-center align-items-center text-white shadow-2xs" 
+                         style="width:28px; height:28px; background:#6366f1; flex-shrink:0;">
+                        <i class="bi bi-lock-fill" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-muted" style="font-size: 0.68rem; text-transform: uppercase;">Cierre de OT</div>
+                        <div class="fw-bold text-dark" style="font-size: 0.88rem;">
+                            ${t.fin ? rotFmtFechaHora(t.fin) + (ot.cerrado_por ? `<span class="text-muted fw-normal small ms-1">(por ${esc(rotGetNombreUsuario(ot.cerrado_por))})</span>` : '') : '<span class="text-muted fw-normal">En proceso / Abierta</span>'}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    // Inspección General (placeholder)
-    var puedeCrearInsp = puedeEditar || (window.checkPerm && window.checkPerm('insp', 'c'));
-    html += '<div class="rot-sec" id="rot-sec-inspecciones">'
-          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#7c3aed;">Inspección General '
-          + (puedeCrearInsp ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(124,58,237,0.1);color:#7c3aed;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirInspeccionWrapper(\'' + esc(ot.placa) + '\', \'' + esc(idOT) + '\', ' + (det.km||0) + ')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
-          + '<div id="rot-insp-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
-          + '</div>';
+            ${t.pausas.length > 0 ? `
+                <div class="mt-3 pt-2 border-top">
+                    <div style="font-size:0.68rem; font-weight:800; color:var(--subtext); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">Registro de Pausas</div>
+                    ${t.pausas.map(function(p) {
+                        var dur = p.fin ? rotFmtDuracion(p.fin - p.inicio) : 'En curso';
+                        return `
+                            <div class="p-2 mb-1 rounded-3 bg-light border-start border-warning border-3" style="font-size: 0.78rem;">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold text-dark">${rotFmtFechaHora(p.inicio)} → ${p.fin ? rotFmtFechaHora(p.fin) : 'Sin reanudar'}</span>
+                                    <span class="badge bg-warning bg-opacity-25 text-dark fw-bold">${dur}</span>
+                                </div>
+                                ${p.motivo ? `<div class="text-muted mt-1 small"><i class="bi bi-chat-left-text me-1"></i>${esc(p.motivo)}</div>` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            ` : ''}
 
-    // Backlog pendiente de la unidad (placeholder)
-    if (ot.placa) {
-        html += '<div class="rot-sec" id="rot-sec-backlog">'
-              + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#d97706;">Mantenimientos Pendientes <span id="rot-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
-              + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog(\'' + rotEscHtml(ot.placa) + '\', \'' + rotEscHtml(idOT) + '\', ' + (det.km||0) + ')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
-              + '<div id="rot-bkg-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
-              + '</div>';
-    }
+            ${ot.comentario_cierre ? `
+                <div class="mt-3 p-2 rounded-3 bg-light border" style="font-size: 0.8rem;">
+                    <div class="fw-bold text-muted small text-uppercase">Comentario de Cierre:</div>
+                    <div class="text-dark fst-italic mt-1">${esc(ot.comentario_cierre)}</div>
+                </div>
+            ` : ''}
+        </div>
+
+        <!-- Motivo / Observaciones -->
+        ${(det.motivo || ot.observaciones) ? `
+            <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+                <h6 class="m-0 fw-bold text-dark mb-2 pb-1 border-bottom d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                    <i class="bi bi-card-text text-primary"></i> Motivo y Observaciones Iniciales
+                </h6>
+                <div class="p-2 rounded-3 bg-light border fw-semibold text-dark text-uppercase" style="font-size: 0.82rem; white-space: pre-line; line-height: 1.5;">
+                    ${esc(rotCleanObsText(det.motivo || ot.observaciones || ''))}
+                </div>
+            </div>
+        ` : ''}
+
+        <!-- Plantillas Rápidas (Bento) -->
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100 d-flex flex-row align-items-center gap-2" 
+                     style="border: 1px solid #e2e8f0 !important; cursor: pointer; transition: all 0.2s;"
+                     onclick="event.stopPropagation(); window.descargarPlantillaVaciaOT('${rotEscHtml(idOT)}', '${rotEscHtml(ot.placa)}', '${rotEscHtml(ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || '')}', '${(det.km||'')}', '${rotEscHtml(det.rampa_origen||'')}')">
+                    <div class="rounded-3 p-2 bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width:38px; height:38px;">
+                        <i class="bi bi-card-checklist fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark small" style="line-height:1.2;">Plantilla Inspecciones</div>
+                        <small class="text-muted" style="font-size:0.68rem;">Formato PDF F-MAN-001</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100 d-flex flex-row align-items-center gap-2" 
+                     style="border: 1px solid #e2e8f0 !important; cursor: pointer; transition: all 0.2s;"
+                     onclick="event.stopPropagation(); window.rotDescargarPlantillaOT('${rotEscHtml(idOT)}', '${rotEscHtml(ot.placa)}');">
+                    <div class="rounded-3 p-2 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width:38px; height:38px;">
+                        <i class="bi bi-file-earmark-pdf fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark small" style="line-height:1.2;">Plantilla OT</div>
+                        <small class="text-muted" style="font-size:0.68rem;">Formato Impresión Rápida</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trabajos -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" id="rot-sec-trabajos" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                        <i class="bi bi-tools text-primary"></i> Trabajos Realizados
+                    </h6>
+                    <span class="badge bg-primary bg-opacity-10 text-primary fw-bold rounded-pill px-2 py-1" id="rot-tr-count" style="font-size: 0.7rem;">0</span>
+                </div>
+                ${esAprobada ? `<button class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3 py-1" style="font-size: 0.72rem;" onclick="event.stopPropagation();window.rotAgregarTrabajo('${rotEscHtml(idOT)}')"><i class="bi bi-plus-lg me-1"></i>Agregar</button>` : ''}
+            </div>
+            <div id="rot-tr-body"><div class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>
+        </div>
+
+        <!-- Salidas de Almacén (Materiales) -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" id="rot-sec-materiales" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                        <i class="bi bi-box-seam text-success"></i> Salidas de Almacén (Repuestos)
+                    </h6>
+                    <span class="badge bg-success bg-opacity-10 text-success fw-bold rounded-pill px-2 py-1" id="rot-mat-count" style="font-size: 0.7rem;">0</span>
+                </div>
+                ${esAprobada ? `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-3 py-1" style="font-size: 0.72rem;" onclick="event.stopPropagation();window.rotAgregarSalida('${rotEscHtml(idOT)}')"><i class="bi bi-plus-lg me-1"></i>Agregar</button>` : ''}
+            </div>
+            <div id="rot-mat-body"><div class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>
+        </div>
+
+        <!-- Servicios de Terceros -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" id="rot-sec-servicios" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                        <i class="bi bi-gear-wide-connected text-info"></i> Servicios de Terceros
+                    </h6>
+                    <span class="badge bg-info bg-opacity-10 text-info fw-bold rounded-pill px-2 py-1" id="rot-srv-count" style="font-size: 0.7rem;">0</span>
+                </div>
+            </div>
+            <div id="rot-srv-body"><div class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>
+        </div>
+
+        <!-- Inspección General -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" id="rot-sec-inspecciones" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                        <i class="bi bi-clipboard2-check-fill text-purple" style="color:#7c3aed;"></i> Inspección General
+                    </h6>
+                </div>
+                ${puedeCrearInsp ? `<button class="btn btn-sm fw-bold rounded-pill px-3 py-1" style="font-size:0.72rem; background:rgba(124,58,237,0.1); color:#7c3aed; border:1px solid rgba(124,58,237,0.2);" onclick="event.stopPropagation();window.rotAbrirInspeccionWrapper('${esc(ot.placa)}', '${esc(idOT)}', ${(det.km||0)})"><i class="bi bi-plus-lg me-1"></i>Agregar</button>` : ''}
+            </div>
+            <div id="rot-insp-body"><div class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>
+        </div>
+
+        <!-- Backlog Pendiente -->
+        ${ot.placa ? `
+            <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" id="rot-sec-backlog" style="border: 1px solid #e2e8f0 !important;">
+                <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                            <i class="bi bi-exclamation-triangle-fill text-warning"></i> Mantenimientos Pendientes (Backlog)
+                        </h6>
+                        <span class="badge bg-warning bg-opacity-10 text-warning fw-bold rounded-pill px-2 py-1" id="rot-bkg-count" style="font-size: 0.7rem;">…</span>
+                    </div>
+                    ${esAprobada ? `<button class="btn btn-sm btn-outline-warning fw-bold rounded-pill px-3 py-1" style="font-size:0.72rem;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog('${rotEscHtml(ot.placa)}', '${rotEscHtml(idOT)}', ${(det.km||0)})"><i class="bi bi-plus-lg me-1"></i>Agregar</button>` : ''}
+                </div>
+                <div id="rot-bkg-body"><div class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>
+            </div>
+        ` : ''}
+    `;
 
     var body   = document.getElementById('rot-drawer-body');
     var footer = document.getElementById('rot-drawer-footer');
@@ -499,50 +673,79 @@ window.rotAbrirDetalle = function(idOT) {
 
     body.innerHTML = html;
 
-    // Footer
+    // Footer Bento
     var puedeEliminar = window.checkPerm('ot', 'd');
-    var ftHtml = (puedeEditar
-        ? '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'editar\',\'' + esc(idOT) + '\')">'
-        + '<i class="bi bi-pencil me-1"></i>Editar OT</button>'
-        : '')
-        + (puedeEliminar
-        ? '<button class="btn btn-sm btn-outline-danger" onclick="window.rotAccion(\'eliminar\',\'' + esc(idOT) + '\')">'
-        + '<i class="bi bi-trash me-1"></i>Eliminar</button>'
-        : '');
+    var ftHtml = `
+        <div class="d-flex align-items-center justify-content-between w-100 flex-wrap gap-2">
+            <div class="d-flex gap-2">
+                ${puedeEliminar ? `
+                    <button class="btn btn-outline-danger btn-sm rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.rotAccion('eliminar','${esc(idOT)}')">
+                        <i class="bi bi-trash3-fill"></i> <span class="d-none d-sm-inline">Eliminar</span>
+                    </button>
+                ` : ''}
+                ${puedeEditar ? `
+                    <button class="btn btn-outline-secondary btn-sm rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.rotAccion('editar','${esc(idOT)}')">
+                        <i class="bi bi-pencil-square"></i> <span class="d-none d-sm-inline">Editar OT</span>
+                    </button>
+                    <button class="btn btn-outline-info btn-sm rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.rotAbrirEditarFechas('${esc(idOT)}')">
+                        <i class="bi bi-calendar3"></i> <span class="d-none d-sm-inline">Fechas</span>
+                    </button>
+                ` : ''}
+                <button class="btn btn-outline-secondary btn-sm rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.rotAccion('pdf','${esc(idOT)}')">
+                    <i class="bi bi-file-earmark-pdf-fill text-danger"></i> <span>PDF</span>
+                </button>
+            </div>
 
-    ftHtml += '<div class="ms-auto d-flex gap-2">';
+            <div class="d-flex gap-2 ms-auto">
+    `;
+
     if (puedeEditar) {
         if (estado === 'Pendiente') {
-            ftHtml += '<button class="btn btn-sm btn-outline-danger" onclick="window.rotAccion(\'anular\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-x-circle me-1"></i>Anular</button>'
-                    + '<button class="btn btn-sm btn-info text-white" onclick="window.rotAccion(\'iniciar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-play-fill me-1"></i>Iniciar</button>';
+            ftHtml += `
+                <button class="btn btn-outline-danger btn-sm rounded-3 px-3 py-2 fw-bold" onclick="window.rotAccion('anular','${esc(idOT)}')">
+                    <i class="bi bi-x-circle me-1"></i>Anular
+                </button>
+                <button class="btn btn-primary btn-sm rounded-3 px-4 py-2 fw-bold shadow-2xs" onclick="window.rotAccion('iniciar','${esc(idOT)}')">
+                    <i class="bi bi-play-fill me-1"></i>Iniciar OT
+                </button>
+            `;
         } else if (estado === 'En Proceso') {
-            ftHtml += '<button class="btn btn-sm btn-warning" onclick="window.rotAccion(\'pausar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-pause-fill me-1"></i>Pausar</button>'
-                    + '<button class="btn btn-sm btn-danger text-white" onclick="window.rotAccion(\'cerrar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-lock-fill me-1"></i>Cerrar</button>';
+            ftHtml += `
+                <button class="btn btn-warning btn-sm rounded-3 px-3 py-2 fw-bold" onclick="window.rotAccion('pausar','${esc(idOT)}')">
+                    <i class="bi bi-pause-fill me-1"></i>Pausar
+                </button>
+                <button class="btn btn-danger text-white btn-sm rounded-3 px-4 py-2 fw-bold shadow-2xs" onclick="window.rotAccion('cerrar','${esc(idOT)}')">
+                    <i class="bi bi-lock-fill me-1"></i>Cerrar OT
+                </button>
+            `;
         } else if (estado === 'Pausada') {
-            ftHtml += '<button class="btn btn-sm btn-success" onclick="window.rotAccion(\'reanudar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-play-fill me-1"></i>Reanudar</button>'
-                    + '<button class="btn btn-sm btn-danger text-white" onclick="window.rotAccion(\'cerrar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-lock-fill me-1"></i>Cerrar</button>';
+            ftHtml += `
+                <button class="btn btn-success btn-sm rounded-3 px-3 py-2 fw-bold" onclick="window.rotAccion('reanudar','${esc(idOT)}')">
+                    <i class="bi bi-play-fill me-1"></i>Reanudar
+                </button>
+                <button class="btn btn-danger text-white btn-sm rounded-3 px-4 py-2 fw-bold shadow-2xs" onclick="window.rotAccion('cerrar','${esc(idOT)}')">
+                    <i class="bi bi-lock-fill me-1"></i>Cerrar OT
+                </button>
+            `;
         } else if (estado === 'Aprobada') {
-            ftHtml += '<button class="btn btn-sm btn-primary" onclick="window.rotAccion(\'cerrar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-lock-fill me-1"></i>Cerrar OT</button>';
+            ftHtml += `
+                <button class="btn btn-primary btn-sm rounded-3 px-4 py-2 fw-bold shadow-2xs" onclick="window.rotAccion('cerrar','${esc(idOT)}')">
+                    <i class="bi bi-lock-fill me-1"></i>Cerrar OT
+                </button>
+            `;
         } else if (estado === 'Finalizado' || estado === 'Cerrada') {
-            ftHtml += '<button class="btn btn-sm btn-outline-success" onclick="window.rotAccion(\'reactivar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar OT</button>';
+            ftHtml += `
+                <button class="btn btn-outline-success btn-sm rounded-3 px-3 py-2 fw-bold" onclick="window.rotAccion('reactivar','${esc(idOT)}')">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar OT
+                </button>
+            `;
         }
     }
-    if (puedeEditar) {
-        ftHtml += '<button class="btn btn-sm btn-outline-info" onclick="window.rotAbrirEditarFechas(\'' + esc(idOT) + '\')">'
-                + '<i class="bi bi-calendar3 me-1"></i>Editar Fechas</button>';
-    }
 
-    ftHtml += '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'pdf\',\'' + esc(idOT) + '\')">'
-            + '<i class="bi bi-filetype-pdf me-1"></i>PDF</button>';
-    ftHtml += '</div>';
+    ftHtml += `
+            </div>
+        </div>
+    `;
     footer.innerHTML = ftHtml;
     footer.style.display = 'flex';
 
