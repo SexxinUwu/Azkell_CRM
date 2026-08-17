@@ -282,7 +282,7 @@ window.rotRenderTabla = function(lista) {
     if (!tbody) return;
 
     if (!lista || lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="td-empty">No hay resultados con los filtros aplicados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="td-empty">No hay resultados con los filtros aplicados.</td></tr>';
         if(mobileList) mobileList.innerHTML = '<div style="text-align:center; padding: 40px 20px; color: #94a3b8; font-size: 13px;"><i class="bi bi-inbox" style="font-size: 32px; display: block; margin-bottom: 12px; color: #cbd5e1;"></i> No se encontraron OTs</div>';
         return;
     }
@@ -302,16 +302,17 @@ window.rotRenderTabla = function(lista) {
         var rawObs = rotCleanObsText(det.motivo || ot.observaciones || '');
 
         html += '<tr class="' + (esActiva ? 'rot-tr-activa' : '') + '" data-id="' + rotEscHtml(idOT) + '" onclick="window.rotAbrirDetalle(\'' + rotEscHtml(idOT) + '\')">'
-              + '<td style="font-weight:700;color:var(--primary,#5865F2);white-space:nowrap;">' + rotEscHtml(idOT) + '</td>'
-              + '<td>' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>'
-              + '<td style="font-weight:700;">' + rotEscHtml(ot.placa || '—') + '</td>'
-              + '<td>' + rotEscHtml(rName) + '</td>'
-              + '<td>' + rotEscHtml(det.tipo_ot || ot.tipo || '—') + '</td>'
-              + '<td>' + rotEscHtml(subTipo) + '</td>'
-              + '<td>' + rotBadgeEstado(ot.estado) + '</td>'
-              + '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + rotEscHtml(rawObs) + '">' + rotEscHtml(rawObs || '—') + '</td>'
-              + '<td>' + rotEscHtml(det.supervisor || ot.supervisor || '—') + '</td>'
-              + '<td>' + rotEscHtml(tecsStr) + '</td>'
+              + '<td onclick="event.stopPropagation();" style="white-space:nowrap;padding:8px 10px;">' + rotBotonesAccion(ot) + '</td>'
+              + '<td style="font-weight:700;color:var(--primary,#2563eb);white-space:nowrap;">' + rotEscHtml(idOT) + '</td>'
+              + '<td style="font-weight:700;"><span class="badge bg-light border text-dark fw-bold px-2 py-1">' + rotEscHtml(ot.placa || '—') + '</span></td>'
+              + '<td style="font-size:0.84rem; font-weight:600;">' + rotFmtKmCol(det) + '</td>'
+              + '<td><span class="badge rounded-pill fw-bold text-uppercase" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-size:0.68rem; padding:2px 8px;">' + rotEscHtml(det.tipo_ot || ot.tipo || '—') + (subTipo !== '—' ? ' • ' + rotEscHtml(subTipo) : '') + '</span></td>'
+              + '<td style="font-size:0.8rem; font-weight:600; text-transform:uppercase;">' + rotEscHtml(det.supervisor || ot.supervisor || '—') + '</td>'
+              + '<td>' + rotBadgeSituacion(det.situacion || det.situacion_inicial || 'En Atención') + '</td>'
+              + '<td style="font-size:0.78rem; color:var(--subtext); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + rotEscHtml(rawObs) + '">' + rotEscHtml(rawObs || '—') + '</td>'
+              + '<td style="font-weight:700; color:#16a34a; text-align:right;">S/ ' + parseFloat(ot.costo_total||0).toFixed(2) + '</td>'
+              + '<td style="font-size:0.78rem; color:var(--subtext); white-space:nowrap;">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>'
+              + '<td style="text-align:center;"><button class="btn btn-sm btn-light border shadow-2xs rounded-3" style="color:#2563eb; padding:3px 8px;" onclick="event.stopPropagation(); window.rotAbrirDetalle(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-eye-fill"></i></button></td>'
               + '</tr>';
 
         // Tarjeta móvil
@@ -351,26 +352,31 @@ window.rotRenderTabla = function(lista) {
 // ── Abrir drawer de detalle (MODERNO BENTO UI) ──────────────────────────────────────
 window.rotAbrirDetalle = function(idOT) {
     if (!idOT) return;
-    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
-    if (!ot) return;
 
-    window.rotDetalleId = idOT;
-    if (typeof window.registrarAperturaDrawer === 'function') window.registrarAperturaDrawer('rot-drawer-detalle');
-    if (typeof window.rotRenderTabla === 'function' && document.getElementById('rot-tbody')) {
-        window.rotRenderTabla(window.rotDatosFiltrados);
-    }
+    var doAbrir = function(ot) {
+        if (!ot) {
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('No se encontró la Orden de Trabajo', 'warning');
+            return;
+        }
 
-    var det    = rotDetalles(ot);
-    var estado = ot.estado || 'Pendiente';
-    var esAprobada = (estado === 'Aprobada' || estado === 'En Proceso' || estado === 'Pausada' || estado === 'Finalizado' || estado === 'Cerrada');
-    var puedeAgregarMaterial = esAprobada;
-    var puedeEditar = window.checkPerm('ot', 'e');
+        window.rotDetalleId = idOT;
+        if (typeof window.registrarAperturaDrawer === 'function') window.registrarAperturaDrawer('rot-drawer-detalle');
+        if (typeof window.rotRenderTabla === 'function' && document.getElementById('rot-tbody')) {
+            window.rotRenderTabla(window.rotDatosFiltrados);
+        }
 
-    function esc(s) { return rotEscHtml(String(s||'')); }
+        var det    = rotDetalles(ot);
+        var estado = ot.estado || 'Pendiente';
+        var esAprobada = (estado === 'Aprobada' || estado === 'En Proceso' || estado === 'Pausada' || estado === 'Finalizado' || estado === 'Cerrada');
+        var puedeAgregarMaterial = esAprobada;
+        var puedeEditar = typeof window.checkPerm === 'function' ? window.checkPerm('ot', 'e') : true;
+        var puedeCrearInsp = puedeEditar || (typeof window.checkPerm === 'function' && window.checkPerm('insp', 'c'));
 
-    var labelKm = det.horas_motor ? 'Horas Motor' : 'Kilometraje';
-    var tipoOtStr = (det.tipo_ot || ot.tipo || 'Correctivo');
-    var subTipoOtStr = (det.sub_tipo || '');
+        function esc(s) { return rotEscHtml(String(s||'')); }
+
+        var labelKm = det.horas_motor ? 'Horas Motor' : 'Kilometraje';
+        var tipoOtStr = (det.tipo_ot || ot.tipo || 'Correctivo');
+        var subTipoOtStr = (det.sub_tipo || '');
     var rId = det.rampa_origen || det.rampa || det.situacion_inicial || ot.id_rampa || '';
     var rObj = (window._rotCatRampas || []).find(function(x) { return x.id == rId; });
     var rName = rObj ? (rObj.descripcion || rObj.nombre_rampa || rObj.nombre || rId) : (rId ? 'Rampa ' + rId : 'Sin Rampa');
@@ -808,6 +814,28 @@ window.rotAbrirDetalle = function(idOT) {
         var elCosto = document.getElementById('rot-ot-costo-total');
         if (elCosto) elCosto.textContent = 'S/' + (costoTr + costoMat).toFixed(2);
     });
+    };
+
+    var ot = (window.rotData || []).find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
+    if (!ot && window.srOtData) {
+        ot = (window.srOtData || []).find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
+    }
+    if (!ot) {
+        fetch('/api/ordenes-trabajo')
+            .then(function(r){ return r.json(); })
+            .then(function(data) {
+                window.rotData = Array.isArray(data) ? data : [];
+                ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
+                if (ot) doAbrir(ot);
+                else if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('No se encontró la Orden de Trabajo', 'warning');
+            })
+            .catch(function(err){ 
+                console.error('Error cargando OT para detalle:', err);
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error cargando la Orden de Trabajo', 'danger');
+            });
+        return;
+    }
+    doAbrir(ot);
 };
 
 // ── Cerrar drawer ─────────────────────────────────────────────────
