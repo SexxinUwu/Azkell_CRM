@@ -4,7 +4,9 @@ module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
 
     function getDb(req) {
-        return req.db || db;
+        const d = (req && req.db) ? req.db : db;
+        if (!d) return null;
+        return (typeof d.promise === 'function') ? d.promise() : d;
     }
 
     const _tenantsInitSet = new Set();
@@ -48,7 +50,9 @@ module.exports = function (db, broadcast, logAudit) {
             placa_actual VARCHAR(20) NULL,
             posicion_actual VARCHAR(10) NULL,
             estado_operativo ENUM('Montada', 'Stock Taller', 'En Rencauche', 'Desecho') DEFAULT 'Stock Taller',
-            fecha_instalacion DATE NULL,
+            fecha_montaje DATE NULL,
+            fecha_baja DATE NULL,
+            observaciones TEXT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_placa (placa_actual),
             INDEX idx_estado (estado_operativo)
@@ -58,15 +62,14 @@ module.exports = function (db, broadcast, logAudit) {
             id_ot VARCHAR(50) NULL,
             placa VARCHAR(20) NOT NULL,
             fecha_inspeccion DATE NOT NULL,
-            km_vehiculo INT NOT NULL DEFAULT 0,
-            dias_propuestos INT NOT NULL DEFAULT 30,
+            km_vehiculo INT DEFAULT 0,
+            dias_propuestos INT DEFAULT 30,
             fecha_proxima DATE NULL,
             observaciones TEXT NULL,
             inspector VARCHAR(100) NOT NULL DEFAULT '',
             total_llantas INT DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_placa (placa),
-            INDEX idx_ot (id_ot),
             INDEX idx_fecha (fecha_inspeccion)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS neumaticos_inspecciones_det (
@@ -77,15 +80,17 @@ module.exports = function (db, broadcast, logAudit) {
             marca VARCHAR(100) NOT NULL,
             medida VARCHAR(50) NOT NULL,
             modelo VARCHAR(100) NOT NULL,
-            r1 INT NOT NULL,
-            r2 INT NOT NULL,
-            r3 INT NOT NULL,
+            r1 INT DEFAULT 0,
+            r2 INT DEFAULT 0,
+            r3 INT DEFAULT 0,
             r4 INT DEFAULT 0,
-            remanente_promedio DECIMAL(4,1) DEFAULT 0.0,
-            presion_ant INT DEFAULT 0,
-            presion_actual INT DEFAULT 0,
-            estado VARCHAR(30) NOT NULL DEFAULT 'NUEVA',
-            accion VARCHAR(50) NOT NULL DEFAULT 'Inspeccion',
+            remanente_promedio DECIMAL(4,1) GENERATED ALWAYS AS (
+                CASE WHEN r4 > 0 THEN (r1 + r2 + r3 + r4) / 4.0 ELSE (r1 + r2 + r3) / 3.0 END
+            ) STORED,
+            presion_ant INT DEFAULT 100,
+            presion_actual INT DEFAULT 100,
+            estado VARCHAR(30) DEFAULT 'NUEVA',
+            accion VARCHAR(50) DEFAULT 'INSPECCION',
             rot VARCHAR(50) DEFAULT 'NO',
             observaciones TEXT NULL,
             foto1 LONGTEXT NULL,
@@ -114,7 +119,7 @@ module.exports = function (db, broadcast, logAudit) {
 
     async function asegurarTablasNeumaticosTenant(tdb, tenantId) {
         try {
-            const pool = tdb.promise();
+            const pool = (typeof tdb.promise === 'function') ? tdb.promise() : tdb;
             for (const sql of TABLES_SQL) {
                 await pool.query(sql);
             }

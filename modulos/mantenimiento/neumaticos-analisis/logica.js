@@ -597,6 +597,18 @@
                 body: JSON.stringify({ inspecciones: window._neuInspeccionesGroupedImport })
             });
 
+            if (!res.ok) {
+                const text = await res.text();
+                let errMsg = 'Error del Servidor (HTTP ' + res.status + ')';
+                try {
+                    const j = JSON.parse(text);
+                    if (j.error || j.mensaje) errMsg = j.error || j.mensaje;
+                } catch(e) {
+                    if (text && text.length < 200) errMsg += ': ' + text;
+                }
+                throw new Error(errMsg);
+            }
+
             const data = await res.json();
             if (!data.ok) throw new Error(data.error || 'Error al importar datos');
 
