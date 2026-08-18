@@ -1,21 +1,104 @@
-<!-- Módulo: Últimas Inspecciones de Neumáticos -->
-<div class="container-fluid p-4">
-    <div class="d-flex align-items-center justify-content-between mb-4">
-        <div>
-            <h4 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
-                <i class="bi bi-clock-history text-primary"></i> Últimas Inspecciones de Neumáticos
-            </h4>
-            <p class="text-muted small m-0">Historial reciente de evaluaciones técnicas de presión, desgaste y estado físico de neumáticos</p>
+<!-- MÓDULO: Últimas Inspecciones y Requerimientos de Neumáticos — ERP Azkell Fleet -->
+<div class="container-fluid p-3 p-md-4" id="moduloNeumaticosUltimas">
+    <!-- Header Bento -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
+        <div class="d-flex align-items-center gap-2">
+            <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background: rgba(37,99,235,0.1); color: #2563eb;">
+                <i class="bi bi-clock-history fs-5"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold text-dark m-0" id="neu-ultimas-titulo">Últimas Inspecciones de Neumáticos</h4>
+                <p class="text-muted small m-0">Historial técnico detallado por posición y módulo de requerimientos para reposición preventiva</p>
+            </div>
         </div>
-        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2 rounded-pill fw-semibold" style="font-size: 0.8rem;">
-            <i class="bi bi-hammer me-1"></i> Módulo en Configuración
-        </span>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.neuUltimasCargar()">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            </button>
+            <button class="btn btn-outline-success btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.neuUltimasExportarCSV()">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+            </button>
+            <button class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-2" onclick="window.neuUltimasNuevaInspeccion()">
+                <i class="bi bi-plus-lg"></i> + Inspección
+            </button>
+        </div>
     </div>
-    <div class="card border-0 rounded-4 shadow-sm p-4 bg-white" style="border: 1px solid var(--border, #e2e8f0) !important;">
-        <div class="text-center py-5">
-            <i class="bi bi-clipboard2-check text-primary display-4 mb-3 d-block"></i>
-            <h5 class="fw-bold text-dark">Registro de Últimas Inspecciones</h5>
-            <p class="text-muted small max-w-md mx-auto">Próximamente podrás revisar el listado cronológico de inspecciones de llantas, lecturas de profundímetro y observaciones por unidad.</p>
+
+    <!-- Pestañas Principales: Últimas Inspecciones vs Requerimientos de Llantas -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <div class="nav nav-pills bg-light p-1 rounded-pill border" style="border-color: var(--border, #e2e8f0) !important;">
+            <button class="nav-link active rounded-pill px-4 py-1 fw-bold small" id="tab-btn-ultimas" onclick="window.neuCambiarTab('ultimas')">
+                <i class="bi bi-list-check me-1"></i> Última Inspección de Llantas
+            </button>
+            <button class="nav-link rounded-pill px-4 py-1 fw-bold small text-danger" id="tab-btn-requerimientos" onclick="window.neuCambiarTab('requerimientos')">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> Requerimiento de Llantas (≤ 4mm) <span class="badge bg-danger text-white rounded-pill ms-1" id="badge-req-count">0</span>
+            </button>
+        </div>
+
+        <!-- Filtros secundarios (Empresa y Unidad Motora/No Motora) -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <!-- Selector de Empresa/Dueño -->
+            <select class="form-select form-select-sm rounded-pill px-3 fw-semibold border shadow-2xs" id="neu-sel-empresa-filtro" onchange="window.neuFiltrarUltimas()" style="max-width: 190px;">
+                <option value="Todos">Todas las Empresas</option>
+                <option value="Marsisa SAC">Marsisa SAC</option>
+                <option value="Rosymar Peru SAC">Rosymar Peru SAC</option>
+                <option value="Yogui Transport SAC">Yogui Transport SAC</option>
+            </select>
+
+            <!-- Subfiltro solo para Requerimientos (Motora / No Motora) -->
+            <div class="btn-group btn-group-sm rounded-pill border overflow-hidden d-none" id="neu-filtro-motora-group">
+                <button class="btn btn-light active px-3 fw-bold" id="btn-filtro-todos" onclick="window.neuSetFiltroMotora('Todos')">Todos</button>
+                <button class="btn btn-light px-3 fw-bold" id="btn-filtro-motora" onclick="window.neuSetFiltroMotora('Motora')">Motora</button>
+                <button class="btn btn-light px-3 fw-bold" id="btn-filtro-nomotora" onclick="window.neuSetFiltroMotora('No Motora')">No Motora</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Buscador Instantáneo -->
+    <div class="card border-0 rounded-4 p-2 mb-3 bg-white shadow-2xs" style="border: 1px solid var(--border, #e2e8f0) !important;">
+        <div class="input-group input-group-sm">
+            <span class="input-group-text bg-transparent border-0 text-muted"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control border-0 shadow-none ps-0" id="neu-input-busqueda-rapida" placeholder="Buscar por placa, posición, marca, medida, modelo u observación..." oninput="window.neuFiltrarUltimas()">
+            <button class="btn btn-link text-muted text-decoration-none small" type="button" onclick="document.getElementById('neu-input-busqueda-rapida').value=''; window.neuFiltrarUltimas();">Limpiar</button>
+        </div>
+    </div>
+
+    <!-- Tabla Principal Bento -->
+    <div class="card border-0 rounded-4 bg-white shadow-2xs overflow-hidden" style="border: 1px solid var(--border, #e2e8f0) !important;">
+        <div class="table-responsive" style="max-height: 600px;">
+            <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.78rem;">
+                <thead class="table-light text-muted fw-bold sticky-top" style="z-index: 2;">
+                    <tr id="neu-thead-row">
+                        <th class="ps-3">Fecha Inspección</th>
+                        <th>Placa</th>
+                        <th>KM</th>
+                        <th class="text-center">Posición</th>
+                        <th>Marca Unidad</th>
+                        <th>Medida</th>
+                        <th>Modelo</th>
+                        <th class="text-center">R1</th>
+                        <th class="text-center">R2</th>
+                        <th class="text-center">R3</th>
+                        <th class="text-center">Promedio</th>
+                        <th class="text-center">Presión Ant.</th>
+                        <th class="text-center">Presión Act.</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                        <th class="pe-3">Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody id="neu-tbody-ultimas">
+                    <tr><td colspan="16" class="text-center text-muted py-5"><div class="spinner-border spinner-border-sm text-secondary"></div> Cargando datos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-light p-2 px-3 d-flex align-items-center justify-content-between text-muted small border-top" style="font-size:0.75rem;">
+            <div>Total de registros mostrados: <b id="neu-footer-registros-count">0</b></div>
+            <div class="d-flex align-items-center gap-3">
+                <span>🟢 > 6mm</span>
+                <span>🟡 4 - 6mm</span>
+                <span>🔴 ≤ 4mm (Alerta)</span>
+            </div>
         </div>
     </div>
 </div>

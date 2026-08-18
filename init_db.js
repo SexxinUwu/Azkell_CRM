@@ -651,6 +651,125 @@ const TABLAS = [
             INDEX idx_estado_con (estado_conductor),
             INDEX idx_estado_uni (estado_unidad)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+        nombre: 'cat_neumaticos_marcas',
+        sql: `CREATE TABLE IF NOT EXISTS cat_neumaticos_marcas (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nombre VARCHAR(100) NOT NULL UNIQUE,
+            activo TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+        nombre: 'cat_neumaticos_modelos',
+        sql: `CREATE TABLE IF NOT EXISTS cat_neumaticos_modelos (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nombre VARCHAR(100) NOT NULL UNIQUE,
+            activo TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+        nombre: 'cat_neumaticos_medidas',
+        sql: `CREATE TABLE IF NOT EXISTS cat_neumaticos_medidas (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nombre VARCHAR(50) NOT NULL UNIQUE,
+            activo TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+        nombre: 'cat_neumaticos_acciones',
+        sql: `CREATE TABLE IF NOT EXISTS cat_neumaticos_acciones (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nombre VARCHAR(50) NOT NULL UNIQUE,
+            activo TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+        nombre: 'neumaticos_hoja_vida',
+        sql: `CREATE TABLE IF NOT EXISTS neumaticos_hoja_vida (
+            id_neumatico VARCHAR(50) PRIMARY KEY,
+            codigo_dot VARCHAR(50) NULL,
+            marca VARCHAR(100) NOT NULL,
+            modelo VARCHAR(100) NOT NULL,
+            medida VARCHAR(50) NOT NULL,
+            estado VARCHAR(30) DEFAULT 'NUEVA',
+            remanente_inicial INT DEFAULT 18,
+            remanente_actual DECIMAL(4,1) DEFAULT 18.0,
+            costo_compra DECIMAL(10,2) DEFAULT 0.00,
+            km_acumulado INT DEFAULT 0,
+            placa_actual VARCHAR(20) NULL,
+            posicion_actual VARCHAR(10) NULL,
+            estado_operativo ENUM('Montada', 'Stock Taller', 'En Rencauche', 'Desecho') DEFAULT 'Stock Taller',
+            fecha_instalacion DATE NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_placa (placa_actual),
+            INDEX idx_estado (estado_operativo)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+        nombre: 'neumaticos_inspecciones',
+        sql: `CREATE TABLE IF NOT EXISTS neumaticos_inspecciones (
+            id_inspeccion VARCHAR(50) PRIMARY KEY,
+            id_ot VARCHAR(50) NULL,
+            placa VARCHAR(20) NOT NULL,
+            fecha_inspeccion DATE NOT NULL,
+            km_vehiculo INT NOT NULL DEFAULT 0,
+            dias_propuestos INT NOT NULL DEFAULT 30,
+            fecha_proxima DATE NULL,
+            observaciones TEXT NULL,
+            inspector VARCHAR(100) NOT NULL DEFAULT '',
+            total_llantas INT DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_placa (placa),
+            INDEX idx_ot (id_ot),
+            INDEX idx_fecha (fecha_inspeccion)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+        nombre: 'neumaticos_inspecciones_det',
+        sql: `CREATE TABLE IF NOT EXISTS neumaticos_inspecciones_det (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            id_inspeccion VARCHAR(50) NOT NULL,
+            id_neumatico VARCHAR(50) NULL,
+            posicion VARCHAR(10) NOT NULL,
+            marca VARCHAR(100) NOT NULL,
+            medida VARCHAR(50) NOT NULL,
+            modelo VARCHAR(100) NOT NULL,
+            r1 INT NOT NULL,
+            r2 INT NOT NULL,
+            r3 INT NOT NULL,
+            remanente_promedio DECIMAL(4,1) GENERATED ALWAYS AS ((r1 + r2 + r3) / 3.0) STORED,
+            presion_ant INT DEFAULT 0,
+            presion_actual INT DEFAULT 0,
+            estado VARCHAR(30) NOT NULL DEFAULT 'NUEVA',
+            accion VARCHAR(50) NOT NULL DEFAULT 'Inspeccion',
+            observaciones TEXT NULL,
+            alerta_cambio TINYINT(1) DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_insp (id_inspeccion),
+            INDEX idx_pos (posicion)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+        nombre: 'neumaticos_rotaciones',
+        sql: `CREATE TABLE IF NOT EXISTS neumaticos_rotaciones (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            id_ot VARCHAR(50) NULL,
+            placa VARCHAR(20) NOT NULL,
+            fecha DATE NOT NULL,
+            km_actual INT DEFAULT 0,
+            posicion_origen VARCHAR(10) NOT NULL,
+            posicion_destino VARCHAR(10) NOT NULL,
+            id_neumatico VARCHAR(50) NULL,
+            motivo VARCHAR(200) DEFAULT 'Rotación preventiva',
+            tecnico VARCHAR(100) NOT NULL DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_placa (placa)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
     }
 ];
 
@@ -683,6 +802,54 @@ async function initDB(db) {
         // Catálogos semillas predeterminados (INSERT IGNORE garantiza no alterar Marsisa ni datos existentes)
         await promisePool.query("INSERT IGNORE INTO cat_situaciones (id, codigo, descripcion) VALUES (1, 'S01', 'En Espera'), (2, 'S02', 'En Diagnóstico'), (3, 'S03', 'En Reparación'), (4, 'S04', 'Finalizada')");
         await promisePool.query("INSERT IGNORE INTO tipos_mantenimiento (id, tipo_mp, marca, descripcion) VALUES (1, 'MP1', 'TODOS', 'Mantenimiento Preventivo 1'), (2, 'MP2', 'TODOS', 'Mantenimiento Preventivo 2'), (3, 'MP3', 'TODOS', 'Mantenimiento Preventivo 3')");
+
+        // Catálogos Neumáticos - Semillas
+        const marcasNeu = [
+            'AEOLUS', 'AMBERTONE', 'APLUS', 'ARMORSTEEL', 'AUSTONE', 'AUFINE', 'BLACKLION', 'BRIDGESTONE',
+            'CHAOYANG', 'CONTINENTAL', 'DUNLOP', 'DOUBLESTAR', 'DURATURN', 'DYNACARGO', 'FULLRUN', 'GITI',
+            'GOODYEAR', 'GOODRIDE', 'GOODTYRE', 'GOLDEN CROWN', 'HANKOOK', 'HILO', 'INFINITY', 'JK TYRE',
+            'JINYU', 'KELLY', 'KETER', 'KUMHO', 'KUNLUN', 'LABIGATOR', 'LINGLONG', 'MAISHALL', 'MARSHAL',
+            'MAXELL', 'MAXXIS', 'MICHELIN', 'NIPPON', 'PIRELLI', 'PRINX', 'ROADLUX', 'ROYAL BLACK',
+            'STEELMARK', 'SUPERHAWK', 'TRIANGLE', 'WESTLAKE', 'WINDPOWER', 'WOSEN', 'YOKOHAMA', 'EVERGREEN', 'ROADMASTER'
+        ];
+        for (const m of marcasNeu) {
+            await promisePool.query("INSERT IGNORE INTO cat_neumaticos_marcas (nombre) VALUES (?)", [m]);
+        }
+
+        const medidasNeu = [
+            '11R22.5', '235/70R17.5', '235/75R17.5', '245/70R17.5', '245/70R19.5', '245/70R22.5',
+            '275/70R22.5', '275/80R22.5', '295/80R22.5', '315/80R22.5', '385/65R22.5', '425/65R22.5',
+            '445/65R22.5', '9.5R17.5'
+        ];
+        for (const med of medidasNeu) {
+            await promisePool.query("INSERT IGNORE INTO cat_neumaticos_medidas (nombre) VALUES (?)", [med]);
+        }
+
+        const accionesNeu = ['Inspeccion', 'Reparacion', 'Cambio', 'Instalacion', 'Rotacion'];
+        for (const ac of accionesNeu) {
+            await promisePool.query("INSERT IGNORE INTO cat_neumaticos_acciones (nombre) VALUES (?)", [ac]);
+        }
+
+        const modelosNeu = [
+            '10558', '17', '366', '785', 'AAR603', 'ACEL2', 'AD153', 'ADR35', 'ADR6', 'ADR8', 'AEL2', 'AEL5',
+            'AF177', 'AG510', 'AGD', 'AGD5', 'AH+', 'AHS', 'AHT', 'AMS', 'AT115A', 'AT121', 'AT161', 'AT27',
+            'AT605', 'AZ126', 'AZ171', 'BA226', 'BAR26', 'BT165', 'C901', 'CITY Y999', 'COUCH GRIP', 'CR960',
+            'CR976A', 'CRUNCH GRIP', 'CST27', 'D200', 'DR919', 'DSR266', 'DUD100', 'E BUS', 'EZ334', 'F820',
+            'FFH123', 'FR01', 'FR88', 'G658', 'GAC812', 'GAR820', 'GAU867', 'GAU867A', 'GDR1', 'GDR665', 'GITI',
+            'GL283A', 'GSR1', 'GSR225', 'GSRI', 'GT198', 'GT867', 'GU01', 'HAI', 'HA1', 'HCT', 'HD', 'HD3',
+            'HH301', 'HKS78', 'HK578', 'HN266', 'HT3', 'HTC', 'HYD', 'IFL866', 'JDH6', 'JDM6', 'JF568', 'JOH6',
+            'JTM1', 'JU558', 'JUH5', 'JULL1', 'JUM', 'K5461', 'KMA01', 'KMAX', 'KMAX D', 'KMAX S', 'KMAX5',
+            'KMAXD', 'KMAX D200', 'KMAX D210', 'KMAX S210', 'KRA01', 'KRA11', 'KRA50', 'KRD50', 'KS461', 'KS481',
+            'KT', 'KT511', 'KT512', 'KT522', 'LLA38', 'LLF01', 'LLFO', 'LUFO1', 'M5A', 'M840', 'M940', 'MC45',
+            'MIX716', 'MSA2', 'MY507A', 'MYSO7', 'NUEVA', 'PROGUO1', 'R152', 'R605', 'RE', 'REE', 'REGIONAL RHZ',
+            'RENCAUCHADA', 'RHS', 'RS201', 'RT605', 'RY023', 'S210', 'SAH02', 'SC216', 'SP580', 'SUPER HA1',
+            'T605', 'TB888', 'TE', 'TH22', 'TR01', 'TR656', 'TR658', 'TR668', 'TR685', 'TR689', 'TRS', 'TRS02',
+            'V1111', 'WGC28', 'WS', 'WS778', 'WS788', 'WS806', 'XLINE', 'XMULTI', 'Y115', 'Y126', 'Y201', 'Y209',
+            'Y631', 'Y99', 'Y999', 'EAU91', 'TR605', 'RM230HH', 'MSS2'
+        ];
+        for (const mod of modelosNeu) {
+            await promisePool.query("INSERT IGNORE INTO cat_neumaticos_modelos (nombre) VALUES (?)", [mod]);
+        }
 
         // Migraciones de columnas en cat_rampas y usuarios para instalaciones existentes
         try { await promisePool.query("ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0"); } catch(e) {}
