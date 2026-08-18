@@ -181,6 +181,73 @@
     font-size: 0.72rem;
     color: #64748b;
 }
+
+/* ── Estilo Idéntico a Reporte de Fallas (Drawer Modal 94vh) ─── */
+.ck-floating-drawer-dialog {
+    max-width: 740px !important;
+    width: 100% !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+    margin: 0 auto !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: auto !important;
+}
+.ck-floating-drawer-content {
+    height: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 28px 28px 0 0 !important;
+    border-bottom: none !important;
+    box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.25) !important;
+    overflow: hidden !important;
+    background: #f8fafc !important;
+}
+
+#modalDisponibilidad .form-control,
+#modalDisponibilidad .form-select {
+    min-height: 44px !important;
+    border-radius: 12px !important;
+    font-size: 0.92rem !important;
+    font-weight: 600 !important;
+    border-color: #cbd5e1 !important;
+    padding: 0.55rem 0.9rem !important;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+#modalDisponibilidad .form-control:focus,
+#modalDisponibilidad .form-select:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+#modalDisponibilidad .form-label {
+    font-size: 0.74rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    color: #475569 !important;
+    margin-bottom: 0.35rem !important;
+}
+#modalDisponibilidad .card {
+    border-radius: 18px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+}
+
+@media (max-width: 768px) {
+    .modal-dialog.ck-floating-drawer-dialog,
+    #modalDisponibilidad .modal-dialog.ck-floating-drawer-dialog,
+    .ck-floating-drawer-dialog {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        height: 96vh !important;
+        max-height: 96vh !important;
+        margin: 0 !important;
+        border-radius: 20px 20px 0 0 !important;
+    }
+}
 </style>
 
 <div class="disp-container">
@@ -345,14 +412,14 @@
     </div>
 </div>
 
-<!-- Modal Centrado Idéntico a Reporte de Fallas -->
+<!-- Modal Drawer Idéntico 1:1 a Reporte de Fallas -->
 <div class="modal fade" id="modalDisponibilidad" tabindex="-1" aria-labelledby="modalDisponibilidadLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
-        <div class="modal-content border-0 rounded-4 shadow-lg">
+    <div class="modal-dialog modal-dialog-scrollable ck-floating-drawer-dialog">
+        <div class="modal-content border-0 ck-floating-drawer-content">
             
             <!-- Modal Header -->
             <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
-                <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2 m-0" style="font-size: 1.15rem;" id="modalDisponibilidadLabel">
+                <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2 m-0" style="font-size: 1.15rem;" id="modalDisponibilidadLabel">
                     <i class="bi bi-truck text-primary fs-4"></i>
                     <span id="disp-modal-title">Registrar Unidad en Disponibilidad</span>
                 </h5>
