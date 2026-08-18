@@ -1744,7 +1744,7 @@ window.actualizarBadgeGlobalFiltros = function() {
 };
 
 // ================================================================
-// EXPORTAR A EXCEL
+// EXPORTAR A EXCEL (Sincronizado con todos los campos de la tabla)
 // ================================================================
 window.exportarPlacasExcel = function() {
     var datos = window.datosFiltradosPlacas && window.datosFiltradosPlacas.length > 0 ? window.datosFiltradosPlacas : window.dataGlobalPlacas;
@@ -1753,27 +1753,74 @@ window.exportarPlacasExcel = function() {
         return;
     }
     
-    var exportData = [];
-    var headers = ['PLACA', 'CLIENTE', 'RUC/DNI', 'MARCA', 'MODELO', 'TIPO', 'SUB TIPO', 'COLOR', 'NRO MOTOR', 'NRO CAJA', 'NRO CORONA', 'NRO VIN', 'CONFIGURACI�N', 'A�O', 'COMBUSTIBLE', 'ESTADO'];
+    var headers = [
+        'PLACA',
+        'CLIENTE',
+        'RUC/DNI',
+        'MARCA',
+        'MODELO',
+        'TIPO',
+        'SUB TIPO',
+        'COLOR',
+        'NRO MOTOR',
+        'NRO CAJA',
+        'NRO CORONA',
+        'NRO VIN',
+        'CONFIGURACIÓN',
+        'AÑO',
+        'COMBUSTIBLE',
+        'CARGA ÚTIL',
+        'PESO NETO',
+        'PESO BRUTO',
+        'UTS',
+        'MOTORA',
+        'LLANTAS',
+        'EN USO',
+        'DISPOSITIVO GPS',
+        'ESTADO'
+    ];
+    
+    var exportData = [headers];
     
     var inicio = 0;
     if (datos.length > 0 && String(datos[0][0]).toUpperCase() === 'PLACA') {
         inicio = 1;
     }
-    exportData.push(headers);
+    
+    // Mapeo sincronizado con las columnas visuales de la tabla principal
+    // 0: Placa, 1: Cliente, 2: RUC/DNI, 3: Marca, 4: Modelo, 5: Tipo, 6: SubTipo, 7: Color
+    // 8: NroMotor, 9: NroCaja, 10: NroCorona, 11: NroVIN, 12: Configuracion, 13: Anio, 14: Combustible
+    // 15: CargaUtil, 16: PesoNeto, 17: PesoBruto, 19: UTS, 20: Motora, 21: Llantas, 22: EnUso, 23: WialonName, 18: Estado
+    var ordenCampos = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 18];
     
     for (var i = inicio; i < datos.length; i++) {
-        exportData.push(datos[i].slice(0, 16));
+        var row = datos[i];
+        if (!row || !row[0]) continue;
+        var rowData = ordenCampos.map(function(idx) {
+            var val = row[idx];
+            return (val !== undefined && val !== null) ? String(val).trim() : '';
+        });
+        exportData.push(rowData);
     }
     
     if (typeof XLSX === 'undefined') {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librer�a de exportaci�n no encontrada.', 'error');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librería de exportación no encontrada.', 'error');
         return;
     }
     
     var wb = XLSX.utils.book_new();
     var ws = XLSX.utils.aoa_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(wb, ws, 'Placas');
-    XLSX.writeFile(wb, 'Reporte_Placas_' + new Date().getTime() + '.xlsx');
-};
+    
+    // Anchos de columna automáticos
+    ws['!cols'] = headers.map(function(h, idx) {
+        var maxLen = h.length;
+        for (var r = 1; r < exportData.length; r++) {
+            var cellVal = exportData[r][idx] ? String(exportData[r][idx]) : '';
+            if (cellVal.length > maxLen) maxLen = cellVal.length;
+        }
+        return { wch: Math.min(Math.max(maxLen + 3, 12), 40) };
+    });
 
+    XLSX.utils.book_append_sheet(wb, ws, 'Flota Total');
+    XLSX.writeFile(wb, 'Reporte_Flota_Total.xlsx');
+};
