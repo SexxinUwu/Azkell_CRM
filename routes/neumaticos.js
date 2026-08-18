@@ -216,7 +216,7 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
     router.get('/catalogos', async (req, res) => {
         try {
-            const tdb = getDb(req).promise();
+            const tdb = getDb(req);
             const [marcas]   = await tdb.query("SELECT nombre FROM cat_neumaticos_marcas WHERE activo = 1 ORDER BY nombre ASC");
             const [modelos]  = await tdb.query("SELECT nombre FROM cat_neumaticos_modelos WHERE activo = 1 ORDER BY nombre ASC");
             const [medidas]  = await tdb.query("SELECT nombre FROM cat_neumaticos_medidas WHERE activo = 1 ORDER BY nombre ASC");
@@ -239,7 +239,7 @@ module.exports = function (db, broadcast, logAudit) {
     // Registrar nuevo elemento dinámico en caliente
     router.post('/catalogos/:tipo', async (req, res) => {
         try {
-            const tdb = getDb(req).promise();
+            const tdb = getDb(req);
             const tipo = (req.params.tipo || '').toLowerCase();
             const valor = (req.body.nombre || req.body.valor || '').trim().toUpperCase();
 
@@ -267,7 +267,7 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
     router.get('/inspecciones', async (req, res) => {
         try {
-            const tdb = getDb(req).promise();
+            const tdb = getDb(req);
             const { placa, id_ot, limit = 100 } = req.query;
 
             let sql = `
@@ -301,7 +301,7 @@ module.exports = function (db, broadcast, logAudit) {
 
     router.get('/inspecciones/:id', async (req, res) => {
         try {
-            const tdb = getDb(req).promise();
+            const tdb = getDb(req);
             const id = req.params.id;
 
             const [cabecera] = await tdb.query("SELECT * FROM neumaticos_inspecciones WHERE id_inspeccion = ?", [id]);
@@ -321,7 +321,7 @@ module.exports = function (db, broadcast, logAudit) {
 
     router.post('/inspecciones', async (req, res) => {
         try {
-            const tdb = getDb(req).promise();
+            const tdb = getDb(req);
             const {
                 id_ot,
                 placa,
@@ -400,8 +400,8 @@ module.exports = function (db, broadcast, logAudit) {
 
                     await tdb.query(`
                         INSERT INTO neumaticos_inspecciones_det
-                        (id_inspeccion, id_neumatico, posicion, marca, medida, modelo, r1, r2, r3, r4, remanente_promedio, presion_ant, presion_actual, estado, accion, rot, observaciones, foto1, foto2, foto3, alerta_cambio)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        (id_inspeccion, id_neumatico, posicion, marca, medida, modelo, r1, r2, r3, r4, presion_ant, presion_actual, estado, accion, rot, observaciones, foto1, foto2, foto3, alerta_cambio)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `, [
                         id_inspeccion,
                         it.id_neumatico || null,
@@ -413,7 +413,6 @@ module.exports = function (db, broadcast, logAudit) {
                         r2,
                         r3,
                         r4,
-                        parseFloat(rProm.toFixed(1)),
                         parseInt(it.presion_ant || 0, 10),
                         parseInt(it.presion_actual || 0, 10),
                         (it.estado || 'NUEVA').toUpperCase(),
@@ -473,7 +472,7 @@ module.exports = function (db, broadcast, logAudit) {
 
     router.delete('/inspecciones/:id', async (req, res) => {
         try {
-            const tdb = getDb(req).promise();
+            const tdb = getDb(req);
             const id = req.params.id;
 
             await tdb.query("DELETE FROM neumaticos_inspecciones_det WHERE id_inspeccion = ?", [id]);
@@ -494,7 +493,7 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
     router.post('/rotaciones', async (req, res) => {
         try {
-            const tdb = getDb(req).promise();
+            const tdb = getDb(req);
             const {
                 id_ot,
                 placa,
@@ -548,7 +547,7 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
     router.get('/hoja-vida/:id', async (req, res) => {
         try {
-            const tdb = getDb(req).promise();
+            const tdb = getDb(req);
             const id = req.params.id;
 
             const [neumatico] = await tdb.query("SELECT * FROM neumaticos_hoja_vida WHERE id_neumatico = ?", [id]);
@@ -587,7 +586,7 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
     router.get('/analisis', async (req, res) => {
         try {
-            const tdb = getDb(req).promise();
+            const tdb = getDb(req);
 
             // Limpiar automáticamente inspecciones huérfanas sin llantas registradas
             try {
@@ -669,7 +668,7 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
     router.get('/ultimas', async (req, res) => {
         try {
-            const tdb = getDb(req).promise();
+            const tdb = getDb(req);
             const { empresa } = req.query;
 
             let sql = `
@@ -734,7 +733,7 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
     router.get('/requerimientos', async (req, res) => {
         try {
-            const tdb = getDb(req).promise();
+            const tdb = getDb(req);
             const { filtro } = req.query; // 'Motora', 'No Motora', 'Todos'
 
             let sql = `
