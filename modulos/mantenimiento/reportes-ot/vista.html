@@ -273,7 +273,7 @@
 /* ── Drawer lateral de detalle ────────────────────────────────── */
 #rotDrawerBackdrop {
     display: none; position: fixed; inset: 0;
-    background: rgba(0, 0, 0, 0.45) !important;
+    background: rgba(0, 0, 0, 0.5) !important;
     z-index: 1089 !important;
 }
 #rotDrawerBackdrop.open { display: block !important; }
@@ -283,7 +283,7 @@
     left: 50% !important;
     top: auto !important;
     right: auto !important;
-    transform: translateX(-50%) translateY(100%);
+    transform: translate3d(-50%, 100%, 0) !important;
     width: 100% !important;
     max-width: 700px !important;
     height: 92vh !important;
@@ -292,8 +292,9 @@
     border: 1px solid var(--border) !important;
     border-bottom: none !important;
     border-radius: 28px 28px 0 0 !important;
-    box-shadow: 0 -12px 48px rgba(0,0,0,.18) !important;
-    transition: transform .25s ease !important;
+    box-shadow: 0 -12px 48px rgba(0,0,0,.25) !important;
+    transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1) !important;
+    will-change: transform;
     z-index: 1090 !important;
     display: flex;
     flex-direction: column;
@@ -302,7 +303,7 @@
     margin: 0 !important;
 }
 .rot-drawer.open {
-    transform: translateX(-50%) translateY(0) !important;
+    transform: translate3d(-50%, 0, 0) !important;
     visibility: visible !important;
 }
 .rot-drawer-hd {
@@ -380,7 +381,7 @@
     left: 50% !important;
     top: auto !important;
     right: auto !important;
-    transform: translateX(-50%) translateY(100%);
+    transform: translate3d(-50%, 100%, 0) !important;
     width: 100% !important;
     max-width: 700px !important;
     height: 92vh !important;
@@ -390,7 +391,8 @@
     border-bottom: none !important;
     border-radius: 28px 28px 0 0 !important;
     box-shadow: 0 -16px 56px rgba(0,0,0,.35) !important;
-    transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1) !important;
+    will-change: transform;
     z-index: 1150 !important;
     display: flex;
     flex-direction: column;
@@ -399,7 +401,7 @@
     margin: 0 !important;
 }
 .rot-sub-drawer.open {
-    transform: translateX(-50%) translateY(0) !important;
+    transform: translate3d(-50%, 0, 0) !important;
     visibility: visible !important;
     display: flex !important;
 }

@@ -287,7 +287,7 @@ module.exports = function (db, broadcast, logAudit) {
             const [rows] = await tdb.query(sql, params);
             res.json({ ok: true, data: rows });
         } catch (err) {
-            console.error("Error listando inspecciones de neumáticos:", err);
+            console.error("Error obteniendo listado de inspecciones:", err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });
