@@ -4,26 +4,27 @@
     padding: 1rem 1.25rem;
 }
 
-/* Pestañas Principales Superiores Pills 1:1 */
+/* Pestañas Principales Superiores Pills 1:1 con Marco Distintivo */
 .neu-main-tabs-bar {
-    background: #e2e8f0;
-    padding: 4px;
-    border-radius: 16px;
-    display: flex;
-    gap: 6px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    padding: 4px 6px;
+    border-radius: 9999px;
+    display: inline-flex;
+    gap: 4px;
     margin-bottom: 1.25rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 }
 .neu-main-tab {
-    flex: 1;
     border: 0 !important;
     outline: none !important;
     background: transparent;
-    padding: 10px 16px;
-    border-radius: 12px;
-    font-size: 0.88rem;
+    padding: 8px 20px;
+    border-radius: 9999px;
+    font-size: 0.86rem;
     font-weight: 700;
     color: #475569;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
@@ -32,16 +33,17 @@
     box-shadow: none !important;
 }
 .neu-main-tab.active {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
+    background: #2563eb !important;
+    color: #ffffff !important;
+    box-shadow: 0 3px 10px rgba(37,99,235,0.25) !important;
 }
 .neu-main-tab.tab-req {
     color: #dc2626;
 }
 .neu-main-tab.tab-req.active {
-    background: #ffffff !important;
-    color: #dc2626 !important;
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    box-shadow: 0 3px 10px rgba(239,68,68,0.25) !important;
 }
 
 /* Card Resumen Consolidado 1:1 */
@@ -169,7 +171,7 @@
     padding: 0 4px;
 }
 
-/* Tarjeta por Vehículo (Cards 1:1) */
+/* Tarjeta por Vehículo (Alineación de Columnas Fija 1:1) */
 .neu-vehicle-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -187,9 +189,10 @@
     justify-content: space-between;
 }
 .neu-vehicle-table {
-    width: 100%;
+    width: 100% !important;
     border-collapse: collapse;
     font-size: 0.8rem;
+    table-layout: fixed !important;
 }
 .neu-vehicle-table th {
     background: #ffffff;
@@ -205,10 +208,19 @@
     padding: 0.75rem 1rem;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
+    word-break: break-word;
 }
 .neu-vehicle-table tr:last-child td {
     border-bottom: none;
 }
+
+/* Definición de Anchos Fijos para Alineación Perfecta 1:1 */
+.neu-vehicle-table th:nth-child(1), .neu-vehicle-table td:nth-child(1) { width: 55px; text-align: center; }
+.neu-vehicle-table th:nth-child(2), .neu-vehicle-table td:nth-child(2) { width: 25%; }
+.neu-vehicle-table th:nth-child(3), .neu-vehicle-table td:nth-child(3) { width: 17%; text-align: center; }
+.neu-vehicle-table th:nth-child(4), .neu-vehicle-table td:nth-child(4) { width: 14%; text-align: center; }
+.neu-vehicle-table th:nth-child(5), .neu-vehicle-table td:nth-child(5) { width: 16%; text-align: center; }
+.neu-vehicle-table th:nth-child(6), .neu-vehicle-table td:nth-child(6) { width: 28%; }
 
 /* Full Bleed Mobile Responsiveness */
 @media (max-width: 768px) {
