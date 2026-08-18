@@ -887,8 +887,8 @@ module.exports = function (db, broadcast, logAudit) {
 
                     await tdb.query(`
                         INSERT INTO neumaticos_inspecciones_det
-                        (id_inspeccion, posicion, tipo_eje, marca, medida, modelo, r1, r2, r3, r4, remanente_promedio, presion_ant, presion_actual, estado, accion, rot, observaciones, foto1, foto2, foto3, alerta_cambio)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        (id_inspeccion, posicion, tipo_eje, marca, medida, modelo, r1, r2, r3, r4, presion_ant, presion_actual, estado, accion, rot, observaciones, foto1, foto2, foto3, alerta_cambio)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `, [
                         id_inspeccion,
                         String(it.posicion || '1').toUpperCase(),
@@ -900,7 +900,6 @@ module.exports = function (db, broadcast, logAudit) {
                         r2,
                         r3,
                         r4,
-                        parseFloat(rProm.toFixed(1)),
                         parseInt(it.presion_ant || 0, 10),
                         parseInt(it.presion_actual || 0, 10),
                         (it.estado || 'NUEVA').toUpperCase(),
