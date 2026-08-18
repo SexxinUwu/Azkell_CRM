@@ -1990,14 +1990,18 @@ window.rotGenerarPlantillaLlantasOT = async function(idOt) {
     }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; color: #000000; }
     
-    /* CABECERA CON LOGO EMPRESA */
-    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-    .header-table td { vertical-align: middle; border: none; padding: 4px; }
-    .logo-cell { width: 220px; text-align: left; }
+    /* CABECERA CON LOGO EMPRESA Y RECUADRO DE CÓDIGO A LA ESQUINA */
+    .header-table { width: 100%; border-collapse: collapse; border: 2px solid #000000; margin-bottom: 8px; }
+    .header-table td { border: 1px solid #000000; padding: 4px; vertical-align: middle; }
+    .logo-cell { width: 220px; text-align: center; border-right: 1px solid #000000; }
     .company-name-text { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 22px; color: #000000; text-transform: uppercase; }
-    .title-cell { text-align: center; }
-    .main-title { font-weight: 700; font-size: 24px; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1; }
-    .sub-code { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 10px; color: #444; margin-top: 2px; }
+    .title-cell { text-align: center; border-right: 1px solid #000000; }
+    .main-title { font-weight: 700; font-size: 22px; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1; }
+    
+    .qms-box-cell { width: 180px; padding: 0 !important; border: none !important; }
+    .qms-subtable { width: 100%; border-collapse: collapse; font-family: 'Oswald', sans-serif; font-size: 10px; }
+    .qms-subtable td { border-bottom: 1px solid #000000; padding: 2px 6px !important; text-align: left; height: 18px; }
+    .qms-subtable tr:last-child td { border-bottom: none; }
     
     /* CUADRO INFO VEHÍCULO (SEGUNDA IMAGEN MARSISA) */
     .info-section-table { width: 100%; margin: 6px 0 10px 0; border-collapse: collapse; }
@@ -2005,7 +2009,7 @@ window.rotGenerarPlantillaLlantasOT = async function(idOt) {
     .vehicle-box {
         border: 2px solid #000000;
         padding: 6px 10px;
-        width: 620px;
+        width: 640px;
         font-family: 'Oswald', sans-serif;
         font-size: 11px;
         line-height: 1.4;
@@ -2084,15 +2088,24 @@ window.rotGenerarPlantillaLlantasOT = async function(idOt) {
     <div class="report-container">
         <table class="header-table">
             <tr>
-                <td class="logo-cell">
+                <td class="logo-cell" rowspan="3">
                     ${logoHtml}
                 </td>
-                <td class="title-cell">
+                <td class="title-cell" rowspan="3">
                     <div class="main-title">INSPECCIÓN DE NEUMÁTICOS</div>
-                    <div class="sub-code">CÓDIGO: F-MAN-005 &nbsp;|&nbsp; VERSIÓN: 03 &nbsp;|&nbsp; EMISIÓN: REVISIÓN</div>
                 </td>
-                <td style="width: 140px; text-align: right; font-weight: 700; font-size: 14px;">
-                    OT Nº ${idOt}
+                <td class="qms-box-cell" style="border-bottom: 1px solid #000;">
+                    <div style="padding: 2px 6px;"><b>CÓDIGO:</b> F-MAN-002</div>
+                </td>
+            </tr>
+            <tr>
+                <td class="qms-box-cell" style="border-bottom: 1px solid #000;">
+                    <div style="padding: 2px 6px;"><b>VERSIÓN:</b> 0</div>
+                </td>
+            </tr>
+            <tr>
+                <td class="qms-box-cell">
+                    <div style="padding: 2px 6px;"><b>F. EMISIÓN:</b> 10/11/2025</div>
                 </td>
             </tr>
         </table>
@@ -2105,6 +2118,7 @@ window.rotGenerarPlantillaLlantasOT = async function(idOt) {
                             <div><span class="v-label">FECHA:</span> <span class="v-val">${fechaInicio}</span></div>
                             <div><span class="v-label">PLACAS:</span> <span class="v-val" style="font-weight:700;">${placa}</span></div>
                             <div><span class="v-label">KILOMETRAJE:</span> <span class="v-val">${kmTablero}</span></div>
+                            <div><span class="v-label">OT Nº:</span> <span class="v-val" style="font-weight:700;">${idOt}</span></div>
                         </div>
                         <div class="v-row">
                             <div><span class="v-label">TIPO OT:</span> <span class="v-val">${tipoOT}</span></div>
