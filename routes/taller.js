@@ -250,7 +250,7 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
     }
 
     if (accion === 'editar') {
-        const { tipo_ot, sub_tipo, supervisor, situacion_inicial, motivo, km } = req.body;
+        const { tipo_ot, sub_tipo, supervisor, situacion_inicial, motivo, km, tecnicos, trabajos_det } = req.body;
         db.query('SELECT detalles_json, id_rampa, placa FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
@@ -265,9 +265,36 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
             if (situacion_inicial !== undefined) det.situacion_inicial = situacion_inicial;
             if (motivo !== undefined)            det.motivo            = motivo;
             if (km !== undefined)                det.km                = parseInt(km) || 0;
+
+            if (tecnicos !== undefined) {
+                const arrTec = Array.isArray(tecnicos) ? tecnicos.filter(Boolean) : (tecnicos ? [tecnicos] : []);
+                det.tecnicos = arrTec;
+                det.tecnicos_str = arrTec.join(', ');
+            }
+            if (trabajos_det !== undefined) {
+                det.trabajos_det = trabajos_det;
+            }
+
             db.query('UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ?',
                 [JSON.stringify(det), ticketId], (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
+
+                    if (Array.isArray(trabajos_det) && trabajos_det.length > 0) {
+                        db.query('DELETE FROM trabajos_ot WHERE ticket_visita = ? OR id_ot = ?', [ticketId, ticketId], () => {
+                            const insVals = trabajos_det.map((td, idx) => [
+                                `${ticketId}-${idx+1}`,
+                                ticketId,
+                                placaOT || '',
+                                td.desc || '',
+                                td.tecnico || '',
+                                'En Proceso'
+                            ]);
+                            if (insVals.length > 0) {
+                                db.query('INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, trabajo_realizado, tecnico, estado) VALUES ?', [insVals], () => {});
+                            }
+                        });
+                    }
+
                     if (motivo !== undefined) {
                         if (idRampa) {
                             db.query('UPDATE taller_rampas SET obs = ? WHERE id = ?', [motivo, idRampa]);
