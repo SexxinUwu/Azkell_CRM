@@ -25,7 +25,12 @@
             const porcVig = totalUnidades > 0 ? Math.round((vig / totalUnidades) * 100) : 0;
             const porcNoVig = totalUnidades > 0 ? Math.round((novig / totalUnidades) * 100) : 0;
 
+            const totalCirc = Number(r.llantas_circulacion || 0);
+
             document.getElementById('kpi-neu-total-insp').innerText = total;
+            const circEl = document.getElementById('kpi-neu-total-circulando');
+            if (circEl) circEl.innerText = totalCirc.toLocaleString();
+
             document.getElementById('kpi-neu-vigentes').innerText = vig;
             
             const porcEl = document.getElementById('kpi-neu-porc-vigente');
