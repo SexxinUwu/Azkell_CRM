@@ -3118,10 +3118,17 @@ window.rotAbrirEditarOT = async function(idOT) {
     else if (det.tecnicos_str) tecsArray = det.tecnicos_str.split(',').map(function(s){ return s.trim(); });
 
     parsed.tareas.forEach(function(tDesc, tIdx) {
+        var tecDeEstaTarea = '';
+        if (det.trabajos_det && Array.isArray(det.trabajos_det) && det.trabajos_det[tIdx] && det.trabajos_det[tIdx].tecnico) {
+            tecDeEstaTarea = det.trabajos_det[tIdx].tecnico;
+        } else {
+            tecDeEstaTarea = tecsArray[tIdx] || tecsArray[0] || '';
+        }
+
         window._rotEotTrabajos.push({
             id: 'rot_eot_t_' + (window._rotEotTrabajosCount++),
             desc: tDesc,
-            tecnico: tecsArray[tIdx] || tecsArray[0] || ''
+            tecnico: tecDeEstaTarea
         });
     });
 
@@ -3239,6 +3246,8 @@ window.rotGuardarEdicionOT = function() {
     // Recopilar trabajos y técnicos
     var tareasFinales = [];
     var tecnicosFinales = [];
+    var trabajosDet = [];
+
     window._rotEotTrabajos.forEach(function(t) {
         var inputDesc = document.getElementById('desc_' + t.id);
         var descVal = (inputDesc ? inputDesc.value : t.desc).trim();
@@ -3247,6 +3256,7 @@ window.rotGuardarEdicionOT = function() {
 
         if (descVal) {
             tareasFinales.push(descVal);
+            trabajosDet.push({ desc: descVal, tecnico: tecVal });
             if (tecVal && !tecnicosFinales.includes(tecVal)) {
                 tecnicosFinales.push(tecVal);
             }
@@ -3268,7 +3278,8 @@ window.rotGuardarEdicionOT = function() {
             supervisor:         supervisor,
             situacion_inicial:  situacion,
             motivo:             motivoFinal,
-            tecnicos:           tecnicosFinales
+            tecnicos:           tecnicosFinales,
+            trabajos_det:       trabajosDet
         })
     })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
