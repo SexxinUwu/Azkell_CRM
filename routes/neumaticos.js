@@ -611,14 +611,18 @@ module.exports = function (db, broadcast, logAudit) {
                 ) as ultimas
             `);
 
-            // Total de llantas en estado crítico (Remanente <= 4mm) en la última inspección de cada placa
+            // Total de llantas en estado crítico (Remanente <= 4mm) en la última inspección por fecha de cada placa
             const [criticas] = await tdb.query(`
                 SELECT COUNT(*) as total_criticas
                 FROM neumaticos_inspecciones_det d
                 INNER JOIN (
-                    SELECT placa, MAX(id_inspeccion) as id_inspeccion
-                    FROM neumaticos_inspecciones
-                    GROUP BY placa
+                    SELECT i1.placa, i1.id_inspeccion
+                    FROM neumaticos_inspecciones i1
+                    INNER JOIN (
+                        SELECT placa, MAX(fecha_inspeccion) as max_fecha
+                        FROM neumaticos_inspecciones
+                        GROUP BY placa
+                    ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
                 ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci
                 WHERE d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0
             `);
@@ -703,10 +707,14 @@ module.exports = function (db, broadcast, logAudit) {
                     p.motora
                 FROM neumaticos_inspecciones_det d
                 INNER JOIN (
-                    SELECT placa, MAX(id_inspeccion) as max_id_inspeccion
-                    FROM neumaticos_inspecciones
-                    GROUP BY placa
-                ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.max_id_inspeccion COLLATE utf8mb4_unicode_ci
+                    SELECT i1.placa, i1.id_inspeccion
+                    FROM neumaticos_inspecciones i1
+                    INNER JOIN (
+                        SELECT placa, MAX(fecha_inspeccion) as max_fecha
+                        FROM neumaticos_inspecciones
+                        GROUP BY placa
+                    ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
+                ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci
                 INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci
                 LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
                 WHERE 1=1
@@ -772,10 +780,14 @@ module.exports = function (db, broadcast, logAudit) {
                     END as tipo_posicion
                 FROM neumaticos_inspecciones_det d
                 INNER JOIN (
-                    SELECT placa, MAX(id_inspeccion) as max_id_inspeccion
-                    FROM neumaticos_inspecciones
-                    GROUP BY placa
-                ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.max_id_inspeccion COLLATE utf8mb4_unicode_ci
+                    SELECT i1.placa, i1.id_inspeccion
+                    FROM neumaticos_inspecciones i1
+                    INNER JOIN (
+                        SELECT placa, MAX(fecha_inspeccion) as max_fecha
+                        FROM neumaticos_inspecciones
+                        GROUP BY placa
+                    ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
+                ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci
                 INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci
                 LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
                 WHERE (d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0)
