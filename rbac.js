@@ -48,7 +48,9 @@ module.exports = function globalRBAC(req, res, next) {
         '/ot-trabajos',
         '/ot-materiales',
         '/ot-backlog',
-        '/inspecciones-por-ot'
+        '/inspecciones-por-ot',
+        '/neumaticos/catalogos',
+        '/combustible/catalogos'
     ];
     if (req.method === 'GET' && globalReferenceGets.some(p => path === p || path.startsWith(p))) {
         return next();
@@ -101,6 +103,12 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/almacen/configuracion')) mod = ['inv', 'ent_inv', 'sal_inv', 'cfg_almacen'];
 
     // MANTENIMIENTO
+    else if (path.startsWith('/neumaticos') || path.includes('neumaticos')) {
+        mod = ['neumaticos', 'insp', 'ot', 'fleetrun'];
+    }
+    else if (path.startsWith('/combustible') || path.includes('combustible')) {
+        mod = ['combustible', 'fleet', 'fleetrun'];
+    }
     else if (path.startsWith('/taller-rampas') || path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban')) {
         mod = ['status_rampa', 'ot', 'trabajos_ot', 'fleetrun', 'plan', 'cfg_mant'];
     }
@@ -145,7 +153,7 @@ module.exports = function globalRBAC(req, res, next) {
         
         for (let mKey of mods) {
             let m = p[mKey];
-            if (m && (m[accion] === 1 || m[accion] === true)) {
+            if (m && (m[accion] === 1 || m[accion] === true || (accion === 'l' && (m.enabled === 1 || m.enabled === true)))) {
                 hasAccess = true;
                 break;
             }
