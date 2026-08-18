@@ -1,19 +1,82 @@
 <!-- MÓDULO: Análisis de Neumáticos — ERP Azkell Fleet -->
-<div class="container-fluid p-3 p-md-4" id="moduloNeumaticosAnalisis">
+<style>
+@media (max-width: 768px) {
+    /* Optimización de pantalla completa en móvil nativo sin espacios laterales vacíos */
+    .topbar { display: none !important; }
+    #root-dinamico, .main-area { 
+        padding: 0 !important; 
+        margin: 0 !important;
+        overflow: hidden !important; 
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100dvh !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    #moduloNeumaticosAnalisis {
+        height: 100% !important; 
+        flex: 1 1 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        background-color: #f8fafc !important;
+        padding: 10px 10px 7rem 10px !important;
+        -webkit-overflow-scrolling: touch;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    #moduloNeumaticosAnalisis .neu-header-box {
+        margin-bottom: 0.75rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    #moduloNeumaticosAnalisis .neu-header-title {
+        font-size: 1.15rem !important;
+    }
+    #moduloNeumaticosAnalisis .neu-header-sub {
+        font-size: 0.72rem !important;
+    }
+    #moduloNeumaticosAnalisis .neu-action-buttons {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px !important;
+        width: 100% !important;
+        margin-top: 8px !important;
+    }
+    #moduloNeumaticosAnalisis .neu-action-buttons .btn {
+        width: 100% !important;
+        padding: 8px 6px !important;
+        font-size: 0.74rem !important;
+        justify-content: center !important;
+    }
+    #moduloNeumaticosAnalisis .neu-kpi-card {
+        padding: 0.75rem 0.65rem !important;
+    }
+    #moduloNeumaticosAnalisis .neu-kpi-val {
+        font-size: 1.35rem !important;
+    }
+    #moduloNeumaticosAnalisis .neu-kpi-lbl {
+        font-size: 0.65rem !important;
+    }
+    #moduloNeumaticosAnalisis .neu-kpi-sub {
+        font-size: 0.65rem !important;
+    }
+}
+</style>
+
+<div class="container-fluid p-2 p-md-4" id="moduloNeumaticosAnalisis">
     <!-- Header Bento -->
-    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4 pb-2 border-bottom">
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-3 mb-md-4 pb-2 border-bottom neu-header-box">
         <div>
             <div class="d-flex align-items-center gap-2">
                 <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background: rgba(37,99,235,0.1); color: #2563eb;">
                     <i class="bi bi-graph-up-arrow fs-5"></i>
                 </div>
                 <div>
-                    <h4 class="fw-bold text-dark m-0">Análisis y Rendimiento de Neumáticos</h4>
-                    <p class="text-muted small m-0">Monitoreo de desgaste, semáforo de vigencia por flota y control predictivo de recambio</p>
+                    <h4 class="fw-bold text-dark m-0 neu-header-title">Análisis y Rendimiento de Neumáticos</h4>
+                    <p class="text-muted small m-0 neu-header-sub">Monitoreo de desgaste, semáforo de vigencia por flota y control predictivo de recambio</p>
                 </div>
             </div>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="d-flex align-items-center gap-2 flex-wrap neu-action-buttons">
             <button class="btn btn-outline-success btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.neuAbrirModalImportar()">
                 <i class="bi bi-file-earmark-excel-fill text-success"></i> Importar Excel
             </button>
@@ -29,55 +92,55 @@
         </div>
     </div>
 
-    <!-- KPIs Bento Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-muted small fw-bold text-uppercase" style="font-size:0.72rem; letter-spacing:0.04em;">Inspecciones Totales</span>
-                    <div class="rounded-3 p-2" style="background: rgba(37,99,235,0.1); color: #2563eb;"><i class="bi bi-clipboard2-check fs-6"></i></div>
+    <!-- KPIs Bento Cards (2x2 en móvil, 4 en fila en desktop) -->
+    <div class="row g-2 g-md-3 mb-3 mb-md-4">
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 rounded-4 p-2 p-sm-3 bg-white shadow-2xs h-100 neu-kpi-card" style="border: 1px solid var(--border, #e2e8f0) !important;">
+                <div class="d-flex align-items-center justify-content-between mb-1 mb-sm-2">
+                    <span class="text-muted small fw-bold text-uppercase neu-kpi-lbl" style="font-size:0.7rem; letter-spacing:0.04em;">Insp. Totales</span>
+                    <div class="rounded-3 p-1.5 p-sm-2" style="background: rgba(37,99,235,0.1); color: #2563eb;"><i class="bi bi-clipboard2-check fs-6"></i></div>
                 </div>
-                <h3 class="fw-bold text-dark m-0" id="kpi-neu-total-insp">--</h3>
-                <small class="text-muted" style="font-size:0.72rem;">Historial general registrado</small>
+                <h3 class="fw-bold text-dark m-0 neu-kpi-val" id="kpi-neu-total-insp">--</h3>
+                <small class="text-muted text-truncate d-block neu-kpi-sub" style="font-size:0.68rem;">Historial general</small>
             </div>
         </div>
 
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-muted small fw-bold text-uppercase" style="font-size:0.72rem; letter-spacing:0.04em;">Vigencia Flota</span>
-                    <div class="rounded-3 p-2" style="background: rgba(34,197,94,0.1); color: #16a34a;"><i class="bi bi-shield-check fs-6"></i></div>
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 rounded-4 p-2 p-sm-3 bg-white shadow-2xs h-100 neu-kpi-card" style="border: 1px solid var(--border, #e2e8f0) !important;">
+                <div class="d-flex align-items-center justify-content-between mb-1 mb-sm-2">
+                    <span class="text-muted small fw-bold text-uppercase neu-kpi-lbl" style="font-size:0.7rem; letter-spacing:0.04em;">Vigencia Flota</span>
+                    <div class="rounded-3 p-1.5 p-sm-2" style="background: rgba(34,197,94,0.1); color: #16a34a;"><i class="bi bi-shield-check fs-6"></i></div>
                 </div>
-                <h3 class="fw-bold text-success m-0" id="kpi-neu-vigentes">--</h3>
-                <small class="text-muted" style="font-size:0.72rem;"><span id="kpi-neu-porc-vigente">0%</span> con inspección al día</small>
+                <h3 class="fw-bold text-success m-0 neu-kpi-val" id="kpi-neu-vigentes">--</h3>
+                <small class="text-muted text-truncate d-block neu-kpi-sub" style="font-size:0.68rem;"><span id="kpi-neu-porc-vigente">0%</span> al día</small>
             </div>
         </div>
 
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-muted small fw-bold text-uppercase" style="font-size:0.72rem; letter-spacing:0.04em;">Llantas en Alerta</span>
-                    <div class="rounded-3 p-2" style="background: rgba(239,68,68,0.1); color: #dc2626;"><i class="bi bi-exclamation-triangle fs-6"></i></div>
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 rounded-4 p-2 p-sm-3 bg-white shadow-2xs h-100 neu-kpi-card" style="border: 1px solid var(--border, #e2e8f0) !important;">
+                <div class="d-flex align-items-center justify-content-between mb-1 mb-sm-2">
+                    <span class="text-muted small fw-bold text-uppercase neu-kpi-lbl" style="font-size:0.7rem; letter-spacing:0.04em;">Llantas Alerta</span>
+                    <div class="rounded-3 p-1.5 p-sm-2" style="background: rgba(239,68,68,0.1); color: #dc2626;"><i class="bi bi-exclamation-triangle fs-6"></i></div>
                 </div>
-                <h3 class="fw-bold text-danger m-0" id="kpi-neu-criticas">--</h3>
-                <small class="text-muted" style="font-size:0.72rem;">Remanente crítico ≤ 4.0 mm</small>
+                <h3 class="fw-bold text-danger m-0 neu-kpi-val" id="kpi-neu-criticas">--</h3>
+                <small class="text-muted text-truncate d-block neu-kpi-sub" style="font-size:0.68rem;">≤ 4.0 mm remanente</small>
             </div>
         </div>
 
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-muted small fw-bold text-uppercase" style="font-size:0.72rem; letter-spacing:0.04em;">Inspecciones Vencidas</span>
-                    <div class="rounded-3 p-2" style="background: rgba(245,158,11,0.1); color: #d97706;"><i class="bi bi-clock-history fs-6"></i></div>
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 rounded-4 p-2 p-sm-3 bg-white shadow-2xs h-100 neu-kpi-card" style="border: 1px solid var(--border, #e2e8f0) !important;">
+                <div class="d-flex align-items-center justify-content-between mb-1 mb-sm-2">
+                    <span class="text-muted small fw-bold text-uppercase neu-kpi-lbl" style="font-size:0.7rem; letter-spacing:0.04em;">Insp. Vencidas</span>
+                    <div class="rounded-3 p-1.5 p-sm-2" style="background: rgba(245,158,11,0.1); color: #d97706;"><i class="bi bi-clock-history fs-6"></i></div>
                 </div>
-                <h3 class="fw-bold text-warning m-0" id="kpi-neu-vencidas">--</h3>
-                <small class="text-muted" style="font-size:0.72rem;">Próxima fecha superada</small>
+                <h3 class="fw-bold text-warning m-0 neu-kpi-val" id="kpi-neu-vencidas">--</h3>
+                <small class="text-muted text-truncate d-block neu-kpi-sub" style="font-size:0.68rem;">Fecha superada</small>
             </div>
         </div>
     </div>
 
     <!-- Charts & Vehicle Inspector Section -->
-    <div class="row g-3 mb-4">
+    <div class="row g-2 g-md-3 mb-3 mb-md-4">
         <!-- Donut Chart Vigencia -->
         <div class="col-lg-5 col-md-12">
             <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
@@ -87,13 +150,13 @@
                     </h6>
                     <span class="badge bg-light text-dark border small">Global</span>
                 </div>
-                <div class="d-flex flex-column align-items-center justify-content-center py-3">
-                    <div style="width: 220px; height: 220px; position: relative;">
+                <div class="d-flex flex-column align-items-center justify-content-center py-2">
+                    <div style="width: 200px; height: 200px; position: relative;">
                         <canvas id="chartNeuVigencia"></canvas>
                     </div>
-                    <div class="d-flex justify-content-center gap-4 mt-3 flex-wrap small fw-bold">
-                        <div class="d-flex align-items-center gap-2"><span class="rounded-circle" style="width:12px;height:12px;background:#22c55e;"></span> Vigente: <span id="lbl-vigentes-cnt">0</span></div>
-                        <div class="d-flex align-items-center gap-2"><span class="rounded-circle" style="width:12px;height:12px;background:#ef4444;"></span> No Vigente: <span id="lbl-novigentes-cnt">0</span></div>
+                    <div class="d-flex justify-content-center gap-3 mt-3 flex-wrap small fw-bold">
+                        <div class="d-flex align-items-center gap-1.5"><span class="rounded-circle" style="width:10px;height:10px;background:#22c55e;"></span> Vigente: <span id="lbl-vigentes-cnt">0</span></div>
+                        <div class="d-flex align-items-center gap-1.5"><span class="rounded-circle" style="width:10px;height:10px;background:#ef4444;"></span> No Vigente: <span id="lbl-novigentes-cnt">0</span></div>
                     </div>
                 </div>
             </div>
@@ -106,16 +169,16 @@
                     <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
                         <i class="bi bi-truck text-primary"></i> Visor Interactivo de Unidad
                     </h6>
-                    <div class="d-flex align-items-center gap-2">
-                        <input type="text" class="form-control form-control-sm rounded-pill px-3 fw-bold text-uppercase" id="neu-quick-search-placa" placeholder="Ingresar placa..." style="max-width: 160px;">
-                        <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" onclick="window.neuConsultarChasisPlaca()">
+                    <div class="d-flex align-items-center gap-2 w-100 w-sm-auto justify-content-end">
+                        <input type="text" class="form-control form-control-sm rounded-pill px-3 fw-bold text-uppercase flex-grow-1 flex-sm-grow-0" id="neu-quick-search-placa" placeholder="INGRESAR PLACA..." style="max-width: 180px;">
+                        <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold flex-shrink-0" onclick="window.neuConsultarChasisPlaca()">
                             <i class="bi bi-search"></i>
                         </button>
                     </div>
                 </div>
 
                 <div id="neu-visor-placa-content">
-                    <div class="text-center py-5 text-muted small">
+                    <div class="text-center py-4 text-muted small">
                         <i class="bi bi-truck display-5 text-secondary opacity-50 d-block mb-2"></i>
                         Ingresa una placa para visualizar el mapa térmico de desgaste de sus llantas.
                     </div>
@@ -134,7 +197,7 @@
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <input type="text" class="form-control form-control-sm rounded-pill px-3" id="neu-filtro-tabla-busqueda" placeholder="Buscar por placa, dueño..." oninput="window.neuFiltrarTablaInsp()">
                 <button class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold d-flex align-items-center gap-1" onclick="window.neuExportarExcel()">
-                    <i class="bi bi-file-earmark-spreadsheet-fill text-success"></i> Exportar Excel (25 Cols)
+                    <i class="bi bi-file-earmark-spreadsheet-fill text-success"></i> Exportar Excel (27 Cols)
                 </button>
             </div>
         </div>
@@ -166,35 +229,35 @@
 <div class="modal fade" id="modalImportarNeumaticos" tabindex="-1" style="z-index: 2060 !important;">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
-            <div class="modal-header bg-white border-bottom px-4 py-3">
-                <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2 m-0">
+            <div class="modal-header bg-white border-bottom px-3 px-md-4 py-3">
+                <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2 m-0 fs-6 fs-md-5">
                     <i class="bi bi-file-earmark-excel-fill text-success fs-5"></i> Importación Masiva de Neumáticos (Excel / CSV)
                 </h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4 bg-light">
+            <div class="modal-body p-3 p-md-4 bg-light">
                 <!-- Paso 1: Descargar Plantilla -->
                 <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                         <div>
-                            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
                                 <i class="bi bi-file-earmark-arrow-down-fill text-primary"></i> Paso 1: Descargar Plantilla
                             </h6>
-                            <small class="text-muted">Descarga la plantilla con las 25 columnas oficiales requeridas por tu sistema</small>
+                            <small class="text-muted" style="font-size:0.75rem;">Descarga la plantilla con las 27 columnas oficiales requeridas</small>
                         </div>
-                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-4 fw-bold" onclick="window.neuDescargarPlantillaExcel()">
-                            <i class="bi bi-download me-1"></i> Descargar Plantilla Oficial (.xlsx)
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1.5 fw-bold" onclick="window.neuDescargarPlantillaExcel()">
+                            <i class="bi bi-download me-1"></i> Descargar Plantilla (.xlsx)
                         </button>
                     </div>
                 </div>
 
                 <!-- Paso 2: Cargar Archivo -->
-                <div class="card border-0 rounded-4 p-4 bg-white shadow-2xs text-center" style="border: 2px dashed #cbd5e1 !important; cursor: pointer;" onclick="document.getElementById('neu-file-import-excel').click()">
+                <div class="card border-0 rounded-4 p-3 p-md-4 bg-white shadow-2xs text-center" style="border: 2px dashed #cbd5e1 !important; cursor: pointer;" onclick="document.getElementById('neu-file-import-excel').click()">
                     <input type="file" id="neu-file-import-excel" accept=".xlsx, .xls, .csv" class="d-none" onchange="window.neuProcesarArchivoImportar(this)">
-                    <div class="py-3">
-                        <i class="bi bi-cloud-arrow-up-fill display-4 text-primary opacity-75 d-block mb-2"></i>
-                        <h6 class="fw-bold text-dark mb-1">Haz clic para seleccionar o arrastra tu archivo Excel aquí</h6>
-                        <small class="text-muted">Formatos compatibles: <b>.xlsx, .xls, .csv</b></small>
+                    <div class="py-2 py-md-3">
+                        <i class="bi bi-cloud-arrow-up-fill display-5 text-primary opacity-75 d-block mb-1"></i>
+                        <h6 class="fw-bold text-dark mb-1 small">Toca para seleccionar o arrastra tu archivo Excel aquí</h6>
+                        <small class="text-muted" style="font-size:0.72rem;">Formatos compatibles: <b>.xlsx, .xls, .csv</b></small>
                     </div>
                 </div>
 
@@ -227,9 +290,9 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-between">
-                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm d-flex align-items-center gap-2" id="neu-btn-confirm-import" onclick="window.neuEjecutarImportacionBackend()" disabled>
+            <div class="modal-footer bg-white border-top px-3 px-md-4 py-3 d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary rounded-pill px-3 py-1.5" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success rounded-pill px-3 px-md-4 py-2 fw-bold shadow-sm d-flex align-items-center gap-2" id="neu-btn-confirm-import" onclick="window.neuEjecutarImportacionBackend()" disabled>
                     <i class="bi bi-cloud-upload-fill"></i> Guardar e Importar Inspecciones
                 </button>
             </div>
