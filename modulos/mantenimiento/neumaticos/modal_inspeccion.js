@@ -503,6 +503,19 @@
         const cats = await window._cargarCatalogosNeumaticos();
         window._neuRellenarSelects(cats);
 
+        // Cargar la última inspección registrada de esta placa para auto-poblado inteligente
+        window._neuUltimaInspeccionMap = {};
+        if (placa) {
+            try {
+                const resUlt = await fetch('/api/neumaticos/placa-ultima/' + encodeURIComponent(placa)).then(r => r.json());
+                if (resUlt.ok && resUlt.datosPosiciones) {
+                    window._neuUltimaInspeccionMap = resUlt.datosPosiciones;
+                }
+            } catch(e) {
+                console.warn('No se pudo cargar la última inspección de la placa:', e);
+            }
+        }
+
         // Renderizar botones de posiciones 1..12 y R
         window._neuRenderPosiciones(['1','2','3','4','5','6','7','8','9','10','11','12','R']);
 
@@ -512,7 +525,7 @@
         // Renderizar Botoneras táctiles 1..20 de remanentes (inician limpias)
         window._neuRenderBotoneraR();
 
-        // Iniciar en posición 1 limpia
+        // Iniciar en posición 1 (auto-poblará con la última inspección de esa posición si existe)
         window._neuSeleccionarPosicion('1');
 
         // Renderizar tabla vacía
@@ -601,7 +614,7 @@
             activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         }
 
-        // Si la llanta ya está en la lista actual, cargar sus datos
+        // Si la llanta ya está en la lista actual borrador, cargar sus datos
         const existente = window._neuLlantasActuales.find(l => String(l.posicion) === String(pos));
         if (existente) {
             if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = existente.marca || '';
@@ -631,12 +644,77 @@
                     }
                 }
             });
+        } else if (window._neuUltimaInspeccionMap && window._neuUltimaInspeccionMap[String(pos).toUpperCase()]) {
+            // AUTOPOBLADO INTELIGENTE DESDE LA ÚLTIMA INSPECCIÓN REGISTRADA
+            const prev = window._neuUltimaInspeccionMap[String(pos).toUpperCase()];
+            
+            const elMarca = document.getElementById('neu-sel-marca');
+            const elMedida = document.getElementById('neu-sel-medida');
+            const elModelo = document.getElementById('neu-sel-modelo');
+
+            if (elMarca && prev.marca) {
+                if (!Array.from(elMarca.options).some(o => o.value === prev.marca)) {
+                    elMarca.add(new Option(prev.marca, prev.marca));
+                }
+                elMarca.value = prev.marca;
+            }
+            if (elMedida && prev.medida) {
+                if (!Array.from(elMedida.options).some(o => o.value === prev.medida)) {
+                    elMedida.add(new Option(prev.medida, prev.medida));
+                }
+                elMedida.value = prev.medida;
+            }
+            if (elModelo && prev.modelo) {
+                if (!Array.from(elModelo.options).some(o => o.value === prev.modelo)) {
+                    elModelo.add(new Option(prev.modelo, prev.modelo));
+                }
+                elModelo.value = prev.modelo;
+            }
+
+            // Remanentes anteriores cargados como referencia
+            window._neuSetR('r1', prev.r1 || 0);
+            window._neuSetR('r2', prev.r2 || 0);
+            window._neuSetR('r3', prev.r3 || 0);
+            window._neuSetR('r4', prev.r4 || 0);
+
+            // Presión Anterior (toma la presión actual de la última inspección) y Presión Actual por defecto
+            if (document.getElementById('neu-input-pres-ant')) {
+                document.getElementById('neu-input-pres-ant').value = (prev.presion_actual || prev.presion_actual === 0) ? prev.presion_actual : '';
+            }
+            if (document.getElementById('neu-input-pres-act')) {
+                document.getElementById('neu-input-pres-act').value = (prev.presion_actual || prev.presion_actual === 0) ? prev.presion_actual : '';
+            }
+
+            // Estado por defecto (NUEVA) y Acción por defecto (Inspeccion)
+            if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = prev.estado || 'NUEVA';
+            if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = 'Inspeccion';
+            if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
+            if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = '';
+
+            window._neuLimpiarFotos();
         } else {
-            // Posición limpia desde cero
+            // Posición limpia con valores predeterminados
             window._neuLimpiarFormLlanta();
         }
         window._neuCalcularPromedio();
         window._neuActualizarColoresChassis();
+    };
+
+    window._neuLimpiarFormLlanta = function() {
+        if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = '';
+        if (document.getElementById('neu-sel-medida')) document.getElementById('neu-sel-medida').value = '';
+        if (document.getElementById('neu-sel-modelo')) document.getElementById('neu-sel-modelo').value = '';
+        window._neuSetR('r1', 0);
+        window._neuSetR('r2', 0);
+        window._neuSetR('r3', 0);
+        window._neuSetR('r4', 0);
+        if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = '';
+        if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = '';
+        if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = 'NUEVA';
+        if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = 'Inspeccion';
+        if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
+        if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = '';
+        window._neuLimpiarFotos();
     };
 
     window._neuLimpiarFotos = function() {
