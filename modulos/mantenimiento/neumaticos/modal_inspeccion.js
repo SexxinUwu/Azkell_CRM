@@ -256,28 +256,31 @@
                             <div class="neu-scroll-x" id="neu-pos-selector"></div>
                         </div>
 
-                        <!-- Marca, Medida, Modelo -->
+                        <!-- Marca, Medida, Modelo con Buscador Autocomplete -->
                         <div class="row g-2 mb-3">
                             <div class="col-12 col-sm-4">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <label class="form-label text-muted fw-bold small m-0" style="font-size:0.75rem;">Marca</label>
                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('marcas')" class="text-primary small fw-bold" style="font-size:0.75rem;">+ Nueva</a>
                                 </div>
-                                <select class="form-select rounded-3 fw-semibold" style="height: 46px;" id="neu-sel-marca"></select>
+                                <input type="text" class="form-control rounded-3 fw-bold text-uppercase" style="height: 46px;" id="neu-sel-marca" list="dl-neu-marcas" placeholder="Escribe o busca marca..." autocomplete="off">
+                                <datalist id="dl-neu-marcas"></datalist>
                             </div>
                             <div class="col-12 col-sm-4">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <label class="form-label text-muted fw-bold small m-0" style="font-size:0.75rem;">Medida</label>
                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('medidas')" class="text-primary small fw-bold" style="font-size:0.75rem;">+ Nueva</a>
                                 </div>
-                                <select class="form-select rounded-3 fw-semibold" style="height: 46px;" id="neu-sel-medida"></select>
+                                <input type="text" class="form-control rounded-3 fw-bold text-uppercase" style="height: 46px;" id="neu-sel-medida" list="dl-neu-medidas" placeholder="Escribe o busca medida..." autocomplete="off">
+                                <datalist id="dl-neu-medidas"></datalist>
                             </div>
                             <div class="col-12 col-sm-4">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <label class="form-label text-muted fw-bold small m-0" style="font-size:0.75rem;">Modelo</label>
                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('modelos')" class="text-primary small fw-bold" style="font-size:0.75rem;">+ Nuevo</a>
                                 </div>
-                                <select class="form-select rounded-3 fw-semibold" style="height: 46px;" id="neu-sel-modelo"></select>
+                                <input type="text" class="form-control rounded-3 fw-bold text-uppercase" style="height: 46px;" id="neu-sel-modelo" list="dl-neu-modelos" placeholder="Escribe o busca modelo..." autocomplete="off">
+                                <datalist id="dl-neu-modelos"></datalist>
                             </div>
                         </div>
 
@@ -546,26 +549,23 @@
         if (backdrop) backdrop.classList.remove('show');
     };
 
-    // Rellenar selectores de marca, medida, modelo y acción (con opción inicial para seleccionar)
+    // Rellenar datalists de marca, medida, modelo y select de acción
     window._neuRellenarSelects = function(cats) {
-        const selMarca  = document.getElementById('neu-sel-marca');
-        const selMedida = document.getElementById('neu-sel-medida');
-        const selModelo = document.getElementById('neu-sel-modelo');
+        const dlMarca  = document.getElementById('dl-neu-marcas');
+        const dlMedida = document.getElementById('dl-neu-medidas');
+        const dlModelo = document.getElementById('dl-neu-modelos');
         const selAccion = document.getElementById('neu-sel-accion');
 
-        if (selMarca) {
-            selMarca.innerHTML = '<option value="">-- Seleccionar Marca --</option>' + cats.marcas.map(m => `<option value="${m}">${m}</option>`).join('');
-            selMarca.value = '';
+        if (dlMarca && cats.marcas) {
+            dlMarca.innerHTML = cats.marcas.map(m => `<option value="${m}">`).join('');
         }
-        if (selMedida) {
-            selMedida.innerHTML = '<option value="">-- Seleccionar Medida --</option>' + cats.medidas.map(m => `<option value="${m}">${m}</option>`).join('');
-            selMedida.value = '';
+        if (dlMedida && cats.medidas) {
+            dlMedida.innerHTML = cats.medidas.map(m => `<option value="${m}">`).join('');
         }
-        if (selModelo) {
-            selModelo.innerHTML = '<option value="">-- Seleccionar Modelo --</option>' + cats.modelos.map(m => `<option value="${m}">${m}</option>`).join('');
-            selModelo.value = '';
+        if (dlModelo && cats.modelos) {
+            dlModelo.innerHTML = cats.modelos.map(m => `<option value="${m}">`).join('');
         }
-        if (selAccion) {
+        if (selAccion && cats.acciones) {
             selAccion.innerHTML = cats.acciones.map(a => `<option value="${a}">${a}</option>`).join('');
             selAccion.value = 'Inspeccion';
         }
@@ -614,9 +614,9 @@
         const selMarca = document.getElementById('neu-sel-marca');
         const selMedida = document.getElementById('neu-sel-medida');
         const selModelo = document.getElementById('neu-sel-modelo');
-        if (selMarca) selMarca.selectedIndex = 0;
-        if (selMedida) selMedida.selectedIndex = 0;
-        if (selModelo) selModelo.selectedIndex = 0;
+        if (selMarca) selMarca.value = '';
+        if (selMedida) selMedida.value = '';
+        if (selModelo) selModelo.value = '';
 
         window._neuSetR('r1', 0);
         window._neuSetR('r2', 0);
