@@ -1,13 +1,129 @@
-<!-- MÓDULO: Últimas Inspecciones y Requerimientos de Neumáticos — ERP Azkell Fleet -->
-<div class="container-fluid p-3 p-md-4" id="moduloNeumaticosUltimas">
-    <!-- Header Bento -->
+<!-- MÓDULO: ÚLTIMAS INSPECCIONES Y REQUERIMIENTOS DE NEUMÁTICOS — ERP AZKELL FLEET -->
+<style>
+#moduloNeumaticosUltimas {
+    padding: 1.25rem 1.5rem;
+}
+
+/* Header & Controls Bar Estilo Apple */
+.neu-top-bar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.2rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+}
+
+.neu-tabs-pill {
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.neu-tab-item {
+    border: none;
+    background: transparent;
+    padding: 6px 18px;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #64748b;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.neu-tab-item.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.neu-tab-item.active.text-danger {
+    background: #ef4444;
+    color: #ffffff !important;
+}
+
+.neu-segmented-filter {
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #e2e8f0;
+}
+
+.neu-segmented-filter .btn {
+    border: none !important;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 5px 14px;
+    border-radius: 9999px !important;
+    transition: all 0.2s ease;
+}
+
+.neu-segmented-filter .btn.active {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(37,99,235,0.3);
+}
+
+/* Buscador Apple Glassmorphic */
+.neu-search-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px;
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.neu-search-box input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.82rem;
+    width: 100%;
+}
+
+/* Full Bleed Mobile Responsiveness */
+@media (max-width: 768px) {
+    #moduloNeumaticosUltimas {
+        padding: 0.5rem 0.25rem !important;
+    }
+    .neu-top-bar {
+        padding: 0.75rem 0.85rem !important;
+        border-radius: 16px !important;
+    }
+    .neu-tabs-pill {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .neu-tab-item {
+        padding: 6px 10px;
+        font-size: 0.72rem;
+        flex: 1;
+        text-align: center;
+    }
+}
+</style>
+
+<div id="moduloNeumaticosUltimas">
+    <!-- Top Header Bar -->
     <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
         <div class="d-flex align-items-center gap-2">
-            <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background: rgba(37,99,235,0.1); color: #2563eb;">
-                <i class="bi bi-clock-history fs-5"></i>
+            <div class="rounded-3 p-2.5 d-flex align-items-center justify-content-center" style="background: rgba(37,99,235,0.1); color: #2563eb;">
+                <i class="bi bi-clock-history fs-4"></i>
             </div>
             <div>
-                <h4 class="fw-bold text-dark m-0" id="neu-ultimas-titulo">Últimas Inspecciones de Neumáticos</h4>
+                <h4 class="fw-bold text-dark m-0" id="neu-ultimas-titulo" style="letter-spacing:-0.02em;">Últimas Inspecciones de Neumáticos</h4>
                 <p class="text-muted small m-0">Historial técnico detallado por posición y módulo de requerimientos para reposición preventiva</p>
             </div>
         </div>
@@ -24,33 +140,43 @@
         </div>
     </div>
 
-    <!-- Pestañas Principales: Últimas Inspecciones vs Requerimientos de Llantas -->
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-        <div class="nav nav-pills bg-light p-1 rounded-pill border" style="border-color: var(--border, #e2e8f0) !important;">
-            <button class="nav-link active rounded-pill px-4 py-1 fw-bold small" id="tab-btn-ultimas" onclick="window.neuCambiarTab('ultimas')">
-                <i class="bi bi-list-check me-1"></i> Última Inspección de Llantas
-            </button>
-            <button class="nav-link rounded-pill px-4 py-1 fw-bold small text-danger" id="tab-btn-requerimientos" onclick="window.neuCambiarTab('requerimientos')">
-                <i class="bi bi-exclamation-triangle-fill me-1"></i> Requerimiento de Llantas (≤ 4mm) <span class="badge bg-danger text-white rounded-pill ms-1" id="badge-req-count">0</span>
-            </button>
+    <!-- Barra Unificada de Filtros en Una Sola Línea Horizontal (Estilo Apple / Status Rampa) -->
+    <div class="neu-top-bar">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <!-- Pestañas Principales (Pill Bar) -->
+            <div class="neu-tabs-pill">
+                <button class="neu-tab-item active" id="tab-btn-ultimas" onclick="window.neuCambiarTab('ultimas')">
+                    <i class="bi bi-list-check me-1"></i> Última Inspección
+                </button>
+                <button class="neu-tab-item text-danger" id="tab-btn-requerimientos" onclick="window.neuCambiarTab('requerimientos')">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Requerimiento (≤ 4mm) <span class="badge bg-danger text-white rounded-pill ms-1" id="badge-req-count">0</span>
+                </button>
+            </div>
+
+            <!-- Controles Secundarios Alineados al Mismo Nivel Horizontal -->
+            <div class="d-flex align-items-center gap-2 flex-wrap flex-sm-nowrap">
+                <!-- Selector de Empresa (Al mismo nivel horizontal) -->
+                <select class="form-select form-select-sm rounded-pill px-3 fw-semibold border-secondary-subtle" id="neu-sel-empresa-filtro" onchange="window.neuFiltrarUltimas()" style="width: auto; min-width: 170px; height: 34px;">
+                    <option value="Todos">Todas las Empresas</option>
+                    <option value="Marsisa SAC">Marsisa SAC</option>
+                    <option value="Rosymar Peru SAC">Rosymar Peru SAC</option>
+                    <option value="Yogui Transport SAC">Yogui Transport SAC</option>
+                </select>
+
+                <!-- Subfiltro Segmentado Motora / No Motora (Al lado derecho del selector de empresa) -->
+                <div class="neu-segmented-filter" id="neu-filtro-motora-group">
+                    <button class="btn active" id="btn-filtro-todos" onclick="window.neuSetFiltroMotora('Todos')">Todos</button>
+                    <button class="btn" id="btn-filtro-motora" onclick="window.neuSetFiltroMotora('Motora')">Motora</button>
+                    <button class="btn" id="btn-filtro-nomotora" onclick="window.neuSetFiltroMotora('No Motora')">No Motora</button>
+                </div>
+            </div>
         </div>
 
-        <!-- Filtros secundarios (Empresa y Unidad Motora/No Motora) -->
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <!-- Selector de Empresa/Dueño -->
-            <select class="form-select form-select-sm rounded-pill px-3 fw-semibold border shadow-2xs" id="neu-sel-empresa-filtro" onchange="window.neuFiltrarUltimas()" style="max-width: 190px;">
-                <option value="Todos">Todas las Empresas</option>
-                <option value="Marsisa SAC">Marsisa SAC</option>
-                <option value="Rosymar Peru SAC">Rosymar Peru SAC</option>
-                <option value="Yogui Transport SAC">Yogui Transport SAC</option>
-            </select>
-
-            <!-- Subfiltro Motora / No Motora -->
-            <div class="btn-group btn-group-sm rounded-pill border overflow-hidden" id="neu-filtro-motora-group">
-                <button class="btn btn-light active px-3 fw-bold" id="btn-filtro-todos" onclick="window.neuSetFiltroMotora('Todos')">Todos</button>
-                <button class="btn btn-light px-3 fw-bold" id="btn-filtro-motora" onclick="window.neuSetFiltroMotora('Motora')">Motora</button>
-                <button class="btn btn-light px-3 fw-bold" id="btn-filtro-nomotora" onclick="window.neuSetFiltroMotora('No Motora')">No Motora</button>
-            </div>
+        <!-- Buscador Integrado en la Barra -->
+        <div class="neu-search-box mt-2.5">
+            <i class="bi bi-search text-muted"></i>
+            <input type="text" id="neu-input-busqueda-rapida" placeholder="Buscar por placa, posición, marca, medida, modelo u observación..." oninput="window.neuFiltrarUltimas()">
+            <button class="btn btn-link text-muted p-0 text-decoration-none small" type="button" onclick="document.getElementById('neu-input-busqueda-rapida').value=''; window.neuFiltrarUltimas();">Limpiar</button>
         </div>
     </div>
 
@@ -88,16 +214,10 @@
         </div>
     </div>
 
-    <!-- Buscador Instantáneo -->
-    <div class="card border-0 rounded-4 p-2 mb-3 bg-white shadow-2xs" style="border: 1px solid var(--border, #e2e8f0) !important;">
-        <div class="input-group input-group-sm">
-            <span class="input-group-text bg-transparent border-0 text-muted"><i class="bi bi-search"></i></span>
-            <input type="text" class="form-control border-0 shadow-none ps-0" id="neu-input-busqueda-rapida" placeholder="Buscar por placa, posición, marca, medida, modelo u observación..." oninput="window.neuFiltrarUltimas()">
-            <button class="btn btn-link text-muted text-decoration-none small" type="button" onclick="document.getElementById('neu-input-busqueda-rapida').value=''; window.neuFiltrarUltimas();">Limpiar</button>
-        </div>
-    </div>
+    <!-- Banner de Filtro Activo por Medida -->
+    <div id="neu-active-medida-filter-banner" class="d-none"></div>
 
-    <!-- Tabla Principal Bento -->
+    <!-- Tabla Principal Bento estilo Apple -->
     <div class="card border-0 rounded-4 bg-white shadow-2xs overflow-hidden" style="border: 1px solid var(--border, #e2e8f0) !important;">
         <div class="table-responsive" style="max-height: 600px;">
             <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.78rem;">
