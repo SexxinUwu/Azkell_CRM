@@ -113,21 +113,23 @@ module.exports = function (db, broadcast, logAudit) {
     ];
 
     async function asegurarTablasNeumaticosTenant(tdb, tenantId) {
-        if (_tenantsInitSet.has(tenantId)) return;
         try {
             const pool = tdb.promise();
             for (const sql of TABLES_SQL) {
                 await pool.query(sql);
             }
 
-            // Migrar columnas adicionales si ya existía la tabla
-            try {
-                await pool.query("ALTER TABLE neumaticos_inspecciones_det ADD COLUMN IF NOT EXISTS r4 INT DEFAULT 0");
-                await pool.query("ALTER TABLE neumaticos_inspecciones_det ADD COLUMN IF NOT EXISTS rot VARCHAR(50) DEFAULT 'NO'");
-                await pool.query("ALTER TABLE neumaticos_inspecciones_det ADD COLUMN IF NOT EXISTS foto1 LONGTEXT NULL");
-                await pool.query("ALTER TABLE neumaticos_inspecciones_det ADD COLUMN IF NOT EXISTS foto2 LONGTEXT NULL");
-                await pool.query("ALTER TABLE neumaticos_inspecciones_det ADD COLUMN IF NOT EXISTS foto3 LONGTEXT NULL");
-            } catch(eCols) {}
+            // Migrar columnas adicionales de forma segura (sin IF NOT EXISTS para compatibilidad total con MySQL)
+            const migCols = [
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN r4 INT DEFAULT 0",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN rot VARCHAR(50) DEFAULT 'NO'",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto1 LONGTEXT NULL",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto2 LONGTEXT NULL",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto3 LONGTEXT NULL"
+            ];
+            for (const q of migCols) {
+                try { await pool.query(q); } catch(e) {}
+            }
 
             // Unificar collation con el resto de tablas (placas, ordenes_trabajo, etc.)
             try {
@@ -363,6 +365,17 @@ module.exports = function (db, broadcast, logAudit) {
             ]);
 
             // 2. Insertar Detalle
+            const migCols = [
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN r4 INT DEFAULT 0",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN rot VARCHAR(50) DEFAULT 'NO'",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto1 LONGTEXT NULL",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto2 LONGTEXT NULL",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto3 LONGTEXT NULL"
+            ];
+            for (const q of migCols) {
+                try { await tdb.query(q); } catch(e) {}
+            }
+
             for (const it of items) {
                 const r1 = parseInt(it.r1 || 0, 10);
                 const r2 = parseInt(it.r2 || 0, 10);

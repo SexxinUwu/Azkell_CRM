@@ -742,12 +742,17 @@ const TABLAS = [
             r1 INT NOT NULL,
             r2 INT NOT NULL,
             r3 INT NOT NULL,
-            remanente_promedio DECIMAL(4,1) GENERATED ALWAYS AS ((r1 + r2 + r3) / 3.0) STORED,
+            r4 INT DEFAULT 0,
+            remanente_promedio DECIMAL(4,1) DEFAULT 0.0,
             presion_ant INT DEFAULT 0,
             presion_actual INT DEFAULT 0,
             estado VARCHAR(30) NOT NULL DEFAULT 'NUEVA',
             accion VARCHAR(50) NOT NULL DEFAULT 'Inspeccion',
+            rot VARCHAR(50) DEFAULT 'NO',
             observaciones TEXT NULL,
+            foto1 LONGTEXT NULL,
+            foto2 LONGTEXT NULL,
+            foto3 LONGTEXT NULL,
             alerta_cambio TINYINT(1) DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_insp (id_inspeccion),
@@ -859,6 +864,18 @@ async function initDB(db) {
         for (const colDef of colsUsuarios) {
             try { await promisePool.query(`ALTER TABLE usuarios ADD COLUMN ${colDef}`); } catch(e) {}
         }
+
+        const colsNeumaticos = [
+            'r4 INT DEFAULT 0',
+            'rot VARCHAR(50) DEFAULT \'NO\'',
+            'foto1 LONGTEXT NULL',
+            'foto2 LONGTEXT NULL',
+            'foto3 LONGTEXT NULL'
+        ];
+        for (const colDef of colsNeumaticos) {
+            try { await promisePool.query(`ALTER TABLE neumaticos_inspecciones_det ADD COLUMN ${colDef}`); } catch(e) {}
+        }
+
         console.log(`✅ Default configurations, catalogs and roles seeded`);
     } catch (err) {
         console.error(`❌ Error seeding configurations:`, err.message);
