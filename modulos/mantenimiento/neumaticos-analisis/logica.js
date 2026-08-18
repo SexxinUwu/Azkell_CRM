@@ -117,44 +117,67 @@
         if (!tbody) return;
 
         if (!lista.length) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No se encontraron inspecciones de neumáticos en el período seleccionado.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No se encontraron inspecciones o vehículos en el filtro seleccionado.</td></tr>';
             return;
         }
 
         tbody.innerHTML = lista.map(i => {
-            const f = String(i.fecha_inspeccion || '').split('T')[0];
-            const fProx = String(i.fecha_proxima || '').split('T')[0] || '---';
-            const dias = i.dias_restantes !== null ? parseInt(i.dias_restantes, 10) : 0;
+            const idInsp = i.id_inspeccion || '<span class="badge bg-light text-muted border">SIN REGISTRO</span>';
+            const f = i.fecha_inspeccion ? String(i.fecha_inspeccion).split('T')[0] : '---';
+            const fProx = i.fecha_proxima ? String(i.fecha_proxima).split('T')[0] : '---';
+            const dias = i.dias_restantes !== null ? parseInt(i.dias_restantes, 10) : null;
             
             let vigBadge = '';
-            if (dias > 5) {
-                vigBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill small"><i class="bi bi-check-circle-fill me-1"></i>Vigente (+${dias}d)</span>`;
+            let btnAccion = '';
+
+            if (!i.fecha_inspeccion) {
+                vigBadge = `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1 rounded-pill small"><i class="bi bi-circle-fill me-1"></i>Sin Inspección</span>`;
+                btnAccion = `
+                    <button class="btn btn-primary btn-sm py-1 px-3 rounded-pill fw-bold" style="font-size:0.72rem;" onclick="window.rotAbrirInspeccionNeumaticosWrapper('${i.placa}')" title="Crear primera inspección para ${i.placa}">
+                        <i class="bi bi-plus-lg me-1"></i>Inspeccionar
+                    </button>
+                `;
+            } else if (dias > 5) {
+                vigBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill small"><i class="bi bi-check-circle-fill me-1"></i>Vigente (+${dias}d)</span>`;
+                btnAccion = `
+                    <button class="btn btn-outline-primary btn-sm py-1 px-3 rounded-pill fw-bold" style="font-size:0.72rem;" onclick="window.neuVerDetalleModal('${i.id_inspeccion}')">
+                        <i class="bi bi-eye-fill me-1"></i>Ver
+                    </button>
+                `;
             } else if (dias >= 0) {
-                vigBadge = `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1 rounded-pill small"><i class="bi bi-clock-history me-1"></i>Por Vencer (${dias}d)</span>`;
+                vigBadge = `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1 rounded-pill small"><i class="bi bi-clock-history me-1"></i>Por Vencer (${dias}d)</span>`;
+                btnAccion = `
+                    <button class="btn btn-outline-primary btn-sm py-1 px-3 rounded-pill fw-bold" style="font-size:0.72rem;" onclick="window.neuVerDetalleModal('${i.id_inspeccion}')">
+                        <i class="bi bi-eye-fill me-1"></i>Ver
+                    </button>
+                `;
             } else {
-                vigBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1 rounded-pill small"><i class="bi bi-x-circle-fill me-1"></i>Vencida (${dias}d)</span>`;
+                vigBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1 rounded-pill small"><i class="bi bi-x-circle-fill me-1"></i>Vencida (${dias}d)</span>`;
+                btnAccion = `
+                    <button class="btn btn-outline-primary btn-sm py-1 px-3 rounded-pill fw-bold" style="font-size:0.72rem;" onclick="window.neuVerDetalleModal('${i.id_inspeccion}')">
+                        <i class="bi bi-eye-fill me-1"></i>Ver
+                    </button>
+                `;
             }
 
-            const critBadge = i.total_criticas > 0 
+            const critBadge = (i.total_criticas && i.total_criticas > 0)
                 ? `<span class="badge bg-danger text-white rounded-pill px-2 py-1 small">${i.total_criticas}</span>`
                 : `<span class="badge bg-light text-muted border rounded-pill px-2 py-1 small">0</span>`;
 
+            const kmFmt = i.km_vehiculo ? `${Number(i.km_vehiculo).toLocaleString()} KM` : '---';
+
             return `
-                <tr>
-                    <td class="ps-3 fw-bold text-primary">${i.id_inspeccion}</td>
+                <tr class="${!i.fecha_inspeccion ? 'bg-light bg-opacity-50' : ''}">
+                    <td class="ps-3 fw-bold text-primary">${idInsp}</td>
                     <td>${f}</td>
-                    <td><span class="badge bg-dark text-white fw-bold px-2 py-1">${i.placa}</span></td>
+                    <td><span class="badge bg-dark text-white fw-bold px-2 py-1 font-monospace" style="cursor:pointer;" onclick="window.rotAbrirInspeccionNeumaticosWrapper('${i.placa}')" title="Registrar inspección de ${i.placa}">${i.placa}</span></td>
                     <td class="small text-muted">${i.dueno || '---'}</td>
-                    <td>${Number(i.km_vehiculo||0).toLocaleString()} KM</td>
+                    <td>${kmFmt}</td>
                     <td class="text-center fw-bold">${i.total_llantas || 0}</td>
                     <td class="text-center">${critBadge}</td>
                     <td class="text-center small">${fProx}</td>
                     <td class="text-center">${vigBadge}</td>
-                    <td class="text-center pe-3">
-                        <button class="btn btn-outline-primary btn-sm py-1 px-3 rounded-pill fw-bold" style="font-size:0.72rem;" onclick="window.neuVerDetalleModal('${i.id_inspeccion}')">
-                            <i class="bi bi-eye-fill me-1"></i>Ver
-                        </button>
-                    </td>
+                    <td class="text-center pe-3">${btnAccion}</td>
                 </tr>
             `;
         }).join('');
@@ -186,9 +209,12 @@
             if (!matchQuery) return false;
 
             if (periodo === 'todos') return true;
+            if (periodo === 'sin_inspeccion') return !i.fecha_inspeccion;
+            if (periodo === 'vigentes') return i.fecha_inspeccion && i.dias_restantes >= 0;
+            if (periodo === 'vencidas') return i.fecha_inspeccion && i.dias_restantes < 0;
 
             const dateStr = String(i.fecha_inspeccion || '').split('T')[0];
-            if (!dateStr) return true;
+            if (!dateStr) return false;
             const parts = dateStr.split('-');
             const fInsp = new Date(parts[0], parts[1] - 1, parts[2]);
 
