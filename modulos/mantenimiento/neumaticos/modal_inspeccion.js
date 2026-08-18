@@ -26,7 +26,7 @@
                 right: auto !important;
                 transform: translate3d(-50%, 100%, 0) !important;
                 width: 100% !important;
-                max-width: 740px !important;
+                max-width: 700px !important;
                 height: 92vh !important;
                 max-height: 92vh !important;
                 background: #f8fafc !important;
@@ -51,14 +51,14 @@
             @media (max-width: 767.98px) {
                 .neu-sub-drawer {
                     max-width: 100% !important;
-                    left: 0 !important;
-                    transform: translate3d(0, 100%, 0) !important;
-                    border-radius: 24px 24px 0 0 !important;
-                    height: 94vh !important;
-                    max-height: 94vh !important;
+                    left: 50% !important;
+                    transform: translate3d(-50%, 100%, 0) !important;
+                    border-radius: 28px 28px 0 0 !important;
+                    height: 92vh !important;
+                    max-height: 92vh !important;
                 }
                 .neu-sub-drawer.open {
-                    transform: translate3d(0, 0, 0) !important;
+                    transform: translate3d(-50%, 0, 0) !important;
                 }
             }
             .neu-drawer-backdrop {
@@ -495,51 +495,37 @@
             document.body.appendChild(drawerEl);
         }
 
-        // Setear datos de la placa y encabezados
+        // ABRIR INSTANTÁNEAMENTE (0ms DE RETRASO VISUAL)
+        drawerEl.classList.add('open');
+        backdrop.classList.add('show');
+
+        // Setear datos de la placa y encabezados de inmediato
         document.getElementById('neu-badge-placa').innerText = (placa || 'SIN-PLACA').toUpperCase();
         document.getElementById('neu-input-fecha').value = hoy;
         document.getElementById('neu-input-km').value = km || '';
         document.getElementById('neu-input-dias').value = 30;
         document.getElementById('neu-input-obs-gen').value = '';
 
-        // Cargar Catálogos
-        const cats = await window._cargarCatalogosNeumaticos();
-        window._neuRellenarSelects(cats);
-
-        // Cargar la última inspección registrada de esta placa para auto-poblado inteligente
-        window._neuUltimaInspeccionMap = {};
-        if (placa) {
-            try {
-                const resUlt = await fetch('/api/neumaticos/placa-ultima/' + encodeURIComponent(placa)).then(r => r.json());
-                if (resUlt.ok && resUlt.datosPosiciones) {
-                    window._neuUltimaInspeccionMap = resUlt.datosPosiciones;
-                }
-            } catch(e) {
-                console.warn('No se pudo cargar la última inspección de la placa:', e);
-            }
-        }
-
-        // Renderizar botones de posiciones 1..12 y R
+        // Renderizar estructura base mientras carga la data
         window._neuRenderPosiciones(['1','2','3','4','5','6','7','8','9','10','11','12','R']);
-
-        // Renderizar Chasis Esquema
         window._neuRenderChassis(placa);
-
-        // Renderizar Botoneras táctiles 1..20 de remanentes (inician limpias)
         window._neuRenderBotoneraR();
-
-        // Iniciar en posición 1 (auto-poblará con la última inspección de esa posición si existe)
-        window._neuSeleccionarPosicion('1');
-
-        // Renderizar tabla vacía
         window._neuRenderTablaLlantas();
 
-        // Abrir Drawer y Backdrop
-        if (drawerEl.parentElement !== document.body) {
-            document.body.appendChild(drawerEl);
+        // Cargar Catálogos y Última Inspección EN PARALELO ultra rápido
+        window._neuUltimaInspeccionMap = {};
+        const catsPromise = window._cargarCatalogosNeumaticos();
+        const ultPromise = placa ? fetch('/api/neumaticos/placa-ultima/' + encodeURIComponent(placa)).then(r => r.json()).catch(() => null) : Promise.resolve(null);
+
+        const [cats, resUlt] = await Promise.all([catsPromise, ultPromise]);
+        
+        if (cats) window._neuRellenarSelects(cats);
+        if (resUlt && resUlt.ok && resUlt.datosPosiciones) {
+            window._neuUltimaInspeccionMap = resUlt.datosPosiciones;
         }
-        drawerEl.classList.add('open');
-        backdrop.classList.add('show');
+
+        // Seleccionar posición 1 e inyectar datos de última inspección
+        window._neuSeleccionarPosicion('1');
     };
 
     window.rotCerrarModalInspeccionNeumaticos = function() {
