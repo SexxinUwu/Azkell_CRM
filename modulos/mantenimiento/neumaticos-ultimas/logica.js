@@ -72,12 +72,12 @@
         const titulo = document.getElementById('neu-ultimas-titulo');
 
         if (tab === 'ultimas') {
-            if (btnUlt) { btnUlt.className = 'neu-tab-item active'; }
-            if (btnReq) { btnReq.className = 'neu-tab-item text-danger'; }
+            if (btnUlt) { btnUlt.className = 'neu-main-tab active'; }
+            if (btnReq) { btnReq.className = 'neu-main-tab tab-req'; }
             if (titulo) titulo.innerText = 'Últimas Inspecciones de Neumáticos';
         } else {
-            if (btnUlt) { btnUlt.className = 'neu-tab-item'; }
-            if (btnReq) { btnReq.className = 'neu-tab-item active text-danger'; }
+            if (btnUlt) { btnUlt.className = 'neu-main-tab'; }
+            if (btnReq) { btnReq.className = 'neu-main-tab tab-req active'; }
             if (titulo) titulo.innerText = 'Requerimiento de Llantas para Recambio (≤ 4.0 mm)';
         }
 

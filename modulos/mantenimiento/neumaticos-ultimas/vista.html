@@ -1,9 +1,7 @@
 <!-- MÓDULO: ÚLTIMAS INSPECCIONES Y REQUERIMIENTOS DE NEUMÁTICOS — DESIGN 1:1 REPORTE DE FALLAS -->
 <style>
 #moduloNeumaticosUltimas {
-    padding: 1.25rem 1.5rem;
-    background-color: #f8fafc;
-    min-height: 100vh;
+    padding: 1rem 1.25rem;
 }
 
 /* Pestañas Principales Superiores Pills 1:1 */
@@ -17,7 +15,8 @@
 }
 .neu-main-tab {
     flex: 1;
-    border: none;
+    border: 0 !important;
+    outline: none !important;
     background: transparent;
     padding: 10px 16px;
     border-radius: 12px;
@@ -30,15 +29,19 @@
     gap: 8px;
     transition: all 0.2s ease;
     cursor: pointer;
+    box-shadow: none !important;
 }
 .neu-main-tab.active {
-    background: #ffffff;
-    color: #0f172a;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
 }
-.neu-main-tab.active.tab-req {
-    background: #ffffff;
-    color: #ef4444;
+.neu-main-tab.tab-req {
+    color: #dc2626;
+}
+.neu-main-tab.tab-req.active {
+    background: #ffffff !important;
+    color: #dc2626 !important;
 }
 
 /* Card Resumen Consolidado 1:1 */
