@@ -340,7 +340,7 @@ window.dispObtenerBadgeEstadoConductor = function (estado) {
     };
     const conf = map[est] || map['Disponible'];
     return `
-        <span class="badge-disp" style="background:${conf.bg}; color:${conf.text}; border:1px solid ${conf.border};">
+        <span class="badge-disp" style="background:${conf.bg}; color:${conf.text} !important; border:1px solid ${conf.border}; font-weight:700;">
             <span class="badge-disp-dot" style="background:${conf.dot};"></span>
             ${_dispEsc(est)}
         </span>
@@ -358,13 +358,13 @@ window.dispObtenerBadgeEstadoUnidad = function (estado) {
         'Tránsito': { bg: '#fffbeb', text: '#92400e', border: '#fde68a', dot: '#f59e0b' },
         'Solo Placa': { bg: '#f8fafc', text: '#334155', border: '#cbd5e1', dot: '#64748b' },
         'Alquilado': { bg: '#faf5ff', text: '#6b21a8', border: '#e9d5ff', dot: '#a855f7' },
-        'Siniestro': { bg: '#450a0a', text: '#fef2f2', border: '#7f1d1d', dot: '#dc2626' },
+        'Siniestro': { bg: '#fef2f2', text: '#991b1b', border: '#fecaca', dot: '#dc2626' },
         'Modificación': { bg: '#fff1f2', text: '#9f1239', border: '#fecdd3', dot: '#f43f5e' },
         'En Proyecto': { bg: '#eef2ff', text: '#3730a3', border: '#c7d2fe', dot: '#6366f1' }
     };
     const conf = map[est] || map['Disponible'];
     return `
-        <span class="badge-disp" style="background:${conf.bg}; color:${conf.text}; border:1px solid ${conf.border};">
+        <span class="badge-disp" style="background:${conf.bg}; color:${conf.text} !important; border:1px solid ${conf.border}; font-weight:700;">
             <span class="badge-disp-dot" style="background:${conf.dot};"></span>
             ${_dispEsc(est)}
         </span>
@@ -471,7 +471,7 @@ window.dispSeleccionarPlacaCamion = function (placa) {
         const combUpper = combustible.toUpperCase();
         const isGas = combUpper.includes('GAS') || combUpper.includes('GNV') || combUpper.includes('GLP');
         const unitSpan = document.getElementById('disp-f-capacidad-unit');
-        if (unitSpan) unitSpan.innerText = isGas ? '(m³ - Gas)' : '(Gln - Diésel)';
+        if (unitSpan) unitSpan.innerText = isGas ? '(m³)' : '(Gln)';
 
         const catEl = document.getElementById('disp-f-categoria');
         if (catEl) {

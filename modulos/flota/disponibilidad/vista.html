@@ -144,6 +144,10 @@
 /* Combos y Dropdowns */
 .disp-combo-wrap {
     position: relative;
+    z-index: 60;
+}
+.disp-combo-wrap:focus-within {
+    z-index: 100 !important;
 }
 .disp-combo-panel {
     position: absolute;
@@ -152,11 +156,11 @@
     right: 0;
     background: #ffffff;
     border: 1px solid #cbd5e1;
-    border-radius: 0.6rem;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    border-radius: 12px;
+    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.22);
     max-height: 220px;
     overflow-y: auto;
-    z-index: 1060;
+    z-index: 9999 !important;
     display: none;
 }
 .disp-combo-panel.show {
@@ -201,7 +205,7 @@
     border-radius: 28px 28px 0 0 !important;
     border-bottom: none !important;
     box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.25) !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     background: #f8fafc !important;
 }
 
@@ -233,6 +237,12 @@
     border-radius: 18px !important;
     border: 1px solid #e2e8f0 !important;
     background: #ffffff !important;
+    overflow: visible !important;
+    position: relative;
+}
+#modalDisponibilidad .card:focus-within,
+#modalDisponibilidad .card:hover {
+    z-index: 50 !important;
 }
 
 @media (max-width: 768px) {
@@ -462,24 +472,24 @@
                             <div class="fw-bold text-muted mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px;">
                                 <i class="bi bi-cpu me-1"></i>Datos Calculados de la Unidad
                             </div>
-                            <div class="row g-2">
+                            <div class="row g-2 align-items-end">
                                 <div class="col-6 col-md-3">
-                                    <label class="form-label fw-semibold text-secondary small mb-1" style="font-size:0.7rem;">Marca (Auto)</label>
+                                    <label class="form-label fw-semibold text-secondary small mb-1 text-truncate d-block" style="font-size:0.7rem;" title="Marca (Auto)">Marca (Auto)</label>
                                     <input type="text" class="form-control form-control-sm bg-white border-secondary-subtle" id="disp-f-marca" readonly placeholder="Auto">
                                 </div>
                                 <div class="col-6 col-md-3">
-                                    <label class="form-label fw-semibold text-secondary small mb-1" style="font-size:0.7rem;">Capacidad Tanque <span id="disp-f-capacidad-unit" class="text-primary fw-bold ms-1">(Gln)</span></label>
+                                    <label class="form-label fw-semibold text-secondary small mb-1 text-truncate d-block" style="font-size:0.7rem;" title="Capacidad Tanque">Capacidad Tanque <span id="disp-f-capacidad-unit" class="text-primary fw-bold ms-1">(Gln)</span></label>
                                     <input type="text" class="form-control form-control-sm bg-white border-secondary-subtle" id="disp-f-capacidad" placeholder="0">
                                 </div>
                                 <div class="col-6 col-md-3">
-                                    <label class="form-label fw-semibold text-secondary small mb-1" style="font-size:0.7rem;">Categoría Conductor</label>
+                                    <label class="form-label fw-semibold text-secondary small mb-1 text-truncate d-block" style="font-size:0.7rem;" title="Categoría Conductor">Categoría Conductor</label>
                                     <select class="form-select form-select-sm bg-white border-secondary-subtle" id="disp-f-categoria">
                                         <option value="Local">Local</option>
                                         <option value="Nacional">Nacional</option>
                                     </select>
                                 </div>
                                 <div class="col-6 col-md-3">
-                                    <label class="form-label fw-semibold text-secondary small mb-1" style="font-size:0.7rem;">Tipo de Unidad</label>
+                                    <label class="form-label fw-semibold text-secondary small mb-1 text-truncate d-block" style="font-size:0.7rem;" title="Tipo de Unidad">Tipo de Unidad</label>
                                     <input type="text" class="form-control form-control-sm bg-white border-secondary-subtle" id="disp-f-tipo-unidad" placeholder="Auto">
                                 </div>
                             </div>
