@@ -69,12 +69,12 @@
         const titulo = document.getElementById('neu-ultimas-titulo');
 
         if (tab === 'ultimas') {
-            if (btnUlt) { btnUlt.className = 'nav-link active rounded-pill px-4 py-1 fw-bold small'; }
-            if (btnReq) { btnReq.className = 'nav-link rounded-pill px-4 py-1 fw-bold small text-danger'; }
+            if (btnUlt) { btnUlt.className = 'neu-tab-item active'; }
+            if (btnReq) { btnReq.className = 'neu-tab-item text-danger'; }
             if (titulo) titulo.innerText = 'Últimas Inspecciones de Neumáticos';
         } else {
-            if (btnUlt) { btnUlt.className = 'nav-link rounded-pill px-4 py-1 fw-bold small'; }
-            if (btnReq) { btnReq.className = 'nav-link active rounded-pill px-4 py-1 fw-bold small bg-danger text-white'; }
+            if (btnUlt) { btnUlt.className = 'neu-tab-item'; }
+            if (btnReq) { btnReq.className = 'neu-tab-item active text-danger'; }
             if (titulo) titulo.innerText = 'Requerimiento de Llantas para Recambio (≤ 4.0 mm)';
         }
 
@@ -85,11 +85,11 @@
         window._neuFiltroMotora = tipo;
         ['todos', 'motora', 'nomotora'].forEach(k => {
             const btn = document.getElementById(`btn-filtro-${k}`);
-            if (btn) btn.className = 'btn btn-light px-3 fw-bold';
+            if (btn) btn.classList.remove('active');
         });
         const key = tipo === 'Todos' ? 'todos' : (tipo === 'Motora' ? 'motora' : 'nomotora');
         const activeBtn = document.getElementById(`btn-filtro-${key}`);
-        if (activeBtn) activeBtn.className = 'btn btn-primary active text-white px-3 fw-bold';
+        if (activeBtn) activeBtn.classList.add('active');
 
         window.neuFiltrarUltimas();
     };
@@ -139,13 +139,46 @@
             if (panelResumen) panelResumen.classList.add('d-none');
         }
 
-        window.neuRenderTabla(filtradas);
+        // Si hay una medida seleccionada en el cuadro, filtrar las filas para la tabla principal
+        let listaTabla = filtradas;
+        if (window._neuFiltroMedidaSel && window._neuTabActiva === 'requerimientos') {
+            listaTabla = filtradas.filter(row => String(row.medida || '').toUpperCase().trim() === window._neuFiltroMedidaSel.toUpperCase().trim());
+        }
+
+        window.neuRenderTabla(listaTabla);
+    };
+
+    // ── Selección Interactiva de Medida en el Cuadro Resumen ──────────
+    window.neuSeleccionarMedidaFiltro = function(medida) {
+        if (!medida || window._neuFiltroMedidaSel === medida) {
+            window._neuFiltroMedidaSel = null; // Alternar deselección
+        } else {
+            window._neuFiltroMedidaSel = medida;
+        }
+        window.neuFiltrarUltimas();
     };
 
     // ── Resumen Consolidado de Requerimientos por Medida para Compras ────
     window.neuRenderResumenMedidas = function(items) {
         const tbody = document.getElementById('tbody-resumen-medidas-req');
         if (!tbody) return;
+
+        // Renderizar banner de filtro activo por medida si existe
+        const bannerEl = document.getElementById('neu-active-medida-filter-banner');
+        if (bannerEl) {
+            if (window._neuFiltroMedidaSel) {
+                bannerEl.className = 'alert alert-primary py-1.5 px-3 rounded-pill d-inline-flex align-items-center gap-2 mb-2 small shadow-2xs fw-bold';
+                bannerEl.innerHTML = `
+                    <i class="bi bi-funnel-fill text-primary"></i> Filtrando tabla por Medida: <span class="badge bg-primary text-white font-monospace fs-6 px-2">${window._neuFiltroMedidaSel}</span>
+                    <button class="btn btn-sm btn-link text-primary p-0 fw-bold ms-auto text-decoration-none" onclick="window.neuSeleccionarMedidaFiltro(null)">
+                        <i class="bi bi-x-circle-fill fs-6"></i> Mostrar Todas
+                    </button>
+                `;
+            } else {
+                bannerEl.className = 'd-none';
+                bannerEl.innerHTML = '';
+            }
+        }
 
         if (!items || !items.length) {
             tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No hay requerimientos de llantas para los filtros seleccionados.</td></tr>';
@@ -193,9 +226,15 @@
 
             arrayResumen.push({ medida, ...val });
 
+            const isSelected = window._neuFiltroMedidaSel === medida;
+            const bgClass = isSelected ? 'bg-primary bg-opacity-10 border-start border-4 border-primary' : '';
+            const activeBadge = isSelected ? `<span class="badge bg-primary rounded-pill ms-2"><i class="bi bi-check-circle-fill me-1"></i>Filtrando</span>` : '';
+
             html += `
-                <tr>
-                    <td class="ps-3 fw-bold text-dark font-monospace fs-6">${medida}</td>
+                <tr class="neu-row-medida-item ${bgClass}" style="cursor:pointer;" onclick="window.neuSeleccionarMedidaFiltro('${medida}')" title="Toca o haz clic para filtrar la tabla inferior por la medida ${medida}">
+                    <td class="ps-3 fw-bold text-dark font-monospace fs-6">
+                        <i class="bi bi-disc me-1 ${isSelected ? 'text-primary' : 'text-secondary'}"></i>${medida} ${activeBadge}
+                    </td>
                     <td class="text-center fw-bold ${val.del > 0 ? 'text-primary fs-6' : 'text-muted'}">${val.del || 0}</td>
                     <td class="text-center fw-bold ${val.trac > 0 ? 'text-dark fs-6' : 'text-muted'}">${val.trac || 0}</td>
                     <td class="text-center fw-bold ${val.arr > 0 ? 'text-info fs-6' : 'text-muted'}">${val.arr || 0}</td>
@@ -205,9 +244,13 @@
             `;
         });
 
+        const isTotalSelected = !window._neuFiltroMedidaSel;
+
         html += `
-            <tr class="table-dark fw-bold">
-                <td class="ps-3">TOTAL GENERAL A COMPRAR / RECOMPRA</td>
+            <tr class="table-dark fw-bold" style="cursor:pointer;" onclick="window.neuSeleccionarMedidaFiltro(null)" title="Toca para mostrar todas las medidas">
+                <td class="ps-3">
+                    <i class="bi bi-layers-fill me-1"></i>TOTAL GENERAL A COMPRAR / RECOMPRA ${isTotalSelected ? '<span class="badge bg-light text-dark rounded-pill ms-2 small">Todas</span>' : ''}
+                </td>
                 <td class="text-center text-primary fs-6">${totDel}</td>
                 <td class="text-center text-warning fs-6">${totTrac}</td>
                 <td class="text-center text-info fs-6">${totArr}</td>
