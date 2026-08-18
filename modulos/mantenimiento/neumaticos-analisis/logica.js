@@ -21,11 +21,15 @@
             const vig = r.vigentes || 0;
             const novig = r.no_vigentes || 0;
             const crit = r.llantas_criticas || 0;
-            const porcVig = (vig + novig) > 0 ? Math.round((vig / (vig + novig)) * 100) : 100;
+            const totalUnidades = vig + novig;
+            const porcVig = totalUnidades > 0 ? Math.round((vig / totalUnidades) * 100) : 100;
 
             document.getElementById('kpi-neu-total-insp').innerText = total;
             document.getElementById('kpi-neu-vigentes').innerText = vig;
-            document.getElementById('kpi-neu-porc-vigente').innerText = `${porcVig}%`;
+            
+            const porcEl = document.getElementById('kpi-neu-porc-vigente');
+            if (porcEl) porcEl.innerText = `${vig} de ${totalUnidades} unidades al día (${porcVig}%)`;
+
             document.getElementById('kpi-neu-criticas').innerText = crit;
             document.getElementById('kpi-neu-vencidas').innerText = novig;
 
@@ -36,7 +40,7 @@
             window.neuRenderChartVigencia(vig, novig);
 
             // 3. Render Tabla
-            window.neuRenderTablaInsp(data.inspecciones || []);
+            window.neuFiltrarTablaInsp();
 
         } catch (e) {
             console.error("Error en neuAnalisisCargar:", e);
@@ -97,7 +101,7 @@
         if (!tbody) return;
 
         if (!lista.length) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No se encontraron inspecciones de neumáticos.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No se encontraron inspecciones de neumáticos en el período seleccionado.</td></tr>';
             return;
         }
 
@@ -142,13 +146,43 @@
 
     window.neuFiltrarTablaInsp = function() {
         const query = (document.getElementById('neu-filtro-tabla-busqueda')?.value || '').toLowerCase().trim();
+        const periodo = document.getElementById('neu-filtro-periodo')?.value || 'todos';
+
         if (!window._neuDataAnalisis || !window._neuDataAnalisis.inspecciones) return;
+
+        const ahora = new Date();
+        const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+        
+        const diaSemana = ahora.getDay() || 7;
+        const inicioSemana = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - diaSemana + 1);
+
+        const inicioMesActual = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+        const inicioMesAnterior = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1);
+        const finMesAnterior = new Date(ahora.getFullYear(), ahora.getMonth(), 0, 23, 59, 59);
+
+        const inicioAnio = new Date(ahora.getFullYear(), 0, 1);
 
         const filtradas = window._neuDataAnalisis.inspecciones.filter(i => {
             const placa = (i.placa || '').toLowerCase();
             const dueno = (i.dueno || '').toLowerCase();
             const id = (i.id_inspeccion || '').toLowerCase();
-            return placa.includes(query) || dueno.includes(query) || id.includes(query);
+            const matchQuery = !query || (placa.includes(query) || dueno.includes(query) || id.includes(query));
+            if (!matchQuery) return false;
+
+            if (periodo === 'todos') return true;
+
+            const dateStr = String(i.fecha_inspeccion || '').split('T')[0];
+            if (!dateStr) return true;
+            const parts = dateStr.split('-');
+            const fInsp = new Date(parts[0], parts[1] - 1, parts[2]);
+
+            if (periodo === 'hoy') return fInsp >= inicioHoy;
+            if (periodo === 'semana') return fInsp >= inicioSemana;
+            if (periodo === 'mes_actual') return fInsp >= inicioMesActual;
+            if (periodo === 'mes_anterior') return fInsp >= inicioMesAnterior && fInsp <= finMesAnterior;
+            if (periodo === 'anio') return fInsp >= inicioAnio;
+
+            return true;
         });
 
         window.neuRenderTablaInsp(filtradas);
