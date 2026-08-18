@@ -1056,6 +1056,8 @@ window.renderizarTablaChecklist = function(lista) {
             countFallas = (Array.isArray(fT) ? fT.length : 0) + (Array.isArray(fR) ? fR.length : 0);
         } catch(e) {}
 
+        const isFinalizado = (r.estado === 'Finalizado');
+
         // 1. Table row (Desktop)
         htmlTable += `
         <tr>
@@ -1073,25 +1075,49 @@ window.renderizarTablaChecklist = function(lista) {
             </td>
             <td class="text-center" style="min-width: 110px;">${badgeEstado}</td>
             <td class="text-center" style="min-width: 130px;">${otsHtml}</td>
-            <td class="pe-4 text-end" style="min-width: 190px;">
+            <td class="pe-4 text-end" style="min-width: 110px;">
                 <div class="d-inline-flex align-items-center justify-content-end gap-1">
-                    <button type="button" class="ck-action-btn ck-btn-view" onclick="window.abrirDetalleChecklist(${r.id})" title="Ver Detalle Digital">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    <button type="button" class="ck-action-btn ck-btn-edit" onclick="window.abrirEditarChecklist(${r.id})" title="Editar Reporte y Añadir Fallas">
-                        <i class="bi bi-pencil"></i>
-                    </button>
+                    <!-- Botón PDF directo afuera -->
                     <button type="button" class="ck-action-btn ck-btn-pdf" onclick="window.generarPDF_Checklist(${r.id})" title="Imprimir Formato PDF F-MAN-001">
                         <i class="bi bi-file-earmark-pdf"></i>
                     </button>
-                    ${r.estado !== 'Finalizado' ? `
-                    <button type="button" class="ck-action-btn ck-btn-ots" onclick="window.abrirModalGenerarOTs(${r.id})" title="Generar OTs e Integrar Taller">
-                        <i class="bi bi-lightning-charge-fill"></i><span>OTs</span>
-                    </button>
-                    ` : ''}
-                    <button type="button" class="ck-action-btn ck-btn-delete" onclick="window.eliminarChecklist(${r.id})" title="Eliminar Reporte">
-                        <i class="bi bi-trash3"></i>
-                    </button>
+
+                    <!-- Menú Desplegable 3 Puntos (Opciones adicionales) -->
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-light border shadow-2xs rounded-3 p-0 d-flex align-items-center justify-content-center" 
+                                type="button" 
+                                data-bs-toggle="dropdown" 
+                                aria-expanded="false" 
+                                style="width: 32px; height: 32px; color: #475569;" 
+                                title="Más opciones">
+                            <i class="bi bi-three-dots-vertical fs-6"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
+                            <li>
+                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirDetalleChecklist(${r.id})">
+                                    <i class="bi bi-eye text-primary fs-6"></i> Ver Detalle
+                                </a>
+                            </li>
+                            ${!isFinalizado ? `
+                            <li>
+                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirEditarChecklist(${r.id})">
+                                    <i class="bi bi-pencil text-secondary fs-6"></i> Editar Reporte
+                                </a>
+                            </li>
+                            ` : ''}
+                            <li>
+                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalGenerarOTs(${r.id})">
+                                    <i class="bi bi-lightning-charge-fill text-warning fs-6"></i> Generar / Ver OTs
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window.eliminarChecklist(${r.id})">
+                                    <i class="bi bi-trash3 text-danger fs-6"></i> Eliminar
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </td>
         </tr>
@@ -1128,25 +1154,39 @@ window.renderizarTablaChecklist = function(lista) {
                 ${r.km_inicial ? `<span class="text-muted small font-monospace" style="font-size:0.75rem;"><i class="bi bi-speedometer2 me-1"></i>${Number(r.km_inicial).toLocaleString()} km</span>` : ''}
             </div>
 
-            <!-- Botones de Acción -->
+            <!-- Botones de Acción Móvil -->
             <div class="d-flex align-items-center justify-content-between gap-1 pt-2 border-top">
                 <button type="button" class="btn btn-sm btn-outline-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.abrirDetalleChecklist(${r.id})" style="border-radius:8px; font-size:0.78rem;">
                     <i class="bi bi-eye"></i> Detalle
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.abrirEditarChecklist(${r.id})" style="border-radius:8px; font-size:0.78rem;">
-                    <i class="bi bi-pencil"></i> Editar
+                <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-3 py-1 d-flex align-items-center gap-1" onclick="window.generarPDF_Checklist(${r.id})" title="PDF" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-file-earmark-pdf"></i> PDF
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-2 py-1" onclick="window.generarPDF_Checklist(${r.id})" title="PDF" style="border-radius:8px; font-size:0.78rem;">
-                    <i class="bi bi-file-earmark-pdf"></i>
-                </button>
-                ${r.estado !== 'Finalizado' ? `
-                <button type="button" class="btn btn-sm btn-warning fw-bold text-dark px-2 py-1 d-flex align-items-center gap-1" onclick="window.abrirModalGenerarOTs(${r.id})" title="Generar OTs" style="border-radius:8px; font-size:0.78rem;">
-                    <i class="bi bi-lightning-charge-fill"></i> OTs
-                </button>
-                ` : ''}
-                <button type="button" class="btn btn-sm btn-light border text-danger px-2 py-1" onclick="window.eliminarChecklist(${r.id})" title="Eliminar" style="border-radius:8px; font-size:0.78rem;">
-                    <i class="bi bi-trash3"></i>
-                </button>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius:8px;">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
+                        ${!isFinalizado ? `
+                        <li>
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirEditarChecklist(${r.id})">
+                                <i class="bi bi-pencil text-secondary fs-6"></i> Editar Reporte
+                            </a>
+                        </li>
+                        ` : ''}
+                        <li>
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalGenerarOTs(${r.id})">
+                                <i class="bi bi-lightning-charge-fill text-warning fs-6"></i> Generar / Ver OTs
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window.eliminarChecklist(${r.id})">
+                                <i class="bi bi-trash3 text-danger fs-6"></i> Eliminar
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
         `;
@@ -1185,6 +1225,11 @@ window.abrirEditarChecklist = async function(id) {
     }
     if (!r) {
         alert('No se encontró la información del reporte a editar.');
+        return;
+    }
+
+    if (r.estado === 'Finalizado') {
+        alert('⚠️ Este reporte de fallas ya se encuentra FINALIZADO y no puede ser modificado.');
         return;
     }
 
@@ -1591,9 +1636,11 @@ window.abrirDetalleChecklist = async function(id) {
                     <i class="bi bi-file-earmark-text-fill text-primary"></i> Datos del Reporte
                 </h6>
                 <div class="d-flex align-items-center gap-2">
+                    ${r.estado !== 'Finalizado' ? `
                     <button type="button" class="btn btn-outline-primary btn-sm fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.abrirEditarChecklist(${r.id})">
                         <i class="bi bi-pencil-square"></i> Editar Reporte
                     </button>
+                    ` : ''}
                     <button type="button" class="btn btn-outline-danger btn-sm fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.generarPDF_Checklist(${r.id})">
                         <i class="bi bi-printer-fill"></i> Imprimir PDF (F-MAN-001)
                     </button>
