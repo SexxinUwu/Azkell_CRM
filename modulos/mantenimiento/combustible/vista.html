@@ -1,13 +1,237 @@
-<!-- Módulo: Combustible -->
-<div class="container-fluid p-4 d-flex flex-column align-items-center justify-content-center" style="min-height: 75vh;">
-    <div class="card border-0 rounded-4 shadow-sm p-4 text-center" style="max-width: 480px; background: var(--surface, #ffffff); border: 1px solid var(--border, #e2e8f0) !important;">
-        <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 80px; height: 80px; background: rgba(245, 158, 11, 0.12); color: #f59e0b;">
-            <i class="bi bi-fuel-pump-fill display-5"></i>
+<!-- MÓDULO: CONTROL Y ANÁLISIS DE COMBUSTIBLE — ERP AZKELL FLEET -->
+<style>
+/* Apple Minimalist Design Tokens */
+.comb-container {
+    padding: 1.25rem 1.5rem;
+}
+.comb-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+.comb-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.2rem;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.comb-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+.comb-kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+.comb-kpi-val {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: #0f172a;
+}
+.comb-kpi-lbl {
+    font-size: 0.73rem;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+/* Tabla Estilo Apple */
+.comb-table-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    overflow: hidden;
+}
+.comb-table-header {
+    padding: 1rem 1.25rem;
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+.comb-table {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: collapse;
+    font-size: 0.83rem;
+}
+.comb-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+.comb-table td {
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #1e293b;
+}
+.comb-table tr:hover td {
+    background: #f8fafc;
+}
+
+/* 100% Edge-to-Edge Mobile Responsiveness (Sin márgenes ni espacios laterales desperdiciados) */
+@media (max-width: 768px) {
+    .comb-container {
+        padding: 0.5rem 0.25rem !important;
+    }
+    .comb-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    .comb-kpi-card {
+        padding: 0.75rem 0.85rem;
+        border-radius: 16px;
+    }
+    .comb-kpi-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 1.1rem;
+    }
+    .comb-kpi-val {
+        font-size: 1.2rem;
+    }
+}
+</style>
+
+<div class="comb-container" id="moduloCombustibleContenedor">
+    <!-- Header Bento Apple -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
+        <div class="d-flex align-items-center gap-2">
+            <div class="rounded-3 p-2.5 d-flex align-items-center justify-content-center" style="background: rgba(245,158,11,0.12); color: #d97706;">
+                <i class="bi bi-fuel-pump-fill fs-4"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold text-dark m-0" style="letter-spacing:-0.02em;">Control y Análisis de Combustible</h4>
+                <p class="text-muted small m-0">Monitoreo de abastecimiento, rendimiento Km/Gln, costos y telemetría por vehículo</p>
+            </div>
         </div>
-        <h4 class="fw-bold text-dark mb-2">Módulo de Combustible</h4>
-        <p class="text-muted small mb-3">Gestión de consumo, abastecimiento y control de rendimiento energético de la flota.</p>
-        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-3 py-2 rounded-pill fw-semibold" style="font-size: 0.85rem;">
-            <i class="bi bi-cone-striped me-1"></i> En Mantenimiento — Próximamente
-        </span>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.combCargarDatos()">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            </button>
+            <button class="btn btn-outline-success btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.combExportarExcel()">
+                <i class="bi bi-file-earmark-excel"></i> Exportar
+            </button>
+            <button class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-2" onclick="window.combNuevoAbastecimiento()">
+                <i class="bi bi-plus-lg"></i> Registrar Abastecimiento
+            </button>
+        </div>
+    </div>
+
+    <!-- Tarjetas Bento de KPIs -->
+    <div class="comb-kpi-grid">
+        <div class="comb-kpi-card">
+            <div class="comb-kpi-icon" style="background:#fffbeb; color:#d97706;">
+                <i class="bi bi-fuel-pump"></i>
+            </div>
+            <div>
+                <div class="comb-kpi-val" id="comb-kpi-galones">0 Gln</div>
+                <div class="comb-kpi-lbl">Consumo Total</div>
+            </div>
+        </div>
+        <div class="comb-kpi-card">
+            <div class="comb-kpi-icon" style="background:#ecfdf5; color:#10b981;">
+                <i class="bi bi-cash-stack"></i>
+            </div>
+            <div>
+                <div class="comb-kpi-val" id="comb-kpi-costo">S/ 0.00</div>
+                <div class="comb-kpi-lbl">Gasto Acumulado</div>
+            </div>
+        </div>
+        <div class="comb-kpi-card">
+            <div class="comb-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                <i class="bi bi-speedometer2"></i>
+            </div>
+            <div>
+                <div class="comb-kpi-val" id="comb-kpi-rendimiento">0.0 Km/Gln</div>
+                <div class="comb-kpi-lbl">Rendimiento Promedio</div>
+            </div>
+        </div>
+        <div class="comb-kpi-card">
+            <div class="comb-kpi-icon" style="background:#f5f3ff; color:#7c3aed;">
+                <i class="bi bi-truck"></i>
+            </div>
+            <div>
+                <div class="comb-kpi-val" id="comb-kpi-unidades">0</div>
+                <div class="comb-kpi-lbl">Unidades Monitoreadas</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal de la Tabla de Abastecimientos -->
+    <div class="comb-table-card">
+        <div class="comb-table-header">
+            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                <!-- Buscador Avanzado -->
+                <div class="position-relative flex-grow-1" style="min-width: 240px; max-width: 420px;">
+                    <i class="bi bi-search position-absolute" style="left: 12px; top: 9px; color: #94a3b8; font-size: 0.85rem;"></i>
+                    <input type="text" id="comb-filtro-search" class="form-control form-control-sm ps-5 rounded-pill border-secondary-subtle" placeholder="Buscar por placa, chofer, grifo, factura o tipo combustible..." oninput="window.combFiltrar()">
+                </div>
+
+                <!-- Selector de Combustible -->
+                <select id="comb-filtro-tipo" class="form-select form-select-sm rounded-pill border-secondary-subtle" style="width: auto; min-width: 150px;" onchange="window.combFiltrar()">
+                    <option value="">Todos los Tipos</option>
+                    <option value="Diésel B5">Diésel B5 S-50</option>
+                    <option value="Gasolina 95">Gasolina 95</option>
+                    <option value="GNV">GNV (Gas Natural)</option>
+                    <option value="GLP">GLP</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive" style="max-height: 520px;">
+            <table class="comb-table" id="comb-main-table">
+                <thead>
+                    <tr>
+                        <th class="ps-3" style="width: 40px;">#</th>
+                        <th>FECHA</th>
+                        <th>PLACA</th>
+                        <th>CONDUCTOR</th>
+                        <th>GRIFO / PROVEEDOR</th>
+                        <th class="text-end">GALONES</th>
+                        <th class="text-end">PRECIO/GLN</th>
+                        <th class="text-end">COSTO TOTAL</th>
+                        <th class="text-end">KM ANTERIOR</th>
+                        <th class="text-end">KM ACTUAL</th>
+                        <th class="text-center">RENDIMIENTO</th>
+                        <th class="text-center pe-3">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="comb-table-body">
+                    <tr>
+                        <td colspan="12" class="text-center py-5 text-muted">
+                            <div class="spinner-border spinner-border-sm text-warning me-2"></div>
+                            Cargando datos de combustible...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>

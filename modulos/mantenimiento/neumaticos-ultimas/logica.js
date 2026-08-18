@@ -66,18 +66,15 @@
 
         const btnUlt = document.getElementById('tab-btn-ultimas');
         const btnReq = document.getElementById('tab-btn-requerimientos');
-        const motoraGroup = document.getElementById('neu-filtro-motora-group');
         const titulo = document.getElementById('neu-ultimas-titulo');
 
         if (tab === 'ultimas') {
             if (btnUlt) { btnUlt.className = 'nav-link active rounded-pill px-4 py-1 fw-bold small'; }
             if (btnReq) { btnReq.className = 'nav-link rounded-pill px-4 py-1 fw-bold small text-danger'; }
-            if (motoraGroup) motoraGroup.classList.add('d-none');
             if (titulo) titulo.innerText = 'Últimas Inspecciones de Neumáticos';
         } else {
             if (btnUlt) { btnUlt.className = 'nav-link rounded-pill px-4 py-1 fw-bold small'; }
             if (btnReq) { btnReq.className = 'nav-link active rounded-pill px-4 py-1 fw-bold small bg-danger text-white'; }
-            if (motoraGroup) motoraGroup.classList.remove('d-none');
             if (titulo) titulo.innerText = 'Requerimiento de Llantas para Recambio (≤ 4.0 mm)';
         }
 
@@ -107,9 +104,13 @@
             // Filtro por Empresa
             if (empresa !== 'Todos' && row.dueno !== empresa) return false;
 
-            // Filtro Motora / No Motora en pestaña de Requerimientos
-            if (window._neuTabActiva === 'requerimientos' && window._neuFiltroMotora !== 'Todos') {
-                const esMotora = row.motora === 'SI' || row.motora === '1' || (row.tipo_unidad || '').toLowerCase().includes('tracto') || (row.tipo_unidad || '').toLowerCase().includes('camion');
+            // Filtro Motora / No Motora (aplica SIEMPRE en ambas pestañas)
+            if (window._neuFiltroMotora !== 'Todos') {
+                const mStr = String(row.motora || '').toUpperCase().trim();
+                const tipoStr = (row.tipo_unidad || '').toLowerCase();
+                const esMotora = mStr === 'SI' || mStr === '1' || mStr === 'MOTORA' || 
+                                 tipoStr.includes('tracto') || tipoStr.includes('camion') || tipoStr.includes('auto');
+                
                 if (window._neuFiltroMotora === 'Motora' && !esMotora) return false;
                 if (window._neuFiltroMotora === 'No Motora' && esMotora) return false;
             }
