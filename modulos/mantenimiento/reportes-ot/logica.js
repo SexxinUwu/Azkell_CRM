@@ -2511,12 +2511,42 @@ function rotRenderSecNeumaticos(idOt) {
                             <span><i class="bi bi-disc mx-1"></i>${item.total_llantas || 0} Llantas evaluadas</span>
                         </div>
                     </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <button class="btn btn-sm btn-outline-danger border-0 p-1 rounded-circle" 
+                                onclick="event.stopPropagation(); window.rotEliminarInspeccionNeumatico('${rotEscHtml(item.id_inspeccion)}', '${rotEscHtml(idOt)}')" 
+                                title="Eliminar Inspección">
+                            <i class="bi bi-trash3-fill fs-6"></i>
+                        </button>
+                    </div>
                 </div>
             `;
         });
     }
     body.innerHTML = html;
 }
+
+window.rotEliminarInspeccionNeumatico = function(idInspeccion, idOt) {
+    if (!confirm('¿Estás seguro de eliminar esta inspección de neumáticos (' + idInspeccion + ')? Esta acción no se puede deshacer.')) return;
+    
+    fetch('/api/neumaticos/inspecciones/' + encodeURIComponent(idInspeccion), {
+        method: 'DELETE'
+    }).then(function(r) { return r.json(); })
+      .then(function(res) {
+          if (res.ok) {
+              if (typeof window.rotToast === 'function') window.rotToast('Inspección eliminada correctamente', 'bg-success');
+              else if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Inspección eliminada exitosamente', 'success');
+              
+              // Actualizar lista local y volver a renderizar
+              window.rotOtNeumaticosActivos = (window.rotOtNeumaticosActivos || []).filter(function(x) { return x.id_inspeccion !== idInspeccion; });
+              rotRenderSecNeumaticos(idOt);
+          } else {
+              alert('Error al eliminar: ' + (res.error || 'Error desconocido'));
+          }
+      }).catch(function(err) {
+          console.error(err);
+          alert('Error de conexión al eliminar la inspección');
+      });
+};
 
 window.rotAbrirInspeccionNeumaticosWrapper = function(placa, idOT, km) {
     if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
