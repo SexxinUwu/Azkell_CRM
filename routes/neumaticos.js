@@ -15,25 +15,25 @@ module.exports = function (db, broadcast, logAudit) {
             nombre VARCHAR(100) NOT NULL UNIQUE,
             activo TINYINT(1) DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS cat_neumaticos_modelos (
             id INT AUTO_INCREMENT PRIMARY KEY,
             nombre VARCHAR(100) NOT NULL UNIQUE,
             activo TINYINT(1) DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS cat_neumaticos_medidas (
             id INT AUTO_INCREMENT PRIMARY KEY,
             nombre VARCHAR(50) NOT NULL UNIQUE,
             activo TINYINT(1) DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS cat_neumaticos_acciones (
             id INT AUTO_INCREMENT PRIMARY KEY,
             nombre VARCHAR(50) NOT NULL UNIQUE,
             activo TINYINT(1) DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS neumaticos_hoja_vida (
             id_neumatico VARCHAR(50) PRIMARY KEY,
             codigo_dot VARCHAR(50) NULL,
@@ -52,7 +52,7 @@ module.exports = function (db, broadcast, logAudit) {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_placa (placa_actual),
             INDEX idx_estado (estado_operativo)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS neumaticos_inspecciones (
             id_inspeccion VARCHAR(50) PRIMARY KEY,
             id_ot VARCHAR(50) NULL,
@@ -68,7 +68,7 @@ module.exports = function (db, broadcast, logAudit) {
             INDEX idx_placa (placa),
             INDEX idx_ot (id_ot),
             INDEX idx_fecha (fecha_inspeccion)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS neumaticos_inspecciones_det (
             id INT AUTO_INCREMENT PRIMARY KEY,
             id_inspeccion VARCHAR(50) NOT NULL,
@@ -90,7 +90,7 @@ module.exports = function (db, broadcast, logAudit) {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_insp (id_inspeccion),
             INDEX idx_pos (posicion)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS neumaticos_rotaciones (
             id INT AUTO_INCREMENT PRIMARY KEY,
             id_ot VARCHAR(50) NULL,
@@ -104,7 +104,7 @@ module.exports = function (db, broadcast, logAudit) {
             tecnico VARCHAR(100) NOT NULL DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_placa (placa)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     ];
 
     async function asegurarTablasNeumaticosTenant(tdb, tenantId) {
@@ -113,6 +113,16 @@ module.exports = function (db, broadcast, logAudit) {
             const pool = tdb.promise();
             for (const sql of TABLES_SQL) {
                 await pool.query(sql);
+            }
+
+            // Unificar collation con el resto de tablas (placas, ordenes_trabajo, etc.)
+            try {
+                await pool.query("ALTER TABLE neumaticos_inspecciones CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                await pool.query("ALTER TABLE neumaticos_inspecciones_det CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                await pool.query("ALTER TABLE neumaticos_hoja_vida CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                await pool.query("ALTER TABLE neumaticos_rotaciones CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            } catch(eCollate) {
+                // ignorar si no requiere conversión
             }
 
             // Semillas si cat_neumaticos_marcas está vacía
@@ -573,7 +583,7 @@ module.exports = function (db, broadcast, logAudit) {
                        (SELECT COUNT(*) FROM neumaticos_inspecciones_det d WHERE d.id_inspeccion = i.id_inspeccion) as total_llantas,
                        (SELECT COUNT(*) FROM neumaticos_inspecciones_det d WHERE d.id_inspeccion = i.id_inspeccion AND d.alerta_cambio = 1) as total_criticas
                 FROM neumaticos_inspecciones i
-                LEFT JOIN placas p ON i.placa = p.placa
+                LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
                 ORDER BY i.fecha_inspeccion DESC
                 LIMIT 200
             `);
@@ -635,7 +645,7 @@ module.exports = function (db, broadcast, logAudit) {
                     GROUP BY placa
                 ) last_i ON d.id_inspeccion = last_i.max_id_inspeccion
                 INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion = i.id_inspeccion
-                LEFT JOIN placas p ON i.placa = p.placa
+                LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
                 WHERE 1=1
             `;
             const params = [];
@@ -699,7 +709,7 @@ module.exports = function (db, broadcast, logAudit) {
                     GROUP BY placa
                 ) last_i ON d.id_inspeccion = last_i.max_id_inspeccion
                 INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion = i.id_inspeccion
-                LEFT JOIN placas p ON i.placa = p.placa
+                LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
                 WHERE (d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0)
             `;
             const params = [];

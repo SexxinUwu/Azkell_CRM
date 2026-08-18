@@ -659,7 +659,7 @@ const TABLAS = [
             nombre VARCHAR(100) NOT NULL UNIQUE,
             activo TINYINT(1) DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     },
     {
         nombre: 'cat_neumaticos_modelos',
@@ -668,7 +668,7 @@ const TABLAS = [
             nombre VARCHAR(100) NOT NULL UNIQUE,
             activo TINYINT(1) DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     },
     {
         nombre: 'cat_neumaticos_medidas',
@@ -677,7 +677,7 @@ const TABLAS = [
             nombre VARCHAR(50) NOT NULL UNIQUE,
             activo TINYINT(1) DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     },
     {
         nombre: 'cat_neumaticos_acciones',
@@ -686,7 +686,7 @@ const TABLAS = [
             nombre VARCHAR(50) NOT NULL UNIQUE,
             activo TINYINT(1) DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     },
     {
         nombre: 'neumaticos_hoja_vida',
@@ -708,7 +708,7 @@ const TABLAS = [
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_placa (placa_actual),
             INDEX idx_estado (estado_operativo)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     },
     {
         nombre: 'neumaticos_inspecciones',
@@ -727,7 +727,7 @@ const TABLAS = [
             INDEX idx_placa (placa),
             INDEX idx_ot (id_ot),
             INDEX idx_fecha (fecha_inspeccion)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     },
     {
         nombre: 'neumaticos_inspecciones_det',
@@ -752,7 +752,7 @@ const TABLAS = [
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_insp (id_inspeccion),
             INDEX idx_pos (posicion)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     },
     {
         nombre: 'neumaticos_rotaciones',
@@ -769,7 +769,7 @@ const TABLAS = [
             tecnico VARCHAR(100) NOT NULL DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_placa (placa)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     }
 ];
 
