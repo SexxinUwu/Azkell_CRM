@@ -282,6 +282,8 @@ window.verificarSesionGuardada = function() {
     var vFleetrun    = showMantHub && _cL('fleetrun');
     var vReportesOT  = showMantHub && _cL('reportes_ot');
     var vTrabajosOT  = showMantHub && _cL('trabajos_ot');
+    var vCombustible = showMantHub && _cL('combustible');
+    var vNeumaticos  = showMantHub && _cL('neumaticos');
     
     var showOtrosMantHub = showMantHub && _cHub('otros_mant');
     var vPlan        = showOtrosMantHub && _cL('plan');
@@ -303,10 +305,15 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-reportes-ot',   vReportesOT);
     safe('nav-trabajos-ot',     vTrabajosOT);
     safe('mbnav-trabajos-ot',   vTrabajosOT);
+    safe('nav-combustible',     vCombustible);
+    safe('mbnav-combustible',   vCombustible);
+    safe('nav-neumaticos-toggle', vNeumaticos);
+    safe('mbnav-neumaticos-analisis', vNeumaticos);
+    safe('mbnav-neumaticos-ultimas',  vNeumaticos);
     safe('nav-otros-mant',      showOtrosMant);
     safe('mbnav-otros-mant',    showOtrosMant);
 
-    var showMant = vStatusRampa || vInsp || vReportesOT || vTrabajosOT || showOtrosMant;
+    var showMant = vStatusRampa || vChecklist || vInsp || vFleetrun || vReportesOT || vTrabajosOT || vCombustible || vNeumaticos || showOtrosMant;
     safe('wrap-mantenimiento', showMant);
 
     // ALMACÉN
@@ -1340,6 +1347,12 @@ window.checkPerm = function(modKey, action) {
             'trabajos_ot': ['trabajos_ot', 'ot', 'reportes_ot'],
             'fleet': ['fleetrun', 'fleet', 'cfg_mant'],
             'fleetrun': ['fleetrun', 'fleet', 'cfg_mant'],
+            'combustible': ['combustible', 'comb'],
+            'comb': ['comb', 'combustible'],
+            'neumaticos': ['neumaticos', 'neumaticos_analisis', 'neumaticos_ultimas', 'neu', 'llantas'],
+            'neumaticos_analisis': ['neumaticos_analisis', 'neumaticos', 'neu', 'llantas'],
+            'neumaticos_ultimas': ['neumaticos_ultimas', 'neumaticos', 'neu', 'llantas'],
+            'neu': ['neu', 'neumaticos', 'neumaticos_analisis', 'neumaticos_ultimas', 'llantas'],
             'pers_mant': ['cfg_personal', 'pers_mant'],
             'cfg_personal': ['cfg_personal', 'pers_mant'],
             'cond': ['cond', 'conductores'],
@@ -3282,6 +3295,9 @@ const MENU_IDS = {
     'mantenimiento/status-rampa':      'nav-status-rampa',
     'mantenimiento/reportes-ot':       'nav-reportes-ot',
     'mantenimiento/trabajos-ot':       'nav-trabajos-ot',
+    'mantenimiento/combustible':        'nav-combustible',
+    'mantenimiento/neumaticos-analisis': 'nav-neumaticos-analisis',
+    'mantenimiento/neumaticos-ultimas':  'nav-neumaticos-ultimas',
 
     'mantenimiento/backlog-taller':    'nav-otros-mant',
     'mantenimiento/kpis-taller':       'nav-otros-mant',
@@ -4319,6 +4335,16 @@ function generarMatrizUI() {
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td></tr>
+        <tr data-k="combustible"><td class="text-start ps-3 fw-semibold text-secondary small">Combustible</td>
+            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="combustible" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="combustible" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="combustible" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="combustible" style="width:18px;height:18px;cursor:pointer;"></td></tr>
+        <tr data-k="neumaticos"><td class="text-start ps-3 fw-semibold text-secondary small">Neumáticos</td>
+            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="neumaticos" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="neumaticos" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="neumaticos" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="neumaticos" style="width:18px;height:18px;cursor:pointer;"></td></tr>
         <tr><th colspan="5" style="background-color: #1e293b; color: #fff;" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-box-seam text-info me-2"></i>ALMACÉN</th></tr>
         <tr data-k="placas"><td class="text-start ps-3 fw-semibold text-secondary small">Placas <small class="text-muted">(Mant+Alm)</small></td>
             <td><input type="checkbox" class="form-check-input p-chk p-l sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'l')"></td>
