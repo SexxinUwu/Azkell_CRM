@@ -824,7 +824,19 @@ module.exports = function (db, broadcast, logAudit) {
 
             for (const insp of inspecciones) {
                 const placa = (insp.placa || '').trim().toUpperCase();
-                const fecha_inspeccion = insp.fecha_inspeccion || new Date().toISOString().split('T')[0];
+                let fecha_inspeccion = (insp.fecha_inspeccion || '').trim();
+                
+                // Formateo seguro de fecha
+                if (!fecha_inspeccion || isNaN(new Date(fecha_inspeccion).getTime())) {
+                    fecha_inspeccion = new Date().toISOString().split('T')[0];
+                } else {
+                    try {
+                        fecha_inspeccion = new Date(fecha_inspeccion).toISOString().split('T')[0];
+                    } catch(e) {
+                        fecha_inspeccion = new Date().toISOString().split('T')[0];
+                    }
+                }
+
                 const km_vehiculo = parseInt(insp.km_vehiculo || 0, 10);
                 const items = insp.items || [];
 
@@ -836,10 +848,12 @@ module.exports = function (db, broadcast, logAudit) {
                 const id_inspeccion = insp.id_inspeccion || `INSP-NEU-${cleanFecha}-${cleanPlaca}-${rand}`;
 
                 let fechaProxima = null;
-                if (fecha_inspeccion) {
+                try {
                     const f = new Date(fecha_inspeccion);
                     f.setDate(f.getDate() + 30);
                     fechaProxima = f.toISOString().split('T')[0];
+                } catch(e) {
+                    fechaProxima = fecha_inspeccion;
                 }
 
                 await tdb.query(`
@@ -859,6 +873,9 @@ module.exports = function (db, broadcast, logAudit) {
                     'Importador Excel',
                     items.length
                 ]);
+
+                // Limpiar detalles antiguos de esta inspección para evitar duplicados o conflictos
+                await tdb.query("DELETE FROM neumaticos_inspecciones_det WHERE id_inspeccion = ?", [id_inspeccion]);
 
                 for (const it of items) {
                     const r1 = parseInt(it.r1 || 0, 10);
@@ -948,8 +965,8 @@ module.exports = function (db, broadcast, logAudit) {
                     d.foto2 AS FOTO2,
                     d.foto3 AS FOTO3
                 FROM neumaticos_inspecciones_det d
-                INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci
-                LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
+                INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_general_ci = i.id_inspeccion COLLATE utf8mb4_general_ci
+                LEFT JOIN placas p ON i.placa COLLATE utf8mb4_general_ci = p.placa COLLATE utf8mb4_general_ci
                 ORDER BY i.fecha_inspeccion DESC, i.placa ASC, CAST(d.posicion AS UNSIGNED) ASC
             `;
             const [rows] = await tdb.query(sql);
