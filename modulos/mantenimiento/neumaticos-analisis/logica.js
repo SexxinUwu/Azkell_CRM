@@ -265,8 +265,8 @@
             if (!mEl) {
                 const div = document.createElement('div');
                 div.innerHTML = `
-                    <div class="modal fade" id="modalVerDetalleNeumaticos" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal fade" id="modalVerDetalleNeumaticos" tabindex="-1" aria-hidden="true" style="z-index: 2050 !important;">
+                        <div class="modal-dialog modal-lg modal-fullscreen-md-down modal-dialog-centered modal-dialog-scrollable" style="z-index: 2051;">
                             <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
                                 <div class="modal-header border-bottom bg-light px-4 py-3">
                                     <h6 class="modal-title fw-bold text-dark d-flex align-items-center gap-2 m-0" id="mvd-title">Detalle de Inspección</h6>
