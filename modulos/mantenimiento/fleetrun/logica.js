@@ -1571,53 +1571,58 @@ window.updateGraficoFleetrun = function(vencidos, proximos, vigentes, totalFlota
     if (elNombreEmp) elNombreEmp.textContent = empNombre;
     
     const elLogoEmp = document.getElementById('scania-logo-empresa');
-    if (elLogoEmp && empLogo) {
-        elLogoEmp.src = empLogo;
-        elLogoEmp.style.display = 'block';
+    const elLogoPh = document.getElementById('scania-logo-placeholder');
+    if (elLogoEmp) {
+        if (empLogo) {
+            elLogoEmp.src = empLogo;
+            elLogoEmp.style.display = 'block';
+            if (elLogoPh) elLogoPh.style.display = 'none';
+        } else {
+            elLogoEmp.style.display = 'none';
+            if (elLogoPh) elLogoPh.style.display = 'flex';
+        }
     }
 
     const elFecha = document.getElementById('scania-fecha-actual');
     if (elFecha) {
         const ahora = new Date();
-        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const opciones = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
         let fecStr = ahora.toLocaleDateString('es-ES', opciones);
         fecStr = fecStr.charAt(0).toUpperCase() + fecStr.slice(1);
         elFecha.textContent = fecStr;
     }
 
-    // 2. Actualizar KPIs Numéricos
-    const kpiTotal = document.getElementById('sca-kpi-total');
-    const kpiCrit = document.getElementById('sca-kpi-critico');
-    const pctCrit = document.getElementById('sca-pct-critico');
-    const kpiRiesgo = document.getElementById('sca-kpi-riesgo');
-    const pctRiesgo = document.getElementById('sca-pct-riesgo');
-    const kpiOper = document.getElementById('sca-kpi-operativo');
-    const pctOper = document.getElementById('sca-pct-operativo');
-
-    if (kpiTotal) kpiTotal.textContent = totalFlota || 0;
-    
+    // 2. Actualizar KPIs Numéricos (Web y Móvil)
     const calcPct = (val) => totalFlota ? Math.round((val / totalFlota) * 100) + '%' : '0%';
     
-    if (kpiCrit) { kpiCrit.textContent = vencidos || 0; pctCrit.textContent = calcPct(vencidos); }
-    if (kpiRiesgo) { kpiRiesgo.textContent = proximos || 0; pctRiesgo.textContent = calcPct(proximos); }
-    if (kpiOper) { kpiOper.textContent = vigentes || 0; pctOper.textContent = calcPct(vigentes); }
+    document.querySelectorAll('.sca-kpi-total-val, #sca-kpi-total').forEach(el => el.textContent = totalFlota || 0);
+    document.querySelectorAll('.sca-kpi-critico-val, #sca-kpi-critico').forEach(el => el.textContent = vencidos || 0);
+    document.querySelectorAll('.sca-pct-critico-val, #sca-pct-critico').forEach(el => el.textContent = calcPct(vencidos));
+    document.querySelectorAll('.sca-kpi-riesgo-val, #sca-kpi-riesgo').forEach(el => el.textContent = proximos || 0);
+    document.querySelectorAll('.sca-pct-riesgo-val, #sca-pct-riesgo').forEach(el => el.textContent = calcPct(proximos));
+    document.querySelectorAll('.sca-kpi-operativo-val, #sca-kpi-operativo').forEach(el => el.textContent = vigentes || 0);
+    document.querySelectorAll('.sca-pct-operativo-val, #sca-pct-operativo').forEach(el => el.textContent = calcPct(vigentes));
 
     // 3. Actualizar Gráfico Donut
     if(!window.chartFleetrunInst) window.chartFleetrunInst = initGraficoFleetrun();
     if(!window.chartFleetrunInst) return;
     let isDark = document.body.classList.contains('dark');
-    window.chartFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
-    window.chartFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
+    if (window.chartFleetrunInst.options?.plugins?.legend?.labels) {
+        window.chartFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
+    }
+    if (window.chartFleetrunInst.data?.datasets?.[0]) {
+        window.chartFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
+    }
     
     let totalMant = (vencidos || 0) + (proximos || 0) + (vigentes || 0);
     if(totalMant === 0) {
         window.chartFleetrunInst.data.labels = ['Sin Datos'];
         window.chartFleetrunInst.data.datasets[0].data = [1];
-        window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
+        window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#94a3b8'];
     } else {
         window.chartFleetrunInst.data.labels = ['Vencidos', 'Próximos', 'Vigentes'];
         window.chartFleetrunInst.data.datasets[0].data = [vencidos, proximos, vigentes];
-        window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#dc3545', '#ffc107', '#198754'];
+        window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#dc2626', '#ca8a04', '#16a34a'];
     }
     window.chartFleetrunInst.update();
 };

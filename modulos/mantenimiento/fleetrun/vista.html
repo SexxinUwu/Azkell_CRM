@@ -302,14 +302,109 @@
         </div>
     </div>
 
-    <!-- ── 2. BENTO KPIS ROW (CLICKABLE) ──────────────────────────────── -->
-    <div class="row g-2 g-md-3 mb-3" id="scaniaDashboard">
+    <!-- ── 2. DASHBOARD BENTO WEB (Solo Desktop / Web >= 992px) ─────── -->
+    <div class="d-none d-lg-flex row g-3 mb-3" id="scaniaDashboardDesktop">
+        <!-- Logo y Datos de Empresa -->
+        <div class="col-lg-3 col-xl-2">
+            <div class="card border-0 rounded-4 p-3 h-100 bg-white shadow-2xs d-flex flex-column align-items-center justify-content-center text-center" style="border: 1px solid #e2e8f0 !important;">
+                <div class="d-flex align-items-center justify-content-center mb-2" style="height: 60px; width: 100%;">
+                    <img id="scania-logo-empresa" src="" alt="Logo Empresa" style="max-height: 55px; max-width: 90%; object-fit: contain; display: none;">
+                    <div id="scania-logo-placeholder" class="rounded-3 bg-light d-flex align-items-center justify-content-center text-primary" style="width: 48px; height: 48px;">
+                        <i class="bi bi-building fs-4"></i>
+                    </div>
+                </div>
+                <h6 id="scania-nombre-empresa" class="fw-bold text-dark m-0 text-truncate w-100" style="font-size: 0.95rem;">Azkell Fleet</h6>
+                <div id="scania-fecha-actual" class="badge bg-dark bg-opacity-75 text-white px-2 py-1 mt-2 text-truncate w-100" style="font-size: 0.72rem; border-radius: 6px;"></div>
+            </div>
+        </div>
+
+        <!-- Estado de Unidades (Gráfico Donut) -->
+        <div class="col-lg-4 col-xl-4">
+            <div class="card border-0 rounded-4 p-3 h-100 bg-white shadow-2xs d-flex flex-column" style="border: 1px solid #e2e8f0 !important;">
+                <div class="d-flex align-items-center justify-content-between mb-1 pb-1 border-bottom">
+                    <span class="fw-bold text-dark small d-flex align-items-center gap-2" style="font-size: 0.85rem;">
+                        <i class="bi bi-pie-chart-fill text-primary"></i> Estado de Mantenimientos
+                    </span>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary px-2 py-1 rounded-pill" style="font-size:0.68rem;">Flota Activa</span>
+                </div>
+                <div class="flex-grow-1 position-relative d-flex align-items-center justify-content-center" style="min-height: 125px; max-height: 135px; width: 100%;">
+                    <canvas id="chartFleetrunStatus"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Situación de Mantenimientos (4 Cuadrantes KPIs) -->
+        <div class="col-lg-5 col-xl-6">
+            <div class="row g-2 h-100">
+                <!-- Flota Total -->
+                <div class="col-6">
+                    <div class="fl-kpi-card h-100" onclick="window.filtrarDesdeKpiFleetrun('')">
+                        <div>
+                            <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Flota Total</span>
+                            <h2 class="fw-bolder m-0 text-dark sca-kpi-total-val" style="font-size: 1.5rem;">0</h2>
+                        </div>
+                        <div class="fl-kpi-icon" style="background: #eff6ff; color: #2563eb;">
+                            <i class="bi bi-truck-front-fill"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- Vencidos -->
+                <div class="col-6">
+                    <div class="fl-kpi-card h-100" onclick="window.filtrarDesdeKpiFleetrun('VENCIDO')">
+                        <div>
+                            <div class="d-flex align-items-center gap-1 mb-1">
+                                <span class="text-secondary small fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing: 0.5px;">Vencidos</span>
+                                <span class="badge bg-danger-subtle text-danger fw-bold sca-pct-critico-val" style="font-size:0.65rem;">0%</span>
+                            </div>
+                            <h2 class="fw-bolder m-0 text-danger sca-kpi-critico-val" style="font-size: 1.5rem;">0</h2>
+                        </div>
+                        <div class="fl-kpi-icon" style="background: #fef2f2; color: #dc2626;">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- Por Vencer -->
+                <div class="col-6">
+                    <div class="fl-kpi-card h-100" onclick="window.filtrarDesdeKpiFleetrun('PROXIMO')">
+                        <div>
+                            <div class="d-flex align-items-center gap-1 mb-1">
+                                <span class="text-secondary small fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing: 0.5px;">Por Vencer</span>
+                                <span class="badge bg-warning-subtle text-warning-emphasis fw-bold sca-pct-riesgo-val" style="font-size:0.65rem;">0%</span>
+                            </div>
+                            <h2 class="fw-bolder m-0 text-warning sca-kpi-riesgo-val" style="font-size: 1.5rem;">0</h2>
+                        </div>
+                        <div class="fl-kpi-icon" style="background: #fefce8; color: #ca8a04;">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- Vigentes -->
+                <div class="col-6">
+                    <div class="fl-kpi-card h-100" onclick="window.filtrarDesdeKpiFleetrun('VIGENTE')">
+                        <div>
+                            <div class="d-flex align-items-center gap-1 mb-1">
+                                <span class="text-secondary small fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing: 0.5px;">Vigentes</span>
+                                <span class="badge bg-success-subtle text-success fw-bold sca-pct-operativo-val" style="font-size:0.65rem;">0%</span>
+                            </div>
+                            <h2 class="fw-bolder m-0 text-success sca-kpi-operativo-val" style="font-size: 1.5rem;">0</h2>
+                        </div>
+                        <div class="fl-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 2. BENTO KPIS ROW MÓVIL (Solo Móvil < 992px) ────────────────── -->
+    <div class="row g-2 mb-3 d-flex d-lg-none" id="scaniaDashboardMobile">
         <!-- Flota Total -->
-        <div class="col-6 col-md-3">
+        <div class="col-6">
             <div class="fl-kpi-card" onclick="window.filtrarDesdeKpiFleetrun('')">
                 <div>
                     <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Flota Total</span>
-                    <h2 id="sca-kpi-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
+                    <h2 class="fw-bolder m-0 text-dark sca-kpi-total-val" style="font-size: 1.4rem;">0</h2>
                 </div>
                 <div class="fl-kpi-icon" style="background: #eff6ff; color: #2563eb;">
                     <i class="bi bi-truck-front-fill"></i>
@@ -317,14 +412,14 @@
             </div>
         </div>
         <!-- Vencidos -->
-        <div class="col-6 col-md-3">
+        <div class="col-6">
             <div class="fl-kpi-card" onclick="window.filtrarDesdeKpiFleetrun('VENCIDO')">
                 <div>
                     <div class="d-flex align-items-center gap-1 mb-1">
                         <span class="text-secondary small fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing: 0.5px;">Vencidos</span>
-                        <span id="sca-pct-critico" class="badge bg-danger-subtle text-danger fw-bold" style="font-size:0.65rem;">0%</span>
+                        <span class="badge bg-danger-subtle text-danger fw-bold sca-pct-critico-val" style="font-size:0.65rem;">0%</span>
                     </div>
-                    <h2 id="sca-kpi-critico" class="fw-bolder m-0 text-danger" style="font-size: 1.6rem;">0</h2>
+                    <h2 class="fw-bolder m-0 text-danger sca-kpi-critico-val" style="font-size: 1.4rem;">0</h2>
                 </div>
                 <div class="fl-kpi-icon" style="background: #fef2f2; color: #dc2626;">
                     <i class="bi bi-exclamation-triangle-fill"></i>
@@ -332,14 +427,14 @@
             </div>
         </div>
         <!-- Próximos a Vencer -->
-        <div class="col-6 col-md-3">
+        <div class="col-6">
             <div class="fl-kpi-card" onclick="window.filtrarDesdeKpiFleetrun('PROXIMO')">
                 <div>
                     <div class="d-flex align-items-center gap-1 mb-1">
                         <span class="text-secondary small fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing: 0.5px;">Por Vencer</span>
-                        <span id="sca-pct-riesgo" class="badge bg-warning-subtle text-warning-emphasis fw-bold" style="font-size:0.65rem;">0%</span>
+                        <span class="badge bg-warning-subtle text-warning-emphasis fw-bold sca-pct-riesgo-val" style="font-size:0.65rem;">0%</span>
                     </div>
-                    <h2 id="sca-kpi-riesgo" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem;">0</h2>
+                    <h2 class="fw-bolder m-0 text-warning sca-kpi-riesgo-val" style="font-size: 1.4rem;">0</h2>
                 </div>
                 <div class="fl-kpi-icon" style="background: #fefce8; color: #ca8a04;">
                     <i class="bi bi-clock-history"></i>
@@ -347,14 +442,14 @@
             </div>
         </div>
         <!-- Vigentes -->
-        <div class="col-6 col-md-3">
+        <div class="col-6">
             <div class="fl-kpi-card" onclick="window.filtrarDesdeKpiFleetrun('VIGENTE')">
                 <div>
                     <div class="d-flex align-items-center gap-1 mb-1">
                         <span class="text-secondary small fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing: 0.5px;">Vigentes</span>
-                        <span id="sca-pct-operativo" class="badge bg-success-subtle text-success fw-bold" style="font-size:0.65rem;">0%</span>
+                        <span class="badge bg-success-subtle text-success fw-bold sca-pct-operativo-val" style="font-size:0.65rem;">0%</span>
                     </div>
-                    <h2 id="sca-kpi-operativo" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">0</h2>
+                    <h2 class="fw-bolder m-0 text-success sca-kpi-operativo-val" style="font-size: 1.4rem;">0</h2>
                 </div>
                 <div class="fl-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
                     <i class="bi bi-shield-check"></i>
