@@ -599,19 +599,25 @@ module.exports = function (db, broadcast, logAudit) {
             // Total de unidades con inspección
             const [totalInsp] = await tdb.query("SELECT COUNT(*) as total FROM neumaticos_inspecciones");
             
-            // Vigencia de inspecciones (días respecto a fecha_proxima)
+            // Vigencia de inspecciones de la flota activa en uso
             const [vigencias] = await tdb.query(`
                 SELECT 
-                    SUM(CASE WHEN fecha_proxima >= CURDATE() THEN 1 ELSE 0 END) as vigentes,
-                    SUM(CASE WHEN fecha_proxima < CURDATE() THEN 1 ELSE 0 END) as no_vigentes
+                    CAST(COALESCE(SUM(CASE WHEN fecha_proxima >= CURDATE() THEN 1 ELSE 0 END), 0) AS UNSIGNED) as vigentes,
+                    CAST(COALESCE(SUM(CASE WHEN fecha_proxima < CURDATE() THEN 1 ELSE 0 END), 0) AS UNSIGNED) as no_vigentes
                 FROM (
-                    SELECT placa, MAX(fecha_proxima) as fecha_proxima
-                    FROM neumaticos_inspecciones
-                    GROUP BY placa
+                    SELECT i1.placa, i1.fecha_proxima
+                    FROM neumaticos_inspecciones i1
+                    INNER JOIN (
+                        SELECT placa, MAX(fecha_inspeccion) as max_fecha
+                        FROM neumaticos_inspecciones
+                        GROUP BY placa
+                    ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
+                    LEFT JOIN placas p ON i1.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
+                    WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
                 ) as ultimas
             `);
 
-            // Total de llantas en estado crítico (Remanente <= 4mm) en la última inspección por fecha de cada placa
+            // Total de llantas en estado crítico (Remanente <= 4mm) en la última inspección de flota activa
             const [criticas] = await tdb.query(`
                 SELECT COUNT(*) as total_criticas
                 FROM neumaticos_inspecciones_det d
@@ -623,6 +629,8 @@ module.exports = function (db, broadcast, logAudit) {
                         FROM neumaticos_inspecciones
                         GROUP BY placa
                     ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
+                    LEFT JOIN placas p ON i1.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
+                    WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
                 ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci
                 WHERE d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0
             `);
