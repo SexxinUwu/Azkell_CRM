@@ -143,57 +143,101 @@
             return;
         }
 
-        tbody.innerHTML = items.map(l => {
-            const f = String(l.fecha_inspeccion || '').split('T')[0];
-            const prom = parseFloat(l.remanente_promedio || 0);
-            
-            let estadoLlant = '🟢 Óptima';
-            let badgeClass = 'bg-success bg-opacity-10 text-success border border-success border-opacity-25';
-            if (prom <= 4.0) {
-                estadoLlant = '🔴 Crítica (≤4mm)';
-                badgeClass = 'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 fw-bold';
-            } else if (prom <= 6.0) {
-                estadoLlant = '🟡 Alerta (4-6mm)';
-                badgeClass = 'bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25';
-            }
+        // Agrupar ítems por Placa para crear encabezados separados (Estilo AppSheet)
+        const gruposPorPlaca = new Map();
+        items.forEach(l => {
+            const pl = (l.placa || 'SIN_PLACA').toUpperCase().trim();
+            if (!gruposPorPlaca.has(pl)) gruposPorPlaca.set(pl, []);
+            gruposPorPlaca.get(pl).push(l);
+        });
 
-            const renderFotoCell = (foto, num) => {
-                if (!foto) return '<span class="text-muted small">-</span>';
-                return `<button type="button" class="btn btn-xs btn-outline-primary py-0 px-1 rounded-pill" onclick="window.neuVerFotoModal('${foto}')" title="Ver Foto ${num}"><i class="bi bi-image"></i> Foto ${num}</button>`;
-            };
+        let html = '';
 
-            return `
-                <tr>
-                    <td class="ps-3 text-muted small fw-semibold">${l.id || l.id_inspeccion || '---'}</td>
-                    <td class="text-muted small">${f}</td>
-                    <td>
-                        <span class="badge bg-dark text-white fw-bold px-2 py-1" style="cursor:pointer;" onclick="window.rotAbrirInspeccionNeumaticosWrapper('${l.placa}', '', ${l.km||0})" title="Hacer click para nueva inspección">${l.placa}</span>
+        gruposPorPlaca.forEach((grupo, placa) => {
+            const primerItem = grupo[0] || {};
+            const fechaFmt = String(primerItem.fecha_inspeccion || '').split('T')[0];
+
+            // Fila Encabezado de Agrupación por Placa estilo AppSheet
+            html += `
+                <tr style="background:#f1f5f9; border-top: 2px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+                    <td colspan="25" class="py-2 ps-3 pe-3 bg-light">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-dark text-white font-monospace fs-6 px-3 py-1 shadow-2xs" style="cursor:pointer; letter-spacing:0.5px;" onclick="window.rotAbrirInspeccionNeumaticosWrapper('${placa}', '', ${primerItem.km||0})" title="Hacer click para registrar nueva inspección de esta placa">
+                                    <i class="bi bi-truck me-1"></i>${placa}
+                                </span>
+                                <span class="text-dark small fw-bold">
+                                    ${primerItem.dueno || 'Sin empresa'} 
+                                    <span class="text-muted fw-normal">(${primerItem.marca_unidad || ''} ${primerItem.tipo_unidad || ''})</span>
+                                </span>
+                            </div>
+                            <div class="text-secondary small">
+                                <span><i class="bi bi-calendar3 me-1"></i>Última Inspección: <strong class="text-dark">${fechaFmt}</strong></span>
+                                <span class="mx-2">·</span>
+                                <span><i class="bi bi-speedometer2 me-1"></i>KM: <strong class="text-dark">${Number(primerItem.km||0).toLocaleString()}</strong></span>
+                                <span class="mx-2">·</span>
+                                <span><i class="bi bi-disc me-1"></i>Posiciones: <strong class="text-primary">${grupo.length} llantas</strong></span>
+                            </div>
+                        </div>
                     </td>
-                    <td class="text-center"><span class="badge ${badgeClass} px-2 py-1">${estadoLlant}</span></td>
-                    <td class="small fw-semibold">${Number(l.km || 0).toLocaleString()}</td>
-                    <td class="text-center"><span class="badge bg-primary rounded-pill px-2">${l.posicion}</span></td>
-                    <td class="small fw-semibold text-truncate" style="max-width:120px;" title="${l.dueno||''}">${l.dueno || '---'}</td>
-                    <td class="small text-truncate" style="max-width:110px;" title="${l.marca_unidad||''}">${l.marca_unidad || '---'}</td>
-                    <td class="small text-truncate" style="max-width:110px;" title="${l.tipo_unidad||''}">${l.tipo_unidad || '---'}</td>
-                    <td class="small fw-bold">${l.marca || '---'}</td>
-                    <td class="small">${l.medida || '---'}</td>
-                    <td class="small"><span class="badge bg-light text-dark border">${l.modelo || '---'}</span></td>
-                    <td class="text-center fw-semibold">${l.r1}</td>
-                    <td class="text-center fw-semibold">${l.r2}</td>
-                    <td class="text-center fw-semibold">${l.r3}</td>
-                    <td class="text-center text-muted small">${l.r4 || 0}</td>
-                    <td class="text-center small text-muted">${l.presion_ant || 0}</td>
-                    <td class="text-center small fw-bold">${l.presion_actual || 0} PSI</td>
-                    <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${l.estado || 'NUEVA'}</span></td>
-                    <td><span class="badge bg-info bg-opacity-10 text-info">${l.accion || 'Inspeccion'}</span></td>
-                    <td class="text-truncate text-muted small" style="max-width:140px;" title="${l.observaciones || ''}">${l.observaciones || 'Ninguna'}</td>
-                    <td class="text-center"><span class="badge ${l.rot !== 'NO' ? 'bg-warning text-dark' : 'bg-light text-muted border'}">${l.rot || 'NO'}</span></td>
-                    <td class="text-center">${renderFotoCell(l.foto1, 1)}</td>
-                    <td class="text-center">${renderFotoCell(l.foto2, 2)}</td>
-                    <td class="text-center pe-3">${renderFotoCell(l.foto3, 3)}</td>
                 </tr>
             `;
-        }).join('');
+
+            // Filas de Posiciones de Neumáticos para la Placa
+            grupo.forEach(l => {
+                const f = String(l.fecha_inspeccion || '').split('T')[0];
+                const prom = parseFloat(l.remanente_promedio || 0);
+                
+                let estadoLlant = '🟢 Óptima';
+                let badgeClass = 'bg-success bg-opacity-10 text-success border border-success border-opacity-25';
+                if (prom <= 4.0) {
+                    estadoLlant = '🔴 Crítica (≤4mm)';
+                    badgeClass = 'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 fw-bold';
+                } else if (prom <= 6.0) {
+                    estadoLlant = '🟡 Alerta (4-6mm)';
+                    badgeClass = 'bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25';
+                }
+
+                const renderFotoCell = (foto, num) => {
+                    if (!foto) return '<span class="text-muted small">-</span>';
+                    return `<button type="button" class="btn btn-xs btn-outline-primary py-0 px-1 rounded-pill" onclick="window.neuVerFotoModal('${foto}')" title="Ver Foto ${num}"><i class="bi bi-image"></i> Foto ${num}</button>`;
+                };
+
+                html += `
+                    <tr>
+                        <td class="ps-3 text-muted small fw-semibold">${l.id || l.id_inspeccion || '---'}</td>
+                        <td class="text-muted small">${f}</td>
+                        <td>
+                            <span class="badge bg-secondary bg-opacity-10 text-dark fw-bold px-2 py-1">${l.placa}</span>
+                        </td>
+                        <td class="text-center"><span class="badge ${badgeClass} px-2 py-1">${estadoLlant}</span></td>
+                        <td class="small fw-semibold">${Number(l.km || 0).toLocaleString()}</td>
+                        <td class="text-center"><span class="badge bg-primary rounded-pill px-2">${l.posicion}</span></td>
+                        <td class="small fw-semibold text-truncate" style="max-width:120px;" title="${l.dueno||''}">${l.dueno || '---'}</td>
+                        <td class="small text-truncate" style="max-width:110px;" title="${l.marca_unidad||''}">${l.marca_unidad || '---'}</td>
+                        <td class="small text-truncate" style="max-width:110px;" title="${l.tipo_unidad||''}">${l.tipo_unidad || '---'}</td>
+                        <td class="small fw-bold">${l.marca || '---'}</td>
+                        <td class="small">${l.medida || '---'}</td>
+                        <td class="small"><span class="badge bg-light text-dark border">${l.modelo || '---'}</span></td>
+                        <td class="text-center fw-semibold">${l.r1}</td>
+                        <td class="text-center fw-semibold">${l.r2}</td>
+                        <td class="text-center fw-semibold">${l.r3}</td>
+                        <td class="text-center text-muted small">${l.r4 || 0}</td>
+                        <td class="text-center small text-muted">${l.presion_ant || 0}</td>
+                        <td class="text-center small fw-bold">${l.presion_actual || 0} PSI</td>
+                        <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${l.estado || 'NUEVA'}</span></td>
+                        <td><span class="badge bg-info bg-opacity-10 text-info">${l.accion || 'Inspeccion'}</span></td>
+                        <td class="text-truncate text-muted small" style="max-width:140px;" title="${l.observaciones || ''}">${l.observaciones || 'Ninguna'}</td>
+                        <td class="text-center"><span class="badge ${l.rot !== 'NO' ? 'bg-warning text-dark' : 'bg-light text-muted border'}">${l.rot || 'NO'}</span></td>
+                        <td class="text-center">${renderFotoCell(l.foto1, 1)}</td>
+                        <td class="text-center">${renderFotoCell(l.foto2, 2)}</td>
+                        <td class="text-center pe-3">${renderFotoCell(l.foto3, 3)}</td>
+                    </tr>
+                `;
+            });
+        });
+
+        tbody.innerHTML = html;
     };
 
     window.neuVerFotoModal = function(src) {
