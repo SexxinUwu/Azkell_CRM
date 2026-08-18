@@ -703,6 +703,22 @@ window.rotAbrirDetalle = function(idOT) {
             <div id="rot-insp-body"><div class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>
         </div>
 
+        <!-- Inspección de Neumáticos -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" id="rot-sec-neumaticos" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                        <i class="bi bi-disc-fill text-primary" style="color:#2563eb;"></i> Inspección de Neumáticos
+                    </h6>
+                    <span class="badge bg-primary bg-opacity-10 text-primary fw-bold rounded-pill px-2 py-1" id="rot-neu-count" style="font-size: 0.7rem;">0</span>
+                </div>
+                <button class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3 py-1" style="font-size:0.72rem;" onclick="event.stopPropagation(); if(typeof window.rotAbrirInspeccionNeumaticos === 'function'){ window.rotAbrirInspeccionNeumaticos('${esc(ot.placa)}', '${esc(idOT)}', ${(det.km||0)}); } else { alert('Módulo de inspección de neumáticos en construcción.'); }"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+            </div>
+            <div id="rot-neu-body">
+                <div class="p-3 text-center text-muted small">No hay inspecciones de neumáticos registradas</div>
+            </div>
+        </div>
+
         <!-- Backlog Pendiente -->
         ${ot.placa ? `
             <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" id="rot-sec-backlog" style="border: 1px solid #e2e8f0 !important;">
