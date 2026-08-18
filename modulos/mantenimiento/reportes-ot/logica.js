@@ -652,8 +652,8 @@ window.rotAbrirDetalle = function(idOT) {
                      style="border: 1px solid #e2e8f0 !important; cursor: pointer; transition: all 0.2s;"
                      onclick="event.stopPropagation(); window.rotGenerarPlantillaLlantasOT('${rotEscHtml(idOT)}');"
                      title="Generar Plantilla de Llantas A4 en Blanco">
-                    <div class="rounded-3 p-2 bg-warning bg-opacity-15 text-dark d-flex align-items-center justify-content-center flex-shrink-0" style="width:34px; height:34px;">
-                        <i class="bi bi-disc fs-5 text-warning"></i>
+                    <div class="rounded-3 p-2 bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center flex-shrink-0" style="width:34px; height:34px;">
+                        <i class="bi bi-disc fs-5"></i>
                     </div>
                     <div>
                         <div class="fw-bold text-dark small" style="line-height:1.2; font-size:0.76rem;">Plantilla de Llantas</div>
