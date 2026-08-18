@@ -1526,13 +1526,24 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
     var finDT = formatDT(ot.fecha_hora_salida);
 
     var htmlMotivos = '';
-    if (det.motivos_array && Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
+    if (det.trabajos_det && Array.isArray(det.trabajos_det) && det.trabajos_det.length > 0) {
+        htmlMotivos = det.trabajos_det.map(function(td, idx) {
+            var descClean = String(td.desc || '').replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim();
+            var tecName = td.tecnico || det.supervisor || '—';
+            return '<tr>'
+                + '<td class="text-center">' + (idx + 1) + '</td>'
+                + '<td>' + rotEscHtml(rotCleanObsText(descClean)) + '</td>'
+                + '<td class="text-center">' + rotEscHtml(tecName) + '</td>'
+                + '</tr>';
+        }).join('');
+    } else if (det.motivos_array && Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
         htmlMotivos = det.motivos_array.map(function(m, idx) {
             var motText = typeof m === 'string' ? m : (m.motivo || m.item || m.descripcion || '—');
+            var cleanText = String(motText || '').replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim();
             var tecText = typeof m === 'object' ? (m.tecnico || m.tecnico_nombre || det.supervisor || '—') : (det.supervisor || '—');
             return '<tr>'
                 + '<td class="text-center">' + (idx + 1) + '</td>'
-                + '<td>' + rotEscHtml(rotCleanObsText(motText)) + '</td>'
+                + '<td>' + rotEscHtml(rotCleanObsText(cleanText)) + '</td>'
                 + '<td class="text-center">' + rotEscHtml(tecText) + '</td>'
                 + '</tr>';
         }).join('');
@@ -1540,7 +1551,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
         var lineas = String(det.motivo).split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
         if (lineas.length > 1) {
             htmlMotivos = lineas.map(function(l, idx) {
-                var cleanL = l.replace(/^[•\-\*]\s*/, '');
+                var cleanL = l.replace(/^[•\-\*]\s*/, '').replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim();
                 return '<tr>'
                     + '<td class="text-center">' + (idx + 1) + '</td>'
                     + '<td>' + rotEscHtml(rotCleanObsText(cleanL)) + '</td>'
@@ -1548,7 +1559,8 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
                     + '</tr>';
             }).join('');
         } else {
-            htmlMotivos = '<tr><td class="text-center">1</td><td>' + rotEscHtml(rotCleanObsText(det.motivo)) + '</td><td class="text-center">' + rotEscHtml(det.supervisor || '—') + '</td></tr>';
+            var cleanSingle = String(det.motivo).replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim();
+            htmlMotivos = '<tr><td class="text-center">1</td><td>' + rotEscHtml(rotCleanObsText(cleanSingle)) + '</td><td class="text-center">' + rotEscHtml(det.supervisor || '—') + '</td></tr>';
         }
     } else {
         htmlMotivos = '<tr><td colspan="3" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay motivos de ingreso registrados.</td></tr>';
@@ -3161,6 +3173,7 @@ window.rotAbrirEditarOT = function(idOT) {
         else if (det.tecnicos_str) tecsArray = det.tecnicos_str.split(',').map(function(s){ return s.trim(); });
 
         parsed.tareas.forEach(function(tDesc, tIdx) {
+            var cleanDesc = String(tDesc || '').replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim();
             var tecDeEstaTarea = '';
             if (det.trabajos_det && Array.isArray(det.trabajos_det) && det.trabajos_det[tIdx] && det.trabajos_det[tIdx].tecnico) {
                 tecDeEstaTarea = det.trabajos_det[tIdx].tecnico;
@@ -3170,7 +3183,7 @@ window.rotAbrirEditarOT = function(idOT) {
 
             window._rotEotTrabajos.push({
                 id: 'rot_eot_t_' + (window._rotEotTrabajosCount++),
-                desc: tDesc,
+                desc: cleanDesc,
                 tecnico: tecDeEstaTarea
             });
         });
@@ -3311,13 +3324,14 @@ window.rotGuardarEdicionOT = function() {
 
     window._rotEotTrabajos.forEach(function(t) {
         var inputDesc = document.getElementById('desc_' + t.id);
-        var descVal = (inputDesc ? inputDesc.value : t.desc).trim();
+        var rawVal = (inputDesc ? inputDesc.value : t.desc).trim();
+        var descClean = rawVal.replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim();
         var tecInputId = 'rot_eot_tec_' + t.id;
         var tecVal = (typeof window._cbGet === 'function' ? window._cbGet(tecInputId) : '') || ((document.getElementById(tecInputId + '-txt') || {}).value || '').trim();
 
-        if (descVal) {
-            tareasFinales.push(descVal);
-            trabajosDet.push({ desc: descVal, tecnico: tecVal });
+        if (descClean) {
+            tareasFinales.push(descClean);
+            trabajosDet.push({ desc: descClean, tecnico: tecVal });
             if (tecVal && !tecnicosFinales.includes(tecVal)) {
                 tecnicosFinales.push(tecVal);
             }

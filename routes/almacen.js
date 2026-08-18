@@ -894,10 +894,10 @@ router.post('/entradas/:id/archivo/:tipo', _multerInv.single('archivo'), (req, r
 // ALMACÉN — Salidas
 // ============================================================
 router.get('/salidas', (req, res) => {
+    const targetDb = req.db || db;
     const SEP_FIELD = '\x1F', SEP_ROW = '\x1E';
     const q = (req.query.q || '').trim();
 
-    // Si hay búsqueda por ID específico, no aplicar límite
     let whereClause = '';
     let queryParams = [];
     if (q) {
@@ -907,7 +907,7 @@ router.get('/salidas', (req, res) => {
 
     const limit = q ? '' : 'LIMIT 2000';
 
-    db.query(`SELECT s.*,
+    targetDb.query(`SELECT s.*,
               COALESCE(MAX(NULLIF(TRIM(u.nombre),'')), MAX(s.creado_por)) AS solicitante_nombre,
               GROUP_CONCAT(CONCAT_WS('\x1F',
                 COALESCE(d.inventario_id,''),
@@ -920,24 +920,41 @@ router.get('/salidas', (req, res) => {
               FROM salidas_inv s
               LEFT JOIN detalle_salidas_inv d ON d.salida_id=s.id
               LEFT JOIN inventario i ON d.inventario_id = i.id
-              LEFT JOIN usuarios u ON (TRIM(LOWER(s.creado_por)) = TRIM(LOWER(u.correo)) OR s.creado_por = u.idUsuario)
+              LEFT JOIN usuarios u ON (TRIM(LOWER(s.creado_por)) = TRIM(LOWER(u.correo)) OR CAST(s.creado_por AS CHAR) = CAST(u.idUsuario AS CHAR))
               ${whereClause}
               GROUP BY s.id ORDER BY s.fecha DESC, s.id DESC ${limit}`, queryParams, (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        rows.forEach(r => {
-            let sol = (r.solicitante_nombre || r.creado_por || '').trim();
-            if (sol && sol.includes('@')) {
-                let uName = sol.split('@')[0].replace(/[._-]/g, ' ');
-                sol = uName.charAt(0).toUpperCase() + uName.slice(1);
-            }
-            r.creado_por = sol;
-            r.items = r.items_raw ? r.items_raw.split(SEP_ROW).map(seg => {
-                const [invId, desc, cant, cu, mon, imp] = seg.split(SEP_FIELD);
-                return { inventario_id: invId||null, descripcion: desc||null, cantidad: parseFloat(cant)||0, costo_unitario: parseFloat(cu)||0, moneda: mon||'PEN', importe: parseFloat(imp)||0 };
-            }).filter(it => it.descripcion || it.inventario_id) : [];
-            delete r.items_raw;
-        });
-        res.json(rows);
+        if (err) {
+            console.error('Error GET /api/almacen/salidas:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        try {
+            const result = (Array.isArray(rows) ? rows : []).map(r => {
+                let sol = (r.solicitante_nombre || r.creado_por || '').trim();
+                if (sol && sol.includes('@')) {
+                    let uName = sol.split('@')[0].replace(/[._-]/g, ' ');
+                    sol = uName.charAt(0).toUpperCase() + uName.slice(1);
+                }
+                const items = r.items_raw ? r.items_raw.split(SEP_ROW).map(seg => {
+                    const parts = seg.split(SEP_FIELD);
+                    return {
+                        inventario_id: parts[0] || null,
+                        descripcion: parts[1] || null,
+                        cantidad: parseFloat(parts[2]) || 0,
+                        costo_unitario: parseFloat(parts[3]) || 0,
+                        moneda: parts[4] || 'PEN',
+                        importe: parseFloat(parts[5]) || 0
+                    };
+                }).filter(it => it.descripcion || it.inventario_id) : [];
+
+                const rObj = Object.assign({}, r, { creado_por: sol, items: items });
+                delete rObj.items_raw;
+                return rObj;
+            });
+            res.json(result);
+        } catch (e) {
+            console.error('Error procesando filas de salidas:', e);
+            res.status(500).json({ error: e.message });
+        }
     });
 });
 router.post('/salidas', (req, res) => {
