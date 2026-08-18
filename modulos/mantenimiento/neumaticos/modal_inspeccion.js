@@ -156,38 +156,61 @@
                                             </div>
                                         </div>
 
-                                        <!-- Remanentes R1, R2, R3 (Botones 1..20) -->
-                                        <div class="mb-3 p-2 rounded-3 bg-light border">
-                                            <label class="form-label text-dark fw-bold small mb-2 d-flex justify-content-between" style="font-size:0.75rem;">
-                                                <span>Profundímetro / Remanente (mm)</span>
-                                                <span class="text-primary" id="neu-r-prom-badge">Promedio: 0 mm</span>
-                                            </label>
-
-                                            <!-- R1 -->
-                                            <div class="mb-2">
-                                                <div class="d-flex align-items-center justify-content-between mb-1">
-                                                    <span class="text-muted small fw-bold" style="font-size:0.72rem;">R1 (Ext.): <b class="text-dark" id="lbl-r1">10 mm</b></span>
-                                                    <div class="d-flex gap-1" id="neu-r1-quick"></div>
+                                        <!-- Remanentes R1, R2, R3 (Botonera Táctil 1..20 mm) -->
+                                        <div class="mb-3 p-3 rounded-4 bg-light border" style="border-color: var(--border, #e2e8f0) !important;">
+                                            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom flex-wrap gap-2">
+                                                <div>
+                                                    <h6 class="m-0 fw-bold text-dark small d-flex align-items-center gap-1">
+                                                        <i class="bi bi-rulers text-primary"></i> Profundímetro / Remanente de Cocada (mm)
+                                                    </h6>
+                                                    <small class="text-muted" style="font-size:0.7rem;">Selecciona los milímetros (1 a 20 mm) para cada punto de la llanta</small>
                                                 </div>
-                                                <input type="range" class="form-range" min="1" max="20" value="10" id="neu-range-r1" oninput="document.getElementById('lbl-r1').innerText = this.value + ' mm'; window._neuCalcularPromedio();">
+                                                <span class="badge bg-white text-primary border shadow-2xs px-3 py-2 fs-6 rounded-pill" id="neu-r-prom-badge">Promedio: 10.0 mm</span>
                                             </div>
 
-                                            <!-- R2 -->
-                                            <div class="mb-2">
-                                                <div class="d-flex align-items-center justify-content-between mb-1">
-                                                    <span class="text-muted small fw-bold" style="font-size:0.72rem;">R2 (Centro): <b class="text-dark" id="lbl-r2">10 mm</b></span>
-                                                    <div class="d-flex gap-1" id="neu-r2-quick"></div>
+                                            <!-- R1 (Exterior) -->
+                                            <div class="mb-3 p-2 bg-white rounded-3 border" style="border-color: var(--border, #e2e8f0) !important;">
+                                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                                    <span class="fw-bold text-dark small" style="font-size:0.78rem;">
+                                                        <i class="bi bi-arrow-left-circle-fill text-primary me-1"></i> R1 — Hombro Exterior:
+                                                    </span>
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:26px;height:26px;" onclick="window._neuAjustarR('r1', -1)"><i class="bi bi-dash"></i></button>
+                                                        <span class="badge bg-primary px-3 py-1 fs-6 rounded-pill" id="lbl-r1">10 mm</span>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:26px;height:26px;" onclick="window._neuAjustarR('r1', 1)"><i class="bi bi-plus"></i></button>
+                                                    </div>
                                                 </div>
-                                                <input type="range" class="form-range" min="1" max="20" value="10" id="neu-range-r2" oninput="document.getElementById('lbl-r2').innerText = this.value + ' mm'; window._neuCalcularPromedio();">
+                                                <div class="d-flex flex-wrap gap-1" id="neu-r1-buttons"></div>
                                             </div>
 
-                                            <!-- R3 -->
-                                            <div class="mb-1">
-                                                <div class="d-flex align-items-center justify-content-between mb-1">
-                                                    <span class="text-muted small fw-bold" style="font-size:0.72rem;">R3 (Int.): <b class="text-dark" id="lbl-r3">10 mm</b></span>
-                                                    <div class="d-flex gap-1" id="neu-r3-quick"></div>
+                                            <!-- R2 (Centro) -->
+                                            <div class="mb-3 p-2 bg-white rounded-3 border" style="border-color: var(--border, #e2e8f0) !important;">
+                                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                                    <span class="fw-bold text-dark small" style="font-size:0.78rem;">
+                                                        <i class="bi bi-record-circle-fill text-primary me-1"></i> R2 — Ranura Central:
+                                                    </span>
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:26px;height:26px;" onclick="window._neuAjustarR('r2', -1)"><i class="bi bi-dash"></i></button>
+                                                        <span class="badge bg-primary px-3 py-1 fs-6 rounded-pill" id="lbl-r2">10 mm</span>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:26px;height:26px;" onclick="window._neuAjustarR('r2', 1)"><i class="bi bi-plus"></i></button>
+                                                    </div>
                                                 </div>
-                                                <input type="range" class="form-range" min="1" max="20" value="10" id="neu-range-r3" oninput="document.getElementById('lbl-r3').innerText = this.value + ' mm'; window._neuCalcularPromedio();">
+                                                <div class="d-flex flex-wrap gap-1" id="neu-r2-buttons"></div>
+                                            </div>
+
+                                            <!-- R3 (Interior) -->
+                                            <div class="p-2 bg-white rounded-3 border" style="border-color: var(--border, #e2e8f0) !important;">
+                                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                                    <span class="fw-bold text-dark small" style="font-size:0.78rem;">
+                                                        <i class="bi bi-arrow-right-circle-fill text-primary me-1"></i> R3 — Hombro Interior:
+                                                    </span>
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:26px;height:26px;" onclick="window._neuAjustarR('r3', -1)"><i class="bi bi-dash"></i></button>
+                                                        <span class="badge bg-primary px-3 py-1 fs-6 rounded-pill" id="lbl-r3">10 mm</span>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:26px;height:26px;" onclick="window._neuAjustarR('r3', 1)"><i class="bi bi-plus"></i></button>
+                                                    </div>
+                                                </div>
+                                                <div class="d-flex flex-wrap gap-1" id="neu-r3-buttons"></div>
                                             </div>
                                         </div>
 
@@ -298,11 +321,11 @@
         // Renderizar botones de posiciones 1..12 y R
         window._neuRenderPosiciones(['1','2','3','4','5','6','7','8','9','10','11','12','R']);
 
-        // Renderizar Esquema de Chasis
+        // Renderizar Chasis Esquema
         window._neuRenderChassis(placa);
 
-        // Renderizar Botones rápidos de remanente
-        window._neuRenderQuickButtons();
+        // Renderizar Botoneras táctiles 1..20 de remanentes
+        window._neuRenderBotoneraR();
 
         // Renderizar tabla vacía
         window._neuRenderTablaLlantas();
@@ -361,6 +384,10 @@
         `).join('');
     };
 
+    window._neuValR1 = 10;
+    window._neuValR2 = 10;
+    window._neuValR3 = 10;
+
     window._neuSeleccionarPosicion = function(pos) {
         window._neuPosicionActiva = pos;
         const b = document.getElementById('neu-form-pos-badge');
@@ -378,45 +405,74 @@
             if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = existente.marca;
             if (document.getElementById('neu-sel-medida')) document.getElementById('neu-sel-medida').value = existente.medida;
             if (document.getElementById('neu-sel-modelo')) document.getElementById('neu-sel-modelo').value = existente.modelo;
-            if (document.getElementById('neu-range-r1')) {
-                document.getElementById('neu-range-r1').value = existente.r1;
-                document.getElementById('lbl-r1').innerText = existente.r1 + ' mm';
-            }
-            if (document.getElementById('neu-range-r2')) {
-                document.getElementById('neu-range-r2').value = existente.r2;
-                document.getElementById('lbl-r2').innerText = existente.r2 + ' mm';
-            }
-            if (document.getElementById('neu-range-r3')) {
-                document.getElementById('neu-range-r3').value = existente.r3;
-                document.getElementById('lbl-r3').innerText = existente.r3 + ' mm';
-            }
+            window._neuSetR('r1', existente.r1 || 10);
+            window._neuSetR('r2', existente.r2 || 10);
+            window._neuSetR('r3', existente.r3 || 10);
             if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = existente.presion_ant || 0;
             if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = existente.presion_actual || 0;
             if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = existente.estado || 'NUEVA';
             if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = existente.accion || 'Inspeccion';
             if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = existente.observaciones || 'Ninguna';
+        } else {
+            window._neuSetR('r1', 10);
+            window._neuSetR('r2', 10);
+            window._neuSetR('r3', 10);
         }
         window._neuCalcularPromedio();
     };
 
-    // Botones rápidos para remanentes
-    window._neuRenderQuickButtons = function() {
-        const quickValues = [4, 8, 12, 16];
-        ['r1', 'r2', 'r3'].forEach(r => {
-            const container = document.getElementById(`neu-${r}-quick`);
-            if (container) {
-                container.innerHTML = quickValues.map(v => `
-                    <button type="button" class="btn btn-xs btn-outline-secondary px-1 py-0" style="font-size:0.65rem;" onclick="document.getElementById('neu-range-${r}').value = ${v}; document.getElementById('lbl-${r}').innerText = '${v} mm'; window._neuCalcularPromedio();">${v}</button>
-                `).join('');
+    // Renderizar botonera 1 a 20 mm
+    window._neuRenderBotoneraR = function() {
+        ['r1', 'r2', 'r3'].forEach(tipo => {
+            const container = document.getElementById(`neu-${tipo}-buttons`);
+            if (!container) return;
+            const current = window[`_neuVal${tipo.toUpperCase()}`] || 10;
+            let html = '';
+            for (let i = 1; i <= 20; i++) {
+                const isActive = i === current;
+                const activeClass = isActive ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary';
+                html += `
+                    <button type="button" class="btn btn-sm ${activeClass} fw-bold rounded-2 px-2 py-1" style="min-width:32px; font-size:0.75rem;" onclick="window._neuSetR('${tipo}', ${i})" id="btn-val-${tipo}-${i}">
+                        ${i}
+                    </button>
+                `;
             }
+            container.innerHTML = html;
+            const lbl = document.getElementById(`lbl-${tipo}`);
+            if (lbl) lbl.innerText = `${current} mm`;
         });
         window._neuCalcularPromedio();
     };
 
+    window._neuSetR = function(tipo, val) {
+        const num = Math.max(1, Math.min(20, parseInt(val, 10) || 10));
+        window[`_neuVal${tipo.toUpperCase()}`] = num;
+
+        const lbl = document.getElementById(`lbl-${tipo}`);
+        if (lbl) lbl.innerText = `${num} mm`;
+
+        // Actualizar estados visuales de los botones 1..20
+        for (let i = 1; i <= 20; i++) {
+            const btn = document.getElementById(`btn-val-${tipo}-${i}`);
+            if (btn) {
+                btn.className = (i === num) 
+                    ? 'btn btn-sm btn-primary text-white shadow-sm fw-bold rounded-2 px-2 py-1' 
+                    : 'btn btn-sm btn-outline-secondary fw-bold rounded-2 px-2 py-1';
+            }
+        }
+
+        window._neuCalcularPromedio();
+    };
+
+    window._neuAjustarR = function(tipo, delta) {
+        const current = window[`_neuVal${tipo.toUpperCase()}`] || 10;
+        window._neuSetR(tipo, current + delta);
+    };
+
     window._neuCalcularPromedio = function() {
-        const r1 = parseInt(document.getElementById('neu-range-r1')?.value || 10, 10);
-        const r2 = parseInt(document.getElementById('neu-range-r2')?.value || 10, 10);
-        const r3 = parseInt(document.getElementById('neu-range-r3')?.value || 10, 10);
+        const r1 = window._neuValR1 || 10;
+        const r2 = window._neuValR2 || 10;
+        const r3 = window._neuValR3 || 10;
         const prom = ((r1 + r2 + r3) / 3.0).toFixed(1);
         const lbl = document.getElementById('neu-r-prom-badge');
         if (lbl) {
@@ -529,9 +585,9 @@
         const marca = document.getElementById('neu-sel-marca')?.value || '';
         const medida = document.getElementById('neu-sel-medida')?.value || '';
         const modelo = document.getElementById('neu-sel-modelo')?.value || '';
-        const r1 = parseInt(document.getElementById('neu-range-r1')?.value || 10, 10);
-        const r2 = parseInt(document.getElementById('neu-range-r2')?.value || 10, 10);
-        const r3 = parseInt(document.getElementById('neu-range-r3')?.value || 10, 10);
+        const r1 = window._neuValR1 || 10;
+        const r2 = window._neuValR2 || 10;
+        const r3 = window._neuValR3 || 10;
         const presion_ant = parseInt(document.getElementById('neu-input-pres-ant')?.value || 0, 10);
         const presion_actual = parseInt(document.getElementById('neu-input-pres-act')?.value || 0, 10);
         const estado = document.getElementById('neu-sel-estado')?.value || 'NUEVA';
@@ -619,12 +675,9 @@
 
     window._neuLimpiarFormLlanta = function() {
         document.getElementById('neu-input-obs-item').value = 'Ninguna';
-        document.getElementById('neu-range-r1').value = 10;
-        document.getElementById('lbl-r1').innerText = '10 mm';
-        document.getElementById('neu-range-r2').value = 10;
-        document.getElementById('lbl-r2').innerText = '10 mm';
-        document.getElementById('neu-range-r3').value = 10;
-        document.getElementById('lbl-r3').innerText = '10 mm';
+        window._neuSetR('r1', 10);
+        window._neuSetR('r2', 10);
+        window._neuSetR('r3', 10);
         window._neuCalcularPromedio();
     };
 
