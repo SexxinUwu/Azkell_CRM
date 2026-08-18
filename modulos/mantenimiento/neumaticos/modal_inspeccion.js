@@ -597,6 +597,42 @@
         reader.readAsDataURL(file);
     };
 
+    window._neuLimpiarFotos = function() {
+        window._neuFotos = { foto1: null, foto2: null, foto3: null };
+        [1, 2, 3].forEach(n => {
+            const btn = document.getElementById(`btn-neu-foto${n}`);
+            if (btn) {
+                btn.className = 'btn btn-outline-secondary w-100 py-2 rounded-3 text-truncate fw-semibold d-flex flex-column align-items-center justify-content-center';
+                btn.innerHTML = `<i class="bi bi-camera fs-5"></i><span>Foto ${n}</span>`;
+            }
+            const inp = document.getElementById(`neu-file-foto${n}`);
+            if (inp) inp.value = '';
+        });
+    };
+
+    window._neuLimpiarFormLlanta = function() {
+        const selMarca = document.getElementById('neu-sel-marca');
+        const selMedida = document.getElementById('neu-sel-medida');
+        const selModelo = document.getElementById('neu-sel-modelo');
+        if (selMarca) selMarca.selectedIndex = 0;
+        if (selMedida) selMedida.selectedIndex = 0;
+        if (selModelo) selModelo.selectedIndex = 0;
+
+        window._neuSetR('r1', 0);
+        window._neuSetR('r2', 0);
+        window._neuSetR('r3', 0);
+        window._neuSetR('r4', 0);
+
+        if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = '';
+        if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = '';
+        if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = 'NUEVA';
+        if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = 'Inspeccion';
+        if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
+        if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = '';
+
+        window._neuLimpiarFotos();
+    };
+
     window._neuSeleccionarPosicion = function(pos) {
         window._neuPosicionActiva = pos;
         const b = document.getElementById('neu-form-pos-badge');
@@ -698,36 +734,6 @@
         }
         window._neuCalcularPromedio();
         window._neuActualizarColoresChassis();
-    };
-
-    window._neuLimpiarFormLlanta = function() {
-        if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = '';
-        if (document.getElementById('neu-sel-medida')) document.getElementById('neu-sel-medida').value = '';
-        if (document.getElementById('neu-sel-modelo')) document.getElementById('neu-sel-modelo').value = '';
-        window._neuSetR('r1', 0);
-        window._neuSetR('r2', 0);
-        window._neuSetR('r3', 0);
-        window._neuSetR('r4', 0);
-        if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = '';
-        if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = '';
-        if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = 'NUEVA';
-        if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = 'Inspeccion';
-        if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
-        if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = '';
-        window._neuLimpiarFotos();
-    };
-
-    window._neuLimpiarFotos = function() {
-        window._neuFotos = { foto1: null, foto2: null, foto3: null };
-        [1, 2, 3].forEach(n => {
-            const btn = document.getElementById(`btn-neu-foto${n}`);
-            if (btn) {
-                btn.className = 'btn btn-outline-secondary w-100 py-2 rounded-3 text-truncate fw-semibold d-flex flex-column align-items-center justify-content-center';
-                btn.innerHTML = `<i class="bi bi-camera fs-5"></i><span>Foto ${n}</span>`;
-            }
-            const inp = document.getElementById(`neu-file-foto${n}`);
-            if (inp) inp.value = '';
-        });
     };
 
     // Renderizar botonera 1 a 20 mm con botones táctiles grandes
