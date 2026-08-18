@@ -765,6 +765,9 @@ window.rotAbrirDetalle = function(idOT) {
                 <button class="btn btn-outline-secondary btn-sm rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.rotAccion('pdf','${esc(idOT)}')">
                     <i class="bi bi-file-earmark-pdf-fill text-danger"></i> <span>PDF</span>
                 </button>
+                <button class="btn btn-outline-primary btn-sm rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.rotGenerarPlantillaLlantasOT('${esc(idOT)}')" title="Imprimir Reporte / Plantilla de Llantas A4">
+                    <i class="bi bi-disc-fill text-primary"></i> <span class="d-none d-sm-inline">Reporte Llantas</span>
+                </button>
             </div>
 
             <div class="d-flex gap-2 ms-auto">
@@ -1878,6 +1881,267 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
 window.rotGenerarPlantillaVaciaOT = function(idOt, placa) {
     if (typeof window.rotToast === 'function') window.rotToast('Generando plantilla...', 'bg-info');
     window.generarPDF_OT({ id_ot: idOt, placa: placa }, [], []);
+};
+
+window.rotGenerarPlantillaLlantasOT = async function(idOt) {
+    if (typeof window.rotToast === 'function') window.rotToast('Generando Reporte de Llantas A4...', 'bg-info');
+    
+    var ot = null;
+    if (window.rotObtenerOTAsync) {
+        ot = await window.rotObtenerOTAsync(idOt);
+    }
+    if (!ot && window.rotData) {
+        ot = window.rotData.find(function(x){ return String(x.ticket_entrada || x.id_ot) === String(idOt); });
+    }
+    ot = ot || { id_ot: idOt, ticket_entrada: idOt, placa: '---' };
+
+    var placa = (ot.placa || ot.placa_vehiculo || '---').toUpperCase().trim();
+    var tipoOT = ot.tipo_ot || ot.tipo || 'Inspección Neumáticos';
+    var fechaInicio = ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || new Date().toISOString().split('T')[0];
+    try { fechaInicio = String(fechaInicio).split('T')[0]; } catch(e){}
+    var kmTablero = ot.km_tablero || ot.km_gps || ot.km || '---';
+    var rampa = ot.txtRampa || ot.rampa || '---';
+
+    // Obtener datos de neumáticos de la placa si existen
+    var datosPos = {};
+    if (placa && placa !== '---') {
+        try {
+            var res = await fetch('/api/neumaticos/placa-ultima/' + encodeURIComponent(placa)).then(r => r.json());
+            if (res.ok && res.datosPosiciones) datosPos = res.datosPosiciones;
+        } catch(e) { console.warn('Error fetching tire data for PDF:', e); }
+    }
+
+    var renderFilaPos = function(posKey) {
+        var det = datosPos[String(posKey).toUpperCase()] || {};
+        var marca = (det.marca || '').toUpperCase();
+        var medida = (det.medida || '').toUpperCase();
+        var modelo = (det.modelo || '').toUpperCase();
+        var r1 = det.r1 !== null && det.r1 !== undefined ? det.r1 : '';
+        var r2 = det.r2 !== null && det.r2 !== undefined ? det.r2 : '';
+        var r3 = det.r3 !== null && det.r3 !== undefined ? det.r3 : '';
+        var presAnt = det.presion_ant || '';
+        var presAct = det.presion_actual || '';
+        var estado = (det.estado || '').toUpperCase();
+        var isNueva = estado === 'NUEVA' ? '<b>✓ NUEVA</b>' : 'Nueva';
+        var isReenc = estado === 'RENCAUCHADA' ? '<b>✓ REEN.</b>' : 'Reencauchada';
+        var accion = det.accion || '';
+        var obs = det.observaciones || '';
+
+        return `<tr>
+            <td></td>
+            <td class="pos-number">${posKey}</td>
+            <td class="text-start ps-1">${marca}</td>
+            <td class="text-start ps-1">${medida}</td>
+            <td class="text-start ps-1">${modelo}</td>
+            <td>${r1}</td>
+            <td>${r2}</td>
+            <td>${r3}</td>
+            <td>${presAnt}</td>
+            <td>${presAct}</td>
+            <td class="col-est-nueva option-text">${isNueva}</td>
+            <td class="col-est-reen option-text">${isReenc}</td>
+            <td>${accion}</td>
+            <td class="text-start ps-1">${obs}</td>
+        </tr>`;
+    };
+
+    var posSec1 = ['1','2','3','4','5','6','7','8','9','10','11','12','R'];
+    var posSec2 = ['1','2'];
+
+    var htmlRows1 = posSec1.map(renderFilaPos).join('');
+    var htmlRows2 = posSec2.map(renderFilaPos).join('');
+
+    var fullHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte de Llantas - OT ${idOt}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: 'Oswald', sans-serif;
+        font-size: 11px;
+        margin: 0;
+        padding: 20px;
+        background-color: #e0e0e0;
+        color: #000000;
+    }
+    .print-btn-container { text-align: center; margin-bottom: 15px; }
+    .btn-print {
+        background-color: #1e293b;
+        color: #ffffff;
+        border: none;
+        padding: 10px 24px;
+        font-family: 'Oswald', sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        text-transform: uppercase;
+        cursor: pointer;
+        border-radius: 8px;
+        letter-spacing: 1px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .btn-print:hover { background-color: #0f172a; }
+    .report-container {
+        width: 100%;
+        max-width: 1120px;
+        margin: 0 auto;
+        border: 2px solid #000000;
+        background-color: #fff;
+        padding: 15px;
+    }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; color: #000000; }
+    .title-row td { padding: 6px 0; border-bottom: 2px solid #000000; vertical-align: middle; }
+    .company-logo { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 20px; color: #1e293b; }
+    .company-logo span { color: #2563eb; }
+    .title-text { text-align: center; font-weight: 700; font-size: 22px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .number-text { text-align: right; font-weight: 700; font-size: 15px; width: 150px; }
+    .info-section-table { width: 100%; margin: 10px 0; }
+    .info-section-table td { vertical-align: middle; padding: 0; }
+    .vehicle-box {
+        border: 2px solid #000000;
+        padding: 8px 12px;
+        width: 400px;
+        font-family: 'Inter', sans-serif;
+        font-size: 11px;
+        line-height: 1.5;
+        font-weight: 600;
+    }
+    .rampa-cell { text-align: right; vertical-align: middle !important; padding-right: 30px; }
+    .rampa-label { font-size: 24px; font-weight: 700; }
+    .rampa-value { font-size: 24px; font-weight: 400; margin-left: 10px; }
+    .grid-table th, .grid-table td {
+        border: 1px solid #000000;
+        text-align: center;
+        padding: 2px 3px;
+        font-size: 11px;
+        height: 20px;
+        overflow: hidden;
+        white-space: nowrap;
+        vertical-align: middle;
+        font-weight: 400;
+    }
+    .grid-table th { font-weight: 700; background-color: #f8fafc; text-transform: uppercase; height: 26px; font-size: 10px; }
+    .col-idx { width: 30px; }
+    .col-pos { width: 40px; }
+    .col-data-main { width: 95px; }
+    .col-r { width: 22px; }
+    .col-presion { width: 85px; }
+    .col-est-nueva { width: 50px; }
+    .col-est-reen { width: 70px; }
+    .col-accion { width: 75px; }
+    .col-obs { width: auto; }
+    .option-text { font-size: 9.5px; }
+    .pos-number { font-weight: 700; font-size: 12px; }
+    .border-top-thick { border-top: 2px solid #000000; }
+    .spacer { height: 10px; border-left: 2px solid #000000; border-right: 2px solid #000000; }
+    .obs-container { padding: 10px 0 5px 0; font-size: 11px; font-family: 'Inter', sans-serif; }
+    .obs-label { font-weight: 700; margin-bottom: 4px; display: block; }
+    .obs-box { width: 100%; min-height: 50px; border: 2px solid #000000; padding: 6px; }
+    .signature-table { width: 100%; margin-top: 15px; font-family: 'Inter', sans-serif; font-size: 10px; }
+    .signature-table td { text-align: center; vertical-align: bottom; height: 45px; }
+    .signature-line { border-top: 1px solid #000; margin: 0 20px; padding-top: 4px; font-weight: 600; }
+    @media print {
+        @page { size: A4 landscape; margin: 5mm; }
+        body { margin: 0; padding: 0; background-color: #fff; color: #000; }
+        .print-btn-container { display: none !important; }
+        .report-container { width: 100%; max-width: none; border: 2px solid #000; margin: 0; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    }
+</style>
+</head>
+<body>
+    <div class="print-btn-container">
+        <button class="btn-print" onclick="window.print()">🖨️ Imprimir Reporte (A4 Landscape)</button>
+    </div>
+    <div class="report-container">
+        <table class="title-row">
+            <tr>
+                <td style="width: 200px;" class="company-logo">AZKELL <span>FLEET</span></td>
+                <td class="title-text">REPORTE DE INSPECCIÓN DE LLANTAS</td>
+                <td class="number-text">OT Nº ${idOt}</td>
+            </tr>
+        </table>
+        <table class="info-section-table">
+            <tr>
+                <td>
+                    <div class="vehicle-box">
+                        PLACA: <span style="font-weight:700">${placa}</span> &nbsp;&nbsp;|&nbsp;&nbsp; TIPO OT: <span>${tipoOT}</span><br>
+                        FECHA DE INICIO: <span>${fechaInicio}</span> &nbsp;&nbsp;|&nbsp;&nbsp; KM TABLERO: <span>${kmTablero}</span>
+                    </div>
+                </td>
+                <td class="rampa-cell">
+                    <span class="rampa-label">RAMPA:</span>
+                    <span class="rampa-value">${rampa}</span>
+                </td>
+            </tr>
+        </table>
+        <table class="grid-table border-top-thick">
+            <thead>
+                <tr>
+                    <th class="col-idx">I.</th>
+                    <th class="col-pos">POS</th>
+                    <th class="col-data-main">MARCA</th>
+                    <th class="col-data-main">MEDIDA</th>
+                    <th class="col-data-main">MODELO</th>
+                    <th class="col-r">R1</th>
+                    <th class="col-r">R2</th>
+                    <th class="col-r">R3</th>
+                    <th class="col-presion">PRESIÓN AIRE<br>ENCONTRADA</th>
+                    <th class="col-presion">PRESIÓN AIRE<br>ACTUAL</th>
+                    <th colspan="2" style="width: 120px;">ESTADO</th>
+                    <th class="col-accion">ACCIÓN</th>
+                    <th class="col-obs">OBSERVACIÓN</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${htmlRows1}
+            </tbody>
+        </table>
+        <div class="spacer"></div>
+        <table class="grid-table border-top-thick">
+            <thead>
+                <tr>
+                    <th class="col-idx">II.</th>
+                    <th class="col-pos">POS</th>
+                    <th class="col-data-main">MARCA</th>
+                    <th class="col-data-main">MEDIDA</th>
+                    <th class="col-data-main">MODELO</th>
+                    <th class="col-r">R1</th>
+                    <th class="col-r">R2</th>
+                    <th class="col-r">R3</th>
+                    <th class="col-presion">PRESIÓN AIRE<br>ENCONTRADA</th>
+                    <th class="col-presion">PRESIÓN AIRE<br>ACTUAL</th>
+                    <th colspan="2" style="width: 120px;">ESTADO</th>
+                    <th class="col-accion">ACCIÓN</th>
+                    <th class="col-obs">OBSERVACIÓN</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${htmlRows2}
+            </tbody>
+        </table>
+        <div class="obs-container">
+            <span class="obs-label">OBSERVACIONES DE INSPECCIÓN:</span>
+            <div class="obs-box"></div>
+        </div>
+        <table class="signature-table">
+            <tr>
+                <td><div class="signature-line">FIRMA TÉCNICO RAMPA</div></td>
+                <td><div class="signature-line">FIRMA INSPECTOR DE FLOTA</div></td>
+                <td><div class="signature-line">SUPERVISOR DE MANTENIMIENTO</div></td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>`;
+
+    var blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
 };
 
 // ── KPIs ─────────────────────────────────────────────────────────
