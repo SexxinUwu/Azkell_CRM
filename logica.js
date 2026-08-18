@@ -3586,6 +3586,21 @@ window.cargarModuloAislado = async function(rutaModulo) {
                 if (typeof window[funcionInitHyphen] === 'function') window[funcionInitHyphen]();
             }
         };
+        script.onerror = function() {
+            console.error(`Error al cargar el script ${script.src}`);
+            if (root) {
+                root.innerHTML = `
+                    <div class="alert alert-danger m-4 rounded-4 shadow-sm text-center py-4">
+                        <i class="bi bi-wifi-off display-6 d-block mb-2 text-danger"></i>
+                        <h6 class="fw-bold">No se pudo cargar la lógica del módulo</h6>
+                        <p class="small text-muted mb-3">Hubo una interrupción en la red al descargar los archivos.</p>
+                        <button class="btn btn-primary rounded-pill px-4 fw-bold" onclick="cargarModuloAislado('${rutaModulo}')">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Reintentar Carga
+                        </button>
+                    </div>
+                `;
+            }
+        };
         document.body.appendChild(script);
         window._navProgress.done();
         // Actualizar visibilidad FAB según módulo activo

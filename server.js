@@ -70,15 +70,6 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 
-// ── Multi-Tenant SaaS Middleware ─────────────────────────────────
-const { resolveTenantMiddleware } = require('./services/tenant_master');
-app.use((req, res, next) => {
-    resolveTenantMiddleware(req, res, () => {
-        tenantStorage.run(req.db, next);
-    });
-});
-app.use('/api/superadmin', require('./routes/superadmin')());
-
 // Archivos en /libs/ son librerías estáticas → cachear agresivamente (30 días)
 app.use('/libs', express.static(path.join(__dirname, 'libs'), {
     maxAge: '30d',
@@ -94,6 +85,15 @@ app.use(express.static(__dirname, {
         }
     }
 }));
+
+// ── Multi-Tenant SaaS Middleware ─────────────────────────────────
+const { resolveTenantMiddleware } = require('./services/tenant_master');
+app.use((req, res, next) => {
+    resolveTenantMiddleware(req, res, () => {
+        tenantStorage.run(req.db, next);
+    });
+});
+app.use('/api/superadmin', require('./routes/superadmin')());
 
 // ── CONFIGURACION ERP ─────────────────────────────────────────────────────────
 app.get('/api/configuracion', async (req, res) => {

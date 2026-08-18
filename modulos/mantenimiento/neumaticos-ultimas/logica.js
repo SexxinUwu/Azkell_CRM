@@ -10,8 +10,8 @@
     window._neuFiltroMotora = 'Todos'; // 'Todos' | 'Motora' | 'No Motora'
 
     window.neuUltimasCargar = async function() {
-        const tbody = document.getElementById('neu-tbody-ultimas');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="16" class="text-center text-muted py-5"><div class="spinner-border spinner-border-sm text-secondary"></div> Cargando datos...</td></tr>';
+        const container = document.getElementById('neu-vehiculos-cards-container');
+        if (container) container.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-secondary me-2"></div> Cargando inspecciones de vehículos...</div>';
 
         try {
             const [resUlt, resReq] = await Promise.all([
@@ -39,7 +39,7 @@
 
         } catch (e) {
             console.error("Error en neuUltimasCargar:", e);
-            if (tbody) tbody.innerHTML = `<tr><td colspan="16" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle"></i> Error al cargar datos: ${e.message}</td></tr>`;
+            if (container) container.innerHTML = `<div class="alert alert-danger rounded-4 m-3 p-4 text-center"><i class="bi bi-exclamation-triangle-fill me-2"></i> Error al cargar datos: ${e.message}</div>`;
         }
     };
 
