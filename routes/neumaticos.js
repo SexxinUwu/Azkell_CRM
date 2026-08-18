@@ -635,26 +635,17 @@ module.exports = function (db, broadcast, logAudit) {
                 WHERE d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0
             `);
 
-            // Total de llantas en circulación de la flota activa (en_uso != 'NO')
+            // Total de llantas en circulación de la flota activa (p.en_uso = 'Si')
             const [circulando] = await tdb.query(`
                 SELECT 
                     CAST(COALESCE(SUM(
                         CASE 
-                            WHEN p.llantas IS NOT NULL AND CAST(p.llantas AS UNSIGNED) > 0 THEN CAST(p.llantas AS UNSIGNED)
-                            ELSE COALESCE(last_i.total_llantas, 0)
+                            WHEN llantas REGEXP '^[0-9]+$' THEN CAST(llantas AS UNSIGNED)
+                            ELSE 0 
                         END
                     ), 0) AS UNSIGNED) as total_circulando
-                FROM placas p
-                LEFT JOIN (
-                    SELECT i1.placa, i1.id_inspeccion, i1.total_llantas
-                    FROM neumaticos_inspecciones i1
-                    INNER JOIN (
-                        SELECT placa, MAX(fecha_inspeccion) as max_fecha
-                        FROM neumaticos_inspecciones
-                        GROUP BY placa
-                    ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
-                ) last_i ON p.placa COLLATE utf8mb4_unicode_ci = last_i.placa COLLATE utf8mb4_unicode_ci
-                WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
+                FROM placas
+                WHERE UPPER(TRIM(COALESCE(en_uso, 'SI'))) = 'SI'
             `);
 
             // Desglose por Marcas más usadas
