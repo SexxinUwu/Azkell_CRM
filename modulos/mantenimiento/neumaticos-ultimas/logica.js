@@ -24,9 +24,12 @@
             window._neuDataUltimas = (dataUlt.ok && Array.isArray(dataUlt.data)) ? dataUlt.data : [];
             window._neuDataRequerimientos = (dataReq.ok && Array.isArray(dataReq.data)) ? dataReq.data : [];
 
-            // Actualizar badge de requerimientos
+            // Actualizar badges de conteo de pestañas
+            const badgeUlt = document.getElementById('badge-ultimas-count');
+            if (badgeUlt) badgeUlt.innerText = window._neuDataUltimas.length.toLocaleString();
+
             const badgeReq = document.getElementById('badge-req-count');
-            if (badgeReq) badgeReq.innerText = window._neuDataRequerimientos.length;
+            if (badgeReq) badgeReq.innerText = window._neuDataRequerimientos.length.toLocaleString();
 
             // Extraer lista única de empresas/dueños para el selector
             window._neuPoblarSelectEmpresas();
@@ -161,27 +164,12 @@
     // ── Resumen Consolidado de Requerimientos por Medida para Compras ────
     window.neuRenderResumenMedidas = function(items) {
         const tbody = document.getElementById('tbody-resumen-medidas-req');
+        const subTitleEl = document.getElementById('neu-resumen-subtitulo');
         if (!tbody) return;
-
-        // Renderizar banner de filtro activo por medida si existe
-        const bannerEl = document.getElementById('neu-active-medida-filter-banner');
-        if (bannerEl) {
-            if (window._neuFiltroMedidaSel) {
-                bannerEl.className = 'alert alert-primary py-1.5 px-3 rounded-pill d-inline-flex align-items-center gap-2 mb-2 small shadow-2xs fw-bold';
-                bannerEl.innerHTML = `
-                    <i class="bi bi-funnel-fill text-primary"></i> Filtrando tabla por Medida: <span class="badge bg-primary text-white font-monospace fs-6 px-2">${window._neuFiltroMedidaSel}</span>
-                    <button class="btn btn-sm btn-link text-primary p-0 fw-bold ms-auto text-decoration-none" onclick="window.neuSeleccionarMedidaFiltro(null)">
-                        <i class="bi bi-x-circle-fill fs-6"></i> Mostrar Todas
-                    </button>
-                `;
-            } else {
-                bannerEl.className = 'd-none';
-                bannerEl.innerHTML = '';
-            }
-        }
 
         if (!items || !items.length) {
             tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No hay requerimientos de llantas para los filtros seleccionados.</td></tr>';
+            if (subTitleEl) subTitleEl.innerText = 'Total a reposición por medida (0 Llantas requeridas)';
             window._neuResumenComprasMap = [];
             return;
         }
@@ -227,40 +215,48 @@
             arrayResumen.push({ medida, ...val });
 
             const isSelected = window._neuFiltroMedidaSel === medida;
-            const bgClass = isSelected ? 'bg-primary bg-opacity-10 border-start border-4 border-primary' : '';
-            const activeBadge = isSelected ? `<span class="badge bg-primary rounded-pill ms-2"><i class="bi bi-check-circle-fill me-1"></i>Filtrando</span>` : '';
+            const bgClass = isSelected ? 'selected-row' : '';
+            const activeBadge = isSelected ? `<span class="badge bg-primary rounded-pill ms-2" style="font-size:0.68rem;"><i class="bi bi-check-circle-fill me-1"></i>Filtrando</span>` : '';
 
             html += `
-                <tr class="neu-row-medida-item ${bgClass}" style="cursor:pointer;" onclick="window.neuSeleccionarMedidaFiltro('${medida}')" title="Toca o haz clic para filtrar la tabla inferior por la medida ${medida}">
-                    <td class="ps-3 fw-bold text-dark font-monospace fs-6">
-                        <i class="bi bi-disc me-1 ${isSelected ? 'text-primary' : 'text-secondary'}"></i>${medida} ${activeBadge}
-                    </td>
-                    <td class="text-center fw-bold ${val.del > 0 ? 'text-primary fs-6' : 'text-muted'}">${val.del || 0}</td>
-                    <td class="text-center fw-bold ${val.trac > 0 ? 'text-dark fs-6' : 'text-muted'}">${val.trac || 0}</td>
-                    <td class="text-center fw-bold ${val.arr > 0 ? 'text-info fs-6' : 'text-muted'}">${val.arr || 0}</td>
-                    <td class="text-center fw-bold ${val.rep > 0 ? 'text-secondary fs-6' : 'text-muted'}">${val.rep || 0}</td>
-                    <td class="text-center fw-bold text-danger fs-6 bg-danger bg-opacity-10">${val.total}</td>
+                <tr class="${bgClass}" style="cursor:pointer;" onclick="window.neuSeleccionarMedidaFiltro('${medida}')" title="Haz clic para filtrar por la medida ${medida}">
+                    <td class="ps-3 fw-bold text-dark font-monospace text-start">${medida} ${activeBadge}</td>
+                    <td class="fw-bold ${val.del > 0 ? 'text-primary' : 'text-muted'}">${val.del || 0}</td>
+                    <td class="fw-bold ${val.trac > 0 ? 'text-dark' : 'text-muted'}">${val.trac || 0}</td>
+                    <td class="fw-bold ${val.arr > 0 ? 'text-dark' : 'text-muted'}">${val.arr || 0}</td>
+                    <td class="fw-bold ${val.rep > 0 ? 'text-dark' : 'text-muted'}">${val.rep || 0}</td>
+                    <td class="fw-bold text-danger fs-6">${val.total}</td>
                 </tr>
             `;
         });
 
-        const isTotalSelected = !window._neuFiltroMedidaSel;
+        if (subTitleEl) subTitleEl.innerText = `Total a reposición por medida (${totGral} Llantas requeridas)`;
 
         html += `
-            <tr class="table-dark fw-bold" style="cursor:pointer;" onclick="window.neuSeleccionarMedidaFiltro(null)" title="Toca para mostrar todas las medidas">
-                <td class="ps-3">
-                    <i class="bi bi-layers-fill me-1"></i>TOTAL GENERAL A COMPRAR / RECOMPRA ${isTotalSelected ? '<span class="badge bg-light text-dark rounded-pill ms-2 small">Todas</span>' : ''}
-                </td>
-                <td class="text-center text-primary fs-6">${totDel}</td>
-                <td class="text-center text-warning fs-6">${totTrac}</td>
-                <td class="text-center text-info fs-6">${totArr}</td>
-                <td class="text-center text-light fs-6">${totRep}</td>
-                <td class="text-center text-white bg-danger fs-5">${totGral}</td>
+            <tr class="footer-total-row" style="cursor:pointer;" onclick="window.neuSeleccionarMedidaFiltro(null)">
+                <td class="ps-3 text-start">TOTAL GENERAL A COMPRAR</td>
+                <td>${totDel}</td>
+                <td>${totTrac}</td>
+                <td>${totArr}</td>
+                <td>${totRep}</td>
+                <td class="td-grand-total">${totGral}</td>
             </tr>
         `;
 
         tbody.innerHTML = html;
         window._neuResumenComprasMap = arrayResumen;
+
+        // Actualizar banner de medida activa 1:1
+        const bannerEl = document.getElementById('neu-active-medida-filter-banner');
+        const labelVal = document.getElementById('lbl-active-medida-val');
+        if (bannerEl && labelVal) {
+            if (window._neuFiltroMedidaSel) {
+                bannerEl.classList.remove('d-none');
+                labelVal.innerText = window._neuFiltroMedidaSel;
+            } else {
+                bannerEl.classList.add('d-none');
+            }
+        }
     };
 
     window.neuCopiarPedidoCompras = function() {
@@ -292,17 +288,15 @@
     };
 
     window.neuRenderTabla = function(items) {
-        const tbody = document.getElementById('neu-tbody-ultimas');
-        const footerCount = document.getElementById('neu-footer-registros-count');
-        if (footerCount) footerCount.innerText = items.length;
-        if (!tbody) return;
+        const container = document.getElementById('neu-vehiculos-cards-container');
+        if (!container) return;
 
-        if (!items.length) {
-            tbody.innerHTML = '<tr><td colspan="25" class="text-center text-muted py-5">No se encontraron registros que coincidan con los filtros aplicados.</td></tr>';
+        if (!items || !items.length) {
+            container.innerHTML = '<div class="card border-0 rounded-4 p-5 text-center text-muted bg-white shadow-2xs">No se encontraron registros que coincidan con los filtros aplicados.</div>';
             return;
         }
 
-        // Agrupar ítems por Placa para crear encabezados separados (Estilo AppSheet)
+        // Agrupar por Placa manteniendo el orden
         const gruposPorPlaca = new Map();
         items.forEach(l => {
             const pl = (l.placa || 'SIN_PLACA').toUpperCase().trim();
@@ -312,91 +306,101 @@
 
         let html = '';
 
-        gruposPorPlaca.forEach((grupo, placa) => {
-            const primerItem = grupo[0] || {};
-            const fechaFmt = String(primerItem.fecha_inspeccion || '').split('T')[0];
+        gruposPorPlaca.forEach((llantas, placa) => {
+            const primerItem = llantas[0] || {};
+            const fechaFmt = String(primerItem.fecha_inspeccion || '').split('T')[0] || '---';
+            const empresa = primerItem.dueno || 'EMPRESA NO REGISTRADA';
+            const marcaUni = primerItem.marca_unidad || '';
+            const tipoUni = primerItem.tipo_unidad || '';
+            let subUni = `${marcaUni} (${tipoUni})`.trim();
+            if (!marcaUni && !tipoUni) subUni = '';
 
-            // Fila Encabezado de Agrupación por Placa estilo AppSheet
             html += `
-                <tr style="background:#f1f5f9; border-top: 2px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
-                    <td colspan="25" class="py-2 ps-3 pe-3 bg-light">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-dark text-white font-monospace fs-6 px-3 py-1 shadow-2xs" style="cursor:pointer; letter-spacing:0.5px;" onclick="window.rotAbrirInspeccionNeumaticosWrapper('${placa}', '', ${primerItem.km||0})" title="Hacer click para registrar nueva inspección de esta placa">
-                                    <i class="bi bi-truck me-1"></i>${placa}
-                                </span>
-                                <span class="text-dark small fw-bold">
-                                    ${primerItem.dueno || 'Sin empresa'} 
-                                    <span class="text-muted fw-normal">(${primerItem.marca_unidad || ''} ${primerItem.tipo_unidad || ''})</span>
-                                </span>
-                            </div>
-                            <div class="text-secondary small">
-                                <span><i class="bi bi-calendar3 me-1"></i>Última Inspección: <strong class="text-dark">${fechaFmt}</strong></span>
-                                <span class="mx-2">·</span>
-                                <span><i class="bi bi-speedometer2 me-1"></i>KM: <strong class="text-dark">${Number(primerItem.km||0).toLocaleString()}</strong></span>
-                                <span class="mx-2">·</span>
-                                <span><i class="bi bi-disc me-1"></i>Posiciones: <strong class="text-primary">${grupo.length} llantas</strong></span>
+                <div class="neu-vehicle-card">
+                    <div class="neu-vehicle-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-black text-white fw-bold px-2.5 py-1.5 fs-6 font-monospace" style="border-radius:8px; cursor:pointer;" onclick="window.rotAbrirInspeccionNeumaticosWrapper('${placa}', '', ${primerItem.km||0})" title="Hacer clic para registrar nueva inspección de ${placa}">${placa}</span>
+                            <div>
+                                <div class="fw-bold text-dark fs-6" style="line-height:1.1;">${empresa}</div>
+                                <small class="text-muted" style="font-size:0.75rem;">${subUni} ${subUni ? '•' : ''} Última Inspex: <b>${fechaFmt}</b></small>
                             </div>
                         </div>
-                    </td>
-                </tr>
+                        <div>
+                            <span class="badge bg-light text-dark border rounded-pill px-3 py-1.5 fw-bold" style="font-size:0.78rem;">${llantas.length} posición(es)</span>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="neu-vehicle-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;" class="text-center">POS</th>
+                                    <th>MARCA / MEDIDA / MODELO</th>
+                                    <th class="text-center">R1 R2 R3 R4 (MM)</th>
+                                    <th class="text-center">PRESIÓN PSI</th>
+                                    <th class="text-center">ESTADO</th>
+                                    <th>OBSERVACIONES</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${llantas.map(det => {
+                                    const pos = String(det.posicion || '-').toUpperCase();
+                                    const marcaL = (det.marca || '---').toUpperCase();
+                                    const medidaL = (det.medida || '---').toUpperCase();
+                                    const modeloL = (det.modelo || '').toUpperCase();
+                                    const estadoMat = (det.estado || 'NUEVA').toUpperCase();
+                                    const r1 = det.r1 !== null ? det.r1 : '-';
+                                    const r2 = det.r2 !== null ? det.r2 : '-';
+                                    const r3 = det.r3 !== null ? det.r3 : '-';
+                                    const r4 = det.r4 !== null ? det.r4 : '-';
+                                    const remProm = det.remanente_promedio !== null ? parseFloat(det.remanente_promedio) : 10;
+                                    const presAct = det.presion_actual ? `${det.presion_actual} PSI` : '---';
+                                    const presAnt = det.presion_ant ? `(Ant: ${det.presion_ant})` : '';
+                                    const obs = det.observaciones || 'Ninguna';
+
+                                    let badgeEstado = '';
+                                    if (det.alerta_cambio === 1 || remProm <= 4.0) {
+                                        badgeEstado = `<span class="badge rounded-pill px-2.5 py-1" style="background:#ffe4e6; color:#be123c; border:1px solid #fecdd3;">● Crítica (≤4mm)</span>`;
+                                    } else if (remProm <= 6.0) {
+                                        badgeEstado = `<span class="badge rounded-pill px-2.5 py-1" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a;">● Alerta (4-6mm)</span>`;
+                                    } else {
+                                        badgeEstado = `<span class="badge rounded-pill px-2.5 py-1" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">● Óptima (>6mm)</span>`;
+                                    }
+
+                                    let obsContent = obs;
+                                    if (obs !== 'Ninguna' && obs.trim() !== '') {
+                                        obsContent = `<span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>${obs}</span>`;
+                                    } else {
+                                        obsContent = `<span class="text-muted">Ninguna</span>`;
+                                    }
+
+                                    return `
+                                        <tr>
+                                            <td class="text-center">
+                                                <span class="rounded-circle bg-dark text-white fw-bold d-inline-flex align-items-center justify-content-center" style="width:26px;height:26px;font-size:0.75rem;">${pos}</span>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-dark font-monospace" style="font-size:0.85rem;">${marcaL} ${modeloL ? '(' + modeloL + ')' : ''}</div>
+                                                <div class="text-muted small" style="font-size:0.75rem;">${medidaL} • ${estadoMat}</div>
+                                            </td>
+                                            <td class="text-center fw-bold font-monospace fs-6 text-dark">${r1} &nbsp;${r2} &nbsp;${r3} &nbsp;${r4}</td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-dark">${presAct}</div>
+                                                ${presAnt ? `<div class="text-muted small" style="font-size:0.7rem;">${presAnt}</div>` : ''}
+                                            </td>
+                                            <td class="text-center">${badgeEstado}</td>
+                                            <td class="small">${obsContent}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             `;
-
-            // Filas de Posiciones de Neumáticos para la Placa
-            grupo.forEach(l => {
-                const f = String(l.fecha_inspeccion || '').split('T')[0];
-                const prom = parseFloat(l.remanente_promedio || 0);
-                
-                let estadoLlant = '🟢 Óptima';
-                let badgeClass = 'bg-success bg-opacity-10 text-success border border-success border-opacity-25';
-                if (prom <= 4.0) {
-                    estadoLlant = '🔴 Crítica (≤4mm)';
-                    badgeClass = 'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 fw-bold';
-                } else if (prom <= 6.0) {
-                    estadoLlant = '🟡 Alerta (4-6mm)';
-                    badgeClass = 'bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25';
-                }
-
-                const renderFotoCell = (foto, num) => {
-                    if (!foto) return '<span class="text-muted small">-</span>';
-                    return `<button type="button" class="btn btn-xs btn-outline-primary py-0 px-1 rounded-pill" onclick="window.neuVerFotoModal('${foto}')" title="Ver Foto ${num}"><i class="bi bi-image"></i> Foto ${num}</button>`;
-                };
-
-                html += `
-                    <tr>
-                        <td class="ps-3 text-muted small fw-semibold">${l.id || l.id_inspeccion || '---'}</td>
-                        <td class="text-muted small">${f}</td>
-                        <td>
-                            <span class="badge bg-secondary bg-opacity-10 text-dark fw-bold px-2 py-1">${l.placa}</span>
-                        </td>
-                        <td class="text-center"><span class="badge ${badgeClass} px-2 py-1">${estadoLlant}</span></td>
-                        <td class="small fw-semibold">${Number(l.km || 0).toLocaleString()}</td>
-                        <td class="text-center"><span class="badge bg-primary rounded-pill px-2">${l.posicion}</span></td>
-                        <td class="small fw-semibold text-truncate" style="max-width:120px;" title="${l.dueno||''}">${l.dueno || '---'}</td>
-                        <td class="small text-truncate" style="max-width:110px;" title="${l.marca_unidad||''}">${l.marca_unidad || '---'}</td>
-                        <td class="small text-truncate" style="max-width:110px;" title="${l.tipo_unidad||''}">${l.tipo_unidad || '---'}</td>
-                        <td class="small fw-bold">${l.marca || '---'}</td>
-                        <td class="small">${l.medida || '---'}</td>
-                        <td class="small"><span class="badge bg-light text-dark border">${l.modelo || '---'}</span></td>
-                        <td class="text-center fw-semibold">${l.r1}</td>
-                        <td class="text-center fw-semibold">${l.r2}</td>
-                        <td class="text-center fw-semibold">${l.r3}</td>
-                        <td class="text-center text-muted small">${l.r4 || 0}</td>
-                        <td class="text-center small text-muted">${l.presion_ant || 0}</td>
-                        <td class="text-center small fw-bold">${l.presion_actual || 0} PSI</td>
-                        <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${l.estado || 'NUEVA'}</span></td>
-                        <td><span class="badge bg-info bg-opacity-10 text-info">${l.accion || 'Inspeccion'}</span></td>
-                        <td class="text-truncate text-muted small" style="max-width:140px;" title="${l.observaciones || ''}">${l.observaciones || 'Ninguna'}</td>
-                        <td class="text-center"><span class="badge ${l.rot !== 'NO' ? 'bg-warning text-dark' : 'bg-light text-muted border'}">${l.rot || 'NO'}</span></td>
-                        <td class="text-center">${renderFotoCell(l.foto1, 1)}</td>
-                        <td class="text-center">${renderFotoCell(l.foto2, 2)}</td>
-                        <td class="text-center pe-3">${renderFotoCell(l.foto3, 3)}</td>
-                    </tr>
-                `;
-            });
         });
 
-        tbody.innerHTML = html;
+        container.innerHTML = html;
     };
 
     window.neuVerFotoModal = function(src) {

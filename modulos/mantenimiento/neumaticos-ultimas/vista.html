@@ -1,53 +1,138 @@
-<!-- MÓDULO: ÚLTIMAS INSPECCIONES Y REQUERIMIENTOS DE NEUMÁTICOS — ERP AZKELL FLEET -->
+<!-- MÓDULO: ÚLTIMAS INSPECCIONES Y REQUERIMIENTOS DE NEUMÁTICOS — DESIGN 1:1 REPORTE DE FALLAS -->
 <style>
 #moduloNeumaticosUltimas {
     padding: 1.25rem 1.5rem;
+    background-color: #f8fafc;
+    min-height: 100vh;
 }
 
-/* Header & Controls Bar Estilo Apple */
-.neu-top-bar {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 1.2rem;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.02);
-}
-
-.neu-tabs-pill {
-    background: #f1f5f9;
+/* Pestañas Principales Superiores Pills 1:1 */
+.neu-main-tabs-bar {
+    background: #e2e8f0;
     padding: 4px;
-    border-radius: 9999px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    display: flex;
+    gap: 6px;
+    margin-bottom: 1.25rem;
 }
-
-.neu-tab-item {
+.neu-main-tab {
+    flex: 1;
     border: none;
     background: transparent;
-    padding: 6px 18px;
-    border-radius: 9999px;
-    font-size: 0.78rem;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 0.88rem;
     font-weight: 700;
-    color: #64748b;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     transition: all 0.2s ease;
-    white-space: nowrap;
+    cursor: pointer;
 }
-
-.neu-tab-item.active {
+.neu-main-tab.active {
     background: #ffffff;
     color: #0f172a;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+.neu-main-tab.active.tab-req {
+    background: #ffffff;
+    color: #ef4444;
 }
 
-.neu-tab-item.active.text-danger {
-    background: #ef4444;
+/* Card Resumen Consolidado 1:1 */
+.neu-resumen-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+.neu-resumen-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* Tabla Resumen con Encabezados Pastel 1:1 */
+.neu-resumen-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.83rem;
+}
+.neu-resumen-table th {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.73rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+}
+.neu-resumen-table th.th-medida { background: #1e293b; color: #ffffff; text-align: left; }
+.neu-resumen-table th.th-del { background: #e0f2fe; color: #0284c7; }
+.neu-resumen-table th.th-trac { background: #fef3c7; color: #b45309; }
+.neu-resumen-table th.th-arr { background: #dcfce7; color: #15803d; }
+.neu-resumen-table th.th-rep { background: #f3e8ff; color: #6b21a8; }
+.neu-resumen-table th.th-total { background: #ffe4e6; color: #be123c; }
+
+.neu-resumen-table td {
+    padding: 0.65rem 0.85rem;
+    border: 1px solid #f1f5f9;
+    vertical-align: middle;
+    text-align: center;
+    font-weight: 600;
+}
+.neu-resumen-table tr.selected-row {
+    background-color: #ebf5ff !important;
+}
+
+/* Footer Fila Total */
+.neu-resumen-table tr.footer-total-row td {
+    background: #1e293b;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 0.88rem;
+    border: 1px solid #1e293b;
+}
+.neu-resumen-table tr.footer-total-row td.td-grand-total {
+    background: #ff3b30 !important;
     color: #ffffff !important;
+    font-size: 1.05rem;
 }
 
-.neu-segmented-filter {
+/* Barra de Buscador y Filtros 1:1 */
+.neu-search-filter-bar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.neu-search-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-grow: 1;
+}
+.neu-search-input-wrap input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.83rem;
+    width: 100%;
+}
+.neu-segmented-pill {
     background: #f1f5f9;
     padding: 3px;
     border-radius: 9999px;
@@ -55,42 +140,71 @@
     align-items: center;
     border: 1px solid #e2e8f0;
 }
-
-.neu-segmented-filter .btn {
+.neu-segmented-pill .btn {
     border: none !important;
     background: transparent;
     color: #64748b;
     font-size: 0.76rem;
     font-weight: 700;
-    padding: 5px 14px;
+    padding: 4px 12px;
     border-radius: 9999px !important;
-    transition: all 0.2s ease;
 }
-
-.neu-segmented-filter .btn.active {
+.neu-segmented-pill .btn.active {
     background: #2563eb !important;
     color: #ffffff !important;
-    box-shadow: 0 2px 6px rgba(37,99,235,0.3);
 }
 
-/* Buscador Apple Glassmorphic */
-.neu-search-box {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 9999px;
-    padding: 6px 16px;
+/* Leyenda de desgaste */
+.neu-legend-bar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    justify-content: space-between;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 1rem;
+    padding: 0 4px;
 }
 
-.neu-search-box input {
-    border: none;
-    outline: none;
-    background: transparent;
-    font-size: 0.82rem;
+/* Tarjeta por Vehículo (Cards 1:1) */
+.neu-vehicle-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.02);
+}
+.neu-vehicle-header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.neu-vehicle-table {
     width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+.neu-vehicle-table th {
+    background: #ffffff;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+.neu-vehicle-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+.neu-vehicle-table tr:last-child td {
+    border-bottom: none;
 }
 
 /* Full Bleed Mobile Responsiveness */
@@ -98,170 +212,105 @@
     #moduloNeumaticosUltimas {
         padding: 0.5rem 0.25rem !important;
     }
-    .neu-top-bar {
-        padding: 0.75rem 0.85rem !important;
-        border-radius: 16px !important;
+    .neu-main-tabs-bar {
+        border-radius: 12px;
     }
-    .neu-tabs-pill {
-        width: 100%;
-        justify-content: space-between;
-    }
-    .neu-tab-item {
-        padding: 6px 10px;
-        font-size: 0.72rem;
-        flex: 1;
-        text-align: center;
+    .neu-search-filter-bar {
+        border-radius: 16px;
+        flex-direction: column;
+        align-items: stretch;
     }
 }
 </style>
 
 <div id="moduloNeumaticosUltimas">
-    <!-- Top Header Bar -->
-    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
-        <div class="d-flex align-items-center gap-2">
-            <div class="rounded-3 p-2.5 d-flex align-items-center justify-content-center" style="background: rgba(37,99,235,0.1); color: #2563eb;">
-                <i class="bi bi-clock-history fs-4"></i>
-            </div>
-            <div>
-                <h4 class="fw-bold text-dark m-0" id="neu-ultimas-titulo" style="letter-spacing:-0.02em;">Últimas Inspecciones de Neumáticos</h4>
-                <p class="text-muted small m-0">Historial técnico detallado por posición y módulo de requerimientos para reposición preventiva</p>
-            </div>
-        </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.neuUltimasCargar()">
-                <i class="bi bi-arrow-clockwise"></i> Actualizar
-            </button>
-            <button class="btn btn-outline-success btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.neuUltimasExportarCSV()">
-                <i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
-            </button>
-            <button class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-2" onclick="window.neuUltimasNuevaInspeccion()">
-                <i class="bi bi-plus-lg"></i> + Inspección
-            </button>
-        </div>
+    <!-- Pestañas Principales Píldoras 1:1 -->
+    <div class="neu-main-tabs-bar">
+        <button class="neu-main-tab active" id="tab-btn-ultimas" onclick="window.neuCambiarTab('ultimas')">
+            Últimas Inspecciones <span class="badge bg-secondary-subtle text-dark rounded-pill ms-1" id="badge-ultimas-count">0</span>
+        </button>
+        <button class="neu-main-tab tab-req" id="tab-btn-requerimientos" onclick="window.neuCambiarTab('requerimientos')">
+            ● Requerimiento (≤ 4.0 mm) <span class="badge bg-danger text-white rounded-pill ms-1" id="badge-req-count">0</span>
+        </button>
     </div>
 
-    <!-- Barra Unificada de Filtros en Una Sola Línea Horizontal (Estilo Apple / Status Rampa) -->
-    <div class="neu-top-bar">
-        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
-            <!-- Pestañas Principales (Pill Bar) -->
-            <div class="neu-tabs-pill">
-                <button class="neu-tab-item active" id="tab-btn-ultimas" onclick="window.neuCambiarTab('ultimas')">
-                    <i class="bi bi-list-check me-1"></i> Última Inspección
-                </button>
-                <button class="neu-tab-item text-danger" id="tab-btn-requerimientos" onclick="window.neuCambiarTab('requerimientos')">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Requerimiento (≤ 4mm) <span class="badge bg-danger text-white rounded-pill ms-1" id="badge-req-count">0</span>
-                </button>
-            </div>
-
-            <!-- Controles Secundarios Alineados al Mismo Nivel Horizontal -->
-            <div class="d-flex align-items-center gap-2 flex-wrap flex-sm-nowrap">
-                <!-- Selector de Empresa (Al mismo nivel horizontal) -->
-                <select class="form-select form-select-sm rounded-pill px-3 fw-semibold border-secondary-subtle" id="neu-sel-empresa-filtro" onchange="window.neuFiltrarUltimas()" style="width: auto; min-width: 170px; height: 34px;">
-                    <option value="Todos">Todas las Empresas</option>
-                    <option value="Marsisa SAC">Marsisa SAC</option>
-                    <option value="Rosymar Peru SAC">Rosymar Peru SAC</option>
-                    <option value="Yogui Transport SAC">Yogui Transport SAC</option>
-                </select>
-
-                <!-- Subfiltro Segmentado Motora / No Motora (Al lado derecho del selector de empresa) -->
-                <div class="neu-segmented-filter" id="neu-filtro-motora-group">
-                    <button class="btn active" id="btn-filtro-todos" onclick="window.neuSetFiltroMotora('Todos')">Todos</button>
-                    <button class="btn" id="btn-filtro-motora" onclick="window.neuSetFiltroMotora('Motora')">Motora</button>
-                    <button class="btn" id="btn-filtro-nomotora" onclick="window.neuSetFiltroMotora('No Motora')">No Motora</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Buscador Integrado en la Barra -->
-        <div class="neu-search-box mt-2.5">
-            <i class="bi bi-search text-muted"></i>
-            <input type="text" id="neu-input-busqueda-rapida" placeholder="Buscar por placa, posición, marca, medida, modelo u observación..." oninput="window.neuFiltrarUltimas()">
-            <button class="btn btn-link text-muted p-0 text-decoration-none small" type="button" onclick="document.getElementById('neu-input-busqueda-rapida').value=''; window.neuFiltrarUltimas();">Limpiar</button>
-        </div>
-    </div>
-
-    <!-- Cuadro Resumen Consolidado de Requerimientos de Llantas para Compras -->
-    <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs d-none" id="panel-resumen-requerimientos" style="border: 1px solid #e2e8f0 !important;">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+    <!-- Card Resumen Consolidado para Compras 1:1 (Solo visible en pestaña Requerimientos) -->
+    <div class="neu-resumen-card d-none" id="panel-resumen-requerimientos">
+        <div class="neu-resumen-header">
             <div>
                 <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
-                    <i class="bi bi-cart-check-fill text-danger fs-5"></i> Resumen Consolidado de Requerimientos por Medida (Para Compras / Reposición)
+                    <i class="bi bi-cart3 text-warning fs-5"></i> Resumen Consolidado para Compras / Reposición
                 </h6>
-                <small class="text-muted">Desglose técnico agrupado por Medida: Delanteras (Motora 1-2), Tracción (Motora Posterior), Arrastre (Carretas/Remolques) y Repuestos.</small>
+                <div class="text-muted small" style="font-size:0.78rem;" id="neu-resumen-subtitulo">Total a reposición por medida (0 Llantas requeridas)</div>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold d-flex align-items-center gap-1" onclick="window.neuCopiarPedidoCompras()" title="Copiar resumen formateado al portapapeles">
-                    <i class="bi bi-clipboard-check"></i> Copiar Pedido a Proveedor
-                </button>
-            </div>
+            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold d-flex align-items-center gap-1" onclick="window.neuCopiarPedidoCompras()">
+                <i class="bi bi-clipboard"></i> Copiar Pedido <i class="bi bi-chevron-down ms-1" style="font-size:0.7rem;"></i>
+            </button>
         </div>
+
         <div class="table-responsive">
-            <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.83rem;">
-                <thead class="table-dark text-nowrap">
+            <table class="neu-resumen-table">
+                <thead>
                     <tr>
-                        <th class="ps-3">MEDIDA DE LLANTA</th>
-                        <th class="text-center bg-primary text-white">DELANTERAS (MOTORA 1 y 2)</th>
-                        <th class="text-center bg-warning text-dark">TRACCIÓN (POSTERIOR MOTORA)</th>
-                        <th class="text-center bg-info text-dark">ARRASTRE (CARRETAS / REMOLQUE)</th>
-                        <th class="text-center bg-secondary text-white">REPUESTOS</th>
-                        <th class="text-center bg-danger text-white fs-6">TOTAL A REPOSICIÓN</th>
+                        <th class="th-medida ps-3">MEDIDA LLANTA</th>
+                        <th class="th-del">DELANTERAS</th>
+                        <th class="th-trac">TRACCIÓN</th>
+                        <th class="th-arr">ARRASTRE</th>
+                        <th class="th-rep">REPUESTOS</th>
+                        <th class="th-total">TOTAL REPOSICIÓN</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-resumen-medidas-req">
-                    <tr><td colspan="6" class="text-center text-muted py-3">No hay requerimientos en esta selección.</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-3">No hay requerimientos activos.</td></tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Banner de Filtro Activo por Medida 1:1 -->
+        <div class="d-flex align-items-center justify-content-between mt-3 text-primary fw-bold small d-none" id="neu-active-medida-filter-banner">
+            <div>Filtrando tabla por Medida: <span class="text-primary fw-bold" id="lbl-active-medida-val">---</span></div>
+            <button class="btn btn-link text-danger p-0 text-decoration-none fw-bold small" onclick="window.neuSeleccionarMedidaFiltro(null)">
+                Mostrar todas ✕
+            </button>
         </div>
     </div>
 
-    <!-- Banner de Filtro Activo por Medida -->
-    <div id="neu-active-medida-filter-banner" class="d-none"></div>
-
-    <!-- Tabla Principal Bento estilo Apple -->
-    <div class="card border-0 rounded-4 bg-white shadow-2xs overflow-hidden" style="border: 1px solid var(--border, #e2e8f0) !important;">
-        <div class="table-responsive" style="max-height: 600px;">
-            <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.78rem;">
-                <thead class="table-light text-muted fw-bold sticky-top" style="z-index: 2;">
-                    <tr id="neu-thead-row">
-                        <th class="ps-3 text-nowrap">ID</th>
-                        <th class="text-nowrap">F. INSPECCION</th>
-                        <th class="text-nowrap">PLACA</th>
-                        <th class="text-center text-nowrap">ESTADO LLANT</th>
-                        <th class="text-nowrap">KM</th>
-                        <th class="text-center text-nowrap">LLANTA</th>
-                        <th class="text-nowrap">DUEÑO</th>
-                        <th class="text-nowrap">MARCA (UNI)</th>
-                        <th class="text-nowrap">UNIDAD</th>
-                        <th class="text-nowrap">MARCA (LLANTA)</th>
-                        <th class="text-nowrap">MEDIDA</th>
-                        <th class="text-nowrap">MODELO</th>
-                        <th class="text-center text-nowrap">R1</th>
-                        <th class="text-center text-nowrap">R2</th>
-                        <th class="text-center text-nowrap">R3</th>
-                        <th class="text-center text-nowrap">R4</th>
-                        <th class="text-center text-nowrap">PRESION ANT</th>
-                        <th class="text-center text-nowrap">PRESION ACT</th>
-                        <th class="text-nowrap">ESTADO</th>
-                        <th class="text-nowrap">ACCION</th>
-                        <th class="text-nowrap">OBS</th>
-                        <th class="text-center text-nowrap">ROT</th>
-                        <th class="text-center text-nowrap">FOTO 1</th>
-                        <th class="text-center text-nowrap">FOTO 2</th>
-                        <th class="text-center pe-3 text-nowrap">FOTO 3</th>
-                    </tr>
-                </thead>
-                <tbody id="neu-tbody-ultimas">
-                    <tr><td colspan="25" class="text-center text-muted py-5"><div class="spinner-border spinner-border-sm text-secondary"></div> Cargando datos...</td></tr>
-                </tbody>
-            </table>
+    <!-- Barra de Buscador y Filtros 1:1 -->
+    <div class="neu-search-filter-bar">
+        <div class="neu-search-input-wrap">
+            <i class="bi bi-search text-muted"></i>
+            <input type="text" id="neu-input-busqueda-rapida" placeholder="Buscar placa, marca, medida o nota..." oninput="window.neuFiltrarUltimas()">
         </div>
-        <div class="card-footer bg-light p-2 px-3 d-flex align-items-center justify-content-between text-muted small border-top" style="font-size:0.75rem;">
-            <div>Total de registros mostrados: <b id="neu-footer-registros-count">0</b></div>
-            <div class="d-flex align-items-center gap-3">
-                <span>🟢 > 6mm</span>
-                <span>🟡 4 - 6mm</span>
-                <span>🔴 ≤ 4mm (Alerta)</span>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <select class="form-select form-select-sm rounded-pill px-3 fw-semibold border-secondary-subtle" id="neu-sel-empresa-filtro" onchange="window.neuFiltrarUltimas()" style="width: auto; min-width: 170px; height: 32px;">
+                <option value="Todos">Todas las Empresas</option>
+                <option value="Marsisa SAC">Marsisa SAC</option>
+                <option value="Rosymar Peru SAC">Rosymar Peru SAC</option>
+                <option value="Yogui Transport SAC">Yogui Transport SAC</option>
+            </select>
+
+            <div class="neu-segmented-pill" id="neu-filtro-motora-group">
+                <button class="btn active" id="btn-filtro-todos" onclick="window.neuSetFiltroMotora('Todos')">Todos</button>
+                <button class="btn" id="btn-filtro-motora" onclick="window.neuSetFiltroMotora('Motora')">Motora</button>
+                <button class="btn" id="btn-filtro-nomotora" onclick="window.neuSetFiltroMotora('No Motora')">No Motora</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Leyenda de Estado de Desgaste 1:1 -->
+    <div class="neu-legend-bar">
+        <span>Estado de desgaste por llanta:</span>
+        <div class="d-flex align-items-center gap-3">
+            <span>🟢 > 6mm (Óptima)</span>
+            <span>🟡 4 - 6mm (Alerta)</span>
+            <span>🔴 ≤ 4mm (Crítica)</span>
+        </div>
+    </div>
+
+    <!-- Contenedor Dinámico de Cards de Vehículos 1:1 -->
+    <div id="neu-vehiculos-cards-container">
+        <div class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm text-secondary me-2"></div> Cargando inspecciones de vehículos...
         </div>
     </div>
 </div>
