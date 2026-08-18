@@ -80,12 +80,17 @@ module.exports = function (db, broadcast, logAudit) {
             r1 INT NOT NULL,
             r2 INT NOT NULL,
             r3 INT NOT NULL,
-            remanente_promedio DECIMAL(4,1) GENERATED ALWAYS AS ((r1 + r2 + r3) / 3.0) STORED,
+            r4 INT DEFAULT 0,
+            remanente_promedio DECIMAL(4,1) DEFAULT 0.0,
             presion_ant INT DEFAULT 0,
             presion_actual INT DEFAULT 0,
             estado VARCHAR(30) NOT NULL DEFAULT 'NUEVA',
             accion VARCHAR(50) NOT NULL DEFAULT 'Inspeccion',
+            rot VARCHAR(50) DEFAULT 'NO',
             observaciones TEXT NULL,
+            foto1 LONGTEXT NULL,
+            foto2 LONGTEXT NULL,
+            foto3 LONGTEXT NULL,
             alerta_cambio TINYINT(1) DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_insp (id_inspeccion),
@@ -114,6 +119,15 @@ module.exports = function (db, broadcast, logAudit) {
             for (const sql of TABLES_SQL) {
                 await pool.query(sql);
             }
+
+            // Migrar columnas adicionales si ya existía la tabla
+            try {
+                await pool.query("ALTER TABLE neumaticos_inspecciones_det ADD COLUMN IF NOT EXISTS r4 INT DEFAULT 0");
+                await pool.query("ALTER TABLE neumaticos_inspecciones_det ADD COLUMN IF NOT EXISTS rot VARCHAR(50) DEFAULT 'NO'");
+                await pool.query("ALTER TABLE neumaticos_inspecciones_det ADD COLUMN IF NOT EXISTS foto1 LONGTEXT NULL");
+                await pool.query("ALTER TABLE neumaticos_inspecciones_det ADD COLUMN IF NOT EXISTS foto2 LONGTEXT NULL");
+                await pool.query("ALTER TABLE neumaticos_inspecciones_det ADD COLUMN IF NOT EXISTS foto3 LONGTEXT NULL");
+            } catch(eCols) {}
 
             // Unificar collation con el resto de tablas (placas, ordenes_trabajo, etc.)
             try {
@@ -353,13 +367,14 @@ module.exports = function (db, broadcast, logAudit) {
                 const r1 = parseInt(it.r1 || 0, 10);
                 const r2 = parseInt(it.r2 || 0, 10);
                 const r3 = parseInt(it.r3 || 0, 10);
-                const rProm = (r1 + r2 + r3) / 3.0;
+                const r4 = parseInt(it.r4 || 0, 10);
+                const rProm = (r4 > 0) ? (r1 + r2 + r3 + r4) / 4.0 : (r1 + r2 + r3) / 3.0;
                 const alertaCambio = rProm <= 4.0 ? 1 : 0;
 
                 await tdb.query(`
                     INSERT INTO neumaticos_inspecciones_det
-                    (id_inspeccion, id_neumatico, posicion, marca, medida, modelo, r1, r2, r3, presion_ant, presion_actual, estado, accion, observaciones, alerta_cambio)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (id_inspeccion, id_neumatico, posicion, marca, medida, modelo, r1, r2, r3, r4, remanente_promedio, presion_ant, presion_actual, estado, accion, rot, observaciones, foto1, foto2, foto3, alerta_cambio)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     id_inspeccion,
                     it.id_neumatico || null,
@@ -370,11 +385,17 @@ module.exports = function (db, broadcast, logAudit) {
                     r1,
                     r2,
                     r3,
+                    r4,
+                    parseFloat(rProm.toFixed(1)),
                     parseInt(it.presion_ant || 0, 10),
                     parseInt(it.presion_actual || 0, 10),
                     (it.estado || 'NUEVA').toUpperCase(),
                     it.accion || 'Inspeccion',
+                    it.rot || 'NO',
                     it.observaciones || '',
+                    it.foto1 || null,
+                    it.foto2 || null,
+                    it.foto3 || null,
                     alertaCambio
                 ]);
 
@@ -627,12 +648,17 @@ module.exports = function (db, broadcast, logAudit) {
                     d.r1,
                     d.r2,
                     d.r3,
+                    d.r4,
                     d.remanente_promedio,
                     d.presion_ant,
                     d.presion_actual,
                     d.estado,
                     d.accion,
+                    d.rot,
                     d.observaciones,
+                    d.foto1,
+                    d.foto2,
+                    d.foto3,
                     d.alerta_cambio,
                     p.cliente as dueno,
                     p.marca as marca_unidad,
@@ -687,12 +713,17 @@ module.exports = function (db, broadcast, logAudit) {
                     d.r1,
                     d.r2,
                     d.r3,
+                    d.r4,
                     d.remanente_promedio,
                     d.presion_ant,
                     d.presion_actual,
                     d.estado,
                     d.accion,
+                    d.rot,
                     d.observaciones,
+                    d.foto1,
+                    d.foto2,
+                    d.foto3,
                     p.cliente as dueno,
                     p.marca as marca_unidad,
                     p.tipo as tipo_unidad,

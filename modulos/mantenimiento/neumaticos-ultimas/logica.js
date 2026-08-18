@@ -139,7 +139,7 @@
         if (!tbody) return;
 
         if (!items.length) {
-            tbody.innerHTML = '<tr><td colspan="16" class="text-center text-muted py-5">No se encontraron registros que coincidan con los filtros aplicados.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="25" class="text-center text-muted py-5">No se encontraron registros que coincidan con los filtros aplicados.</td></tr>';
             return;
         }
 
@@ -147,47 +147,104 @@
             const f = String(l.fecha_inspeccion || '').split('T')[0];
             const prom = parseFloat(l.remanente_promedio || 0);
             
-            let colorProm = '#16a34a';
+            let estadoLlant = '🟢 Óptima';
             let badgeClass = 'bg-success bg-opacity-10 text-success border border-success border-opacity-25';
             if (prom <= 4.0) {
-                colorProm = '#dc2626';
+                estadoLlant = '🔴 Crítica (≤4mm)';
                 badgeClass = 'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 fw-bold';
             } else if (prom <= 6.0) {
-                colorProm = '#d97706';
+                estadoLlant = '🟡 Alerta (4-6mm)';
                 badgeClass = 'bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25';
             }
 
-            const alertIcon = (prom <= 4.0) ? '<i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>' : '';
+            const renderFotoCell = (foto, num) => {
+                if (!foto) return '<span class="text-muted small">-</span>';
+                return `<button type="button" class="btn btn-xs btn-outline-primary py-0 px-1 rounded-pill" onclick="window.neuVerFotoModal('${foto}')" title="Ver Foto ${num}"><i class="bi bi-image"></i> Foto ${num}</button>`;
+            };
 
             return `
                 <tr>
-                    <td class="ps-3 text-muted small">${f}</td>
+                    <td class="ps-3 text-muted small fw-semibold">${l.id || l.id_inspeccion || '---'}</td>
+                    <td class="text-muted small">${f}</td>
                     <td>
                         <span class="badge bg-dark text-white fw-bold px-2 py-1" style="cursor:pointer;" onclick="window.rotAbrirInspeccionNeumaticosWrapper('${l.placa}', '', ${l.km||0})" title="Hacer click para nueva inspección">${l.placa}</span>
                     </td>
-                    <td class="small">${Number(l.km || 0).toLocaleString()}</td>
+                    <td class="text-center"><span class="badge ${badgeClass} px-2 py-1">${estadoLlant}</span></td>
+                    <td class="small fw-semibold">${Number(l.km || 0).toLocaleString()}</td>
                     <td class="text-center"><span class="badge bg-primary rounded-pill px-2">${l.posicion}</span></td>
-                    <td class="small fw-semibold text-truncate" style="max-width:120px;" title="${l.marca_unidad||''}">${l.marca_unidad || '---'}</td>
-                    <td class="small">${l.medida}</td>
-                    <td class="small fw-bold"><span class="badge bg-light text-dark border">${l.modelo}</span></td>
+                    <td class="small fw-semibold text-truncate" style="max-width:120px;" title="${l.dueno||''}">${l.dueno || '---'}</td>
+                    <td class="small text-truncate" style="max-width:110px;" title="${l.marca_unidad||''}">${l.marca_unidad || '---'}</td>
+                    <td class="small text-truncate" style="max-width:110px;" title="${l.tipo_unidad||''}">${l.tipo_unidad || '---'}</td>
+                    <td class="small fw-bold">${l.marca || '---'}</td>
+                    <td class="small">${l.medida || '---'}</td>
+                    <td class="small"><span class="badge bg-light text-dark border">${l.modelo || '---'}</span></td>
                     <td class="text-center fw-semibold">${l.r1}</td>
                     <td class="text-center fw-semibold">${l.r2}</td>
                     <td class="text-center fw-semibold">${l.r3}</td>
-                    <td class="text-center"><span class="badge ${badgeClass} px-2 py-1">${alertIcon}${prom} mm</span></td>
+                    <td class="text-center text-muted small">${l.r4 || 0}</td>
                     <td class="text-center small text-muted">${l.presion_ant || 0}</td>
                     <td class="text-center small fw-bold">${l.presion_actual || 0} PSI</td>
                     <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${l.estado || 'NUEVA'}</span></td>
                     <td><span class="badge bg-info bg-opacity-10 text-info">${l.accion || 'Inspeccion'}</span></td>
-                    <td class="text-truncate text-muted small pe-3" style="max-width:160px;" title="${l.observaciones || ''}">${l.observaciones || 'Ninguna'}</td>
+                    <td class="text-truncate text-muted small" style="max-width:140px;" title="${l.observaciones || ''}">${l.observaciones || 'Ninguna'}</td>
+                    <td class="text-center"><span class="badge ${l.rot !== 'NO' ? 'bg-warning text-dark' : 'bg-light text-muted border'}">${l.rot || 'NO'}</span></td>
+                    <td class="text-center">${renderFotoCell(l.foto1, 1)}</td>
+                    <td class="text-center">${renderFotoCell(l.foto2, 2)}</td>
+                    <td class="text-center pe-3">${renderFotoCell(l.foto3, 3)}</td>
                 </tr>
             `;
         }).join('');
     };
 
+    window.neuVerFotoModal = function(src) {
+        let m = document.getElementById('modalPreviewFotoNeu');
+        if (!m) {
+            const div = document.createElement('div');
+            div.id = 'modalPreviewFotoNeu';
+            div.className = 'modal fade';
+            div.tabIndex = -1;
+            div.style.zIndex = '2100';
+            div.innerHTML = `
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+                        <div class="modal-header bg-dark text-white py-2 px-3">
+                            <h6 class="m-0 fw-bold"><i class="bi bi-camera me-2"></i>Evidencia Fotográfica de la Llanta</h6>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-0 text-center bg-black d-flex align-items-center justify-content-center" style="min-height:350px;">
+                            <img id="imgPreviewNeu" src="" class="img-fluid" style="max-height:75vh; object-fit:contain;" alt="Foto Llanta">
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(div);
+            m = div;
+        }
+        document.getElementById('imgPreviewNeu').src = src;
+        const bsModal = bootstrap.Modal.getInstance(m) || new bootstrap.Modal(m);
+        bsModal.show();
+    };
+
+    window.abrirModalInspeccionNeumaticos = function(placa, idOT, km) {
+        if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+            window.rotAbrirInspeccionNeumaticos(placa, idOT, km);
+        } else {
+            const script = document.createElement('script');
+            script.src = '/modulos/mantenimiento/neumaticos/modal_inspeccion.js?v=' + Date.now();
+            script.onload = function() {
+                if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+                    window.rotAbrirInspeccionNeumaticos(placa, idOT, km);
+                }
+            };
+            document.body.appendChild(script);
+        }
+    };
+    window.rotAbrirInspeccionNeumaticosWrapper = window.abrirModalInspeccionNeumaticos;
+
     window.neuUltimasNuevaInspeccion = function() {
         const placa = prompt("Ingresa la placa de la unidad:");
         if (placa && placa.trim()) {
-            window.rotAbrirInspeccionNeumaticosWrapper(placa.trim().toUpperCase(), '', 0);
+            window.abrirModalInspeccionNeumaticos(placa.trim().toUpperCase(), '', 0);
         }
     };
 
@@ -201,16 +258,20 @@
             return true;
         });
 
-        let csv = 'Fecha,Placa,Dueno,KM,Posicion,Marca Unidad,Marca Llanta,Medida,Modelo,R1,R2,R3,Promedio,Presion Ant,Presion Act,Estado,Accion,Observaciones\n';
+        // Exact 25 columns in header
+        let csv = 'ID,F. INSPECCION,PLACA,ESTADO LLANT,KM,LLANTA,DUEÑO,MARCA (UNI),UNIDAD,MARCA (LLANTA),MEDIDA,MODELO,R1,R2,R3,R4,PRESION DE AIRE ANT,PRESION DE AIRE ACTUAL,ESTADO,ACCION,OBS,ROT,FOTO1,FOTO2,FOTO3\n';
+        
         filtradas.forEach(l => {
-            csv += `"${(l.fecha_inspeccion||'').split('T')[0]}","${l.placa}","${l.dueno||''}","${l.km||0}","${l.posicion}","${l.marca_unidad||''}","${l.marca}","${l.medida}","${l.modelo}","${l.r1}","${l.r2}","${l.r3}","${l.remanente_promedio}","${l.presion_ant||0}","${l.presion_actual||0}","${l.estado}","${l.accion}","${(l.observaciones||'').replace(/"/g, '""')}"\n`;
+            const prom = parseFloat(l.remanente_promedio || 0);
+            const estLlant = prom <= 4.0 ? 'CRITICA' : (prom <= 6.0 ? 'ALERTA' : 'OPTIMA');
+            csv += `"${l.id || l.id_inspeccion || ''}","${(l.fecha_inspeccion||'').split('T')[0]}","${l.placa}","${estLlant}","${l.km||0}","${l.posicion}","${l.dueno||''}","${l.marca_unidad||''}","${l.tipo_unidad||''}","${l.marca||''}","${l.medida||''}","${l.modelo||''}","${l.r1||0}","${l.r2||0}","${l.r3||0}","${l.r4||0}","${l.presion_ant||0}","${l.presion_actual||0}","${l.estado||'NUEVA'}","${l.accion||'Inspeccion'}","${(l.observaciones||'').replace(/"/g, '""')}","${l.rot||'NO'}","${l.foto1 ? 'SI' : 'NO'}","${l.foto2 ? 'SI' : 'NO'}","${l.foto3 ? 'SI' : 'NO'}"\n`;
         });
 
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `reporte_neumaticos_${window._neuTabActiva}_${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `historial_inspecciones_neumaticos_${window._neuTabActiva}_${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
     };
 

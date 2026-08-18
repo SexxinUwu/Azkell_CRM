@@ -313,10 +313,26 @@
         }
     };
 
+    window.abrirModalInspeccionNeumaticos = function(placa, idOT, km) {
+        if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+            window.rotAbrirInspeccionNeumaticos(placa, idOT, km);
+        } else {
+            const script = document.createElement('script');
+            script.src = '/modulos/mantenimiento/neumaticos/modal_inspeccion.js?v=' + Date.now();
+            script.onload = function() {
+                if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+                    window.rotAbrirInspeccionNeumaticos(placa, idOT, km);
+                }
+            };
+            document.body.appendChild(script);
+        }
+    };
+    window.rotAbrirInspeccionNeumaticosWrapper = window.abrirModalInspeccionNeumaticos;
+
     window.neuAnalisisNuevaInspeccion = function() {
         const placa = prompt("Ingresa la placa del vehículo a inspeccionar:");
         if (placa && placa.trim()) {
-            window.rotAbrirInspeccionNeumaticosWrapper(placa.trim().toUpperCase(), '', 0);
+            window.abrirModalInspeccionNeumaticos(placa.trim().toUpperCase(), '', 0);
         }
     };
 
