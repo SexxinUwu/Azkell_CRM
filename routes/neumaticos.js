@@ -332,6 +332,22 @@ module.exports = function (db, broadcast, logAudit) {
                 return res.status(400).json({ ok: false, error: 'Placa y fecha de inspección son requeridas' });
             }
 
+            if (!items || items.length === 0) {
+                return res.status(400).json({ ok: false, error: 'Debes agregar al menos una llanta a la inspección' });
+            }
+
+            // Asegurar que las columnas existen antes de cualquier inserción
+            const migCols = [
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN r4 INT DEFAULT 0",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN rot VARCHAR(50) DEFAULT 'NO'",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto1 LONGTEXT NULL",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto2 LONGTEXT NULL",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto3 LONGTEXT NULL"
+            ];
+            for (const q of migCols) {
+                try { await tdb.query(q); } catch(e) {}
+            }
+
             // Generar ID único
             const cleanPlaca = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
             const cleanFecha = (fecha_inspeccion || '').replace(/-/g, '').substring(0, 8);
@@ -346,106 +362,103 @@ module.exports = function (db, broadcast, logAudit) {
                 fechaProxima = f.toISOString().split('T')[0];
             }
 
-            // 1. Insertar Cabecera
-            await tdb.query(`
-                INSERT INTO neumaticos_inspecciones 
-                (id_inspeccion, id_ot, placa, fecha_inspeccion, km_vehiculo, dias_propuestos, fecha_proxima, observaciones, inspector, total_llantas)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                id_inspeccion,
-                id_ot || null,
-                placa.toUpperCase(),
-                fecha_inspeccion,
-                km_vehiculo || 0,
-                dias_propuestos || 30,
-                fechaProxima,
-                observaciones || '',
-                inspector || '',
-                items.length
-            ]);
+            // 1. Iniciar Transacción Atómica
+            await tdb.query('START TRANSACTION');
 
-            // 2. Insertar Detalle
-            const migCols = [
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN r4 INT DEFAULT 0",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN rot VARCHAR(50) DEFAULT 'NO'",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto1 LONGTEXT NULL",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto2 LONGTEXT NULL",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto3 LONGTEXT NULL"
-            ];
-            for (const q of migCols) {
-                try { await tdb.query(q); } catch(e) {}
-            }
-
-            for (const it of items) {
-                const r1 = parseInt(it.r1 || 0, 10);
-                const r2 = parseInt(it.r2 || 0, 10);
-                const r3 = parseInt(it.r3 || 0, 10);
-                const r4 = parseInt(it.r4 || 0, 10);
-                const rProm = (r4 > 0) ? (r1 + r2 + r3 + r4) / 4.0 : (r1 + r2 + r3) / 3.0;
-                const alertaCambio = rProm <= 4.0 ? 1 : 0;
-
+            try {
+                // Insertar Cabecera
                 await tdb.query(`
-                    INSERT INTO neumaticos_inspecciones_det
-                    (id_inspeccion, id_neumatico, posicion, marca, medida, modelo, r1, r2, r3, r4, remanente_promedio, presion_ant, presion_actual, estado, accion, rot, observaciones, foto1, foto2, foto3, alerta_cambio)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO neumaticos_inspecciones 
+                    (id_inspeccion, id_ot, placa, fecha_inspeccion, km_vehiculo, dias_propuestos, fecha_proxima, observaciones, inspector, total_llantas)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     id_inspeccion,
-                    it.id_neumatico || null,
-                    String(it.posicion || '1').toUpperCase(),
-                    (it.marca || '').toUpperCase(),
-                    (it.medida || '').toUpperCase(),
-                    (it.modelo || '').toUpperCase(),
-                    r1,
-                    r2,
-                    r3,
-                    r4,
-                    parseFloat(rProm.toFixed(1)),
-                    parseInt(it.presion_ant || 0, 10),
-                    parseInt(it.presion_actual || 0, 10),
-                    (it.estado || 'NUEVA').toUpperCase(),
-                    it.accion || 'Inspeccion',
-                    it.rot || 'NO',
-                    it.observaciones || '',
-                    it.foto1 || null,
-                    it.foto2 || null,
-                    it.foto3 || null,
-                    alertaCambio
+                    id_ot || null,
+                    placa.toUpperCase(),
+                    fecha_inspeccion,
+                    km_vehiculo || 0,
+                    dias_propuestos || 30,
+                    fechaProxima,
+                    observaciones || '',
+                    inspector || '',
+                    items.length
                 ]);
 
-                // Actualizar o Registrar en Hoja de Vida
-                if (it.id_neumatico) {
-                    await tdb.query(`
-                        INSERT INTO neumaticos_hoja_vida 
-                        (id_neumatico, marca, modelo, medida, estado, remanente_actual, placa_actual, posicion_actual, estado_operativo)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Montada')
-                        ON DUPLICATE KEY UPDATE 
-                            marca = VALUES(marca),
-                            modelo = VALUES(modelo),
-                            medida = VALUES(medida),
-                            remanente_actual = VALUES(remanente_actual),
-                            placa_actual = VALUES(placa_actual),
-                            posicion_actual = VALUES(posicion_actual),
-                            estado_operativo = 'Montada'
-                    `, [
-                        it.id_neumatico,
-                        (it.marca || '').toUpperCase(),
-                        (it.modelo || '').toUpperCase(),
-                        (it.medida || '').toUpperCase(),
-                        (it.estado || 'NUEVA').toUpperCase(),
-                        rProm,
-                        placa.toUpperCase(),
-                        String(it.posicion || '1').toUpperCase()
-                    ]);
-                }
-            }
+                // 2. Insertar Detalles
+                for (const it of items) {
+                    const r1 = parseInt(it.r1 || 0, 10);
+                    const r2 = parseInt(it.r2 || 0, 10);
+                    const r3 = parseInt(it.r3 || 0, 10);
+                    const r4 = parseInt(it.r4 || 0, 10);
+                    const rProm = (r4 > 0) ? (r1 + r2 + r3 + r4) / 4.0 : (r1 + r2 + r3) / 3.0;
+                    const alertaCambio = rProm <= 4.0 ? 1 : 0;
 
-            if (logAudit) logAudit(req, 'NEUMATICOS', 'CREAR_INSPECCION', `Inspección de neumáticos registrada para placa ${placa} (${items.length} llantas)`);
-            if (broadcast) broadcast({ tipo: 'neumaticos_update', placa, id_inspeccion });
+                    await tdb.query(`
+                        INSERT INTO neumaticos_inspecciones_det
+                        (id_inspeccion, id_neumatico, posicion, marca, medida, modelo, r1, r2, r3, r4, remanente_promedio, presion_ant, presion_actual, estado, accion, rot, observaciones, foto1, foto2, foto3, alerta_cambio)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        id_inspeccion,
+                        it.id_neumatico || null,
+                        String(it.posicion || '1').toUpperCase(),
+                        (it.marca || '').toUpperCase(),
+                        (it.medida || '').toUpperCase(),
+                        (it.modelo || '').toUpperCase(),
+                        r1,
+                        r2,
+                        r3,
+                        r4,
+                        parseFloat(rProm.toFixed(1)),
+                        parseInt(it.presion_ant || 0, 10),
+                        parseInt(it.presion_actual || 0, 10),
+                        (it.estado || 'NUEVA').toUpperCase(),
+                        it.accion || 'Inspeccion',
+                        it.rot || 'NO',
+                        it.observaciones || '',
+                        it.foto1 || null,
+                        it.foto2 || null,
+                        it.foto3 || null,
+                        alertaCambio
+                    ]);
+
+                    // Actualizar o Registrar en Hoja de Vida
+                    if (it.id_neumatico) {
+                        await tdb.query(`
+                            INSERT INTO neumaticos_hoja_vida 
+                            (id_neumatico, marca, modelo, medida, estado, remanente_actual, placa_actual, posicion_actual, estado_operativo)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Montada')
+                            ON DUPLICATE KEY UPDATE 
+                                marca = VALUES(marca),
+                                modelo = VALUES(modelo),
+                                medida = VALUES(medida),
+                                remanente_actual = VALUES(remanente_actual),
+                                placa_actual = VALUES(placa_actual),
+                                posicion_actual = VALUES(posicion_actual),
+                                estado_operativo = 'Montada'
+                        `, [
+                            it.id_neumatico,
+                            (it.marca || '').toUpperCase(),
+                            (it.modelo || '').toUpperCase(),
+                            (it.medida || '').toUpperCase(),
+                            (it.estado || 'NUEVA').toUpperCase(),
+                            parseFloat(rProm.toFixed(1)),
+                            placa.toUpperCase(),
+                            String(it.posicion || '1').toUpperCase()
+                        ]);
+                    }
+                }
+
+                await tdb.query('COMMIT');
+            } catch (errTx) {
+                await tdb.query('ROLLBACK');
+                throw errTx;
+            }
 
             res.json({
                 ok: true,
-                mensaje: 'Inspección de neumáticos registrada con éxito',
-                id_inspeccion
+                message: 'Inspección de neumáticos registrada exitosamente',
+                id_inspeccion,
+                fecha_proxima: fechaProxima
             });
         } catch (err) {
             console.error("Error guardando inspección de neumáticos:", err);
@@ -472,105 +485,112 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ============================================================
-    // 3. 🚚 ESTADO ACTUAL / DIAGRAMA INTERACTIVO DE LA PLACA
+    // 3. 🔄 REGISTRO Y CONSULTA DE ROTACIONES DE NEUMÁTICOS
     // ============================================================
-    router.get('/estado-actual/:placa', async (req, res) => {
-        try {
-            const tdb = getDb(req).promise();
-            const placa = (req.params.placa || '').toUpperCase();
-
-            // Buscar la última inspección de esta placa
-            const [lastInsp] = await tdb.query(`
-                SELECT * FROM neumaticos_inspecciones 
-                WHERE placa = ? 
-                ORDER BY fecha_inspeccion DESC, created_at DESC 
-                LIMIT 1
-            `, [placa]);
-
-            let llantas = [];
-            if (lastInsp.length > 0) {
-                const [rows] = await tdb.query(`
-                    SELECT * FROM neumaticos_inspecciones_det 
-                    WHERE id_inspeccion = ? 
-                    ORDER BY CAST(posicion AS UNSIGNED) ASC, posicion ASC
-                `, [lastInsp[0].id_inspeccion]);
-                llantas = rows;
-            }
-
-            // Datos de la unidad (tipo, configuración de ejes, número de llantas)
-            const [flota] = await tdb.query(`
-                SELECT placa, marca, modelo_uts, tipo, sub_tipo, configuracion, llantas, uts, motora
-                FROM placas 
-                WHERE placa = ? LIMIT 1
-            `, [placa]);
-
-            res.json({
-                ok: true,
-                placa,
-                unidad: flota[0] || null,
-                ultima_inspeccion: lastInsp[0] || null,
-                posiciones: llantas
-            });
-        } catch (err) {
-            console.error("Error obteniendo estado actual de neumáticos:", err);
-            res.status(500).json({ ok: false, error: err.message });
-        }
-    });
-
-    // ============================================================
-    // 4. 🔄 ROTACIÓN DE NEUMÁTICOS
-    // ============================================================
-    router.post('/rotacion', async (req, res) => {
+    router.post('/rotaciones', async (req, res) => {
         try {
             const tdb = getDb(req).promise();
             const {
-                placa,
                 id_ot,
-                fecha = new Date().toISOString().split('T')[0],
+                placa,
+                fecha,
                 km_actual = 0,
                 posicion_origen,
                 posicion_destino,
-                id_neumatico,
+                id_neumatico = null,
                 motivo = 'Rotación preventiva',
                 tecnico = ''
             } = req.body;
 
-            if (!placa || !posicion_origen || !posicion_destino) {
-                return res.status(400).json({ ok: false, error: 'Placa, posición de origen y destino son requeridos' });
+            if (!placa || !fecha || !posicion_origen || !posicion_destino) {
+                return res.status(400).json({ ok: false, error: 'Placa, fecha y posiciones son requeridas' });
             }
 
-            await tdb.query(`
-                INSERT INTO neumaticos_rotaciones 
+            const [result] = await tdb.query(`
+                INSERT INTO neumaticos_rotaciones
                 (id_ot, placa, fecha, km_actual, posicion_origen, posicion_destino, id_neumatico, motivo, tecnico)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 id_ot || null,
                 placa.toUpperCase(),
                 fecha,
-                km_actual || 0,
+                km_actual,
                 String(posicion_origen).toUpperCase(),
                 String(posicion_destino).toUpperCase(),
-                id_neumatico || null,
+                id_neumatico,
                 motivo,
                 tecnico
             ]);
 
-            if (logAudit) logAudit(req, 'NEUMATICOS', 'ROTACION', `Rotación de llantas en ${placa}: Pos ${posicion_origen} ➔ Pos ${posicion_destino}`);
-            if (broadcast) broadcast({ tipo: 'neumaticos_update', placa });
+            // Actualizar posición en Hoja de Vida si existe
+            if (id_neumatico) {
+                await tdb.query(`
+                    UPDATE neumaticos_hoja_vida 
+                    SET posicion_actual = ?, placa_actual = ?
+                    WHERE id_neumatico = ?
+                `, [String(posicion_destino).toUpperCase(), placa.toUpperCase(), id_neumatico]);
+            }
 
-            res.json({ ok: true, mensaje: 'Rotación registrada con éxito' });
+            res.json({ ok: true, message: 'Rotación registrada exitosamente', id: result.insertId });
         } catch (err) {
-            console.error("Error registrando rotación:", err);
+            console.error("Error registrando rotación de neumáticos:", err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });
 
     // ============================================================
-    // 5. 📊 ANÁLISIS, KPIS Y SEMÁFORO DE FLOTA
+    // 4. 📖 HOJA DE VIDA DE NEUMÁTICOS (HISTORIAL COMPLETO)
+    // ============================================================
+    router.get('/hoja-vida/:id', async (req, res) => {
+        try {
+            const tdb = getDb(req).promise();
+            const id = req.params.id;
+
+            const [neumatico] = await tdb.query("SELECT * FROM neumaticos_hoja_vida WHERE id_neumatico = ?", [id]);
+            if (!neumatico.length) return res.status(404).json({ ok: false, error: 'Neumático no encontrado' });
+
+            const [inspecciones] = await tdb.query(`
+                SELECT i.fecha_inspeccion, i.km_vehiculo, d.* 
+                FROM neumaticos_inspecciones_det d
+                INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci
+                WHERE d.id_neumatico = ?
+                ORDER BY i.fecha_inspeccion DESC
+            `, [id]);
+
+            const [rotaciones] = await tdb.query(`
+                SELECT * FROM neumaticos_rotaciones 
+                WHERE id_neumatico = ?
+                ORDER BY fecha DESC
+            `, [id]);
+
+            res.json({
+                ok: true,
+                data: {
+                    ...neumatico[0],
+                    historial_inspecciones: inspecciones,
+                    historial_rotaciones: rotaciones
+                }
+            });
+        } catch (err) {
+            console.error("Error obteniendo hoja de vida del neumático:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // ============================================================
+    // 5. 📊 DASHBOARD & ANÁLISIS DE NEUMÁTICOS POR FLOTA
     // ============================================================
     router.get('/analisis', async (req, res) => {
         try {
             const tdb = getDb(req).promise();
+
+            // Limpiar automáticamente inspecciones huérfanas sin llantas registradas
+            try {
+                await tdb.query(`
+                    DELETE FROM neumaticos_inspecciones 
+                    WHERE id_inspeccion NOT IN (SELECT DISTINCT id_inspeccion FROM neumaticos_inspecciones_det)
+                `);
+            } catch(e) {}
 
             // Total de unidades con inspección
             const [totalInsp] = await tdb.query("SELECT COUNT(*) as total FROM neumaticos_inspecciones");
@@ -595,7 +615,7 @@ module.exports = function (db, broadcast, logAudit) {
                     SELECT placa, MAX(id_inspeccion) as id_inspeccion
                     FROM neumaticos_inspecciones
                     GROUP BY placa
-                ) last_i ON d.id_inspeccion = last_i.id_inspeccion
+                ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci
                 WHERE d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0
             `);
 
@@ -614,8 +634,8 @@ module.exports = function (db, broadcast, logAudit) {
                 SELECT i.*, 
                        p.cliente as dueno,
                        DATEDIFF(i.fecha_proxima, CURDATE()) as dias_restantes,
-                       (SELECT COUNT(*) FROM neumaticos_inspecciones_det d WHERE d.id_inspeccion = i.id_inspeccion) as total_llantas,
-                       (SELECT COUNT(*) FROM neumaticos_inspecciones_det d WHERE d.id_inspeccion = i.id_inspeccion AND d.alerta_cambio = 1) as total_criticas
+                       (SELECT COUNT(*) FROM neumaticos_inspecciones_det d WHERE d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci) as total_llantas,
+                       (SELECT COUNT(*) FROM neumaticos_inspecciones_det d WHERE d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci AND d.alerta_cambio = 1) as total_criticas
                 FROM neumaticos_inspecciones i
                 LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
                 ORDER BY i.fecha_inspeccion DESC
@@ -682,8 +702,8 @@ module.exports = function (db, broadcast, logAudit) {
                     SELECT placa, MAX(id_inspeccion) as max_id_inspeccion
                     FROM neumaticos_inspecciones
                     GROUP BY placa
-                ) last_i ON d.id_inspeccion = last_i.max_id_inspeccion
-                INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion = i.id_inspeccion
+                ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.max_id_inspeccion COLLATE utf8mb4_unicode_ci
+                INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci
                 LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
                 WHERE 1=1
             `;
@@ -751,8 +771,8 @@ module.exports = function (db, broadcast, logAudit) {
                     SELECT placa, MAX(id_inspeccion) as max_id_inspeccion
                     FROM neumaticos_inspecciones
                     GROUP BY placa
-                ) last_i ON d.id_inspeccion = last_i.max_id_inspeccion
-                INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion = i.id_inspeccion
+                ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.max_id_inspeccion COLLATE utf8mb4_unicode_ci
+                INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci
                 LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
                 WHERE (d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0)
             `;

@@ -240,33 +240,46 @@
             const insp = data.data;
             const detalles = insp.detalles || [];
 
-            let rows = detalles.map(d => {
-                const prom = parseFloat(d.remanente_promedio || 0);
-                const badge = prom <= 4 ? 'bg-danger' : (prom <= 6 ? 'bg-warning text-dark' : 'bg-success');
-                return `
-                    <tr>
-                        <td class="ps-3"><span class="badge bg-primary rounded-pill px-2">${d.posicion}</span></td>
-                        <td class="fw-bold">${d.marca}</td>
-                        <td>${d.medida}</td>
-                        <td>${d.modelo}</td>
-                        <td class="text-center">${d.r1}</td>
-                        <td class="text-center">${d.r2}</td>
-                        <td class="text-center">${d.r3}</td>
-                        <td class="text-center"><span class="badge ${badge} px-2 py-1">${prom} mm</span></td>
-                        <td class="text-center">${d.presion_actual} PSI</td>
-                        <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${d.estado}</span></td>
-                        <td><span class="badge bg-info bg-opacity-10 text-info">${d.accion}</span></td>
-                        <td class="small text-muted">${d.observaciones || '---'}</td>
-                    </tr>
-                `;
-            }).join('');
+            let rows = '';
+            if (detalles.length === 0) {
+                rows = `<tr><td colspan="14" class="text-center py-4 text-muted">No se encontraron llantas registradas para esta inspección.</td></tr>`;
+            } else {
+                rows = detalles.map(d => {
+                    const prom = parseFloat(d.remanente_promedio || 0);
+                    const badge = prom <= 4 ? 'bg-danger' : (prom <= 6 ? 'bg-warning text-dark' : 'bg-success');
+                    const fotosCount = (d.foto1 ? 1 : 0) + (d.foto2 ? 1 : 0) + (d.foto3 ? 1 : 0);
+                    const fotosHtml = fotosCount > 0 
+                        ? `<button class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill" onclick="window.neuVerFotoModal('${d.foto1||d.foto2||d.foto3}')"><i class="bi bi-camera-fill me-1"></i>${fotosCount}</button>` 
+                        : `<span class="text-muted small">-</span>`;
+
+                    return `
+                        <tr>
+                            <td class="ps-3"><span class="badge bg-primary rounded-pill px-2 fs-6">${d.posicion}</span></td>
+                            <td class="fw-bold">${d.marca}</td>
+                            <td>${d.medida}</td>
+                            <td><span class="badge bg-light text-dark border">${d.modelo}</span></td>
+                            <td class="text-center fw-bold">${d.r1}</td>
+                            <td class="text-center fw-bold">${d.r2}</td>
+                            <td class="text-center fw-bold">${d.r3}</td>
+                            <td class="text-center text-muted small">${d.r4 || 0}</td>
+                            <td class="text-center"><span class="badge ${badge} px-2 py-1">${prom} mm</span></td>
+                            <td class="text-center small">${d.presion_ant || 0} ➔ <b>${d.presion_actual} PSI</b></td>
+                            <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${d.estado}</span></td>
+                            <td><span class="badge bg-info bg-opacity-10 text-info">${d.accion}</span></td>
+                            <td><span class="badge ${d.rot !== 'NO' ? 'bg-warning text-dark' : 'bg-light text-muted border'}">${d.rot || 'NO'}</span></td>
+                            <td class="text-center">${fotosHtml}</td>
+                            <td class="small text-muted text-truncate" style="max-width:140px;">${d.observaciones || '---'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
 
             let mEl = document.getElementById('modalVerDetalleNeumaticos');
             if (!mEl) {
                 const div = document.createElement('div');
                 div.innerHTML = `
-                    <div class="modal fade" id="modalVerDetalleNeumaticos" tabindex="-1" aria-hidden="true" style="z-index: 2050 !important;">
-                        <div class="modal-dialog modal-lg modal-fullscreen-md-down modal-dialog-centered modal-dialog-scrollable" style="z-index: 2051;">
+                    <div class="modal fade" id="modalVerDetalleNeumaticos" tabindex="-1" style="z-index: 2050 !important;">
+                        <div class="modal-dialog modal-xl modal-fullscreen-md-down modal-dialog-centered modal-dialog-scrollable" style="z-index: 2051;">
                             <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
                                 <div class="modal-header border-bottom bg-light px-4 py-3">
                                     <h6 class="modal-title fw-bold text-dark d-flex align-items-center gap-2 m-0" id="mvd-title">Detalle de Inspección</h6>
@@ -287,19 +300,19 @@
             document.getElementById('mvd-title').innerHTML = `<i class="bi bi-disc-fill text-primary"></i> Inspección: <span class="text-primary">${insp.id_inspeccion}</span> — <span class="badge bg-dark">${insp.placa}</span>`;
             document.getElementById('mvd-body').innerHTML = `
                 <div class="row g-2 mb-3 p-3 bg-light rounded-3 border">
-                    <div class="col-md-3"><strong>Fecha:</strong> ${(insp.fecha_inspeccion||'').split('T')[0]}</div>
-                    <div class="col-md-3"><strong>KM:</strong> ${Number(insp.km_vehiculo||0).toLocaleString()} KM</div>
-                    <div class="col-md-3"><strong>Días Prop.:</strong> ${insp.dias_propuestos||30}</div>
-                    <div class="col-md-3"><strong>Próxima:</strong> ${(insp.fecha_proxima||'').split('T')[0]}</div>
-                    ${insp.observaciones ? `<div class="col-12 mt-2"><strong>Obs:</strong> ${insp.observaciones}</div>` : ''}
+                    <div class="col-6 col-md-3"><strong>Fecha:</strong> ${(insp.fecha_inspeccion||'').split('T')[0]}</div>
+                    <div class="col-6 col-md-3"><strong>KM Tablero:</strong> ${Number(insp.km_vehiculo||0).toLocaleString()} KM</div>
+                    <div class="col-6 col-md-3"><strong>Días Prop.:</strong> ${insp.dias_propuestos||30}</div>
+                    <div class="col-6 col-md-3"><strong>Próxima Insp.:</strong> ${(insp.fecha_proxima||'').split('T')[0]}</div>
+                    ${insp.observaciones ? `<div class="col-12 mt-2"><strong>Observaciones:</strong> ${insp.observaciones}</div>` : ''}
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover table-sm align-middle mb-0" style="font-size:0.78rem;">
+                    <table class="table table-hover table-sm align-middle mb-0" style="font-size:0.8rem;">
                         <thead class="table-light text-muted fw-bold">
                             <tr>
                                 <th class="ps-3">Pos</th><th>Marca</th><th>Medida</th><th>Modelo</th>
-                                <th class="text-center">R1</th><th class="text-center">R2</th><th class="text-center">R3</th>
-                                <th class="text-center">Prom</th><th class="text-center">Presión</th><th>Estado</th><th>Acción</th><th>Obs</th>
+                                <th class="text-center">R1</th><th class="text-center">R2</th><th class="text-center">R3</th><th class="text-center">R4</th>
+                                <th class="text-center">Prom</th><th class="text-center">Presión</th><th>Estado</th><th>Acción</th><th>ROT</th><th class="text-center">Fotos</th><th>Obs</th>
                             </tr>
                         </thead>
                         <tbody>${rows}</tbody>
@@ -307,7 +320,7 @@
                 </div>
             `;
 
-            new bootstrap.Modal(mEl).show();
+            bootstrap.Modal.getOrCreateInstance(mEl).show();
         } catch (e) {
             alert(`Error: ${e.message}`);
         }
