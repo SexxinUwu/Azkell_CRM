@@ -33,6 +33,8 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'MANTENIMIENTO', key:'fleetrun',         nombre:'Fleetrun',                    desc:'Gestión de Mantenimientos Preventivos Fleetrun', type:'child', parent:'hub_mant' },
     { grupo:'MANTENIMIENTO', key:'reportes_ot',      nombre:'Reportes OT',                 desc:'Órdenes de trabajo y métricas de mantenimiento', type:'child', parent:'hub_mant' },
     { grupo:'MANTENIMIENTO', key:'trabajos_ot',      nombre:'Historial de Trabajos',       desc:'Historial de trabajos realizados por técnicos', type:'child', parent:'hub_mant' },
+    { grupo:'MANTENIMIENTO', key:'combustible',      nombre:'Combustible',                 desc:'Control de abastecimiento, rendimiento km/gal y consumo de combustible', type:'child', parent:'hub_mant' },
+    { grupo:'MANTENIMIENTO', key:'neumaticos',       nombre:'Neumáticos',                  desc:'Análisis de desgaste, historial de inspecciones y semáforo de llantas', type:'child', parent:'hub_mant' },
     { grupo:'MANTENIMIENTO', key:'otros_mant',       nombre:'Otros',                       desc:'Habilitar acceso a los sub-módulos complementarios de Mantenimiento', type:'hub', parent:'hub_mant' },
     { grupo:'MANTENIMIENTO', key:'plan',             nombre:'Planificación de Mantenimientos', desc:'Programación y seguimiento de MP',          type:'child', parent:'otros_mant' },
     { grupo:'MANTENIMIENTO', key:'backlog',          nombre:'Backlog Pendientes',           desc:'Lista de trabajos pendientes por atender',      type:'child', parent:'otros_mant' },
