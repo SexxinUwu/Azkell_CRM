@@ -619,31 +619,45 @@ window.rotAbrirDetalle = function(idOT) {
             </div>
         ` : ''}
 
-        <!-- Plantillas Rápidas (Bento) -->
+        <!-- Plantillas Rápidas (Bento 3 Columnas) -->
         <div class="row g-2 mb-3">
-            <div class="col-6">
+            <div class="col-4">
                 <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100 d-flex flex-row align-items-center gap-2" 
                      style="border: 1px solid #e2e8f0 !important; cursor: pointer; transition: all 0.2s;"
                      onclick="event.stopPropagation(); window.descargarPlantillaVaciaOT('${rotEscHtml(idOT)}', '${rotEscHtml(ot.placa)}', '${rotEscHtml(ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || '')}', '${(det.km||'')}', '${rotEscHtml(det.rampa_origen||'')}')">
-                    <div class="rounded-3 p-2 bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width:38px; height:38px;">
+                    <div class="rounded-3 p-2 bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center flex-shrink-0" style="width:34px; height:34px;">
                         <i class="bi bi-card-checklist fs-5"></i>
                     </div>
                     <div>
-                        <div class="fw-bold text-dark small" style="line-height:1.2;">Plantilla Inspecciones</div>
-                        <small class="text-muted" style="font-size:0.68rem;">Formato PDF F-MAN-001</small>
+                        <div class="fw-bold text-dark small" style="line-height:1.2; font-size:0.76rem;">Plantilla Inspecciones</div>
+                        <small class="text-muted" style="font-size:0.64rem;">F-MAN-001</small>
                     </div>
                 </div>
             </div>
-            <div class="col-6">
+            <div class="col-4">
                 <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100 d-flex flex-row align-items-center gap-2" 
                      style="border: 1px solid #e2e8f0 !important; cursor: pointer; transition: all 0.2s;"
                      onclick="event.stopPropagation(); window.rotDescargarPlantillaOT('${rotEscHtml(idOT)}', '${rotEscHtml(ot.placa)}');">
-                    <div class="rounded-3 p-2 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width:38px; height:38px;">
+                    <div class="rounded-3 p-2 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width:34px; height:34px;">
                         <i class="bi bi-file-earmark-pdf fs-5"></i>
                     </div>
                     <div>
-                        <div class="fw-bold text-dark small" style="line-height:1.2;">Plantilla OT</div>
-                        <small class="text-muted" style="font-size:0.68rem;">Formato Impresión Rápida</small>
+                        <div class="fw-bold text-dark small" style="line-height:1.2; font-size:0.76rem;">Plantilla OT</div>
+                        <small class="text-muted" style="font-size:0.64rem;">Impresión Rápida</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100 d-flex flex-row align-items-center gap-2" 
+                     style="border: 1px solid #e2e8f0 !important; cursor: pointer; transition: all 0.2s;"
+                     onclick="event.stopPropagation(); window.rotGenerarPlantillaLlantasOT('${rotEscHtml(idOT)}');"
+                     title="Generar Plantilla de Llantas A4 en Blanco">
+                    <div class="rounded-3 p-2 bg-warning bg-opacity-15 text-dark d-flex align-items-center justify-content-center flex-shrink-0" style="width:34px; height:34px;">
+                        <i class="bi bi-disc fs-5 text-warning"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark small" style="line-height:1.2; font-size:0.76rem;">Plantilla de Llantas</div>
+                        <small class="text-muted" style="font-size:0.64rem;">Formato A4 Blanco</small>
                     </div>
                 </div>
             </div>
@@ -764,9 +778,6 @@ window.rotAbrirDetalle = function(idOT) {
                 ` : ''}
                 <button class="btn btn-outline-secondary btn-sm rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.rotAccion('pdf','${esc(idOT)}')">
                     <i class="bi bi-file-earmark-pdf-fill text-danger"></i> <span>PDF</span>
-                </button>
-                <button class="btn btn-outline-primary btn-sm rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.rotGenerarPlantillaLlantasOT('${esc(idOT)}')" title="Imprimir Reporte / Plantilla de Llantas A4">
-                    <i class="bi bi-disc-fill text-primary"></i> <span class="d-none d-sm-inline">Reporte Llantas</span>
                 </button>
             </div>
 
@@ -1884,7 +1895,7 @@ window.rotGenerarPlantillaVaciaOT = function(idOt, placa) {
 };
 
 window.rotGenerarPlantillaLlantasOT = async function(idOt) {
-    if (typeof window.rotToast === 'function') window.rotToast('Generando Reporte de Llantas A4...', 'bg-info');
+    if (typeof window.rotToast === 'function') window.rotToast('Generando Plantilla de Llantas A4...', 'bg-info');
     
     var ot = null;
     if (window.rotObtenerOTAsync) {
@@ -1896,181 +1907,211 @@ window.rotGenerarPlantillaLlantasOT = async function(idOt) {
     ot = ot || { id_ot: idOt, ticket_entrada: idOt, placa: '---' };
 
     var placa = (ot.placa || ot.placa_vehiculo || '---').toUpperCase().trim();
-    var tipoOT = ot.tipo_ot || ot.tipo || 'Inspección Neumáticos';
+    var tipoOT = (ot.tipo_ot || ot.tipo || 'Preventivo').toUpperCase();
     var fechaInicio = ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || new Date().toISOString().split('T')[0];
     try { fechaInicio = String(fechaInicio).split('T')[0]; } catch(e){}
     var kmTablero = ot.km_tablero || ot.km_gps || ot.km || '---';
     var rampa = ot.txtRampa || ot.rampa || '---';
 
-    // Obtener datos de neumáticos de la placa si existen
-    var datosPos = {};
-    if (placa && placa !== '---') {
-        try {
-            var res = await fetch('/api/neumaticos/placa-ultima/' + encodeURIComponent(placa)).then(r => r.json());
-            if (res.ok && res.datosPosiciones) datosPos = res.datosPosiciones;
-        } catch(e) { console.warn('Error fetching tire data for PDF:', e); }
-    }
+    // Obtener logo y datos de empresa
+    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || '';
+    var empNombre  = (localStorage.getItem('fleet_empresa_nombre') || 'EMPRESA').toUpperCase();
 
-    var renderFilaPos = function(posKey) {
-        var det = datosPos[String(posKey).toUpperCase()] || {};
-        var marca = (det.marca || '').toUpperCase();
-        var medida = (det.medida || '').toUpperCase();
-        var modelo = (det.modelo || '').toUpperCase();
-        var r1 = det.r1 !== null && det.r1 !== undefined ? det.r1 : '';
-        var r2 = det.r2 !== null && det.r2 !== undefined ? det.r2 : '';
-        var r3 = det.r3 !== null && det.r3 !== undefined ? det.r3 : '';
-        var presAnt = det.presion_ant || '';
-        var presAct = det.presion_actual || '';
-        var estado = (det.estado || '').toUpperCase();
-        var isNueva = estado === 'NUEVA' ? '<b>✓ NUEVA</b>' : 'Nueva';
-        var isReenc = estado === 'RENCAUCHADA' ? '<b>✓ REEN.</b>' : 'Reencauchada';
-        var accion = det.accion || '';
-        var obs = det.observaciones || '';
+    var logoHtml = empLogoUrl 
+        ? `<img src="${empLogoUrl}" style="max-height: 55px; max-width: 180px; object-fit: contain;">`
+        : `<div class="company-name-text">${empNombre}</div>`;
 
+    var renderFilaPosBlanco = function(posKey) {
         return `<tr>
             <td></td>
             <td class="pos-number">${posKey}</td>
-            <td class="text-start ps-1">${marca}</td>
-            <td class="text-start ps-1">${medida}</td>
-            <td class="text-start ps-1">${modelo}</td>
-            <td>${r1}</td>
-            <td>${r2}</td>
-            <td>${r3}</td>
-            <td>${presAnt}</td>
-            <td>${presAct}</td>
-            <td class="col-est-nueva option-text">${isNueva}</td>
-            <td class="col-est-reen option-text">${isReenc}</td>
-            <td>${accion}</td>
-            <td class="text-start ps-1">${obs}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="col-est-nueva option-text">Nueva</td>
+            <td class="col-est-reen option-text">Reencauchada</td>
+            <td></td>
+            <td></td>
         </tr>`;
     };
 
     var posSec1 = ['1','2','3','4','5','6','7','8','9','10','11','12','R'];
-    var posSec2 = ['1','2'];
+    var posSec2 = ['1','2','3','4','5','6','7','8','9','10','11','12','R'];
 
-    var htmlRows1 = posSec1.map(renderFilaPos).join('');
-    var htmlRows2 = posSec2.map(renderFilaPos).join('');
+    var htmlRows1 = posSec1.map(renderFilaPosBlanco).join('');
+    var htmlRows2 = posSec2.map(renderFilaPosBlanco).join('');
 
     var fullHtml = `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Reporte de Llantas - OT ${idOt}</title>
+<title>Plantilla de Llantas - OT ${idOt}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
     * { box-sizing: border-box; }
     body {
         font-family: 'Oswald', sans-serif;
         font-size: 11px;
         margin: 0;
-        padding: 20px;
+        padding: 15px;
         background-color: #e0e0e0;
         color: #000000;
     }
-    .print-btn-container { text-align: center; margin-bottom: 15px; }
+    .print-btn-container { text-align: center; margin-bottom: 12px; }
     .btn-print {
-        background-color: #1e293b;
+        background-color: #000000;
         color: #ffffff;
         border: none;
-        padding: 10px 24px;
+        padding: 10px 25px;
         font-family: 'Oswald', sans-serif;
         font-size: 14px;
         font-weight: 700;
         text-transform: uppercase;
         cursor: pointer;
-        border-radius: 8px;
+        border-radius: 4px;
         letter-spacing: 1px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
-    .btn-print:hover { background-color: #0f172a; }
+    .btn-print:hover { opacity: 0.9; }
     .report-container {
         width: 100%;
         max-width: 1120px;
         margin: 0 auto;
         border: 2px solid #000000;
         background-color: #fff;
-        padding: 15px;
+        padding: 12px;
     }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; color: #000000; }
-    .title-row td { padding: 6px 0; border-bottom: 2px solid #000000; vertical-align: middle; }
-    .company-logo { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 20px; color: #1e293b; }
-    .company-logo span { color: #2563eb; }
-    .title-text { text-align: center; font-weight: 700; font-size: 22px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .number-text { text-align: right; font-weight: 700; font-size: 15px; width: 150px; }
-    .info-section-table { width: 100%; margin: 10px 0; }
+    
+    /* CABECERA CON LOGO EMPRESA */
+    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    .header-table td { vertical-align: middle; border: none; padding: 4px; }
+    .logo-cell { width: 220px; text-align: left; }
+    .company-name-text { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 22px; color: #000000; text-transform: uppercase; }
+    .title-cell { text-align: center; }
+    .main-title { font-weight: 700; font-size: 24px; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1; }
+    .sub-code { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 10px; color: #444; margin-top: 2px; }
+    
+    /* CUADRO INFO VEHÍCULO (SEGUNDA IMAGEN MARSISA) */
+    .info-section-table { width: 100%; margin: 6px 0 10px 0; border-collapse: collapse; }
     .info-section-table td { vertical-align: middle; padding: 0; }
     .vehicle-box {
         border: 2px solid #000000;
-        padding: 8px 12px;
-        width: 400px;
-        font-family: 'Inter', sans-serif;
+        padding: 6px 10px;
+        width: 620px;
+        font-family: 'Oswald', sans-serif;
         font-size: 11px;
-        line-height: 1.5;
-        font-weight: 600;
+        line-height: 1.4;
     }
-    .rampa-cell { text-align: right; vertical-align: middle !important; padding-right: 30px; }
+    .v-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 2px; }
+    .v-row:last-child { margin-bottom: 0; }
+    .v-label { font-weight: 700; text-transform: uppercase; }
+    .v-val { font-weight: 400; font-family: 'Inter', sans-serif; }
+    .chk-box { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; font-size: 10px; }
+    .chk-sq { width: 12px; height: 12px; border: 1px solid #000; display: inline-block; }
+
+    .rampa-cell { text-align: right; vertical-align: middle !important; padding-right: 20px; }
     .rampa-label { font-size: 24px; font-weight: 700; }
-    .rampa-value { font-size: 24px; font-weight: 400; margin-left: 10px; }
+    .rampa-value { font-size: 24px; font-weight: 400; margin-left: 8px; }
+
+    /* GRILLA 100% BLANCA DE LLANTAS */
     .grid-table th, .grid-table td {
         border: 1px solid #000000;
         text-align: center;
-        padding: 2px 3px;
+        padding: 1px 2px;
         font-size: 11px;
-        height: 20px;
+        height: 19px;
         overflow: hidden;
         white-space: nowrap;
         vertical-align: middle;
-        font-weight: 400;
+        font-weight: 300;
+        line-height: 1.1;
+        color: #000000;
     }
-    .grid-table th { font-weight: 700; background-color: #f8fafc; text-transform: uppercase; height: 26px; font-size: 10px; }
+    .grid-table th {
+        font-weight: 500;
+        background-color: #ffffff;
+        text-transform: uppercase;
+        height: 26px;
+        white-space: normal;
+        font-size: 10px;
+        color: #000000;
+    }
     .col-idx { width: 30px; }
     .col-pos { width: 40px; }
     .col-data-main { width: 95px; }
-    .col-r { width: 22px; }
-    .col-presion { width: 85px; }
-    .col-est-nueva { width: 50px; }
-    .col-est-reen { width: 70px; }
-    .col-accion { width: 75px; }
+    .col-r { width: 18px; }
+    .col-presion { width: 80px; }
+    .col-est-nueva { width: 45px; }
+    .col-est-reen { width: 65px; }
+    .col-accion { width: 60px; }
     .col-obs { width: auto; }
-    .option-text { font-size: 9.5px; }
+    .option-text { font-size: 9px; font-weight: 500; }
     .pos-number { font-weight: 700; font-size: 12px; }
     .border-top-thick { border-top: 2px solid #000000; }
-    .spacer { height: 10px; border-left: 2px solid #000000; border-right: 2px solid #000000; }
-    .obs-container { padding: 10px 0 5px 0; font-size: 11px; font-family: 'Inter', sans-serif; }
-    .obs-label { font-weight: 700; margin-bottom: 4px; display: block; }
-    .obs-box { width: 100%; min-height: 50px; border: 2px solid #000000; padding: 6px; }
-    .signature-table { width: 100%; margin-top: 15px; font-family: 'Inter', sans-serif; font-size: 10px; }
-    .signature-table td { text-align: center; vertical-align: bottom; height: 45px; }
-    .signature-line { border-top: 1px solid #000; margin: 0 20px; padding-top: 4px; font-weight: 600; }
+    .spacer { height: 8px; border-left: 2px solid #000000; border-right: 2px solid #000000; }
+    
+    .obs-container { padding: 6px 0 4px 0; font-size: 11px; }
+    .obs-label { font-weight: 700; margin-bottom: 2px; display: block; }
+    .obs-box { width: 100%; min-height: 55px; border: 2px solid #000000; }
+
+    .signature-table { width: 100%; margin-top: 10px; font-family: 'Inter', sans-serif; font-size: 9.5px; }
+    .signature-table td { text-align: center; vertical-align: bottom; height: 40px; }
+    .signature-line { border-top: 1px solid #000; margin: 0 25px; padding-top: 3px; font-weight: 600; text-transform: uppercase; }
+
     @media print {
-        @page { size: A4 landscape; margin: 5mm; }
+        @page { size: A4 landscape; margin: 4mm; }
         body { margin: 0; padding: 0; background-color: #fff; color: #000; }
         .print-btn-container { display: none !important; }
         .report-container { width: 100%; max-width: none; border: 2px solid #000; margin: 0; }
-        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .grid-table td { height: 19px !important; }
+        .grid-table th { height: 26px !important; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000 !important; border-color: #000 !important; }
     }
 </style>
 </head>
 <body>
     <div class="print-btn-container">
-        <button class="btn-print" onclick="window.print()">🖨️ Imprimir Reporte (A4 Landscape)</button>
+        <button class="btn-print" onclick="window.print()">🖨️ Imprimir Plantilla de Llantas (A4 Landscape)</button>
     </div>
     <div class="report-container">
-        <table class="title-row">
+        <table class="header-table">
             <tr>
-                <td style="width: 200px;" class="company-logo">AZKELL <span>FLEET</span></td>
-                <td class="title-text">REPORTE DE INSPECCIÓN DE LLANTAS</td>
-                <td class="number-text">OT Nº ${idOt}</td>
+                <td class="logo-cell">
+                    ${logoHtml}
+                </td>
+                <td class="title-cell">
+                    <div class="main-title">INSPECCIÓN DE NEUMÁTICOS</div>
+                    <div class="sub-code">CÓDIGO: F-MAN-005 &nbsp;|&nbsp; VERSIÓN: 03 &nbsp;|&nbsp; EMISIÓN: REVISIÓN</div>
+                </td>
+                <td style="width: 140px; text-align: right; font-weight: 700; font-size: 14px;">
+                    OT Nº ${idOt}
+                </td>
             </tr>
         </table>
+
         <table class="info-section-table">
             <tr>
                 <td>
                     <div class="vehicle-box">
-                        PLACA: <span style="font-weight:700">${placa}</span> &nbsp;&nbsp;|&nbsp;&nbsp; TIPO OT: <span>${tipoOT}</span><br>
-                        FECHA DE INICIO: <span>${fechaInicio}</span> &nbsp;&nbsp;|&nbsp;&nbsp; KM TABLERO: <span>${kmTablero}</span>
+                        <div class="v-row">
+                            <div><span class="v-label">FECHA:</span> <span class="v-val">${fechaInicio}</span></div>
+                            <div><span class="v-label">PLACAS:</span> <span class="v-val" style="font-weight:700;">${placa}</span></div>
+                            <div><span class="v-label">KILOMETRAJE:</span> <span class="v-val">${kmTablero}</span></div>
+                        </div>
+                        <div class="v-row">
+                            <div><span class="v-label">TIPO OT:</span> <span class="v-val">${tipoOT}</span></div>
+                            <div class="chk-box"><span class="chk-sq"></span> DUAL</div>
+                            <div class="chk-box"><span class="chk-sq"></span> BALÓN</div>
+                            <div class="chk-box"><span class="chk-sq"></span> VISUALIZACIÓN DE ZAPATAS</div>
+                        </div>
                     </div>
                 </td>
                 <td class="rampa-cell">
@@ -2079,55 +2120,60 @@ window.rotGenerarPlantillaLlantasOT = async function(idOt) {
                 </td>
             </tr>
         </table>
+
         <table class="grid-table border-top-thick">
             <thead>
                 <tr>
                     <th class="col-idx">I.</th>
-                    <th class="col-pos">POS</th>
-                    <th class="col-data-main">MARCA</th>
-                    <th class="col-data-main">MEDIDA</th>
-                    <th class="col-data-main">MODELO</th>
+                    <th class="col-pos">Posición</th>
+                    <th class="col-data-main">Marca</th>
+                    <th class="col-data-main">Medida</th>
+                    <th class="col-data-main">Modelo</th>
                     <th class="col-r">R1</th>
                     <th class="col-r">R2</th>
                     <th class="col-r">R3</th>
-                    <th class="col-presion">PRESIÓN AIRE<br>ENCONTRADA</th>
-                    <th class="col-presion">PRESIÓN AIRE<br>ACTUAL</th>
-                    <th colspan="2" style="width: 120px;">ESTADO</th>
-                    <th class="col-accion">ACCIÓN</th>
-                    <th class="col-obs">OBSERVACIÓN</th>
+                    <th class="col-presion">Presión Aire<br>Encontrada</th>
+                    <th class="col-presion">Presión Aire<br>Actual</th>
+                    <th colspan="2" style="width: 110px;">Estado</th>
+                    <th class="col-accion">Acción</th>
+                    <th class="col-obs">Observación</th>
                 </tr>
             </thead>
             <tbody>
                 ${htmlRows1}
             </tbody>
         </table>
+
         <div class="spacer"></div>
+
         <table class="grid-table border-top-thick">
             <thead>
                 <tr>
                     <th class="col-idx">II.</th>
-                    <th class="col-pos">POS</th>
-                    <th class="col-data-main">MARCA</th>
-                    <th class="col-data-main">MEDIDA</th>
-                    <th class="col-data-main">MODELO</th>
+                    <th class="col-pos">Posición</th>
+                    <th class="col-data-main">Marca</th>
+                    <th class="col-data-main">Medida</th>
+                    <th class="col-data-main">Modelo</th>
                     <th class="col-r">R1</th>
                     <th class="col-r">R2</th>
                     <th class="col-r">R3</th>
-                    <th class="col-presion">PRESIÓN AIRE<br>ENCONTRADA</th>
-                    <th class="col-presion">PRESIÓN AIRE<br>ACTUAL</th>
-                    <th colspan="2" style="width: 120px;">ESTADO</th>
-                    <th class="col-accion">ACCIÓN</th>
-                    <th class="col-obs">OBSERVACIÓN</th>
+                    <th class="col-presion">Presión Aire<br>Encontrada</th>
+                    <th class="col-presion">Presión Aire<br>Actual</th>
+                    <th colspan="2" style="width: 110px;">Estado</th>
+                    <th class="col-accion">Acción</th>
+                    <th class="col-obs">Observación</th>
                 </tr>
             </thead>
             <tbody>
                 ${htmlRows2}
             </tbody>
         </table>
+
         <div class="obs-container">
-            <span class="obs-label">OBSERVACIONES DE INSPECCIÓN:</span>
+            <span class="obs-label">Observaciones :</span>
             <div class="obs-box"></div>
         </div>
+
         <table class="signature-table">
             <tr>
                 <td><div class="signature-line">FIRMA TÉCNICO RAMPA</div></td>
