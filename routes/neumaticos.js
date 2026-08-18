@@ -652,21 +652,35 @@ module.exports = function (db, broadcast, logAudit) {
                 LIMIT 8
             `);
 
-            // Listado de inspecciones con vigencia calculada
+            // Listado de última inspección o estado por unidad activa
             const [listado] = await tdb.query(`
                 SELECT 
-                    i.id_inspeccion,
-                    i.fecha_inspeccion,
-                    i.placa,
-                    i.km_vehiculo,
-                    i.fecha_proxima,
-                    DATEDIFF(i.fecha_proxima, CURDATE()) as dias_restantes,
+                    p.placa,
                     p.cliente as dueno,
-                    (SELECT COUNT(*) FROM neumaticos_inspecciones_det d WHERE d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci) as total_llantas,
-                    (SELECT COUNT(*) FROM neumaticos_inspecciones_det d WHERE d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci AND (d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0)) as total_criticas
-                FROM neumaticos_inspecciones i
-                LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
-                ORDER BY i.fecha_inspeccion DESC
+                    p.marca as marca_unidad,
+                    p.tipo as tipo_unidad,
+                    p.motora,
+                    last_i.id_inspeccion,
+                    last_i.fecha_inspeccion,
+                    last_i.km_vehiculo,
+                    last_i.fecha_proxima,
+                    DATEDIFF(last_i.fecha_proxima, CURDATE()) as dias_restantes,
+                    (SELECT COUNT(*) FROM neumaticos_inspecciones_det d WHERE d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci) as total_llantas,
+                    (SELECT COUNT(*) FROM neumaticos_inspecciones_det d WHERE d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci AND (d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0)) as total_criticas
+                FROM placas p
+                LEFT JOIN (
+                    SELECT i1.id_inspeccion, i1.placa, i1.fecha_inspeccion, i1.km_vehiculo, i1.fecha_proxima
+                    FROM neumaticos_inspecciones i1
+                    INNER JOIN (
+                        SELECT placa, MAX(fecha_inspeccion) as max_fecha
+                        FROM neumaticos_inspecciones
+                        GROUP BY placa
+                    ) i2 ON i1.placa COLLATE utf8mb4_unicode_ci = i2.placa COLLATE utf8mb4_unicode_ci AND i1.fecha_inspeccion = i2.max_fecha
+                ) last_i ON p.placa COLLATE utf8mb4_unicode_ci = last_i.placa COLLATE utf8mb4_unicode_ci
+                WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
+                ORDER BY 
+                    CASE WHEN last_i.fecha_inspeccion IS NULL THEN 0 ELSE 1 END ASC,
+                    last_i.fecha_inspeccion DESC
             `);
 
             const totalUso = unidadesUso[0]?.total_unidades_en_uso || 0;
