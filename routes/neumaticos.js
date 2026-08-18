@@ -635,17 +635,11 @@ module.exports = function (db, broadcast, logAudit) {
                 WHERE d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0
             `);
 
-            // Total de llantas en circulación de la flota activa (p.en_uso = 'Si')
-            const [circulando] = await tdb.query(`
-                SELECT 
-                    CAST(COALESCE(SUM(
-                        CASE 
-                            WHEN llantas REGEXP '^[0-9]+$' THEN CAST(llantas AS UNSIGNED)
-                            ELSE 0 
-                        END
-                    ), 0) AS UNSIGNED) as total_circulando
+            // Total de vehículos/unidades activas en uso (en_uso != 'NO')
+            const [unidadesUso] = await tdb.query(`
+                SELECT COUNT(*) as total_unidades_en_uso
                 FROM placas
-                WHERE UPPER(TRIM(COALESCE(en_uso, 'SI'))) = 'SI'
+                WHERE UPPER(TRIM(COALESCE(en_uso, 'SI'))) != 'NO'
             `);
 
             // Desglose por Marcas más usadas
@@ -682,7 +676,7 @@ module.exports = function (db, broadcast, logAudit) {
                     vigentes: vigencias[0]?.vigentes || 0,
                     no_vigentes: vigencias[0]?.no_vigentes || 0,
                     llantas_criticas: criticas[0]?.total_criticas || 0,
-                    llantas_circulacion: circulando[0]?.total_circulando || 0
+                    unidades_en_uso: unidadesUso[0]?.total_unidades_en_uso || 0
                 },
                 marcas: marcasTop,
                 inspecciones: listado
