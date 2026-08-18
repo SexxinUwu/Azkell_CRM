@@ -737,6 +737,7 @@ window.dispGuardarFormulario = async function (e) {
         if (btn) btn.disabled = false;
     }
 };
+window.guardarFormularioDisponibilidad = window.dispGuardarFormulario;
 
 // ── Eliminar Registro ─────────────────────────────────────────────
 window.dispEliminar = async function (id) {
