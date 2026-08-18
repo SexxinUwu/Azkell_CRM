@@ -6,6 +6,7 @@ window.dispDatos = [];
 window.dispPlacas = [];
 window.dispConductores = [];
 window.dispGpsMap = {};
+window._dispKpiFiltroActivo = null;
 
 // ── Cargar Datos del Servidor ─────────────────────────────────────
 window.dispCargarDatos = async function () {
@@ -14,7 +15,7 @@ window.dispCargarDatos = async function () {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="13" class="text-center py-5 text-danger">
+                    <td colspan="14" class="text-center py-5 text-danger">
                         <i class="bi bi-shield-lock-fill fs-2 d-block mb-2"></i>
                         No tiene permisos asignados para acceder a Disponibilidad de Flota.
                     </td>
@@ -48,14 +49,6 @@ window.dispCargarDatos = async function () {
         window.dispPlacas = Array.isArray(resPlacas) ? resPlacas : (resPlacas.data || []);
         window.dispConductores = Array.isArray(resCond) ? resCond : (resCond.data || []);
 
-        // Si la tabla de disponibilidad está vacía pero hay placas registradas, sincronizar automáticamente (máximo 1 intento)
-        if (window.dispDatos.length === 0 && window.dispPlacas.length > 0 && !window._dispAutoSyncAttempted) {
-            window._dispAutoSyncAttempted = true;
-            console.log('📌 Tabla disponibilidad vacía. Sincronizando placas activas automáticamente...');
-            await window.dispSincronizarPlacas(true);
-            return;
-        }
-
         // Cargar datos de GPS/Wialon para autocompletar ubicaciones
         window.dispCargarGpsMap();
 
@@ -66,7 +59,7 @@ window.dispCargarDatos = async function () {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="13" class="text-center py-4 text-danger">
+                    <td colspan="14" class="text-center py-4 text-danger">
                         <i class="bi bi-exclamation-triangle-fill me-1"></i> Error al cargar datos: ${err.message}
                     </td>
                 </tr>
@@ -184,7 +177,7 @@ window.dispActualizarKPIs = function () {
         if (estUni === 'mantenimiento' || estUni === 'siniestro') mantenimiento++;
 
         if (estCon === 'disponible') condDisp++;
-        else if (estCon && estCon !== 'vacante') condNoDisp++;
+        else if (estCon && estCon !== 'vacante' && estCon !== 'sin conductor') condNoDisp++;
     });
 
     const setKpi = (id, val) => {
@@ -197,6 +190,26 @@ window.dispActualizarKPIs = function () {
     setKpi('disp-kpi-mantenimiento', mantenimiento);
     setKpi('disp-kpi-cond-disp', condDisp);
     setKpi('disp-kpi-cond-nodisp', condNoDisp);
+};
+
+// ── Filtrado Interactivo por KPI ──────────────────────────────────
+window.dispFiltrarPorKPI = function (tipo) {
+    if (window._dispKpiFiltroActivo === tipo) {
+        window._dispKpiFiltroActivo = null;
+    } else {
+        window._dispKpiFiltroActivo = tipo;
+    }
+
+    document.querySelectorAll('.disp-kpi-card').forEach(card => {
+        card.classList.remove('active-kpi');
+    });
+
+    if (window._dispKpiFiltroActivo) {
+        const activeCard = document.getElementById(`card-kpi-${window._dispKpiFiltroActivo}`);
+        if (activeCard) activeCard.classList.add('active-kpi');
+    }
+
+    window.dispFiltrar();
 };
 
 // ── Renderizar Tabla ──────────────────────────────────────────────
@@ -220,11 +233,10 @@ window.dispRenderTabla = function (lista) {
     lista.forEach((item, index) => {
         const num = index + 1;
         const cleanPlaca = (item.placa_camion || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const gpsUbicacion = window.dispGpsMap[cleanPlaca] || item.ubicacion_manual || item.ubicacion_manual || 'Sin ubicación GPS';
+        const gpsUbicacion = (cleanPlaca && window.dispGpsMap[cleanPlaca]) || item.ubicacion_manual || 'Sin ubicación registrada';
 
-        // Badge de Estado Conductor
+        // Badges de Estados
         const estConBadge = window.dispObtenerBadgeEstadoConductor(item.estado_conductor);
-        // Badge de Estado Unidad
         const estUniBadge = window.dispObtenerBadgeEstadoUnidad(item.estado_unidad);
 
         // Capacidad Tanque Formateada (0 por defecto)
@@ -245,9 +257,11 @@ window.dispRenderTabla = function (lista) {
                     </div>
                 </td>
                 <td>
-                    <span class="disp-placa-badge">
-                        <i class="bi bi-truck text-secondary"></i> ${_dispEsc(item.placa_camion)}
-                    </span>
+                    ${item.placa_camion ? `
+                        <span class="disp-placa-badge">
+                            <i class="bi bi-truck text-secondary"></i> ${_dispEsc(item.placa_camion)}
+                        </span>
+                    ` : '<span class="text-muted">—</span>'}
                 </td>
                 <td>
                     ${item.placa_carreta ? `
@@ -283,12 +297,17 @@ window.dispRenderTabla = function (lista) {
                     ${estUniBadge}
                 </td>
                 <td>
-                    <div class="d-flex align-items-center gap-1" style="max-width:280px;" title="${_dispEsc(gpsUbicacion)}">
+                    <div class="d-flex align-items-center gap-1" style="max-width:240px; cursor:pointer;" onclick="window.open('https://maps.google.com/?q=' + encodeURIComponent('${_dispEsc(gpsUbicacion)}'), '_blank')" title="Ver ubicación Google Maps: ${_dispEsc(gpsUbicacion)}">
                         <i class="bi bi-geo-alt-fill text-danger flex-shrink-0" style="font-size:0.85rem;"></i>
                         <span class="text-truncate" style="font-size:0.78rem; color:#475569;">
                             ${_dispEsc(gpsUbicacion)}
                         </span>
                     </div>
+                </td>
+                <td>
+                    <span class="text-truncate d-inline-block" style="max-width:180px; font-size:0.78rem; color:#64748b;" title="${_dispEsc(item.observaciones)}">
+                        ${_dispEsc(item.observaciones || '—')}
+                    </span>
                 </td>
                 <td class="text-center">
                     <div class="d-flex align-items-center justify-content-center gap-1">
@@ -312,6 +331,7 @@ window.dispObtenerBadgeEstadoConductor = function (estado) {
     const est = (estado || 'Disponible').trim();
     const map = {
         'Disponible': { bg: '#ecfdf5', text: '#065f46', border: '#a7f3d0', dot: '#10b981' },
+        'Sin Conductor': { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1', dot: '#94a3b8' },
         'Día Libre': { bg: '#eff6ff', text: '#1e40af', border: '#bfdbfe', dot: '#3b82f6' },
         'Entra UTS': { bg: '#f5f3ff', text: '#5b21b6', border: '#ddd6fe', dot: '#8b5cf6' },
         'Vacaciones': { bg: '#fffbeb', text: '#92400e', border: '#fde68a', dot: '#f59e0b' },
@@ -351,21 +371,34 @@ window.dispObtenerBadgeEstadoUnidad = function (estado) {
     `;
 };
 
-// ── Filtrar Tabla ─────────────────────────────────────────────────
+// ── Buscador Global Multicolumna (Búsqueda Avanzada) ──────────────
 window.dispFiltrar = function () {
     const q = (document.getElementById('disp-filtro-search')?.value || '').toLowerCase().trim();
     const fUni = (document.getElementById('disp-filtro-est-uni')?.value || '').toLowerCase().trim();
     const fCon = (document.getElementById('disp-filtro-est-con')?.value || '').toLowerCase().trim();
     const fCat = (document.getElementById('disp-filtro-categoria')?.value || '').toLowerCase().trim();
+    const kpiF = window._dispKpiFiltroActivo;
 
     const filtrados = (window.dispDatos || []).filter(item => {
-        if (fUni && (item.estado_unidad || '').toLowerCase() !== fUni) return false;
-        if (fCon && (item.estado_conductor || '').toLowerCase() !== fCon) return false;
-        if (fCat && (item.categoria_conductor || '').toLowerCase() !== fCat) return false;
+        const estUni = (item.estado_unidad || '').toLowerCase();
+        const estCon = (item.estado_conductor || '').toLowerCase();
+        const catCon = (item.categoria_conductor || '').toLowerCase();
 
+        // Filtro KPI activo
+        if (kpiF === 'operativos' && !(estUni === 'disponible' || estUni === 'operativo')) return false;
+        if (kpiF === 'mantenimiento' && !(estUni === 'mantenimiento' || estUni === 'siniestro')) return false;
+        if (kpiF === 'cond-disp' && !(estCon === 'disponible')) return false;
+        if (kpiF === 'cond-nodisp' && (estCon === 'disponible' || estCon === 'vacante' || estCon === 'sin conductor')) return false;
+
+        // Filtros desplegables
+        if (fUni && estUni !== fUni) return false;
+        if (fCon && estCon !== fCon) return false;
+        if (fCat && catCon !== fCat) return false;
+
+        // Búsqueda global que abarca TODAS las columnas y detalles
         if (q) {
             const cleanPlaca = (item.placa_camion || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const gpsUbicacion = window.dispGpsMap[cleanPlaca] || item.ubicacion_manual || '';
+            const gpsUbicacion = (cleanPlaca && window.dispGpsMap[cleanPlaca]) || item.ubicacion_manual || '';
             const match = 
                 (item.placa_camion || '').toLowerCase().includes(q) ||
                 (item.placa_carreta || '').toLowerCase().includes(q) ||
@@ -373,7 +406,12 @@ window.dispFiltrar = function () {
                 (item.conductor_eventual || '').toLowerCase().includes(q) ||
                 (item.flota || '').toLowerCase().includes(q) ||
                 (item.marca || '').toLowerCase().includes(q) ||
+                (item.capacidad_tanque || '').toLowerCase().includes(q) ||
+                (item.categoria_conductor || '').toLowerCase().includes(q) ||
                 (item.tipo_unidad || '').toLowerCase().includes(q) ||
+                (item.estado_conductor || '').toLowerCase().includes(q) ||
+                (item.estado_unidad || '').toLowerCase().includes(q) ||
+                (item.observaciones || '').toLowerCase().includes(q) ||
                 gpsUbicacion.toLowerCase().includes(q);
             if (!match) return false;
         }
@@ -389,7 +427,6 @@ window.dispBuscarPlacaCamion = function (val) {
     if (!panel) return;
 
     const q = (val || '').toUpperCase().trim();
-    // Filtra placas que sean motora o camiones/tractos
     const match = (window.dispPlacas || []).filter(p => {
         const pl = (p.placa || (Array.isArray(p) ? p[0] : '')).toUpperCase();
         const tipo = (p.tipo || (Array.isArray(p) ? p[5] : '')).toUpperCase();
@@ -422,34 +459,28 @@ window.dispSeleccionarPlacaCamion = function (placa) {
     if (inp) inp.value = placa;
     document.getElementById('disp-panel-camion')?.classList.remove('show');
 
-    // Autocalcular datos derivados
     const pObj = (window.dispPlacas || []).find(p => (p.placa || (Array.isArray(p) ? p[0] : '')).toUpperCase() === placa.toUpperCase());
     if (pObj) {
         const marca = pObj.marca || (Array.isArray(pObj) ? pObj[3] : '') || '';
         const combustible = pObj.combustible || (Array.isArray(pObj) ? pObj[14] : '') || '';
         const uts = pObj.uts || (Array.isArray(pObj) ? pObj[19] : '') || '';
 
-        // Marca
         const marcaEl = document.getElementById('disp-f-marca');
         if (marcaEl) marcaEl.value = marca.toUpperCase();
 
-        // Capacidad Tanque (Unidad según combustible: Gln si Diésel, m³ si Gas)
         const combUpper = combustible.toUpperCase();
         const isGas = combUpper.includes('GAS') || combUpper.includes('GNV') || combUpper.includes('GLP');
         const unitSpan = document.getElementById('disp-f-capacidad-unit');
         if (unitSpan) unitSpan.innerText = isGas ? '(m³ - Gas)' : '(Gln - Diésel)';
 
-        // Categoría Conductor (Local o Nacional según UTS)
         const catEl = document.getElementById('disp-f-categoria');
         if (catEl) {
             const utsUpper = uts.toUpperCase();
             catEl.value = utsUpper.includes('LOCAL') ? 'Local' : 'Nacional';
         }
 
-        // Recalcular Tipo de Unidad Concatenado
         window.dispCalcularTipoUnidad();
 
-        // Ubicación GPS si existe en tiempo real
         const cleanPlaca = placa.toUpperCase().replace(/[^A-Z0-9]/g, '');
         const gpsDir = window.dispGpsMap[cleanPlaca];
         const ubiEl = document.getElementById('disp-f-ubicacion');
@@ -539,7 +570,7 @@ document.addEventListener('click', function (e) {
     }
 });
 
-// ── Concatenación de Tipo de Unidad (Semirremolque -> Remolque) ───
+// ── Concatenación de Tipo de Unidad ───────────────────────────────
 window.dispCalcularTipoUnidad = function () {
     const plCamion = (document.getElementById('disp-f-placa-camion')?.value || '').toUpperCase().trim();
     const plCarreta = (document.getElementById('disp-f-placa-carreta')?.value || '').toUpperCase().trim();
@@ -559,7 +590,6 @@ window.dispCalcularTipoUnidad = function () {
         if (pCar) tipoCarreta = pCar.tipo || (Array.isArray(pCar) ? pCar[5] : '') || 'Remolque';
     }
 
-    // Regla: si dice semirremolque, mostrar "Remolque"
     const homologar = (t) => {
         if (/semirremolque/i.test(t)) return 'Remolque';
         return t;
@@ -576,21 +606,20 @@ window.dispCalcularTipoUnidad = function () {
     tipoEl.value = finalTipo;
 };
 
-// ── Abrir Modal Nuevo ─────────────────────────────────────────────
+// ── Abrir Modal Nuevo Centrado ─────────────────────────────────────
 window.dispAbrirModalNuevo = function () {
     const form = document.getElementById('disp-form');
     if (form) form.reset();
     document.getElementById('disp-f-id').value = '';
     document.getElementById('disp-modal-title').innerText = 'Registrar Unidad en Disponibilidad';
 
-    const offcanvasEl = document.getElementById('offcanvasDisponibilidad');
-    if (offcanvasEl) {
-        const bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
-        bsOffcanvas.show();
+    const modalEl = document.getElementById('modalDisponibilidad');
+    if (modalEl) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
     }
 };
 
-// ── Abrir Modal Editar ────────────────────────────────────────────
+// ── Abrir Modal Editar Centrado ────────────────────────────────────
 window.dispEditar = function (id) {
     const item = (window.dispDatos || []).find(x => Number(x.id) === Number(id));
     if (!item) return;
@@ -603,11 +632,9 @@ window.dispEditar = function (id) {
     document.getElementById('disp-f-placa-carreta').value = item.placa_carreta || '';
     document.getElementById('disp-f-marca').value = item.marca || '';
 
-    // Extraer sólo el número para el campo de capacidad
     const capNum = String(item.capacidad_tanque || '').replace(/[^0-9.]/g, '');
     document.getElementById('disp-f-capacidad').value = capNum || '0';
 
-    // Detectar unidad de combustible
     const pObj = (window.dispPlacas || []).find(p => (p.placa || (Array.isArray(p) ? p[0] : '')).toUpperCase() === cleanPlaca);
     const combUpper = (pObj?.combustible || '').toUpperCase();
     const isGas = combUpper.includes('GAS') || combUpper.includes('GNV') || combUpper.includes('GLP');
@@ -621,17 +648,15 @@ window.dispEditar = function (id) {
     document.getElementById('disp-f-estado-conductor').value = item.estado_conductor || 'Disponible';
     document.getElementById('disp-f-estado-unidad').value = item.estado_unidad || 'Disponible';
     
-    // Ubicación GPS en tiempo real o manual
     const gpsDir = window.dispGpsMap[cleanPlaca];
     document.getElementById('disp-f-ubicacion').value = gpsDir || item.ubicacion_manual || '';
     document.getElementById('disp-f-observaciones').value = item.observaciones || '';
 
-    document.getElementById('disp-modal-title').innerText = `Editar Disponibilidad (${plCamion})`;
+    document.getElementById('disp-modal-title').innerText = `Editar Disponibilidad (${plCamion || item.placa_carreta || 'Unidad'})`;
 
-    const offcanvasEl = document.getElementById('offcanvasDisponibilidad');
-    if (offcanvasEl) {
-        const bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
-        bsOffcanvas.show();
+    const modalEl = document.getElementById('modalDisponibilidad');
+    if (modalEl) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
     }
 };
 
@@ -639,12 +664,21 @@ window.dispEditar = function (id) {
 window.dispGuardarFormulario = async function (e) {
     e.preventDefault();
     const btn = document.getElementById('disp-btn-guardar');
-    if (btn) btn.disabled = true;
-
+    
     const id = document.getElementById('disp-f-id')?.value;
     const plCamion = (document.getElementById('disp-f-placa-camion')?.value || '').trim();
-    const cleanPlaca = plCamion.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const plCarreta = (document.getElementById('disp-f-placa-carreta')?.value || '').trim();
 
+    // Validación flexible: al menos una de las dos placas debe ingresarse
+    if (!plCamion && !plCarreta) {
+        if (typeof window.mostrarToast === 'function') window.mostrarToast('Debe ingresar al menos la Placa del Camión o la Placa de Carreta', 'warning');
+        else alert('Debe ingresar al menos la Placa del Camión o la Placa de Carreta');
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+
+    const cleanPlaca = plCamion.toUpperCase().replace(/[^A-Z0-9]/g, '');
     const pObj = (window.dispPlacas || []).find(p => (p.placa || (Array.isArray(p) ? p[0] : '')).toUpperCase() === cleanPlaca);
     const combUpper = (pObj?.combustible || '').toUpperCase();
     const isGas = combUpper.includes('GAS') || combUpper.includes('GNV') || combUpper.includes('GLP');
@@ -655,7 +689,7 @@ window.dispGuardarFormulario = async function (e) {
 
     const payload = {
         placa_camion: plCamion,
-        placa_carreta: document.getElementById('disp-f-placa-carreta')?.value || '',
+        placa_carreta: plCarreta,
         marca: document.getElementById('disp-f-marca')?.value || '',
         capacidad_tanque: capTanque,
         categoria_conductor: document.getElementById('disp-f-categoria')?.value || 'Nacional',
@@ -686,12 +720,14 @@ window.dispGuardarFormulario = async function (e) {
 
         if (!res.ok) throw new Error(data.error || 'Error al guardar');
 
-        window.mostrarToast(id ? 'Unidad actualizada correctamente' : 'Unidad registrada en disponibilidad', 'success');
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast(id ? 'Unidad actualizada correctamente' : 'Unidad registrada en disponibilidad', 'success');
+        }
 
-        const offcanvasEl = document.getElementById('offcanvasDisponibilidad');
-        if (offcanvasEl) {
-            const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
-            if (bsOffcanvas) bsOffcanvas.hide();
+        const modalEl = document.getElementById('modalDisponibilidad');
+        if (modalEl) {
+            const bsModal = bootstrap.Modal.getInstance(modalEl);
+            if (bsModal) bsModal.hide();
         }
 
         window.dispCargarDatos();
@@ -711,28 +747,10 @@ window.dispEliminar = async function (id) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al eliminar');
 
-        window.mostrarToast('Registro eliminado', 'info');
+        if (typeof window.mostrarToast === 'function') window.mostrarToast('Registro eliminado', 'info');
         window.dispCargarDatos();
     } catch (err) {
         alert('Error: ' + err.message);
-    }
-};
-
-// ── Sincronizar Placas Activas ────────────────────────────────────
-window.dispSincronizarPlacas = async function (silencioso) {
-    try {
-        const res = await fetch('/api/disponibilidad-flota/sincronizar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usuario: localStorage.getItem('fleet_user') || 'Sistema' })
-        });
-        const data = await res.json();
-        if (!silencioso && data.message) {
-            window.mostrarToast(data.message, 'success');
-        }
-        window.dispCargarDatos();
-    } catch (e) {
-        if (!silencioso) alert('Error al sincronizar: ' + e.message);
     }
 };
 
@@ -744,11 +762,12 @@ window.dispExportarExcel = function () {
     }
 
     let csvContent = '\uFEFF'; // BOM para tildes
-    csvContent += 'N°,CONDUCTOR EVENTUAL,CONDUCTOR ASIGNADO,PLACA CAMION,PLACA CARRETA,CAPACIDAD TANQUE,MARCA,CATEGORIA,TIPO UNIDAD,ESTADO CONDUCTOR,ESTADO UNIDAD,UBICACION\n';
+    csvContent += 'N°,CONDUCTOR EVENTUAL,CONDUCTOR ASIGNADO,PLACA CAMION,PLACA CARRETA,CAPACIDAD TANQUE,MARCA,CATEGORIA,TIPO UNIDAD,ESTADO CONDUCTOR,ESTADO UNIDAD,UBICACION,OBSERVACIONES\n';
 
     window.dispDatos.forEach((d, idx) => {
         const cleanPlaca = (d.placa_camion || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
         const ubi = (window.dispGpsMap[cleanPlaca] || d.ubicacion_manual || '').replace(/"/g, '""');
+        const obs = (d.observaciones || '').replace(/"/g, '""');
         const row = [
             idx + 1,
             `"${d.conductor_eventual || ''}"`,
@@ -761,7 +780,8 @@ window.dispExportarExcel = function () {
             `"${d.tipo_unidad || ''}"`,
             `"${d.estado_conductor || ''}"`,
             `"${d.estado_unidad || ''}"`,
-            `"${ubi}"`
+            `"${ubi}"`,
+            `"${obs}"`
         ];
         csvContent += row.join(',') + '\n';
     });
@@ -789,4 +809,3 @@ function _dispEsc(txt) {
 
 // ── Iniciar Carga Inmediata al Montar Módulo ───────────────────────
 window.dispCargarDatos();
-

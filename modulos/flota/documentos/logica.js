@@ -351,6 +351,7 @@ function actualizarFiltroEmpresas() {
 
 function renderizarListaLateral() {
     const listDiv = document.getElementById('vehicle-list');
+    if (!listDiv) return;
     const searchEl = document.getElementById('fleet-search');
     const term = searchEl ? (searchEl.value || '').toLowerCase() : '';
     
@@ -412,27 +413,34 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
     
     currentPlaca = placa;
     
+    const rcw = document.getElementById('right-content-wrapper');
+    const esp = document.getElementById('empty-state-panel');
+    
     if(!placa) {
-        document.getElementById('right-content-wrapper').style.display = 'none';
-        document.getElementById('empty-state-panel').style.display = 'flex';
+        if (rcw) rcw.style.display = 'none';
+        if (esp) esp.style.display = 'flex';
         return;
     }
     
-    document.getElementById('right-content-wrapper').style.display = 'flex';
-    document.getElementById('empty-state-panel').style.display = 'none';
+    if (rcw) rcw.style.display = 'flex';
+    if (esp) esp.style.display = 'none';
     const splitContainer = document.querySelector('.fleet-main-split');
     if(splitContainer) {
         if (isInitialLoad && window.innerWidth <= 768) { /* Do not auto-open on mobile load */ }
-        else { splitContainer.classList.add('show-detail');
-        document.getElementById('fleet-module-container').classList.add('show-detail-mobile');
-        const fab = document.querySelector('.mobile-fab-plus');
-        if(fab) fab.style.display = 'none'; }
+        else { 
+            splitContainer.classList.add('show-detail');
+            const fmc = document.getElementById('fleet-module-container');
+            if (fmc) fmc.classList.add('show-detail-mobile');
+            const fab = document.querySelector('.mobile-fab-plus');
+            if(fab) fab.style.display = 'none'; 
+        }
     }
     const v = vehiculosFlota.find(x => x.placa === placa);
     if(!v) return;
 
-    // Ficha Header
-    document.getElementById('ft-placa').innerText = v.placa;
+    // Ficha Header defensivo
+    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val || ''; };
+    setTxt('ft-placa', v.placa);
     document.getElementById('ft-tipo').innerText = v.tipo || '---';
     document.getElementById('ft-marca-modelo').innerText = `${v.marca || '---'} - ${v.modelo || '---'}`;
     document.getElementById('ft-anio').innerText = v.anio || '---';
