@@ -99,7 +99,7 @@
                 <div id="wrap-mantenimiento">
                     <button class="nav-section-toggle" data-section="mantenimiento" aria-expanded="false" onclick="window.toggleNavSection('mantenimiento')">
                         <span class="link-text" data-i18n="nav.mantenimiento">Mantenimiento</span>
-                        <span class="section-badge">6</span>
+                        <span class="section-badge">8</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-mantenimiento">
@@ -128,6 +128,30 @@
                             <i class="bi bi-person-gear nav-icon"></i>
                             <span class="link-text" data-i18n="nav.trabajos_ot">Historial de Trabajos</span>
                         </a>
+                        <a id="nav-combustible" class="nav-item" onclick="cargarModuloAislado('mantenimiento/combustible')">
+                            <i class="bi bi-fuel-pump-fill nav-icon"></i>
+                            <span class="link-text">Combustible</span>
+                        </a>
+                        <!-- Submenú desplegable Neumáticos -->
+                        <div class="nav-submenu-group">
+                            <a id="nav-neumaticos-toggle" class="nav-item d-flex align-items-center justify-content-between" onclick="var el=document.getElementById('submenu-neumaticos'); var chev=document.getElementById('chev-neumaticos'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-disc-fill nav-icon"></i>
+                                    <span class="link-text">Neumáticos</span>
+                                </div>
+                                <i class="bi bi-chevron-down nav-sub-chevron" id="chev-neumaticos" style="font-size:0.75rem; transition: transform 0.2s ease;"></i>
+                            </a>
+                            <div class="nav-submenu-items d-none ps-3" id="submenu-neumaticos">
+                                <a id="nav-neumaticos-analisis" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('mantenimiento/neumaticos-analisis')">
+                                    <i class="bi bi-graph-up-arrow nav-icon me-1" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Análisis de Neumáticos</span>
+                                </a>
+                                <a id="nav-neumaticos-ultimas" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('mantenimiento/neumaticos-ultimas')">
+                                    <i class="bi bi-clock-history nav-icon me-1" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Últimas Inspecciones</span>
+                                </a>
+                            </div>
+                        </div>
                         <a id="nav-otros-mant" class="nav-item" onclick="cargarModuloAislado('mantenimiento/otros')">
                             <i class="bi bi-grid-fill nav-icon"></i>
                             <span class="link-text" data-i18n="nav.otros">Otros</span>
@@ -138,7 +162,6 @@
                         <a id="nav-kpis-taller"     class="nav-item" style="display:none!important" onclick="cargarModuloAislado('mantenimiento/kpis-taller')"></a>
                         <a id="nav-productividad"   class="nav-item" style="display:none!important" onclick="cargarModuloAislado('mantenimiento/productividad')"></a>
                         <a id="nav-finanzas-taller" class="nav-item" style="display:none!important" onclick="cargarModuloAislado('mantenimiento/finanzas-taller')"></a>
-                        
                     </div>
                 </div>
 
@@ -704,6 +727,18 @@
             <div id="mbnav-trabajos-ot" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/trabajos-ot'); setBottomNavActive('bnav-mantenimiento');">
                 <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-person-gear"></i></div>
                 <div><p class="bnav-card-title" data-i18n="nav.trabajos_ot">Historial de Trabajos</p><p class="bnav-card-desc">Tareas adicionales</p></div>
+            </div>
+            <div id="mbnav-combustible" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/combustible'); setBottomNavActive('bnav-mantenimiento');">
+                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-fuel-pump-fill"></i></div>
+                <div><p class="bnav-card-title">Combustible</p><p class="bnav-card-desc">Control y consumo</p></div>
+            </div>
+            <div id="mbnav-neumaticos-analisis" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/neumaticos-analisis'); setBottomNavActive('bnav-mantenimiento');">
+                <div class="bnav-card-icon" style="background: rgba(37,99,235,.1); color: #2563eb;"><i class="bi bi-graph-up-arrow"></i></div>
+                <div><p class="bnav-card-title">Análisis Neumáticos</p><p class="bnav-card-desc">Métricas y desgaste</p></div>
+            </div>
+            <div id="mbnav-neumaticos-ultimas" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/neumaticos-ultimas'); setBottomNavActive('bnav-mantenimiento');">
+                <div class="bnav-card-icon" style="background: rgba(37,99,235,.1); color: #2563eb;"><i class="bi bi-clock-history"></i></div>
+                <div><p class="bnav-card-title">Últimas Inspecciones</p><p class="bnav-card-desc">Histórico de neumáticos</p></div>
             </div>
             <div id="mbnav-otros-mant" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/otros'); setBottomNavActive('bnav-mantenimiento');">
                 <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-grid-fill"></i></div>
