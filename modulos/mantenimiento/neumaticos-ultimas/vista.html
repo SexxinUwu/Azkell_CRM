@@ -54,6 +54,40 @@
         </div>
     </div>
 
+    <!-- Cuadro Resumen Consolidado de Requerimientos de Llantas para Compras -->
+    <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs d-none" id="panel-resumen-requerimientos" style="border: 1px solid #e2e8f0 !important;">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+            <div>
+                <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-cart-check-fill text-danger fs-5"></i> Resumen Consolidado de Requerimientos por Medida (Para Compras / Reposición)
+                </h6>
+                <small class="text-muted">Desglose técnico agrupado por Medida: Delanteras (Motora 1-2), Tracción (Motora Posterior), Arrastre (Carretas/Remolques) y Repuestos.</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold d-flex align-items-center gap-1" onclick="window.neuCopiarPedidoCompras()" title="Copiar resumen formateado al portapapeles">
+                    <i class="bi bi-clipboard-check"></i> Copiar Pedido a Proveedor
+                </button>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.83rem;">
+                <thead class="table-dark text-nowrap">
+                    <tr>
+                        <th class="ps-3">MEDIDA DE LLANTA</th>
+                        <th class="text-center bg-primary text-white">DELANTERAS (MOTORA 1 y 2)</th>
+                        <th class="text-center bg-warning text-dark">TRACCIÓN (POSTERIOR MOTORA)</th>
+                        <th class="text-center bg-info text-dark">ARRASTRE (CARRETAS / REMOLQUE)</th>
+                        <th class="text-center bg-secondary text-white">REPUESTOS</th>
+                        <th class="text-center bg-danger text-white fs-6">TOTAL A REPOSICIÓN</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-resumen-medidas-req">
+                    <tr><td colspan="6" class="text-center text-muted py-3">No hay requerimientos en esta selección.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Buscador Instantáneo -->
     <div class="card border-0 rounded-4 p-2 mb-3 bg-white shadow-2xs" style="border: 1px solid var(--border, #e2e8f0) !important;">
         <div class="input-group input-group-sm">
