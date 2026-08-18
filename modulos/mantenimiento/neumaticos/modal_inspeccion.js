@@ -24,7 +24,7 @@
                 left: 50% !important;
                 top: auto !important;
                 right: auto !important;
-                transform: translateX(-50%) translateY(100%) !important;
+                transform: translate3d(-50%, 100%, 0) !important;
                 width: 100% !important;
                 max-width: 740px !important;
                 height: 92vh !important;
@@ -33,8 +33,9 @@
                 border: 1px solid var(--border, #e2e8f0) !important;
                 border-bottom: none !important;
                 border-radius: 28px 28px 0 0 !important;
-                box-shadow: 0 -16px 56px rgba(0,0,0,0.45) !important;
-                transition: transform .28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                box-shadow: 0 -16px 56px rgba(0,0,0,0.35) !important;
+                transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                will-change: transform;
                 z-index: 2150 !important;
                 display: flex !important;
                 flex-direction: column !important;
@@ -43,7 +44,7 @@
                 margin: 0 !important;
             }
             .neu-sub-drawer.open {
-                transform: translateX(-50%) translateY(0) !important;
+                transform: translate3d(-50%, 0, 0) !important;
                 visibility: visible !important;
                 display: flex !important;
             }
@@ -51,24 +52,23 @@
                 .neu-sub-drawer {
                     max-width: 100% !important;
                     left: 0 !important;
-                    transform: translateY(100%) !important;
+                    transform: translate3d(0, 100%, 0) !important;
                     border-radius: 24px 24px 0 0 !important;
                     height: 94vh !important;
                     max-height: 94vh !important;
                 }
                 .neu-sub-drawer.open {
-                    transform: translateY(0) !important;
+                    transform: translate3d(0, 0, 0) !important;
                 }
             }
             .neu-drawer-backdrop {
                 position: fixed;
                 inset: 0;
-                background: rgba(15, 23, 42, 0.65);
-                backdrop-filter: blur(4px);
+                background: rgba(15, 23, 42, 0.55);
                 z-index: 2140;
                 opacity: 0;
                 pointer-events: none;
-                transition: opacity .25s ease;
+                transition: opacity 0.2s ease;
             }
             .neu-drawer-backdrop.show {
                 opacity: 1;
@@ -730,7 +730,7 @@
         if (!container) return;
 
         container.innerHTML = `
-            <svg viewBox="0 0 220 320" width="100%" height="auto" style="max-width:200px; max-height:260px; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.1));">
+            <svg viewBox="0 0 220 320" style="width: 100%; max-width: 200px; height: 260px; display: block; margin: 0 auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.08));">
                 <!-- Chasis Central -->
                 <rect x="95" y="20" width="30" height="270" rx="6" fill="#cbd5e1" stroke="#94a3b8" stroke-width="2"/>
                 <!-- Cabina / Frente -->
