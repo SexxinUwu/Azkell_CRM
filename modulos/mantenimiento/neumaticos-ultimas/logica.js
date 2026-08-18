@@ -129,7 +129,122 @@
             return true;
         });
 
+        // Renderizar o Biswas panel de resumen de requerimientos
+        const panelResumen = document.getElementById('panel-resumen-requerimientos');
+        if (window._neuTabActiva === 'requerimientos') {
+            if (panelResumen) panelResumen.classList.remove('d-none');
+            window.neuRenderResumenMedidas(filtradas);
+        } else {
+            if (panelResumen) panelResumen.classList.add('d-none');
+        }
+
         window.neuRenderTabla(filtradas);
+    };
+
+    // ── Resumen Consolidado de Requerimientos por Medida para Compras ────
+    window.neuRenderResumenMedidas = function(items) {
+        const tbody = document.getElementById('tbody-resumen-medidas-req');
+        if (!tbody) return;
+
+        if (!items || !items.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No hay requerimientos de llantas para los filtros seleccionados.</td></tr>';
+            window._neuResumenComprasMap = [];
+            return;
+        }
+
+        const mapaMedidas = new Map();
+
+        items.forEach(row => {
+            const medida = (row.medida || 'SIN ESPECIFICAR').toUpperCase().trim();
+            if (!mapaMedidas.has(medida)) {
+                mapaMedidas.set(medida, { del: 0, trac: 0, arr: 0, rep: 0, total: 0 });
+            }
+            const obj = mapaMedidas.get(medida);
+            
+            const mStr = String(row.motora || '').toUpperCase().trim();
+            const esMotora = mStr === 'SI' || mStr === '1' || mStr === 'MOTORA' || (row.tipo_unidad || '').toLowerCase().includes('tracto') || (row.tipo_unidad || '').toLowerCase().includes('camion');
+            const posStr = String(row.posicion || '').trim().toUpperCase();
+
+            if (posStr === 'R') {
+                obj.rep++;
+            } else if (esMotora) {
+                if (posStr === '1' || posStr === '2') {
+                    obj.del++;
+                } else {
+                    obj.trac++;
+                }
+            } else {
+                obj.arr++;
+            }
+            obj.total++;
+        });
+
+        let html = '';
+        let totDel = 0, totTrac = 0, totArr = 0, totRep = 0, totGral = 0;
+
+        const arrayResumen = [];
+        mapaMedidas.forEach((val, medida) => {
+            totDel += val.del;
+            totTrac += val.trac;
+            totArr += val.arr;
+            totRep += val.rep;
+            totGral += val.total;
+
+            arrayResumen.push({ medida, ...val });
+
+            html += `
+                <tr>
+                    <td class="ps-3 fw-bold text-dark font-monospace fs-6">${medida}</td>
+                    <td class="text-center fw-bold ${val.del > 0 ? 'text-primary fs-6' : 'text-muted'}">${val.del || 0}</td>
+                    <td class="text-center fw-bold ${val.trac > 0 ? 'text-dark fs-6' : 'text-muted'}">${val.trac || 0}</td>
+                    <td class="text-center fw-bold ${val.arr > 0 ? 'text-info fs-6' : 'text-muted'}">${val.arr || 0}</td>
+                    <td class="text-center fw-bold ${val.rep > 0 ? 'text-secondary fs-6' : 'text-muted'}">${val.rep || 0}</td>
+                    <td class="text-center fw-bold text-danger fs-6 bg-danger bg-opacity-10">${val.total}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+            <tr class="table-dark fw-bold">
+                <td class="ps-3">TOTAL GENERAL A COMPRAR / RECOMPRA</td>
+                <td class="text-center text-primary fs-6">${totDel}</td>
+                <td class="text-center text-warning fs-6">${totTrac}</td>
+                <td class="text-center text-info fs-6">${totArr}</td>
+                <td class="text-center text-light fs-6">${totRep}</td>
+                <td class="text-center text-white bg-danger fs-5">${totGral}</td>
+            </tr>
+        `;
+
+        tbody.innerHTML = html;
+        window._neuResumenComprasMap = arrayResumen;
+    };
+
+    window.neuCopiarPedidoCompras = function() {
+        if (!window._neuResumenComprasMap || !window._neuResumenComprasMap.length) {
+            alert("No hay requerimientos activos para copiar.");
+            return;
+        }
+
+        let txt = `📋 *REQUERIMIENTO DE NEUMÁTICOS PARA COMPRAS* — ERP Azkell Fleet\n`;
+        txt += `📅 *Fecha:* ${new Date().toLocaleDateString()}\n\n`;
+
+        let totalGral = 0;
+        window._neuResumenComprasMap.forEach(it => {
+            txt += `📌 *MEDIDA: ${it.medida}*\n`;
+            if (it.del > 0) txt += `  - Delanteras (Motora 1-2): ${it.del}\n`;
+            if (it.trac > 0) txt += `  - Tracción (Posterior Motora): ${it.trac}\n`;
+            if (it.arr > 0) txt += `  - Arrastre (Carretas/Remolque): ${it.arr}\n`;
+            if (it.rep > 0) txt += `  - Repuestos: ${it.rep}\n`;
+            txt += `  👉 *TOTAL MEDIDA:* ${it.total} llantas\n\n`;
+            totalGral += it.total;
+        });
+
+        txt += `🔴 *TOTAL GENERAL A ADQUIRIR:* ${totalGral} llantas\n`;
+
+        navigator.clipboard.writeText(txt).then(() => {
+            if (typeof window.mostrarToast === 'function') window.mostrarToast('Resumen de compra copiado al portapapeles', 'success');
+            else alert('Resumen de compra copiado al portapapeles.');
+        });
     };
 
     window.neuRenderTabla = function(items) {

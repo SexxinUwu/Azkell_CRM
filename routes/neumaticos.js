@@ -774,9 +774,11 @@ module.exports = function (db, broadcast, logAudit) {
                     p.tipo as tipo_unidad,
                     p.motora,
                     CASE 
-                        WHEN d.posicion IN ('1','2') THEN 'Direccional'
+                        WHEN (UPPER(TRIM(p.motora)) IN ('SI','1','MOTORA') OR p.tipo LIKE '%TRACTO%' OR p.tipo LIKE '%CAMION%') AND d.posicion IN ('1','2') THEN 'Delantera'
+                        WHEN (UPPER(TRIM(p.motora)) IN ('SI','1','MOTORA') OR p.tipo LIKE '%TRACTO%' OR p.tipo LIKE '%CAMION%') AND d.posicion = 'R' THEN 'Repuesto'
+                        WHEN (UPPER(TRIM(p.motora)) IN ('SI','1','MOTORA') OR p.tipo LIKE '%TRACTO%' OR p.tipo LIKE '%CAMION%') THEN 'Tracción'
                         WHEN d.posicion = 'R' THEN 'Repuesto'
-                        ELSE 'Tracción / Arrastre'
+                        ELSE 'Arrastre'
                     END as tipo_posicion
                 FROM neumaticos_inspecciones_det d
                 INNER JOIN (
