@@ -6,9 +6,9 @@
 (function() {
     window._neuCatalogos = window._neuCatalogos || null;
     window._neuLlantasActuales = [];
-    window._neuValR1 = 10;
-    window._neuValR2 = 10;
-    window._neuValR3 = 10;
+    window._neuValR1 = 0;
+    window._neuValR2 = 0;
+    window._neuValR3 = 0;
     window._neuValR4 = 0;
     window._neuPosicionActiva = '1';
     window._neuFotos = { foto1: null, foto2: null, foto3: null };
@@ -75,16 +75,16 @@
                 pointer-events: auto;
             }
             .neu-touch-btn-pos {
-                min-width: 46px;
-                height: 46px;
+                min-width: 48px;
+                height: 48px;
                 font-size: 1.05rem;
                 font-weight: 800;
-                border-radius: 12px;
+                border-radius: 14px;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
                 user-select: none;
-                transition: transform 0.1s ease, background-color 0.15s ease;
+                transition: transform 0.1s ease, background-color 0.15s ease, border-color 0.15s ease;
             }
             .neu-touch-btn-pos:active {
                 transform: scale(0.92);
@@ -109,8 +109,8 @@
                 overflow-x: auto;
                 scroll-behavior: smooth;
                 -webkit-overflow-scrolling: touch;
-                padding-bottom: 4px;
-                gap: 6px;
+                padding: 4px 2px;
+                gap: 8px;
             }
             .neu-scroll-x::-webkit-scrollbar {
                 height: 4px;
@@ -243,10 +243,10 @@
                         <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center fs-6 shadow-sm" style="width:34px;height:34px;" id="neu-form-pos-badge">1</span>
-                                <h6 class="fw-bold m-0 text-dark">Datos de Llanta Seleccionada</h6>
+                                <h6 class="fw-bold m-0 text-dark">Datos de Llanta — Posición <span id="neu-pos-label-top" class="text-primary">1</span></h6>
                             </div>
                             <button class="btn btn-sm btn-light border py-1 px-3 rounded-pill fw-bold text-muted" style="font-size:0.75rem;" onclick="window._neuLimpiarFormLlanta()">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar Campos
                             </button>
                         </div>
 
@@ -288,9 +288,9 @@
                                     <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-1" style="font-size: 0.95rem;">
                                         <i class="bi bi-rulers text-primary"></i> Profundímetro Táctil (mm)
                                     </h6>
-                                    <small class="text-muted" style="font-size:0.75rem;">Toca directamente el número medido para cada ranura</small>
+                                    <small class="text-muted" style="font-size:0.75rem;">Toca el número medido para cada ranura</small>
                                 </div>
-                                <span class="badge bg-white text-primary border shadow-sm px-3 py-2 fs-6 rounded-pill" id="neu-r-prom-badge">Promedio: 10.0 mm</span>
+                                <span class="badge bg-white text-primary border shadow-sm px-3 py-2 fs-6 rounded-pill" id="neu-r-prom-badge">Promedio: -- mm</span>
                             </div>
 
                             <!-- R1 (Exterior) -->
@@ -301,7 +301,7 @@
                                     </span>
                                     <div class="d-flex align-items-center gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r1', -1)"><i class="bi bi-dash fs-5"></i></button>
-                                        <span class="badge bg-primary px-3 py-1 fs-6 rounded-pill shadow-2xs" id="lbl-r1">10 mm</span>
+                                        <span class="badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs" id="lbl-r1">0 mm</span>
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r1', 1)"><i class="bi bi-plus fs-5"></i></button>
                                     </div>
                                 </div>
@@ -316,7 +316,7 @@
                                     </span>
                                     <div class="d-flex align-items-center gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r2', -1)"><i class="bi bi-dash fs-5"></i></button>
-                                        <span class="badge bg-primary px-3 py-1 fs-6 rounded-pill shadow-2xs" id="lbl-r2">10 mm</span>
+                                        <span class="badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs" id="lbl-r2">0 mm</span>
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r2', 1)"><i class="bi bi-plus fs-5"></i></button>
                                     </div>
                                 </div>
@@ -331,7 +331,7 @@
                                     </span>
                                     <div class="d-flex align-items-center gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r3', -1)"><i class="bi bi-dash fs-5"></i></button>
-                                        <span class="badge bg-primary px-3 py-1 fs-6 rounded-pill shadow-2xs" id="lbl-r3">10 mm</span>
+                                        <span class="badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs" id="lbl-r3">0 mm</span>
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r3', 1)"><i class="bi bi-plus fs-5"></i></button>
                                     </div>
                                 </div>
@@ -358,11 +358,11 @@
                         <div class="row g-2 mb-3">
                             <div class="col-6 col-sm-3">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.75rem;">Presión Ant. (PSI)</label>
-                                <input type="number" class="form-control rounded-3 fw-bold text-center fs-6" style="height: 46px;" id="neu-input-pres-ant" value="100">
+                                <input type="number" class="form-control rounded-3 fw-bold text-center fs-6" style="height: 46px;" id="neu-input-pres-ant" value="" placeholder="Ej: 100">
                             </div>
                             <div class="col-6 col-sm-3">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.75rem;">Presión Actual (PSI)</label>
-                                <input type="number" class="form-control rounded-3 fw-bold text-center fs-6 text-primary" style="height: 46px;" id="neu-input-pres-act" value="110">
+                                <input type="number" class="form-control rounded-3 fw-bold text-center fs-6 text-primary" style="height: 46px;" id="neu-input-pres-act" value="" placeholder="Ej: 110">
                             </div>
                             <div class="col-6 col-sm-2">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.75rem;">Estado</label>
@@ -433,12 +433,12 @@
                         <!-- Observación de la llanta -->
                         <div class="mb-3">
                             <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.78rem;">Observación de la Llanta (OBS)</label>
-                            <input type="text" class="form-control rounded-3" style="height: 46px; font-size: 0.95rem;" id="neu-input-obs-item" value="Ninguna" placeholder="Ej: Desgaste irregular lado derecho, alinear...">
+                            <input type="text" class="form-control rounded-3" style="height: 46px; font-size: 0.95rem;" id="neu-input-obs-item" value="" placeholder="Ej: Desgaste regular, sin cortes...">
                         </div>
 
                         <!-- Botón Agregar Llanta a la Lista -->
                         <button class="btn btn-primary btn-lg rounded-pill py-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 w-100 fs-6" onclick="window._neuGuardarLlantaEnLista()">
-                            <i class="bi bi-plus-circle-fill fs-5"></i> Guardar Llanta en Inspección
+                            <i class="bi bi-plus-circle-fill fs-5"></i> Guardar Llanta en Inspección y Pasar a la Siguiente
                         </button>
                     </div>
 
@@ -495,7 +495,7 @@
         // Setear datos de la placa y encabezados
         document.getElementById('neu-badge-placa').innerText = (placa || 'SIN-PLACA').toUpperCase();
         document.getElementById('neu-input-fecha').value = hoy;
-        document.getElementById('neu-input-km').value = km || 0;
+        document.getElementById('neu-input-km').value = km || '';
         document.getElementById('neu-input-dias').value = 30;
         document.getElementById('neu-input-obs-gen').value = '';
 
@@ -509,8 +509,11 @@
         // Renderizar Chasis Esquema
         window._neuRenderChassis(placa);
 
-        // Renderizar Botoneras táctiles 1..20 de remanentes
+        // Renderizar Botoneras táctiles 1..20 de remanentes (inician limpias)
         window._neuRenderBotoneraR();
+
+        // Iniciar en posición 1 limpia
+        window._neuSeleccionarPosicion('1');
 
         // Renderizar tabla vacía
         window._neuRenderTablaLlantas();
@@ -530,7 +533,7 @@
         if (backdrop) backdrop.classList.remove('show');
     };
 
-    // Rellenar selectores de marca, medida, modelo y acción
+    // Rellenar selectores de marca, medida, modelo y acción (con opción inicial para seleccionar)
     window._neuRellenarSelects = function(cats) {
         const selMarca  = document.getElementById('neu-sel-marca');
         const selMedida = document.getElementById('neu-sel-medida');
@@ -538,18 +541,16 @@
         const selAccion = document.getElementById('neu-sel-accion');
 
         if (selMarca) {
-            selMarca.innerHTML = cats.marcas.map(m => `<option value="${m}">${m}</option>`).join('');
-            if (cats.marcas.includes('GITI')) selMarca.value = 'GITI';
-            else if (cats.marcas.includes('GOODYEAR')) selMarca.value = 'GOODYEAR';
+            selMarca.innerHTML = '<option value="">-- Seleccionar Marca --</option>' + cats.marcas.map(m => `<option value="${m}">${m}</option>`).join('');
+            selMarca.value = '';
         }
         if (selMedida) {
-            selMedida.innerHTML = cats.medidas.map(m => `<option value="${m}">${m}</option>`).join('');
-            if (cats.medidas.includes('295/80R22.5')) selMedida.value = '295/80R22.5';
-            else if (cats.medidas.includes('275/70R22.5')) selMedida.value = '275/70R22.5';
+            selMedida.innerHTML = '<option value="">-- Seleccionar Medida --</option>' + cats.medidas.map(m => `<option value="${m}">${m}</option>`).join('');
+            selMedida.value = '';
         }
         if (selModelo) {
-            selModelo.innerHTML = cats.modelos.map(m => `<option value="${m}">${m}</option>`).join('');
-            if (cats.modelos.includes('GAU867')) selModelo.value = 'GAU867';
+            selModelo.innerHTML = '<option value="">-- Seleccionar Modelo --</option>' + cats.modelos.map(m => `<option value="${m}">${m}</option>`).join('');
+            selModelo.value = '';
         }
         if (selAccion) {
             selAccion.innerHTML = cats.acciones.map(a => `<option value="${a}">${a}</option>`).join('');
@@ -587,29 +588,35 @@
         window._neuPosicionActiva = pos;
         const b = document.getElementById('neu-form-pos-badge');
         if (b) b.innerText = pos;
+        const labelTop = document.getElementById('neu-pos-label-top');
+        if (labelTop) labelTop.innerText = pos;
 
+        // Actualizar botones de posición en la barra scroll
         document.querySelectorAll('#neu-pos-selector button').forEach(btn => {
             btn.className = 'btn btn-outline-secondary neu-touch-btn-pos';
         });
         const activeBtn = document.getElementById(`btn-pos-${pos}`);
-        if (activeBtn) activeBtn.className = 'btn btn-primary text-white shadow-sm neu-touch-btn-pos';
+        if (activeBtn) {
+            activeBtn.className = 'btn btn-primary text-white shadow-sm neu-touch-btn-pos';
+            activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
 
-        // Si la llanta ya está en la lista actual, cargar sus valores para edición rápida
+        // Si la llanta ya está en la lista actual, cargar sus datos
         const existente = window._neuLlantasActuales.find(l => String(l.posicion) === String(pos));
         if (existente) {
-            if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = existente.marca;
-            if (document.getElementById('neu-sel-medida')) document.getElementById('neu-sel-medida').value = existente.medida;
-            if (document.getElementById('neu-sel-modelo')) document.getElementById('neu-sel-modelo').value = existente.modelo;
-            window._neuSetR('r1', existente.r1 || 10);
-            window._neuSetR('r2', existente.r2 || 10);
-            window._neuSetR('r3', existente.r3 || 10);
+            if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = existente.marca || '';
+            if (document.getElementById('neu-sel-medida')) document.getElementById('neu-sel-medida').value = existente.medida || '';
+            if (document.getElementById('neu-sel-modelo')) document.getElementById('neu-sel-modelo').value = existente.modelo || '';
+            window._neuSetR('r1', existente.r1 || 0);
+            window._neuSetR('r2', existente.r2 || 0);
+            window._neuSetR('r3', existente.r3 || 0);
             window._neuSetR('r4', existente.r4 || 0);
-            if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = existente.presion_ant || 0;
-            if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = existente.presion_actual || 0;
+            if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = (existente.presion_ant || existente.presion_ant === 0) ? existente.presion_ant : '';
+            if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = (existente.presion_actual || existente.presion_actual === 0) ? existente.presion_actual : '';
             if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = existente.estado || 'NUEVA';
             if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = existente.accion || 'Inspeccion';
             if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = existente.rot || 'NO';
-            if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = existente.observaciones || 'Ninguna';
+            if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = existente.observaciones || '';
             
             window._neuFotos = { foto1: existente.foto1 || null, foto2: existente.foto2 || null, foto3: existente.foto3 || null };
             [1, 2, 3].forEach(n => {
@@ -625,13 +632,11 @@
                 }
             });
         } else {
-            window._neuSetR('r1', 10);
-            window._neuSetR('r2', 10);
-            window._neuSetR('r3', 10);
-            window._neuSetR('r4', 0);
-            window._neuLimpiarFotos();
+            // Posición limpia desde cero
+            window._neuLimpiarFormLlanta();
         }
         window._neuCalcularPromedio();
+        window._neuActualizarColoresChassis();
     };
 
     window._neuLimpiarFotos = function() {
@@ -652,17 +657,16 @@
         ['r1', 'r2', 'r3', 'r4'].forEach(tipo => {
             const container = document.getElementById(`neu-${tipo}-buttons`);
             if (!container) return;
-            const current = window[`_neuVal${tipo.toUpperCase()}`] || (tipo === 'r4' ? 0 : 10);
+            const current = window[`_neuVal${tipo.toUpperCase()}`] || 0;
             let html = '';
             
-            if (tipo === 'r4') {
-                const isZero = current === 0;
-                html += `
-                    <button type="button" class="btn ${isZero ? 'btn-secondary text-white shadow-sm' : 'btn-outline-secondary'} neu-touch-btn-r" style="min-width:70px;" onclick="window._neuSetR('${tipo}', 0)" id="btn-val-${tipo}-0">
-                        0 (N/A)
-                    </button>
-                `;
-            }
+            // Botón 0 (Sin medición / Limpio)
+            const isZero = current === 0;
+            html += `
+                <button type="button" class="btn ${isZero ? 'btn-secondary text-white shadow-sm' : 'btn-outline-secondary'} neu-touch-btn-r" style="min-width:60px;" onclick="window._neuSetR('${tipo}', 0)" id="btn-val-${tipo}-0">
+                    0 mm
+                </button>
+            `;
 
             for (let i = 1; i <= 20; i++) {
                 const isActive = i === current;
@@ -675,25 +679,31 @@
             }
             container.innerHTML = html;
             const lbl = document.getElementById(`lbl-${tipo}`);
-            if (lbl) lbl.innerText = `${current} mm`;
+            if (lbl) {
+                lbl.innerText = `${current} mm`;
+                lbl.className = (current > 0) ? 'badge bg-primary px-3 py-1 fs-6 rounded-pill shadow-2xs' : 'badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs';
+            }
         });
         window._neuCalcularPromedio();
     };
 
     window._neuSetR = function(tipo, val) {
-        const minVal = (tipo === 'r4') ? 0 : 1;
-        const num = Math.max(minVal, Math.min(20, parseInt(val, 10) || minVal));
+        const num = Math.max(0, Math.min(20, parseInt(val, 10) || 0));
         window[`_neuVal${tipo.toUpperCase()}`] = num;
 
         const lbl = document.getElementById(`lbl-${tipo}`);
-        if (lbl) lbl.innerText = `${num} mm`;
-
-        // Actualizar estados visuales de los botones
-        if (tipo === 'r4') {
-            const btnZero = document.getElementById(`btn-val-r4-0`);
-            if (btnZero) btnZero.className = (num === 0) ? 'btn btn-secondary text-white shadow-sm neu-touch-btn-r' : 'btn btn-outline-secondary neu-touch-btn-r';
+        if (lbl) {
+            lbl.innerText = `${num} mm`;
+            lbl.className = (num > 0) ? 'badge bg-primary px-3 py-1 fs-6 rounded-pill shadow-2xs' : 'badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs';
         }
 
+        // Actualizar botón 0
+        const btnZero = document.getElementById(`btn-val-${tipo}-0`);
+        if (btnZero) {
+            btnZero.className = (num === 0) ? 'btn btn-secondary text-white shadow-sm neu-touch-btn-r' : 'btn btn-outline-secondary neu-touch-btn-r';
+        }
+
+        // Actualizar botones 1..20
         for (let i = 1; i <= 20; i++) {
             const btn = document.getElementById(`btn-val-${tipo}-${i}`);
             if (btn) {
@@ -707,21 +717,27 @@
     };
 
     window._neuAjustarR = function(tipo, delta) {
-        const current = window[`_neuVal${tipo.toUpperCase()}`] || (tipo === 'r4' ? 0 : 10);
+        const current = window[`_neuVal${tipo.toUpperCase()}`] || 0;
         window._neuSetR(tipo, current + delta);
     };
 
     window._neuCalcularPromedio = function() {
-        const r1 = window._neuValR1 || 10;
-        const r2 = window._neuValR2 || 10;
-        const r3 = window._neuValR3 || 10;
+        const r1 = window._neuValR1 || 0;
+        const r2 = window._neuValR2 || 0;
+        const r3 = window._neuValR3 || 0;
         const r4 = window._neuValR4 || 0;
-        const prom = (r4 > 0) ? ((r1 + r2 + r3 + r4) / 4.0).toFixed(1) : ((r1 + r2 + r3) / 3.0).toFixed(1);
+
         const lbl = document.getElementById('neu-r-prom-badge');
-        if (lbl) {
-            let color = prom > 6 ? '#16a34a' : (prom > 4 ? '#d97706' : '#dc2626');
-            lbl.innerHTML = `Promedio: <b style="color:${color}">${prom} mm</b> ${prom <= 4 ? '<span class="badge bg-danger ms-1">⚠️ Cambio</span>' : ''}`;
+        if (!lbl) return;
+
+        if (r1 === 0 && r2 === 0 && r3 === 0 && r4 === 0) {
+            lbl.innerHTML = `<span class="text-muted">Promedio: -- mm (Sin medir)</span>`;
+            return;
         }
+
+        const prom = (r4 > 0) ? ((r1 + r2 + r3 + r4) / 4.0).toFixed(1) : ((r1 + r2 + r3) / 3.0).toFixed(1);
+        let color = prom > 6 ? '#16a34a' : (prom > 4 ? '#d97706' : '#dc2626');
+        lbl.innerHTML = `Promedio: <b style="color:${color}">${prom} mm</b> ${prom <= 4 ? '<span class="badge bg-danger ms-1">⚠️ Cambio</span>' : ''}`;
     };
 
     // Renderizar Chasis SVG Interactivo
@@ -740,55 +756,55 @@
                 <!-- Eje 1 (Direccional) -->
                 <line x1="45" y1="60" x2="175" y2="60" stroke="#64748b" stroke-width="4"/>
                 <g style="cursor:pointer;" onclick="window._neuSeleccionarPosicion('1')">
-                    <rect id="svg-tire-1" x="25" y="40" width="24" height="42" rx="6" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+                    <rect id="svg-tire-1" x="25" y="40" width="24" height="42" rx="6" fill="#94a3b8" stroke="#64748b" stroke-width="2"/>
                     <text x="37" y="66" font-size="11" font-weight="900" fill="#ffffff" text-anchor="middle">1</text>
                 </g>
                 <g style="cursor:pointer;" onclick="window._neuSeleccionarPosicion('2')">
-                    <rect id="svg-tire-2" x="171" y="40" width="24" height="42" rx="6" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+                    <rect id="svg-tire-2" x="171" y="40" width="24" height="42" rx="6" fill="#94a3b8" stroke="#64748b" stroke-width="2"/>
                     <text x="183" y="66" font-size="11" font-weight="900" fill="#ffffff" text-anchor="middle">2</text>
                 </g>
 
                 <!-- Eje 2 (Tracción 1 Dual) -->
                 <line x1="30" y1="170" x2="190" y2="170" stroke="#64748b" stroke-width="4"/>
                 <g style="cursor:pointer;" onclick="window._neuSeleccionarPosicion('3')">
-                    <rect id="svg-tire-3" x="8" y="150" width="20" height="42" rx="5" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
+                    <rect id="svg-tire-3" x="8" y="150" width="20" height="42" rx="5" fill="#94a3b8" stroke="#64748b" stroke-width="1.5"/>
                     <text x="18" y="176" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle">3</text>
                 </g>
                 <g style="cursor:pointer;" onclick="window._neuSeleccionarPosicion('4')">
-                    <rect id="svg-tire-4" x="32" y="150" width="20" height="42" rx="5" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
+                    <rect id="svg-tire-4" x="32" y="150" width="20" height="42" rx="5" fill="#94a3b8" stroke="#64748b" stroke-width="1.5"/>
                     <text x="42" y="176" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle">4</text>
                 </g>
                 <g style="cursor:pointer;" onclick="window._neuSeleccionarPosicion('5')">
-                    <rect id="svg-tire-5" x="168" y="150" width="20" height="42" rx="5" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
+                    <rect id="svg-tire-5" x="168" y="150" width="20" height="42" rx="5" fill="#94a3b8" stroke="#64748b" stroke-width="1.5"/>
                     <text x="178" y="176" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle">5</text>
                 </g>
                 <g style="cursor:pointer;" onclick="window._neuSeleccionarPosicion('6')">
-                    <rect id="svg-tire-6" x="192" y="150" width="20" height="42" rx="5" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
+                    <rect id="svg-tire-6" x="192" y="150" width="20" height="42" rx="5" fill="#94a3b8" stroke="#64748b" stroke-width="1.5"/>
                     <text x="202" y="176" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle">6</text>
                 </g>
 
                 <!-- Eje 3 (Tracción 2 Dual) -->
                 <line x1="30" y1="230" x2="190" y2="230" stroke="#64748b" stroke-width="4"/>
                 <g style="cursor:pointer;" onclick="window._neuSeleccionarPosicion('7')">
-                    <rect id="svg-tire-7" x="8" y="210" width="20" height="42" rx="5" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
+                    <rect id="svg-tire-7" x="8" y="210" width="20" height="42" rx="5" fill="#94a3b8" stroke="#64748b" stroke-width="1.5"/>
                     <text x="18" y="236" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle">7</text>
                 </g>
                 <g style="cursor:pointer;" onclick="window._neuSeleccionarPosicion('8')">
-                    <rect id="svg-tire-8" x="32" y="210" width="20" height="42" rx="5" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
+                    <rect id="svg-tire-8" x="32" y="210" width="20" height="42" rx="5" fill="#94a3b8" stroke="#64748b" stroke-width="1.5"/>
                     <text x="42" y="236" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle">8</text>
                 </g>
                 <g style="cursor:pointer;" onclick="window._neuSeleccionarPosicion('9')">
-                    <rect id="svg-tire-9" x="168" y="210" width="20" height="42" rx="5" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
+                    <rect id="svg-tire-9" x="168" y="210" width="20" height="42" rx="5" fill="#94a3b8" stroke="#64748b" stroke-width="1.5"/>
                     <text x="178" y="236" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle">9</text>
                 </g>
                 <g style="cursor:pointer;" onclick="window._neuSeleccionarPosicion('10')">
-                    <rect id="svg-tire-10" x="192" y="210" width="20" height="42" rx="5" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
+                    <rect id="svg-tire-10" x="192" y="210" width="20" height="42" rx="5" fill="#94a3b8" stroke="#64748b" stroke-width="1.5"/>
                     <text x="202" y="236" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle">10</text>
                 </g>
 
                 <!-- Repuesto (R) -->
                 <g style="cursor:pointer;" onclick="window._neuSeleccionarPosicion('R')">
-                    <rect id="svg-tire-R" x="95" y="110" width="30" height="20" rx="5" fill="#64748b" stroke="#334155" stroke-width="1.5"/>
+                    <rect id="svg-tire-R" x="95" y="110" width="30" height="20" rx="5" fill="#94a3b8" stroke="#64748b" stroke-width="1.5"/>
                     <text x="110" y="124" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle">R</text>
                 </g>
             </svg>
@@ -797,34 +813,52 @@
     };
 
     window._neuActualizarColoresChassis = function() {
-        window._neuLlantasActuales.forEach(l => {
-            const svgTire = document.getElementById(`svg-tire-${l.posicion}`);
-            if (svgTire) {
+        const ordenPos = ['1','2','3','4','5','6','7','8','9','10','11','12','R'];
+        
+        ordenPos.forEach(p => {
+            const svgTire = document.getElementById(`svg-tire-${p}`);
+            if (!svgTire) return;
+
+            const l = window._neuLlantasActuales.find(item => String(item.posicion) === String(p));
+            const isActive = String(window._neuPosicionActiva) === String(p);
+
+            if (l) {
                 const prom = parseFloat(l.remanente_promedio || 0);
                 if (prom <= 4.0) {
                     svgTire.setAttribute('fill', '#ef4444');
-                    svgTire.setAttribute('stroke', '#b91c1c');
+                    svgTire.setAttribute('stroke', isActive ? '#2563eb' : '#b91c1c');
                 } else if (prom <= 6.0) {
                     svgTire.setAttribute('fill', '#eab308');
-                    svgTire.setAttribute('stroke', '#a16207');
+                    svgTire.setAttribute('stroke', isActive ? '#2563eb' : '#a16207');
                 } else {
                     svgTire.setAttribute('fill', '#22c55e');
-                    svgTire.setAttribute('stroke', '#15803d');
+                    svgTire.setAttribute('stroke', isActive ? '#2563eb' : '#15803d');
                 }
+            } else {
+                svgTire.setAttribute('fill', isActive ? '#3b82f6' : '#94a3b8');
+                svgTire.setAttribute('stroke', isActive ? '#1d4ed8' : '#64748b');
             }
+
+            svgTire.setAttribute('stroke-width', isActive ? '3.5' : '1.5');
         });
     };
 
-    // Guardar Llanta en Lista local
+    // Guardar Llanta en Lista local y auto-avanzar a la siguiente posición
     window._neuGuardarLlantaEnLista = function() {
         const pos = window._neuPosicionActiva || '1';
         const marca = document.getElementById('neu-sel-marca')?.value || '';
         const medida = document.getElementById('neu-sel-medida')?.value || '';
         const modelo = document.getElementById('neu-sel-modelo')?.value || '';
-        const r1 = window._neuValR1 || 10;
-        const r2 = window._neuValR2 || 10;
-        const r3 = window._neuValR3 || 10;
+        const r1 = window._neuValR1 || 0;
+        const r2 = window._neuValR2 || 0;
+        const r3 = window._neuValR3 || 0;
         const r4 = window._neuValR4 || 0;
+
+        if (r1 === 0 && r2 === 0 && r3 === 0 && r4 === 0) {
+            alert(`⚠️ Por favor ingresa al menos una medición de remanente (R1, R2, R3) para la Llanta Posición ${pos}.`);
+            return;
+        }
+
         const rProm = (r4 > 0) ? ((r1 + r2 + r3 + r4) / 4.0) : ((r1 + r2 + r3) / 3.0);
         const presion_ant = parseInt(document.getElementById('neu-input-pres-ant')?.value || 0, 10);
         const presion_actual = parseInt(document.getElementById('neu-input-pres-act')?.value || 0, 10);
@@ -865,12 +899,14 @@
         window._neuRenderTablaLlantas();
         window._neuActualizarColoresChassis();
 
-        // Pasar a la siguiente posición automáticamente si es número
-        const num = parseInt(pos, 10);
-        if (!isNaN(num) && num < 12) {
-            window._neuSeleccionarPosicion(String(num + 1));
-        } else if (num === 12) {
-            window._neuSeleccionarPosicion('R');
+        // Auto-avanzar a la siguiente posición
+        const ordenPos = ['1','2','3','4','5','6','7','8','9','10','11','12','R'];
+        const curIdx = ordenPos.indexOf(String(pos).toUpperCase());
+        if (curIdx !== -1 && curIdx < ordenPos.length - 1) {
+            const nextPos = ordenPos[curIdx + 1];
+            window._neuSeleccionarPosicion(nextPos);
+        } else {
+            alert(`✅ Llanta Posición ${pos} registrada. Has completado todas las posiciones de la unidad.`);
         }
     };
 
@@ -897,9 +933,9 @@
             return `
                 <tr>
                     <td class="ps-3"><span class="badge bg-primary rounded-pill px-2 fs-6">${l.posicion}</span></td>
-                    <td class="fw-bold">${l.marca}</td>
-                    <td>${l.medida}</td>
-                    <td><span class="badge bg-light text-dark border">${l.modelo}</span></td>
+                    <td class="fw-bold">${l.marca || '---'}</td>
+                    <td>${l.medida || '---'}</td>
+                    <td><span class="badge bg-light text-dark border">${l.modelo || '---'}</span></td>
                     <td class="text-center fw-bold">${l.r1}</td>
                     <td class="text-center fw-bold">${l.r2}</td>
                     <td class="text-center fw-bold">${l.r3}</td>
@@ -926,10 +962,12 @@
     };
 
     window._neuLimpiarFormLlanta = function() {
-        document.getElementById('neu-input-obs-item').value = 'Ninguna';
-        window._neuSetR('r1', 10);
-        window._neuSetR('r2', 10);
-        window._neuSetR('r3', 10);
+        if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = '';
+        if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = '';
+        if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = '';
+        window._neuSetR('r1', 0);
+        window._neuSetR('r2', 0);
+        window._neuSetR('r3', 0);
         window._neuSetR('r4', 0);
         if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
         window._neuLimpiarFotos();
