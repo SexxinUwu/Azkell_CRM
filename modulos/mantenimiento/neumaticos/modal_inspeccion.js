@@ -614,6 +614,9 @@
             activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         }
 
+        // Limpiar siempre el formulario primero para evitar arrastrar marca/medida/modelo de otras posiciones
+        window._neuLimpiarFormLlanta();
+
         // Si la llanta ya está en la lista actual borrador, cargar sus datos
         const existente = window._neuLlantasActuales.find(l => String(l.posicion) === String(pos));
         if (existente) {
@@ -645,30 +648,30 @@
                 }
             });
         } else if (window._neuUltimaInspeccionMap && window._neuUltimaInspeccionMap[String(pos).toUpperCase()]) {
-            // AUTOPOBLADO INTELIGENTE DESDE LA ÚLTIMA INSPECCIÓN REGISTRADA
+            // AUTOPOBLADO INTELIGENTE DESDE LA ÚLTIMA INSPECCIÓN REGISTRADA PARA ESTA POSICIÓN
             const prev = window._neuUltimaInspeccionMap[String(pos).toUpperCase()];
             
             const elMarca = document.getElementById('neu-sel-marca');
             const elMedida = document.getElementById('neu-sel-medida');
             const elModelo = document.getElementById('neu-sel-modelo');
 
-            if (elMarca && prev.marca) {
-                if (!Array.from(elMarca.options).some(o => o.value === prev.marca)) {
+            if (elMarca) {
+                if (prev.marca && !Array.from(elMarca.options).some(o => o.value === prev.marca)) {
                     elMarca.add(new Option(prev.marca, prev.marca));
                 }
-                elMarca.value = prev.marca;
+                elMarca.value = prev.marca || '';
             }
-            if (elMedida && prev.medida) {
-                if (!Array.from(elMedida.options).some(o => o.value === prev.medida)) {
+            if (elMedida) {
+                if (prev.medida && !Array.from(elMedida.options).some(o => o.value === prev.medida)) {
                     elMedida.add(new Option(prev.medida, prev.medida));
                 }
-                elMedida.value = prev.medida;
+                elMedida.value = prev.medida || '';
             }
-            if (elModelo && prev.modelo) {
-                if (!Array.from(elModelo.options).some(o => o.value === prev.modelo)) {
+            if (elModelo) {
+                if (prev.modelo && !Array.from(elModelo.options).some(o => o.value === prev.modelo)) {
                     elModelo.add(new Option(prev.modelo, prev.modelo));
                 }
-                elModelo.value = prev.modelo;
+                elModelo.value = prev.modelo || '';
             }
 
             // Remanentes anteriores cargados como referencia
@@ -677,7 +680,7 @@
             window._neuSetR('r3', prev.r3 || 0);
             window._neuSetR('r4', prev.r4 || 0);
 
-            // Presión Anterior (toma la presión actual de la última inspección) y Presión Actual por defecto
+            // Presión Anterior y Presión Actual por defecto
             if (document.getElementById('neu-input-pres-ant')) {
                 document.getElementById('neu-input-pres-ant').value = (prev.presion_actual || prev.presion_actual === 0) ? prev.presion_actual : '';
             }
@@ -692,9 +695,6 @@
             if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = '';
 
             window._neuLimpiarFotos();
-        } else {
-            // Posición limpia con valores predeterminados
-            window._neuLimpiarFormLlanta();
         }
         window._neuCalcularPromedio();
         window._neuActualizarColoresChassis();
