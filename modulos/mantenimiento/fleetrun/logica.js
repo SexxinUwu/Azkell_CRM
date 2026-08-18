@@ -1573,13 +1573,26 @@ window.updateGraficoFleetrun = function(vencidos, proximos, vigentes, totalFlota
     const elLogoEmp = document.getElementById('scania-logo-empresa');
     const elLogoPh = document.getElementById('scania-logo-placeholder');
     if (elLogoEmp) {
-        if (empLogo) {
+        if (empLogo && empLogo.trim() !== '') {
             elLogoEmp.src = empLogo;
             elLogoEmp.style.display = 'block';
-            if (elLogoPh) elLogoPh.style.display = 'none';
+            if (elLogoPh) {
+                elLogoPh.style.display = 'none';
+                elLogoPh.classList.remove('d-flex');
+            }
+            elLogoEmp.onerror = function() {
+                elLogoEmp.style.display = 'none';
+                if (elLogoPh) {
+                    elLogoPh.style.display = 'flex';
+                    elLogoPh.classList.add('d-flex');
+                }
+            };
         } else {
             elLogoEmp.style.display = 'none';
-            if (elLogoPh) elLogoPh.style.display = 'flex';
+            if (elLogoPh) {
+                elLogoPh.style.display = 'flex';
+                elLogoPh.classList.add('d-flex');
+            }
         }
     }
 
@@ -1593,7 +1606,8 @@ window.updateGraficoFleetrun = function(vencidos, proximos, vigentes, totalFlota
     }
 
     // 2. Actualizar KPIs Numéricos (Web y Móvil)
-    const calcPct = (val) => totalFlota ? Math.round((val / totalFlota) * 100) + '%' : '0%';
+    const calcPctVal = (val) => totalFlota ? Math.round((val / totalFlota) * 100) : 0;
+    const calcPct = (val) => `${calcPctVal(val)}%`;
     
     document.querySelectorAll('.sca-kpi-total-val, #sca-kpi-total').forEach(el => el.textContent = totalFlota || 0);
     document.querySelectorAll('.sca-kpi-critico-val, #sca-kpi-critico').forEach(el => el.textContent = vencidos || 0);
@@ -1603,7 +1617,7 @@ window.updateGraficoFleetrun = function(vencidos, proximos, vigentes, totalFlota
     document.querySelectorAll('.sca-kpi-operativo-val, #sca-kpi-operativo').forEach(el => el.textContent = vigentes || 0);
     document.querySelectorAll('.sca-pct-operativo-val, #sca-pct-operativo').forEach(el => el.textContent = calcPct(vigentes));
 
-    // 3. Actualizar Gráfico Donut
+    // 3. Actualizar Gráfico Donut con Porcentaje y Cantidad entre paréntesis en la Leyenda
     if(!window.chartFleetrunInst) window.chartFleetrunInst = initGraficoFleetrun();
     if(!window.chartFleetrunInst) return;
     let isDark = document.body.classList.contains('dark');
@@ -1616,11 +1630,19 @@ window.updateGraficoFleetrun = function(vencidos, proximos, vigentes, totalFlota
     
     let totalMant = (vencidos || 0) + (proximos || 0) + (vigentes || 0);
     if(totalMant === 0) {
-        window.chartFleetrunInst.data.labels = ['Sin Datos'];
+        window.chartFleetrunInst.data.labels = ['Sin Datos: 0% (0)'];
         window.chartFleetrunInst.data.datasets[0].data = [1];
         window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#94a3b8'];
     } else {
-        window.chartFleetrunInst.data.labels = ['Vencidos', 'Próximos', 'Vigentes'];
+        const pctV = calcPctVal(vencidos);
+        const pctP = calcPctVal(proximos);
+        const pctO = calcPctVal(vigentes);
+
+        window.chartFleetrunInst.data.labels = [
+            `Vencidos: ${pctV}% (${vencidos || 0})`,
+            `Por Vencer: ${pctP}% (${proximos || 0})`,
+            `Vigentes: ${pctO}% (${vigentes || 0})`
+        ];
         window.chartFleetrunInst.data.datasets[0].data = [vencidos, proximos, vigentes];
         window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#dc2626', '#ca8a04', '#16a34a'];
     }
