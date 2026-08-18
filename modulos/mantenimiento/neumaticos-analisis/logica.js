@@ -199,18 +199,31 @@
             // Renderizar datos de la unidad y visor interactivo
             let cardsHtml = llantas.map(l => {
                 const prom = parseFloat(l.remanente_promedio || 0);
-                const color = prom > 6 ? '#16a34a' : (prom > 4 ? '#d97706' : '#dc2626');
-                const badgeClass = prom > 6 ? 'bg-success' : (prom > 4 ? 'bg-warning text-dark' : 'bg-danger');
+                const isGood = prom > 6;
+                const isWarning = prom > 4 && prom <= 6;
+                const borderColor = isGood ? '#10b981' : (isWarning ? '#f59e0b' : '#ef4444');
+                const badgeBg = isGood ? '#059669' : (isWarning ? '#d97706' : '#dc2626');
+
                 return `
                     <div class="col-6 col-sm-4 col-md-3">
-                        <div class="p-2 rounded-3 border bg-light text-center h-100" style="border-left: 4px solid ${color} !important;">
+                        <div class="p-2 rounded-3 border bg-white shadow-2xs text-center h-100 position-relative" style="border-left: 5px solid ${borderColor} !important; border-color: #e2e8f0;">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="badge bg-dark rounded-pill px-2" style="font-size:0.65rem;">Pos ${l.posicion}</span>
-                                <span class="badge ${badgeClass}" style="font-size:0.65rem;">${prom} mm</span>
+                                <span class="badge rounded-pill px-2 py-1 fw-bold text-white shadow-xs" style="background: #1e293b !important; color: #ffffff !important; font-size: 0.72rem; letter-spacing: 0.02em;">
+                                    Pos ${l.posicion}
+                                </span>
+                                <span class="badge rounded-pill px-2 py-1 fw-bold text-white shadow-xs" style="background: ${badgeBg} !important; color: #ffffff !important; font-size: 0.75rem; letter-spacing: 0.02em;">
+                                    ${prom} mm
+                                </span>
                             </div>
-                            <div class="fw-bold text-dark text-truncate small">${l.marca}</div>
-                            <div class="text-muted small" style="font-size:0.68rem;">${l.modelo} • ${l.medida}</div>
-                            <div class="small fw-semibold mt-1 text-primary" style="font-size:0.7rem;">${l.presion_actual} PSI</div>
+                            <div class="fw-bold text-dark text-truncate small mt-1" style="font-size: 0.85rem; color: #0f172a !important;">
+                                ${l.marca || '—'}
+                            </div>
+                            <div class="small fw-medium text-truncate" style="font-size: 0.7rem; color: #64748b !important;">
+                                ${l.modelo || '—'} • ${l.medida || '—'}
+                            </div>
+                            <div class="small fw-bold mt-1 d-inline-block px-2 py-0.5 rounded-pill" style="font-size: 0.74rem; background: #eff6ff; color: #2563eb;">
+                                <i class="bi bi-speedometer2 me-1"></i>${l.presion_actual || '0'} PSI
+                            </div>
                         </div>
                     </div>
                 `;
