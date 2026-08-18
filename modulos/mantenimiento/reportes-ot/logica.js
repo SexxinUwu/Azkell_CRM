@@ -1941,7 +1941,7 @@ window.rotGenerarPlantillaLlantasOT = async function(idOt) {
     };
 
     var posSec1 = ['1','2','3','4','5','6','7','8','9','10','11','12','R'];
-    var posSec2 = ['1','2','3','4','5','6','7','8','9','10','11','12','R'];
+    var posSec2 = ['1','2'];
 
     var htmlRows1 = posSec1.map(renderFilaPosBlanco).join('');
     var htmlRows2 = posSec2.map(renderFilaPosBlanco).join('');
