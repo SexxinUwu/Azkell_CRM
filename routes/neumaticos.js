@@ -798,6 +798,62 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ============================================================
+    // 8. 🚚 ESTADO ACTUAL DE NEUMÁTICOS POR PLACA (Visor Interactivo)
+    // ============================================================
+    router.get('/estado-actual/:placa', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const placa = (req.params.placa || '').trim().toUpperCase();
+
+            if (!placa) {
+                return res.status(400).json({ ok: false, error: 'Placa requerida' });
+            }
+
+            // Datos de la unidad desde tabla placas
+            const [unidadRows] = await tdb.query(
+                "SELECT * FROM placas WHERE placa COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci LIMIT 1",
+                [placa]
+            );
+            const unidad = unidadRows[0] || { placa };
+
+            // Obtener la última inspección de esta placa
+            const [inspRows] = await tdb.query(
+                "SELECT * FROM neumaticos_inspecciones WHERE placa COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci ORDER BY fecha_inspeccion DESC, created_at DESC LIMIT 1",
+                [placa]
+            );
+
+            if (!inspRows || inspRows.length === 0) {
+                return res.json({
+                    ok: true,
+                    placa,
+                    unidad,
+                    ultima_inspeccion: null,
+                    posiciones: []
+                });
+            }
+
+            const ultimaInsp = inspRows[0];
+
+            // Obtener los detalles de las llantas en esa inspección
+            const [detalles] = await tdb.query(
+                "SELECT * FROM neumaticos_inspecciones_det WHERE id_inspeccion COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci ORDER BY CAST(posicion AS UNSIGNED) ASC, posicion ASC",
+                [ultimaInsp.id_inspeccion]
+            );
+
+            res.json({
+                ok: true,
+                placa,
+                unidad,
+                ultima_inspeccion: ultimaInsp,
+                posiciones: detalles || []
+            });
+        } catch (err) {
+            console.error("Error obteniendo estado actual de neumáticos por placa:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     // ── POST /api/neumaticos/importar — Importación masiva desde Excel ──────
     router.post('/importar', async (req, res) => {
         const tdb = getDb(req);
