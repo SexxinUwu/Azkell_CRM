@@ -15,14 +15,15 @@
 
             window._neuDataAnalisis = data;
 
-            // 1. Render KPIs
+            // 1. Render KPIs con casteo numérico estricto
             const r = data.resumen || {};
-            const total = r.total_inspecciones || 0;
-            const vig = r.vigentes || 0;
-            const novig = r.no_vigentes || 0;
-            const crit = r.llantas_criticas || 0;
+            const total = Number(r.total_inspecciones || 0);
+            const vig = Number(r.vigentes || 0);
+            const novig = Number(r.no_vigentes || 0);
+            const crit = Number(r.llantas_criticas || 0);
             const totalUnidades = vig + novig;
-            const porcVig = totalUnidades > 0 ? Math.round((vig / totalUnidades) * 100) : 100;
+            const porcVig = totalUnidades > 0 ? Math.round((vig / totalUnidades) * 100) : 0;
+            const porcNoVig = totalUnidades > 0 ? Math.round((novig / totalUnidades) * 100) : 0;
 
             document.getElementById('kpi-neu-total-insp').innerText = total;
             document.getElementById('kpi-neu-vigentes').innerText = vig;
@@ -33,8 +34,10 @@
             document.getElementById('kpi-neu-criticas').innerText = crit;
             document.getElementById('kpi-neu-vencidas').innerText = novig;
 
-            document.getElementById('lbl-vigentes-cnt').innerText = vig;
-            document.getElementById('lbl-novigentes-cnt').innerText = novig;
+            const lblVig = document.getElementById('lbl-vigentes-cnt');
+            if (lblVig) lblVig.innerText = `${vig} (${porcVig}%)`;
+            const lblNoVig = document.getElementById('lbl-novigentes-cnt');
+            if (lblNoVig) lblNoVig.innerText = `${novig} (${porcNoVig}%)`;
 
             // 2. Render Chart Vigencia Donut
             window.neuRenderChartVigencia(vig, novig);
