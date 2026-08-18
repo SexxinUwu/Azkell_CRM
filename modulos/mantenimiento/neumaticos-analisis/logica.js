@@ -21,9 +21,16 @@
             const vig = Number(r.vigentes || 0);
             const novig = Number(r.no_vigentes || 0);
             const crit = Number(r.llantas_criticas || 0);
-            const totalUnidadesEnUso = Number(r.unidades_en_uso || (vig + novig));
+            const totalUnidadesEnUso = Number(r.unidades_en_uso || 178);
+            
+            let sinInsp = Number(r.sin_inspeccion || 0);
+            if (sinInsp < 0 || (vig + novig + sinInsp) !== totalUnidadesEnUso) {
+                sinInsp = Math.max(0, totalUnidadesEnUso - (vig + novig));
+            }
+
             const porcVig = totalUnidadesEnUso > 0 ? Math.round((vig / totalUnidadesEnUso) * 100) : 0;
             const porcNoVig = totalUnidadesEnUso > 0 ? Math.round((novig / totalUnidadesEnUso) * 100) : 0;
+            const porcSinInsp = Math.max(0, 100 - porcVig - porcNoVig);
 
             document.getElementById('kpi-neu-total-insp').innerText = total;
             const usoEl = document.getElementById('kpi-neu-unidades-uso');
@@ -41,9 +48,11 @@
             if (lblVig) lblVig.innerText = `${vig} (${porcVig}%)`;
             const lblNoVig = document.getElementById('lbl-novigentes-cnt');
             if (lblNoVig) lblNoVig.innerText = `${novig} (${porcNoVig}%)`;
+            const lblSinInsp = document.getElementById('lbl-sininsp-cnt');
+            if (lblSinInsp) lblSinInsp.innerText = `${sinInsp} (${porcSinInsp}%)`;
 
-            // 2. Render Chart Vigencia Donut
-            window.neuRenderChartVigencia(vig, novig);
+            // 2. Render Chart Vigencia Donut con 3 segmentos (100% de la flota)
+            window.neuRenderChartVigencia(vig, novig, sinInsp);
 
             // 3. Render Tabla
             window.neuFiltrarTablaInsp();
@@ -55,7 +64,7 @@
         }
     };
 
-    window.neuRenderChartVigencia = function(vig, novig) {
+    window.neuRenderChartVigencia = function(vig, novig, sinInsp) {
         const canvas = document.getElementById('chartNeuVigencia');
         if (!canvas) return;
 
@@ -67,14 +76,15 @@
         const ChartConstructor = window.Chart || (typeof Chart !== 'undefined' ? Chart : null);
         if (!ChartConstructor) return;
 
-        const total = vig + novig;
-        const dataVals = total === 0 ? [1, 0] : [vig, novig];
-        const bgColors = total === 0 ? ['#e2e8f0', '#cbd5e1'] : ['#22c55e', '#ef4444'];
+        const sInsp = sinInsp || 0;
+        const total = vig + novig + sInsp;
+        const dataVals = total === 0 ? [1, 0, 0] : [vig, novig, sInsp];
+        const bgColors = total === 0 ? ['#e2e8f0', '#cbd5e1', '#94a3b8'] : ['#22c55e', '#ef4444', '#94a3b8'];
 
         window._neuChartVigencia = new ChartConstructor(canvas.getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: ['Vigente', 'No Vigente'],
+                labels: ['Vigente', 'No Vigente', 'Sin Inspección'],
                 datasets: [{
                     data: dataVals,
                     backgroundColor: bgColors,

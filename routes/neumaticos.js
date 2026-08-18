@@ -669,14 +669,20 @@ module.exports = function (db, broadcast, logAudit) {
                 ORDER BY i.fecha_inspeccion DESC
             `);
 
+            const totalUso = unidadesUso[0]?.total_unidades_en_uso || 0;
+            const vig = vigencias[0]?.vigentes || 0;
+            const noVig = vigencias[0]?.no_vigentes || 0;
+            const sinInsp = Math.max(0, totalUso - (vig + noVig));
+
             res.json({
                 ok: true,
                 resumen: {
                     total_inspecciones: totalInsp[0]?.total || 0,
-                    vigentes: vigencias[0]?.vigentes || 0,
-                    no_vigentes: vigencias[0]?.no_vigentes || 0,
+                    vigentes: vig,
+                    no_vigentes: noVig,
+                    sin_inspeccion: sinInsp,
                     llantas_criticas: criticas[0]?.total_criticas || 0,
-                    unidades_en_uso: unidadesUso[0]?.total_unidades_en_uso || 0
+                    unidades_en_uso: totalUso
                 },
                 marcas: marcasTop,
                 inspecciones: listado

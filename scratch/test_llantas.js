@@ -10,19 +10,31 @@ async function main() {
             port: 3306 
         });
         
-        // Count of all placas
-        const [totalPlacas] = await pool.query(`SELECT COUNT(*) as total FROM placas`);
+        const [vigencias] = await pool.query(`
+            SELECT 
+                COUNT(*) as total_flota_activa,
+                CAST(COALESCE(SUM(CASE WHEN last_i.fecha_proxima IS NOT NULL AND last_i.fecha_proxima >= CURDATE() THEN 1 ELSE 0 END), 0) AS UNSIGNED) as vigentes,
+                CAST(COALESCE(SUM(CASE WHEN last_i.fecha_proxima IS NOT NULL AND last_i.fecha_proxima < CURDATE() THEN 1 ELSE 0 END), 0) AS UNSIGNED) as no_vigentes,
+                CAST(COALESCE(SUM(CASE WHEN last_i.fecha_proxima IS NULL THEN 1 ELSE 0 END), 0) AS UNSIGNED) as sin_inspeccion
+            FROM placas p
+            LEFT JOIN (
+                SELECT i1.placa, i1.fecha_proxima
+                FROM neumaticos_inspecciones i1
+                INNER JOIN (
+                    SELECT placa, MAX(fecha_inspeccion) as max_fecha
+                    FROM neumaticos_inspecciones
+                    GROUP BY placa
+                ) i2 ON i1.placa COLLATE utf8mb4_unicode_ci = i2.placa COLLATE utf8mb4_unicode_ci AND i1.fecha_inspeccion = i2.max_fecha
+            ) last_i ON p.placa COLLATE utf8mb4_unicode_ci = last_i.placa COLLATE utf8mb4_unicode_ci
+            WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
+        `);
 
-        // Count of placas by en_uso
-        const [byEnUso] = await pool.query(`SELECT en_uso, COUNT(*) as cnt FROM placas GROUP BY en_uso`);
-
-        // Count of placas by tipo
-        const [byTipo] = await pool.query(`SELECT tipo, COUNT(*) as cnt FROM placas GROUP BY tipo`);
-
-        console.log("=== ANÁLISIS PLACAS DB ===");
-        console.log("Total placas DB:", totalPlacas[0].total);
-        console.log("Por en_uso:", byEnUso);
-        console.log("Por tipo:", byTipo);
+        console.log("=== VIGENCIAS SOBRE FLOTA COMPLETA ===");
+        console.log("Total Flota Activa:", vigencias[0].total_flota_activa);
+        console.log("Vigentes:", vigencias[0].vigentes);
+        console.log("No Vigentes (Vencidas):", vigencias[0].no_vigentes);
+        console.log("Sin Inspección (Nunca inspeccionadas):", vigencias[0].sin_inspeccion);
+        console.log("Suma comprobación:", Number(vigencias[0].vigentes) + Number(vigencias[0].no_vigentes) + Number(vigencias[0].sin_inspeccion));
 
         process.exit(0);
     } catch(e) {
