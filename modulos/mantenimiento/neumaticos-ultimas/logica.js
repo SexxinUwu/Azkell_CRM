@@ -330,11 +330,11 @@
                         </div>
                     </div>
 
-                    <div class="table-responsive">
+                    <div class="neu-vehicle-table-wrap custom-scrollbar">
                         <table class="neu-vehicle-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 50px;" class="text-center">POS</th>
+                                    <th class="text-center">POS</th>
                                     <th>MARCA / MEDIDA / MODELO</th>
                                     <th class="text-center">R1 R2 R3 R4 (MM)</th>
                                     <th class="text-center">PRESIÓN PSI</th>
@@ -360,11 +360,11 @@
 
                                     let badgeEstado = '';
                                     if (det.alerta_cambio === 1 || remProm <= 4.0) {
-                                        badgeEstado = `<span class="badge rounded-pill px-2.5 py-1" style="background:#ffe4e6; color:#be123c; border:1px solid #fecdd3;">● Crítica (≤4mm)</span>`;
+                                        badgeEstado = `<span class="badge rounded-pill px-2.5 py-1 text-nowrap" style="background:#ffe4e6; color:#be123c; border:1px solid #fecdd3;">● Crítica (≤4mm)</span>`;
                                     } else if (remProm <= 6.0) {
-                                        badgeEstado = `<span class="badge rounded-pill px-2.5 py-1" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a;">● Alerta (4-6mm)</span>`;
+                                        badgeEstado = `<span class="badge rounded-pill px-2.5 py-1 text-nowrap" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a;">● Alerta (4-6mm)</span>`;
                                     } else {
-                                        badgeEstado = `<span class="badge rounded-pill px-2.5 py-1" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">● Óptima (>6mm)</span>`;
+                                        badgeEstado = `<span class="badge rounded-pill px-2.5 py-1 text-nowrap" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">● Óptima (>6mm)</span>`;
                                     }
 
                                     let obsContent = obs;
@@ -380,13 +380,13 @@
                                                 <span class="rounded-circle bg-dark text-white fw-bold d-inline-flex align-items-center justify-content-center" style="width:26px;height:26px;font-size:0.75rem;">${pos}</span>
                                             </td>
                                             <td>
-                                                <div class="fw-bold text-dark font-monospace" style="font-size:0.85rem;">${marcaL} ${modeloL ? '(' + modeloL + ')' : ''}</div>
-                                                <div class="text-muted small" style="font-size:0.75rem;">${medidaL} • ${estadoMat}</div>
+                                                <div class="fw-bold text-dark font-monospace text-nowrap" style="font-size:0.85rem;">${marcaL} ${modeloL ? '(' + modeloL + ')' : ''}</div>
+                                                <div class="text-muted small text-nowrap" style="font-size:0.75rem;">${medidaL} • ${estadoMat}</div>
                                             </td>
-                                            <td class="text-center fw-bold font-monospace fs-6 text-dark">${r1} &nbsp;${r2} &nbsp;${r3} &nbsp;${r4}</td>
+                                            <td class="text-center fw-bold font-monospace fs-6 text-dark text-nowrap">${r1} &nbsp;${r2} &nbsp;${r3} &nbsp;${r4}</td>
                                             <td class="text-center">
-                                                <div class="fw-bold text-dark">${presAct}</div>
-                                                ${presAnt ? `<div class="text-muted small" style="font-size:0.7rem;">${presAnt}</div>` : ''}
+                                                <div class="fw-bold text-dark text-nowrap">${presAct}</div>
+                                                ${presAnt ? `<div class="text-muted small text-nowrap" style="font-size:0.7rem;">${presAnt}</div>` : ''}
                                             </td>
                                             <td class="text-center">${badgeEstado}</td>
                                             <td class="small">${obsContent}</td>
