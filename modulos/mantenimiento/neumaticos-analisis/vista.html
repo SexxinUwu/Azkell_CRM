@@ -1,21 +1,157 @@
-<!-- Módulo: Análisis de Neumáticos -->
-<div class="container-fluid p-4">
-    <div class="d-flex align-items-center justify-content-between mb-4">
+<!-- MÓDULO: Análisis de Neumáticos — ERP Azkell Fleet -->
+<div class="container-fluid p-3 p-md-4" id="moduloNeumaticosAnalisis">
+    <!-- Header Bento -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4 pb-2 border-bottom">
         <div>
-            <h4 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
-                <i class="bi bi-graph-up-arrow text-primary"></i> Análisis de Neumáticos
-            </h4>
-            <p class="text-muted small m-0">Monitoreo de desgaste, profundidad de cocada y proyecciones de vida útil de neumáticos de la flota</p>
+            <div class="d-flex align-items-center gap-2">
+                <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background: rgba(37,99,235,0.1); color: #2563eb;">
+                    <i class="bi bi-graph-up-arrow fs-5"></i>
+                </div>
+                <div>
+                    <h4 class="fw-bold text-dark m-0">Análisis y Rendimiento de Neumáticos</h4>
+                    <p class="text-muted small m-0">Monitoreo de desgaste, semáforo de vigencia por flota y control predictivo de recambio</p>
+                </div>
+            </div>
         </div>
-        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2 rounded-pill fw-semibold" style="font-size: 0.8rem;">
-            <i class="bi bi-hammer me-1"></i> Módulo en Configuración
-        </span>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.neuAnalisisCargar()">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            </button>
+            <button class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-2" onclick="window.neuAnalisisNuevaInspeccion()">
+                <i class="bi bi-plus-lg"></i> Nueva Inspección
+            </button>
+        </div>
     </div>
-    <div class="card border-0 rounded-4 shadow-sm p-4 bg-white" style="border: 1px solid var(--border, #e2e8f0) !important;">
-        <div class="text-center py-5">
-            <i class="bi bi-disc text-primary display-4 mb-3 d-block"></i>
-            <h5 class="fw-bold text-dark">Tablero de Análisis de Neumáticos</h5>
-            <p class="text-muted small max-w-md mx-auto">Próximamente podrás visualizar gráficos comparativos, desgaste por eje, costo por kilómetro (CPK) y métricas de rotación.</p>
+
+    <!-- KPIs Bento Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="font-size:0.72rem; letter-spacing:0.04em;">Inspecciones Totales</span>
+                    <div class="rounded-3 p-2" style="background: rgba(37,99,235,0.1); color: #2563eb;"><i class="bi bi-clipboard2-check fs-6"></i></div>
+                </div>
+                <h3 class="fw-bold text-dark m-0" id="kpi-neu-total-insp">--</h3>
+                <small class="text-muted" style="font-size:0.72rem;">Historial general registrado</small>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="font-size:0.72rem; letter-spacing:0.04em;">Vigencia Flota</span>
+                    <div class="rounded-3 p-2" style="background: rgba(34,197,94,0.1); color: #16a34a;"><i class="bi bi-shield-check fs-6"></i></div>
+                </div>
+                <h3 class="fw-bold text-success m-0" id="kpi-neu-vigentes">--</h3>
+                <small class="text-muted" style="font-size:0.72rem;"><span id="kpi-neu-porc-vigente">0%</span> con inspección al día</small>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="font-size:0.72rem; letter-spacing:0.04em;">Llantas en Alerta</span>
+                    <div class="rounded-3 p-2" style="background: rgba(239,68,68,0.1); color: #dc2626;"><i class="bi bi-exclamation-triangle fs-6"></i></div>
+                </div>
+                <h3 class="fw-bold text-danger m-0" id="kpi-neu-criticas">--</h3>
+                <small class="text-muted" style="font-size:0.72rem;">Remanente crítico ≤ 4.0 mm</small>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="font-size:0.72rem; letter-spacing:0.04em;">Inspecciones Vencidas</span>
+                    <div class="rounded-3 p-2" style="background: rgba(245,158,11,0.1); color: #d97706;"><i class="bi bi-clock-history fs-6"></i></div>
+                </div>
+                <h3 class="fw-bold text-warning m-0" id="kpi-neu-vencidas">--</h3>
+                <small class="text-muted" style="font-size:0.72rem;">Próxima fecha superada</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts & Vehicle Inspector Section -->
+    <div class="row g-3 mb-4">
+        <!-- Donut Chart Vigencia -->
+        <div class="col-lg-5 col-md-12">
+            <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
+                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                    <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
+                        <i class="bi bi-pie-chart-fill text-primary"></i> Estado de Vigencia de Llantas
+                    </h6>
+                    <span class="badge bg-light text-dark border small">Global</span>
+                </div>
+                <div class="d-flex flex-column align-items-center justify-content-center py-3">
+                    <div style="width: 220px; height: 220px; position: relative;">
+                        <canvas id="chartNeuVigencia"></canvas>
+                    </div>
+                    <div class="d-flex justify-content-center gap-4 mt-3 flex-wrap small fw-bold">
+                        <div class="d-flex align-items-center gap-2"><span class="rounded-circle" style="width:12px;height:12px;background:#22c55e;"></span> Vigente: <span id="lbl-vigentes-cnt">0</span></div>
+                        <div class="d-flex align-items-center gap-2"><span class="rounded-circle" style="width:12px;height:12px;background:#ef4444;"></span> No Vigente: <span id="lbl-novigentes-cnt">0</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Consulta Rápida por Placa con Chasis Interactivo -->
+        <div class="col-lg-7 col-md-12">
+            <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
+                <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3 border-bottom pb-2">
+                    <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
+                        <i class="bi bi-truck text-primary"></i> Visor Interactivo de Unidad
+                    </h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="text" class="form-control form-control-sm rounded-pill px-3 fw-bold text-uppercase" id="neu-quick-search-placa" placeholder="Ingresar placa..." style="max-width: 160px;">
+                        <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" onclick="window.neuConsultarChasisPlaca()">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="neu-visor-placa-content">
+                    <div class="text-center py-5 text-muted small">
+                        <i class="bi bi-truck display-5 text-secondary opacity-50 d-block mb-2"></i>
+                        Ingresa una placa para visualizar el mapa térmico de desgaste de sus llantas.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Inspecciones -->
+    <div class="card border-0 rounded-4 bg-white shadow-2xs overflow-hidden" style="border: 1px solid var(--border, #e2e8f0) !important;">
+        <div class="card-header bg-white p-3 border-bottom d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <h6 class="fw-bold text-dark m-0 small">Historial de Inspecciones de Neumáticos</h6>
+                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill" id="neu-tabla-insp-count">0</span>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <input type="text" class="form-control form-control-sm rounded-pill px-3" id="neu-filtro-tabla-busqueda" placeholder="Buscar por placa, dueño..." oninput="window.neuFiltrarTablaInsp()">
+                <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold d-flex align-items-center gap-1" onclick="window.neuExportarCSV()">
+                    <i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+                </button>
+            </div>
+        </div>
+        <div class="table-responsive" style="max-height: 480px;">
+            <table class="table table-hover table-sm align-middle mb-0" style="font-size:0.8rem;">
+                <thead class="table-light text-muted fw-bold">
+                    <tr>
+                        <th class="ps-3">ID Inspección</th>
+                        <th>Fecha</th>
+                        <th>Placa</th>
+                        <th>Dueño / Cliente</th>
+                        <th>KM Tablero</th>
+                        <th class="text-center">Llantas</th>
+                        <th class="text-center">Críticas</th>
+                        <th class="text-center">Próx. Insp</th>
+                        <th class="text-center">Vigencia</th>
+                        <th class="text-center pe-3">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="neu-tbody-inspecciones">
+                    <tr><td colspan="10" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-secondary"></div> Cargando...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

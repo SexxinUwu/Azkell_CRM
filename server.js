@@ -2686,6 +2686,7 @@ app.put('/api/integraciones', (req, res) => {
 app.use('/api/checklist', require('./routes/checklist')(db, broadcast, logAudit));
 app.use('/api/clientes', require('./routes/clientes')(db, logAudit));
 app.use('/api/disponibilidad-flota', require('./routes/disponibilidad')(db, logAudit));
+app.use('/api/neumaticos', require('./routes/neumaticos')(db, broadcast, logAudit));
 
 const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
 app.use('/api/script', legacyRoutes);

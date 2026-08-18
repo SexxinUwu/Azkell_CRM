@@ -712,10 +712,10 @@ window.rotAbrirDetalle = function(idOT) {
                     </h6>
                     <span class="badge bg-primary bg-opacity-10 text-primary fw-bold rounded-pill px-2 py-1" id="rot-neu-count" style="font-size: 0.7rem;">0</span>
                 </div>
-                <button class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3 py-1" style="font-size:0.72rem;" onclick="event.stopPropagation(); if(typeof window.rotAbrirInspeccionNeumaticos === 'function'){ window.rotAbrirInspeccionNeumaticos('${esc(ot.placa)}', '${esc(idOT)}', ${(det.km||0)}); } else { alert('Módulo de inspección de neumáticos en construcción.'); }"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+                <button class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3 py-1" style="font-size:0.72rem;" onclick="event.stopPropagation();window.rotAbrirInspeccionNeumaticosWrapper('${esc(ot.placa)}', '${esc(idOT)}', ${(det.km||0)})"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
             </div>
             <div id="rot-neu-body">
-                <div class="p-3 text-center text-muted small">No hay inspecciones de neumáticos registradas</div>
+                <div class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm text-secondary"></div></div>
             </div>
         </div>
 
@@ -823,49 +823,53 @@ window.rotAbrirDetalle = function(idOT) {
     if (back) back.classList.add('open');
     drawer.classList.add('open');
 
-    // Fetch trabajos + materiales + backlog + inspecciones en paralelo
+    // Fetch trabajos + materiales + backlog + inspecciones + neumáticos en paralelo
     window.rotOtTrabajosActivos   = [];
     window.rotOtMaterialesActivos = [];
     window.rotOtInspeccionesActivas = [];
-
+    window.rotOtNeumaticosActivos = [];
 
     Promise.all([
         fetch('/api/ot-trabajos?id_ot='       + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
         fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
         ot.placa ? fetch('/api/ot-backlog?placa=' + encodeURIComponent(ot.placa)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }) : Promise.resolve([]),
         fetch('/api/inspecciones-por-ot?id_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
-        fetch('/api/almacen/entradas?ot_id=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
+        fetch('/api/almacen/entradas?ot_id=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
+        fetch('/api/neumaticos/inspecciones?id_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : { ok:false, data:[] }; }).catch(function(){ return { ok:false, data:[] }; })
     ]).then(function(res) {
         window.rotOtTrabajosActivos   = Array.isArray(res[0]) ? res[0] : [];
         window.rotOtMaterialesActivos = Array.isArray(res[1]) ? res[1] : [];
         var backlogItems              = Array.isArray(res[2]) ? res[2] : [];
         window.rotOtInspeccionesActivas = Array.isArray(res[3]) ? res[3] : [];
-          var servicios = Array.isArray(res[4]) ? res[4] : [];
-            servicios = servicios.filter(function(s) { return (s.tipo_orden||'').toLowerCase() === 'orden de servicio' && (s.estado || '').toLowerCase() !== 'anulado' && (s.estado || '').toLowerCase() !== 'anulada'; });
-          var srvBody = document.getElementById('rot-srv-body');
-          var srvCount = document.getElementById('rot-srv-count');
-          if (srvCount) srvCount.textContent = servicios.length;
-          if (srvBody) {
-              if (!servicios.length) {
-                  srvBody.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay servicios de terceros registrados.</div>';
-              } else {
-                  var sHTML = '';
-                  servicios.forEach(function(srv) {
-                      var svcNames = (srv.items && srv.items.length > 0) ? srv.items.map(function(it) { return it.descripcion; }).join(', ') : 'Servicio sin descripción';
-                      sHTML += '<div style="padding:10px 12px; border-bottom:1px solid var(--border); font-size:0.8rem;">' +
-                               '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-                                  '<strong>' + rotEscHtml(svcNames) + '</strong>' +
-                                  '<span style="color:#16a34a; font-weight:bold;">S/ ' + Number(srv.total_pen || 0).toLocaleString('es-PE', {minimumFractionDigits:2}) + '</span>' +
-                               '</div>' +
-                               '</div>';
-                  });
-                  srvBody.innerHTML = sHTML;
-              }
-          }
+        var servicios = Array.isArray(res[4]) ? res[4] : [];
+        window.rotOtNeumaticosActivos = (res[5] && res[5].ok && Array.isArray(res[5].data)) ? res[5].data : (Array.isArray(res[5]) ? res[5] : []);
+
+        servicios = servicios.filter(function(s) { return (s.tipo_orden||'').toLowerCase() === 'orden de servicio' && (s.estado || '').toLowerCase() !== 'anulado' && (s.estado || '').toLowerCase() !== 'anulada'; });
+        var srvBody = document.getElementById('rot-srv-body');
+        var srvCount = document.getElementById('rot-srv-count');
+        if (srvCount) srvCount.textContent = servicios.length;
+        if (srvBody) {
+            if (!servicios.length) {
+                srvBody.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay servicios de terceros registrados.</div>';
+            } else {
+                var sHTML = '';
+                servicios.forEach(function(srv) {
+                    var svcNames = (srv.items && srv.items.length > 0) ? srv.items.map(function(it) { return it.descripcion; }).join(', ') : 'Servicio sin descripción';
+                    sHTML += '<div style="padding:10px 12px; border-bottom:1px solid var(--border); font-size:0.8rem;">' +
+                             '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                                '<strong>' + rotEscHtml(svcNames) + '</strong>' +
+                                '<span style="color:#16a34a; font-weight:bold;">S/ ' + Number(srv.total_pen || 0).toLocaleString('es-PE', {minimumFractionDigits:2}) + '</span>' +
+                             '</div>' +
+                             '</div>';
+                });
+                srvBody.innerHTML = sHTML;
+            }
+        }
         rotRenderSecTrabajos(idOT, esAprobada);
         rotRenderSecMateriales(idOT, puedeAgregarMaterial);
         rotRenderSecBacklog(backlogItems, idOT);
         rotRenderSecInspecciones(idOT);
+        rotRenderSecNeumaticos(idOT);
         // Actualizar costo total dinámico
         var costoTr = window.rotOtTrabajosActivos
             .filter(function(t){ return t.estado === 'Aprobado'; })
@@ -2136,6 +2140,66 @@ window.rotAbrirTabInspeccion = function(idInsp) {
             alert('Error al cargar la lógica de inspecciones.');
         };
         document.body.appendChild(script);
+    }
+};
+
+// ── Render dinámico: sección Inspección de Neumáticos ──────────────
+function rotRenderSecNeumaticos(idOt) {
+    var body = document.getElementById('rot-neu-body');
+    var count = document.getElementById('rot-neu-count');
+    if (!body) return;
+
+    var lista = window.rotOtNeumaticosActivos || [];
+    if (count) count.textContent = lista.length;
+
+    var html = '';
+    if (!lista.length) {
+        html += '<div class="p-3 text-center text-muted small">No hay inspecciones de neumáticos registradas para esta OT.</div>';
+    } else {
+        lista.forEach(function(item) {
+            var f = String(item.fecha_inspeccion || '').split('T')[0];
+            var criticasBadge = item.llantas_criticas > 0 
+                ? '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1 rounded-pill small ms-2"><i class="bi bi-exclamation-triangle-fill me-1"></i>' + item.llantas_criticas + ' Críticas</span>' 
+                : '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill small ms-2"><i class="bi bi-check-circle-fill me-1"></i>Óptimas</span>';
+            
+            html += `
+                <div class="d-flex align-items-center justify-content-between p-2 mb-2 rounded-3 border bg-light" style="font-size:0.8rem; border-color: var(--border, #e2e8f0) !important;">
+                    <div>
+                        <div class="fw-bold text-dark d-flex align-items-center">
+                            <span class="text-primary fw-bold me-2">${rotEscHtml(item.id_inspeccion)}</span>
+                            ${criticasBadge}
+                        </div>
+                        <div class="text-muted small mt-1">
+                            <span><i class="bi bi-calendar3 me-1"></i>${f}</span> • 
+                            <span><i class="bi bi-speedometer2 mx-1"></i>${Number(item.km_vehiculo||0).toLocaleString()} KM</span> • 
+                            <span><i class="bi bi-disc mx-1"></i>${item.total_llantas || 0} Llantas evaluadas</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    body.innerHTML = html;
+}
+
+window.rotAbrirInspeccionNeumaticosWrapper = function(placa, idOT, km) {
+    if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+        window.rotAbrirInspeccionNeumaticos(placa, idOT, km);
+    } else {
+        var script = document.createElement('script');
+        script.src = '/modulos/mantenimiento/neumaticos/modal_inspeccion.js?v=' + Date.now();
+        script.onload = function() {
+            if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+                window.rotAbrirInspeccionNeumaticos(placa, idOT, km);
+            }
+        };
+        document.body.appendChild(script);
+    }
+};
+
+window.rotRecargarDetalleOT = function(idOT) {
+    if (typeof window.rotAbrirDetalle === 'function' && idOT) {
+        window.rotAbrirDetalle(idOT);
     }
 };
 
