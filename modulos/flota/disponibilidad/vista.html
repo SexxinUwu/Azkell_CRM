@@ -6,7 +6,7 @@
 }
 .disp-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
     margin-bottom: 1.25rem;
 }
@@ -19,11 +19,17 @@
     align-items: center;
     gap: 1rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    user-select: none;
 }
 .disp-kpi-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.disp-kpi-card.active-kpi {
+    border: 2px solid #3b82f6 !important;
+    background: #f0f9ff !important;
 }
 .disp-kpi-icon {
     width: 46px;
@@ -120,7 +126,7 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 3px 8px;
+    padding: 4px 9px;
     background: #f1f5f9;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
@@ -150,7 +156,7 @@
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     max-height: 220px;
     overflow-y: auto;
-    z-index: 1050;
+    z-index: 1060;
     display: none;
 }
 .disp-combo-panel.show {
@@ -176,26 +182,19 @@
     color: #64748b;
 }
 
-/* Modal Offcanvas */
-#offcanvasDisponibilidad {
-    width: min(560px, 100vw);
-}
+/* Formulario Modal Estilo Moderno Bento */
 .disp-form-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #334155;
+    font-size: 0.73rem;
+    font-weight: 800;
+    color: #475569;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
-    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
 }
-.disp-calc-badge {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: #1e293b;
+.disp-modal-card {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 </style>
 
@@ -211,21 +210,18 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-outline-secondary btn-sm rounded-3 fw-bold" onclick="window.dispSincronizarPlacas()" title="Importar/Sincronizar placas motora">
-                <i class="bi bi-arrow-repeat me-1"></i>Sincronizar Placas
-            </button>
-            <button class="btn btn-outline-success btn-sm rounded-3 fw-bold" onclick="window.dispExportarExcel()" title="Exportar reporte a Excel">
+            <button class="btn btn-outline-success btn-sm rounded-3 fw-bold px-3 py-2" onclick="window.dispExportarExcel()" title="Exportar reporte a Excel">
                 <i class="bi bi-file-earmark-excel me-1"></i>Exportar
             </button>
-            <button class="btn btn-primary btn-sm rounded-3 fw-bold px-3" onclick="window.dispAbrirModalNuevo()">
+            <button class="btn btn-primary btn-sm rounded-3 fw-bold px-4 py-2" onclick="window.dispAbrirModalNuevo()">
                 <i class="bi bi-plus-lg me-1"></i>Registrar Unidad
             </button>
         </div>
     </div>
 
-    <!-- Tarjetas de KPIs -->
+    <!-- Tarjetas de KPIs Interactivas -->
     <div class="disp-kpi-grid">
-        <div class="disp-kpi-card">
+        <div class="disp-kpi-card" id="card-kpi-total" onclick="window.dispFiltrarPorKPI('total')">
             <div class="disp-kpi-icon" style="background:#eff6ff; color:#2563eb;">
                 <i class="bi bi-truck"></i>
             </div>
@@ -234,7 +230,7 @@
                 <div class="disp-kpi-lbl">Total Flota</div>
             </div>
         </div>
-        <div class="disp-kpi-card">
+        <div class="disp-kpi-card" id="card-kpi-operativos" onclick="window.dispFiltrarPorKPI('operativos')">
             <div class="disp-kpi-icon" style="background:#ecfdf5; color:#10b981;">
                 <i class="bi bi-check-circle-fill"></i>
             </div>
@@ -243,7 +239,7 @@
                 <div class="disp-kpi-lbl">Operativos / Disp.</div>
             </div>
         </div>
-        <div class="disp-kpi-card">
+        <div class="disp-kpi-card" id="card-kpi-mantenimiento" onclick="window.dispFiltrarPorKPI('mantenimiento')">
             <div class="disp-kpi-icon" style="background:#fef2f2; color:#ef4444;">
                 <i class="bi bi-tools"></i>
             </div>
@@ -252,7 +248,7 @@
                 <div class="disp-kpi-lbl">En Taller / Mant.</div>
             </div>
         </div>
-        <div class="disp-kpi-card">
+        <div class="disp-kpi-card" id="card-kpi-cond-disp" onclick="window.dispFiltrarPorKPI('cond-disp')">
             <div class="disp-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
                 <i class="bi bi-person-check-fill"></i>
             </div>
@@ -261,7 +257,7 @@
                 <div class="disp-kpi-lbl">Cond. Disponibles</div>
             </div>
         </div>
-        <div class="disp-kpi-card">
+        <div class="disp-kpi-card" id="card-kpi-cond-nodisp" onclick="window.dispFiltrarPorKPI('cond-nodisp')">
             <div class="disp-kpi-icon" style="background:#fffbeb; color:#f59e0b;">
                 <i class="bi bi-person-x-fill"></i>
             </div>
@@ -277,14 +273,14 @@
         <!-- Filtros y Búsqueda -->
         <div class="disp-table-header">
             <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-                <!-- Buscador -->
-                <div class="position-relative" style="min-width: 240px; max-width: 320px;">
-                    <i class="bi bi-search position-absolute" style="left: 12px; top: 9px; color: #94a3b8; font-size: 0.85rem;"></i>
-                    <input type="text" id="disp-filtro-search" class="form-control form-control-sm ps-5 rounded-3" placeholder="Buscar placa, chofer, marca..." oninput="window.dispFiltrar()">
+                <!-- Buscador Avanzado Multicolumna (Diseño Equilibrado Amplio) -->
+                <div class="position-relative flex-grow-1" style="min-width: 300px; max-width: 480px;">
+                    <i class="bi bi-search position-absolute" style="left: 14px; top: 10px; color: #94a3b8; font-size: 0.9rem;"></i>
+                    <input type="text" id="disp-filtro-search" class="form-control form-control-sm ps-5 rounded-3 border-secondary-subtle" style="padding-top:0.5rem; padding-bottom:0.5rem; font-size:0.88rem;" placeholder="Buscar por placa, chofer, marca, carreta, observaciones, ubicación..." oninput="window.dispFiltrar()">
                 </div>
 
                 <!-- Filtro Estado Unidad -->
-                <select id="disp-filtro-est-uni" class="form-select form-select-sm rounded-3" style="width: auto; min-width: 150px;" onchange="window.dispFiltrar()">
+                <select id="disp-filtro-est-uni" class="form-select form-select-sm rounded-3 border-secondary-subtle" style="width: auto; min-width: 160px; padding-top:0.5rem; padding-bottom:0.5rem;" onchange="window.dispFiltrar()">
                     <option value="">Todos los Estados Unidad</option>
                     <option value="Disponible">Disponible</option>
                     <option value="Operativo">Operativo</option>
@@ -299,9 +295,10 @@
                 </select>
 
                 <!-- Filtro Estado Conductor -->
-                <select id="disp-filtro-est-con" class="form-select form-select-sm rounded-3" style="width: auto; min-width: 150px;" onchange="window.dispFiltrar()">
+                <select id="disp-filtro-est-con" class="form-select form-select-sm rounded-3 border-secondary-subtle" style="width: auto; min-width: 160px; padding-top:0.5rem; padding-bottom:0.5rem;" onchange="window.dispFiltrar()">
                     <option value="">Todos los Estados Conductor</option>
                     <option value="Disponible">Disponible</option>
+                    <option value="Sin Conductor">Sin Conductor</option>
                     <option value="Día Libre">Día Libre</option>
                     <option value="Entra UTS">Entra UTS</option>
                     <option value="Vacaciones">Vacaciones</option>
@@ -310,20 +307,20 @@
                 </select>
 
                 <!-- Filtro Categoría -->
-                <select id="disp-filtro-categoria" class="form-select form-select-sm rounded-3" style="width: auto; min-width: 130px;" onchange="window.dispFiltrar()">
+                <select id="disp-filtro-categoria" class="form-select form-select-sm rounded-3 border-secondary-subtle" style="width: auto; min-width: 130px; padding-top:0.5rem; padding-bottom:0.5rem;" onchange="window.dispFiltrar()">
                     <option value="">Todas Categorías</option>
                     <option value="Local">Local</option>
                     <option value="Nacional">Nacional</option>
                 </select>
 
                 <!-- Botón Toggle Conductor Eventual -->
-                <button id="btn-toggle-eventual" class="btn btn-sm btn-outline-secondary rounded-3" onclick="window.dispToggleColumnaEventual()" title="Mostrar u ocultar columna Conductor Eventual">
+                <button id="btn-toggle-eventual" class="btn btn-sm btn-outline-secondary rounded-3 px-3" style="padding-top:0.5rem; padding-bottom:0.5rem;" onclick="window.dispToggleColumnaEventual()" title="Mostrar u ocultar columna Conductor Eventual">
                     <i class="bi bi-eye-slash me-1"></i>Cond. Eventual
                 </button>
             </div>
 
             <div>
-                <button class="btn btn-sm btn-light border rounded-3 text-muted" onclick="window.dispCargarDatos()" title="Refrescar datos">
+                <button class="btn btn-sm btn-light border rounded-3 text-muted px-3" style="padding-top:0.5rem; padding-bottom:0.5rem;" onclick="window.dispCargarDatos()" title="Refrescar datos">
                     <i class="bi bi-arrow-clockwise"></i>
                 </button>
             </div>
@@ -346,12 +343,13 @@
                         <th>ESTADO CONDUCTOR</th>
                         <th>ESTADO UNIDAD</th>
                         <th style="min-width: 180px;">UBICACIÓN</th>
+                        <th style="min-width: 160px;">OBSERVACIONES</th>
                         <th style="width: 70px; text-align: center;">ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody id="disp-table-body">
                     <tr>
-                        <td colspan="13" class="text-center py-4 text-muted">
+                        <td colspan="14" class="text-center py-4 text-muted">
                             <div class="spinner-border spinner-border-sm text-primary me-2"></div>
                             Cargando disponibilidad de flota...
                         </td>
@@ -362,134 +360,142 @@
     </div>
 </div>
 
-<!-- Offcanvas Modal para Registrar / Editar Disponibilidad -->
-<div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasDisponibilidad" aria-labelledby="offcanvasDisponibilidadLabel">
-    <div class="offcanvas-header bg-light border-bottom">
-        <h5 class="offcanvas-title fw-bold" id="offcanvasDisponibilidadLabel">
-            <i class="bi bi-truck-front-fill text-primary me-2"></i><span id="disp-modal-title">Registrar Unidad</span>
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-    </div>
-    <div class="offcanvas-body p-4">
-        <form id="disp-form" onsubmit="window.dispGuardarFormulario(event)">
-            <input type="hidden" id="disp-f-id">
-
-            <div class="row g-3 mb-3">
-                <!-- PLACA CAMIÓN -->
-                <div class="col-md-6">
-                    <label class="disp-form-label">Placa Camión <span class="text-danger">*</span></label>
-                    <div class="disp-combo-wrap">
-                        <input type="text" class="form-control rounded-3 fw-bold text-uppercase" id="disp-f-placa-camion" placeholder="Buscar placa..." autocomplete="off" required oninput="window.dispBuscarPlacaCamion(this.value)" onfocus="window.dispBuscarPlacaCamion(this.value)">
-                        <div class="disp-combo-panel" id="disp-panel-camion"></div>
+<!-- Modal Centrado para Registrar / Editar Disponibilidad (Diseño Moderno) -->
+<div class="modal fade" id="modalDisponibilidad" tabindex="-1" aria-labelledby="modalDisponibilidadLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content disp-modal-card">
+            <div class="modal-header border-bottom px-4 py-3 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="modalDisponibilidadLabel">
+                    <div class="bg-primary text-white rounded-3 p-2 d-flex align-items-center justify-content-center" style="width:36px; height:36px;">
+                        <i class="bi bi-truck fs-5"></i>
                     </div>
-                </div>
-
-                <!-- PLACA CARRETA -->
-                <div class="col-md-6">
-                    <label class="disp-form-label">Placa Carreta / Programada</label>
-                    <div class="disp-combo-wrap">
-                        <input type="text" class="form-control rounded-3 fw-bold text-uppercase" id="disp-f-placa-carreta" placeholder="Buscar carreta..." autocomplete="off" oninput="window.dispBuscarPlacaCarreta(this.value)" onfocus="window.dispBuscarPlacaCarreta(this.value)">
-                        <div class="disp-combo-panel" id="disp-panel-carreta"></div>
-                    </div>
-                </div>
+                    <span id="disp-modal-title">Registrar Unidad en Disponibilidad</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <div class="modal-body p-4">
+                <form id="disp-form" onsubmit="window.dispGuardarFormulario(event)">
+                    <input type="hidden" id="disp-f-id">
 
-            <!-- DATOS CALCULADOS AUTOMÁTICAMENTE DE LAS PLACAS -->
-            <div class="p-3 mb-3 rounded-3" style="background:#f8fafc; border:1px solid #e2e8f0;">
-                <div class="fw-bold text-muted mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px;">
-                    <i class="bi bi-cpu me-1"></i>Datos Calculados de la Unidad
-                </div>
-                <div class="row g-2">
-                    <div class="col-6">
-                        <div class="disp-form-label">Marca (No editable)</div>
-                        <input type="text" class="form-control form-control-sm bg-white" id="disp-f-marca" readonly placeholder="Auto">
-                    </div>
-                    <div class="col-6">
-                        <div class="disp-form-label">Capacidad Tanque <span id="disp-f-capacidad-unit" class="text-primary fw-bold ms-1" style="font-size:0.75rem;">(Gln)</span></div>
-                        <input type="text" class="form-control form-control-sm bg-white" id="disp-f-capacidad" placeholder="0">
-                    </div>
-                    <div class="col-6">
-                        <div class="disp-form-label">Categoría Conductor</div>
-                        <select class="form-select form-select-sm" id="disp-f-categoria">
-                            <option value="Local">Local</option>
-                            <option value="Nacional">Nacional</option>
-                        </select>
-                    </div>
-                    <div class="col-6">
-                        <div class="disp-form-label">Tipo de Unidad</div>
-                        <input type="text" class="form-control form-control-sm bg-white" id="disp-f-tipo-unidad" placeholder="Auto">
-                    </div>
-                </div>
-            </div>
+                    <div class="row g-3 mb-3">
+                        <!-- PLACA CAMIÓN -->
+                        <div class="col-md-6">
+                            <label class="disp-form-label">Placa Camión <span class="text-muted fw-normal">(Opcional si es Carreta)</span></label>
+                            <div class="disp-combo-wrap">
+                                <input type="text" class="form-control form-control-lg rounded-3 fw-bold text-uppercase" id="disp-f-placa-camion" placeholder="Buscar o ingresar placa..." autocomplete="off" oninput="window.dispBuscarPlacaCamion(this.value)" onfocus="window.dispBuscarPlacaCamion(this.value)">
+                                <div class="disp-combo-panel" id="disp-panel-camion"></div>
+                            </div>
+                        </div>
 
-            <!-- CONDUCTORES -->
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label class="disp-form-label">Conductor Asignado</label>
-                    <div class="disp-combo-wrap">
-                        <input type="text" class="form-control rounded-3" id="disp-f-conductor-asignado" placeholder="Buscar conductor..." autocomplete="off" oninput="window.dispBuscarConductor(this.value, 'asignado')" onfocus="window.dispBuscarConductor(this.value, 'asignado')">
-                        <div class="disp-combo-panel" id="disp-panel-cond-asignado"></div>
+                        <!-- PLACA CARRETA -->
+                        <div class="col-md-6">
+                            <label class="disp-form-label">Placa Carreta / Programada</label>
+                            <div class="disp-combo-wrap">
+                                <input type="text" class="form-control form-control-lg rounded-3 fw-bold text-uppercase" id="disp-f-placa-carreta" placeholder="Buscar o ingresar carreta..." autocomplete="off" oninput="window.dispBuscarPlacaCarreta(this.value)" onfocus="window.dispBuscarPlacaCarreta(this.value)">
+                                <div class="disp-combo-panel" id="disp-panel-carreta"></div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-6">
-                    <label class="disp-form-label">Conductor Eventual</label>
-                    <div class="disp-combo-wrap">
-                        <input type="text" class="form-control rounded-3" id="disp-f-conductor-eventual" placeholder="Buscar conductor..." autocomplete="off" oninput="window.dispBuscarConductor(this.value, 'eventual')" onfocus="window.dispBuscarConductor(this.value, 'eventual')">
-                        <div class="disp-combo-panel" id="disp-panel-cond-eventual"></div>
+
+                    <!-- DATOS CALCULADOS AUTOMÁTICAMENTE DE LAS PLACAS -->
+                    <div class="p-3 mb-3 rounded-4" style="background:#f8fafc; border:1px solid #e2e8f0;">
+                        <div class="fw-bold text-muted mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px;">
+                            <i class="bi bi-cpu me-1"></i>Datos Calculados de la Unidad
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-3 col-6">
+                                <div class="disp-form-label">Marca (Auto)</div>
+                                <input type="text" class="form-control bg-white" id="disp-f-marca" readonly placeholder="Auto">
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <div class="disp-form-label">Capacidad Tanque <span id="disp-f-capacidad-unit" class="text-primary fw-bold ms-1" style="font-size:0.75rem;">(Gln)</span></div>
+                                <input type="text" class="form-control bg-white" id="disp-f-capacidad" placeholder="0">
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <div class="disp-form-label">Categoría Conductor</div>
+                                <select class="form-select bg-white" id="disp-f-categoria">
+                                    <option value="Local">Local</option>
+                                    <option value="Nacional">Nacional</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <div class="disp-form-label">Tipo de Unidad</div>
+                                <input type="text" class="form-control bg-white" id="disp-f-tipo-unidad" placeholder="Auto">
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- ESTADOS -->
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label class="disp-form-label">Estado de Conductor <span class="text-danger">*</span></label>
-                    <select class="form-select rounded-3 fw-bold" id="disp-f-estado-conductor" required>
-                        <option value="Disponible">🟢 Disponible</option>
-                        <option value="Día Libre">🔵 Día Libre</option>
-                        <option value="Entra UTS">🟣 Entra UTS</option>
-                        <option value="Vacaciones">🟡 Vacaciones</option>
-                        <option value="Vacante">⚪ Vacante</option>
-                        <option value="Faltó">🔴 Faltó</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="disp-form-label">Estado de Unidad <span class="text-danger">*</span></label>
-                    <select class="form-select rounded-3 fw-bold" id="disp-f-estado-unidad" required>
-                        <option value="Disponible">🟢 Disponible</option>
-                        <option value="Operativo">🔵 Operativo</option>
-                        <option value="Mantenimiento">🔴 Mantenimiento</option>
-                        <option value="Programado">🟣 Programado</option>
-                        <option value="Tránsito">🟡 Tránsito</option>
-                        <option value="Solo Placa">⚪ Solo Placa</option>
-                        <option value="Alquilado">🟤 Alquilado</option>
-                        <option value="Siniestro">⛔ Siniestro</option>
-                        <option value="Modificación">🔧 Modificación</option>
-                        <option value="En Proyecto">📋 En Proyecto</option>
-                    </select>
-                </div>
-            </div>
+                    <!-- CONDUCTORES -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="disp-form-label">Conductor Asignado</label>
+                            <div class="disp-combo-wrap">
+                                <input type="text" class="form-control form-control-lg rounded-3" id="disp-f-conductor-asignado" placeholder="Buscar conductor asignado..." autocomplete="off" oninput="window.dispBuscarConductor(this.value, 'asignado')" onfocus="window.dispBuscarConductor(this.value, 'asignado')">
+                                <div class="disp-combo-panel" id="disp-panel-cond-asignado"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="disp-form-label">Conductor Eventual</label>
+                            <div class="disp-combo-wrap">
+                                <input type="text" class="form-control form-control-lg rounded-3" id="disp-f-conductor-eventual" placeholder="Buscar conductor eventual..." autocomplete="off" oninput="window.dispBuscarConductor(this.value, 'eventual')" onfocus="window.dispBuscarConductor(this.value, 'eventual')">
+                                <div class="disp-combo-panel" id="disp-panel-cond-eventual"></div>
+                            </div>
+                        </div>
+                    </div>
 
-            <!-- UBICACIÓN / OBSERVACIONES -->
-            <div class="mb-3">
-                <label class="disp-form-label">Ubicación Actual / Dirección</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-light"><i class="bi bi-geo-alt-fill text-danger"></i></span>
-                    <input type="text" class="form-control" id="disp-f-ubicacion" placeholder="Dirección GPS o referencia manual">
-                </div>
-            </div>
+                    <!-- ESTADOS -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="disp-form-label">Estado de Conductor <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-lg rounded-3 fw-bold" id="disp-f-estado-conductor" required>
+                                <option value="Disponible">🟢 Disponible</option>
+                                <option value="Sin Conductor">⚪ Sin Conductor</option>
+                                <option value="Día Libre">🔵 Día Libre</option>
+                                <option value="Entra UTS">🟣 Entra UTS</option>
+                                <option value="Vacaciones">🟡 Vacaciones</option>
+                                <option value="Vacante">⚪ Vacante</option>
+                                <option value="Faltó">🔴 Faltó</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="disp-form-label">Estado de Unidad <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-lg rounded-3 fw-bold" id="disp-f-estado-unidad" required>
+                                <option value="Disponible">🟢 Disponible</option>
+                                <option value="Operativo">🔵 Operativo</option>
+                                <option value="Mantenimiento">🔴 Mantenimiento</option>
+                                <option value="Programado">🟣 Programado</option>
+                                <option value="Tránsito">🟡 Tránsito</option>
+                                <option value="Solo Placa">⚪ Solo Placa</option>
+                                <option value="Alquilado">🟤 Alquilado</option>
+                                <option value="Siniestro">⛔ Siniestro</option>
+                                <option value="Modificación">🔧 Modificación</option>
+                                <option value="En Proyecto">📋 En Proyecto</option>
+                            </select>
+                        </div>
+                    </div>
 
-            <div class="mb-4">
-                <label class="disp-form-label">Observaciones Adicionales</label>
-                <textarea class="form-control rounded-3" id="disp-f-observaciones" rows="2" placeholder="Notas de ruta, cliente o estado..."></textarea>
-            </div>
+                    <!-- UBICACIÓN / OBSERVACIONES -->
+                    <div class="mb-3">
+                        <label class="disp-form-label">Ubicación Actual / Dirección GPS</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-light border-secondary-subtle"><i class="bi bi-geo-alt-fill text-danger"></i></span>
+                            <input type="text" class="form-control border-secondary-subtle fs-6" id="disp-f-ubicacion" placeholder="Dirección GPS o referencia manual de ubicación...">
+                        </div>
+                    </div>
 
-            <div class="d-flex justify-content-end gap-2 pt-2 border-top">
-                <button type="button" class="btn btn-light rounded-3 fw-bold" data-bs-dismiss="offcanvas">Cancelar</button>
-                <button type="submit" class="btn btn-primary rounded-3 fw-bold px-4" id="disp-btn-guardar">
-                    <i class="bi bi-check-lg me-1"></i>Guardar
-                </button>
+                    <div class="mb-4">
+                        <label class="disp-form-label">Observaciones Adicionales</label>
+                        <textarea class="form-control rounded-3" id="disp-f-observaciones" rows="3" placeholder="Notas de ruta, cliente o observaciones de estado..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <button type="button" class="btn btn-light rounded-3 fw-bold px-4 py-2" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary rounded-3 fw-bold px-4 py-2" id="disp-btn-guardar">
+                            <i class="bi bi-check-lg me-1"></i>Guardar Registro
+                        </button>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
     </div>
 </div>
