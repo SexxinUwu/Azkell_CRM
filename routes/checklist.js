@@ -533,6 +533,10 @@ module.exports = function (db, broadcast, logAudit) {
             const rep = rows[0];
             const folio = rep.folio;
 
+            if (rep.estado === 'Finalizado') {
+                return res.status(400).json({ error: 'Este reporte de fallas ya se encuentra FINALIZADO y no puede ser modificado.' });
+            }
+
             // Procesar fotos existentes y nuevas en base64
             let fotosUrls = [];
             try {
