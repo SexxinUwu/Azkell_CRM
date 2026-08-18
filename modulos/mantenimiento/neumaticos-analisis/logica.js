@@ -382,23 +382,23 @@
         return window.XLSX;
     }
 
-    // ── DESCARGAR PLANTILLA EXCEL OFICIAL CON 25 COLUMNAS ─────────────────
+    // ── DESCARGAR PLANTILLA EXCEL OFICIAL CON 27 COLUMNAS ─────────────────
     window.neuDescargarPlantillaExcel = async function() {
         try {
             const xlsxLib = await asegurarXLSX();
             const headers = [
                 "ID", "F. INSPECCION", "PLACA", "ESTADO LLANT", "KM", "LLANTA", 
-                "DUENO", "MARCA_UNI", "UNIDAD", "MARCA DE LLANTA", "MEDIDA", "MODELO", 
+                "DUEÑO", "MARCA", "UNIDAD", "Delantera o Traccion", "MARCA DE LLANTA", "MEDIDA", "MODELO", 
                 "R1", "R2", "R3", "R4", "PRESION DE AIRE ANT", "PRESION DE AIRE ACTUAL", 
-                "ESTADO", "ACCION", "OBS", "ROT", "FOTO1", "FOTO2", "FOTO3"
+                "ESTADO", "ACCION", "OBS", "ROT", "R Min", "FOTO1", "FOTO2", "FOTO3"
             ];
             
             const sampleData = [
                 headers,
-                [3, "2024-01-02", "BEQ986", "Activa", 150000, 1, "PROPIO", "VOLVO", "TRACTO", "MAXELL", "295/80R22.5", "GAU867", 12, 13, 13, 0, 100, 100, "NUEVA", "INSPECCION", "Ninguna", "NO", "", "", ""],
-                [3, "2024-01-02", "BEQ986", "Activa", 150000, 2, "PROPIO", "VOLVO", "TRACTO", "MAXELL", "295/80R22.5", "GAU867", 14, 13, 13, 0, 100, 100, "NUEVA", "INSPECCION", "Ninguna", "NO", "", "", ""],
-                [3, "2024-01-02", "BEQ986", "Activa", 150000, 3, "PROPIO", "VOLVO", "TRACTO", "JKTIRE", "295/80R22.5", "GAU867", 6, 6, 10, 0, 100, 100, "NUEVA", "INSPECCION", "Ninguna", "NO", "", "", ""],
-                [5, "2024-01-03", "ARW987", "Activa", 180000, 1, "PROPIO", "SCANIA", "TRACTO", "STEELMARK", "275/70R22.5", "KT512", 6, 7, 6, 0, 100, 100, "RENCAUCHADA", "INSPECCION", "Ninguna", "NO", "", "", ""]
+                [3, "2024-01-02", "BEQ986", "Activa", 150000, 1, "PROPIO", "VOLVO", "TRACTO", "DELANTERA", "MAXELL", "295/80R22.5", "GAU867", 12, 13, 13, 0, 100, 100, "NUEVA", "INSPECCION", "Ninguna", "NO", 12, "", "", ""],
+                [3, "2024-01-02", "BEQ986", "Activa", 150000, 2, "PROPIO", "VOLVO", "TRACTO", "DELANTERA", "MAXELL", "295/80R22.5", "GAU867", 14, 13, 13, 0, 100, 100, "NUEVA", "INSPECCION", "Ninguna", "NO", 13, "", "", ""],
+                [3, "2024-01-02", "BEQ986", "Activa", 150000, 3, "PROPIO", "VOLVO", "TRACTO", "TRACCION", "JKTIRE", "295/80R22.5", "GAU867", 6, 6, 10, 0, 100, 100, "NUEVA", "INSPECCION", "Ninguna", "NO", 6, "", "", ""],
+                [5, "2024-01-03", "ARW987", "Activa", 180000, 1, "PROPIO", "SCANIA", "TRACTO", "DELANTERA", "STEELMARK", "275/70R22.5", "KT512", 6, 7, 6, 0, 100, 100, "RENCAUCHADA", "INSPECCION", "Ninguna", "NO", 6, "", "", ""]
             ];
 
             const wb = xlsxLib.utils.book_new();
@@ -486,6 +486,7 @@
                         }
 
                         const pos = String(getVal(["LLANTA", "POSICION", "POS"]) || (idx + 1)).trim().toUpperCase();
+                        const tipoEje = String(getVal(["Delantera o Traccion", "DELANTERA O TRACCION", "TIPO_EJE", "EJE"])).trim();
                         const marca = String(getVal(["MARCA DE LLANTA", "MARCA_LLANTA", "MARCA"])).trim();
                         const medida = String(getVal(["MEDIDA", "TAMANO"])).trim();
                         const modelo = String(getVal(["MODELO"])).trim();
@@ -499,9 +500,13 @@
                         const accion = String(getVal(["ACCION"]) || "INSPECCION").trim();
                         const obs = String(getVal(["OBS", "OBSERVACIONES"])).trim();
                         const rot = String(getVal(["ROT", "ROTACION"]) || "NO").trim();
+                        const foto1 = String(getVal(["FOTO1", "FOTO 1"])).trim();
+                        const foto2 = String(getVal(["FOTO2", "FOTO 2"])).trim();
+                        const foto3 = String(getVal(["FOTO3", "FOTO 3"])).trim();
 
                         grouped[groupKey].items.push({
                             posicion: pos,
+                            tipo_eje: tipoEje,
                             marca: marca,
                             medida: medida,
                             modelo: modelo,
@@ -514,7 +519,10 @@
                             estado: estado,
                             accion: accion,
                             observaciones: obs,
-                            rot: rot
+                            rot: rot,
+                            foto1: foto1,
+                            foto2: foto2,
+                            foto3: foto3
                         });
                         totalLlantasParsed++;
                     });

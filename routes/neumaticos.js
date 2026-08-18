@@ -807,6 +807,7 @@ module.exports = function (db, broadcast, logAudit) {
             // Asegurar que las columnas existen
             const migCols = [
                 "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN r4 INT DEFAULT 0",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN tipo_eje VARCHAR(50) DEFAULT NULL",
                 "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN rot VARCHAR(50) DEFAULT 'NO'",
                 "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto1 LONGTEXT NULL",
                 "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto2 LONGTEXT NULL",
@@ -869,11 +870,12 @@ module.exports = function (db, broadcast, logAudit) {
 
                     await tdb.query(`
                         INSERT INTO neumaticos_inspecciones_det
-                        (id_inspeccion, posicion, marca, medida, modelo, r1, r2, r3, r4, remanente_promedio, presion_ant, presion_actual, estado, accion, rot, observaciones, foto1, foto2, foto3, alerta_cambio)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        (id_inspeccion, posicion, tipo_eje, marca, medida, modelo, r1, r2, r3, r4, remanente_promedio, presion_ant, presion_actual, estado, accion, rot, observaciones, foto1, foto2, foto3, alerta_cambio)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `, [
                         id_inspeccion,
                         String(it.posicion || '1').toUpperCase(),
+                        (it.tipo_eje || it.eje || '').toUpperCase(),
                         (it.marca || '').toUpperCase(),
                         (it.medida || '').toUpperCase(),
                         (it.modelo || '').toUpperCase(),
@@ -907,34 +909,41 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
-    // ── GET /api/neumaticos/exportar-datos — Exportación con 25 columnas oficiales ──────
+    // ── GET /api/neumaticos/exportar-datos — Exportación con 27 columnas oficiales ──────
     router.get('/exportar-datos', async (req, res) => {
         const tdb = getDb(req);
         try {
             const sql = `
                 SELECT 
                     i.id_inspeccion AS ID,
-                    DATE_FORMAT(i.fecha_inspeccion, '%Y-%m-%d') AS F_INSPECCION,
+                    DATE_FORMAT(i.fecha_inspeccion, '%Y-%m-%d') AS 'F. INSPECCION',
                     i.placa AS PLACA,
-                    COALESCE(p.estado, 'Activa') AS ESTADO_LLANT,
+                    COALESCE(p.estado, 'Activa') AS 'ESTADO LLANT',
                     i.km_vehiculo AS KM,
                     d.posicion AS LLANTA,
-                    COALESCE(p.cliente, 'PROPIO') AS DUENO,
-                    COALESCE(p.marca, 'FLOTA') AS MARCA_UNI,
+                    COALESCE(p.cliente, 'PROPIO') AS 'DUEÑO',
+                    COALESCE(p.marca, 'FLOTA') AS MARCA,
                     COALESCE(p.tipo, 'UNIDAD') AS UNIDAD,
-                    d.marca AS MARCA_LLANTA,
+                    COALESCE(d.tipo_eje, '') AS 'Delantera o Traccion',
+                    d.marca AS 'MARCA DE LLANTA',
                     d.medida AS MEDIDA,
                     d.modelo AS MODELO,
                     d.r1 AS R1,
                     d.r2 AS R2,
                     d.r3 AS R3,
                     d.r4 AS R4,
-                    d.presion_ant AS PRESION_DE_AIRE_ANT,
-                    d.presion_actual AS PRESION_DE_AIRE_ACTUAL,
+                    d.presion_ant AS 'PRESION DE AIRE ANT',
+                    d.presion_actual AS 'PRESION DE AIRE ACTUAL',
                     d.estado AS ESTADO,
                     d.accion AS ACCION,
                     d.observaciones AS OBS,
                     d.rot AS ROT,
+                    LEAST(
+                        COALESCE(NULLIF(d.r1, 0), 99),
+                        COALESCE(NULLIF(d.r2, 0), 99),
+                        COALESCE(NULLIF(d.r3, 0), 99),
+                        COALESCE(NULLIF(d.r4, 0), 99)
+                    ) AS 'R Min',
                     d.foto1 AS FOTO1,
                     d.foto2 AS FOTO2,
                     d.foto3 AS FOTO3
