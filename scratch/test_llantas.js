@@ -10,31 +10,19 @@ async function main() {
             port: 3306 
         });
         
-        const [r] = await pool.query(`
-            SELECT 
-                CAST(COALESCE(SUM(
-                    CASE 
-                        WHEN p.llantas REGEXP '^[0-9]+$' THEN CAST(p.llantas AS UNSIGNED)
-                        ELSE 0 
-                    END
-                ), 0) AS UNSIGNED) as total_circulando
-            FROM placas p
-            WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) = 'SI'
-        `);
+        // Count of all placas
+        const [totalPlacas] = await pool.query(`SELECT COUNT(*) as total FROM placas`);
 
-        const [byMotora] = await pool.query(`
-            SELECT 
-                COALESCE(motora, 'Sin Especificar') as tipo_motora,
-                COUNT(*) as cantidad_vehiculos,
-                SUM(CASE WHEN llantas REGEXP '^[0-9]+$' THEN CAST(llantas AS UNSIGNED) ELSE 0 END) as suma_llantas
-            FROM placas 
-            WHERE UPPER(TRIM(COALESCE(en_uso, 'SI'))) = 'SI'
-            GROUP BY motora
-        `);
+        // Count of placas by en_uso
+        const [byEnUso] = await pool.query(`SELECT en_uso, COUNT(*) as cnt FROM placas GROUP BY en_uso`);
 
-        console.log("=== RESULTADO LIMPIO ===");
-        console.log("Total Llantas Circulando (Sum de llantas en placas activas en_uso=Si):", r[0].total_circulando);
-        console.log("Desglose por Motora / No Motora:", byMotora);
+        // Count of placas by tipo
+        const [byTipo] = await pool.query(`SELECT tipo, COUNT(*) as cnt FROM placas GROUP BY tipo`);
+
+        console.log("=== ANÁLISIS PLACAS DB ===");
+        console.log("Total placas DB:", totalPlacas[0].total);
+        console.log("Por en_uso:", byEnUso);
+        console.log("Por tipo:", byTipo);
 
         process.exit(0);
     } catch(e) {

@@ -21,20 +21,18 @@
             const vig = Number(r.vigentes || 0);
             const novig = Number(r.no_vigentes || 0);
             const crit = Number(r.llantas_criticas || 0);
-            const totalUnidades = vig + novig;
-            const porcVig = totalUnidades > 0 ? Math.round((vig / totalUnidades) * 100) : 0;
-            const porcNoVig = totalUnidades > 0 ? Math.round((novig / totalUnidades) * 100) : 0;
-
-            const totalCirc = Number(r.llantas_circulacion || 0);
+            const totalUnidadesEnUso = Number(r.unidades_en_uso || (vig + novig));
+            const porcVig = totalUnidadesEnUso > 0 ? Math.round((vig / totalUnidadesEnUso) * 100) : 0;
+            const porcNoVig = totalUnidadesEnUso > 0 ? Math.round((novig / totalUnidadesEnUso) * 100) : 0;
 
             document.getElementById('kpi-neu-total-insp').innerText = total;
-            const circEl = document.getElementById('kpi-neu-total-circulando');
-            if (circEl) circEl.innerText = totalCirc.toLocaleString();
+            const usoEl = document.getElementById('kpi-neu-unidades-uso');
+            if (usoEl) usoEl.innerText = totalUnidadesEnUso.toLocaleString();
 
             document.getElementById('kpi-neu-vigentes').innerText = vig;
             
             const porcEl = document.getElementById('kpi-neu-porc-vigente');
-            if (porcEl) porcEl.innerText = `${vig} de ${totalUnidades} unidades al día (${porcVig}%)`;
+            if (porcEl) porcEl.innerText = `${vig} de ${totalUnidadesEnUso} unidades al día (${porcVig}%)`;
 
             document.getElementById('kpi-neu-criticas').innerText = crit;
             document.getElementById('kpi-neu-vencidas').innerText = novig;
