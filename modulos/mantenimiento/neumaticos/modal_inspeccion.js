@@ -690,22 +690,25 @@
             const elMarca = document.getElementById('neu-sel-marca');
             const elMedida = document.getElementById('neu-sel-medida');
             const elModelo = document.getElementById('neu-sel-modelo');
+            const dlMarca = document.getElementById('dl-neu-marcas');
+            const dlMedida = document.getElementById('dl-neu-medidas');
+            const dlModelo = document.getElementById('dl-neu-modelos');
 
             if (elMarca) {
-                if (prev.marca && !Array.from(elMarca.options).some(o => o.value === prev.marca)) {
-                    elMarca.add(new Option(prev.marca, prev.marca));
+                if (prev.marca && dlMarca && !Array.from(dlMarca.options || []).some(o => o.value === prev.marca)) {
+                    dlMarca.innerHTML += `<option value="${prev.marca}">`;
                 }
                 elMarca.value = prev.marca || '';
             }
             if (elMedida) {
-                if (prev.medida && !Array.from(elMedida.options).some(o => o.value === prev.medida)) {
-                    elMedida.add(new Option(prev.medida, prev.medida));
+                if (prev.medida && dlMedida && !Array.from(dlMedida.options || []).some(o => o.value === prev.medida)) {
+                    dlMedida.innerHTML += `<option value="${prev.medida}">`;
                 }
                 elMedida.value = prev.medida || '';
             }
             if (elModelo) {
-                if (prev.modelo && !Array.from(elModelo.options).some(o => o.value === prev.modelo)) {
-                    elModelo.add(new Option(prev.modelo, prev.modelo));
+                if (prev.modelo && dlModelo && !Array.from(dlModelo.options || []).some(o => o.value === prev.modelo)) {
+                    dlModelo.innerHTML += `<option value="${prev.modelo}">`;
                 }
                 elModelo.value = prev.modelo || '';
             }
