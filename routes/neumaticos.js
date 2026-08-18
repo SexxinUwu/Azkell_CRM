@@ -708,6 +708,49 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ============================================================
+    // 5.5 🔍 OBTENER ÚLTIMA INSPECCIÓN DE UNA PLACA POR POSICIÓN (AUTOPOBLADO)
+    // ============================================================
+    router.get('/placa-ultima/:placa', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const { placa } = req.params;
+            const [rows] = await tdb.query(`
+                SELECT 
+                    d.posicion,
+                    d.marca,
+                    d.medida,
+                    d.modelo,
+                    d.r1,
+                    d.r2,
+                    d.r3,
+                    d.r4,
+                    d.remanente_promedio,
+                    d.presion_actual,
+                    d.estado
+                FROM neumaticos_inspecciones_det d
+                INNER JOIN (
+                    SELECT id_inspeccion
+                    FROM neumaticos_inspecciones
+                    WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?))
+                    ORDER BY fecha_inspeccion DESC, created_at DESC
+                    LIMIT 1
+                ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci
+            `, [placa]);
+
+            const datosPosiciones = {};
+            rows.forEach(r => {
+                const k = String(r.posicion || '').trim().toUpperCase();
+                if (k) datosPosiciones[k] = r;
+            });
+
+            res.json({ ok: true, placa, datosPosiciones });
+        } catch (err) {
+            console.error("Error en placa-ultima:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // ============================================================
     // 6. 🕒 ÚLTIMAS INSPECCIONES DE NEUMÁTICOS POR UNIDAD Y POSICIÓN
     // ============================================================
     router.get('/ultimas', async (req, res) => {
