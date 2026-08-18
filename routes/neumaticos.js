@@ -794,5 +794,162 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ── POST /api/neumaticos/importar — Importación masiva desde Excel ──────
+    router.post('/importar', async (req, res) => {
+        const tdb = getDb(req);
+        const { inspecciones = [] } = req.body;
+
+        if (!Array.isArray(inspecciones) || inspecciones.length === 0) {
+            return res.status(400).json({ ok: false, error: 'No se recibieron datos de inspecciones para importar' });
+        }
+
+        try {
+            // Asegurar que las columnas existen
+            const migCols = [
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN r4 INT DEFAULT 0",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN rot VARCHAR(50) DEFAULT 'NO'",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto1 LONGTEXT NULL",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto2 LONGTEXT NULL",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto3 LONGTEXT NULL"
+            ];
+            for (const q of migCols) {
+                try { await tdb.query(q); } catch(e) {}
+            }
+
+            await tdb.query('START TRANSACTION');
+
+            let totalImportadas = 0;
+            let totalLlantas = 0;
+
+            for (const insp of inspecciones) {
+                const placa = (insp.placa || '').trim().toUpperCase();
+                const fecha_inspeccion = insp.fecha_inspeccion || new Date().toISOString().split('T')[0];
+                const km_vehiculo = parseInt(insp.km_vehiculo || 0, 10);
+                const items = insp.items || [];
+
+                if (!placa || items.length === 0) continue;
+
+                const cleanPlaca = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+                const cleanFecha = (fecha_inspeccion || '').replace(/-/g, '').substring(0, 8);
+                const rand = Math.floor(1000 + Math.random() * 9000);
+                const id_inspeccion = insp.id_inspeccion || `INSP-NEU-${cleanFecha}-${cleanPlaca}-${rand}`;
+
+                let fechaProxima = null;
+                if (fecha_inspeccion) {
+                    const f = new Date(fecha_inspeccion);
+                    f.setDate(f.getDate() + 30);
+                    fechaProxima = f.toISOString().split('T')[0];
+                }
+
+                await tdb.query(`
+                    INSERT INTO neumaticos_inspecciones 
+                    (id_inspeccion, placa, fecha_inspeccion, km_vehiculo, dias_propuestos, fecha_proxima, observaciones, inspector, total_llantas)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE 
+                    fecha_inspeccion = VALUES(fecha_inspeccion), km_vehiculo = VALUES(km_vehiculo), total_llantas = VALUES(total_llantas)
+                `, [
+                    id_inspeccion,
+                    placa,
+                    fecha_inspeccion,
+                    km_vehiculo,
+                    30,
+                    fechaProxima,
+                    insp.observaciones || 'Importación Masiva Excel',
+                    'Importador Excel',
+                    items.length
+                ]);
+
+                for (const it of items) {
+                    const r1 = parseInt(it.r1 || 0, 10);
+                    const r2 = parseInt(it.r2 || 0, 10);
+                    const r3 = parseInt(it.r3 || 0, 10);
+                    const r4 = parseInt(it.r4 || 0, 10);
+                    const rProm = (r4 > 0) ? (r1 + r2 + r3 + r4) / 4.0 : (r1 + r2 + r3) / 3.0;
+                    const alertaCambio = rProm <= 4.0 ? 1 : 0;
+
+                    await tdb.query(`
+                        INSERT INTO neumaticos_inspecciones_det
+                        (id_inspeccion, posicion, marca, medida, modelo, r1, r2, r3, r4, remanente_promedio, presion_ant, presion_actual, estado, accion, rot, observaciones, foto1, foto2, foto3, alerta_cambio)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        id_inspeccion,
+                        String(it.posicion || '1').toUpperCase(),
+                        (it.marca || '').toUpperCase(),
+                        (it.medida || '').toUpperCase(),
+                        (it.modelo || '').toUpperCase(),
+                        r1,
+                        r2,
+                        r3,
+                        r4,
+                        parseFloat(rProm.toFixed(1)),
+                        parseInt(it.presion_ant || 0, 10),
+                        parseInt(it.presion_actual || 0, 10),
+                        (it.estado || 'NUEVA').toUpperCase(),
+                        it.accion || 'INSPECCION',
+                        it.rot || 'NO',
+                        it.observaciones || '',
+                        it.foto1 || null,
+                        it.foto2 || null,
+                        it.foto3 || null,
+                        alertaCambio
+                    ]);
+                    totalLlantas++;
+                }
+                totalImportadas++;
+            }
+
+            await tdb.query('COMMIT');
+            return res.json({ ok: true, mensaje: `Se importaron ${totalImportadas} inspección(es) con ${totalLlantas} llanta(s) exitosamente.`, totalImportadas, totalLlantas });
+        } catch (err) {
+            await tdb.query('ROLLBACK');
+            console.error("Error en importación de neumáticos:", err);
+            return res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // ── GET /api/neumaticos/exportar-datos — Exportación con 25 columnas oficiales ──────
+    router.get('/exportar-datos', async (req, res) => {
+        const tdb = getDb(req);
+        try {
+            const sql = `
+                SELECT 
+                    i.id_inspeccion AS ID,
+                    DATE_FORMAT(i.fecha_inspeccion, '%Y-%m-%d') AS F_INSPECCION,
+                    i.placa AS PLACA,
+                    COALESCE(p.estado, 'Activa') AS ESTADO_LLANT,
+                    i.km_vehiculo AS KM,
+                    d.posicion AS LLANTA,
+                    COALESCE(p.cliente, 'PROPIO') AS DUENO,
+                    COALESCE(p.marca, 'FLOTA') AS MARCA_UNI,
+                    COALESCE(p.tipo, 'UNIDAD') AS UNIDAD,
+                    d.marca AS MARCA_LLANTA,
+                    d.medida AS MEDIDA,
+                    d.modelo AS MODELO,
+                    d.r1 AS R1,
+                    d.r2 AS R2,
+                    d.r3 AS R3,
+                    d.r4 AS R4,
+                    d.presion_ant AS PRESION_DE_AIRE_ANT,
+                    d.presion_actual AS PRESION_DE_AIRE_ACTUAL,
+                    d.estado AS ESTADO,
+                    d.accion AS ACCION,
+                    d.observaciones AS OBS,
+                    d.rot AS ROT,
+                    d.foto1 AS FOTO1,
+                    d.foto2 AS FOTO2,
+                    d.foto3 AS FOTO3
+                FROM neumaticos_inspecciones_det d
+                INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci
+                LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
+                ORDER BY i.fecha_inspeccion DESC, i.placa ASC, CAST(d.posicion AS UNSIGNED) ASC
+            `;
+            const [rows] = await tdb.query(sql);
+            res.json({ ok: true, data: rows });
+        } catch (err) {
+            console.error("Error exportando datos de neumáticos:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     return router;
 };

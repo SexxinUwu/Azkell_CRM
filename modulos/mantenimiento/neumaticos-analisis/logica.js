@@ -365,6 +365,286 @@
         a.click();
     };
 
+    // ── GESTOR Y HELPER SHEETJS (XLSX) ──────────────────────────────────
+    async function asegurarXLSX() {
+        if (typeof XLSX !== 'undefined') return XLSX;
+        if (typeof window.loadScript === 'function') {
+            await window.loadScript('/libs/xlsx.full.min.js');
+        } else {
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = '/libs/xlsx.full.min.js';
+                s.onload = resolve;
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+        return window.XLSX;
+    }
+
+    // ── DESCARGAR PLANTILLA EXCEL OFICIAL CON 25 COLUMNAS ─────────────────
+    window.neuDescargarPlantillaExcel = async function() {
+        try {
+            const xlsxLib = await asegurarXLSX();
+            const headers = [
+                "ID", "F. INSPECCION", "PLACA", "ESTADO LLANT", "KM", "LLANTA", 
+                "DUENO", "MARCA_UNI", "UNIDAD", "MARCA DE LLANTA", "MEDIDA", "MODELO", 
+                "R1", "R2", "R3", "R4", "PRESION DE AIRE ANT", "PRESION DE AIRE ACTUAL", 
+                "ESTADO", "ACCION", "OBS", "ROT", "FOTO1", "FOTO2", "FOTO3"
+            ];
+            
+            const sampleData = [
+                headers,
+                [3, "2024-01-02", "BEQ986", "Activa", 150000, 1, "PROPIO", "VOLVO", "TRACTO", "MAXELL", "295/80R22.5", "GAU867", 12, 13, 13, 0, 100, 100, "NUEVA", "INSPECCION", "Ninguna", "NO", "", "", ""],
+                [3, "2024-01-02", "BEQ986", "Activa", 150000, 2, "PROPIO", "VOLVO", "TRACTO", "MAXELL", "295/80R22.5", "GAU867", 14, 13, 13, 0, 100, 100, "NUEVA", "INSPECCION", "Ninguna", "NO", "", "", ""],
+                [3, "2024-01-02", "BEQ986", "Activa", 150000, 3, "PROPIO", "VOLVO", "TRACTO", "JKTIRE", "295/80R22.5", "GAU867", 6, 6, 10, 0, 100, 100, "NUEVA", "INSPECCION", "Ninguna", "NO", "", "", ""],
+                [5, "2024-01-03", "ARW987", "Activa", 180000, 1, "PROPIO", "SCANIA", "TRACTO", "STEELMARK", "275/70R22.5", "KT512", 6, 7, 6, 0, 100, 100, "RENCAUCHADA", "INSPECCION", "Ninguna", "NO", "", "", ""]
+            ];
+
+            const wb = xlsxLib.utils.book_new();
+            const ws = xlsxLib.utils.aoa_to_sheet(sampleData);
+            ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 3, 12) }));
+
+            xlsxLib.utils.book_append_sheet(wb, ws, "Plantilla_Neumaticos");
+            xlsxLib.writeFile(wb, "Plantilla_Inspeccion_Neumaticos_Azkell.xlsx");
+        } catch(e) {
+            alert("Error generando plantilla Excel: " + e.message);
+        }
+    };
+
+    // ── ABRIR MODAL IMPORTACIÓN ──────────────────────────────────────────
+    window._neuInspeccionesGroupedImport = [];
+
+    window.neuAbrirModalImportar = function() {
+        window._neuInspeccionesGroupedImport = [];
+        const fileInput = document.getElementById('neu-file-import-excel');
+        if (fileInput) fileInput.value = '';
+
+        const previewWrap = document.getElementById('neu-import-preview-wrap');
+        if (previewWrap) previewWrap.style.display = 'none';
+
+        const btnConfirm = document.getElementById('neu-btn-confirm-import');
+        if (btnConfirm) btnConfirm.disabled = true;
+
+        const mEl = document.getElementById('modalImportarNeumaticos');
+        if (mEl) bootstrap.Modal.getOrCreateInstance(mEl).show();
+    };
+
+    // ── PROCESAR ARCHIVO EXCEL/CSV SUBIDO ──────────────────────────────────
+    window.neuProcesarArchivoImportar = async function(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+
+        try {
+            const xlsxLib = await asegurarXLSX();
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = xlsxLib.read(data, { type: 'array', cellDates: true });
+
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const rows = xlsxLib.utils.sheet_to_json(worksheet, { defval: "" });
+
+                    if (!rows || rows.length === 0) {
+                        alert("El archivo Excel no contiene filas válidas.");
+                        return;
+                    }
+
+                    // Normalizar columnas y agrupar por (ID o PLACA + FECHA)
+                    const grouped = {};
+                    let totalLlantasParsed = 0;
+
+                    rows.forEach((r, idx) => {
+                        const getVal = (keys) => {
+                            for (const k of keys) {
+                                const foundKey = Object.keys(r).find(rk => rk.trim().toUpperCase() === k.toUpperCase());
+                                if (foundKey && r[foundKey] !== undefined && r[foundKey] !== "") return r[foundKey];
+                            }
+                            return "";
+                        };
+
+                        const idRef = getVal(["ID", "ID INSPECCION", "ID_INSPECCION", "REF"]);
+                        const fecha = getVal(["F. INSPECCION", "F_INSPECCION", "FECHA INSPECCION", "FECHA"]) || new Date().toISOString().split('T')[0];
+                        const placa = String(getVal(["PLACA", "VEHICULO"])).trim().toUpperCase();
+                        const km = parseInt(getVal(["KM", "KM TABLERO", "KM_VEHICULO"]) || 0, 10);
+
+                        if (!placa) return;
+
+                        const groupKey = idRef ? `ID_${idRef}` : `${placa}_${fecha}`;
+
+                        if (!grouped[groupKey]) {
+                            grouped[groupKey] = {
+                                id_inspeccion: idRef ? String(idRef) : null,
+                                placa: placa,
+                                fecha_inspeccion: typeof fecha === 'object' && fecha instanceof Date ? fecha.toISOString().split('T')[0] : String(fecha).split('T')[0],
+                                km_vehiculo: km,
+                                items: []
+                            };
+                        }
+
+                        const pos = String(getVal(["LLANTA", "POSICION", "POS"]) || (idx + 1)).trim().toUpperCase();
+                        const marca = String(getVal(["MARCA DE LLANTA", "MARCA_LLANTA", "MARCA"])).trim();
+                        const medida = String(getVal(["MEDIDA", "TAMANO"])).trim();
+                        const modelo = String(getVal(["MODELO"])).trim();
+                        const r1 = parseInt(getVal(["R1", "REMANENTE 1"]) || 0, 10);
+                        const r2 = parseInt(getVal(["R2", "REMANENTE 2"]) || 0, 10);
+                        const r3 = parseInt(getVal(["R3", "REMANENTE 3"]) || 0, 10);
+                        const r4 = parseInt(getVal(["R4", "REMANENTE 4"]) || 0, 10);
+                        const pAnt = parseInt(getVal(["PRESION DE AIRE ANT", "PRESION_ANT", "PRESION ANTERIOR"]) || 100, 10);
+                        const pAct = parseInt(getVal(["PRESION DE AIRE ACTUAL", "PRESION_ACTUAL", "PRESION ACTUAL"]) || 100, 10);
+                        const estado = String(getVal(["ESTADO", "ESTADO_LLANTA"]) || "NUEVA").trim().toUpperCase();
+                        const accion = String(getVal(["ACCION"]) || "INSPECCION").trim();
+                        const obs = String(getVal(["OBS", "OBSERVACIONES"])).trim();
+                        const rot = String(getVal(["ROT", "ROTACION"]) || "NO").trim();
+
+                        grouped[groupKey].items.push({
+                            posicion: pos,
+                            marca: marca,
+                            medida: medida,
+                            modelo: modelo,
+                            r1: r1,
+                            r2: r2,
+                            r3: r3,
+                            r4: r4,
+                            presion_ant: pAnt,
+                            presion_actual: pAct,
+                            estado: estado,
+                            accion: accion,
+                            observaciones: obs,
+                            rot: rot
+                        });
+                        totalLlantasParsed++;
+                    });
+
+                    window._neuInspeccionesGroupedImport = Object.values(grouped);
+
+                    if (window._neuInspeccionesGroupedImport.length === 0) {
+                        alert("No se detectaron placas válidas en el Excel.");
+                        return;
+                    }
+
+                    // Render Previsualización
+                    const tbody = document.getElementById('neu-tbody-preview-import');
+                    const countBadge = document.getElementById('neu-import-rows-count');
+                    if (countBadge) countBadge.innerText = `${window._neuInspeccionesGroupedImport.length} inspecciones (${totalLlantasParsed} llantas)`;
+
+                    let htmlPrev = '';
+                    window._neuInspeccionesGroupedImport.forEach(insp => {
+                        insp.items.forEach(it => {
+                            htmlPrev += `
+                                <tr>
+                                    <td class="fw-bold font-monospace text-primary">${insp.id_inspeccion || 'Auto'}</td>
+                                    <td>${insp.fecha_inspeccion}</td>
+                                    <td><span class="badge bg-light text-dark border fw-bold">${insp.placa}</span></td>
+                                    <td class="fw-bold text-center">${it.posicion}</td>
+                                    <td>${it.marca || '—'}</td>
+                                    <td>${it.medida || '—'}</td>
+                                    <td>${it.r1}</td>
+                                    <td>${it.r2}</td>
+                                    <td>${it.r3}</td>
+                                    <td>${it.presion_actual} PSI</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark small">${it.estado}</span></td>
+                                    <td>${it.accion}</td>
+                                </tr>
+                            `;
+                        });
+                    });
+
+                    if (tbody) tbody.innerHTML = htmlPrev;
+
+                    const previewWrap = document.getElementById('neu-import-preview-wrap');
+                    if (previewWrap) previewWrap.style.display = 'block';
+
+                    const btnConfirm = document.getElementById('neu-btn-confirm-import');
+                    if (btnConfirm) btnConfirm.disabled = false;
+
+                } catch (errEx) {
+                    alert("Error al leer el archivo Excel: " + errEx.message);
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        } catch(e) {
+            alert("Error: " + e.message);
+        }
+    };
+
+    // ── EJECUTAR IMPORTACIÓN AL BACKEND ────────────────────────────────────
+    window.neuEjecutarImportacionBackend = async function() {
+        if (!window._neuInspeccionesGroupedImport || window._neuInspeccionesGroupedImport.length === 0) return;
+
+        const btnConfirm = document.getElementById('neu-btn-confirm-import');
+        if (btnConfirm) {
+            btnConfirm.disabled = true;
+            btnConfirm.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Importando...';
+        }
+
+        try {
+            const res = await fetch('/api/neumaticos/importar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inspecciones: window._neuInspeccionesGroupedImport })
+            });
+
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || 'Error al importar datos');
+
+            alert(`✅ ${data.mensaje}`);
+
+            const mEl = document.getElementById('modalImportarNeumaticos');
+            if (mEl) {
+                const inst = bootstrap.Modal.getInstance(mEl);
+                if (inst) inst.hide();
+            }
+
+            // Recargar tabla y KPIs
+            if (typeof window.neuAnalisisCargar === 'function') {
+                window.neuAnalisisCargar();
+            }
+        } catch(e) {
+            alert("❌ Error al guardar importación: " + e.message);
+        } finally {
+            if (btnConfirm) {
+                btnConfirm.disabled = false;
+                btnConfirm.innerHTML = '<i class="bi bi-cloud-upload-fill"></i> Guardar e Importar Inspecciones';
+            }
+        }
+    };
+
+    // ── EXPORTAR EXCEL COMPLETO CON 25 COLUMNAS ────────────────────────────
+    window.neuExportarExcel = async function() {
+        try {
+            const xlsxLib = await asegurarXLSX();
+            const res = await fetch('/api/neumaticos/exportar-datos');
+            const data = await res.json();
+
+            if (!data.ok || !data.data) throw new Error(data.error || 'No se pudieron obtener datos para exportar');
+            const rows = data.data;
+
+            if (rows.length === 0) {
+                alert("No hay registros de inspecciones para exportar.");
+                return;
+            }
+
+            const wb = xlsxLib.utils.book_new();
+            const ws = xlsxLib.utils.json_to_sheet(rows);
+
+            if (rows.length > 0) {
+                const keys = Object.keys(rows[0]);
+                ws['!cols'] = keys.map(k => ({ wch: Math.max(k.length + 3, 14) }));
+            }
+
+            xlsxLib.utils.book_append_sheet(wb, ws, "Inspecciones_Neumaticos");
+            const fechaStr = new Date().toISOString().split('T')[0];
+            xlsxLib.writeFile(wb, `Reporte_Inspecciones_Neumaticos_${fechaStr}.xlsx`);
+        } catch(e) {
+            alert("Error al exportar Excel: " + e.message);
+        }
+    };
+
     // Auto-arranque al cargar vista
     window.neuAnalisisCargar();
 })();
