@@ -41,35 +41,35 @@
         if (!modalEl) {
             const div = document.createElement('div');
             div.innerHTML = `
-            <div class="modal fade" id="modalInspeccionNeumaticos" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal fade" id="modalInspeccionNeumaticos" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" style="z-index: 2050 !important;">
+                <div class="modal-dialog modal-xl modal-fullscreen-lg-down modal-dialog-centered modal-dialog-scrollable" style="z-index: 2051;">
                     <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden" style="background: var(--surface, #ffffff);">
                         <!-- Header -->
-                        <div class="modal-header border-bottom px-4 py-3 bg-light d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center gap-3">
+                        <div class="modal-header border-bottom px-3 px-md-4 py-3 bg-light d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2 gap-md-3">
                                 <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background: rgba(37,99,235,0.1); color: #2563eb;">
                                     <i class="bi bi-disc-fill fs-5"></i>
                                 </div>
                                 <div>
-                                    <h6 class="modal-title fw-bold text-dark m-0 d-flex align-items-center gap-2">
-                                        Inspección Técnica de Neumáticos
-                                        <span class="badge bg-primary px-3 py-1 rounded-pill" id="neu-badge-placa" style="font-size:0.75rem;">---</span>
+                                    <h6 class="modal-title fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size: 0.95rem;">
+                                        Inspección de Neumáticos
+                                        <span class="badge bg-primary px-2 px-md-3 py-1 rounded-pill" id="neu-badge-placa" style="font-size:0.75rem;">---</span>
                                     </h6>
-                                    <small class="text-muted" id="neu-sub-info">Control milimétrico de cocada, presiones y diagnóstico</small>
+                                    <small class="text-muted d-none d-sm-inline" id="neu-sub-info">Control milimétrico de cocada, presiones y diagnóstico</small>
                                 </div>
                             </div>
                             <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
 
                         <!-- Body -->
-                        <div class="modal-body p-4" style="max-height: 80vh;">
+                        <div class="modal-body p-3 p-md-4" style="max-height: 85vh;">
                             <!-- Paso 1: Cabecera General -->
-                            <div class="row g-3 mb-4 p-3 rounded-4 bg-light border" style="border-color: var(--border, #e2e8f0) !important;">
-                                <div class="col-md-3">
+                            <div class="row g-2 g-md-3 mb-3 mb-md-4 p-3 rounded-4 bg-light border" style="border-color: var(--border, #e2e8f0) !important;">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <label class="form-label text-muted fw-bold small mb-1">Fecha de Inspección *</label>
                                     <input type="date" class="form-control form-control-sm rounded-3 fw-bold" id="neu-input-fecha" value="${hoy}">
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-6 col-sm-3 col-md-2">
                                     <label class="form-label text-muted fw-bold small mb-1">Días Propuestos *</label>
                                     <div class="input-group input-group-sm">
                                         <button class="btn btn-outline-secondary" type="button" onclick="var el=document.getElementById('neu-input-dias'); el.value = Math.max(1, (parseInt(el.value)||30)-5);"><i class="bi bi-dash"></i></button>
@@ -77,18 +77,18 @@
                                         <button class="btn btn-outline-secondary" type="button" onclick="var el=document.getElementById('neu-input-dias'); el.value = (parseInt(el.value)||30)+5;"><i class="bi bi-plus"></i></button>
                                     </div>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-6 col-sm-3 col-md-2">
                                     <label class="form-label text-muted fw-bold small mb-1">KM Odómetro</label>
                                     <input type="number" class="form-control form-control-sm rounded-3 fw-bold" id="neu-input-km" value="${km}">
                                 </div>
-                                <div class="col-md-5">
+                                <div class="col-12 col-md-5">
                                     <label class="form-label text-muted fw-bold small mb-1">Observaciones Generales</label>
                                     <input type="text" class="form-control form-control-sm rounded-3" id="neu-input-obs-gen" placeholder="Ej: Inspección rutinaria de flota mensual...">
                                 </div>
                             </div>
 
                             <!-- Chassis & Form Grid -->
-                            <div class="row g-4">
+                            <div class="row g-3 g-md-4">
                                 <!-- Columna Izquierda: Diagrama Interactivo del Vehículo -->
                                 <div class="col-lg-5 col-md-12">
                                     <div class="card border rounded-4 p-3 h-100 bg-white shadow-2xs" style="border-color: var(--border, #e2e8f0) !important;">
@@ -100,7 +100,7 @@
                                         </div>
                                         
                                         <!-- Diagrama SVG Interactivo -->
-                                        <div class="p-3 text-center rounded-3 bg-light d-flex flex-column align-items-center justify-content-center" style="min-height: 280px;" id="neu-chassis-container">
+                                        <div class="p-2 text-center rounded-3 bg-light d-flex flex-column align-items-center justify-content-center" style="min-height: 240px;" id="neu-chassis-container">
                                             <!-- Inyectado dinámicamente -->
                                         </div>
 
@@ -133,21 +133,21 @@
 
                                         <!-- Marca, Medida, Modelo -->
                                         <div class="row g-2 mb-3">
-                                            <div class="col-md-4">
+                                            <div class="col-12 col-sm-4">
                                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                                     <label class="form-label text-muted fw-bold small m-0" style="font-size:0.75rem;">Marca</label>
                                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('marcas')" class="text-primary small fw-bold" style="font-size:0.7rem;">+ Nueva</a>
                                                 </div>
                                                 <select class="form-select form-select-sm rounded-3 fw-semibold" id="neu-sel-marca"></select>
                                             </div>
-                                            <div class="col-md-4">
+                                            <div class="col-12 col-sm-4">
                                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                                     <label class="form-label text-muted fw-bold small m-0" style="font-size:0.75rem;">Medida</label>
                                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('medidas')" class="text-primary small fw-bold" style="font-size:0.7rem;">+ Nueva</a>
                                                 </div>
                                                 <select class="form-select form-select-sm rounded-3 fw-semibold" id="neu-sel-medida"></select>
                                             </div>
-                                            <div class="col-md-4">
+                                            <div class="col-12 col-sm-4">
                                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                                     <label class="form-label text-muted fw-bold small m-0" style="font-size:0.75rem;">Modelo</label>
                                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('modelos')" class="text-primary small fw-bold" style="font-size:0.7rem;">+ Nuevo</a>
@@ -193,22 +193,22 @@
 
                                         <!-- Presión, Estado, Acción -->
                                         <div class="row g-2 mb-3">
-                                            <div class="col-md-3">
+                                            <div class="col-6 col-sm-3">
                                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.72rem;">Presión Ant. (PSI)</label>
                                                 <input type="number" class="form-control form-control-sm rounded-3 fw-bold" id="neu-input-pres-ant" value="100">
                                             </div>
-                                            <div class="col-md-3">
+                                            <div class="col-6 col-sm-3">
                                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.72rem;">Presión Actual (PSI)</label>
                                                 <input type="number" class="form-control form-control-sm rounded-3 fw-bold" id="neu-input-pres-act" value="110">
                                             </div>
-                                            <div class="col-md-3">
+                                            <div class="col-6 col-sm-3">
                                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.72rem;">Estado</label>
                                                 <select class="form-select form-select-sm rounded-3 fw-semibold" id="neu-sel-estado">
                                                     <option value="NUEVA">NUEVA</option>
                                                     <option value="RENCAUCHADA">RENCAUCHADA</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-3">
+                                            <div class="col-6 col-sm-3">
                                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                                     <label class="form-label text-muted fw-bold small m-0" style="font-size:0.72rem;">Acción</label>
                                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('acciones')" class="text-primary small fw-bold" style="font-size:0.68rem;">+ Nueva</a>
@@ -225,7 +225,7 @@
 
                                         <!-- Botón Agregar Llanta a la Lista -->
                                         <div class="d-flex justify-content-end gap-2">
-                                            <button class="btn btn-primary btn-sm rounded-pill px-4 py-2 fw-bold shadow-sm d-flex align-items-center gap-2" onclick="window._neuGuardarLlantaEnLista()">
+                                            <button class="btn btn-primary btn-sm rounded-pill px-4 py-2 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 w-100 w-sm-auto" onclick="window._neuGuardarLlantaEnLista()">
                                                 <i class="bi bi-check2-circle fs-6"></i> Guardar Llanta en Lista
                                             </button>
                                         </div>
@@ -307,8 +307,18 @@
         // Renderizar tabla vacía
         window._neuRenderTablaLlantas();
 
-        // Mostrar Modal Bootstrap
-        const bsModal = new bootstrap.Modal(modalEl);
+        // Mostrar Modal Bootstrap con z-index superior al drawer de OT
+        modalEl.style.zIndex = '2050';
+        const bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        
+        modalEl.addEventListener('shown.bs.modal', function onShown() {
+            modalEl.removeEventListener('shown.bs.modal', onShown);
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(b => {
+                b.style.zIndex = '2045';
+            });
+        });
+
         bsModal.show();
     };
 
