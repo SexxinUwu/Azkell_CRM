@@ -709,34 +709,8 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
 .form-control-clean:focus { border-bottom-color: #3b82f6; }
 
 .tab-pane { display: none; }
-.tab-pane.active { display: block; }/* ================= RESPONSIVE MÓVIL ================= */
-@media (max-width: 768px) {
+.tab-pane.active { display: block; }
 
-    #fleet-module-container {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        padding-bottom: 75px !important;
-        margin: 0 !important;
-        border-radius: 0 !important;
-        z-index: 100 !important;
-        background: #f4f7fb !important;
-        display: flex !important;
-        flex-direction: column !important;
-    }
-    
-    #fleet-module-container.show-detail-mobile .fleet-content {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        z-index: 9999 !important;
-        background: #f4f7fb !important;
-        overflow-y: auto !important;
-        display: block !important;
 /* ── Mobile View Adaptations (@media max-width: 768px) ─────────────── */
 @media (max-width: 768px) {
     #fleet-module-container {
@@ -885,51 +859,101 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     width: 100%; padding: 0.8rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; text-align: center; border: none; margin-bottom: 0.5rem; display: block;
 }
 
-    /* ── Floating Drawer Modal & Inputs Styling 1:1 Reporte de Fallas ── */
+/* ── Floating Drawer Modal & Inputs Styling (Exacto 1:1 a Reporte de Fallas) ──────────────────────── */
+.ck-floating-drawer-dialog,
+#modalEdicionVehiculo .modal-dialog {
+    max-width: 740px !important;
+    width: 100% !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+    margin: 0 auto !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: auto !important;
+}
+.ck-floating-drawer-content,
+#modalEdicionVehiculo .modal-content {
+    height: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 28px 28px 0 0 !important;
+    border-bottom: none !important;
+    box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.25) !important;
+    overflow: hidden !important;
+    background: #f8fafc !important;
+}
+
+/* Modal Form Inputs: Enlarge & Beautify matching Reporte de Fallas */
+#modalEdicionVehiculo .form-control,
+#modalEdicionVehiculo .form-select {
+    min-height: 44px !important;
+    border-radius: 12px !important;
+    font-size: 0.92rem !important;
+    font-weight: 600 !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 0.55rem 0.9rem !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    transition: all 0.2s ease;
+}
+#modalEdicionVehiculo .form-control:focus,
+#modalEdicionVehiculo .form-select:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+#modalEdicionVehiculo .form-label {
+    font-size: 0.74rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    color: #475569 !important;
+    margin-bottom: 0.35rem !important;
+}
+#modalEdicionVehiculo .card {
+    border-radius: 18px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Mobile 100% Full-Bleed Edge-to-Edge */
+@media (max-width: 768px) {
+    .modal-dialog.ck-floating-drawer-dialog,
     #modalEdicionVehiculo .modal-dialog {
-        max-width: 620px !important;
-        width: 100% !important;
-        margin: 1.75rem auto !important;
+        max-width: 100vw !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        height: 96vh !important;
+        max-height: 96vh !important;
+        margin: 0 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        transform: none !important;
+        border-radius: 24px 24px 0 0 !important;
     }
+    .ck-floating-drawer-content,
     #modalEdicionVehiculo .modal-content {
-        border-radius: 24px !important;
-        background: #f8fafc !important;
-        box-shadow: 0 20px 48px rgba(15, 23, 42, 0.18) !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        height: 100% !important;
+        max-height: 96vh !important;
+        border-radius: 24px 24px 0 0 !important;
         border: none !important;
-        overflow: hidden !important;
+        margin: 0 !important;
     }
-    #modalEdicionVehiculo .form-control,
-    #modalEdicionVehiculo .form-select {
-        min-height: 44px !important;
-        border-radius: 12px !important;
-        font-size: 0.92rem !important;
-        font-weight: 600 !important;
-        border: 1px solid #cbd5e1 !important;
-        padding: 0.55rem 0.9rem !important;
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        transition: all 0.2s ease;
-    }
-    #modalEdicionVehiculo .form-control:focus,
-    #modalEdicionVehiculo .form-select:focus {
-        border-color: #0284c7 !important;
-        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
-        background-color: #ffffff !important;
-    }
-    #modalEdicionVehiculo .form-label {
-        font-size: 0.74rem !important;
-        font-weight: 700 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.4px !important;
-        color: #475569 !important;
-        margin-bottom: 0.35rem !important;
+    #modalEdicionVehiculo .modal-body {
+        padding: 0.75rem 0.65rem !important;
     }
     #modalEdicionVehiculo .card {
-        border-radius: 18px !important;
-        border: 1px solid #e2e8f0 !important;
-        background: #ffffff !important;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
+        padding: 0.85rem 0.75rem !important;
+        margin-bottom: 0.65rem !important;
+        border-radius: 14px !important;
     }
+}
 </style>
 
 <div id="fleet-module-container">
@@ -1034,6 +1058,9 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                 <span id="badge-filtros-doc" class="badge bg-primary rounded-pill position-absolute top-0 start-100 translate-middle d-none" style="font-size: 0.6rem;">0</span>
             </button>
         </div>
+    </div>
+
+    <!-- ── 4. SPLIT PRINCIPAL: LISTA LATERAL Y FICHA TÉCNICA ──────── -->
     <div class="fleet-main-split">
         <!-- Sidebar Izquierda -->
         <div class="fleet-sidebar">
@@ -1170,6 +1197,9 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                 </div>
             </div>
 
+        </div>
+    </div>
+
     <!-- ── BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
     <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1040;">
         <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
@@ -1219,18 +1249,20 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     </div>
 </div>
 
-<!-- Modal Nuevo Documento (Diseño 1:1 Reporte de Fallas) -->
-<div class="modal fade" id="modalEdicionVehiculo" tabindex="-1" data-bs-backdrop="static" aria-hidden="true" style="z-index: 1060; background: rgba(15, 23, 42, 0.6);">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 620px;">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 24px; background: #f8fafc; overflow: hidden;">
+<!-- Modal Nuevo Documento (Exacto a Reporte de Fallas: Floating Drawer desde Abajo) -->
+<div class="modal fade" id="modalEdicionVehiculo" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-scrollable ck-floating-drawer-dialog">
+        <div class="modal-content border-0 ck-floating-drawer-content">
             
             <!-- Modal Header -->
             <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
-                <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2 m-0" style="font-size: 1.2rem;">
-                    <i class="bi bi-file-earmark-plus-fill"></i>
-                    <span id="lbl-modal-doc-titulo">Nuevo Documento</span>
-                </h5>
-                <button type="button" class="btn-close shadow-none" onclick="cerrarModalEdicion()" aria-label="Cerrar"></button>
+                <div>
+                    <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2 m-0" style="font-size: 1.2rem;">
+                        <i class="bi bi-file-earmark-plus-fill"></i>
+                        <span id="lbl-modal-doc-titulo">Nuevo Documento</span>
+                    </h5>
+                </div>
+                <button type="button" class="btn-close" onclick="cerrarModalEdicion()" aria-label="Cerrar"></button>
             </div>
 
             <!-- Modal Body con Bento Cards -->
@@ -1311,14 +1343,13 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
 
                     <!-- Footer Buttons -->
                     <div class="d-flex align-items-center justify-content-end gap-2 pt-2">
-                        <button type="button" class="btn btn-light fw-bold rounded-3 px-4 py-2" onclick="cerrarModalEdicion()">Cancelar</button>
-                        <button type="submit" class="btn btn-success fw-bold px-4 py-2 shadow-sm rounded-3">
+                        <button type="button" class="btn btn-light fw-bold rounded-3 px-3" onclick="cerrarModalEdicion()">Cancelar</button>
+                        <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm rounded-3">
                             <i class="bi bi-check-circle-fill me-1"></i> Guardar Documento
                         </button>
                     </div>
                 </form>
             </div>
-        </div>
     </div>
 </div>
 
@@ -1382,89 +1413,9 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     </div>
 </div>
 
-<!-- Mobile FAB -->
-<button class="mobile-fab-plus d-md-none" onclick="abrirModalEdicion(null)" style="position:fixed; bottom: 105px; right: 20px; width: 56px; height: 56px; background: #f97316; color: white; border-radius: 16px; border: none; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4); z-index: 999; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; transition: transform 0.2s;">
-    <i class="bi bi-plus-lg"></i>
-</button>
-
 <script src="/modulos/flota/documentos/logica.js"></script>
 <script>
     setTimeout(() => {
         if (typeof init_documentos === 'function') init_documentos();
     }, 150);
 </script>
-
-<style>
-/* Utilities */
-.hide-on-desktop { display: none !important; }
-.hide-on-mobile { display: block !important; }
-
-
-    #fleet-module-container.show-detail-mobile .mobile-fab-plus { display: none !important; }
-
-/* Global modal buttons */
-.btn-cancel-modal { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; color: #475569; font-weight: 700; padding: 1rem; width: 100%; cursor: pointer; transition: 0.2s; }
-.btn-cancel-modal:hover { background: #f1f5f9; }
-.btn-save-modal { background: #16a34a; border: none; border-radius: 12px; color: #fff; font-weight: 700; padding: 1rem; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-.btn-save-modal:hover { background: #15803d; }
-
-@media (max-width: 768px) {
-    .hide-on-desktop { display: flex !important; }
-    .hide-on-mobile { display: none !important; }
-    
-    .fleet-dashboard { flex-direction: column !important; }
-    .fleet-sidebar {
-        width: 100% !important; border-right: none !important;
-        padding: 0 !important; background: #f4f7fb; flex: 1; overflow: hidden;
-    }
-    .fleet-content {
-        display: none !important; /* hidden by default on mobile */
-        padding-bottom: 6rem !important; position: fixed; top: 0; left: 0;
-        width: 100%; height: 100%; background: #f4f7fb; z-index: 50; overflow-y: auto;
-    }
-    
-    /* Toggle list/detail on mobile */
-    .fleet-main-split.show-detail .fleet-sidebar { display: none !important; }
-    .fleet-main-split.show-detail .fleet-content { display: block !important; }
-    
-    .fleet-sidebar .form-control { border-radius: 12px; background: #fff; padding: 0.8rem 1rem 0.8rem 2.5rem; }
-    
-    .kpi-wrapper { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 0.5rem; }
-    .kpi-wrapper::-webkit-scrollbar { display: none; }
-    .kpi-card { min-width: 120px; flex: 0 0 auto; padding: 1rem; border-radius: 16px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
-    
-    .vehicle-item { margin: 0 1rem 0.75rem 1rem !important; background: #fff !important; border-radius: 16px !important; padding: 1rem !important; border: none !important; box-shadow: 0 2px 10px rgba(0,0,0,0.03) !important; flex-direction: row !important; }
-    
-    .ficha-tecnica { position: relative; padding: 0 !important; background: transparent !important; box-shadow: none !important; border: none !important; }
-    .docs-grid { gap: 1rem !important; padding: 0 1rem 120px 1rem !important; display: grid; grid-template-columns: 1fr 1fr; }
-    
-    /* Specific Document Bottom Sheet Modal */
-    #docModalOverlay .doc-modal {
-        border-radius: 24px 24px 0 0 !important;
-        background: #fff !important;
-        margin: auto 0 0 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 1.5rem !important;
-    }
-    #docModalOverlay { align-items: flex-end !important; }
-    #dm-title { font-size: 1.25rem !important; font-weight: 800 !important; color: #0f172a !important; margin-bottom: 0.25rem !important; }
-    .doc-modal-header p { font-size: 0.8rem !important; color: #64748b !important; }
-    .doc-modal-close { background: #f1f5f9 !important; border-radius: 50% !important; width: 32px !important; height: 32px !important; }
-    
-    .doc-modal-body .data-row { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px dashed #e2e8f0; }
-    .doc-modal-body .data-row:last-child { border-bottom: none; }
-    .doc-modal-body { border: 1px solid #e2e8f0; border-radius: 16px; padding: 0.5rem 1rem; margin-bottom: 1rem; }
-    
-    .doc-modal-btn { width: 100% !important; padding: 1rem !important; border-radius: 12px !important; margin-bottom: 0.5rem !important; font-weight: 700 !important; display:flex !important; align-items:center !important; justify-content:center !important; gap: 0.5rem !important; }
-    .doc-modal-btn.primary { background: #2563eb !important; border: none !important; color: #fff !important; }
-    .doc-modal-btn.secondary { background: #f1f5f9 !important; border: none !important; color: #0f172a !important; }
-    
-    
-    
-    
-    #modalEdicionVehiculo .modal-dialog {
-        margin: 1rem;
-    }
-}
-</style>
