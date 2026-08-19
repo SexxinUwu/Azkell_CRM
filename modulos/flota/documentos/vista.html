@@ -908,6 +908,13 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
             </div>
             <div class="kpi-icon-wrapper"><i class="bi bi-exclamation-triangle"></i></div>
         </div>
+        <div class="kpi-card kpi-sin-doc" onclick="filtrarKPI('sin-doc', this)" style="border-left: 4px solid #94a3b8;">
+            <div class="kpi-info">
+                <span class="kpi-title">Sin Documentos</span>
+                <span class="kpi-value" id="kpi-sin-doc">0</span>
+            </div>
+            <div class="kpi-icon-wrapper" style="background:#f1f5f9; color:#64748b;"><i class="bi bi-file-earmark-x"></i></div>
+        </div>
     </div>
 
     <div class="fleet-main-split">
@@ -1099,6 +1106,15 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         </div>
         <div class="doc-modal-data" id="dm-data">
             <!-- Rellenado por JS -->
+        </div>
+        <div class="mt-2 mb-3 pt-2 border-top" style="border-color:#e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="fw-bold text-dark small" style="font-size:0.8rem;"><i class="bi bi-clock-history text-primary me-1"></i> Historial de Documentos Anteriores</span>
+                <button class="btn btn-sm btn-light border text-secondary py-0 px-2" style="font-size:0.7rem; border-radius:6px;" onclick="window.cargarHistorialDocModal()"><i class="bi bi-arrow-clockwise me-1"></i> Actualizar</button>
+            </div>
+            <div id="dm-historial-container" class="custom-scrollbar" style="max-height: 150px; overflow-y: auto;">
+                <div class="text-muted small text-center py-2" style="font-size:0.75rem;">Sin registros anteriores.</div>
+            </div>
         </div>
         <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
             <button class="doc-modal-btn secondary" id="dm-btn-ver" style="display:none; flex:1;" onclick="">
