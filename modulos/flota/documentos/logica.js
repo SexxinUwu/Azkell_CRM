@@ -251,9 +251,9 @@ function calcularMetadatos(v) {
     });
 
     let salud = docsRegistrados === 0 ? 0 : Math.round((docsVerdes / docsRegistrados) * 100);
-    if(docsRegistrados === 0) peorEstado = { text: 'Sin Info', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray' };
+    if(docsRegistrados === 0) peorEstado = { text: 'Sin Info', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', score: -1 };
 
-    return { salud, peorEstado, docs };
+    return { salud, peorEstado, docs, docsRegistrados };
 }
 
 function cargarDatosVehiculos() {
@@ -308,10 +308,15 @@ function actualizarKPIs() {
         if(!matchAvanzado) return;
         
         t++;
-        if(v._meta.peorEstado.score === -1 || v._meta.salud === 0) sinDoc++;
-        else if(v._meta.peorEstado.score === 3) vig++;
-        else if(v._meta.peorEstado.score === 2 || v._meta.peorEstado.score === 1) ale++;
-        else if(v._meta.peorEstado.score === 0) ven++;
+        if (v._meta.docsRegistrados === 0 || v._meta.peorEstado.score === -1) {
+            sinDoc++;
+        } else if (v._meta.peorEstado.score === 0) {
+            ven++;
+        } else if (v._meta.peorEstado.score === 1 || v._meta.peorEstado.score === 2) {
+            ale++;
+        } else if (v._meta.peorEstado.score === 3) {
+            vig++;
+        }
     });
 
     var setTxt = function(id, val) { var e = document.getElementById(id); if (e) e.innerText = val; };
@@ -323,12 +328,45 @@ function actualizarKPIs() {
 }
 
 function filtrarKPI(tipo, element) {
-    document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('active'));
-    element.classList.add('active');
+    document.querySelectorAll('.ck-kpi-card, .kpi-card').forEach(c => c.classList.remove('active'));
+    if (element) {
+        element.classList.add('active');
+    } else {
+        const el = document.querySelector(`.ck-kpi-card[data-kpi="${tipo}"]`);
+        if (el) el.classList.add('active');
+    }
+
+    // Sincronizar pills segmentadas
+    document.querySelectorAll('.ck-segment-item').forEach(b => {
+        if (b.getAttribute('data-kpi') === tipo) b.classList.add('active');
+        else b.classList.remove('active');
+    });
+
     currentFiltroKPI = tipo;
     renderizarListaLateral();
     renderizarMatriz();
 }
+
+function filtrarSegmentoDoc(tipo, element) {
+    document.querySelectorAll('.ck-segment-item').forEach(b => b.classList.remove('active'));
+    if (element) {
+        element.classList.add('active');
+    } else {
+        const b = document.querySelector(`.ck-segment-item[data-kpi="${tipo}"]`);
+        if (b) b.classList.add('active');
+    }
+
+    // Sincronizar tarjetas KPI
+    document.querySelectorAll('.ck-kpi-card, .kpi-card').forEach(c => {
+        if (c.getAttribute('data-kpi') === tipo) c.classList.add('active');
+        else c.classList.remove('active');
+    });
+
+    currentFiltroKPI = tipo;
+    renderizarListaLateral();
+    renderizarMatriz();
+}
+window.filtrarSegmentoDoc = filtrarSegmentoDoc;
 
 function filtrarListaLocal() {
     actualizarKPIs();
@@ -378,10 +416,10 @@ function renderizarListaLateral() {
         }
         
         let matchKpi = true;
-        if(currentFiltroKPI === 'vigente') matchKpi = (v._meta.peorEstado.score === 3);
-        else if(currentFiltroKPI === 'alerta') matchKpi = (v._meta.peorEstado.score === 1 || v._meta.peorEstado.score === 2);
-        else if(currentFiltroKPI === 'vencido') matchKpi = (v._meta.peorEstado.score === 0);
-        else if(currentFiltroKPI === 'sin-doc') matchKpi = (v._meta.peorEstado.score === -1 || v._meta.salud === 0);
+        if (currentFiltroKPI === 'vigente') matchKpi = (v._meta.docsRegistrados > 0 && v._meta.peorEstado.score === 3);
+        else if (currentFiltroKPI === 'alerta') matchKpi = (v._meta.docsRegistrados > 0 && (v._meta.peorEstado.score === 1 || v._meta.peorEstado.score === 2));
+        else if (currentFiltroKPI === 'vencido') matchKpi = (v._meta.docsRegistrados > 0 && v._meta.peorEstado.score === 0);
+        else if (currentFiltroKPI === 'sin-doc') matchKpi = (v._meta.docsRegistrados === 0 || v._meta.peorEstado.score === -1);
         
         return matchTerm && matchAvanzado && matchKpi;
     });
@@ -692,11 +730,10 @@ function renderizarMatriz() {
         }
         
         let matchKpi = true;
-        if(currentFiltroKPI === 'vigente') matchKpi = (v._meta.peorEstado.score === 3);
-        else if(currentFiltroKPI === 'alerta') matchKpi = (v._meta.peorEstado.score === 1 || v._meta.peorEstado.score === 2);
-        else if(currentFiltroKPI === 'vencido') matchKpi = (v._meta.peorEstado.score === 0);
-        
-        return matchTerm && matchAvanzado && matchKpi;
+        if (currentFiltroKPI === 'vigente') matchKpi = (v._meta.docsRegistrados > 0 && v._meta.peorEstado.score === 3);
+        else if (currentFiltroKPI === 'alerta') matchKpi = (v._meta.docsRegistrados > 0 && (v._meta.peorEstado.score === 1 || v._meta.peorEstado.score === 2));
+        else if (currentFiltroKPI === 'vencido') matchKpi = (v._meta.docsRegistrados > 0 && v._meta.peorEstado.score === 0);
+        else if (currentFiltroKPI === 'sin-doc') matchKpi = (v._meta.docsRegistrados === 0 || v._meta.peorEstado.score === -1);
     });
 
     if(filtrados.length === 0){
