@@ -29,14 +29,48 @@ function cargarDatosPlacasCatalogo() {
 
 function actualizarDatalistPlacas() {
     let opciones = new Set();
-    (placasCatalogo || []).forEach(p => { if (p.placa) opciones.add(p.placa.toUpperCase()); });
-    (vehiculosFlota || []).forEach(v => { if (v.placa) opciones.add(v.placa.toUpperCase()); });
+    if (Array.isArray(placasCatalogo)) {
+        placasCatalogo.forEach(p => {
+            let pl = (typeof p === 'string' ? p : (p.placa || (Array.isArray(p) ? p[0] : ''))).trim();
+            if (pl && pl.toUpperCase() !== 'PLACA') opciones.add(pl.toUpperCase());
+        });
+    }
+    if (Array.isArray(vehiculosFlota)) {
+        vehiculosFlota.forEach(v => {
+            let pl = (typeof v === 'string' ? v : (v.placa || (Array.isArray(v) ? v[0] : ''))).trim();
+            if (pl && pl.toUpperCase() !== 'PLACA') opciones.add(pl.toUpperCase());
+        });
+    }
+    if (Array.isArray(window.dataGlobalPlacas)) {
+        window.dataGlobalPlacas.forEach(p => {
+            let pl = (typeof p === 'string' ? p : (p.placa || (Array.isArray(p) ? p[0] : ''))).trim();
+            if (pl && pl.toUpperCase() !== 'PLACA') opciones.add(pl.toUpperCase());
+        });
+    }
     
     let items = Array.from(opciones).sort().map(placa => ({ value: placa, label: placa }));
     
     if (typeof window._cbInit === 'function') {
         window._cbInit('nd_vehiculo', items, 'BUSCAR PLACA...');
         window._cbInit('fd_placa', items, 'BUSCAR PLACA...');
+    }
+
+    if (items.length === 0) {
+        fetch('/api/placas-lista')
+        .then(r => r.json())
+        .then(rows => {
+            if (Array.isArray(rows)) {
+                rows.forEach(p => {
+                    let pl = (typeof p === 'string' ? p : (p.placa || (Array.isArray(p) ? p[0] : ''))).trim();
+                    if (pl && pl.toUpperCase() !== 'PLACA') opciones.add(pl.toUpperCase());
+                });
+                let newItems = Array.from(opciones).sort().map(placa => ({ value: placa, label: placa }));
+                if (typeof window._cbInit === 'function') {
+                    window._cbInit('nd_vehiculo', newItems, 'BUSCAR PLACA...');
+                    window._cbInit('fd_placa', newItems, 'BUSCAR PLACA...');
+                }
+            }
+        }).catch(e => console.error('Error cargando fallback de placas:', e));
     }
 }
 

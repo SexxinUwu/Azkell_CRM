@@ -118,6 +118,41 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
 }
 
+/* ── Combobox searchable dropdown styles ──────── */
+.cb-wrap {
+    position: relative;
+    width: 100%;
+}
+.cb-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 99999 !important;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.18);
+    max-height: 220px;
+    overflow-y: auto;
+}
+.cb-opt {
+    padding: 0.65rem 1rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.cb-opt:last-child {
+    border-bottom: none;
+}
+.cb-opt:hover {
+    background: #eff6ff !important;
+    color: #0284c7 !important;
+}
+
 /* Main split */
 .fleet-main-split {
     display: flex;
@@ -1300,8 +1335,16 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                         <div class="row g-2">
                             <div class="col-12 col-md-6">
                                 <label class="form-label fw-bold text-secondary small mb-1">Vehículo / Placa <span class="text-danger">(*)</span></label>
-                                <div id="nd_vehiculo_container" style="position: relative;">
-                                    <input type="text" id="nd_vehiculo" class="form-control border-secondary-subtle" placeholder="BUSCAR PLACA..." required autocomplete="off">
+                                <div class="cb-wrap position-relative">
+                                    <input type="hidden" id="nd_vehiculo" name="nd_vehiculo">
+                                    <input type="text" id="nd_vehiculo-txt" class="form-control border-secondary-subtle text-uppercase fw-semibold"
+                                           placeholder="BUSCAR PLACA..." autocomplete="off"
+                                           style="border-radius:12px; min-height:44px;"
+                                           oninput="this.value=this.value.toUpperCase(); window._cbFiltrar('nd_vehiculo')"
+                                           onfocus="window._cbFiltrar('nd_vehiculo')"
+                                           onblur="window._cbHide('nd_vehiculo')">
+                                    <div id="nd_vehiculo-dd" class="cb-dropdown shadow-lg"
+                                         style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1099; background:#fff; max-height:220px; overflow-y:auto; border-radius:12px; border:1px solid #cbd5e1; box-shadow:0 10px 25px -5px rgba(0,0,0,0.15);"></div>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6">
