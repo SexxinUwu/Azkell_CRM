@@ -2,58 +2,67 @@
 <style>
 /* Estilos Específicos del Módulo Disponibilidad */
 .disp-container {
-    padding: 1.25rem 1.5rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
 }
 .disp-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
 }
 .disp-kpi-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 1rem;
-    padding: 1.1rem 1.25rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
     user-select: none;
+    min-height: 56px !important;
 }
 .disp-kpi-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
 }
 .disp-kpi-card.active-kpi {
-    border: 2px solid #3b82f6 !important;
-    background: #f0f9ff !important;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
+    background: #f8fafc !important;
 }
 .disp-kpi-icon {
-    width: 46px;
-    height: 46px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.35rem;
-    flex-shrink: 0;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
 }
 .disp-kpi-val {
-    font-size: 1.5rem;
-    font-weight: 800;
-    line-height: 1.1;
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
     color: #0f172a;
 }
 .disp-kpi-lbl {
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-top: 2px;
+    margin-bottom: 2px;
+    line-height: 1 !important;
+    white-space: nowrap;
 }
 
 /* Tabla de Disponibilidad */
@@ -283,49 +292,49 @@
 
     <!-- Tarjetas de KPIs Interactivas -->
     <div class="disp-kpi-grid">
-        <div class="disp-kpi-card" id="card-kpi-total" onclick="window.dispFiltrarPorKPI('total')">
+        <div class="disp-kpi-card active-kpi" id="card-kpi-total" onclick="window.dispFiltrarPorKPI('total')">
             <div class="disp-kpi-icon" style="background:#eff6ff; color:#2563eb;">
                 <i class="bi bi-truck"></i>
             </div>
-            <div>
-                <div class="disp-kpi-val" id="disp-kpi-total">0</div>
+            <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
                 <div class="disp-kpi-lbl">Total Flota</div>
+                <div class="disp-kpi-val" id="disp-kpi-total">0</div>
             </div>
         </div>
         <div class="disp-kpi-card" id="card-kpi-operativos" onclick="window.dispFiltrarPorKPI('operativos')">
             <div class="disp-kpi-icon" style="background:#ecfdf5; color:#10b981;">
                 <i class="bi bi-check-circle-fill"></i>
             </div>
-            <div>
-                <div class="disp-kpi-val" id="disp-kpi-operativos">0</div>
+            <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
                 <div class="disp-kpi-lbl">Operativos / Disp.</div>
+                <div class="disp-kpi-val text-success" id="disp-kpi-operativos">0</div>
             </div>
         </div>
         <div class="disp-kpi-card" id="card-kpi-mantenimiento" onclick="window.dispFiltrarPorKPI('mantenimiento')">
             <div class="disp-kpi-icon" style="background:#fef2f2; color:#ef4444;">
                 <i class="bi bi-tools"></i>
             </div>
-            <div>
-                <div class="disp-kpi-val" id="disp-kpi-mantenimiento">0</div>
+            <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
                 <div class="disp-kpi-lbl">En Taller / Mant.</div>
+                <div class="disp-kpi-val text-danger" id="disp-kpi-mantenimiento">0</div>
             </div>
         </div>
         <div class="disp-kpi-card" id="card-kpi-cond-disp" onclick="window.dispFiltrarPorKPI('cond-disp')">
             <div class="disp-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
                 <i class="bi bi-person-check-fill"></i>
             </div>
-            <div>
-                <div class="disp-kpi-val" id="disp-kpi-cond-disp">0</div>
+            <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
                 <div class="disp-kpi-lbl">Cond. Disponibles</div>
+                <div class="disp-kpi-val text-success" id="disp-kpi-cond-disp">0</div>
             </div>
         </div>
         <div class="disp-kpi-card" id="card-kpi-cond-nodisp" onclick="window.dispFiltrarPorKPI('cond-nodisp')">
             <div class="disp-kpi-icon" style="background:#fffbeb; color:#f59e0b;">
                 <i class="bi bi-person-x-fill"></i>
             </div>
-            <div>
-                <div class="disp-kpi-val" id="disp-kpi-cond-nodisp">0</div>
+            <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
                 <div class="disp-kpi-lbl">Descanso / Vac.</div>
+                <div class="disp-kpi-val text-warning" id="disp-kpi-cond-nodisp">0</div>
             </div>
         </div>
     </div>
