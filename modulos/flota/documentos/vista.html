@@ -24,6 +24,14 @@
     box-sizing: border-box;
 }
 
+/* Responsive utilities */
+.hide-on-desktop { display: none !important; }
+.hide-on-mobile { display: flex !important; }
+@media (max-width: 768px) {
+    .hide-on-desktop { display: flex !important; }
+    .hide-on-mobile { display: none !important; }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -1039,12 +1047,27 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         </div>
     </div>
 
-    <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS SEGMENTED (FULL-BLEED) ──────── -->
+    <!-- ── 3. BARRA DE BÚSQUEDA, SWITCHER DE VISTAS Y FILTROS SEGMENTED ── -->
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <div class="position-relative flex-grow-1" style="max-width: 360px;">
-            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
-            <input type="text" id="fleet-search" class="ck-apple-search" placeholder="Buscar placa, tipo..." oninput="filtrarListaLocal()">
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 320px;">
+            <div class="position-relative flex-grow-1">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+                <input type="text" id="fleet-search" class="ck-apple-search" placeholder="Buscar placa, tipo..." oninput="filtrarListaLocal()">
+            </div>
         </div>
+
+        <!-- Switcher de Vistas: Expediente vs Matriz -->
+        <div class="d-flex align-items-center">
+            <div class="bg-white border p-1 rounded-3 d-flex align-items-center gap-1 shadow-2xs">
+                <button type="button" class="btn btn-sm border-0 fw-bold px-3 py-1-5 rounded-2 d-flex align-items-center gap-1" id="btn-view-cards" onclick="cambiarModoVistaDoc('cards')" style="font-size: 0.82rem; background: #eff6ff; color: #0284c7; transition: all 0.2s;">
+                    <i class="bi bi-grid-fill"></i> Expediente
+                </button>
+                <button type="button" class="btn btn-sm border-0 fw-bold px-3 py-1-5 rounded-2 d-flex align-items-center gap-1 text-secondary" id="btn-view-matrix" onclick="cambiarModoVistaDoc('matrix')" style="font-size: 0.82rem; background: transparent; transition: all 0.2s;">
+                    <i class="bi bi-table"></i> Matriz General
+                </button>
+            </div>
+        </div>
+
         <div class="d-flex align-items-center gap-2 flex-grow-1 flex-md-grow-0">
             <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-estados-docs">
                 <button type="button" class="ck-segment-item active" data-kpi="total" onclick="filtrarSegmentoDoc('total', this)">Todos</button>
@@ -1060,8 +1083,8 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         </div>
     </div>
 
-    <!-- ── 4. SPLIT PRINCIPAL: LISTA LATERAL Y FICHA TÉCNICA ──────── -->
-    <div class="fleet-main-split">
+    <!-- ── 4A. VISTA EXPEDIENTES (SPLIT PRINCIPAL: LISTA LATERAL Y FICHA TÉCNICA) ──────── -->
+    <div class="fleet-main-split" id="view-container-cards">
         <!-- Sidebar Izquierda -->
         <div class="fleet-sidebar">
             <h3 class="d-md-none" style="font-size: 0.85rem; font-weight: 800; color: #64748b; margin: 0.5rem 0; letter-spacing: 0.05em;">VEHÍCULOS DE FLOTA</h3>
@@ -1070,7 +1093,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
             </div>
         </div>
 
-        <!-- Panel Derecho -->
+        <!-- Panel Derecho: Expediente / Módulos de Control -->
         <div class="fleet-content">
             
             <div id="right-content-wrapper" style="display:none; height:100%; flex-direction:column; gap:1.5rem;">
@@ -1127,63 +1150,6 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                         <div class="docs-grid" id="docs-grid-container">
                         </div>
                 </div>
-
-                <!-- Matriz Inferior -->
-                <div class="matriz-container">
-                    <div class="matriz-header">
-                        <div class="mh-title"><i class="bi bi-table"></i> Matriz General de Control</div>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn-export" onclick="descargarPlantillaVehiculos()" style="background-color: #f59e0b; color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 500; cursor: pointer;"><i class="bi bi-download"></i> Descargar Plantilla</button>
-                            <button class="btn-export" onclick="document.getElementById('file-import-flota').click()" style="background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 500; cursor: pointer;"><i class="bi bi-upload"></i> Importar Datos</button>
-                            <button class="btn-export" onclick="exportarExcel()"><i class="bi bi-file-earmark-excel"></i> Exportar Vista</button>
-                            <input type="file" id="file-import-flota" accept=".xlsx, .xls" style="display:none;" onchange="importarExcelVehiculos(event)">
-                        </div>
-                    </div>
-                    <div class="table-wrapper">
-                        <table class="matriz-table" id="tabla-matriz">
-                            <thead>
-                                <tr>
-                                    <th class="sticky-col" rowspan="2" style="border-right: none;">N°</th>
-                                    <th class="sticky-col-2" rowspan="2">PLACA</th>
-                                    <th colspan="9" class="super-header text-center" style="background:#f1f5f9; color:#334155; border-bottom: 2px solid #e2e8f0; font-size: 11px; padding: 6px;">DATOS GENERALES</th>
-                                    <th colspan="3" class="super-header text-center" style="background:#e0f2fe; color:#0369a1; border-bottom: 2px solid #bae6fd; font-size: 11px; padding: 6px;">TARJ. CIRCULACIÓN</th>
-                                    <th colspan="4" class="super-header text-center" style="background:#fce7f3; color:#be185d; border-bottom: 2px solid #fbcfe8; font-size: 11px; padding: 6px;">SOAT</th>
-                                    <th colspan="3" class="super-header text-center" style="background:#fef3c7; color:#b45309; border-bottom: 2px solid #fde68a; font-size: 11px; padding: 6px;">MATPEL</th>
-                                    <th colspan="3" class="super-header text-center" style="background:#dcfce7; color:#15803d; border-bottom: 2px solid #bbf7d0; font-size: 11px; padding: 6px;">REV. TÉCNICA</th>
-                                    <th colspan="3" class="super-header text-center" style="background:#fae8ff; color:#a21caf; border-bottom: 2px solid #f5d0fe; font-size: 11px; padding: 6px;">BONIFICACIÓN</th>
-                                    <th colspan="4" class="super-header text-center" style="background:#ede9fe; color:#6d28d9; border-bottom: 2px solid #ddd6fe; font-size: 11px; padding: 6px;">SEG. VEHICULAR</th>
-                                    <th colspan="4" class="super-header text-center" style="background:#ffedd5; color:#c2410c; border-bottom: 2px solid #fed7aa; font-size: 11px; padding: 6px;">SEG. DE CARGA</th>
-                                    <th colspan="3" class="super-header text-center" style="background:#e0e7ff; color:#4338ca; border-bottom: 2px solid #c7d2fe; font-size: 11px; padding: 6px;">FUMIGACIÓN</th>
-                                    <th colspan="4" class="super-header text-center" style="background:#ffe4e6; color:#be123c; border-bottom: 2px solid #fecdd3; font-size: 11px; padding: 6px;">EXTINTORES</th>
-                                </tr>
-                                <tr>
-                                    <!-- General -->
-                                    <th>PROPIEDAD</th><th>EMPRESA</th><th>F. ENTREGA</th><th>TIPO</th><th>AÑO</th><th>MODELO</th><th>COLOR</th><th>MARCA</th><th>SERIE/CHASIS</th>
-                                    <!-- Tarjeta Circulacion -->
-                                    <th>N° CONST.</th><th>F. VENC.</th><th>DÍAS</th>
-                                    <!-- SOAT -->
-                                    <th>ENTIDAD</th><th>PAGO</th><th>F. VENC.</th><th>DÍAS</th>
-                                    <!-- MATPEL -->
-                                    <th>N° CONST.</th><th>F. VENC.</th><th>DÍAS</th>
-                                    <!-- RT -->
-                                    <th>F. EMISIÓN</th><th>F. VENC.</th><th>DÍAS</th>
-                                    <!-- BONI -->
-                                    <th>F. EMISIÓN</th><th>F. VENC.</th><th>DÍAS</th>
-                                    <!-- SV -->
-                                    <th>ENTIDAD</th><th>ASESOR</th><th>F. VENC.</th><th>DÍAS</th>
-                                    <!-- SC -->
-                                    <th>ENTIDAD</th><th>ASESOR</th><th>F. VENC.</th><th>DÍAS</th>
-                                    <!-- FUM -->
-                                    <th>F. EMISIÓN</th><th>F. VENC.</th><th>DÍAS</th>
-                                    <!-- EXT -->
-                                    <th>CANTIDAD</th><th>F. EMISIÓN</th><th>F. VENC.</th><th>DÍAS</th>
-                                </tr>
-                            </thead>
-                            <tbody id="matriz-body">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
             </div>
 
             <!-- Empty State -->
@@ -1197,6 +1163,63 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                 </div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- ── 4B. VISTA MATRIZ GENERAL INDEPENDIENTE (FULL SCREEN) ───────── -->
+    <div class="matriz-container d-none p-3 bg-white border rounded-4 shadow-2xs mt-2" id="view-container-matrix">
+        <div class="matriz-header d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-3 border-bottom">
+            <div class="mh-title fw-bold text-dark fs-6"><i class="bi bi-table text-primary me-2"></i> Matriz General de Control Documentario</div>
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-sm btn-outline-secondary fw-semibold rounded-3" onclick="descargarPlantillaVehiculos()"><i class="bi bi-download me-1 text-warning"></i> Descargar Plantilla</button>
+                <button class="btn btn-sm btn-outline-primary fw-semibold rounded-3" onclick="document.getElementById('file-import-flota').click()"><i class="bi bi-upload me-1"></i> Importar Excel</button>
+                <button class="btn btn-sm btn-success fw-bold text-white rounded-3 shadow-sm" onclick="exportarExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Exportar Vista</button>
+                <input type="file" id="file-import-flota" accept=".xlsx, .xls" style="display:none;" onchange="importarExcelVehiculos(event)">
+            </div>
+        </div>
+        <div class="table-wrapper custom-scrollbar" style="overflow-x: auto;">
+            <table class="matriz-table" id="tabla-matriz">
+                <thead>
+                    <tr>
+                        <th class="sticky-col" rowspan="2" style="border-right: none;">N°</th>
+                        <th class="sticky-col-2" rowspan="2">PLACA</th>
+                        <th colspan="9" class="super-header text-center" style="background:#f1f5f9; color:#334155; border-bottom: 2px solid #e2e8f0; font-size: 11px; padding: 6px;">DATOS GENERALES</th>
+                        <th colspan="3" class="super-header text-center" style="background:#e0f2fe; color:#0369a1; border-bottom: 2px solid #bae6fd; font-size: 11px; padding: 6px;">TARJ. CIRCULACIÓN</th>
+                        <th colspan="4" class="super-header text-center" style="background:#fce7f3; color:#be185d; border-bottom: 2px solid #fbcfe8; font-size: 11px; padding: 6px;">SOAT</th>
+                        <th colspan="3" class="super-header text-center" style="background:#fef3c7; color:#b45309; border-bottom: 2px solid #fde68a; font-size: 11px; padding: 6px;">MATPEL</th>
+                        <th colspan="3" class="super-header text-center" style="background:#dcfce7; color:#15803d; border-bottom: 2px solid #bbf7d0; font-size: 11px; padding: 6px;">REV. TÉCNICA</th>
+                        <th colspan="3" class="super-header text-center" style="background:#fae8ff; color:#a21caf; border-bottom: 2px solid #f5d0fe; font-size: 11px; padding: 6px;">BONIFICACIÓN</th>
+                        <th colspan="4" class="super-header text-center" style="background:#ede9fe; color:#6d28d9; border-bottom: 2px solid #ddd6fe; font-size: 11px; padding: 6px;">SEG. VEHICULAR</th>
+                        <th colspan="4" class="super-header text-center" style="background:#ffedd5; color:#c2410c; border-bottom: 2px solid #fed7aa; font-size: 11px; padding: 6px;">SEG. DE CARGA</th>
+                        <th colspan="3" class="super-header text-center" style="background:#e0e7ff; color:#4338ca; border-bottom: 2px solid #c7d2fe; font-size: 11px; padding: 6px;">FUMIGACIÓN</th>
+                        <th colspan="4" class="super-header text-center" style="background:#ffe4e6; color:#be123c; border-bottom: 2px solid #fecdd3; font-size: 11px; padding: 6px;">EXTINTORES</th>
+                    </tr>
+                    <tr>
+                        <!-- General -->
+                        <th>PROPIEDAD</th><th>EMPRESA</th><th>F. ENTREGA</th><th>TIPO</th><th>AÑO</th><th>MODELO</th><th>COLOR</th><th>MARCA</th><th>SERIE/CHASIS</th>
+                        <!-- Tarjeta Circulacion -->
+                        <th>N° CONST.</th><th>F. VENC.</th><th>DÍAS</th>
+                        <!-- SOAT -->
+                        <th>ENTIDAD</th><th>PAGO</th><th>F. VENC.</th><th>DÍAS</th>
+                        <!-- MATPEL -->
+                        <th>N° CONST.</th><th>F. VENC.</th><th>DÍAS</th>
+                        <!-- RT -->
+                        <th>F. EMISIÓN</th><th>F. VENC.</th><th>DÍAS</th>
+                        <!-- BONI -->
+                        <th>F. EMISIÓN</th><th>F. VENC.</th><th>DÍAS</th>
+                        <!-- SV -->
+                        <th>ENTIDAD</th><th>ASESOR</th><th>F. VENC.</th><th>DÍAS</th>
+                        <!-- SC -->
+                        <th>ENTIDAD</th><th>ASESOR</th><th>F. VENC.</th><th>DÍAS</th>
+                        <!-- FUM -->
+                        <th>F. EMISIÓN</th><th>F. VENC.</th><th>DÍAS</th>
+                        <!-- EXT -->
+                        <th>CANTIDAD</th><th>F. EMISIÓN</th><th>F. VENC.</th><th>DÍAS</th>
+                    </tr>
+                </thead>
+                <tbody id="matriz-body">
+                </tbody>
+            </table>
         </div>
     </div>
 

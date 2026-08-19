@@ -1,18 +1,106 @@
 <!-- Módulo Mantenimiento / Placas — SPA Aislado -->
+<style>
+/* ── Estilos Modernos 1:1 Reporte de Fallas ───────────────────────── */
+#moduloPlacas {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+}
+#moduloPlacas .ck-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+}
+#moduloPlacas .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+}
+#moduloPlacas .ck-kpi-card.active {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
+}
+#moduloPlacas .ck-kpi-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+#moduloPlacas .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.65rem 1rem 0.65rem 2.4rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: #0f172a;
+    width: 100%;
+    outline: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+#moduloPlacas .ck-apple-search:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+#moduloPlacas .ck-apple-segmented {
+    background: #f1f5f9;
+    border-radius: 12px;
+    padding: 3px;
+    display: inline-flex;
+    gap: 2px;
+    border: 1px solid #e2e8f0;
+}
+#moduloPlacas .ck-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+#moduloPlacas .ck-segment-item:hover { color: #0f172a; }
+#moduloPlacas .ck-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+</style>
+
 <div id="moduloPlacas" class="modulo-wrapper d-flex flex-column h-100" style="overflow-x: hidden;">
 
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
-        <i class="bi bi-truck text-primary me-1"></i>Flota Vehicular
-      </h2>
-      <p class="text-muted small mb-0">Gestión de Placas</p>
+  <!-- ── 1. ENCABEZADO PRINCIPAL (RESPONSIVE) ───────────────────────── -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="d-flex align-items-center gap-2 gap-md-3">
+      <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+        <i class="bi bi-truck-front-fill text-primary fs-5"></i>
+      </div>
+      <div>
+        <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+          Flota Vehicular
+        </h4>
+        <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">Catálogo y gestión integral de placas</small>
+      </div>
     </div>
-    <div class="d-flex gap-2 align-items-center">
-      <!-- Botón Importar Excel -->
+    <div class="d-flex align-items-center gap-2">
+      <!-- Dropdown Importar Excel -->
       <div class="dropdown">
-        <button class="btn btn-sm btn-outline-info dropdown-toggle fw-bold text-info shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Importar datos desde Excel">
-          <i class="bi bi-upload me-1"></i>Importar
+        <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
+          <i class="bi bi-cloud-arrow-up text-primary"></i> <span class="d-none d-md-inline">Importar</span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius: 12px; border: 1px solid var(--border);">
           <li>
@@ -30,64 +118,110 @@
       </div>
       <input type="file" id="input-importar-placas-excel" accept=".xlsx, .xls" style="display:none;" onchange="window.importarExcelPlacas(event)">
 
-      <button class="btn btn-sm btn-success fw-bold text-white shadow-sm" onclick="window.exportarPlacasExcel()" title="Exportar a Excel">
-        <i class="bi bi-file-earmark-excel"></i><span class="d-none d-md-inline ms-1">Exportar</span>
+      <button class="btn btn-success shadow-sm px-3 py-2 fw-bold text-white d-flex align-items-center gap-1 rounded-3" onclick="window.exportarPlacasExcel()" title="Exportar a Excel">
+        <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Exportar</span>
       </button>
-      <button class="btn btn-sm btn-outline-secondary" onclick="recargarModulo('placas')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-      <button class="btn btn-sm btn-primary" onclick="document.getElementById('formPlaca').reset(); bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();" data-perm-crear="flota">
-        <i class="bi bi-plus-lg"></i><span class="d-none d-md-inline ms-1">Nueva Placa</span>
+      <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="recargarModulo('placas')" title="Actualizar">
+        <i class="bi bi-arrow-clockwise fs-6"></i>
+      </button>
+      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="document.getElementById('formPlaca').reset(); bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();" data-perm-crear="flota" style="background: #0284c7; border-color: #0284c7;">
+        <i class="bi bi-plus-lg fs-6"></i> <span>Nueva Placa</span>
       </button>
     </div>
   </div>
 
-  <!-- Filtros -->
-  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
-    <input type="text" id="buscadorPlacas" class="form-control form-control-sm" style="max-width:280px;" placeholder="Buscar placa, tipo..." oninput="window.filtrarPlacasAvanzado()">
-    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 fw-bold" onclick="window.abrirFiltrosPlacas()" style="color: var(--text); border-color: var(--border);">
-      <i class="bi bi-funnel"></i> <span class="d-none d-md-inline">Filtros</span>
-      <span id="badge-filtros-placas" class="badge bg-primary rounded-pill d-none">0</span>
-    </button>
-    <div class="form-check ms-2 mb-0 d-flex align-items-center me-2">
-      <input class="form-check-input me-2" type="checkbox" id="placas-select-all" style="cursor: pointer; transform: scale(1.1);" onchange="window._placasToggleSelAll(this.checked)">
-      <label class="form-check-label small fw-bold text-muted" for="placas-select-all">Todas</label>
+  <!-- ── 2. BENTO KPIS ROW (100% RESPONSIVE) ───────────────────────── -->
+  <div class="row g-2 g-md-3 mb-3">
+    <div class="col-6 col-md-4 col-xl">
+      <div class="ck-kpi-card active" data-tipo-kpi="total" onclick="window.filtrarPorTipoKPI('total', this)">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Flota Total</span>
+          <h2 id="kpi-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
+        </div>
+        <div class="ck-kpi-icon" style="background: #eff6ff; color: #2563eb;">
+          <i class="bi bi-ui-radios-grid"></i>
+        </div>
+      </div>
     </div>
-    <button id="placas-btn-eliminar-masivo" class="btn btn-sm btn-danger fw-bold" style="display:none" onclick="window.eliminarMasivoPlacas()">
-      <i class="bi bi-trash me-1"></i>Eliminar 0 seleccionadas
-    </button>
-    <span id="placas-contador" class="text-muted small ms-auto"></span>
+    <div class="col-6 col-md-4 col-xl">
+      <div class="ck-kpi-card" data-tipo-kpi="camion" onclick="window.filtrarPorTipoKPI('camion', this)">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Camiones</span>
+          <h2 id="kpi-camion" class="fw-bolder m-0 text-primary" style="font-size: 1.6rem;">0</h2>
+        </div>
+        <div class="ck-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
+          <i class="bi bi-truck"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+      <div class="ck-kpi-card" data-tipo-kpi="carreta" onclick="window.filtrarPorTipoKPI('carreta', this)">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Carretas</span>
+          <h2 id="kpi-carreta" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">0</h2>
+        </div>
+        <div class="ck-kpi-icon" style="background: #fefce8; color: #ca8a04;">
+          <i class="bi bi-truck-flatbed"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-6 col-xl">
+      <div class="ck-kpi-card" data-tipo-kpi="tracto" onclick="window.filtrarPorTipoKPI('tracto', this)">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Tractos</span>
+          <h2 id="kpi-tracto" class="fw-bolder m-0 text-info" style="font-size: 1.6rem;">0</h2>
+        </div>
+        <div class="ck-kpi-icon" style="background: #f0f9ff; color: #0284c7;">
+          <i class="bi bi-truck-front"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl">
+      <div class="ck-kpi-card" data-tipo-kpi="semi" onclick="window.filtrarPorTipoKPI('semi', this)">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Semirrem.</span>
+          <h2 id="kpi-semi" class="fw-bolder m-0 text-secondary" style="font-size: 1.6rem;">0</h2>
+        </div>
+        <div class="ck-kpi-icon" style="background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">
+          <i class="bi bi-shield-shaded"></i>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- KPI Row Bento -->
-  <div class="bento-kpi-row mb-3" style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem; scrollbar-width: none;">
-    <div class="bento-kpi-card" onclick="window.filtrarPorTipoKPI('total')" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
-        <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-ui-radios-grid fs-5"></i></div>
-        <h2 id="kpi-total" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
-        <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Flota Total</p>
+  <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS SEGMENTED ───────────────────── -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="position-relative flex-grow-1" style="max-width: 340px;">
+      <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+      <input type="text" id="buscadorPlacas" class="ck-apple-search" placeholder="Buscar placa, tipo, marca..." oninput="window.filtrarPlacasAvanzado()">
     </div>
-    <div class="bento-kpi-card" onclick="window.filtrarPorTipoKPI('camion')" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
-        <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck fs-5"></i></div>
-        <h2 id="kpi-camion" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
-        <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Camiones</p>
-    </div>
-    <div class="bento-kpi-card" onclick="window.filtrarPorTipoKPI('carreta')" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
-        <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck-flatbed fs-5"></i></div>
-        <h2 id="kpi-carreta" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
-        <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Carretas</p>
-    </div>
-    <div class="bento-kpi-card" onclick="window.filtrarPorTipoKPI('tracto')" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
-        <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck-front fs-5"></i></div>
-        <h2 id="kpi-tracto" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
-        <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Tractos</p>
-    </div>
-    <div class="bento-kpi-card" onclick="window.filtrarPorTipoKPI('semi')" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
-        <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck-flatbed fs-5"></i></div>
-        <h2 id="kpi-semi" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
-        <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Semirrem.</p>
+    
+    <div class="d-flex align-items-center gap-2 flex-grow-1 flex-md-grow-0">
+      <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-tipos-placas">
+        <button type="button" class="ck-segment-item active" data-tipo-kpi="total" onclick="window.filtrarPorTipoKPI('total', this)">Todos</button>
+        <button type="button" class="ck-segment-item" data-tipo-kpi="camion" onclick="window.filtrarPorTipoKPI('camion', this)">Camiones</button>
+        <button type="button" class="ck-segment-item" data-tipo-kpi="carreta" onclick="window.filtrarPorTipoKPI('carreta', this)">Carretas</button>
+        <button type="button" class="ck-segment-item" data-tipo-kpi="tracto" onclick="window.filtrarPorTipoKPI('tracto', this)">Tractos</button>
+        <button type="button" class="ck-segment-item" data-tipo-kpi="semi" onclick="window.filtrarPorTipoKPI('semi', this)">Semirrem.</button>
+      </div>
+      <button class="btn bg-white border rounded-3 px-3 py-2 text-secondary d-flex align-items-center gap-2 fw-semibold" onclick="window.abrirFiltrosPlacas()" title="Filtros avanzados">
+        <i class="bi bi-funnel"></i>
+        <span class="d-none d-md-inline">Filtros</span>
+        <span id="badge-filtros-placas" class="badge bg-primary rounded-pill d-none" style="font-size: 0.65rem;">0</span>
+      </button>
+      <div class="form-check ms-2 mb-0 d-flex align-items-center">
+        <input class="form-check-input me-2" type="checkbox" id="placas-select-all" style="cursor: pointer; transform: scale(1.1);" onchange="window._placasToggleSelAll(this.checked)">
+        <label class="form-check-label small fw-bold text-muted" for="placas-select-all">Todas</label>
+      </div>
+      <button id="placas-btn-eliminar-masivo" class="btn btn-sm btn-danger fw-bold rounded-3 px-3 py-2" style="display:none" onclick="window.eliminarMasivoPlacas()">
+        <i class="bi bi-trash me-1"></i>Eliminar 0 seleccionadas
+      </button>
+      <span id="placas-contador" class="text-muted small ms-auto fw-bold"></span>
     </div>
   </div>
 
-  <!-- TABLA DE PLACAS -->
-  <div style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:12px;">
+  <!-- ── 4. TABLA DE PLACAS (MODERNA CON BORDES REDONDEADOS) ────────── -->
+  <div style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
     <div class="ent-table-wrap custom-scrollbar" style="flex:1 1 0; overflow: auto; -webkit-overflow-scrolling: touch;">
       <style>
         #tabla-placas th, #tabla-placas td { white-space: nowrap; border-right: 1px solid rgba(148, 163, 184, 0.15); }
