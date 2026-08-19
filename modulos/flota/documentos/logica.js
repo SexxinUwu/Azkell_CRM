@@ -772,6 +772,8 @@ function renderizarMatriz() {
         else if (currentFiltroKPI === 'alerta') matchKpi = (v._meta.docsRegistrados > 0 && (v._meta.peorEstado.score === 1 || v._meta.peorEstado.score === 2));
         else if (currentFiltroKPI === 'vencido') matchKpi = (v._meta.docsRegistrados > 0 && v._meta.peorEstado.score === 0);
         else if (currentFiltroKPI === 'sin-doc') matchKpi = (v._meta.docsRegistrados === 0 || v._meta.peorEstado.score === -1);
+        
+        return matchTerm && matchAvanzado && matchKpi;
     });
 
     if(filtrados.length === 0){
