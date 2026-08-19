@@ -1128,249 +1128,80 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         </div>
         <button class="doc-modal-btn primary" onclick="abrirModalEdicion(currentPlaca); cerrarDocModal();">
             <i class="bi bi-pencil-square" style="margin-right:0.5rem;"></i> Editar Información
-        </button>
-    </div>
-</div>
-
-<!-- Modal -->
-<div class="fleet-modal-overlay" id="modalEdicionVehiculo">
-    <div class="fleet-modal">
-        <div class="fm-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; background: #1e293b; border-bottom: 1px solid #334155; border-radius: 24px 24px 0 0;">
-            <div style="display:flex; align-items:center; gap:0.75rem;">
-                <div style="width:40px; height:40px; background:#dcfce7; color:#16a34a; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
-                    <i class="bi bi-arrow-down-circle"></i>
-                </div>
-                <div style="display:flex; flex-direction:column; line-height:1.2;">
-                    <span style="font-weight:800; color:#ffffff !important; font-size:1.1rem;">Configuración de Unidad</span>
-                    <span style="font-weight:800; color:#cbd5e1 !important; font-size:0.65rem; text-transform:uppercase; letter-spacing:0.5px;">Documentos de Flota</span>
-                </div>
+     <!-- Modal Nuevo Documento (Exacto a la Imagen 2) -->
+<div class="modal fade" id="modalEdicionVehiculo" tabindex="-1" aria-hidden="true" style="z-index: 1060; background: rgba(15, 23, 42, 0.5);">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+        <div class="modal-content rounded-4 border-0 shadow-lg" style="overflow:hidden;">
+            <div class="modal-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="modal-title fw-bold" style="color: #0284c7; font-size: 1.2rem;">Nuevo Documento</h5>
+                <button type="button" class="btn-close shadow-none" onclick="cerrarModalEdicion()"></button>
             </div>
-            <button class="fm-close" onclick="cerrarModalEdicion()" style="width:36px; height:36px; background:#f1f5f9; color:#000000; border-radius:12px; border:none; display:flex; align-items:center; justify-content:center; font-size:1.1rem; cursor:pointer;"><i class="bi bi-x-lg"></i></button>
-        </div>
-        <div class="fm-body">
-            <div class="fm-sidebar">
-                <div class="fm-section-title">Identificación</div>
-                <div class="fm-tab active" onclick="switchTab(0, this)">General</div>
-                <div class="fm-section-title" style="margin-top: 1rem;">Documentación (9)</div>
-                <div class="fm-tab" onclick="switchTab(1, this)">1. Tarj. Circulación</div>
-                <div class="fm-tab" onclick="switchTab(2, this)">2. SOAT</div>
-                <div class="fm-tab" onclick="switchTab(3, this)">3. MATPEL</div>
-                <div class="fm-tab" onclick="switchTab(4, this)">4. Rev. Técnica</div>
-                <div class="fm-tab" onclick="switchTab(5, this)">5. Bonificación</div>
-                <div class="fm-tab" onclick="switchTab(6, this)">6. Seg. Vehicular</div>
-                <div class="fm-tab" onclick="switchTab(7, this)">7. Seg. de Carga</div>
-                <div class="fm-tab" onclick="switchTab(8, this)">8. Fumigación</div>
-                <div class="fm-tab" onclick="switchTab(9, this)">9. Extintores</div>
-            </div>
-            <div class="fm-content">
+            <div class="modal-body p-4 bg-white">
                 <form id="formVehiculoFlota" onsubmit="event.preventDefault(); guardarVehiculo();">
-                    <div class="tab-pane active" id="tab-0">
-                        <div class="fm-content-title">Identidad del Vehículo</div>
-                        
-                        <div class="form-grid-2">
-                            <div class="form-group">
-                                <label>Placa Principal *</label>
-                                <div class="position-relative">
-                                    <input type="text" id="fd_placa-txt" class="form-control-large" placeholder="BUSCAR PLACA..." autocomplete="off"
-                                           style="text-transform:uppercase;"
-                                           oninput="window._cbFiltrar('fd_placa'); autocompletarDatosPlaca(this.value)"
-                                           onfocus="window._cbFiltrar('fd_placa')"
-                                           onblur="window._cbHide('fd_placa')">
-                                    <input type="hidden" id="fd_placa">
-                                    <div id="fd_placa-dd" class="cb-dropdown"></div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Tipo de Unidad</label>
-                                <input type="text" id="f_tipo" class="form-control-large" readonly>
-                            </div>
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small mb-1">Vehículo <span class="text-danger">(*)</span></label>
+                        <select id="nd_vehiculo" class="form-select rounded-3 py-2 border" required style="font-size:0.9rem;">
+                            <option value="">Seleccione...</option>
+                        </select>
+                    </div>
 
-                        <div class="grouped-box">
-                            <div class="form-group-clean"><label>Propiedad</label><input type="text" id="f_propiedad" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Empresa</label><input type="text" id="f_empresa" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Marca</label><input type="text" id="f_marca" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Modelo</label><input type="text" id="f_modelo" class="form-control-clean"></div>
-                            
-                            <div class="form-group-clean"><label>Año</label><input type="number" id="f_anio" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Color</label><input type="text" id="f_color" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>F. Entrega</label><input type="date" id="f_fecha_entrega" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Serie/Chasis</label><input type="text" id="f_chasis" class="form-control-clean"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small mb-1">Tipo Documento <span class="text-danger">(*)</span></label>
+                        <select id="nd_tipo_documento" class="form-select rounded-3 py-2 border" required style="font-size:0.9rem;" onchange="window.onTipoDocumentoChange(this.value)">
+                            <option value="">Seleccione...</option>
+                            <option value="TARJETA_PROPIEDAD">Tarjeta de Propiedad / Circulación</option>
+                            <option value="SOAT">SOAT</option>
+                            <option value="MATPEL">Tarjeta de Circulación MATPEL</option>
+                            <option value="REV_TECNICA">Revisión Técnica (CITV)</option>
+                            <option value="BONIFICACION">Bonificación / Suspensión Neumática</option>
+                            <option value="SEG_VEHICULAR">Seguro / Póliza Vehicular</option>
+                            <option value="SEG_CARRETA">Seguro Carreta</option>
+                            <option value="FUMIGACION">Certificado de Fumigación</option>
+                            <option value="EXTINTOR">Inspección Extintor</option>
+                            <option value="NUEVO_TIPO">+ Agregar Nuevo Tipo de Documento...</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3 d-none" id="grp_nuevo_tipo">
+                        <label class="form-label fw-bold text-secondary small mb-1">Nombre del Nuevo Tipo de Documento <span class="text-danger">(*)</span></label>
+                        <input type="text" id="nd_nuevo_tipo_nombre" class="form-control rounded-3 py-2 border" style="font-size:0.9rem;" placeholder="Ej: Certificado GPS, SCTR, Contrato Leasing...">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small mb-1">Documento <span class="text-danger">(*)</span></label>
+                        <input type="text" id="nd_constancia" class="form-control rounded-3 py-2 border" style="font-size:0.9rem;" placeholder="Número, N° constancia o entidad emisor..." required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small mb-1">Archivo <span class="text-danger">(*)</span></label>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="file" id="nd_archivo_file" class="form-control rounded-3 py-2 border" style="font-size:0.85rem;" accept=".pdf,image/*" onchange="subirDocumentoS3(this, 'nd_archivo_url', 'nd_link_file', 'nd')">
+                            <input type="hidden" id="nd_archivo_url">
+                            <span id="spin_nd" class="spinner-border spinner-border-sm text-primary d-none"></span>
                         </div>
                     </div>
 
-                    <!-- Repetir tab-pane con form-control-clean para los documentos -->
-                    <div class="tab-pane" id="tab-1">
-                        <div class="fm-content-title">1. Tarjeta de Circulación</div>
-                        <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
-                            <div class="form-group-clean"><label>N° Constancia MTC</label><input type="text" id="f_tc_constancia" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_tc_vencimiento" class="form-control-clean">
-                            <div class="form-group-clean">
-                                <label>Doc. Adjunto (PDF/Img)</label>
-                                <div style="display:flex; gap:0.5rem; align-items:center;">
-                                    <input type="file" id="file_tc" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_tc_url', 'link_tc', 'tc')">
-                                    <input type="hidden" id="f_tc_url">
-                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_tc').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
-                                    <button type="button" id="del_tc" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_tc_url', 'link_tc', 'del_tc', 'tc')"><i class="bi bi-trash"></i></button>
-                                    <span id="spin_tc" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
-                                </div>
-                            </div></div>
+                    <div class="row g-2 mb-4">
+                        <div class="col-4">
+                            <label class="form-label fw-bold text-secondary small mb-1">Fecha Emisión <span class="text-danger">(*)</span></label>
+                            <input type="date" id="nd_fecha_emision" class="form-control rounded-3 py-2 border" style="font-size:0.85rem;" required>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-bold text-secondary small mb-1">Fecha Vencimiento <span class="text-danger">(*)</span></label>
+                            <input type="date" id="nd_fecha_vencimiento" class="form-control rounded-3 py-2 border" style="font-size:0.85rem;" required>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-bold text-secondary small mb-1">Costo <span class="text-danger">(*)</span></label>
+                            <input type="number" step="0.01" id="nd_costo" class="form-control rounded-3 py-2 border" style="font-size:0.85rem;" placeholder="0.00">
                         </div>
                     </div>
 
-                    <div class="tab-pane" id="tab-2">
-                        <div class="fm-content-title">2. SOAT</div>
-                        <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
-                            <div class="form-group-clean"><label>Entidad Emisora</label><input type="text" id="f_soat_entidad" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Pago (Monto)</label><input type="number" step="0.01" id="f_soat_pago" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_soat_vencimiento" class="form-control-clean">
-                            <div class="form-group-clean">
-                                <label>Doc. Adjunto (PDF/Img)</label>
-                                <div style="display:flex; gap:0.5rem; align-items:center;">
-                                    <input type="file" id="file_soat" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_soat_url', 'link_soat', 'soat')">
-                                    <input type="hidden" id="f_soat_url">
-                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_soat').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
-                                    <button type="button" id="del_soat" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_soat_url', 'link_soat', 'del_soat', 'soat')"><i class="bi bi-trash"></i></button>
-                                    <span id="spin_soat" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
-                                </div>
-                            </div></div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane" id="tab-3">
-                        <div class="fm-content-title">3. Certificado MATPEL</div>
-                        <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
-                            <div class="form-group-clean"><label>N° Constancia MTC</label><input type="text" id="f_matpel_constancia" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_matpel_vencimiento" class="form-control-clean">
-                            <div class="form-group-clean">
-                                <label>Doc. Adjunto (PDF/Img)</label>
-                                <div style="display:flex; gap:0.5rem; align-items:center;">
-                                    <input type="file" id="file_matpel" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_matpel_url', 'link_matpel', 'matpel')">
-                                    <input type="hidden" id="f_matpel_url">
-                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_matpel').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
-                                    <button type="button" id="del_matpel" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_matpel_url', 'link_matpel', 'del_matpel', 'matpel')"><i class="bi bi-trash"></i></button>
-                                    <span id="spin_matpel" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
-                                </div>
-                            </div></div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane" id="tab-4">
-                        <div class="fm-content-title">4. Revisión Técnica (CITV)</div>
-                        <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
-                            <div class="form-group-clean"><label>Fecha de Emisión</label><input type="date" id="f_rt_emision" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_rt_vencimiento" class="form-control-clean">
-                            <div class="form-group-clean">
-                                <label>Doc. Adjunto (PDF/Img)</label>
-                                <div style="display:flex; gap:0.5rem; align-items:center;">
-                                    <input type="file" id="file_rt" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_rt_url', 'link_rt', 'rt')">
-                                    <input type="hidden" id="f_rt_url">
-                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_rt').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
-                                    <button type="button" id="del_rt" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_rt_url', 'link_rt', 'del_rt', 'rt')"><i class="bi bi-trash"></i></button>
-                                    <span id="spin_rt" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
-                                </div>
-                            </div></div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane" id="tab-5">
-                        <div class="fm-content-title">5. Bonificación</div>
-                        <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
-                            <div class="form-group-clean"><label>Fecha de Emisión</label><input type="date" id="f_boni_emision" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_boni_vencimiento" class="form-control-clean">
-                            <div class="form-group-clean">
-                                <label>Doc. Adjunto (PDF/Img)</label>
-                                <div style="display:flex; gap:0.5rem; align-items:center;">
-                                    <input type="file" id="file_boni" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_boni_url', 'link_boni', 'boni')">
-                                    <input type="hidden" id="f_boni_url">
-                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_boni').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
-                                    <button type="button" id="del_boni" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_boni_url', 'link_boni', 'del_boni', 'boni')"><i class="bi bi-trash"></i></button>
-                                    <span id="spin_boni" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
-                                </div>
-                            </div></div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane" id="tab-6">
-                        <div class="fm-content-title">6. Seguro Vehicular</div>
-                        <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
-                            <div class="form-group-clean"><label>Entidad Aseguradora</label><input type="text" id="f_sv_entidad" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Asesor Comercial</label><input type="text" id="f_sv_asesor" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_sv_vencimiento" class="form-control-clean">
-                            <div class="form-group-clean">
-                                <label>Doc. Adjunto (PDF/Img)</label>
-                                <div style="display:flex; gap:0.5rem; align-items:center;">
-                                    <input type="file" id="file_sv" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_sv_url', 'link_sv', 'sv')">
-                                    <input type="hidden" id="f_sv_url">
-                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_sv').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
-                                    <button type="button" id="del_sv" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_sv_url', 'link_sv', 'del_sv', 'sv')"><i class="bi bi-trash"></i></button>
-                                    <span id="spin_sv" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
-                                </div>
-                            </div></div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane" id="tab-7">
-                        <div class="fm-content-title">7. Seguro de Carga</div>
-                        <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
-                            <div class="form-group-clean"><label>Entidad Aseguradora</label><input type="text" id="f_sc_entidad" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Asesor Comercial</label><input type="text" id="f_sc_asesor" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_sc_vencimiento" class="form-control-clean">
-                            <div class="form-group-clean">
-                                <label>Doc. Adjunto (PDF/Img)</label>
-                                <div style="display:flex; gap:0.5rem; align-items:center;">
-                                    <input type="file" id="file_sc" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_sc_url', 'link_sc', 'sc')">
-                                    <input type="hidden" id="f_sc_url">
-                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_sc').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
-                                    <button type="button" id="del_sc" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_sc_url', 'link_sc', 'del_sc', 'sc')"><i class="bi bi-trash"></i></button>
-                                    <span id="spin_sc" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
-                                </div>
-                            </div></div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane" id="tab-8">
-                        <div class="fm-content-title">8. Certificado de Fumigación</div>
-                        <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
-                            <div class="form-group-clean"><label>Fecha de Emisión</label><input type="date" id="f_fum_emision" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_fum_vencimiento" class="form-control-clean">
-                            <div class="form-group-clean">
-                                <label>Doc. Adjunto (PDF/Img)</label>
-                                <div style="display:flex; gap:0.5rem; align-items:center;">
-                                    <input type="file" id="file_fum" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_fum_url', 'link_fum', 'fum')">
-                                    <input type="hidden" id="f_fum_url">
-                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_fum').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
-                                    <button type="button" id="del_fum" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_fum_url', 'link_fum', 'del_fum', 'fum')"><i class="bi bi-trash"></i></button>
-                                    <span id="spin_fum" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
-                                </div>
-                            </div></div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane" id="tab-9">
-                        <div class="fm-content-title">9. Extintores</div>
-                        <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
-                            <div class="form-group-clean"><label>Cantidad</label><input type="number" id="f_ext_cantidad" class="form-control-clean" value="1"></div>
-                            <div class="form-group-clean"><label>Fecha de Emisión</label><input type="date" id="f_ext_emision" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_ext_vencimiento" class="form-control-clean">
-                            <div class="form-group-clean">
-                                <label>Doc. Adjunto (PDF/Img)</label>
-                                <div style="display:flex; gap:0.5rem; align-items:center;">
-                                    <input type="file" id="file_ext" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_ext_url', 'link_ext', 'ext')">
-                                    <input type="hidden" id="f_ext_url">
-                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_ext').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
-                                    <button type="button" id="del_ext" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_ext_url', 'link_ext', 'del_ext', 'ext')"><i class="bi bi-trash"></i></button>
-                                    <span id="spin_ext" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
-                                </div>
-                            </div></div>
-                        </div>
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <button type="button" class="btn btn-light px-4 py-2 text-secondary fw-semibold rounded-3 border" onclick="cerrarModalEdicion()">Cerrar</button>
+                        <button type="submit" class="btn text-white px-4 py-2 fw-semibold rounded-3" style="background:#0284c7; border:none;">Guardar</button>
                     </div>
                 </form>
             </div>
-        </div>
-        <div class="fm-footer" style="display: grid; grid-template-columns: 1fr 2fr; gap: 0.75rem; padding: 1.5rem; background: #fff; border-top: 1px solid #e2e8f0;">
-            <button type="button" class="btn-cancel-modal" onclick="cerrarModalEdicion()">Cancelar</button>
-            <button type="button" class="btn-save-modal" onclick="guardarVehiculo()"><i class="bi bi-download" style="margin-right:0.5rem;"></i> Guardar Configuración</button>
         </div>
     </div>
 </div>

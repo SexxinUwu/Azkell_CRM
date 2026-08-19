@@ -694,196 +694,159 @@ function switchTab(index, element) {
     document.getElementById(`tab-${index}`).classList.add('active');
 }
 
-function abrirModalEdicion(placa) {
-    document.getElementById('formVehiculoFlota').reset();
-    
-    // Configurar combobox de placa
-    if (window._cbReset) window._cbReset('fd_placa');
-    var txtEl = document.getElementById('fd_placa-txt');
-    if (placa) {
-        if (window._cbSet) window._cbSet('fd_placa', placa, placa);
-        if (txtEl) txtEl.readOnly = true;
-    } else {
-        if (txtEl) txtEl.readOnly = false;
+window.onTipoDocumentoChange = function(val) {
+    var grp = document.getElementById('grp_nuevo_tipo');
+    if (grp) {
+        if (val === 'NUEVO_TIPO') grp.classList.remove('d-none');
+        else grp.classList.add('d-none');
     }
-    
-    switchTab(0, document.querySelector('.fm-tab'));
+};
 
-    // Helper: sincroniza campo hidden + boton Ver + boton Eliminar para cada documento
-    var _setDocUrl = function(key, url) {
-        var hidEl  = document.getElementById('f_' + key + '_url');
-        var lnkEl  = document.getElementById('link_' + key);
-        var delEl  = document.getElementById('del_' + key);
-        var fileEl = document.getElementById('file_' + key);
-        if (hidEl)  hidEl.value = url || '';
-        if (fileEl) fileEl.value = '';   // limpiar cualquier archivo seleccionado previo
-        if (url) {
-            if (lnkEl) { lnkEl.href = url; lnkEl.style.display = 'inline-flex'; }
-            if (delEl) delEl.style.display = 'inline-flex';
-        } else {
-            if (lnkEl) { lnkEl.href = '#'; lnkEl.style.display = 'none'; }
-            if (delEl) delEl.style.display = 'none';
-        }
-    };
-
-    // Limpiar visualmente todos los archivos
-    ['tc', 'soat', 'matpel', 'rt', 'boni', 'sv', 'sc', 'fum', 'ext'].forEach(function(k) {
-        _setDocUrl(k, null);
-    });
-
-    if(placa) {
-        const v = vehiculosFlota.find(x => x.placa === placa);
-        if(v) {
-            document.getElementById('f_tipo').value = v.tipo || '';
-            document.getElementById('f_propiedad').value = v.propiedad || '';
-            document.getElementById('f_empresa').value = v.empresa || '';
-            document.getElementById('f_marca').value = v.marca || '';
-            document.getElementById('f_modelo').value = v.modelo || '';
-            document.getElementById('f_anio').value = v.anio || '';
-            document.getElementById('f_color').value = v.color || '';
-            document.getElementById('f_chasis').value = v.chasis || '';
-            document.getElementById('f_fecha_entrega').value = (v.fecha_entrega||'').split('T')[0];
-            
-            document.getElementById('f_tc_constancia').value = v.tc_constancia || '';
-            document.getElementById('f_tc_vencimiento').value = (v.tc_vencimiento||'').split('T')[0];
-            
-            document.getElementById('f_soat_entidad').value = v.soat_entidad || '';
-            document.getElementById('f_soat_pago').value = v.soat_pago || '';
-            document.getElementById('f_soat_vencimiento').value = (v.soat_vencimiento||'').split('T')[0];
-            
-            document.getElementById('f_matpel_constancia').value = v.matpel_constancia || '';
-            document.getElementById('f_matpel_vencimiento').value = (v.matpel_vencimiento||'').split('T')[0];
-            
-            document.getElementById('f_rt_emision').value = (v.rt_emision||'').split('T')[0];
-            document.getElementById('f_rt_vencimiento').value = (v.rt_vencimiento||'').split('T')[0];
-            
-            document.getElementById('f_boni_emision').value = (v.boni_emision||'').split('T')[0];
-            document.getElementById('f_boni_vencimiento').value = (v.boni_vencimiento||'').split('T')[0];
-            
-            document.getElementById('f_sv_entidad').value = v.sv_entidad || '';
-            document.getElementById('f_sv_asesor').value = v.sv_asesor || '';
-            document.getElementById('f_sv_vencimiento').value = (v.sv_vencimiento||'').split('T')[0];
-            
-            document.getElementById('f_sc_entidad').value = v.sc_entidad || '';
-            document.getElementById('f_sc_asesor').value = v.sc_asesor || '';
-            document.getElementById('f_sc_vencimiento').value = (v.sc_vencimiento||'').split('T')[0];
-            
-            document.getElementById('f_fum_emision').value = (v.fum_emision||'').split('T')[0];
-            document.getElementById('f_fum_vencimiento').value = (v.fum_vencimiento||'').split('T')[0];
-            
-            document.getElementById('f_ext_cantidad').value = v.ext_cantidad || 1;
-            document.getElementById('f_ext_emision').value = (v.ext_emision||'').split('T')[0];
-            document.getElementById('f_ext_vencimiento').value = (v.ext_vencimiento||'').split('T')[0];
-
-            _setDocUrl('tc',     v.tc_url);
-            _setDocUrl('soat',   v.soat_url);
-            _setDocUrl('matpel', v.matpel_url);
-            _setDocUrl('rt',     v.rt_url);
-            _setDocUrl('boni',   v.boni_url);
-            _setDocUrl('sv',     v.sv_url);
-            _setDocUrl('sc',     v.sc_url);
-            _setDocUrl('fum',    v.fum_url);
-            _setDocUrl('ext',    v.ext_url);
-
-        }
-    }
-    
-    document.getElementById('modalEdicionVehiculo').style.display = 'flex';
-}
-
-function autocompletarDatosPlaca(placaSeleccionada) {
-    if(!placaSeleccionada) {
-        document.getElementById('formVehiculoFlota').reset();
-        return;
-    }
-    
-    // 1. Ver si ya está en vehiculosFlota (editar)
-    const v = vehiculosFlota.find(x => x.placa === placaSeleccionada);
-    if(v) {
-        abrirModalEdicion(placaSeleccionada);
-        return;
+function abrirModalEdicion(placa, tipoDoc) {
+    const selV = document.getElementById('nd_vehiculo');
+    if (selV) {
+        let opciones = new Set();
+        (placasCatalogo || []).forEach(p => { if (p.placa) opciones.add(p.placa.toUpperCase()); });
+        (vehiculosFlota || []).forEach(v => { if (v.placa) opciones.add(v.placa.toUpperCase()); });
+        let sorted = Array.from(opciones).sort();
+        
+        let html = '<option value="">Seleccione...</option>';
+        sorted.forEach(p => {
+            html += `<option value="${p}">${p}</option>`;
+        });
+        selV.innerHTML = html;
+        if (placa) selV.value = placa.toUpperCase();
     }
 
-    // 2. Si no, llenar con datos del catálogo
-    const p = placasCatalogo.find(x => x.placa === placaSeleccionada);
-    if(p) {
-        // Handle "tipo de unidad" mapping safely (accents and variations)
-        let tipoStr = (p.tipo || p.modelo_uts || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        document.getElementById('f_tipo').value = p.tipo || '';
-
-        document.getElementById('f_propiedad').value = p.propiedad || 'PROPIA';
-        document.getElementById('f_empresa').value = p.cliente || p.empresa || 'MARSISA';
-        document.getElementById('f_marca').value = p.marca || '';
-        document.getElementById('f_modelo').value = p.modelo_uts || p.modelo || '';
-        document.getElementById('f_anio').value = p.anio || '';
-        document.getElementById('f_color').value = p.color || '';
-        document.getElementById('f_chasis').value = p.nro_vin || p.chasis_vin || p.chasis || '';
-        document.getElementById('f_fecha_entrega').value = (p.fecha_ingreso || p.fecha_entrega || '').split('T')[0];
+    const f = document.getElementById('formVehiculoFlota');
+    if (f) f.reset();
+    
+    if (placa && selV) selV.value = placa.toUpperCase();
+    if (tipoDoc && document.getElementById('nd_tipo_documento')) {
+        document.getElementById('nd_tipo_documento').value = tipoDoc;
+    }
+    
+    const grp = document.getElementById('grp_nuevo_tipo');
+    if (grp) grp.classList.add('d-none');
+    
+    const m = document.getElementById('modalEdicionVehiculo');
+    if (m) {
+        m.style.display = 'block';
+        m.classList.add('show');
     }
 }
 
 function cerrarModalEdicion() {
-    document.getElementById('modalEdicionVehiculo').style.display = 'none';
+    const m = document.getElementById('modalEdicionVehiculo');
+    if (m) {
+        m.style.display = 'none';
+        m.classList.remove('show');
+    }
 }
 
 function guardarVehiculo() {
-    const placa = (document.getElementById('fd_placa')||{}).value;
-    if(!placa || !placa.trim()) return alert('La placa es obligatoria');
+    const placa = (document.getElementById('nd_vehiculo') || {}).value;
+    if (!placa || !placa.trim()) return alert('El vehículo/placa es obligatorio');
 
-    const data = {
-        placa: placa.trim().toUpperCase(),
-        tipo: document.getElementById('f_tipo').value,
-        propiedad: document.getElementById('f_propiedad').value,
-        empresa: document.getElementById('f_empresa').value,
-        marca: document.getElementById('f_marca').value,
-        modelo: document.getElementById('f_modelo').value,
-        anio: document.getElementById('f_anio').value,
-        color: document.getElementById('f_color').value,
-        chasis: document.getElementById('f_chasis').value,
-        fecha_entrega: document.getElementById('f_fecha_entrega').value,
-        tc_vencimiento: document.getElementById('f_tc_vencimiento').value,
-        tc_constancia: document.getElementById('f_tc_constancia').value,
-        soat_entidad: document.getElementById('f_soat_entidad').value,
-        soat_pago: document.getElementById('f_soat_pago').value,
-        soat_vencimiento: document.getElementById('f_soat_vencimiento').value,
-        matpel_constancia: document.getElementById('f_matpel_constancia').value,
-        matpel_vencimiento: document.getElementById('f_matpel_vencimiento').value,
-        rt_emision: document.getElementById('f_rt_emision').value,
-        rt_vencimiento: document.getElementById('f_rt_vencimiento').value,
-        boni_emision: document.getElementById('f_boni_emision').value,
-        boni_vencimiento: document.getElementById('f_boni_vencimiento').value,
-        sv_entidad: document.getElementById('f_sv_entidad').value,
-        sv_asesor: document.getElementById('f_sv_asesor').value,
-        sv_vencimiento: document.getElementById('f_sv_vencimiento').value,
-        sc_entidad: document.getElementById('f_sc_entidad').value,
-        sc_asesor: document.getElementById('f_sc_asesor').value,
-        sc_vencimiento: document.getElementById('f_sc_vencimiento').value,
-        fum_emision: document.getElementById('f_fum_emision').value,
-        fum_vencimiento: document.getElementById('f_fum_vencimiento').value,
-        ext_cantidad: document.getElementById('f_ext_cantidad').value,
-        ext_emision: document.getElementById('f_ext_emision').value,
-        ext_vencimiento: document.getElementById('f_ext_vencimiento').value,
-        tc_url: document.getElementById('f_tc_url').value,
-        soat_url: document.getElementById('f_soat_url').value,
-        matpel_url: document.getElementById('f_matpel_url').value,
-        rt_url: document.getElementById('f_rt_url').value,
-        boni_url: document.getElementById('f_boni_url').value,
-        sv_url: document.getElementById('f_sv_url').value,
-        sc_url: document.getElementById('f_sc_url').value,
-        fum_url: document.getElementById('f_fum_url').value,
-        ext_url: document.getElementById('f_ext_url').value,
-    };
+    const tipoVal = (document.getElementById('nd_tipo_documento') || {}).value;
+    if (!tipoVal) return alert('El tipo de documento es obligatorio');
 
-    fetch('/api/vehiculos-flota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) })
+    let tipoNombre = tipoVal;
+    if (tipoVal === 'NUEVO_TIPO') {
+        tipoNombre = (document.getElementById('nd_nuevo_tipo_nombre') || {}).value;
+        if (!tipoNombre || !tipoNombre.trim()) return alert('Ingrese el nombre del nuevo tipo de documento');
+    }
+
+    const constancia = (document.getElementById('nd_constancia') || {}).value;
+    const fechaEmision = (document.getElementById('nd_fecha_emision') || {}).value;
+    const fechaVencimiento = (document.getElementById('nd_fecha_vencimiento') || {}).value;
+    const costo = (document.getElementById('nd_costo') || {}).value;
+    const archivoUrl = (document.getElementById('nd_archivo_url') || {}).value;
+
+    const targetVehicle = vehiculosFlota.find(x => x.placa === placa.toUpperCase()) || { placa: placa.toUpperCase() };
+
+    // 1. Guardar en historial de documentos
+    fetch('/api/documentos-flota/guardar-historial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            placa: placa.toUpperCase(),
+            tipo_documento: tipoNombre,
+            nro_constancia: constancia,
+            fecha_emision: fechaEmision,
+            fecha_vencimiento: fechaVencimiento,
+            pago: costo,
+            observaciones: archivoUrl,
+            usuario: 'GERENCIA'
+        })
+    }).catch(e => console.error('Error guardando en historial:', e));
+
+    // 2. Mapear campos para vehiculos_flota (vigente)
+    const data = Object.assign({}, targetVehicle, {
+        placa: placa.toUpperCase()
+    });
+
+    if (tipoVal === 'SOAT') {
+        data.soat_entidad = constancia;
+        data.soat_vencimiento = fechaVencimiento;
+        if (archivoUrl) data.soat_url = archivoUrl;
+        if (costo) data.soat_pago = costo;
+    } else if (tipoVal === 'REV_TECNICA') {
+        data.rt_emision = fechaEmision;
+        data.rt_vencimiento = fechaVencimiento;
+        if (archivoUrl) data.rt_url = archivoUrl;
+    } else if (tipoVal === 'TARJETA_PROPIEDAD') {
+        data.tc_constancia = constancia;
+        data.tc_vencimiento = fechaVencimiento;
+        if (archivoUrl) data.tc_url = archivoUrl;
+    } else if (tipoVal === 'MATPEL') {
+        data.matpel_constancia = constancia;
+        data.matpel_vencimiento = fechaVencimiento;
+        if (archivoUrl) data.matpel_url = archivoUrl;
+    } else if (tipoVal === 'BONIFICACION') {
+        data.boni_emision = fechaEmision;
+        data.boni_vencimiento = fechaVencimiento;
+        if (archivoUrl) data.boni_url = archivoUrl;
+    } else if (tipoVal === 'SEG_VEHICULAR') {
+        data.sv_entidad = constancia;
+        data.sv_vencimiento = fechaVencimiento;
+        if (archivoUrl) data.sv_url = archivoUrl;
+    } else if (tipoVal === 'SEG_CARRETA') {
+        data.sc_entidad = constancia;
+        data.sc_vencimiento = fechaVencimiento;
+        if (archivoUrl) data.sc_url = archivoUrl;
+    } else if (tipoVal === 'FUMIGACION') {
+        data.fum_emision = fechaEmision;
+        data.fum_vencimiento = fechaVencimiento;
+        if (archivoUrl) data.fum_url = archivoUrl;
+    } else if (tipoVal === 'EXTINTOR') {
+        data.ext_emision = fechaEmision;
+        data.ext_vencimiento = fechaVencimiento;
+        if (archivoUrl) data.ext_url = archivoUrl;
+    }
+
+    fetch('/api/vehiculos-flota', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
     .then(r => r.json())
     .then(r => {
-        if(r.ok) {
+        if (r.ok) {
             cerrarModalEdicion();
+            if (typeof window.rotToast === 'function') window.rotToast('Documento guardado correctamente', 'bg-success');
+            else alert('Documento guardado exitosamente');
+
+            currentPlaca = placa.toUpperCase();
             cargarDatosVehiculos();
         } else {
-            alert(r.error || 'Error al guardar');
+            alert('Error guardando documento: ' + (r.error || 'Error desconocido'));
         }
-    }).catch(e => console.error(e));
+    })
+    .catch(e => {
+        console.error('Error al guardar vehiculo:', e);
+        alert('Error de conexión al guardar documento');
+    });
 }
 
 function eliminarVehiculoActual() {
