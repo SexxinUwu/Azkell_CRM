@@ -1116,22 +1116,40 @@ window.abrirDocModal = function(title, contentRows, est, docUrl) {
         }
     }
 
+    const wrap = document.getElementById('dm-historial-wrapper');
+    if (wrap) wrap.classList.add('d-none');
+    const icn = document.getElementById('dm-icn-hist');
+    if (icn) icn.className = 'bi bi-chevron-down';
+
     window.cargarHistorialDocModal(title);
     document.getElementById('docModalOverlay').classList.add('active');
+};
+
+window.toggleHistorialModal = function() {
+    var wrap = document.getElementById('dm-historial-wrapper');
+    var icn = document.getElementById('dm-icn-hist');
+    if (!wrap) return;
+    if (wrap.classList.contains('d-none')) {
+        wrap.classList.remove('d-none');
+        if (icn) icn.className = 'bi bi-chevron-up';
+    } else {
+        wrap.classList.add('d-none');
+        if (icn) icn.className = 'bi bi-chevron-down';
+    }
 };
 
 window.cargarHistorialDocModal = function(tipoDocNombre) {
     if (!tipoDocNombre && window._lastDocTitle) tipoDocNombre = window._lastDocTitle;
     var container = document.getElementById('dm-historial-container');
+    var cntEl = document.getElementById('dm-cnt-hist');
     if (!container || !currentPlaca) return;
-
-    container.innerHTML = '<div class="text-muted small text-center py-2" style="font-size:0.75rem;"><i class="bi bi-hourglass-split me-1"></i> Cargando historial...</div>';
 
     fetch('/api/documentos-flota/historial/' + encodeURIComponent(currentPlaca))
         .then(r => r.json())
         .then(res => {
             if (!res.ok || !Array.isArray(res.historial) || res.historial.length === 0) {
-                container.innerHTML = '<div class="text-muted small text-center py-2" style="font-size:0.75rem;">Sin historial de documentos anteriores.</div>';
+                container.innerHTML = '<div class="text-muted small text-center py-2" style="font-size:0.75rem;">Sin registros anteriores.</div>';
+                if (cntEl) cntEl.innerText = '0';
                 return;
             }
             var filtrados = res.historial;
@@ -1140,6 +1158,8 @@ window.cargarHistorialDocModal = function(tipoDocNombre) {
                 var match = res.historial.filter(h => String(h.tipo_documento||'').toLowerCase().replace(/[^a-z0-9]/g, '').includes(cleanTipo));
                 if (match.length > 0) filtrados = match;
             }
+            if (cntEl) cntEl.innerText = String(filtrados.length);
+
             var html = '';
             filtrados.forEach(h => {
                 var fVen = formatearFechaVista(h.fecha_vencimiento);
@@ -1162,6 +1182,7 @@ window.cargarHistorialDocModal = function(tipoDocNombre) {
         .catch(e => {
             console.error('Error cargando historial:', e);
             if (container) container.innerHTML = '<div class="text-muted small text-center py-2" style="font-size:0.75rem;">Sin registros anteriores.</div>';
+            if (cntEl) cntEl.innerText = '0';
         });
 };
 

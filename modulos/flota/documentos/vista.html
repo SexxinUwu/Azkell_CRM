@@ -1107,13 +1107,15 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         <div class="doc-modal-data" id="dm-data">
             <!-- Rellenado por JS -->
         </div>
-        <div class="mt-2 mb-3 pt-2 border-top" style="border-color:#e2e8f0 !important;">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <span class="fw-bold text-dark small" style="font-size:0.8rem;"><i class="bi bi-clock-history text-primary me-1"></i> Historial de Documentos Anteriores</span>
-                <button class="btn btn-sm btn-light border text-secondary py-0 px-2" style="font-size:0.7rem; border-radius:6px;" onclick="window.cargarHistorialDocModal()"><i class="bi bi-arrow-clockwise me-1"></i> Actualizar</button>
-            </div>
-            <div id="dm-historial-container" class="custom-scrollbar" style="max-height: 150px; overflow-y: auto;">
-                <div class="text-muted small text-center py-2" style="font-size:0.75rem;">Sin registros anteriores.</div>
+        <div class="mt-2 pt-2 border-top" style="border-color:#f1f5f9 !important;">
+            <button class="btn btn-sm text-secondary p-0 text-decoration-none w-100 text-start d-flex align-items-center justify-content-between py-1" onclick="window.toggleHistorialModal()" style="font-size:0.78rem;">
+                <span><i class="bi bi-clock-history me-1 text-primary"></i> Ver versiones anteriores (<span id="dm-cnt-hist">0</span>)</span>
+                <i class="bi bi-chevron-down" id="dm-icn-hist"></i>
+            </button>
+            <div id="dm-historial-wrapper" class="mt-2 d-none">
+                <div id="dm-historial-container" class="custom-scrollbar" style="max-height: 150px; overflow-y: auto;">
+                    <div class="text-muted small text-center py-2" style="font-size:0.75rem;">Sin registros anteriores.</div>
+                </div>
             </div>
         </div>
         <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
