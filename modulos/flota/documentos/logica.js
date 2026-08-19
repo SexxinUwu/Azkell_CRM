@@ -368,6 +368,44 @@ function filtrarSegmentoDoc(tipo, element) {
 }
 window.filtrarSegmentoDoc = filtrarSegmentoDoc;
 
+window.cambiarModoVistaDoc = function(modo) {
+    const btnCards = document.getElementById('btn-view-cards');
+    const btnMatrix = document.getElementById('btn-view-matrix');
+    const viewCards = document.getElementById('view-container-cards');
+    const viewMatrix = document.getElementById('view-container-matrix');
+
+    if (modo === 'matrix') {
+        if (btnMatrix) {
+            btnMatrix.classList.add('active');
+            btnMatrix.style.background = '#eff6ff';
+            btnMatrix.style.color = '#0284c7';
+        }
+        if (btnCards) {
+            btnCards.classList.remove('active');
+            btnCards.style.background = 'transparent';
+            btnCards.style.color = '#64748b';
+        }
+        if (viewCards) viewCards.classList.add('d-none');
+        if (viewMatrix) {
+            viewMatrix.classList.remove('d-none');
+            renderizarMatriz();
+        }
+    } else {
+        if (btnCards) {
+            btnCards.classList.add('active');
+            btnCards.style.background = '#eff6ff';
+            btnCards.style.color = '#0284c7';
+        }
+        if (btnMatrix) {
+            btnMatrix.classList.remove('active');
+            btnMatrix.style.background = 'transparent';
+            btnMatrix.style.color = '#64748b';
+        }
+        if (viewCards) viewCards.classList.remove('d-none');
+        if (viewMatrix) viewMatrix.classList.add('d-none');
+    }
+};
+
 function filtrarListaLocal() {
     actualizarKPIs();
     renderizarListaLateral();

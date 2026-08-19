@@ -402,6 +402,31 @@ window.filtrarPlacasAvanzado = function() {
         return true;
     });
 
+    window.filtrarPorTipoKPI = function(tipo, element) {
+        if (window._kpiFiltroActivo === tipo && tipo !== 'total') {
+            window._kpiFiltroActivo = null;
+            tipo = 'total';
+        } else if (tipo === 'total') {
+            window._kpiFiltroActivo = null;
+        } else {
+            window._kpiFiltroActivo = tipo;
+        }
+
+        // Actualizar clases activas en Tarjetas KPI
+        document.querySelectorAll('.ck-kpi-card').forEach(c => {
+            if (c.getAttribute('data-tipo-kpi') === tipo) c.classList.add('active');
+            else c.classList.remove('active');
+        });
+
+        // Actualizar pills segmentadas
+        document.querySelectorAll('#btn-group-tipos-placas .ck-segment-item').forEach(b => {
+            if (b.getAttribute('data-tipo-kpi') === tipo) b.classList.add('active');
+            else b.classList.remove('active');
+        });
+
+        window.filtrarPlacasAvanzado();
+    };
+
     const safe = v => document.getElementById(v);
     if (safe('kpi-total')) safe('kpi-total').innerText = kpiTotal;
     if (safe('kpi-camion')) safe('kpi-camion').innerText = kpiCamion;
@@ -411,38 +436,6 @@ window.filtrarPlacasAvanzado = function() {
     
     paginaActualPlacas = 1;
     renderizarPaginaPlacas();
-};;
-
-
-window.filtrarPorTipoKPI = function(tipo) {
-    if (window._kpiFiltroActivo === tipo || tipo === 'total') {
-        window._kpiFiltroActivo = null; // deselect
-    } else {
-        window._kpiFiltroActivo = tipo; // select
-    }
-
-    // Actualizar estilos visuales
-    document.querySelectorAll('.bento-kpi-card').forEach(c => {
-        c.style.border = '1px solid var(--border)';
-        c.style.backgroundColor = 'var(--surface)';
-    });
-    
-    if (window._kpiFiltroActivo) {
-        const idMap = {'camion': 'kpi-camion', 'carreta': 'kpi-carreta', 'semi': 'kpi-semi', 'tracto': 'kpi-tracto'};
-        const card = document.getElementById(idMap[tipo])?.closest('.bento-kpi-card');
-        if (card) {
-            card.style.border = '2px solid var(--primary, #3b82f6)';
-            card.style.backgroundColor = 'var(--bg)';
-        }
-    } else {
-        const card = document.getElementById('kpi-total')?.closest('.bento-kpi-card');
-        if (card) {
-            card.style.border = '2px solid var(--primary, #3b82f6)';
-            card.style.backgroundColor = 'var(--bg)';
-        }
-    }
-
-    window.filtrarPlacasAvanzado();
 };
 
 function actualizarIndicadoresPlacas(datos) {

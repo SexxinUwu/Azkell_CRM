@@ -2206,7 +2206,6 @@ app.get('/api/vehiculos-flota', (req, res) => {
             vf.tc_url, vf.soat_url, vf.matpel_url, vf.rt_url, vf.boni_url, vf.sv_url, vf.sc_url, vf.fum_url, vf.ext_url, vf.wialon_name
         FROM placas p
         LEFT JOIN vehiculos_flota vf ON UPPER(TRIM(p.placa)) = UPPER(TRIM(vf.placa))
-        WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
         ORDER BY p.placa ASC
     `;
     tdb.query(query, (err, rows) => {
