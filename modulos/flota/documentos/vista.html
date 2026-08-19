@@ -158,13 +158,14 @@
     display: flex;
     flex: 1;
     overflow: hidden;
-    gap: 1.5rem;
-    padding: 0 1.5rem 1.5rem 1.5rem;
+    gap: 1.25rem;
+    padding: 0 !important;
+    width: 100% !important;
 }
 
 /* Sidebar (Left) */
 .fleet-sidebar {
-    width: 270px;
+    width: 320px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -403,8 +404,9 @@
 /* Grid de Documentos */
 .docs-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.15rem;
+    width: 100%;
 }
 .doc-card {
     border: 1px solid #e2e8f0;
