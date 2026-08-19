@@ -1,214 +1,348 @@
+<!-- MÓDULO: UBICACIÓN GPS FLOTA (DISEÑO APPLE / BENTO ERP) -->
 <style>
-@media (max-width: 767.98px) {
-    .topbar { display: none !important; }
-    #root-dinamico, .main-area { 
-        padding: 0 !important; 
-        overflow: hidden !important; 
-        display: flex !important;
-        flex-direction: column !important;
-    }
+#moduloUbicacionGPS {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    min-height: calc(100vh - 60px);
+    display: flex;
+    flex-direction: column;
+}
 
-    #moduloUbicacionGPS { padding: 0 !important; margin: 0 !important; border-radius: 0 !important; background: #fff !important; width: 100% !important; max-width: 100vw !important; flex: 1 1 0; }
-    #moduloUbicacionGPS .controls-row { display: none !important; }
-    #gps-panel-lista { flex: 1 1 100% !important; width: 100% !important; max-width: 100% !important; }
-    .gps-search-wrap { padding: 0.5rem 1.25rem; }
-    .gps-search-box {
-        background: #f1f5f9;
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        padding: 0 16px;
-        border: 1px solid #e2e8f0;
-    }
-    .gps-search-box input {
-        background: transparent;
-        border: none;
-        outline: none;
-        width: 100%;
-        font-size: 16px;
-        color: #1e293b;
-        margin-left: 12px;
-    }
-    .gps-unit-btn {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 16px 24px;
-        border-bottom: 1px solid #f1f5f9;
-        background: #fff;
-        text-align: left;
-        border-left: none;
-        border-right: none;
-        border-top: none;
-        transition: background 0.2s;
-    }
-    .gps-unit-btn:active { background: #f8fafc; }
-    
-    /* Custom Mobile Header for GPS (Design Match) */
-    .gps-mob-header-container {
-        background: #059669;
-        border-radius: 0 0 24px 24px;
-        padding: 1.25rem 1.25rem 1.5rem 1.25rem;
-        margin-bottom: 0.5rem;
-    }
-    .gps-mob-header-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 0.75rem;
-    }
-    .gps-mob-super-title {
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: rgba(255,255,255,0.85);
-        margin: 0 0 4px 0;
-    }
-    .gps-mob-header-title {
-        font-size: 1.75rem;
-        font-weight: 900;
-        color: #fff;
-        margin: 0;
-        line-height: 1.1;
-    }
-    .gps-badge-active {
-        background: rgba(255,255,255,0.2);
-        color: #fff;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        border: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    .gps-search-wrap { padding: 0; }
-    .gps-search-box {
-        background: rgba(255,255,255,0.15);
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        padding: 0 16px;
-        border: 1px solid rgba(255,255,255,0.1);
-    }
-    .gps-search-box input {
-        background: transparent;
-        border: none;
-        outline: none;
-        width: 100%;
-        font-size: 15px;
-        color: #fff;
-        margin-left: 10px;
-    }
-    .gps-search-box input::placeholder { color: rgba(255,255,255,0.7); }
-    .gps-search-box i { color: rgba(255,255,255,0.8); }
-    /* Offcanvas Full Screen */
-    #gpsDetalleOffcanvas {
-        height: 100vh !important;
-        border-radius: 0 !important;
-        background: #fff !important;
-    }
-    #gpsDetalleOffcanvas .offcanvas-header {
-        padding: 1rem;
-        background: #fff !important;
-        border-bottom: 1px solid #f3f4f6 !important;
-        border-radius: 0 !important;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    #gpsDetalleOffcanvasBody { padding: 0 !important; background: #fff !important; }
+/* ── KPIs Apple Compact Bento Cards ─────────────── */
+.ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    min-height: 56px !important;
+}
+.ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
+}
+.ck-kpi-card.active {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
+    background: #f8fafc !important;
+}
+.ck-kpi-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* ── Control Bar & Apple Search ──────────────────── */
+.ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 9px 14px 9px 38px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+.ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+.ck-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+.ck-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+.ck-segment-item:hover { color: #0f172a; }
+.ck-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ── Split Layout & Unit Cards ───────────────────── */
+.gps-main-split {
+    display: flex;
+    flex: 1 1 auto;
+    gap: 1.25rem;
+    width: 100% !important;
+    padding: 0 !important;
+    overflow: hidden;
+    min-height: 520px;
+}
+.gps-sidebar-panel {
+    width: 340px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow: hidden;
+}
+.gps-list-container {
+    flex: 1 1 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding-right: 0.25rem;
+    scrollbar-width: thin;
+}
+.gps-unit-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+.gps-unit-card:hover {
+    border-color: #0284c7;
+    background: #f8fafc;
+    transform: translateX(2px);
+}
+.gps-unit-card.active {
+    background: #eff6ff !important;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
+}
+.gps-unit-plate {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+}
+.gps-unit-model {
+    font-size: 0.72rem;
+    color: #64748b;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gps-unit-stat {
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+/* ── Panel Detalle Bento ─────────────────────────── */
+.gps-detail-panel {
+    flex: 1 1 0;
+    min-width: 0;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+.gps-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: #94a3b8;
+    padding: 3rem 1.5rem;
+}
+.gps-telemetry-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0.85rem;
+    margin-top: 1rem;
+}
+.gps-telemetry-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+@media (max-width: 767.98px) {
+    .gps-main-split { flex-direction: column; }
+    .gps-sidebar-panel { width: 100%; }
+    .gps-detail-panel { display: none; }
 }
 </style>
-<div id="moduloUbicacionGPS" class="modulo-wrapper" style="display: flex; flex-direction: column;">
 
-    <!-- Barra de controles -->
-    <div class="controls-row d-flex justify-content-between align-items-center mb-2">
+<div id="moduloUbicacionGPS">
+
+    <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-geo-alt-fill"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Ubicación GPS Flota</h4>
+                <span class="text-secondary small">Monitoreo satelital y telemetría de unidades en tiempo real</span>
+            </div>
+        </div>
         <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-geo-alt-fill fs-4 text-primary"></i>
-            <h5 class="m-0 fw-bold text-dark-theme" data-i18n="gps.title">Ubicación GPS Flota</h5>
-            <span id="badge-wialon-ubicacion" class="badge bg-success ms-1" style="display:none;"><i class="bi bi-broadcast"></i> <span data-i18n="gps.active">Activo</span></span>
-        </div>
-        <div class="d-flex gap-2 align-items-center">
-            <span id="gps-unit-count-badge" class="badge bg-secondary">0 unidades</span>
-            <button class="btn-reload-cache" onclick="recargarWialon(true)" title="Actualizar GPS">
-                <i class="bi bi-arrow-clockwise"></i>
+            <span id="badge-wialon-ubicacion" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2 fw-bold d-flex align-items-center gap-2">
+                <span class="spinner-grow spinner-grow-sm text-success" style="width:7px;height:7px;"></span> En Vivo
+            </span>
+            <span id="gps-unit-count-badge" class="badge bg-white border text-secondary px-3 py-2 fw-bold rounded-3 shadow-2xs">0 unidades</span>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="recargarWialon(true)" title="Actualizar GPS">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
             </button>
         </div>
     </div>
 
-    <!-- Cuerpo: lista izquierda + panel detalle derecha -->
-    <div class="d-flex gap-3 flex-grow-1" style="min-height: 0; overflow: hidden;">
-
-        <!-- Panel izquierdo: lista de unidades — full width en móvil, 340px en desktop -->
-        <div id="gps-panel-lista" style="flex: 0 0 340px; max-width: 340px; width: 100%; display: flex; flex-direction: column; min-height: 0;">
-            
-            <div class="d-block d-md-none gps-mob-header-container">
-                <div class="gps-mob-header-top">
-                    <div>
-                        <p class="gps-mob-super-title">Monitoreo</p>
-                        <h1 class="gps-mob-header-title">GPS Flota</h1>
-                    </div>
-                    <div class="gps-badge-active" id="badge-wialon-ubicacion-mob">
-                        <div style="width:6px;height:6px;border-radius:50%;background:#a7f3d0;"></div>
-                        <span data-i18n="gps.active">Activo</span>
-                    </div>
+    <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO) ─────────────── -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card active" id="gps-kpi-total" onclick="window.filtrarSegmentoGPS('total', this)">
+                <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                    <i class="bi bi-truck"></i>
                 </div>
-
-                <div class="gps-search-wrap mb-1">
-                    <div class="gps-search-box d-flex">
-                        <i class="bi bi-search"></i>
-                        <input type="text" id="busGPSUnidadMob" placeholder="Buscar placa o unidad..." oninput="filtrarListaGPS(this.value)">
-                    </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Flota Monitoreada</span>
+                    <h2 id="kpi-gps-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
                 </div>
             </div>
-
-            <!-- Escritorio Search (Solo visible en md o mayor) -->
-            <div class="gps-search-wrap mb-2 mb-md-3 d-none d-md-block px-3 pt-3">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text border-end-0 bg-transparent">
-                        <i class="bi bi-search" style="color: var(--subtext);"></i>
-                    </span>
-                    <input type="text" class="form-control border-start-0 ps-0" id="busGPSUnidad" placeholder="Buscar placa o unidad..." oninput="filtrarListaGPS(this.value)">
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="gps-kpi-online" onclick="window.filtrarSegmentoGPS('online', this)">
+                <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+                    <i class="bi bi-broadcast-pin"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Con Señal GPS</span>
+                    <h2 id="kpi-gps-online" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">0</h2>
                 </div>
             </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="gps-kpi-movimiento" onclick="window.filtrarSegmentoGPS('movimiento', this)">
+                <div class="ck-kpi-icon" style="background:#f0f9ff; color:#0284c7;">
+                    <i class="bi bi-speedometer2"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">En Movimiento</span>
+                    <h2 id="kpi-gps-movimiento" class="fw-bolder m-0 text-primary lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="gps-kpi-offline" onclick="window.filtrarSegmentoGPS('offline', this)">
+                <div class="ck-kpi-icon" style="background:#f8fafc; color:#94a3b8; border: 1px solid #e2e8f0;">
+                    <i class="bi bi-geo-alt-slash"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Sin Señal</span>
+                    <h2 id="kpi-gps-offline" class="fw-bolder m-0 text-secondary lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            <div id="listaUnidadesGPS" style="flex-grow:1; overflow-y:auto; min-height:0;">
+    <!-- ── 3. BARRA DE BÚSQUEDA Y FILTRO SEGMENTADO ──────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 340px;">
+            <div class="position-relative flex-grow-1">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+                <input type="text" id="busGPSUnidad" class="ck-apple-search" placeholder="Buscar placa, unidad..." oninput="filtrarListaGPS(this.value)">
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <div class="ck-apple-segmented" id="btn-group-gps-filtros">
+                <button type="button" class="ck-segment-item active" data-filter="total" onclick="window.filtrarSegmentoGPS('total', this)">Todos</button>
+                <button type="button" class="ck-segment-item" data-filter="online" onclick="window.filtrarSegmentoGPS('online', this)">Con Señal</button>
+                <button type="button" class="ck-segment-item" data-filter="movimiento" onclick="window.filtrarSegmentoGPS('movimiento', this)">En Ruta</button>
+                <button type="button" class="ck-segment-item" data-filter="offline" onclick="window.filtrarSegmentoGPS('offline', this)">Sin Señal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 4. SPLIT VIEW: SIDEBAR + PANEL DETALLE (ALINEACIÓN 1:1) ────── -->
+    <div class="gps-main-split">
+
+        <!-- Panel Lateral Izquierdo: Lista de Unidades -->
+        <div class="gps-sidebar-panel">
+            <div class="gps-list-container custom-scrollbar" id="listaUnidadesGPS">
                 <div class="text-center py-5 text-muted">
-                    <i class="bi bi-satellite fs-3 opacity-50"></i>
-                    <p class="mt-2 mb-0" data-i18n="gps.syncing">Sincronizando GPS...</p>
+                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                    <span style="font-size: 0.85rem;">Sincronizando telemetría GPS...</span>
                 </div>
             </div>
         </div>
 
-        <!-- Panel derecho: detalle — solo visible en desktop (≥768px) -->
-        <div id="paneDetalleGPS" class="card flex-grow-1 p-3 d-none d-md-flex flex-column" style="min-height:0; overflow-y:auto;">
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-geo-alt fs-2 opacity-40"></i>
-                <p class="mt-3 mb-0" data-i18n="gps.selectUnit">Selecciona una unidad de la lista para ver su detalle</p>
+        <!-- Panel Detalle Derecho Bento: Mapa y Telemetría -->
+        <div class="gps-detail-panel custom-scrollbar" id="paneDetalleGPS">
+            <div class="gps-empty-state">
+                <div style="width:68px;height:68px;border-radius:20px;background:#eff6ff;color:#0284c7;display:flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:1rem;box-shadow:0 4px 12px rgba(2,132,199,0.1);">
+                    <i class="bi bi-geo-alt"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-1" style="letter-spacing:-0.02em;">Selecciona una unidad</h5>
+                <p class="text-secondary small mb-0" style="max-width: 320px;">
+                    Haz clic en cualquier vehículo del panel lateral para ver su ubicación satelital en vivo, odómetro y telemetría completa.
+                </p>
             </div>
         </div>
 
     </div>
 
-    <!-- Offcanvas detalle para móvil (desliza desde abajo / full screen) -->
-    <div class="offcanvas offcanvas-bottom" tabindex="-1" id="gpsDetalleOffcanvas" style="height:100vh; border-radius:0; background: #fff; z-index: 1055;">
-        <div class="offcanvas-header" id="gpsDetalleOffcanvasHeader" style="background: #fff; border-bottom: 1px solid #f3f4f6; border-radius:0; padding: 12px 16px;">
-            <button type="button" class="btn p-2 ms-n2 text-muted" data-bs-dismiss="offcanvas" aria-label="Cerrar"><i class="bi bi-x-lg fs-5"></i></button>
-            <div class="text-center" style="flex:1;">
-                <h2 class="fw-bold m-0 text-primary" id="gpsDetalleOffcanvasTitle" style="font-size: 17px;">—</h2>
-                <p class="text-muted m-0" id="gpsDetalleOffcanvasSubtitle" style="font-size: 12px;"></p>
+    <!-- Offcanvas Detalle Móvil (<768px) -->
+    <div class="offcanvas offcanvas-bottom" tabindex="-1" id="gpsDetalleOffcanvas" style="height:90vh; border-radius:20px 20px 0 0; background: #fff; z-index: 1055;">
+        <div class="offcanvas-header border-bottom px-4 py-3">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:40px;height:40px;border-radius:10px;background:#eff6ff;color:#0284c7;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+                    <i class="bi bi-truck"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold m-0 text-dark" id="gpsDetalleOffcanvasTitle">—</h5>
+                    <small class="text-secondary" id="gpsDetalleOffcanvasSubtitle"></small>
+                </div>
             </div>
-            <button class="btn btn-sm btn-success rounded-pill fw-bold" id="btn-gps-compartir-mob" style="font-size: 11px; padding: 4px 10px;">
-                <i class="bi bi-whatsapp"></i> Compartir
-            </button>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
         </div>
-        <div class="offcanvas-body p-3" id="gpsDetalleOffcanvasBody" style="overflow-y: auto; background: var(--bg);">
-        </div>
+        <div class="offcanvas-body p-3 custom-scrollbar" id="gpsDetalleOffcanvasBody"></div>
     </div>
 
 </div>

@@ -5,6 +5,7 @@
 
 window._datosWialonGPS   = window._datosWialonGPS   || [];
 window._filtroGPSActivo  = window._filtroGPSActivo  || '';
+window._segmentoGPSActivo= window._segmentoGPSActivo|| 'total';
 window._placaGPSActiva   = window._placaGPSActiva   || null;
 
 // ------------------------------------------------------------
@@ -16,9 +17,7 @@ window.init_ubicacion = function() {
         if (wrap) window.showNoPermMsg(wrap);
         return;
     }
-    let elSede = document.getElementById('fu-filter-sede');
-    if (elSede) elSede.value = '';
-    window._placaGPSActiva  = null;
+    window._placaGPSActiva = null;
 
     // Usar caché Wialon si ya existe
     let datos = (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0)
@@ -27,9 +26,25 @@ window.init_ubicacion = function() {
     if (datos.length > 0) {
         renderListaUnidadesGPS(datos);
     } else {
-        // Dispara carga; cuando termine recargarWialon llama renderListaUnidadesGPS
         if (typeof recargarWialon === 'function') recargarWialon(true);
     }
+};
+
+// ------------------------------------------------------------
+// FILTRO SEGMENTADO & KPIS
+// ------------------------------------------------------------
+window.filtrarSegmentoGPS = function(tipo, btn) {
+    window._segmentoGPSActivo = tipo || 'total';
+
+    // Actualizar active state en botones segmented y KPIs
+    document.querySelectorAll('#btn-group-gps-filtros .ck-segment-item').forEach(el => {
+        el.classList.toggle('active', el.getAttribute('data-filter') === window._segmentoGPSActivo);
+    });
+    document.querySelectorAll('#moduloUbicacionGPS .ck-kpi-card').forEach(el => {
+        el.classList.toggle('active', el.id === 'gps-kpi-' + window._segmentoGPSActivo);
+    });
+
+    filtrarListaGPS(window._filtroGPSActivo || '');
 };
 
 // ------------------------------------------------------------
@@ -38,15 +53,40 @@ window.init_ubicacion = function() {
 window.renderListaUnidadesGPS = function(datos) {
     window._datosWialonGPS = datos || [];
 
-    // Actualizar badge de cantidad
+    // Calcular KPIs
+    let total = datos.length;
+    let online = 0;
+    let movimiento = 0;
+    let offline = 0;
+
+    datos.forEach(w => {
+        let tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
+        let speed = (w.velocidad != null ? Number(w.velocidad) : (w.pos && w.pos.s != null ? Number(w.pos.s) : 0)) || 0;
+        
+        if (tienePos) {
+            online++;
+            if (speed > 3) movimiento++;
+        } else {
+            offline++;
+        }
+    });
+
+    const setKpi = (id, val) => {
+        let el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    setKpi('kpi-gps-total', total);
+    setKpi('kpi-gps-online', online);
+    setKpi('kpi-gps-movimiento', movimiento);
+    setKpi('kpi-gps-offline', offline);
+
+    // Actualizar badge de cantidad y estado en vivo
     let badge = document.getElementById('gps-unit-count-badge');
-    if (badge) badge.textContent = datos.length + ' unidades';
+    if (badge) badge.textContent = total + ' unidades';
 
     let badgeActivo = document.getElementById('badge-wialon-ubicacion');
-    if (badgeActivo) badgeActivo.style.display = datos.length > 0 ? '' : 'none';
-    
-    let badgeActivoMob = document.getElementById('badge-wialon-ubicacion-mob');
-    if (badgeActivoMob) badgeActivoMob.style.display = datos.length > 0 ? '' : 'none';
+    if (badgeActivo) badgeActivo.style.display = total > 0 ? 'inline-flex' : 'none';
 
     filtrarListaGPS(window._filtroGPSActivo || '');
 };
@@ -58,55 +98,61 @@ window.filtrarListaGPS = function(query) {
 
     let datos = window._datosWialonGPS;
     if (!datos || datos.length === 0) {
-        lista.innerHTML = '<div class="text-center py-4 text-muted">No hay datos GPS disponibles.</div>';
+        lista.innerHTML = '<div class="text-center py-5 text-muted" style="font-size:0.85rem;">No hay datos GPS disponibles.</div>';
         return;
     }
 
-    let q = query.trim().toUpperCase();
-    let filtrados = q
-        ? datos.filter(w => (w.placa||'').toUpperCase().includes(q) || (w.nombre_wialon||'').toUpperCase().includes(q))
-        : datos;
+    let q = (query || '').trim().toUpperCase();
+    let filtrados = datos.filter(w => {
+        let matchText = !q || (w.placa || '').toUpperCase().includes(q) || (w.nombre_wialon || '').toUpperCase().includes(q);
+        
+        let tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
+        let speed = (w.velocidad != null ? Number(w.velocidad) : (w.pos && w.pos.s != null ? Number(w.pos.s) : 0)) || 0;
+
+        let matchSeg = true;
+        if (window._segmentoGPSActivo === 'online') matchSeg = tienePos;
+        else if (window._segmentoGPSActivo === 'movimiento') matchSeg = (tienePos && speed > 3);
+        else if (window._segmentoGPSActivo === 'offline') matchSeg = !tienePos;
+
+        return matchText && matchSeg;
+    });
 
     if (filtrados.length === 0) {
-        lista.innerHTML = '<div class="text-center py-4 text-muted">Sin resultados para "' + query + '".</div>';
+        lista.innerHTML = '<div class="text-center py-5 text-muted" style="font-size:0.85rem;">Sin resultados.</div>';
         return;
     }
 
     lista.innerHTML = filtrados.map(w => {
-        let tienePos = w.lat !== 0 && w.lng !== 0;
-        let dotColor  = tienePos ? '#10b981' : '#d1d5db'; // green-500 or gray-300
-        let isActive  = window._placaGPSActiva === (w.placa || '');
-        
-        var isMobile = window.innerWidth < 768;
-        if (isMobile) {
-            return `<button class="gps-unit-btn" onclick="abrirDetalleGPS('${(w.placa||'').replace(/'/g,"\\'")}')">
-                <div class="d-flex align-items-center gap-3">
-                    <div style="width:8px;height:8px;border-radius:50%;background:${dotColor};"></div>
-                    <div>
-                        <h3 class="fw-semibold m-0" style="font-size:16px;color:#2563eb;">${w.placa || '—'}</h3>
-                        <p class="m-0 mt-1" style="font-size:13px;color:#6b7280;">${w.nombre_wialon || ''}</p>
+        let tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
+        let speed = (w.velocidad != null ? Number(w.velocidad) : (w.pos && w.pos.s != null ? Number(w.pos.s) : 0)) || 0;
+        let isMoving = tienePos && speed > 3;
+
+        let dotColor = tienePos ? (isMoving ? '#0284c7' : '#10b981') : '#94a3b8';
+        let statusBadge = tienePos 
+            ? (isMoving ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:0.65rem; border-radius:6px;">' + speed + ' km/h</span>' 
+                        : '<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:0.65rem; border-radius:6px;">Detenido</span>')
+            : '<span class="badge bg-light text-secondary border" style="font-size:0.65rem; border-radius:6px;">Sin Señal</span>';
+
+        let isActive = window._placaGPSActiva === (w.placa || '');
+        let safePlc = (w.placa || '').replace(/'/g, "\\'");
+
+        return `
+        <div class="gps-unit-card${isActive ? ' active' : ''}" onclick="abrirDetalleGPS('${safePlc}')">
+            <div class="d-flex align-items-center gap-2" style="min-width: 0;">
+                <div style="width: 8px; height: 8px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0;"></div>
+                <div style="min-width: 0;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="gps-unit-plate">${w.placa || '—'}</span>
+                        ${statusBadge}
                     </div>
+                    <div class="gps-unit-model">${w.nombre_wialon || ''}</div>
                 </div>
-                <div class="text-end">
-                    <p class="fw-medium m-0" style="font-size:13px;color:#3b82f6;">${(w.km||0).toLocaleString()} km</p>
-                    <p class="fw-medium m-0 mt-1" style="font-size:12px;color:#fb923c;">${(w.horas||0).toLocaleString()} hrs</p>
-                </div>
-            </button>`;
-        } else {
-            return `<div class="gps-unit-card${isActive ? ' active' : ''}" onclick="abrirDetalleGPS('${(w.placa||'').replace(/'/g,"\\'")}')">
-                <div class="d-flex align-items-center gap-2">
-                    <span style="width:9px;height:9px;border-radius:50%;background:${dotColor};flex-shrink:0;margin-top:2px;"></span>
-                    <div style="flex:1;min-width:0;">
-                        <div class="fw-bold text-primary" style="font-size:0.88rem;">${w.placa || '—'}</div>
-                        <div class="text-muted text-truncate" style="font-size:0.76rem;">${w.nombre_wialon || ''}</div>
-                    </div>
-                    <div class="text-end" style="font-size:0.76rem;flex-shrink:0;">
-                        <div style="color:#0ea5e9;">${(w.km||0).toLocaleString()} km</div>
-                        <div style="color:#f59e0b;">${(w.horas||0).toLocaleString()} hrs</div>
-                    </div>
-                </div>
-            </div>`;
-        }
+            </div>
+            <div class="text-end" style="flex-shrink: 0;">
+                <div class="gps-unit-stat text-primary" style="font-size:0.75rem;">${(w.km || 0).toLocaleString()} km</div>
+                <div class="gps-unit-stat text-secondary" style="font-size:0.68rem;">${(w.horas || 0).toLocaleString()} hrs</div>
+            </div>
+        </div>`;
     }).join('');
 };
 
@@ -114,7 +160,7 @@ window.filtrarListaGPS = function(query) {
 // DETALLE UNIDAD (panel desktop | offcanvas móvil)
 // ------------------------------------------------------------
 window.abrirDetalleGPS = function(placa) {
-    let w = window._datosWialonGPS.find(x => (x.placa||'') === placa);
+    let w = window._datosWialonGPS.find(x => (x.placa || '') === placa);
     if (!w) return;
 
     window._placaGPSActiva = placa;
@@ -122,175 +168,132 @@ window.abrirDetalleGPS = function(placa) {
     // Re-render lista para marcar activa
     filtrarListaGPS(window._filtroGPSActivo || '');
 
-    let tienePos = w.lat !== 0 && w.lng !== 0;
+    let tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
+    let speed = (w.velocidad != null ? Number(w.velocidad) : (w.pos && w.pos.s != null ? Number(w.pos.s) : 0)) || 0;
+    let isMoving = tienePos && speed > 3;
 
-    // Mapa embebido
+    let dirId = 'gps-dir-' + Date.now();
+    let btnDirId = dirId + '-btn';
+
+    // Mapa embebido con diseño Apple
     let mapHTML = tienePos
-        ? `<iframe src="https://maps.google.com/maps?q=${w.lat},${w.lng}&z=16&output=embed"
-               style="width:100%;height:260px;border:0;border-radius:10px;" loading="lazy" allowfullscreen></iframe>`
-        : `<div class="d-flex align-items-center justify-content-center rounded"
-               style="height:200px;background:var(--bg);border:1px dashed var(--border);color:var(--subtext);">
+        ? `<div style="position:relative; width:100%; height:320px; border-radius:16px; overflow:hidden; border:1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+               <iframe src="https://maps.google.com/maps?q=${w.lat},${w.lng}&z=16&output=embed"
+                   style="width:100%; height:100%; border:0;" loading="lazy" allowfullscreen></iframe>
+               <a href="https://maps.google.com/maps?q=${w.lat},${w.lng}" target="_blank" class="btn btn-sm btn-light border fw-bold position-absolute bottom-0 end-0 m-3 shadow-sm rounded-3 d-flex align-items-center gap-1" style="font-size:0.78rem;">
+                   <i class="bi bi-box-arrow-up-right"></i> Abrir en Google Maps
+               </a>
+           </div>`
+        : `<div class="d-flex align-items-center justify-content-center"
+               style="height:260px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:16px; color:#94a3b8;">
                <div class="text-center">
-                   <i class="bi bi-geo-alt-slash fs-1 opacity-40"></i>
-                   <p class="mt-2 mb-0">Sin señal GPS</p>
+                   <i class="bi bi-geo-alt-slash fs-1 text-secondary opacity-50"></i>
+                   <h6 class="fw-bold mt-2 mb-1 text-dark">Unidad sin señal GPS</h6>
+                   <p class="small text-secondary m-0">El dispositivo se encuentra apagado o fuera de cobertura satelital.</p>
                </div>
            </div>`;
 
-    // Fila de dato con botón copiar
-    function campoCopia(label, valor, valorCopia) {
-        let id = 'copy-gps-' + Math.random().toString(36).substr(2,6);
-        let vc = (valorCopia||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
-        return `<div class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid var(--border);">
-            <span class="text-muted" style="font-size:0.81rem;">${label}</span>
-            <div class="d-flex align-items-center gap-2">
-                <span class="fw-bold" style="font-size:0.88rem;">${valor}</span>
-                <button class="btn p-0 px-1 btn-gps-copy" id="${id}" title="Copiar"
-                    onclick="navigator.clipboard.writeText('${vc}').then(()=>{let b=document.getElementById('${id}');if(b){b.innerHTML='<i class=\\'bi bi-check2 text-success\\'></i>';setTimeout(()=>{if(b)b.innerHTML='<i class=\\'bi bi-clipboard\\'></i>';},2000);}})">
-                    <i class="bi bi-clipboard"></i>
-                </button>
-            </div>
-        </div>`;
-    }
+    let safeNombre = (w.nombre_wialon || '').replace(/'/g, "\\'");
+    let coordsTxt = tienePos ? (w.lat.toFixed(5) + ', ' + w.lng.toFixed(5)) : '—';
 
-    let dirId    = 'gps-dir-' + Date.now();
-    let btnDirId = dirId + '-btn';
-
-    var isMobile = window.innerWidth < 768;
-
-    let contentHTML = '';
-
-    if (isMobile) {
-        // Estilo Nativo Edge-to-Edge para Móvil
-        let mapMobHTML = tienePos
-            ? `<div style="width:100%;height:260px;position:relative;overflow:hidden;border-bottom:1px solid #e5e7eb;">
-                   <iframe src="https://maps.google.com/maps?q=${w.lat},${w.lng}&z=16&output=embed" style="width:100%;height:100%;border:0;" loading="lazy" allowfullscreen></iframe>
-                   <div style="position:absolute;bottom:16px;right:16px;width:40px;height:40px;background:#fff;border-radius:8px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;color:#4b5563;" onclick="window.open('https://maps.google.com/maps?q=${w.lat},${w.lng}','_blank')">
-                       <i class="bi bi-compass-fill fs-5"></i>
-                   </div>
-               </div>`
-            : `<div style="width:100%;height:260px;background:#d5f0d6;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #e5e7eb;">
-                   <div class="text-center" style="color:rgba(0,0,0,0.3);">
-                       <i class="bi bi-geo-alt-slash fs-1"></i>
-                       <p class="mt-2 mb-0 fw-bold">Sin señal GPS</p>
-                   </div>
-               </div>`;
-
-        function campoMob(label, valor) {
-            let id = 'copy-gps-' + Math.random().toString(36).substr(2,6);
-            let vc = (valor||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
-            return `<div class="d-flex align-items-center justify-content-between px-4 py-3" style="border-bottom:1px solid #f3f4f6;">
-                <span style="font-size:15px;color:#6b7280;font-weight:500;width:33%;">${label}</span>
-                <div class="d-flex align-items-center gap-2 justify-content-end text-end" style="width:66%;">
-                    <span class="fw-bold" style="font-size:15px;color:#111827;word-break:break-word;">${valor}</span>
-                    <button class="btn p-0 text-muted" id="${id}" onclick="navigator.clipboard.writeText('${vc}').then(()=>{let b=document.getElementById('${id}');if(b){b.innerHTML='<i class=\\'bi bi-check-lg text-success\\'></i>';setTimeout(()=>{if(b)b.innerHTML='<i class=\\'bi bi-files\\'></i>';},2000);}})">
-                        <i class="bi bi-files" style="font-size:14px;"></i>
-                    </button>
-                </div>
-            </div>`;
-        }
-
-        contentHTML = `
-            ${mapMobHTML}
-            <div class="d-flex flex-column pt-2 bg-white">
-                ${campoMob('Kilometraje', (w.km||0).toLocaleString() + ' km')}
-                ${campoMob('Horas Motor', (w.horas||0).toLocaleString() + ' hrs')}
-                ${tienePos ? campoMob('Coordenadas', w.lat.toFixed(5) + ', ' + w.lng.toFixed(5)) : ''}
-                
-                <div class="d-flex align-items-center justify-content-between px-4 py-3" style="border-bottom:1px solid #f3f4f6;">
-                    <span style="font-size:15px;color:#6b7280;font-weight:500;width:33%;">Dirección</span>
-                    <div class="d-flex align-items-center gap-2 justify-content-end text-end" style="width:66%;">
-                        <span class="fw-bold" id="${dirId}" style="font-size:15px;color:#111827;word-break:break-word;">
-                            ${tienePos ? '<span class="spinner-border spinner-border-sm text-primary"></span>' : '<span class="text-muted fw-normal">Sin señal</span>'}
-                        </span>
-                        ${tienePos ? `<button class="btn p-0 text-muted" id="${btnDirId}">
-                            <i class="bi bi-files" style="font-size:14px;"></i>
-                        </button>` : ''}
+    let contentHTML = `
+        <!-- Header Bento de la Unidad -->
+        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 52px; height: 52px; background: #0f172a; color: #ffffff; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                        <i class="bi bi-truck"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h4 class="fw-bolder m-0 text-dark" style="letter-spacing: -0.02em;">${w.placa || '—'}</h4>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold rounded-2 text-uppercase" style="font-size:0.72rem;">
+                                ${w.tipo || 'UNIDAD'}
+                            </span>
+                            ${tienePos ? (isMoving 
+                                ? '<span class="badge bg-primary px-2 py-1 fw-bold rounded-2" style="font-size:0.72rem;"><i class="bi bi-speedometer2 me-1"></i>En Ruta: ' + speed + ' km/h</span>'
+                                : '<span class="badge bg-success px-2 py-1 fw-bold rounded-2" style="font-size:0.72rem;"><i class="bi bi-pause-circle me-1"></i>Detenido</span>')
+                                : '<span class="badge bg-secondary px-2 py-1 fw-bold rounded-2" style="font-size:0.72rem;">Offline</span>'}
+                        </div>
+                        <span class="text-secondary small fw-medium">${w.nombre_wialon || 'Unidad de Flota'}</span>
                     </div>
                 </div>
-            </div>
-        `;
 
-        // Update Mobile Header Buttons
-        let btnComp = document.getElementById('btn-gps-compartir-mob');
-        if (btnComp) {
-            if (tienePos) {
-                btnComp.style.display = 'inline-block';
-                btnComp.onclick = function() { compartirUbicacion((w.nombre_wialon||'').replace(/'/g,"\\'"), w.lat, w.lng); };
-            } else {
-                btnComp.style.display = 'none';
-            }
-        }
-
-    } else {
-        // Estilo Desktop clásico
-        let mapHTML = tienePos
-            ? `<iframe src="https://maps.google.com/maps?q=${w.lat},${w.lng}&z=16&output=embed"
-                   style="width:100%;height:260px;border:0;border-radius:10px;" loading="lazy" allowfullscreen></iframe>`
-            : `<div class="d-flex align-items-center justify-content-center rounded"
-                   style="height:200px;background:var(--bg);border:1px dashed var(--border);color:var(--subtext);">
-                   <div class="text-center">
-                       <i class="bi bi-geo-alt-slash fs-1 opacity-40"></i>
-                       <p class="mt-2 mb-0">Sin señal GPS</p>
-                   </div>
-               </div>`;
-
-        function campoCopia(label, valor, valorCopia) {
-            let id = 'copy-gps-' + Math.random().toString(36).substr(2,6);
-            let vc = (valorCopia||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
-            return `<div class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid var(--border);">
-                <span class="text-muted" style="font-size:0.81rem;">${label}</span>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bold" style="font-size:0.88rem;">${valor}</span>
-                    <button class="btn p-0 px-1 btn-gps-copy" id="${id}" title="Copiar"
-                        onclick="navigator.clipboard.writeText('${vc}').then(()=>{let b=document.getElementById('${id}');if(b){b.innerHTML='<i class=\\'bi bi-check2 text-success\\'></i>';setTimeout(()=>{if(b)b.innerHTML='<i class=\\'bi bi-clipboard\\'></i>';},2000);}})">
-                        <i class="bi bi-clipboard"></i>
-                    </button>
+                    ${tienePos ? `
+                    <button class="btn btn-success btn-sm fw-bold px-3 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2"
+                        onclick="window.compartirUbicacion('${safeNombre}', ${w.lat}, ${w.lng})">
+                        <i class="bi bi-whatsapp"></i> Compartir Ubicación
+                    </button>` : ''}
                 </div>
-            </div>`;
-        }
-
-        contentHTML = `
-            <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-                <div>
-                    <h5 class="fw-bold mb-0 text-primary">${w.placa || '—'}</h5>
-                    <small class="text-muted">${w.nombre_wialon || ''}</small>
-                </div>
-                ${tienePos ? `
-                <button class="btn btn-success btn-sm fw-bold shadow-sm"
-                    onclick="compartirUbicacion('${(w.nombre_wialon||'').replace(/'/g,"\\'")}', ${w.lat}, ${w.lng})">
-                    <i class="bi bi-whatsapp"></i> Compartir
-                </button>` : ''}
             </div>
+        </div>
+
+        <!-- Mapa Satelital Interactivo -->
+        <div class="mb-3">
             ${mapHTML}
-            <div class="mt-3">
-                ${campoCopia('Kilometraje', (w.km||0).toLocaleString() + ' km', (w.km||0) + ' km')}
-                ${campoCopia('Horas Motor', (w.horas||0).toLocaleString() + ' hrs', (w.horas||0) + ' hrs')}
-                ${tienePos ? campoCopia('Coordenadas', w.lat.toFixed(5) + ', ' + w.lng.toFixed(5), w.lat + ', ' + w.lng) : ''}
-                <!-- Fila dirección (asíncrona) -->
-                <div class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid var(--border);">
-                    <span class="text-muted" style="font-size:0.81rem;">Dirección</span>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bold" id="${dirId}" style="font-size:0.88rem;">
-                            ${tienePos ? '<span class="spinner-border spinner-border-sm text-primary"></span>' : '<span class="text-muted">Sin señal GPS</span>'}
-                        </span>
-                        ${tienePos ? `<button class="btn p-0 px-1 btn-gps-copy" id="${btnDirId}" title="Copiar dirección">
-                            <i class="bi bi-clipboard"></i>
-                        </button>` : ''}
+        </div>
+
+        <!-- Bento Grid de Telemetría -->
+        <div class="gps-telemetry-grid">
+            <div class="gps-telemetry-box">
+                <div style="width:40px;height:40px;border-radius:10px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+                    <i class="bi bi-speedometer"></i>
+                </div>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Odómetro</span>
+                    <h6 class="fw-bolder m-0 text-dark" style="font-size:1.05rem;">${(w.km || 0).toLocaleString()} km</h6>
+                </div>
+            </div>
+
+            <div class="gps-telemetry-box">
+                <div style="width:40px;height:40px;border-radius:10px;background:#fefce8;color:#ca8a04;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Horas de Motor</span>
+                    <h6 class="fw-bolder m-0 text-dark" style="font-size:1.05rem;">${(w.horas || 0).toLocaleString()} hrs</h6>
+                </div>
+            </div>
+
+            <div class="gps-telemetry-box">
+                <div style="width:40px;height:40px;border-radius:10px;background:#f0fdf4;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+                    <i class="bi bi-compass"></i>
+                </div>
+                <div style="min-width:0; flex:1;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Coordenadas</span>
+                    <div class="d-flex align-items-center justify-content-between gap-1">
+                        <h6 class="fw-bolder m-0 text-dark text-truncate" style="font-size:0.92rem;">${coordsTxt}</h6>
+                        ${tienePos ? `<button class="btn btn-sm p-0 text-secondary" title="Copiar coordenadas" onclick="navigator.clipboard.writeText('${coordsTxt}').then(()=>{ alert('Coordenadas copiadas'); })"><i class="bi bi-clipboard"></i></button>` : ''}
                     </div>
                 </div>
             </div>
-        `;
-    }
 
-    // Detectar móvil y escribir en el contenedor correcto
+            <div class="gps-telemetry-box" style="grid-column: span 1 / -1;">
+                <div style="width:40px;height:40px;border-radius:10px;background:#f1f5f9;color:#475569;display:flex;align-items:center;justify-content:center;font-size:1.2rem; flex-shrink:0;">
+                    <i class="bi bi-pin-map"></i>
+                </div>
+                <div style="min-width:0; flex:1;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Dirección Satelital</span>
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                        <h6 class="fw-bold m-0 text-dark text-truncate" id="${dirId}" style="font-size:0.92rem;">
+                            ${tienePos ? '<span class="spinner-border spinner-border-sm text-primary"></span> Obteniendo dirección...' : '<span class="text-secondary fw-normal">Sin señal</span>'}
+                        </h6>
+                        ${tienePos ? `<button class="btn btn-sm p-0 text-secondary" id="${btnDirId}" title="Copiar"><i class="bi bi-clipboard"></i></button>` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
     var isMobile = window.innerWidth < 768;
     if (isMobile) {
-        var titleEl    = document.getElementById('gpsDetalleOffcanvasTitle');
+        var titleEl = document.getElementById('gpsDetalleOffcanvasTitle');
         var subtitleEl = document.getElementById('gpsDetalleOffcanvasSubtitle');
-        var bodyEl     = document.getElementById('gpsDetalleOffcanvasBody');
-        if (titleEl)    titleEl.textContent    = w.placa || '—';
+        var bodyEl = document.getElementById('gpsDetalleOffcanvasBody');
+        if (titleEl) titleEl.textContent = w.placa || '—';
         if (subtitleEl) subtitleEl.textContent = w.nombre_wialon || '';
-        if (bodyEl)     bodyEl.innerHTML       = contentHTML;
+        if (bodyEl) bodyEl.innerHTML = contentHTML;
         var oc = document.getElementById('gpsDetalleOffcanvas');
         if (oc) bootstrap.Offcanvas.getOrCreateInstance(oc).show();
     } else {
@@ -299,14 +302,14 @@ window.abrirDetalleGPS = function(placa) {
         pane.innerHTML = contentHTML;
     }
 
-    // Geocodificación asíncrona (Nominatim)
+    // Geocodificación asíncrona
     if (tienePos) {
         (async () => {
-            let dirEl  = document.getElementById(dirId);
-            let btnEl  = document.getElementById(btnDirId);
+            let dirEl = document.getElementById(dirId);
+            let btnEl = document.getElementById(btnDirId);
             let dirTxt = w.lat.toFixed(5) + ', ' + w.lng.toFixed(5);
             try {
-                const res  = await fetch(`/api/proxy/geocode?lat=${w.lat}&lon=${w.lng}`);
+                const res = await fetch(`/api/proxy/geocode?lat=${w.lat}&lon=${w.lng}`);
                 const data = await res.json();
                 if (data && data.display_name) {
                     let d = data.display_name.replace(/^Sin nombre,\s*/i, '');
@@ -316,7 +319,6 @@ window.abrirDetalleGPS = function(placa) {
 
             if (dirEl) dirEl.textContent = dirTxt;
             if (btnEl) {
-                let vc = dirTxt.replace(/'/g,"\\'");
                 btnEl.onclick = function() {
                     navigator.clipboard.writeText(dirTxt).then(() => {
                         btnEl.innerHTML = '<i class="bi bi-check2 text-success"></i>';
@@ -326,4 +328,11 @@ window.abrirDetalleGPS = function(placa) {
             }
         })();
     }
+};
+
+window.compartirUbicacion = function(nombre, lat, lng) {
+    let mapsUrl = `https://maps.google.com/maps?q=${lat},${lng}`;
+    let texto = `📍 *Ubicación GPS — ${nombre}*\nCoordenadas: ${lat.toFixed(5)}, ${lng.toFixed(5)}\nVer en Google Maps: ${mapsUrl}`;
+    let wUrl = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    window.open(wUrl, '_blank');
 };

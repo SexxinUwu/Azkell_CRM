@@ -590,9 +590,21 @@ function renderizarPaginaPlacas() {
 
         let menuAcciones = '';
         if (canEditP || canDeleteP) {
-            let btnEdit = canEditP ? '<button class="btn btn-sm btn-light" onclick="abrirModalEditarPlaca(' + indexGlobal + ')" title="Editar" style="color:#64748b; border:1px solid #e2e8f0;"><i class="bi bi-pencil-fill"></i></button>' : '';
-            let btnDel  = canDeleteP ? '<button class="btn btn-sm btn-light" onclick="event.stopPropagation(); eliminarPlacaDesdeTarjeta(\'' + plc + '\')" title="Eliminar" style="color:#ef4444; border:1px solid #fee2e2; background:#fef2f2;"><i class="bi bi-trash-fill"></i></button>' : '';
-            menuAcciones = '<div style="display:flex; gap:0.3rem; justify-content:flex-end;">' + btnEdit + btnDel + '</div>';
+            let items = '';
+            if (canEditP) items += '<li><a class="dropdown-item fw-semibold py-2" href="javascript:void(0)" onclick="abrirModalEditarPlaca(' + indexGlobal + ')"><i class="bi bi-pencil text-primary me-2"></i> Editar</a></li>';
+            if (canEditP && canDeleteP) items += '<li><hr class="dropdown-divider my-1"></li>';
+            if (canDeleteP) items += '<li><a class="dropdown-item text-danger fw-bold py-2" href="javascript:void(0)" onclick="eliminarPlacaDesdeTarjeta(\'' + plc + '\')"><i class="bi bi-trash me-2"></i> Eliminar</a></li>';
+            
+            menuAcciones = '<div class="dropstart text-center">' +
+                '<button class="btn btn-sm btn-light border-0 shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; color:#64748b; padding:4px 8px; border-radius:6px;" onclick="event.stopPropagation()">' +
+                '<i class="bi bi-three-dots-vertical fs-6"></i>' +
+                '</button>' +
+                '<ul class="dropdown-menu shadow-sm border" style="border-radius:10px; font-size:0.85rem; z-index:1050;">' +
+                items +
+                '</ul>' +
+                '</div>';
+        } else {
+            menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>';
         }
 
         let checkHtml = '<input type="checkbox" class="form-check-input chk-bulk-placas m-0" value="'+plc+'" style="cursor: pointer;" onchange="window._placasToggleSel(\''+plc+'\', this.checked)">';
@@ -626,7 +638,7 @@ function renderizarPaginaPlacas() {
         }
 
         // Columna Acciones
-        html += '<td style="padding:0.75rem 0.5rem; text-align:right; position: sticky; right: 0; background: inherit;" onclick="event.stopPropagation()">' + menuAcciones + '</td>';
+        html += '<td style="padding:0.75rem 0.5rem; text-align:center;" onclick="event.stopPropagation()">' + menuAcciones + '</td>';
         
         html += '</tr>';
     });
