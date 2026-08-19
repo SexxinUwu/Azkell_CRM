@@ -466,117 +466,205 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
     }
     document.getElementById('ft-health-txt').innerText = `${v._meta.salud}%`;
 
-    // Renderizar tarjetas de documentos exactas a la imagen
-    const m = v._meta.docs;
-    
-    const renderCard = (id, title, num, bgClass, contentRows, est, docUrl) => {
-        let rowsHtml = '';
-        contentRows.forEach(row => {
-            rowsHtml += `
-            <div class="doc-row">
-                <span class="doc-label">${row.label}</span>
-                <span class="doc-value">${row.val}</span>
-            </div>`;
-        });
-        
-        let estHtml = `<span class="footer-label">ESTADO</span>`;
-        if(est.diff !== null) {
-            let labelText = '';
-            if (est.diff < 0) {
-                labelText = `Vencido hace ${Math.abs(est.diff)} días`;
-            } else if (est.diff === 0) {
-                labelText = `Vence hoy (Alerta)`;
-            } else if (est.diff <= 30) {
-                labelText = `Faltan ${est.diff} días (${est.text})`;
+    // Definición de documentos estándar
+    const defDocs = [
+        {
+            tipo: 'TARJETA_PROPIEDAD',
+            title: 'TARJ. CIRCULACIÓN',
+            num: 1,
+            bgClass: 'bg-c1',
+            est: calcularEstado(v.tc_vencimiento),
+            rows: [
+                { label: 'N°', val: v.tc_constancia },
+                { label: 'Vencimiento', val: formatearFechaVista(v.tc_vencimiento) }
+            ],
+            url: v.tc_url,
+            hasData: Boolean(v.tc_vencimiento || (v.tc_constancia && v.tc_constancia.trim() && v.tc_constancia !== '---') || v.tc_url)
+        },
+        {
+            tipo: 'SOAT',
+            title: 'SOAT',
+            num: 2,
+            bgClass: 'bg-c2',
+            est: calcularEstado(v.soat_vencimiento),
+            rows: [
+                { label: 'Entidad', val: v.soat_entidad },
+                { label: 'Pago', val: v.soat_pago },
+                { label: 'Vencimiento', val: formatearFechaVista(v.soat_vencimiento) }
+            ],
+            url: v.soat_url,
+            hasData: Boolean(v.soat_vencimiento || (v.soat_entidad && v.soat_entidad.trim() && v.soat_entidad !== '---') || v.soat_url)
+        },
+        {
+            tipo: 'MATPEL',
+            title: 'MATPEL',
+            num: 3,
+            bgClass: 'bg-c3',
+            est: calcularEstado(v.matpel_vencimiento),
+            rows: [
+                { label: 'N°', val: v.matpel_constancia },
+                { label: 'Vencimiento', val: formatearFechaVista(v.matpel_vencimiento) }
+            ],
+            url: v.matpel_url,
+            hasData: Boolean(v.matpel_vencimiento || (v.matpel_constancia && v.matpel_constancia.trim() && v.matpel_constancia !== '---') || v.matpel_url)
+        },
+        {
+            tipo: 'REV_TECNICA',
+            title: 'REV. TÉCNICA',
+            num: 4,
+            bgClass: 'bg-c4',
+            est: calcularEstado(v.rt_vencimiento),
+            rows: [
+                { label: 'Emisión', val: formatearFechaVista(v.rt_emision) },
+                { label: 'Vencimiento', val: formatearFechaVista(v.rt_vencimiento) }
+            ],
+            url: v.rt_url,
+            hasData: Boolean(v.rt_vencimiento || v.rt_emision || v.rt_url)
+        },
+        {
+            tipo: 'BONIFICACION',
+            title: 'BONIFICACIÓN',
+            num: 5,
+            bgClass: 'bg-c5',
+            est: calcularEstado(v.boni_vencimiento),
+            rows: [
+                { label: 'Emisión', val: formatearFechaVista(v.boni_emision) },
+                { label: 'Vencimiento', val: formatearFechaVista(v.boni_vencimiento) }
+            ],
+            url: v.boni_url,
+            hasData: Boolean(v.boni_vencimiento || v.boni_emision || v.boni_url)
+        },
+        {
+            tipo: 'SEG_VEHICULAR',
+            title: 'SEG. VEHICULAR',
+            num: 6,
+            bgClass: 'bg-c6',
+            est: calcularEstado(v.sv_vencimiento),
+            rows: [
+                { label: 'Entidad', val: v.sv_entidad },
+                { label: 'Asesor', val: v.sv_asesor },
+                { label: 'Vencimiento', val: formatearFechaVista(v.sv_vencimiento) }
+            ],
+            url: v.sv_url,
+            hasData: Boolean(v.sv_vencimiento || (v.sv_entidad && v.sv_entidad.trim() && v.sv_entidad !== '---') || v.sv_url)
+        },
+        {
+            tipo: 'SEG_CARRETA',
+            title: 'SEG. CARRETA',
+            num: 7,
+            bgClass: 'bg-c7',
+            est: calcularEstado(v.sc_vencimiento),
+            rows: [
+                { label: 'Entidad', val: v.sc_entidad },
+                { label: 'Asesor', val: v.sc_asesor },
+                { label: 'Vencimiento', val: formatearFechaVista(v.sc_vencimiento) }
+            ],
+            url: v.sc_url,
+            hasData: Boolean(v.sc_vencimiento || (v.sc_entidad && v.sc_entidad.trim() && v.sc_entidad !== '---') || v.sc_url)
+        },
+        {
+            tipo: 'FUMIGACION',
+            title: 'FUMIGACIÓN',
+            num: 8,
+            bgClass: 'bg-c8',
+            est: calcularEstado(v.fum_vencimiento),
+            rows: [
+                { label: 'Emisión', val: formatearFechaVista(v.fum_emision) },
+                { label: 'Vencimiento', val: formatearFechaVista(v.fum_vencimiento) }
+            ],
+            url: v.fum_url,
+            hasData: Boolean(v.fum_vencimiento || v.fum_emision || v.fum_url)
+        },
+        {
+            tipo: 'EXTINTOR',
+            title: 'EXTINTOR',
+            num: 9,
+            bgClass: 'bg-c9',
+            est: calcularEstado(v.ext_vencimiento),
+            rows: [
+                { label: 'Cantidad', val: v.ext_cantidad || 1 },
+                { label: 'Emisión', val: formatearFechaVista(v.ext_emision) },
+                { label: 'Vencimiento', val: formatearFechaVista(v.ext_vencimiento) }
+            ],
+            url: v.ext_url,
+            hasData: Boolean(v.ext_vencimiento || v.ext_emision || v.ext_url)
+        }
+    ];
+
+    // FILTRADO ESTRICTO: Solo mostramos casillas con información cargada
+    const docsConDatos = defDocs.filter(d => d.hasData);
+
+    let gridHtml = '';
+    if (docsConDatos.length === 0) {
+        gridHtml = `
+            <div style="grid-column: 1 / -1; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 18px; padding: 2.5rem 1.5rem; text-align: center; width: 100%;">
+                <div style="width: 50px; height: 50px; border-radius: 14px; background: #f1f5f9; color: #64748b; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 1.5rem;">
+                    <i class="bi bi-file-earmark-plus"></i>
+                </div>
+                <div style="font-weight: 700; color: #0f172a; font-size: 1.05rem; margin-bottom: 0.35rem;">Sin documentos registrados</div>
+                <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.25rem; max-width: 400px; margin-left: auto; margin-right: auto;">Esta unidad aún no tiene ningún documento registrado o vigente en el ERP.</div>
+                <button class="btn" style="background: #0284c7; color: #fff; border-radius: 12px; font-weight: 600; font-size: 0.85rem; padding: 0.6rem 1.5rem;" onclick="abrirModalEdicion('${v.placa}')">
+                    <i class="bi bi-plus-lg me-1"></i> Registrar Primer Documento
+                </button>
+            </div>
+        `;
+    } else {
+        docsConDatos.forEach(doc => {
+            let rowsHtml = '';
+            doc.rows.forEach(r => {
+                let val = r.val || '---';
+                rowsHtml += `
+                    <div class="doc-row">
+                        <span class="doc-label">${r.label}</span>
+                        <span class="doc-value">${val}</span>
+                    </div>
+                `;
+            });
+
+            let est = doc.est;
+            let estHtml = `<span class="footer-label">ESTADO</span>`;
+            if (est.diff !== null) {
+                let labelText = '';
+                if (est.diff < 0) labelText = `Vencido hace ${Math.abs(est.diff)} días`;
+                else if (est.diff === 0) labelText = `Vence hoy (Alerta)`;
+                else labelText = `Faltan ${est.diff} días (${est.text})`;
+                estHtml += `<span class="footer-status ${est.class}">${labelText}</span>`;
             } else {
-                labelText = `Faltan ${est.diff} días (${est.text})`;
+                estHtml += `<span class="footer-status" style="color:#94a3b8;">-</span>`;
             }
-            estHtml += `<span class="footer-status ${est.class}">${labelText}</span>`;
-        } else {
-            estHtml += `<span class="footer-status" style="color:#94a3b8;">-</span>`;
-        }
 
-        let html = `
-        <div class="doc-card-header">
-            <div class="num-circle ${bgClass}">${num}</div>
-            ${title}
-        </div>
-        <div class="doc-card-body">
-            ${rowsHtml}
-        </div>
-        <div class="doc-card-footer">
-            ${estHtml}
-        </div>`;
-        
-        const cardEl = document.getElementById(id);
-        cardEl.innerHTML = html;
-        
-        let shadowColor = '';
-        if (est.class === 's-green') shadowColor = 'rgba(16, 185, 129, 0.4)';
-        else if (est.class === 's-yellow' || est.class === 's-orange') shadowColor = 'rgba(245, 158, 11, 0.4)';
-        else if (est.class === 's-red') shadowColor = 'rgba(239, 68, 68, 0.4)';
-        else shadowColor = 'rgba(148, 163, 184, 0.2)';
+            let borderStyle = 'border: 1px solid #e2e8f0;';
+            let shadowStyle = 'box-shadow: 0 2px 4px rgba(0,0,0,0.02);';
+            if (est.class === 's-green') {
+                borderStyle = 'border: 1px solid #10b981;';
+                shadowStyle = 'box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.25);';
+            } else if (est.class === 's-yellow' || est.class === 's-orange') {
+                borderStyle = 'border: 1px solid #f59e0b;';
+                shadowStyle = 'box-shadow: 0 4px 12px -2px rgba(245, 158, 11, 0.25);';
+            } else if (est.class === 's-red') {
+                borderStyle = 'border: 1px solid #ef4444;';
+                shadowStyle = 'box-shadow: 0 4px 12px -2px rgba(239, 68, 68, 0.3);';
+            }
 
-        if (shadowColor) {
-            cardEl.style.boxShadow = `0 4px 6px -1px ${shadowColor}, 0 2px 4px -2px ${shadowColor}`;
-            if (est.class === 's-green') cardEl.style.border = '1px solid #10b981';
-            else if (est.class === 's-yellow' || est.class === 's-orange') cardEl.style.border = '1px solid #f59e0b';
-            else if (est.class === 's-red') cardEl.style.border = '1px solid #ef4444';
-            else cardEl.style.border = '1px solid #e2e8f0';
-        }
-        
-        cardEl.style.cursor = 'pointer';
-        cardEl.onclick = () => window.abrirDocModal(title, contentRows, est, docUrl);
-    };
+            gridHtml += `
+                <div class="doc-card" style="${borderStyle} ${shadowStyle} cursor: pointer;" onclick="window.abrirDocModal('${doc.title}', ${JSON.stringify(doc.rows).replace(/"/g, '&quot;')}, ${JSON.stringify(doc.est).replace(/"/g, '&quot;')}, '${doc.url || ''}', '${doc.tipo}')">
+                    <div class="doc-card-header">
+                        <div class="num-circle ${doc.bgClass}">${doc.num}</div>
+                        ${doc.title}
+                    </div>
+                    <div class="doc-card-body">
+                        ${rowsHtml}
+                    </div>
+                    <div class="doc-card-footer">
+                        ${estHtml}
+                    </div>
+                </div>
+            `;
+        });
+    }
 
-    renderCard('card-tc', 'TARJ. CIRC...', 1, 'bg-c1', [
-        {label: 'N°', val: v.tc_constancia||'---'},
-        {label: 'Vencimiento', val: formatearFechaVista(v.tc_vencimiento)}
-    ], m[0], v.tc_url);
-    
-    renderCard('card-soat', 'SOAT', 2, 'bg-c2', [
-        {label: 'Entidad', val: v.soat_entidad||'---'},
-        {label: 'Pago', val: v.soat_pago||'---'},
-        {label: 'Vencimiento', val: formatearFechaVista(v.soat_vencimiento)}
-    ], m[1], v.soat_url);
-        
-    renderCard('card-matpel', 'MATPEL', 3, 'bg-c3', [
-        {label: 'N°', val: v.matpel_constancia||'---'},
-        {label: 'Vencimiento', val: formatearFechaVista(v.matpel_vencimiento)}
-    ], m[2], v.matpel_url);
-        
-    renderCard('card-rt', 'REV. TÉCN...', 4, 'bg-c4', [
-        {label: 'Emisión', val: formatearFechaVista(v.rt_emision)},
-        {label: 'Vencimiento', val: formatearFechaVista(v.rt_vencimiento)}
-    ], m[3], v.rt_url);
-        
-    renderCard('card-boni', 'BONIFICA...', 5, 'bg-c5', [
-        {label: 'Emisión', val: formatearFechaVista(v.boni_emision)},
-        {label: 'Vencimiento', val: formatearFechaVista(v.boni_vencimiento)}
-    ], m[4], v.boni_url);
-        
-    renderCard('card-sv', 'SEG. VEHI...', 6, 'bg-c6', [
-        {label: 'Entidad', val: v.sv_entidad||'---'},
-        {label: 'Asesor', val: v.sv_asesor||'---'},
-        {label: 'Vencimiento', val: formatearFechaVista(v.sv_vencimiento)}
-    ], m[5], v.sv_url);
-        
-    renderCard('card-sc', 'SEG. CAR...', 7, 'bg-c7', [
-        {label: 'Entidad', val: v.sc_entidad||'---'},
-        {label: 'Asesor', val: v.sc_asesor||'---'},
-        {label: 'Vencimiento', val: formatearFechaVista(v.sc_vencimiento)}
-    ], m[6], v.sc_url);
-        
-    renderCard('card-fum', 'FUMIGACI...', 8, 'bg-c8', [
-        {label: 'Emisión', val: formatearFechaVista(v.fum_emision)},
-        {label: 'Vencimiento', val: formatearFechaVista(v.fum_vencimiento)}
-    ], m[7], v.fum_url);
-        
-    renderCard('card-ext', 'EXTINTOR...', 9, 'bg-c9', [
-        {label: 'Cantidad', val: v.ext_cantidad||1},
-        {label: 'Emisión', val: formatearFechaVista(v.ext_emision)},
-        {label: 'Vencimiento', val: formatearFechaVista(v.ext_vencimiento)}
-    ], m[8], v.ext_url);
+    const gridContainer = document.getElementById('docs-grid-container') || document.querySelector('.docs-grid');
+    if (gridContainer) gridContainer.innerHTML = gridHtml;
 }
 
 function renderizarMatriz() {
@@ -1037,13 +1125,15 @@ function volverListaMovil() {
     if(fab) fab.style.display = 'flex';
 }
 
-window.abrirDocModal = function(title, contentRows, est, docUrl) {
+window.abrirDocModal = function(title, contentRows, est, docUrl, tipoDocKey) {
     window._lastDocTitle = title;
+    window._lastDocTipo = tipoDocKey;
     document.getElementById('dm-title').innerText = title;
     
     let html = '';
     contentRows.forEach(row => {
-        html += `<div class="doc-modal-row"><span class="doc-modal-label">${row.label}</span><span class="doc-modal-val">${row.val}</span></div>`;
+        let val = row.val || '---';
+        html += `<div class="doc-modal-row"><span class="doc-modal-label">${row.label}</span><span class="doc-modal-val">${val}</span></div>`;
     });
     
     if(est.diff !== null) {
@@ -1057,7 +1147,7 @@ window.abrirDocModal = function(title, contentRows, est, docUrl) {
         else if(est.class === 's-yellow' || est.class === 's-orange') color = '#f59e0b';
         else if(est.class === 's-red') color = '#ef4444';
 
-        html += `<div class="doc-modal-row" style="margin-top:0.5rem;"><span class="doc-modal-label">Estado Actual:</span><span class="doc-modal-val" style="color:${color};">${labelText}</span></div>`;
+        html += `<div class="doc-modal-row" style="margin-top:0.5rem;"><span class="doc-modal-label">Estado Actual:</span><span class="doc-modal-val" style="color:${color}; font-weight:700;">${labelText}</span></div>`;
     }
     
     document.getElementById('dm-data').innerHTML = html;
