@@ -2183,10 +2183,40 @@ app.delete('/api/documentos-flota/delete', async (req, res) => {
     }
 });
 
-// ── GET /api/vehiculos-flota — Lista de vehículos con documentos ──────────────
+// ── GET /api/vehiculos-flota — Lista de vehículos con documentos (Sincronizado con Placas) ──────────────
 app.get('/api/vehiculos-flota', (req, res) => {
-    db.query('SELECT * FROM vehiculos_flota ORDER BY placa ASC', (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const tdb = (req && req.db) ? req.db : db;
+    const query = `
+        SELECT 
+            p.placa,
+            COALESCE(vf.tipo, p.tipo, '---') AS tipo,
+            COALESCE(vf.propiedad, 'PROPIA') AS propiedad,
+            COALESCE(vf.empresa, p.cliente, 'MARSISA') AS empresa,
+            vf.fecha_entrega,
+            COALESCE(vf.anio, p.anio) AS anio,
+            COALESCE(vf.marca, p.marca) AS marca,
+            COALESCE(vf.modelo, p.modelo_uts, p.modelo) AS modelo,
+            COALESCE(vf.color, p.color) AS color,
+            COALESCE(vf.chasis, p.chasis) AS chasis,
+            vf.tc_vencimiento, vf.tc_constancia, vf.soat_entidad, vf.soat_pago, vf.soat_vencimiento,
+            vf.matpel_constancia, vf.matpel_vencimiento, vf.rt_emision, vf.rt_vencimiento,
+            vf.boni_emision, vf.boni_vencimiento, vf.sv_entidad, vf.sv_asesor, vf.sv_vencimiento,
+            vf.sc_entidad, vf.sc_asesor, vf.sc_vencimiento, vf.fum_emision, vf.fum_vencimiento,
+            vf.ext_emision, vf.ext_vencimiento, vf.ext_cantidad,
+            vf.tc_url, vf.soat_url, vf.matpel_url, vf.rt_url, vf.boni_url, vf.sv_url, vf.sc_url, vf.fum_url, vf.ext_url, vf.wialon_name
+        FROM placas p
+        LEFT JOIN vehiculos_flota vf ON UPPER(TRIM(p.placa)) = UPPER(TRIM(vf.placa))
+        WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
+        ORDER BY p.placa ASC
+    `;
+    tdb.query(query, (err, rows) => {
+        if (err) {
+            tdb.query('SELECT * FROM vehiculos_flota ORDER BY placa ASC', (err2, rows2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json(rows2);
+            });
+            return;
+        }
         res.json(rows);
     });
 });
@@ -2250,6 +2280,51 @@ app.post('/api/vehiculos-flota', (req, res) => {
     db.query(query, values, (err) => {
         if (err) { console.error('Error vehiculos_flota:', err); return res.status(500).json({ error: err.message }); }
         res.json({ ok: true });
+    });
+});
+
+// ── GET /api/documentos-flota/historial/:placa — Historial de documentos de la placa ──
+app.get('/api/documentos-flota/historial/:placa', (req, res) => {
+    const tdb = (req && req.db) ? req.db : db;
+    const placa = req.params.placa;
+    tdb.query(
+        'SELECT * FROM documentos_flota WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?)) ORDER BY fecha_vencimiento DESC, creado_en DESC',
+        [placa],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, historial: rows || [] });
+        }
+    );
+});
+
+// ── POST /api/documentos-flota/guardar-historial — Insertar registro historico ──
+app.post('/api/documentos-flota/guardar-historial', (req, res) => {
+    const tdb = (req && req.db) ? req.db : db;
+    const d = req.body || {};
+    if (!d.placa || !d.tipo_documento) return res.status(400).json({ error: 'Placa y tipo de documento requeridos' });
+
+    const id = `DOC-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+    const sql = `INSERT INTO documentos_flota 
+        (id, placa, tipo_documento, entidad, nro_constancia, fecha_emision, fecha_vencimiento, pago, asesor, observaciones, usuario)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    const vals = [
+        id,
+        d.placa.toUpperCase().trim(),
+        d.tipo_documento.trim(),
+        d.entidad || null,
+        d.nro_constancia || null,
+        d.fecha_emision || null,
+        d.fecha_vencimiento || null,
+        d.pago || null,
+        d.asesor || null,
+        d.observaciones || null,
+        d.usuario || 'SISTEMA'
+    ];
+
+    tdb.query(sql, vals, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true, id });
     });
 });
 
