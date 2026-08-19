@@ -856,16 +856,29 @@ function abrirModalEdicion(placa, tipoDoc) {
     
     const m = document.getElementById('modalEdicionVehiculo');
     if (m) {
-        m.style.display = 'block';
-        m.classList.add('show');
+        if (window.bootstrap && bootstrap.Modal) {
+            let bsModal = bootstrap.Modal.getInstance(m) || new bootstrap.Modal(m, { backdrop: 'static', keyboard: false });
+            bsModal.show();
+        } else {
+            m.style.display = 'block';
+            m.classList.add('show');
+        }
     }
 }
 
 function cerrarModalEdicion() {
     const m = document.getElementById('modalEdicionVehiculo');
     if (m) {
+        if (window.bootstrap && bootstrap.Modal) {
+            let bsModal = bootstrap.Modal.getInstance(m);
+            if (bsModal) bsModal.hide();
+        }
         m.style.display = 'none';
         m.classList.remove('show');
+        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
     }
 }
 
