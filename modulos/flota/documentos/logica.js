@@ -29,12 +29,13 @@ function cargarDatosPlacasCatalogo() {
 
 function actualizarDatalistPlacas() {
     let opciones = new Set();
-    placasCatalogo.forEach(p => { if (p.placa) opciones.add(p.placa.toUpperCase()); });
-    vehiculosFlota.forEach(v => { if (v.placa) opciones.add(v.placa.toUpperCase()); });
+    (placasCatalogo || []).forEach(p => { if (p.placa) opciones.add(p.placa.toUpperCase()); });
+    (vehiculosFlota || []).forEach(v => { if (v.placa) opciones.add(v.placa.toUpperCase()); });
     
     let items = Array.from(opciones).sort().map(placa => ({ value: placa, label: placa }));
     
     if (typeof window._cbInit === 'function') {
+        window._cbInit('nd_vehiculo', items, 'BUSCAR PLACA...');
         window._cbInit('fd_placa', items, 'BUSCAR PLACA...');
     }
 }
@@ -868,25 +869,24 @@ window.onTipoDocumentoChange = function(val) {
 };
 
 function abrirModalEdicion(placa, tipoDoc) {
-    const selV = document.getElementById('nd_vehiculo');
-    if (selV) {
-        let opciones = new Set();
-        (placasCatalogo || []).forEach(p => { if (p.placa) opciones.add(p.placa.toUpperCase()); });
-        (vehiculosFlota || []).forEach(v => { if (v.placa) opciones.add(v.placa.toUpperCase()); });
-        let sorted = Array.from(opciones).sort();
-        
-        let html = '<option value="">Seleccione...</option>';
-        sorted.forEach(p => {
-            html += `<option value="${p}">${p}</option>`;
-        });
-        selV.innerHTML = html;
-        if (placa) selV.value = placa.toUpperCase();
-    }
+    actualizarDatalistPlacas();
 
     const f = document.getElementById('formVehiculoFlota');
     if (f) f.reset();
     
-    if (placa && selV) selV.value = placa.toUpperCase();
+    if (placa) {
+        if (typeof window._cbSet === 'function') {
+            window._cbSet('nd_vehiculo', placa.toUpperCase(), placa.toUpperCase());
+        } else {
+            const selV = document.getElementById('nd_vehiculo');
+            if (selV) selV.value = placa.toUpperCase();
+        }
+    } else {
+        if (typeof window._cbSet === 'function') {
+            window._cbSet('nd_vehiculo', '', '');
+        }
+    }
+    
     if (tipoDoc && document.getElementById('nd_tipo_documento')) {
         document.getElementById('nd_tipo_documento').value = tipoDoc;
     }
@@ -923,7 +923,13 @@ function cerrarModalEdicion() {
 }
 
 function guardarVehiculo() {
-    const placa = (document.getElementById('nd_vehiculo') || {}).value;
+    let placa = '';
+    if (typeof window._cbGet === 'function') {
+        placa = window._cbGet('nd_vehiculo');
+    }
+    if (!placa) {
+        placa = (document.getElementById('nd_vehiculo') || {}).value || '';
+    }
     if (!placa || !placa.trim()) return alert('El vehículo/placa es obligatorio');
 
     const tipoVal = (document.getElementById('nd_tipo_documento') || {}).value;

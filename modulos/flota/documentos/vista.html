@@ -1299,10 +1299,10 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                         </h6>
                         <div class="row g-2">
                             <div class="col-12 col-md-6">
-                                <label class="form-label fw-bold text-secondary small mb-1">Vehículo <span class="text-danger">(*)</span></label>
-                                <select id="nd_vehiculo" class="form-select border-secondary-subtle" required>
-                                    <option value="">Seleccione...</option>
-                                </select>
+                                <label class="form-label fw-bold text-secondary small mb-1">Vehículo / Placa <span class="text-danger">(*)</span></label>
+                                <div id="nd_vehiculo_container" style="position: relative;">
+                                    <input type="text" id="nd_vehiculo" class="form-control border-secondary-subtle" placeholder="BUSCAR PLACA..." required autocomplete="off">
+                                </div>
                             </div>
                             <div class="col-12 col-md-6">
                                 <label class="form-label fw-bold text-secondary small mb-1">Tipo Documento <span class="text-danger">(*)</span></label>
