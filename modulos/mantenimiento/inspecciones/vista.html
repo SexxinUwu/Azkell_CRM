@@ -317,11 +317,11 @@
         </div>
 
         <div class="d-flex align-items-center gap-2">
-            <div class="ck-apple-segmented" id="btn-group-insp-tabs">
-                <button type="button" class="ck-segment-item active" id="insp-general-tab" data-bs-toggle="tab" data-bs-target="#insp-general" onclick="document.getElementById('insp-general-tab').classList.add('active');document.getElementById('insp-frenos-tab').classList.remove('active'); window.actualizarVistaGraficos && window.actualizarVistaGraficos();">
-                    General
+            <div class="ck-apple-segmented" id="btn-group-insp-tabs" role="tablist">
+                <button type="button" class="ck-segment-item active" id="insp-general-tab" onclick="window.cambiarInspTab('general')">
+                    <i class="bi bi-card-checklist me-1"></i>General
                 </button>
-                <button type="button" class="ck-segment-item" id="insp-frenos-tab" data-bs-toggle="tab" data-bs-target="#insp-frenos" onclick="document.getElementById('insp-frenos-tab').classList.add('active');document.getElementById('insp-general-tab').classList.remove('active'); window.actualizarVistaGraficos && window.actualizarVistaGraficos();">
+                <button type="button" class="ck-segment-item" id="insp-frenos-tab" onclick="window.cambiarInspTab('frenos')">
                     <i class="bi bi-stop-circle-fill text-danger me-1"></i>Sistema de Frenos
                 </button>
             </div>
@@ -350,38 +350,73 @@
     </div>
     </div>
 
-        <!-- PESTAÑA FRENOS -->
-        <div class="tab-pane fade h-100 flex-column" id="insp-frenos" role="tabpanel">
-            <div class="card p-0 flex-grow-1 overflow-hidden d-flex flex-column border-top-0 rounded-top-0">
-                <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-0 fw-bold"><i class="bi bi-speedometer2 text-danger"></i> Monitoreo de Frenos</h6>
-                        <small class="text-muted">Unidades activas y estado de zapatas / embrague</small>
+        <!-- PESTAÑA FRENOS (DISEÑO MODERNO ERP) -->
+        <div class="tab-pane fade h-100 flex-column" id="insp-frenos" role="tabpanel" style="display:none;">
+            <div class="card p-0 flex-grow-1 overflow-hidden d-flex flex-column border-top-0 rounded-top-0 shadow-none bg-transparent">
+                
+                <!-- Sub-barra Bento de Monitoreo de Frenos -->
+                <div class="p-3 bg-white border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width: 36px; height: 36px; background: #fef2f2; color: #ef4444; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                            <i class="bi bi-speedometer2"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.95rem;">Monitoreo de Sistema de Frenos</h6>
+                            <small class="text-secondary" style="font-size: 0.75rem;">Desgaste de zapatas (delantera, tracción, loca) y disco de embrague</small>
+                        </div>
                     </div>
-                    <div>
-                        <button class="btn btn-danger btn-sm fw-bold" onclick="abrirModalFrenos()"><i class="bi bi-plus-circle me-1"></i> Registrar Frenos</button>
+                    
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <!-- Filtros rápidos por estado de frenos -->
+                        <div class="d-none d-md-flex align-items-center gap-1">
+                            <button type="button" class="btn btn-sm btn-light border shadow-2xs fw-bold px-2 py-1" onclick="window.filtrarTablaFrenosPorKPI('todos', this)" style="font-size: 0.75rem;">
+                                Todos <span class="badge bg-secondary ms-1" id="frenos-cnt-todos">0</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light border shadow-2xs text-success fw-bold px-2 py-1" onclick="window.filtrarTablaFrenosPorKPI('vigentes', this)" style="font-size: 0.75rem;">
+                                <i class="bi bi-check-circle-fill me-1"></i>Vigentes (&gt;30%) <span class="badge bg-success ms-1" id="frenos-cnt-vigentes">0</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light border shadow-2xs text-warning-emphasis fw-bold px-2 py-1" onclick="window.filtrarTablaFrenosPorKPI('alerta', this)" style="font-size: 0.75rem;">
+                                <i class="bi bi-exclamation-circle-fill me-1"></i>En Alerta (21-30%) <span class="badge bg-warning text-dark ms-1" id="frenos-cnt-alerta">0</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light border shadow-2xs text-danger fw-bold px-2 py-1" onclick="window.filtrarTablaFrenosPorKPI('vencidos', this)" style="font-size: 0.75rem;">
+                                <i class="bi bi-x-circle-fill me-1"></i>Críticos (≤20%) <span class="badge bg-danger ms-1" id="frenos-cnt-vencidos">0</span>
+                            </button>
+                        </div>
+
+                        <button class="btn btn-danger btn-sm fw-bold px-3 py-1 shadow-2xs d-flex align-items-center gap-1 rounded-3" onclick="window.abrirModalFrenos()">
+                            <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">Registrar Frenos</span>
+                        </button>
                     </div>
                 </div>
-                <div class="table-container flex-grow-1 overflow-auto">
-                    <table class="table table-custom m-0" id="tablaFrenos" data-sort-dir="asc">
-                        <thead style="position: sticky; top: 0; background: var(--surface); z-index: 10; border-bottom: 2px solid var(--border);">
-                            <tr>
-                                <th>N°</th>
-                                <th onclick="sortTable('tablaFrenos', 1)">Placa <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
-                                <th onclick="sortTable('tablaFrenos', 2)">Fec. Insp. <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
-                                <th>Zap. Delantera</th>
-                                <th>Zap. 1er Eje Tracción</th>
-                                <th>Zap. 2do Eje Loca</th>
-                                <th>Disco Embrague</th>
-                                <th>Técnico</th>
-                                <th>Observación</th>
+
+                <!-- Contenedor Tabla Escritorio -->
+                <div class="table-container flex-grow-1 overflow-auto d-none d-md-block" style="background:#ffffff;">
+                    <table class="table table-hover align-middle m-0" id="tablaFrenos" data-sort-dir="asc" style="font-size: 0.85rem;">
+                        <thead class="bg-light sticky-top shadow-2xs border-bottom" style="z-index: 10;">
+                            <tr class="text-secondary" style="font-size: 0.74rem; letter-spacing: 0.5px; text-transform: uppercase;">
+                                <th class="ps-3 py-2 text-center" style="width: 45px; min-width: 45px;">N°</th>
+                                <th class="py-2" style="min-width: 100px; cursor: pointer;" onclick="sortTable('tablaFrenos', 1)">Placa <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
+                                <th class="py-2" style="min-width: 110px; cursor: pointer;" onclick="sortTable('tablaFrenos', 2)">Fec. Insp. <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
+                                <th class="py-2 text-center" style="min-width: 135px; white-space: nowrap;">Zap. Delantera</th>
+                                <th class="py-2 text-center" style="min-width: 160px; white-space: nowrap;">Zap. 1er Eje Tracción</th>
+                                <th class="py-2 text-center" style="min-width: 150px; white-space: nowrap;">Zap. 2do Eje Loca</th>
+                                <th class="py-2 text-center" style="min-width: 140px; white-space: nowrap;">Disco Embrague</th>
+                                <th class="py-2" style="min-width: 160px; white-space: nowrap;">Técnico</th>
+                                <th class="py-2" style="min-width: 180px;">Observación</th>
+                                <th class="pe-3 py-2 text-center" style="min-width: 80px; width: 80px;">Acción</th>
                             </tr>
                         </thead>
                         <tbody id="cuerpoTablaFrenos">
-                            <tr><td colspan="9" class="text-center py-5">Cargando frenos...</td></tr>
+                            <tr><td colspan="10" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2 text-danger"></div> Cargando monitoreo de frenos...</td></tr>
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Contenedor Cards Móvil -->
+                <div id="frenosMobileContainer" class="d-md-none p-2 flex-grow-1 overflow-auto custom-scrollbar">
+                    <div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2 text-danger"></div> Cargando monitoreo de frenos...</div>
+                </div>
+
             </div>
         </div>
     </div>

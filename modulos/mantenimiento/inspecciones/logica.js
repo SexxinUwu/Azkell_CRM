@@ -247,6 +247,43 @@ window.verFotoEvidencia = function (fotoOrIndex, titulo = '') {
 // ==========================================
 // 🔥 MÓDULO ANÁLISIS DE INSPECCIONES (STATUS) 🔥
 // ==========================================
+window.cambiarInspTab = function(tab) {
+    var btnGen = document.getElementById('insp-general-tab');
+    var btnFre = document.getElementById('insp-frenos-tab');
+    var paneGen = document.getElementById('insp-general');
+    var paneFre = document.getElementById('insp-frenos');
+
+    if (tab === 'frenos') {
+        if (btnGen) btnGen.classList.remove('active');
+        if (btnFre) btnFre.classList.add('active');
+        if (paneGen) {
+            paneGen.classList.remove('show', 'active');
+            paneGen.style.display = 'none';
+        }
+        if (paneFre) {
+            paneFre.classList.add('show', 'active');
+            paneFre.style.display = 'flex';
+        }
+        if (typeof window.renderTablaFrenos === 'function') {
+            window.renderTablaFrenos(dataGlobalInspecciones);
+        }
+    } else {
+        if (btnFre) btnFre.classList.remove('active');
+        if (btnGen) btnGen.classList.add('active');
+        if (paneFre) {
+            paneFre.classList.remove('show', 'active');
+            paneFre.style.display = 'none';
+        }
+        if (paneGen) {
+            paneGen.classList.add('show', 'active');
+            paneGen.style.display = 'flex';
+        }
+    }
+    if (typeof window.actualizarVistaGraficos === 'function') {
+        window.actualizarVistaGraficos();
+    }
+};
+
 window.graficosStatusAbiertos = false;
 window.actualizarVistaGraficos = function() {
     let panelG = document.getElementById('panelGraficosStatus'); 
@@ -795,14 +832,21 @@ function filtrarStatusAvanzado() {
         try { updateGraficosEnVivo(cntTotalVig, cntTotalNoVig, cntMotVig, cntMotNoVig, cntNoMotVig, cntNoMotNoVig); } catch(e) { }
     }
 
-    // Filtrar también tabla Frenos si está renderizada
+    // Filtrar también tabla Frenos y cards móviles si están renderizadas
     let rowsFrenos = document.querySelectorAll('#cuerpoTablaFrenos tr');
     if (rowsFrenos.length > 0) {
         rowsFrenos.forEach(row => {
-            if (row.cells.length > 1) {
+            if (row.cells && row.cells.length > 1) {
                 let textoFila = row.textContent.toLowerCase();
                 row.style.display = (!txt || textoFila.includes(txt)) ? '' : 'none';
             }
+        });
+    }
+    let cardsFrenos = document.querySelectorAll('#frenosMobileContainer .card');
+    if (cardsFrenos.length > 0) {
+        cardsFrenos.forEach(card => {
+            let textoCard = card.textContent.toLowerCase();
+            card.style.display = (!txt || textoCard.includes(txt)) ? '' : 'none';
         });
     }
 }
@@ -2511,7 +2555,7 @@ window.toggleRadioOkFalla = function(el, cajaId, isFalla) {
 // 🚀 MÓDULO DE FRENOS
 // ==========================================
 
-window.abrirModalFrenos = async function() {
+window.abrirModalFrenos = async function(placaPrevia) {
     let modalEl = document.getElementById('modalRegistrarFrenos');
     if (modalEl && modalEl.parentElement !== document.body) {
         document.body.appendChild(modalEl);
@@ -2584,6 +2628,13 @@ window.abrirModalFrenos = async function() {
     }
     document.getElementById('rf-placa').value = '';
     document.getElementById('rf-tecnico').value = '';
+
+    if (placaPrevia && typeof placaPrevia === 'string') {
+        let pUpper = placaPrevia.trim().toUpperCase();
+        if (inputPlaca) inputPlaca.value = pUpper;
+        let hdPlaca = document.getElementById('rf-placa');
+        if (hdPlaca) hdPlaca.value = pUpper;
+    }
 
     let fechaInput = document.getElementById('rf-fecha');
     if (fechaInput) {
@@ -2670,11 +2721,13 @@ window.guardarRegistroFrenos = async function() {
 
 window.renderTablaFrenos = async function(todasLasInspecciones) {
     let tbody = document.getElementById('cuerpoTablaFrenos');
-    if (!tbody) return;
+    let cardContainer = document.getElementById('frenosMobileContainer');
+    if (!tbody && !cardContainer) return;
 
     // Si no hay datos de placas, intentar cargarlos
     if (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando datos de flota...</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2 text-danger"></span>Cargando datos de flota...</td></tr>';
+        if (cardContainer) cardContainer.innerHTML = '<div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2 text-danger"></span>Cargando datos de flota...</div>';
         try {
             let r = await fetch('/api/script/obtenerPlacas', {
                 method: 'POST',
@@ -2685,12 +2738,14 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
         } catch(e) {}
     }
 
+    let arrInspecciones = (todasLasInspecciones && todasLasInspecciones.length) ? todasLasInspecciones : (dataGlobalInspecciones || []);
+
     // Obtener la inspección más reciente de Frenos por placa (puede ser General con sección Frenos, o "Solo Frenos")
     let frenosMasRecientesPorPlaca = new Map();
     
     // Sort descending by ID — extract trailing number from IDs like 'INSP-2026-0085'
     const extractIdNum = (id) => { const m = String(id || '').match(/(\d+)$/); return m ? parseInt(m[1], 10) : 0; };
-    let arrOrdenado = [...(todasLasInspecciones || [])].sort((a, b) => {
+    let arrOrdenado = [...arrInspecciones].sort((a, b) => {
         let iA = a.insp || a;
         let iB = b.insp || b;
         return extractIdNum(iB.id) - extractIdNum(iA.id);
@@ -2742,7 +2797,8 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
     });
 
     // Construir tabla con placas activas (al igual que Status)
-    let html = '';
+    let htmlDesktop = '';
+    let htmlMobile = '';
     let placasActivasEnUso = (window.dataGlobalPlacas || []).filter(p => {
         if ((p[0] || '').toUpperCase() === 'PLACA') return false;
         let estado = (p[18] || p[8] || '').trim().toUpperCase();
@@ -2751,7 +2807,55 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
     });
 
     let cont = 1;
-    let kpiFrenos = { vigentes: 0, alerta: 0, vencidos: 0 };
+    let kpiFrenos = { vigentes: 0, alerta: 0, vencidos: 0, todos: placasActivasEnUso.length };
+
+    // Función para renderizar badge de porcentaje moderno
+    let renderBadge = (val) => {
+        if (val === "-" || val === "" || String(val).trim().toUpperCase() === "SIN DATOS" || val === null || val === undefined) {
+            return `<span class="text-muted small">—</span>`;
+        }
+        let num = parseInt(val);
+        if (isNaN(num)) return `<span class="badge bg-light text-dark border">${val}</span>`;
+        
+        if (num <= 20) {
+            return `<span class="badge rounded-pill fw-bold text-white px-2 py-1 shadow-2xs" style="background:#ef4444; font-size:0.78rem;" title="Crítico: Desgaste severo (${num}%)"><i class="bi bi-exclamation-triangle-fill me-1"></i>${num}%</span>`;
+        } else if (num <= 30) {
+            return `<span class="badge rounded-pill fw-bold px-2 py-1 shadow-2xs" style="background:#fef08a; color:#854d0e; border:1px solid #fde047; font-size:0.78rem;" title="Alerta: Desgaste próximo (${num}%)"><i class="bi bi-exclamation-circle-fill me-1"></i>${num}%</span>`;
+        } else {
+            return `<span class="badge rounded-pill fw-bold text-white px-2 py-1 shadow-2xs" style="background:#10b981; font-size:0.78rem;" title="Óptimo (${num}%)"><i class="bi bi-check-circle-fill me-1"></i>${num}%</span>`;
+        }
+    };
+
+    // Función para renderizar minitarjeta móvil con barra de progreso
+    let renderMobileGauge = (label, val) => {
+        let num = parseInt(val);
+        let color = '#10b981';
+        let bgSubtle = '#f0fdf4';
+        let textCls = 'text-success';
+        let displayVal = isNaN(num) ? '—' : num + '%';
+        
+        if (!isNaN(num)) {
+            if (num <= 20) {
+                color = '#ef4444';
+                bgSubtle = '#fef2f2';
+                textCls = 'text-danger';
+            } else if (num <= 30) {
+                color = '#ca8a04';
+                bgSubtle = '#fefce8';
+                textCls = 'text-warning-emphasis';
+            }
+        }
+        
+        return `
+            <div class="p-2 rounded-3 border" style="background:${bgSubtle}; min-width: 0;">
+                <div class="text-secondary text-truncate" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">${label}</div>
+                <div class="fw-bolder ${textCls} d-flex align-items-center justify-content-between mt-1" style="font-size:0.86rem;">
+                    <span>${displayVal}</span>
+                    ${!isNaN(num) ? `<div style="width:24px;height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden;"><div style="width:${Math.min(100, num)}%;height:100%;background:${color};border-radius:2px;"></div></div>` : ''}
+                </div>
+            </div>
+        `;
+    };
 
     placasActivasEnUso.forEach(p => {
         let placaStr = (p[0] || '').toUpperCase().trim();
@@ -2765,10 +2869,8 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
             if (itemFrenos.insp.fecha_ingreso) {
                 let fi = itemFrenos.insp.fecha_ingreso;
                 if (/^\d{2}\/\d{2}\/\d{4}$/.test(fi)) {
-                    // Ya viene formateado como DD/MM/YYYY desde la API
                     fec = fi;
                 } else {
-                    // Formato ISO: 2026-07-24T05:00:00.000Z o 2026-07-24
                     let ds = fi.split('T')[0].split('-');
                     if (ds.length === 3) fec = `${ds[2]}/${ds[1]}/${ds[0]}`;
                     else fec = fi;
@@ -2778,8 +2880,6 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
                 itemFrenos.dataFrenos.forEach(it => {
                     let nom = (it.item || '').toLowerCase();
                     let est = (it.estado || '').replace('%', '').trim();
-                    // IMPORTANT: check '2do'/'loca' BEFORE 'tracci' to avoid misclassifying
-                    // items like 'Zapatas Eje Loca o 2do Eje Tracciona'
                     if (nom.includes("delantera") || nom.includes("pastilla")) valZapDel = est;
                     else if (nom.includes("2do eje") || nom.includes("segundo eje") || (nom.includes("loca") && !nom.includes("1er"))) valZap2 = est;
                     else if (nom.includes("1er eje") || nom.includes("primer eje") || nom.includes("tracci")) valZap1 = est;
@@ -2807,51 +2907,82 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
             else { kpiFrenos.vigentes++; estadoFrenosRow = "vigentes"; }
         }
 
-        // Función para colorear el valor
-        let renderBadge = (val) => {
-            if (val === "-" || val === "" || String(val).trim().toUpperCase() === "SIN DATOS") return `<span class="text-muted">-</span>`;
-            let num = parseInt(val);
-            if (isNaN(num)) return val;
-            
-            let colorCls = "bg-success text-white";
-            if (num <= 20) colorCls = "bg-danger text-white px-2 py-1 shadow-sm";
-            else if (num <= 30) colorCls = "bg-warning text-dark px-2 py-1 shadow-sm";
-            else colorCls = "bg-success text-white px-2 py-1 shadow-sm";
-            
-            return `<span class="badge rounded-pill ${colorCls}" style="font-size: 0.85rem;">${num}%</span>`;
-        };
-
-        html += `
+        // 1. Desktop Row
+        htmlDesktop += `
             <tr class="align-middle bg-white border-bottom" data-estado-frenos="${estadoFrenosRow}">
-                <td class="text-muted fw-bold">${cont++}</td>
-                <td class="fw-bold text-primary">${placaStr}</td>
-                <td class="text-muted">${fec}</td>
-                <td class="text-center">${renderBadge(valZapDel)}</td>
-                <td class="text-center">${renderBadge(valZap1)}</td>
-                <td class="text-center">${renderBadge(valZap2)}</td>
-                <td class="text-center">${renderBadge(valDisco)}</td>
-                <td class="text-truncate" style="max-width: 120px;" title="${tec}">${tec}</td>
-                <td class="text-muted" style="font-size: 0.85rem;" title="${obs}">${obs.length > 20 ? obs.substring(0, 20) + '...' : obs}</td>
+                <td class="text-muted fw-bold text-center ps-3" style="width:45px;">${cont++}</td>
+                <td style="white-space:nowrap;"><span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-1" style="font-size:0.84rem; letter-spacing:0.5px;">${placaStr}</span></td>
+                <td style="white-space:nowrap;"><span class="text-secondary fw-medium" style="font-size:0.82rem;">${fec}</span></td>
+                <td class="text-center" style="white-space:nowrap;">${renderBadge(valZapDel)}</td>
+                <td class="text-center" style="white-space:nowrap;">${renderBadge(valZap1)}</td>
+                <td class="text-center" style="white-space:nowrap;">${renderBadge(valZap2)}</td>
+                <td class="text-center" style="white-space:nowrap;">${renderBadge(valDisco)}</td>
+                <td style="white-space:nowrap;"><span class="fw-semibold text-dark text-truncate d-inline-block" style="max-width:150px; font-size:0.82rem;" title="${tec}">${tec}</span></td>
+                <td class="text-muted" style="font-size:0.82rem; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${obs}">${obs}</td>
+                <td class="pe-3 text-center" style="width:80px;">
+                    <button class="btn btn-sm btn-light border shadow-2xs rounded-3 text-danger p-1 d-flex align-items-center justify-content-center mx-auto" onclick="window.abrirModalFrenos('${placaStr}')" title="Registrar Medición para ${placaStr}" style="width:28px; height:28px;">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </td>
             </tr>
+        `;
+
+        // 2. Mobile Card
+        htmlMobile += `
+            <div class="card mb-2 shadow-2xs border rounded-3 p-3 bg-white" data-estado-frenos="${estadoFrenosRow}" data-placa="${placaStr}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-1" style="font-size:0.88rem; letter-spacing:0.5px;">${placaStr}</span>
+                        <span class="text-secondary small fw-medium">${fec !== '-' ? fec : 'Sin medición'}</span>
+                    </div>
+                    <div>
+                        ${estadoFrenosRow === 'vencidos' ? '<span class="badge rounded-pill bg-danger text-white px-2 py-1 fw-bold" style="font-size:0.68rem;">CRÍTICO (≤20%)</span>' :
+                          estadoFrenosRow === 'alerta' ? '<span class="badge rounded-pill bg-warning text-dark px-2 py-1 fw-bold" style="font-size:0.68rem;">ALERTA (21-30%)</span>' :
+                          estadoFrenosRow === 'vigentes' ? '<span class="badge rounded-pill bg-success text-white px-2 py-1 fw-bold" style="font-size:0.68rem;">ÓPTIMO (>30%)</span>' :
+                          '<span class="badge bg-light text-secondary border px-2 py-1" style="font-size:0.68rem;">SIN REGISTROS</span>'}
+                    </div>
+                </div>
+                
+                <div class="grid g-2 mb-2" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+                    ${renderMobileGauge('Zap. Delantera', valZapDel)}
+                    ${renderMobileGauge('Zap. 1er Eje', valZap1)}
+                    ${renderMobileGauge('Zap. 2do Eje Loca', valZap2)}
+                    ${renderMobileGauge('Disco Embrague', valDisco)}
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top text-secondary" style="font-size:0.75rem;">
+                    <div class="text-truncate me-2" title="${tec}">
+                        <i class="bi bi-person-badge text-primary me-1"></i><span class="fw-semibold">${tec !== '-' ? tec : 'No asignado'}</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 rounded-2 fw-semibold d-flex align-items-center gap-1" style="font-size:0.75rem;" onclick="window.abrirModalFrenos('${placaStr}')">
+                        <i class="bi bi-plus-circle"></i> Medir
+                    </button>
+                </div>
+            </div>
         `;
     });
 
     if (placasActivasEnUso.length === 0) {
-        html = '<tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-info-circle fs-4 d-block mb-2"></i> No hay unidades activas para monitorear.</td></tr>';
+        htmlDesktop = '<tr><td colspan="10" class="text-center py-5 text-muted"><i class="bi bi-info-circle fs-4 d-block mb-2"></i> No hay unidades activas para monitorear.</td></tr>';
+        htmlMobile = '<div class="text-center py-5 text-muted"><i class="bi bi-info-circle fs-3 d-block mb-2"></i> No hay unidades activas para monitorear.</div>';
     }
 
-    tbody.innerHTML = html;
+    if (tbody) tbody.innerHTML = htmlDesktop;
+    if (cardContainer) cardContainer.innerHTML = htmlMobile;
 
     window.frenosKPIData = kpiFrenos;
+    window.updateFrenosKPIs();
     if (typeof window.actualizarVistaGraficos === 'function') window.actualizarVistaGraficos();
 };
 
 window.updateFrenosKPIs = function() {
     if (!window.frenosKPIData) return;
+    let elTodos = document.getElementById('frenos-cnt-todos');
     let elVigentes = document.getElementById('frenos-cnt-vigentes');
     let elAlerta = document.getElementById('frenos-cnt-alerta');
     let elVencidos = document.getElementById('frenos-cnt-vencidos');
     
+    if (elTodos) elTodos.innerText = window.frenosKPIData.todos || 0;
     if (elVigentes) elVigentes.innerText = window.frenosKPIData.vigentes || 0;
     if (elAlerta) elAlerta.innerText = window.frenosKPIData.alerta || 0;
     if (elVencidos) elVencidos.innerText = window.frenosKPIData.vencidos || 0;
@@ -2859,14 +2990,14 @@ window.updateFrenosKPIs = function() {
 
 window.filtrarTablaFrenosPorKPI = function(estado, el) {
     let cards = document.querySelectorAll('.kpi-card-frenos');
-    let wasActive = el.classList.contains('active');
+    let wasActive = el && el.classList.contains('active');
     
-    cards.forEach(c => c.classList.remove('active'));
+    if (cards && cards.length) cards.forEach(c => c.classList.remove('active'));
     
     let targetEstado = estado;
     if (wasActive) {
         targetEstado = 'todos';
-    } else {
+    } else if (el) {
         el.classList.add('active');
     }
     
@@ -2882,6 +3013,17 @@ window.filtrarTablaFrenosPorKPI = function(estado, el) {
             if (tdIndex) tdIndex.innerText = cont++;
         } else {
             row.style.display = 'none';
+        }
+    });
+
+    let mobileCards = document.querySelectorAll('#frenosMobileContainer .card');
+    mobileCards.forEach(card => {
+        if (!card.hasAttribute('data-estado-frenos')) return;
+        let cardEstado = card.getAttribute('data-estado-frenos');
+        if (targetEstado === 'todos' || cardEstado === targetEstado) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
         }
     });
 };
