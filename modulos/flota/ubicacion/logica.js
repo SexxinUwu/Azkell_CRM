@@ -13,7 +13,7 @@ window._placaGPSActiva   = window._placaGPSActiva   || null;
 // ------------------------------------------------------------
 window.init_ubicacion = function() {
     if (!window.checkPerm('gps', 'l')) {
-        var wrap = document.getElementById('flota-ubicacion-app') || document.querySelector('.container-fluid');
+        var wrap = document.getElementById('moduloUbicacionGPS') || document.querySelector('.container-fluid');
         if (wrap) window.showNoPermMsg(wrap);
         return;
     }
@@ -24,9 +24,23 @@ window.init_ubicacion = function() {
         ? CACHE.wialon : [];
 
     if (datos.length > 0) {
-        renderListaUnidadesGPS(datos);
+        window.renderListaUnidadesGPS(datos);
     } else {
-        if (typeof recargarWialon === 'function') recargarWialon(true);
+        fetch('/api/script/obtenerDatosWialon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+            .then(function(r) { return r.json(); })
+            .then(function(r) {
+                let d = r.data || [];
+                if (Array.isArray(d)) {
+                    if (typeof CACHE !== 'undefined') CACHE.wialon = d;
+                    window.renderListaUnidadesGPS(d);
+                } else {
+                    window.renderListaUnidadesGPS([]);
+                }
+            })
+            .catch(function(err) {
+                console.error("Error GPS:", err);
+                window.renderListaUnidadesGPS([]);
+            });
     }
 };
 

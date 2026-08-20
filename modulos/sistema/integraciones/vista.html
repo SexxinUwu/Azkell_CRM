@@ -153,34 +153,36 @@
             <span class="intg-status pending" id="intg-wialon-status">Sin probar</span>
         </div>
 
-        <div class="intg-field">
-            <label>Token de autenticación</label>
-            <div class="input-wrap">
-                <input type="password" id="intg-wialon-token" placeholder="Pega aquí tu token de Wialon…" autocomplete="off" />
-                <button class="btn-toggle-pwd" onclick="intgTogglePwd('intg-wialon-token', this)" title="Mostrar/Ocultar">
-                    <i class="bi bi-eye"></i>
+        <form onsubmit="return false;" autocomplete="off">
+            <div class="intg-field">
+                <label>Token de autenticación</label>
+                <div class="input-wrap">
+                    <input type="password" id="intg-wialon-token" placeholder="Pega aquí tu token de Wialon…" autocomplete="off" />
+                    <button type="button" class="btn-toggle-pwd" onclick="intgTogglePwd('intg-wialon-token', this)" title="Mostrar/Ocultar">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
+                <div class="intg-hint">Obten el token desde tu cuenta Wialon → Recursos → Usuario → Token de acceso.</div>
+                <div class="intg-meta" id="intg-wialon-meta"></div>
+            </div>
+
+            <div class="intg-field">
+                <label>URL base API <span style="font-weight:400;text-transform:none;">(opcional)</span></label>
+                <div class="input-wrap">
+                    <input type="text" id="intg-wialon-url" placeholder="https://hst-api.wialon.us/wialon/ajax.html" autocomplete="off" />
+                </div>
+                <div class="intg-hint">Dejar vacío para usar el servidor por defecto (hst-api.wialon.us).</div>
+            </div>
+
+            <div class="intg-actions">
+                <button type="button" class="btn btn-sm btn-primary" onclick="intgGuardar('wialon')">
+                    <i class="bi bi-floppy me-1"></i>Guardar
                 </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="intgProbarWialon()">
+                    <i class="bi bi-lightning me-1"></i>Probar conexión
+                </button>
+                <span class="intg-test-result" id="intg-wialon-testresult"></span>
             </div>
-            <div class="intg-hint">Obten el token desde tu cuenta Wialon → Recursos → Usuario → Token de acceso.</div>
-            <div class="intg-meta" id="intg-wialon-meta"></div>
-        </div>
-
-        <div class="intg-field">
-            <label>URL base API <span style="font-weight:400;text-transform:none;">(opcional)</span></label>
-            <div class="input-wrap">
-                <input type="text" id="intg-wialon-url" placeholder="https://hst-api.wialon.us/wialon/ajax.html" autocomplete="off" />
-            </div>
-            <div class="intg-hint">Dejar vacío para usar el servidor por defecto (hst-api.wialon.us).</div>
-        </div>
-
-        <div class="intg-actions">
-            <button class="btn btn-sm btn-primary" onclick="intgGuardar('wialon')">
-                <i class="bi bi-floppy me-1"></i>Guardar
-            </button>
-            <button class="btn btn-sm btn-outline-secondary" onclick="intgProbarWialon()">
-                <i class="bi bi-lightning me-1"></i>Probar conexión
-            </button>
-            <span class="intg-test-result" id="intg-wialon-testresult"></span>
-        </div>
+        </form>
     </div>
 </div>

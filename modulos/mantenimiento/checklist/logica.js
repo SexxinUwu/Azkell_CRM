@@ -1069,9 +1069,9 @@ window.renderizarTablaChecklist = function(lista) {
             <td style="min-width: 105px;">
                 ${r.placa_remolque ? `<span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-2 text-center" style="min-width: 80px; font-size: 0.82rem; border-radius: 8px; letter-spacing: 0.5px;">${r.placa_remolque}</span>` : '<span class="text-muted small">—</span>'}
             </td>
-            <td>
-                <div class="fw-bold text-dark" style="font-size: 0.86rem;">${r.conductor || 'Sin Conductor'}</div>
-                <div class="text-muted" style="font-size: 0.76rem;"><i class="bi bi-geo-alt me-1 text-primary"></i>${r.procedencia || 'En Ruta'}</div>
+            <td style="min-width: 180px; white-space: nowrap;">
+                <div class="fw-bold text-dark" style="font-size: 0.86rem; white-space: nowrap;">${r.conductor || 'Sin Conductor'}</div>
+                <div class="text-muted" style="font-size: 0.76rem; white-space: nowrap;"><i class="bi bi-geo-alt me-1 text-primary"></i>${r.procedencia || 'En Ruta'}</div>
             </td>
             <td class="text-center" style="min-width: 110px;">${badgeEstado}</td>
             <td class="text-center" style="min-width: 130px;">${otsHtml}</td>

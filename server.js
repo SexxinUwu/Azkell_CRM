@@ -195,6 +195,22 @@ app.get(['/api/proxy/documento', '/api/proxy/sunat'], async (req, res) => {
     }
 });
 
+// Endpoint seguro para Abastecimientos de Combustible
+app.get('/api/combustible/abastecimientos', async (req, res) => {
+    try {
+        if (typeof db !== 'undefined' && db.query) {
+            const [tables] = await db.query("SHOW TABLES LIKE 'combustible_abastecimientos'");
+            if (tables && tables.length > 0) {
+                const [data] = await db.query("SELECT * FROM combustible_abastecimientos ORDER BY fecha DESC, id DESC LIMIT 500");
+                return res.json(data || []);
+            }
+        }
+        res.json([]);
+    } catch(e) {
+        res.json([]);
+    }
+});
+
 const _geoCacheMap = new Map();
 app.get('/api/proxy/geocode', async (req, res) => {
     let lat = parseFloat(req.query.lat);

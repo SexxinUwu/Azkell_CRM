@@ -1,9 +1,15 @@
 <!-- Módulo: Configuración del Sistema — Azkell ERP (Apple & Bento ERP) -->
 <style>
+/* ── Reset root-dinamico padding for full-bleed ─────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
 #moduloConfiguracion {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    padding: 1rem 1.25rem 3rem 1.25rem !important;
     width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -12,34 +18,10 @@
     overflow-y: auto;
 }
 
-/* ── Control Bar & Segmented Nav ─────────────────── */
-#moduloConfiguracion .ck-apple-segmented {
-    background: #e2e8f0 !important;
-    padding: 4px !important;
-    border-radius: 14px !important;
-    display: inline-flex !important;
-    gap: 3px !important;
-    border: 1px solid #cbd5e1 !important;
-}
-#moduloConfiguracion .ck-segment-item {
-    border: none;
-    background: transparent;
-    padding: 7px 16px;
-    border-radius: 10px;
-    font-size: 0.84rem;
-    font-weight: 600;
-    color: #64748b;
-    transition: all 0.18s ease;
-    cursor: pointer;
-    user-select: none;
-    white-space: nowrap;
-}
-#moduloConfiguracion .ck-segment-item:hover { color: #0f172a; }
-#moduloConfiguracion .ck-segment-item.active {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    font-weight: 700 !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+@media (max-width: 768px) {
+    #moduloConfiguracion {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+    }
 }
 
 /* ── Bento Cards ─────────────────────────────────── */
@@ -96,31 +78,13 @@
                 <i class="bi bi-sliders2"></i>
             </div>
             <div>
-                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Configuración del ERP</h4>
+                <h4 class="fw-bold m-0 text-dark" id="cfg-header-title" style="letter-spacing: -0.02em;">Personalización y Ajustes</h4>
                 <span class="text-secondary small">Personalización visual, datos de empresa, accesibilidad e idioma</span>
             </div>
         </div>
     </div>
 
-    <!-- ── 2. SEGMENTED NAVIGATION TABS ────────────────────────────── -->
-    <div class="d-flex align-items-center gap-2 mb-4 flex-wrap">
-        <div class="ck-apple-segmented">
-            <button type="button" class="ck-segment-item active" id="btn-cfg-apariencia" onclick="document.querySelectorAll('#moduloConfiguracion .ck-segment-item').forEach(b=>b.classList.remove('active')); this.classList.add('active'); window.showConfig('apariencia');">
-                <i class="bi bi-palette me-1"></i>Apariencia
-            </button>
-            <button type="button" class="ck-segment-item" id="btn-cfg-empresa" onclick="document.querySelectorAll('#moduloConfiguracion .ck-segment-item').forEach(b=>b.classList.remove('active')); this.classList.add('active'); window.showConfig('empresa');">
-                <i class="bi bi-building me-1"></i>Empresa
-            </button>
-            <button type="button" class="ck-segment-item" id="btn-cfg-accesibilidad" onclick="document.querySelectorAll('#moduloConfiguracion .ck-segment-item').forEach(b=>b.classList.remove('active')); this.classList.add('active'); window.showConfig('accesibilidad');">
-                <i class="bi bi-universal-access me-1"></i>Accesibilidad
-            </button>
-            <button type="button" class="ck-segment-item" id="btn-cfg-idioma" onclick="document.querySelectorAll('#moduloConfiguracion .ck-segment-item').forEach(b=>b.classList.remove('active')); this.classList.add('active'); window.showConfig('idioma');">
-                <i class="bi bi-translate me-1"></i>Idioma
-            </button>
-        </div>
-    </div>
-
-    <!-- ── 3. PANELES DE CONFIGURACIÓN ─────────────────────────────── -->
+    <!-- ── 2. PANELES DE CONFIGURACIÓN ─────────────────────────────── -->
     
     <!-- Panel: Empresa -->
     <div id="cfg-panel-empresa" class="config-panel d-none">

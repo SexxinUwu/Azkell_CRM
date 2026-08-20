@@ -582,9 +582,16 @@ function renderizarPaginaPlacas() {
     if(infoPag) infoPag.innerText = datosFiltradosPlacas.length + ' placa(s)';
 
     let html = '';
+    let htmlCards = '';
     
     datosPagina.forEach((fila) => {
         const plc = (fila[0]||'').trim();
+        const cliente = (fila[1]||'').trim();
+        const ruc = (fila[2]||'').trim();
+        const marca = (fila[3]||'').trim();
+        const modelo = (fila[4]||'').trim();
+        const tipo = (fila[5]||'').trim();
+        const anio = (fila[13]||'').trim();
         const est = fila[18] ? fila[18].trim() : '';
         const indexGlobal = dataGlobalPlacas.findIndex(x => x[0] === plc);
 
@@ -613,23 +620,27 @@ function renderizarPaginaPlacas() {
             ? '<span style="font-size:0.7rem;font-weight:700;color:#16a34a;background:#dcfce7;padding:0.2rem 0.5rem;border-radius:12px;">Activa</span>'
             : (est === 'Inactiva' ? '<span style="font-size:0.7rem;font-weight:700;color:#475569;background:#e2e8f0;padding:0.2rem 0.5rem;border-radius:12px;">Inactiva</span>' : est);
 
+        var estadoBadgeMobile = est === 'Activa'
+            ? '<span class="badge rounded-pill fw-bold text-success" style="background:#dcfce7; border:1px solid #a7f3d0; font-size:0.72rem; padding:4px 10px;">Activa</span>'
+            : '<span class="badge rounded-pill fw-bold text-secondary" style="background:#e2e8f0; border:1px solid #cbd5e1; font-size:0.72rem; padding:4px 10px;">Inactiva</span>';
+
+        var tipoLower = tipo.toLowerCase();
+        var tipoIcon = (tipoLower.indexOf('camion') !== -1) ? 'bi-truck' :
+                       (tipoLower.indexOf('tracto') !== -1) ? 'bi-truck-front' :
+                       (tipoLower.indexOf('carreta') !== -1) ? 'bi-truck-flatbed' : 'bi-shield-shaded';
+
+        // 1. Desktop Row
         html += '<tr style="border-bottom: 1px solid var(--border); transition: background 0.2s; cursor:pointer;" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'transparent\'" onclick="abrirDetallePlaca(event, '+indexGlobal+')">';
-        
-        // Columna 0: Checkbox
         html += '<td style="text-align:center; padding:0.75rem 0.5rem;" onclick="event.stopPropagation()">' + checkHtml + '</td>';
         
-        // Mapear las 23 columnas en el orden visual correcto (Estado al final)
         const ordenVisual = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 18];
         for (let i of ordenVisual) {
             let val = fila[i] ? fila[i].trim() : '—';
             let tdStyle = 'padding:0.75rem 0.5rem; color:var(--text);';
             
-            // Especial styling for Placa
             if (i === 0) {
                 html += '<td style="' + tdStyle + ' font-weight:700;">' + val + '</td>';
-            } 
-            // Especial styling for Estado (index 18)
-            else if (i === 18) {
+            } else if (i === 18) {
                 html += '<td style="' + tdStyle + ' text-align:center;">' + estadoHtml + '</td>';
             }
             else {

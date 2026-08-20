@@ -1892,7 +1892,7 @@ window._invMobileSearchToggle = function() {
 window.inventarioFiltros = {}; // { colKey: Set(val1, val2...) }
 window._columnaActivaFiltroInv = null;
 
-const INVENTARIO_COLUMNAS = [
+var INVENTARIO_COLUMNAS = window.INVENTARIO_COLUMNAS = [
     { key: "familia", label: "Familia" },
     { key: "sistema", label: "Sistema" },
     { key: "almacen", label: "Almacén" },

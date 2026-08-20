@@ -1,14 +1,26 @@
 <!-- Módulo Gestión de Usuarios — Azkell ERP (Apple & Bento ERP) -->
 <style>
+/* ── Reset root-dinamico padding for full-bleed ─────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
 #moduloUsuarios {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    padding: 1rem 1.25rem 3rem 1.25rem !important;
     width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
+}
+
+@media (max-width: 768px) {
+    #moduloUsuarios {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+    }
 }
 
 /* ── KPIs Apple Compact Bento Cards ─────────────── */
@@ -253,10 +265,10 @@
             <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.init_usuarios && window.init_usuarios()" title="Actualizar">
                 <i class="bi bi-arrow-clockwise fs-6"></i>
             </button>
-            <button class="btn btn-light bg-white border shadow-2xs text-dark rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1" onclick="window.guNuevoRol && window.guNuevoRol()">
+            <button class="btn btn-light bg-white border shadow-2xs text-dark rounded-3 px-3 py-2 fw-bold d-none d-md-inline-flex align-items-center gap-1" onclick="window.guNuevoRol && window.guNuevoRol()">
                 <i class="bi bi-shield-plus text-success"></i> <span>+ Nuevo Rol</span>
             </button>
-            <button class="btn btn-primary fw-bold text-white rounded-3 px-3 py-2 shadow-2xs d-flex align-items-center gap-1" onclick="window.guNuevoMiembro && window.guNuevoMiembro()" style="background:#2563eb; border-color:#2563eb;">
+            <button class="btn btn-primary fw-bold text-white rounded-3 px-3 py-2 shadow-2xs d-none d-md-inline-flex align-items-center gap-1" onclick="window.guNuevoMiembro && window.guNuevoMiembro()" style="background:#2563eb; border-color:#2563eb;">
                 <i class="bi bi-person-plus-fill"></i> <span>+ Nuevo Usuario</span>
             </button>
         </div>
@@ -343,6 +355,13 @@
         </div>
     </div>
 
+    <!-- Mobile Floating Action Button -->
+    <button class="btn btn-primary rounded-circle shadow-lg d-flex d-md-none align-items-center justify-content-center position-fixed"
+            style="width: 54px; height: 54px; bottom: 85px; right: 20px; z-index: 1040; background: #2563eb; border: none; box-shadow: 0 8px 24px rgba(37,99,235,0.4) !important;"
+            onclick="window.guNuevoMiembro && window.guNuevoMiembro()"
+            title="Nuevo Usuario">
+        <i class="bi bi-plus-lg fs-4 text-white"></i>
+    </button>
 </div>
 
 <!-- Offcanvas para móvil y paneles -->

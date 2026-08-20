@@ -222,16 +222,28 @@
     background: rgba(59, 130, 246, 0.05);
 }
 
+/* ── Reset root-dinamico padding for full-bleed ─────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
 /* ── Reglas Generales de Entradas / Órdenes de Compra ─────────────── */
 #moduloEntradas {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    padding: 1rem 1.25rem 3rem 1.25rem !important;
     width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
+}
+
+@media (max-width: 768px) {
+    #moduloEntradas {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+    }
 }
 
 /* ── KPIs Apple Compact Bento Cards ─────────────── */
@@ -320,7 +332,7 @@
                 </ul>
             </div>
             <div id="col-picker-ent" class="d-none d-md-flex"></div>
-            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalEntrada()" style="background: #0284c7; border-color: #0284c7;">
+            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-inline-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalEntrada()" style="background: #0284c7; border-color: #0284c7;">
                 <i class="bi bi-plus-lg fs-6"></i> <span>Nueva Orden de Compra</span>
             </button>
         </div>
@@ -447,15 +459,12 @@
             z-index:1054;"></div>
 
 <!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
-<div id="ent-fab-wrap" style="display:none;position:fixed;bottom:104px;right:1rem;z-index:1041;">
-  <button onclick="window.abrirModalEntrada()"
-          style="width:60px;height:60px;border-radius:18px;background:#16a34a;border:none;color:#fff;
-                 font-size:1.5rem;box-shadow:0 6px 24px rgba(22,163,74,.5);
-                 display:flex;align-items:center;justify-content:center;
-                 transition:transform .25s cubic-bezier(.4,0,.2,1);">
-    <i class="bi bi-plus-lg"></i>
-  </button>
-</div>
+<button class="btn btn-primary rounded-circle shadow-lg d-flex d-md-none align-items-center justify-content-center position-fixed"
+        style="width: 54px; height: 54px; bottom: 85px; right: 20px; z-index: 1040; background: #0284c7; border: none; box-shadow: 0 8px 24px rgba(2,132,199,0.4) !important;"
+        onclick="window.abrirModalEntrada()"
+        title="Nueva Orden de Compra">
+    <i class="bi bi-plus-lg fs-4 text-white"></i>
+</button>
 
 <!-- Backdrop nueva entrada -->
 <div id="ent-entrada-bd" onclick="window._entCerrarModal()"
