@@ -379,22 +379,18 @@
 
 /* ── Historial paginación ──────────────────────────────────────── */
 #moduloStatusRampa .sr-hist-wrap {
-    background: var(--surface);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    margin: 1rem 1.25rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    margin: 0 !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 0;
-    min-height: 0;
+    width: 100%;
 }
 #moduloStatusRampa .sr-hist-table-wrap {
-    flex: 1 1 0;
-    overflow-y: auto;
     overflow-x: auto;
-    background: var(--surface);
+    background: #ffffff;
+    width: 100%;
 }
 #moduloStatusRampa .sr-hist-pag {
     display: flex;
@@ -770,66 +766,72 @@
     </div><!-- fin pane rampas -->
 
     <!-- PANE: HISTORIAL -->
-    <div id="sr-pane-historial" style="display:none; flex:1 1 0; min-height:0; flex-direction:column; overflow:hidden;">
+    <div id="sr-pane-historial" style="display:none; flex-direction:column; width:100%;">
 
-        <!-- Contenedor con bordes redondeados igual que en Rampas -->
+        <!-- MOBILE GRID HISTORIAL -->
+        <div class="d-flex d-md-none flex-column gap-2 w-100" id="sr-historial-mobile" style="overflow-y:auto; padding: 0 0 120px 0;"></div>
+
+        <!-- TABLA ESCRITORIO HISTORIAL -->
         <div class="sr-hist-wrap">
             <!-- Filtro de fecha -->
-            <div style="display:flex;align-items:center;gap:.5rem;padding:.6rem 1.25rem;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;background:var(--surface);">
-                <i class="bi bi-funnel" style="color:var(--subtext);font-size:.8rem;"></i>
-                <span style="font-size:.72rem;font-weight:700;color:var(--subtext);white-space:nowrap;">Desde</span>
-                <input type="date" id="sr-hist-desde" style="border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.75rem;padding:3px 8px;outline:none;" oninput="window.srHistFiltroDesde=this.value;window.srHistPage=1;window.srAplicarFiltroHist()">
-                <span style="font-size:.72rem;color:var(--subtext);">—</span>
-                <input type="date" id="sr-hist-hasta" style="border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.75rem;padding:3px 8px;outline:none;" oninput="window.srHistFiltroHasta=this.value;window.srHistPage=1;window.srAplicarFiltroHist()">
-                <button onclick="window.srHistFiltroDesde='';window.srHistFiltroHasta='';var d=document.getElementById('sr-hist-desde');if(d)d.value='';var h=document.getElementById('sr-hist-hasta');if(h)h.value='';window.srHistPage=1;window.srAplicarFiltroHist();" style="border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--subtext);font-size:.72rem;padding:3px 10px;font-weight:700;cursor:pointer;">Limpiar</button>
-                <span style="font-size:.72rem;color:var(--subtext);margin-left:auto;" id="sr-hist-filtro-info"></span>
+            <div class="d-flex align-items-center gap-2 p-2 border-bottom flex-wrap" style="background:#ffffff;">
+                <i class="bi bi-funnel text-secondary" style="font-size:.85rem;"></i>
+                <span class="text-secondary small fw-bold text-uppercase" style="font-size:.7rem;">Desde</span>
+                <input type="date" id="sr-hist-desde" class="form-control form-control-sm" style="width: auto; font-size:.8rem; border-radius:8px;" oninput="window.srHistFiltroDesde=this.value; window.srHistPage=1; window.srAplicarFiltroHist()">
+                <span class="text-secondary small">—</span>
+                <span class="text-secondary small fw-bold text-uppercase" style="font-size:.7rem;">Hasta</span>
+                <input type="date" id="sr-hist-hasta" class="form-control form-control-sm" style="width: auto; font-size:.8rem; border-radius:8px;" oninput="window.srHistFiltroHasta=this.value; window.srHistPage=1; window.srAplicarFiltroHist()">
+                <button type="button" class="btn btn-sm btn-light border text-secondary fw-semibold rounded-2" onclick="window.srHistFiltroDesde='';window.srHistFiltroHasta='';var d=document.getElementById('sr-hist-desde');if(d)d.value='';var h=document.getElementById('sr-hist-hasta');if(h)h.value='';window.srHistPage=1;window.srAplicarFiltroHist();" style="font-size:.75rem;">Limpiar</button>
+                <span class="text-secondary small ms-auto fw-semibold" id="sr-hist-filtro-info" style="font-size:.75rem;"></span>
             </div>
-            <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
-                <!-- TABLA HISTORIAL -->
-                <div class="sr-hist-table-wrap" id="sr-hist-tabla-wrap">
-                <table style="width:100%; border-collapse:collapse; font-size:0.79rem; table-layout:fixed;">
+
+            <div class="d-none d-md-block sr-hist-table-wrap" id="sr-hist-tabla-wrap">
+                <table style="width:100%; border-collapse:collapse; font-size:0.82rem; min-width: 980px;">
                     <thead>
-                        <tr style="background:var(--bg);">
-                            <th style="width:50px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); white-space:nowrap; position:sticky; top:0; z-index:2;">Rampa</th>
-                            <th style="width:72px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Placa</th>
-                            <th style="width:110px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">F/H Ingreso</th>
-                            <th style="width:110px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">F/H Liberado</th>
-                            <th style="width:68px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">H. Taller</th>
-                            <th style="width:108px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Situación</th>
-                            <th style="width:160px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Observaciones</th>
-                            <th style="width:110px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Liberado por</th>
-                            <th style="width:100px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;"></th>
+                        <tr>
+                            <th style="width:75px; text-align:center;">Rampa</th>
+                            <th style="width:95px;">Placa</th>
+                            <th style="width:145px;">F/H Ingreso</th>
+                            <th style="width:145px;">F/H Salida</th>
+                            <th style="width:85px; text-align:center;">H. Taller</th>
+                            <th style="width:125px;">Situación</th>
+                            <th>Observaciones</th>
+                            <th style="width:140px;">Liberado por</th>
+                            <th style="width:95px; text-align:center;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="sr-historial-tbody">
-                        <tr><td colspan="8" class="td-placeholder">Cargando...</td></tr>
+                        <tr><td colspan="9" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando historial...</td></tr>
                     </tbody>
                 </table>
-                </div>
-                <!-- PANEL DETALLE HISTORIAL -->
-                <div class="sr-drawer-global" id="sr-panel-detalle-hist" style="max-width: 660px; width: 100%;">
-                    <div class="sr-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white">
-                        <div>
-                            <span class="sr-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.1rem;">
-                                <i class="bi bi-archive-fill text-secondary fs-5"></i> Detalle Historial de Rampa
-                            </span>
-                            <small class="text-muted d-block" style="font-size: 0.75rem;">Registro consolidado de estancia y servicio liberado</small>
-                        </div>
-                        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.srCerrarDetalleHist()" style="color:var(--subtext);">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
-                    <div class="sr-drawer-body p-3 overflow-auto custom-scrollbar" id="sr-hist-detalle-scroll" style="background: #f8fafc;"></div>
-                    <div class="sr-drawer-footer bg-white border-top" id="sr-hist-detalle-footer"></div>
+            </div>
+
+            <!-- PAGINACIÓN HISTORIAL -->
+            <div class="sr-hist-pag d-flex align-items-center justify-content-between p-2 border-top bg-white" id="sr-hist-pag-bar">
+                <span id="sr-hist-pag-info" class="text-secondary small fw-medium"></span>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-outline-secondary px-3 py-1 rounded-2" id="sr-hist-prev" onclick="window.srHistPaginar(-1)"><i class="bi bi-chevron-left me-1"></i>Anterior</button>
+                    <button class="btn btn-sm btn-outline-secondary px-3 py-1 rounded-2" id="sr-hist-next" onclick="window.srHistPaginar(1)">Siguiente<i class="bi bi-chevron-right ms-1"></i></button>
                 </div>
             </div>
-            <!-- PAGINACIÓN HISTORIAL -->
-            <div class="sr-hist-pag" id="sr-hist-pag-bar">
-            <button class="btn btn-sm btn-outline-secondary" id="sr-hist-prev" onclick="window.srHistPaginar(-1)"><i class="bi bi-chevron-left"></i></button>
-            <span id="sr-hist-pag-info" style="font-size:0.8rem; color:var(--subtext);"></span>
-            <button class="btn btn-sm btn-outline-secondary" id="sr-hist-next" onclick="window.srHistPaginar(1)"><i class="bi bi-chevron-right"></i></button>
-        </div>
         </div><!-- fin sr-hist-wrap -->
+
+        <!-- PANEL DETALLE HISTORIAL -->
+        <div class="sr-drawer-global" id="sr-panel-detalle-hist" style="max-width: 660px; width: 100%;">
+            <div class="sr-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white">
+                <div>
+                    <span class="sr-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.1rem;">
+                        <i class="bi bi-archive-fill text-secondary fs-5"></i> Detalle Historial de Rampa
+                    </span>
+                    <small class="text-muted d-block" style="font-size: 0.75rem;">Registro consolidado de estancia y servicio liberado</small>
+                </div>
+                <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.srCerrarDetalleHist()" style="color:var(--subtext);">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="sr-drawer-body p-3 overflow-auto custom-scrollbar" id="sr-hist-detalle-scroll" style="background: #f8fafc;"></div>
+            <div class="sr-drawer-footer bg-white border-top" id="sr-hist-detalle-footer"></div>
+        </div>
     </div><!-- fin sr-pane-historial -->
 
 </div><!-- fin moduloStatusRampa -->

@@ -1220,7 +1220,8 @@ function srCargarHistorial() {
 
 function srRenderHistorial() {
     var tbody = document.getElementById('sr-historial-tbody');
-    if (!tbody) return;
+    var mobileGrid = document.getElementById('sr-historial-mobile');
+    if (!tbody && !mobileGrid) return;
     var all = window.srHistorialData || [];
 
     // Aplicar filtro de fecha
@@ -1268,15 +1269,19 @@ function srRenderHistorial() {
     if (btnNext) btnNext.disabled = (page >= totalPag);
 
     if (!slice.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="td-placeholder">Sin registros liberados</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-archive fs-3 d-block mb-2"></i>Sin registros liberados</td></tr>';
+        if (mobileGrid) mobileGrid.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-archive fs-3 d-block mb-2"></i>Sin registros liberados</div>';
         return;
     }
-    tbody.innerHTML = slice.map(function(r) {
+
+    var htmlDesktop = '';
+    var htmlMobile = '';
+
+    slice.forEach(function(r) {
         var fIng     = r.fecha_ingreso ? String(r.fecha_ingreso).split('T')[0] : '—';
-        // Mostrar fecha/hora de salida programada (no fecha_liberado que es timestamp del servidor)
         var fLibDate = r.fecha_salida ? String(r.fecha_salida).split('T')[0] : (r.fecha_liberado ? String(r.fecha_liberado).split('T')[0] : '—');
         var fLibTime = r.hora_salida ? String(r.hora_salida).slice(0,5) : (r.fecha_liberado ? String(r.fecha_liberado).slice(11, 16) : '');
-        // Horas en taller para historial
+        
         var hTaller = '—';
         if (r.fecha_ingreso && r.hora_ingreso && fLibDate !== '—' && fLibTime) {
             var hStart = new Date(String(r.fecha_ingreso).split('T')[0] + 'T' + String(r.hora_ingreso).slice(0,5) + ':00');
@@ -1293,19 +1298,50 @@ function srRenderHistorial() {
         var styleRampa = (rampaId >= 1 && rampaId <= 3) 
             ? 'background:' + rCol + ';' 
             : 'background:' + rCol + '; padding:2px 8px; border-radius:10px; font-size:0.65rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; display:inline-block; vertical-align:middle;';
-            
-        return '<tr style="cursor:pointer;border-bottom:1px solid var(--border);" onclick="window.srAbrirDetalleHistorial(' + r.id + ')">'
-            + '<td style="padding:5px 8px;"><span class="' + ((rampaId >= 1 && rampaId <= 3) ? 'sr-badge-rampa' : '') + '" style="' + styleRampa + ' color:#fff; font-weight:700;" title="' + _srEsc(rNom) + '">' + _srEsc(textRampa) + '</span></td>'
-            + '<td style="padding:5px 8px;font-weight:700;">' + (r.placa || '—') + '</td>'
-            + '<td style="padding:5px 8px;font-size:0.78rem;">' + srFmtFecha(fIng) + ' ' + (r.hora_ingreso ? String(r.hora_ingreso).slice(0,5) : '') + '</td>'
-            + '<td style="padding:5px 8px;font-size:0.78rem;">' + srFmtFecha(fLibDate) + (fLibTime ? ' ' + fLibTime : '') + '</td>'
-            + '<td style="padding:5px 8px;font-weight:700;font-size:0.8rem;color:var(--primary,#5865F2);">' + hTaller + '</td>'
-            + '<td style="padding:5px 8px;font-size:0.78rem;">' + (r.situacion || '—') + '</td>'
-            + '<td style="padding:5px 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.78rem;line-height:1.4;" title="' + (r.obs || '').replace(/"/g,'&quot;') + '">' + (r.obs || '—') + '</td>'
-            + '<td style="padding:5px 8px;font-size:0.75rem;color:var(--subtext);">' + (r.liberado_por || '—') + '</td>'
-            + '<td style="padding:5px 8px;" onclick="event.stopPropagation();"><button class="btn btn-xs btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" onclick="window.srReactivarRampa(' + r.id + ')"><i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar</button></td>'
+
+        var situacionBadge = r.situacion === 'Operativo'
+            ? '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size:0.75rem;">Operativo</span>'
+            : '<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1" style="font-size:0.75rem;">' + _srEsc(r.situacion || 'En Atención') + '</span>';
+
+        // 1. Desktop Row
+        htmlDesktop += '<tr style="cursor:pointer; border-bottom:1px solid #f1f5f9;" onclick="window.srAbrirDetalleHistorial(' + r.id + ')">'
+            + '<td style="padding:8px; text-align:center;"><span class="' + ((rampaId >= 1 && rampaId <= 3) ? 'sr-badge-rampa' : '') + '" style="' + styleRampa + ' color:#fff; font-weight:700;" title="' + _srEsc(rNom) + '">' + _srEsc(textRampa) + '</span></td>'
+            + '<td style="padding:8px;"><span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-1" style="font-size:0.84rem; letter-spacing:0.5px;">' + (r.placa || '—') + '</span></td>'
+            + '<td style="padding:8px; font-size:0.80rem; white-space:nowrap;" class="text-secondary">' + srFmtFecha(fIng) + ' ' + (r.hora_ingreso ? String(r.hora_ingreso).slice(0,5) : '') + '</td>'
+            + '<td style="padding:8px; font-size:0.80rem; white-space:nowrap;" class="text-secondary">' + srFmtFecha(fLibDate) + (fLibTime ? ' ' + fLibTime : '') + '</td>'
+            + '<td style="padding:8px; text-align:center;"><span class="badge bg-light text-primary border fw-bold px-2 py-1">' + hTaller + '</span></td>'
+            + '<td style="padding:8px;">' + situacionBadge + '</td>'
+            + '<td style="padding:8px; font-size:0.80rem; max-width:220px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;" title="' + (r.obs || '').replace(/"/g,'&quot;') + '">' + (r.obs || '—') + '</td>'
+            + '<td style="padding:8px; font-size:0.80rem; white-space:nowrap;" class="text-secondary">' + (r.liberado_por || '—') + '</td>'
+            + '<td style="padding:8px; text-align:center;" onclick="event.stopPropagation();"><button class="btn btn-sm btn-outline-warning py-0 px-2 rounded-2 fw-semibold" style="font-size:0.75rem;" onclick="window.srReactivarRampa(' + r.id + ')"><i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar</button></td>'
             + '</tr>';
-    }).join('');
+
+        // 2. Mobile Card
+        htmlMobile += '<div class="card mb-2 shadow-2xs border rounded-3 p-3 bg-white" onclick="window.srAbrirDetalleHistorial(' + r.id + ')" style="cursor: pointer;">'
+            + '<div class="d-flex justify-content-between align-items-center mb-2">'
+            + '  <div class="d-flex align-items-center gap-2">'
+            + '    <span class="' + ((rampaId >= 1 && rampaId <= 3) ? 'sr-badge-rampa' : '') + '" style="' + styleRampa + ' color:#fff; font-weight:700;">' + _srEsc(textRampa) + '</span>'
+            + '    <span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-1" style="font-size:0.88rem; letter-spacing:0.5px;">' + (r.placa || '—') + '</span>'
+            + '  </div>'
+            + '  <div class="d-flex align-items-center gap-1">'
+            + '    ' + situacionBadge
+            + '    <span class="badge bg-light text-primary border fw-bold px-2 py-1" style="font-size:0.72rem;"><i class="bi bi-clock me-1"></i>' + hTaller + '</span>'
+            + '  </div>'
+            + '</div>'
+            + '<div class="text-secondary small mb-2" style="font-size:0.80rem; line-height:1.35;">' + (r.obs || 'Sin observaciones') + '</div>'
+            + '<div class="d-flex justify-content-between align-items-center pt-2 border-top text-secondary" style="font-size:0.75rem;">'
+            + '  <div><i class="bi bi-box-arrow-in-right text-success me-1"></i>' + srFmtFecha(fIng) + ' ' + (r.hora_ingreso ? String(r.hora_ingreso).slice(0,5) : '') + '</div>'
+            + '  <div><i class="bi bi-box-arrow-right text-danger me-1"></i>' + srFmtFecha(fLibDate) + (fLibTime ? ' ' + fLibTime : '') + '</div>'
+            + '</div>'
+            + '<div class="d-flex justify-content-between align-items-center pt-2 mt-1 border-top" style="font-size:0.75rem;">'
+            + '  <span class="text-muted"><i class="bi bi-person-check me-1"></i>' + (r.liberado_por || '—') + '</span>'
+            + '  <button class="btn btn-sm btn-outline-warning py-0 px-2 rounded-2 fw-semibold" style="font-size:0.72rem;" onclick="event.stopPropagation(); window.srReactivarRampa(' + r.id + ')"><i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar</button>'
+            + '</div>'
+            + '</div>';
+    });
+
+    if (tbody) tbody.innerHTML = htmlDesktop;
+    if (mobileGrid) mobileGrid.innerHTML = htmlMobile;
 }
 
 window.srAplicarFiltroHist = function() { srRenderHistorial(); };
