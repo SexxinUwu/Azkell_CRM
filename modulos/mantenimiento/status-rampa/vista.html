@@ -1,10 +1,22 @@
 <!-- Módulo Status Rampa — Azkell Fleet -->
 <style>
+/* ── Reset root-dinamico padding for full-bleed ─────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
 #moduloStatusRampa {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    padding: 1rem 1.25rem 3rem 1.25rem !important;
     width: 100% !important;
-    box-sizing: border-box;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+@media (max-width: 768px) {
+    #moduloStatusRampa {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+    }
 }
 
 /* ── KPIs Apple Compact Bento Cards ─────────────── */
@@ -647,7 +659,7 @@
             <button class="btn btn-success shadow-sm px-3 py-2 fw-bold text-white d-flex align-items-center gap-1 rounded-3" id="sr-btn-excel" onclick="window.srExportarExcel()" title="Exportar Excel">
                 <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Excel</span>
             </button>
-            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" id="sr-btn-registrar" onclick="window.srRegistrar()" data-perm-c="status_rampa" style="background: #0284c7; border-color: #0284c7;">
+            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-inline-flex align-items-center gap-2 rounded-3" id="sr-btn-registrar" onclick="window.srRegistrar()" data-perm-c="status_rampa" style="background: #0284c7; border-color: #0284c7;">
                 <i class="bi bi-plus-lg fs-6"></i> <span>Registrar Unidad</span>
             </button>
         </div>
@@ -751,8 +763,14 @@
         </div>
         
         
-        <!-- FAB REGISTRAR MÓVIL (Eliminado duplicado) -->
-
+        <!-- Mobile Floating Action Button -->
+        <button class="btn btn-primary rounded-circle shadow-lg d-flex d-md-none align-items-center justify-content-center position-fixed"
+                style="width: 54px; height: 54px; bottom: 85px; right: 20px; z-index: 1040; background: #0284c7; border: none; box-shadow: 0 8px 24px rgba(2,132,199,0.4) !important;"
+                onclick="window.srRegistrar()"
+                data-perm-c="status_rampa"
+                title="Registrar Unidad">
+            <i class="bi bi-plus-lg fs-4 text-white"></i>
+        </button>
 
         <!-- PANEL DETALLE LATERAL (MODERNO BENTO) -->
         <div class="sr-drawer-global" id="sr-panel-detalle" style="max-width: 660px; width: 100%;">

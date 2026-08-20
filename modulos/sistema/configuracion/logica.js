@@ -114,21 +114,23 @@ window.init_configuracion = function() {
 // ---- Navegación de paneles ----
 window.showConfig = function(panel) {
     const panels  = ['apariencia', 'accesibilidad', 'idioma', 'usuarios', 'auditoria', 'empresa'];
-    const buttons = document.querySelectorAll('.config-nav-btn');
+    const titleMap = {
+        'apariencia': 'Personalización de Apariencia',
+        'empresa': 'Datos de la Empresa',
+        'accesibilidad': 'Accesibilidad y Efectos',
+        'idioma': 'Configuración de Idioma',
+        'usuarios': 'Gestión de Usuarios',
+        'auditoria': 'Registro de Auditoría'
+    };
+
+    const headerTitle = document.getElementById('cfg-header-title');
+    if (headerTitle && titleMap[panel]) {
+        headerTitle.textContent = titleMap[panel];
+    }
 
     panels.forEach(p => {
         const el = document.getElementById('cfg-panel-' + p);
-        const btn = document.getElementById('cfg-btn-' + p);
-        if (el)  el.classList.toggle('d-none', p !== panel);
-        if (btn) {
-            if (p === panel) {
-                btn.style.background = 'var(--crm-accent)';
-                btn.style.color = '#fff';
-            } else {
-                btn.style.background = 'transparent';
-                btn.style.color = 'var(--text)';
-            }
-        }
+        if (el) el.classList.toggle('d-none', p !== panel);
     });
 };
 

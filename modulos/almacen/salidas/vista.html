@@ -1,15 +1,17 @@
 <!-- Módulo Almacén / Salidas — Azkell Fleet v2 (Bento UI) -->
 <style>
+/* ── Reset root-dinamico padding for full-bleed ─────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
 /* ─── Mobile-First ──────────────────────────────────────── */
 @media (max-width: 767.98px) {
     .topbar { display: none !important; }
-    #root-dinamico, .main-area { 
-        padding: 0 !important; 
-        overflow: hidden !important; 
-        display: flex !important;
-        flex-direction: column !important;
+    #moduloSalidas {
+        flex: 1 1 0;
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
     }
-    #moduloSalidas { flex: 1 1 0; }
     #sal-desktop-header { display: none !important; }
     #sal-m-header { display: flex !important; }
     #sal-search-compact { display: flex !important; }
@@ -21,24 +23,20 @@
     }
     #sal-kpi-row::-webkit-scrollbar { display: none; }
     .bento-kpi { min-width: 130px; flex-shrink: 0; }
-    #moduloSalidas { padding-bottom: 0px; }
     #sal-fab-wrap { display: flex !important; }
     .sal-controls, .sal-filters { display: none !important; }
-    /* Tabs: segmented control en mobile */
-    #sal-m-tabs {
+    /* Tabs: segmented control en mobile centradas */
+    #btn-group-sal-tabs {
+        width: 100% !important;
         display: flex !important;
-        background: var(--bg, #f1f5f9);
-        border-radius: 14px;
-        padding: 4px;
-        gap: 3px;
-        margin: 0 1rem .5rem;
+        justify-content: space-between !important;
+        margin: 0 auto !important;
     }
-    #sal-m-tabs .sal-m-tab {
-        flex: 1; border: none; border-radius: 10px;
-        font-size: .65rem; font-weight: 700; text-transform: uppercase;
-        letter-spacing: .04em; color: var(--subtext); padding: .5rem .25rem;
-        background: transparent; cursor: pointer; text-align: center;
-        transition: all .2s; white-space: nowrap;
+    #btn-group-sal-tabs .ck-segment-item {
+        flex: 1 !important;
+        text-align: center !important;
+        padding: 6px 4px !important;
+        font-size: 0.72rem !important;
     }
     #sal-m-tabs .sal-m-tab.active {
         background: var(--surface, #fff);
@@ -353,7 +351,7 @@
             <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.salExportar()" title="Exportar Excel">
                 <i class="bi bi-file-earmark-excel text-success"></i> <span class="d-none d-md-inline">Excel</span>
             </button>
-            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="window.salAbrirNuevo()" style="background: #0284c7; border-color: #0284c7;">
+            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-inline-flex align-items-center gap-2 rounded-3" onclick="window.salAbrirNuevo()" style="background: #0284c7; border-color: #0284c7;">
                 <i class="bi bi-plus-lg fs-6"></i> <span>Nueva Solicitud</span>
             </button>
         </div>
@@ -634,12 +632,9 @@
 </div>
 
 <!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
-<div id="sal-fab-wrap" style="display:none;position:fixed;bottom:104px;right:1rem;z-index:1041;">
-  <button onclick="window.salAbrirNuevo()"
-          style="width:60px;height:60px;border-radius:18px;background:#5865F2;border:none;color:#fff;
-                 font-size:1.5rem;box-shadow:0 6px 24px rgba(88,101,242,.5);
-                 display:flex;align-items:center;justify-content:center;
-                 transition:transform .25s cubic-bezier(.4,0,.2,1);">
-    <i class="bi bi-plus-lg"></i>
-  </button>
-</div>
+<button class="btn btn-primary rounded-circle shadow-lg d-flex d-md-none align-items-center justify-content-center position-fixed"
+        style="width: 54px; height: 54px; bottom: 85px; right: 20px; z-index: 1040; background: #0284c7; border: none; box-shadow: 0 8px 24px rgba(2,132,199,0.4) !important;"
+        onclick="window.salAbrirNuevo()"
+        title="Nueva Solicitud de Salida">
+    <i class="bi bi-plus-lg fs-4 text-white"></i>
+</button>

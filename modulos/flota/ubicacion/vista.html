@@ -1,17 +1,25 @@
 <!-- MÓDULO: UBICACIÓN GPS FLOTA (DISEÑO APPLE / BENTO ERP) -->
 <style>
+/* ── Reset root-dinamico padding for full-bleed ─────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
 #moduloUbicacionGPS {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    padding: 1rem 1.25rem 3rem 1.25rem !important;
     width: 100% !important;
-    box-sizing: border-box;
-    min-height: calc(100vh - 60px);
+    max-width: 100% !important;
+    box-sizing: border-box !important;
     display: flex;
     flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 /* ── KPIs Apple Compact Bento Cards ─────────────── */
-.ck-kpi-card {
+#moduloUbicacionGPS .ck-kpi-card {
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 14px !important;
@@ -27,16 +35,16 @@
     user-select: none;
     min-height: 56px !important;
 }
-.ck-kpi-card:hover {
+#moduloUbicacionGPS .ck-kpi-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
 }
-.ck-kpi-card.active {
+#moduloUbicacionGPS .ck-kpi-card.active {
     border-color: #0284c7 !important;
     box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
     background: #f8fafc !important;
 }
-.ck-kpi-icon {
+#moduloUbicacionGPS .ck-kpi-icon {
     width: 38px !important;
     height: 38px !important;
     border-radius: 10px !important;
@@ -48,7 +56,7 @@
 }
 
 /* ── Control Bar & Apple Search ──────────────────── */
-.ck-apple-search {
+#moduloUbicacionGPS .ck-apple-search {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
@@ -58,27 +66,28 @@
     transition: all 0.2s ease;
     color: #1e293b;
     width: 100%;
+    box-sizing: border-box;
 }
-.ck-apple-search:focus {
+#moduloUbicacionGPS .ck-apple-search:focus {
     background: #ffffff;
     border-color: #0284c7;
     box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
     outline: none;
 }
-.ck-apple-segmented {
-    background: #e2e8f0 !important;
-    padding: 4px !important;
-    border-radius: 14px !important;
+#moduloUbicacionGPS .ck-apple-segmented {
+    background: #f1f5f9 !important;
+    padding: 3px !important;
+    border-radius: 12px !important;
     display: inline-flex !important;
-    gap: 3px !important;
-    border: 1px solid #cbd5e1 !important;
+    gap: 2px !important;
+    border: 1px solid #e2e8f0 !important;
 }
-.ck-segment-item {
+#moduloUbicacionGPS .ck-segment-item {
     border: none;
     background: transparent;
-    padding: 6px 14px;
-    border-radius: 10px;
-    font-size: 0.82rem;
+    padding: 6px 12px;
+    border-radius: 9px;
+    font-size: 0.78rem;
     font-weight: 600;
     color: #64748b;
     transition: all 0.18s ease;
@@ -86,8 +95,8 @@
     user-select: none;
     white-space: nowrap;
 }
-.ck-segment-item:hover { color: #0f172a; }
-.ck-segment-item.active {
+#moduloUbicacionGPS .ck-segment-item:hover { color: #0f172a; }
+#moduloUbicacionGPS .ck-segment-item.active {
     background: #ffffff !important;
     color: #0f172a !important;
     font-weight: 700 !important;
@@ -97,15 +106,15 @@
 /* ── Split Layout & Unit Cards ───────────────────── */
 .gps-main-split {
     display: flex;
-    flex: 1 1 auto;
+    flex: 1 1 0;
     gap: 1.25rem;
     width: 100% !important;
     padding: 0 !important;
+    min-height: 0;
     overflow: hidden;
-    min-height: 520px;
 }
 .gps-sidebar-panel {
-    width: 340px;
+    width: 360px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -117,15 +126,15 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
+    gap: 0.5rem;
     padding-right: 0.25rem;
     scrollbar-width: thin;
 }
 .gps-unit-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 0.75rem 1rem;
+    border-radius: 16px;
+    padding: 0.85rem 1rem;
     cursor: pointer;
     transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
@@ -133,11 +142,12 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 .gps-unit-card:hover {
     border-color: #0284c7;
     background: #f8fafc;
-    transform: translateX(2px);
+    transform: translateY(-1px);
 }
 .gps-unit-card.active {
     background: #eff6ff !important;
@@ -145,22 +155,18 @@
     box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
 }
 .gps-unit-plate {
-    font-size: 0.95rem;
+    font-size: 0.98rem;
     font-weight: 800;
     color: #0f172a;
     letter-spacing: -0.01em;
 }
 .gps-unit-model {
-    font-size: 0.72rem;
+    font-size: 0.76rem;
     color: #64748b;
-    max-width: 150px;
+    max-width: 180px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-.gps-unit-stat {
-    font-size: 0.72rem;
-    font-weight: 700;
 }
 
 /* ── Panel Detalle Bento ─────────────────────────── */
@@ -202,14 +208,46 @@
     gap: 0.75rem;
 }
 
-@media (max-width: 767.98px) {
-    .gps-main-split { flex-direction: column; }
-    .gps-sidebar-panel { width: 100%; }
-    .gps-detail-panel { display: none; }
+/* ── Adaptación Móvil (<768px) ───────────────────── */
+@media (max-width: 768px) {
+    #moduloUbicacionGPS {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+        min-height: auto !important;
+    }
+    .gps-main-split {
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: visible !important;
+        min-height: auto !important;
+        flex: none !important;
+    }
+    .gps-sidebar-panel {
+        width: 100% !important;
+        overflow: visible !important;
+    }
+    .gps-list-container {
+        overflow-y: visible !important;
+        max-height: none !important;
+        padding-right: 0 !important;
+    }
+    .gps-detail-panel {
+        display: none !important;
+    }
+    .ck-apple-segmented {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+    }
+    .ck-segment-item {
+        flex: 1 !important;
+        text-align: center !important;
+        padding: 6px 4px !important;
+        font-size: 0.72rem !important;
+    }
 }
 </style>
 
-<div id="moduloUbicacionGPS">
+<div id="moduloUbicacionGPS" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
 
     <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
@@ -286,12 +324,12 @@
         <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 340px;">
             <div class="position-relative flex-grow-1">
                 <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
-                <input type="text" id="busGPSUnidad" class="ck-apple-search" placeholder="Buscar placa, unidad..." oninput="filtrarListaGPS(this.value)">
+                <input type="text" id="busGPSUnidad" class="ck-apple-search" placeholder="Buscar placa, unidad..." oninput="window.filtrarListaGPS(this.value)">
             </div>
         </div>
 
-        <div class="d-flex align-items-center gap-2">
-            <div class="ck-apple-segmented" id="btn-group-gps-filtros">
+        <div class="d-flex align-items-center gap-2 flex-grow-1 flex-md-grow-0">
+            <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-gps-filtros">
                 <button type="button" class="ck-segment-item active" data-filter="total" onclick="window.filtrarSegmentoGPS('total', this)">Todos</button>
                 <button type="button" class="ck-segment-item" data-filter="online" onclick="window.filtrarSegmentoGPS('online', this)">Con Señal</button>
                 <button type="button" class="ck-segment-item" data-filter="movimiento" onclick="window.filtrarSegmentoGPS('movimiento', this)">En Ruta</button>

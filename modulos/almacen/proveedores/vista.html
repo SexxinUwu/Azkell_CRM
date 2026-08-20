@@ -1,14 +1,26 @@
 <!-- Módulo Almacén / Proveedores — SPA Aislado -->
 <style>
+/* ── Reset root-dinamico padding for full-bleed ─────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
 #mod-proveedores {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    padding: 1rem 1.25rem 3rem 1.25rem !important;
     width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
+}
+
+@media (max-width: 768px) {
+    #mod-proveedores {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+    }
 }
 
 /* ── KPIs Apple Compact Bento Cards ─────────────── */
@@ -111,7 +123,7 @@
           </li>
         </ul>
       </div>
-      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalProveedor()" style="background: #0284c7; border-color: #0284c7;">
+      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-inline-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalProveedor()" style="background: #0284c7; border-color: #0284c7;">
         <i class="bi bi-plus-lg fs-6"></i> <span>Registrar Proveedor</span>
       </button>
     </div>
@@ -220,6 +232,14 @@
 
   <!-- Paginador -->
   <div id="prov-paginador" class="d-flex align-items-center gap-1 flex-wrap px-1 py-2 flex-shrink-0 mb-5 mb-md-0 pb-5 pb-md-0"></div>
+
+  <!-- Mobile Floating Action Button -->
+  <button class="btn btn-primary rounded-circle shadow-lg d-flex d-md-none align-items-center justify-content-center position-fixed"
+          style="width: 54px; height: 54px; bottom: 85px; right: 20px; z-index: 1040; background: #0284c7; border: none; box-shadow: 0 8px 24px rgba(2,132,199,0.4) !important;"
+          onclick="window.abrirModalProveedor()"
+          title="Registrar Proveedor">
+      <i class="bi bi-plus-lg fs-4 text-white"></i>
+  </button>
 </div>
 
 <!-- ═══ MODAL ADD/EDIT PROVEEDOR ══════════════════════════════════ -->

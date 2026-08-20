@@ -1,9 +1,22 @@
 <!-- Módulo Mantenimiento / Placas — SPA Aislado -->
 <style>
+/* ── Reset root-dinamico padding for full-bleed ─────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
 /* ── Estilos Modernos 1:1 Reporte de Fallas ───────────────────────── */
 #moduloPlacas {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    padding: 1rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
 }
 #moduloPlacas .ck-kpi-card {
     background: #ffffff !important;
@@ -83,6 +96,58 @@
     font-weight: 700 !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
 }
+
+/* Universal Modern Card (Mobile) */
+.ck-mobile-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 14px rgba(15, 23, 42, 0.03);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ck-mobile-card:active {
+    transform: scale(0.99);
+}
+
+@media (max-width: 768px) {
+    #moduloPlacas {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+    }
+    #placas-tabla-wrap {
+        display: none !important;
+    }
+    #placasCardContainer {
+        display: block !important;
+    }
+    .ck-kpi-card {
+        padding: 0.65rem 0.75rem !important;
+        border-radius: 14px !important;
+    }
+    .ck-kpi-card h2 {
+        font-size: 1.3rem !important;
+    }
+    .ck-apple-segmented {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+    }
+    .ck-segment-item {
+        flex: 1 !important;
+        text-align: center !important;
+        padding: 6px 4px !important;
+        font-size: 0.72rem !important;
+    }
+}
+@media (min-width: 769px) {
+    #placasCardContainer {
+        display: none !important;
+    }
+    #placas-tabla-wrap {
+        display: flex !important;
+    }
+}
 </style>
 
 <div id="moduloPlacas" class="modulo-wrapper d-flex flex-column h-100" style="overflow-x: hidden;">
@@ -128,7 +193,7 @@
       <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="recargarModulo('placas')" title="Actualizar">
         <i class="bi bi-arrow-clockwise fs-6"></i>
       </button>
-      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="document.getElementById('formPlaca').reset(); bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();" data-perm-crear="flota" style="background: #0284c7; border-color: #0284c7;">
+      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-inline-flex align-items-center gap-2 rounded-3" onclick="document.getElementById('formPlaca').reset(); bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();" data-perm-crear="flota" style="background: #0284c7; border-color: #0284c7;">
         <i class="bi bi-plus-lg fs-6"></i> <span>Nueva Placa</span>
       </button>
     </div>
@@ -225,7 +290,7 @@
   </div>
 
   <!-- ── 4. TABLA DE PLACAS (MODERNA CON BORDES REDONDEADOS) ────────── -->
-  <div style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+  <div id="placas-tabla-wrap" style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
     <div class="ent-table-wrap custom-scrollbar" style="flex:1 1 0; overflow: auto; -webkit-overflow-scrolling: touch;">
       <style>
         #tabla-placas th, #tabla-placas td { white-space: nowrap; border-right: 1px solid rgba(148, 163, 184, 0.15); }
@@ -268,8 +333,19 @@
     </div>
   </div>
 
+  <!-- ── 5. CONTENEDOR DE CARDS NATIVAS MÓVILES (1:1 Reporte de Fallas) ── -->
+  <div id="placasCardContainer" class="flex-grow-1 overflow-auto"></div>
+
   <!-- Paginador -->
   <div id="controles-paginacion-placas" class="d-flex align-items-center gap-1 flex-wrap px-1 py-2 flex-shrink-0"></div>
+
+  <!-- Mobile Floating Action Button -->
+  <button class="btn btn-primary rounded-circle shadow-lg d-flex d-md-none align-items-center justify-content-center position-fixed"
+          style="width: 54px; height: 54px; bottom: 85px; right: 20px; z-index: 1040; background: #0284c7; border: none; box-shadow: 0 8px 24px rgba(2,132,199,0.4) !important;"
+          onclick="document.getElementById('formPlaca').reset(); bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();"
+          title="Nueva Placa">
+      <i class="bi bi-plus-lg fs-4 text-white"></i>
+  </button>
 </div>
 
 <!-- ── OFFCANVAS: DETALLE DE PLACA (Estilo Entradas: al centro, desde abajo) ── -->
