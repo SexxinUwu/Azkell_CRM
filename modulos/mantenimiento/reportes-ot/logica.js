@@ -204,30 +204,26 @@ function rotBotonesAccion(ot) {
     if (!rotPuedeEditar()) return '';
 
     var b = function(cls, icon, txt, accion) {
-        return '<button class="rot-btn ' + cls + '" onclick="event.stopPropagation();window.rotAccion(\'' + accion + '\',\'' + idOT + '\')">'
-             + '<i class="bi ' + icon + '"></i>' + txt + '</button>';
+        return '<button type="button" class="rot-btn ' + cls + '" onclick="event.stopPropagation();window.rotAccion(\'' + accion + '\',\'' + idOT + '\')">'
+             + '<i class="bi ' + icon + '"></i><span>' + txt + '</span></button>';
     };
 
+    var html = '<div class="rot-actions-container">';
     if (estado === 'Pendiente' || (!['En Proceso','Pausada','Finalizado','Cerrada','Anulado'].includes(estado))) {
-        return b('rot-btn-iniciar', 'bi-play-fill', 'Iniciar', 'iniciar');
+        html += b('rot-btn-iniciar', 'bi-play-fill', 'Iniciar', 'iniciar');
+    } else if (estado === 'En Proceso') {
+        html += b('rot-btn-pausar',  'bi-pause-fill', 'Pausar', 'pausar')
+              + b('rot-btn-cerrar',  'bi-lock-fill',  'Cerrar', 'cerrar');
+    } else if (estado === 'Pausada') {
+        html += b('rot-btn-reanudar', 'bi-play-fill', 'Reanudar', 'reanudar')
+              + b('rot-btn-cerrar',   'bi-lock-fill', 'Cerrar',   'cerrar');
+    } else if (estado === 'Finalizado' || estado === 'Cerrada') {
+        html += '<span class="rot-badge rot-b-finalizado"><i class="bi bi-check-circle-fill"></i>Finalizado</span>';
+    } else if (estado === 'Anulado') {
+        html += '<span class="rot-badge rot-b-anulado"><i class="bi bi-x-circle-fill"></i>Anulado</span>';
     }
-    if (estado === 'En Proceso') {
-        return b('rot-btn-pausar',  'bi-pause-fill', 'Pausar', 'pausar')
-             + ' '
-             + b('rot-btn-cerrar',  'bi-lock-fill',  'Cerrar', 'cerrar');
-    }
-    if (estado === 'Pausada') {
-        return b('rot-btn-reanudar', 'bi-play-fill', 'Reanudar', 'reanudar')
-             + ' '
-             + b('rot-btn-cerrar',   'bi-lock-fill', 'Cerrar',   'cerrar');
-    }
-    if (estado === 'Finalizado' || estado === 'Cerrada') {
-        return '<span class="rot-badge rot-b-finalizado">Finalizado</span>';
-    }
-    if (estado === 'Anulado') {
-        return '<span class="rot-badge rot-b-anulado">Anulado</span>';
-    }
-    return '';
+    html += '</div>';
+    return html;
 }
 
 function rotBadgeEstado(estado) {

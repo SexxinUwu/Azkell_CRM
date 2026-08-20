@@ -1,190 +1,209 @@
 
+<!-- Módulo Kits de Mantenimiento — Azkell ERP (Apple & Bento ERP) -->
 <style>
-/* ─── Mobile Kits View ─────────────────────────────────────────── */
-@media (max-width: 767.98px) {
-    .topbar { display: none !important; }
-    .main-area { padding: 0 !important; overflow: auto !important; overscroll-behavior: contain; }
-    #kits-desktop-header { display: none !important; }
-    #kits-m-header { display: flex !important; }
-    #kits-fab-wrap { display: flex !important; flex-direction: column; align-items: flex-end; }
-    .kits-desktop-table { display: none !important; }
-}
-/* ─── Kits List Card Mobile ────────────────────────────────────── */
-.kits-list-card {
-    background: #fff; border: 1.5px solid #e2e8f0;
-    border-radius: 16px; padding: 0; margin-bottom: 1rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,.03); position: relative;
-}
-.kits-list-card-header {
-    display: flex; justify-content: space-between; align-items: center;
-    border-bottom: 1px dashed #e2e8f0; padding-bottom: .5rem; margin-bottom: .5rem;
-}
-.kits-fab-btn {
-    width: 60px; height: 60px; border-radius: 20px;
-    background: #2563eb; color: #fff; border: none;
-    box-shadow: 0 8px 24px rgba(37,99,235,.4);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.8rem; cursor: pointer; transition: transform .2s, box-shadow .2s;
-}
-.kits-fab-btn:active { transform: scale(.92); }
-</style>
-<style>
-/* ─── Kits: Panel fullscreen (slide desde abajo) ────────── */
-.kits-panel-full {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%) translateY(100%);
-    width: 100%;
-    max-width: 700px;
-    height: 92vh;
-    background: #f4f7fe;
-    border-radius: 28px 28px 0 0;
-    z-index: 1059;
+#mod-kits-mp {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    transition: transform .28s ease;
-    box-shadow: 0 -12px 48px rgba(0,0,0,.18);
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
 }
-.kits-panel-full.open {
-    transform: translateX(-50%) translateY(0);
-}
-@media (max-width: 767.98px) {
-    .kits-panel-full { max-width: 100%; left: 0; transform: translateY(100%); border-radius: 28px 28px 0 0; }
-    .kits-panel-full.open { transform: translateY(0); }
-}
-.kits-item-card {
-    background: #fff;
-    border-radius: 20px;
-    padding: 12px;
-    border: 1.5px solid #e2e8f0;
-    margin-bottom: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.04);
-}
-.kits-doc-card {
-    background: #fff;
-    border-radius: 24px;
-    padding: 14px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 2px 8px rgba(0,0,0,.04);
-    margin-bottom: 12px;
-}
-.kits-field-label {
-    font-size: .56rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: .09em;
-    color: #94a3b8;
-    margin-bottom: 3px;
-}
-.kits-input-sm {
-    width: 100%;
-    height: 38px;
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 0 11px;
-    font-size: 12px;
-    font-weight: 700;
-    outline: none;
-    transition: all .2s;
-    color: #0f172a;
-}
-.kits-input-sm:focus { border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
 
-/* ─── Mobile Kits View ─────────────────────────────────────────── */
-@media (max-width: 767.98px) {
-    .topbar { display: none !important; }
-    .main-area { padding: 0 !important; overflow: auto !important; overscroll-behavior: contain; }
-    #kits-desktop-header { display: none !important; }
-    #kits-m-header { display: flex !important; }
-    #kits-fab-wrap { display: flex !important; flex-direction: column; align-items: flex-end; }
-    .kits-desktop-table { display: none !important; }
+/* ── KPIs Apple Compact Bento Cards ─────────────── */
+#mod-kits-mp .ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    min-height: 56px !important;
 }
-/* ─── Kits List Card Mobile ────────────────────────────────────── */
-.kits-list-card {
-    background: #fff; border: 1.5px solid #e2e8f0;
-    border-radius: 16px; padding: .85rem 1rem; margin-bottom: .65rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,.04); position: relative;
+#mod-kits-mp .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
 }
-.kits-list-card-header {
-    display: flex; justify-content: space-between; align-items: center;
-    border-bottom: 1px dashed #e2e8f0; padding-bottom: .5rem; margin-bottom: .5rem;
+#mod-kits-mp .ck-kpi-card.active {
+    border-color: #d97706 !important;
+    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.25) !important;
+    background: #f8fafc !important;
 }
-.kits-fab-btn {
-    width: 56px; height: 56px; border-radius: 18px;
-    background: #2563eb; color: #fff; border: none;
-    box-shadow: 0 6px 16px rgba(37,99,235,.4);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem; cursor: pointer; transition: transform .2s, box-shadow .2s;
+#mod-kits-mp .ck-kpi-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
 }
-.kits-fab-btn:active { transform: scale(.92); }
+
+/* ── Control Bar & Filter Inputs ─────────────────── */
+#mod-kits-mp .kits-filter-input {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    outline: none;
+    min-width: 170px;
+}
+#mod-kits-mp .kits-filter-input:focus {
+    border-color: #d97706;
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15);
+}
+
+/* ── Tabla Bento ─────────────────────────────────── */
+#mod-kits-mp .kits-table-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+#mod-kits-mp table th {
+    background: var(--bg, #f8fafc);
+    color: var(--subtext, #64748b);
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 10px 14px;
+    border-bottom: 1.5px solid var(--border, #e2e8f0);
+    white-space: nowrap;
+}
+#mod-kits-mp table td {
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--text, #0f172a);
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border, #f1f5f9);
+}
+#mod-kits-mp tbody tr.kits-item-row:hover {
+    background: rgba(217, 119, 6, 0.04);
+}
 </style>
 
-<div class="d-flex flex-column flex-1 min-h-0" style="height:100%; overflow:hidden">
+<div id="mod-kits-mp" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
 
-  <!-- ── HEADER ────────────────────────────────────────────────── -->
-  <div id="kits-desktop-header" class="d-flex align-items-center justify-content-between px-3 py-2 flex-shrink-0"
-       style="border-bottom:1px solid var(--border); background:var(--surface)">
-    <div class="d-flex align-items-center gap-2">
-      <i class="bi bi-tools text-primary" style="font-size:1.1rem"></i>
-      <span class="fw-bold" style="font-size:1rem">Kits de Mantenimiento</span>
+  <!-- ── 1. ENCABEZADO OFICIAL ERP ───────────────────────────────── -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+    <div class="d-flex align-items-center gap-3">
+      <div style="width: 44px; height: 44px; background: #fef3c7; color: #d97706; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+        <i class="bi bi-tools"></i>
+      </div>
+      <div>
+        <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Kits de Mantenimiento</h4>
+        <span class="text-secondary small">Configuración de materiales, repuestos y costos por tipo de servicio MP</span>
+      </div>
     </div>
-    <div class="d-flex gap-2">
-      <button class="btn btn-sm btn-reload-cache" title="Actualizar"
-              onclick="window.kitsCargarTabla()">
-        <i class="bi bi-arrow-clockwise"></i>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" title="Actualizar" onclick="window.kitsCargarTabla()">
+        <i class="bi bi-arrow-clockwise fs-6"></i>
       </button>
       <!-- Importar -->
       <div class="dropdown">
-        <button class="btn btn-sm btn-outline-info fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
           <i class="bi bi-upload"></i> <span class="d-none d-md-inline">Importar</span>
         </button>
-        <ul class="dropdown-menu shadow">
-          <li><a class="dropdown-item fw-bold text-success" href="#" onclick="window.kitsDescargarPlantilla()"><i class="bi bi-file-earmark-spreadsheet me-1"></i>1. Descargar Plantilla</a></li>
-          <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileKits').click()"><i class="bi bi-cloud-upload me-1"></i>2. Subir Excel Lleno</a></li>
+        <ul class="dropdown-menu shadow border" style="border-radius:12px;">
+          <li><a class="dropdown-item fw-bold text-success py-2" href="#" onclick="window.kitsDescargarPlantilla()"><i class="bi bi-file-earmark-spreadsheet me-2"></i>1. Descargar Plantilla</a></li>
+          <li><hr class="dropdown-divider my-1"></li>
+          <li><a class="dropdown-item fw-bold text-primary py-2" href="#" onclick="document.getElementById('inputFileKits').click()"><i class="bi bi-cloud-upload me-2"></i>2. Subir Excel Lleno</a></li>
         </ul>
       </div>
       <input type="file" id="inputFileKits" accept=".xlsx,.xls" style="display:none;" onchange="window.kitsImportarExcel(event)">
       <!-- Exportar -->
-      <button class="btn btn-sm btn-outline-success fw-bold" onclick="window.kitsExportarExcel()">
-        <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Excel</span>
+      <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.kitsExportarExcel()">
+        <i class="bi bi-file-earmark-excel text-success"></i> <span class="d-none d-md-inline">Excel</span>
       </button>
-      <button class="btn btn-sm btn-primary fw-bold" onclick="window.kitsAbrirModal()">
-        <i class="bi bi-plus-lg me-1"></i>Nuevo Ítem de Kit
+      <button class="btn btn-primary fw-bold text-white rounded-3 px-3 py-2 shadow-2xs d-flex align-items-center gap-1" onclick="window.kitsAbrirModal()" style="background:#2563eb; border-color:#2563eb;">
+        <i class="bi bi-plus-lg"></i> <span>+ Nuevo Ítem de Kit</span>
       </button>
     </div>
   </div>
 
-  <!-- ── MOBILE HEADER ─────────────────────────────────────────── -->
-  <div id="kits-m-header" style="display:none;align-items:center;padding:1rem 1.25rem .75rem;background:#fff;border-bottom:1.5px solid #e2e8f0;position:sticky;top:0;z-index:10;">
-    <div style="flex:1;">
-      <h6 style="margin:0;font-size:1.15rem;font-weight:900;color:#0f172a;">Kits de Mantenimiento</h6>
-      <div style="font-size:.7rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Administración</div>
+  <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO 56px) ──────── -->
+  <div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="ck-kpi-card active" onclick="if(window._cbSet){window._cbSet('kits-fil-marca','',''); window._cbSet('kits-fil-modelo','',''); window._cbSet('kits-fil-tipo','',''); window.kitsFiltrar();}">
+        <div class="ck-kpi-icon" style="background:#fef3c7; color:#d97706;">
+          <i class="bi bi-tools"></i>
+        </div>
+        <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+          <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Kits Configurados</span>
+          <h2 id="kits-kpi-total-kits" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="ck-kpi-card">
+        <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+          <i class="bi bi-boxes"></i>
+        </div>
+        <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+          <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Repuestos / Ítems</span>
+          <h2 id="kits-kpi-total-items" class="fw-bolder m-0 text-primary lh-1" style="font-size: 1.35rem;">0</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="ck-kpi-card">
+        <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+          <i class="bi bi-truck"></i>
+        </div>
+        <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+          <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Marcas / Modelos</span>
+          <h2 id="kits-kpi-total-marcas" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">0</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="ck-kpi-card">
+        <div class="ck-kpi-icon" style="background:#faf5ff; color:#9333ea;">
+          <i class="bi bi-cash-stack"></i>
+        </div>
+        <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+          <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Inversión Referencial</span>
+          <h2 id="kits-kpi-costo-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.15rem;">S/ 0.00</h2>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- ── FILTROS ───────────────────────────────────────────────── -->
-  <div class="d-flex align-items-center gap-2 px-3 py-2 flex-shrink-0"
-       style="border-bottom:1px solid var(--border); background:var(--surface); flex-wrap:wrap">
-    <div class="position-relative" style="max-width:150px;">
-      <input type="text" id="kits-fil-marca-txt" class="form-control form-control-sm" placeholder="Todas las marcas"
+  <!-- ── 3. FILTROS MODERNOS ─────────────────────────────────────── -->
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <div class="position-relative" style="max-width:200px;">
+      <input type="text" id="kits-fil-marca-txt" class="kits-filter-input" placeholder="Todas las marcas"
         autocomplete="off" oninput="window._cbFiltrarFilter('kits-fil-marca')"
         onfocus="window._cbFiltrar('kits-fil-marca')" onblur="window._cbHideFilter('kits-fil-marca')">
       <input type="hidden" id="kits-fil-marca">
       <div id="kits-fil-marca-dd" class="cb-dropdown"></div>
     </div>
-    <div class="position-relative" style="max-width:150px;">
-      <input type="text" id="kits-fil-modelo-txt" class="form-control form-control-sm" placeholder="Todos los modelos"
+    <div class="position-relative" style="max-width:200px;">
+      <input type="text" id="kits-fil-modelo-txt" class="kits-filter-input" placeholder="Todos los modelos"
         autocomplete="off" oninput="window._cbFiltrarFilter('kits-fil-modelo')"
         onfocus="window._cbFiltrar('kits-fil-modelo')" onblur="window._cbHideFilter('kits-fil-modelo')">
       <input type="hidden" id="kits-fil-modelo">
       <div id="kits-fil-modelo-dd" class="cb-dropdown"></div>
     </div>
-    <div class="position-relative" style="max-width:150px;">
-      <input type="text" id="kits-fil-tipo-txt" class="form-control form-control-sm" placeholder="Todo MP"
+    <div class="position-relative" style="max-width:180px;">
+      <input type="text" id="kits-fil-tipo-txt" class="kits-filter-input" placeholder="Todo MP"
         autocomplete="off" oninput="window._cbFiltrarFilter('kits-fil-tipo')"
         onfocus="window._cbFiltrar('kits-fil-tipo')" onblur="window._cbHideFilter('kits-fil-tipo')">
       <input type="hidden" id="kits-fil-tipo">
@@ -192,29 +211,33 @@
     </div>
   </div>
 
-  <!-- ── TABLA ─────────────────────────────────────────────────── -->
-  <div class="flex-1 overflow-auto px-2 py-2 kits-desktop-table">
-    <table class="table table-sm table-hover align-middle w-100" style="font-size:0.82rem">
-      <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
-        <tr style="border-bottom:2px solid var(--border)">
-          <th></th><th></th>
-          <th style="min-width:160px">Ítem</th>
-          <th>Cant.</th><th>Unidad</th>
-          <th>C.Unit.</th><th>C.Total</th><th></th>
-        </tr>
-      </thead>
-      <tbody id="kits-tbody">
-        <tr><td colspan="8" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
-      </tbody>
-    </table>
+  <!-- ── 4. TABLA BENTO ──────────────────────────────────────────── -->
+  <div class="kits-table-wrap flex-grow-1 d-flex flex-column overflow-hidden kits-desktop-table">
+    <div class="table-responsive flex-grow-1 overflow-auto">
+      <table class="table table-borderless m-0 align-middle">
+        <thead>
+          <tr>
+            <th style="min-width:220px">Ítem / Repuesto</th>
+            <th>Cantidad</th>
+            <th>Unidad</th>
+            <th>Costo Unitario</th>
+            <th>Costo Total</th>
+            <th class="text-end">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="kits-tbody">
+          <tr><td colspan="6" class="text-center py-4 text-muted">Cargando kits...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <!-- ── MOBILE GRID ─────────────────────────────────────────────── -->
   <div class="d-md-none flex-1 overflow-auto" style="padding: .75rem .75rem 120px .75rem; background:transparent;">
     <div id="kits-grid-mobile"></div>
   </div>
-  
-  <!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
+
+  <!-- FAB Mobile -->
   <div id="kits-fab-wrap" style="display:none;position:fixed;bottom:104px;right:1rem;z-index:1041;">
     <button class="kits-fab-btn" onclick="window.kitsAbrirModal()">
       <i class="bi bi-plus-lg"></i>

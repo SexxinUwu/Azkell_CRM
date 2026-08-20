@@ -1,10 +1,16 @@
 <!-- Módulo Administración — Hub de configuración Azkell ERP (Apple & Bento ERP) -->
 <style>
+/* ── Reset root-dinamico padding for full-bleed ─────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
 #moduloAdmin {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    padding: 1rem 1.25rem 3rem 1.25rem !important;
     width: 100% !important;
-    box-sizing: border-box;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
     display: flex;
     flex-direction: column;
     flex: 1 1 0;
@@ -15,14 +21,19 @@
 /* ── Buscador Apple ──────────────────────────────── */
 #moduloAdmin .ck-apple-search {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #cbd5e1;
     border-radius: 12px;
     padding: 9px 14px 9px 38px;
     font-size: 0.88rem;
-    font-weight: 500;
+    font-weight: 600;
     transition: all 0.2s ease;
-    color: #1e293b;
+    color: #0f172a;
     width: 100%;
+    box-sizing: border-box;
+}
+#moduloAdmin .ck-apple-search::placeholder {
+    color: #475569;
+    font-weight: 500;
 }
 #moduloAdmin .ck-apple-search:focus {
     background: #ffffff;
@@ -36,6 +47,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1rem;
+    width: 100%;
 }
 
 .adm-bento-card {
@@ -51,6 +63,8 @@
     position: relative;
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    box-sizing: border-box;
+    width: 100%;
 }
 .adm-bento-card:hover {
     transform: translateY(-3px);
@@ -83,28 +97,69 @@
     min-width: 0;
 }
 .adm-bento-title {
-    font-size: 0.95rem;
+    font-size: 0.96rem;
     font-weight: 800;
-    color: #0f172a;
+    color: #0f172a !important;
     line-height: 1.2;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.35rem;
 }
 .adm-bento-desc {
-    font-size: 0.76rem;
-    color: #64748b;
+    font-size: 0.78rem;
+    color: #0f172a !important;
+    font-weight: 500;
     line-height: 1.35;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.55rem;
 }
 .adm-bento-badge {
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 6px;
+    padding: 3px 9px;
+    border-radius: 8px;
     background: #f1f5f9;
-    color: #475569;
+    color: #0f172a !important;
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.adm-section-header {
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #0f172a !important;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+/* ── Mobile Full-bleed Optimization ──────────────── */
+@media (max-width: 768px) {
+    #moduloAdmin {
+        padding: 0.75rem 0.5rem 6rem 0.5rem !important;
+    }
+    .adm-grid-bento {
+        grid-template-columns: 1fr !important;
+        gap: 0.65rem !important;
+    }
+    .adm-bento-card {
+        padding: 0.95rem 1rem !important;
+        border-radius: 16px !important;
+    }
+    .adm-bento-icon {
+        width: 42px !important;
+        height: 42px !important;
+        font-size: 1.25rem !important;
+        border-radius: 12px !important;
+    }
+    .adm-bento-title {
+        font-size: 0.92rem !important;
+    }
+    .adm-bento-desc {
+        font-size: 0.76rem !important;
+    }
 }
 </style>
 
@@ -122,25 +177,25 @@ window.filtrarAdminCards = function() {
 <div id="moduloAdmin" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
 
     <!-- ── 1. ENCABEZADO OFICIAL ERP ───────────────────────────────── -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <div class="d-flex align-items-center gap-3">
-            <div style="width: 44px; height: 44px; background: #eef2ff; color: #4f46e5; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+            <div style="width: 44px; height: 44px; background: #eef2ff; color: #4f46e5; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; flex-shrink:0;">
                 <i class="bi bi-gear-wide-connected"></i>
             </div>
             <div>
-                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Administración &amp; Maestros</h4>
-                <span class="text-secondary small">Configuración de catálogos, frecuencias, kits y parámetros del ERP</span>
+                <h4 class="fw-bold m-0" style="color: #0f172a; letter-spacing: -0.02em;">Administración &amp; Maestros</h4>
+                <span class="small fw-semibold" style="color: #0f172a;">Configuración de catálogos, frecuencias, kits y parámetros del ERP</span>
             </div>
         </div>
-        <div class="position-relative flex-grow-1" style="max-width: 320px;">
-            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+        <div class="position-relative flex-grow-1 w-100 w-md-auto" style="max-width: 320px;">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3" style="font-size:0.85rem; color: #0f172a;"></i>
             <input type="text" id="admBuscador" class="ck-apple-search" placeholder="Filtrar catálogos..." oninput="window.filtrarAdminCards()">
         </div>
     </div>
 
     <!-- ── 2. SECCIÓN: MAESTROS DE ALMACÉN ─────────────────────────── -->
     <div class="mb-4">
-        <div class="text-uppercase fw-extrabold text-secondary small mb-3 d-flex align-items-center gap-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+        <div class="adm-section-header">
             <i class="bi bi-box-seam text-success"></i> Catálogos de Almacén
         </div>
 
@@ -189,7 +244,7 @@ window.filtrarAdminCards = function() {
 
     <!-- ── 3. SECCIÓN: MAESTROS DE MANTENIMIENTO ───────────────────── -->
     <div class="mb-4">
-        <div class="text-uppercase fw-extrabold text-secondary small mb-3 d-flex align-items-center gap-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+        <div class="adm-section-header">
             <i class="bi bi-tools text-warning"></i> Parámetros de Mantenimiento
         </div>
 
@@ -268,7 +323,7 @@ window.filtrarAdminCards = function() {
 
     <!-- ── 4. SECCIÓN: SISTEMA E INTEGRACIONES ─────────────────────── -->
     <div class="mb-4">
-        <div class="text-uppercase fw-extrabold text-secondary small mb-3 d-flex align-items-center gap-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+        <div class="adm-section-header">
             <i class="bi bi-plug-fill text-primary"></i> Sistema
         </div>
 

@@ -3539,7 +3539,7 @@ window.cargarModuloAislado = async function(rutaModulo) {
             'almacen/sistemas','almacen/marcas',
             'mantenimiento/configuracion-mp','mantenimiento/kits-mp',
             'mantenimiento/tipos-mp','mantenimiento/config-metrica',
-            'preferencias/situaciones','sistema/integraciones'
+            'mantenimiento/personal','preferencias/situaciones','sistema/integraciones'
         ];
         if (ADMIN_SUBRUTAS.includes(rutaModulo)) {
             var backBtn = document.createElement('div');

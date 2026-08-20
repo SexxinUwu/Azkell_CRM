@@ -1,10 +1,16 @@
 <!-- Módulo Otros — Hub de herramientas de Mantenimiento (Apple & Bento ERP) -->
 <style>
+/* ── Reset root-dinamico padding for full-bleed ─────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
 #moduloOtrosMant {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    padding: 1rem 1.25rem 3rem 1.25rem !important;
     width: 100% !important;
-    box-sizing: border-box;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
     display: flex;
     flex-direction: column;
     flex: 1 1 0;
@@ -17,6 +23,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1rem;
+    width: 100%;
 }
 
 .otro-bento-card {
@@ -32,6 +39,8 @@
     position: relative;
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    box-sizing: border-box;
+    width: 100%;
 }
 .otro-bento-card:hover {
     transform: translateY(-3px);
@@ -64,28 +73,69 @@
     min-width: 0;
 }
 .otro-bento-title {
-    font-size: 0.95rem;
+    font-size: 0.96rem;
     font-weight: 800;
-    color: #0f172a;
+    color: #0f172a !important;
     line-height: 1.2;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.35rem;
 }
 .otro-bento-desc {
-    font-size: 0.76rem;
-    color: #64748b;
+    font-size: 0.78rem;
+    color: #0f172a !important;
+    font-weight: 500;
     line-height: 1.35;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.55rem;
 }
 .otro-bento-badge {
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 6px;
+    padding: 3px 9px;
+    border-radius: 8px;
     background: #f1f5f9;
-    color: #475569;
+    color: #0f172a !important;
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.otro-section-header {
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #0f172a !important;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+/* ── Mobile Full-bleed Optimization ──────────────── */
+@media (max-width: 768px) {
+    #moduloOtrosMant {
+        padding: 0.75rem 0.5rem 6rem 0.5rem !important;
+    }
+    .otro-grid-bento {
+        grid-template-columns: 1fr !important;
+        gap: 0.65rem !important;
+    }
+    .otro-bento-card {
+        padding: 0.95rem 1rem !important;
+        border-radius: 16px !important;
+    }
+    .otro-bento-icon {
+        width: 42px !important;
+        height: 42px !important;
+        font-size: 1.25rem !important;
+        border-radius: 12px !important;
+    }
+    .otro-bento-title {
+        font-size: 0.92rem !important;
+    }
+    .otro-bento-desc {
+        font-size: 0.76rem !important;
+    }
 }
 </style>
 
@@ -94,19 +144,19 @@
     <!-- ── 1. ENCABEZADO OFICIAL ERP ───────────────────────────────── -->
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <div class="d-flex align-items-center gap-3">
-            <div style="width: 44px; height: 44px; background: #fef3c7; color: #d97706; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+            <div style="width: 44px; height: 44px; background: #fef3c7; color: #d97706; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; flex-shrink:0;">
                 <i class="bi bi-tools"></i>
             </div>
             <div>
-                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Otros — Herramientas de Mantenimiento</h4>
-                <span class="text-secondary small">Gestión, planificación, análisis y reportes avanzados del taller</span>
+                <h4 class="fw-bold m-0" style="color: #0f172a; letter-spacing: -0.02em;">Otros — Herramientas de Mantenimiento</h4>
+                <span class="small fw-semibold" style="color: #0f172a;">Gestión, planificación, análisis y reportes avanzados del taller</span>
             </div>
         </div>
     </div>
 
     <!-- ── 2. SECCIÓN: PLANIFICACIÓN Y BACKLOG ─────────────────────── -->
     <div class="mb-4">
-        <div class="text-uppercase fw-extrabold text-secondary small mb-3 d-flex align-items-center gap-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+        <div class="otro-section-header">
             <i class="bi bi-calendar2-week text-primary"></i> Programación Operativa
         </div>
 
@@ -139,7 +189,7 @@
 
     <!-- ── 3. SECCIÓN: REPORTES Y MÉTRICAS ─────────────────────────── -->
     <div class="mb-4">
-        <div class="text-uppercase fw-extrabold text-secondary small mb-3 d-flex align-items-center gap-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+        <div class="otro-section-header">
             <i class="bi bi-graph-up text-info"></i> Rendimiento e Indicadores
         </div>
 
