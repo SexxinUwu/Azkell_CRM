@@ -512,10 +512,41 @@ window._invSwitchTab = function(tab) {
     window.filtrarInventario();
 };
 
+window._invKpiFiltro = window._invKpiFiltro || 'total';
+
+window.filtrarInventarioPorKPI = function(tipo, btn) {
+    window._invKpiFiltro = tipo || 'total';
+    document.querySelectorAll('#mod-inventario .ck-kpi-card').forEach(function(el) {
+        var cardId = 'inv-kpi-' + (tipo || 'total');
+        el.classList.toggle('active', el.id === cardId);
+    });
+    window.filtrarInventario();
+};
+
 window.filtrarInventario = function() {
     var buscar  = ((document.getElementById('inv-buscar')       || {}).value || '').toLowerCase().trim();
+    var fKpi = window._invKpiFiltro || 'total';
+
+    var kpiTot = 0, kpiOpt = 0, kpiAle = 0, kpiQui = 0;
     
     window._invFiltrados = (window._invData || []).filter(function(d) {
+        var matchC = (window._invActiveTab === 'servicios') ? (d.tipo === 'Servicio') : (d.tipo !== 'Servicio');
+        if (!matchC) return false;
+
+        var sa = parseFloat(d.stock_actual || 0);
+        var sm = parseFloat(d.stock_min || 0);
+
+        kpiTot++;
+        if (d.tipo === 'Servicio') {
+            kpiOpt++;
+        } else if (sa <= 0) {
+            kpiQui++;
+        } else if (sa <= sm) {
+            kpiAle++;
+        } else {
+            kpiOpt++;
+        }
+
         var matchB = !buscar ||
             (d.id           || '').toLowerCase().includes(buscar) ||
             (d.descripcion  || '').toLowerCase().includes(buscar) ||
@@ -523,8 +554,6 @@ window.filtrarInventario = function() {
             (d.familia      || '').toLowerCase().includes(buscar) ||
             (d.codigo_item  || '').toLowerCase().includes(buscar) ||
             (d.codigo_barras|| '').toLowerCase().includes(buscar);
-        
-        var matchC = (window._invActiveTab === 'servicios') ? (d.tipo === 'Servicio') : (d.tipo !== 'Servicio');
         
         var matchAdv = true;
         if (window.inventarioFiltros && typeof INVENTARIO_COLUMNAS !== 'undefined') {
@@ -542,20 +571,23 @@ window.filtrarInventario = function() {
             }
         }
         
-        var f = window._invKpiFiltro || 'todos';
-        if (f === 'bajo') {
-            var sa = parseFloat(d.stock_actual || 0);
-            var sm = parseFloat(d.stock_min || 0);
-            var sx = parseFloat(d.stock_max || 0);
-            if (!(sm > 0 && sx > 0 && sa >= sm && sa < sx)) return false;
-        } else if (f === 'critico') {
-            var sa = parseFloat(d.stock_actual || 0);
-            var sm = parseFloat(d.stock_min || 0);
-            if (!(sm > 0 && sa < sm)) return false;
+        var matchKpi = true;
+        if (fKpi === 'optimo') {
+            matchKpi = d.tipo === 'Servicio' || (sa > sm && sa > 0);
+        } else if (fKpi === 'alerta') {
+            matchKpi = d.tipo !== 'Servicio' && sa <= sm && sa > 0;
+        } else if (fKpi === 'quiebre') {
+            matchKpi = d.tipo !== 'Servicio' && sa <= 0;
         }
 
-        return matchB && matchC && matchAdv;
+        return matchB && matchAdv && matchKpi;
     });
+
+    var setKpi = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    setKpi('kpi-inv-total', kpiTot);
+    setKpi('kpi-inv-optimo', kpiOpt);
+    setKpi('kpi-inv-alerta', kpiAle);
+    setKpi('kpi-inv-quiebre', kpiQui);
 
     window._invRenderStockBadge = function(actual, min, tipo) {
         if (tipo === 'Servicio') return '-';

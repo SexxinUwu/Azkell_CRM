@@ -23,19 +23,7 @@ window.init_proveedores = function() {
         lnk.href = '/modulos/almacen/almacen-bento.css';
         document.head.appendChild(lnk);
     }
-    if (!window.checkPerm('prov_inv', 'l')) {
-        var wrap = document.getElementById('mod-proveedores') || document.querySelector('.container-fluid');
-        if (wrap) window.showNoPermMsg(wrap);
-        return;
-    }
     window.cargarProveedores();
-    // Ocultar botones sin permiso
-    var btnNuevo = document.querySelector('#mod-proveedores .btn-primary[onclick*="abrirModalProveedor"]');
-    if (btnNuevo) btnNuevo.style.display = window.checkPerm('prov_inv','c') ? '' : 'none';
-    var btnImportar = document.querySelector('#mod-proveedores .btn-outline-info');
-    if (btnImportar) btnImportar.style.display = window.checkPerm('prov_inv','c') ? '' : 'none';
-    var btnExportar = document.querySelector('#mod-proveedores .btn-outline-success');
-    if (btnExportar) btnExportar.style.display = window.checkPerm('prov_inv','l') ? '' : 'none';
 };
 
 window.cargarProveedores = function() {
@@ -44,19 +32,22 @@ window.cargarProveedores = function() {
     window._provFiltroB = '';
     window._provSeleccionados = [];
     window._provActualizarBtnMasivo();
-    var grid = document.getElementById('prov-grid');
-    if (grid) grid.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</div>';
+    var grid = document.getElementById('prov-tbody');
+    if (grid) grid.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:3rem;color:#94a3b8;"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
+    var gridMobile = document.getElementById('prov-grid-mobile');
+    if (gridMobile) gridMobile.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</div>';
+
     fetch('/api/almacen/proveedores')
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(function(data) {
-            window._provData = data;
-            window._provFiltrados = data;
-            window._provRenderKPIs(data);
+            window._provData = data || [];
+            window._provFiltrados = window._provData;
+            window._provRenderKPIs(window._provData);
             window.filtrarProveedores();
         })
         .catch(function(err) {
-            var g = document.getElementById('prov-grid');
-            if (g) g.innerHTML = '<div style="padding:2rem;color:#ef4444">Error: '+err.message+'</div>';
+            var g = document.getElementById('prov-tbody');
+            if (g) g.innerHTML = '<tr><td colspan="8" style="padding:2rem;color:#ef4444;text-align:center;">Error: '+err.message+'</td></tr>';
         });
 };
 
@@ -80,14 +71,29 @@ window.filtrarProveedores = function() {
 
 // ── KPI Row Bento ─────────────────────────────────────────────────
 window._provRenderKPIs = function(data) {
-    var total   = data.length;
-    var el = document.getElementById('prov-kpi-row');
-    if (!el) return;
-    el.innerHTML =
-        '<div class="bento-kpi">' +
-          '<div><div class="bento-kpi-label">Total Proveedores</div><div class="bento-kpi-num">' + total + '</div></div>' +
-          '<div class="bento-kpi-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-truck fs-4"></i></div>' +
-        '</div>';
+    var list = data || window._provData || [];
+    var total = list.length;
+    var activos = 0;
+    var inactivos = 0;
+    var marcasSet = {};
+
+    list.forEach(function(d) {
+        if (d.estado === 'Activo') activos++;
+        else inactivos++;
+
+        if (d.marcas) {
+            d.marcas.split(',').forEach(function(m) {
+                var mTrim = m.trim();
+                if (mTrim) marcasSet[mTrim.toLowerCase()] = true;
+            });
+        }
+    });
+
+    var setKpi = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    setKpi('kpi-prov-total', total);
+    setKpi('kpi-prov-activos', activos);
+    setKpi('kpi-prov-inactivos', inactivos);
+    setKpi('kpi-prov-marcas', Object.keys(marcasSet).length);
 };
 
 window._provRender = function() {
@@ -107,7 +113,7 @@ window._provRender = function() {
     if (!grid) return;
 
     if (!datos.length) {
-        grid.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:3rem;color:#94a3b8;"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin proveedores encontrados</td></tr>';
+        grid.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:3rem;color:#94a3b8;"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin proveedores encontrados</td></tr>';
         if (gridMobile) gridMobile.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin proveedores encontrados</div>';
         window._provRenderPaginador(0, 1, 0);
         return;
@@ -117,9 +123,6 @@ window._provRender = function() {
     var canDel  = window.checkPerm('prov_inv', 'd');
 
     grid.innerHTML = datos.map(function(d) {
-        // Initials (no longer used in table, but keeping logic just in case)
-        var initials = (d.nombre || '?').split(' ').slice(0, 2).map(function(w) { return (w[0] || ''); }).join('').toUpperCase();
-
         // Marcas
         var marcasHtml = '';
         if (d.marcas) {
@@ -153,13 +156,21 @@ window._provRender = function() {
         var wspTel = cleanTel.replace('+', '');
         if (wspTel.length === 9 && wspTel.startsWith('9')) wspTel = '51' + wspTel;
 
-        var btnLlamar = cleanTel ? '<a href="tel:' + cleanTel + '" class="btn btn-sm btn-light" title="Llamar" style="color:#0ea5e9; border:1px solid #e0f2fe; background:#f0f9ff;"><i class="bi bi-telephone-fill"></i></a>' 
-                                 : '<button class="btn btn-sm btn-light" disabled style="opacity:0.5;"><i class="bi bi-telephone-fill"></i></button>';
-        var btnWsp = wspTel ? '<a href="https://api.whatsapp.com/send?phone=' + wspTel + '" target="_blank" class="btn btn-sm btn-light" title="WhatsApp" style="color:#16a34a; border:1px solid #dcfce7; background:#f0fdf4;"><i class="bi bi-whatsapp"></i></a>' 
-                              : '<button class="btn btn-sm btn-light" disabled style="opacity:0.5;"><i class="bi bi-whatsapp"></i></button>';
-                              
-        var btnEdit = canEdit ? '<button class="btn btn-sm btn-light" onclick="window.abrirModalProveedor(\'' + _provEsc(d.id) + '\')" title="Editar" style="color:#64748b; border:1px solid #e2e8f0;"><i class="bi bi-pencil-fill"></i></button>' : '';
-        var btnDel  = canDel  ? '<button class="btn btn-sm btn-light" onclick="window.eliminarProveedor(\'' + _provEsc(d.id) + '\')" title="Eliminar" style="color:#ef4444; border:1px solid #fee2e2; background:#fef2f2;"><i class="bi bi-trash-fill"></i></button>' : '';
+        var menuItems = '';
+        if (cleanTel) menuItems += '<li><a class="dropdown-item py-2 fw-semibold" href="tel:' + cleanTel + '"><i class="bi bi-telephone-fill me-2 text-info"></i>Llamar</a></li>';
+        if (wspTel) menuItems += '<li><a class="dropdown-item py-2 fw-semibold" href="https://api.whatsapp.com/send?phone=' + wspTel + '" target="_blank"><i class="bi bi-whatsapp me-2 text-success"></i>WhatsApp</a></li>';
+        if (menuItems && (canEdit || canDel)) menuItems += '<li><hr class="dropdown-divider my-1"></li>';
+        if (canEdit) menuItems += '<li><a class="dropdown-item py-2 fw-semibold" href="#" onclick="window.abrirModalProveedor(\'' + _provEsc(d.id) + '\'); return false;"><i class="bi bi-pencil-fill me-2 text-primary"></i>Editar</a></li>';
+        if (canDel) menuItems += '<li><a class="dropdown-item py-2 fw-semibold text-danger" href="#" onclick="window.eliminarProveedor(\'' + _provEsc(d.id) + '\'); return false;"><i class="bi bi-trash-fill me-2"></i>Eliminar</a></li>';
+
+        var accionesDropdown = '<div class="dropdown text-end" onclick="event.stopPropagation();">' +
+            '<button class="btn btn-sm btn-light rounded-circle shadow-none p-0 d-inline-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" style="width: 32px; height: 32px; border: 1px solid #e2e8f0; background: #fff;" title="Acciones">' +
+                '<i class="bi bi-three-dots-vertical text-secondary"></i>' +
+            '</button>' +
+            '<ul class="dropdown-menu dropdown-menu-end shadow border" style="border-radius:12px; font-size:0.83rem;">' +
+                menuItems +
+            '</ul>' +
+        '</div>';
 
         return '<tr style="border-bottom: 1px solid var(--border); transition: background 0.2s;" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'transparent\'">' +
             '<td style="text-align:center; padding:0.75rem 0.5rem;">' +
@@ -174,9 +185,7 @@ window._provRender = function() {
             '<td style="padding:0.75rem 0.5rem;">' + marcasHtml + '</td>' +
             '<td style="padding:0.75rem 0.5rem; text-align:center;">' + estadoHtml + '</td>' +
             '<td style="padding:0.75rem 0.5rem; text-align:right;">' +
-                '<div style="display:flex; gap:0.3rem; justify-content:flex-end;">' +
-                    btnLlamar + btnWsp + btnEdit + btnDel +
-                '</div>' +
+                accionesDropdown +
             '</td>' +
         '</tr>';
     }).join('');
@@ -218,15 +227,15 @@ window._provRenderPaginador = function(total, paginas, hasta) {
     if (!cont) return;
     var pag = window._provPagina;
     var btns = '';
-    btns += '<button class="btn btn-xs btn-outline-secondary" onclick="window._provIrPagina('+pag+'- 1)" '+(pag<=1?'disabled':'')+'>‹ Ant</button>';
+    btns += '<button class="btn btn-xs btn-outline-secondary" onclick="window._provIrPagina('+ (pag - 1) + ')" ' + (pag <= 1 ? 'disabled' : '') + '>‹ Ant</button>';
     // Números de página (máx 5 visibles)
     var start = Math.max(1, pag - 2), end = Math.min(paginas, start + 4);
     if (end - start < 4) start = Math.max(1, end - 4);
     for (var i = start; i <= end; i++) {
-        btns += '<button class="btn btn-xs '+(i===pag?'btn-primary':'btn-outline-secondary')+'" onclick="window._provIrPagina('+i+')">'+i+'</button>';
+        btns += '<button class="btn btn-xs ' + (i === pag ? 'btn-primary' : 'btn-outline-secondary') + '" onclick="window._provIrPagina(' + i + ')">' + i + '</button>';
     }
-    btns += '<button class="btn btn-xs btn-outline-secondary" onclick="window._provIrPagina('+pag+'+ 1)" '+(pag>=paginas?'disabled':'')+'>Sig ›</button>';
-    btns += '<span class="text-muted small ms-2">Pág '+pag+' de '+paginas+' ('+total+' total)</span>';
+    btns += '<button class="btn btn-xs btn-outline-secondary" onclick="window._provIrPagina(' + (pag + 1) + ')" ' + (pag >= paginas ? 'disabled' : '') + '>Sig ›</button>';
+    btns += '<span class="text-muted small ms-2">Pág ' + pag + ' de ' + paginas + ' (' + total + ' total)</span>';
     cont.innerHTML = btns;
 };
 
@@ -245,6 +254,7 @@ window._provRenderTags = function() {
                '<i class="bi bi-x-circle" style="cursor:pointer;" onclick="window._provQuitarMarca(\''+m.replace(/'/g,"\\'")+'\')"></i></span>';
     }).join('');
 };
+
 window._provAgregarMarca = function() {
     var input = document.getElementById('prov-f-marca-input');
     if (!input) return;
@@ -553,4 +563,3 @@ window.consultarDocProveedor = async function() {
         if(btnIcon) btnIcon.className = "bi bi-search";
     }
 };
-

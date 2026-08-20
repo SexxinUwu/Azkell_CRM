@@ -166,6 +166,30 @@ window.totRenderTabla = function() {
     window.totDatosFil = datos;
     window.totPaginaActual = 1;
 
+    // Calcular Bento KPIs
+    var totalTrabajos = datos.length;
+    var totalHoras = 0;
+    var setTecnicos = {};
+    var setOTs = {};
+
+    datos.forEach(function(t) {
+        var det = totParseDetalles(t);
+        var hrs = parseFloat(t.total_horas || (det && det.horas) || 0) || 0;
+        totalHoras += hrs;
+
+        var tec = (det && det.personal) || t.tecnico;
+        if (tec) setTecnicos[String(tec).trim()] = true;
+
+        var ot = t.ot_id || t.id_ot || t.ticket_visita;
+        if (ot) setOTs[String(ot).trim()] = true;
+    });
+
+    var setKpi = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    setKpi('kpi-tot-total', totalTrabajos);
+    setKpi('kpi-tot-horas', totalHoras.toFixed(1) + 'h');
+    setKpi('kpi-tot-tecnicos', Object.keys(setTecnicos).length);
+    setKpi('kpi-tot-ots', Object.keys(setOTs).length);
+
     totRenderTablaRows();
 };
 

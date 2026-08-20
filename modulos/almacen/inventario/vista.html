@@ -227,230 +227,232 @@
 }
 .ent-input-sm:focus { border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
 
+/* ── Reglas Generales de Inventario ──────────────────────────────── */
+#mod-inventario {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    background: transparent !important;
+}
+#root-dinamico, .main-area {
+    padding: 0 !important;
+    background-color: #F2F2F7 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* ── KPIs Apple Compact Bento Cards ─────────────── */
+#mod-inventario .ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    min-height: 56px !important;
+}
+#mod-inventario .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
+}
+#mod-inventario .ck-kpi-card.active {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
+    background: #f8fafc !important;
+}
+#mod-inventario .ck-kpi-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* ── Control Bar & Apple Search ──────────────────── */
+#mod-inventario .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 9px 14px 9px 38px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+#mod-inventario .ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+#mod-inventario .ck-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+#mod-inventario .ck-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+#mod-inventario .ck-segment-item:hover { color: #0f172a; }
+#mod-inventario .ck-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
 </style>
+
 <div id="mod-inventario" class="modulo-wrapper d-flex flex-column h-100">
 
-  <!-- ═══ HEADER MOBILE (iOS Style) ══════════════════════════════ -->
-  <style>
-    /* Forzar que el contenedor principal ocupe todo el espacio sin "cajas" */
-    #root-dinamico, .main-area {
-        padding: 0 !important;
-        background-color: #F2F2F7 !important;
-        display: flex !important;
-        flex-direction: column !important;
-    }
-    #mod-inventario { background-color: #F2F2F7; flex: 1 1 0; }
-    
-    @media (max-width: 767.98px) {
-        #inv-ios-header { display: block !important; }
-        #inv-desktop-controls, #inv-filter-row, #inv-kpi-row-desktop { display: none !important; }
-        #inv-paginacion { padding-bottom: 90px !important; }
-    }
-    @media (min-width: 768px) {
-        #inv-ios-header { display: none !important; }
-        #inv-desktop-controls, #inv-filter-row, #inv-kpi-row-desktop { display: flex !important; }
-        /* Padding interno para compensar la remoción de padding en main-area */
-        #inv-desktop-controls, #inv-kpi-row-desktop, #inv-filter-row { padding: 0 1rem; }
-        #inv-grid-container { padding: 0 1rem 6rem 1rem !important; }
-    }
-  </style>
-
-  <header id="inv-ios-header" style="display:none;" class="pt-3 pb-3 px-3 bg-[#F2F2F7] sticky-top z-30">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <div class="d-flex align-items-center gap-2">
-        <div style="background-color: #facc15; padding: 6px; border-radius: 8px; display:flex; align-items:center; justify-content:center;">
-          <i class="bi bi-box text-white" style="font-size: 1.25rem; line-height: 1;"></i>
+    <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-box-seam-fill"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Inventario de Almacén</h4>
+                <span class="text-secondary small">Catálogo de repuestos, insumos y control de existencias en tiempo real</span>
+            </div>
         </div>
-        <h1 style="font-size: 1.5rem; font-weight: 700; margin: 0; color: #111827; letter-spacing: -0.025em;">Inventario</h1>
-      </div>
-      <div class="d-flex align-items-center gap-3">
-        <button onclick="document.getElementById('inv-search-input-ios').focus()" style="background:transparent; border:none; color: #4b5563; padding: 0;">
-          <i class="bi bi-search" style="font-size: 1.25rem;"></i>
-        </button>
-        <div id="inv-m-avatar-ios" onclick="window._invAvatarPopup()"
-             style="width: 40px; height: 40px; background-color: #2563eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.9rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); cursor: pointer;">
-          SA
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.cargarInventario()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
+            </button>
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-file-earmark-excel text-success"></i> Excel
+                </button>
+                <ul class="dropdown-menu shadow border" style="border-radius:10px;">
+                    <li><a class="dropdown-item py-2 fw-semibold" onclick="window.exportarInventarioExcel()"><i class="bi bi-download me-2 text-success"></i>Exportar todo</a></li>
+                    <li><a class="dropdown-item py-2 fw-semibold" onclick="window.descargarPlantillaInventario()"><i class="bi bi-file-earmark-arrow-down me-2 text-primary"></i>Descargar plantilla</a></li>
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li>
+                        <label class="dropdown-item py-2 fw-semibold" style="cursor:pointer;">
+                            <i class="bi bi-upload me-2 text-warning"></i>Importar Excel
+                            <input type="file" id="inputFileInventario" accept=".xlsx,.xls" style="display:none" onchange="window.importarExcelInventario(event)">
+                        </label>
+                    </li>
+                </ul>
+            </div>
+            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalInventario()" style="background: #0284c7; border-color: #0284c7;">
+                <i class="bi bi-plus-lg fs-6"></i> <span>Nuevo Artículo</span>
+            </button>
         </div>
-      </div>
     </div>
 
-    <!-- METRICS WIDGETS -->
-    <div id="inv-kpi-row" class="mb-3" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem;">
-      <!-- Se llenará dinámicamente con JS (window._invRenderKPIs) -->
+    <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO) ─────────────── -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card active" id="inv-kpi-total" onclick="window.filtrarInventarioPorKPI && window.filtrarInventarioPorKPI('total', this)">
+                <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                    <i class="bi bi-boxes"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Total Artículos</span>
+                    <h2 id="kpi-inv-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="inv-kpi-optimo" onclick="window.filtrarInventarioPorKPI && window.filtrarInventarioPorKPI('optimo', this)">
+                <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Stock Óptimo</span>
+                    <h2 id="kpi-inv-optimo" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="inv-kpi-alerta" onclick="window.filtrarInventarioPorKPI && window.filtrarInventarioPorKPI('alerta', this)">
+                <div class="ck-kpi-icon" style="background:#fefce8; color:#ca8a04;">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Stock Bajo / Alerta</span>
+                    <h2 id="kpi-inv-alerta" class="fw-bolder m-0 text-warning lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="inv-kpi-quiebre" onclick="window.filtrarInventarioPorKPI && window.filtrarInventarioPorKPI('quiebre', this)">
+                <div class="ck-kpi-icon" style="background:#fef2f2; color:#ef4444;">
+                    <i class="bi bi-x-circle-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Sin Stock / Quiebre</span>
+                    <h2 id="kpi-inv-quiebre" class="fw-bolder m-0 text-danger lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- SEARCH BAR -->
-    <div class="d-flex align-items-center gap-2">
-      <div style="flex: 1; background-color: white; height: 48px; border-radius: 12px; display: flex; align-items: center; padding: 0 16px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); border: 1px solid #f3f4f6;">
-        <i class="bi bi-search me-2" style="color: #9ca3af;"></i>
-        <input 
-          type="text" 
-          id="inv-search-input-ios"
-          placeholder="¿Qué repuesto buscas?" 
-          style="width: 100%; background: transparent; border: none; outline: none; font-size: 0.875rem; font-weight: 500; color: #111827;"
-          oninput="(function(v){
-               var d=document.getElementById('inv-buscar');if(d)d.value=v;
-               window.filtrarInventario();
-             })(this.value);"
-        />
-      </div>
-      <button onclick="window._invAbrirScanner('search')"
-              style="height: 48px; width: 48px; background-color: #2563eb; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; border: none; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2), 0 2px 4px -1px rgba(37, 99, 235, 0.1); cursor: pointer; transition: transform 0.1s;">
-        <i class="bi bi-qr-code-scan" style="font-size: 1.2rem;"></i>
-      </button>
-    </div>
-  </header>
-  <!-- Popup usuario mobile -->
-  <div id="inv-avatar-popup"
-       style="display:none;position:fixed;top:58px;right:.75rem;width:230px;
-              background:var(--surface);border-radius:18px;
-              box-shadow:0 8px 32px rgba(0,0,0,.22);z-index:1060;padding:1.1rem;text-align:center;
-              border:1px solid var(--border);">
-    <div id="iap-avatar"
-         style="width:52px;height:52px;border-radius:50%;background:#2563eb;margin:0 auto .55rem;
-                display:flex;align-items:center;justify-content:center;
-                font-weight:900;font-size:1.1rem;color:#fff;"></div>
-    <div id="iap-nombre" style="font-weight:800;font-size:.92rem;color:var(--text);"></div>
-    <span id="iap-rol"
-          style="display:inline-block;background:#eff6ff;color:#2563eb;font-size:.62rem;
-                 font-weight:700;padding:.2rem .65rem;border-radius:99px;margin:.3rem 0 .4rem;"></span>
-    <div id="iap-email" style="font-size:.7rem;color:var(--subtext);margin-bottom:.8rem;word-break:break-all;"></div>
-    <button onclick="window.cerrarSesion()"
-            style="width:100%;background:#ef4444;color:#fff;border:none;border-radius:10px;
-                   padding:.6rem;font-weight:700;font-size:.82rem;">
-      <i class="bi bi-box-arrow-right me-1"></i>Cerrar Sesión
-    </button>
-  </div>
-  <div id="inv-avatar-popup-bd" onclick="window._invAvatarPopupClose()"
-       style="display:none;position:fixed;inset:0;z-index:1059;"></div>
-  <!-- Search bar mobile — obsoleta, reemplazada por inv-search-compact -->
+    <!-- ── 3. BARRA DE BÚSQUEDA Y TABS SEGMENTADOS ───────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 380px;">
+            <div class="position-relative flex-grow-1">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+                <input type="text" id="inv-buscar" class="ck-apple-search" placeholder="Código, descripción, marca..." oninput="window.filtrarInventario()">
+            </div>
+            <button onclick="window.abrirFiltrosInventario()" class="btn bg-white border rounded-3 px-3 py-2 text-secondary d-flex align-items-center gap-2 fw-semibold" title="Filtros avanzados">
+                <i class="bi bi-funnel"></i>
+                <span class="d-none d-md-inline">Filtros</span>
+                <span id="badge-filtros-inventario" class="badge bg-primary rounded-pill d-none" style="font-size:.65rem;">0</span>
+            </button>
+        </div>
 
-  <!-- Cabecera + controles (escritorio) -->
-  <div id="inv-desktop-controls"
-       style="display:flex;align-items:center;justify-content:space-between;
-              padding:.9rem 1.5rem;border-bottom:1px solid var(--border);
-              background:var(--surface);flex-shrink:0;flex-wrap:wrap;gap:.75rem;">
-    <div>
-      <h2 style="font-size:1.05rem;font-weight:900;color:var(--text);margin:0;line-height:1.2;">
-        <i class="bi bi-box-seam text-warning me-2"></i>Inventario
-      </h2>
-      <p style="font-size:.71rem;color:var(--subtext);margin:0;font-weight:600;">Catálogo de artículos — stock calculado automáticamente</p>
-    </div>
-    <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
-      <!-- Refrescar -->
-      <button onclick="window.cargarInventario()" title="Actualizar"
-              style="width:36px;height:36px;border-radius:10px;border:1.5px solid var(--border);
-                     background:transparent;color:var(--subtext);font-size:.95rem;
-                     display:flex;align-items:center;justify-content:center;cursor:pointer;
-                     transition:all .15s;flex-shrink:0;">
-        <i class="bi bi-arrow-clockwise"></i>
-      </button>
-      <!-- Excel -->
-      <div class="dropdown">
-        <button style="height:36px;padding:0 .85rem;border-radius:10px;border:1.5px solid var(--border);
-                       background:transparent;color:var(--text);font-size:.82rem;font-weight:700;
-                       display:flex;align-items:center;gap:.4rem;cursor:pointer;"
-                data-bs-toggle="dropdown">
-          <i class="bi bi-file-earmark-excel" style="color:#16a34a;"></i>Excel
-          <i class="bi bi-chevron-down" style="font-size:.65rem;color:var(--subtext);"></i>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-          <li><a class="dropdown-item" onclick="window.exportarInventarioExcel()"><i class="bi bi-download me-2 text-success"></i>Exportar todo</a></li>
-          <li><a class="dropdown-item" onclick="window.descargarPlantillaInventario()"><i class="bi bi-file-earmark-arrow-down me-2 text-primary"></i>Descargar plantilla</a></li>
-          <li><hr class="dropdown-divider"></li>
-          <li>
-            <label class="dropdown-item" style="cursor:pointer;">
-              <i class="bi bi-upload me-2 text-warning"></i>Importar Excel
-              <input type="file" id="inputFileInventario" accept=".xlsx,.xls" style="display:none" onchange="window.importarExcelInventario(event)">
-            </label>
-          </li>
-        </ul>
-      </div>
-      <!-- Seleccionar -->
-      <button id="inv-btn-sel" onclick="window._invToggleSeleccion()"
-              style="display:none;height:36px;padding:0 .85rem;border-radius:10px;
-                     border:1.5px solid var(--border);background:transparent;
-                     color:var(--text);font-size:.82rem;font-weight:700;
-                     align-items:center;gap:.4rem;cursor:pointer;">
-        <i class="bi bi-ui-checks"></i><span class="d-none d-md-inline">Seleccionar</span>
-      </button>
-      <button class="d-none" id="inv-btn-sel-all" onclick="window._invSeleccionarTodos()"
-              style="height:36px;padding:0 .85rem;border-radius:10px;border:1.5px solid #2563eb;
-                     background:#eff6ff;color:#2563eb;font-size:.82rem;font-weight:700;
-                     align-items:center;gap:.4rem;cursor:pointer;">
-        <i class="bi bi-check-all"></i><span class="d-none d-md-inline">Todos</span>
-      </button>
-      <button class="d-none" id="inv-btn-bulk-del" onclick="window._invEliminarMasivo()"
-              style="height:36px;padding:0 .85rem;border-radius:10px;border:none;
-                     background:#ef4444;color:#fff;font-size:.82rem;font-weight:700;
-                     align-items:center;gap:.4rem;cursor:pointer;">
-        <i class="bi bi-trash"></i>Eliminar (<span id="inv-bulk-cnt">0</span>)
-      </button>
-      <!-- + Nuevo -->
-      <button onclick="window.abrirModalInventario()"
-              style="height:36px;padding:0 1.1rem;border-radius:10px;border:none;
-                     background:#2563eb;color:#fff;font-size:.83rem;font-weight:700;
-                     display:flex;align-items:center;gap:.4rem;cursor:pointer;
-                     box-shadow:0 2px 10px rgba(37,99,235,.28);flex-shrink:0;">
-        <i class="bi bi-plus-lg"></i><span class="d-none d-md-inline">Nuevo</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Filtros -->
-    <div id="inv-filter-row"
-       style="display:flex;align-items:center;gap:.6rem;padding:.6rem 1.5rem;
-              border-bottom:1px solid var(--border);background:var(--surface);
-              flex-shrink:0;flex-wrap:wrap;">
-    <!-- Pill search -->
-    <div style="display:flex;align-items:center;gap:.45rem;background:var(--bg);
-                border:1.5px solid var(--border);border-radius:99px;padding:.25rem .85rem;
-                min-width:230px;transition:border-color .2s,box-shadow .2s;"
-         onfocusin="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,.08)'"
-         onfocusout="this.style.borderColor='var(--border)';this.style.boxShadow=''">
-      <i class="bi bi-search" style="color:#94a3b8;font-size:.82rem;flex-shrink:0;"></i>
-      <input type="text" id="inv-buscar"
-             style="border:none;background:transparent;outline:none;
-                    font-size:.83rem;color:var(--text);flex:1;min-width:0;padding:.28rem 0;"
-             placeholder="Código, descripción, marca…" oninput="window.filtrarInventario()">
-    </div>
-    
-    <!-- Pestañas de Aislamiento -->
-    <div style="display:flex; background:rgba(14,165,233,0.1); border-radius:12px; padding:4px; margin-left:12px;">
-      <button id="inv-tab-fisicos" onclick="window._invSwitchTab('fisicos')" class="inv-tab-btn active" style="border:none; border-radius:8px; padding:4px 12px; font-size:.8rem; font-weight:700; background:#0ea5e9; color:#fff; cursor:pointer;">📦 Inventario Físico</button>
-      <button id="inv-tab-servicios" onclick="window._invSwitchTab('servicios')" class="inv-tab-btn" style="border:none; border-radius:8px; padding:4px 12px; font-size:.8rem; font-weight:700; background:transparent; color:#0ea5e9; cursor:pointer; margin-left:4px;">🛠️ Catálogo de Servicios</button>
+        <div class="d-flex align-items-center gap-2">
+            <div class="ck-apple-segmented" id="btn-group-inv-tabs">
+                <button type="button" class="ck-segment-item active" id="inv-tab-fisicos" onclick="window._invSwitchTab('fisicos')">
+                    📦 Inventario Físico
+                </button>
+                <button type="button" class="ck-segment-item" id="inv-tab-servicios" onclick="window._invSwitchTab('servicios')">
+                    🛠️ Catálogo de Servicios
+                </button>
+            </div>
+            <span id="inv-contador" class="text-secondary small fw-bold ms-2"></span>
+        </div>
     </div>
 
-    <!-- Botón Filtros Avanzados -->
-    <button onclick="window.abrirFiltrosInventario()"
-            style="height:36px;padding:0 .85rem;border-radius:99px;border:1.5px solid var(--border);
-                   background:var(--surface);color:var(--text);font-size:.82rem;font-weight:700;
-                   display:flex;align-items:center;gap:.4rem;cursor:pointer;transition:all .2s;">
-      <i class="bi bi-funnel"></i>Filtros
-      <span id="badge-filtros-inventario" class="badge bg-primary rounded-pill d-none" style="font-size:.65rem;padding:.2em .5em;">0</span>
-    </button>
-    <span id="inv-contador"
-          style="font-size:.78rem;font-weight:700;color:var(--subtext);margin-left:auto;"></span>
-  </div>
-
-  <!-- KPI Row Bento Desktop -->
-  <div id="inv-kpi-row-desktop" class="bento-kpi-row" style="display:flex;"></div>
-
-  <!-- Grid de Cards (scrollable) -->
-  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0; padding: 0 .25rem 120px .25rem; background:transparent; scrollbar-width:thin; scrollbar-color:rgba(0,0,0,.18) transparent; -webkit-overflow-scrolling:touch;">
-    <div id="inv-grid" class="pb-3">
-      <div class="col-12 text-center py-5 text-muted">
-        <div class="spinner-border spinner-border-sm me-2"></div>Cargando inventario…
-      </div>
+    <!-- Grid de Cards (scrollable) -->
+    <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0; padding: 0 0 120px 0; background:transparent; scrollbar-width:thin; -webkit-overflow-scrolling:touch;">
+        <div id="inv-grid" class="pb-3">
+            <div class="col-12 text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2"></div>Cargando inventario…
+            </div>
+        </div>
     </div>
-  </div>
 
-  <!-- Paginación -->
-  <div class="d-flex justify-content-between align-items-center mt-auto mb-2 px-1" id="inv-paginacion"></div>
+    <!-- Paginación -->
+    <div class="d-flex justify-content-between align-items-center mt-auto mb-2 px-1" id="inv-paginacion"></div>
 </div>
-
-<!-- ═══ MODAL ADD / EDIT ═══════════════════════════════════════════ -->
-<div class="modal fade" id="modal-inv-articulo" tabindex="-1" style="display:none!important;"></div>
 
 <!-- ═══ DRAWER — Nuevo / Editar Artículo ════════════════════════ -->
 <div id="inv-drawer-backdrop" onclick="window._invCerrarDrawer()"

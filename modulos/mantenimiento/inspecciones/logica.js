@@ -682,16 +682,30 @@ window.cambiarInspPorPagina = function (val) {
     mostrarStatusInspecciones(dataGlobalInspecciones);
 };
 
+window._inspFiltroSemaforo = window._inspFiltroSemaforo || 'total';
+
+window.filtrarTablaPorSemaforo = function(tipo, btn) {
+    window._inspFiltroSemaforo = tipo || 'total';
+    document.querySelectorAll('#moduloStatus .ck-kpi-card').forEach(function(el) {
+        var cardId = 'insp-kpi-' + (tipo === 'verde' ? 'conformes' : (tipo === 'amarillo' ? 'alerta' : (tipo === 'rojo' ? 'criticas' : 'total')));
+        el.classList.toggle('active', el.id === cardId);
+    });
+    filtrarStatusAvanzado();
+};
+
 function filtrarStatusAvanzado() {
     const txt = document.getElementById('buscadorStatus')?.value.toLowerCase() || '';
     const chkCli = Array.from(document.querySelectorAll('#filtroStatusCliente input:checked')).map(e => e.value);
     const chkMar = Array.from(document.querySelectorAll('#filtroStatusMarca input:checked')).map(e => e.value);
     const chkEst = Array.from(document.querySelectorAll('#filtroStatusEstado input:checked')).map(e => e.value);
-    let isFiltering = txt !== '' || chkCli.length > 0 || chkMar.length > 0 || chkEst.length > 0;
+    const filtroSem = window._inspFiltroSemaforo || 'total';
+    let isFiltering = txt !== '' || chkCli.length > 0 || chkMar.length > 0 || chkEst.length > 0 || filtroSem !== 'total';
 
     let cntTotalVig = 0, cntTotalNoVig = 0;
     let cntMotVig = 0, cntMotNoVig = 0;
     let cntNoMotVig = 0, cntNoMotNoVig = 0;
+
+    let kpiTotal = 0, kpiConformes = 0, kpiAlerta = 0, kpiCriticas = 0;
 
     const headers = document.querySelectorAll('#cuerpoTablaStatus tr.group-header');
     let totalVisiblesMob = 0;
@@ -705,20 +719,39 @@ function filtrarStatusAvanzado() {
         childRows.forEach(row => {
             let cli = row.getAttribute('data-cliente');
             let mar = row.getAttribute('data-marca');
-            let est = row.getAttribute('data-estado-v2');
+            let est = (row.getAttribute('data-estado-v2') || '').toLowerCase();
             let textoFila = row.textContent.toLowerCase();
+            let dias = parseInt(row.getAttribute('data-dias'));
+
+            // Clasificar estado semafórico para KPI
+            kpiTotal++;
+            if (dias < 0 || est.includes('vencid') || est.includes('crit')) {
+                kpiCriticas++;
+            } else if (dias <= 15 || est.includes('alert') || est.includes('observ')) {
+                kpiAlerta++;
+            } else {
+                kpiConformes++;
+            }
 
             let matchCli = (!chkCli.length || chkCli.includes(cli));
             let matchMar = (!chkMar.length || chkMar.includes(mar));
             let matchEst = (!chkEst.length || chkEst.includes(est));
             let matchTxt = (!txt || textoFila.includes(txt));
 
-            if (matchCli && matchMar && matchEst && matchTxt) {
+            let matchSem = true;
+            if (filtroSem === 'verde') {
+                matchSem = dias > 15 && !est.includes('vencid') && !est.includes('alert');
+            } else if (filtroSem === 'amarillo') {
+                matchSem = (dias >= 0 && dias <= 15) || est.includes('alert') || est.includes('observ');
+            } else if (filtroSem === 'rojo') {
+                matchSem = dias < 0 || est.includes('vencid') || est.includes('crit');
+            }
+
+            if (matchCli && matchMar && matchEst && matchTxt && matchSem) {
                 visibleCount++;
                 row.style.display = (isFiltering || expandStatusMap[classTipo]) ? '' : 'none';
 
                 if (!isHistorialStatus) {
-                    let dias = parseInt(row.getAttribute('data-dias'));
                     let mot = row.getAttribute('data-motor') || '';
                     let esMotora = mot.toUpperCase().trim() === 'MOTORA';
 
@@ -745,6 +778,12 @@ function filtrarStatusAvanzado() {
             header.style.display = 'none';
         }
     });
+
+    const setKpi = (id, v) => { var el = document.getElementById(id); if (el) el.textContent = v; };
+    setKpi('kpi-insp-total', kpiTotal);
+    setKpi('kpi-insp-conformes', kpiConformes);
+    setKpi('kpi-insp-alerta', kpiAlerta);
+    setKpi('kpi-insp-criticas', kpiCriticas);
 
     var mobCnt = document.getElementById('insp-mob-mode-count');
     if (mobCnt) mobCnt.textContent = totalVisiblesMob + (totalVisiblesMob === 1 ? ' registro' : ' registros');
