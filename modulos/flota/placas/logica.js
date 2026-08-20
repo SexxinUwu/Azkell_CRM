@@ -359,6 +359,32 @@ function mostrarPlacas(datos) {
 }
 
 // ── Filtro avanzado ──────────────────────────────────────────────
+// ── Filtrado por Tipo KPI / Segmented Control ─────────────────────
+window.filtrarPorTipoKPI = function(tipo, element) {
+    if (window._kpiFiltroActivo === tipo && tipo !== 'total') {
+        window._kpiFiltroActivo = null;
+        tipo = 'total';
+    } else if (tipo === 'total') {
+        window._kpiFiltroActivo = null;
+    } else {
+        window._kpiFiltroActivo = tipo;
+    }
+
+    // Actualizar clases activas en Tarjetas KPI
+    document.querySelectorAll('.ck-kpi-card').forEach(c => {
+        if (c.getAttribute('data-tipo-kpi') === tipo) c.classList.add('active');
+        else c.classList.remove('active');
+    });
+
+    // Actualizar pills segmentadas
+    document.querySelectorAll('#btn-group-tipos-placas .ck-segment-item').forEach(b => {
+        if (b.getAttribute('data-tipo-kpi') === tipo) b.classList.add('active');
+        else b.classList.remove('active');
+    });
+
+    window.filtrarPlacasAvanzado();
+};
+
 window.filtrarPlacasAvanzado = function() {
     const txt = document.getElementById('buscadorPlacas')?.value.toLowerCase() || '';
     const kpiFiltroActivo = window._kpiFiltroActivo || null;
@@ -401,31 +427,6 @@ window.filtrarPlacasAvanzado = function() {
 
         return true;
     });
-
-    window.filtrarPorTipoKPI = function(tipo, element) {
-        if (window._kpiFiltroActivo === tipo && tipo !== 'total') {
-            window._kpiFiltroActivo = null;
-            tipo = 'total';
-        } else if (tipo === 'total') {
-            window._kpiFiltroActivo = null;
-        } else {
-            window._kpiFiltroActivo = tipo;
-        }
-
-        // Actualizar clases activas en Tarjetas KPI
-        document.querySelectorAll('.ck-kpi-card').forEach(c => {
-            if (c.getAttribute('data-tipo-kpi') === tipo) c.classList.add('active');
-            else c.classList.remove('active');
-        });
-
-        // Actualizar pills segmentadas
-        document.querySelectorAll('#btn-group-tipos-placas .ck-segment-item').forEach(b => {
-            if (b.getAttribute('data-tipo-kpi') === tipo) b.classList.add('active');
-            else b.classList.remove('active');
-        });
-
-        window.filtrarPlacasAvanzado();
-    };
 
     const safe = v => document.getElementById(v);
     if (safe('kpi-total')) safe('kpi-total').innerText = kpiTotal;
