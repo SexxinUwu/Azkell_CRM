@@ -1929,7 +1929,7 @@ window.toggleNavSection = function(sectionId) {
 
 window.restoreNavSections = function() {
     try {
-        const all = ['mantenimiento','almacen','flota','directorio','sistema','configuracion','administracion'];
+        const all = ['mantenimiento','almacen','flota','directorio','seguridad','rrhh','operaciones','tesoreria','sistema','configuracion','administracion'];
         all.forEach(function(id) {
             const items = document.getElementById('section-items-' + id);
             const btn   = document.querySelector('.nav-section-toggle[data-section="' + id + '"]');

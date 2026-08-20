@@ -2202,18 +2202,21 @@ app.delete('/api/documentos-flota/delete', async (req, res) => {
 // ── GET /api/vehiculos-flota — Lista de vehículos con documentos (Sincronizado con Placas) ──────────────
 app.get('/api/vehiculos-flota', (req, res) => {
     const tdb = (req && req.db) ? req.db : db;
+    tdb.query("ALTER TABLE placas CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", () => {});
+    tdb.query("ALTER TABLE vehiculos_flota CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", () => {});
+
     const query = `
         SELECT 
             p.placa,
             COALESCE(vf.tipo, p.tipo, '---') AS tipo,
             COALESCE(vf.propiedad, 'PROPIA') AS propiedad,
-            COALESCE(vf.empresa, p.cliente, 'MARSISA') AS empresa,
+            COALESCE(vf.empresa, p.cliente) AS empresa,
             vf.fecha_entrega,
             COALESCE(vf.anio, p.anio) AS anio,
             COALESCE(vf.marca, p.marca) AS marca,
-            COALESCE(vf.modelo, p.modelo_uts, p.modelo) AS modelo,
+            COALESCE(vf.modelo, p.modelo_uts) AS modelo,
             COALESCE(vf.color, p.color) AS color,
-            COALESCE(vf.chasis, p.chasis) AS chasis,
+            vf.chasis,
             vf.tc_vencimiento, vf.tc_constancia, vf.soat_entidad, vf.soat_pago, vf.soat_vencimiento,
             vf.matpel_constancia, vf.matpel_vencimiento, vf.rt_emision, vf.rt_vencimiento,
             vf.boni_emision, vf.boni_vencimiento, vf.sv_entidad, vf.sv_asesor, vf.sv_vencimiento,
@@ -2221,11 +2224,12 @@ app.get('/api/vehiculos-flota', (req, res) => {
             vf.ext_emision, vf.ext_vencimiento, vf.ext_cantidad,
             vf.tc_url, vf.soat_url, vf.matpel_url, vf.rt_url, vf.boni_url, vf.sv_url, vf.sc_url, vf.fum_url, vf.ext_url, vf.wialon_name
         FROM placas p
-        LEFT JOIN vehiculos_flota vf ON UPPER(TRIM(p.placa)) = UPPER(TRIM(vf.placa))
+        LEFT JOIN vehiculos_flota vf ON CONVERT(p.placa USING utf8mb4) = CONVERT(vf.placa USING utf8mb4)
         ORDER BY p.placa ASC
     `;
     tdb.query(query, (err, rows) => {
         if (err) {
+            console.error("Error en query de vehiculos-flota:", err);
             tdb.query('SELECT * FROM vehiculos_flota ORDER BY placa ASC', (err2, rows2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 res.json(rows2);

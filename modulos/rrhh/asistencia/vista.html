@@ -1,0 +1,127 @@
+<!-- Módulo: Asistencia y Turnos -->
+<style>
+#root-dinamico { padding: 0 !important; }
+.mod-wrap-rrhh-asistencia {
+    padding: 1.25rem;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+@media (max-width: 768px) {
+    .mod-wrap-rrhh-asistencia { padding: 0.75rem 0.75rem 90px 0.75rem; }
+}
+</style>
+
+<div class="mod-wrap-rrhh-asistencia container-fluid">
+    <!-- Header principal -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h4 class="fw-bolder text-dark m-0" style="letter-spacing:-0.02em;">Asistencia y Turnos</h4>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold" style="font-size:0.7rem;">Módulo ERP</span>
+            </div>
+            <p class="text-secondary m-0" style="font-size:0.83rem;">Control de asistencia, marcaciones en ruta, turnos y horas extra</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;" onclick="location.reload()">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            </button>
+            <button class="btn btn-primary rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1" style="font-size:0.82rem; background:var(--primary, #0284c7); border:none;" onclick="alert('Formulario de registro en desarrollo.')">
+                <i class="bi bi-plus-lg"></i> Nuevo Registro
+            </button>
+        </div>
+    </div>
+
+    <!-- Cards KPI Bento -->
+    <div class="row g-3 mb-4">
+        
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-2xs p-3 rounded-4 bg-white d-flex flex-row align-items-center gap-3" style="border:1px solid var(--border)!important;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:44px;height:44px;background:#16a34a;font-size:1.2rem;">
+                    <i class="bi bi-person-check-fill"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.75rem;">Presentes Hoy</div>
+                    <div class="fw-bolder text-dark" style="font-size:1.15rem;line-height:1.2;">42</div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-2xs p-3 rounded-4 bg-white d-flex flex-row align-items-center gap-3" style="border:1px solid var(--border)!important;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:44px;height:44px;background:#dc2626;font-size:1.2rem;">
+                    <i class="bi bi-person-x-fill"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.75rem;">Tardanzas / Inasist.</div>
+                    <div class="fw-bolder text-dark" style="font-size:1.15rem;line-height:1.2;">2</div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-2xs p-3 rounded-4 bg-white d-flex flex-row align-items-center gap-3" style="border:1px solid var(--border)!important;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:44px;height:44px;background:#d97706;font-size:1.2rem;">
+                    <i class="bi bi-calendar-event"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.75rem;">Permisos / Vacaciones</div>
+                    <div class="fw-bolder text-dark" style="font-size:1.15rem;line-height:1.2;">4</div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-2xs p-3 rounded-4 bg-white d-flex flex-row align-items-center gap-3" style="border:1px solid var(--border)!important;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:44px;height:44px;background:#0284c7;font-size:1.2rem;">
+                    <i class="bi bi-clock-fill"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.75rem;">Horas Extra Mes</div>
+                    <div class="fw-bolder text-dark" style="font-size:1.15rem;line-height:1.2;">124 hrs</div>
+                </div>
+            </div>
+        </div>
+    
+    </div>
+
+    <!-- Barra de Búsqueda y Filtros -->
+    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border:1px solid var(--border)!important;">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+            <div class="position-relative flex-grow-1" style="max-width:420px;">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
+                <input type="text" class="form-control ps-5 py-2 rounded-3 border-0 bg-light" placeholder="Buscar por código, placa o nombre..." style="font-size:0.83rem;">
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-light border rounded-3 px-3 py-2 text-secondary fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;">
+                    <i class="bi bi-funnel"></i> Filtros
+                </button>
+                <button class="btn btn-light border rounded-3 px-3 py-2 text-secondary fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;">
+                    <i class="bi bi-download"></i> Exportar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Data -->
+    <div class="card border-0 shadow-2xs rounded-4 overflow-hidden bg-white" style="border:1px solid var(--border)!important;">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle m-0" style="font-size:0.83rem;">
+                <thead class="bg-light text-secondary fw-bold border-bottom">
+                    <tr>
+                        <th>FECHA</th><th>COLABORADOR</th><th>TURNO</th><th>ENTRADA</th><th>SALIDA</th><th>HORAS TRABAJADAS</th><th>ESTADO</th><th>ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+        <tr>
+            <td class="fw-bold text-dark">20/08/2026</td><td class="">Carlos Mendoza</td><td class="">Turno Mañana (06:00 - 18:00)</td><td class="">05:52 AM</td><td class="">06:05 PM</td><td class="">12.2 hrs</td><td><span class="badge bg-success">Puntual</span></td><td class="text-end"><button class="btn btn-sm btn-light border py-1 px-2" style="font-size:0.75rem;"><i class="bi bi-three-dots"></i></button></td>
+        </tr>
+    
+        <tr>
+            <td class="fw-bold text-dark">20/08/2026</td><td class="">Jorge Ramírez</td><td class="">Turno Noche (18:00 - 06:00)</td><td class="">06:12 PM</td><td class="">—</td><td class="">—</td><td><span class="badge bg-warning text-dark">Tardanza</span></td><td class="text-end"><button class="btn btn-sm btn-light border py-1 px-2" style="font-size:0.75rem;"><i class="bi bi-three-dots"></i></button></td>
+        </tr>
+    
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
