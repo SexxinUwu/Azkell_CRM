@@ -1037,3 +1037,14 @@ window._guExpandHub = function(hubKey) {
 
 
 setTimeout(function() { window.guSetTab('roles'); window.guCargarTodo(); }, 100);
+
+window.guAbrirSelectorAccionMobile = function() {
+    var modalEl = document.getElementById('modalAccionUsuariosMobile');
+    if (modalEl && modalEl.parentElement !== document.body) {
+        document.body.appendChild(modalEl);
+    }
+    if (modalEl) {
+        var m = bootstrap.Modal.getOrCreateInstance(modalEl);
+        if (m) m.show();
+    }
+};

@@ -339,13 +339,15 @@
   <!-- Paginador -->
   <div id="controles-paginacion-placas" class="d-flex align-items-center gap-1 flex-wrap px-1 py-2 flex-shrink-0"></div>
 
-  <!-- Mobile Floating Action Button -->
-  <button class="btn btn-primary rounded-circle shadow-lg d-flex d-md-none align-items-center justify-content-center position-fixed"
-          style="width: 54px; height: 54px; bottom: 85px; right: 20px; z-index: 1040; background: #0284c7; border: none; box-shadow: 0 8px 24px rgba(2,132,199,0.4) !important;"
-          onclick="document.getElementById('formPlaca').reset(); bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();"
-          title="Nueva Placa">
-      <i class="bi bi-plus-lg fs-4 text-white"></i>
-  </button>
+  <!-- ── 6. BOTÓN FLOTANTE (FAB) PARA MÓVIL (1:1 Reporte de Fallas) ── -->
+  <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1040;">
+    <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+            onclick="document.getElementById('formPlaca').reset(); bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();"
+            style="width: 58px; height: 58px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.6rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;"
+            title="Nueva Placa">
+      <i class="bi bi-plus-lg"></i>
+    </button>
+  </div>
 </div>
 
 <!-- ── OFFCANVAS: DETALLE DE PLACA (Estilo Entradas: al centro, desde abajo) ── -->

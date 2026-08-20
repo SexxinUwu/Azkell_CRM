@@ -245,15 +245,15 @@ function totRenderTablaRows() {
         var tr = document.createElement('tr');
         if (totGetId(t) === window.totDetalleId) tr.classList.add('tot-row-active');
         tr.innerHTML =
-            '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + totEsc(totGetId(t) || '—') + '</span></td>'
-            + '<td><strong>' + totEsc(otVal) + '</strong></td>'
-            + '<td><strong>' + totEsc(placaVal) + '</strong></td>'
-            + '<td style="font-size:0.79rem;">' + totFmtDateTime(t.fecha_trabajo) + '</td>'
-            + '<td style="max-width:200px;white-space:normal;font-size:0.81rem;">' + totEsc(t.trabajo_realizado || '—') + '</td>'
-            + '<td>' + totEsc(det.personal || t.tecnico || '—') + '</td>'
-            + '<td style="font-size:0.79rem;">' + totFmtDateTime(t.fecha_salida) + '</td>'
-            + '<td><strong style="color:#16a34a;">' + totFmtMoney(det.costo) + '</strong></td>'
-            + '<td style="font-size:0.82rem;">' + totEsc(tiempoHrs) + '</td>';
+            '<td style="white-space:nowrap;"><span class="fw-bold" style="color:var(--primary,#0284c7);">' + totEsc(totGetId(t) || '—') + '</span></td>'
+            + '<td style="white-space:nowrap;"><strong>' + totEsc(otVal) + '</strong></td>'
+            + '<td style="white-space:nowrap;"><span class="badge bg-white border text-dark fw-bolder px-2 py-1 shadow-2xs">' + totEsc(placaVal) + '</span></td>'
+            + '<td style="font-size:0.80rem; white-space:nowrap;">' + totFmtDateTime(t.fecha_trabajo) + '</td>'
+            + '<td style="max-width:280px; font-size:0.82rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + totEsc(t.trabajo_realizado || '—') + '">' + totEsc(t.trabajo_realizado || '—') + '</td>'
+            + '<td style="white-space:nowrap; font-size:0.82rem;">' + totEsc(det.personal || t.tecnico || '—') + '</td>'
+            + '<td style="font-size:0.80rem; white-space:nowrap;">' + totFmtDateTime(t.fecha_salida) + '</td>'
+            + '<td style="text-align:right; white-space:nowrap;"><strong style="color:#16a34a;">' + totFmtMoney(det.costo) + '</strong></td>'
+            + '<td style="font-size:0.82rem; text-align:center; white-space:nowrap;">' + totEsc(tiempoHrs) + '</td>';
         tr.onclick = (function(row) {
             return function() { totAbrirDetalle(row); };
         })(t);

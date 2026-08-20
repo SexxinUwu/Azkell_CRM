@@ -272,19 +272,19 @@
 
         <!-- TABLA CON PAGINACIÓN -->
         <div class="tot-table-wrap d-flex flex-column" style="flex:1 1 0; overflow:hidden;">
-            <div style="flex:1 1 0; overflow-y:auto;">
-                <table>
+            <div class="table-responsive" style="flex:1 1 0; overflow-x:auto; overflow-y:auto;">
+                <table style="min-width: 1050px; width: 100%;">
                     <thead>
                         <tr>
-                            <th>ID TRABAJO</th>
-                            <th>N° OT</th>
-                            <th>PLACA</th>
-                            <th>F/H INICIO</th>
-                            <th>TRABAJO REALIZADO</th>
-                            <th>PERSONAL</th>
-                            <th>F/H SALIDA</th>
-                            <th>COSTO</th>
-                            <th>TIEMPO (HRS)</th>
+                            <th style="min-width: 120px; white-space: nowrap;">ID TRABAJO</th>
+                            <th style="min-width: 120px; white-space: nowrap;">N° OT</th>
+                            <th style="min-width: 90px; white-space: nowrap;">PLACA</th>
+                            <th style="min-width: 155px; white-space: nowrap;">F/H INICIO</th>
+                            <th style="min-width: 250px; white-space: nowrap;">TRABAJO REALIZADO</th>
+                            <th style="min-width: 180px; white-space: nowrap;">PERSONAL</th>
+                            <th style="min-width: 155px; white-space: nowrap;">F/H SALIDA</th>
+                            <th style="min-width: 100px; text-align: right; white-space: nowrap;">COSTO</th>
+                            <th style="min-width: 110px; text-align: center; white-space: nowrap;">TIEMPO (HRS)</th>
                         </tr>
                     </thead>
                     <tbody id="tot-tbody"></tbody>

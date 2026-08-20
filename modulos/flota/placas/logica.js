@@ -650,11 +650,29 @@ function renderizarPaginaPlacas() {
 
         // Columna Acciones
         html += '<td style="padding:0.75rem 0.5rem; text-align:center;" onclick="event.stopPropagation()">' + menuAcciones + '</td>';
-        
         html += '</tr>';
+
+        // 2. Mobile Card (1:1 Reporte de Fallas)
+        htmlCards += '<div class="card mb-2 shadow-2xs border rounded-3 p-3 bg-white" onclick="abrirDetallePlaca(event, ' + indexGlobal + ')" style="cursor: pointer;">'
+                   + '<div class="d-flex justify-content-between align-items-center mb-2">'
+                   + '  <div class="d-flex align-items-center gap-2">'
+                   + '    <span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-1" style="font-size:0.92rem; letter-spacing:0.5px;">' + plc + '</span>'
+                   + '    <span class="badge rounded-pill fw-bold text-uppercase" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-size:0.68rem; padding:3px 8px;"><i class="bi ' + tipoIcon + ' me-1"></i>' + (tipo || 'UNIDAD') + '</span>'
+                   + '  </div>'
+                   + '  <div class="d-flex align-items-center gap-1">' + estadoBadgeMobile + '<div onclick="event.stopPropagation();">' + menuAcciones + '</div></div>'
+                   + '</div>'
+                   + '<div class="d-flex flex-column gap-1" style="font-size:0.82rem;">'
+                   + '  <div class="d-flex justify-content-between"><span class="text-secondary">Cliente:</span><span class="fw-bold text-dark text-truncate text-end" style="max-width:200px;">' + (cliente || '—') + '</span></div>'
+                   + '  <div class="d-flex justify-content-between"><span class="text-secondary">Marca / Modelo:</span><span class="fw-semibold text-dark">' + (marca || '—') + (modelo ? ' • ' + modelo : '') + (anio ? ' (' + anio + ')' : '') + '</span></div>'
+                   + (ruc ? '  <div class="d-flex justify-content-between"><span class="text-secondary">RUC / DNI:</span><span class="text-muted font-monospace">' + ruc + '</span></div>' : '')
+                   + '</div></div>';
     });
 
     contenedor.innerHTML = html;
+    const cardContainer = document.getElementById('placasCardContainer');
+    if (cardContainer) {
+        cardContainer.innerHTML = htmlCards || '<div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No hay vehículos que coincidan.</div>';
+    }
 
     // Actualizar controles paginación
     let pagHtml = '';
