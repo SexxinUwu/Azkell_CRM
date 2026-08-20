@@ -1,44 +1,79 @@
 <!-- Módulo Trabajos Anexos — Azkell Fleet -->
 <style>
 #moduloTrabajosOT {
+    font-family: 'Plus Jakarta Sans', sans-serif;
     display: flex;
     flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
-    overflow: hidden;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
 }
 
-/* Barra de controles */
-#moduloTrabajosOT .tot-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0.6rem 1.25rem;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    flex-wrap: wrap;
+/* ── KPIs Apple Compact Bento Cards ─────────────── */
+#moduloTrabajosOT .ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    min-height: 56px !important;
 }
-#moduloTrabajosOT .tot-filters {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0.45rem 1.25rem;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    flex-wrap: wrap;
+#moduloTrabajosOT .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
+}
+#moduloTrabajosOT .ck-kpi-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* ── Control Bar & Apple Search ──────────────────── */
+#moduloTrabajosOT .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 9px 14px 9px 38px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+#moduloTrabajosOT .ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
 }
 
 /* Tabla */
 #moduloTrabajosOT .tot-table-wrap {
     flex: 1 1 0;
     overflow-y: auto;
-    background: var(--surface);
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
 }
 #moduloTrabajosOT table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
 #moduloTrabajosOT thead th {
-    background: var(--bg);
+    background: var(--surface);
     color: var(--subtext);
     font-size: 0.7rem;
     font-weight: 700;
@@ -87,8 +122,9 @@
     width: 0;
     flex-shrink: 0;
     overflow: hidden;
-    background: var(--surface);
-    border-left: 1px solid var(--border);
+    background: #ffffff;
+    border-left: 1px solid #e2e8f0;
+    border-radius: 0 18px 18px 0;
     display: flex;
     flex-direction: column;
     transition: width 0.25s;
@@ -124,71 +160,99 @@
 
 <div id="moduloTrabajosOT">
 
-    <!-- FILA 1: Buscador + recarga -->
-    <div class="tot-controls">
-        <div class="input-group input-group-sm" style="max-width:260px;">
-            <span class="input-group-text bg-transparent border-end-0">
-                <i class="bi bi-search" style="color:var(--subtext)"></i>
-            </span>
-            <input type="text" class="form-control border-start-0 ps-0"
-                id="tot-search"
-                placeholder="Buscar por Personal o Descripción..."
-                oninput="window.totFiltrar()">
+    <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-journal-check"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Historial de Trabajos</h4>
+                <span class="text-secondary small">Registro cronológico de tareas ejecutadas y mano de obra técnica</span>
+            </div>
         </div>
-        <input type="text" class="form-control form-control-sm" id="tot-fil-ot"
-            placeholder="N° OT" style="max-width:110px"
-            oninput="window.totFiltrar()">
-        <input type="text" class="form-control form-control-sm" id="tot-fil-placa"
-            placeholder="PLACA" style="max-width:100px; text-transform:uppercase"
-            oninput="this.value=this.value.toUpperCase(); window.totFiltrar()">
-        <input type="month" class="form-control form-control-sm" id="tot-fil-mes"
-            style="max-width:150px" onchange="window.totFiltrar()">
-        <input type="date" class="form-control form-control-sm" id="tot-fil-desde"
-            style="max-width:150px" title="Desde" onchange="window.totFiltrar()">
-        <input type="date" class="form-control form-control-sm" id="tot-fil-hasta"
-            style="max-width:150px" title="Hasta" onchange="window.totFiltrar()">
-        <div style="flex:1"></div>
-        <button class="btn btn-sm btn-outline-secondary" onclick="window.totCargar()" title="Actualizar">
-            <i class="bi bi-arrow-clockwise"></i>
-        </button>
-    </div>
-
-    <!-- FILA 2: Importar / Exportar -->
-    <div class="tot-filters d-flex align-items-center justify-content-between">
-        <div style="flex:1"></div>
         <div class="d-flex align-items-center gap-2">
-            <!-- Dropdown Importar -->
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.totCargar()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
+            </button>
             <div class="dropdown d-inline-block">
-                <button class="btn btn-sm btn-light border dropdown-toggle fw-bold text-info shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius:10px; min-height:36px; padding:0.4rem 0.9rem;">
-                    <i class="bi bi-upload me-1 text-info"></i>Importar
+                <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-upload"></i> Importar
                 </button>
-                <ul class="dropdown-menu shadow border-0 dropdown-menu-end" style="border-radius:14px; font-size:0.85rem; padding:6px; min-width:200px; z-index:1050;">
-                    <li>
-                        <button class="dropdown-item py-2 fw-bold text-dark d-flex align-items-center gap-2 rounded-2" type="button" onclick="window.totDescargarPlantilla()">
-                            <i class="bi bi-file-earmark-excel text-secondary fs-6"></i> 1. Descargar Plantilla
-                        </button>
-                    </li>
+                <ul class="dropdown-menu shadow border" style="border-radius:10px;">
+                    <li><button class="dropdown-item fw-semibold text-dark py-2" type="button" onclick="window.totDescargarPlantilla()"><i class="bi bi-file-earmark-excel text-secondary me-2"></i> 1. Descargar Plantilla</button></li>
                     <li><hr class="dropdown-divider my-1"></li>
-                    <li>
-                        <button class="dropdown-item py-2 fw-bold text-primary d-flex align-items-center gap-2 rounded-2" type="button" onclick="document.getElementById('tot-file-import').click()">
-                            <i class="bi bi-cloud-arrow-up text-primary fs-6"></i> 2. Subir Excel Lleno
-                        </button>
-                    </li>
+                    <li><button class="dropdown-item fw-semibold text-primary py-2" type="button" onclick="document.getElementById('tot-file-import').click()"><i class="bi bi-cloud-arrow-up text-primary me-2"></i> 2. Subir Excel</button></li>
                     <li><hr class="dropdown-divider my-1"></li>
-                    <li>
-                        <button class="dropdown-item py-2 fw-bold text-danger d-flex align-items-center gap-2 rounded-2" type="button" onclick="window.totLimpiarImportados()">
-                            <i class="bi bi-trash text-danger fs-6"></i> 3. Limpiar Importación Anterior
-                        </button>
-                    </li>
+                    <li><button class="dropdown-item fw-semibold text-danger py-2" type="button" onclick="window.totLimpiarImportados()"><i class="bi bi-trash text-danger me-2"></i> 3. Limpiar Importación</button></li>
                 </ul>
             </div>
             <input type="file" id="tot-file-import" accept=".xlsx, .xls, .csv" style="display:none" onchange="window.totImportarExcel(event)">
-
-            <!-- Botón Exportar -->
-            <button class="btn btn-sm btn-success fw-bold shadow-sm" onclick="window.totExportar()" style="border-radius:10px; min-height:36px; padding:0.4rem 0.9rem;">
-                <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
+            <button class="btn btn-success shadow-sm px-3 py-2 fw-bold text-white d-flex align-items-center gap-1 rounded-3" onclick="window.totExportar()" title="Exportar Excel">
+                <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Exportar Excel</span>
             </button>
         </div>
+    </div>
+
+    <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO) ─────────────── -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="tot-kpi-total">
+                <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                    <i class="bi bi-journal-text"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Total Trabajos</span>
+                    <h2 id="kpi-tot-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="tot-kpi-horas">
+                <div class="ck-kpi-icon" style="background:#fefce8; color:#ca8a04;">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Horas Invertidas</span>
+                    <h2 id="kpi-tot-horas" class="fw-bolder m-0 text-warning lh-1" style="font-size: 1.35rem;">0h</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="tot-kpi-tecnicos">
+                <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Técnicos Activos</span>
+                    <h2 id="kpi-tot-tecnicos" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="tot-kpi-ots">
+                <div class="ck-kpi-icon" style="background:#f5f3ff; color:#7c3aed;">
+                    <i class="bi bi-tools"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">OTs Atendidas</span>
+                    <h2 id="kpi-tot-ots" class="fw-bolder m-0 text-primary lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS RÁPIDOS ────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <div class="position-relative flex-grow-1" style="min-width: 240px; max-width: 380px;">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+            <input type="text" id="tot-search" class="ck-apple-search" placeholder="Buscar por personal, descripción..." oninput="window.totFiltrar()">
+        </div>
+        <input type="text" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-ot" placeholder="N° OT" style="max-width:110px; height:38px;" oninput="window.totFiltrar()">
+        <input type="text" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-placa" placeholder="PLACA" style="max-width:100px; height:38px; text-transform:uppercase" oninput="this.value=this.value.toUpperCase(); window.totFiltrar()">
+        <input type="month" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-mes" style="max-width:140px; height:38px;" onchange="window.totFiltrar()">
+        <input type="date" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-desde" style="max-width:130px; height:38px;" title="Desde" onchange="window.totFiltrar()">
+        <input type="date" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-hasta" style="max-width:130px; height:38px;" title="Hasta" onchange="window.totFiltrar()">
     </div>
 
     <!-- CONTENEDOR PRINCIPAL (tabla + detalle) -->

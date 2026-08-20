@@ -215,6 +215,29 @@ function salDescLimpia(desc, invId) {
     return desc;
 }
 
+window._salRenderKPIs = function(data) {
+    var total = (data || []).length;
+    var pendientes = 0;
+    var despachadas = 0;
+    var otsSet = {};
+
+    (data || []).forEach(function(m) {
+        if (m.estado === 'Despachado') {
+            despachadas++;
+        } else if (m.estado !== 'Anulado') {
+            pendientes++;
+        }
+        var ot = m.ticket_ot || m.id_ot;
+        if (ot) otsSet[String(ot).trim()] = true;
+    });
+
+    var setKpi = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    setKpi('kpi-sal-total', total);
+    setKpi('kpi-sal-pendientes', pendientes);
+    setKpi('kpi-sal-despachadas', despachadas);
+    setKpi('kpi-sal-ots', Object.keys(otsSet).length);
+};
+
 // ── Badges de tabs ────────────────────────────────────────────
 function salActualizarBadges() {
     var pend   = window.salData.filter(function(m) { return m.estado !== 'Despachado' && m.estado !== 'Anulado'; }).length;
@@ -226,12 +249,19 @@ function salActualizarBadges() {
     if (bp) bp.textContent = pend;
     if (bd) bd.textContent = desp;
     if (ba) ba.textContent = anulado;
+    window._salRenderKPIs(window.salData);
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
 window.salCambiarTab = function(tab) {
     window.salTabActiva = tab;
     salSincronizarTabs();
+    var cardTotal = document.getElementById('sal-kpi-total-card');
+    var cardPend = document.getElementById('sal-kpi-pendientes-card');
+    var cardDesp = document.getElementById('sal-kpi-despachadas-card');
+    if (cardTotal) cardTotal.classList.toggle('active', tab === 'desp');
+    if (cardPend) cardPend.classList.toggle('active', tab === 'pend');
+    if (cardDesp) cardDesp.classList.toggle('active', tab === 'desp');
     window.salDetalleId = null;
     var panel = document.getElementById('sal-panel-detalle');
     if (panel) panel.classList.remove('open');

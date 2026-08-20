@@ -238,14 +238,92 @@
     }
 }
 .sal-drawer-hd {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:0 1.25rem; height:54px; border-bottom:1px solid var(--border); flex-shrink:0;
+    flex: 1 1 0;
+    min-height: 0;
 }
-.sal-drawer-title { font-size:1.05rem; font-weight:800; color:var(--text); }
-.sal-drawer-body { flex:1; overflow-y:auto; padding:1.25rem; }
-.sal-drawer-footer {
-    padding: .75rem 1.25rem; border-top: 1px solid var(--border);
-    display: flex; justify-content: flex-end; gap: .5rem; background: var(--surface, #fff);
+
+/* ── KPIs Apple Compact Bento Cards ─────────────── */
+#moduloSalidas .ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    min-height: 56px !important;
+}
+#moduloSalidas .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
+}
+#moduloSalidas .ck-kpi-card.active {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
+    background: #f8fafc !important;
+}
+#moduloSalidas .ck-kpi-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* ── Control Bar & Apple Search ──────────────────── */
+#moduloSalidas .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 9px 14px 9px 38px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+#moduloSalidas .ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+#moduloSalidas .ck-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+#moduloSalidas .ck-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+#moduloSalidas .ck-segment-item:hover { color: #0f172a; }
+#moduloSalidas .ck-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
 }
 </style>
 
@@ -258,213 +336,118 @@
 
 <div id="moduloSalidas" class="modulo-wrapper d-flex flex-column h-100">
 
-  <!-- ═══ HEADER MOBILE ════════════════════════════════════════════ -->
-  <div id="sal-m-header" style="display:none;align-items:center;justify-content:space-between;
-       padding:.7rem 1rem 0;flex-shrink:0;">
-    <div style="font-size:1.15rem;font-weight:900;color:var(--text);">
-      <i class="bi bi-arrow-up-circle-fill text-primary me-2"></i>Salidas
-    </div>
-    <div class="d-flex align-items-center gap-2">
-      <button class="btn border-0 p-1" onclick="window.salCargar()" style="background:transparent;">
-        <i class="bi bi-arrow-clockwise" style="font-size:1.2rem;color:var(--text);"></i>
-      </button>
-      <div style="width:34px;height:34px;border-radius:10px;background:#5865F2;display:flex;
-                  align-items:center;justify-content:center;font-weight:800;font-size:.78rem;
-                  color:#fff;cursor:pointer;flex-shrink:0;" id="sal-m-avatar">SA</div>
-    </div>
-  </div>
-
-  <!-- ═══ KPI ROW ══════════════════════════════════════════════════ -->
-  <div id="sal-kpi-row" class="bento-kpi-row"
-       style="display:flex;flex-wrap:nowrap;overflow-x:auto;gap:.6rem;
-              padding:.65rem 1rem .25rem;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>
-
-  <!-- ═══ TABS MOBILE (segmented control) ═════════════════════════ -->
-  <div id="sal-m-tabs" style="display:none;">
-    <button class="sal-m-tab active" id="sal-m-tab-pend" onclick="window.salCambiarTab('pend');window._salSyncMTabs('pend')">
-      Pendientes <span id="sal-m-badge-pend" style="font-size:.58rem;font-weight:800;"></span>
-    </button>
-    <button class="sal-m-tab" id="sal-m-tab-desp" onclick="window.salCambiarTab('desp');window._salSyncMTabs('desp')">
-      Salidas <span id="sal-m-badge-desp" style="font-size:.58rem;font-weight:800;"></span>
-    </button>
-    <button class="sal-m-tab" id="sal-m-tab-anulado" onclick="window.salCambiarTab('anulado');window._salSyncMTabs('anulado')">
-      Anuladas
-    </button>
-  </div>
-
-  <!-- ═══ BARRA BÚSQUEDA COMPACTA (mobile) ════════════════════════ -->
-  <div id="sal-search-compact" style="display:none;padding:.3rem 1rem .65rem;align-items:center;gap:.6rem;flex-shrink:0;">
-    <div style="flex:1;display:flex;align-items:center;
-                background:#f1f5f9;border-radius:99px;
-                box-shadow:0 2px 8px rgba(0,0,0,.06);
-                overflow:hidden;height:46px;padding:0 .9rem;gap:.4rem;">
-      <i class="bi bi-search" style="color:#94a3b8;font-size:.95rem;flex-shrink:0;"></i>
-      <input type="text" id="sal-search-mobile"
-             style="flex:1;border:none;background:transparent;outline:none;
-                    font-size:.92rem;color:var(--text);padding:0;"
-             placeholder="Artículo, N° OT, Placa…"
-             oninput="(function(v){
-               var d=document.getElementById('sal-search');if(d)d.value=v;
-               var btn=document.getElementById('sal-search-clear');
-               if(btn)btn.style.display=v?'flex':'none';
-               window.salFiltrar();
-             })(this.value);">
-      <button id="sal-search-clear"
-              onclick="(function(){
-                var i=document.getElementById('sal-search-mobile');if(i){i.value='';i.focus();}
-                var d=document.getElementById('sal-search');if(d)d.value='';
-                document.getElementById('sal-search-clear').style.display='none';
-                window.salFiltrar();
-              })()"
-              style="display:none;width:22px;height:22px;border-radius:50%;background:#ef4444;
-                     border:none;color:#fff;font-size:.65rem;flex-shrink:0;
-                     align-items:center;justify-content:center;cursor:pointer;">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </div>
-    <button onclick="window._salToggleFiltrosMobile()"
-            style="width:46px;height:46px;border-radius:50%;background:#f1f5f9;border:none;
-                   color:var(--subtext);font-size:1.1rem;flex-shrink:0;display:flex;align-items:center;
-                   justify-content:center;cursor:pointer;">
-      <i class="bi bi-funnel-fill"></i>
-    </button>
-  </div>
-  <!-- Filtros mobile expandibles -->
-  <div id="sal-filtros-mobile" style="display:none;padding:0 1rem .65rem;gap:.5rem;flex-wrap:wrap;align-items:flex-end;">
-    <div style="flex:1;min-width:90px;">
-      <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);margin-bottom:3px;">N° OT</div>
-      <input type="text" id="sal-fil-ot-mob"
-             style="width:100%;height:40px;border:1.5px solid var(--border);border-radius:12px;padding:0 .7rem;
-                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;text-transform:uppercase;"
-             oninput="(function(){var d=document.getElementById('sal-fil-ot');if(d)d.value=this.value;window.salFiltrar();}).call(this)">
-    </div>
-    <div style="flex:1;min-width:120px;">
-      <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);margin-bottom:3px;">Desde</div>
-      <input type="date" id="sal-fil-desde-mob"
-             style="width:100%;height:40px;border:1.5px solid var(--border);border-radius:12px;padding:0 .7rem;
-                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;"
-             onchange="(function(){var d=document.getElementById('sal-fil-desde');if(d)d.value=this.value;window.salFiltrar();}).call(this)">
-    </div>
-    <div style="flex:1;min-width:120px;">
-      <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);margin-bottom:3px;">Hasta</div>
-      <input type="date" id="sal-fil-hasta-mob"
-             style="width:100%;height:40px;border:1.5px solid var(--border);border-radius:12px;padding:0 .7rem;
-                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;"
-             onchange="(function(){var h=document.getElementById('sal-fil-hasta');if(h)h.value=this.value;window.salFiltrar();}).call(this)">
-    </div>
-    <button onclick="(function(){['sal-fil-ot','sal-fil-desde','sal-fil-hasta'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});['sal-fil-ot-mob','sal-fil-desde-mob','sal-fil-hasta-mob'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});window.salFiltrar();})()"
-            style="width:40px;height:40px;border-radius:12px;background:#fee2e2;border:none;
-                   color:#ef4444;font-size:.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-      <i class="bi bi-x-lg"></i>
-    </button>
-  </div>
-
-  <!-- ═══ WRAPPER DESKTOP (BORDES REDONDOS) ════════════════════════ -->
-  <div class="sal-desktop-card">
-
-    <!-- ═══ HEADER ESCRITORIO ════════════════════════════════════════ -->
-    <div id="sal-desktop-header">
-
-    <!-- Barra título + acciones -->
-    <div style="display:flex;align-items:center;justify-content:space-between;
-                padding:.9rem 1.5rem;border-bottom:1px solid var(--border);
-                background:var(--surface);flex-shrink:0;flex-wrap:wrap;gap:.75rem;">
-      <div>
-        <h2 style="font-size:1.05rem;font-weight:900;color:var(--text);margin:0;line-height:1.2;">
-          <i class="bi bi-arrow-up-circle-fill text-primary me-2"></i>Salidas
-        </h2>
-        <p style="font-size:.71rem;color:var(--subtext);margin:0;font-weight:600;">Despacho de artículos del almacén a vehículos o personal</p>
-      </div>
-      <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
-        <!-- Refrescar -->
-        <button onclick="window.salCargar()" title="Actualizar"
-                style="width:36px;height:36px;border-radius:10px;border:1.5px solid var(--border);
-                       background:transparent;color:var(--subtext);font-size:.95rem;
-                       display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-          <i class="bi bi-arrow-clockwise"></i>
-        </button>
-        <!-- Excel -->
-        <button onclick="window.salExportar()"
-                style="height:36px;padding:0 .85rem;border-radius:10px;border:1.5px solid var(--border);
-                       background:transparent;color:var(--text);font-size:.82rem;font-weight:700;
-                       display:flex;align-items:center;gap:.4rem;cursor:pointer;">
-          <i class="bi bi-file-earmark-excel" style="color:#16a34a;"></i>Excel
-        </button>
-        <!-- + Nueva Solicitud -->
-        <button onclick="window.salAbrirNuevo()"
-                style="height:36px;padding:0 1.1rem;border-radius:10px;border:none;
-                       background:#5865F2;color:#fff;font-size:.83rem;font-weight:700;
-                       display:flex;align-items:center;gap:.4rem;cursor:pointer;
-                       box-shadow:0 2px 10px rgba(88,101,242,.28);flex-shrink:0;">
-          <i class="bi bi-plus-lg"></i>Nueva Solicitud
-        </button>
-      </div>
+    <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-box-arrow-up-right"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Órdenes de Salida</h4>
+                <span class="text-secondary small">Despacho de artículos, entrega de repuestos a OTs y control de egresos</span>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.salCargar()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
+            </button>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.salExportar()" title="Exportar Excel">
+                <i class="bi bi-file-earmark-excel text-success"></i> <span class="d-none d-md-inline">Excel</span>
+            </button>
+            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="window.salAbrirNuevo()" style="background: #0284c7; border-color: #0284c7;">
+                <i class="bi bi-plus-lg fs-6"></i> <span>Nueva Solicitud</span>
+            </button>
+        </div>
     </div>
 
-    <!-- TABS DESKTOP -->
-    <div class="sal-tabs">
-      <div class="sal-tab active" id="sal-tab-pend" onclick="window.salCambiarTab('pend')">
-        Solicitudes Pendientes <span class="sal-tab-badge" id="sal-badge-pend">0</span>
-      </div>
-      <div class="sal-tab" id="sal-tab-desp" onclick="window.salCambiarTab('desp')">
-        Salidas (Despachadas) <span class="sal-tab-badge" id="sal-badge-desp">0</span>
-      </div>
-      <div class="sal-tab" id="sal-tab-anulado" onclick="window.salCambiarTab('anulado')">
-        Anuladas <span class="sal-tab-badge" id="sal-badge-anulado">0</span>
-      </div>
+    <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO) ─────────────── -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card active" id="sal-kpi-total-card" onclick="window.salCambiarTab('desp')">
+                <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                    <i class="bi bi-arrow-up-circle-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Total Despachos</span>
+                    <h2 id="kpi-sal-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="sal-kpi-pendientes-card" onclick="window.salCambiarTab('pend')">
+                <div class="ck-kpi-icon" style="background:#fefce8; color:#ca8a04;">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Pendientes</span>
+                    <h2 id="kpi-sal-pendientes" class="fw-bolder m-0 text-warning lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="sal-kpi-despachadas-card" onclick="window.salCambiarTab('desp')">
+                <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+                    <i class="bi bi-check2-circle"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Despachadas</span>
+                    <h2 id="kpi-sal-despachadas" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="sal-kpi-ots-card" onclick="window.salCambiarTab('desp')">
+                <div class="ck-kpi-icon" style="background:#f5f3ff; color:#7c3aed;">
+                    <i class="bi bi-tools"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">OTs Atendidas</span>
+                    <h2 id="kpi-sal-ots" class="fw-bolder m-0 text-primary lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Barra filtros combinada -->
-    <div class="sal-controls"
-         style="display:flex;align-items:center;gap:.6rem;padding:.6rem 1.5rem;
-                background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;">
-      <!-- Pill search -->
-      <div style="display:flex;align-items:center;gap:.45rem;background:var(--bg);
-                  border:1.5px solid var(--border);border-radius:99px;padding:.25rem .85rem;
-                  min-width:210px;transition:border-color .2s,box-shadow .2s;"
-           onfocusin="this.style.borderColor='#5865F2';this.style.boxShadow='0 0 0 3px rgba(88,101,242,.08)'"
-           onfocusout="this.style.borderColor='var(--border)';this.style.boxShadow=''">
-        <i class="bi bi-search" style="color:#94a3b8;font-size:.82rem;flex-shrink:0;"></i>
-        <input type="text" id="sal-search"
-               style="border:none;background:transparent;outline:none;
-                      font-size:.83rem;color:var(--text);flex:1;min-width:0;padding:.28rem 0;"
-               placeholder="Artículo, N° OT, Placa…" oninput="window.salFiltrar()">
-      </div>
-      <!-- Inputs N° OT / Placa -->
-      <input type="text" id="sal-fil-ot" placeholder="N° OT"
-             style="height:36px;border-radius:10px;border:1.5px solid var(--border);
-                    background:var(--surface);padding:0 .75rem;font-size:.82rem;
-                    color:var(--text);outline:none;max-width:100px;"
-             oninput="window.salFiltrar()">
-      <input type="text" id="sal-fil-placa" placeholder="PLACA"
-             style="height:36px;border-radius:10px;border:1.5px solid var(--border);
-                    background:var(--surface);padding:0 .75rem;font-size:.82rem;
-                    color:var(--text);outline:none;max-width:100px;text-transform:uppercase;"
-             oninput="this.value=this.value.toUpperCase();window.salFiltrar()">
-      <!-- Fechas -->
-      <input type="date" id="sal-fil-desde" onchange="window.salFiltrar()"
-             style="height:36px;border-radius:10px;border:1.5px solid var(--border);
-                    background:var(--surface);padding:0 .75rem;font-size:.82rem;
-                    color:var(--text);outline:none;max-width:145px;">
-      <input type="date" id="sal-fil-hasta" onchange="window.salFiltrar()"
-             style="height:36px;border-radius:10px;border:1.5px solid var(--border);
-                    background:var(--surface);padding:0 .75rem;font-size:.82rem;
-                    color:var(--text);outline:none;max-width:145px;">
-      <!-- Estado -->
-      <select id="sal-fil-estado" onchange="window.salFiltrar()"
-              style="height:36px;border-radius:10px;border:1.5px solid var(--border);
-                     background:var(--surface);padding:0 .75rem;font-size:.82rem;
-                     font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
-        <option value="">Todos los estados</option>
-        <option value="Pendiente">Pendiente</option>
-        <option value="Despachado">Despachado</option>
-        <option value="Anulado">Anulado</option>
-      </select>
-      <!-- Mes (oculto, usado por JS) -->
-      <input type="month" id="sal-fil-mes" style="display:none;" onchange="window.salFiltrar()">
-    </div>
+    <!-- ── 3. BARRA DE BÚSQUEDA Y TABS SEGMENTADOS ───────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 500px;">
+            <div class="position-relative flex-grow-1">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+                <input type="text" id="sal-search" class="ck-apple-search" placeholder="Artículo, N° OT, Placa..." oninput="window.salFiltrar()">
+            </div>
+            <input type="text" id="sal-fil-ot" placeholder="N° OT" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:100px; height:38px;" oninput="window.salFiltrar()">
+            <input type="text" id="sal-fil-placa" placeholder="PLACA" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:100px; height:38px; text-transform:uppercase" oninput="this.value=this.value.toUpperCase();window.salFiltrar()">
+        </div>
 
-  </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="ck-apple-segmented" id="btn-group-sal-tabs">
+                <button type="button" class="ck-segment-item active" id="sal-tab-pend" onclick="window.salCambiarTab('pend');">
+                    Pendientes <span class="badge bg-warning text-dark ms-1 rounded-pill" id="sal-badge-pend">0</span>
+                </button>
+                <button type="button" class="ck-segment-item" id="sal-tab-desp" onclick="window.salCambiarTab('desp');">
+                    Despachadas <span class="badge bg-success ms-1 rounded-pill" id="sal-badge-desp">0</span>
+                </button>
+                <button type="button" class="ck-segment-item" id="sal-tab-anulado" onclick="window.salCambiarTab('anulado');">
+                    Anuladas <span class="badge bg-secondary ms-1 rounded-pill" id="sal-badge-anulado">0</span>
+                </button>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+                <input type="date" id="sal-fil-desde" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:130px; height:38px;" title="Desde" onchange="window.salFiltrar()">
+                <input type="date" id="sal-fil-hasta" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:130px; height:38px;" title="Hasta" onchange="window.salFiltrar()">
+                <button onclick="(function(){['sal-fil-ot','sal-fil-placa','sal-fil-desde','sal-fil-hasta'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});window.salFiltrar();})()" class="btn btn-light bg-white border text-secondary rounded-3" style="height:38px; width:38px; display:flex; align-items:center; justify-content:center;" title="Limpiar filtros">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <select id="sal-fil-estado" onchange="window.salFiltrar()" style="display:none;">
+                <option value="">Todos</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="Despachado">Despachado</option>
+                <option value="Anulado">Anulado</option>
+            </select>
+            <input type="month" id="sal-fil-mes" style="display:none;" onchange="window.salFiltrar()">
+            <span id="sal-contador" class="text-secondary small fw-bold"></span>
+        </div>
+    </div>
 
   <!-- ═══ CONTENEDOR PRINCIPAL ═════════════════════════════════════ -->
   <div style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;">

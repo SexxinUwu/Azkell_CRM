@@ -333,6 +333,16 @@ function srCalcHorasTaller(e) {
     return hrs.toFixed(1) + 'h';
 }
 
+window._srFiltroKPI = window._srFiltroKPI || 'total';
+
+window.srFiltrarKPI = function(tipo, btn) {
+    window._srFiltroKPI = tipo || 'total';
+    document.querySelectorAll('#moduloStatusRampa .ck-kpi-card').forEach(function(el) {
+        el.classList.toggle('active', el.id === 'sr-kpi-' + window._srFiltroKPI);
+    });
+    srRenderTabla();
+};
+
 // ── Render tabla ─────────────────────────────────────────────────
 function srRenderTabla() {
     var tbody = document.getElementById('sr-tbody');
@@ -344,6 +354,39 @@ function srRenderTabla() {
     var htmlMobile = '';
 
     var rampas = window.srCatRampas || [];
+
+    // Calcular KPIs
+    var totalRampas = rampas.length;
+    var ocupadas = 0;
+    var libres = 0;
+    var espera = 0;
+
+    rampas.forEach(function(rampaObj) {
+        var rampaId = rampaObj.id;
+        var rampaNom = rampaObj.nombre_rampa || ('Rampa ' + rampaId);
+        var entradas = window.srEntradas.filter(function(e) {
+            var rStr = String(e.rampa || '').trim().toLowerCase();
+            var nomLower = String(rampaNom || '').trim().toLowerCase();
+            return String(e.rampa) === String(rampaId) || rStr === nomLower;
+        });
+
+        if (!entradas.length) {
+            libres++;
+        } else {
+            var sit = (entradas[0].situacion || '').toLowerCase();
+            if (sit.indexOf('espera') !== -1 || sit.indexOf('lavado') !== -1 || sit.indexOf('auxilio') !== -1) {
+                espera++;
+            } else {
+                ocupadas++;
+            }
+        }
+    });
+
+    var setEl = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    setEl('kpi-sr-total', totalRampas);
+    setEl('kpi-sr-ocupadas', ocupadas);
+    setEl('kpi-sr-libres', libres);
+    setEl('kpi-sr-espera', espera);
 
     if (!rampas.length) {
         var emptyHtml = '<tr><td colspan="10" class="text-center py-5 text-muted" style="background:var(--card-bg);"><i class="bi bi-gear fs-1 d-block mb-2 text-primary"></i><span class="fw-bold">No hay rampas configuradas aún.</span><br><span class="small">Haz clic en <strong>⚙️ Configurar</strong> (arriba a la derecha) para agregar tus rampas o espacios de trabajo.</span></td></tr>';

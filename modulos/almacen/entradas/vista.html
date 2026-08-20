@@ -221,193 +221,174 @@
     border-color: #3b82f6;
     background: rgba(59, 130, 246, 0.05);
 }
+
+/* ── Reglas Generales de Entradas / Órdenes de Compra ─────────────── */
+#moduloEntradas {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+/* ── KPIs Apple Compact Bento Cards ─────────────── */
+#moduloEntradas .ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    min-height: 56px !important;
+}
+#moduloEntradas .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
+}
+#moduloEntradas .ck-kpi-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* ── Control Bar & Apple Search ──────────────────── */
+#moduloEntradas .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 9px 14px 9px 38px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+#moduloEntradas .ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
 </style>
 
 <div id="moduloEntradas" class="modulo-wrapper d-flex flex-column h-100">
 
-  <!-- ═══ HEADER MOBILE ════════════════════════════════════════════ -->
-  <div id="ent-m-header" style="display:none;align-items:center;justify-content:space-between;
-       padding:.7rem 1rem 0;flex-shrink:0;">
-    <div style="font-size:1.15rem;font-weight:900;color:var(--text);">
-      <i class="bi bi-arrow-down-circle-fill text-success me-2"></i>Órdenes de Compra
-    </div>
-    <div class="d-flex align-items-center gap-2">
-      <button class="btn border-0 p-1" onclick="window.cargarEntradas()" style="background:transparent;">
-        <i class="bi bi-arrow-clockwise" style="font-size:1.2rem;color:var(--text);"></i>
-      </button>
-      <div onclick="window._invAvatarPopup && window._invAvatarPopup()"
-           style="width:34px;height:34px;border-radius:10px;background:#16a34a;display:flex;
-                  align-items:center;justify-content:center;font-weight:800;font-size:.78rem;
-                  color:#fff;cursor:pointer;flex-shrink:0;" id="ent-m-avatar">SA</div>
-    </div>
-  </div>
-
-  <!-- ═══ KPI ROW ══════════════════════════════════════════════════ -->
-  <div id="ent-kpi-row" class="bento-kpi-row"
-       style="display:flex;flex-wrap:nowrap;overflow-x:auto;gap:.6rem;
-              padding:.65rem 1rem .25rem;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>
-
-  <!-- ═══ BARRA BÚSQUEDA COMPACTA (mobile) ════════════════════════ -->
-  <div id="ent-search-compact" style="display:none;padding:.3rem 1rem .65rem;align-items:center;gap:.6rem;flex-shrink:0;">
-    <div style="flex:1;display:flex;align-items:center;
-                background:#f1f5f9;border-radius:99px;
-                box-shadow:0 2px 8px rgba(0,0,0,.06);
-                overflow:hidden;height:46px;padding:0 .9rem;gap:.4rem;">
-      <i class="bi bi-search" style="color:#94a3b8;font-size:.95rem;flex-shrink:0;"></i>
-      <input type="text" id="ent-search-mobile"
-             style="flex:1;border:none;background:transparent;outline:none;
-                    font-size:.92rem;color:var(--text);padding:0;"
-             placeholder="Código, proveedor, doc…"
-             oninput="(function(v){
-               var d=document.getElementById('ent-buscar');if(d)d.value=v;
-               var btn=document.getElementById('ent-search-clear');
-               if(btn)btn.style.display=v?'flex':'none';
-               window.filtrarEntradas();
-             })(this.value);">
-      <button id="ent-search-clear"
-              onclick="(function(){
-                var i=document.getElementById('ent-search-mobile');if(i){i.value='';i.focus();}
-                var d=document.getElementById('ent-buscar');if(d)d.value='';
-                document.getElementById('ent-search-clear').style.display='none';
-                window.filtrarEntradas();
-              })()"
-              style="display:none;width:22px;height:22px;border-radius:50%;background:#ef4444;
-                     border:none;color:#fff;font-size:.65rem;flex-shrink:0;
-                     align-items:center;justify-content:center;cursor:pointer;">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </div>
-    <!-- Filtro fechas mobile (colapsable) -->
-    <button onclick="window._entToggleFiltrosMobile()"
-            style="width:46px;height:46px;border-radius:50%;background:#f1f5f9;border:none;
-                   color:var(--subtext);font-size:1.1rem;flex-shrink:0;display:flex;align-items:center;
-                   justify-content:center;cursor:pointer;" title="Filtrar por fecha">
-      <i class="bi bi-funnel-fill"></i>
-    </button>
-  </div>
-  <!-- Filtros fecha mobile (expandible) -->
-  <div id="ent-filtros-mobile" style="display:none;padding:0 1rem .65rem;gap:.5rem;flex-wrap:wrap;align-items:center;">
-    <div style="flex:1;min-width:130px;">
-      <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);margin-bottom:3px;">Desde</div>
-      <input type="date" id="ent-fil-desde-mob"
-             style="width:100%;height:40px;border:1.5px solid var(--border);border-radius:12px;padding:0 .7rem;
-                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;"
-             onchange="(function(){
-               var d=document.getElementById('ent-fil-desde');if(d)d.value=this.value;
-               window.filtrarEntradas();
-             }).call(this)">
-    </div>
-    <div style="flex:1;min-width:130px;">
-      <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);margin-bottom:3px;">Hasta</div>
-      <input type="date" id="ent-fil-hasta-mob"
-             style="width:100%;height:40px;border:1.5px solid var(--border);border-radius:12px;padding:0 .7rem;
-                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;"
-             onchange="(function(){
-               var h=document.getElementById('ent-fil-hasta');if(h)h.value=this.value;
-               window.filtrarEntradas();
-             }).call(this)">
-    </div>
-    <button onclick="window._entLimpiarFechas()"
-            style="width:40px;height:40px;border-radius:12px;background:#fee2e2;border:none;
-                   color:#ef4444;font-size:.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:17px;">
-      <i class="bi bi-x-lg"></i>
-    </button>
-  </div>
-
-  <!-- ═══ WRAPPER DESKTOP (BORDES REDONDOS) ════════════════════════ -->
-  <div class="ent-desktop-card">
-
-    <!-- ═══ HEADER ESCRITORIO ════════════════════════════════════════ -->
-    <div id="ent-desktop-header">
-
-    <!-- Barra título + acciones -->
-    <div style="display:flex;align-items:center;justify-content:space-between;
-                padding:.9rem 1.5rem;border-bottom:1px solid var(--border);
-                background:var(--surface);flex-shrink:0;flex-wrap:wrap;gap:.75rem;">
-      <div>
-        <h2 style="font-size:1.05rem;font-weight:900;color:var(--text);margin:0;line-height:1.2;">
-          <i class="bi bi-arrow-down-circle-fill text-success me-2"></i>Órdenes de Compra
-        </h2>
-        <p style="font-size:.71rem;color:var(--subtext);margin:0;font-weight:600;">Registro de ingresos al almacén</p>
-      </div>
-      <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
-        <!-- Refrescar -->
-        <button onclick="window.cargarEntradas()" title="Actualizar"
-                style="width:36px;height:36px;border-radius:10px;border:1.5px solid var(--border);
-                       background:transparent;color:var(--subtext);font-size:.95rem;
-                       display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-          <i class="bi bi-arrow-clockwise"></i>
-        </button>
-        <!-- Excel -->
-        <div class="dropdown">
-          <button style="height:36px;padding:0 .85rem;border-radius:10px;border:1.5px solid var(--border);
-                         background:transparent;color:var(--text);font-size:.82rem;font-weight:700;
-                         display:flex;align-items:center;gap:.4rem;cursor:pointer;"
-                  data-bs-toggle="dropdown">
-            <i class="bi bi-file-earmark-excel" style="color:#16a34a;"></i>Excel
-            <i class="bi bi-chevron-down" style="font-size:.65rem;color:var(--subtext);"></i>
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="#" onclick="window.exportarEntradasExcel();return false;"><i class="bi bi-download me-2 text-success"></i>Exportar</a></li>
-            <li><a class="dropdown-item" href="#" onclick="window.descargarPlantillaEntradas();return false;"><i class="bi bi-file-earmark-arrow-down me-2 text-primary"></i>Plantilla</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-              <label class="dropdown-item" style="cursor:pointer;">
-                <i class="bi bi-upload me-2 text-warning"></i>Importar Excel
-                <input type="file" id="inputFileEntradas" accept=".xlsx,.xls" style="display:none" onchange="window.importarExcelEntradas(event)">
-              </label>
-            </li>
-          </ul>
+    <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-cart-check-fill"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Órdenes de Compra</h4>
+                <span class="text-secondary small">Gestión de compras, abastecimiento de repuestos y recepción de mercancía</span>
+            </div>
         </div>
-        <div id="col-picker-ent"></div>
-        <!-- + Nueva Entrada -->
-        <button onclick="window.abrirModalEntrada()"
-                style="height:36px;padding:0 1.1rem;border-radius:10px;border:none;
-                       background:#16a34a;color:#fff;font-size:.83rem;font-weight:700;
-                       display:flex;align-items:center;gap:.4rem;cursor:pointer;
-                       box-shadow:0 2px 10px rgba(22,163,74,.28);flex-shrink:0;">
-          <i class="bi bi-plus-lg me-1"></i><span class="d-none d-sm-inline">Nueva Orden de Compra</span>
-        </button>
-      </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.cargarEntradas()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
+            </button>
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-file-earmark-excel text-success"></i> Excel
+                </button>
+                <ul class="dropdown-menu shadow border" style="border-radius:10px;">
+                    <li><a class="dropdown-item py-2 fw-semibold" href="#" onclick="window.exportarEntradasExcel();return false;"><i class="bi bi-download me-2 text-success"></i>Exportar</a></li>
+                    <li><a class="dropdown-item py-2 fw-semibold" href="#" onclick="window.descargarPlantillaEntradas();return false;"><i class="bi bi-file-earmark-arrow-down me-2 text-primary"></i>Plantilla</a></li>
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li>
+                        <label class="dropdown-item py-2 fw-semibold" style="cursor:pointer;">
+                            <i class="bi bi-upload me-2 text-warning"></i>Importar Excel
+                            <input type="file" id="inputFileEntradas" accept=".xlsx,.xls" style="display:none" onchange="window.importarExcelEntradas(event)">
+                        </label>
+                    </li>
+                </ul>
+            </div>
+            <div id="col-picker-ent" class="d-none d-md-flex"></div>
+            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalEntrada()" style="background: #0284c7; border-color: #0284c7;">
+                <i class="bi bi-plus-lg fs-6"></i> <span>Nueva Orden de Compra</span>
+            </button>
+        </div>
     </div>
 
-    <!-- Barra filtros -->
-    <div class="ent-controls"
-         style="display:flex;align-items:center;gap:.6rem;padding:.6rem 1.5rem;
-                background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;">
-      <!-- Pill search -->
-      <div style="display:flex;align-items:center;gap:.45rem;background:var(--bg);
-                  border:1.5px solid var(--border);border-radius:99px;padding:.25rem .85rem;
-                  min-width:220px;transition:border-color .2s,box-shadow .2s;"
-           onfocusin="this.style.borderColor='#16a34a';this.style.boxShadow='0 0 0 3px rgba(22,163,74,.08)'"
-           onfocusout="this.style.borderColor='var(--border)';this.style.boxShadow=''">
-        <i class="bi bi-search" style="color:#94a3b8;font-size:.82rem;flex-shrink:0;"></i>
-        <input type="text" id="ent-buscar"
-               style="border:none;background:transparent;outline:none;
-                      font-size:.83rem;color:var(--text);flex:1;min-width:0;padding:.28rem 0;"
-               placeholder="Código, proveedor, documento…" oninput="window.filtrarEntradas()">
-      </div>
-      <!-- Fechas -->
-      <input type="date" id="ent-fil-desde" onchange="window.filtrarEntradas()"
-             style="height:36px;border-radius:10px;border:1.5px solid var(--border);
-                    background:var(--surface);padding:0 .75rem;font-size:.82rem;
-                    color:var(--text);outline:none;max-width:148px;">
-      <input type="date" id="ent-fil-hasta" onchange="window.filtrarEntradas()"
-             style="height:36px;border-radius:10px;border:1.5px solid var(--border);
-                    background:var(--surface);padding:0 .75rem;font-size:.82rem;
-                    color:var(--text);outline:none;max-width:148px;">
-      <!-- Limpiar fechas -->
-      <button onclick="window._entLimpiarFechas()" title="Limpiar fechas"
-              style="width:36px;height:36px;border-radius:10px;border:1.5px solid var(--border);
-                     background:transparent;color:var(--subtext);font-size:.85rem;
-                     display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-        <i class="bi bi-x-lg"></i>
-      </button>
-      <span id="ent-contador"
-            style="font-size:.78rem;font-weight:700;color:var(--subtext);margin-left:auto;"></span>
+    <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO) ─────────────── -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="ent-kpi-total-card">
+                <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                    <i class="bi bi-arrow-down-circle-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Total O.C.</span>
+                    <h2 id="kpi-ent-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="ent-kpi-monto-card">
+                <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Monto Total</span>
+                    <h2 id="kpi-ent-monto" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">S/ 0.00</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="ent-kpi-provs-card">
+                <div class="ck-kpi-icon" style="background:#f5f3ff; color:#7c3aed;">
+                    <i class="bi bi-truck"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Proveedores</span>
+                    <h2 id="kpi-ent-provs" class="fw-bolder m-0 text-primary lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="ent-kpi-items-card">
+                <div class="ck-kpi-icon" style="background:#fefce8; color:#ca8a04;">
+                    <i class="bi bi-box-seam"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Items Recibidos</span>
+                    <h2 id="kpi-ent-items" class="fw-bolder m-0 text-warning lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
     </div>
 
-  </div>
+    <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS RÁPIDOS ────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <div class="position-relative flex-grow-1" style="min-width: 240px; max-width: 380px;">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+            <input type="text" id="ent-buscar" class="ck-apple-search" placeholder="Código, proveedor, documento..." oninput="window.filtrarEntradas()">
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <input type="date" id="ent-fil-desde" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:140px; height:38px;" title="Desde" onchange="window.filtrarEntradas()">
+            <input type="date" id="ent-fil-hasta" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:140px; height:38px;" title="Hasta" onchange="window.filtrarEntradas()">
+            <button onclick="window._entLimpiarFechas()" class="btn btn-light bg-white border text-secondary rounded-3" style="height:38px; width:38px; display:flex; align-items:center; justify-content:center;" title="Limpiar fechas">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <span id="ent-contador" class="text-secondary small fw-bold ms-auto"></span>
+    </div>
 
   <!-- ═══ CONTENEDOR PRINCIPAL ═════════════════════════════════════ -->
   <div style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;">

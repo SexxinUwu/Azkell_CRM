@@ -1,17 +1,104 @@
 <!-- Módulo Status Rampa — Azkell Fleet -->
 <style>
 #moduloStatusRampa {
+    font-family: 'Plus Jakarta Sans', sans-serif;
     display: flex;
     flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
-    overflow: hidden;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
 }
 #root-dinamico, .main-area {
     padding: 0 !important;
     background-color: #F2F2F7 !important;
     display: flex !important;
     flex-direction: column !important;
+}
+
+/* ── KPIs Apple Compact Bento Cards ─────────────── */
+#moduloStatusRampa .ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    min-height: 56px !important;
+}
+#moduloStatusRampa .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
+}
+#moduloStatusRampa .ck-kpi-card.active {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
+    background: #f8fafc !important;
+}
+#moduloStatusRampa .ck-kpi-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* ── Control Bar & Apple Search ──────────────────── */
+#moduloStatusRampa .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 9px 14px 9px 38px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+#moduloStatusRampa .ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+#moduloStatusRampa .ck-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+#moduloStatusRampa .ck-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+#moduloStatusRampa .ck-segment-item:hover { color: #0f172a; }
+#moduloStatusRampa .ck-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
 }
 
 /* ── Combobox cb-dropdown scoped en drawers de Status Rampa ── */
@@ -36,35 +123,15 @@
     color: #0284c7 !important;
 }
 
-/* ── Barra de controles ──────────────────────────────────────── */
-#moduloStatusRampa .sr-top-wrap {
-    background: var(--surface);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    margin: 1rem 1.25rem 0 1.25rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-    overflow: hidden;
-    flex-shrink: 0;
-}
-#moduloStatusRampa .sr-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0.6rem 1.25rem;
-    background: transparent;
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
-}
-
 /* ── Tabla ────────────────────────────────────────────────────── */
 #moduloStatusRampa .sr-table-wrap {
     flex: 1 1 0;
     overflow-y: auto;
-    background: var(--surface);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    margin: 1rem 1.25rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    margin: 0 !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
 }
 #moduloStatusRampa table {
     width: 100%;
@@ -568,57 +635,101 @@
 
 <div id="moduloStatusRampa">
 
-    <!-- CONTROLES SUPERIORES (BARRA + PESTAÑAS) -->
-    <div class="sr-top-wrap">
-        <div class="sr-controls d-flex d-md-flex align-items-center justify-content-between p-3" style="border-bottom:none;">
-            <div class="input-group flex-fill" style="max-width:320px;">
-                <span class="input-group-text">
-                    <i class="bi bi-search" style="color:var(--subtext)"></i>
-                </span>
-                <input type="text" class="form-control border-start-0 ps-0 shadow-none" id="sr-buscador"
-                    placeholder="Buscar por placa, rampa, situación..."
-                    oninput="window.srBuscar()">
+    <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-ev-station-fill"></i>
             </div>
-            <div style="flex:1"></div>
-            <button class="btn btn-sm btn-outline-secondary d-none d-md-block" onclick="window.init_status_rampa()" title="Actualizar">
-                <i class="bi bi-arrow-clockwise"></i>
+            <div>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Status de Rampa</h4>
+                <span class="text-secondary small">Gestión y monitoreo de ocupación de bahías y turnos de taller</span>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.init_status_rampa()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
             </button>
-            <button class="btn btn-sm btn-outline-secondary d-none d-md-block" onclick="window.srAbrirConfigRampas()" title="Configurar Rampas" data-perm-e="status_rampa">
-                <i class="bi bi-gear me-1"></i><span class="sr-excel-txt">Configurar</span>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.srAbrirConfigRampas()" data-perm-e="status_rampa" title="Configurar Rampas">
+                <i class="bi bi-gear fs-6"></i> <span class="d-none d-md-inline">Configurar</span>
             </button>
             <div id="col-picker-sr" class="d-none d-md-flex"></div>
-            <button class="btn btn-sm btn-outline-success d-none d-md-block" id="sr-btn-excel" onclick="window.srExportarExcel()" title="Exportar Excel">
-                <i class="bi bi-file-earmark-excel"></i><span class="sr-excel-txt ms-1">Excel</span>
+            <button class="btn btn-success shadow-sm px-3 py-2 fw-bold text-white d-flex align-items-center gap-1 rounded-3" id="sr-btn-excel" onclick="window.srExportarExcel()" title="Exportar Excel">
+                <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Excel</span>
             </button>
-            <button class="btn btn-sm btn-primary d-none d-md-block" id="sr-btn-registrar" onclick="window.srRegistrar()" data-perm-c="status_rampa">
-                <i class="bi bi-plus-lg me-1"></i>Registrar Unidad
+            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" id="sr-btn-registrar" onclick="window.srRegistrar()" data-perm-c="status_rampa" style="background: #0284c7; border-color: #0284c7;">
+                <i class="bi bi-plus-lg fs-6"></i> <span>Registrar Unidad</span>
             </button>
+        </div>
+    </div>
+
+    <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO) ─────────────── -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card active" id="sr-kpi-total" onclick="window.srFiltrarKPI('total', this)">
+                <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                    <i class="bi bi-grid-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Total Rampas</span>
+                    <h2 id="kpi-sr-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="sr-kpi-ocupadas" onclick="window.srFiltrarKPI('ocupadas', this)">
+                <div class="ck-kpi-icon" style="background:#fef2f2; color:#ef4444;">
+                    <i class="bi bi-tools"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">En Trabajo / Ocupadas</span>
+                    <h2 id="kpi-sr-ocupadas" class="fw-bolder m-0 text-danger lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="sr-kpi-libres" onclick="window.srFiltrarKPI('libres', this)">
+                <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Libres / Disponibles</span>
+                    <h2 id="kpi-sr-libres" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="sr-kpi-espera" onclick="window.srFiltrarKPI('espera', this)">
+                <div class="ck-kpi-icon" style="background:#fefce8; color:#ca8a04;">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">En Espera / Lavado</span>
+                    <h2 id="kpi-sr-espera" class="fw-bolder m-0 text-warning lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 3. BARRA DE BÚSQUEDA Y PESTAÑAS SEGMENTADAS ───────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 340px;">
+            <div class="position-relative flex-grow-1">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+                <input type="text" id="sr-buscador" class="ck-apple-search" placeholder="Buscar por placa, rampa, situación..." oninput="window.srBuscar()">
+            </div>
         </div>
 
-    <!-- PESTAÑAS -->
-    <div class="sr-tabs">
-        <div class="sr-tabs-inner d-md-flex w-100" style="gap:0;">
-            <div class="sr-tab active" id="sr-tab-rampas" onclick="window.srCambiarTab('rampas')">
-                RAMPAS <span class="sr-tab-badge" id="sr-tab-badge-rampas">0</span>
-            </div>
-            <div class="sr-tab" id="sr-tab-historial" onclick="window.srCambiarTab('historial')">
-                HISTORIAL <span class="sr-tab-badge" id="sr-tab-badge-historial">0</span>
+        <div class="d-flex align-items-center gap-2">
+            <div class="ck-apple-segmented" id="btn-group-sr-tabs">
+                <button type="button" class="ck-segment-item active" id="sr-tab-rampas" onclick="window.srCambiarTab('rampas')">
+                    Rampas <span class="badge bg-primary rounded-pill ms-1" id="sr-tab-badge-rampas">0</span>
+                </button>
+                <button type="button" class="ck-segment-item" id="sr-tab-historial" onclick="window.srCambiarTab('historial')">
+                    Historial <span class="badge bg-secondary rounded-pill ms-1" id="sr-tab-badge-historial">0</span>
+                </button>
             </div>
         </div>
-    </div>
-    
-    <!-- CONTROLES MÓVILES SCROLL HORIZONTAL -->
-    <div class="d-flex d-md-none align-items-center justify-content-center bg-white" style="gap:0.75rem; padding:0.2rem 0.75rem 0.8rem; margin-bottom: 0.5rem;">
-        <button class="btn rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px; height:42px; color:#475569; background:#f1f5f9; border:none;" onclick="window.init_status_rampa()" title="Actualizar">
-            <i class="bi bi-arrow-clockwise" style="font-size:1.1rem;"></i>
-        </button>
-        <button class="btn rounded-pill d-flex align-items-center justify-content-center flex-shrink-0" style="height:42px; padding:0 1.25rem; color:#1e293b; font-weight:700; font-size:0.85rem; background:#f1f5f9; border:none;" onclick="window.srAbrirConfigRampas()" data-perm-e="status_rampa">
-            <i class="bi bi-gear me-2" style="color:#64748b; font-size:1.1rem;"></i> Configurar
-        </button>
-        <button class="btn rounded-pill d-flex align-items-center justify-content-center flex-shrink-0" style="height:42px; padding:0 1.25rem; font-weight:700; font-size:0.85rem; color:#16a34a; background:#f0fdf4; border:none;" onclick="window.srExportarExcel()">
-            <i class="bi bi-file-earmark-excel me-2" style="font-size:1.1rem;"></i> Excel
-        </button>
-    </div>
     </div>
 
     <!-- PANE: RAMPAS -->

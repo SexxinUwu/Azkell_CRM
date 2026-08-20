@@ -1,5 +1,67 @@
 <!-- Módulo Almacén / Proveedores — SPA Aislado -->
 <style>
+#mod-proveedores {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+/* ── KPIs Apple Compact Bento Cards ─────────────── */
+#mod-proveedores .ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    min-height: 56px !important;
+}
+#mod-proveedores .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
+}
+#mod-proveedores .ck-kpi-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* ── Control Bar & Apple Search ──────────────────── */
+#mod-proveedores .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 9px 14px 9px 38px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+#mod-proveedores .ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+
 .prov-card { display: flex; align-items: center; gap: .75rem; padding: .8rem .9rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px; position: relative; overflow: hidden; min-height: 72px; }
 .prov-avatar { width: 48px; height: 48px; border-radius: 50%; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.05rem; flex-shrink: 0; }
 .prov-info { flex: 1; min-width: 0; }
@@ -15,72 +77,124 @@
     .prov-panel-full.open { transform: translateY(0); }
 }
 </style>
+
 <div id="mod-proveedores" class="modulo-wrapper d-flex flex-column h-100">
 
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
-        <i class="bi bi-building-fill text-primary me-1"></i>Proveedores
-      </h2>
-      <p class="text-muted small mb-0">Proveedores de repuestos e insumos</p>
+  <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+    <div class="d-flex align-items-center gap-3">
+      <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+        <i class="bi bi-building-fill"></i>
+      </div>
+      <div>
+        <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Directorio de Proveedores</h4>
+        <span class="text-secondary small">Gestión de aliados estratégicos, marcas autorizadas y contactos comerciales</span>
+      </div>
     </div>
-    <div class="d-flex gap-2">
-      <button class="btn btn-sm btn-success d-none d-md-inline-block fw-bold shadow-sm" onclick="window.abrirModalProveedor()"><i class="bi bi-plus-lg me-1"></i>Registrar</button>
-      <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarProveedores()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-      <input type="file" id="inputFileProveedores" accept=".xlsx,.xls" style="display:none;" onchange="window.importarExcelProveedores(event)">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.cargarProveedores()" title="Actualizar">
+        <i class="bi bi-arrow-clockwise fs-6"></i>
+      </button>
+      <div class="dropdown d-inline-block">
+        <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
+          <i class="bi bi-file-earmark-excel text-success"></i> Excel
+        </button>
+        <ul class="dropdown-menu shadow border" style="border-radius:10px;">
+          <li><a class="dropdown-item py-2 fw-semibold" href="#" onclick="window.exportarExcelProveedores();return false;"><i class="bi bi-download me-2 text-success"></i>Exportar</a></li>
+          <li><a class="dropdown-item py-2 fw-semibold" href="#" onclick="window.descargarPlantillaProveedores();return false;"><i class="bi bi-file-earmark-arrow-down me-2 text-primary"></i>Plantilla</a></li>
+          <li><hr class="dropdown-divider my-1"></li>
+          <li>
+            <label class="dropdown-item py-2 fw-semibold" style="cursor:pointer;">
+              <i class="bi bi-upload me-2 text-warning"></i>Importar Excel
+              <input type="file" id="inputFileProveedores" accept=".xlsx,.xls" style="display:none;" onchange="window.importarExcelProveedores(event)">
+            </label>
+          </li>
+        </ul>
+      </div>
+      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalProveedor()" style="background: #0284c7; border-color: #0284c7;">
+        <i class="bi bi-plus-lg fs-6"></i> <span>Registrar Proveedor</span>
+      </button>
     </div>
   </div>
 
-  <!-- Botón Flotante (FAB) -->
-  <div class="dropup d-md-none" style="position:fixed; bottom:104px; right:1rem; z-index:1000;">
-    <button class="btn btn-success shadow-lg" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.5rem; background:#10b981; border:none;">
-      <i class="bi bi-plus-lg"></i>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-end shadow-lg mb-2" style="border-radius:12px; border:none;">
-      <li><button class="dropdown-item fw-bold text-primary py-2 btn btn-link text-decoration-none text-start" type="button" onclick="window.abrirModalProveedor()"><i class="bi bi-building-add me-2"></i>Registrar Proveedor</button></li>
-      <li><hr class="dropdown-divider"></li>
-      <li><button class="dropdown-item fw-bold text-success py-2 btn btn-link text-decoration-none text-start" type="button" onclick="window.descargarPlantillaProveedores()"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Descargar Plantilla</button></li>
-      <li><button class="dropdown-item fw-bold text-info py-2 btn btn-link text-decoration-none text-start" type="button" onclick="document.getElementById('inputFileProveedores').click()"><i class="bi bi-cloud-upload me-2"></i>Importar Excel Lleno</button></li>
-      <li><hr class="dropdown-divider"></li>
-      <li><button class="dropdown-item fw-bold text-secondary py-2 btn btn-link text-decoration-none text-start" type="button" onclick="window.exportarExcelProveedores()"><i class="bi bi-download me-2"></i>Exportar Proveedores</button></li>
-    </ul>
-  </div>
-
-  <!-- Filtros Modernos -->
-  <div class="mb-3" style="background:var(--surface); border:1.5px solid var(--border); border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:12px;">
-    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-      <div class="position-relative" style="flex:1; min-width:200px;">
-        <i class="bi bi-search position-absolute text-muted" style="left:12px; top:50%; transform:translateY(-50%); font-size:0.9rem;"></i>
-        <input type="text" id="prov-buscar" class="form-control" style="padding-left:36px; border-radius:12px; background:var(--bg); border:1.5px solid var(--border); box-shadow:none; font-weight:600; font-size:0.85rem;" placeholder="Nombre, RUC, marca…" oninput="window.filtrarProveedores()">
-      </div>
-      <div style="width:120px; flex-shrink:0;">
-        <select id="prov-fil-estado" class="form-select" style="border-radius:12px; background:var(--bg); border:1.5px solid var(--border); box-shadow:none; font-weight:600; font-size:0.85rem;" onchange="window.filtrarProveedores()">
-          <option value="">Todos</option>
-          <option value="Activo">Activos</option>
-          <option value="Inactivo">Inactivos</option>
-        </select>
+  <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO) ─────────────── -->
+  <div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="ck-kpi-card" id="prov-kpi-total-card">
+        <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+          <i class="bi bi-building-fill"></i>
+        </div>
+        <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+          <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Total Proveedores</span>
+          <h2 id="kpi-prov-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
+        </div>
       </div>
     </div>
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-top:1.5px dashed var(--border); padding-top:10px;">
+    <div class="col-6 col-md-3">
+      <div class="ck-kpi-card" id="prov-kpi-activos-card">
+        <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+          <i class="bi bi-check-circle-fill"></i>
+        </div>
+        <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+          <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Activos</span>
+          <h2 id="kpi-prov-activos" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">0</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="ck-kpi-card" id="prov-kpi-inactivos-card">
+        <div class="ck-kpi-icon" style="background:#fefce8; color:#ca8a04;">
+          <i class="bi bi-pause-circle-fill"></i>
+        </div>
+        <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+          <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Inactivos</span>
+          <h2 id="kpi-prov-inactivos" class="fw-bolder m-0 text-warning lh-1" style="font-size: 1.35rem;">0</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="ck-kpi-card" id="prov-kpi-marcas-card">
+        <div class="ck-kpi-icon" style="background:#f5f3ff; color:#7c3aed;">
+          <i class="bi bi-tags-fill"></i>
+        </div>
+        <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+          <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Marcas Únicas</span>
+          <h2 id="kpi-prov-marcas" class="fw-bolder m-0 text-primary lh-1" style="font-size: 1.35rem;">0</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS RÁPIDOS ────────────────────── -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 480px;">
+      <div class="position-relative flex-grow-1">
+        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+        <input type="text" id="prov-buscar" class="ck-apple-search" placeholder="Nombre, RUC, marca, contacto..." oninput="window.filtrarProveedores()">
+      </div>
+      <select id="prov-fil-estado" class="form-select form-select-sm rounded-3 bg-white border" style="max-width:130px; height:38px; font-weight:600;" onchange="window.filtrarProveedores()">
+        <option value="">Todos</option>
+        <option value="Activo">Activos</option>
+        <option value="Inactivo">Inactivos</option>
+      </select>
+    </div>
+    <div class="d-flex align-items-center gap-2">
       <div class="form-check m-0 d-flex align-items-center">
         <input class="form-check-input me-2" type="checkbox" id="prov-select-all" style="cursor:pointer; transform:scale(1.1); width:1.2em; height:1.2em; border-radius:6px; border:2px solid #cbd5e1;" onchange="window._provToggleSelAll(this.checked)">
         <label class="form-check-label text-muted" for="prov-select-all" style="font-weight:700; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;">Seleccionar Todos</label>
       </div>
-      <div class="d-flex align-items-center gap-2">
-        <button id="prov-btn-eliminar-masivo" class="btn btn-sm btn-danger fw-bold rounded-3" style="display:none; padding:4px 10px;" onclick="window.eliminarMasivoProveedores()"><i class="bi bi-trash-fill me-1"></i><span id="prov-btn-eliminar-txt">Eliminar</span></button>
-        <span id="prov-contador" class="text-muted" style="font-weight:700; font-size:0.75rem; background:var(--bg); padding:4px 10px; border-radius:12px; border:1px solid var(--border);">Cargando...</span>
-      </div>
+      <button id="prov-btn-eliminar-masivo" class="btn btn-sm btn-danger fw-bold rounded-3" style="display:none; padding:6px 12px;" onclick="window.eliminarMasivoProveedores()">
+        <i class="bi bi-trash-fill me-1"></i><span id="prov-btn-eliminar-txt">Eliminar</span>
+      </button>
+      <span id="prov-contador" class="text-secondary small fw-bold ms-auto">Cargando...</span>
     </div>
   </div>
 
-  <!-- KPI Row Bento -->
-  <div id="prov-kpi-row" class="bento-kpi-row"></div>
-
   <!-- TABLA DE PROVEEDORES (Desktop) -->
-  <div class="d-none d-md-flex" style="flex:1 1 0;min-height:0;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:12px;">
+  <div class="d-none d-md-flex" style="flex:1 1 0;min-height:0;overflow:hidden;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;">
     <div class="ent-table-wrap" style="flex:1 1 0; overflow: auto; -webkit-overflow-scrolling: touch;">
       <table id="tabla-proveedores" style="width: 100%; min-width: 950px; border-collapse: collapse; font-size: 0.82rem;">
-        <thead style="position: sticky; top: 0; background: var(--surface); z-index: 10; border-bottom: 2px solid var(--border);">
+        <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10; border-bottom: 2px solid #e2e8f0;">
           <tr>
             <th style="width: 40px; text-align: center; padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;"></th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Proveedor / Asesor</th>
@@ -89,7 +203,7 @@
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;" class="d-none d-md-table-cell">Contacto</th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Marcas</th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Estado</th>
-            <th style="width: 160px; padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Acciones</th>
+            <th style="width: 140px; padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Acciones</th>
           </tr>
         </thead>
         <tbody id="prov-tbody">

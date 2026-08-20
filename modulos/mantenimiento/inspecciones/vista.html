@@ -16,6 +16,97 @@
     flex-direction: column;
 }
 
+#moduloStatus {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+}
+
+/* ── KPIs Apple Compact Bento Cards ─────────────── */
+#moduloStatus .ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    min-height: 56px !important;
+}
+#moduloStatus .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
+}
+#moduloStatus .ck-kpi-card.active {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
+    background: #f8fafc !important;
+}
+#moduloStatus .ck-kpi-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* ── Control Bar & Apple Search ──────────────────── */
+#moduloStatus .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 9px 14px 9px 38px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+#moduloStatus .ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+#moduloStatus .ck-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+#moduloStatus .ck-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+#moduloStatus .ck-segment-item:hover { color: #0f172a; }
+#moduloStatus .ck-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
 @media (max-width: 768px) {
     /* Hacer pantalla completa y ocultar topbar */
     .topbar { display: none !important; }
@@ -37,343 +128,168 @@
     #moduloStatus .controls-row {
         padding: 0 !important;
     }
-    /* El table-container envuelve la tabla que NO vamos a ocultar, pero en móvil las filas se muestran como cards */
     #moduloStatus .card.flex-grow-1 {
         min-height: 0 !important;
         border: none !important;
         margin: 0 !important;
         background-color: transparent !important;
-        padding-bottom: 6rem !important; /* Espacio para FAB */
+        padding-bottom: 6rem !important;
         overflow-y: visible !important;
     }
     #tablaStatus { background: transparent !important; border: none !important; margin: 0 !important; }
     #tablaStatus thead { display: none !important; }
     #cuerpoTablaStatus, #cuerpoTablaStatus tr { display: block; width: 100%; border: none !important; padding: 0 !important; background: transparent !important; }
-    #cuerpoTablaStatus td { display: none !important; } /* Ocultar TODAS por defecto */
+    #cuerpoTablaStatus td { display: none !important; }
     #cuerpoTablaStatus td:last-child { display: block !important; width: 100%; border: none !important; padding: 0 !important; background: transparent !important; }
-    
-    /* Mobile Header Controls */
-    .insp-header-mobile {
-        background-color: #00875A;
-        padding: 2rem 1.25rem 1rem;
-        border-radius: 0 0 1.5rem 1.5rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        z-index: 20;
-        position: relative;
-        margin-bottom: 1rem;
-    }
-    /* Gráficos en Móvil */
-    #panelGraficosStatus { margin-top: -0.5rem; position: relative; z-index: 10; padding: 0 1rem !important; }
-    #panelGraficosStatus .card {
-        border-radius: 20px !important;
-        border: 1px solid #f3f4f6 !important;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
-        margin-bottom: 0.75rem !important;
-    }
-    #panelGraficosStatus h6.fw-bold {
-        font-size: 13px !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.05em !important;
-        color: #1f2937 !important;
-    }
-    .col-12.col-md-4 .chart-container-status { height: 180px !important; position: relative; width: 100%; }
-    .col-6.col-md-4 .chart-container-status { height: 110px !important; position: relative; width: 100%; }
     
     .desktop-controls-wrapper { display: none !important; }
 }
 </style>
 
 <div id="moduloStatus" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
-    <div class="controls-row">
-        <!-- Header Móvil (solo visible en móvil) -->
-        <div class="d-md-none insp-header-mobile w-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="fw-bold text-white" style="font-size: 14px;">Mantenimiento</span>
-                <div class="d-flex align-items-center justify-content-center text-white fw-bold shadow-inner" style="width: 32px; height: 32px; background-color: rgba(0,0,0,0.2); border-radius: 50%; font-size: 11px;">
-                    SA
-                </div>
-            </div>
 
-            <h1 id="mobile-insp-title" class="fw-bold text-white mb-4" style="font-size: 1.5rem; letter-spacing: -0.5px;">
-                Análisis de Inspecciones
-            </h1>
-
-            <div class="d-flex flex-wrap gap-2 align-items-center">
-                <div class="flex-grow-1 d-flex align-items-center px-3 border" style="min-width: 150px; background-color: rgba(0,0,0,0.15); height: 42px; border-radius: 0.75rem; border-color: rgba(255,255,255,0.1) !important; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);">
-                    <i class="bi bi-search me-2" style="color: rgba(255,255,255,0.7); font-size: 18px;"></i>
-                    <input type="text" class="w-100 bg-transparent border-0 outline-none text-white" placeholder="Buscar placa..." style="font-size: 15px; outline: none; box-shadow: none;" oninput="document.getElementById('buscadorStatus').value = this.value; window.filtrarStatusAvanzado();">
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="d-flex align-items-center justify-content-center text-white border btn-mobile-filtros" style="width: 42px; height: 42px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: background-color 0.2s;" onclick="event.stopPropagation(); window.toggleMobileFiltrosSheet();" title="Filtros">
-                        <i class="bi bi-funnel" style="font-size: 17px;"></i>
-                    </button>
-                    <script>
-                        window.toggleMobileFiltrosSheet = function() {
-                            var b = document.querySelector('#btnFiltrosInsp');
-                            var m = b ? b.nextElementSibling : null;
-                            var ov = document.getElementById('mobFiltOverlay');
-                            if (!ov) {
-                                ov = document.createElement('div');
-                                ov.id = 'mobFiltOverlay';
-                                ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:9999;display:none;backdrop-filter:blur(4px);transition:opacity 0.25s ease;';
-                                ov.onclick = function() {
-                                    if (m) m.classList.remove('show');
-                                    ov.style.display = 'none';
-                                };
-                                document.body.appendChild(ov);
-                            }
-                            window._mobFiltOverlay = ov;
-                            if (m) {
-                                var isShown = m.classList.contains('show');
-                                if (isShown) {
-                                    m.classList.remove('show');
-                                    ov.style.display = 'none';
-                                } else {
-                                    m.classList.add('show');
-                                    ov.style.display = 'block';
-                                }
-                            }
-                        };
-                    </script>
-                    <button class="d-flex align-items-center justify-content-center text-white border" style="width: 42px; height: 42px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: background-color 0.2s;" onclick="recargarModulo('statusMant')">
-                        <i class="bi bi-arrow-clockwise" style="font-size: 17px;"></i>
-                    </button>
-                    <button id="btnMobileHistorial" class="d-flex align-items-center justify-content-center text-white border btn-historial-toggle" style="height: 42px; min-width: 42px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: all 0.25s ease;" onclick="toggleVistaStatus();" title="Ver Historial Completo">
-                        <i class="bi bi-clock-history" style="font-size: 17px;"></i>
-                    </button>
-                    <button class="d-flex align-items-center justify-content-center text-white border btn-graficos-toggle" style="width: 42px; height: 42px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: all 0.2s;" onclick="toggleGraficosStatus(); this.classList.toggle('active-graficos');" title="Ver Gráficos">
-                        <i class="bi bi-pie-chart" style="font-size: 17px;"></i>
-                    </button>
-                </div>
+    <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-clipboard2-check-fill"></i>
             </div>
-            <!-- Banner de Modo Activo (Liquid Glass) -->
-            <div class="d-flex align-items-center justify-content-between px-3 py-2 mt-2 rounded-3 text-white" id="insp-mob-mode-banner" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); font-size: 0.78rem; font-weight: 700;">
-                <div class="d-flex align-items-center gap-2" id="insp-mob-mode-label">
-                    <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;box-shadow:0 0 8px #10b981;"></span>
-                    <span>Modo: Últimas Inspecciones (Vigentes)</span>
-                </div>
-                <span class="badge bg-white text-dark shadow-sm" id="insp-mob-mode-count" style="font-size: 0.72rem; font-weight: 800;">—</span>
+            <div>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Análisis de Inspecciones</h4>
+                <span class="text-secondary small">Control semafórico, diagnóstico preventivo y checklist de unidades</span>
             </div>
-            <style>
-                .btn-historial-toggle.active-historial { background-color: #6366f1 !important; border-color: #818cf8 !important; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4); }
-                .btn-graficos-toggle.active-graficos { background-color: #f59e0b !important; border-color: #fbbf24 !important; }
-                @media (max-width: 767.98px) {
-                    #btnFiltrosInsp {
-                        position: absolute !important;
-                        opacity: 0.01 !important;
-                        pointer-events: none !important;
-                        display: block !important;
-                        z-index: -100;
-                        width: 1px !important;
-                        height: 1px !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
-                        border: none !important;
-                    }
-                    #btnFiltrosInsp + .dropdown-menu {
-                        position: fixed !important;
-                        top: auto !important;
-                        bottom: 0 !important;
-                        left: 0 !important;
-                        right: 0 !important;
-                        width: 100vw !important;
-                        max-width: 100vw !important;
-                        border-radius: 24px 24px 0 0 !important;
-                        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.35) !important;
-                        border: 1px solid var(--border) !important;
-                        border-bottom: none !important;
-                        padding: 0 0 1rem 0 !important;
-                        z-index: 10000 !important;
-                        max-height: 82dvh !important;
-                        overflow-y: auto !important;
-                        transform: translateY(100%);
-                        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-                        background: var(--surface, #ffffff) !important;
-                    }
-                    #btnFiltrosInsp + .dropdown-menu.show {
-                        transform: translateY(0) !important;
-                    }
-                }
-            </style>
         </div>
-        
-        <div class="row mb-3 px-2 px-md-0" id="panelGraficosStatus" style="display: none;">
-            <div class="col-12 col-md-4 mb-3 mb-md-0"><div class="card p-3 shadow-sm h-100 position-relative"><span style="position:absolute; top:10px; right:10px; font-size:0.65rem; color:var(--subtext); background:var(--bg); border:1px solid var(--border); padding:2px 6px; border-radius:6px; font-weight:700;">Objetivo <span contenteditable="true" style="outline:none;border-bottom:1px dashed var(--border);" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">95</span>%</span><h6 class="fw-bold text-center mb-2" data-i18n="insp.totalFleet">Flota Total</h6><div class="chart-container-status"><canvas id="chartTotal"></canvas></div></div></div>
-            <div class="col-12 col-md-4 mb-3 mb-md-0"><div class="card p-3 shadow-sm h-100 position-relative"><span style="position:absolute; top:10px; right:10px; font-size:0.65rem; color:var(--subtext); background:var(--bg); border:1px solid var(--border); padding:2px 6px; border-radius:6px; font-weight:700;">Objetivo <span contenteditable="true" style="outline:none;border-bottom:1px dashed var(--border);" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">95</span>%</span><h6 class="fw-bold text-center mb-2" data-i18n="insp.motors">Unidades Motoras</h6><div class="chart-container-status"><canvas id="chartMotoras"></canvas></div></div></div>
-            <div class="col-12 col-md-4 mb-3 mb-md-0"><div class="card p-3 shadow-sm h-100 position-relative"><span style="position:absolute; top:10px; right:10px; font-size:0.65rem; color:var(--subtext); background:var(--bg); border:1px solid var(--border); padding:2px 6px; border-radius:6px; font-weight:700;">Objetivo <span contenteditable="true" style="outline:none;border-bottom:1px dashed var(--border);" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">95</span>%</span><h6 class="fw-bold text-center mb-2" data-i18n="insp.nonMotors">Unidades No Motoras</h6><div class="chart-container-status"><canvas id="chartNoMotoras"></canvas></div></div></div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span id="cache-badge-statusMant" class="cache-badge d-none d-md-inline-flex"><i class="bi bi-database"></i> <span id="cache-label-statusMant" data-i18n="common.sinCargar">Sin cargar</span></span>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" id="btn-reload-statusMant" onclick="recargarModulo('statusMant')" title="Actualizar">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
+            </button>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" id="btnToggleGraficos" onclick="toggleGraficosStatus()" title="Ver Gráficos">
+                <i class="bi bi-bar-chart-fill fs-6 text-warning"></i> <span class="d-none d-md-inline">Gráficos</span>
+            </button>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="toggleAllStatusGroups()" title="Expandir / Colapsar Grupos">
+                <i class="bi bi-arrows-expand fs-6"></i> <span class="d-none d-md-inline">Expandir</span>
+            </button>
+            <div id="col-picker-insp" class="d-none d-md-flex"></div>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" id="btnToggleHistorialStatus" onclick="toggleVistaStatus()" title="Historial Completo">
+                <i class="bi bi-clock-history fs-6 text-info"></i> <span class="d-none d-md-inline">Historial</span>
+            </button>
+            <div class="dropdown d-none d-md-inline-block">
+                <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-upload"></i> Importar
+                </button>
+                <ul class="dropdown-menu shadow border" style="border-radius:10px;">
+                    <li><a class="dropdown-item fw-semibold text-success py-2" href="#" onclick="descargarPlantillaInspecciones()"><i class="bi bi-file-earmark-spreadsheet me-2"></i> Descargar Plantilla</a></li>
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li><a class="dropdown-item fw-semibold text-primary py-2" href="#" onclick="document.getElementById('inputFileInspecciones').click()"><i class="bi bi-cloud-upload me-2"></i> Subir Excel</a></li>
+                </ul>
+            </div>
+            <input type="file" id="inputFileInspecciones" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelInspecciones(event)">
+            <button class="btn btn-success shadow-sm px-3 py-2 fw-bold text-white d-flex align-items-center gap-1 rounded-3" onclick="exportarExcelInspecciones()" title="Exportar Excel">
+                <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Exportar</span>
+            </button>
+            <button class="btn btn-dark shadow-sm px-3 py-2 fw-bold text-white d-flex align-items-center gap-1 rounded-3" onclick="abrirConfigInspecciones()" data-perm-crear="mantenimiento">
+                <i class="bi bi-gear"></i> <span class="d-none d-md-inline">Configurar Checklist</span>
+            </button>
         </div>
+    </div>
 
-        <style>
-            .kpi-container-frenos { padding: 0.5rem 0; }
-            .kpi-card-frenos {
-                background: #ffffff;
-                border: 1px solid #e2e8f0;
-                border-radius: 16px;
-                padding: 1.25rem 1.5rem;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                min-height: 100px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-                position: relative;
-                overflow: hidden;
-                cursor: pointer;
-                transition: all 0.2s ease;
-            }
-            .kpi-card-frenos:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
-            }
-            .kpi-card-frenos.active {
-                box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
-                border-color: rgba(59, 130, 246, 0.4);
-            }
-            .dark .kpi-card-frenos { background: #1e293b; border-color: #334155; }
-            .dark .kpi-card-frenos .text-dark { color: #f8fafc !important; }
-            .kpi-info-frenos { display: flex; flex-direction: column; gap: 0.25rem; }
-            @media (max-width: 767.98px) {
-                .kpi-card-frenos { margin-bottom: 10px; }
-            }
-        </style>
-        <div class="row mb-3 px-2 px-md-0 kpi-container-frenos" id="panelGraficosFrenos" style="display: none;">
-            <div class="col-12 col-md-4">
-                <div class="kpi-card-frenos" onclick="window.filtrarTablaFrenosPorKPI && window.filtrarTablaFrenosPorKPI('vigentes', this)">
-                    <div class="kpi-info-frenos">
-                        <span class="text-success fw-bold" style="font-size: 0.75rem; letter-spacing: 0.08em;">VIGENTES</span>
-                        <span class="text-dark fw-bold" style="font-size: 2.5rem; line-height: 1.1;" id="frenos-cnt-vigentes">0</span>
-                    </div>
-                    <div class="bg-success bg-opacity-10 text-success" style="position: absolute; top: 1.5rem; right: 1.5rem; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-                        <i class="bi bi-check-lg"></i>
-                    </div>
+    <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO) ─────────────── -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card active" id="insp-kpi-total" onclick="window.filtrarTablaPorSemaforo && window.filtrarTablaPorSemaforo('total', this)">
+                <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                    <i class="bi bi-clipboard2-check"></i>
                 </div>
-            </div>
-            <div class="col-12 col-md-4">
-                <div class="kpi-card-frenos" onclick="window.filtrarTablaFrenosPorKPI && window.filtrarTablaFrenosPorKPI('alerta', this)">
-                    <div class="kpi-info-frenos">
-                        <span class="text-warning fw-bold" style="font-size: 0.75rem; letter-spacing: 0.08em;">EN ALERTA</span>
-                        <span class="text-dark fw-bold" style="font-size: 2.5rem; line-height: 1.1;" id="frenos-cnt-alerta">0</span>
-                    </div>
-                    <div class="bg-warning bg-opacity-10 text-warning" style="position: absolute; top: 1.5rem; right: 1.5rem; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-                        <i class="bi bi-clock"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-4">
-                <div class="kpi-card-frenos" onclick="window.filtrarTablaFrenosPorKPI && window.filtrarTablaFrenosPorKPI('vencidos', this)">
-                    <div class="kpi-info-frenos">
-                        <span class="text-danger fw-bold" style="font-size: 0.75rem; letter-spacing: 0.08em;">VENCIDOS</span>
-                        <span class="text-dark fw-bold" style="font-size: 2.5rem; line-height: 1.1;" id="frenos-cnt-vencidos">0</span>
-                    </div>
-                    <div class="bg-danger text-white" style="position: absolute; top: 1.5rem; right: 1.5rem; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; box-shadow: 0 8px 20px rgba(239,68,68,0.4);">
-                        <i class="bi bi-exclamation-triangle"></i>
-                    </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Flota Inspeccionada</span>
+                    <h2 id="kpi-insp-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
                 </div>
             </div>
         </div>
-
-        <div class="d-flex justify-content-between flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
-                <div class="d-none d-md-flex align-items-center" style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;transition:all .2s;overflow:hidden;height:36px;padding:0 .8rem;gap:.4rem;min-width:240px;flex:1;max-width:300px;" onfocusin="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 4px rgba(99,102,241,0.1)'" onfocusout="this.style.borderColor='var(--border)';this.style.boxShadow=''">
-                    <i class="bi bi-search" style="color:#94a3b8;font-size:.82rem;flex-shrink:0;"></i>
-                    <input type="text" id="buscadorStatus-desktop" style="border:none;background:transparent;outline:none;font-size:.83rem;color:var(--text);flex:1;min-width:0;padding:.28rem 0;" placeholder="Buscar placa, técnico..." onkeyup="document.getElementById('buscadorStatus').value=this.value; filtrarStatusAvanzado()">
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="insp-kpi-conformes" onclick="window.filtrarTablaPorSemaforo && window.filtrarTablaPorSemaforo('verde', this)">
+                <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+                    <i class="bi bi-check-circle-fill"></i>
                 </div>
-                <input type="hidden" id="buscadorStatus" value="">
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary fw-bold px-2 d-none d-md-block" id="btnFiltrosInsp" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Filtros">
-                        <i class="bi bi-funnel-fill"></i>
-                        <span class="badge bg-primary ms-1 d-none" id="badge-filtros-insp" style="font-size:0.65rem; vertical-align:middle;"></span>
-                    </button>
-                    <div class="dropdown-menu shadow p-0" style="min-width:290px; max-height:calc(100dvh - 80px); overflow:hidden;">
-                        <!-- Drag Handle Pill para Móvil -->
-                        <div class="d-block d-md-none" style="width:44px; height:5px; background:var(--border, #cbd5e1); border-radius:999px; margin:10px auto 4px auto;"></div>
-                        
-                        <div class="d-flex align-items-center justify-content-between px-3 py-2" style="flex-shrink:0; z-index:2; background:var(--surface); border-bottom:1px solid var(--border);">
-                            <span class="fw-bold text-dark" style="font-size:0.9rem;">Filtros</span>
-                            <button class="btn btn-sm btn-link text-danger p-0 fw-bold" style="font-size:0.82rem;" onclick="document.querySelectorAll('#filtroStatusCliente input,#filtroStatusMarca input,#filtroStatusEstado input').forEach(function(c){c.checked=false;}); filtrarStatusAvanzado()"><i class="bi bi-x-circle me-1"></i>Limpiar todo</button>
-                        </div>
-                        <div style="max-height:calc(100dvh - 170px); overflow-y:auto; -webkit-overflow-scrolling:touch;">
-                            <!-- Acordeón: Cliente -->
-                            <div style="border-bottom:1px solid var(--border);">
-                                <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                    <span class="fw-bold" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.clients">Cliente</span>
-                                    <i class="bi bi-chevron-down chev" style="font-size:0.8rem;color:var(--subtext);"></i>
-                                </button>
-                                <div style="display:none;padding:0 14px 10px;">
-                                    <input type="text" class="form-control form-control-sm mb-2" style="font-size:0.85rem; border-radius:8px;" placeholder="Buscar cliente..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroStatusCliente li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                    <ul class="list-unstyled mb-0" id="filtroStatusCliente" style="max-height:140px;overflow-y:auto;"></ul>
-                                </div>
-                            </div>
-                            <!-- Acordeón: Marca -->
-                            <div style="border-bottom:1px solid var(--border);">
-                                <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                    <span class="fw-bold" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.brand">Marca</span>
-                                    <i class="bi bi-chevron-down chev" style="font-size:0.8rem;color:var(--subtext);"></i>
-                                </button>
-                                <div style="display:none;padding:0 14px 10px;">
-                                    <input type="text" class="form-control form-control-sm mb-2" style="font-size:0.85rem; border-radius:8px;" placeholder="Buscar marca..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroStatusMarca li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                    <ul class="list-unstyled mb-0" id="filtroStatusMarca" style="max-height:140px;overflow-y:auto;"></ul>
-                                </div>
-                            </div>
-                            <!-- Acordeón: Estado -->
-                            <div>
-                                <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                    <span class="fw-bold" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.status">Estado</span>
-                                    <i class="bi bi-chevron-down chev" style="font-size:0.8rem;color:var(--subtext);"></i>
-                                </button>
-                                <div style="display:none;padding:0 14px 10px;">
-                                    <ul class="list-unstyled mb-0" id="filtroStatusEstado"></ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Botón de Aplicar para Móvil -->
-                        <div class="p-3 d-block d-md-none border-top bg-light">
-                            <button class="btn btn-primary w-100 rounded-3 py-2 fw-bold shadow-sm" style="font-size: 0.95rem;" onclick="var menu=document.querySelector('#btnFiltrosInsp')?document.querySelector('#btnFiltrosInsp').nextElementSibling:null; if(menu) menu.classList.remove('show'); if(window._mobFiltOverlay) window._mobFiltOverlay.style.display='none';">
-                                <i class="bi bi-check2-circle me-1"></i> Aplicar Filtros
-                            </button>
-                        </div>
-                    </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Conformes / Verde</span>
+                    <h2 id="kpi-insp-conformes" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">0</h2>
                 </div>
-                <!-- Botones icono solo-móvil eliminados porque ahora están en el header móvil -->
             </div>
-            <div class="d-flex align-items-center gap-2 d-none d-md-flex">
-                <span id="cache-badge-statusMant" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-statusMant" data-i18n="common.sinCargar">Sin cargar</span></span>
-                <button class="btn-reload-cache" id="btn-reload-statusMant" onclick="recargarModulo('statusMant')" title="Actualizar Base de Datos"><i class="bi bi-arrow-clockwise"></i></button>
-                <button class="btn btn-outline-warning fw-bold btn-sm text-dark" id="btnToggleGraficos" onclick="toggleGraficosStatus()"><i class="bi bi-bar-chart-fill"></i></button>
-                <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllStatusGroups()"><i class="bi bi-arrows-expand"></i> <span data-i18n="common.expand">Expandir</span></button>
-                <div id="col-picker-insp"></div>
-                <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorialStatus" onclick="toggleVistaStatus()"><i class="bi bi-clock-history"></i> <span data-i18n="insp.btn.history">Historial</span></button>
-                <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-activar-sel-statusMant" onclick="activarModoSeleccionStatusMant()"><i class="bi bi-ui-checks"></i> <span data-i18n="common.select">Seleccionar</span></button>
-                <button class="btn btn-outline-primary fw-bold btn-sm d-none" id="btn-select-all-statusMant" onclick="seleccionarTodasLasStatusMant()"><i class="bi bi-check-square"></i> <span data-i18n="common.selectAll">Seleccionar Todo</span></button>
-                <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-statusMant" onclick="eliminarMasivo('Inspecciones', 'statusMant')"><i class="bi bi-trash"></i> Eliminar (<span id="cnt-bulk-statusMant">0</span>)</button>
-
-                <div class="dropdown">
-                    <button class="btn btn-outline-info fw-bold btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-upload"></i> Importar
-                    </button>
-                    <ul class="dropdown-menu shadow">
-                        <li><a class="dropdown-item fw-bold text-success" href="#" onclick="descargarPlantillaInspecciones()"><i class="bi bi-file-earmark-spreadsheet"></i> 1. Descargar Plantilla</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileInspecciones').click()"><i class="bi bi-cloud-upload"></i> 2. Subir Excel Lleno</a></li>
-                    </ul>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="insp-kpi-alerta" onclick="window.filtrarTablaPorSemaforo && window.filtrarTablaPorSemaforo('amarillo', this)">
+                <div class="ck-kpi-icon" style="background:#fefce8; color:#ca8a04;">
+                    <i class="bi bi-exclamation-circle-fill"></i>
                 </div>
-                <input type="file" id="inputFileInspecciones" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelInspecciones(event)">
-
-                <button class="btn btn-outline-success fw-bold btn-sm" onclick="exportarExcelInspecciones()"><i class="bi bi-download"></i> <span data-i18n="common.export">Exportar</span></button>
-                <button class="btn btn-dark fw-bold btn-sm" onclick="abrirConfigInspecciones()" data-perm-crear="mantenimiento"><i class="bi bi-gear"></i> Configurar Checklist</button>
-                <!-- Botón de registrar eliminado por requerimiento de creación exclusiva por OT -->
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">En Alerta / Amarillo</span>
+                    <h2 id="kpi-insp-alerta" class="fw-bolder m-0 text-warning lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" id="insp-kpi-criticas" onclick="window.filtrarTablaPorSemaforo && window.filtrarTablaPorSemaforo('rojo', this)">
+                <div class="ck-kpi-icon" style="background:#fef2f2; color:#ef4444;">
+                    <i class="bi bi-x-circle-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Críticas / Rojo</span>
+                    <h2 id="kpi-insp-criticas" class="fw-bolder m-0 text-danger lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
             </div>
         </div>
     </div>
-    
-    <ul class="nav nav-tabs px-3 border-0 mt-2" id="insp-tabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active fw-bold text-dark border-0 border-bottom border-primary border-3 bg-transparent" id="insp-general-tab" data-bs-toggle="tab" data-bs-target="#insp-general" type="button" role="tab" aria-selected="true" onclick="document.getElementById('insp-general-tab').classList.add('border-primary','border-3');document.getElementById('insp-frenos-tab').classList.remove('border-primary','border-3'); window.actualizarVistaGraficos && window.actualizarVistaGraficos();">General</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link fw-bold text-danger border-0 bg-transparent" id="insp-frenos-tab" data-bs-toggle="tab" data-bs-target="#insp-frenos" type="button" role="tab" aria-selected="false" onclick="document.getElementById('insp-frenos-tab').classList.add('border-primary','border-3');document.getElementById('insp-general-tab').classList.remove('border-primary','border-3'); window.actualizarVistaGraficos && window.actualizarVistaGraficos();"><i class="bi bi-stop-circle-fill me-1"></i>Sistema de Frenos</button>
-        </li>
-    </ul>
+
+    <!-- ── 3. BARRA DE BÚSQUEDA Y PESTAÑAS SEGMENTADAS ───────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 380px;">
+            <div class="position-relative flex-grow-1">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+                <input type="text" id="buscadorStatus-desktop" class="ck-apple-search" placeholder="Buscar placa, técnico..." onkeyup="document.getElementById('buscadorStatus').value=this.value; filtrarStatusAvanzado()">
+            </div>
+            <input type="hidden" id="buscadorStatus" value="">
+            <div class="dropdown">
+                <button class="btn bg-white border rounded-3 px-3 py-2 text-secondary d-flex align-items-center gap-2 fw-semibold" id="btnFiltrosInsp" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Filtros">
+                    <i class="bi bi-funnel"></i>
+                    <span class="d-none d-md-inline">Filtros</span>
+                    <span class="badge bg-primary ms-1 d-none rounded-pill" id="badge-filtros-insp" style="font-size:0.65rem;"></span>
+                </button>
+                <div class="dropdown-menu shadow-lg p-0 border" style="min-width:290px; border-radius:14px; max-height:calc(100dvh - 80px); overflow:hidden;">
+                    <div class="d-flex align-items-center justify-content-between px-3 py-2" style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                        <span class="fw-bold text-dark" style="font-size:0.88rem;">Filtros</span>
+                        <button class="btn btn-sm btn-link text-danger p-0 fw-bold" style="font-size:0.82rem;" onclick="document.querySelectorAll('#filtroStatusCliente input,#filtroStatusMarca input,#filtroStatusEstado input').forEach(function(c){c.checked=false;}); filtrarStatusAvanzado()"><i class="bi bi-x-circle me-1"></i>Limpiar</button>
+                    </div>
+                    <div style="max-height:calc(100dvh - 170px); overflow-y:auto;">
+                        <div class="p-3 border-bottom">
+                            <span class="fw-bold d-block text-secondary small text-uppercase mb-2">Cliente</span>
+                            <ul class="list-unstyled mb-0" id="filtroStatusCliente" style="max-height:140px;overflow-y:auto;"></ul>
+                        </div>
+                        <div class="p-3 border-bottom">
+                            <span class="fw-bold d-block text-secondary small text-uppercase mb-2">Marca</span>
+                            <ul class="list-unstyled mb-0" id="filtroStatusMarca" style="max-height:140px;overflow-y:auto;"></ul>
+                        </div>
+                        <div class="p-3">
+                            <span class="fw-bold d-block text-secondary small text-uppercase mb-2">Estado</span>
+                            <ul class="list-unstyled mb-0" id="filtroStatusEstado"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <div class="ck-apple-segmented" id="btn-group-insp-tabs">
+                <button type="button" class="ck-segment-item active" id="insp-general-tab" data-bs-toggle="tab" data-bs-target="#insp-general" onclick="document.getElementById('insp-general-tab').classList.add('active');document.getElementById('insp-frenos-tab').classList.remove('active'); window.actualizarVistaGraficos && window.actualizarVistaGraficos();">
+                    General
+                </button>
+                <button type="button" class="ck-segment-item" id="insp-frenos-tab" data-bs-toggle="tab" data-bs-target="#insp-frenos" onclick="document.getElementById('insp-frenos-tab').classList.add('active');document.getElementById('insp-general-tab').classList.remove('active'); window.actualizarVistaGraficos && window.actualizarVistaGraficos();">
+                    <i class="bi bi-stop-circle-fill text-danger me-1"></i>Sistema de Frenos
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div class="tab-content flex-grow-1 d-flex flex-column overflow-hidden" id="insp-tabContent" style="background:var(--surface);">
         <!-- PESTAÑA GENERAL -->

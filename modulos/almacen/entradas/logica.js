@@ -899,6 +899,28 @@ window.filtrarEntradas = function() {
         return matchB && matchD && matchH;
     });
     window._entPagActual = 1;
+
+    // Bento KPIs
+    var totalOC = window._entFiltrados.length;
+    var totalMonto = 0;
+    var provsSet = {};
+    var totalItems = 0;
+
+    window._entFiltrados.forEach(function(d) {
+        totalMonto += parseFloat(d.total_pen || 0);
+        var prov = d.proveedor_nombre || d.proveedor_id;
+        if (prov) provsSet[String(prov).trim()] = true;
+        (d.items || []).forEach(function(it) {
+            totalItems += parseFloat(it.cantidad || 0);
+        });
+    });
+
+    var setKpi = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    setKpi('kpi-ent-total', totalOC);
+    setKpi('kpi-ent-monto', 'S/ ' + totalMonto.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setKpi('kpi-ent-provs', Object.keys(provsSet).length);
+    setKpi('kpi-ent-items', Math.round(totalItems));
+
     window._entRender();
 };
 
