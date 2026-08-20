@@ -1,141 +1,328 @@
-<!-- Módulo Gestión de Usuarios v2 — Discord-style -->
+<!-- Módulo Gestión de Usuarios — Azkell ERP (Apple & Bento ERP) -->
 <style>
-/* ── Layout principal ─────────────────────────────── */
-:root {
-  --dc-bg: #f2f3f5;
-  --dc-panel-bg: #ffffff;
-  --dc-text: #060607;
-  --dc-subtext: #4e5058;
-  --dc-border: #e3e5e8;
-  --dc-hover: rgba(78, 80, 88, 0.08);
-  --dc-active: rgba(78, 80, 88, 0.16);
-  --dc-primary: #5865f2;
+#moduloUsuarios {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
 }
 
-#moduloUsuarios { display:flex; flex-direction:column; height:100%; background:var(--dc-bg); font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-.gu-header { background:var(--dc-bg); border-bottom:1px solid var(--dc-border); flex-shrink:0; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.gu-tabs { background:var(--dc-bg); border-bottom:1px solid var(--dc-border); flex-shrink:0; padding:0 20px; display:flex; gap:16px; }
-.gu-tab { font-size:0.9rem; font-weight:600; padding:12px 4px; border:none; background:transparent; color:var(--dc-subtext); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .15s; }
-.gu-tab:hover { color:var(--dc-text); }
-.gu-tab.active { color:var(--dc-primary); border-bottom-color:var(--dc-primary); }
-.gu-body { display:flex; flex:1 1 0; min-height:0; overflow:hidden; }
+/* ── KPIs Apple Compact Bento Cards ─────────────── */
+#moduloUsuarios .ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    min-height: 56px !important;
+}
+#moduloUsuarios .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
+}
+#moduloUsuarios .ck-kpi-card.active {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25) !important;
+    background: #f8fafc !important;
+}
+#moduloUsuarios .ck-kpi-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
+}
 
-/* ── Lista ────────────────────────────────────────── */
-.gu-list { width:320px; flex-shrink:0; border-right:1px solid var(--dc-border); background:var(--dc-bg); overflow-y:auto; display:flex; flex-direction:column; padding: 10px; }
-.gu-list-item { display:flex; align-items:center; gap:10px; padding:10px 12px; cursor:pointer; transition:background .1s; border-radius: 6px; margin-bottom: 2px; }
-.gu-list-item:hover { background:var(--dc-hover); }
-.gu-list-item.selected { background:var(--dc-active); }
-.gu-role-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-.gu-list-info { flex:1; min-width:0; }
-.gu-list-name { font-size:0.9rem; font-weight:600; color:var(--dc-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.gu-list-sub  { font-size:0.75rem; color:var(--dc-subtext); }
-.gu-list-chevron { display:none; }
-.gu-add-btn { margin:10px 0; padding:8px 12px; border:none; border-radius:6px; background:transparent; color:var(--dc-subtext); font-size:0.85rem; font-weight:600; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:6px; }
-.gu-add-btn:hover { background:var(--dc-hover); color:var(--dc-text); }
+/* ── Control Bar & Apple Search ──────────────────── */
+#moduloUsuarios .ck-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+#moduloUsuarios .ck-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 16px;
+    border-radius: 10px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+#moduloUsuarios .ck-segment-item:hover { color: #0f172a; }
+#moduloUsuarios .ck-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
 
-/* ── Panel derecho (desktop) ──────────────────────── */
-.gu-panel { flex:1 1 0; overflow:hidden; display:flex; flex-direction:column; position:relative; background:var(--dc-panel-bg); }
-.gu-panel-body { padding:32px 40px 80px; flex:1; overflow-y:auto; }
-.gu-panel-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--dc-subtext); text-align:center; padding:40px; gap:16px; }
-.gu-panel-empty i { font-size:3.5rem; opacity:.4; }
+/* ── Split Layout Bento ───────────────────────────── */
+.gu-body {
+    display: flex;
+    flex: 1 1 0;
+    min-height: 0;
+    gap: 1rem;
+}
+.gu-list {
+    width: 320px;
+    flex-shrink: 0;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+.gu-list-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background .12s, transform .1s;
+    border-radius: 12px;
+    margin-bottom: 4px;
+    border: 1px solid transparent;
+}
+.gu-list-item:hover { background: #f1f5f9; }
+.gu-list-item.selected {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+.gu-role-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.gu-list-info { flex: 1; min-width: 0; }
+.gu-list-name { font-size: 0.88rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gu-list-sub  { font-size: 0.72rem; color: #64748b; font-weight: 500; }
+.gu-list-chevron { display: none; }
+.gu-add-btn {
+    margin: 8px 0;
+    padding: 9px 12px;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #2563eb;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.gu-add-btn:hover { background: #eff6ff; border-color: #2563eb; }
 
-/* ── Secciones dentro del panel ───────────────────── */
-.gu-section-header { font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--dc-subtext); padding:0 0 8px; margin-bottom:16px; }
-.gu-field-label { font-size:0.75rem; font-weight:700; color:var(--dc-subtext); text-transform:uppercase; margin-bottom:8px; display:block; }
-.dc-input { width:100%; padding:10px 12px; border:none; border-radius:3px; background:#e3e5e8; color:var(--dc-text); font-size:0.95rem; margin-bottom:24px; outline:none; transition:background 0.2s; }
-.dc-input:focus { background:#ebebeb; }
+/* ── Panel Derecho Bento ─────────────────────────── */
+.gu-panel {
+    flex: 1 1 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+.gu-panel-body { padding: 24px 32px 80px; flex: 1; overflow-y: auto; }
+.gu-panel-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #94a3b8;
+    text-align: center;
+    padding: 40px;
+    gap: 12px;
+}
+.gu-panel-empty i { font-size: 3rem; color: #cbd5e1; }
 
-.gu-colors { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; align-items:center; margin-bottom: 32px; }
-.gu-color-swatch { width:32px; height:32px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:transform .1s,border-color .1s; display:flex; align-items:center; justify-content:center; color:#fff; }
-.gu-color-swatch.selected { border-color:var(--dc-primary); transform:scale(1.1); box-shadow: 0 0 0 2px var(--dc-panel-bg) inset; }
-.gu-color-swatch:hover { transform:scale(1.1); }
-.gu-color-custom { background: var(--dc-bg); color: var(--dc-subtext); border: 1px solid var(--dc-border); }
+.gu-section-header { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; padding: 0 0 8px; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; }
+.gu-field-label { font-size: 0.72rem; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 6px; display: block; }
+.dc-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 0.88rem;
+    margin-bottom: 18px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.dc-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
 
-/* ── Módulo permiso row ───────────────────────────── */
-.gu-perm-group { font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--dc-subtext); padding:24px 0 12px; }
-.gu-perm-row { display:flex; align-items:center; padding:16px 0; border-bottom:1px solid var(--dc-border); gap:16px; }
-.gu-perm-row:last-child { border-bottom:none; }
-.gu-perm-info { flex:1; }
-.gu-perm-name { font-size:0.95rem; font-weight:600; color:var(--dc-text); }
-.gu-perm-desc { font-size:0.85rem; color:var(--dc-subtext); margin-top:4px; line-height:1.4; }
-.gu-perm-actions { display:flex; gap:16px; align-items:center; flex-shrink:0; }
+.gu-colors { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; align-items: center; margin-bottom: 24px; }
+.gu-color-swatch { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform .1s, border-color .1s; display: flex; align-items: center; justify-content: center; color: #fff; }
+.gu-color-swatch.selected { border-color: #0f172a; transform: scale(1.15); }
+.gu-color-swatch:hover { transform: scale(1.15); }
 
-/* Toggles estilo Discord */
-.dc-toggle { display:none; }
-.dc-toggle-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
-.dc-toggle-label { display:inline-block; width:40px; height:24px; border-radius:12px; background:#80848e; cursor:pointer; position:relative; transition:background .15s; flex-shrink:0; }
-.dc-toggle:checked + .dc-toggle-label { background:var(--dc-primary); }
-.dc-toggle-label::after { content:''; position:absolute; width:18px; height:18px; border-radius:50%; background:#fff; top:3px; left:3px; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.4); }
-.dc-toggle:checked + .dc-toggle-label::after { left:19px; }
-.dc-toggle-label.danger { background:#80848e; }
-.dc-toggle:checked + .dc-toggle-label.danger { background:#da373c; }
-.dc-toggle-label.readonly { opacity:0.5; cursor:not-allowed; pointer-events:none; }
+/* Permisos */
+.gu-perm-group { font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 20px 0 10px; }
+.gu-perm-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; gap: 14px; }
+.gu-perm-row:last-child { border-bottom: none; }
+.gu-perm-info { flex: 1; }
+.gu-perm-name { font-size: 0.88rem; font-weight: 700; color: #0f172a; }
+.gu-perm-desc { font-size: 0.78rem; color: #64748b; margin-top: 2px; line-height: 1.35; }
+.gu-perm-actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
 
-/* ── Hub modules (expandable) ─────────────────────── */
-.gu-perm-hub { background:rgba(88,101,242,0.06); border-radius:10px; padding:14px 16px; border:1px solid rgba(88,101,242,0.2) !important; margin:4px 0; }
-.gu-perm-hub .gu-perm-name { font-size:0.92rem; }
-.gu-hub-expand-btn { background:transparent; border:1px solid var(--dc-border); color:var(--dc-subtext); border-radius:6px; padding:2px 8px; font-size:0.8rem; cursor:pointer; transition:all .15s; margin-left:6px; }
-.gu-hub-expand-btn:hover { border-color:var(--dc-primary); color:var(--dc-primary); }
-.gu-hub-children { overflow:hidden; transition:all .2s ease; }
+/* Toggles Switches */
+.dc-toggle { display: none; }
+.dc-toggle-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.dc-toggle-label { display: inline-block; width: 36px; height: 20px; border-radius: 12px; background: #cbd5e1; cursor: pointer; position: relative; transition: background .15s; flex-shrink: 0; }
+.dc-toggle:checked + .dc-toggle-label { background: #2563eb; }
+.dc-toggle-label::after { content: ''; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: left .15s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.dc-toggle:checked + .dc-toggle-label::after { left: 19px; }
+.dc-toggle-label.danger { background: #cbd5e1; }
+.dc-toggle:checked + .dc-toggle-label.danger { background: #ef4444; }
+.dc-toggle-label.readonly { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
-/* ── Child module rows (indented) ─────────────────── */
-.gu-perm-child { display:flex; align-items:center; padding:12px 0 12px 24px; border-bottom:1px solid var(--dc-border); gap:16px; border-left:2px solid rgba(88,101,242,0.3); margin-left:8px; padding-left:20px; }
-.gu-perm-child .gu-perm-name { font-size:0.88rem; }
-.gu-perm-child .gu-perm-desc { font-size:0.78rem; }
+.gu-perm-hub { background: #f8fafc; border-radius: 12px; padding: 12px 14px; border: 1px solid #e2e8f0 !important; margin: 4px 0; }
+.gu-hub-expand-btn { background: transparent; border: 1px solid #cbd5e1; color: #64748b; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; transition: all .15s; margin-left: 6px; }
+.gu-hub-expand-btn:hover { border-color: #2563eb; color: #2563eb; }
+.gu-hub-children { overflow: hidden; transition: all .2s ease; }
+.gu-perm-child { display: flex; align-items: center; padding: 10px 0 10px 20px; border-bottom: 1px solid #f1f5f9; gap: 14px; border-left: 2px solid #93c5fd; margin-left: 8px; padding-left: 16px; }
 
-/* ── Muted rows (admin/todos badges) ──────────────── */
-.gu-perm-row--muted { opacity:0.8; }
+.gu-badge-admin { display: inline-flex; align-items: center; gap: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 20px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; }
+.gu-badge-todos { display: inline-flex; align-items: center; gap: 4px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 20px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; }
+.gu-perm-label { font-size: 0.62rem; color: #64748b; text-align: center; white-space: nowrap; font-weight: 600; }
 
-/* ── Badges ───────────────────────────────────────── */
-.gu-badge-admin { display:inline-flex; align-items:center; gap:4px; background:rgba(237,66,69,0.12); color:#ED4245; border:1px solid rgba(237,66,69,0.3); border-radius:20px; padding:4px 12px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
-.gu-badge-todos { display:inline-flex; align-items:center; gap:4px; background:rgba(87,242,135,0.1); color:#57F287; border:1px solid rgba(87,242,135,0.25); border-radius:20px; padding:4px 12px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
+.gu-member-chip { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+.gu-avatar { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; color: #fff; flex-shrink: 0; }
+.gu-member-name { font-size: 0.88rem; font-weight: 700; color: #0f172a; flex: 1; }
+.gu-member-cargo { font-size: 0.75rem; color: #64748b; }
 
-/* ── Permission label under toggles ──────────────── */
-.gu-perm-label { font-size:0.65rem; color:var(--dc-subtext); text-align:center; white-space:nowrap; }
+.gu-panel-actions { display: flex; gap: 10px; padding: 14px 32px; background: #ffffff; border-top: 1px solid #e2e8f0; flex-shrink: 0; align-items: center; justify-content: flex-end; }
+.btn-gu-danger { background: transparent; border: 1px solid #fecaca; color: #dc2626; font-size: 0.84rem; font-weight: 700; padding: 7px 16px; border-radius: 8px; cursor: pointer; transition: all .15s; margin-right: auto; }
+.btn-gu-danger:hover { background: #fef2f2; }
+.btn-gu-save { background: #2563eb; border: none; color: #fff; font-size: 0.84rem; font-weight: 700; padding: 8px 22px; border-radius: 8px; cursor: pointer; transition: background .15s; box-shadow: 0 1px 3px rgba(37,99,235,0.3); }
+.btn-gu-save:hover { background: #1d4ed8; }
 
-/* ── Miembros del rol ─────────────────────────────── */
-.gu-member-chip { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--dc-border); }
-.gu-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:700; color:#fff; flex-shrink:0; }
-.gu-member-name { font-size:0.95rem; font-weight:600; color:var(--dc-text); flex:1; }
-.gu-member-cargo { font-size:0.8rem; color:var(--dc-subtext); }
-
-/* ── Actions bar del panel ────────────────────────── */
-.gu-panel-actions { display:flex; gap:12px; padding:16px 40px; background:var(--dc-bg); border-top:1px solid var(--dc-border); flex-shrink:0; align-items:center; justify-content:flex-end; }
-.btn-gu-danger { background:transparent; border:none; color:#da373c; font-size:0.9rem; font-weight:600; padding:8px 16px; border-radius:3px; cursor:pointer; transition:all .15s; margin-right:auto; }
-.btn-gu-danger:hover { text-decoration:underline; }
-.btn-gu-save { background:var(--dc-primary); border:none; color:#fff; font-size:0.9rem; font-weight:600; padding:8px 24px; border-radius:3px; cursor:pointer; transition:background .15s; }
-.btn-gu-save:hover { background:#4752c4; }
-
-/* ── Mobile ───────────────────────────────────────── */
-@media (max-width:767px) {
-    .gu-list { width:100%; border-right:none; }
-    .gu-panel { display:none; }
-    .gu-body { flex-direction:column; }
+@media (max-width: 767px) {
+    .gu-list { width: 100%; border-right: none; }
+    .gu-panel { display: none; }
+    .gu-body { flex-direction: column; }
 }
 </style>
 
-<div id="moduloUsuarios">
-    <!-- Header -->
-    <div class="gu-header">
-        <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-people-fill" style="font-size:1.1rem;color:var(--dc-primary);"></i>
+<div id="moduloUsuarios" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
+
+    <!-- ── 1. ENCABEZADO OFICIAL ERP ───────────────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #eff6ff; color: #2563eb; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-shield-lock-fill"></i>
+            </div>
             <div>
-                <div class="fw-bold" style="color:var(--dc-text);font-size:0.88rem;">Gestión de Usuarios</div>
-                <div id="gu-subtitle" style="font-size:0.7rem;color:var(--dc-subtext);">Cargando...</div>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Gestión de Usuarios</h4>
+                <span id="gu-subtitle" class="text-secondary small">Control de accesos, roles y permisos del ERP</span>
             </div>
         </div>
-        <div class="d-flex gap-2 align-items-center">
-            <div id="top-actions-placeholder"></div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.init_usuarios && window.init_usuarios()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
+            </button>
+            <button class="btn btn-light bg-white border shadow-2xs text-dark rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1" onclick="window.guNuevoRol && window.guNuevoRol()">
+                <i class="bi bi-shield-plus text-success"></i> <span>+ Nuevo Rol</span>
+            </button>
+            <button class="btn btn-primary fw-bold text-white rounded-3 px-3 py-2 shadow-2xs d-flex align-items-center gap-1" onclick="window.guNuevoMiembro && window.guNuevoMiembro()" style="background:#2563eb; border-color:#2563eb;">
+                <i class="bi bi-person-plus-fill"></i> <span>+ Nuevo Usuario</span>
+            </button>
         </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="gu-tabs">
-        <button class="gu-tab active" id="gu-tab-roles" onclick="window.guSetTab && window.guSetTab('roles')"><i class="bi bi-shield-fill me-1"></i>Roles <span id="gu-count-roles" class="ms-1 opacity-60"></span></button>
-        <button class="gu-tab" id="gu-tab-miembros" onclick="window.guSetTab && window.guSetTab('miembros')"><i class="bi bi-people me-1"></i>Usuarios <span id="gu-count-miembros" class="ms-1 opacity-60"></span></button>
+    <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO 56px) ──────── -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card active" onclick="window.guSetTab && window.guSetTab('miembros')">
+                <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Total Usuarios</span>
+                    <h2 id="gu-kpi-total-usuarios" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" onclick="window.guSetTab && window.guSetTab('roles')">
+                <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Roles Configurados</span>
+                    <h2 id="gu-kpi-total-roles" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card">
+                <div class="ck-kpi-icon" style="background:#fef2f2; color:#ef4444;">
+                    <i class="bi bi-key-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Administradores</span>
+                    <h2 id="gu-kpi-total-admins" class="fw-bolder m-0 text-danger lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card">
+                <div class="ck-kpi-icon" style="background:#faf5ff; color:#9333ea;">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Seguridad ERP</span>
+                    <h2 class="fw-bolder m-0 text-primary lh-1" style="font-size: 1.15rem;">Activa</h2>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Body split -->
+    <!-- ── 3. SEGMENTED CONTROL TABS ─────────────────────────────────── -->
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+        <div class="ck-apple-segmented">
+            <button type="button" class="ck-segment-item active" id="gu-tab-roles" onclick="document.querySelectorAll('#moduloUsuarios .ck-segment-item').forEach(b=>b.classList.remove('active')); this.classList.add('active'); window.guSetTab && window.guSetTab('roles');">
+                <i class="bi bi-shield-fill me-1"></i>Roles <span id="gu-count-roles" class="badge bg-light text-dark rounded-pill ms-1"></span>
+            </button>
+            <button type="button" class="ck-segment-item" id="gu-tab-miembros" onclick="document.querySelectorAll('#moduloUsuarios .ck-segment-item').forEach(b=>b.classList.remove('active')); this.classList.add('active'); window.guSetTab && window.guSetTab('miembros');">
+                <i class="bi bi-people me-1"></i>Usuarios <span id="gu-count-miembros" class="badge bg-light text-dark rounded-pill ms-1"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ── 4. BODY SPLIT BENTO ───────────────────────────────────────── -->
     <div class="gu-body">
         <!-- Lista izquierda -->
         <div class="gu-list" id="guList">
@@ -147,71 +334,25 @@
             <div class="gu-panel-body">
                 <div class="gu-panel-empty" id="guPanelEmpty">
                     <i class="bi bi-shield-lock"></i>
-                    <div class="fw-bold" style="font-size:.9rem;">Selecciona un rol o miembro</div>
-                    <div style="font-size:.78rem;">Haz clic en la lista para ver y editar sus detalles.</div>
+                    <div class="fw-bold" style="font-size:.9rem; color:#0f172a;">Selecciona un rol o usuario</div>
+                    <div style="font-size:.78rem; color:#64748b;">Haz clic en la lista para ver y editar sus permisos y accesos.</div>
                 </div>
                 <div id="guPanelContent" style="display:none;"></div>
             </div>
             <div class="gu-panel-actions" id="guPanelActions" style="display:none;"></div>
         </div>
     </div>
+
 </div>
-    </div>
-</div>
-    </div>
-</div>
-
-
-    <!-- FAB Menu Usuarios (Estilo Inventario) -->
-    <div id="us-fab-container" style="position:fixed;bottom:24px;right:24px;z-index:1030;display:flex;flex-direction:column;align-items:flex-end;">
-      <div id="us-fab-backdrop" onclick="document.getElementById('us-fab-menu').style.display='none'; document.getElementById('us-fab-backdrop').style.display='none'; document.getElementById('us-fab-icon').style.transform='rotate(0deg)';" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);background:rgba(0,0,0,.28);z-index:-1;"></div>
-      
-      <!-- Menú expandido -->
-      <div id="us-fab-menu" style="display:none;flex-direction:column;align-items:flex-end;gap:1rem;margin-bottom:1rem;">
-        
-        <!-- NUEVO USUARIO -->
-        <div style="display:flex;align-items:center;gap:.75rem;">
-          <span style="background:#0f172a;color:#fff!important;padding:.45rem .95rem;border-radius:14px;font-size:.7rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.25);-webkit-text-fill-color:#fff;">NUEVO USUARIO</span>
-          <button onclick="document.getElementById('us-fab-backdrop').click(); window.guNuevoMiembro && window.guNuevoMiembro()" style="width:56px;height:56px;border-radius:18px;background:#2563eb;border:2px solid #fff;color:#fff!important;font-size:1.3rem;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(37,99,235,.4);cursor:pointer;transition:transform .15s;">
-            <i class="bi bi-person-plus"></i>
-          </button>
-        </div>
-
-        <!-- NUEVO ROL -->
-        <div style="display:flex;align-items:center;gap:.75rem;">
-          <span style="background:#0f172a;color:#fff!important;padding:.45rem .95rem;border-radius:14px;font-size:.7rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.25);-webkit-text-fill-color:#fff;">NUEVO ROL</span>
-          <button onclick="document.getElementById('us-fab-backdrop').click(); window.guNuevoRol && window.guNuevoRol()" style="width:56px;height:56px;border-radius:18px;background:#10b981;border:2px solid #fff;color:#fff!important;font-size:1.3rem;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(16,185,129,.4);cursor:pointer;transition:transform .15s;">
-            <i class="bi bi-shield-plus"></i>
-          </button>
-        </div>
-
-      </div>
-
-      <!-- Botón principal (cuadrado redondeado) -->
-      <button id="us-fab-btn" onclick="const m = document.getElementById('us-fab-menu'); const b = document.getElementById('us-fab-backdrop'); const i = document.getElementById('us-fab-icon'); if(m.style.display==='none'){ m.style.display='flex'; b.style.display='block'; i.style.transform='rotate(45deg)'; } else { m.style.display='none'; b.style.display='none'; i.style.transform='rotate(0deg)'; }" style="width:60px;height:60px;border-radius:18px;background:#f97316;border:none;color:#fff;font-size:1.5rem;box-shadow:0 6px 24px rgba(249,115,22,.5);display:flex;align-items:center;justify-content:center;transition:transform .25s cubic-bezier(.4,0,.2,1),background .2s;margin-top:.5rem;flex-shrink:0;">
-        <i class="bi bi-plus-lg" id="us-fab-icon" style="transition:transform .25s;"></i>
-      </button>
-    </div>
-    <style>
-      @media (min-width: 769px) {
-         #us-fab-container { display: none !important; }
-      }
-      @media (max-width: 768px) {
-         #us-fab-container { bottom: 90px !important; }
-         .top-btn-reg { display: none !important; }
-      }
-    </style>
-
 
 <!-- Offcanvas para móvil y paneles -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasGU" style="width:min(460px,100vw); background:var(--dc-bg); border:none; margin:16px; height:calc(100% - 32px); border-radius:8px; box-shadow:-4px 0 30px rgba(0,0,0,0.15); z-index:1045;">
-    <div class="offcanvas-header" style="background:var(--dc-bg);border-bottom:1px solid var(--dc-border);border-radius:8px 8px 0 0;padding:20px 24px;">
-        <h6 class="offcanvas-title fw-bold" id="offcanvasGUTitle" style="color:var(--dc-text);font-size:1.1rem;letter-spacing:0.3px;">Detalle</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" style="opacity:0.6;transition:all 0.2s;"></button>
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasGU" style="width:min(480px,100vw); background:#ffffff; border:none; margin:12px; height:calc(100% - 24px); border-radius:20px; box-shadow:-4px 0 30px rgba(0,0,0,0.15); z-index:1045;">
+    <div class="offcanvas-header" style="background:#ffffff; border-bottom:1px solid #e2e8f0; border-radius:20px 20px 0 0; padding:16px 20px;">
+        <h6 class="offcanvas-title fw-bold" id="offcanvasGUTitle" style="color:#0f172a; font-size:1rem;">Detalle</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" style="opacity:0.6; transition:all 0.2s;"></button>
     </div>
-    <div class="offcanvas-body p-0" style="overflow-y:auto;position:relative;">
-        <div id="guOffcanvasContent" style="padding:24px 24px 80px;"></div>
-        <div id="guOffcanvasActions" style="display:none;position:sticky;bottom:0;background:var(--dc-bg);padding:16px 24px;border-top:1px solid var(--dc-border);border-radius:0 0 8px 8px;justify-content:flex-end;gap:12px;z-index:10;box-shadow:0 -4px 10px rgba(0,0,0,0.02);"></div>
+    <div class="offcanvas-body p-0" style="overflow-y:auto; position:relative;">
+        <div id="guOffcanvasContent" style="padding:20px 20px 80px;"></div>
+        <div id="guOffcanvasActions" style="display:none; position:sticky; bottom:0; background:#ffffff; padding:14px 20px; border-top:1px solid #e2e8f0; border-radius:0 0 20px 20px; justify-content:flex-end; gap:10px; z-index:10; box-shadow:0 -4px 10px rgba(0,0,0,0.02);"></div>
     </div>
-</div>
 </div>

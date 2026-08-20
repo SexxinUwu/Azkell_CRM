@@ -1,72 +1,138 @@
-<!-- Módulo Conductores - Aislado en SPA -->
+<!-- Módulo Personal / Conductores — Azkell Fleet (Apple & Bento ERP) -->
 <style>
-/* ── Directorio de Personal — Card Grid ────────────────────────── */
+#moduloConductores {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+/* ── KPIs Apple Compact Bento Cards ─────────────── */
+#moduloConductores .ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    min-height: 56px !important;
+}
+#moduloConductores .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
+}
+#moduloConductores .ck-kpi-card.active {
+    border-color: #059669 !important;
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.25) !important;
+    background: #f8fafc !important;
+}
+#moduloConductores .ck-kpi-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* ── Control Bar & Apple Search ──────────────────── */
+#moduloConductores .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 9px 14px 9px 38px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+#moduloConductores .ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #059669;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+    outline: none;
+}
+
+/* ── Bento Grid de Personal ───────────────────────── */
 #cond-grid {
-    display: flex; flex-direction: column; gap: .45rem;
-    padding: .25rem .1rem .75rem; flex: 1; overflow-y: auto; min-height: 0;
+    display: flex; flex-direction: column; gap: .55rem;
+    padding: .25rem 0 .75rem; flex: 1; overflow-y: auto; min-height: 0;
 }
 @media (min-width: 680px) {
     #cond-grid {
         display: grid; grid-template-columns: repeat(2, 1fr);
-        gap: .65rem; padding: .25rem .25rem .75rem; align-content: start;
+        gap: .75rem; align-content: start;
     }
     .cond-group-lbl { grid-column: 1 / -1; }
 }
 @media (min-width: 1100px) { #cond-grid { grid-template-columns: repeat(3, 1fr); } }
 
 .cond-card {
-    display: flex; align-items: center; gap: .75rem; padding: .8rem .9rem;
-    background: var(--surface); border: 1.5px solid var(--border);
+    display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem;
+    background: #ffffff; border: 1px solid #e2e8f0;
     border-radius: 16px; cursor: pointer;
     transition: box-shadow .15s, border-color .15s, transform .15s;
-    position: relative; overflow: hidden; min-height: 72px;
+    position: relative; overflow: hidden; min-height: 76px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
-.cond-card:hover  { box-shadow: 0 4px 18px rgba(0,0,0,.08); border-color: #2563eb55; transform: translateY(-1px); }
-.cond-card:active { transform: scale(.984); }
+.cond-card:hover {
+    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+    border-color: #059669;
+    transform: translateY(-2px);
+}
 .cond-avatar {
-    width: 48px; height: 48px; border-radius: 50%;
+    width: 48px; height: 48px; border-radius: 14px;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 900; font-size: 1.05rem; flex-shrink: 0; color: #fff;
-    letter-spacing: .02em; text-shadow: 0 1px 3px rgba(0,0,0,.18);
+    font-weight: 800; font-size: 1.05rem; flex-shrink: 0; color: #fff;
 }
 .cond-info { flex: 1; min-width: 0; }
 .cond-name {
-    font-weight: 800; font-size: .88rem; color: var(--text);
+    font-weight: 800; font-size: .88rem; color: #0f172a;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    margin-bottom: 1px; line-height: 1.25;
+    margin-bottom: 2px; line-height: 1.25;
 }
 .cond-sub {
-    font-size: .69rem; color: var(--subtext); font-weight: 600;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px;
+    font-size: .72rem; color: #64748b; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;
 }
 .cond-lic {
-    display: inline-block; font-size: .6rem; font-weight: 800;
-    padding: 1px 7px; border-radius: 99px;
-    background: #eff6ff; color: #2563eb;
-    text-transform: uppercase; letter-spacing: .06em;
+    display: inline-block; font-size: .62rem; font-weight: 800;
+    padding: 2px 8px; border-radius: 99px;
+    background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;
+    text-transform: uppercase; letter-spacing: .04em;
 }
 .cond-actions { display: flex; flex-direction: row; gap: 6px; flex-shrink: 0; }
 .cond-btn {
     width: 36px; height: 36px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-    font-size: .9rem; text-decoration: none;
+    font-size: .95rem; text-decoration: none;
     transition: opacity .12s, transform .1s; border: none; flex-shrink: 0;
 }
-.cond-btn:hover { opacity: .82; transform: scale(1.06); }
+.cond-btn:hover { opacity: .85; transform: scale(1.05); }
 .cond-call { background: #eff6ff; color: #2563eb; }
 .cond-wsp  { background: #f0fdf4; color: #16a34a; }
-.cond-no-tel {
-    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-    color: var(--border); font-size: .85rem;
-}
 .cond-group-lbl {
-    display: flex; align-items: center; gap: .45rem;
-    padding: .4rem .5rem .2rem; font-size: .72rem; font-weight: 900;
+    display: flex; align-items: center; gap: .5rem;
+    padding: .45rem .5rem .25rem; font-size: .75rem; font-weight: 800;
     text-transform: uppercase; letter-spacing: .08em;
     cursor: pointer; user-select: none; border-radius: 8px; margin-top: .3rem;
 }
-.cond-group-lbl:hover { background: var(--border); }
-.cond-group-cnt { border-radius: 99px; padding: 1px 9px; font-size: .68rem; font-weight: 800; }
+.cond-group-lbl:hover { background: #f1f5f9; }
+.cond-group-cnt { border-radius: 99px; padding: 2px 8px; font-size: .7rem; font-weight: 800; }
 
 /* ── Modal modernizado ──────────────────────────────────────────── */
 #modalConductor .modal-content {
@@ -105,12 +171,10 @@
     border-radius: 10px; background: var(--bg);
     border-color: var(--border); color: var(--text);
 }
-/* Vista lectura: campos parecen chips */
 .cond-mfield[readonly], .cond-mfield:disabled {
     background: var(--bg) !important; opacity: 1; cursor: default;
     border-color: transparent; font-weight: 700;
 }
-/* Hero ficha (modo vista) */
 .cond-ficha-hero {
     display: flex; align-items: center; gap: 1rem;
     background: var(--bg); border-radius: 14px;
@@ -142,7 +206,6 @@
 }
 #cond-fab:active { transform: scale(.91); }
 
-/* ── Mobile ─────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .topbar { display: none !important; }
     #root-dinamico, .main-area { 
@@ -151,137 +214,112 @@
         display: flex !important;
         flex-direction: column !important;
     }
-
     #cond-fab { display: flex !important; }
     #cond-btn-nuevo { display: none !important; }
     #modalConductor .modal-dialog { margin: 0; max-width: 100%; }
     #modalConductor .modal-content { border-radius: 20px 20px 0 0; }
     #modalConductor .modal-dialog { align-items: flex-end; min-height: 100%; }
-    
-    /* Edge-to-edge list for Directorio on Mobile */
-    #moduloConductores { padding: 0 !important; margin: 0 !important; border-radius: 0 !important; background: #fff !important; width: 100% !important; max-width: 100vw !important; flex: 1 1 0; }
-    /* Mobile Header and Search styling (Design Match) */
-    .dir-mob-header-container {
-        background: #059669; /* Verde esmeralda */
-        border-radius: 0 0 24px 24px;
-        padding: 1.25rem 1.25rem 1.5rem 1.25rem;
-        margin-bottom: 0.5rem;
-    }
-    .dir-mob-header-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 0.75rem;
-    }
-    .dir-mob-super-title {
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: rgba(255,255,255,0.85);
-        margin: 0 0 4px 0;
-    }
-    .dir-mob-header-title {
-        font-size: 1.75rem;
-        font-weight: 900;
-        color: #fff;
-        margin: 0;
-        line-height: 1.1;
-    }
-    
-    .dir-search-wrap { padding: 0; }
-    .dir-search-box {
-        background: rgba(255,255,255,0.15);
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        padding: 0 16px;
-        border: 1px solid rgba(255,255,255,0.1);
-    }
-    .dir-search-box input {
-        background: transparent;
-        border: none;
-        outline: none;
-        width: 100%;
-        font-size: 15px;
-        color: #fff;
-        margin-left: 10px;
-    }
-    .dir-search-box input::placeholder { color: rgba(255,255,255,0.7); }
-    .dir-search-box i { color: rgba(255,255,255,0.8); }
-    .desktop-controls { display: none !important; }
-    
-    #cond-grid { padding: 0 !important; gap: 0 !important; }
-    .cond-card {
-        border-radius: 0 !important;
-        border: none !important;
-        border-bottom: 1px solid #f3f4f6 !important;
-        padding: 14px 20px !important;
-        background: #fff !important;
-        box-shadow: none !important;
-    }
-    .cond-group-lbl {
-        padding: 12px 20px !important;
-        background: #f9fafb !important;
-        border-bottom: 1px solid #e5e7eb !important;
-        border-radius: 0 !important;
-        margin: 0 !important;
-    }
 }
 </style>
 
 <div id="moduloConductores" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
 
-    <!-- Mobile Header Container -->
-    <div class="d-block d-md-none dir-mob-header-container">
-        <div class="dir-mob-header-top">
+    <!-- ── 1. ENCABEZADO OFICIAL ERP ───────────────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #ecfdf5; color: #059669; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-people-fill"></i>
+            </div>
             <div>
-                <p class="dir-mob-super-title">Directorio</p>
-                <h1 class="dir-mob-header-title">Personal y<br>Contactos</h1>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Directorio de Personal</h4>
+                <span class="text-secondary small">Conductores, mecánicos, supervisores y personal operativo</span>
             </div>
-        </div>
-        
-        <div class="dir-search-wrap" style="display: flex; gap: 0.5rem;">
-            <div class="dir-search-box d-flex" style="flex: 1;">
-                <i class="bi bi-search"></i>
-                <input type="text" id="buscadorConductoresMob" oninput="document.getElementById('buscadorConductores').value = this.value; window.filtrarConductores()" placeholder="Buscar por Nombre, DNI...">
-            </div>
-            <button onclick="window.init_conductores()" title="Actualizar"
-                    style="width: 48px; height: 48px; border-radius: 12px; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
-                <i class="bi bi-arrow-clockwise fs-5"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- Barra de controles Desktop -->
-    <div class="controls-row d-none d-md-flex justify-content-between flex-wrap gap-2 mb-3">
-        <div class="input-group input-group-sm" style="max-width:300px;">
-            <span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search text-secondary"></i></span>
-            <input type="text" class="form-control border-start-0 ps-0" id="buscadorConductores"
-                   oninput="window.filtrarConductores()" placeholder="Buscar por Nombre, DNI...">
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span id="cache-badge-conductores" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-conductores">Sin cargar</span></span>
-            <button class="btn-reload-cache" onclick="window.init_conductores()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-            <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllCondGroups()"><i class="bi bi-arrows-expand"></i> <span class="d-none d-md-inline">Expandir</span></button>
+            <span id="cache-badge-conductores" class="cache-badge d-none d-md-inline-flex"><i class="bi bi-database"></i> <span id="cache-label-conductores">Sin cargar</span></span>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.init_conductores()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
+            </button>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-none d-md-inline-flex align-items-center gap-1" onclick="toggleAllCondGroups()" title="Expandir/Colapsar Grupos">
+                <i class="bi bi-arrows-expand"></i> <span class="d-none d-lg-inline">Grupos</span>
+            </button>
             <div class="dropdown">
-                <button class="btn btn-sm btn-outline-info fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-upload"></i> <span class="d-none d-md-inline">Importar</span>
+                <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-cloud-arrow-up"></i> <span class="d-none d-md-inline">Importar</span>
                 </button>
-                <ul class="dropdown-menu shadow">
-                    <li><a class="dropdown-item fw-bold text-success" href="#" onclick="window.descargarPlantillaConductores()"><i class="bi bi-file-earmark-spreadsheet me-1"></i>1. Descargar Plantilla</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileConductores').click()"><i class="bi bi-cloud-upload me-1"></i>2. Subir Excel Lleno</a></li>
+                <ul class="dropdown-menu shadow-lg border p-2" style="border-radius:12px;">
+                    <li><a class="dropdown-item fw-semibold text-success rounded-2 py-2" href="#" onclick="window.descargarPlantillaConductores()"><i class="bi bi-file-earmark-spreadsheet me-2"></i>1. Descargar Plantilla</a></li>
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li><a class="dropdown-item fw-semibold text-primary rounded-2 py-2" href="#" onclick="document.getElementById('inputFileConductores').click()"><i class="bi bi-cloud-upload me-2"></i>2. Subir Excel Lleno</a></li>
                 </ul>
             </div>
             <input type="file" id="inputFileConductores" accept=".xlsx,.xls" style="display:none;" onchange="window.importarExcelConductores(event)">
-            <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaConductores', 'Directorio_Personal')"><i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Excel</span></button>
-            <button class="btn btn-primary fw-bold text-white btn-sm" id="cond-btn-nuevo" onclick="abrirModalConductor()" data-perm-crear="flota">
-                <i class="bi bi-person-plus-fill"></i> <span class="d-none d-sm-inline">Nuevo</span>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="descargarExcelDinamico('tablaConductores', 'Directorio_Personal')" title="Exportar a Excel">
+                <i class="bi bi-file-earmark-excel text-success"></i> <span class="d-none d-md-inline">Excel</span>
+            </button>
+            <button class="btn btn-primary fw-bold text-white rounded-3 px-3 py-2 shadow-2xs d-flex align-items-center gap-1" id="cond-btn-nuevo" onclick="abrirModalConductor()" data-perm-crear="flota" style="background:#059669; border-color:#059669;">
+                <i class="bi bi-person-plus-fill"></i> <span>+ Nuevo Personal</span>
             </button>
         </div>
     </div>
 
-    <!-- Grid de tarjetas de contacto -->
+    <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO 56px) ──────── -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card active" onclick="document.getElementById('buscadorConductores').value=''; window.filtrarConductores(); document.querySelectorAll('#moduloConductores .ck-kpi-card').forEach(e=>e.classList.remove('active')); this.classList.add('active');">
+                <div class="ck-kpi-icon" style="background:#ecfdf5; color:#059669;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Total Personal</span>
+                    <h2 id="cond-kpi-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" onclick="document.getElementById('buscadorConductores').value='Activo'; window.filtrarConductores(); document.querySelectorAll('#moduloConductores .ck-kpi-card').forEach(e=>e.classList.remove('active')); this.classList.add('active');">
+                <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                    <i class="bi bi-person-check-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Activos</span>
+                    <h2 id="cond-kpi-activos" class="fw-bolder m-0 text-primary lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" onclick="document.getElementById('buscadorConductores').value='Cesado'; window.filtrarConductores(); document.querySelectorAll('#moduloConductores .ck-kpi-card').forEach(e=>e.classList.remove('active')); this.classList.add('active');">
+                <div class="ck-kpi-icon" style="background:#f8fafc; color:#64748b;">
+                    <i class="bi bi-person-x-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Cesados</span>
+                    <h2 id="cond-kpi-cesados" class="fw-bolder m-0 text-secondary lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" onclick="document.getElementById('buscadorConductores').value='Bloqueado'; window.filtrarConductores(); document.querySelectorAll('#moduloConductores .ck-kpi-card').forEach(e=>e.classList.remove('active')); this.classList.add('active');">
+                <div class="ck-kpi-icon" style="background:#fef2f2; color:#ef4444;">
+                    <i class="bi bi-shield-slash-fill"></i>
+                </div>
+                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
+                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Bloqueados</span>
+                    <h2 id="cond-kpi-bloqueados" class="fw-bolder m-0 text-danger lh-1" style="font-size: 1.35rem;">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 3. BARRA DE BÚSQUEDA APPLE ────────────────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="position-relative flex-grow-1" style="max-width: 480px;">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+            <input type="text" id="buscadorConductores" class="ck-apple-search" placeholder="Buscar por Nombre, DNI, Licencia, Empresa..." oninput="window.filtrarConductores()">
+        </div>
+    </div>
+
+    <!-- ── 4. GRID DE TARJETAS DE PERSONAL ───────────────────────────── -->
     <div id="cond-grid">
         <div style="text-align:center;padding:3rem 1rem;color:var(--subtext);font-size:.88rem;">
             <div class="spinner-border spinner-border-sm me-2 text-secondary"></div>Cargando personal...

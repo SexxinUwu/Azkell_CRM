@@ -1,290 +1,288 @@
-<!-- Módulo Administración — Hub de configuración Azkell Fleet -->
+<!-- Módulo Administración — Hub de configuración Azkell ERP (Apple & Bento ERP) -->
 <style>
-/* ─── Admin Hub ──────────────────────────────────────────────────── */
 #moduloAdmin {
-    display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
-    overflow-y: auto; background: #ffffff;
-}
-.adm-hero {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    padding: 2rem 2rem 1.6rem;
-    flex-shrink: 0;
-}
-@media (max-width: 767.98px) {
-    .topbar { display: none !important; }
-    #root-dinamico, .main-area { 
-        padding: 0 !important; 
-        overflow: hidden !important; 
-        display: flex !important;
-        flex-direction: column !important;
-    }
-    #moduloAdmin { border-radius: 0 !important; height: 100%; }
-    .adm-hero { padding: 1.25rem 1rem 1rem; border-radius: 0 !important; }
-}
-.adm-hero-title {
-    font-size: 1.45rem; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: .3rem;
-}
-.adm-hero-sub {
-    font-size: .75rem; color: #94a3b8; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .1em;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
 }
 
-/* Grid de cards — 2 columnas fijas */
-.adm-grid {
-    padding: 1.5rem 1.25rem;
+/* ── Buscador Apple ──────────────────────────────── */
+#moduloAdmin .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 9px 14px 9px 38px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+#moduloAdmin .ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    outline: none;
+}
+
+/* ── Bento Grid Hub ──────────────────────────────── */
+.adm-grid-bento {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1rem;
 }
-@media (max-width: 767.98px) {
-    .adm-grid { padding: .85rem; gap: .75rem; }
-}
 
-/* Card individual — centrada verticalmente */
-.adm-card {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 20px;
-    padding: 1.5rem 1rem 1.25rem;
+.adm-bento-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1.25rem 1.25rem;
     cursor: pointer;
-    transition: transform .18s cubic-bezier(.4,0,.2,1),
-                box-shadow .18s cubic-bezier(.4,0,.2,1),
-                border-color .18s;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center; gap: .65rem;
-    position: relative; overflow: hidden;
-    min-height: 130px;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
-.adm-card:hover {
+.adm-bento-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 28px rgba(0,0,0,.1);
-    border-color: var(--adm-color, #2563eb);
+    box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.08);
+    border-color: var(--card-color, #4f46e5);
 }
-.adm-card:active { transform: translateY(-1px); }
+.adm-bento-card:active {
+    transform: translateY(-1px);
+}
 
-/* Ícono grande centrado */
-.adm-card-icon {
-    width: 64px; height: 64px; border-radius: 20px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.75rem;
-    background: var(--adm-bg, #eff6ff);
-    color: var(--adm-color, #2563eb);
+.adm-bento-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    background: var(--card-bg, #eef2ff);
+    color: var(--card-color, #4f46e5);
     flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+.adm-bento-card:hover .adm-bento-icon {
+    transform: scale(1.08);
 }
 
-/* Texto */
-.adm-card-name {
-    font-size: .88rem; font-weight: 800; color: var(--text); line-height: 1.2;
+.adm-bento-info {
+    flex: 1;
+    min-width: 0;
 }
-
-/* Ocultar elementos no necesarios en diseño centrado */
-.adm-card-desc, .adm-card-arrow, .adm-card-num { display: none; }
-
-/* Section label — ocupa las 2 columnas */
-.adm-section-label {
-    grid-column: 1 / -1;
-    font-size: .6rem; font-weight: 900; text-transform: uppercase;
-    letter-spacing: .12em; color: var(--subtext);
-    display: flex; align-items: center; gap: .5rem;
-    padding-top: .25rem;
+.adm-bento-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+    margin-bottom: 0.3rem;
 }
-.adm-section-label::after {
-    content: ''; flex: 1; height: 1px; background: var(--border);
+.adm-bento-desc {
+    font-size: 0.76rem;
+    color: #64748b;
+    line-height: 1.35;
+    margin-bottom: 0.5rem;
+}
+.adm-bento-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 </style>
 
-<div id="moduloAdmin">
+<script>
+window.filtrarAdminCards = function() {
+    var query = (document.getElementById('admBuscador')?.value || '').toLowerCase().trim();
+    var cards = document.querySelectorAll('#moduloAdmin .adm-bento-card');
+    cards.forEach(function(card) {
+        var text = card.textContent.toLowerCase();
+        card.style.display = (!query || text.includes(query)) ? 'flex' : 'none';
+    });
+};
+</script>
 
-    <!-- Hero header -->
-    <div class="adm-hero">
-        <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:.6rem;">
-            <div style="width:46px;height:46px;border-radius:16px;background:rgba(255,255,255,.1);
-                        display:flex;align-items:center;justify-content:center;">
-                <i class="bi bi-grid-fill" style="font-size:1.3rem;color:#fff;"></i>
+<div id="moduloAdmin" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
+
+    <!-- ── 1. ENCABEZADO OFICIAL ERP ───────────────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #eef2ff; color: #4f46e5; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-gear-wide-connected"></i>
             </div>
             <div>
-                <div class="adm-hero-title">Administración</div>
-                <div class="adm-hero-sub">Configuración &amp; Maestros del sistema</div>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Administración &amp; Maestros</h4>
+                <span class="text-secondary small">Configuración de catálogos, frecuencias, kits y parámetros del ERP</span>
             </div>
         </div>
-        <!-- Stats row -->
-        <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.5rem;">
-            <div style="display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.08);
-                        border-radius:10px;padding:.35rem .75rem;">
-                <i class="bi bi-box-seam" style="color:#22c55e;font-size:.85rem;"></i>
-                <span style="font-size:.72rem;color:#e2e8f0 !important;font-weight:700;">5 módulos Almacén</span>
+        <div class="position-relative flex-grow-1" style="max-width: 320px;">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+            <input type="text" id="admBuscador" class="ck-apple-search" placeholder="Filtrar catálogos..." oninput="window.filtrarAdminCards()">
+        </div>
+    </div>
+
+    <!-- ── 2. SECCIÓN: MAESTROS DE ALMACÉN ─────────────────────────── -->
+    <div class="mb-4">
+        <div class="text-uppercase fw-extrabold text-secondary small mb-3 d-flex align-items-center gap-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+            <i class="bi bi-box-seam text-success"></i> Catálogos de Almacén
+        </div>
+
+        <div class="adm-grid-bento">
+            <!-- Familias -->
+            <div class="adm-bento-card" style="--card-color: #7c3aed; --card-bg: #f3e8ff;" onclick="cargarModuloAislado('almacen/familias')">
+                <div class="adm-bento-icon"><i class="bi bi-tags-fill"></i></div>
+                <div class="adm-bento-info">
+                    <div class="adm-bento-title">Familias</div>
+                    <div class="adm-bento-desc">Categorías de artículos y repuestos del inventario.</div>
+                    <span class="adm-bento-badge"><i class="bi bi-arrow-right-short" style="color:#7c3aed;"></i> Gestionar</span>
+                </div>
             </div>
-            <div style="display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.08);
-                        border-radius:10px;padding:.35rem .75rem;">
-                <i class="bi bi-tools" style="color:#f59e0b;font-size:.85rem;"></i>
-                <span style="font-size:.72rem;color:#e2e8f0 !important;font-weight:700;">5 módulos Mantenimiento</span>
+
+            <!-- Unidades de Medida -->
+            <div class="adm-bento-card" style="--card-color: #0891b2; --card-bg: #cffafe;" onclick="cargarModuloAislado('almacen/unidades')">
+                <div class="adm-bento-icon"><i class="bi bi-rulers"></i></div>
+                <div class="adm-bento-info">
+                    <div class="adm-bento-title">Unidades de Medida</div>
+                    <div class="adm-bento-desc">Unidades estándar para cantidades y stocks.</div>
+                    <span class="adm-bento-badge"><i class="bi bi-arrow-right-short text-info"></i> Gestionar</span>
+                </div>
             </div>
-            <div style="display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.08);
-                        border-radius:10px;padding:.35rem .75rem;">
-                <i class="bi bi-truck" style="color:#22d3ee;font-size:.85rem;"></i>
-                <span style="font-size:.72rem;color:#e2e8f0 !important;font-weight:700;">1 módulo Flota</span>
+
+            <!-- Sistemas -->
+            <div class="adm-bento-card" style="--card-color: #ea580c; --card-bg: #ffedd5;" onclick="cargarModuloAislado('almacen/sistemas')">
+                <div class="adm-bento-icon"><i class="bi bi-diagram-3-fill"></i></div>
+                <div class="adm-bento-info">
+                    <div class="adm-bento-title">Sistemas de Vehículos</div>
+                    <div class="adm-bento-desc">Estructura de sistemas y subsistemas automotrices.</div>
+                    <span class="adm-bento-badge"><i class="bi bi-arrow-right-short text-warning"></i> Gestionar</span>
+                </div>
             </div>
-            <div style="display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.08);
-                        border-radius:10px;padding:.35rem .75rem;">
-                <i class="bi bi-plug-fill" style="color:#a78bfa;font-size:.85rem;"></i>
-                <span style="font-size:.72rem;color:#e2e8f0 !important;font-weight:700;">1 módulo Sistema</span>
+
+            <!-- Marcas -->
+            <div class="adm-bento-card" style="--card-color: #db2777; --card-bg: #fce7f3;" onclick="cargarModuloAislado('almacen/marcas')">
+                <div class="adm-bento-icon"><i class="bi bi-award-fill"></i></div>
+                <div class="adm-bento-info">
+                    <div class="adm-bento-title">Marcas</div>
+                    <div class="adm-bento-desc">Marcas de repuestos, insumos y fabricantes.</div>
+                    <span class="adm-bento-badge"><i class="bi bi-arrow-right-short" style="color:#db2777;"></i> Gestionar</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Cards grid -->
-    <div class="adm-grid">
-
-        <!-- ── ALMACÉN ── -->
-        <div class="adm-section-label">
-            <i class="bi bi-box-seam" style="color:#16a34a;"></i>Almacén
+    <!-- ── 3. SECCIÓN: MAESTROS DE MANTENIMIENTO ───────────────────── -->
+    <div class="mb-4">
+        <div class="text-uppercase fw-extrabold text-secondary small mb-3 d-flex align-items-center gap-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+            <i class="bi bi-tools text-warning"></i> Parámetros de Mantenimiento
         </div>
 
-        <div class="adm-card" style="--adm-color:#7c3aed;--adm-bg:#f3e8ff;"
-             onclick="cargarModuloAislado('almacen/familias')">
-            <span class="adm-card-num">02</span>
-            <div class="adm-card-icon"><i class="bi bi-tags-fill"></i></div>
-            <div>
-                <div class="adm-card-name">Familias</div>
-                <div class="adm-card-desc">Categorías de artículos del inventario</div>
+        <div class="adm-grid-bento">
+            <!-- Frecuencias MP -->
+            <div class="adm-bento-card" style="--card-color: #2563eb; --card-bg: #eff6ff;" onclick="cargarModuloAislado('mantenimiento/configuracion-mp')">
+                <div class="adm-bento-icon"><i class="bi bi-sliders"></i></div>
+                <div class="adm-bento-info">
+                    <div class="adm-bento-title">Frecuencias MP</div>
+                    <div class="adm-bento-desc">Intervalos de mantenimiento preventivo por km o tiempo.</div>
+                    <span class="adm-bento-badge"><i class="bi bi-arrow-right-short text-primary"></i> Gestionar</span>
+                </div>
             </div>
-            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
-        </div>
 
-        <div class="adm-card" style="--adm-color:#0891b2;--adm-bg:#cffafe;"
-             onclick="cargarModuloAislado('almacen/unidades')">
-            <span class="adm-card-num">03</span>
-            <div class="adm-card-icon"><i class="bi bi-rulers"></i></div>
-            <div>
-                <div class="adm-card-name">Unidades de Medida</div>
-                <div class="adm-card-desc">Unidades para cantidades y stocks</div>
+            <!-- Kits MP -->
+            <div class="adm-bento-card" style="--card-color: #d97706; --card-bg: #fef3c7;" onclick="cargarModuloAislado('mantenimiento/kits-mp')">
+                <div class="adm-bento-icon"><i class="bi bi-tools"></i></div>
+                <div class="adm-bento-info">
+                    <div class="adm-bento-title">Kits MP</div>
+                    <div class="adm-bento-desc">Kits de materiales y repuestos por tipo de servicio.</div>
+                    <span class="adm-bento-badge"><i class="bi bi-arrow-right-short text-warning"></i> Gestionar</span>
+                </div>
             </div>
-            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
-        </div>
 
-        <div class="adm-card" style="--adm-color:#ea580c;--adm-bg:#ffedd5;"
-             onclick="cargarModuloAislado('almacen/sistemas')">
-            <span class="adm-card-num">04</span>
-            <div class="adm-card-icon"><i class="bi bi-diagram-3-fill"></i></div>
-            <div>
-                <div class="adm-card-name">Sistemas</div>
-                <div class="adm-card-desc">Sistemas y subsistemas de vehículos</div>
+            <!-- Tipos MP -->
+            <div class="adm-bento-card" style="--card-color: #0284c7; --card-bg: #e0f2fe;" onclick="cargarModuloAislado('mantenimiento/tipos-mp')">
+                <div class="adm-bento-icon"><i class="bi bi-card-list"></i></div>
+                <div class="adm-bento-info">
+                    <div class="adm-bento-title">Tipos MP</div>
+                    <div class="adm-bento-desc">Catálogo de tipos de mantenimiento y servicios.</div>
+                    <span class="adm-bento-badge"><i class="bi bi-arrow-right-short text-info"></i> Gestionar</span>
+                </div>
             </div>
-            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
-        </div>
 
-        <div class="adm-card" style="--adm-color:#db2777;--adm-bg:#fce7f3;"
-             onclick="cargarModuloAislado('almacen/marcas')">
-            <span class="adm-card-num">05</span>
-            <div class="adm-card-icon"><i class="bi bi-award-fill"></i></div>
-            <div>
-                <div class="adm-card-name">Marcas</div>
-                <div class="adm-card-desc">Marcas de repuestos y materiales</div>
+            <!-- Config. Métrica -->
+            <div class="adm-bento-card" style="--card-color: #dc2626; --card-bg: #fee2e2;" onclick="cargarModuloAislado('mantenimiento/config-metrica')">
+                <div class="adm-bento-icon"><i class="bi bi-speedometer2"></i></div>
+                <div class="adm-bento-info">
+                    <div class="adm-bento-title">Config. Métrica</div>
+                    <div class="adm-bento-desc">Parámetros de métricas, metas y umbrales de KPIs.</div>
+                    <span class="adm-bento-badge"><i class="bi bi-arrow-right-short text-danger"></i> Gestionar</span>
+                </div>
             </div>
-            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
-        </div>
 
-        <!-- ── MANTENIMIENTO ── -->
-        <div class="adm-section-label">
-            <i class="bi bi-tools" style="color:#d97706;"></i>Mantenimiento
-        </div>
-
-        <div class="adm-card" style="--adm-color:#2563eb;--adm-bg:#eff6ff;"
-             onclick="cargarModuloAislado('mantenimiento/configuracion-mp')">
-            <span class="adm-card-num">06</span>
-            <div class="adm-card-icon"><i class="bi bi-sliders"></i></div>
-            <div>
-                <div class="adm-card-name">Frecuencias MP</div>
-                <div class="adm-card-desc">Intervalos de mantenimiento preventivo</div>
+            <!-- Config. Fleetrun -->
+            <div class="adm-bento-card" style="--card-color: #059669; --card-bg: #d1fae5;" onclick="cargarModuloAislado('administracion/fleetrun-config')">
+                <div class="adm-bento-icon"><i class="bi bi-gear-wide-connected"></i></div>
+                <div class="adm-bento-info">
+                    <div class="adm-bento-title">Config. Fleetrun</div>
+                    <div class="adm-bento-desc">Umbrales de estados para KPIs y sincronización.</div>
+                    <span class="adm-bento-badge"><i class="bi bi-arrow-right-short text-success"></i> Gestionar</span>
+                </div>
             </div>
-            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
-        </div>
 
-        <div class="adm-card" style="--adm-color:#d97706;--adm-bg:#fef3c7;"
-             onclick="cargarModuloAislado('mantenimiento/kits-mp')">
-            <span class="adm-card-num">07</span>
-            <div class="adm-card-icon"><i class="bi bi-tools"></i></div>
-            <div>
-                <div class="adm-card-name">Kits MP</div>
-                <div class="adm-card-desc">Kits de materiales por tipo de servicio</div>
+            <!-- Situaciones -->
+            <div class="adm-bento-card" style="--card-color: #4f46e5; --card-bg: #eef2ff;" onclick="cargarModuloAislado('preferencias/situaciones')">
+                <div class="adm-bento-icon"><i class="bi bi-flag-fill"></i></div>
+                <div class="adm-bento-info">
+                    <div class="adm-bento-title">Situaciones</div>
+                    <div class="adm-bento-desc">Estados y situaciones operativas de la flota.</div>
+                    <span class="adm-bento-badge"><i class="bi bi-arrow-right-short" style="color:#4f46e5;"></i> Gestionar</span>
+                </div>
             </div>
-            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
-        </div>
 
-        <div class="adm-card" style="--adm-color:#0284c7;--adm-bg:#e0f2fe;"
-             onclick="cargarModuloAislado('mantenimiento/tipos-mp')">
-            <span class="adm-card-num">08</span>
-            <div class="adm-card-icon"><i class="bi bi-card-list"></i></div>
-            <div>
-                <div class="adm-card-name">Tipos MP</div>
-                <div class="adm-card-desc">Tipos de mantenimiento del taller</div>
+            <!-- Personal Taller -->
+            <div class="adm-bento-card" style="--card-color: #059669; --card-bg: #d1fae5;" onclick="cargarModuloAislado('mantenimiento/personal')">
+                <div class="adm-bento-icon"><i class="bi bi-people-fill"></i></div>
+                <div class="adm-bento-info">
+                    <div class="adm-bento-title">Personal Taller</div>
+                    <div class="adm-bento-desc">Sueldos base y costo hora-hombre de mecánicos.</div>
+                    <span class="adm-bento-badge"><i class="bi bi-arrow-right-short text-success"></i> Gestionar</span>
+                </div>
             </div>
-            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </div>
+    </div>
+
+    <!-- ── 4. SECCIÓN: SISTEMA E INTEGRACIONES ─────────────────────── -->
+    <div class="mb-4">
+        <div class="text-uppercase fw-extrabold text-secondary small mb-3 d-flex align-items-center gap-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+            <i class="bi bi-plug-fill text-primary"></i> Sistema
         </div>
 
-        <div class="adm-card" style="--adm-color:#dc2626;--adm-bg:#fee2e2;"
-             onclick="cargarModuloAislado('mantenimiento/config-metrica')">
-            <span class="adm-card-num">09</span>
-            <div class="adm-card-icon"><i class="bi bi-speedometer2"></i></div>
-            <div>
-                <div class="adm-card-name">Config. Métrica</div>
-                <div class="adm-card-desc">Parámetros de métricas y KPIs</div>
+        <div class="adm-grid-bento">
+            <!-- Integraciones -->
+            <div class="adm-bento-card" style="--card-color: #7c3aed; --card-bg: #f3e8ff;" onclick="cargarModuloAislado('sistema/integraciones')">
+                <div class="adm-bento-icon"><i class="bi bi-plug-fill"></i></div>
+                <div class="adm-bento-info">
+                    <div class="adm-bento-title">Integraciones</div>
+                    <div class="adm-bento-desc">Conexiones con APIs externas, GPS y servicios web.</div>
+                    <span class="adm-bento-badge"><i class="bi bi-arrow-right-short" style="color:#7c3aed;"></i> Gestionar</span>
+                </div>
             </div>
-            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
         </div>
-
-        <div class="adm-card" style="--adm-color:#059669;--adm-bg:#d1fae5;"
-             onclick="cargarModuloAislado('administracion/fleetrun-config')">
-            <span class="adm-card-num">09b</span>
-            <div class="adm-card-icon"><i class="bi bi-gear-wide-connected"></i></div>
-            <div>
-                <div class="adm-card-name">Config. Fleetrun</div>
-                <div class="adm-card-desc">Umbrales de estados para KPIs</div>
-            </div>
-            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
-        </div>
-
-        <div class="adm-card" style="--adm-color:#4f46e5;--adm-bg:#eef2ff;"
-             onclick="cargarModuloAislado('preferencias/situaciones')">
-            <span class="adm-card-num">10</span>
-            <div class="adm-card-icon"><i class="bi bi-flag-fill"></i></div>
-            <div>
-                <div class="adm-card-name">Situaciones</div>
-                <div class="adm-card-desc">Estados y situaciones de flota</div>
-            </div>
-            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
-        </div>
-
-        <div class="adm-card" style="--adm-color:#059669;--adm-bg:#d1fae5;"
-             onclick="cargarModuloAislado('mantenimiento/personal')">
-            <span class="adm-card-num">11</span>
-            <div class="adm-card-icon"><i class="bi bi-people-fill"></i></div>
-            <div>
-                <div class="adm-card-name">Personal Taller</div>
-                <div class="adm-card-desc">Sueldos y horas de técnicos</div>
-            </div>
-            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
-        </div>
-
-
-
-        <!-- ── SISTEMA ── -->
-        <div class="adm-section-label">
-            <i class="bi bi-plug-fill" style="color:#7c3aed;"></i>Sistema
-        </div>
-
-        <div class="adm-card" style="--adm-color:#7c3aed;--adm-bg:#f3e8ff;"
-             onclick="cargarModuloAislado('sistema/integraciones')">
-            <span class="adm-card-num">13</span>
-            <div class="adm-card-icon"><i class="bi bi-plug-fill"></i></div>
-            <div>
-                <div class="adm-card-name">Integraciones</div>
-                <div class="adm-card-desc">Conexiones con servicios externos</div>
-            </div>
-            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
-        </div>
-
     </div>
 
 </div>

@@ -1,148 +1,185 @@
-<!-- Módulo Otros — Hub de herramientas de Mantenimiento -->
+<!-- Módulo Otros — Hub de herramientas de Mantenimiento (Apple & Bento ERP) -->
 <style>
-/* ─── Mant-Otros Hub ──────────────────────────────────────────────── */
 #moduloOtrosMant {
-    display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
-    overflow-y: auto; background: var(--bg);
-}
-.otro-hero {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    padding: 2rem 2rem 1.6rem;
-    flex-shrink: 0;
-}
-@media (max-width: 767.98px) {
-    .otro-hero { padding: 1.25rem 1rem 1rem; }
-}
-.otro-hero-title {
-    font-size: 1.45rem; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: .3rem;
-}
-.otro-hero-sub {
-    font-size: .75rem; color: #94a3b8; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .1em;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
 }
 
-/* Grid 2 columnas */
-.otro-grid {
-    padding: 1.5rem 1.25rem;
+/* ── Bento Grid Hub ──────────────────────────────── */
+.otro-grid-bento {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1rem;
 }
-@media (max-width: 767.98px) {
-    .otro-grid { padding: .85rem; gap: .75rem; }
-}
 
-/* Card */
-.otro-card {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 20px;
-    padding: 1.5rem 1rem 1.25rem;
+.otro-bento-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1.25rem 1.25rem;
     cursor: pointer;
-    transition: transform .18s cubic-bezier(.4,0,.2,1),
-                box-shadow .18s cubic-bezier(.4,0,.2,1),
-                border-color .18s;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center; gap: .65rem;
-    position: relative; overflow: hidden;
-    min-height: 130px;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
-.otro-card:hover {
+.otro-bento-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 28px rgba(0,0,0,.1);
-    border-color: var(--otro-color, #7c3aed);
+    box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.08);
+    border-color: var(--card-color, #2563eb);
 }
-.otro-card:active { transform: translateY(-1px); }
+.otro-bento-card:active {
+    transform: translateY(-1px);
+}
 
-.otro-card-icon {
-    width: 64px; height: 64px; border-radius: 20px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.75rem;
-    background: var(--otro-bg, #f3e8ff);
-    color: var(--otro-color, #7c3aed);
+.otro-bento-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    background: var(--card-bg, #eff6ff);
+    color: var(--card-color, #2563eb);
     flex-shrink: 0;
+    transition: transform 0.2s ease;
 }
-.otro-card-name {
-    font-size: .88rem; font-weight: 800; color: var(--text); line-height: 1.2;
+.otro-bento-card:hover .otro-bento-icon {
+    transform: scale(1.08);
 }
 
-/* Section label */
-.otro-section-label {
-    grid-column: 1 / -1;
-    font-size: .6rem; font-weight: 900; text-transform: uppercase;
-    letter-spacing: .12em; color: var(--subtext);
-    display: flex; align-items: center; gap: .5rem;
-    padding-top: .25rem;
+.otro-bento-info {
+    flex: 1;
+    min-width: 0;
 }
-.otro-section-label::after {
-    content: ''; flex: 1; height: 1px; background: var(--border);
+.otro-bento-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+    margin-bottom: 0.3rem;
+}
+.otro-bento-desc {
+    font-size: 0.76rem;
+    color: #64748b;
+    line-height: 1.35;
+    margin-bottom: 0.5rem;
+}
+.otro-bento-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 </style>
 
-<div id="moduloOtrosMant">
+<div id="moduloOtrosMant" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
 
-    <!-- Hero -->
-    <div class="otro-hero">
-        <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:.6rem;">
-            <div style="width:46px;height:46px;border-radius:16px;background:rgba(255,255,255,.1);
-                        display:flex;align-items:center;justify-content:center;">
-                <i class="bi bi-tools" style="font-size:1.3rem;color:#f59e0b;"></i>
+    <!-- ── 1. ENCABEZADO OFICIAL ERP ───────────────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #fef3c7; color: #d97706; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-tools"></i>
             </div>
             <div>
-                <div class="otro-hero-title">Otros — Mantenimiento</div>
-                <div class="otro-hero-sub">Gestión, análisis y reportes del taller</div>
-            </div>
-        </div>
-        <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.5rem;">
-            <div style="display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.08);
-                        border-radius:10px;padding:.35rem .75rem;">
-                <i class="bi bi-grid-fill" style="color:#a78bfa;font-size:.85rem;"></i>
-                <span style="font-size:.72rem;color:#e2e8f0 !important;font-weight:700;">5 herramientas</span>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Otros — Herramientas de Mantenimiento</h4>
+                <span class="text-secondary small">Gestión, planificación, análisis y reportes avanzados del taller</span>
             </div>
         </div>
     </div>
 
-    <!-- Cards grid -->
-    <div class="otro-grid">
-
-        <div class="otro-section-label">
-            <i class="bi bi-calendar2-check" style="color:#2563eb;"></i>Planificación
+    <!-- ── 2. SECCIÓN: PLANIFICACIÓN Y BACKLOG ─────────────────────── -->
+    <div class="mb-4">
+        <div class="text-uppercase fw-extrabold text-secondary small mb-3 d-flex align-items-center gap-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+            <i class="bi bi-calendar2-week text-primary"></i> Programación Operativa
         </div>
 
-        <div class="otro-card" style="--otro-color:#2563eb;--otro-bg:#eff6ff;"
-             onclick="cargarModuloAislado('mantenimiento/planificacion')">
-            <div class="otro-card-icon"><i class="bi bi-calendar2-check-fill"></i></div>
-            <div class="otro-card-name">Planificación de Mantenimientos</div>
-        </div>
+        <div class="otro-grid-bento">
+            <!-- Planificación -->
+            <div class="otro-bento-card" style="--card-color: #2563eb; --card-bg: #eff6ff;" onclick="cargarModuloAislado('mantenimiento/planificacion')">
+                <div class="otro-bento-icon">
+                    <i class="bi bi-calendar2-check-fill"></i>
+                </div>
+                <div class="otro-bento-info">
+                    <div class="otro-bento-title">Planificación de Mantenimientos</div>
+                    <div class="otro-bento-desc">Programación preventiva, frecuencias por kilometraje y calendario del taller.</div>
+                    <span class="otro-bento-badge"><i class="bi bi-arrow-right-short text-primary"></i> Abrir módulo</span>
+                </div>
+            </div>
 
-        <div class="otro-card" style="--otro-color:#d97706;--otro-bg:#fef3c7;"
-             onclick="cargarModuloAislado('mantenimiento/backlog-taller')">
-            <div class="otro-card-icon"><i class="bi bi-hourglass-split"></i></div>
-            <div class="otro-card-name">Backlog Pendientes</div>
+            <!-- Backlog -->
+            <div class="otro-bento-card" style="--card-color: #d97706; --card-bg: #fef3c7;" onclick="cargarModuloAislado('mantenimiento/backlog-taller')">
+                <div class="otro-bento-icon">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <div class="otro-bento-info">
+                    <div class="otro-bento-title">Backlog Pendientes</div>
+                    <div class="otro-bento-desc">Control de averías acumuladas, repuestos pendientes y cola de espera de unidades.</div>
+                    <span class="otro-bento-badge"><i class="bi bi-arrow-right-short text-warning"></i> Abrir módulo</span>
+                </div>
+            </div>
         </div>
-
-        <div class="otro-section-label">
-            <i class="bi bi-bar-chart-fill" style="color:#0891b2;"></i>Análisis y Reportes
-        </div>
-
-        <div class="otro-card" style="--otro-color:#0891b2;--otro-bg:#cffafe;"
-             onclick="cargarModuloAislado('mantenimiento/kpis-taller')">
-            <div class="otro-card-icon"><i class="bi bi-activity"></i></div>
-            <div class="otro-card-name">Métricas y KPIs</div>
-        </div>
-
-        <div class="otro-card" style="--otro-color:#7c3aed;--otro-bg:#f3e8ff;"
-             onclick="cargarModuloAislado('mantenimiento/productividad')">
-            <div class="otro-card-icon"><i class="bi bi-person-lines-fill"></i></div>
-            <div class="otro-card-name">Productividad Personal</div>
-        </div>
-
-        <div class="otro-card" style="--otro-color:#16a34a;--otro-bg:#dcfce7;"
-             onclick="cargarModuloAislado('mantenimiento/finanzas-taller')">
-            <div class="otro-card-icon"><i class="bi bi-cash-coin"></i></div>
-            <div class="otro-card-name">Reporte Financiero</div>
-        </div>
-
     </div>
+
+    <!-- ── 3. SECCIÓN: REPORTES Y MÉTRICAS ─────────────────────────── -->
+    <div class="mb-4">
+        <div class="text-uppercase fw-extrabold text-secondary small mb-3 d-flex align-items-center gap-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+            <i class="bi bi-graph-up text-info"></i> Rendimiento e Indicadores
+        </div>
+
+        <div class="otro-grid-bento">
+            <!-- Métricas y KPIs -->
+            <div class="otro-bento-card" style="--card-color: #0891b2; --card-bg: #cffafe;" onclick="cargarModuloAislado('mantenimiento/kpis-taller')">
+                <div class="otro-bento-icon">
+                    <i class="bi bi-activity"></i>
+                </div>
+                <div class="otro-bento-info">
+                    <div class="otro-bento-title">Métricas y KPIs</div>
+                    <div class="otro-bento-desc">Disponibilidad de flota, MTBF, MTTR y cumplimiento del plan preventivo.</div>
+                    <span class="otro-bento-badge"><i class="bi bi-arrow-right-short text-info"></i> Abrir módulo</span>
+                </div>
+            </div>
+
+            <!-- Productividad Personal -->
+            <div class="otro-bento-card" style="--card-color: #7c3aed; --card-bg: #f3e8ff;" onclick="cargarModuloAislado('mantenimiento/productividad')">
+                <div class="otro-bento-icon">
+                    <i class="bi bi-person-lines-fill"></i>
+                </div>
+                <div class="otro-bento-info">
+                    <div class="otro-bento-title">Productividad Personal</div>
+                    <div class="otro-bento-desc">Horas hombre trabajadas, órdenes cerradas por mecánico y eficiencia operativa.</div>
+                    <span class="otro-bento-badge"><i class="bi bi-arrow-right-short" style="color:#7c3aed;"></i> Abrir módulo</span>
+                </div>
+            </div>
+
+            <!-- Reporte Financiero -->
+            <div class="otro-bento-card" style="--card-color: #16a34a; --card-bg: #dcfce7;" onclick="cargarModuloAislado('mantenimiento/finanzas-taller')">
+                <div class="otro-bento-icon">
+                    <i class="bi bi-cash-coin"></i>
+                </div>
+                <div class="otro-bento-info">
+                    <div class="otro-bento-title">Reporte Financiero</div>
+                    <div class="otro-bento-desc">Costos de mano de obra externa, consumo de repuestos y gasto total por unidad.</div>
+                    <span class="otro-bento-badge"><i class="bi bi-arrow-right-short text-success"></i> Abrir módulo</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>

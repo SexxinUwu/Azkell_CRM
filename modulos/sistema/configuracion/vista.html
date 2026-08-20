@@ -1,241 +1,296 @@
-<!-- Módulo: Configuración del Sistema -->
+<!-- Módulo: Configuración del Sistema — Azkell ERP (Apple & Bento ERP) -->
 <style>
-@media (max-width: 768px) {
-    .topbar { display: none !important; }
-    #root-dinamico, .main-area { 
-        padding: 0 !important; 
-        overflow: hidden !important; 
-        display: flex !important;
-        flex-direction: column !important;
-    }
-    .config-content { padding: 1rem !important; }
-    .config-content .card { max-width: 100% !important; }
-    .config-panel { max-width: 100% !important; }
+#moduloConfiguracion {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
 }
+
+/* ── Control Bar & Segmented Nav ─────────────────── */
+#moduloConfiguracion .ck-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+#moduloConfiguracion .ck-segment-item {
+    border: none;
+    background: transparent;
+    padding: 7px 16px;
+    border-radius: 10px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+#moduloConfiguracion .ck-segment-item:hover { color: #0f172a; }
+#moduloConfiguracion .ck-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ── Bento Cards ─────────────────────────────────── */
+#moduloConfiguracion .cfg-bento-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    max-width: 600px;
+    margin-bottom: 1.25rem;
+}
+.lang-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+.lang-card:hover {
+    border-color: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37,99,235,0.08);
+}
+.lang-card.active {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+.cfg-font-btn {
+    border: 1.5px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 80px;
+}
+.cfg-font-btn:hover { border-color: #2563eb; }
+.cfg-font-btn.active { border-color: #2563eb; background: #eff6ff; }
+.cfg-font-preview { font-size: 1.2rem; font-weight: 700; color: #0f172a; }
+.cfg-font-name { font-size: 0.72rem; color: #64748b; font-weight: 600; }
 </style>
-<div class="config-content p-4" style="background-color: var(--bg); flex: 1 1 0; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;">
 
+<div id="moduloConfiguracion" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
 
-        <!-- Panel: Empresa -->
-        <div id="cfg-panel-empresa" class="config-panel d-none">
-            <h5 class="fw-bold mb-1" style="color: var(--text);">Datos de la Empresa</h5>
-            <p class="mb-4" style="color: var(--subtext); font-size: 0.875rem;">Configura el nombre y logotipo que aparecerán en los reportes (ej. Dashboard de Mantenimiento).</p>
-
-            <div class="card border-0 shadow-sm p-4 mb-4" style="background-color: var(--surface); border-radius: 12px; max-width: 520px;">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold" style="color: var(--text);">Nombre de la Empresa</label>
-                    <input type="text" class="form-control" id="cfg-empresa-nombre" placeholder="Ej. Azkell Fleet o Marsisa S.A.C." style="border-color: var(--border); background-color: var(--bg); color: var(--text);">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold" style="color: var(--text);">Logotipo</label>
-                    <p class="mb-2" style="color: var(--subtext); font-size: 0.8rem;">Se recomienda una imagen PNG o JPG de tamaño horizontal (ej. 250x100px). Máximo 1MB.</p>
-                    <input class="form-control" type="file" id="cfg-empresa-logo" accept="image/png, image/jpeg, image/webp" style="border-color: var(--border); background-color: var(--bg); color: var(--text);">
-                    
-                    <!-- Preview -->
-                    <div class="mt-3 text-center p-3 rounded" style="background-color: var(--bg); border: 1px dashed var(--border); min-height: 80px; display: flex; align-items: center; justify-content: center;">
-                        <img id="cfg-empresa-logo-preview" src="" alt="Vista previa del logo" style="max-height: 60px; max-width: 100%; display: none;">
-                        <span id="cfg-empresa-logo-placeholder" style="color: var(--subtext); font-size: 0.85rem;">No hay logo subido</span>
-                    </div>
-                </div>
-                <div class="text-end">
-                    <button class="btn btn-primary px-4" onclick="window.guardarDatosEmpresa()">Guardar Cambios</button>
-                </div>
+    <!-- ── 1. ENCABEZADO OFICIAL ERP ───────────────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #f1f5f9; color: #475569; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-sliders2"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Configuración del ERP</h4>
+                <span class="text-secondary small">Personalización visual, datos de empresa, accesibilidad e idioma</span>
             </div>
         </div>
+    </div>
 
-        <!-- Panel: Apariencia -->
-        <div id="cfg-panel-apariencia" class="config-panel d-none">
-            <h5 class="fw-bold mb-1" style="color: var(--text);" data-i18n="cfg.appearance.title">Apariencia</h5>
-            <p class="mb-4" style="color: var(--subtext); font-size: 0.875rem;" data-i18n="cfg.appearance.subtitle">Personaliza colores, tipografía y modo de visualización.</p>
-
-            <!-- Modo Oscuro/Claro -->
-            <div class="card border-0 shadow-sm p-4 mb-4" style="background-color: var(--surface); border-radius: 12px; max-width: 520px;">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <p class="fw-semibold mb-1" style="color: var(--text);">Modo oscuro</p>
-                        <p class="mb-0" style="color: var(--subtext); font-size: 0.8rem;">Reduce la fatiga visual en entornos oscuros.</p>
-                    </div>
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" id="cfg-switch-dark" role="switch" style="width: 3em; height: 1.5em; cursor: pointer;" onchange="if(window.applyDark) window.applyDark(this.checked, true)">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Color de Acento -->
-            <div class="card border-0 shadow-sm p-4 mb-4" style="background-color: var(--surface); border-radius: 12px; max-width: 520px;">
-                <p class="fw-semibold mb-1" style="color: var(--text);">Color de acento</p>
-                <p class="mb-3" style="color: var(--subtext); font-size: 0.8rem;">Elige el color principal de la interfaz.</p>
-
-                <div class="d-flex flex-wrap gap-2 mb-3" id="cfg-swatches">
-                    <div class="cfg-swatch" data-color="#007aff" title="Azul" onclick="window.selectAccentColor(this)" style="width:36px;height:36px;border-radius:50%;background:#007aff;cursor:pointer;border:3px solid transparent;transition:border 0.15s,transform 0.15s;"></div>
-                    <div class="cfg-swatch" data-color="#10b981" title="Verde" onclick="window.selectAccentColor(this)" style="width:36px;height:36px;border-radius:50%;background:#10b981;cursor:pointer;border:3px solid transparent;transition:border 0.15s,transform 0.15s;"></div>
-                    <div class="cfg-swatch" data-color="#f59e0b" title="Ámbar" onclick="window.selectAccentColor(this)" style="width:36px;height:36px;border-radius:50%;background:#f59e0b;cursor:pointer;border:3px solid transparent;transition:border 0.15s,transform 0.15s;"></div>
-                    <div class="cfg-swatch" data-color="#ef4444" title="Rojo" onclick="window.selectAccentColor(this)" style="width:36px;height:36px;border-radius:50%;background:#ef4444;cursor:pointer;border:3px solid transparent;transition:border 0.15s,transform 0.15s;"></div>
-                    <div class="cfg-swatch" data-color="#8b5cf6" title="Violeta" onclick="window.selectAccentColor(this)" style="width:36px;height:36px;border-radius:50%;background:#8b5cf6;cursor:pointer;border:3px solid transparent;transition:border 0.15s,transform 0.15s;"></div>
-                    <div class="cfg-swatch" data-color="#ec4899" title="Rosa" onclick="window.selectAccentColor(this)" style="width:36px;height:36px;border-radius:50%;background:#ec4899;cursor:pointer;border:3px solid transparent;transition:border 0.15s,transform 0.15s;"></div>
-                    <div class="cfg-swatch" data-color="#06b6d4" title="Cian" onclick="window.selectAccentColor(this)" style="width:36px;height:36px;border-radius:50%;background:#06b6d4;cursor:pointer;border:3px solid transparent;transition:border 0.15s,transform 0.15s;"></div>
-                    <div class="cfg-swatch" data-color="#f97316" title="Naranja" onclick="window.selectAccentColor(this)" style="width:36px;height:36px;border-radius:50%;background:#f97316;cursor:pointer;border:3px solid transparent;transition:border 0.15s,transform 0.15s;"></div>
-                </div>
-
-                <div class="d-flex align-items-center gap-2">
-                    <label style="font-size: 0.8rem; color: var(--subtext); white-space: nowrap;">Color personalizado:</label>
-                    <input type="color" id="cfg-color-custom" class="form-control form-control-sm p-0" style="width: 40px; height: 32px; cursor: pointer; border-radius: 50%; border: 2px solid var(--border); padding: 2px;" onchange="window.selectAccentColorCustom(this.value)" oninput="window.selectAccentColorCustom(this.value)">
-                    <button onclick="window.resetAccentColor()" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem; border-radius: 8px;">
-                        <i class="bi bi-arrow-counterclockwise"></i> Restablecer
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tamaño de fuente -->
-            <div class="card border-0 shadow-sm p-4 mb-4" style="background-color: var(--surface); border-radius: 12px; max-width: 520px;">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <p class="fw-semibold mb-0" style="color: var(--text);">Tamaño de fuente</p>
-                    <span class="badge" id="cfg-font-label" style="background-color: var(--crm-accent); color: #fff; min-width: 48px; text-align: center;">14px</span>
-                </div>
-                <p class="mb-3" style="color: var(--subtext); font-size: 0.8rem;">Ajusta el tamaño de texto base de la interfaz.</p>
-                <input type="range" class="form-range" id="cfg-font-slider" min="10" max="20" step="1" value="14"
-                    oninput="window.applyFontSize(parseInt(this.value), true)"
-                    style="accent-color: var(--accent);">
-                <div class="d-flex justify-content-between mt-1" style="color: var(--subtext); font-size: 0.75rem;">
-                    <span>Compacto (10px)</span>
-                    <span>Normal (14px)</span>
-                    <span>Grande (20px)</span>
-                </div>
-            </div>
-
-            <!-- Tipo de fuente -->
-            <div class="card border-0 shadow-sm p-4 mb-4" style="background-color: var(--surface); border-radius: 12px; max-width: 520px;">
-                <p class="fw-semibold mb-1" style="color: var(--text);">Tipo de fuente</p>
-                <p class="mb-3" style="color: var(--subtext); font-size: 0.8rem;">Elige la tipografía de la interfaz.</p>
-                <div class="d-flex flex-wrap gap-2" id="cfg-font-options">
-                    <button class="cfg-font-btn" data-font="inter" onclick="window.applyFontFamily('inter', true)" style="font-family: 'Inter', sans-serif;">
-                        <span class="cfg-font-preview">Aa</span>
-                        <span class="cfg-font-name">Inter</span>
-                    </button>
-                    <button class="cfg-font-btn" data-font="system" onclick="window.applyFontFamily('system', true)" style="font-family: system-ui, sans-serif;">
-                        <span class="cfg-font-preview">Aa</span>
-                        <span class="cfg-font-name">Sistema</span>
-                    </button>
-                    <button class="cfg-font-btn" data-font="serif" onclick="window.applyFontFamily('serif', true)" style="font-family: Georgia, serif;">
-                        <span class="cfg-font-preview">Aa</span>
-                        <span class="cfg-font-name">Serif</span>
-                    </button>
-                    <button class="cfg-font-btn" data-font="mono" onclick="window.applyFontFamily('mono', true)" style="font-family: 'Consolas', monospace;">
-                        <span class="cfg-font-preview">Aa</span>
-                        <span class="cfg-font-name">Mono</span>
-                    </button>
-                    <button class="cfg-font-btn" data-font="oswald" onclick="window.applyFontFamily('oswald', true)" style="font-family: 'Oswald', sans-serif;">
-                        <span class="cfg-font-preview">Aa</span>
-                        <span class="cfg-font-name">Oswald</span>
-                    </button>
-                </div>
-            </div>
+    <!-- ── 2. SEGMENTED NAVIGATION TABS ────────────────────────────── -->
+    <div class="d-flex align-items-center gap-2 mb-4 flex-wrap">
+        <div class="ck-apple-segmented">
+            <button type="button" class="ck-segment-item active" id="btn-cfg-apariencia" onclick="document.querySelectorAll('#moduloConfiguracion .ck-segment-item').forEach(b=>b.classList.remove('active')); this.classList.add('active'); window.showConfig('apariencia');">
+                <i class="bi bi-palette me-1"></i>Apariencia
+            </button>
+            <button type="button" class="ck-segment-item" id="btn-cfg-empresa" onclick="document.querySelectorAll('#moduloConfiguracion .ck-segment-item').forEach(b=>b.classList.remove('active')); this.classList.add('active'); window.showConfig('empresa');">
+                <i class="bi bi-building me-1"></i>Empresa
+            </button>
+            <button type="button" class="ck-segment-item" id="btn-cfg-accesibilidad" onclick="document.querySelectorAll('#moduloConfiguracion .ck-segment-item').forEach(b=>b.classList.remove('active')); this.classList.add('active'); window.showConfig('accesibilidad');">
+                <i class="bi bi-universal-access me-1"></i>Accesibilidad
+            </button>
+            <button type="button" class="ck-segment-item" id="btn-cfg-idioma" onclick="document.querySelectorAll('#moduloConfiguracion .ck-segment-item').forEach(b=>b.classList.remove('active')); this.classList.add('active'); window.showConfig('idioma');">
+                <i class="bi bi-translate me-1"></i>Idioma
+            </button>
         </div>
+    </div>
 
-        <!-- Panel: Accesibilidad -->
-        <div id="cfg-panel-accesibilidad" class="config-panel d-none">
-            <h5 class="fw-bold mb-1" style="color: var(--text);" data-i18n="cfg.access.title">Accesibilidad</h5>
-            <p class="mb-4" style="color: var(--subtext); font-size: 0.875rem;" data-i18n="cfg.access.subtitle">Ajustes para mejorar tu experiencia de usuario.</p>
+    <!-- ── 3. PANELES DE CONFIGURACIÓN ─────────────────────────────── -->
+    
+    <!-- Panel: Empresa -->
+    <div id="cfg-panel-empresa" class="config-panel d-none">
+        <div class="cfg-bento-card">
+            <h6 class="fw-bold mb-1 text-dark">Datos de la Empresa</h6>
+            <p class="text-secondary small mb-4">Configura la razón social y logotipo oficial que aparecerán en los reportes y comprobantes del ERP.</p>
 
-            <div class="card border-0 shadow-sm p-0 mb-4" style="background-color: var(--surface); border-radius: 12px; overflow: hidden; max-width: 520px;">
-
-                <!-- Reducir animaciones -->
-                <div class="d-flex align-items-center justify-content-between p-4" style="border-bottom: 1px solid var(--border);">
-                    <div>
-                        <p class="fw-semibold mb-1" style="color: var(--text);">Reducir animaciones</p>
-                        <p class="mb-0" style="color: var(--subtext); font-size: 0.8rem;">Desactiva transiciones y efectos de movimiento.</p>
-                    </div>
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" id="cfg-switch-anims" role="switch" style="width: 3em; height: 1.5em; cursor: pointer;" onchange="window.setReduceMotion(this.checked)">
-                    </div>
-                </div>
-
-                <!-- Sidebar compacto -->
-                <div class="d-flex align-items-center justify-content-between p-4">
-                    <div>
-                        <p class="fw-semibold mb-1" style="color: var(--text);">Barra lateral compacta</p>
-                        <p class="mb-0" style="color: var(--subtext); font-size: 0.8rem;">Reduce el ancho del menú lateral para más espacio.</p>
-                    </div>
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" id="cfg-switch-compact" role="switch" style="width: 3em; height: 1.5em; cursor: pointer;" onchange="window.setSidebarCompact(this.checked)">
-                    </div>
-                </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold small text-secondary">Nombre de la Empresa</label>
+                <input type="text" class="form-control rounded-3" id="cfg-empresa-nombre" placeholder="Ej. Azkell Fleet o Marsisa S.A.C.">
             </div>
-        </div>
-
-        <!-- Panel: Idioma -->
-        <div id="cfg-panel-idioma" class="config-panel d-none">
-            <h5 class="fw-bold mb-1" style="color: var(--text);" data-i18n="cfg.lang.title">Idioma y Región</h5>
-            <p class="mb-4" style="color: var(--subtext); font-size: 0.875rem;" data-i18n="cfg.lang.subtitle">Elige el idioma de la interfaz de la aplicación.</p>
-
-            <div class="d-flex flex-column gap-3" style="max-width: 520px;">
-
-                <div class="lang-card d-flex align-items-center gap-4 p-3" data-lang="es" onclick="window.setLanguage('es')">
-                    <div class="lang-flag-circle"><img src="https://flagcdn.com/w40/pe.png" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt="PE"></div>
-                    <div class="flex-grow-1">
-                        <p class="fw-bold mb-0" style="color: var(--text); font-size: 0.95rem;">Español</p>
-                        <p class="mb-0" style="color: var(--subtext); font-size: 0.78rem;">Español (Perú)</p>
-                    </div>
-                    <div class="lang-check-icon"><i class="bi bi-check-circle-fill"></i></div>
-                </div>
-
-                <div class="lang-card d-flex align-items-center gap-4 p-3" data-lang="en" onclick="window.setLanguage('en')">
-                    <div class="lang-flag-circle"><img src="https://flagcdn.com/w40/us.png" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt="US"></div>
-                    <div class="flex-grow-1">
-                        <p class="fw-bold mb-0" style="color: var(--text); font-size: 0.95rem;">English</p>
-                        <p class="mb-0" style="color: var(--subtext); font-size: 0.78rem;">English (US)</p>
-                    </div>
-                    <div class="lang-check-icon"><i class="bi bi-check-circle-fill"></i></div>
-                </div>
-
-                <div class="lang-card d-flex align-items-center gap-4 p-3" data-lang="pt" onclick="window.setLanguage('pt')">
-                    <div class="lang-flag-circle"><img src="https://flagcdn.com/w40/br.png" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt="BR"></div>
-                    <div class="flex-grow-1">
-                        <p class="fw-bold mb-0" style="color: var(--text); font-size: 0.95rem;">Português</p>
-                        <p class="mb-0" style="color: var(--subtext); font-size: 0.78rem;">Português (Brasil)</p>
-                    </div>
-                    <div class="lang-check-icon"><i class="bi bi-check-circle-fill"></i></div>
-                </div>
-
-                <div class="lang-card d-flex align-items-center gap-4 p-3" data-lang="zh" onclick="window.setLanguage('zh')">
-                    <div class="lang-flag-circle"><img src="https://flagcdn.com/w40/cn.png" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt="CN"></div>
-                    <div class="flex-grow-1">
-                        <p class="fw-bold mb-0" style="color: var(--text); font-size: 0.95rem;">中文</p>
-                        <p class="mb-0" style="color: var(--subtext); font-size: 0.78rem;">普通话 (Mandarín)</p>
-                    </div>
-                    <div class="lang-check-icon"><i class="bi bi-check-circle-fill"></i></div>
-                </div>
-
-                <div class="lang-card d-flex align-items-center gap-4 p-3" data-lang="qu" onclick="window.setLanguage('qu')">
-                    <div class="lang-flag-circle"><img src="https://flagcdn.com/w40/pe.png" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt="PE-QU"></div>
-                    <div class="flex-grow-1">
-                        <p class="fw-bold mb-0" style="color: var(--text); font-size: 0.95rem;">Runasimi</p>
-                        <p class="mb-0" style="color: var(--subtext); font-size: 0.78rem;">Quechua (Perú)</p>
-                    </div>
-                    <div class="lang-check-icon"><i class="bi bi-check-circle-fill"></i></div>
-                </div>
-
-                <div class="lang-card d-flex align-items-center gap-4 p-3" data-lang="ay" onclick="window.setLanguage('ay')">
-                    <div class="lang-flag-circle"><img src="https://flagcdn.com/w40/bo.png" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt="BO-AY"></div>
-                    <div class="flex-grow-1">
-                        <p class="fw-bold mb-0" style="color: var(--text); font-size: 0.95rem;">Aymar Aru</p>
-                        <p class="mb-0" style="color: var(--subtext); font-size: 0.78rem;">Aymara (Bolivia/Perú)</p>
-                    </div>
-                    <div class="lang-check-icon"><i class="bi bi-check-circle-fill"></i></div>
-                </div>
-
-                <div class="lang-card d-flex align-items-center gap-4 p-3" data-lang="fr" onclick="window.setLanguage('fr')">
-                    <div class="lang-flag-circle"><img src="https://flagcdn.com/w40/fr.png" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt="FR"></div>
-                    <div class="flex-grow-1">
-                        <p class="fw-bold mb-0" style="color: var(--text); font-size: 0.95rem;">Français</p>
-                        <p class="mb-0" style="color: var(--subtext); font-size: 0.78rem;">Français (France)</p>
-                    </div>
-                    <div class="lang-check-icon"><i class="bi bi-check-circle-fill"></i></div>
-                </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold small text-secondary">Logotipo Oficial</label>
+                <p class="text-muted small mb-2">Formato PNG o JPG horizontal (máx 1MB).</p>
+                <input class="form-control rounded-3" type="file" id="cfg-empresa-logo" accept="image/png, image/jpeg, image/webp">
                 
+                <!-- Preview -->
+                <div class="mt-3 text-center p-3 rounded-3" style="background:#f8fafc; border: 1.5px dashed #cbd5e1; min-height: 80px; display: flex; align-items: center; justify-content: center;">
+                    <img id="cfg-empresa-logo-preview" src="" alt="Vista previa" style="max-height: 60px; max-width: 100%; display: none;">
+                    <span id="cfg-empresa-logo-placeholder" class="text-muted small">No hay logo cargado</span>
+                </div>
+            </div>
+            <div class="text-end mt-4">
+                <button class="btn btn-primary fw-bold px-4 rounded-3 shadow-2xs" onclick="window.guardarDatosEmpresa()">
+                    <i class="bi bi-check-lg me-1"></i> Guardar Cambios
+                </button>
+            </div>
         </div>
+    </div>
+
+    <!-- Panel: Apariencia -->
+    <div id="cfg-panel-apariencia" class="config-panel d-none">
+        <!-- Modo Oscuro/Claro -->
+        <div class="cfg-bento-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="fw-bold mb-1 text-dark">Modo Oscuro</h6>
+                    <p class="text-secondary small mb-0">Reduce la fatiga visual en jornadas nocturnas.</p>
+                </div>
+                <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" id="cfg-switch-dark" role="switch" style="width: 2.8em; height: 1.4em; cursor: pointer;" onchange="if(window.applyDark) window.applyDark(this.checked, true)">
+                </div>
+            </div>
+        </div>
+
+        <!-- Color de Acento -->
+        <div class="cfg-bento-card">
+            <h6 class="fw-bold mb-1 text-dark">Color de Acento</h6>
+            <p class="text-secondary small mb-3">Personaliza el tono principal de selección y botones del sistema.</p>
+
+            <div class="d-flex flex-wrap gap-2 mb-3" id="cfg-swatches">
+                <div class="cfg-swatch" data-color="#007aff" title="Azul" onclick="window.selectAccentColor(this)" style="width:34px;height:34px;border-radius:50%;background:#007aff;cursor:pointer;border:3px solid transparent;transition:transform 0.15s;"></div>
+                <div class="cfg-swatch" data-color="#10b981" title="Verde" onclick="window.selectAccentColor(this)" style="width:34px;height:34px;border-radius:50%;background:#10b981;cursor:pointer;border:3px solid transparent;transition:transform 0.15s;"></div>
+                <div class="cfg-swatch" data-color="#f59e0b" title="Ámbar" onclick="window.selectAccentColor(this)" style="width:34px;height:34px;border-radius:50%;background:#f59e0b;cursor:pointer;border:3px solid transparent;transition:transform 0.15s;"></div>
+                <div class="cfg-swatch" data-color="#ef4444" title="Rojo" onclick="window.selectAccentColor(this)" style="width:34px;height:34px;border-radius:50%;background:#ef4444;cursor:pointer;border:3px solid transparent;transition:transform 0.15s;"></div>
+                <div class="cfg-swatch" data-color="#8b5cf6" title="Violeta" onclick="window.selectAccentColor(this)" style="width:34px;height:34px;border-radius:50%;background:#8b5cf6;cursor:pointer;border:3px solid transparent;transition:transform 0.15s;"></div>
+                <div class="cfg-swatch" data-color="#ec4899" title="Rosa" onclick="window.selectAccentColor(this)" style="width:34px;height:34px;border-radius:50%;background:#ec4899;cursor:pointer;border:3px solid transparent;transition:transform 0.15s;"></div>
+                <div class="cfg-swatch" data-color="#06b6d4" title="Cian" onclick="window.selectAccentColor(this)" style="width:34px;height:34px;border-radius:50%;background:#06b6d4;cursor:pointer;border:3px solid transparent;transition:transform 0.15s;"></div>
+                <div class="cfg-swatch" data-color="#f97316" title="Naranja" onclick="window.selectAccentColor(this)" style="width:34px;height:34px;border-radius:50%;background:#f97316;cursor:pointer;border:3px solid transparent;transition:transform 0.15s;"></div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <label class="small text-secondary">Personalizado:</label>
+                <input type="color" id="cfg-color-custom" class="form-control form-control-sm p-0" style="width: 36px; height: 32px; cursor: pointer; border-radius: 8px; border: 1px solid #cbd5e1;" onchange="window.selectAccentColorCustom(this.value)" oninput="window.selectAccentColorCustom(this.value)">
+                <button onclick="window.resetAccentColor()" class="btn btn-sm btn-light border fw-semibold rounded-3 ms-2">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Restablecer
+                </button>
+            </div>
+        </div>
+
+        <!-- Tamaño de fuente -->
+        <div class="cfg-bento-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="fw-bold mb-0 text-dark">Tamaño de Fuente Base</h6>
+                <span class="badge bg-primary rounded-pill px-3 py-1" id="cfg-font-label">14px</span>
+            </div>
+            <p class="text-secondary small mb-3">Escalado general de textos de las tablas y formularios.</p>
+            <input type="range" class="form-range" id="cfg-font-slider" min="10" max="20" step="1" value="14"
+                oninput="window.applyFontSize(parseInt(this.value), true)">
+            <div class="d-flex justify-content-between mt-1 text-muted" style="font-size: 0.72rem;">
+                <span>Compacto (10px)</span>
+                <span>Normal (14px)</span>
+                <span>Grande (20px)</span>
+            </div>
+        </div>
+
+        <!-- Tipo de fuente -->
+        <div class="cfg-bento-card">
+            <h6 class="fw-bold mb-1 text-dark">Tipografía de la Interfaz</h6>
+            <p class="text-secondary small mb-3">Selecciona la familia tipográfica aplicada al ERP.</p>
+            <div class="d-flex flex-wrap gap-2" id="cfg-font-options">
+                <button class="cfg-font-btn active" data-font="inter" onclick="window.applyFontFamily('inter', true)" style="font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;">
+                    <span class="cfg-font-preview">Aa</span>
+                    <span class="cfg-font-name">Plus Jakarta</span>
+                </button>
+                <button class="cfg-font-btn" data-font="system" onclick="window.applyFontFamily('system', true)" style="font-family: system-ui, sans-serif;">
+                    <span class="cfg-font-preview">Aa</span>
+                    <span class="cfg-font-name">Sistema</span>
+                </button>
+                <button class="cfg-font-btn" data-font="serif" onclick="window.applyFontFamily('serif', true)" style="font-family: Georgia, serif;">
+                    <span class="cfg-font-preview">Aa</span>
+                    <span class="cfg-font-name">Serif</span>
+                </button>
+                <button class="cfg-font-btn" data-font="mono" onclick="window.applyFontFamily('mono', true)" style="font-family: 'Consolas', monospace;">
+                    <span class="cfg-font-preview">Aa</span>
+                    <span class="cfg-font-name">Mono</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel: Accesibilidad -->
+    <div id="cfg-panel-accesibilidad" class="config-panel d-none">
+        <div class="cfg-bento-card p-0 overflow-hidden">
+            <div class="d-flex align-items-center justify-content-between p-4 border-bottom">
+                <div>
+                    <h6 class="fw-bold mb-1 text-dark">Reducir Animaciones</h6>
+                    <p class="text-secondary small mb-0">Desactiva micro-transiciones para maximizar el rendimiento.</p>
+                </div>
+                <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" id="cfg-switch-anims" role="switch" style="width: 2.8em; height: 1.4em; cursor: pointer;" onchange="window.setReduceMotion(this.checked)">
+                </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between p-4">
+                <div>
+                    <h6 class="fw-bold mb-1 text-dark">Barra Lateral Compacta</h6>
+                    <p class="text-secondary small mb-0">Reduce el ancho de navegación para mayor área de trabajo.</p>
+                </div>
+                <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" id="cfg-switch-compact" role="switch" style="width: 2.8em; height: 1.4em; cursor: pointer;" onchange="window.setSidebarCompact(this.checked)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel: Idioma -->
+    <div id="cfg-panel-idioma" class="config-panel d-none">
+        <div class="d-flex flex-column gap-2" style="max-width: 600px;">
+            <div class="lang-card d-flex align-items-center gap-3 p-3 active" data-lang="es" onclick="window.setLanguage('es')">
+                <img src="https://flagcdn.com/w40/pe.png" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" alt="PE">
+                <div class="flex-grow-1">
+                    <div class="fw-bold text-dark" style="font-size: 0.92rem;">Español</div>
+                    <div class="text-secondary small">Español (Perú) — Predeterminado</div>
+                </div>
+                <div class="text-primary"><i class="bi bi-check-circle-fill fs-5"></i></div>
+            </div>
+
+            <div class="lang-card d-flex align-items-center gap-3 p-3" data-lang="en" onclick="window.setLanguage('en')">
+                <img src="https://flagcdn.com/w40/us.png" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" alt="US">
+                <div class="flex-grow-1">
+                    <div class="fw-bold text-dark" style="font-size: 0.92rem;">English</div>
+                    <div class="text-secondary small">English (US)</div>
+                </div>
+                <div class="text-secondary opacity-25"><i class="bi bi-check-circle fs-5"></i></div>
+            </div>
+
+            <div class="lang-card d-flex align-items-center gap-3 p-3" data-lang="pt" onclick="window.setLanguage('pt')">
+                <img src="https://flagcdn.com/w40/br.png" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" alt="BR">
+                <div class="flex-grow-1">
+                    <div class="fw-bold text-dark" style="font-size: 0.92rem;">Português</div>
+                    <div class="text-secondary small">Português (Brasil)</div>
+                </div>
+                <div class="text-secondary opacity-25"><i class="bi bi-check-circle fs-5"></i></div>
+            </div>
+        </div>
+    </div>
 
 </div>
 
 <!-- Toast de confirmación -->
-<div id="cfg-toast"><i class="bi bi-check-circle-fill" style="color: #10b981;"></i><span data-i18n="cfg.saved"> Preferencias guardadas</span></div>
+<div id="cfg-toast" style="display:none; position:fixed; bottom:24px; right:24px; background:#0f172a; color:#ffffff; padding:10px 18px; border-radius:12px; font-weight:700; font-size:0.85rem; box-shadow:0 10px 30px rgba(0,0,0,0.25); z-index:9999;">
+    <i class="bi bi-check-circle-fill text-success me-2"></i> Preferencias guardadas correctamente
+</div>

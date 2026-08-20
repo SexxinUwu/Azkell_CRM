@@ -195,15 +195,15 @@
 #moduloSalidas .sal-field-val { width:60%; color:var(--text); font-weight:600; word-break:break-word; }
 
 /* Drawer */
-#salNuevoBackdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1089; }
-#salNuevoBackdrop.open { display:block; }
-#moduloSalidas .sal-drawer {
-    position: fixed;
+#salNuevoBackdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45) !important; z-index:1089 !important; backdrop-filter: blur(2px); }
+#salNuevoBackdrop.open { display:block !important; }
+.sal-drawer, #moduloSalidas .sal-drawer {
+    position: fixed !important;
     bottom: 0 !important;
     left: 50% !important;
     top: auto !important;
     right: auto !important;
-    transform: translateX(-50%) translateY(100%);
+    transform: translateX(-50%) translateY(100%) !important;
     width: 100% !important;
     max-width: 700px !important;
     height: 92vh !important;
@@ -215,31 +215,30 @@
     box-shadow: 0 -16px 56px rgba(0,0,0,.35) !important;
     transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1) !important;
     z-index: 1090 !important;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    visibility: hidden;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
     margin: 0 !important;
 }
-#moduloSalidas .sal-drawer.open {
+.sal-drawer.open, #moduloSalidas .sal-drawer.open {
     transform: translateX(-50%) translateY(0) !important;
     visibility: visible !important;
     display: flex !important;
 }
 @media (max-width: 767.98px) {
-    #moduloSalidas .sal-drawer {
+    .sal-drawer, #moduloSalidas .sal-drawer {
         max-width: 100% !important;
         left: 0 !important;
         transform: translateY(100%) !important;
         border-radius: 28px 28px 0 0 !important;
     }
-    #moduloSalidas .sal-drawer.open {
+    .sal-drawer.open, #moduloSalidas .sal-drawer.open {
         transform: translateY(0) !important;
     }
 }
 .sal-drawer-hd {
-    flex: 1 1 0;
-    min-height: 0;
+    flex-shrink: 0;
 }
 
 /* ── KPIs Apple Compact Bento Cards ─────────────── */
@@ -491,7 +490,6 @@
     </div>
 
   </div>
-  </div> <!-- Cierre del sal-desktop-card -->
 
   <!-- DRAWER: Nueva Solicitud (MODERNO BENTO) -->
   <div class="sal-drawer" id="sal-drawer-nuevo">
