@@ -125,6 +125,10 @@ function _guShowInPanel(contentHtml, actionsHtml, title) {
     }
 }
 
+window.init_usuarios = function() {
+    window.guCargarTodo();
+};
+
 // ── Carga de datos ────────────────────────────────────────────
 window.guCargarTodo = async function(forzar) {
     var list = document.getElementById('guList');
@@ -153,6 +157,16 @@ window.guCargarTodo = async function(forzar) {
         var cm = document.getElementById('gu-count-miembros');
         if (cr) cr.textContent = '(' + window.dataGlobalRoles.length + ')';
         if (cm) cm.textContent = '(' + window.dataGlobalUsuarios.length + ')';
+        
+        var elUsers = document.getElementById('gu-kpi-total-usuarios');
+        if (elUsers) elUsers.textContent = window.dataGlobalUsuarios.length;
+        var elRoles = document.getElementById('gu-kpi-total-roles');
+        if (elRoles) elRoles.textContent = window.dataGlobalRoles.length;
+        var elAdmins = document.getElementById('gu-kpi-total-admins');
+        if (elAdmins) elAdmins.textContent = window.dataGlobalUsuarios.filter(function(u) {
+            return (u.rol_label || '').toLowerCase().includes('admin') || (u.cargo || '').toLowerCase().includes('admin');
+        }).length;
+
         window.guSetTab(window._guTabActiva || 'roles');
     } catch(e) {
         if (list) list.innerHTML = '<div class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>' + e.message + '</div>';

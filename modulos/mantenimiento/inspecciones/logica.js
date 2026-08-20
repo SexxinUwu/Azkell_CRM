@@ -263,6 +263,9 @@ window.actualizarVistaGraficos = function() {
 window.toggleGraficosStatus = function() { 
     window.graficosStatusAbiertos = !window.graficosStatusAbiertos; 
     window.actualizarVistaGraficos();
+    if (window.graficosStatusAbiertos && typeof filtrarStatusAvanzado === 'function') {
+        filtrarStatusAvanzado();
+    }
 };
 function toggleVistaStatus() { 
     isHistorialStatus = !isHistorialStatus; 
@@ -725,9 +728,9 @@ function filtrarStatusAvanzado() {
 
             // Clasificar estado semafórico para KPI
             kpiTotal++;
-            if (dias < 0 || est.includes('vencid') || est.includes('crit')) {
+            if (isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente')) {
                 kpiCriticas++;
-            } else if (dias <= 15 || est.includes('alert') || est.includes('observ')) {
+            } else if (dias <= 7 || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo')) {
                 kpiAlerta++;
             } else {
                 kpiConformes++;
@@ -740,11 +743,11 @@ function filtrarStatusAvanzado() {
 
             let matchSem = true;
             if (filtroSem === 'verde') {
-                matchSem = dias > 15 && !est.includes('vencid') && !est.includes('alert');
+                matchSem = dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
             } else if (filtroSem === 'amarillo') {
-                matchSem = (dias >= 0 && dias <= 15) || est.includes('alert') || est.includes('observ');
+                matchSem = (dias >= 0 && dias <= 7) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo');
             } else if (filtroSem === 'rojo') {
-                matchSem = dias < 0 || est.includes('vencid') || est.includes('crit');
+                matchSem = isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente');
             }
 
             if (matchCli && matchMar && matchEst && matchTxt && matchSem) {

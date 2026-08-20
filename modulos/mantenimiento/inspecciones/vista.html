@@ -242,6 +242,43 @@
         </div>
     </div>
 
+    <!-- ── PANEL DE GRÁFICOS (COLAPSABLE / BENTO CARDS) ─────────────── -->
+    <div class="row g-3 mb-3" id="panelGraficosStatus" style="display: none;">
+        <div class="col-12 col-md-4">
+            <div class="card p-3 shadow-2xs border h-100" style="border-radius: 16px; background: #ffffff;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fw-bold text-dark small"><i class="bi bi-pie-chart-fill text-primary me-1"></i> Estado Global</span>
+                    <span class="badge bg-light text-secondary rounded-pill">Total</span>
+                </div>
+                <div style="position: relative; height: 160px; width: 100%;">
+                    <canvas id="chartTotal"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card p-3 shadow-2xs border h-100" style="border-radius: 16px; background: #ffffff;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fw-bold text-dark small"><i class="bi bi-truck text-warning me-1"></i> Unidades Motoras</span>
+                    <span class="badge bg-light text-secondary rounded-pill">Tractos / Camiones</span>
+                </div>
+                <div style="position: relative; height: 160px; width: 100%;">
+                    <canvas id="chartMotoras"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card p-3 shadow-2xs border h-100" style="border-radius: 16px; background: #ffffff;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fw-bold text-dark small"><i class="bi bi-box text-info me-1"></i> No Motoras</span>
+                    <span class="badge bg-light text-secondary rounded-pill">Carretas / Semiremolques</span>
+                </div>
+                <div style="position: relative; height: 160px; width: 100%;">
+                    <canvas id="chartNoMotoras"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ── 3. BARRA DE BÚSQUEDA Y PESTAÑAS SEGMENTADAS ───────────────── -->
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 380px;">

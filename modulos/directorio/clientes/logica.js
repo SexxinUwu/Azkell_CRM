@@ -50,10 +50,12 @@ window.cliFiltrar = function() {
 window.cliActualizarKPIs = function() {
     var total = window.cliData.length;
     var activos = window.cliData.filter(function(c) { return (c.estado || '').toLowerCase() === 'activo'; }).length;
+    var inactivos = total - activos;
     var totalFlota = window.cliData.reduce(function(acc, c) { return acc + (parseInt(c.total_flota) || 0); }, 0);
 
     var elTotal = document.getElementById('cli-kpi-total');   if (elTotal) elTotal.textContent = total;
     var elAct = document.getElementById('cli-kpi-activos');   if (elAct) elAct.textContent = activos;
+    var elInact = document.getElementById('cli-kpi-inactivos'); if (elInact) elInact.textContent = inactivos;
     var elFlota = document.getElementById('cli-kpi-flota');  if (elFlota) elFlota.textContent = totalFlota;
 };
 

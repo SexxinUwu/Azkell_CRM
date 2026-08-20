@@ -50,6 +50,16 @@ function mostrarConductores(datos) {
         return;
     }
 
+    // Render KPIs
+    var totalCond = datos.length;
+    var activosCond = datos.filter(function(d) { return (d.estado || '').toLowerCase() === 'activo'; }).length;
+    var cesadosCond = datos.filter(function(d) { return (d.estado || '').toLowerCase() === 'cesado'; }).length;
+    var bloqCond = datos.filter(function(d) { return (d.estado || '').toLowerCase() === 'bloqueado'; }).length;
+    var elTot = document.getElementById('cond-kpi-total'); if (elTot) elTot.textContent = totalCond;
+    var elAct = document.getElementById('cond-kpi-activos'); if (elAct) elAct.textContent = activosCond;
+    var elCes = document.getElementById('cond-kpi-cesados'); if (elCes) elCes.textContent = cesadosCond;
+    var elBlo = document.getElementById('cond-kpi-bloqueados'); if (elBlo) elBlo.textContent = bloqCond;
+
     var mapEstados = new Map();
     datos.forEach(function(f) {
         var estado = f.estado || 'Desconocido';
