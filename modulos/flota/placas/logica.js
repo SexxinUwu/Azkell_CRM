@@ -746,20 +746,56 @@ function _placasActualizarBtnMasivo() {
 }
 
 window.eliminarMasivoPlacas = function() {
-    var arr = window.placasSeleccionadasGlobalmente || [];
-    if (!arr.length) return;
-    if (!confirm('¿Seguro que deseas eliminar ' + arr.length + ' placas seleccionadas? Esta acción no se puede deshacer.')) return;
+    var arr = (window.placasSeleccionadasGlobalmente && window.placasSeleccionadasGlobalmente.length > 0)
+        ? window.placasSeleccionadasGlobalmente.slice()
+        : Array.from(document.querySelectorAll('.chk-bulk-placas:checked')).map(function(c) { return c.value; }).filter(Boolean);
+
+    if (!arr.length) {
+        alert('Selecciona al menos una placa para eliminar.');
+        return;
+    }
     
-    Promise.all(arr.map(id => fetch('/api/script/eliminarDatosPlacas', {
+    if (!confirm('¿Seguro que deseas eliminar ' + arr.length + ' placa(s) seleccionada(s)? Esta acción no se puede deshacer.')) return;
+    
+    var btn = document.getElementById('placas-btn-eliminar-masivo');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...'; }
+
+    fetch('/api/eliminarMasivo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ args: [id] })
-    })))
-    .then(() => {
+        body: JSON.stringify({ ids: arr, coleccion: 'Placas' })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (res.error) {
+            alert('Error: ' + res.error);
+            return;
+        }
         window.placasSeleccionadasGlobalmente = [];
+        _placasActualizarBtnMasivo();
         cargarTablaPlacas(true);
     })
-    .catch(() => alert('Ocurrió un error al intentar eliminar las placas seleccionadas.'));
+    .catch(function(err) {
+        console.warn('Error en eliminarMasivo, probando fallback:', err);
+        var usr = (typeof usuarioLogueado !== 'undefined' && usuarioLogueado) ? usuarioLogueado : (localStorage.getItem('fleet_user') || 'sistema');
+        fetch('/api/script/eliminarDocumento', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: arr, coleccion: 'Placas', usuario: usr })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            window.placasSeleccionadasGlobalmente = [];
+            _placasActualizarBtnMasivo();
+            cargarTablaPlacas(true);
+        })
+        .catch(function() {
+            alert('Ocurrió un error al intentar eliminar las placas seleccionadas.');
+        });
+    })
+    .finally(function() {
+        if (btn) { btn.disabled = false; }
+    });
 };
 
 window.cambiarPaginaPlacas = function(direccion) {
@@ -1403,12 +1439,29 @@ window.eliminarMasivo = function(coleccion, contexto) {
 window.eliminarPlacaDesdeTarjeta = function(plc) {
     if (!window.guardAction('placas', 'd')) return;
     var doDelete = function() {
-        fetch('/api/script/eliminarDocumento', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids: [plc], coleccion: 'Placas', usuario: usuarioLogueado })
-        }).then(function(r) { return r.json(); }).then(function(r) {
-            if (r.data === 'Éxito') cargarTablaPlacas(true);
-            else alert(r.data);
+        var usr = (typeof usuarioLogueado !== 'undefined' && usuarioLogueado) ? usuarioLogueado : (localStorage.getItem('fleet_user') || 'sistema');
+        fetch('/api/eliminarMasivo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: [plc], coleccion: 'Placas' })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(r) {
+            if (r.error) {
+                // Fallback a eliminarDocumento
+                fetch('/api/script/eliminarDocumento', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: [plc], coleccion: 'Placas', usuario: usr })
+                }).then(function(res) { return res.json(); }).then(function(res) {
+                    if (res.data === 'Éxito' || !res.error) cargarTablaPlacas(true);
+                    else alert(res.data || res.error);
+                });
+            } else {
+                cargarTablaPlacas(true);
+            }
+        })
+        .catch(function(err) {
+            alert('Error al eliminar: ' + err.message);
         });
     };
     if (typeof window.confirmar === 'function') {

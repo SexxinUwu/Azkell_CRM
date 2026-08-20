@@ -30,7 +30,36 @@ window.srHistPageSize         = window.srHistPageSize         || 20;
 // srEntradas se carga desde BD — no se persiste en localStorage
 window.srEntradas             = [];
 
-var SR_COLORES = ['#ef4444'];
+
+// ── Color Dinámico sincronizado con Apariencia del ERP ───────────
+window.srGetColorTema = function() {
+    return localStorage.getItem('fleet_accent') || '#7c3aed';
+};
+
+window.srGetColorRampa = function(rampaObj) {
+    var temaCol = window.srGetColorTema();
+    if (!rampaObj) return temaCol;
+    var c = (rampaObj.color || '').trim().toLowerCase();
+    // Si no tiene color asignado o mantiene los colores estándar por defecto previos (#ef4444, #007aff, #64748b, etc.)
+    // se sincroniza dinámicamente con el tema de Apariencia del ERP
+    if (!c || c === '#ef4444' || c === '#007aff' || c === '#64748b' || c === 'default') {
+        return temaCol;
+    }
+    return rampaObj.color;
+};
+
+// Sincronización en vivo cuando el usuario cambia el color en Configuración -> Apariencia
+window.addEventListener('accentColorChanged', function() {
+    if (document.getElementById('moduloStatusRampa')) {
+        if (window.srTabActual === 'historial') {
+            if (typeof srRenderHistorial === 'function') srRenderHistorial();
+        } else {
+            if (typeof srRenderTabla === 'function') srRenderTabla();
+        }
+    }
+});
+
+var SR_COLORES = [window.srGetColorTema()];
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_status_rampa = function() {
@@ -398,7 +427,7 @@ function srRenderTabla() {
     rampas.forEach(function(rampaObj, idx) {
         var rampaId   = rampaObj.id;
         var rampaNom  = rampaObj.nombre_rampa || ('Rampa ' + rampaId);
-        var color     = rampaObj.color || '#ef4444';
+        var color     = window.srGetColorRampa(rampaObj);
         var entradas  = window.srEntradas.filter(function(e) { 
             var rStr = String(e.rampa || '').trim().toLowerCase();
             var nomLower = String(rampaNom || '').trim().toLowerCase();
@@ -588,7 +617,7 @@ window.srAbrirDetalle = function(id) {
     var rampaDetObj = rampaIdx >= 0 ? window.srCatRampas[rampaIdx] : null;
     var rampaNomDet = rampaDetObj ? (rampaDetObj.nombre_rampa || rampaDetObj.descripcion || 'Rampa ' + e.rampa) : ('Rampa ' + e.rampa);
     var rNum = (rampaIdx >= 0 ? (rampaIdx + 1) : e.rampa);
-    var rampaCol = (rampaDetObj && rampaDetObj.color) ? rampaDetObj.color : '#ef4444';
+    var rampaCol = window.srGetColorRampa(rampaDetObj);
 
     // Horas y Permanencia
     var horas = e.fechaIngreso ? srCalcHorasTaller(e).replace('h', '') : '0.0';
@@ -1293,7 +1322,7 @@ function srRenderHistorial() {
         var rIdx = window.srCatRampas ? window.srCatRampas.findIndex(function(c) { return c.id == rampaId; }) : -1;
         var rObj = rIdx >= 0 ? window.srCatRampas[rIdx] : null;
         var rNom = rObj ? (rObj.nombre_rampa || rObj.descripcion || String(rampaId)) : String(rampaId);
-        var rCol = (rObj && rObj.color) ? rObj.color : '#64748b';
+        var rCol = window.srGetColorRampa(rObj);
         var textRampa = (rampaId >= 1 && rampaId <= 3) ? String(rampaId) : rNom;
         var styleRampa = (rampaId >= 1 && rampaId <= 3) 
             ? 'background:' + rCol + ';' 
@@ -1380,7 +1409,7 @@ window.srAbrirDetalleHistorial = function(id) {
     var rObj = rIdx >= 0 ? window.srCatRampas[rIdx] : null;
     var rNom = rObj ? (rObj.nombre_rampa || rObj.descripcion || 'Rampa ' + row.rampa) : ('Rampa ' + (row.rampa || '1'));
     var rNum = (rIdx >= 0 ? (rIdx + 1) : (row.rampa || '1'));
-    var rCol = (rObj && rObj.color) ? rObj.color : '#64748b';
+    var rCol = window.srGetColorRampa(rObj);
 
     // Calcular permanencia total
     var hTaller = '—';
@@ -2799,6 +2828,7 @@ window.srAbrirConfigRampas = function() {
     var panel = document.getElementById('sr-config-rampas');
     var bd    = document.getElementById('sr-config-bd');
     if (panel) { panel.classList.add('open'); }
+    var colInp = document.getElementById('sr-cfg-color'); if (colInp) colInp.value = window.srGetColorTema();
     if (bd)    bd.style.display = 'block';
     if (window.srCatRampas && window.srCatRampas.length) {
         srRenderConfigRampas();
@@ -2829,7 +2859,7 @@ function srRenderConfigRampas() {
         return;
     }
     list.innerHTML = rampas.map(function(r) {
-        var col = r.color || '#ef4444';
+        var col = window.srGetColorRampa(r);
         return '<div class="sr-cfg-row p-2 rounded-3 mb-2 bg-white border d-flex align-items-center gap-2 shadow-2xs" data-id="' + r.id + '" draggable="true" style="cursor:default;">' +
             '<span class="sr-cfg-drag text-muted" title="Arrastrar para reordenar" style="cursor:grab; font-size:1.1rem; flex-shrink:0;">⠿</span>' +
             '<input type="color" value="' + col + '" id="sr-cfg-col-' + r.id + '" ' +
@@ -2945,7 +2975,7 @@ window.srAgregarRampa = function() {
     var colInp = document.getElementById('sr-cfg-color');
     if (!inp) return;
     var nombre = inp.value.trim();
-    var color = colInp ? colInp.value : '#ef4444';
+    var color = colInp ? colInp.value : window.srGetColorTema();
     if (!nombre) { inp.focus(); return; }
     fetch('/api/cat-rampas', {
         method: 'POST',

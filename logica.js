@@ -1743,11 +1743,18 @@ window.exportarFichaPlacaPDF = async function(placaArg) {
 
 // Aplica color de acento guardado (accesible desde módulo configuración)
 window.applyAccent = function(hex, save) {
-    // Seteamos en body (inline) para ganar sobre cualquier :root redefinido
+    // Seteamos en body y documentElement para máxima cobertura de variables CSS
     document.body.style.setProperty('--accent', hex);
     document.body.style.setProperty('--crm-accent', hex);
     document.body.style.setProperty('--crm-accent-light', hex + '1a'); // 10% opacity
+    document.body.style.setProperty('--primary', hex);
+    document.documentElement.style.setProperty('--primary', hex);
+    document.documentElement.style.setProperty('--accent', hex);
     if (save) localStorage.setItem('fleet_accent', hex);
+    window.dispatchEvent(new CustomEvent('accentColorChanged', { detail: { color: hex } }));
+    if (typeof window.srRenderTabla === 'function' && document.getElementById('moduloStatusRampa')) {
+        window.srRenderTabla();
+    }
 };
 
 // ============================================================
