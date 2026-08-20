@@ -124,6 +124,135 @@
 #moduloReportesOT tbody tr:hover { background: rgba(2, 132, 199, 0.04); }
 #moduloReportesOT tbody td { padding: 9px 12px; color: var(--text, #0f172a); vertical-align: middle; }
 
+/* ── Botones y Badges de Acción Modernos Bento ERP ───────────── */
+#moduloReportesOT .rot-actions-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+#moduloReportesOT .rot-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 5px 11px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 8px;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    border: 1px solid transparent;
+    line-height: 1;
+    user-select: none;
+    white-space: nowrap;
+    text-decoration: none;
+}
+#moduloReportesOT .rot-btn i {
+    font-size: 0.85rem;
+    line-height: 1;
+}
+#moduloReportesOT .rot-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+#moduloReportesOT .rot-btn:active {
+    transform: translateY(0);
+}
+
+/* Iniciar */
+#moduloReportesOT .rot-btn-iniciar {
+    background: #ecfdf5;
+    color: #059669;
+    border-color: #a7f3d0;
+}
+#moduloReportesOT .rot-btn-iniciar:hover {
+    background: #10b981;
+    color: #ffffff;
+    border-color: #10b981;
+}
+
+/* Pausar */
+#moduloReportesOT .rot-btn-pausar {
+    background: #fffbeb;
+    color: #d97706;
+    border-color: #fde68a;
+}
+#moduloReportesOT .rot-btn-pausar:hover {
+    background: #f59e0b;
+    color: #ffffff;
+    border-color: #f59e0b;
+}
+
+/* Reanudar */
+#moduloReportesOT .rot-btn-reanudar {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+#moduloReportesOT .rot-btn-reanudar:hover {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+}
+
+/* Cerrar */
+#moduloReportesOT .rot-btn-cerrar {
+    background: #f8fafc;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+#moduloReportesOT .rot-btn-cerrar:hover {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+}
+
+/* Badges de Estado */
+#moduloReportesOT .rot-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border-radius: 20px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    line-height: 1;
+}
+#moduloReportesOT .rot-b-pendiente {
+    background: #fffbeb;
+    color: #d97706;
+    border-color: #fde68a;
+}
+#moduloReportesOT .rot-b-en-proceso {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+#moduloReportesOT .rot-b-pausada {
+    background: #fff7ed;
+    color: #ea580c;
+    border-color: #fed7aa;
+}
+#moduloReportesOT .rot-b-finalizado {
+    background: #f0fdf4;
+    color: #16a34a;
+    border-color: #bbf7d0;
+}
+#moduloReportesOT .rot-b-aprobada {
+    background: #ecfdf5;
+    color: #059669;
+    border-color: #a7f3d0;
+}
+#moduloReportesOT .rot-b-anulado {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
 /* ── Drawers ────────────────────────────────────────────────────── */
 #rotDrawerBackdrop {
     display: none; position: fixed; inset: 0;
