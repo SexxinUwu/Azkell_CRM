@@ -99,7 +99,7 @@
                 <div id="wrap-mantenimiento">
                     <button class="nav-section-toggle" data-section="mantenimiento" aria-expanded="false" onclick="window.toggleNavSection('mantenimiento')">
                         <span class="link-text" data-i18n="nav.mantenimiento">Mantenimiento</span>
-                        <span class="section-badge">8</span>
+                        <span class="section-badge">9</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-mantenimiento">
@@ -152,6 +152,10 @@
                                 </a>
                             </div>
                         </div>
+                        <a id="nav-incidencias-ruta" class="nav-item" onclick="cargarModuloAislado('mantenimiento/incidencias-ruta')">
+                            <i class="bi bi-exclamation-triangle-fill nav-icon text-warning"></i>
+                            <span class="link-text">Incidencias en Ruta</span>
+                        </a>
                         <a id="nav-otros-mant" class="nav-item" onclick="cargarModuloAislado('mantenimiento/otros')">
                             <i class="bi bi-grid-fill nav-icon"></i>
                             <span class="link-text" data-i18n="nav.otros">Otros</span>
@@ -220,6 +224,75 @@
                         <a id="nav-clientes" class="nav-item" onclick="cargarModuloAislado('directorio/clientes')">
                             <i class="bi bi-building-fill nav-icon"></i>
                             <span class="link-text" data-i18n="nav.clientes">Clientes</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- OPERACIONES -->
+                <div id="wrap-operaciones">
+                    <button class="nav-section-toggle" data-section="operaciones" aria-expanded="false" onclick="window.toggleNavSection('operaciones')">
+                        <span class="link-text">Operaciones</span>
+                        <span class="section-badge">3</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items nav-section-collapsed" id="section-items-operaciones">
+                        <a id="nav-op-rutas" class="nav-item" onclick="cargarModuloAislado('operaciones/rutas')">
+                            <i class="bi bi-map-fill nav-icon"></i>
+                            <span class="link-text">Control de Rutas y Viajes</span>
+                        </a>
+                        <a id="nav-op-asignacion" class="nav-item" onclick="cargarModuloAislado('operaciones/asignacion')">
+                            <i class="bi bi-truck-front-fill nav-icon"></i>
+                            <span class="link-text">Asignación de Unidades</span>
+                        </a>
+                        <a id="nav-op-monitoreo" class="nav-item" onclick="cargarModuloAislado('operaciones/monitoreo')">
+                            <i class="bi bi-activity nav-icon"></i>
+                            <span class="link-text">Monitoreo de Operaciones</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- RRHH -->
+                <div id="wrap-rrhh">
+                    <button class="nav-section-toggle" data-section="rrhh" aria-expanded="false" onclick="window.toggleNavSection('rrhh')">
+                        <span class="link-text">RRHH</span>
+                        <span class="section-badge">3</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items nav-section-collapsed" id="section-items-rrhh">
+                        <a id="nav-rrhh-personal" class="nav-item" onclick="cargarModuloAislado('rrhh/personal')">
+                            <i class="bi bi-person-vcard-fill nav-icon"></i>
+                            <span class="link-text">Gestión de Personal</span>
+                        </a>
+                        <a id="nav-rrhh-asistencia" class="nav-item" onclick="cargarModuloAislado('rrhh/asistencia')">
+                            <i class="bi bi-calendar2-check-fill nav-icon"></i>
+                            <span class="link-text">Asistencia y Turnos</span>
+                        </a>
+                        <a id="nav-rrhh-nomina" class="nav-item" onclick="cargarModuloAislado('rrhh/nomina')">
+                            <i class="bi bi-cash-stack nav-icon"></i>
+                            <span class="link-text">Nómina y Pagos</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- TESORERÍA -->
+                <div id="wrap-tesoreria">
+                    <button class="nav-section-toggle" data-section="tesoreria" aria-expanded="false" onclick="window.toggleNavSection('tesoreria')">
+                        <span class="link-text">Tesorería</span>
+                        <span class="section-badge">3</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items nav-section-collapsed" id="section-items-tesoreria">
+                        <a id="nav-tesoreria-caja" class="nav-item" onclick="cargarModuloAislado('tesoreria/caja-chica')">
+                            <i class="bi bi-wallet2 nav-icon"></i>
+                            <span class="link-text">Caja Chica y Gastos</span>
+                        </a>
+                        <a id="nav-tesoreria-flujo" class="nav-item" onclick="cargarModuloAislado('tesoreria/flujo-caja')">
+                            <i class="bi bi-graph-up-arrow nav-icon"></i>
+                            <span class="link-text">Flujo de Caja</span>
+                        </a>
+                        <a id="nav-tesoreria-cuentas" class="nav-item" onclick="cargarModuloAislado('tesoreria/cuentas')">
+                            <i class="bi bi-receipt-cutoff nav-icon"></i>
+                            <span class="link-text">Cuentas por Cobrar/Pagar</span>
                         </a>
                     </div>
                 </div>

@@ -1,0 +1,127 @@
+<!-- Módulo: Gestión de Personal -->
+<style>
+#root-dinamico { padding: 0 !important; }
+.mod-wrap-rrhh-personal {
+    padding: 1.25rem;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+@media (max-width: 768px) {
+    .mod-wrap-rrhh-personal { padding: 0.75rem 0.75rem 90px 0.75rem; }
+}
+</style>
+
+<div class="mod-wrap-rrhh-personal container-fluid">
+    <!-- Header principal -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h4 class="fw-bolder text-dark m-0" style="letter-spacing:-0.02em;">Gestión de Personal</h4>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold" style="font-size:0.7rem;">Módulo ERP</span>
+            </div>
+            <p class="text-secondary m-0" style="font-size:0.83rem;">Legajo digital de colaboradores, contratos, certificaciones y legajo laboral</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;" onclick="location.reload()">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            </button>
+            <button class="btn btn-primary rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1" style="font-size:0.82rem; background:var(--primary, #0284c7); border:none;" onclick="alert('Formulario de registro en desarrollo.')">
+                <i class="bi bi-plus-lg"></i> Nuevo Registro
+            </button>
+        </div>
+    </div>
+
+    <!-- Cards KPI Bento -->
+    <div class="row g-3 mb-4">
+        
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-2xs p-3 rounded-4 bg-white d-flex flex-row align-items-center gap-3" style="border:1px solid var(--border)!important;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:44px;height:44px;background:#0284c7;font-size:1.2rem;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.75rem;">Personal Activo</div>
+                    <div class="fw-bolder text-dark" style="font-size:1.15rem;line-height:1.2;">48</div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-2xs p-3 rounded-4 bg-white d-flex flex-row align-items-center gap-3" style="border:1px solid var(--border)!important;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:44px;height:44px;background:#d97706;font-size:1.2rem;">
+                    <i class="bi bi-card-heading"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.75rem;">Licencias por Vencer</div>
+                    <div class="fw-bolder text-dark" style="font-size:1.15rem;line-height:1.2;">3</div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-2xs p-3 rounded-4 bg-white d-flex flex-row align-items-center gap-3" style="border:1px solid var(--border)!important;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:44px;height:44px;background:#16a34a;font-size:1.2rem;">
+                    <i class="bi bi-heart-pulse-fill"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.75rem;">Exámenes Médicos</div>
+                    <div class="fw-bolder text-dark" style="font-size:1.15rem;line-height:1.2;">45 Vigentes</div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-2xs p-3 rounded-4 bg-white d-flex flex-row align-items-center gap-3" style="border:1px solid var(--border)!important;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:44px;height:44px;background:#7c3aed;font-size:1.2rem;">
+                    <i class="bi bi-file-earmark-check-fill"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.75rem;">Contratos Vigentes</div>
+                    <div class="fw-bolder text-dark" style="font-size:1.15rem;line-height:1.2;">100%</div>
+                </div>
+            </div>
+        </div>
+    
+    </div>
+
+    <!-- Barra de Búsqueda y Filtros -->
+    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border:1px solid var(--border)!important;">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+            <div class="position-relative flex-grow-1" style="max-width:420px;">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
+                <input type="text" class="form-control ps-5 py-2 rounded-3 border-0 bg-light" placeholder="Buscar por código, placa o nombre..." style="font-size:0.83rem;">
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-light border rounded-3 px-3 py-2 text-secondary fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;">
+                    <i class="bi bi-funnel"></i> Filtros
+                </button>
+                <button class="btn btn-light border rounded-3 px-3 py-2 text-secondary fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;">
+                    <i class="bi bi-download"></i> Exportar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Data -->
+    <div class="card border-0 shadow-2xs rounded-4 overflow-hidden bg-white" style="border:1px solid var(--border)!important;">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle m-0" style="font-size:0.83rem;">
+                <thead class="bg-light text-secondary fw-bold border-bottom">
+                    <tr>
+                        <th>DNI</th><th>COLABORADOR</th><th>CARGO / ÁREA</th><th>TELÉFONO</th><th>LICENCIA</th><th>TIPO CONTRATO</th><th>ESTADO</th><th>ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+        <tr>
+            <td class="fw-bold text-dark">45892011</td><td class="">Juan Manuel Pérez</td><td class="">Conductor Categ. A3C</td><td class="">984123849</td><td class="">Q45892011 (Vigente)</td><td class="">Indeterminado</td><td><span class="badge bg-success">Activo</span></td><td class="text-end"><button class="btn btn-sm btn-light border py-1 px-2" style="font-size:0.75rem;"><i class="bi bi-three-dots"></i></button></td>
+        </tr>
+    
+        <tr>
+            <td class="fw-bold text-dark">70192834</td><td class="">Roberto Gómez</td><td class="">Mecánico Senior</td><td class="">912849201</td><td class="">N/A</td><td class="">Plazo Fijo</td><td><span class="badge bg-success">Activo</span></td><td class="text-end"><button class="btn btn-sm btn-light border py-1 px-2" style="font-size:0.75rem;"><i class="bi bi-three-dots"></i></button></td>
+        </tr>
+    
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
