@@ -34,7 +34,8 @@ async function uploadToS3(buffer, key, contentType) {
 async function getPresignedUrl(key, expiresIn = 3600) {
     return getSignedUrl(s3, new GetObjectCommand({
         Bucket: BUCKET,
-        Key: key
+        Key: key,
+        ResponseContentType: 'image/jpeg'
     }), { expiresIn });
 }
 
