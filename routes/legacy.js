@@ -83,36 +83,50 @@ router.post('/importarPlacasMasivo', async (req, res) => {
     if (validos.length > 0) {
         for (let i = 0; i < validos.length; i += 500) {
             const lote = validos.slice(i, i + 500);
-            const vals = lote.map(r => [
-                (r.placa || r.PLACA || '').toString().trim().toUpperCase(),
-                r.cliente || r.CLIENTE || '',
-                r.ruc_dni || r['RUC / DNI'] || r['RUC/DNI'] || r.RUC_DNI || '',
-                r.marca || r.MARCA || '',
-                r.modelo_uts || r['MODELO UTS'] || r.MODELO_UTS || r.modelo || r.MODELO || '',
-                r.tipo || r.TIPO || '',
-                r.sub_tipo || r['SUB TIPO'] || r.SUB_TIPO || '',
-                r.color || r.COLOR || '',
-                r.nro_motor || r['Nº MOTOR'] || r['NRO MOTOR'] || r.NRO_MOTOR || '',
-                r.nro_caja || r['Nº CAJA'] || r['NRO CAJA'] || r.NRO_CAJA || '',
-                r.nro_corona || r['Nº CORONA'] || r['NRO CORONA'] || r.NRO_CORONA || '',
-                r.nro_vin || r['Nº VIN'] || r['NRO VIN'] || r.NRO_VIN || '',
-                r.configuracion || r.CONFIGURACION || r['CONFIGURACIÓN'] || '',
-                r.tanque_1 || r['TANQUE 1'] || r['Tanque 1'] || r.tanque1 || r.TANQUE1 || '',
-                r.tanque_2 || r['TANQUE 2'] || r['Tanque 2'] || r.tanque2 || r.TANQUE2 || '',
-                r.tanque_3 || r['TANQUE 3'] || r['Tanque 3'] || r.tanque3 || r.TANQUE3 || '',
-                r.capacidad_tanque || r['CAPACIDAD DE TANQUE TOTAL'] || r['Capacitad de Tanque Total'] || r['CAPACIDAD TANQUE TOTAL'] || r['Capacidad de Tanque Total'] || r['Capacidad Tanque Total'] || r['CAPACIDAD TOTAL'] || '',
-                r.anio || r.AÑO || r.ANIO || '',
-                (r.combustible || r.COMBUSTIBLE || '').replace('Dií©sel','DIESEL').replace('DIÍ©SEL','DIESEL'),
-                r.tara || r.TARA || r.Tara || '',
-                r.carga_util || r['CARGA UTIL'] || r['CARGA ÚTIL'] || r.CARGA_UTIL || '',
-                r.peso_neto || r['PESO NETO'] || r.PESO_NETO || '',
-                r.peso_bruto || r['PESO BRUTO'] || r.PESO_BRUTO || '',
-                r.estado || r.ESTADO || 'Activa',
-                r.uts || r.UTS || '',
-                r.motora || r.MOTORA || '',
-                r.llantas || r.LLANTAS || '',
-                r.en_uso || r['EN USO?'] || r['EN USO'] || r.EN_USO || ''
-            ]);
+            const vals = lote.map(r => {
+                const t1 = parseFloat(r.tanque_1 || r['TANQUE 1'] || r['Tanque 1'] || r.tanque1 || r.TANQUE1 || 0) || 0;
+                const t2 = parseFloat(r.tanque_2 || r['TANQUE 2'] || r['Tanque 2'] || r.tanque2 || r.TANQUE2 || 0) || 0;
+                const t3 = parseFloat(r.tanque_3 || r['TANQUE 3'] || r['Tanque 3'] || r.tanque3 || r.TANQUE3 || 0) || 0;
+                const sumT = (t1 + t2 + t3) > 0 ? String((t1 + t2 + t3) % 1 === 0 ? (t1 + t2 + t3) : (t1 + t2 + t3).toFixed(2)) : '';
+                const capTanque = sumT || (r.capacidad_tanque || r['CAPACIDAD DE TANQUE TOTAL'] || r['Capacitad de Tanque Total'] || r['CAPACIDAD TANQUE TOTAL'] || r['Capacidad de Tanque Total'] || r['Capacidad Tanque Total'] || r['CAPACIDAD TOTAL'] || '').toString().trim();
+
+                const combRaw = (r.combustible || r.COMBUSTIBLE || r.Combustible || '').toString().trim();
+                let combClean = '';
+                if (combRaw && combRaw !== '-' && combRaw.toLowerCase() !== 'null' && combRaw.toLowerCase() !== 'no aplica' && combRaw.toLowerCase() !== 'ninguno') {
+                    combClean = combRaw.replace(/Di[íi]©?sel/gi, 'Diésel');
+                }
+
+                return [
+                    (r.placa || r.PLACA || '').toString().trim().toUpperCase(),
+                    r.cliente || r.CLIENTE || '',
+                    r.ruc_dni || r['RUC / DNI'] || r['RUC/DNI'] || r.RUC_DNI || '',
+                    r.marca || r.MARCA || '',
+                    r.modelo_uts || r['MODELO UTS'] || r.MODELO_UTS || r.modelo || r.MODELO || '',
+                    r.tipo || r.TIPO || '',
+                    r.sub_tipo || r['SUB TIPO'] || r.SUB_TIPO || '',
+                    r.color || r.COLOR || '',
+                    r.nro_motor || r['Nº MOTOR'] || r['NRO MOTOR'] || r.NRO_MOTOR || '',
+                    r.nro_caja || r['Nº CAJA'] || r['NRO CAJA'] || r.NRO_CAJA || '',
+                    r.nro_corona || r['Nº CORONA'] || r['NRO CORONA'] || r.NRO_CORONA || '',
+                    r.nro_vin || r['Nº VIN'] || r['NRO VIN'] || r.NRO_VIN || '',
+                    r.configuracion || r.CONFIGURACION || r['CONFIGURACIÓN'] || '',
+                    (t1 > 0 ? String(t1) : (r.tanque_1 || r['TANQUE 1'] || r['Tanque 1'] || '').toString().trim()),
+                    (t2 > 0 ? String(t2) : (r.tanque_2 || r['TANQUE 2'] || r['Tanque 2'] || '').toString().trim()),
+                    (t3 > 0 ? String(t3) : (r.tanque_3 || r['TANQUE 3'] || r['Tanque 3'] || '').toString().trim()),
+                    capTanque,
+                    r.anio || r.AÑO || r.ANIO || '',
+                    combClean,
+                    r.tara || r.TARA || r.Tara || '',
+                    r.carga_util || r['CARGA UTIL'] || r['CARGA ÚTIL'] || r.CARGA_UTIL || '',
+                    r.peso_neto || r['PESO NETO'] || r.PESO_NETO || '',
+                    r.peso_bruto || r['PESO BRUTO'] || r.PESO_BRUTO || '',
+                    r.estado || r.ESTADO || 'Activa',
+                    r.uts || r.UTS || '',
+                    r.motora || r.MOTORA || '',
+                    r.llantas || r.LLANTAS || '',
+                    r.en_uso || r['EN USO?'] || r['EN USO'] || r.EN_USO || ''
+                ];
+            });
 
             try {
                 await new Promise((resolve, reject) => {
@@ -937,6 +951,12 @@ router.post('/:metodo', async (req, res) => {
         const enuso = isEdit ? form.editP_enuso : form.p_enuso;
         const wialon_name = isEdit ? form.editP_wialon_name : form.p_wialon_name;
 
+        const t1 = parseFloat(tanque_1) || 0;
+        const t2 = parseFloat(tanque_2) || 0;
+        const t3 = parseFloat(tanque_3) || 0;
+        const sumT = (t1 + t2 + t3) > 0 ? String((t1 + t2 + t3) % 1 === 0 ? (t1 + t2 + t3) : (t1 + t2 + t3).toFixed(2)) : '';
+        const capFinal = sumT || (capacidad_tanque || '').toString().trim();
+
         const query = `
             INSERT INTO placas (
                 placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color,
@@ -955,8 +975,8 @@ router.post('/:metodo', async (req, res) => {
         const valores = [
             placa, cliente, ruc, marca, modelo, tipo, sub_tipo, color,
             nro_motor, nro_caja, nro_corona, nro_vin, conf,
-            tanque_1 || '', tanque_2 || '', tanque_3 || '', capacidad_tanque || '',
-            anio, comb, tara || '', carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, enuso, wialon_name
+            tanque_1 || '', tanque_2 || '', tanque_3 || '', capFinal,
+            anio, comb || '', tara || '', carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, enuso, wialon_name
         ];
         const valoresUpdate = valores.slice(1);
 

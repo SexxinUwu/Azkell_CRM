@@ -2494,6 +2494,13 @@ app.put('/api/placas/:placa', (req, res) => {
         const actual = rows[0];
         const nuevo  = req.body;
 
+        const t1 = parseFloat(nuevo.tanque_1) || 0;
+        const t2 = parseFloat(nuevo.tanque_2) || 0;
+        const t3 = parseFloat(nuevo.tanque_3) || 0;
+        if (t1 > 0 || t2 > 0 || t3 > 0) {
+            nuevo.capacidad_tanque = String((t1 + t2 + t3) % 1 === 0 ? (t1 + t2 + t3) : (t1 + t2 + t3).toFixed(2));
+        }
+
         // Detectar diferencias campo a campo
         const diffs = [];
         campos.forEach(c => {

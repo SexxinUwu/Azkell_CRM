@@ -638,6 +638,18 @@ function renderizarPaginaPlacas() {
         const ordenVisual = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 25, 26, 27, 13, 14, 28, 15, 16, 17, 19, 20, 21, 22, 18];
         for (let i of ordenVisual) {
             let val = (fila[i] !== undefined && fila[i] !== null && String(fila[i]).trim() !== '') ? String(fila[i]).trim() : '—';
+            
+            // Auto-calcular suma de tanques para Cap. Tanque Total si no viene explícita
+            if (i === 27 && val === '—') {
+                const t1 = parseFloat(fila[24]) || 0;
+                const t2 = parseFloat(fila[25]) || 0;
+                const t3 = parseFloat(fila[26]) || 0;
+                if (t1 > 0 || t2 > 0 || t3 > 0) {
+                    const tot = t1 + t2 + t3;
+                    val = String(tot % 1 === 0 ? tot : tot.toFixed(2));
+                }
+            }
+
             let tdStyle = 'padding:0.75rem 0.5rem; color:var(--text);';
             
             if (i === 0) {
@@ -846,9 +858,17 @@ window.abrirDetallePlaca = function(event, index) {
         'det-conf': p[12],
         'det-tanque_1': p[24],
         'det-tanque_2': p[25],
-        'det-tanque_3': p[26],
-        'det-capacidad_tanque': p[27],
-        'det-anio': p[13],
+        'det-capacidad_tanque': (function() {
+            if (p[27] && String(p[27]).trim() !== '') return String(p[27]).trim();
+            const t1 = parseFloat(p[24]) || 0;
+            const t2 = parseFloat(p[25]) || 0;
+            const t3 = parseFloat(p[26]) || 0;
+            if (t1 > 0 || t2 > 0 || t3 > 0) {
+                const tot = t1 + t2 + t3;
+                return String(tot % 1 === 0 ? tot : tot.toFixed(2));
+            }
+            return '';
+        })(),
         'det-comb': p[14],
         'det-tara': p[28],
         'det-carga_util': p[15],
@@ -1327,20 +1347,41 @@ function enviarEdicionPlaca(event, formObj) {
 }
 
 // ── Importación Excel ────────────────────────────────────────────
-window.descargarPlantillaPlacas = function() {
-    const ws_data = [
-        ['PLACA', 'CLIENTE', 'RUC/DNI', 'MARCA', 'MODELO', 'TIPO', 'SUB TIPO', 'COLOR', 'NRO MOTOR', 'NRO CAJA', 'NRO CORONA', 'NRO VIN', 'CONFIGURACIÓN', 'Tanque 1', 'Tanque 2', 'Tanque 3', 'Capacitad de Tanque Total', 'AÑO', 'COMBUSTIBLE', 'TARA', 'CARGA ÚTIL', 'PESO NETO', 'PESO BRUTO', 'ESTADO', 'UTS', 'MOTORA', 'LLANTAS', 'EN USO'],
-        ['ABC-123', 'EMPRESA EJEMPLO SAC', '20123456789', 'VOLVO', 'FH 460', 'CAMION', 'FURGON', 'BLANCO', 'MOT-999', 'CAJ-888', 'COR-777', 'VIN-555', '6X4', '100', '80', '50', '230', '2024', 'DIESEL', '7.5', '30.5', '8.2', '38.7', 'Activa', 'NACIONAL', 'Motora', '10', 'Si']
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(ws_data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Plantilla_Placas");
-    XLSX.writeFile(wb, "Plantilla_Importacion_Placas.xlsx");
+window.descargarPlantillaPlacas = async function() {
+    try {
+        if (typeof XLSX === 'undefined' && typeof window.loadExcel === 'function') {
+            await window.loadExcel();
+        }
+        if (typeof XLSX === 'undefined') {
+            alert("Cargando componente de Excel, por favor intenta en unos segundos...");
+            return;
+        }
+        const ws_data = [
+            ['PLACA', 'CLIENTE', 'RUC/DNI', 'MARCA', 'MODELO', 'TIPO', 'SUB TIPO', 'COLOR', 'NRO MOTOR', 'NRO CAJA', 'NRO CORONA', 'NRO VIN', 'CONFIGURACIÓN', 'Tanque 1', 'Tanque 2', 'Tanque 3', 'AÑO', 'COMBUSTIBLE', 'TARA', 'CARGA ÚTIL', 'PESO NETO', 'PESO BRUTO', 'ESTADO', 'UTS', 'MOTORA', 'LLANTAS', 'EN USO'],
+            ['ABC-123', 'EMPRESA EJEMPLO SAC', '20123456789', 'VOLVO', 'FH 460', 'CAMION', 'FURGON', 'BLANCO', 'MOT-999', 'CAJ-888', 'COR-777', 'VIN-555', '6X4', '100', '80', '50', '2024', 'DIESEL', '7.5', '30.5', '8.2', '38.7', 'Activa', 'NACIONAL', 'Motora', '10', 'Si']
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(ws_data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Plantilla_Placas");
+        XLSX.writeFile(wb, "Plantilla_Importacion_Placas.xlsx");
+    } catch (err) {
+        console.error("Error al descargar plantilla:", err);
+        alert("Error al generar plantilla: " + err.message);
+    }
 };
 
-window.importarExcelPlacas = function(event) {
+window.importarExcelPlacas = async function(event) {
     const file = event.target.files[0];
     if (!file) return;
+
+    if (typeof XLSX === 'undefined' && typeof window.loadExcel === 'function') {
+        await window.loadExcel();
+    }
+    if (typeof XLSX === 'undefined') {
+        alert("Cargando componente de Excel, por favor intenta en unos segundos...");
+        event.target.value = '';
+        return;
+    }
 
     const reader = new FileReader();
     reader.onload = async function(e) {
@@ -1906,10 +1947,18 @@ window.actualizarBadgeGlobalFiltros = function() {
 // ================================================================
 // EXPORTAR A EXCEL (Sincronizado con todos los campos de la tabla)
 // ================================================================
-window.exportarPlacasExcel = function() {
+window.exportarPlacasExcel = async function() {
     var datos = window.datosFiltradosPlacas && window.datosFiltradosPlacas.length > 0 ? window.datosFiltradosPlacas : window.dataGlobalPlacas;
     if (!datos || datos.length === 0) {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('No hay datos para exportar.', 'warning');
+        return;
+    }
+
+    if (typeof XLSX === 'undefined' && typeof window.loadExcel === 'function') {
+        await window.loadExcel();
+    }
+    if (typeof XLSX === 'undefined') {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librería de exportación no disponible. Intenta de nuevo en unos segundos.', 'error');
         return;
     }
     
@@ -1964,14 +2013,19 @@ window.exportarPlacasExcel = function() {
         if (!row || !row[0]) continue;
         var rowData = ordenCampos.map(function(idx) {
             var val = row[idx];
-            return (val !== undefined && val !== null) ? String(val).trim() : '';
+            var strVal = (val !== undefined && val !== null) ? String(val).trim() : '';
+            if (idx === 27 && (!strVal || strVal === '—')) {
+                var t1 = parseFloat(row[24]) || 0;
+                var t2 = parseFloat(row[25]) || 0;
+                var t3 = parseFloat(row[26]) || 0;
+                if (t1 > 0 || t2 > 0 || t3 > 0) {
+                    var tot = t1 + t2 + t3;
+                    strVal = String(tot % 1 === 0 ? tot : tot.toFixed(2));
+                }
+            }
+            return strVal;
         });
         exportData.push(rowData);
-    }
-    
-    if (typeof XLSX === 'undefined') {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librería de exportación no encontrada.', 'error');
-        return;
     }
     
     var wb = XLSX.utils.book_new();
