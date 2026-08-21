@@ -73,30 +73,36 @@ const TABLAS = [
     {
         nombre: 'placas',
         sql: `CREATE TABLE IF NOT EXISTS placas (
-            placa         VARCHAR(20)  NOT NULL PRIMARY KEY,
-            cliente       VARCHAR(100) NOT NULL DEFAULT '',
-            ruc_dni       VARCHAR(20)  NOT NULL DEFAULT '',
-            marca         VARCHAR(50)  NOT NULL DEFAULT '',
-            modelo_uts    VARCHAR(100) NOT NULL DEFAULT '',
-            tipo          VARCHAR(50)  NOT NULL DEFAULT '',
-            sub_tipo      VARCHAR(50)  NOT NULL DEFAULT '',
-            color         VARCHAR(30)  NOT NULL DEFAULT '',
-            nro_motor     VARCHAR(50)  NOT NULL DEFAULT '',
-            nro_caja      VARCHAR(50)  NOT NULL DEFAULT '',
-            nro_corona    VARCHAR(50)  NOT NULL DEFAULT '',
-            nro_vin       VARCHAR(50)  NOT NULL DEFAULT '',
-            configuracion VARCHAR(50)  NOT NULL DEFAULT '',
-            anio          VARCHAR(10)  NOT NULL DEFAULT '',
-            combustible   VARCHAR(30)  NOT NULL DEFAULT '',
-            carga_util    VARCHAR(20)  NOT NULL DEFAULT '',
-            peso_neto     VARCHAR(20)  NOT NULL DEFAULT '',
-            peso_bruto    VARCHAR(20)  NOT NULL DEFAULT '',
-            estado        VARCHAR(20)  NOT NULL DEFAULT 'Activa',
-            uts           VARCHAR(20)  NOT NULL DEFAULT '',
-            motora        VARCHAR(10)  NOT NULL DEFAULT '',
-            llantas       VARCHAR(10)  NOT NULL DEFAULT '',
-            en_uso        VARCHAR(10)  NOT NULL DEFAULT '',
-            metrica       VARCHAR(10)  NOT NULL DEFAULT 'km'
+            placa            VARCHAR(20)  NOT NULL PRIMARY KEY,
+            cliente          VARCHAR(100) NOT NULL DEFAULT '',
+            ruc_dni          VARCHAR(20)  NOT NULL DEFAULT '',
+            marca            VARCHAR(50)  NOT NULL DEFAULT '',
+            modelo_uts       VARCHAR(100) NOT NULL DEFAULT '',
+            tipo             VARCHAR(50)  NOT NULL DEFAULT '',
+            sub_tipo         VARCHAR(50)  NOT NULL DEFAULT '',
+            color            VARCHAR(30)  NOT NULL DEFAULT '',
+            nro_motor        VARCHAR(50)  NOT NULL DEFAULT '',
+            nro_caja         VARCHAR(50)  NOT NULL DEFAULT '',
+            nro_corona       VARCHAR(50)  NOT NULL DEFAULT '',
+            nro_vin          VARCHAR(50)  NOT NULL DEFAULT '',
+            configuracion    VARCHAR(50)  NOT NULL DEFAULT '',
+            tanque_1         VARCHAR(20)  NOT NULL DEFAULT '',
+            tanque_2         VARCHAR(20)  NOT NULL DEFAULT '',
+            tanque_3         VARCHAR(20)  NOT NULL DEFAULT '',
+            capacidad_tanque VARCHAR(20)  NOT NULL DEFAULT '',
+            anio             VARCHAR(10)  NOT NULL DEFAULT '',
+            combustible      VARCHAR(30)  NOT NULL DEFAULT '',
+            tara             VARCHAR(20)  NOT NULL DEFAULT '',
+            carga_util       VARCHAR(20)  NOT NULL DEFAULT '',
+            peso_neto        VARCHAR(20)  NOT NULL DEFAULT '',
+            peso_bruto       VARCHAR(20)  NOT NULL DEFAULT '',
+            estado           VARCHAR(20)  NOT NULL DEFAULT 'Activa',
+            uts              VARCHAR(20)  NOT NULL DEFAULT '',
+            motora           VARCHAR(10)  NOT NULL DEFAULT '',
+            llantas          VARCHAR(10)  NOT NULL DEFAULT '',
+            en_uso           VARCHAR(10)  NOT NULL DEFAULT '',
+            metrica          VARCHAR(10)  NOT NULL DEFAULT 'km',
+            wialon_name      VARCHAR(100) DEFAULT NULL
         )`
     },
     {
@@ -872,8 +878,16 @@ async function initDB(db) {
             'foto2 LONGTEXT NULL',
             'foto3 LONGTEXT NULL'
         ];
-        for (const colDef of colsNeumaticos) {
-            try { await promisePool.query(`ALTER TABLE neumaticos_inspecciones_det ADD COLUMN ${colDef}`); } catch(e) {}
+        const colsPlacas = [
+            'tanque_1 VARCHAR(20) NOT NULL DEFAULT \'\'',
+            'tanque_2 VARCHAR(20) NOT NULL DEFAULT \'\'',
+            'tanque_3 VARCHAR(20) NOT NULL DEFAULT \'\'',
+            'capacidad_tanque VARCHAR(20) NOT NULL DEFAULT \'\'',
+            'tara VARCHAR(20) NOT NULL DEFAULT \'\'',
+            'wialon_name VARCHAR(100) DEFAULT NULL'
+        ];
+        for (const colDef of colsPlacas) {
+            try { await promisePool.query(`ALTER TABLE placas ADD COLUMN ${colDef}`); } catch(e) {}
         }
 
         console.log(`✅ Default configurations, catalogs and roles seeded`);

@@ -2478,14 +2478,16 @@ app.post('/api/importarVehiculosFlotaMasivo', async (req, res) => {
 
 
 app.put('/api/placas/:placa', (req, res) => {
+    const targetDb = req.db || db;
     const placa   = req.params.placa;
     const usuario = (req.user?.correo || req.body.usuario_autor || '').substring(0, 100);
     const ip      = (req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '').substring(0, 80);
     const campos  = ['cliente','ruc_dni','marca','modelo_uts','tipo','sub_tipo','color',
-                     'nro_motor','nro_caja','nro_corona','nro_vin','configuracion','anio',
-                     'combustible','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica','wialon_name'];
+                     'nro_motor','nro_caja','nro_corona','nro_vin','configuracion',
+                     'tanque_1','tanque_2','tanque_3','capacidad_tanque',
+                     'anio','combustible','tara','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica','wialon_name'];
 
-    db.query('SELECT * FROM placas WHERE placa=?', [placa], (err, rows) => {
+    targetDb.query('SELECT * FROM placas WHERE placa=?', [placa], (err, rows) => {
         if (err)  return res.status(500).json({ error: err.message });
         if (!rows.length) return res.status(404).json({ error: 'Placa no encontrada' });
 
@@ -2503,12 +2505,12 @@ app.put('/api/placas/:placa', (req, res) => {
         // Actualizar la placa
         const sets = campos.map(c => `${c}=?`).join(', ');
         const vals = campos.map(c => nuevo[c] != null ? String(nuevo[c]).trim() : '');
-        db.query(`UPDATE placas SET ${sets} WHERE placa=?`, [...vals, placa], (err2) => {
+        targetDb.query(`UPDATE placas SET ${sets} WHERE placa=?`, [...vals, placa], (err2) => {
             if (err2) return res.status(500).json({ error: err2.message });
 
             // Insertar diffs en auditoría (fire-and-forget)
             if (diffs.length) {
-                db.query(
+                targetDb.query(
                     'INSERT INTO placa_auditoria (placa, campo, valor_ant, valor_nuevo, usuario, ip) VALUES ?',
                     [diffs], () => {}
                 );

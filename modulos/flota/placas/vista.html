@@ -313,8 +313,13 @@
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Nro Corona</th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Nro VIN</th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Configuración</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Tanque 1</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Tanque 2</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Tanque 3</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Cap. Tanque Total</th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Año</th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Combustible</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Tara</th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Carga Útil</th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Peso Neto</th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Peso Bruto</th>
@@ -577,6 +582,11 @@
 
                 <h6 class="fw-bold text-primary mb-2"><i class="bi bi-arrows-fullscreen me-1"></i> <span data-i18n="plates.s.capacity">3. Capacidades y Dimensiones</span></h6>
                 <div class="detalle-lateral-grid mb-4">
+                    <div class="det-lat-item"><span>Tanque 1</span><strong id="det-tanque_1">—</strong></div>
+                    <div class="det-lat-item"><span>Tanque 2</span><strong id="det-tanque_2">—</strong></div>
+                    <div class="det-lat-item"><span>Tanque 3</span><strong id="det-tanque_3">—</strong></div>
+                    <div class="det-lat-item"><span>Cap. Tanque Total</span><strong id="det-capacidad_tanque">—</strong></div>
+                    <div class="det-lat-item"><span>Tara</span><strong id="det-tara">—</strong></div>
                     <div class="det-lat-item"><span data-i18n="plates.form.cargautil">Carga Útil</span><strong id="det-carga_util"></strong></div>
                     <div class="det-lat-item"><span data-i18n="plates.form.pesoneto">Peso Neto</span><strong id="det-peso_neto"></strong></div>
                     <div class="det-lat-item"><span data-i18n="plates.form.pesobruto">Peso Bruto</span><strong id="det-peso_bruto"></strong></div>
@@ -778,9 +788,28 @@
                     <div class="placas-form-section">
                         <h6 class="placas-form-section-title" data-i18n="plates.s.capacity">3. Capacidades y Dimensiones</h6>
                         <div class="row">
-                            <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.cargautil">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="p_carga_util" placeholder="Ej: 30.5"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.pesoneto">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="p_peso_neto" placeholder="Ej: 8.2"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.pesobruto">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="p_peso_bruto" placeholder="Ej: 38.7"></div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label placas-form-label"><i class="bi bi-fuel-pump text-primary me-1"></i> Tanque 1 (Gal)</label>
+                                <input type="number" step="0.01" class="form-control placas-form-control" name="p_tanque_1" id="p_tanque_1" placeholder="Ej: 100" oninput="window._autoSumTanques('p_')">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label placas-form-label"><i class="bi bi-fuel-pump text-primary me-1"></i> Tanque 2 (Gal)</label>
+                                <input type="number" step="0.01" class="form-control placas-form-control" name="p_tanque_2" id="p_tanque_2" placeholder="Ej: 80" oninput="window._autoSumTanques('p_')">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label placas-form-label"><i class="bi bi-fuel-pump text-primary me-1"></i> Tanque 3 (Gal)</label>
+                                <input type="number" step="0.01" class="form-control placas-form-control" name="p_tanque_3" id="p_tanque_3" placeholder="Ej: 50" oninput="window._autoSumTanques('p_')">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label placas-form-label fw-bold text-dark"><i class="bi bi-speedometer2 text-success me-1"></i> Cap. Tanque Total</label>
+                                <input type="text" class="form-control placas-form-control fw-bold" name="p_capacidad_tanque" id="p_capacidad_tanque" placeholder="Total galones">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label">Tara (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="p_tara" id="p_tara" placeholder="Ej: 7.5"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.cargautil">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="p_carga_util" placeholder="Ej: 30.5"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.pesoneto">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="p_peso_neto" placeholder="Ej: 8.2"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.pesobruto">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="p_peso_bruto" placeholder="Ej: 38.7"></div>
                         </div>
                     </div>
 
@@ -894,9 +923,28 @@
                     <div class="placas-form-section">
                         <h6 class="placas-form-section-title" data-i18n="plates.s.capacity">3. Capacidades y Dimensiones</h6>
                         <div class="row">
-                            <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.cargautil">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="editP_carga_util" id="e_carga_util"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.pesoneto">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="editP_peso_neto" id="e_peso_neto"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.pesobruto">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="editP_peso_bruto" id="e_peso_bruto"></div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label placas-form-label"><i class="bi bi-fuel-pump text-warning me-1"></i> Tanque 1 (Gal)</label>
+                                <input type="number" step="0.01" class="form-control placas-form-control" name="editP_tanque_1" id="e_tanque_1" placeholder="Ej: 100" oninput="window._autoSumTanques('e_')">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label placas-form-label"><i class="bi bi-fuel-pump text-warning me-1"></i> Tanque 2 (Gal)</label>
+                                <input type="number" step="0.01" class="form-control placas-form-control" name="editP_tanque_2" id="e_tanque_2" placeholder="Ej: 80" oninput="window._autoSumTanques('e_')">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label placas-form-label"><i class="bi bi-fuel-pump text-warning me-1"></i> Tanque 3 (Gal)</label>
+                                <input type="number" step="0.01" class="form-control placas-form-control" name="editP_tanque_3" id="e_tanque_3" placeholder="Ej: 50" oninput="window._autoSumTanques('e_')">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label placas-form-label fw-bold text-dark"><i class="bi bi-speedometer2 text-success me-1"></i> Cap. Tanque Total</label>
+                                <input type="text" class="form-control placas-form-control fw-bold" name="editP_capacidad_tanque" id="e_capacidad_tanque" placeholder="Total galones">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label">Tara (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="editP_tara" id="e_tara" placeholder="Ej: 7.5"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.cargautil">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="editP_carga_util" id="e_carga_util"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.pesoneto">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="editP_peso_neto" id="e_peso_neto"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.pesobruto">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="editP_peso_bruto" id="e_peso_bruto"></div>
                         </div>
                     </div>
 

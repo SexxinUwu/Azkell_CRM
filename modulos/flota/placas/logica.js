@@ -568,7 +568,7 @@ function renderizarPaginaPlacas() {
     actualizarIndicadoresPlacas(datosFiltradosPlacas);
 
     if (datosFiltradosPlacas.length === 0) {
-        contenedor.innerHTML = '<tr><td colspan="25" style="text-align:center;padding:3rem;color:#94a3b8;"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No hay vehículos que coincidan.</td></tr>';
+        contenedor.innerHTML = '<tr><td colspan="30" style="text-align:center;padding:3rem;color:#94a3b8;"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No hay vehículos que coincidan.</td></tr>';
         if(infoPag) infoPag.innerText = '0 resultados'; if(ctrlPag) ctrlPag.innerHTML = ''; return;
     }
 
@@ -634,9 +634,10 @@ function renderizarPaginaPlacas() {
         html += '<tr style="border-bottom: 1px solid var(--border); transition: background 0.2s; cursor:pointer;" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'transparent\'" onclick="abrirDetallePlaca(event, '+indexGlobal+')">';
         html += '<td style="text-align:center; padding:0.75rem 0.5rem;" onclick="event.stopPropagation()">' + checkHtml + '</td>';
         
-        const ordenVisual = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 18];
+        // Mapeo sincronizado con los 28 campos + estado + acciones
+        const ordenVisual = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 25, 26, 27, 13, 14, 28, 15, 16, 17, 19, 20, 21, 22, 18];
         for (let i of ordenVisual) {
-            let val = fila[i] ? fila[i].trim() : '—';
+            let val = (fila[i] !== undefined && fila[i] !== null && String(fila[i]).trim() !== '') ? String(fila[i]).trim() : '—';
             let tdStyle = 'padding:0.75rem 0.5rem; color:var(--text);';
             
             if (i === 0) {
@@ -830,16 +831,44 @@ window.abrirDetallePlaca = function(event, index) {
 
     document.getElementById('det-placa-titulo').innerText = p[0] || 'SIN PLACA';
 
-    const ids = ['det-cliente','det-ruc','det-marca','det-modelo','det-tipo','det-sub_tipo','det-color','det-nro_motor','det-nro_caja','det-nro_corona','det-nro_vin','det-conf','det-anio','det-comb','det-carga_util','det-peso_neto','det-peso_bruto','det-estado','det-uts','det-motora','det-llantas','det-enuso'];
+    const mapDet = {
+        'det-cliente': p[1],
+        'det-ruc': p[2],
+        'det-marca': p[3],
+        'det-modelo': p[4],
+        'det-tipo': p[5],
+        'det-sub_tipo': p[6],
+        'det-color': p[7],
+        'det-nro_motor': p[8],
+        'det-nro_caja': p[9],
+        'det-nro_corona': p[10],
+        'det-nro_vin': p[11],
+        'det-conf': p[12],
+        'det-tanque_1': p[24],
+        'det-tanque_2': p[25],
+        'det-tanque_3': p[26],
+        'det-capacidad_tanque': p[27],
+        'det-anio': p[13],
+        'det-comb': p[14],
+        'det-tara': p[28],
+        'det-carga_util': p[15],
+        'det-peso_neto': p[16],
+        'det-peso_bruto': p[17],
+        'det-estado': p[18],
+        'det-uts': p[19],
+        'det-motora': p[20],
+        'det-llantas': p[21],
+        'det-enuso': p[22]
+    };
     var _detTc = function(s) { return s ? String(s).trim().replace(/\b\w+/g, function(w){ return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); }) : s; };
     var _detTcIds = ['det-marca','det-tipo','det-sub_tipo','det-color','det-conf'];
-    ids.forEach((id, i) => {
+    Object.keys(mapDet).forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            var raw = p[i + 1] ? p[i + 1] : '-';
-            el.innerText = (_detTcIds.indexOf(id) >= 0 && raw !== '-') ? _detTc(raw) : raw;
+            var raw = (mapDet[id] !== undefined && mapDet[id] !== null && String(mapDet[id]).trim() !== '') ? String(mapDet[id]).trim() : '—';
+            el.innerText = (_detTcIds.indexOf(id) >= 0 && raw !== '—') ? _detTc(raw) : raw;
             if (id === 'det-estado') {
-                el.className = 'badge-premium ' + (p[i + 1] === 'Activa' ? 'badge-green' : 'badge-red');
+                el.className = 'badge-premium ' + (mapDet[id] === 'Activa' ? 'badge-green' : 'badge-red');
             }
         }
     });
@@ -1096,18 +1125,44 @@ window.abrirModalEditarPlaca = function(index) {
 
     poblarSelectsFormularios(dataGlobalPlacas);
 
-    const ids = [
-        'e_placa', 'e_cliente', 'e_ruc', 'e_marca', 'e_modelo', 'e_tipo', 'e_sub_tipo',
-        'e_color', 'e_nro_motor', 'e_nro_caja', 'e_nro_corona', 'e_nro_vin', 'e_conf',
-        'e_anio', 'e_comb', 'e_carga_util', 'e_peso_neto', 'e_peso_bruto', 'e_estado',
-        'e_uts', 'e_motora', 'e_llantas', 'e_enuso', 'e_wialon_name'
+    const fieldMap = [
+        { id: 'e_placa', idx: 0 },
+        { id: 'e_cliente', idx: 1 },
+        { id: 'e_ruc', idx: 2 },
+        { id: 'e_marca', idx: 3 },
+        { id: 'e_modelo', idx: 4 },
+        { id: 'e_tipo', idx: 5 },
+        { id: 'e_sub_tipo', idx: 6 },
+        { id: 'e_color', idx: 7 },
+        { id: 'e_nro_motor', idx: 8 },
+        { id: 'e_nro_caja', idx: 9 },
+        { id: 'e_nro_corona', idx: 10 },
+        { id: 'e_nro_vin', idx: 11 },
+        { id: 'e_conf', idx: 12 },
+        { id: 'e_tanque_1', idx: 24 },
+        { id: 'e_tanque_2', idx: 25 },
+        { id: 'e_tanque_3', idx: 26 },
+        { id: 'e_capacidad_tanque', idx: 27 },
+        { id: 'e_anio', idx: 13 },
+        { id: 'e_comb', idx: 14 },
+        { id: 'e_tara', idx: 28 },
+        { id: 'e_carga_util', idx: 15 },
+        { id: 'e_peso_neto', idx: 16 },
+        { id: 'e_peso_bruto', idx: 17 },
+        { id: 'e_estado', idx: 18 },
+        { id: 'e_uts', idx: 19 },
+        { id: 'e_motora', idx: 20 },
+        { id: 'e_llantas', idx: 21 },
+        { id: 'e_enuso', idx: 22 },
+        { id: 'e_wialon_name', idx: 23 }
     ];
 
     var _editTc = function(s) { return s ? String(s).trim().replace(/\b\w+/g, function(w){ return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); }) : s; };
     var _editTcIds = ['e_marca','e_modelo','e_tipo','e_sub_tipo','e_color','e_conf'];
 
-    ids.forEach((id, i) => {
-        const valorLimpio = p[i] ? p[i].toString().trim() : '';
+    fieldMap.forEach(item => {
+        const id = item.id;
+        const valorLimpio = p[item.idx] ? p[item.idx].toString().trim() : '';
         // Si el campo usa combobox, actualizar con _cbSet
         if (typeof window._cbSet === 'function' && document.getElementById(id + '-txt')) {
             var labelCb = (_editTcIds.indexOf(id) >= 0 && valorLimpio) ? _editTc(valorLimpio) : valorLimpio;
@@ -1153,6 +1208,17 @@ window.abrirModalEditarPlaca = function(index) {
     new bootstrap.Modal(document.getElementById('modalEditarPlaca')).show();
 };
 
+window._autoSumTanques = function(prefix) {
+    var t1 = parseFloat(document.getElementById(prefix + 'tanque_1')?.value) || 0;
+    var t2 = parseFloat(document.getElementById(prefix + 'tanque_2')?.value) || 0;
+    var t3 = parseFloat(document.getElementById(prefix + 'tanque_3')?.value) || 0;
+    var total = t1 + t2 + t3;
+    var totEl = document.getElementById(prefix + 'capacidad_tanque');
+    if (totEl && (t1 > 0 || t2 > 0 || t3 > 0)) {
+        totEl.value = total > 0 ? (total % 1 === 0 ? total : total.toFixed(2)) : '';
+    }
+};
+
 function enviarPlaca(event, formObj) {
     event.preventDefault();
     if (!window.guardAction('placas', 'c')) return;
@@ -1190,8 +1256,9 @@ function enviarEdicionPlaca(event, formObj) {
     var placa = get('e_placa');
     var camposRequeridos = [
         'cliente','ruc_dni','marca','modelo_uts','tipo','sub_tipo','color',
-        'nro_motor','nro_caja','nro_corona','nro_vin','configuracion','anio',
-        'combustible','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica', 'wialon_name'
+        'nro_motor','nro_caja','nro_corona','nro_vin','configuracion',
+        'tanque_1','tanque_2','tanque_3','capacidad_tanque',
+        'anio','combustible','tara','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica', 'wialon_name'
     ];
         // Obtener valor de metrica (puedes ajustar el id según tu formulario)
         var getMetrica = function() {
@@ -1215,8 +1282,13 @@ function enviarEdicionPlaca(event, formObj) {
             case 'nro_corona': payload[c] = get('e_nro_corona'); break;
             case 'nro_vin': payload[c] = get('e_nro_vin'); break;
             case 'configuracion': payload[c] = cb('e_conf'); break;
+            case 'tanque_1': payload[c] = get('e_tanque_1'); break;
+            case 'tanque_2': payload[c] = get('e_tanque_2'); break;
+            case 'tanque_3': payload[c] = get('e_tanque_3'); break;
+            case 'capacidad_tanque': payload[c] = get('e_capacidad_tanque'); break;
             case 'anio': payload[c] = get('e_anio'); break;
             case 'combustible': payload[c] = cb('e_comb'); break;
+            case 'tara': payload[c] = get('e_tara'); break;
             case 'carga_util': payload[c] = get('e_carga_util'); break;
             case 'peso_neto': payload[c] = get('e_peso_neto'); break;
             case 'peso_bruto': payload[c] = get('e_peso_bruto'); break;
@@ -1257,8 +1329,8 @@ function enviarEdicionPlaca(event, formObj) {
 // ── Importación Excel ────────────────────────────────────────────
 window.descargarPlantillaPlacas = function() {
     const ws_data = [
-        ['PLACA', 'CLIENTE', 'RUC / DNI', 'MARCA', 'MODELO UTS', 'TIPO', 'SUB TIPO', 'COLOR', 'Nº MOTOR', 'Nº CAJA', 'Nº CORONA', 'Nº VIN', 'CONFIGURACION', 'AÑO', 'COMBUSTIBLE', 'CARGA UTIL', 'PESO NETO', 'PESO BRUTO', 'ESTADO', 'UTS', 'MOTORA', 'LLANTAS', 'EN USO?'],
-        ['ABC-123', 'EMPRESA EJEMPLO SAC', '20123456789', 'VOLVO', 'FH 460', 'CAMION', 'FURGON', 'BLANCO', 'MOT-999', 'CAJ-888', 'COR-777', 'VIN-555', '6X4', '2024', 'DIESEL', '30.5', '8.2', '38.7', 'Activa', 'NACIONAL', 'Motora', '10', 'Si']
+        ['PLACA', 'CLIENTE', 'RUC/DNI', 'MARCA', 'MODELO', 'TIPO', 'SUB TIPO', 'COLOR', 'NRO MOTOR', 'NRO CAJA', 'NRO CORONA', 'NRO VIN', 'CONFIGURACIÓN', 'Tanque 1', 'Tanque 2', 'Tanque 3', 'Capacitad de Tanque Total', 'AÑO', 'COMBUSTIBLE', 'TARA', 'CARGA ÚTIL', 'PESO NETO', 'PESO BRUTO', 'ESTADO', 'UTS', 'MOTORA', 'LLANTAS', 'EN USO'],
+        ['ABC-123', 'EMPRESA EJEMPLO SAC', '20123456789', 'VOLVO', 'FH 460', 'CAMION', 'FURGON', 'BLANCO', 'MOT-999', 'CAJ-888', 'COR-777', 'VIN-555', '6X4', '100', '80', '50', '230', '2024', 'DIESEL', '7.5', '30.5', '8.2', '38.7', 'Activa', 'NACIONAL', 'Motora', '10', 'Si']
     ];
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
     const wb = XLSX.utils.book_new();
@@ -1855,8 +1927,13 @@ window.exportarPlacasExcel = function() {
         'NRO CORONA',
         'NRO VIN',
         'CONFIGURACIÓN',
+        'Tanque 1',
+        'Tanque 2',
+        'Tanque 3',
+        'Capacitad de Tanque Total',
         'AÑO',
         'COMBUSTIBLE',
+        'TARA',
         'CARGA ÚTIL',
         'PESO NETO',
         'PESO BRUTO',
@@ -1877,9 +1954,10 @@ window.exportarPlacasExcel = function() {
     
     // Mapeo sincronizado con las columnas visuales de la tabla principal
     // 0: Placa, 1: Cliente, 2: RUC/DNI, 3: Marca, 4: Modelo, 5: Tipo, 6: SubTipo, 7: Color
-    // 8: NroMotor, 9: NroCaja, 10: NroCorona, 11: NroVIN, 12: Configuracion, 13: Anio, 14: Combustible
-    // 15: CargaUtil, 16: PesoNeto, 17: PesoBruto, 19: UTS, 20: Motora, 21: Llantas, 22: EnUso, 23: WialonName, 18: Estado
-    var ordenCampos = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 18];
+    // 8: NroMotor, 9: NroCaja, 10: NroCorona, 11: NroVIN, 12: Configuracion
+    // 24: Tanque 1, 25: Tanque 2, 26: Tanque 3, 27: Cap. Tanque Total
+    // 13: Anio, 14: Combustible, 28: Tara, 15: CargaUtil, 16: PesoNeto, 17: PesoBruto, 19: UTS, 20: Motora, 21: Llantas, 22: EnUso, 23: WialonName, 18: Estado
+    var ordenCampos = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 25, 26, 27, 13, 14, 28, 15, 16, 17, 19, 20, 21, 22, 23, 18];
     
     for (var i = inicio; i < datos.length; i++) {
         var row = datos[i];
