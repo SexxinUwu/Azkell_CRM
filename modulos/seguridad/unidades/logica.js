@@ -1110,82 +1110,82 @@ function _sguBuildPageHtml(rec, tipo) {
     var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
     var ts = _sguTimestamp();
 
-    // 1. Cabecera ISO
-    var h = '<div class="sgu-pdf-page" style="width:210mm;height:296mm;max-height:296mm;background:#fff;padding:6mm 8mm;box-sizing:border-box;position:relative;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;font-family:\'Oswald\',sans-serif;color:#000;">';
+    var h = '<div style="width:700px;min-height:980px;box-sizing:border-box;font-family:\'Plus Jakarta Sans\',Arial,sans-serif;color:#000000;background:#ffffff;padding:12px;margin:0 auto;display:flex;flex-direction:column;justify-content:space-between;">';
 
     h += '<div>'; // Top wrapper
-    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-bottom:4px;table-layout:fixed;">';
+
+    // 1. Cabecera ISO
+    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:6px;table-layout:fixed;">';
     h += '<tr>';
-    h += '<td style="width:22%;border:1px solid #000;text-align:center;vertical-align:middle;padding:4px;" rowspan="3">';
-    h += '<img src="' + empLogoUrl + '" style="max-height:46px;max-width:130px;object-fit:contain;" crossorigin="anonymous">';
+    h += '<td style="width:22%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:4px;" rowspan="3">';
+    h += '<img src="' + empLogoUrl + '" style="max-height:48px;max-width:130px;object-fit:contain;" crossorigin="anonymous">';
     h += '</td>';
-    h += '<td style="width:53%;border:1px solid #000;text-align:center;vertical-align:middle;padding:4px;" rowspan="3">';
-    h += '<div style="font-size:20px;font-weight:bold;line-height:1.1;text-transform:uppercase;color:#000;">CHECKLIST DE INSPECCIÓN VEHICULAR</div>';
-    h += '<div style="font-size:11px;font-weight:normal;color:#333;letter-spacing:0.5px;margin-top:2px;">CONTROL DE SEGURIDAD, INGRESO Y SALIDA DE UNIDADES</div>';
+    h += '<td style="width:53%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:4px;" rowspan="3">';
+    h += '<div style="font-size:18px;font-weight:900;line-height:1.1;text-transform:uppercase;color:#000000;">CHECKLIST DE INSPECCIÓN VEHICULAR</div>';
+    h += '<div style="font-size:10px;font-weight:bold;color:#444444;letter-spacing:0.5px;margin-top:2px;">CONTROL DE SEGURIDAD, INGRESO Y SALIDA DE UNIDADES</div>';
     h += '</td>';
-    h += '<td style="width:25%;border:1px solid #000;font-size:9px;text-align:left;padding:2px 5px;height:15px;"><strong>CÓDIGO:</strong> F-SEG-002</td>';
+    h += '<td style="width:25%;border:1px solid #000000;font-size:9.5px;text-align:left;padding:2px 5px;height:16px;color:#000000;"><strong>CÓDIGO:</strong> F-SEG-002</td>';
     h += '</tr>';
-    h += '<tr><td style="border:1px solid #000;font-size:9px;text-align:left;padding:2px 5px;height:15px;"><strong>VERSIÓN:</strong> 01</td></tr>';
-    h += '<tr><td style="border:1px solid #000;font-size:9px;text-align:left;padding:2px 5px;height:15px;"><strong>F. EMISIÓN:</strong> ' + (fecha || ts.fullDate) + '</td></tr>';
+    h += '<tr><td style="border:1px solid #000000;font-size:9.5px;text-align:left;padding:2px 5px;height:16px;color:#000000;"><strong>VERSIÓN:</strong> 01</td></tr>';
+    h += '<tr><td style="border:1px solid #000000;font-size:9.5px;text-align:left;padding:2px 5px;height:16px;color:#000000;"><strong>F. EMISIÓN:</strong> ' + (fecha || ts.fullDate) + '</td></tr>';
     h += '</table>';
 
     // 2. Grid de Datos Generales
-    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-bottom:5px;table-layout:fixed;font-size:10px;">';
+    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:6px;table-layout:fixed;font-size:10.5px;color:#000000;">';
     h += '<tr>';
-    h += '<td style="border:1px solid #000;padding:2px 5px;width:33%;height:20px;vertical-align:middle;"><strong>Nº EXPEDIENTE:</strong> <span style="color:#1e60bf;font-size:12px;font-weight:bold;margin-left:4px;">' + rec.id + '</span></td>';
-    h += '<td style="border:1px solid #000;padding:2px 5px;width:33%;vertical-align:middle;"><strong>PLACA TRACTO:</strong> <span style="font-weight:normal;margin-left:4px;">' + rec.placa_tracto + '</span></td>';
-    h += '<td style="border:1px solid #000;padding:2px 5px;width:34%;vertical-align:middle;"><strong>PLACA CARRETA:</strong> <span style="font-weight:normal;margin-left:4px;">' + (rec.placa_carreta || '---') + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:3px 6px;width:33%;height:22px;vertical-align:middle;"><strong>Nº EXPEDIENTE:</strong> <span style="color:#0284c7;font-size:12px;font-weight:bold;margin-left:4px;">' + rec.id + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:3px 6px;width:33%;vertical-align:middle;"><strong>PLACA TRACTO:</strong> <span style="font-weight:bold;margin-left:4px;">' + rec.placa_tracto + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:3px 6px;width:34%;vertical-align:middle;"><strong>PLACA CARRETA:</strong> <span style="font-weight:bold;margin-left:4px;">' + (rec.placa_carreta || '---') + '</span></td>';
     h += '</tr>';
     h += '<tr>';
-    h += '<td style="border:1px solid #000;padding:2px 5px;vertical-align:middle;"><strong>CONDUCTOR:</strong> <span style="font-weight:normal;margin-left:4px;">' + (rec.conductor || '---') + '</span></td>';
-    h += '<td style="border:1px solid #000;padding:2px 5px;vertical-align:middle;"><strong>FASE:</strong> <span style="font-weight:bold;margin-left:4px;color:#000;">' + (tipo === 'salida' ? 'SALIDA (IDA)' : 'RETORNO (VUELTA)') + '</span></td>';
-    h += '<td style="border:1px solid #000;padding:2px 5px;vertical-align:middle;"><strong>DESTINO:</strong> <span style="font-weight:normal;margin-left:4px;">' + (rec.destino || '---') + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:3px 6px;vertical-align:middle;"><strong>CONDUCTOR:</strong> <span style="font-weight:normal;margin-left:4px;">' + (rec.conductor || '---') + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:3px 6px;vertical-align:middle;"><strong>FASE:</strong> <span style="font-weight:bold;margin-left:4px;color:#000000;">' + (tipo === 'salida' ? 'SALIDA (IDA)' : 'RETORNO (VUELTA)') + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:3px 6px;vertical-align:middle;"><strong>DESTINO:</strong> <span style="font-weight:normal;margin-left:4px;">' + (rec.destino || '---') + '</span></td>';
     h += '</tr>';
     h += '<tr>';
-    h += '<td style="border:1px solid #000;padding:2px 5px;vertical-align:middle;"><strong>FECHA / HORA:</strong> <span style="font-weight:normal;margin-left:4px;">' + (fecha || '--') + ' ' + (hora || '') + '</span></td>';
-    h += '<td style="border:1px solid #000;padding:2px 5px;vertical-align:middle;"><strong>KILOMETRAJE:</strong> <span style="font-weight:normal;margin-left:4px;">' + (km ? km + ' KM' : '---') + '</span></td>';
-    var estadoInsp = hasAlert ? '<span style="color:#cc2222;font-weight:bold;margin-left:4px;">CON OBSERVACIONES</span>' : '<span style="color:#16a34a;font-weight:bold;margin-left:4px;">CONFORME / OK</span>';
-    h += '<td style="border:1px solid #000;padding:2px 5px;vertical-align:middle;"><strong>ESTADO:</strong> ' + estadoInsp + '</td>';
+    h += '<td style="border:1px solid #000000;padding:3px 6px;vertical-align:middle;"><strong>FECHA / HORA:</strong> <span style="font-weight:normal;margin-left:4px;">' + (fecha || '--') + ' ' + (hora || '') + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:3px 6px;vertical-align:middle;"><strong>KILOMETRAJE:</strong> <span style="font-weight:bold;margin-left:4px;">' + (km ? km + ' KM' : '---') + '</span></td>';
+    var estadoInsp = hasAlert ? '<span style="color:#dc2626;font-weight:bold;margin-left:4px;">CON OBSERVACIONES</span>' : '<span style="color:#16a34a;font-weight:bold;margin-left:4px;">CONFORME / OK</span>';
+    h += '<td style="border:1px solid #000000;padding:3px 6px;vertical-align:middle;"><strong>ESTADO:</strong> ' + estadoInsp + '</td>';
     h += '</tr>';
     h += '</table>';
 
     // 3. Banner de Estado
     if (hasAlert) {
-        h += '<div style="background-color:#fee2e2;padding:2px 6px;font-size:10px;font-weight:bold;text-align:center;border:2px solid #000;margin-bottom:4px;color:#991b1b;">';
+        h += '<div style="background-color:#fee2e2;padding:4px 8px;font-size:10px;font-weight:bold;text-align:center;border:2px solid #000000;margin-bottom:6px;color:#991b1b;">';
         h += 'ATENCIÓN: SE REPORTARON NOVEDADES / ANOMALÍAS EN LA REVISIÓN TÉCNICA DE LA UNIDAD';
         h += '</div>';
     } else {
-        h += '<div style="background-color:#f2f2f2;padding:2px 6px;font-size:10px;font-weight:bold;text-align:center;border:2px solid #000;margin-bottom:4px;">';
-        h += 'REGISTRO DE CONDICIONES OPERATIVAS Y ELEMENTOS DE SEGURIDAD. PLACA: <span style="color:#cc2222;font-size:11px;margin-left:4px;">' + rec.placa_tracto + '</span>';
+        h += '<div style="background-color:#f1f5f9;padding:4px 8px;font-size:10px;font-weight:bold;text-align:center;border:2px solid #000000;margin-bottom:6px;color:#0f172a;">';
+        h += 'REGISTRO DE CONDICIONES OPERATIVAS Y ELEMENTOS DE SEGURIDAD. PLACA: <span style="color:#dc2626;font-size:12px;margin-left:4px;">' + rec.placa_tracto + '</span>';
         h += '</div>';
     }
 
-    // 4. Checklist Items (Diseñado compacto en 2 columnas para caber en 1 A4 exacto)
-    h += '<div style="background:#444444;color:#fff;font-weight:700;font-size:10px;letter-spacing:.5px;padding:2px 8px;text-align:center;text-transform:uppercase;border:2px solid #000;border-bottom:none;margin:0;">';
+    // 4. Checklist Items (2 Columnas)
+    h += '<div style="background:#334155;color:#ffffff;font-weight:bold;font-size:10.5px;letter-spacing:.5px;padding:3px 8px;text-align:center;text-transform:uppercase;border:2px solid #000000;border-bottom:none;margin:0;">';
     h += 'DETALLE DE INSPECCIÓN TÉCNICA Y EQUIPAMIENTO';
     h += '</div>';
 
     if (template && template.length && checklist) {
-        h += '<div style="border:2px solid #000;margin-bottom:5px;padding:2px;display:flex;gap:4px;">';
+        h += '<div style="border:2px solid #000000;margin-bottom:6px;padding:4px;display:flex;gap:6px;background:#ffffff;">';
 
-        // Dividir categorías en 2 columnas equilibradas
         var mid = Math.ceil(template.length / 2);
         var col1 = template.slice(0, mid);
         var col2 = template.slice(mid);
 
         function renderCol(cats) {
-            var colHtml = '<div style="flex:1;display:flex;flex-direction:column;gap:3px;">';
+            var colHtml = '<div style="flex:1;display:flex;flex-direction:column;gap:5px;">';
             cats.forEach(function(cat) {
-                colHtml += '<table style="width:100%;border-collapse:collapse;border:1px solid #666;font-size:9px;">';
-                colHtml += '<thead><tr><th colspan="2" style="background:#e2e8f0;color:#0f172a;font-weight:bold;text-align:left;padding:2px 4px;border-bottom:1px solid #999;font-size:9px;text-transform:uppercase;">' + (cat.titulo || 'Categoría') + '</th></tr></thead>';
+                colHtml += '<table style="width:100%;border-collapse:collapse;border:1px solid #94a3b8;font-size:9.5px;color:#000000;">';
+                colHtml += '<thead><tr><th colspan="2" style="background:#e2e8f0;color:#0f172a;font-weight:bold;text-align:left;padding:3px 6px;border-bottom:1px solid #94a3b8;font-size:9.5px;text-transform:uppercase;">' + (cat.titulo || 'Categoría') + '</th></tr></thead>';
                 colHtml += '<tbody>';
                 (cat.items || []).forEach(function(item) {
                     var valor = (checklist[item.id] || '---').toUpperCase();
-                    var color = valor === 'OK' ? '#16a34a' : (valor === 'MAL' ? '#dc2626' : '#64748b');
+                    var color = valor === 'OK' ? '#166534' : (valor === 'MAL' ? '#991b1b' : '#475569');
                     var bg = valor === 'OK' ? '#dcfce7' : (valor === 'MAL' ? '#fee2e2' : '#f1f5f9');
-                    colHtml += '<tr style="border-bottom:1px solid #eee;">';
-                    colHtml += '<td style="padding:2px 4px;color:#333;vertical-align:middle;">' + item.label + '</td>';
-                    colHtml += '<td style="width:38px;padding:2px;text-align:center;vertical-align:middle;"><span style="background:' + bg + ';color:' + color + ';padding:1px 5px;border-radius:4px;font-weight:bold;font-size:8.5px;display:inline-block;">' + valor + '</span></td>';
+                    colHtml += '<tr style="border-bottom:1px solid #f1f5f9;">';
+                    colHtml += '<td style="padding:3px 6px;color:#1e293b;vertical-align:middle;font-weight:600;">' + item.label + '</td>';
+                    colHtml += '<td style="width:42px;padding:3px;text-align:center;vertical-align:middle;"><span style="background:' + bg + ';color:' + color + ';padding:2px 6px;border-radius:4px;font-weight:bold;font-size:9px;display:inline-block;">' + valor + '</span></td>';
                     colHtml += '</tr>';
                 });
                 colHtml += '</tbody></table>';
@@ -1198,34 +1198,34 @@ function _sguBuildPageHtml(rec, tipo) {
         h += renderCol(col2);
         h += '</div>';
     } else {
-        h += '<div style="border:2px solid #000;padding:15px;text-align:center;font-style:italic;color:#666;font-size:10px;margin-bottom:5px;">No se registró detalle de checklist en esta fase.</div>';
+        h += '<div style="border:2px solid #000000;padding:15px;text-align:center;font-style:italic;color:#666666;font-size:10px;margin-bottom:6px;">No se registró detalle de checklist en esta fase.</div>';
     }
 
     h += '</div>'; // End top wrapper
 
-    // 5. Bloque de Firmas al Pie (Fijo al final de la página 1)
-    h += '<div style="margin-top:auto;">';
-    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000;table-layout:fixed;margin-top:4px;">';
+    // 5. Bloque de Firmas al Pie
+    h += '<div style="margin-top:10px;">';
+    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;table-layout:fixed;color:#000000;">';
     h += '<tr>';
-    h += '<td style="width:50%;border:1px solid #000;padding:28px 10px 4px 10px;text-align:center;vertical-align:bottom;">';
-    h += '<div style="border-top:1px dashed #000;padding-top:3px;font-size:9.5px;font-weight:bold;">';
-    h += 'FIRMA DEL CONDUCTOR<br><span style="font-weight:normal;font-size:8.5px;">' + (rec.conductor || 'DNI: _______________') + '</span>';
+    h += '<td style="width:50%;border:1px solid #000000;padding:32px 10px 6px 10px;text-align:center;vertical-align:bottom;">';
+    h += '<div style="border-top:1px dashed #000000;padding-top:4px;font-size:10px;font-weight:bold;color:#000000;">';
+    h += 'FIRMA DEL CONDUCTOR<br><span style="font-weight:normal;font-size:9px;color:#333333;">' + (rec.conductor || 'DNI: _______________') + '</span>';
     h += '</div>';
     h += '</td>';
-    h += '<td style="width:50%;border:1px solid #000;padding:28px 10px 4px 10px;text-align:center;vertical-align:bottom;">';
-    h += '<div style="border-top:1px dashed #000;padding-top:3px;font-size:9.5px;font-weight:bold;">';
-    h += 'INSPECTOR DE SEGURIDAD / CONTROL<br><span style="font-weight:normal;font-size:8.5px;">VoBo DESPACHO & FLOTA</span>';
+    h += '<td style="width:50%;border:1px solid #000000;padding:32px 10px 6px 10px;text-align:center;vertical-align:bottom;">';
+    h += '<div style="border-top:1px dashed #000000;padding-top:4px;font-size:10px;font-weight:bold;color:#000000;">';
+    h += 'INSPECTOR DE SEGURIDAD / CONTROL<br><span style="font-weight:normal;font-size:9px;color:#333333;">VoBo DESPACHO & FLOTA</span>';
     h += '</div>';
     h += '</td>';
     h += '</tr>';
     h += '</table>';
-    h += '<div style="display:flex;justify-content:space-between;font-size:8px;color:#666;margin-top:2px;padding:0 2px;">';
+    h += '<div style="display:flex;justify-content:space-between;font-size:8.5px;color:#666666;margin-top:4px;padding:0 2px;">';
     h += '<span>Documento generado por Sistema ERP de Gestión de Flota</span>';
     h += '<span>Página 1 de 1 (Acta Oficial)</span>';
     h += '</div>';
     h += '</div>';
 
-    h += '</div>'; // End sgu-pdf-page
+    h += '</div>';
     return h;
 }
 
@@ -1235,25 +1235,25 @@ function _sguBuildPhotosPagesHtml(fotosArray, tipo) {
     var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
 
     var h = '<div class="html2pdf__page-break"></div>';
-    h += '<div class="sgu-pdf-page" style="width:210mm;min-height:296mm;background:#fff;padding:8mm 10mm;box-sizing:border-box;position:relative;display:flex;flex-direction:column;font-family:\'Oswald\',sans-serif;color:#000;">';
+    h += '<div style="width:700px;min-height:980px;box-sizing:border-box;font-family:\'Plus Jakarta Sans\',Arial,sans-serif;color:#000000;background:#ffffff;padding:12px;margin:0 auto;display:flex;flex-direction:column;">';
 
-    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-bottom:8px;table-layout:fixed;">';
+    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:10px;table-layout:fixed;">';
     h += '<tr>';
-    h += '<td style="width:20%;border:1px solid #000;text-align:center;vertical-align:middle;padding:4px;">';
-    h += '<img src="' + empLogoUrl + '" style="max-height:40px;max-width:120px;object-fit:contain;" crossorigin="anonymous">';
+    h += '<td style="width:22%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:4px;">';
+    h += '<img src="' + empLogoUrl + '" style="max-height:44px;max-width:120px;object-fit:contain;" crossorigin="anonymous">';
     h += '</td>';
-    h += '<td style="width:80%;border:1px solid #000;text-align:center;vertical-align:middle;padding:4px;">';
-    h += '<div style="font-size:16px;font-weight:bold;text-transform:uppercase;color:#000;">EVIDENCIAS FOTOGRÁFICAS — FASE ' + tipo.toUpperCase() + '</div>';
-    h += '<div style="font-size:10px;color:#555;">REGISTRO DE CONDICIONES VISUALES DEL VEHÍCULO</div>';
+    h += '<td style="width:78%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:4px;">';
+    h += '<div style="font-size:17px;font-weight:bold;text-transform:uppercase;color:#000000;">EVIDENCIAS FOTOGRÁFICAS — FASE ' + tipo.toUpperCase() + '</div>';
+    h += '<div style="font-size:10.5px;color:#444444;font-weight:600;">REGISTRO DE CONDICIONES VISUALES DEL VEHÍCULO</div>';
     h += '</td>';
     h += '</tr>';
     h += '</table>';
 
-    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;">';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px;">';
     fotosArray.forEach(function(f, idx) {
-        h += '<div style="border:1px solid #000;padding:6px;border-radius:4px;background:#fdfdfd;text-align:center;break-inside:avoid;">';
-        h += '<div style="font-size:10px;font-weight:bold;margin-bottom:4px;text-transform:uppercase;">EVIDENCIA ' + (idx + 1) + '</div>';
-        h += '<img src="' + (f.b64 || f.url) + '" style="max-width:100%;max-height:210px;height:auto;object-fit:contain;display:block;margin:0 auto;border:1px solid #ccc;" crossorigin="anonymous">';
+        h += '<div style="border:1.5px solid #000000;padding:8px;border-radius:6px;background:#f8fafc;text-align:center;break-inside:avoid;">';
+        h += '<div style="font-size:11px;font-weight:bold;margin-bottom:6px;text-transform:uppercase;color:#0f172a;">EVIDENCIA ' + (idx + 1) + '</div>';
+        h += '<img src="' + (f.b64 || f.url) + '" style="max-width:100%;max-height:220px;height:auto;object-fit:contain;display:block;margin:0 auto;border:1px solid #cbd5e1;border-radius:4px;" crossorigin="anonymous">';
         h += '</div>';
     });
     h += '</div>';
@@ -1272,7 +1272,7 @@ window._sguGenerarPDF = async function(tipo) {
     var rec = window._sguCurrentRecord;
     var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
 
-    _sguToast('Generando reporte PDF en formato A4...', 'bi-hourglass-split');
+    _sguToast('Generando reporte PDF...', 'bi-hourglass-split');
 
     var fotosBase64 = [];
     if (fotos.length > 0) {
@@ -1292,32 +1292,27 @@ window._sguGenerarPDF = async function(tipo) {
         }
     }
 
-    var container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.top = '-9999px';
-
     var htmlFinal = _sguBuildPageHtml(rec, tipo);
     if (fotosBase64.length > 0) {
         htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
     }
 
-    container.innerHTML = htmlFinal;
-    document.body.appendChild(container);
+    var div = document.createElement('div');
+    div.style.width = '700px';
+    div.style.backgroundColor = '#ffffff';
+    div.innerHTML = htmlFinal;
 
     var opt = {
-        margin:       0,
+        margin:       [8, 8, 8, 8],
         filename:     'Checklist_' + rec.placa_tracto + '_' + tipo + '.pdf',
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2.5, useCORS: true, logging: false },
+        html2canvas:  { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(container).save().then(function() {
-        document.body.removeChild(container);
-        _sguToast('PDF generado con éxito');
+    html2pdf().set(opt).from(div).save().then(function() {
+        _sguToast('PDF descargado correctamente.');
     }).catch(function(err) {
-        if (container.parentNode) document.body.removeChild(container);
         _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
     });
 };
@@ -1331,7 +1326,7 @@ window._sguGenerarPDFCompleto = async function() {
     if (!window._sguCurrentRecord) return;
     var rec = window._sguCurrentRecord;
 
-    _sguToast('Generando Expediente Completo (Ida y Vuelta)...', 'bi-hourglass-split');
+    _sguToast('Generando Expediente Completo...', 'bi-hourglass-split');
 
     var todasFotos = rec.fotos || [];
     var fotosSalida = [];
@@ -1355,11 +1350,6 @@ window._sguGenerarPDFCompleto = async function() {
         }
     }
 
-    var container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.top = '-9999px';
-
     // Página 1: Salida
     var htmlFinal = _sguBuildPageHtml(rec, 'salida');
 
@@ -1377,22 +1367,22 @@ window._sguGenerarPDFCompleto = async function() {
         htmlFinal += _sguBuildPhotosPagesHtml(fotosRetorno, 'retorno');
     }
 
-    container.innerHTML = htmlFinal;
-    document.body.appendChild(container);
+    var div = document.createElement('div');
+    div.style.width = '700px';
+    div.style.backgroundColor = '#ffffff';
+    div.innerHTML = htmlFinal;
 
     var opt = {
-        margin:       0,
+        margin:       [8, 8, 8, 8],
         filename:     'Expediente_Completo_' + rec.placa_tracto + '.pdf',
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2.5, useCORS: true, logging: false },
+        html2canvas:  { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(container).save().then(function() {
-        document.body.removeChild(container);
-        _sguToast('Expediente completo descargado con éxito');
+    html2pdf().set(opt).from(div).save().then(function() {
+        _sguToast('Expediente descargado con éxito.');
     }).catch(function(err) {
-        if (container.parentNode) document.body.removeChild(container);
         _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
     });
 };
