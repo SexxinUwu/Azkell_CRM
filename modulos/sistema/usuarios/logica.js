@@ -8,82 +8,29 @@ window._guSeleccionado    = window._guSeleccionado    || null;
 window._guEsNuevo         = window._guEsNuevo         || false;
 
 // ── Módulos de permisos ──────────────────────────────────────────
-// type: 'normal'  → fila LCAD estándar
-// type: 'hub'     → toggle Habilitado/Deshabilitado; hijos se muestran indentados
-// type: 'child'   → hijo de un hub (indentado, LCAD)
-// type: 'solo_admin' → solo administrador (badge, sin toggles)
-// type: 'todos'   → todos los usuarios (badge, sin toggles)
 window._GU_MODULOS = window._GU_MODULOS || [
-    // ── DASHBOARD ────────────────────────────────────────────────────
-    { grupo:'DASHBOARD',     key:'dashboard',        nombre:'Dashboard',                   desc:'Vista general y KPIs del sistema',             type:'normal', lcad:false },
-
-    // ── FLOTA (hub) ──────────────────────────────────────────────────
-    { grupo:'FLOTA',         key:'hub_flota',        nombre:'Flota',                       desc:'Habilitar o deshabilitar acceso al módulo Flota completo', type:'hub' },
-    { grupo:'FLOTA',         key:'disponibilidad',   nombre:'Disponibilidad',             desc:'Gestión de asignación de tractos, carretas, conductores y estados en tiempo real', type:'child', parent:'hub_flota' },
-    { grupo:'FLOTA',         key:'gps',              nombre:'GPS / Ubicación',             desc:'Rastreo en tiempo real de unidades',            type:'child', parent:'hub_flota' },
-    { grupo:'FLOTA',         key:'status',           nombre:'Status Flota',                desc:'Estado y agrupación de unidades',               type:'child', parent:'hub_flota' },
-    { grupo:'FLOTA',         key:'placas',           nombre:'Placas',                      desc:'Registro y gestión de unidades de la flota',   type:'child', parent:'hub_flota' },
-    { grupo:'FLOTA',         key:'docs_flota',       nombre:'Documentos',                  desc:'Documentos por vehículo (SOAT, tarjetas, etc.)', type:'child', parent:'hub_flota' },
-
-    // ── MANTENIMIENTO ────────────────────────────────────────────────
-    { grupo:'MANTENIMIENTO', key:'hub_mant',         nombre:'Mantenimiento',               desc:'Habilitar o deshabilitar acceso al módulo Mantenimiento completo', type:'hub' },
-    { grupo:'MANTENIMIENTO', key:'status_rampa',     nombre:'Status Rampa',                desc:'Gestión visual del estado en taller',           type:'child', parent:'hub_mant' },
-    { grupo:'MANTENIMIENTO', key:'checklist',        nombre:'Reporte de Fallas',           desc:'Checklist de fallas mecánicas en ruta o taller (F-MAN-001)', type:'child', parent:'hub_mant' },
-    { grupo:'MANTENIMIENTO', key:'insp',             nombre:'Análisis de Inspecciones',    desc:'Registro y análisis de inspecciones de unidades', type:'child', parent:'hub_mant' },
-    { grupo:'MANTENIMIENTO', key:'fleetrun',         nombre:'Fleetrun',                    desc:'Gestión de Mantenimientos Preventivos Fleetrun', type:'child', parent:'hub_mant' },
-    { grupo:'MANTENIMIENTO', key:'reportes_ot',      nombre:'Reportes OT',                 desc:'Órdenes de trabajo y métricas de mantenimiento', type:'child', parent:'hub_mant' },
-    { grupo:'MANTENIMIENTO', key:'trabajos_ot',      nombre:'Historial de Trabajos',       desc:'Historial de trabajos realizados por técnicos', type:'child', parent:'hub_mant' },
-    { grupo:'MANTENIMIENTO', key:'combustible',      nombre:'Combustible',                 desc:'Control de abastecimiento, rendimiento km/gal y consumo de combustible', type:'child', parent:'hub_mant' },
-    { grupo:'MANTENIMIENTO', key:'neumaticos',       nombre:'Neumáticos',                  desc:'Análisis de desgaste, historial de inspecciones y semáforo de llantas', type:'child', parent:'hub_mant' },
-    { grupo:'MANTENIMIENTO', key:'otros_mant',       nombre:'Otros',                       desc:'Habilitar acceso a los sub-módulos complementarios de Mantenimiento', type:'hub', parent:'hub_mant' },
-    { grupo:'MANTENIMIENTO', key:'plan',             nombre:'Planificación de Mantenimientos', desc:'Programación y seguimiento de MP',          type:'child', parent:'otros_mant' },
-    { grupo:'MANTENIMIENTO', key:'backlog',          nombre:'Backlog Pendientes',           desc:'Lista de trabajos pendientes por atender',      type:'child', parent:'otros_mant' },
-    { grupo:'MANTENIMIENTO', key:'kpis',             nombre:'Métricas y KPIs',             desc:'Indicadores de rendimiento del taller',         type:'child', parent:'otros_mant' },
-    { grupo:'MANTENIMIENTO', key:'productividad',    nombre:'Productividad Personal',      desc:'Reporte de productividad del personal técnico', type:'child', parent:'otros_mant' },
-    { grupo:'MANTENIMIENTO', key:'fin_taller',       nombre:'Reporte Financiero',          desc:'Costos de mano de obra y repuestos por OT',    type:'child', parent:'otros_mant' },
-
-    // ── ALMACÉN ──────────────────────────────────────────────────────
-    { grupo:'ALMACÉN',       key:'hub_almacen',      nombre:'Almacén',                     desc:'Habilitar o deshabilitar acceso al módulo Almacén completo', type:'hub' },
-    { grupo:'ALMACÉN',       key:'dash_alm',         nombre:'Dashboard Financiero',        desc:'Resumen financiero del almacén',                type:'child', parent:'hub_almacen' },
-    { grupo:'ALMACÉN',       key:'inv',              nombre:'Inventario',                  desc:'Catálogo de artículos y stock',                 type:'child', parent:'hub_almacen' },
-    { grupo:'ALMACÉN',       key:'ent_inv',          nombre:'Órdenes de Compra',           desc:'Ingresos y órdenes de compra al almacén',      type:'child', parent:'hub_almacen' },
-    { grupo:'ALMACÉN',       key:'sal_inv',          nombre:'Órdenes de Salida',           desc:'Egresos y salidas del almacén',                 type:'child', parent:'hub_almacen' },
-    { grupo:'ALMACÉN',       key:'kardex',           nombre:'Kardex',                      desc:'Movimientos históricos por artículo',           type:'child', parent:'hub_almacen', lcad:false },
-    { grupo:'ALMACÉN',       key:'prov_inv',         nombre:'Proveedores',                 desc:'Directorio de proveedores',                     type:'child', parent:'hub_almacen' },
-
-    // ── DIRECTORIO ───────────────────────────────────────────────────
-    { grupo:'DIRECTORIO',    key:'hub_directorio',   nombre:'Directorio',                  desc:'Habilitar o deshabilitar acceso al módulo Directorio', type:'hub' },
-    { grupo:'DIRECTORIO',    key:'cond',             nombre:'Personal',                    desc:'Directorio operativo del personal',             type:'child', parent:'hub_directorio' },
-    { grupo:'DIRECTORIO',    key:'clientes',         nombre:'Clientes',                    desc:'Directorio comercial de clientes',              type:'child', parent:'hub_directorio' },
-
-    // ── SEGURIDAD ────────────────────────────────────────────────────
-    { grupo:'SEGURIDAD',     key:'hub_seguridad',    nombre:'Seguridad',                   desc:'Habilitar o deshabilitar acceso al módulo Seguridad', type:'hub' },
-    { grupo:'SEGURIDAD',     key:'checklist',        nombre:'CheckList de Unidades',       desc:'Inspecciones de ingreso/salida de unidades',    type:'child', parent:'hub_seguridad' },
-    { grupo:'SEGURIDAD',     key:'asist',            nombre:'Tareo',                       desc:'Control de asistencia del personal',            type:'child', parent:'hub_seguridad' },
-
-    // ── CONFIGURACIÓN ────────────────────────────────────────────────
-    { grupo:'CONFIGURACIÓN', key:'usuarios',         nombre:'Usuarios',                    desc:'Gestión de usuarios y roles del sistema',       type:'solo_admin' },
-    { grupo:'CONFIGURACIÓN', key:'mod_auditoria',    nombre:'Auditoría',                   desc:'Bitácora de actividad del sistema',             type:'solo_admin' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_empresa',      nombre:'Empresa',                     desc:'Datos y configuración de la empresa',           type:'normal' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_apariencia',   nombre:'Apariencia',                  desc:'Personalización visual de la interfaz',         type:'todos' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_accesibilidad',nombre:'Accesibilidad',               desc:'Ajustes de accesibilidad del sistema',          type:'todos' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_idioma',       nombre:'Idioma',                      desc:'Configuración de idioma del sistema',           type:'todos' },
-    { grupo:'CONFIGURACIÓN', key:'mi_perfil',        nombre:'Mi Perfil',                   desc:'Configuración personal del usuario',            type:'todos' },
-    { grupo:'CONFIGURACIÓN', key:'administracion',   nombre:'Administración',              desc:'Habilitar acceso a la configuración avanzada del sistema', type:'hub' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_familias',     nombre:'Familias',                    desc:'Familias de artículos de almacén',             type:'child', parent:'administracion' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_unidades',     nombre:'Unidades de Medida',          desc:'Unidades de medida del sistema',                type:'child', parent:'administracion' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_sistemas',     nombre:'Sistemas',                    desc:'Sistemas de vehículos',                         type:'child', parent:'administracion' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_marcas',       nombre:'Marcas',                      desc:'Marcas de vehículos y repuestos',               type:'child', parent:'administracion' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_frec',         nombre:'Frecuencias MP',              desc:'Frecuencias de mantenimiento preventivo',       type:'child', parent:'administracion' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_kits',         nombre:'Kits MP',                     desc:'Kits de mantenimiento por tipo de vehículo',   type:'child', parent:'administracion' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_tipos_mp',     nombre:'Tipos MP',                    desc:'Tipos de mantenimiento preventivo',             type:'child', parent:'administracion' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_metrica',      nombre:'Config. Métrica',             desc:'Configuración de métricas de vehículos',       type:'child', parent:'administracion' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_situacion',    nombre:'Situación',                   desc:'Estados de situación de mantenimiento',         type:'child', parent:'administracion' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_personal',     nombre:'Personal Taller',             desc:'Configuración del personal técnico',            type:'child', parent:'administracion' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_fleetrun',     nombre:'Config. Fleetrun',            desc:'Configuración del módulo Fleetrun',             type:'child_admin', parent:'administracion' },
-    { grupo:'CONFIGURACIÓN', key:'cfg_integ',        nombre:'Integraciones',               desc:'Conexiones con sistemas externos',              type:'child_admin', parent:'administracion' },
+    { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicación',  desc:'Visualización en tiempo real',  lcad:false },
+    { grupo:'FLOTA',         key:'status',        nombre:'Status Flota',     desc:'Estado y agrupación de unidades', lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'status_rampa',  nombre:'Status Rampa',     desc:'Gestión visual en taller',      lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Análisis de Inspecciones', desc:'Registro de inspecciones', lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'fleet',         nombre:'Mantenimiento Preventivo', desc:'Datos operativos de la flota',  lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'reportes_ot',   nombre:'Reportes OT',      desc:'Métricas de mantenimiento',     lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'trabajos_ot',   nombre:'Historial de Trabajos', desc:'Gestión de técnicos',           lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'otros_mant',    nombre:'Otros',            desc:'Módulos complementarios',       lcad:true  },
+    { grupo:'ALMACÉN',       key:'inv',           nombre:'Inventario',       desc:'Catálogo de artículos',         lcad:true  },
+    { grupo:'ALMACÉN',       key:'ent_inv',       nombre:'Entradas',         desc:'Ingresos al almacén',           lcad:true  },
+    { grupo:'ALMACÉN',       key:'sal_inv',       nombre:'Salidas',          desc:'Egresos del almacén',           lcad:true  },
+    { grupo:'ALMACÉN',       key:'kardex',        nombre:'Kardex',           desc:'Movimientos por artículo',      lcad:false },
+    { grupo:'DIRECTORIO',    key:'cond',          nombre:'Personal',         desc:'Directorio operativo',          lcad:true  },
+    { grupo:'SEGURIDAD',     key:'placas',        nombre:'CheckList de Ingreso/Salidas de Unidades',desc:'Fichas técnicas', lcad:true  },
+    { grupo:'SEGURIDAD',     key:'asist',         nombre:'Tareo',            desc:'Asistencia del personal',       lcad:true  },
+    { grupo:'CONFIGURACIÓN', key:'usuarios',      nombre:'Usuarios',         desc:'Gestión de accesos',            lcad:true  },
+    { grupo:'CONFIGURACIÓN', key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad',         lcad:true  },
+    { grupo:'CONFIGURACIÓN', key:'cfg_apariencia',nombre:'Apariencia',       desc:'Personalización visual',        lcad:true  },
+    { grupo:'CONFIGURACIÓN', key:'cfg_accesibilidad',nombre:'Accesibilidad', desc:'Ajustes de uso',                lcad:true  },
+    { grupo:'CONFIGURACIÓN', key:'cfg_idioma',    nombre:'Idioma',           desc:'Idiomas del sistema',           lcad:true  },
+    { grupo:'CONFIGURACIÓN', key:'administracion',nombre:'Administración',   desc:'Hub de administración',         lcad:true  }
 ];
-
 
 
 window._GU_COLORS = window._GU_COLORS || [
@@ -125,10 +72,6 @@ function _guShowInPanel(contentHtml, actionsHtml, title) {
     }
 }
 
-window.init_usuarios = function() {
-    window.guCargarTodo();
-};
-
 // ── Carga de datos ────────────────────────────────────────────
 window.guCargarTodo = async function(forzar) {
     var list = document.getElementById('guList');
@@ -157,16 +100,6 @@ window.guCargarTodo = async function(forzar) {
         var cm = document.getElementById('gu-count-miembros');
         if (cr) cr.textContent = '(' + window.dataGlobalRoles.length + ')';
         if (cm) cm.textContent = '(' + window.dataGlobalUsuarios.length + ')';
-        
-        var elUsers = document.getElementById('gu-kpi-total-usuarios');
-        if (elUsers) elUsers.textContent = window.dataGlobalUsuarios.length;
-        var elRoles = document.getElementById('gu-kpi-total-roles');
-        if (elRoles) elRoles.textContent = window.dataGlobalRoles.length;
-        var elAdmins = document.getElementById('gu-kpi-total-admins');
-        if (elAdmins) elAdmins.textContent = window.dataGlobalUsuarios.filter(function(u) {
-            return (u.rol_label || '').toLowerCase().includes('admin') || (u.cargo || '').toLowerCase().includes('admin');
-        }).length;
-
         window.guSetTab(window._guTabActiva || 'roles');
     } catch(e) {
         if (list) list.innerHTML = '<div class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>' + e.message + '</div>';
@@ -191,9 +124,9 @@ window.guSetTab = function(tab) {
     var ph = document.getElementById('top-actions-placeholder');
     if (ph) {
         if (tab === 'roles') {
-            ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--dc-primary);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoRol()"><i class="bi bi-shield-plus"></i> Registrar Rol</button>';
+            ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--crm-accent);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoRol()"><i class="bi bi-shield-plus"></i> Registrar Rol</button>';
         } else if (tab === 'miembros') {
-            ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--dc-primary);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoMiembro()"><i class="bi bi-person-plus"></i> Registrar Usuario</button>';
+            ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--crm-accent);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoMiembro()"><i class="bi bi-person-plus"></i> Registrar Usuario</button>';
         } else {
             ph.innerHTML = '';
         }
@@ -228,7 +161,6 @@ window.guRenderLista = function() {
     var list = document.getElementById('guList');
     if (!list) return;
     var html = '';
-
     if (window._guTabActiva === 'roles') {
         if (!window.dataGlobalRoles.length) {
             html = '<div class="text-center py-4 text-muted" style="font-size:.8rem;padding:20px;">No hay roles. Crea el primero.</div>';
@@ -243,7 +175,6 @@ window.guRenderLista = function() {
                     + '<i class="bi bi-chevron-right gu-list-chevron"></i></div>';
             });
         }
-        // html += '<button class="gu-add-btn" onclick="window.guNuevoRol()"><i class="bi bi-plus-lg"></i> Crear Rol</button>';
     } else {
         if (!window.dataGlobalUsuarios.length) {
             html = '<div class="text-center py-4 text-muted" style="font-size:.8rem;padding:20px;">No hay miembros.</div>';
@@ -258,12 +189,10 @@ window.guRenderLista = function() {
                     grupos[key].users.push(u);
                 } else { sinRol.push(u); }
             });
-            // Asignar info del rol a cada grupo, en el orden de dataGlobalRoles
             window.dataGlobalRoles.forEach(function(r) {
                 var key = String(r.id);
                 if (grupos[key]) grupos[key].rol = r;
             });
-            // Renderizar grupos ordenados por orden del rol
             var gruposOrdenados = Object.values(grupos).sort(function(a, b) {
                 var oa = a.rol ? (a.rol.orden||0) : 999;
                 var ob = b.rol ? (b.rol.orden||0) : 999;
@@ -273,13 +202,13 @@ window.guRenderLista = function() {
                 var r = g.rol;
                 var color = r ? (r.color||'#6b7280') : '#6b7280';
                 var nombre = r ? r.nombre : 'Desconocido';
-                html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px 4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dc-subtext);">'
+                html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px 4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--subtext);">'
                     + '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;"></div>'
                     + _guEsc(nombre) + ' — ' + g.users.length + '</div>';
                 g.users.forEach(function(u) { html += _guRenderUserItem(u); });
             });
             if (sinRol.length) {
-                html += '<div style="padding:10px 14px 4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dc-subtext);">SIN ROL — ' + sinRol.length + '</div>';
+                html += '<div style="padding:10px 14px 4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--subtext);">SIN ROL — ' + sinRol.length + '</div>';
                 sinRol.forEach(function(u) { html += _guRenderUserItem(u); });
             }
         }
@@ -295,9 +224,11 @@ function _guBuildRolPanel(rol) {
     var colorActual = rol.color || '#5865F2';
     var html = '';
 
+    // Nombre
     html += '<div class="gu-field-label">Nombre del Rol</div>'
-        + '<input type="text" id="guRolNombre" class="dc-input" value="' + _guEsc(rol.nombre||'') + '" placeholder="Nombre del rol..." style="font-weight:700;">';
+        + '<input type="text" id="guRolNombre" class="form-control" value="' + _guEsc(rol.nombre||'') + '" placeholder="Nombre del rol..." style="font-weight:700;">';
 
+    // Color
     html += '<div class="gu-field-label">Color del Rol</div><div class="gu-colors" id="guColorSwatches">';
     window._GU_COLORS.forEach(function(c) {
         html += '<div class="gu-color-swatch' + (c.toLowerCase()===colorActual.toLowerCase()?' selected':'') + '" '
@@ -306,109 +237,38 @@ function _guBuildRolPanel(rol) {
     html += '<input type="text" class="gu-hex-input" id="guRolColor" value="' + _guEsc(colorActual) + '" '
         + 'placeholder="#5865F2" oninput="window._guHexColorInput(this.value)"></div>';
 
+    // Prioridad
+    html += '<div class="gu-field-label">Prioridad / Orden</div>'
+        + '<input type="number" id="guRolOrden" class="form-control" value="' + (rol.orden||0) + '" min="0" max="9999" style="max-width:120px;">'
+        + '<div style="font-size:.72rem;color:var(--subtext);margin-top:3px;">Número menor aparece primero en la lista.</div>';
+
+    // Permisos
     html += '<div class="gu-section-header" style="margin-top:18px;">Permisos de Módulo</div>';
     var lastGrp = '';
-    var accs = ['l','c','e','d'];
-    var lbls = ['Leer','Crear','Editar','Eliminar'];
-
-    var hubsActivos = {};
-    window._GU_MODULOS.forEach(function(mod) {
-        if (mod.type === 'hub') hubsActivos[mod.key] = !!(p[mod.key] && p[mod.key]['enabled']);
-    });
-
-    // Compatibilidad: Si un hijo tiene permisos activos, el hub padre debe activarse automáticamente.
-    var changed = true;
-    while (changed) {
-        changed = false;
-        window._GU_MODULOS.forEach(function(mod) {
-            if (mod.parent && !hubsActivos[mod.parent]) {
-                var hasPerm = false;
-                if (mod.type === 'hub') {
-                    hasPerm = hubsActivos[mod.key];
-                } else {
-                    var m = p[mod.key];
-                    if (m && (m['l'] || m['c'] || m['e'] || m['d'])) hasPerm = true;
-                }
-                if (hasPerm) {
-                    hubsActivos[mod.parent] = true;
-                    if (!p[mod.parent]) p[mod.parent] = {};
-                    p[mod.parent]['enabled'] = 1;
-                    changed = true;
-                }
-            }
-        });
-    }
-
     window._GU_MODULOS.forEach(function(mod) {
         if (mod.grupo !== lastGrp) {
             html += '<div class="gu-perm-group">' + mod.grupo + '</div>';
             lastGrp = mod.grupo;
         }
-
-        if (mod.type === 'todos') {
-            html += '<div class="gu-perm-row gu-perm-row--muted"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div><div class="gu-perm-desc">' + mod.desc + '</div></div><div class="gu-perm-actions"><span class="gu-badge-todos"><i class="bi bi-people-fill me-1"></i>Todos los roles</span></div></div>';
-            return;
-        }
-
-        if (mod.type === 'solo_admin') {
-            html += '<div class="gu-perm-row gu-perm-row--muted"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div><div class="gu-perm-desc">' + mod.desc + '</div></div><div class="gu-perm-actions"><span class="gu-badge-admin"><i class="bi bi-shield-fill me-1"></i>Solo Administrador</span></div></div>';
-            return;
-        }
-
-        if (mod.type === 'hub') {
-            var hubEnabled = esAdmin ? true : hubsActivos[mod.key];
-            var rdonly = esAdmin ? ' readonly' : '';
-            var rowCls = 'gu-perm-row gu-perm-hub';
-            var parentAttr = '';
-            var display = '';
-            if (mod.parent) {
-                rowCls += ' gu-perm-child';
-                parentAttr = ' data-parent="' + mod.parent + '"';
-                display = hubsActivos[mod.parent] ? '' : 'display:none;';
-            }
-
-            html += '<div class="' + rowCls + '" id="gu-hub-row-' + mod.key + '"' + parentAttr + ' style="' + display + '">'
-                + '<div class="gu-perm-info"><div class="gu-perm-name" style="color:var(--dc-primary);font-weight:700;">'
-                + (mod.parent?'<i class="bi bi-arrow-return-right me-1" style="opacity:0.5;"></i>':'')
-                + '<i class="bi bi-folder2-open me-1" style="font-size:.85em;"></i>' + mod.nombre + '</div>'
+        if (!mod.lcad) {
+            var lv = p[mod.key] ? (p[mod.key]['l'] ? true : false) : false;
+            html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
                 + '<div class="gu-perm-desc">' + mod.desc + '</div></div>'
                 + '<div class="gu-perm-actions"><div class="dc-toggle-wrap">'
-                + '<input type="checkbox" class="dc-toggle dc-toggle--hub" id="pt-' + mod.key + '-enabled"' + (hubEnabled ? ' checked' : '') + ' onchange="window._guToggleHub(this, \'' + mod.key + '\')">'
-                + '<label class="dc-toggle-label' + rdonly + '" for="pt-' + mod.key + '-enabled"></label>'
-                + '<label class="gu-perm-label" id="pt-' + mod.key + '-lbl" for="pt-' + mod.key + '-enabled" style="' + (esAdmin?'pointer-events:none;opacity:0.5;':'cursor:pointer;') + '">' + (hubEnabled ? 'Habilitado' : 'Deshabilitado') + '</label></div>'
-                + '<button type="button" class="gu-hub-expand-btn" id="gu-hub-btn-' + mod.key + '" onclick="window._guExpandHub(\'' + mod.key + '\')" title="Ver sub-módulos" style="' + (hubEnabled ? '' : 'display:none;') + '"><i class="bi bi-chevron-' + (hubEnabled ? 'up' : 'down') + '" id="gu-hub-icon-' + mod.key + '"></i></button>'
-                + '</div></div>';
-            return;
-        }
-
-        var isChild = (mod.type === 'child' || mod.type === 'child_admin');
-        if (mod.type === 'normal' || mod.type === 'normal_r' || isChild || !mod.type) {
+                + '<input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-l"' + (lv?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'l\')">'
+                + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-' + mod.key + '-l"></label>'
+                + '<span class="gu-perm-label">Leer</span></div></div></div>';
+        } else {
             var m = p[mod.key] || {};
-            if (esAdmin) m = { l:1, c:1, e:1, d:1 };
             var accs = ['l','c','e','d'];
-            var lbls = ['Leer','Crear','Editar','Eliminar'];
-            var rdonly = esAdmin ? ' readonly' : '';
-            var rowCls = isChild ? 'gu-perm-row gu-perm-child' : 'gu-perm-row';
-            var parentAttr = isChild ? ' data-parent="' + mod.parent + '"' : '';
-            var display = (isChild && !hubsActivos[mod.parent]) ? 'display:none;' : '';
-            
-            var soloLeer = (mod.lcad === false || mod.type === 'normal_r');
-
-            html += '<div class="' + rowCls + '"' + parentAttr + ' style="' + display + '">'
-                + '<div class="gu-perm-info"><div class="gu-perm-name">' + (isChild?'<i class="bi bi-arrow-return-right me-1" style="opacity:0.5;"></i>':'') + mod.nombre + '</div>'
+            var lbls = ['Leer','Crear','Editar','Elim'];
+            html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
                 + '<div class="gu-perm-desc">' + mod.desc + '</div></div><div class="gu-perm-actions">';
-            
-            if (soloLeer) {
-                html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-l"' + (m['l']?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'l\')">'
-                    + '<label class="dc-toggle-label' + rdonly + '" for="pt-' + mod.key + '-l"></label>'
-                    + '<label class="gu-perm-label" for="pt-' + mod.key + '-l" style="' + (esAdmin?'pointer-events:none;opacity:0.5;':'cursor:pointer;') + '">Leer</label></div>';
-            } else {
-                accs.forEach(function(a,i) {
-                    html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-' + a + '"' + (m[a]?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'' + a + '\')">'
-                        + '<label class="dc-toggle-label' + rdonly + '" for="pt-' + mod.key + '-' + a + '"></label>'
-                        + '<label class="gu-perm-label" for="pt-' + mod.key + '-' + a + '" style="' + (esAdmin?'pointer-events:none;opacity:0.5;':'cursor:pointer;') + '">' + lbls[i] + '</label></div>';
-                });
-            }
+            accs.forEach(function(a,i) {
+                html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-' + a + '"' + (m[a]?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'' + a + '\')">'
+                    + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-' + mod.key + '-' + a + '"></label>'
+                    + '<span class="gu-perm-label">' + lbls[i] + '</span></div>';
+            });
             html += '</div></div>';
         }
     });
@@ -435,10 +295,10 @@ function _guBuildRolPanel(rol) {
         });
     }
     if (rol.id) {
-        html += '<div style="margin-top:32px; background:var(--dc-bg); border:1px solid var(--dc-border); border-radius:12px; padding:16px;">'
-            + '<div style="font-weight:700; color:var(--dc-text); margin-bottom:4px;">Ver servidor como un rol</div>'
-            + '<div style="font-size:0.8rem; color:var(--dc-subtext); margin-bottom:12px;">Esto te permitirá probar qué acciones puede realizar este rol y qué áreas puede ver.</div>'
-            + '<button class="btn btn-sm" style="background:var(--dc-primary); color:#fff; font-weight:600; padding:6px 16px; border-radius:6px; border:none; transition:opacity 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" onclick="window.guVerComoRol(' + rol.id + ')">Ver servidor como rol <i class="bi bi-arrow-right ms-1"></i></button>'
+        html += '<div style="margin-top:32px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px;">'
+            + '<div style="font-weight:700; color:var(--text); margin-bottom:4px;">Ver servidor como un rol</div>'
+            + '<div style="font-size:0.8rem; color:var(--subtext); margin-bottom:12px;">Esto te permitirá probar qué acciones puede realizar este rol y qué áreas puede ver.</div>'
+            + '<button class="btn btn-sm" style="background:var(--crm-accent); color:#fff; font-weight:600; padding:6px 16px; border-radius:6px; border:none; transition:opacity 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" onclick="window.guVerComoRol(' + rol.id + ')">Ver servidor como rol <i class="bi bi-arrow-right ms-1"></i></button>'
             + '</div>';
     }
     return html;
@@ -447,22 +307,11 @@ function _guBuildRolPanel(rol) {
 window.guVerComoRol = function(rolId) {
     var rol = window.dataGlobalRoles.find(function(r){ return r.id == rolId; });
     if (!rol) return;
-    
-    var isEditing = (window._guSeleccionado && window._guSeleccionado.id == rolId);
-    var permisosToSimulate = rol.permisos_json || '{}';
-    var esAdmin = !!rol.es_admin;
-    
-    if (isEditing) {
-        var adminEl = document.getElementById('pt-admin');
-        esAdmin = adminEl ? adminEl.checked : false;
-        permisosToSimulate = esAdmin ? '{}' : _guCollectPermisos();
-    }
-
     localStorage.setItem('fleet_simulated_role', JSON.stringify({
         id: rol.id,
         nombre: rol.nombre,
-        permisos: permisosToSimulate,
-        es_admin: esAdmin
+        permisos: rol.permisos_json || '{}',
+        es_admin: !!rol.es_admin
     }));
     window.location.reload();
 };
@@ -503,106 +352,25 @@ window._guHexColorInput = function(val) {
 };
 
 window._guToggleAdmin = function(chk) {
-      var isAdm = chk.checked;
-      document.querySelectorAll('.dc-toggle-label:not(.danger)').forEach(function(lbl){
-          lbl.classList.toggle('readonly', isAdm);
-      });
-      document.querySelectorAll('.gu-perm-label').forEach(function(lbl){
-          if (lbl.id && lbl.id.endsWith('-lbl')) {
-              if (isAdm) lbl.innerText = 'Habilitado';
-          }
-      });
-      document.querySelectorAll('.dc-toggle:not(#pt-admin)').forEach(function(input){
-          if (isAdm) {
-              input.checked = true;
-          }
-      });
-};
-
-window._guToggleHub = function(chk, hubKey) {
-    var isEnabled = chk.checked;
-    var lbl = document.getElementById('pt-' + hubKey + '-lbl');
-    if (lbl) lbl.innerText = isEnabled ? 'Habilitado' : 'Deshabilitado';
-
-    var expandBtn = document.getElementById('gu-hub-btn-' + hubKey);
-    if (expandBtn) expandBtn.style.display = isEnabled ? '' : 'none';
-
-    document.querySelectorAll('[data-parent="' + hubKey + '"]').forEach(function(row) {
-        row.style.display = isEnabled ? '' : 'none';
-        if (!isEnabled) {
-            row.querySelectorAll('input[type="checkbox"]').forEach(function(c) {
-                c.checked = false;
-            });
-        }
+    document.querySelectorAll('.dc-toggle-label:not(.danger)').forEach(function(lbl){
+        lbl.classList.toggle('readonly', chk.checked);
     });
-};
-
-window._guExpandHub = function(hubKey) {
-    var icon = document.getElementById('gu-hub-icon-' + hubKey);
-    var isExpanded = icon ? icon.classList.contains('bi-chevron-up') : false;
-
-    if (icon) {
-        icon.classList.toggle('bi-chevron-up', !isExpanded);
-        icon.classList.toggle('bi-chevron-down', isExpanded);
-    }
-
-    document.querySelectorAll('[data-parent="' + hubKey + '"]').forEach(function(row) {
-        row.style.display = !isExpanded ? '' : 'none';
-    });
-};
-
-window._guCheckCascade = function(chk, key, action) {
-    var isChecked = chk.checked;
-
-    if (isChecked && (action === 'c' || action === 'e' || action === 'd')) {
-        var rEl = document.getElementById('pt-' + key + '-l');
-        if (rEl) rEl.checked = true;
-    }
-
-    if (!isChecked && action === 'l') {
-        ['c', 'e', 'd'].forEach(function(a) {
-            var el = document.getElementById('pt-' + key + '-' + a);
-            if (el) el.checked = false;
-        });
-    }
-
-    if (isChecked) {
-        var modInfo = (window._GU_MODULOS || []).find(function(m){ return m.key === key; });
-        if (modInfo && modInfo.parent) {
-            var hubChk = document.getElementById('pt-' + modInfo.parent + '-enabled');
-            if (hubChk && !hubChk.checked) {
-                hubChk.checked = true;
-                window._guToggleHub(hubChk, modInfo.parent);
-            }
-        }
-    }
 };
 
 function _guCollectPermisos() {
     var pObj = {};
     window._GU_MODULOS.forEach(function(mod) {
-        var t = mod.type || (mod.lcad === false ? 'normal_r' : 'normal');
-        // Ignorar tipos que no tienen permisos propios
-        if (t === 'todos' || t === 'solo_admin' || t === 'child_admin') return;
-
-        if (t === 'hub') {
-            var enabledEl = document.getElementById('pt-' + mod.key + '-enabled');
-            pObj[mod.key] = { enabled: enabledEl && enabledEl.checked ? 1 : 0 };
-            return;
-        }
-        // normal solo-leer o child con solo leer
-        if (mod.lcad === false) {
+        if (!mod.lcad) {
             var el = document.getElementById('pt-' + mod.key + '-l');
             pObj[mod.key] = { l: el && el.checked ? 1 : 0 };
-            return;
+        } else {
+            pObj[mod.key] = {
+                l: !!(document.getElementById('pt-'+mod.key+'-l')||{}).checked ? 1 : 0,
+                c: !!(document.getElementById('pt-'+mod.key+'-c')||{}).checked ? 1 : 0,
+                e: !!(document.getElementById('pt-'+mod.key+'-e')||{}).checked ? 1 : 0,
+                d: !!(document.getElementById('pt-'+mod.key+'-d')||{}).checked ? 1 : 0,
+            };
         }
-        // normal o child con LCAD
-        pObj[mod.key] = {
-            l: !!(document.getElementById('pt-'+mod.key+'-l')||{}).checked ? 1 : 0,
-            c: !!(document.getElementById('pt-'+mod.key+'-c')||{}).checked ? 1 : 0,
-            e: !!(document.getElementById('pt-'+mod.key+'-e')||{}).checked ? 1 : 0,
-            d: !!(document.getElementById('pt-'+mod.key+'-d')||{}).checked ? 1 : 0,
-        };
     });
     return JSON.stringify(pObj);
 }
@@ -664,48 +432,52 @@ function _guBuildUserPanel(user) {
     var html = '';
 
     if (user.nombre || user.correo) {
-        html += '<div style="display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--dc-border);margin-bottom:24px;">'
+        html += '<div style="display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid #e2e8f0;margin-bottom:18px;">'
             + '<div class="gu-avatar" style="width:52px;height:52px;font-size:1rem;background:' + color + ';">' + initials + '</div>'
-            + '<div><div style="font-size:.95rem;font-weight:800;color:var(--dc-text);">' + _guEsc(user.nombre||'Nuevo usuario') + '</div>'
-            + '<div style="font-size:.75rem;color:var(--dc-subtext);">' + _guEsc(user.correo||'') + '</div></div></div>';
+            + '<div><div style="font-size:.95rem;font-weight:800;color:#0f172a;">' + _guEsc(user.nombre||'Nuevo usuario') + '</div>'
+            + '<div style="font-size:.75rem;color:#64748b;">' + _guEsc(user.correo||'') + '</div></div></div>';
     }
 
     html += '<div class="gu-field-label">Nombre Completo</div>'
-        + '<input type="text" id="guUserNombre" class="dc-input" value="' + _guEsc(user.nombre||'') + '" required>';
+        + '<input type="text" id="guUserNombre" class="form-control" value="' + _guEsc(user.nombre||'') + '" required>';
     html += '<div class="gu-field-label">Cargo</div>'
-        + '<input type="text" id="guUserCargo" class="dc-input" value="' + _guEsc(user.cargo||'') + '">';
+        + '<input type="text" id="guUserCargo" class="form-control" value="' + _guEsc(user.cargo||'') + '">';
     html += '<div class="gu-field-label">Correo (login)</div>'
-        + '<input type="email" id="guUserCorreo" class="dc-input" value="' + _guEsc(user.correo||'') + '" required>';
+        + '<input type="email" id="guUserCorreo" class="form-control" value="' + _guEsc(user.correo||'') + '" required>';
 
     // Contraseña: usuario existente vs nuevo
     if (user.id) {
-        html += '<button style="background:transparent; border:none; color:var(--dc-primary); font-size:0.85rem; cursor:pointer; margin-bottom: 16px; padding: 0;" type="button" onclick="window._guToggleChangePass()">'
-            + '<i class="bi bi-key-fill me-1"></i>Restablecer contraseña</button>'
-            + '<div id="guChangePassSection" style="display:none;">'
-            + '<div class="gu-field-label">Nueva contraseña</div>'
-            + '<div style="display:flex; position:relative; margin-bottom:8px;">'
-            + '<input type="password" id="guUserPassword" class="dc-input" placeholder="Escribe la nueva contraseña..." style="margin-bottom:0; padding-right:40px;">'
-            + '<button style="position:absolute; right:8px; top:5px; border:none; background:transparent; color:var(--dc-subtext); cursor:pointer;" type="button" onclick="window._guToggleEye(\'guUserPassword\',this)" title="Ver contraseña">'
+        html += '<div class="gu-field-label">Contraseña actual</div>'
+            + '<div class="input-group mb-1">'
+            + '<input type="password" id="guUserPassActual" class="form-control" value="' + _guEsc(user.password||'') + '" readonly style="background:#f8fafc;color:#0f172a;">'
+            + '<button class="btn btn-outline-secondary" type="button" onclick="window._guToggleEye(\'guUserPassActual\',this)" title="Ver contraseña">'
             + '<i class="bi bi-eye"></i></button></div>'
-            + '<div style="font-size:.72rem;color:var(--dc-subtext);margin-bottom:24px;">Si escribes una contraseña, el usuario perderá su acceso anterior y deberá usar esta.</div>'
+            + '<button class="btn btn-sm btn-outline-primary mt-1" type="button" onclick="window._guToggleChangePass()">'
+            + '<i class="bi bi-pencil me-1"></i>Cambiar contraseña</button>'
+            + '<div id="guChangePassSection" style="display:none;margin-top:10px;">'
+            + '<div class="gu-field-label">Nueva contraseña</div>'
+            + '<div class="input-group">'
+            + '<input type="password" id="guUserPassword" class="form-control" placeholder="Nueva contraseña...">'
+            + '<button class="btn btn-outline-secondary" type="button" onclick="window._guToggleEye(\'guUserPassword\',this)" title="Ver contraseña">'
+            + '<i class="bi bi-eye"></i></button></div>'
+            + '<div style="font-size:.72rem;color:#64748b;margin-top:4px;">Deja vacío para no cambiar la contraseña.</div>'
             + '</div>';
     } else {
-        // Nuevo usuario: campo simple con ojo
         html += '<div class="gu-field-label">Contraseña</div>'
-            + '<div style="display:flex; position:relative; margin-bottom:24px;">'
-            + '<input type="password" id="guUserPassword" class="dc-input" placeholder="Contraseña inicial..." style="margin-bottom:0; padding-right:40px;">'
-            + '<button style="position:absolute; right:8px; top:5px; border:none; background:transparent; color:var(--dc-subtext); cursor:pointer;" type="button" onclick="window._guToggleEye(\'guUserPassword\',this)" title="Ver contraseña">'
+            + '<div class="input-group">'
+            + '<input type="password" id="guUserPassword" class="form-control" placeholder="Contraseña inicial...">'
+            + '<button class="btn btn-outline-secondary" type="button" onclick="window._guToggleEye(\'guUserPassword\',this)" title="Ver contraseña">'
             + '<i class="bi bi-eye"></i></button></div>';
     }
     html += '<div style="max-width:200px;"><div class="gu-field-label">Estado</div>'
-        + '<select id="guUserEstado" class="dc-input">'
+        + '<select id="guUserEstado" class="form-select">'
         + '<option value="Activo"' + (user.estado==='Activo'?' selected':'') + '>Activo</option>'
         + '<option value="Inactivo"' + (user.estado==='Inactivo'?' selected':'') + '>Inactivo</option>'
         + '</select></div>';
 
     html += '<div class="gu-section-header" style="margin-top:18px;">Rol Asignado</div>'
-        + '<div style="font-size:.75rem;color:var(--dc-subtext);margin:8px 0 6px;">El usuario hereda los permisos del rol seleccionado.</div>'
-        + '<select id="guUserRolId" class="dc-input">'
+        + '<div style="font-size:.75rem;color:#64748b;margin:8px 0 6px;">El usuario hereda los permisos del rol seleccionado.</div>'
+        + '<select id="guUserRolId" class="form-select">'
         + '<option value="">— Sin rol asignado —</option>';
     window.dataGlobalRoles.forEach(function(r) {
         html += '<option value="' + r.id + '"' + (user.rol_id==r.id?' selected':'') + '>'
@@ -716,21 +488,21 @@ function _guBuildUserPanel(user) {
     // Última sesión
     if (user.id && (user.ultimo_acceso || user.ultimo_ip || user.ultimo_dispositivo)) {
         html += '<div class="gu-section-header" style="margin-top:18px;">Última Sesión</div>'
-            + '<div style="background:var(--dc-bg);border:1px solid var(--dc-border);border-radius:8px;padding:12px;margin-top:8px;">';
+            + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-top:8px;">';
         if (user.ultimo_acceso) {
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--dc-border);">'
-                + '<span style="font-size:.75rem;color:var(--dc-subtext);"><i class="bi bi-clock me-1"></i>Último acceso</span>'
-                + '<span style="font-size:.75rem;font-weight:600;color:var(--dc-text);">' + _guRelTime(user.ultimo_acceso) + '</span></div>';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #e2e8f0;">'
+                + '<span style="font-size:.75rem;color:#64748b;"><i class="bi bi-clock me-1"></i>Último acceso</span>'
+                + '<span style="font-size:.75rem;font-weight:600;color:#0f172a;">' + _guRelTime(user.ultimo_acceso) + '</span></div>';
         }
         if (user.ultimo_ip) {
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--dc-border);">'
-                + '<span style="font-size:.75rem;color:var(--dc-subtext);"><i class="bi bi-globe me-1"></i>Dirección IP</span>'
-                + '<span style="font-size:.75rem;font-weight:600;color:var(--dc-text);font-family:monospace;">' + _guEsc(user.ultimo_ip) + '</span></div>';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #e2e8f0;">'
+                + '<span style="font-size:.75rem;color:#64748b;"><i class="bi bi-globe me-1"></i>Dirección IP</span>'
+                + '<span style="font-size:.75rem;font-weight:600;color:#0f172a;font-family:monospace;">' + _guEsc(user.ultimo_ip) + '</span></div>';
         }
         if (user.ultimo_dispositivo) {
             html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;gap:10px;">'
-                + '<span style="font-size:.75rem;color:var(--dc-subtext);flex-shrink:0;"><i class="bi bi-phone me-1"></i>Dispositivo</span>'
-                + '<span style="font-size:.72rem;color:var(--dc-subtext);text-align:right;word-break:break-all;">' + _guEsc(user.ultimo_dispositivo) + '</span></div>';
+                + '<span style="font-size:.75rem;color:#64748b;flex-shrink:0;"><i class="bi bi-phone me-1"></i>Dispositivo</span>'
+                + '<span style="font-size:.72rem;color:#64748b;text-align:right;word-break:break-all;">' + _guEsc(user.ultimo_dispositivo) + '</span></div>';
         }
         html += '</div>';
     }
@@ -863,60 +635,61 @@ window.guEliminarUsuario = async function(id) {
 };
 
 window._guShowCredsPopup = function(nombre, correo, password, esReset) {
-    var titulo    = esReset ? 'Contraseña actualizada' : 'Usuario creado exitosamente';
-    var subtitulo = esReset ? 'Comparte la nueva clave con el miembro' : 'Comparte estas credenciales con el nuevo miembro';
+    var titulo    = esReset ? 'Contraseña Actualizada' : 'Usuario Creado Exitosamente';
+    var subtitulo = esReset ? 'Comparte la nueva clave de acceso con el usuario' : 'Comparte estas credenciales con el nuevo miembro';
     var icono     = esReset ? 'bi-key-fill' : 'bi-person-check-fill';
     var iconoBg   = esReset ? '#f59e0b' : '#10b981';
 
-    var lineaUsuario = esReset ? '' : ('\u2753 Usuario: ' + nombre + '\n');
-    var textoWA = '\u00a1Hola ' + nombre + '! \u{1F44B}\n\n'
-        + (esReset ? 'Tu contrase\u00f1a en Azkell Fleet fue restablecida:\n\n'
-                   : 'Te comparto tus credenciales para Azkell Fleet:\n\n')
-        + '\u{1F4E7} Correo: ' + correo + '\n'
-        + '\u{1F511} Contrase\u00f1a: ' + password + '\n'
-        + '\u{1F310} Acceso: ' + window.location.origin + '\n\n'
-        + '\u26A0\uFE0F Guarda estos datos en un lugar seguro.';
+    var textoWA = '¡Hola ' + nombre + '! 👋\n\n'
+        + (esReset ? 'Tu contraseña en Azkell Fleet fue restablecida:\n\n'
+                   : 'Te comparto tus credenciales de acceso para el ERP:\n\n')
+        + '📧 Correo: ' + correo + '\n'
+        + '🔑 Contraseña: ' + password + '\n'
+        + '🌐 Acceso: ' + window.location.origin + '\n\n'
+        + '⚠️ Por tu seguridad, guarda estos datos en un lugar seguro.';
 
     var waLink = 'https://wa.me/?text=' + encodeURIComponent(textoWA);
 
+    // Remover cualquier overlay previo
+    var old = document.getElementById('guCredsOverlay');
+    if (old) old.remove();
+
     var overlay = document.createElement('div');
     overlay.id = 'guCredsOverlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
-    overlay.innerHTML = '<div style="background:var(--dc-bg);border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.55);">'
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.72);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+    
+    overlay.innerHTML = '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:24px;padding:28px 24px;max-width:440px;width:100%;box-shadow:0 25px 60px -15px rgba(0,0,0,0.35);font-family:\'Plus Jakarta Sans\',sans-serif;box-sizing:border-box;">'
 
         // Header con ícono + títulos
-        + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;">'
-        + '<div style="width:46px;height:46px;border-radius:50%;background:' + iconoBg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
-        + '<i class="bi ' + icono + '" style="color:#fff;font-size:1.2rem;"></i></div>'
-        + '<div><div style="font-size:.95rem;font-weight:800;color:var(--dc-text);">' + titulo + '</div>'
-        + '<div style="font-size:.75rem;color:var(--dc-subtext);margin-top:1px;">' + subtitulo + '</div></div></div>'
+        + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">'
+        + '<div style="width:48px;height:48px;border-radius:14px;background:' + iconoBg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(16,185,129,0.3);">'
+        + '<i class="bi ' + icono + '" style="color:#ffffff;font-size:1.35rem;"></i></div>'
+        + '<div><div style="font-size:1.05rem;font-weight:800;color:#0f172a;line-height:1.2;">' + titulo + '</div>'
+        + '<div style="font-size:0.78rem;color:#64748b;margin-top:3px;">' + subtitulo + '</div></div></div>'
 
         // Card de credenciales
-        + '<div style="background:var(--dc-bg);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px;">'
-        + '<div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dc-subtext);margin-bottom:14px;">Credenciales de acceso</div>'
+        + '<div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:16px;padding:18px;margin-bottom:22px;">'
+        + '<div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:12px;display:flex;align-items:center;gap:6px;">'
+        + '<i class="bi bi-shield-lock-fill text-primary"></i> Credenciales de Acceso</div>'
 
         // Correo
-        + '<div style="margin-bottom:12px;">'
-        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
-        + '<i class="bi bi-envelope-fill" style="font-size:.75rem;color:var(--dc-subtext);"></i>'
-        + '<span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--dc-subtext);">Correo</span></div>'
-        + '<div style="font-size:.9rem;font-weight:700;color:var(--dc-text);font-family:monospace;word-break:break-all;">' + _guEsc(correo) + '</div></div>'
+        + '<div style="margin-bottom:14px;">'
+        + '<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;color:#475569;margin-bottom:4px;">Correo (Login)</div>'
+        + '<div style="font-size:0.92rem;font-weight:700;color:#0f172a;font-family:ui-monospace,monospace;background:#ffffff;border:1px solid #cbd5e1;padding:8px 12px;border-radius:10px;word-break:break-all;">' + _guEsc(correo) + '</div></div>'
 
         // Contraseña
         + '<div>'
-        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
-        + '<i class="bi bi-key-fill" style="font-size:.75rem;color:var(--dc-subtext);"></i>'
-        + '<span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--dc-subtext);">Contrase\u00f1a</span></div>'
-        + '<div style="font-size:.9rem;font-weight:700;color:var(--dc-text);font-family:monospace;">' + _guEsc(password) + '</div>'
+        + '<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;color:#475569;margin-bottom:4px;">Contraseña Asignada</div>'
+        + '<div style="font-size:0.95rem;font-weight:800;color:#0284c7;font-family:ui-monospace,monospace;background:#ffffff;border:1px solid #cbd5e1;padding:8px 12px;border-radius:10px;letter-spacing:1px;">' + _guEsc(password) + '</div>'
         + '</div></div>'
 
         // Botones
-        + '<div style="display:flex;gap:8px;">'
+        + '<div style="display:flex;gap:10px;">'
         + '<a href="' + waLink + '" target="_blank" '
-        + 'style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;font-size:.82rem;text-decoration:none;">'
-        + '<i class="bi bi-whatsapp" style="font-size:1rem;"></i> Enviar por WhatsApp</a>'
+        + 'style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#22c55e;color:#ffffff;border-radius:12px;padding:12px 16px;font-weight:700;font-size:0.86rem;text-decoration:none;box-shadow:0 4px 14px rgba(34,197,94,0.35);transition:transform 0.15s ease;">'
+        + '<i class="bi bi-whatsapp" style="font-size:1.1rem;"></i> Enviar por WhatsApp</a>'
         + '<button onclick="document.getElementById(\'guCredsOverlay\').remove()" '
-        + 'style="background:var(--border);color:var(--dc-text);border:none;border-radius:10px;padding:10px 18px;font-weight:600;font-size:.82rem;cursor:pointer;">Cerrar</button>'
+        + 'style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:12px;padding:12px 20px;font-weight:700;font-size:0.86rem;cursor:pointer;transition:background 0.15s ease;">Cerrar</button>'
         + '</div></div>';
 
     document.body.appendChild(overlay);
@@ -942,109 +715,21 @@ window.init_usuarios = function() {
     window.guCargarTodo(true);
 };
 
-
-
 window._guCheckCascade = function(el, modKey, action) {
     if (!el || el.classList.contains('readonly')) return;
     var chk = el.checked;
-    // Auto-activación: Si se activa c, e, d => activa l también
+    
+    // Auto-activación: Si se activa c, e, d => activa l
     if (chk && (action === 'c' || action === 'e' || action === 'd')) {
         var lEl = document.getElementById('pt-' + modKey + '-l');
         if (lEl && !lEl.checked) lEl.checked = true;
     }
+    
     // Auto-desactivación: Si se desactiva l => desactiva c, e, d
     if (!chk && action === 'l') {
         ['c', 'e', 'd'].forEach(function(a) {
             var subEl = document.getElementById('pt-' + modKey + '-' + a);
             if (subEl && subEl.checked) subEl.checked = false;
         });
-    }
-};
-
-window._guToggleHub = function(el, hubKey) {
-    var enabled = el && el.checked;
-    
-    var btn = document.getElementById('gu-hub-btn-' + hubKey);
-    if (btn) btn.style.display = enabled ? '' : 'none';
-
-    var lbl = document.getElementById('pt-' + hubKey + '-lbl');
-    if (lbl) lbl.innerText = enabled ? 'Habilitado' : 'Deshabilitado';
-
-    function setDisplay(parentKey, isVisible) {
-        document.querySelectorAll('.gu-perm-child[data-parent="' + parentKey + '"]').forEach(function(row) {
-            row.style.display = isVisible ? '' : 'none';
-            var childHubMatch = row.id.match(/^gu-hub-row-(.+)$/);
-            if (childHubMatch) {
-                var childHubKey = childHubMatch[1];
-                var childHubEl = document.getElementById('pt-' + childHubKey + '-enabled');
-                var childHubEnabled = childHubEl ? childHubEl.checked : false;
-                var icon = document.getElementById('gu-hub-icon-' + childHubKey);
-                var isExpanded = icon && icon.classList.contains('bi-chevron-up');
-                setDisplay(childHubKey, isVisible && childHubEnabled && isExpanded);
-            }
-        });
-    }
-    setDisplay(hubKey, enabled);
-
-    // Actualizar icono expand
-    var icon = document.getElementById('gu-hub-icon-' + hubKey);
-    if (icon) {
-        icon.className = 'bi bi-chevron-' + (enabled ? 'up' : 'down');
-    }
-    // Si se deshabilita el hub, desactivar todos los permisos hijos
-    if (!enabled) {
-        document.querySelectorAll('[id^="pt-"]').forEach(function(chk) {
-            var modK = (chk.id || '').replace(/^pt-/, '').replace(/-(l|c|e|d|enabled)$/, '');
-            var modDef = window._GU_MODULOS.find(function(m){ return m.key === modK; });
-            if (modDef && modDef.parent === hubKey) {
-                chk.checked = false;
-                if (chk.id.endsWith('-enabled')) {
-                    // Si el hijo es un hub, también aplicar en cascada
-                    window._guToggleHub(chk, modK);
-                }
-            }
-        });
-    }
-};
-
-// ── Expand/collapse hub children section ─────────────────────────
-window._guExpandHub = function(hubKey) {
-    var icon = document.getElementById('gu-hub-icon-' + hubKey);
-    var children = document.querySelectorAll('.gu-perm-child[data-parent="' + hubKey + '"]');
-    if (!children.length) return;
-    var isHidden = (children[0].style.display === 'none');
-    
-    function setDisplay(parentKey, isVisible) {
-        document.querySelectorAll('.gu-perm-child[data-parent="' + parentKey + '"]').forEach(function(row) {
-            row.style.display = isVisible ? '' : 'none';
-            var childHubMatch = row.id.match(/^gu-hub-row-(.+)$/);
-            if (childHubMatch) {
-                var childHubKey = childHubMatch[1];
-                var childHubEl = document.getElementById('pt-' + childHubKey + '-enabled');
-                var childHubEnabled = childHubEl ? childHubEl.checked : false;
-                var iconC = document.getElementById('gu-hub-icon-' + childHubKey);
-                var childExpanded = iconC && iconC.classList.contains('bi-chevron-up');
-                setDisplay(childHubKey, isVisible && childHubEnabled && childExpanded);
-            }
-        });
-    }
-    
-    setDisplay(hubKey, isHidden);
-    if (icon) icon.className = 'bi bi-chevron-' + (isHidden ? 'up' : 'down');
-};
-
-
-
-
-setTimeout(function() { window.guSetTab('roles'); window.guCargarTodo(); }, 100);
-
-window.guAbrirSelectorAccionMobile = function() {
-    var modalEl = document.getElementById('modalAccionUsuariosMobile');
-    if (modalEl && modalEl.parentElement !== document.body) {
-        document.body.appendChild(modalEl);
-    }
-    if (modalEl) {
-        var m = bootstrap.Modal.getOrCreateInstance(modalEl);
-        if (m) m.show();
     }
 };
