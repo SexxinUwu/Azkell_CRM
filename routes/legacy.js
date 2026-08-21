@@ -58,15 +58,17 @@ router.post('/importarPlacasMasivo', async (req, res) => {
     const query = `
         INSERT INTO placas (
             placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color,
-            nro_motor, nro_caja, nro_corona, nro_vin, configuracion, anio,
-            combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso
+            nro_motor, nro_caja, nro_corona, nro_vin, configuracion,
+            tanque_1, tanque_2, tanque_3, capacidad_tanque,
+            anio, combustible, tara, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso
         ) VALUES ?
         ON DUPLICATE KEY UPDATE
             cliente=VALUES(cliente), ruc_dni=VALUES(ruc_dni), marca=VALUES(marca),
             modelo_uts=VALUES(modelo_uts), tipo=VALUES(tipo), sub_tipo=VALUES(sub_tipo),
             color=VALUES(color), nro_motor=VALUES(nro_motor), nro_caja=VALUES(nro_caja),
             nro_corona=VALUES(nro_corona), nro_vin=VALUES(nro_vin), configuracion=VALUES(configuracion),
-            anio=VALUES(anio), combustible=VALUES(combustible), carga_util=VALUES(carga_util),
+            tanque_1=VALUES(tanque_1), tanque_2=VALUES(tanque_2), tanque_3=VALUES(tanque_3), capacidad_tanque=VALUES(capacidad_tanque),
+            anio=VALUES(anio), combustible=VALUES(combustible), tara=VALUES(tara), carga_util=VALUES(carga_util),
             peso_neto=VALUES(peso_neto), peso_bruto=VALUES(peso_bruto), estado=VALUES(estado),
             uts=VALUES(uts), motora=VALUES(motora), llantas=VALUES(llantas), en_uso=VALUES(en_uso)
     `;
@@ -84,27 +86,32 @@ router.post('/importarPlacasMasivo', async (req, res) => {
             const vals = lote.map(r => [
                 (r.placa || r.PLACA || '').toString().trim().toUpperCase(),
                 r.cliente || r.CLIENTE || '',
-                r.ruc_dni || r['RUC / DNI'] || r.RUC_DNI || '',
+                r.ruc_dni || r['RUC / DNI'] || r['RUC/DNI'] || r.RUC_DNI || '',
                 r.marca || r.MARCA || '',
-                r.modelo_uts || r['MODELO UTS'] || r.MODELO_UTS || r.modelo || '',
+                r.modelo_uts || r['MODELO UTS'] || r.MODELO_UTS || r.modelo || r.MODELO || '',
                 r.tipo || r.TIPO || '',
                 r.sub_tipo || r['SUB TIPO'] || r.SUB_TIPO || '',
                 r.color || r.COLOR || '',
-                r.nro_motor || r['Nº MOTOR'] || r.NRO_MOTOR || '',
-                r.nro_caja || r['Nº CAJA'] || r.NRO_CAJA || '',
-                r.nro_corona || r['Nº CORONA'] || r.NRO_CORONA || '',
-                r.nro_vin || r['Nº VIN'] || r.NRO_VIN || '',
-                r.configuracion || r.CONFIGURACION || '',
+                r.nro_motor || r['Nº MOTOR'] || r['NRO MOTOR'] || r.NRO_MOTOR || '',
+                r.nro_caja || r['Nº CAJA'] || r['NRO CAJA'] || r.NRO_CAJA || '',
+                r.nro_corona || r['Nº CORONA'] || r['NRO CORONA'] || r.NRO_CORONA || '',
+                r.nro_vin || r['Nº VIN'] || r['NRO VIN'] || r.NRO_VIN || '',
+                r.configuracion || r.CONFIGURACION || r['CONFIGURACIÓN'] || '',
+                r.tanque_1 || r['TANQUE 1'] || r['Tanque 1'] || r.tanque1 || r.TANQUE1 || '',
+                r.tanque_2 || r['TANQUE 2'] || r['Tanque 2'] || r.tanque2 || r.TANQUE2 || '',
+                r.tanque_3 || r['TANQUE 3'] || r['Tanque 3'] || r.tanque3 || r.TANQUE3 || '',
+                r.capacidad_tanque || r['CAPACIDAD DE TANQUE TOTAL'] || r['Capacitad de Tanque Total'] || r['CAPACIDAD TANQUE TOTAL'] || r['Capacidad de Tanque Total'] || r['Capacidad Tanque Total'] || r['CAPACIDAD TOTAL'] || '',
                 r.anio || r.AÑO || r.ANIO || '',
                 (r.combustible || r.COMBUSTIBLE || '').replace('Dií©sel','DIESEL').replace('DIÍ©SEL','DIESEL'),
-                r.carga_util || r['CARGA UTIL'] || r.CARGA_UTIL || '',
+                r.tara || r.TARA || r.Tara || '',
+                r.carga_util || r['CARGA UTIL'] || r['CARGA ÚTIL'] || r.CARGA_UTIL || '',
                 r.peso_neto || r['PESO NETO'] || r.PESO_NETO || '',
                 r.peso_bruto || r['PESO BRUTO'] || r.PESO_BRUTO || '',
                 r.estado || r.ESTADO || 'Activa',
                 r.uts || r.UTS || '',
                 r.motora || r.MOTORA || '',
                 r.llantas || r.LLANTAS || '',
-                r.en_uso || r['EN USO?'] || r.EN_USO || ''
+                r.en_uso || r['EN USO?'] || r['EN USO'] || r.EN_USO || ''
             ]);
 
             try {
@@ -414,9 +421,6 @@ router.post('/:metodo', async (req, res) => {
     console.log(`📡 El sistema solicitó: ${metodo}`);
 
     if (metodo === 'obtenerDatosPlacas') {
-        // Auto-migrate: add wialon_name if missing
-        reqDb.query("ALTER TABLE placas ADD COLUMN wialon_name VARCHAR(100) DEFAULT NULL", () => {});
-
         const sql = `SELECT * FROM placas`;
         reqDb.query(sql, (err, results) => {
             if (err) { console.error("Error leyendo placas:", err); return res.json({ data: [] }); }
@@ -446,7 +450,12 @@ router.post('/:metodo', async (req, res) => {
                 r.motora || '',          // 20: Motora O No Motora
                 r.llantas || '',         // 21: Llantas
                 r.en_uso || '',          // 22: En Uso?
-                r.wialon_name || ''      // 23: Wialon Name
+                r.wialon_name || '',     // 23: Wialon Name
+                r.tanque_1 || '',        // 24: Tanque 1
+                r.tanque_2 || '',        // 25: Tanque 2
+                r.tanque_3 || '',        // 26: Tanque 3
+                r.capacidad_tanque || '',// 27: Capacidad Tanque Total
+                r.tara || ''             // 28: Tara
             ]);
             return res.json({ data });
         });
@@ -896,7 +905,7 @@ router.post('/:metodo', async (req, res) => {
         const form = req.body.args[0];
         const isEdit = metodo === 'actualizarPlaca';
 
-        // Extracción de las 23 variables del formulario HTML
+        // Extracción de las variables del formulario HTML
         const rawPlaca = isEdit ? form.editP_placa : form.p_placa;
         const placa = (rawPlaca || '').toString().trim().substring(0, 100).toUpperCase();
         const cliente = isEdit ? form.editP_cliente : form.p_cliente;
@@ -911,8 +920,13 @@ router.post('/:metodo', async (req, res) => {
         const nro_corona = isEdit ? form.editP_nro_corona : form.p_nro_corona;
         const nro_vin = isEdit ? form.editP_nro_vin : form.p_nro_vin;
         const conf = isEdit ? form.editP_conf : form.p_conf;
+        const tanque_1 = isEdit ? form.editP_tanque_1 : form.p_tanque_1;
+        const tanque_2 = isEdit ? form.editP_tanque_2 : form.p_tanque_2;
+        const tanque_3 = isEdit ? form.editP_tanque_3 : form.p_tanque_3;
+        const capacidad_tanque = isEdit ? form.editP_capacidad_tanque : form.p_capacidad_tanque;
         const anio = isEdit ? form.editP_anio : form.p_anio;
         const comb = isEdit ? form.editP_comb : form.p_comb;
+        const tara = isEdit ? form.editP_tara : form.p_tara;
         const carga_util = isEdit ? form.editP_carga_util : form.p_carga_util;
         const peso_neto = isEdit ? form.editP_peso_neto : form.p_peso_neto;
         const peso_bruto = isEdit ? form.editP_peso_bruto : form.p_peso_bruto;
@@ -924,17 +938,30 @@ router.post('/:metodo', async (req, res) => {
         const wialon_name = isEdit ? form.editP_wialon_name : form.p_wialon_name;
 
         const query = `
-            INSERT INTO placas (placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color, nro_motor, nro_caja, nro_corona, nro_vin, configuracion, anio, combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso, wialon_name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO placas (
+                placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color,
+                nro_motor, nro_caja, nro_corona, nro_vin, configuracion,
+                tanque_1, tanque_2, tanque_3, capacidad_tanque,
+                anio, combustible, tara, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso, wialon_name
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-            cliente=?, ruc_dni=?, marca=?, modelo_uts=?, tipo=?, sub_tipo=?, color=?, nro_motor=?, nro_caja=?, nro_corona=?, nro_vin=?, configuracion=?, anio=?, combustible=?, carga_util=?, peso_neto=?, peso_bruto=?, estado=?, uts=?, motora=?, llantas=?, en_uso=?, wialon_name=?
+            cliente=?, ruc_dni=?, marca=?, modelo_uts=?, tipo=?, sub_tipo=?, color=?,
+            nro_motor=?, nro_caja=?, nro_corona=?, nro_vin=?, configuracion=?,
+            tanque_1=?, tanque_2=?, tanque_3=?, capacidad_tanque=?,
+            anio=?, combustible=?, tara=?, carga_util=?, peso_neto=?, peso_bruto=?, estado=?, uts=?, motora=?, llantas=?, en_uso=?, wialon_name=?
         `;
 
-        // 24 valores para INSERT, luego 23 (sin placa) para ON DUPLICATE KEY UPDATE
-        const valores = [placa, cliente, ruc, marca, modelo, tipo, sub_tipo, color, nro_motor, nro_caja, nro_corona, nro_vin, conf, anio, comb, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, enuso, wialon_name];
+        const valores = [
+            placa, cliente, ruc, marca, modelo, tipo, sub_tipo, color,
+            nro_motor, nro_caja, nro_corona, nro_vin, conf,
+            tanque_1 || '', tanque_2 || '', tanque_3 || '', capacidad_tanque || '',
+            anio, comb, tara || '', carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, enuso, wialon_name
+        ];
         const valoresUpdate = valores.slice(1);
 
-        db.query(query, [...valores, ...valoresUpdate], (err) => {
+        const targetDb = req.db || db;
+        targetDb.query(query, [...valores, ...valoresUpdate], (err) => {
             if (err) return res.json({ data: "Error BD: " + err.message });
             broadcast('placas', metodo);
             const usuario = (req.body && req.body.usuario) || 'sistema';
