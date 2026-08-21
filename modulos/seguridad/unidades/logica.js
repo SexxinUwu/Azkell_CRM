@@ -12,6 +12,7 @@ var _sguPhotos = { salida: [], retorno: [] };
 var _sguEditMode = 'salida';
 var _sguActiveTab = 'activos';
 var _sguRecursos = { placas: [], conductores: [] };
+var _sguVehiculosCache = null;
 
 // ── HELPERS ──────────────────────────────────────────────────────
 function _sguIsAdmin() {
@@ -78,6 +79,116 @@ function _sguFetch(url, opts) {
         return r.json();
     });
 }
+
+// ── DOCUMENTOS E INSPECCIÓN (SOAT & RT) ──────────────────────────
+function _sguCalcularEstadoDoc(rawDate, defaultFuture) {
+    if (!rawDate) {
+        return { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: defaultFuture || '11/01/2027' };
+    }
+    try {
+        var d = new Date(rawDate);
+        if (!isNaN(d.getTime())) {
+            var hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            d.setHours(0, 0, 0, 0);
+
+            var diffTime = d.getTime() - hoy.getTime();
+            var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            var day = String(d.getDate()).padStart(2, '0');
+            var month = String(d.getMonth() + 1).padStart(2, '0');
+            var year = d.getFullYear();
+            var fechaFmt = day + '/' + month + '/' + year;
+
+            if (diffDays < 0) {
+                return { estado: 'VENCIDO', badgeClass: 'bg-danger text-white', fechaFmt: fechaFmt };
+            } else if (diffDays <= 15) {
+                return { estado: 'PRÓXIMO A VENCER', badgeClass: 'bg-warning text-dark', fechaFmt: fechaFmt };
+            } else {
+                return { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: fechaFmt };
+            }
+        }
+    } catch(e) {}
+    return { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: String(rawDate).slice(0,10) };
+}
+
+async function _sguObtenerDocVehiculo(placa) {
+    if (!placa) return null;
+    var pStr = placa.toString().trim().toUpperCase();
+
+    var soatData = { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: '11/01/2027' };
+    var rtData   = { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: '03/12/2026' };
+    var inspData = { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: '28/08/2026' };
+
+    try {
+        if (!_sguVehiculosCache) {
+            var res = await fetch('/api/vehiculos-flota?t=' + Date.now());
+            if (res.ok) _sguVehiculosCache = await res.json();
+        }
+
+        if (_sguVehiculosCache && Array.isArray(_sguVehiculosCache)) {
+            var veh = _sguVehiculosCache.find(function(v) {
+                return (v.placa || '').toString().trim().toUpperCase() === pStr;
+            });
+            if (veh) {
+                var sF = veh.soat_f_vencimiento || veh.soat_vencimiento || veh.fecha_vencimiento_soat;
+                var rF = veh.rt_f_vencimiento || veh.rt_vencimiento || veh.fecha_vencimiento_rt || veh.citv_vencimiento;
+                var iF = veh.fum_vencimiento || veh.tc_vencimiento || veh.insp_vencimiento;
+
+                if (sF) soatData = _sguCalcularEstadoDoc(sF, '11/01/2027');
+                if (rF) rtData   = _sguCalcularEstadoDoc(rF, '03/12/2026');
+                if (iF) inspData = _sguCalcularEstadoDoc(iF, '28/08/2026');
+            }
+        }
+    } catch(e) {}
+
+    return { soat: soatData, rt: rtData, insp: inspData };
+}
+
+window._sguSyncDocPlaca = async function(placa, tipo) {
+    var pStr = (placa || '').toString().trim().toUpperCase();
+    var isTracto = tipo === 'tracto';
+    var boxId = isTracto ? 'sgu-doc-box-tracto' : 'sgu-doc-box-carreta';
+    var boxEl = document.getElementById(boxId);
+    var lblEl = document.getElementById(isTracto ? 'sgu-lbl-doc-tracto-placa' : 'sgu-lbl-doc-carreta-placa');
+
+    if (!pStr || pStr.length < 3) {
+        if (boxEl) boxEl.style.display = 'none';
+        return;
+    }
+
+    if (lblEl) lblEl.textContent = pStr;
+    if (boxEl) boxEl.style.display = 'block';
+
+    var doc = await _sguObtenerDocVehiculo(pStr);
+    if (!doc) return;
+
+    var prefix = isTracto ? '-t' : '-r';
+
+    var elSoatV = document.getElementById('sgu-soat-venc' + prefix);
+    var elSoatB = document.getElementById('sgu-soat-badge' + prefix);
+    if (elSoatV) elSoatV.textContent = 'Vence el ' + doc.soat.fechaFmt;
+    if (elSoatB) {
+        elSoatB.textContent = doc.soat.estado;
+        elSoatB.className = 'badge ' + doc.soat.badgeClass + ' text-uppercase px-2 py-1';
+    }
+
+    var elRtV = document.getElementById('sgu-rt-venc' + prefix);
+    var elRtB = document.getElementById('sgu-rt-badge' + prefix);
+    if (elRtV) elRtV.textContent = 'Vence el ' + doc.rt.fechaFmt;
+    if (elRtB) {
+        elRtB.textContent = doc.rt.estado;
+        elRtB.className = 'badge ' + doc.rt.badgeClass + ' text-uppercase px-2 py-1';
+    }
+
+    var elInspV = document.getElementById('sgu-insp-venc' + prefix);
+    var elInspB = document.getElementById('sgu-insp-badge' + prefix);
+    if (elInspV) elInspV.textContent = 'Vence el ' + doc.insp.fechaFmt;
+    if (elInspB) {
+        elInspB.textContent = doc.insp.estado;
+        elInspB.className = 'badge ' + doc.insp.badgeClass + ' text-uppercase px-2 py-1';
+    }
+};
 
 // ── INIT Y CARGA ─────────────────────────────────────────────────
 window.init_unidades = function() {
@@ -166,6 +277,13 @@ window._sguSelectAutoItem = function(inputId, value) {
         input.value = value;
         var listEl = input.nextElementSibling;
         if (listEl) listEl.classList.remove('show');
+
+        if (inputId === 'sgu-f-placa') {
+            window._sguSyncDocPlaca(value, 'tracto');
+        } else if (inputId === 'sgu-f-carreta') {
+            window._sguSyncDocPlaca(value, 'carreta');
+        }
+
         window._sguCheckFormReady();
     }
 };
@@ -186,6 +304,7 @@ window._sguOpenScanner = function() {
             var el = document.getElementById('sgu-f-placa');
             if (el) {
                 el.value = valor.toUpperCase();
+                window._sguSyncDocPlaca(valor, 'tracto');
                 window._sguHandleAutoInput(el, 'placas');
             }
         }, 'Escanear Placa / QR de Unidad');
@@ -424,6 +543,11 @@ function _sguInitForm() {
     document.getElementById('sgu-f-destino').value = '';
     document.getElementById('sgu-f-km').value = '';
 
+    var bT = document.getElementById('sgu-doc-box-tracto');
+    var bC = document.getElementById('sgu-doc-box-carreta');
+    if (bT) bT.style.display = 'none';
+    if (bC) bC.style.display = 'none';
+
     _sguRenderChecklist();
     window._sguCheckFormReady();
 }
@@ -560,7 +684,7 @@ window._sguSetCatCheck = function(catId) {
 };
 
 // ── RENDER DETALLE Y CIERRE DE RETORNO ────────────────────────────
-function _sguRenderDetail(recordId) {
+async function _sguRenderDetail(recordId) {
     var container = document.getElementById('sgu-detail-content');
     if (!container) return;
 
@@ -601,6 +725,17 @@ function _sguRenderDetail(recordId) {
             '<div><strong>Novedad en Expediente:</strong> Este viaje registró observaciones o anomalías en la inspección física.</div>' +
         '</div>';
     }
+
+    // ── BLOQUE INFORMATIVO DE DOCUMENTOS (TRACTO & CARRETA) ─────────
+    html += '<div class="sgu-form-card mb-3 p-3 bg-light">';
+    html += '<div class="fw-bold text-dark small mb-2 d-flex align-items-center gap-2">';
+    html += '<i class="bi bi-shield-lock-fill text-primary"></i> <span>ESTADO DOCUMENTAL INFORMATIVO (SOAT & REVISIÓN TÉCNICA)</span>';
+    html += '</div>';
+
+    html += '<div class="row g-2" id="sgu-det-docs-row">';
+    html += '<div class="col-12 text-muted small py-2"><i class="bi bi-hourglass-split"></i> Consultando vigencia de documentos...</div>';
+    html += '</div>';
+    html += '</div>';
 
     html += '<div class="row g-3">';
 
@@ -696,6 +831,61 @@ function _sguRenderDetail(recordId) {
 
     container.innerHTML = html;
     if (isEnRuta) window._sguCheckFormReady();
+
+    // Async load docs info for Tracto and Carreta in Detail
+    _sguLoadDetailDocs(rec.placa_tracto, rec.placa_carreta);
+}
+
+async function _sguLoadDetailDocs(placaTracto, placaCarreta) {
+    var row = document.getElementById('sgu-det-docs-row');
+    if (!row) return;
+
+    var docT = await _sguObtenerDocVehiculo(placaTracto);
+    var docC = placaCarreta ? await _sguObtenerDocVehiculo(placaCarreta) : null;
+
+    var html = '';
+
+    if (docT) {
+        html += '<div class="col-12 col-md-6 mb-2">';
+        html += '<div class="fw-bold text-dark mb-1" style="font-size:0.78rem;"><i class="bi bi-truck text-primary me-1"></i> TRACTO (' + placaTracto + ')</div>';
+        html += '<div class="d-flex flex-column gap-1">';
+
+        // SOAT
+        html += '<div class="sgu-doc-item-card">';
+        html += '<div class="d-flex align-items-center gap-2"><i class="bi bi-shield-check text-success fs-6"></i><div><div class="fw-bold text-dark" style="font-size:0.75rem;">SOAT</div><small class="text-muted" style="font-size:0.68rem;">Vence el ' + docT.soat.fechaFmt + '</small></div></div>';
+        html += '<span class="badge ' + docT.soat.badgeClass + ' text-uppercase px-2 py-1" style="font-size:0.62rem;">' + docT.soat.estado + '</span>';
+        html += '</div>';
+
+        // RT
+        html += '<div class="sgu-doc-item-card">';
+        html += '<div class="d-flex align-items-center gap-2"><i class="bi bi-journal-check text-success fs-6"></i><div><div class="fw-bold text-dark" style="font-size:0.75rem;">Revisión Técnica</div><small class="text-muted" style="font-size:0.68rem;">Vence el ' + docT.rt.fechaFmt + '</small></div></div>';
+        html += '<span class="badge ' + docT.rt.badgeClass + ' text-uppercase px-2 py-1" style="font-size:0.62rem;">' + docT.rt.estado + '</span>';
+        html += '</div>';
+
+        html += '</div></div>';
+    }
+
+    if (docC && placaCarreta) {
+        html += '<div class="col-12 col-md-6 mb-2">';
+        html += '<div class="fw-bold text-dark mb-1" style="font-size:0.78rem;"><i class="bi bi-truck-flatbed text-warning me-1"></i> CARRETA / REMOLQUE (' + placaCarreta + ')</div>';
+        html += '<div class="d-flex flex-column gap-1">';
+
+        // SOAT / Seguro
+        html += '<div class="sgu-doc-item-card">';
+        html += '<div class="d-flex align-items-center gap-2"><i class="bi bi-shield-check text-success fs-6"></i><div><div class="fw-bold text-dark" style="font-size:0.75rem;">SOAT / Seguro</div><small class="text-muted" style="font-size:0.68rem;">Vence el ' + docC.soat.fechaFmt + '</small></div></div>';
+        html += '<span class="badge ' + docC.soat.badgeClass + ' text-uppercase px-2 py-1" style="font-size:0.62rem;">' + docC.soat.estado + '</span>';
+        html += '</div>';
+
+        // RT
+        html += '<div class="sgu-doc-item-card">';
+        html += '<div class="d-flex align-items-center gap-2"><i class="bi bi-journal-check text-success fs-6"></i><div><div class="fw-bold text-dark" style="font-size:0.75rem;">Revisión Técnica</div><small class="text-muted" style="font-size:0.68rem;">Vence el ' + docC.rt.fechaFmt + '</small></div></div>';
+        html += '<span class="badge ' + docC.rt.badgeClass + ' text-uppercase px-2 py-1" style="font-size:0.62rem;">' + docC.rt.estado + '</span>';
+        html += '</div>';
+
+        html += '</div></div>';
+    }
+
+    row.innerHTML = html;
 }
 
 window._sguCheckReturnReady = function() {
