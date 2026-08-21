@@ -177,10 +177,10 @@ module.exports = (db, logAudit) => {
             const urls = await Promise.all(archivos.map(async (arch) => {
                 const tipo = arch.fase || 'salida';
                 const ext = (arch.nombre || '').split('.').pop() || 'jpg';
-                // Generar sufijo pseudo-random para evitar colisiones si se suben múltiples al mismo tiempo
                 const rand = Math.random().toString(36).substring(2, 7);
                 const s3Key = `seguridad/unidades/${registroId}/${tipo}_${Date.now()}_${rand}.${ext}`;
-                const uploadUrl = await getPresignedUploadUrl(s3Key, arch.tipo || 'image/jpeg', 300); // 5 mins
+                // Generar URL pre-firmada estándar
+                const uploadUrl = await getPresignedUploadUrl(s3Key, 'image/jpeg', 600);
                 return { uploadUrl, key: s3Key, fase: tipo };
             }));
 
@@ -191,7 +191,7 @@ module.exports = (db, logAudit) => {
         }
     });
 
-    // ── POST /seguridad/unidades/:id/fotos/confirmar — Confirmar subida a DB ──
+    // ── POST /seguridad/unidades/:id/fotos/confirmar — Confirmar subida a DB en lote (Bulk) ──
     router.post('/seguridad/unidades/:id/fotos/confirmar', (req, res) => {
         const registroId = req.params.id;
         const exitosos = req.body.exitosos || []; // [{key: '...', fase: 'salida'}]
@@ -200,38 +200,30 @@ module.exports = (db, logAudit) => {
         const bucket = (process.env.AWS_BUCKET_NAME || '').trim();
         const region = (process.env.AWS_REGION || 'us-east-2').trim();
 
-        // Para evitar bloqueos con consultas separadas, iteramos o insertamos en bloque
         db.query(
             'SELECT COALESCE(MAX(orden), 0) AS maxOrden FROM seg_unidades_fotos WHERE registro_id = ?',
             [registroId],
             (errDb, rows) => {
                 if (errDb) return res.status(500).json({ error: errDb.message });
                 let orden = (rows && rows[0]) ? rows[0].maxOrden : 0;
-                // Usar inserts individuales para asegurar máxima compatibilidad
-                let procesados = 0;
-                let errores = 0;
-                let ultimoError = '';
-
-                exitosos.forEach(ex => {
+                
+                const values = exitosos.map(ex => {
                     orden++;
                     const fullUrl = `https://${bucket}.s3.${region}.amazonaws.com/${ex.key}`;
-                    db.query(
-                        'INSERT INTO seg_unidades_fotos (registro_id, tipo, url, orden) VALUES (?, ?, ?, ?)',
-                        [registroId, ex.fase || 'salida', fullUrl, orden],
-                        (err2) => {
-                            if (err2) {
-                                console.error('Error insertando foto:', err2.message);
-                                errores++;
-                                ultimoError = err2.message;
-                            }
-                            procesados++;
-                            if (procesados === exitosos.length) {
-                                if (errores === procesados) return res.status(500).json({ error: 'MySQL Error: ' + ultimoError });
-                                res.json({ ok: true, guardados: procesados - errores });
-                            }
-                        }
-                    );
+                    return [registroId, ex.fase || 'salida', fullUrl, orden];
                 });
+
+                db.query(
+                    'INSERT INTO seg_unidades_fotos (registro_id, tipo, url, orden) VALUES ?',
+                    [values],
+                    (errInsert) => {
+                        if (errInsert) {
+                            console.error('Error bulk insert fotos:', errInsert.message);
+                            return res.status(500).json({ error: errInsert.message });
+                        }
+                        res.json({ ok: true, guardados: values.length });
+                    }
+                );
             }
         );
     });
