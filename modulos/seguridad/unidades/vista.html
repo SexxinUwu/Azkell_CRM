@@ -435,44 +435,74 @@
     border-color: #bbf7d0;
 }
 
-/* ── Overlays y Modales ─────────────────────────────────────────── */
-.sgu-overlay {
+/* ── Bottom Drawers (Animados de abajo hacia arriba 88vh) ────────── */
+.sgu-drawer-backdrop {
     display: none;
     position: fixed;
     inset: 0;
+    background: rgba(15, 23, 42, 0.55);
     z-index: 1080;
-    background: rgba(15, 23, 42, 0.6);
     backdrop-filter: blur(4px);
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
 }
-.sgu-overlay.show { display: flex; }
-.sgu-modal-content {
-    background: #ffffff;
-    border-radius: 20px;
+.sgu-drawer-backdrop.show { display: block; }
+
+.sgu-bottom-drawer {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translate3d(-50%, 100%, 0);
     width: 100%;
-    max-width: 650px;
-    max-height: 90vh;
+    max-width: 740px;
+    height: 88vh;
+    max-height: 88vh;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-bottom: none;
+    border-radius: 26px 26px 0 0;
+    box-shadow: 0 -16px 48px rgba(0,0,0,0.25);
+    transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 1085;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.25);
-    animation: sguZoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    visibility: hidden;
 }
-@keyframes sguZoomIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+.sgu-bottom-drawer.show {
+    transform: translate3d(-50%, 0, 0);
+    visibility: visible;
 }
-.sgu-modal-header {
-    padding: 1rem 1.35rem;
+@media (max-width: 768px) {
+    .sgu-bottom-drawer {
+        max-width: 100%;
+        left: 0;
+        transform: translateY(100%);
+        height: 92vh;
+        max-height: 92vh;
+        border-radius: 24px 24px 0 0;
+    }
+    .sgu-bottom-drawer.show {
+        transform: translateY(0);
+    }
+}
+
+.sgu-drawer-handle {
+    width: 44px;
+    height: 5px;
+    background: #cbd5e1;
+    border-radius: 10px;
+    margin: 8px auto 4px auto;
+    flex-shrink: 0;
+}
+.sgu-drawer-header {
+    padding: 0.85rem 1.35rem;
     border-bottom: 1px solid #e2e8f0;
     display: flex;
     align-items: center;
     justify-content: space-between;
     background: #f8fafc;
+    flex-shrink: 0;
 }
-.sgu-modal-title {
+.sgu-drawer-title {
     margin: 0;
     font-size: 1.1rem;
     font-weight: 800;
@@ -481,10 +511,11 @@
     align-items: center;
     gap: 0.5rem;
 }
-.sgu-modal-body {
+.sgu-drawer-body {
     padding: 1.35rem;
     overflow-y: auto;
     flex: 1 1 0;
+    min-height: 0;
 }
 
 /* Checklist Items y Toggles */
@@ -542,35 +573,35 @@
 
 <div id="moduloSegUnidades" class="modulo-wrapper d-flex flex-column h-100">
 
-    <!-- ═══ 1. ENCABEZADO OFICIAL BENTO ERP ══════════════════════════ -->
-    <div class="sgu-header-box">
-        <div class="sgu-header-left">
-            <div class="sgu-header-icon">
-                <i class="bi bi-shield-check"></i>
-            </div>
-            <div>
-                <h4 class="sgu-header-title">CheckList de Unidades</h4>
-                <p class="sgu-header-sub">Inspección física de vehículos, control de salidas y retornos de flota</p>
-            </div>
-        </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button class="sgu-btn-top" onclick="window._sguRefresh()" title="Actualizar">
-                <i class="bi bi-arrow-clockwise fs-6"></i>
-            </button>
-            <button class="sgu-btn-top" onclick="window._sguExportarExcel()" title="Exportar Excel">
-                <i class="bi bi-file-earmark-excel text-success"></i> <span class="d-none d-sm-inline">Excel</span>
-            </button>
-            <button class="sgu-btn-top" onclick="window._sguOpenSettings()" title="Ajustes de Plantilla" data-perm-crear="seguridad_unidades">
-                <i class="bi bi-sliders"></i> <span class="d-none d-sm-inline">Plantilla</span>
-            </button>
-            <button class="sgu-btn-top sgu-btn-primary" onclick="window._sguNav('form')" data-perm-crear="seguridad_unidades">
-                <i class="bi bi-plus-lg"></i> <span>Registrar Salida</span>
-            </button>
-        </div>
-    </div>
-
     <!-- ═══ VISTA PRINCIPAL: LISTA / DASHBOARD ═════════════════════ -->
     <div id="sgu-list" class="sgu-view active">
+
+        <!-- ── 1. ENCABEZADO OFICIAL BENTO ERP (Solo en Vista Principal) ── -->
+        <div class="sgu-header-box">
+            <div class="sgu-header-left">
+                <div class="sgu-header-icon">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <div>
+                    <h4 class="sgu-header-title">CheckList de Unidades</h4>
+                    <p class="sgu-header-sub">Inspección física de vehículos, control de salidas y retornos de flota</p>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button class="sgu-btn-top" onclick="window._sguRefresh()" title="Actualizar">
+                    <i class="bi bi-arrow-clockwise fs-6"></i>
+                </button>
+                <button class="sgu-btn-top" onclick="window._sguExportarExcel()" title="Exportar Excel">
+                    <i class="bi bi-file-earmark-excel text-success"></i> <span class="d-none d-sm-inline">Excel</span>
+                </button>
+                <button class="sgu-btn-top" onclick="window._sguOpenSettings()" title="Ajustes de Plantilla" data-perm-crear="seguridad_unidades">
+                    <i class="bi bi-sliders"></i> <span class="d-none d-sm-inline">Plantilla</span>
+                </button>
+                <button class="sgu-btn-top sgu-btn-primary" onclick="window._sguNav('form')" data-perm-crear="seguridad_unidades">
+                    <i class="bi bi-plus-lg"></i> <span>Registrar Salida</span>
+                </button>
+            </div>
+        </div>
 
         <!-- ── 2. BENTO KPIS ROW (56px) ────────────────────────────── -->
         <div class="row g-2 mb-3">
@@ -671,7 +702,7 @@
         <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
             <div class="d-flex align-items-center gap-2">
                 <button class="sgu-btn-top" onclick="window._sguNav('list')">
-                    <i class="bi bi-arrow-left"></i> Volver
+                    <i class="bi bi-arrow-left"></i> Volver a la Lista
                 </button>
                 <h5 class="fw-bold mb-0 text-dark">Registrar Salida de Unidad</h5>
             </div>
@@ -789,7 +820,7 @@
         <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2">
                 <button class="sgu-btn-top" onclick="window._sguNav('list'); window._sguLoadTemplate();">
-                    <i class="bi bi-arrow-left"></i> Volver
+                    <i class="bi bi-arrow-left"></i> Volver a la Lista
                 </button>
                 <h5 class="fw-bold mb-0 text-dark">Constructor Dinámico de Plantilla</h5>
             </div>
@@ -814,79 +845,78 @@
 
 </div>
 
-<!-- ═══ MODAL OVERLAY: CHECKLIST INTERACTIVO ═══════════════════════ -->
-<div id="sgu-checklist-overlay" class="sgu-overlay" onclick="if(event.target===this) this.classList.remove('show');">
-    <div class="sgu-modal-content">
-        <div class="sgu-modal-header">
-            <h5 class="sgu-modal-title">
-                <i class="bi bi-clipboard2-check text-primary"></i> <span id="sgu-chk-overlay-title">Checklist de Inspección</span>
-            </h5>
-            <button class="btn btn-sm btn-primary rounded-3 px-3 fw-bold" onclick="document.getElementById('sgu-checklist-overlay').classList.remove('show'); window._sguCheckFormReady();">
-                Listo / Guardar
-            </button>
-        </div>
-        <div class="sgu-modal-body" id="sgu-checklist-container">
-            <!-- Checklist items rendered by logica.js -->
-        </div>
+<!-- ═══ BACKDROP GENERAL PARA DRAWERS ══════════════════════════════ -->
+<div id="sgu-drawer-backdrop" class="sgu-drawer-backdrop" onclick="window._sguCloseAllDrawers()"></div>
+
+<!-- ═══ BOTTOM DRAWER: CHECKLIST INTERACTIVO (LLENAR) ══════════════ -->
+<div id="sgu-checklist-overlay" class="sgu-bottom-drawer">
+    <div class="sgu-drawer-handle"></div>
+    <div class="sgu-drawer-header">
+        <h5 class="sgu-drawer-title">
+            <i class="bi bi-clipboard2-check text-primary"></i> <span id="sgu-chk-overlay-title">Checklist de Inspección</span>
+        </h5>
+        <button class="btn btn-sm btn-primary rounded-3 px-3 fw-bold" onclick="window._sguCloseAllDrawers(); window._sguCheckFormReady();">
+            Listo / Guardar
+        </button>
+    </div>
+    <div class="sgu-drawer-body" id="sgu-checklist-container">
+        <!-- Checklist items rendered by logica.js -->
     </div>
 </div>
 
-<!-- ═══ MODAL OVERLAY: AÑADIR FOTOS ════════════════════════════════ -->
-<div id="sgu-photos-bsheet" class="sgu-overlay" onclick="if(event.target===this) this.classList.remove('show');">
-    <div class="sgu-modal-content" style="max-width: 440px;">
-        <div class="sgu-modal-header">
-            <h5 class="sgu-modal-title"><i class="bi bi-camera text-primary"></i> Añadir Evidencias</h5>
-            <button class="btn-close" onclick="document.getElementById('sgu-photos-bsheet').classList.remove('show');"></button>
-        </div>
-        <div class="sgu-modal-body">
-            <p class="text-secondary small mb-3">Seleccione el método de captura fotográfica para la inspección:</p>
-            <div class="row g-2">
-                <div class="col-6">
-                    <label class="sgu-form-card d-flex flex-column align-items-center justify-content-center p-3 m-0 text-center cursor-pointer w-100 h-100" style="background:#f8fafc;cursor:pointer;">
-                        <div style="width:48px;height:48px;background:#0f172a;color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:0.5rem;">
-                            <i class="bi bi-camera"></i>
-                        </div>
-                        <span class="fw-bold text-dark small">Cámara</span>
-                        <input type="file" accept="image/*" capture="environment" style="display:none;" id="sgu-input-cam">
-                    </label>
-                </div>
-                <div class="col-6">
-                    <label class="sgu-form-card d-flex flex-column align-items-center justify-content-center p-3 m-0 text-center cursor-pointer w-100 h-100" style="background:#f8fafc;cursor:pointer;">
-                        <div style="width:48px;height:48px;background:#0284c7;color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:0.5rem;">
-                            <i class="bi bi-images"></i>
-                        </div>
-                        <span class="fw-bold text-dark small">Galería</span>
-                        <input type="file" accept="image/*" multiple style="display:none;" id="sgu-input-gal">
-                    </label>
-                </div>
+<!-- ═══ BOTTOM DRAWER: AÑADIR FOTOS ════════════════════════════════ -->
+<div id="sgu-photos-bsheet" class="sgu-bottom-drawer" style="height: auto; max-height: 50vh;">
+    <div class="sgu-drawer-handle"></div>
+    <div class="sgu-drawer-header">
+        <h5 class="sgu-drawer-title"><i class="bi bi-camera text-primary"></i> Añadir Evidencias</h5>
+        <button class="btn-close" onclick="window._sguCloseAllDrawers()"></button>
+    </div>
+    <div class="sgu-drawer-body">
+        <p class="text-secondary small mb-3">Seleccione el método de captura fotográfica para la inspección:</p>
+        <div class="row g-2">
+            <div class="col-6">
+                <label class="sgu-form-card d-flex flex-column align-items-center justify-content-center p-3 m-0 text-center cursor-pointer w-100 h-100" style="background:#f8fafc;cursor:pointer;">
+                    <div style="width:48px;height:48px;background:#0f172a;color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:0.5rem;">
+                        <i class="bi bi-camera"></i>
+                    </div>
+                    <span class="fw-bold text-dark small">Cámara</span>
+                    <input type="file" accept="image/*" capture="environment" style="display:none;" id="sgu-input-cam">
+                </label>
+            </div>
+            <div class="col-6">
+                <label class="sgu-form-card d-flex flex-column align-items-center justify-content-center p-3 m-0 text-center cursor-pointer w-100 h-100" style="background:#f8fafc;cursor:pointer;">
+                    <div style="width:48px;height:48px;background:#0284c7;color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:0.5rem;">
+                        <i class="bi bi-images"></i>
+                    </div>
+                    <span class="fw-bold text-dark small">Galería</span>
+                    <input type="file" accept="image/*" multiple style="display:none;" id="sgu-input-gal">
+                </label>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ═══ MODAL OVERLAY: GALERÍA DE FOTOS ════════════════════════════ -->
-<div id="sgu-gallery-overlay" class="sgu-overlay" onclick="if(event.target===this) this.classList.remove('show');">
-    <div class="sgu-modal-content">
-        <div class="sgu-modal-header">
-            <h5 class="sgu-modal-title"><i class="bi bi-images text-primary"></i> <span id="sgu-gallery-title">Galería de Evidencias</span></h5>
-            <button class="btn-close" onclick="document.getElementById('sgu-gallery-overlay').classList.remove('show');"></button>
-        </div>
-        <div class="sgu-modal-body" id="sgu-gallery-container">
-            <!-- Rendered by logica.js -->
-        </div>
+<!-- ═══ BOTTOM DRAWER: GALERÍA DE FOTOS ════════════════════════════ -->
+<div id="sgu-gallery-overlay" class="sgu-bottom-drawer">
+    <div class="sgu-drawer-handle"></div>
+    <div class="sgu-drawer-header">
+        <h5 class="sgu-drawer-title"><i class="bi bi-images text-primary"></i> <span id="sgu-gallery-title">Galería de Evidencias</span></h5>
+        <button class="btn-close" onclick="window._sguCloseAllDrawers()"></button>
+    </div>
+    <div class="sgu-drawer-body" id="sgu-gallery-container">
+        <!-- Rendered by logica.js -->
     </div>
 </div>
 
-<!-- ═══ MODAL OVERLAY: DETALLE CHECKLIST ═══════════════════════════ -->
-<div id="sgu-details-overlay" class="sgu-overlay" onclick="if(event.target===this) this.classList.remove('show');">
-    <div class="sgu-modal-content">
-        <div class="sgu-modal-header">
-            <h5 class="sgu-modal-title"><i class="bi bi-file-earmark-check text-primary"></i> <span id="sgu-details-title">Detalles del Checklist</span></h5>
-            <button class="btn-close" onclick="document.getElementById('sgu-details-overlay').classList.remove('show');"></button>
-        </div>
-        <div class="sgu-modal-body" id="sgu-details-container">
-            <!-- Rendered by logica.js -->
-        </div>
+<!-- ═══ BOTTOM DRAWER: DETALLE CHECKLIST (VER) ═════════════════════ -->
+<div id="sgu-details-overlay" class="sgu-bottom-drawer">
+    <div class="sgu-drawer-handle"></div>
+    <div class="sgu-drawer-header">
+        <h5 class="sgu-drawer-title"><i class="bi bi-file-earmark-check text-primary"></i> <span id="sgu-details-title">Detalles del Checklist</span></h5>
+        <button class="btn-close" onclick="window._sguCloseAllDrawers()"></button>
+    </div>
+    <div class="sgu-drawer-body" id="sgu-details-container">
+        <!-- Rendered by logica.js -->
     </div>
 </div>
 

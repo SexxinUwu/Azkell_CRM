@@ -37,9 +37,10 @@ function _sguTimestamp() {
     var dd = String(d.getDate()).padStart(2, '0');
     var mm = String(d.getMonth() + 1).padStart(2, '0');
     var yy = String(d.getFullYear()).slice(-2);
+    var yyyy = d.getFullYear();
     var HH = String(d.getHours()).padStart(2, '0');
     var MM = String(d.getMinutes()).padStart(2, '0');
-    return { date: dd + '-' + mm + '-' + yy, time: HH + ':' + MM };
+    return { date: dd + '-' + mm + '-' + yy, fullDate: dd + '/' + mm + '/' + yyyy, time: HH + ':' + MM };
 }
 
 function _sguToast(msg, icon) {
@@ -51,6 +52,23 @@ function _sguToast(msg, icon) {
     t.innerHTML = '<i class="bi ' + (icon || 'bi-check-circle-fill') + '" style="color:#10b981;"></i> ' + msg;
     c.appendChild(t);
     setTimeout(function() { if (t.parentNode) t.remove(); }, 3500);
+}
+
+// ── CONTROL DE DRAWERS (Abajo hacia Arriba) ──────────────────────
+window._sguCloseAllDrawers = function() {
+    var bd = document.getElementById('sgu-drawer-backdrop');
+    if (bd) bd.classList.remove('show');
+    ['sgu-checklist-overlay', 'sgu-photos-bsheet', 'sgu-gallery-overlay', 'sgu-details-overlay'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.classList.remove('show');
+    });
+};
+
+function _sguOpenDrawer(drawerId) {
+    var bd = document.getElementById('sgu-drawer-backdrop');
+    if (bd) bd.classList.add('show');
+    var drawer = document.getElementById(drawerId);
+    if (drawer) drawer.classList.add('show');
 }
 
 // ── API HELPERS ──────────────────────────────────────────────────
@@ -207,7 +225,6 @@ window._sguSetTab = function(tab) {
     var activePill = document.getElementById('sgu-tab-' + tab);
     if (activePill) activePill.classList.add('active');
 
-    // Highlight corresponding KPI card
     ['total', 'ruta', 'completados', 'alertas'].forEach(function(k) {
         var kpiEl = document.getElementById('sgu-kpi-' + k);
         if (kpiEl) kpiEl.classList.remove('active');
@@ -237,7 +254,6 @@ function _sguRenderList() {
     var mobileContainer = document.getElementById('sgu-mobile-records-list');
     if (!tableBody && !mobileContainer) return;
 
-    // Calcular KPIs
     var countTotal = _sguRecords.length;
     var countRuta = _sguRecords.filter(function(r) { return r.estado === 'en_ruta'; }).length;
     var countComp = _sguRecords.filter(function(r) { return r.estado === 'completado'; }).length;
@@ -260,7 +276,7 @@ function _sguRenderList() {
         if (_sguActiveTab === 'activos' && r.estado !== 'en_ruta') return false;
         if (_sguActiveTab === 'historial' && r.estado !== 'completado') return false;
         if (_sguActiveTab === 'alertas' && !(r.salida_has_alert || r.retorno_has_alert)) return false;
-        
+
         if (!search) return true;
         return (r.id || '').toLowerCase().indexOf(search) >= 0 ||
                (r.placa_tracto || '').toLowerCase().indexOf(search) >= 0 ||
@@ -295,7 +311,7 @@ function _sguRenderList() {
             : '<span class="sgu-badge sgu-badge-ok"><i class="bi bi-shield-check"></i> CONFORME</span>';
 
         var deleteBtn = isAdmin ? '<button class="sgu-action-btn sgu-btn-del-cell" onclick="event.stopPropagation(); window._sguDeleteRecord(\'' + rec.id + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '';
-        
+
         var actionBtn = isEnRuta
             ? '<button class="sgu-action-btn sgu-btn-ingresar-cell" onclick="event.stopPropagation(); window._sguShowView(\'detail\',\'' + rec.id + '\')"><i class="bi bi-arrow-left-circle-fill"></i> Ingresar</button>'
             : '<button class="sgu-action-btn sgu-btn-view-cell" onclick="event.stopPropagation(); window._sguShowView(\'detail\',\'' + rec.id + '\')"><i class="bi bi-eye"></i> Detalle</button>';
@@ -311,7 +327,6 @@ function _sguRenderList() {
             : '<div class="fw-bold text-dark" style="font-size:0.8rem;">' + (rec.retorno_fecha || '--') + ' ' + (rec.retorno_hora || '') + '</div>' +
               '<div class="text-secondary" style="font-size:0.75rem;">' + (rec.retorno_km ? rec.retorno_km + ' km' : 'Sin Km') + '</div>';
 
-        // 1. Fila Desktop Table
         htmlTable += '<tr onclick="window._sguShowView(\'detail\',\'' + rec.id + '\')">' +
             '<td><span class="fw-bold text-primary" style="font-family:monospace;font-size:0.85rem;">' + rec.id + '</span></td>' +
             '<td>' + placaText + '</td>' +
@@ -329,7 +344,6 @@ function _sguRenderList() {
             '</td>' +
         '</tr>';
 
-        // 2. Tarjeta Móvil
         htmlMobile += '<div class="sgu-form-card p-3 mb-2" onclick="window._sguShowView(\'detail\',\'' + rec.id + '\')">' +
             '<div class="d-flex justify-content-between align-items-center mb-2">' +
                 '<div>' + placaText + '</div>' +
@@ -462,21 +476,21 @@ window._sguCheckFormReady = function() {
     }
 };
 
-// ── OVERLAYS: CHECKLIST & FOTOS ──────────────────────────────────
+// ── OVERLAYS: CHECKLIST & FOTOS (Abajo hacia arriba) ─────────────
 window._sguOpenChecklist = function() {
     document.getElementById('sgu-chk-overlay-title').textContent = _sguEditMode === 'retorno' ? 'Checklist Retorno (Vuelta)' : 'Checklist Salida (Ida)';
     _sguRenderChecklist();
-    document.getElementById('sgu-checklist-overlay').classList.add('show');
+    _sguOpenDrawer('sgu-checklist-overlay');
 };
 
 window._sguOpenPhotosChooser = function(tipo) {
-    document.getElementById('sgu-photos-bsheet').classList.add('show');
-
     var inputCam = document.getElementById('sgu-input-cam');
     var inputGal = document.getElementById('sgu-input-gal');
 
     inputCam.onchange = function() { _sguHandlePhotoInput(this, tipo); };
     inputGal.onchange = function() { _sguHandlePhotoInput(this, tipo); };
+
+    _sguOpenDrawer('sgu-photos-bsheet');
 };
 
 function _sguHandlePhotoInput(input, tipo) {
@@ -487,7 +501,7 @@ function _sguHandlePhotoInput(input, tipo) {
         _sguPhotos[tipo].push({ url: url, file: file, uploaded: false });
     });
     input.value = '';
-    document.getElementById('sgu-photos-bsheet').classList.remove('show');
+    window._sguCloseAllDrawers();
     _sguToast('Fotos adjuntadas (' + _sguPhotos[tipo].length + ')');
     window._sguCheckFormReady();
 }
@@ -590,7 +604,7 @@ function _sguRenderDetail(recordId) {
 
     html += '<div class="row g-3">';
 
-    // Columna Izquierda: Información del Viaje / Salida
+    // Columna Izquierda: Información de Salida
     html += '<div class="col-12 col-lg-6">';
     html += '<div class="sgu-form-card">';
     html += '<div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">';
@@ -603,7 +617,7 @@ function _sguRenderDetail(recordId) {
     html += '<div class="col-6"><span class="sgu-form-label">Destino Reportado</span><div class="fw-bold text-dark fs-6">' + (rec.destino || '---') + '</div></div>';
     html += '</div>';
 
-    html += '<div class="d-flex gap-2">';
+    html += '<div class="d-flex gap-2 flex-wrap">';
     html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerDetalles(\'salida\')"><i class="bi bi-list-check"></i> Ver Checklist</button>';
     html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerFotos(\'salida\')"><i class="bi bi-images"></i> Fotos (' + (rec.fotos || []).filter(function(f){return f.tipo==='salida';}).length + ')</button>';
     html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDF(\'salida\')"><i class="bi bi-filetype-pdf text-danger"></i> PDF</button>';
@@ -661,7 +675,7 @@ function _sguRenderDetail(recordId) {
         html += '<div class="col-6"><span class="sgu-form-label">Km Total Recorrido</span><div class="fw-bold text-primary fs-6">' + (kmRecorrido !== null ? kmRecorrido + ' km' : '---') + '</div></div>';
         html += '</div>';
 
-        html += '<div class="d-flex gap-2">';
+        html += '<div class="d-flex gap-2 flex-wrap">';
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerDetalles(\'retorno\')"><i class="bi bi-list-check"></i> Ver Checklist</button>';
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerFotos(\'retorno\')"><i class="bi bi-images"></i> Fotos (' + (rec.fotos || []).filter(function(f){return f.tipo==='retorno';}).length + ')</button>';
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDF(\'retorno\')"><i class="bi bi-filetype-pdf text-danger"></i> PDF</button>';
@@ -990,7 +1004,7 @@ window._sguSaveSettings = function() {
 };
 
 // =========================================================
-// 📸 GALERÍA DE FOTOS
+// 📸 GALERÍA DE FOTOS (Bottom Drawer)
 // =========================================================
 window._sguVerFotos = function(tipo) {
     if (!window._sguCurrentRecord) return;
@@ -1001,13 +1015,16 @@ window._sguVerFotos = function(tipo) {
     if (!container) return;
 
     if (fotos.length === 0) {
-        container.innerHTML = '<div class="text-center py-4 text-secondary">No hay evidencias fotográficas registradas en la fase de ' + tipo + '.</div>';
+        container.innerHTML = '<div class="text-center py-5 text-secondary"><i class="bi bi-images fs-2 d-block mb-2"></i>No hay evidencias fotográficas registradas en la fase de ' + tipo + '.</div>';
     } else {
-        var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;">';
-        fotos.forEach(function(f) {
-            html += '<a href="' + f.url + '" target="_blank" style="display:block;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.04);">';
-            html += '<img src="' + f.url + '" style="width:100%;height:130px;object-fit:cover;display:block;" alt="Evidencia" crossorigin="anonymous">';
+        var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;">';
+        fotos.forEach(function(f, idx) {
+            html += '<div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#f8fafc;box-shadow:0 2px 8px rgba(0,0,0,0.04);">';
+            html += '<a href="' + f.url + '" target="_blank" style="display:block;">';
+            html += '<img src="' + f.url + '" style="width:100%;height:140px;object-fit:cover;display:block;" alt="Evidencia ' + (idx + 1) + '" crossorigin="anonymous">';
             html += '</a>';
+            html += '<div style="padding:6px 8px;font-size:0.75rem;font-weight:700;color:#475569;text-align:center;background:#fff;border-top:1px solid #f1f5f9;">Foto ' + (idx + 1) + '</div>';
+            html += '</div>';
         });
         html += '</div>';
         container.innerHTML = html;
@@ -1015,11 +1032,11 @@ window._sguVerFotos = function(tipo) {
 
     var titleEl = document.getElementById('sgu-gallery-title');
     if (titleEl) titleEl.textContent = 'Evidencias Fotográficas — ' + (tipo === 'salida' ? 'Ida' : 'Vuelta');
-    document.getElementById('sgu-gallery-overlay').classList.add('show');
+    _sguOpenDrawer('sgu-gallery-overlay');
 };
 
 // =========================================================
-// 📝 DETALLES DEL CHECKLIST
+// 📝 DETALLES DEL CHECKLIST (Bottom Drawer)
 // =========================================================
 window._sguVerDetalles = function(tipo) {
     if (!window._sguCurrentRecord) return;
@@ -1031,13 +1048,13 @@ window._sguVerDetalles = function(tipo) {
     if (!container) return;
 
     if (!checklist || Object.keys(checklist).length === 0) {
-        container.innerHTML = '<div class="text-center py-4 text-secondary">No se registró checklist en esta fase.</div>';
+        container.innerHTML = '<div class="text-center py-5 text-secondary"><i class="bi bi-clipboard2-x fs-2 d-block mb-2"></i>No se registró checklist en esta fase.</div>';
     } else {
-        var html = '<div class="sgu-form-card mb-0">';
+        var html = '';
         if (template && template.length) {
             template.forEach(function(cat) {
-                html += '<div class="mb-3">';
-                html += '<h6 class="fw-bold text-dark border-bottom pb-2 mb-2">' + (cat.titulo || 'Categoría') + '</h6>';
+                html += '<div class="sgu-form-card p-3 mb-3">';
+                html += '<h6 class="fw-bold text-dark border-bottom pb-2 mb-2"><i class="bi bi-check2-circle text-primary me-1"></i>' + (cat.titulo || 'Categoría') + '</h6>';
                 if (cat.items && cat.items.length) {
                     cat.items.forEach(function(item) {
                         var valor = checklist[item.id];
@@ -1047,8 +1064,8 @@ window._sguVerDetalles = function(tipo) {
                         else if (valor === 'mal') badge = '<span class="badge bg-danger">OBSERVADO</span>';
                         else badge = '<span class="badge bg-light text-dark border">-</span>';
 
-                        html += '<div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light" style="font-size:0.85rem;">';
-                        html += '<span class="text-secondary">' + item.label + '</span>';
+                        html += '<div class="d-flex justify-content-between align-items-center py-2 border-bottom border-light" style="font-size:0.88rem;">';
+                        html += '<span class="fw-semibold text-secondary">' + item.label + '</span>';
                         html += '<div>' + badge + '</div>';
                         html += '</div>';
                     });
@@ -1056,17 +1073,18 @@ window._sguVerDetalles = function(tipo) {
                 html += '</div>';
             });
         }
-        html += '</div>';
 
         var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
         if (fotos.length > 0) {
-            html += '<h6 class="fw-bold text-dark mt-3 mb-2">Evidencias Fotográficas (' + fotos.length + ')</h6>';
-            html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;">';
-            fotos.forEach(function(f) {
-                html += '<a href="' + f.url + '" target="_blank" style="display:block;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;">';
-                html += '<img src="' + f.url + '" style="width:100%;height:100px;object-fit:cover;display:block;" alt="Evidencia" crossorigin="anonymous">';
+            html += '<div class="sgu-form-card p-3 mb-3">';
+            html += '<h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-images text-primary me-1"></i> Evidencias Fotográficas Adjuntas (' + fotos.length + ')</h6>';
+            html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;">';
+            fotos.forEach(function(f, idx) {
+                html += '<a href="' + f.url + '" target="_blank" style="display:block;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.04);">';
+                html += '<img src="' + f.url + '" style="width:100%;height:110px;object-fit:cover;display:block;" alt="Evidencia ' + (idx + 1) + '" crossorigin="anonymous">';
                 html += '</a>';
             });
+            html += '</div>';
             html += '</div>';
         }
 
@@ -1075,12 +1093,175 @@ window._sguVerDetalles = function(tipo) {
 
     var titleEl = document.getElementById('sgu-details-title');
     if (titleEl) titleEl.textContent = 'Checklist Técnico — ' + (tipo === 'salida' ? 'Ida' : 'Vuelta');
-    document.getElementById('sgu-details-overlay').classList.add('show');
+    _sguOpenDrawer('sgu-details-overlay');
 };
 
 // =========================================================
-// 📄 GENERAR PDF INDIVIDUAL
+// 📄 GENERAR PDF FORMATO ISO OFICIAL (1 SOLA HOJA A4)
 // =========================================================
+function _sguBuildPageHtml(rec, tipo) {
+    var checklist = tipo === 'salida' ? rec.salida_checklist_json : rec.retorno_checklist_json;
+    var template = tipo === 'salida' ? rec.salida_template_json : rec.retorno_template_json;
+    var fecha = tipo === 'salida' ? rec.salida_fecha : rec.retorno_fecha;
+    var hora = tipo === 'salida' ? rec.salida_hora : rec.retorno_hora;
+    var km = tipo === 'salida' ? rec.salida_km : rec.retorno_km;
+    var hasAlert = tipo === 'salida' ? rec.salida_has_alert : rec.retorno_has_alert;
+
+    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+    var ts = _sguTimestamp();
+
+    // 1. Cabecera ISO
+    var h = '<div class="sgu-pdf-page" style="width:210mm;height:296mm;max-height:296mm;background:#fff;padding:6mm 8mm;box-sizing:border-box;position:relative;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;font-family:\'Oswald\',sans-serif;color:#000;">';
+
+    h += '<div>'; // Top wrapper
+    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-bottom:4px;table-layout:fixed;">';
+    h += '<tr>';
+    h += '<td style="width:22%;border:1px solid #000;text-align:center;vertical-align:middle;padding:4px;" rowspan="3">';
+    h += '<img src="' + empLogoUrl + '" style="max-height:46px;max-width:130px;object-fit:contain;" crossorigin="anonymous">';
+    h += '</td>';
+    h += '<td style="width:53%;border:1px solid #000;text-align:center;vertical-align:middle;padding:4px;" rowspan="3">';
+    h += '<div style="font-size:20px;font-weight:bold;line-height:1.1;text-transform:uppercase;color:#000;">CHECKLIST DE INSPECCIÓN VEHICULAR</div>';
+    h += '<div style="font-size:11px;font-weight:normal;color:#333;letter-spacing:0.5px;margin-top:2px;">CONTROL DE SEGURIDAD, INGRESO Y SALIDA DE UNIDADES</div>';
+    h += '</td>';
+    h += '<td style="width:25%;border:1px solid #000;font-size:9px;text-align:left;padding:2px 5px;height:15px;"><strong>CÓDIGO:</strong> F-SEG-002</td>';
+    h += '</tr>';
+    h += '<tr><td style="border:1px solid #000;font-size:9px;text-align:left;padding:2px 5px;height:15px;"><strong>VERSIÓN:</strong> 01</td></tr>';
+    h += '<tr><td style="border:1px solid #000;font-size:9px;text-align:left;padding:2px 5px;height:15px;"><strong>F. EMISIÓN:</strong> ' + (fecha || ts.fullDate) + '</td></tr>';
+    h += '</table>';
+
+    // 2. Grid de Datos Generales
+    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-bottom:5px;table-layout:fixed;font-size:10px;">';
+    h += '<tr>';
+    h += '<td style="border:1px solid #000;padding:2px 5px;width:33%;height:20px;vertical-align:middle;"><strong>Nº EXPEDIENTE:</strong> <span style="color:#1e60bf;font-size:12px;font-weight:bold;margin-left:4px;">' + rec.id + '</span></td>';
+    h += '<td style="border:1px solid #000;padding:2px 5px;width:33%;vertical-align:middle;"><strong>PLACA TRACTO:</strong> <span style="font-weight:normal;margin-left:4px;">' + rec.placa_tracto + '</span></td>';
+    h += '<td style="border:1px solid #000;padding:2px 5px;width:34%;vertical-align:middle;"><strong>PLACA CARRETA:</strong> <span style="font-weight:normal;margin-left:4px;">' + (rec.placa_carreta || '---') + '</span></td>';
+    h += '</tr>';
+    h += '<tr>';
+    h += '<td style="border:1px solid #000;padding:2px 5px;vertical-align:middle;"><strong>CONDUCTOR:</strong> <span style="font-weight:normal;margin-left:4px;">' + (rec.conductor || '---') + '</span></td>';
+    h += '<td style="border:1px solid #000;padding:2px 5px;vertical-align:middle;"><strong>FASE:</strong> <span style="font-weight:bold;margin-left:4px;color:#000;">' + (tipo === 'salida' ? 'SALIDA (IDA)' : 'RETORNO (VUELTA)') + '</span></td>';
+    h += '<td style="border:1px solid #000;padding:2px 5px;vertical-align:middle;"><strong>DESTINO:</strong> <span style="font-weight:normal;margin-left:4px;">' + (rec.destino || '---') + '</span></td>';
+    h += '</tr>';
+    h += '<tr>';
+    h += '<td style="border:1px solid #000;padding:2px 5px;vertical-align:middle;"><strong>FECHA / HORA:</strong> <span style="font-weight:normal;margin-left:4px;">' + (fecha || '--') + ' ' + (hora || '') + '</span></td>';
+    h += '<td style="border:1px solid #000;padding:2px 5px;vertical-align:middle;"><strong>KILOMETRAJE:</strong> <span style="font-weight:normal;margin-left:4px;">' + (km ? km + ' KM' : '---') + '</span></td>';
+    var estadoInsp = hasAlert ? '<span style="color:#cc2222;font-weight:bold;margin-left:4px;">CON OBSERVACIONES</span>' : '<span style="color:#16a34a;font-weight:bold;margin-left:4px;">CONFORME / OK</span>';
+    h += '<td style="border:1px solid #000;padding:2px 5px;vertical-align:middle;"><strong>ESTADO:</strong> ' + estadoInsp + '</td>';
+    h += '</tr>';
+    h += '</table>';
+
+    // 3. Banner de Estado
+    if (hasAlert) {
+        h += '<div style="background-color:#fee2e2;padding:2px 6px;font-size:10px;font-weight:bold;text-align:center;border:2px solid #000;margin-bottom:4px;color:#991b1b;">';
+        h += 'ATENCIÓN: SE REPORTARON NOVEDADES / ANOMALÍAS EN LA REVISIÓN TÉCNICA DE LA UNIDAD';
+        h += '</div>';
+    } else {
+        h += '<div style="background-color:#f2f2f2;padding:2px 6px;font-size:10px;font-weight:bold;text-align:center;border:2px solid #000;margin-bottom:4px;">';
+        h += 'REGISTRO DE CONDICIONES OPERATIVAS Y ELEMENTOS DE SEGURIDAD. PLACA: <span style="color:#cc2222;font-size:11px;margin-left:4px;">' + rec.placa_tracto + '</span>';
+        h += '</div>';
+    }
+
+    // 4. Checklist Items (Diseñado compacto en 2 columnas para caber en 1 A4 exacto)
+    h += '<div style="background:#444444;color:#fff;font-weight:700;font-size:10px;letter-spacing:.5px;padding:2px 8px;text-align:center;text-transform:uppercase;border:2px solid #000;border-bottom:none;margin:0;">';
+    h += 'DETALLE DE INSPECCIÓN TÉCNICA Y EQUIPAMIENTO';
+    h += '</div>';
+
+    if (template && template.length && checklist) {
+        h += '<div style="border:2px solid #000;margin-bottom:5px;padding:2px;display:flex;gap:4px;">';
+
+        // Dividir categorías en 2 columnas equilibradas
+        var mid = Math.ceil(template.length / 2);
+        var col1 = template.slice(0, mid);
+        var col2 = template.slice(mid);
+
+        function renderCol(cats) {
+            var colHtml = '<div style="flex:1;display:flex;flex-direction:column;gap:3px;">';
+            cats.forEach(function(cat) {
+                colHtml += '<table style="width:100%;border-collapse:collapse;border:1px solid #666;font-size:9px;">';
+                colHtml += '<thead><tr><th colspan="2" style="background:#e2e8f0;color:#0f172a;font-weight:bold;text-align:left;padding:2px 4px;border-bottom:1px solid #999;font-size:9px;text-transform:uppercase;">' + (cat.titulo || 'Categoría') + '</th></tr></thead>';
+                colHtml += '<tbody>';
+                (cat.items || []).forEach(function(item) {
+                    var valor = (checklist[item.id] || '---').toUpperCase();
+                    var color = valor === 'OK' ? '#16a34a' : (valor === 'MAL' ? '#dc2626' : '#64748b');
+                    var bg = valor === 'OK' ? '#dcfce7' : (valor === 'MAL' ? '#fee2e2' : '#f1f5f9');
+                    colHtml += '<tr style="border-bottom:1px solid #eee;">';
+                    colHtml += '<td style="padding:2px 4px;color:#333;vertical-align:middle;">' + item.label + '</td>';
+                    colHtml += '<td style="width:38px;padding:2px;text-align:center;vertical-align:middle;"><span style="background:' + bg + ';color:' + color + ';padding:1px 5px;border-radius:4px;font-weight:bold;font-size:8.5px;display:inline-block;">' + valor + '</span></td>';
+                    colHtml += '</tr>';
+                });
+                colHtml += '</tbody></table>';
+            });
+            colHtml += '</div>';
+            return colHtml;
+        }
+
+        h += renderCol(col1);
+        h += renderCol(col2);
+        h += '</div>';
+    } else {
+        h += '<div style="border:2px solid #000;padding:15px;text-align:center;font-style:italic;color:#666;font-size:10px;margin-bottom:5px;">No se registró detalle de checklist en esta fase.</div>';
+    }
+
+    h += '</div>'; // End top wrapper
+
+    // 5. Bloque de Firmas al Pie (Fijo al final de la página 1)
+    h += '<div style="margin-top:auto;">';
+    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000;table-layout:fixed;margin-top:4px;">';
+    h += '<tr>';
+    h += '<td style="width:50%;border:1px solid #000;padding:28px 10px 4px 10px;text-align:center;vertical-align:bottom;">';
+    h += '<div style="border-top:1px dashed #000;padding-top:3px;font-size:9.5px;font-weight:bold;">';
+    h += 'FIRMA DEL CONDUCTOR<br><span style="font-weight:normal;font-size:8.5px;">' + (rec.conductor || 'DNI: _______________') + '</span>';
+    h += '</div>';
+    h += '</td>';
+    h += '<td style="width:50%;border:1px solid #000;padding:28px 10px 4px 10px;text-align:center;vertical-align:bottom;">';
+    h += '<div style="border-top:1px dashed #000;padding-top:3px;font-size:9.5px;font-weight:bold;">';
+    h += 'INSPECTOR DE SEGURIDAD / CONTROL<br><span style="font-weight:normal;font-size:8.5px;">VoBo DESPACHO & FLOTA</span>';
+    h += '</div>';
+    h += '</td>';
+    h += '</tr>';
+    h += '</table>';
+    h += '<div style="display:flex;justify-content:space-between;font-size:8px;color:#666;margin-top:2px;padding:0 2px;">';
+    h += '<span>Documento generado por Sistema ERP de Gestión de Flota</span>';
+    h += '<span>Página 1 de 1 (Acta Oficial)</span>';
+    h += '</div>';
+    h += '</div>';
+
+    h += '</div>'; // End sgu-pdf-page
+    return h;
+}
+
+function _sguBuildPhotosPagesHtml(fotosArray, tipo) {
+    if (!fotosArray || fotosArray.length === 0) return '';
+
+    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+
+    var h = '<div class="html2pdf__page-break"></div>';
+    h += '<div class="sgu-pdf-page" style="width:210mm;min-height:296mm;background:#fff;padding:8mm 10mm;box-sizing:border-box;position:relative;display:flex;flex-direction:column;font-family:\'Oswald\',sans-serif;color:#000;">';
+
+    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-bottom:8px;table-layout:fixed;">';
+    h += '<tr>';
+    h += '<td style="width:20%;border:1px solid #000;text-align:center;vertical-align:middle;padding:4px;">';
+    h += '<img src="' + empLogoUrl + '" style="max-height:40px;max-width:120px;object-fit:contain;" crossorigin="anonymous">';
+    h += '</td>';
+    h += '<td style="width:80%;border:1px solid #000;text-align:center;vertical-align:middle;padding:4px;">';
+    h += '<div style="font-size:16px;font-weight:bold;text-transform:uppercase;color:#000;">EVIDENCIAS FOTOGRÁFICAS — FASE ' + tipo.toUpperCase() + '</div>';
+    h += '<div style="font-size:10px;color:#555;">REGISTRO DE CONDICIONES VISUALES DEL VEHÍCULO</div>';
+    h += '</td>';
+    h += '</tr>';
+    h += '</table>';
+
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;">';
+    fotosArray.forEach(function(f, idx) {
+        h += '<div style="border:1px solid #000;padding:6px;border-radius:4px;background:#fdfdfd;text-align:center;break-inside:avoid;">';
+        h += '<div style="font-size:10px;font-weight:bold;margin-bottom:4px;text-transform:uppercase;">EVIDENCIA ' + (idx + 1) + '</div>';
+        h += '<img src="' + (f.b64 || f.url) + '" style="max-width:100%;max-height:210px;height:auto;object-fit:contain;display:block;margin:0 auto;border:1px solid #ccc;" crossorigin="anonymous">';
+        h += '</div>';
+    });
+    h += '</div>';
+
+    h += '</div>';
+    return h;
+}
+
 window._sguGenerarPDF = async function(tipo) {
     if (!window._sguCurrentRecord) return;
     if (typeof html2pdf === 'undefined') {
@@ -1089,67 +1270,12 @@ window._sguGenerarPDF = async function(tipo) {
     }
 
     var rec = window._sguCurrentRecord;
-    var checklist = tipo === 'salida' ? rec.salida_checklist_json : rec.retorno_checklist_json;
-    var template = tipo === 'salida' ? rec.salida_template_json : rec.retorno_template_json;
-    var fecha = tipo === 'salida' ? rec.salida_fecha : rec.retorno_fecha;
-    var hora = tipo === 'salida' ? rec.salida_hora : rec.retorno_hora;
-    var km = tipo === 'salida' ? rec.salida_km : rec.retorno_km;
-
-    var div = document.createElement('div');
-    div.style.width = '750px'; 
-    div.style.padding = '30px';
-    div.style.fontFamily = '"Plus Jakarta Sans", "Helvetica Neue", Helvetica, Arial, sans-serif';
-    div.style.color = '#1e293b';
-    div.style.backgroundColor = '#ffffff';
-    div.style.boxSizing = 'border-box';
-
-    var html = '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #0284c7;padding-bottom:15px;margin-bottom:25px;">';
-    html += '<div>';
-    html += '<h1 style="margin:0;font-size:24px;color:#0f172a;letter-spacing:-0.5px;">AZKELL FLEET — ACTA DE INSPECCIÓN</h1>';
-    html += '<p style="margin:5px 0 0 0;font-size:13px;color:#64748b;font-weight:bold;text-transform:uppercase;">FASE: ' + tipo.toUpperCase() + '</p>';
-    html += '</div>';
-    html += '<div style="text-align:right;">';
-    html += '<p style="margin:0;font-size:16px;font-weight:bold;color:#0f172a;">ID: ' + rec.id + '</p>';
-    html += '<p style="margin:5px 0 0 0;font-size:13px;color:#64748b;">' + (fecha||'--') + ' ' + (hora||'--') + '</p>';
-    html += '</div>';
-    html += '</div>';
-
-    html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:15px;margin-bottom:25px;">';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">';
-    html += '<div><p style="margin:0;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;">Placa Tracto</p><p style="margin:2px 0 0 0;font-size:15px;font-weight:bold;">' + rec.placa_tracto + '</p></div>';
-    html += '<div><p style="margin:0;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;">Placa Carreta</p><p style="margin:2px 0 0 0;font-size:15px;font-weight:bold;">' + (rec.placa_carreta || '---') + '</p></div>';
-    html += '<div><p style="margin:0;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;">Conductor</p><p style="margin:2px 0 0 0;font-size:15px;font-weight:bold;">' + rec.conductor + '</p></div>';
-    html += '<div><p style="margin:0;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;">Kilometraje</p><p style="margin:2px 0 0 0;font-size:15px;font-weight:bold;">' + (km||'---') + '</p></div>';
-    html += '</div></div>';
-
-    html += '<h3 style="margin:0 0 15px 0;font-size:16px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Detalle de Revisión Técnica</h3>';
-    if (template && template.length && checklist) {
-        template.forEach(function(cat) {
-            html += '<div style="margin-bottom:15px;break-inside:avoid;">';
-            html += '<h4 style="margin:0 0 8px 0;font-size:13px;background:#f1f5f9;padding:6px 10px;border-radius:6px;color:#334155;">' + (cat.titulo || 'Categoría') + '</h4>';
-            html += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
-            if (cat.items) {
-                cat.items.forEach(function(item) {
-                    var valor = checklist[item.id] || '---';
-                    var valStr = valor.toUpperCase();
-                    var color = valor === 'ok' ? '#16a34a' : (valor === 'mal' ? '#dc2626' : '#64748b');
-                    var bg = valor === 'ok' ? '#dcfce7' : (valor === 'mal' ? '#fee2e2' : '#f1f5f9');
-                    html += '<tr style="border-bottom:1px solid #f1f5f9;">';
-                    html += '<td style="padding:6px 4px;width:80%;color:#475569;">' + item.label + '</td>';
-                    html += '<td style="padding:6px 4px;text-align:right;"><span style="background:'+bg+';color:'+color+';padding:3px 8px;border-radius:12px;font-weight:bold;font-size:11px;">' + valStr + '</span></td>';
-                    html += '</tr>';
-                });
-            }
-            html += '</table></div>';
-        });
-    } else {
-        html += '<p style="font-size:13px;color:#64748b;font-style:italic;">No se registró checklist.</p>';
-    }
-
     var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+
+    _sguToast('Generando reporte PDF en formato A4...', 'bi-hourglass-split');
+
     var fotosBase64 = [];
     if (fotos.length > 0) {
-        _sguToast('Procesando evidencias fotográficas...', 'bi-hourglass-split');
         for (var i = 0; i < fotos.length; i++) {
             try {
                 var res = await fetch(fotos[i].url, { mode: 'cors', cache: 'no-store' });
@@ -1164,38 +1290,38 @@ window._sguGenerarPDF = async function(tipo) {
                 fotosBase64.push({ b64: fotos[i].url, num: i + 1 });
             }
         }
-
-        html += '<div style="break-inside:avoid;margin-top:20px;">';
-        html += '<h3 style="margin:0 0 15px 0;font-size:16px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Evidencias Fotográficas (' + fotos.length + ')</h3>';
-        html += '<div style="display:flex;flex-direction:column;gap:20px;">';
-        fotosBase64.forEach(function(f) {
-            html += '<div style="text-align:center;border:1px solid #e2e8f0;padding:12px;border-radius:8px;background:#f8fafc;break-inside:avoid;">';
-            html += '<h4 style="margin:0 0 8px 0;font-size:13px;color:#334155;font-weight:bold;">Evidencia ' + f.num + '</h4>';
-            html += '<img src="' + f.b64 + '" style="max-width:100%;height:auto;display:block;margin:0 auto;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.06);" crossorigin="anonymous">';
-            html += '</div>';
-        });
-        html += '</div></div>';
     }
 
-    div.innerHTML = html;
+    var container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '-9999px';
+
+    var htmlFinal = _sguBuildPageHtml(rec, tipo);
+    if (fotosBase64.length > 0) {
+        htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
+    }
+
+    container.innerHTML = htmlFinal;
+    document.body.appendChild(container);
 
     var opt = {
-        margin:       [10, 10, 10, 10],
+        margin:       0,
         filename:     'Checklist_' + rec.placa_tracto + '_' + tipo + '.pdf',
-        image:        { type: 'jpeg', quality: 1.0 },
+        image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2.5, useCORS: true, logging: false },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    _sguToast('Generando PDF...', 'bi-hourglass-split');
-    html2pdf().set(opt).from(div).save().then(function() {
-        _sguToast('PDF descargado correctamente.');
+    html2pdf().set(opt).from(container).save().then(function() {
+        document.body.removeChild(container);
+        _sguToast('PDF generado con éxito');
+    }).catch(function(err) {
+        if (container.parentNode) document.body.removeChild(container);
+        _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
     });
 };
 
-// =========================================================
-// 📄 GENERAR PDF COMPLETO (IDA Y VUELTA)
-// =========================================================
 window._sguGenerarPDFCompleto = async function() {
     if (typeof html2pdf === 'undefined') {
         _sguToast('Error: Librería PDF no disponible', 'bi-exclamation-triangle');
@@ -1205,126 +1331,69 @@ window._sguGenerarPDFCompleto = async function() {
     if (!window._sguCurrentRecord) return;
     var rec = window._sguCurrentRecord;
 
-    var div = document.createElement('div');
-    div.style.width = '750px'; 
-    div.style.padding = '30px';
-    div.style.fontFamily = '"Plus Jakarta Sans", "Helvetica Neue", Helvetica, Arial, sans-serif';
-    div.style.color = '#1e293b';
-    div.style.backgroundColor = '#ffffff';
-    div.style.boxSizing = 'border-box';
+    _sguToast('Generando Expediente Completo (Ida y Vuelta)...', 'bi-hourglass-split');
 
-    function buildTable(tipo) {
-        var fecha = tipo === 'salida' ? rec.salida_fecha : rec.retorno_fecha;
-        var hora = tipo === 'salida' ? rec.salida_hora : rec.retorno_hora;
-        var km = tipo === 'salida' ? rec.salida_km : rec.retorno_km;
-        var checklist = tipo === 'salida' ? rec.salida_checklist_json : rec.retorno_checklist_json;
-        var template = tipo === 'salida' ? rec.salida_template_json : rec.retorno_template_json;
+    var todasFotos = rec.fotos || [];
+    var fotosSalida = [];
+    var fotosRetorno = [];
 
-        var html = '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #0284c7;padding-bottom:15px;margin-bottom:20px;">';
-        html += '<div>';
-        html += '<h1 style="margin:0;font-size:22px;color:#0f172a;letter-spacing:-0.5px;">EXPEDIENTE DE VIAJE — ' + tipo.toUpperCase() + '</h1>';
-        html += '<p style="margin:4px 0 0 0;font-size:13px;color:#64748b;font-weight:bold;">AZKELL FLEET ERP</p>';
-        html += '</div>';
-        html += '<div style="text-align:right;">';
-        html += '<p style="margin:0;font-size:15px;font-weight:bold;color:#0f172a;">FOLIO: ' + rec.id + '</p>';
-        html += '<p style="margin:4px 0 0 0;font-size:12px;color:#64748b;">' + (fecha||'--') + ' ' + (hora||'--') + '</p>';
-        html += '</div>';
-        html += '</div>';
-
-        html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:20px;">';
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
-        html += '<div><p style="margin:0;font-size:10px;color:#64748b;font-weight:bold;text-transform:uppercase;">Placa Tracto</p><p style="margin:2px 0 0 0;font-size:14px;font-weight:bold;">' + rec.placa_tracto + '</p></div>';
-        html += '<div><p style="margin:0;font-size:10px;color:#64748b;font-weight:bold;text-transform:uppercase;">Placa Carreta</p><p style="margin:2px 0 0 0;font-size:14px;font-weight:bold;">' + (rec.placa_carreta || '---') + '</p></div>';
-        html += '<div><p style="margin:0;font-size:10px;color:#64748b;font-weight:bold;text-transform:uppercase;">Conductor</p><p style="margin:2px 0 0 0;font-size:14px;font-weight:bold;">' + rec.conductor + '</p></div>';
-        html += '<div><p style="margin:0;font-size:10px;color:#64748b;font-weight:bold;text-transform:uppercase;">Kilometraje</p><p style="margin:2px 0 0 0;font-size:14px;font-weight:bold;">' + (km||'---') + '</p></div>';
-        html += '</div></div>';
-
-        html += '<h4 style="margin:0 0 12px 0;font-size:15px;color:#0f172a;border-bottom:1.5px solid #e2e8f0;padding-bottom:6px;">Detalle de Revisión</h4>';
-        if (template && template.length && checklist) {
-            template.forEach(function(cat) {
-                html += '<div style="margin-bottom:12px;break-inside:avoid;">';
-                html += '<h5 style="margin:0 0 6px 0;font-size:12px;background:#f1f5f9;padding:5px 8px;border-radius:4px;color:#334155;">' + (cat.titulo || 'Categoría') + '</h5>';
-                html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
-                if (cat.items) {
-                    cat.items.forEach(function(item) {
-                        var valor = checklist[item.id] || '---';
-                        var valStr = valor.toUpperCase();
-                        var color = valor === 'ok' ? '#16a34a' : (valor === 'mal' ? '#dc2626' : '#64748b');
-                        var bg = valor === 'ok' ? '#dcfce7' : (valor === 'mal' ? '#fee2e2' : '#f1f5f9');
-                        html += '<tr style="border-bottom:1px solid #f1f5f9;">';
-                        html += '<td style="padding:4px;width:80%;color:#475569;">' + item.label + '</td>';
-                        html += '<td style="padding:4px;text-align:right;"><span style="background:'+bg+';color:'+color+';padding:2px 6px;border-radius:10px;font-weight:bold;font-size:10px;">' + valStr + '</span></td>';
-                        html += '</tr>';
-                    });
-                }
-                html += '</table></div>';
+    for (var i = 0; i < todasFotos.length; i++) {
+        var f = todasFotos[i];
+        try {
+            var res = await fetch(f.url, { mode: 'cors', cache: 'no-store' });
+            var blob = await res.blob();
+            var b64 = await new Promise(function(resolve) {
+                var r = new FileReader();
+                r.onloadend = function() { resolve(r.result); };
+                r.readAsDataURL(blob);
             });
-        } else {
-            html += '<p style="font-size:12px;color:#64748b;font-style:italic;">No se registró checklist.</p>';
-        }
-
-        var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
-        return { html: html, fotos: fotos };
-    }
-
-    var salidaData = buildTable('salida');
-    var retornoData = buildTable('retorno');
-
-    var todasFotos = salidaData.fotos.concat(retornoData.fotos);
-    var fotosMap = {};
-
-    if (todasFotos.length > 0) {
-        _sguToast('Preparando imágenes...', 'bi-hourglass-split');
-        for (var i = 0; i < todasFotos.length; i++) {
-            var url = todasFotos[i].url;
-            if (fotosMap[url]) continue;
-            try {
-                var res = await fetch(url, { mode: 'cors', cache: 'no-store' });
-                var blob = await res.blob();
-                var b64 = await new Promise(function(resolve) {
-                    var r = new FileReader();
-                    r.onloadend = function() { resolve(r.result); };
-                    r.readAsDataURL(blob);
-                });
-                fotosMap[url] = b64;
-            } catch(e) {
-                fotosMap[url] = url;
-            }
+            if (f.tipo === 'salida') fotosSalida.push({ b64: b64, num: fotosSalida.length + 1 });
+            else fotosRetorno.push({ b64: b64, num: fotosRetorno.length + 1 });
+        } catch(e) {
+            if (f.tipo === 'salida') fotosSalida.push({ b64: f.url, num: fotosSalida.length + 1 });
+            else fotosRetorno.push({ b64: f.url, num: fotosRetorno.length + 1 });
         }
     }
 
-    function buildFotosHtml(fotosArray) {
-        if (!fotosArray || fotosArray.length === 0) return '';
-        var h = '<div style="break-inside:avoid;margin-top:15px;">';
-        h += '<h4 style="margin:0 0 10px 0;font-size:14px;color:#0f172a;border-bottom:1.5px solid #e2e8f0;padding-bottom:6px;">Evidencias Fotográficas (' + fotosArray.length + ')</h4>';
-        h += '<div style="display:flex;flex-direction:column;gap:15px;margin-bottom:15px;">';
-        fotosArray.forEach(function(f, index) {
-            h += '<div style="text-align:center;border:1px solid #e2e8f0;padding:10px;border-radius:6px;background:#f8fafc;break-inside:avoid;">';
-            h += '<h5 style="margin:0 0 6px 0;font-size:12px;color:#334155;">Evidencia ' + (index + 1) + '</h5>';
-            h += '<img src="' + fotosMap[f.url] + '" style="max-width:100%;height:auto;display:block;margin:0 auto;border-radius:4px;" crossorigin="anonymous">';
-            h += '</div>';
-        });
-        h += '</div></div>';
-        return h;
+    var container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '-9999px';
+
+    // Página 1: Salida
+    var htmlFinal = _sguBuildPageHtml(rec, 'salida');
+
+    // Página 2: Retorno (si existe o completado)
+    if (rec.retorno_fecha || rec.estado === 'completado') {
+        htmlFinal += '<div class="html2pdf__page-break"></div>';
+        htmlFinal += _sguBuildPageHtml(rec, 'retorno');
     }
 
-    var htmlFinal = salidaData.html + buildFotosHtml(salidaData.fotos);
-    htmlFinal += '<div class="html2pdf__page-break"></div>';
-    htmlFinal += retornoData.html + buildFotosHtml(retornoData.fotos);
+    // Páginas siguientes: Fotos
+    if (fotosSalida.length > 0) {
+        htmlFinal += _sguBuildPhotosPagesHtml(fotosSalida, 'salida');
+    }
+    if (fotosRetorno.length > 0) {
+        htmlFinal += _sguBuildPhotosPagesHtml(fotosRetorno, 'retorno');
+    }
 
-    div.innerHTML = htmlFinal;
+    container.innerHTML = htmlFinal;
+    document.body.appendChild(container);
 
     var opt = {
-        margin:       [10, 10, 10, 10],
+        margin:       0,
         filename:     'Expediente_Completo_' + rec.placa_tracto + '.pdf',
-        image:        { type: 'jpeg', quality: 1.0 },
+        image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2.5, useCORS: true, logging: false },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    _sguToast('Generando Expediente PDF...', 'bi-hourglass-split');
-    html2pdf().set(opt).from(div).save().then(function() {
-        _sguToast('Expediente descargado con éxito.');
+    html2pdf().set(opt).from(container).save().then(function() {
+        document.body.removeChild(container);
+        _sguToast('Expediente completo descargado con éxito');
+    }).catch(function(err) {
+        if (container.parentNode) document.body.removeChild(container);
+        _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
     });
 };
 
