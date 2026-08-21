@@ -467,9 +467,9 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.55);
-    z-index: 1080;
-    backdrop-filter: blur(4px);
+    background: rgba(15, 23, 42, 0.65);
+    z-index: 99990;
+    backdrop-filter: blur(5px);
 }
 .sgu-drawer-backdrop.show { display: block; }
 
@@ -486,9 +486,9 @@
     border: 1px solid #e2e8f0;
     border-bottom: none;
     border-radius: 26px 26px 0 0;
-    box-shadow: 0 -16px 48px rgba(0,0,0,0.25);
+    box-shadow: 0 -16px 48px rgba(0,0,0,0.35);
     transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
-    z-index: 1085;
+    z-index: 99995;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -509,6 +509,21 @@
     }
     .sgu-bottom-drawer.show {
         transform: translateY(0);
+    }
+}
+
+.sgu-photos-drawer {
+    height: auto !important;
+    max-height: 80vh !important;
+    min-height: 290px !important;
+    padding-bottom: 2.5rem !important;
+}
+@media (max-width: 768px) {
+    .sgu-photos-drawer {
+        height: auto !important;
+        max-height: 85vh !important;
+        min-height: 310px !important;
+        padding-bottom: 3.5rem !important;
     }
 }
 
@@ -961,30 +976,32 @@
 </div>
 
 <!-- ═══ BOTTOM DRAWER: AÑADIR FOTOS ════════════════════════════════ -->
-<div id="sgu-photos-bsheet" class="sgu-bottom-drawer" style="height: auto; max-height: 50vh;">
+<div id="sgu-photos-bsheet" class="sgu-bottom-drawer sgu-photos-drawer">
     <div class="sgu-drawer-handle"></div>
     <div class="sgu-drawer-header">
         <h5 class="sgu-drawer-title"><i class="bi bi-camera text-primary"></i> Añadir Evidencias</h5>
         <button class="btn-close" onclick="window._sguCloseAllDrawers()"></button>
     </div>
-    <div class="sgu-drawer-body">
+    <div class="sgu-drawer-body pb-4">
         <p class="text-secondary small mb-3">Seleccione el método de captura fotográfica para la inspección:</p>
-        <div class="row g-2">
+        <div class="row g-3">
             <div class="col-6">
-                <label class="sgu-form-card d-flex flex-column align-items-center justify-content-center p-3 m-0 text-center cursor-pointer w-100 h-100" style="background:#f8fafc;cursor:pointer;">
-                    <div style="width:48px;height:48px;background:#0f172a;color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:0.5rem;">
+                <label class="sgu-form-card d-flex flex-column align-items-center justify-content-center p-3 m-0 text-center cursor-pointer w-100" style="background:#f8fafc;cursor:pointer;border:2px dashed #cbd5e1;border-radius:16px;min-height:130px;">
+                    <div style="width:52px;height:52px;background:#0f172a;color:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:0.5rem;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
                         <i class="bi bi-camera"></i>
                     </div>
-                    <span class="fw-bold text-dark small">Cámara</span>
+                    <span class="fw-bold text-dark" style="font-size:0.9rem;">Cámara</span>
+                    <small class="text-muted" style="font-size:0.72rem;">Tomar foto directa</small>
                     <input type="file" accept="image/*" capture="environment" style="display:none;" id="sgu-input-cam">
                 </label>
             </div>
             <div class="col-6">
-                <label class="sgu-form-card d-flex flex-column align-items-center justify-content-center p-3 m-0 text-center cursor-pointer w-100 h-100" style="background:#f8fafc;cursor:pointer;">
-                    <div style="width:48px;height:48px;background:#0284c7;color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:0.5rem;">
+                <label class="sgu-form-card d-flex flex-column align-items-center justify-content-center p-3 m-0 text-center cursor-pointer w-100" style="background:#f8fafc;cursor:pointer;border:2px dashed #93c5fd;border-radius:16px;min-height:130px;">
+                    <div style="width:52px;height:52px;background:#0284c7;color:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:0.5rem;box-shadow:0 4px 12px rgba(2,132,199,0.25);">
                         <i class="bi bi-images"></i>
                     </div>
-                    <span class="fw-bold text-dark small">Galería</span>
+                    <span class="fw-bold text-dark" style="font-size:0.9rem;">Galería</span>
+                    <small class="text-muted" style="font-size:0.72rem;">Subir del dispositivo</small>
                     <input type="file" accept="image/*" multiple style="display:none;" id="sgu-input-gal">
                 </label>
             </div>
