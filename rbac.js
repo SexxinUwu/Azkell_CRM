@@ -50,7 +50,10 @@ module.exports = function globalRBAC(req, res, next) {
         '/ot-backlog',
         '/inspecciones-por-ot',
         '/neumaticos/catalogos',
-        '/combustible/catalogos'
+        '/combustible/catalogos',
+        '/seguridad/recursos',
+        '/seguridad/template',
+        '/vehiculos-flota'
     ];
     if (req.method === 'GET' && globalReferenceGets.some(p => path === p || path.startsWith(p))) {
         return next();
@@ -79,8 +82,8 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/usuarios-v2')) mod = 'usuarios';
     else if (path.startsWith('/integraciones')) mod = 'integraciones';
     else if (path.startsWith('/auditoria')) mod = 'mod_auditoria';
-    else if (path.startsWith('/seguridad/asistencia')) mod = 'asist';
-    else if (path.startsWith('/seguridad/unidades')) mod = ['checklist', 'unid'];
+    else if (path.startsWith('/seguridad/asistencia')) mod = ['asist', 'seguridad'];
+    else if (path.startsWith('/seguridad')) mod = ['placas', 'unid', 'checklist', 'seguridad'];
     else if (path.startsWith('/configuracion-flota')) mod = 'cfg_mant';
     
     // ALMACEN & CONFIGURACION
