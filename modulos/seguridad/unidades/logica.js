@@ -744,7 +744,8 @@ async function _sguRenderDetail(recordId) {
     html += '<div class="d-flex gap-2 flex-wrap">';
     html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerDetalles(\'salida\')"><i class="bi bi-list-check"></i> Ver Checklist</button>';
     html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerFotos(\'salida\')"><i class="bi bi-images"></i> Fotos (' + (rec.fotos || []).filter(function(f){return f.tipo==='salida';}).length + ')</button>';
-    html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDF(\'salida\')"><i class="bi bi-filetype-pdf text-danger"></i> PDF</button>';
+    html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguPrevisualizarPDF(\'salida\')"><i class="bi bi-eye text-primary"></i> Ver PDF</button>';
+    html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDF(\'salida\')" title="Descargar directo"><i class="bi bi-download text-danger"></i> Descargar</button>';
     html += '</div>';
 
     html += '</div>';
@@ -802,11 +803,13 @@ async function _sguRenderDetail(recordId) {
         html += '<div class="d-flex gap-2 flex-wrap">';
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerDetalles(\'retorno\')"><i class="bi bi-list-check"></i> Ver Checklist</button>';
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerFotos(\'retorno\')"><i class="bi bi-images"></i> Fotos (' + (rec.fotos || []).filter(function(f){return f.tipo==='retorno';}).length + ')</button>';
-        html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDF(\'retorno\')"><i class="bi bi-filetype-pdf text-danger"></i> PDF</button>';
+        html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguPrevisualizarPDF(\'retorno\')"><i class="bi bi-eye text-primary"></i> Ver PDF</button>';
+        html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDF(\'retorno\')" title="Descargar directo"><i class="bi bi-download text-danger"></i> Descargar</button>';
         html += '</div>';
 
-        html += '<div class="pt-3 mt-3 border-top d-flex gap-2">';
-        html += '<button class="sgu-btn-top sgu-btn-primary flex-grow-1" onclick="window._sguGenerarPDFCompleto()"><i class="bi bi-file-earmark-arrow-down-fill"></i> Descargar Expediente Completo (Ida y Vuelta)</button>';
+        html += '<div class="pt-3 mt-3 border-top d-flex gap-2 flex-wrap">';
+        html += '<button class="sgu-btn-top sgu-btn-primary flex-grow-1" onclick="window._sguPrevisualizarPDFCompleto()"><i class="bi bi-eye"></i> Previsualizar Expediente</button>';
+        html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDFCompleto()"><i class="bi bi-file-earmark-arrow-down text-danger"></i> Descargar Expediente</button>';
         if (_sguIsAdmin()) {
             html += '<button class="sgu-btn-top" style="color:#dc2626;" onclick="window._sguDeleteRecord(\'' + rec.id + '\')" title="Eliminar Expediente"><i class="bi bi-trash"></i></button>';
         }
@@ -1278,7 +1281,7 @@ window._sguVerDetalles = function(tipo) {
 // =========================================================
 // 📄 GENERAR PDF FORMATO ISO OFICIAL (1 SOLA HOJA A4)
 // =========================================================
-function _sguBuildPageHtml(rec, tipo) {
+function _sguBuildPageHtml(rec, tipo, pageLabel) {
     var checklist = tipo === 'salida' ? rec.salida_checklist_json : rec.retorno_checklist_json;
     var template = tipo === 'salida' ? rec.salida_template_json : rec.retorno_template_json;
     var fecha = tipo === 'salida' ? rec.salida_fecha : rec.retorno_fecha;
@@ -1400,7 +1403,7 @@ function _sguBuildPageHtml(rec, tipo) {
     h += '</table>';
     h += '<div style="display:flex;justify-content:space-between;font-size:8.5px;color:#666666;margin-top:4px;padding:0 2px;">';
     h += '<span>Documento generado por Sistema ERP de Gestión de Flota</span>';
-    h += '<span>Página 1 de 1 (Acta Oficial)</span>';
+    h += '<span>' + (pageLabel || 'Página 1 de 1 (Acta Oficial)') + '</span>';
     h += '</div>';
     h += '</div>';
 
@@ -1441,6 +1444,91 @@ function _sguBuildPhotosPagesHtml(fotosArray, tipo) {
     return h;
 }
 
+function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
+    var finalHtml = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>' + (titulo || 'Checklist de Inspección') + '</title>\n'
+        + '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">\n'
+        + '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">\n'
+        + '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></scr' + 'ipt>\n'
+        + '<style>\n'
+        + 'body { background-color: #334155; margin: 0; padding: 24px 12px 60px 12px; display: flex; flex-direction: column; align-items: center; font-family: "Plus Jakarta Sans", Arial, sans-serif; }\n'
+        + '.sgu-actions-bar { position: fixed; top: 16px; right: 20px; display: flex; gap: 8px; z-index: 9999; }\n'
+        + '.sgu-btn-doc { background: #0f172a; color: #ffffff; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.35); transition: all 0.15s ease; }\n'
+        + '.sgu-btn-doc:hover { background: #0284c7; transform: translateY(-1px); }\n'
+        + '.sgu-btn-doc-primary { background: #0284c7; }\n'
+        + '.sgu-btn-doc-primary:hover { background: #0369a1; }\n'
+        + '.sgu-pdf-wrapper { display: flex; flex-direction: column; align-items: center; gap: 20px; }\n'
+        + '.sgu-pdf-wrapper > div { box-shadow: 0 10px 30px rgba(0,0,0,0.35); border-radius: 4px; }\n'
+        + '@media print {\n'
+        + '  body { background: none !important; padding: 0 !important; margin: 0 !important; display: block !important; }\n'
+        + '  .sgu-actions-bar { display: none !important; }\n'
+        + '  .sgu-pdf-wrapper > div { box-shadow: none !important; margin: 0 !important; border-radius: 0 !important; }\n'
+        + '  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }\n'
+        + '}\n'
+        + '</style>\n</head>\n<body>\n'
+        + '<div class="sgu-actions-bar">\n'
+        + '  <button class="sgu-btn-doc" onclick="window.print()"><i class="bi bi-printer-fill"></i> Imprimir</button>\n'
+        + '  <button class="sgu-btn-doc sgu-btn-doc-primary" onclick="descargarDoc()"><i class="bi bi-download"></i> Descargar PDF</button>\n'
+        + '</div>\n'
+        + '<div class="sgu-pdf-wrapper" id="sgu-pdf-root">\n'
+        + htmlBody
+        + '\n</div>\n'
+        + '<script>\n'
+        + 'function descargarDoc() {\n'
+        + '  var el = document.getElementById("sgu-pdf-root");\n'
+        + '  var opt = { margin: [8,8,8,8], filename: "' + filename + '", image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0 }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } };\n'
+        + '  html2pdf().set(opt).from(el).save();\n'
+        + '}\n'
+        + '</scr' + 'ipt>\n'
+        + '</body>\n</html>';
+
+    var blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+}
+
+window._sguPrevisualizarPDF = async function(tipo) {
+    if (!window._sguCurrentRecord) return;
+    var rec = window._sguCurrentRecord;
+    var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+
+    _sguToast('Preparando vista previa...', 'bi-eye');
+
+    var htmlFinal = _sguBuildPageHtml(rec, tipo);
+    if (fotos.length > 0) {
+        var fotosSimple = fotos.map(function(f, i) { return { url: f.url, num: i + 1 }; });
+        htmlFinal += _sguBuildPhotosPagesHtml(fotosSimple, tipo);
+    }
+
+    _sguAbrirVentanaImpresion(htmlFinal, 'Checklist_' + rec.placa_tracto + '_' + tipo + '.pdf', 'Checklist ' + rec.placa_tracto + ' (' + tipo.toUpperCase() + ')');
+};
+
+window._sguPrevisualizarPDFCompleto = async function() {
+    if (!window._sguCurrentRecord) return;
+    var rec = window._sguCurrentRecord;
+
+    _sguToast('Preparando vista previa del expediente...', 'bi-eye');
+
+    var todasFotos = rec.fotos || [];
+    var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
+    var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
+
+    var htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)');
+
+    if (rec.retorno_fecha || rec.estado === 'completado') {
+        htmlFinal += '<div class="html2pdf__page-break"></div>';
+        htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)');
+    }
+
+    if (fotosSalida.length > 0) {
+        htmlFinal += _sguBuildPhotosPagesHtml(fotosSalida, 'salida');
+    }
+    if (fotosRetorno.length > 0) {
+        htmlFinal += _sguBuildPhotosPagesHtml(fotosRetorno, 'retorno');
+    }
+
+    _sguAbrirVentanaImpresion(htmlFinal, 'Expediente_Completo_' + rec.placa_tracto + '.pdf', 'Expediente Completo ' + rec.placa_tracto);
+};
+
 window._sguGenerarPDF = async function(tipo) {
     if (!window._sguCurrentRecord) return;
     if (typeof html2pdf === 'undefined') {
@@ -1451,7 +1539,7 @@ window._sguGenerarPDF = async function(tipo) {
     var rec = window._sguCurrentRecord;
     var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
 
-    _sguToast('Generando reporte PDF...', 'bi-hourglass-split');
+    _sguToast('Descargando reporte PDF...', 'bi-hourglass-split');
 
     var fotosBase64 = [];
     if (fotos.length > 0) {
@@ -1471,7 +1559,7 @@ window._sguGenerarPDF = async function(tipo) {
         }
     }
 
-    var htmlFinal = _sguBuildPageHtml(rec, tipo);
+    var htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)');
     if (fotosBase64.length > 0) {
         htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
     }
@@ -1505,7 +1593,7 @@ window._sguGenerarPDFCompleto = async function() {
     if (!window._sguCurrentRecord) return;
     var rec = window._sguCurrentRecord;
 
-    _sguToast('Generando Expediente Completo...', 'bi-hourglass-split');
+    _sguToast('Descargando Expediente Completo...', 'bi-hourglass-split');
 
     var todasFotos = rec.fotos || [];
     var fotosSalida = [];
@@ -1530,12 +1618,12 @@ window._sguGenerarPDFCompleto = async function() {
     }
 
     // Página 1: Salida
-    var htmlFinal = _sguBuildPageHtml(rec, 'salida');
+    var htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)');
 
     // Página 2: Retorno (si existe o completado)
     if (rec.retorno_fecha || rec.estado === 'completado') {
         htmlFinal += '<div class="html2pdf__page-break"></div>';
-        htmlFinal += _sguBuildPageHtml(rec, 'retorno');
+        htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)');
     }
 
     // Páginas siguientes: Fotos
