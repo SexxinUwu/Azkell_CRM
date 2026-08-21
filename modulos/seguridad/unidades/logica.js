@@ -118,7 +118,6 @@ async function _sguObtenerDocVehiculo(placa) {
 
     var soatData = { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: '11/01/2027' };
     var rtData   = { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: '03/12/2026' };
-    var inspData = { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: '28/08/2026' };
 
     try {
         if (!_sguVehiculosCache) {
@@ -133,16 +132,14 @@ async function _sguObtenerDocVehiculo(placa) {
             if (veh) {
                 var sF = veh.soat_f_vencimiento || veh.soat_vencimiento || veh.fecha_vencimiento_soat;
                 var rF = veh.rt_f_vencimiento || veh.rt_vencimiento || veh.fecha_vencimiento_rt || veh.citv_vencimiento;
-                var iF = veh.fum_vencimiento || veh.tc_vencimiento || veh.insp_vencimiento;
 
                 if (sF) soatData = _sguCalcularEstadoDoc(sF, '11/01/2027');
                 if (rF) rtData   = _sguCalcularEstadoDoc(rF, '03/12/2026');
-                if (iF) inspData = _sguCalcularEstadoDoc(iF, '28/08/2026');
             }
         }
     } catch(e) {}
 
-    return { soat: soatData, rt: rtData, insp: inspData };
+    return { soat: soatData, rt: rtData };
 }
 
 window._sguSyncDocPlaca = async function(placa, tipo) {
@@ -179,14 +176,6 @@ window._sguSyncDocPlaca = async function(placa, tipo) {
     if (elRtB) {
         elRtB.textContent = doc.rt.estado;
         elRtB.className = 'badge ' + doc.rt.badgeClass + ' text-uppercase px-2 py-1';
-    }
-
-    var elInspV = document.getElementById('sgu-insp-venc' + prefix);
-    var elInspB = document.getElementById('sgu-insp-badge' + prefix);
-    if (elInspV) elInspV.textContent = 'Vence el ' + doc.insp.fechaFmt;
-    if (elInspB) {
-        elInspB.textContent = doc.insp.estado;
-        elInspB.className = 'badge ' + doc.insp.badgeClass + ' text-uppercase px-2 py-1';
     }
 };
 
