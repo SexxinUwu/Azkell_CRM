@@ -44,12 +44,12 @@ async function getPresignedUrl(key, expiresIn = 3600) {
  * @param {string} contentType — Tipo MIME (ej: image/jpeg)
  * @param {number} expiresIn — Vigencia en segundos (default 300 = 5 mins)
  */
-async function getPresignedUploadUrl(key, contentType, expiresIn = 300) {
-    return getSignedUrl(s3, new PutObjectCommand({
+async function getPresignedUploadUrl(key, contentType, expiresIn = 600) {
+    const params = {
         Bucket: BUCKET,
-        Key: key,
-        ContentType: contentType
-    }), { expiresIn });
+        Key: key
+    };
+    return getSignedUrl(s3, new PutObjectCommand(params), { expiresIn });
 }
 
 /**
