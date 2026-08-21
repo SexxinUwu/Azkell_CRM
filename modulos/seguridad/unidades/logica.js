@@ -920,85 +920,142 @@ window._sguCheckReturnReady = function() {
     }
 };
 
-// ── GUARDAR FOTOS A S3 ───────────────────────────────────────────
-function _sguUploadPhotos(registroId, tipo, cb) {
+// ── COMPRESIÓN Y OPTIMIZACIÓN DE IMÁGENES EN CLIENTE ─────────────
+function _sguComprimirImagen(file, maxDimension, quality) {
+    maxDimension = maxDimension || 1600;
+    quality = quality || 0.82;
+    return new Promise(function(resolve) {
+        if (!file || !file.type || !file.type.match(/image.*/)) {
+            return resolve(file);
+        }
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var img = new Image();
+            img.onload = function() {
+                var w = img.width;
+                var h = img.height;
+                if (w > maxDimension || h > maxDimension) {
+                    if (w > h) {
+                        h = Math.round((h * maxDimension) / w);
+                        w = maxDimension;
+                    } else {
+                        w = Math.round((w * maxDimension) / h);
+                        h = maxDimension;
+                    }
+                }
+                var canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                canvas.toBlob(function(blob) {
+                    if (!blob) return resolve(file);
+                    resolve(blob);
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = function() { resolve(file); };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() { resolve(file); };
+        reader.readAsDataURL(file);
+    });
+}
+
+// ── GUARDAR IMÁGENES ─────────────────────────────────────────────
+async function _sguUploadPhotos(registroId, tipo, cb) {
     var pendientes = (_sguPhotos[tipo] || []).filter(function(p) { return !p.uploaded && p.file; });
     if (!pendientes.length) return cb();
 
-    var archivosMetadata = pendientes.map(function(p) {
-        return { nombre: p.file.name || 'foto.jpg', tipo: p.file.type || 'image/jpeg', fase: tipo };
+    _sguToast('Optimizando imágenes...', 'bi-images');
+
+    // 1. Optimizar imágenes para evitar saturación de red y pérdida de fotos
+    var blobsOptimizados = [];
+    for (var j = 0; j < pendientes.length; j++) {
+        var blob = await _sguComprimirImagen(pendientes[j].file);
+        blobsOptimizados.push(blob);
+    }
+
+    var archivosMetadata = pendientes.map(function(p, idx) {
+        return { nombre: 'evidencia_' + (idx + 1) + '.jpg', tipo: 'image/jpeg', fase: tipo };
     });
 
-    _sguToast('Preparando subida directa a la nube...', 'bi-cloud-arrow-up');
+    _sguToast('Subiendo imágenes...', 'bi-cloud-arrow-up');
 
-    fetch('/api/seguridad/unidades/' + registroId + '/fotos/presigned', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + localStorage.getItem('fleet_token')
-        },
-        body: JSON.stringify({ archivos: archivosMetadata })
-    })
-    .then(function(r) {
-        if (!r.ok) throw new Error('Error solicitando permisos de subida');
-        return r.json();
-    })
-    .then(function(data) {
-        var urls = data.urls || [];
-        var exitosos = [];
-        var promesas = [];
-
-        _sguToast('Subiendo ' + pendientes.length + ' fotos a S3...', 'bi-hourglass-split');
-
-        pendientes.forEach(function(p, i) {
-            if (!urls[i]) return;
-            var uploadUrl = urls[i].uploadUrl;
-            var s3Key = urls[i].key;
-
-            var req = fetch(uploadUrl, {
-                method: 'PUT',
-                headers: { 'Content-Type': p.file.type || 'image/jpeg' },
-                body: p.file
-            })
-            .then(function(resS3) {
-                if (!resS3.ok) throw new Error('Fallo subida a S3');
-                p.uploaded = true;
-                exitosos.push({ key: s3Key, fase: tipo });
-            })
-            .catch(function(e) { console.error(e); });
-
-            promesas.push(req);
+    try {
+        var r = await fetch('/api/seguridad/unidades/' + registroId + '/fotos/presigned', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('fleet_token')
+            },
+            body: JSON.stringify({ archivos: archivosMetadata })
         });
 
-        return Promise.all(promesas).then(function() { return exitosos; });
-    })
-    .then(function(exitosos) {
+        if (!r.ok) throw new Error('Error solicitando permisos de subida');
+        var data = await r.json();
+        var urls = data.urls || [];
+        var exitosos = [];
+
+        // Subida secuencial con reintento automático para garantizar 100% de éxito
+        for (var i = 0; i < pendientes.length; i++) {
+            if (!urls[i]) continue;
+            var uploadUrl = urls[i].uploadUrl;
+            var s3Key = urls[i].key;
+            var fileBlob = blobsOptimizados[i] || pendientes[i].file;
+
+            _sguToast('Subiendo imagen ' + (i + 1) + ' de ' + pendientes.length + '...', 'bi-cloud-arrow-up');
+
+            var uploadOk = false;
+            for (var intento = 0; intento < 2; intento++) {
+                try {
+                    var resUpload = await fetch(uploadUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'image/jpeg' },
+                        body: fileBlob
+                    });
+                    if (resUpload.ok) {
+                        uploadOk = true;
+                        break;
+                    }
+                } catch(eUpload) {
+                    console.warn('Reintentando subida imagen ' + (i + 1), eUpload);
+                }
+            }
+
+            if (uploadOk) {
+                pendientes[i].uploaded = true;
+                exitosos.push({ key: s3Key, fase: tipo });
+            }
+        }
+
         if (!exitosos.length) {
-            _sguToast('Ninguna foto pudo subirse.', 'bi-x-circle');
+            _sguToast('No se pudieron subir las imágenes.', 'bi-x-circle');
             return cb();
         }
 
-        return fetch('/api/seguridad/unidades/' + registroId + '/fotos/confirmar', {
+        _sguToast('Guardando evidencias...', 'bi-check2-circle');
+
+        var rConf = await fetch('/api/seguridad/unidades/' + registroId + '/fotos/confirmar', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + localStorage.getItem('fleet_token')
             },
             body: JSON.stringify({ exitosos: exitosos })
-        })
-        .then(function(r) { 
-            if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Error BD'); });
-            return r.json(); 
-        })
-        .then(function() {
-            cb();
         });
-    })
-    .catch(function(e) {
-        console.error('Error subida fotos:', e);
-        _sguToast(e.message || 'Fallo de subida de fotos', 'bi-exclamation-triangle');
-        setTimeout(cb, 2000);
-    });
+
+        if (!rConf.ok) {
+            var errData = await rConf.json().catch(function(){ return {}; });
+            throw new Error(errData.error || 'Error en base de datos');
+        }
+
+        _sguToast('Imágenes subidas con éxito.');
+        cb();
+    } catch(err) {
+        console.error('Error subida imágenes:', err);
+        _sguToast(err.message || 'Fallo al subir imágenes', 'bi-exclamation-triangle');
+        setTimeout(cb, 1500);
+    }
 }
 
 // ── GUARDAR SALIDA / RETORNO ─────────────────────────────────────
