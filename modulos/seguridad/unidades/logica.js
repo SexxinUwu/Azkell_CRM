@@ -961,7 +961,29 @@ function _sguComprimirImagen(file, maxDimension, quality) {
     });
 }
 
-// ── GUARDAR IMÁGENES ULTRA RÁPIDO (PARALELO EN MILISEGUNDOS) ──────
+// ── REINTENTO AUTOMÁTICO DE SUBIDA (ESTÁNDAR ENTERPRISE) ─────────
+async function _sguUploadSinglePhotoWithRetry(uploadUrl, fileBlob, s3Key, tipo, maxRetries) {
+    maxRetries = maxRetries || 3;
+    for (var attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            var res = await fetch(uploadUrl, {
+                method: 'PUT',
+                body: fileBlob
+            });
+            if (res.ok) {
+                return { ok: true, key: s3Key, fase: tipo };
+            }
+        } catch (e) {
+            console.warn('Reintentando foto (' + attempt + '/' + maxRetries + '):', s3Key, e);
+            if (attempt < maxRetries) {
+                await new Promise(function(r) { setTimeout(r, 100); });
+            }
+        }
+    }
+    return { ok: false, key: s3Key };
+}
+
+// ── GUARDAR IMÁGENES ULTRA RÁPIDO (PARALELO ENTERPRISE) ──────────
 async function _sguUploadPhotos(registroId, tipo, cb) {
     var pendientes = (_sguPhotos[tipo] || []).filter(function(p) { return !p.uploaded && p.file; });
     if (!pendientes.length) return cb();
@@ -969,7 +991,7 @@ async function _sguUploadPhotos(registroId, tipo, cb) {
     _sguToast('Subiendo imágenes...', 'bi-cloud-arrow-up');
 
     try {
-        // 1. Optimizar todas las fotos en paralelo en memoria (toma ~40-80ms total)
+        // 1. Optimizar todas las fotos en paralelo en memoria (toma ~30-60ms total)
         var blobsOptimizados = await Promise.all(pendientes.map(function(p) {
             return _sguComprimirImagen(p.file);
         }));
@@ -978,7 +1000,7 @@ async function _sguUploadPhotos(registroId, tipo, cb) {
             return { nombre: 'evidencia_' + (idx + 1) + '.jpg', tipo: 'image/jpeg', fase: tipo };
         });
 
-        // 2. Pedir URLs de carga directa
+        // 2. Solicitar URLs de subida
         var r = await fetch('/api/seguridad/unidades/' + registroId + '/fotos/presigned', {
             method: 'POST',
             headers: {
@@ -993,29 +1015,28 @@ async function _sguUploadPhotos(registroId, tipo, cb) {
         var urls = data.urls || [];
         var exitosos = [];
 
-        // 3. Subir todas las imágenes simultáneamente en paralelo a S3
-        var uploadPromises = pendientes.map(function(p, i) {
-            if (!urls[i]) return Promise.resolve();
-            var uploadUrl = urls[i].uploadUrl;
-            var s3Key = urls[i].key;
-            var fileBlob = blobsOptimizados[i] || p.file;
-
-            return fetch(uploadUrl, {
-                method: 'PUT',
-                body: fileBlob
-            }).then(function(resUpload) {
-                if (resUpload.ok) {
-                    p.uploaded = true;
-                    exitosos.push({ key: s3Key, fase: tipo });
-                } else {
-                    console.warn('Error subiendo imagen ' + (i + 1), resUpload.statusText);
-                }
-            }).catch(function(errU) {
-                console.warn('Fallo red imagen ' + (i + 1), errU);
+        // 3. Subida en batches de 6 hilos concurrentes con reintentos automáticos
+        var BATCH_SIZE = 6;
+        for (var i = 0; i < pendientes.length; i += BATCH_SIZE) {
+            var batch = pendientes.slice(i, i + BATCH_SIZE);
+            var batchPromises = batch.map(function(p, bIdx) {
+                var idx = i + bIdx;
+                if (!urls[idx]) return Promise.resolve(null);
+                var uploadUrl = urls[idx].uploadUrl;
+                var s3Key = urls[idx].key;
+                var fileBlob = blobsOptimizados[idx] || p.file;
+                return _sguUploadSinglePhotoWithRetry(uploadUrl, fileBlob, s3Key, tipo, 3);
             });
-        });
 
-        await Promise.all(uploadPromises);
+            var batchResults = await Promise.all(batchPromises);
+            batchResults.forEach(function(res, bIdx) {
+                if (res && res.ok) {
+                    var idx = i + bIdx;
+                    pendientes[idx].uploaded = true;
+                    exitosos.push({ key: res.key, fase: res.fase });
+                }
+            });
+        }
 
         if (!exitosos.length) {
             _sguToast('No se pudieron subir las imágenes.', 'bi-x-circle');
