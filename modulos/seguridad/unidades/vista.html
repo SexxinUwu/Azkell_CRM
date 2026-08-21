@@ -9,7 +9,7 @@
 
 #moduloSegUnidades {
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
-    padding: 1rem 1.25rem 3rem 1.25rem !important;
+    padding: 1rem 1.25rem 140px 1.25rem !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box;
@@ -21,8 +21,16 @@
 
 @media (max-width: 768px) {
     #moduloSegUnidades {
-        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+        padding: 0.5rem 0.5rem 160px 0.5rem !important;
     }
+}
+
+.sgu-bottom-spacer {
+    height: 120px;
+    width: 100%;
+    flex-shrink: 0;
+    pointer-events: none;
+    display: block;
 }
 
 /* ── Vistas y Transiciones ─────────────────────────────────────── */
@@ -755,10 +763,10 @@
                     <!-- Bloque Informativo Documentos Tracto -->
                     <div class="sgu-doc-box" id="sgu-doc-box-tracto" style="display:none;">
                         <div class="fw-bold text-dark small mb-2 d-flex align-items-center gap-1">
-                            <i class="bi bi-truck text-primary"></i> DOCUMENTOS E INSPECCIÓN TRACTO (<span id="sgu-lbl-doc-tracto-placa" class="text-primary fw-bold">--</span>)
+                            <i class="bi bi-truck text-primary"></i> DOCUMENTOS TRACTO (<span id="sgu-lbl-doc-tracto-placa" class="text-primary fw-bold">--</span>)
                         </div>
                         <div class="row g-2">
-                            <div class="col-12 col-md-4">
+                            <div class="col-12 col-md-6">
                                 <div class="sgu-doc-item-card">
                                     <div class="d-flex align-items-center gap-2">
                                         <i class="bi bi-shield-check text-success fs-5"></i>
@@ -770,7 +778,7 @@
                                     <span class="badge bg-success text-uppercase px-2 py-1" id="sgu-soat-badge-t" style="font-size:0.65rem;">VIGENTE</span>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-4">
+                            <div class="col-12 col-md-6">
                                 <div class="sgu-doc-item-card">
                                     <div class="d-flex align-items-center gap-2">
                                         <i class="bi bi-journal-check text-success fs-5"></i>
@@ -782,28 +790,16 @@
                                     <span class="badge bg-success text-uppercase px-2 py-1" id="sgu-rt-badge-t" style="font-size:0.65rem;">VIGENTE</span>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <div class="sgu-doc-item-card">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="bi bi-search-heart text-primary fs-5"></i>
-                                        <div>
-                                            <div class="fw-bold text-dark" style="font-size:0.75rem;">Inspección General</div>
-                                            <small class="text-muted" id="sgu-insp-venc-t" style="font-size:0.7rem;">Vence el --/--/----</small>
-                                        </div>
-                                    </div>
-                                    <span class="badge bg-success text-uppercase px-2 py-1" id="sgu-insp-badge-t" style="font-size:0.65rem;">VIGENTE</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
                     <!-- Bloque Informativo Documentos Carreta / Remolque -->
                     <div class="sgu-doc-box" id="sgu-doc-box-carreta" style="display:none;">
                         <div class="fw-bold text-dark small mb-2 d-flex align-items-center gap-1">
-                            <i class="bi bi-truck-flatbed text-warning"></i> DOCUMENTOS E INSPECCIÓN CARRETA / REMOLQUE (<span id="sgu-lbl-doc-carreta-placa" class="text-warning fw-bold">--</span>)
+                            <i class="bi bi-truck-flatbed text-warning"></i> DOCUMENTOS CARRETA / REMOLQUE (<span id="sgu-lbl-doc-carreta-placa" class="text-warning fw-bold">--</span>)
                         </div>
                         <div class="row g-2">
-                            <div class="col-12 col-md-4">
+                            <div class="col-12 col-md-6">
                                 <div class="sgu-doc-item-card">
                                     <div class="d-flex align-items-center gap-2">
                                         <i class="bi bi-shield-check text-success fs-5"></i>
@@ -815,7 +811,7 @@
                                     <span class="badge bg-success text-uppercase px-2 py-1" id="sgu-soat-badge-r" style="font-size:0.65rem;">VIGENTE</span>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-4">
+                            <div class="col-12 col-md-6">
                                 <div class="sgu-doc-item-card">
                                     <div class="d-flex align-items-center gap-2">
                                         <i class="bi bi-journal-check text-success fs-5"></i>
@@ -825,18 +821,6 @@
                                         </div>
                                     </div>
                                     <span class="badge bg-success text-uppercase px-2 py-1" id="sgu-rt-badge-r" style="font-size:0.65rem;">VIGENTE</span>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <div class="sgu-doc-item-card">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="bi bi-search-heart text-primary fs-5"></i>
-                                        <div>
-                                            <div class="fw-bold text-dark" style="font-size:0.75rem;">Inspección General</div>
-                                            <small class="text-muted" id="sgu-insp-venc-r" style="font-size:0.7rem;">Vence el --/--/----</small>
-                                        </div>
-                                    </div>
-                                    <span class="badge bg-success text-uppercase px-2 py-1" id="sgu-insp-badge-r" style="font-size:0.65rem;">VIGENTE</span>
                                 </div>
                             </div>
                         </div>
@@ -903,6 +887,7 @@
                 </div>
             </div>
         </div>
+        <div class="sgu-bottom-spacer"></div>
     </div>
 
     <!-- ═══ VISTA: DETALLE Y CIERRE DE RETORNO ═════════════════════ -->
@@ -920,9 +905,10 @@
             <div id="sgu-det-head-badge" class="sgu-badge sgu-badge-en-ruta">EN RUTA</div>
         </div>
 
-        <div id="sgu-detail-content" class="pb-4">
+        <div id="sgu-detail-content" style="padding-bottom: 2rem;">
             <!-- Dynamic detail content rendered by logica.js -->
         </div>
+        <div class="sgu-bottom-spacer"></div>
     </div>
 
     <!-- ═══ VISTA: CONSTRUCTOR DE PLANTILLA (AJUSTES) ══════════════ -->
