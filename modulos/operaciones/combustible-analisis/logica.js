@@ -192,7 +192,7 @@
         const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
         const plateFilter = document.getElementById('ca-filter-plate')?.value || 'ALL';
         const searchVal = (document.getElementById('ca-search-input')?.value || '').toLowerCase().trim();
-        const sortBy = document.getElementById('ca-sort-by')?.value || 'trip_desc';
+        const sortBy = document.getElementById('ca-sort-by')?.value || 'date_desc';
 
         window._caFilteredTrips = window._caTripGroups.filter(t => {
             // Filtro Rango de Fechas (Solapamiento con período del viaje)
@@ -218,8 +218,8 @@
             
             // Filtro por Combustible
             if (fuelFilter !== 'ALL') {
-                const hasFuel = (t.vouchers || []).some(v => v.producto === fuelFilter);
-                if (!hasFuel) return false;
+                const matchingVouchers = (t.vouchers || []).filter(v => !v.esPuntoPartida && v.producto === fuelFilter);
+                if (matchingVouchers.length === 0) return false;
             }
 
             // Filtro por Búsqueda rápida
@@ -483,11 +483,22 @@
         const trip = window._caFilteredTrips[idx];
         if (!trip) return;
 
+        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
         const title = document.getElementById('ca-modal-title');
         const sub = document.getElementById('ca-modal-sub-header');
         const tbody = document.getElementById('ca-modal-table-body');
 
-        if (title) title.textContent = `Detalle de Vales — Viaje ${trip.viaje} (${trip.placa})`;
+        // Filtrar lista de vales estrictamente por el combustible activo
+        let vouchersList = trip.vouchers || [];
+        if (fuelFilter !== 'ALL') {
+            vouchersList = vouchersList.filter(v => v.producto === fuelFilter);
+        }
+
+        const vPropios = vouchersList.filter(v => !v.esPuntoPartida);
+        const modalGalones = vPropios.reduce((s, x) => s + (x.galones || 0), 0);
+        const modalGasto = vPropios.reduce((s, x) => s + (x.importe || 0), 0);
+
+        if (title) title.textContent = `Detalle de Vales ${fuelFilter !== 'ALL' ? '(' + fuelFilter + ')' : ''} — Viaje ${trip.viaje} (${trip.placa})`;
 
         if (sub) {
             sub.innerHTML = `
@@ -495,14 +506,14 @@
                 <div><span class="text-muted">Km Inicial (Partida):</span> <strong class="text-success font-monospace">${trip.kmInicio > 0 ? trip.kmInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
                 <div><span class="text-muted">Km Final (Cierre):</span> <strong class="text-danger font-monospace">${trip.kmFin > 0 ? trip.kmFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
                 <div><span class="text-muted">Recorrido:</span> <strong class="text-dark font-monospace">${trip.recorridoKm > 0 ? trip.recorridoKm.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
-                <div><span class="text-muted">Total Galones:</span> <strong class="text-primary">${trip.totalGalones.toFixed(2)} Gln</strong></div>
-                <div><span class="text-muted">Total Gasto:</span> <strong class="text-success">S/ ${trip.totalGasto.toFixed(2)}</strong></div>
-                <div><span class="text-muted">Rendimiento:</span> <strong class="text-indigo-600 font-monospace">${trip.rendimiento > 0 ? trip.rendimiento.toFixed(2) + ' Km/Gal' : 'N/D'}</strong></div>
+                <div><span class="text-muted">Total Galones ${fuelFilter !== 'ALL' ? '(' + fuelFilter + ')' : ''}:</span> <strong class="text-primary">${modalGalones.toFixed(2)} Gln</strong></div>
+                <div><span class="text-muted">Total Gasto ${fuelFilter !== 'ALL' ? '(' + fuelFilter + ')' : ''}:</span> <strong class="text-success">S/ ${modalGasto.toFixed(2)}</strong></div>
+                ${fuelFilter === 'ALL' ? `<div><span class="text-muted">Rendimiento:</span> <strong class="text-indigo-600 font-monospace">${trip.rendimiento > 0 ? trip.rendimiento.toFixed(2) + ' Km/Gal' : 'N/D'}</strong></div>` : ''}
             `;
         }
 
         if (tbody) {
-            tbody.innerHTML = trip.vouchers.map(v => {
+            tbody.innerHTML = vouchersList.map(v => {
                 if (v.esPuntoPartida) {
                     return `
                         <tr style="background: #f0fdf4 !important;">
