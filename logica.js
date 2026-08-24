@@ -311,8 +311,10 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-reportes-ot',   vReportesOT);
     safe('nav-trabajos-ot',     vTrabajosOT);
     safe('mbnav-trabajos-ot',   vTrabajosOT);
-    safe('nav-combustible',     vCombustible);
-    safe('mbnav-combustible',   vCombustible);
+    safe('nav-combustible-toggle',   vCombustible);
+    safe('nav-combustible-vales',    vCombustible);
+    safe('nav-combustible-analisis', vCombustible);
+    safe('mbnav-combustible',        vCombustible);
     safe('nav-neumaticos-toggle', vNeumaticos);
     safe('mbnav-neumaticos-analisis', vNeumaticos);
     safe('mbnav-neumaticos-ultimas',  vNeumaticos);
@@ -511,6 +513,8 @@ window.verificarSesionGuardada = function() {
             'mantenimiento/reportes-ot': 'reportes_ot',
             'mantenimiento/trabajos-ot': 'trabajos_ot',
             'mantenimiento/combustible': 'combustible',
+            'mantenimiento/combustible-vales': 'combustible_vales',
+            'mantenimiento/combustible-analisis': 'combustible_analisis',
             'mantenimiento/neumaticos': 'neumaticos',
             'mantenimiento/neumaticos-analisis': 'neumaticos',
             'mantenimiento/neumaticos-ultimas': 'neumaticos',
@@ -1509,9 +1513,10 @@ window.checkPerm = function(modKey, action) {
             'insp': ['insp', 'inspecciones'],
             'inspecciones': ['inspecciones', 'insp'],
             'fleet': ['fleetrun', 'fleet'],
-            'fleetrun': ['fleetrun', 'fleet'],
-            'combustible': ['combustible', 'comb'],
-            'comb': ['comb', 'combustible'],
+            'combustible': ['combustible', 'combustible_vales', 'combustible_analisis', 'comb'],
+            'combustible_vales': ['combustible_vales', 'combustible', 'comb'],
+            'combustible_analisis': ['combustible_analisis', 'combustible', 'comb'],
+            'comb': ['comb', 'combustible', 'combustible_vales', 'combustible_analisis'],
             'neumaticos': ['neumaticos', 'neumaticos_analisis', 'neumaticos_ultimas', 'neu', 'llantas'],
             'neumaticos_analisis': ['neumaticos_analisis', 'neumaticos', 'neu', 'llantas'],
             'neumaticos_ultimas': ['neumaticos_ultimas', 'neumaticos', 'neu', 'llantas'],

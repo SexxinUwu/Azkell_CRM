@@ -117,14 +117,50 @@ module.exports = function (db, broadcast, logAudit) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     ];
 
+    const DEFAULT_MARCAS = [
+        'ADVANCE', 'AEOLUS', 'AMBERTONE', 'APLUS', 'ARMORSTEEL', 'AUSTONE', 'AUFINE', 'BLACKLION', 'BRIDGESTONE',
+        'CHAOYANG', 'CONTINENTAL', 'DUNLOP', 'DOUBLESTAR', 'DURATURN', 'DYNACARGO', 'EVERGREEN', 'FULLRUN', 'GITI',
+        'GOODYEAR', 'GOODRIDE', 'GOODTYRE', 'GOLDEN CROWN', 'HANKOOK', 'HILO', 'INFINITY', 'JK TYRE',
+        'JINYU', 'KELLY', 'KETER', 'KUMHO', 'KUNLUN', 'LABIGATOR', 'LINGLONG', 'MAISHALL', 'MARSHAL',
+        'MAXELL', 'MAXXIS', 'MICHELIN', 'NIPPON', 'PIRELLI', 'PRINX', 'ROADLUX', 'ROADMASTER', 'ROYAL BLACK',
+        'STEELMARK', 'SUPERHAWK', 'TRIANGLE', 'WESTLAKE', 'WINDPOWER', 'WOSEN', 'YOKOHAMA'
+    ];
+
+    const DEFAULT_MEDIDAS = [
+        '11R22.5', '12R22.5', '235/70R17.5', '235/75R17.5', '245/70R17.5', '245/70R19.5', '245/70R22.5',
+        '275/70R22.5', '275/80R22.5', '295/80R22.5', '315/80R22.5', '385/65R22.5', '425/65R22.5',
+        '445/65R22.5', '9.5R17.5'
+    ];
+
+    const DEFAULT_MODELOS = [
+        '10558', '17', '366', '785', 'AAR603', 'ACEL2', 'AD153', 'ADR35', 'ADR6', 'ADR8', 'AEL2', 'AEL5',
+        'AF177', 'AG510', 'AGD', 'AGD5', 'AH+', 'AHS', 'AHT', 'AMS', 'AT115A', 'AT121', 'AT161', 'AT27',
+        'AT605', 'AZ126', 'AZ171', 'BA226', 'BAR26', 'BT165', 'C901', 'CITY Y999', 'COUCH GRIP', 'CR960',
+        'CR976A', 'CRUNCH GRIP', 'CST27', 'D200', 'DR919', 'DSR266', 'DUD100', 'E BUS', 'EAU91', 'EZ334', 'F820',
+        'FFH123', 'FR01', 'FR88', 'G658', 'GAC812', 'GAR820', 'GAU867', 'GAU867A', 'GDR1', 'GDR665', 'GITI',
+        'GL282A', 'GL283A', 'GSR1', 'GSR225', 'GSRI', 'GT198', 'GT867', 'GU01', 'HAI', 'HA1', 'HCT', 'HD', 'HD3',
+        'HH301', 'HKS78', 'HK578', 'HN266', 'HT3', 'HTC', 'HYD', 'IFL866', 'JDH6', 'JDM6', 'JF568', 'JOH6',
+        'JTM1', 'JU558', 'JUH5', 'JULL1', 'JUM', 'K5461', 'KMA01', 'KMAX', 'KMAX D', 'KMAX S', 'KMAX5',
+        'KMAXD', 'KMAX D200', 'KMAX D210', 'KMAX S210', 'KRA01', 'KRA11', 'KRA50', 'KRD50', 'KS461', 'KS481',
+        'KT', 'KT511', 'KT512', 'KT522', 'LLA38', 'LLF01', 'LLFO', 'LUFO1', 'M5A', 'M729', 'M840', 'M940', 'MC45',
+        'MIX716', 'MSA2', 'MSS2', 'MY507A', 'MYSO7', 'NUEVA', 'PROGUO1', 'R152', 'R605', 'RE', 'REE', 'REGIONAL RHZ',
+        'RENCAUCHADA', 'RHS', 'RM230HH', 'RS201', 'RT605', 'RY023', 'S210', 'SAH02', 'SC216', 'SP580', 'SUPER HA1',
+        'T605', 'TB888', 'TE', 'TH22', 'TR01', 'TR605', 'TR656', 'TR658', 'TR668', 'TR685', 'TR689', 'TRS', 'TRS02',
+        'V1111', 'WGC28', 'WS', 'WS778', 'WS788', 'WS806', 'XLINE', 'XMULTI', 'XZY3', 'Y115', 'Y126', 'Y201', 'Y209',
+        'Y631', 'Y99', 'Y999'
+    ];
+
+    const DEFAULT_ACCIONES = ['Inspección', 'Rotación', 'Instalación', 'Cambio', 'Reparación', 'Reencauche', 'Baja'];
+
     async function asegurarTablasNeumaticosTenant(tdb, tenantId) {
+        if (!tdb) return;
         try {
             const pool = (typeof tdb.promise === 'function') ? tdb.promise() : tdb;
             for (const sql of TABLES_SQL) {
-                await pool.query(sql);
+                try { await pool.query(sql); } catch(eSql) {}
             }
 
-            // Migrar columnas adicionales de forma segura (sin IF NOT EXISTS para compatibilidad total con MySQL)
+            // Migrar columnas adicionales de forma segura
             const migCols = [
                 "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN r4 INT DEFAULT 0",
                 "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN rot VARCHAR(50) DEFAULT 'NO'",
@@ -136,68 +172,24 @@ module.exports = function (db, broadcast, logAudit) {
                 try { await pool.query(q); } catch(e) {}
             }
 
-            // Unificar collation con el resto de tablas (placas, ordenes_trabajo, etc.)
-            try {
-                await pool.query("ALTER TABLE neumaticos_inspecciones CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-                await pool.query("ALTER TABLE neumaticos_inspecciones_det CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-                await pool.query("ALTER TABLE neumaticos_hoja_vida CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-                await pool.query("ALTER TABLE neumaticos_rotaciones CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-            } catch(eCollate) {
-                // ignorar si no requiere conversión
+            // Sembrar catálogos de marcas
+            for (const m of DEFAULT_MARCAS) {
+                try { await pool.query("INSERT IGNORE INTO cat_neumaticos_marcas (nombre) VALUES (?)", [m]); } catch(e) {}
+            }
+            // Sembrar catálogos de medidas
+            for (const med of DEFAULT_MEDIDAS) {
+                try { await pool.query("INSERT IGNORE INTO cat_neumaticos_medidas (nombre) VALUES (?)", [med]); } catch(e) {}
+            }
+            // Sembrar catálogos de acciones
+            for (const ac of DEFAULT_ACCIONES) {
+                try { await pool.query("INSERT IGNORE INTO cat_neumaticos_acciones (nombre) VALUES (?)", [ac]); } catch(e) {}
+            }
+            // Sembrar catálogos de modelos
+            for (const mod of DEFAULT_MODELOS) {
+                try { await pool.query("INSERT IGNORE INTO cat_neumaticos_modelos (nombre) VALUES (?)", [mod]); } catch(e) {}
             }
 
-            // Semillas si cat_neumaticos_marcas está vacía
-            const [mRows] = await pool.query("SELECT COUNT(*) as cnt FROM cat_neumaticos_marcas");
-            if (mRows[0].cnt === 0) {
-                const marcasNeu = [
-                    'AEOLUS', 'AMBERTONE', 'APLUS', 'ARMORSTEEL', 'AUSTONE', 'AUFINE', 'BLACKLION', 'BRIDGESTONE',
-                    'CHAOYANG', 'CONTINENTAL', 'DUNLOP', 'DOUBLESTAR', 'DURATURN', 'DYNACARGO', 'FULLRUN', 'GITI',
-                    'GOODYEAR', 'GOODRIDE', 'GOODTYRE', 'GOLDEN CROWN', 'HANKOOK', 'HILO', 'INFINITY', 'JK TYRE',
-                    'JINYU', 'KELLY', 'KETER', 'KUMHO', 'KUNLUN', 'LABIGATOR', 'LINGLONG', 'MAISHALL', 'MARSHAL',
-                    'MAXELL', 'MAXXIS', 'MICHELIN', 'NIPPON', 'PIRELLI', 'PRINX', 'ROADLUX', 'ROYAL BLACK',
-                    'STEELMARK', 'SUPERHAWK', 'TRIANGLE', 'WESTLAKE', 'WINDPOWER', 'WOSEN', 'YOKOHAMA', 'EVERGREEN', 'ROADMASTER'
-                ];
-                for (const m of marcasNeu) {
-                    await pool.query("INSERT IGNORE INTO cat_neumaticos_marcas (nombre) VALUES (?)", [m]);
-                }
-
-                const medidasNeu = [
-                    '11R22.5', '235/70R17.5', '235/75R17.5', '245/70R17.5', '245/70R19.5', '245/70R22.5',
-                    '275/70R22.5', '275/80R22.5', '295/80R22.5', '315/80R22.5', '385/65R22.5', '425/65R22.5',
-                    '445/65R22.5', '9.5R17.5'
-                ];
-                for (const med of medidasNeu) {
-                    await pool.query("INSERT IGNORE INTO cat_neumaticos_medidas (nombre) VALUES (?)", [med]);
-                }
-
-                const accionesNeu = ['Inspeccion', 'Reparacion', 'Cambio', 'Instalacion', 'Rotacion'];
-                for (const ac of accionesNeu) {
-                    await pool.query("INSERT IGNORE INTO cat_neumaticos_acciones (nombre) VALUES (?)", [ac]);
-                }
-
-                const modelosNeu = [
-                    '10558', '17', '366', '785', 'AAR603', 'ACEL2', 'AD153', 'ADR35', 'ADR6', 'ADR8', 'AEL2', 'AEL5',
-                    'AF177', 'AG510', 'AGD', 'AGD5', 'AH+', 'AHS', 'AHT', 'AMS', 'AT115A', 'AT121', 'AT161', 'AT27',
-                    'AT605', 'AZ126', 'AZ171', 'BA226', 'BAR26', 'BT165', 'C901', 'CITY Y999', 'COUCH GRIP', 'CR960',
-                    'CR976A', 'CRUNCH GRIP', 'CST27', 'D200', 'DR919', 'DSR266', 'DUD100', 'E BUS', 'EZ334', 'F820',
-                    'FFH123', 'FR01', 'FR88', 'G658', 'GAC812', 'GAR820', 'GAU867', 'GAU867A', 'GDR1', 'GDR665', 'GITI',
-                    'GL283A', 'GSR1', 'GSR225', 'GSRI', 'GT198', 'GT867', 'GU01', 'HAI', 'HA1', 'HCT', 'HD', 'HD3',
-                    'HH301', 'HKS78', 'HK578', 'HN266', 'HT3', 'HTC', 'HYD', 'IFL866', 'JDH6', 'JDM6', 'JF568', 'JOH6',
-                    'JTM1', 'JU558', 'JUH5', 'JULL1', 'JUM', 'K5461', 'KMA01', 'KMAX', 'KMAX D', 'KMAX S', 'KMAX5',
-                    'KMAXD', 'KMAX D200', 'KMAX D210', 'KMAX S210', 'KRA01', 'KRA11', 'KRA50', 'KRD50', 'KS461', 'KS481',
-                    'KT', 'KT511', 'KT512', 'KT522', 'LLA38', 'LLF01', 'LLFO', 'LUFO1', 'M5A', 'M840', 'M940', 'MC45',
-                    'MIX716', 'MSA2', 'MY507A', 'MYSO7', 'NUEVA', 'PROGUO1', 'R152', 'R605', 'RE', 'REE', 'REGIONAL RHZ',
-                    'RENCAUCHADA', 'RHS', 'RS201', 'RT605', 'RY023', 'S210', 'SAH02', 'SC216', 'SP580', 'SUPER HA1',
-                    'T605', 'TB888', 'TE', 'TH22', 'TR01', 'TR656', 'TR658', 'TR668', 'TR685', 'TR689', 'TRS', 'TRS02',
-                    'V1111', 'WGC28', 'WS', 'WS778', 'WS788', 'WS806', 'XLINE', 'XMULTI', 'Y115', 'Y126', 'Y201', 'Y209',
-                    'Y631', 'Y99', 'Y999', 'EAU91', 'TR605', 'RM230HH', 'MSS2'
-                ];
-                for (const mod of modelosNeu) {
-                    await pool.query("INSERT IGNORE INTO cat_neumaticos_modelos (nombre) VALUES (?)", [mod]);
-                }
-            }
             _tenantsInitSet.add(tenantId);
-            console.log(`✅ [Multi-Tenant] Tablas y catálogos de neumáticos inicializados en tenant [${tenantId}]`);
         } catch(err) {
             console.error(`⚠️ Error asegurando tablas de neumáticos en tenant [${tenantId}]:`, err.message);
         }
@@ -207,7 +199,9 @@ module.exports = function (db, broadcast, logAudit) {
     router.use(async (req, res, next) => {
         const tenantId = req.tenantSlug || req.headers['x-tenant-id'] || 'default';
         const tdb = getDb(req);
-        await asegurarTablasNeumaticosTenant(tdb, tenantId);
+        if (tdb) {
+            await asegurarTablasNeumaticosTenant(tdb, tenantId);
+        }
         next();
     });
 
@@ -215,55 +209,79 @@ module.exports = function (db, broadcast, logAudit) {
     // 1. 📋 CATÁLOGOS (Marcas, Modelos, Medidas, Acciones)
     // ============================================================
     router.get('/catalogos', async (req, res) => {
+        let dbMarcas = [];
+        let dbModelos = [];
+        let dbMedidas = [];
+        let dbAcciones = [];
+
         try {
             const tdb = getDb(req);
-            const [marcas]   = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_marcas WHERE activo = 1 ORDER BY nombre ASC");
-            const [modelos]  = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_modelos WHERE activo = 1 ORDER BY nombre ASC");
-            const [medidas]  = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_medidas WHERE activo = 1 ORDER BY nombre ASC");
-            const [acciones] = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_acciones WHERE activo = 1 ORDER BY id ASC");
+            if (tdb) {
+                try {
+                    const [rows] = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_marcas WHERE activo = 1 ORDER BY nombre ASC");
+                    dbMarcas = rows.map(r => r.nombre);
+                } catch(e) {}
 
-            const accionMap = {
-                'INSPECCION': 'Inspección',
-                'INSPECCIÓN': 'Inspección',
-                'ROTACION': 'Rotación',
-                'ROTACIÓN': 'Rotación',
-                'INSTALACION': 'Instalación',
-                'INSTALACIÓN': 'Instalación',
-                'CAMBIO': 'Cambio',
-                'REPARACION': 'Reparación',
-                'REPARACIÓN': 'Reparación',
-                'REENCAUCHE': 'Reencauche',
-                'BAJA': 'Baja',
-                'ALINEACION': 'Alineación',
-                'ALINEACIÓN': 'Alineación',
-                'BALANCEO': 'Balanceo',
-                'PARCHADO': 'Parchado'
-            };
+                try {
+                    const [rows] = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_modelos WHERE activo = 1 ORDER BY nombre ASC");
+                    dbModelos = rows.map(r => r.nombre);
+                } catch(e) {}
 
-            const defaultAcciones = ['Inspección', 'Rotación', 'Instalación', 'Cambio', 'Reparación', 'Reencauche', 'Baja'];
-            const uniqueAccionesMap = new Map();
-            [...defaultAcciones, ...acciones.map(r => r.nombre)].forEach(a => {
-                if (!a) return;
-                const clean = a.trim();
-                const normKey = clean.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-                const displayVal = accionMap[normKey] || (clean.charAt(0).toUpperCase() + clean.slice(1));
-                if (!uniqueAccionesMap.has(normKey)) {
-                    uniqueAccionesMap.set(normKey, displayVal);
-                }
-            });
+                try {
+                    const [rows] = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_medidas WHERE activo = 1 ORDER BY nombre ASC");
+                    dbMedidas = rows.map(r => r.nombre);
+                } catch(e) {}
 
-            res.json({
-                ok: true,
-                marcas:   Array.from(new Set(marcas.map(r => (r.nombre || '').trim().toUpperCase()))).filter(Boolean),
-                modelos:  Array.from(new Set(modelos.map(r => (r.nombre || '').trim().toUpperCase()))).filter(Boolean),
-                medidas:  Array.from(new Set(medidas.map(r => (r.nombre || '').trim().toUpperCase()))).filter(Boolean),
-                acciones: Array.from(uniqueAccionesMap.values()),
-                estados:  ['NUEVA', 'RENCAUCHADA']
-            });
+                try {
+                    const [rows] = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_acciones WHERE activo = 1 ORDER BY id ASC");
+                    dbAcciones = rows.map(r => r.nombre);
+                } catch(e) {}
+            }
         } catch (err) {
-            console.error("Error obteniendo catálogos de neumáticos:", err);
-            res.status(500).json({ ok: false, error: err.message });
+            console.warn("Aviso en lectura de catálogos neumáticos:", err.message);
         }
+
+        const accionMap = {
+            'INSPECCION': 'Inspección',
+            'INSPECCIÓN': 'Inspección',
+            'ROTACION': 'Rotación',
+            'ROTACIÓN': 'Rotación',
+            'INSTALACION': 'Instalación',
+            'INSTALACIÓN': 'Instalación',
+            'CAMBIO': 'Cambio',
+            'REPARACION': 'Reparación',
+            'REPARACIÓN': 'Reparación',
+            'REENCAUCHE': 'Reencauche',
+            'BAJA': 'Baja',
+            'ALINEACION': 'Alineación',
+            'ALINEACIÓN': 'Alineación',
+            'BALANCEO': 'Balanceo',
+            'PARCHADO': 'Parchado'
+        };
+
+        const uniqueAccionesMap = new Map();
+        [...DEFAULT_ACCIONES, ...dbAcciones].forEach(a => {
+            if (!a) return;
+            const clean = a.trim();
+            const normKey = clean.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            const displayVal = accionMap[normKey] || (clean.charAt(0).toUpperCase() + clean.slice(1));
+            if (!uniqueAccionesMap.has(normKey)) {
+                uniqueAccionesMap.set(normKey, displayVal);
+            }
+        });
+
+        const allMarcas = Array.from(new Set([...DEFAULT_MARCAS, ...dbMarcas].map(r => (r || '').trim().toUpperCase()))).filter(Boolean).sort();
+        const allModelos = Array.from(new Set([...DEFAULT_MODELOS, ...dbModelos].map(r => (r || '').trim().toUpperCase()))).filter(Boolean).sort();
+        const allMedidas = Array.from(new Set([...DEFAULT_MEDIDAS, ...dbMedidas].map(r => (r || '').trim().toUpperCase()))).filter(Boolean).sort();
+
+        res.json({
+            ok: true,
+            marcas:   allMarcas,
+            modelos:  allModelos,
+            medidas:  allMedidas,
+            acciones: Array.from(uniqueAccionesMap.values()),
+            estados:  ['NUEVA', 'RENCAUCHADA']
+        });
     });
 
     // Registrar nuevo elemento dinámico en caliente
