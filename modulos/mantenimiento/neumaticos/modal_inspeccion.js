@@ -16,6 +16,7 @@
     window._neuConfigActualKey = '6X4';
     window._neuXRayActive = false;
     window._neuViewMode = '2d'; // '2d', 'iso', 'lat'
+    window._neuAnimationId = null;
 
     // ── MAPEO VEHICULAR MTC Y CONFIGURACIONES PARAMÉTRICAS 3D ─────────────────────
     const ALIAS_MAPPER = {
@@ -33,77 +34,77 @@
             totalTires: 6,
             positions: ["1", "2", "3", "4", "5", "6", "R"],
             axles: [
-                { id: 1, z: -2.2, isDual: false, tires: [{ id: "1", side: "left", isOuter: false }, { id: "2", side: "right", isOuter: false }] },
-                { id: 2, z: 1.8,  isDual: true,  tires: [{ id: "3", side: "left", isOuter: true }, { id: "4", side: "left", isOuter: false }, { id: "5", side: "right", isOuter: false }, { id: "6", side: "right", isOuter: true }] }
+                { id: 1, z: -2.8, isDual: false, tires: [{ id: "1", side: "left", isOuter: false }, { id: "2", side: "right", isOuter: false }] },
+                { id: 2, z: 2.2,  isDual: true,  tires: [{ id: "3", side: "left", isOuter: true }, { id: "4", side: "left", isOuter: false }, { id: "5", side: "right", isOuter: false }, { id: "6", side: "right", isOuter: true }] }
             ],
-            spares: [{ id: "R", pos: [0, 0.4, -0.2] }]
+            spares: [{ id: "R", pos: [0, 0.5, -0.2] }]
         },
         "6X4": {
             name: "C3 / T3 / 6x4 (10 Llantas)",
             totalTires: 10,
             positions: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "R"],
             axles: [
-                { id: 1, z: -3.0, isDual: false, tires: [{ id: "1", side: "left", isOuter: false }, { id: "2", side: "right", isOuter: false }] },
-                { id: 2, z: 1.2,  isDual: true,  tires: [{ id: "3", side: "left", isOuter: true }, { id: "4", side: "left", isOuter: false }, { id: "5", side: "right", isOuter: false }, { id: "6", side: "right", isOuter: true }] },
-                { id: 3, z: 2.8,  isDual: true,  tires: [{ id: "7", side: "left", isOuter: true }, { id: "8", side: "left", isOuter: false }, { id: "9", side: "right", isOuter: false }, { id: "10", side: "right", isOuter: true }] }
+                { id: 1, z: -3.8, isDual: false, tires: [{ id: "1", side: "left", isOuter: false }, { id: "2", side: "right", isOuter: false }] },
+                { id: 2, z: 1.8,  isDual: true,  tires: [{ id: "3", side: "left", isOuter: true }, { id: "4", side: "left", isOuter: false }, { id: "5", side: "right", isOuter: false }, { id: "6", side: "right", isOuter: true }] },
+                { id: 3, z: 3.4,  isDual: true,  tires: [{ id: "7", side: "left", isOuter: true }, { id: "8", side: "left", isOuter: false }, { id: "9", side: "right", isOuter: false }, { id: "10", side: "right", isOuter: true }] }
             ],
-            spares: [{ id: "R", pos: [0, 0.4, -0.8] }]
+            spares: [{ id: "R", pos: [0, 0.5, -0.5] }]
         },
         "6X2": {
             name: "6x2 (8 Llantas)",
             totalTires: 8,
             positions: ["1", "2", "3", "4", "5", "6", "7", "8", "R"],
             axles: [
-                { id: 1, z: -3.0, isDual: false, tires: [{ id: "1", side: "left", isOuter: false }, { id: "2", side: "right", isOuter: false }] },
-                { id: 2, z: 1.2,  isDual: false, tires: [{ id: "3", side: "left", isOuter: false }, { id: "4", side: "right", isOuter: false }] },
-                { id: 3, z: 2.8,  isDual: true,  tires: [{ id: "5", side: "left", isOuter: true }, { id: "6", side: "left", isOuter: false }, { id: "7", side: "right", isOuter: false }, { id: "8", side: "right", isOuter: true }] }
+                { id: 1, z: -3.8, isDual: false, tires: [{ id: "1", side: "left", isOuter: false }, { id: "2", side: "right", isOuter: false }] },
+                { id: 2, z: 1.6,  isDual: false, tires: [{ id: "3", side: "left", isOuter: false }, { id: "4", side: "right", isOuter: false }] },
+                { id: 3, z: 3.4,  isDual: true,  tires: [{ id: "5", side: "left", isOuter: true }, { id: "6", side: "left", isOuter: false }, { id: "7", side: "right", isOuter: false }, { id: "8", side: "right", isOuter: true }] }
             ],
-            spares: [{ id: "R", pos: [0, 0.4, -0.8] }]
+            spares: [{ id: "R", pos: [0, 0.5, -0.5] }]
         },
         "R2": {
             name: "R2 Carreta / Burrita (8 Llantas)",
             totalTires: 8,
             positions: ["1", "2", "3", "4", "5", "6", "7", "8", "R"],
             axles: [
-                { id: 1, z: -2.0, isDual: true, tires: [{ id: "1", side: "left", isOuter: true }, { id: "2", side: "left", isOuter: false }, { id: "3", side: "right", isOuter: false }, { id: "4", side: "right", isOuter: true }] },
-                { id: 2, z: 2.0,  isDual: true, tires: [{ id: "5", side: "left", isOuter: true }, { id: "6", side: "left", isOuter: false }, { id: "7", side: "right", isOuter: false }, { id: "8", side: "right", isOuter: true }] }
+                { id: 1, z: -2.2, isDual: true, tires: [{ id: "1", side: "left", isOuter: true }, { id: "2", side: "left", isOuter: false }, { id: "3", side: "right", isOuter: false }, { id: "4", side: "right", isOuter: true }] },
+                { id: 2, z: 2.2,  isDual: true, tires: [{ id: "5", side: "left", isOuter: true }, { id: "6", side: "left", isOuter: false }, { id: "7", side: "right", isOuter: false }, { id: "8", side: "right", isOuter: true }] }
             ],
-            spares: [{ id: "R", pos: [0, 0.4, 0.0] }]
+            spares: [{ id: "R", pos: [0, 0.5, 0.0] }]
         },
         "S2": {
             name: "S2 Semiremolque (8 Llantas)",
             totalTires: 8,
             positions: ["1", "2", "3", "4", "5", "6", "7", "8", "R1", "R2"],
             axles: [
-                { id: 1, z: 1.0, isDual: true, tires: [{ id: "1", side: "left", isOuter: true }, { id: "2", side: "left", isOuter: false }, { id: "3", side: "right", isOuter: false }, { id: "4", side: "right", isOuter: true }] },
-                { id: 2, z: 2.6, isDual: true, tires: [{ id: "5", side: "left", isOuter: true }, { id: "6", side: "left", isOuter: false }, { id: "7", side: "right", isOuter: false }, { id: "8", side: "right", isOuter: true }] }
+                { id: 1, z: 1.8, isDual: true, tires: [{ id: "1", side: "left", isOuter: true }, { id: "2", side: "left", isOuter: false }, { id: "3", side: "right", isOuter: false }, { id: "4", side: "right", isOuter: true }] },
+                { id: 2, z: 3.4, isDual: true, tires: [{ id: "5", side: "left", isOuter: true }, { id: "6", side: "left", isOuter: false }, { id: "7", side: "right", isOuter: false }, { id: "8", side: "right", isOuter: true }] }
             ],
-            spares: [{ id: "R1", pos: [-0.4, 0.4, -1.8] }, { id: "R2", pos: [0.4, 0.4, -1.8] }]
+            spares: [{ id: "R1", pos: [-0.4, 0.5, -2.5] }, { id: "R2", pos: [0.4, 0.5, -2.5] }]
         },
         "S3": {
             name: "S3 Semiremolque (12 Llantas)",
             totalTires: 12,
             positions: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "R1", "R2"],
             axles: [
-                { id: 1, z: 0.0, isDual: true, tires: [{ id: "1", side: "left", isOuter: true }, { id: "2", side: "left", isOuter: false }, { id: "3", side: "right", isOuter: false }, { id: "4", side: "right", isOuter: true }] },
-                { id: 2, z: 1.6, isDual: true, tires: [{ id: "5", side: "left", isOuter: true }, { id: "6", side: "left", isOuter: false }, { id: "7", side: "right", isOuter: false }, { id: "8", side: "right", isOuter: true }] },
-                { id: 3, z: 3.2, isDual: true, tires: [{ id: "9", side: "left", isOuter: true }, { id: "10", side: "left", isOuter: false }, { id: "11", side: "right", isOuter: false }, { id: "12", side: "right", isOuter: true }] }
+                { id: 1, z: 1.0, isDual: true, tires: [{ id: "1", side: "left", isOuter: true }, { id: "2", side: "left", isOuter: false }, { id: "3", side: "right", isOuter: false }, { id: "4", side: "right", isOuter: true }] },
+                { id: 2, z: 2.6, isDual: true, tires: [{ id: "5", side: "left", isOuter: true }, { id: "6", side: "left", isOuter: false }, { id: "7", side: "right", isOuter: false }, { id: "8", side: "right", isOuter: true }] },
+                { id: 3, z: 4.2, isDual: true, tires: [{ id: "9", side: "left", isOuter: true }, { id: "10", side: "left", isOuter: false }, { id: "11", side: "right", isOuter: false }, { id: "12", side: "right", isOuter: true }] }
             ],
-            spares: [{ id: "R1", pos: [-0.4, 0.4, -2.2] }, { id: "R2", pos: [0.4, 0.4, -2.2] }]
+            spares: [{ id: "R1", pos: [-0.8, 0.5, -3.5] }, { id: "R2", pos: [0.8, 0.5, -3.5] }]
         },
         "T3S3": {
-            name: "T3S3 Tracto-Semiremolque (22 Llantas)",
+            name: "Combinación T3S3 / C3S3 (22 Llantas)",
             totalTires: 22,
             positions: ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","R1","R2"],
             axles: [
-                { id: 1, z: -5.5, isDual: false, tires: [{ id: "1", side: "left", isOuter: false }, { id: "2", side: "right", isOuter: false }] },
+                { id: 1, z: -8.5, isDual: false, tires: [{ id: "1", side: "left", isOuter: false }, { id: "2", side: "right", isOuter: false }] },
                 { id: 2, z: -3.8, isDual: true,  tires: [{ id: "3", side: "left", isOuter: true }, { id: "4", side: "left", isOuter: false }, { id: "5", side: "right", isOuter: false }, { id: "6", side: "right", isOuter: true }] },
                 { id: 3, z: -2.2, isDual: true,  tires: [{ id: "7", side: "left", isOuter: true }, { id: "8", side: "left", isOuter: false }, { id: "9", side: "right", isOuter: false }, { id: "10", side: "right", isOuter: true }] },
-                { id: 4, z: 2.0,  isDual: true,  tires: [{ id: "11", side: "left", isOuter: true }, { id: "12", side: "left", isOuter: false }, { id: "13", side: "right", isOuter: false }, { id: "14", side: "right", isOuter: true }] },
-                { id: 5, z: 3.6,  isDual: true,  tires: [{ id: "15", side: "left", isOuter: true }, { id: "16", side: "left", isOuter: false }, { id: "17", side: "right", isOuter: false }, { id: "18", side: "right", isOuter: true }] },
-                { id: 6, z: 5.2,  isDual: true,  tires: [{ id: "19", side: "left", isOuter: true }, { id: "20", side: "left", isOuter: false }, { id: "21", side: "right", isOuter: false }, { id: "22", side: "right", isOuter: true }] }
+                { id: 4, z: 3.5,  isDual: true,  tires: [{ id: "11", side: "left", isOuter: true }, { id: "12", side: "left", isOuter: false }, { id: "13", side: "right", isOuter: false }, { id: "14", side: "right", isOuter: true }] },
+                { id: 5, z: 5.0,  isDual: true,  tires: [{ id: "15", side: "left", isOuter: true }, { id: "16", side: "left", isOuter: false }, { id: "17", side: "right", isOuter: false }, { id: "18", side: "right", isOuter: true }] },
+                { id: 6, z: 6.5,  isDual: true,  tires: [{ id: "19", side: "left", isOuter: true }, { id: "20", side: "left", isOuter: false }, { id: "21", side: "right", isOuter: false }, { id: "22", side: "right", isOuter: true }] }
             ],
-            spares: [{ id: "R1", pos: [-0.4, 0.4, -0.4] }, { id: "R2", pos: [0.4, 0.4, -0.4] }]
+            spares: [{ id: "R1", pos: [0, 0.8, -5.2] }, { id: "R2", pos: [0, 0.8, 0.8] }]
         }
     };
 
@@ -120,9 +121,9 @@
                 right: auto !important;
                 transform: translate3d(-50%, 100%, 0) !important;
                 width: 100% !important;
-                max-width: 760px !important;
-                height: 94vh !important;
-                max-height: 94vh !important;
+                max-width: 820px !important;
+                height: 95vh !important;
+                max-height: 95vh !important;
                 background: #f8fafc !important;
                 border: 1px solid var(--border, #e2e8f0) !important;
                 border-bottom: none !important;
@@ -145,7 +146,7 @@
             @media (max-width: 767.98px) {
                 .neu-sub-drawer {
                     max-width: 100% !important;
-                    height: 94vh !important;
+                    height: 95vh !important;
                 }
             }
             .neu-drawer-backdrop {
@@ -162,11 +163,11 @@
                 pointer-events: auto;
             }
             .neu-touch-btn-pos {
-                min-width: 50px;
-                height: 48px;
-                font-size: 1.05rem;
+                min-width: 48px;
+                height: 44px;
+                font-size: 0.95rem;
                 font-weight: 800;
-                border-radius: 14px;
+                border-radius: 12px;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
@@ -176,8 +177,8 @@
             .neu-touch-btn-pos:active { transform: scale(0.92); }
             .neu-touch-btn-r {
                 min-width: 42px;
-                height: 42px;
-                font-size: 0.95rem;
+                height: 40px;
+                font-size: 0.9rem;
                 font-weight: 700;
                 border-radius: 10px;
                 display: inline-flex;
@@ -195,28 +196,32 @@
             .neu-scroll-x::-webkit-scrollbar { height: 4px; }
             .neu-scroll-x::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
             .neu-toast {
-                position: absolute;
-                bottom: 80px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: #0f172a;
-                color: #ffffff;
-                padding: 10px 20px;
-                border-radius: 30px;
-                font-size: 0.85rem;
-                font-weight: 700;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-                z-index: 2200;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                opacity: 0;
-                transition: opacity 0.25s ease, transform 0.25s ease;
-                pointer-events: none;
+                position: fixed !important;
+                bottom: 24px !important;
+                left: 50% !important;
+                transform: translateX(-50%) translateY(20px) !important;
+                background: #0f172a !important;
+                color: #ffffff !important;
+                padding: 12px 24px !important;
+                border-radius: 9999px !important;
+                font-size: 0.85rem !important;
+                font-weight: 700 !important;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+                z-index: 999999 !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 10px !important;
+                opacity: 0 !important;
+                transition: opacity 0.25s ease, transform 0.25s ease !important;
+                pointer-events: none !important;
+                border: 1px solid #334155 !important;
+            }
+            .neu-toast span, .neu-toast i {
+                color: #ffffff !important;
             }
             .neu-toast.show {
-                opacity: 1;
-                transform: translate(-50%, -10px);
+                opacity: 1 !important;
+                transform: translateX(-50%) translateY(0) !important;
             }
         `;
         document.head.appendChild(style);
@@ -259,25 +264,24 @@
         } catch (e) {
             console.error('Error cargando catálogos de neumáticos:', e);
         }
-        return {
-            marcas: ['WINDPOWER', 'GOODYEAR', 'MICHELIN', 'GITI', 'BRIDGESTONE', 'KUNLUN', 'CONTINENTAL', 'TRIANGLE', 'WESTLAKE', 'YOKOHAMA'],
-            modelos: ['PROGUO1', 'GAU867', 'KT512', 'Y999', 'KMAX', '366', 'TR685', 'F820', 'RS618A'],
-            medidas: ['275/70R22.5', '295/80R22.5', '245/70R19.5', '11R22.5', '315/80R22.5'],
-            acciones: ['Inspeccion', 'Rotación', 'Reparacion', 'Cambio', 'Instalacion'],
-            estados: ['NUEVA', 'BUENA', 'RECAPADA', 'REGULAR', 'MALA', 'CRÍTICA']
-        };
+        return { marcas: ['WINDPOWER','GOODYEAR','BRIDGESTONE','MICHELIN','ADVANCE'], medidas: ['275/70R22.5','295/80R22.5','315/80R22.5','11R22.5','12R22.5'], modelos: ['PROGUO1','KMAX','M729','XZY3','GL282A'], acciones: ['Inspección','Cambio','Rotación','Reparación'] };
     };
 
-    // ── ABRIR DRAWER SUB-MODAL ────────────────────────────────────────────────────
+    // ── APERTURA DEL MODAL PRINCIPAL ──────────────────────────────────────────────
     window.rotAbrirInspeccionNeumaticos = async function(placa, idOT, kmVehiculo, configCode) {
         window._neuLlantasActuales = [];
-        const hoy = new Date().toISOString().split('T')[0];
-        const km = kmVehiculo || 0;
+        window._neuFotos = { foto1: null, foto2: null, foto3: null };
+        window._neuValR1 = 0; window._neuValR2 = 0; window._neuValR3 = 0; window._neuValR4 = 0;
+        window._neuPosicionActiva = '1';
+        window._neuXRayActive = false;
+        window._neuViewMode = '2d';
 
-        // Determinar clave de configuración 3D a partir de alias MTC
-        const aliasKey = (configCode || '').toUpperCase().trim();
-        const mappedKey = ALIAS_MAPPER[aliasKey] || ALIAS_MAPPER[aliasKey.replace(/[^A-Z0-9]/g, '')] || '6X4';
-        window._neuConfigActualKey = mappedKey;
+        // Mapear configuración si fue provista
+        const rawCode = (configCode || '').toUpperCase().trim();
+        window._neuConfigActualKey = ALIAS_MAPPER[rawCode] || '6X4';
+
+        const hoy = new Date().toISOString().split('T')[0];
+        const km = kmVehiculo || (window.rotData ? (window.rotData.find(o => o.id == idOT)?.kilometraje || '') : '');
 
         // Asegurar backdrop
         let backdrop = document.getElementById('neuDrawerBackdrop');
@@ -306,21 +310,13 @@
                         <div>
                             <span class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.15rem;">
                                 <i class="bi bi-disc-fill text-primary"></i> Inspección de Neumáticos
-                                <span class="badge bg-primary rounded-pill px-3 py-1 fs-6" id="neu-badge-placa">PLACA</span>
+                                <span class="badge bg-primary rounded-pill px-3 py-1 fs-6 font-monospace" id="neu-badge-placa">${placa || 'PLACA'}</span>
                             </span>
                             <small class="text-muted d-block" style="font-size: 0.75rem;">Control táctil de cocadas, presiones y chasis interactivo</small>
                         </div>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <select id="neu-select-config" class="form-select form-select-sm rounded-pill fw-bold text-primary border-primary" style="width: auto; max-width: 220px;" onchange="window._neuCambiarConfiguracion(this.value)">
-                            <option value="6X4">C3 / T3 / 6x4 (10 Llantas)</option>
-                            <option value="4X2">C2 / T2 / 4x2 (6 Llantas)</option>
-                            <option value="6X2">6x2 (8 Llantas)</option>
-                            <option value="S2">S2 Semiremolque (8 Llantas)</option>
-                            <option value="S3">S3 Semiremolque (12 Llantas)</option>
-                            <option value="T3S3">T3S3 Tracto-Semiremolque (22 Llantas)</option>
-                        </select>
-                        <button class="btn btn-light border-0 rounded-circle p-2" onclick="window.rotCerrarModalInspeccionNeumaticos()" style="color:var(--subtext);">
+                    <div>
+                        <button class="btn btn-light border-0 rounded-circle p-2" onclick="window.rotCerrarModalInspeccionNeumaticos()" style="color:var(--subtext);" title="Cerrar">
                             <i class="bi bi-x-lg fs-5"></i>
                         </button>
                     </div>
@@ -334,19 +330,19 @@
                         <div class="row g-2 g-md-3">
                             <div class="col-12 col-sm-4">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.75rem;">Fecha de Inspección *</label>
-                                <input type="date" class="form-control rounded-3 fw-bold" style="height: 46px; font-size: 0.95rem;" id="neu-input-fecha" value="${hoy}">
+                                <input type="date" class="form-control rounded-3 fw-bold font-monospace" style="height: 46px; font-size: 0.95rem;" id="neu-input-fecha" value="${hoy}">
                             </div>
                             <div class="col-6 col-sm-4">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.75rem;">Días Propuestos</label>
                                 <div class="input-group" style="height: 46px;">
                                     <button class="btn btn-outline-secondary px-3" type="button" onclick="var el=document.getElementById('neu-input-dias'); el.value = Math.max(1, (parseInt(el.value)||30)-5);"><i class="bi bi-dash fs-5"></i></button>
-                                    <input type="number" class="form-control text-center fw-bold fs-6" id="neu-input-dias" value="30">
+                                    <input type="number" class="form-control text-center fw-bold fs-6 font-monospace" id="neu-input-dias" value="30">
                                     <button class="btn btn-outline-secondary px-3" type="button" onclick="var el=document.getElementById('neu-input-dias'); el.value = (parseInt(el.value)||30)+5;"><i class="bi bi-plus fs-5"></i></button>
                                 </div>
                             </div>
                             <div class="col-6 col-sm-4">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.75rem;">KM Odómetro</label>
-                                <input type="number" class="form-control rounded-3 fw-bold fs-6" style="height: 46px;" id="neu-input-km" value="${km}">
+                                <input type="number" class="form-control rounded-3 fw-bold fs-6 font-monospace" style="height: 46px;" id="neu-input-km" value="${km}">
                             </div>
                             <div class="col-12">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.75rem;">Observaciones Generales</label>
@@ -380,22 +376,22 @@
                         </div>
 
                         <!-- Canvas 3D / 2D Wrapper -->
-                        <div class="p-0 rounded-4 bg-slate-100 overflow-hidden position-relative" style="height: 340px; background:#f1f5f9; border:1px solid #e2e8f0;" id="neu-chassis-container">
+                        <div class="p-0 rounded-4 overflow-hidden position-relative" style="height: 360px; background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%); border: 1px solid #cbd5e1;" id="neu-chassis-container">
                             <!-- Banner flotante de instrucción al arrastrar -->
-                            <div id="dragInstructionBanner" style="position:absolute; top:12px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.88); color:#fff; padding:6px 16px; border-radius:20px; font-size:0.78rem; font-weight:700; display:none; pointer-events:none; z-index:10; box-shadow:0 4px 12px rgba(0,0,0,0.25);">
-                                <i class="bi bi-arrows-move me-1 text-info"></i> Arrastrando llanta — Suelta sobre otra llanta para rotar
+                            <div id="dragInstructionBanner" style="position:absolute; top:12px; left:50%; transform:translateX(-50%); background: linear-gradient(90deg, #2563eb, #1d4ed8); color:#fff; padding:8px 20px; border-radius:30px; font-size:0.82rem; font-weight:700; display:none; pointer-events:none; z-index:20; box-shadow:0 8px 20px rgba(37,99,235,0.4);">
+                                <i class="bi bi-hand-index-thumb-fill me-1 text-warning"></i> Arrastrando llanta — Suelta sobre otra posición para intercambiar
                             </div>
                         </div>
 
                         <!-- Leyenda Semáforo -->
                         <div class="d-flex justify-content-between align-items-center mt-2 px-1 flex-wrap gap-2" style="font-size: 0.76rem;">
                             <div class="d-flex align-items-center gap-3">
-                                <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:10px;height:10px;background:#22c55e;"></span> <b>Óptima (>6mm)</b></div>
-                                <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:10px;height:10px;background:#eab308;"></span> <b>Alerta (4-6mm)</b></div>
+                                <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:10px;height:10px;background:#10b981;"></span> <b>Óptima (>6mm)</b></div>
+                                <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:10px;height:10px;background:#f59e0b;"></span> <b>Alerta (4-6mm)</b></div>
                                 <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:10px;height:10px;background:#ef4444;"></span> <b>Crítica (≤4mm)</b></div>
-                                <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:10px;height:10px;background:#3b82f6;"></span> <b>Rotada 🔄</b></div>
+                                <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:10px;height:10px;background:#2563eb;"></span> <b>Rotada 🔄</b></div>
                             </div>
-                            <span class="text-muted fw-semibold" id="neu-chassis-stats-summary">Total: 0 llantas</span>
+                            <span class="text-muted fw-bold font-monospace" id="neu-chassis-stats-summary">Total: 0 llantas</span>
                         </div>
                     </div>
 
@@ -403,8 +399,8 @@
                     <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid var(--border, #e2e8f0) !important;">
                         <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
                             <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center fs-6 shadow-sm" style="width:34px;height:34px;" id="neu-form-pos-badge">1</span>
-                                <h6 class="fw-bold m-0 text-dark">Datos de Llanta — Posición <span id="neu-pos-label-top" class="text-primary">1</span></h6>
+                                <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center fs-6 shadow-sm font-monospace" style="width:34px;height:34px;" id="neu-form-pos-badge">1</span>
+                                <h6 class="fw-bold m-0 text-dark">Datos de Llanta — Posición <span id="neu-pos-label-top" class="text-primary font-monospace">1</span></h6>
                             </div>
                             <button class="btn btn-sm btn-light border py-1 px-3 rounded-pill fw-bold text-muted" style="font-size:0.75rem;" onclick="window._neuLimpiarFormLlanta()">
                                 <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar Campos
@@ -432,7 +428,7 @@
                                     <label class="form-label text-muted fw-bold small m-0" style="font-size:0.75rem;">Medida</label>
                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('medidas')" class="text-primary small fw-bold" style="font-size:0.75rem;">+ Nueva</a>
                                 </div>
-                                <input type="text" class="form-control rounded-3 fw-bold text-uppercase" style="height: 46px;" id="neu-sel-medida" list="dl-neu-medidas" placeholder="Escribe o busca medida..." autocomplete="off">
+                                <input type="text" class="form-control rounded-3 fw-bold text-uppercase font-monospace" style="height: 46px;" id="neu-sel-medida" list="dl-neu-medidas" placeholder="Escribe o busca medida..." autocomplete="off">
                                 <datalist id="dl-neu-medidas"></datalist>
                             </div>
                             <div class="col-12 col-sm-4">
@@ -454,18 +450,18 @@
                                     </h6>
                                     <small class="text-muted" style="font-size:0.75rem;">Toca el número medido para cada ranura</small>
                                 </div>
-                                <span class="badge bg-white text-primary border shadow-sm px-3 py-2 fs-6 rounded-pill" id="neu-r-prom-badge">Promedio: -- mm</span>
+                                <span class="badge bg-white text-primary border shadow-sm px-3 py-2 fs-6 rounded-pill font-monospace" id="neu-r-prom-badge">Promedio: -- mm</span>
                             </div>
 
                             <!-- R1 (Exterior) -->
                             <div class="mb-3 p-2 bg-white rounded-3 border" style="border-color: var(--border, #e2e8f0) !important;">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <span class="fw-bold text-dark" style="font-size:0.85rem;">
-                                        <i class="bi bi-arrow-left-circle-fill text-primary me-1"></i> R1 — Hombro Exterior:
+                                        <i class="bi bi-arrow-left-circle-fill text-primary me-1"></i> R1 — Ranura Exterior:
                                     </span>
                                     <div class="d-flex align-items-center gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r1', -1)"><i class="bi bi-dash fs-5"></i></button>
-                                        <span class="badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs" id="lbl-r1">0 mm</span>
+                                        <span class="badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs font-monospace" id="lbl-r1">0 mm</span>
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r1', 1)"><i class="bi bi-plus fs-5"></i></button>
                                     </div>
                                 </div>
@@ -480,7 +476,7 @@
                                     </span>
                                     <div class="d-flex align-items-center gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r2', -1)"><i class="bi bi-dash fs-5"></i></button>
-                                        <span class="badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs" id="lbl-r2">0 mm</span>
+                                        <span class="badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs font-monospace" id="lbl-r2">0 mm</span>
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r2', 1)"><i class="bi bi-plus fs-5"></i></button>
                                     </div>
                                 </div>
@@ -495,7 +491,7 @@
                                     </span>
                                     <div class="d-flex align-items-center gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r3', -1)"><i class="bi bi-dash fs-5"></i></button>
-                                        <span class="badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs" id="lbl-r3">0 mm</span>
+                                        <span class="badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs font-monospace" id="lbl-r3">0 mm</span>
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r3', 1)"><i class="bi bi-plus fs-5"></i></button>
                                     </div>
                                 </div>
@@ -506,11 +502,11 @@
                             <div class="p-2 bg-white rounded-3 border" style="border-color: var(--border, #e2e8f0) !important;">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <span class="fw-bold text-dark" style="font-size:0.85rem;">
-                                        <i class="bi bi-dash-circle-dotted text-secondary me-1"></i> R4 — Hombro Interior (Opcional):
+                                        <i class="bi bi-dash-circle text-muted me-1"></i> R4 — Hombro Interior (Opcional):
                                     </span>
                                     <div class="d-flex align-items-center gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r4', -1)"><i class="bi bi-dash fs-5"></i></button>
-                                        <span class="badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs" id="lbl-r4">0 mm</span>
+                                        <span class="badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs font-monospace" id="lbl-r4">0 mm</span>
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:34px;height:34px;" onclick="window._neuAjustarR('r4', 1)"><i class="bi bi-plus fs-5"></i></button>
                                     </div>
                                 </div>
@@ -522,11 +518,11 @@
                         <div class="row g-2 mb-3">
                             <div class="col-6 col-sm-3">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.75rem;">Presión Ant. (PSI)</label>
-                                <input type="number" class="form-control rounded-3 fw-bold text-center fs-6" style="height: 46px;" id="neu-input-pres-ant" value="" placeholder="Ej: 100">
+                                <input type="number" class="form-control rounded-3 fw-bold text-center fs-6 font-monospace" style="height: 46px;" id="neu-input-pres-ant" value="" placeholder="Ej: 100">
                             </div>
                             <div class="col-6 col-sm-3">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.75rem;">Presión Actual (PSI)</label>
-                                <input type="number" class="form-control rounded-3 fw-bold text-center fs-6 text-primary" style="height: 46px;" id="neu-input-pres-act" value="" placeholder="Ej: 110">
+                                <input type="number" class="form-control rounded-3 fw-bold text-center fs-6 text-primary font-monospace" style="height: 46px;" id="neu-input-pres-act" value="" placeholder="Ej: 110">
                             </div>
                             <div class="col-6 col-sm-2">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.75rem;">Estado</label>
@@ -602,7 +598,7 @@
                         <div class="card-header bg-light px-3 py-3 d-flex align-items-center justify-content-between border-bottom">
                             <div class="d-flex align-items-center gap-2">
                                 <h6 class="m-0 fw-bold text-dark">Llantas Agregadas a la Inspección</h6>
-                                <span class="badge bg-primary rounded-pill px-3 fs-6" id="neu-tabla-count">0</span>
+                                <span class="badge bg-primary rounded-pill px-3 fs-6 font-monospace" id="neu-tabla-count">0</span>
                             </div>
                             <small class="text-muted">Ordenamiento numérico estricto por posición</small>
                         </div>
@@ -644,42 +640,35 @@
                     </button>
                 </div>
 
-                <!-- TOAST EMERGENTE -->
+                <!-- TOAST EMERGENTE CON TEXTO BLANCO -->
                 <div id="neuToast" class="neu-toast">
                     <i class="bi bi-arrow-repeat text-info fs-5"></i>
-                    <span id="neuToastMsg">Rotación realizada</span>
+                    <span id="neuToastMsg" style="color:#ffffff !important; font-weight:700;">Rotación realizada</span>
                 </div>
             `;
             document.body.appendChild(drawerEl);
         }
 
-        // Seleccionar opción en el selector de configuración
-        const selConfig = document.getElementById('neu-select-config');
-        if (selConfig) selConfig.value = window._neuConfigActualKey;
+        // Actualizar badge de placa en el encabezado
+        const bPlaca = document.getElementById('neu-badge-placa');
+        if (bPlaca) bPlaca.innerText = placa || 'PLACA';
 
         // Abrir modal con animación
         drawerEl.classList.add('open');
         backdrop.classList.add('show');
 
-        // Setear encabezados
-        document.getElementById('neu-badge-placa').innerText = (placa || 'SIN-PLACA').toUpperCase();
-        document.getElementById('neu-input-fecha').value = hoy;
-        document.getElementById('neu-input-km').value = km || '';
-        document.getElementById('neu-input-dias').value = 30;
-        document.getElementById('neu-input-obs-gen').value = '';
-
-        // Configurar posiciones y renderizar 3D / Tabla / Botonera
+        // Configurar posiciones iniciales y renderizar
         const cfg = VEHICLE_CONFIGS_3D[window._neuConfigActualKey] || VEHICLE_CONFIGS_3D["6X4"];
         window._neuRenderPosiciones(cfg.positions);
         window._neuRenderBotoneraR();
         window._neuRenderTablaLlantas();
 
-        // Cargar Three.js e Iniciar Escena 3D
+        // Iniciar motor Three.js
         loadThreeJs(function() {
             window._neuInitThreeEngine(cfg);
         });
 
-        // Cargar Catálogos y Última Inspección en Paralelo
+        // Cargar catálogos y última inspección en paralelo
         window._neuUltimaInspeccionMap = {};
         const catsPromise = window._cargarCatalogosNeumaticos();
         const ultPromise = placa ? fetch('/api/neumaticos/placa-ultima/' + encodeURIComponent(placa)).then(r => r.json()).catch(() => null) : Promise.resolve(null);
@@ -747,7 +736,7 @@
         if (dlModelo && cats.modelos) dlModelo.innerHTML = cats.modelos.map(m => `<option value="${m}">`).join('');
         if (selAccion && cats.acciones) {
             selAccion.innerHTML = cats.acciones.map(a => `<option value="${a}">${a}</option>`).join('');
-            selAccion.value = 'Inspeccion';
+            selAccion.value = 'Inspección';
         }
     };
 
@@ -758,7 +747,7 @@
         wrap.innerHTML = posArray.map(p => {
             const hasRot = window._neuLlantasActuales.some(l => String(l.posicion) === String(p) && l.rot === 'SI');
             return `
-                <button type="button" class="btn ${p === window._neuPosicionActiva ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary'} neu-touch-btn-pos position-relative" onclick="window._neuSeleccionarPosicion('${p}')" id="btn-pos-${p}">
+                <button type="button" class="btn ${p === window._neuPosicionActiva ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary'} neu-touch-btn-pos position-relative font-monospace" onclick="window._neuSeleccionarPosicion('${p}')" id="btn-pos-${p}">
                     ${p} ${hasRot ? '<span style="font-size:0.7rem; position:absolute; top:2px; right:4px;">🔄</span>' : ''}
                 </button>
             `;
@@ -775,13 +764,13 @@
         if (oldCanvas) oldCanvas.remove();
 
         const width = container.clientWidth || 700;
-        const height = container.clientHeight || 340;
+        const height = container.clientHeight || 360;
 
         // Scene, Camera, Renderer
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf1f5f9);
 
-        const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
         
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(width, height);
@@ -791,26 +780,63 @@
         container.appendChild(renderer.domElement);
 
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
         controls.enableRotate = false;
         controls.enablePan = false;
         controls.enableZoom = false;
 
         // Luces
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
         scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-        dirLight.position.set(10, 20, 10);
-        dirLight.castShadow = true;
-        scene.add(dirLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.3);
+        sunLight.position.set(10, 20, 10);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 1024;
+        sunLight.shadow.mapSize.height = 1024;
+        scene.add(sunLight);
+
+        const fillLight = new THREE.DirectionalLight(0x3b82f6, 0.35);
+        fillLight.position.set(-10, 10, -10);
+        scene.add(fillLight);
+
+        // Plano de sombra y rejilla
+        const planeGeo = new THREE.PlaneGeometry(60, 60);
+        const planeMat = new THREE.ShadowMaterial({ opacity: 0.15 });
+        const shadowPlane = new THREE.Mesh(planeGeo, planeMat);
+        shadowPlane.rotation.x = -Math.PI / 2;
+        shadowPlane.position.y = -0.01;
+        shadowPlane.receiveShadow = true;
+        scene.add(shadowPlane);
+
+        const gridHelper = new THREE.GridHelper(50, 50, 0x94a3b8, 0xcbd5e1);
+        gridHelper.position.y = 0;
+        scene.add(gridHelper);
 
         // Grupo principal del vehículo
         const vehicleGroup = new THREE.Group();
         scene.add(vehicleGroup);
 
-        // Materiales del chasis
-        const frameMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.5, roughness: 0.4, transparent: true, opacity: 0.95 });
-        const cabinMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.2, roughness: 0.3, transparent: true, opacity: 0.95 });
+        // Materiales de alta fidelidad para el chasis
+        const cabPaintMat = new THREE.MeshStandardMaterial({
+            color: 0xf8fafc,
+            metalness: 0.3,
+            roughness: 0.2,
+            transparent: true,
+            opacity: window._neuXRayActive ? 0.22 : 1.0
+        });
+
+        const darkChassisMat = new THREE.MeshStandardMaterial({
+            color: 0x334155,
+            metalness: 0.8,
+            roughness: 0.3,
+            transparent: true,
+            opacity: window._neuXRayActive ? 0.22 : 1.0
+        });
+
+        const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.1 });
+        const glassMat = new THREE.MeshPhysicalMaterial({ color: 0x1e293b, metalness: 0.1, roughness: 0.05, transmission: 0.85, transparent: true, opacity: 0.7 });
 
         // Encontrar dimensiones Z de ejes
         let minZ = 0, maxZ = 0;
@@ -819,89 +845,148 @@
             if (a.z > maxZ) maxZ = a.z;
         });
 
-        // 1. Chasis central (Vigas de acero)
-        const frameLength = (maxZ - minZ) + 3.0;
+        const frameLength = Math.max(8, (maxZ - minZ) + 4.5);
         const centerZ = (minZ + maxZ) / 2;
-        const frameGeo = new THREE.BoxGeometry(0.8, 0.2, frameLength);
-        const frameMesh = new THREE.Mesh(frameGeo, frameMat);
-        frameMesh.position.set(0, 0.2, centerZ);
-        vehicleGroup.add(frameMesh);
 
-        // 2. Elemento Frontal (-Z, apuntando Hacia Arriba en pantalla)
-        if (cfg.name.includes("Carreta") || cfg.name.includes("Remolque") || cfg.name.includes("Semiremolque") || cfg.name.includes("S2") || cfg.name.includes("S3") || cfg.name.includes("R2")) {
-            // Enganche / Lanza de Remolque
+        // Vigas de acero longitudinales del chasis
+        const railGeo = new THREE.BoxGeometry(0.2, 0.35, frameLength);
+        const railL = new THREE.Mesh(railGeo, darkChassisMat);
+        railL.position.set(-0.55, 0.85, centerZ);
+        railL.castShadow = true;
+        const railR = railL.clone();
+        railR.position.x = 0.55;
+        vehicleGroup.add(railL);
+        vehicleGroup.add(railR);
+
+        // Tanques de combustible cromados
+        const tankGeo = new THREE.CylinderGeometry(0.38, 0.38, 2.0, 20);
+        tankGeo.rotateX(Math.PI / 2);
+        const tankL = new THREE.Mesh(tankGeo, chromeMat);
+        tankL.position.set(-1.08, 0.75, minZ + 1.8);
+        tankL.castShadow = true;
+        const tankR = tankL.clone();
+        tankR.position.x = 1.08;
+        vehicleGroup.add(tankL);
+        vehicleGroup.add(tankR);
+
+        // Elemento Frontal (-Z = Frente apuntando Hacia Arriba)
+        const isTrailer = cfg.name.includes("Carreta") || cfg.name.includes("Remolque") || cfg.name.includes("Semiremolque") || cfg.name.includes("S2") || cfg.name.includes("S3") || cfg.name.includes("R2");
+
+        if (isTrailer) {
+            // Lanza triangular / Kingpin frontal en -Z
             const hitchGroup = new THREE.Group();
-            const hitchGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.6, 12);
-            const hitchLeft = new THREE.Mesh(hitchGeo, frameMat);
+            const hitchGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.8, 12);
+            const hitchLeft = new THREE.Mesh(hitchGeo, darkChassisMat);
             hitchLeft.rotation.z = Math.PI / 4;
-            hitchLeft.position.set(-0.35, 0.3, minZ - 1.2);
+            hitchLeft.position.set(-0.4, 0.6, minZ - 1.2);
             
-            const hitchRight = new THREE.Mesh(hitchGeo, frameMat);
+            const hitchRight = new THREE.Mesh(hitchGeo, darkChassisMat);
             hitchRight.rotation.z = -Math.PI / 4;
-            hitchRight.position.set(0.35, 0.3, minZ - 1.2);
+            hitchRight.position.set(0.4, 0.6, minZ - 1.2);
             
-            const kingpinGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.3, 16);
-            const kingpinMesh = new THREE.Mesh(kingpinGeo, frameMat);
-            kingpinMesh.position.set(0, 0.3, minZ - 1.8);
+            const kingpinGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.3, 16);
+            const kingpinMesh = new THREE.Mesh(kingpinGeo, chromeMat);
+            kingpinMesh.position.set(0, 0.6, minZ - 1.8);
             
             hitchGroup.add(hitchLeft);
             hitchGroup.add(hitchRight);
             hitchGroup.add(kingpinMesh);
             vehicleGroup.add(hitchGroup);
         } else {
-            // Cabina de Camión / Tracto
-            const cabinGeo = new THREE.BoxGeometry(1.6, 1.2, 1.8);
-            const cabinMesh = new THREE.Mesh(cabinGeo, cabinMat);
-            cabinMesh.position.set(0, 0.8, minZ - 1.2);
-            vehicleGroup.add(cabinMesh);
+            // Cabina completa de camión/tracto en -Z (frente hacia arriba)
+            const cabGroup = new THREE.Group();
+
+            const bodyGeo = new THREE.BoxGeometry(2.3, 2.4, 2.8);
+            const cabMesh = new THREE.Mesh(bodyGeo, cabPaintMat);
+            cabMesh.position.set(0, 1.9, minZ - 0.4);
+            cabMesh.castShadow = true;
+            cabGroup.add(cabMesh);
+
+            const hoodGeo = new THREE.BoxGeometry(2.2, 1.3, 1.6);
+            const hoodMesh = new THREE.Mesh(hoodGeo, cabPaintMat);
+            hoodMesh.position.set(0, 1.35, minZ - 2.0);
+            hoodMesh.castShadow = true;
+            cabGroup.add(hoodMesh);
+
+            const grilleGeo = new THREE.BoxGeometry(1.8, 1.0, 0.1);
+            const grilleMesh = new THREE.Mesh(grilleGeo, chromeMat);
+            grilleMesh.position.set(0, 1.25, minZ - 2.81);
+            cabGroup.add(grilleMesh);
+
+            const windGeo = new THREE.BoxGeometry(2.1, 0.9, 0.1);
+            const windMesh = new THREE.Mesh(windGeo, glassMat);
+            windMesh.position.set(0, 2.35, minZ - 1.8);
+            windMesh.rotation.x = -0.2;
+            cabGroup.add(windMesh);
+
+            const bumperGeo = new THREE.BoxGeometry(2.4, 0.45, 0.3);
+            const bumperMesh = new THREE.Mesh(bumperGeo, chromeMat);
+            bumperMesh.position.set(0, 0.6, minZ - 2.8);
+            cabGroup.add(bumperMesh);
+
+            vehicleGroup.add(cabGroup);
         }
 
         // Textura procedural de rodamiento de llanta (Canvas2D)
         const treadCanvas = document.createElement('canvas');
-        treadCanvas.width = 256;
-        treadCanvas.height = 256;
+        treadCanvas.width = 512;
+        treadCanvas.height = 512;
         const ctx = treadCanvas.getContext('2d');
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(0, 0, 256, 256);
-        ctx.fillStyle = '#0f172a';
-        for (let y = 0; y < 256; y += 32) {
-            ctx.fillRect(16, y + 4, 100, 14);
-            ctx.fillRect(140, y + 16, 100, 14);
+        ctx.fillStyle = '#1e1e24';
+        ctx.fillRect(0, 0, 512, 512);
+        ctx.strokeStyle = '#0a0a0d';
+        ctx.lineWidth = 12;
+        for (let y = 0; y < 512; y += 20) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(180, y + 10);
+            ctx.lineTo(332, y + 10);
+            ctx.lineTo(512, y);
+            ctx.stroke();
         }
         const treadTexture = new THREE.CanvasTexture(treadCanvas);
         treadTexture.wrapS = THREE.RepeatWrapping;
         treadTexture.wrapT = THREE.RepeatWrapping;
-        treadTexture.repeat.set(1, 4);
+        treadTexture.repeat.set(1, 10);
 
-        const rubberMat = new THREE.MeshStandardMaterial({ map: treadTexture, color: 0x1e293b, roughness: 0.8 });
-        const rimMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.8, roughness: 0.2 });
+        const rubberMat = new THREE.MeshStandardMaterial({ map: treadTexture, color: 0x1f2024, roughness: 0.85, metalness: 0.1 });
+        const rimMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.9, roughness: 0.2 });
+        const hubMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 });
 
         // Colección de objetos 3D de llantas para Raycasting
         const tireMeshesMap = {};
         const tireObjectsArray = [];
+        const slotPositionsMap = {};
 
         // Generar Neumático 3D genérico
-        function createTireMesh3D(posId) {
+        function createTireMesh3D(posId, isSpare = false) {
             const tireGroup = new THREE.Group();
             
             // Goma neumático
-            const rubberGeo = new THREE.CylinderGeometry(0.48, 0.48, 0.32, 24);
+            const rubberGeo = new THREE.CylinderGeometry(0.60, 0.60, 0.38, 28);
             rubberGeo.rotateZ(Math.PI / 2);
             const rubberMesh = new THREE.Mesh(rubberGeo, rubberMat);
             rubberMesh.castShadow = true;
             tireGroup.add(rubberMesh);
 
             // Rin de aluminio
-            const rimGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.33, 16);
+            const rimGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.39, 20);
             rimGeo.rotateZ(Math.PI / 2);
             const rimMesh = new THREE.Mesh(rimGeo, rimMat);
             tireGroup.add(rimMesh);
 
+            // Cubo central
+            const hubGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.41, 14);
+            hubGeo.rotateZ(Math.PI / 2);
+            const hubMesh = new THREE.Mesh(hubGeo, hubMat);
+            tireGroup.add(hubMesh);
+
             // Anillo exterior indicador (Torus)
-            const ringGeo = new THREE.TorusGeometry(0.51, 0.04, 8, 24);
+            const ringGeo = new THREE.TorusGeometry(0.48, 0.04, 10, 24);
             ringGeo.rotateY(Math.PI / 2);
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8 });
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
             const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+            ringMesh.position.x = 0.19;
             tireGroup.add(ringMesh);
             tireGroup.ringMesh = ringMesh;
 
@@ -917,8 +1002,8 @@
             const labelTex = new THREE.CanvasTexture(labelCanvas);
             const spriteMat = new THREE.SpriteMaterial({ map: labelTex });
             const sprite = new THREE.Sprite(spriteMat);
-            sprite.scale.set(0.65, 0.65, 1);
-            sprite.position.set(0, 0.65, 0);
+            sprite.scale.set(0.7, 0.7, 1);
+            sprite.position.set(0, 0.75, 0);
             tireGroup.add(sprite);
 
             tireGroup.userData = { isTire: true, id: String(posId) };
@@ -929,11 +1014,10 @@
 
         // Posicionar ejes y llantas en el vehículo
         cfg.axles.forEach(axle => {
-            // Eje tubo
-            const axleGeo = new THREE.CylinderGeometry(0.06, 0.06, 3.0, 12);
+            const axleGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.8, 14);
             axleGeo.rotateZ(Math.PI / 2);
-            const axleMesh = new THREE.Mesh(axleGeo, frameMat);
-            axleMesh.position.set(0, 0.4, axle.z);
+            const axleMesh = new THREE.Mesh(axleGeo, darkChassisMat);
+            axleMesh.position.set(0, 0.6, axle.z);
             vehicleGroup.add(axleMesh);
 
             axle.tires.forEach(t => {
@@ -944,54 +1028,62 @@
                 } else {
                     xPos = t.isOuter ? 1.45 : 0.92;
                 }
-                const posVec = new THREE.Vector3(xPos, 0.4, axle.z);
+                const posVec = new THREE.Vector3(xPos, 0.6, axle.z);
                 mesh.position.copy(posVec);
                 mesh.userData.defaultPos = posVec.clone();
                 vehicleGroup.add(mesh);
 
                 tireMeshesMap[t.id] = mesh;
-                tireObjectsArray.push(mesh.children[0]); // rubberMesh para raycast
+                slotPositionsMap[t.id] = posVec.clone();
+                tireObjectsArray.push(mesh.children[0]); // rubberMesh
             });
         });
 
         // Posicionar repuestos
         if (cfg.spares) {
             cfg.spares.forEach(sp => {
-                const mesh = createTireMesh3D(sp.id);
+                const mesh = createTireMesh3D(sp.id, true);
                 const posVec = new THREE.Vector3(sp.pos[0], sp.pos[1], sp.pos[2]);
                 mesh.position.copy(posVec);
                 mesh.userData.defaultPos = posVec.clone();
                 vehicleGroup.add(mesh);
 
                 tireMeshesMap[sp.id] = mesh;
+                slotPositionsMap[sp.id] = posVec.clone();
                 tireObjectsArray.push(mesh.children[0]);
             });
         }
 
         // Anillo de resaltado verde sobre destino en Drag & Drop (Hover)
-        const highlightGeo = new THREE.RingGeometry(0.55, 0.68, 32);
-        highlightGeo.rotateX(-Math.PI / 2);
-        const highlightMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, side: THREE.DoubleSide, transparent: true, opacity: 0.85 });
-        const highlightMesh = new THREE.Mesh(highlightGeo, highlightMat);
-        highlightMesh.visible = false;
-        scene.add(highlightMesh);
+        const dropRingGeo = new THREE.TorusGeometry(0.72, 0.08, 16, 32);
+        dropRingGeo.rotateY(Math.PI / 2);
+        const dropRingMat = new THREE.MeshBasicMaterial({ color: 0x16a34a, transparent: true, opacity: 0.95 });
+        const dragHoverHighlightMesh = new THREE.Mesh(dropRingGeo, dropRingMat);
+        dragHoverHighlightMesh.visible = false;
+        scene.add(dragHoverHighlightMesh);
 
-        // ── AJUSTE DE CÁMARA 90° CENITAL 2D (autoHeight + 55% margen) ────────────────
+        // ── AJUSTE DE CÁMARA 2D (Frente hacia arriba con UP = [0, 0, -1]) ─────────────
         window._neuUpdateCameraView = function() {
-            const totalLength = frameLength;
-            const autoHeight = Math.max(10, totalLength * 1.55);
+            const totalSpan = frameLength;
+            const autoHeight = Math.max(16, totalSpan * 1.55);
 
             if (window._neuViewMode === '2d') {
-                camera.position.set(0, autoHeight, centerZ + 0.0001);
+                camera.up.set(0, 0, -1); // Cabina y Eje 1 arriba, parte trasera abajo
+                camera.position.set(0, autoHeight, centerZ);
                 camera.lookAt(0, 0, centerZ);
+                controls.target.set(0, 0, centerZ);
                 controls.enableRotate = false; controls.enablePan = false; controls.enableZoom = false;
             } else if (window._neuViewMode === 'iso') {
-                camera.position.set(autoHeight * 0.7, autoHeight * 0.7, centerZ + autoHeight * 0.7);
+                camera.up.set(0, 1, 0);
+                camera.position.set(10, autoHeight * 0.7, centerZ + 10);
                 camera.lookAt(0, 0, centerZ);
+                controls.target.set(0, 0, centerZ);
                 controls.enableRotate = true; controls.enablePan = true; controls.enableZoom = true;
             } else if (window._neuViewMode === 'lat') {
-                camera.position.set(autoHeight * 1.2, 0.5, centerZ);
+                camera.up.set(0, 1, 0);
+                camera.position.set(14, 1.5, centerZ);
                 camera.lookAt(0, 0, centerZ);
+                controls.target.set(0, 0, centerZ);
                 controls.enableRotate = true; controls.enablePan = true; controls.enableZoom = true;
             }
             controls.update();
@@ -1015,20 +1107,20 @@
 
                 if (lData) {
                     if (lData.rot === 'SI') {
-                        ring.material.color.setHex(0x3b82f6); // Azul rotación
+                        ring.material.color.setHex(0x2563eb); // Azul rotación
                     } else {
                         const prom = parseFloat(lData.remanente_promedio || 0);
                         if (prom <= 4.0) ring.material.color.setHex(0xef4444); // Red
-                        else if (prom <= 6.0) ring.material.color.setHex(0xeab308); // Yellow
-                        else ring.material.color.setHex(0x22c55e); // Green
+                        else if (prom <= 6.0) ring.material.color.setHex(0xf59e0b); // Amber
+                        else ring.material.color.setHex(0x10b981); // Green
                     }
                 } else {
-                    ring.material.color.setHex(isActive ? 0x2563eb : 0x94a3b8);
+                    ring.material.color.setHex(isActive ? 0x2563eb : 0x10b981);
                 }
 
                 // Resaltar escala de llanta activa
                 if (isActive) {
-                    meshGroup.scale.set(1.1, 1.1, 1.1);
+                    meshGroup.scale.set(1.08, 1.08, 1.08);
                 } else {
                     meshGroup.scale.set(1.0, 1.0, 1.0);
                 }
@@ -1036,10 +1128,10 @@
         };
         window._neuActualizar3DColores();
 
-        // ── RAYCASTING Y LÓGICA DRAG & DROP DE ROTACIONES (POINTER EVENTS) ───────────
+        // ── RAYCASTING Y DRAG & DROP SEGURO CON RETORNO GARANTIZADO ─────────────────
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
-        const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.4);
+        const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.6);
         const planeIntersect = new THREE.Vector3();
 
         let isPointerDown = false;
@@ -1067,7 +1159,7 @@
                     isPointerDown = true;
                     draggedTireGroup = parentGroup;
                     draggedTireId = parentGroup.userData.id;
-                    canvasEl.setPointerCapture(e.pointerId);
+                    try { canvasEl.setPointerCapture(e.pointerId); } catch(err) {}
                 }
             }
         });
@@ -1080,11 +1172,11 @@
             // Activar arrastre si se supera umbral de 8px
             if (dist > 8 && !isDragging) {
                 isDragging = true;
-                draggedTireGroup.scale.set(1.18, 1.18, 1.18);
+                draggedTireGroup.scale.set(1.15, 1.15, 1.15);
                 const banner = document.getElementById('dragInstructionBanner');
                 if (banner) {
                     banner.style.display = 'block';
-                    banner.innerHTML = `<i class="bi bi-arrows-move me-1 text-info"></i> Arrastrando Llanta #${draggedTireId} — Suelta sobre otra llanta para rotar`;
+                    banner.innerHTML = `<i class="bi bi-arrows-move me-1 text-warning"></i> Arrastrando Llanta #${draggedTireId} — Suelta sobre otra posición para intercambiar`;
                 }
             }
 
@@ -1113,12 +1205,12 @@
                     hoverTargetId = hitTarget;
                     const targetGroup = tireMeshesMap[hitTarget];
                     if (targetGroup) {
-                        highlightMesh.position.set(targetGroup.position.x, 0.41, targetGroup.position.z);
-                        highlightMesh.visible = true;
+                        dragHoverHighlightMesh.position.copy(targetGroup.position);
+                        dragHoverHighlightMesh.visible = true;
                     }
                 } else {
                     hoverTargetId = null;
-                    highlightMesh.visible = false;
+                    dragHoverHighlightMesh.visible = false;
                 }
             }
         });
@@ -1126,37 +1218,51 @@
         const endDragHandler = (e) => {
             if (!isPointerDown) return;
 
+            try { canvasEl.releasePointerCapture(e.pointerId); } catch(err) {}
+
             const banner = document.getElementById('dragInstructionBanner');
             if (banner) banner.style.display = 'none';
-            highlightMesh.visible = false;
+            dragHoverHighlightMesh.visible = false;
 
-            if (isDragging && draggedTireGroup) {
-                if (hoverTargetId && hoverTargetId !== draggedTireId) {
+            const meshToRestore = draggedTireGroup;
+            const sourceId = draggedTireId;
+            const targetId = hoverTargetId;
+
+            if (isDragging && meshToRestore && sourceId) {
+                if (targetId && targetId !== sourceId) {
                     // INTERCAMBIO / ROTACIÓN AUTOMÁTICA
-                    window._neuEjecutarRotacion(draggedTireId, hoverTargetId);
-                    // Resetear posición física en 3D
-                    draggedTireGroup.position.copy(draggedTireGroup.userData.defaultPos);
+                    window._neuEjecutarRotacion(sourceId, targetId);
+                    meshToRestore.position.copy(meshToRestore.userData.defaultPos);
+                    meshToRestore.scale.set(1.0, 1.0, 1.0);
                 } else {
-                    // RETORNO SUAVE (LERP)
-                    const targetPos = draggedTireGroup.userData.defaultPos;
+                    // RETORNO SUAVE SEGURO (LERP) — NUNCA QUEDA FUERA
+                    const targetPos = meshToRestore.userData.defaultPos.clone();
+                    const startPos = meshToRestore.position.clone();
                     let startTime = null;
-                    const startPos = draggedTireGroup.position.clone();
-                    
+
+                    meshToRestore.scale.set(1.0, 1.0, 1.0);
+
                     function animateLerp(time) {
                         if (!startTime) startTime = time;
-                        const progress = Math.min((time - startTime) / 180, 1);
-                        draggedTireGroup.position.lerpVectors(startPos, targetPos, progress);
-                        if (progress < 1) requestAnimationFrame(animateLerp);
+                        const progress = Math.min((time - startTime) / 160, 1);
+                        if (meshToRestore) {
+                            meshToRestore.position.lerpVectors(startPos, targetPos, progress);
+                        }
+                        if (progress < 1) {
+                            requestAnimationFrame(animateLerp);
+                        } else if (meshToRestore) {
+                            meshToRestore.position.copy(targetPos);
+                        }
                     }
                     requestAnimationFrame(animateLerp);
                 }
-            } else if (draggedTireId) {
+            } else if (sourceId) {
                 // CLIC SIMPLE: Seleccionar posición
-                window._neuSeleccionarPosicion(draggedTireId);
+                window._neuSeleccionarPosicion(sourceId);
             }
 
-            if (draggedTireGroup) {
-                draggedTireGroup.scale.set(1.0, 1.0, 1.0);
+            if (meshToRestore) {
+                meshToRestore.scale.set(1.0, 1.0, 1.0);
             }
 
             isPointerDown = false;
@@ -1181,9 +1287,21 @@
         window._neuRefrescar3D = function() {
             window._neuActualizar3DColores();
         };
+
+        window._neuToggleXRay = function() {
+            window._neuXRayActive = !window._neuXRayActive;
+            const btn = document.getElementById('btn-xray');
+            if (btn) {
+                btn.className = window._neuXRayActive 
+                    ? 'btn btn-sm btn-warning text-dark py-1 px-3 rounded-pill fw-bold' 
+                    : 'btn btn-sm btn-outline-warning py-1 px-3 rounded-pill fw-bold';
+            }
+            cabPaintMat.opacity = window._neuXRayActive ? 0.22 : 1.0;
+            darkChassisMat.opacity = window._neuXRayActive ? 0.22 : 1.0;
+        };
     };
 
-    // ── NAVEGACIÓN VISTAS 2D / ISOMÉTRICA / LATERAL / RAYOS X ───────────────────────
+    // ── NAVEGACIÓN VISTAS 2D / ISOMÉTRICA / LATERAL ─────────────────────────────────
     window._neuSetViewMode = function(mode) {
         window._neuViewMode = mode;
         ['2d', 'iso', 'lat'].forEach(m => {
@@ -1193,27 +1311,20 @@
         if (window._neuUpdateCameraView) window._neuUpdateCameraView();
     };
 
-    window._neuToggleXRay = function() {
-        window._neuXRayActive = !window._neuXRayActive;
-        const btn = document.getElementById('btn-xray');
-        if (btn) {
-            btn.className = window._neuXRayActive 
-                ? 'btn btn-sm btn-warning text-dark py-1 px-3 rounded-pill fw-bold' 
-                : 'btn btn-sm btn-outline-warning py-1 px-3 rounded-pill fw-bold';
-        }
-    };
-
     // ── LÓGICA DE NEGOCIO: EJECUTAR ROTACIÓN Y AUTO-REGISTRO ───────────────────────
     window._neuEjecutarRotacion = function(sourceId, targetId) {
-        // Buscar o crear registros de ambas llantas
-        let sourceItem = window._neuLlantasActuales.find(l => String(l.posicion) === String(sourceId));
-        let targetItem = window._neuLlantasActuales.find(l => String(l.posicion) === String(targetId));
+        const sId = String(sourceId);
+        const tId = String(targetId);
 
+        let sourceItem = window._neuLlantasActuales.find(l => String(l.posicion) === sId);
+        let targetItem = window._neuLlantasActuales.find(l => String(l.posicion) === tId);
+
+        // Posición Origen sId (ahora tiene la llanta que vino de tId)
         if (!sourceItem) {
-            const prev = (window._neuUltimaInspeccionMap || {})[String(sourceId).toUpperCase()] || {};
+            const prev = (window._neuUltimaInspeccionMap || {})[sId.toUpperCase()] || {};
             sourceItem = {
-                posicion: String(sourceId),
-                id: String(sourceId),
+                posicion: sId,
+                id: sId,
                 marca: prev.marca || 'WINDPOWER',
                 medida: prev.medida || '275/70R22.5',
                 modelo: prev.modelo || 'PROGUO1',
@@ -1225,24 +1336,25 @@
                 estado: prev.estado || 'NUEVA',
                 accion: 'Rotación',
                 rot: 'SI',
-                rotTarget: String(targetId),
-                observaciones: `De Posición #${sourceId} a Posición #${targetId}`,
-                obs: `De Posición #${sourceId} a Posición #${targetId}`
+                rotTarget: tId,
+                observaciones: `De Posición #${tId} a Posición #${sId}`,
+                obs: `De Posición #${tId} a Posición #${sId}`
             };
             window._neuLlantasActuales.push(sourceItem);
         } else {
             sourceItem.rot = 'SI';
-            sourceItem.rotTarget = String(targetId);
+            sourceItem.rotTarget = tId;
             sourceItem.accion = 'Rotación';
-            sourceItem.observaciones = `De Posición #${sourceId} a Posición #${targetId}`;
-            sourceItem.obs = `De Posición #${sourceId} a Posición #${targetId}`;
+            sourceItem.observaciones = `De Posición #${tId} a Posición #${sId}`;
+            sourceItem.obs = `De Posición #${tId} a Posición #${sId}`;
         }
 
+        // Posición Destino tId (ahora tiene la llanta que vino de sId)
         if (!targetItem) {
-            const prevT = (window._neuUltimaInspeccionMap || {})[String(targetId).toUpperCase()] || {};
+            const prevT = (window._neuUltimaInspeccionMap || {})[tId.toUpperCase()] || {};
             targetItem = {
-                posicion: String(targetId),
-                id: String(targetId),
+                posicion: tId,
+                id: tId,
                 marca: prevT.marca || 'WINDPOWER',
                 medida: prevT.medida || '275/70R22.5',
                 modelo: prevT.modelo || 'PROGUO1',
@@ -1254,28 +1366,28 @@
                 estado: prevT.estado || 'NUEVA',
                 accion: 'Rotación',
                 rot: 'SI',
-                rotTarget: String(sourceId),
-                observaciones: `De Posición #${targetId} a Posición #${sourceId}`,
-                obs: `De Posición #${targetId} a Posición #${sourceId}`
+                rotTarget: sId,
+                observaciones: `De Posición #${sId} a Posición #${tId}`,
+                obs: `De Posición #${sId} a Posición #${tId}`
             };
             window._neuLlantasActuales.push(targetItem);
         } else {
             targetItem.rot = 'SI';
-            targetItem.rotTarget = String(sourceId);
+            targetItem.rotTarget = sId;
             targetItem.accion = 'Rotación';
-            targetItem.observaciones = `De Posición #${targetId} a Posición #${sourceId}`;
-            targetItem.obs = `De Posición #${targetId} a Posición #${sourceId}`;
+            targetItem.observaciones = `De Posición #${sId} a Posición #${tId}`;
+            targetItem.obs = `De Posición #${sId} a Posición #${tId}`;
         }
 
         // Renderizar tabla y 3D
         window._neuRenderTablaLlantas();
         if (window._neuRefrescar3D) window._neuRefrescar3D();
         
-        // Notificación Toast emergente
-        showToast(`Rotación realizada: Posición #${sourceId} ⇄ Posición #${targetId}`);
+        // Notificación Toast emergente con texto blanco
+        showToast(`Rotación realizada: Posición #${sId} ⇄ Posición #${tId}`);
         
         // Seleccionar automáticamente la llanta origen en el formulario
-        window._neuSeleccionarPosicion(sourceId);
+        window._neuSeleccionarPosicion(sId);
     };
 
     // ── MANEJO DEL FORMULARIO DE LLANTA Y MEDICIONES TÁCTILES ─────────────────────
@@ -1288,11 +1400,11 @@
 
         // Actualizar barra scroll táctil de botones
         document.querySelectorAll('#neu-pos-selector button').forEach(btn => {
-            btn.className = 'btn btn-outline-secondary neu-touch-btn-pos position-relative';
+            btn.className = 'btn btn-outline-secondary neu-touch-btn-pos position-relative font-monospace';
         });
         const activeBtn = document.getElementById(`btn-pos-${pos}`);
         if (activeBtn) {
-            activeBtn.className = 'btn btn-primary text-white shadow-sm neu-touch-btn-pos position-relative';
+            activeBtn.className = 'btn btn-primary text-white shadow-sm neu-touch-btn-pos position-relative font-monospace';
             activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         }
 
@@ -1311,9 +1423,9 @@
             if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = (existente.presion_ant || existente.presion_ant === 0) ? existente.presion_ant : '';
             if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = (existente.presion_actual || existente.presion_actual === 0) ? existente.presion_actual : '';
             if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = existente.estado || 'NUEVA';
-            if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = existente.accion || 'Inspeccion';
+            if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = existente.accion || 'Inspección';
             if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = existente.rot || 'NO';
-            if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = existente.observaciones || '';
+            if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = existente.observaciones || existente.obs || '';
             
             window._neuFotos = { foto1: existente.foto1 || null, foto2: existente.foto2 || null, foto3: existente.foto3 || null };
             [1, 2, 3].forEach(n => {
@@ -1340,7 +1452,7 @@
             if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = prev.presion_actual || 100;
             if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = prev.presion_actual || 100;
             if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = prev.estado || 'NUEVA';
-            if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = 'Inspeccion';
+            if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = 'Inspección';
             if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
         }
 
@@ -1348,7 +1460,7 @@
         if (window._neuRefrescar3D) window._neuRefrescar3D();
     };
 
-    // Renderizar botonera 0..20mm para R1, R2, R3, R4
+    // Renderizar botonera 0..16mm para R1, R2, R3, R4
     window._neuRenderBotoneraR = function() {
         ['r1', 'r2', 'r3', 'r4'].forEach(tipo => {
             const container = document.getElementById(`neu-${tipo}-buttons`);
@@ -1358,7 +1470,7 @@
             
             const isZero = current === 0;
             html += `
-                <button type="button" class="btn ${isZero ? 'btn-secondary text-white shadow-sm' : 'btn-outline-secondary'} neu-touch-btn-r" style="min-width:56px;" onclick="window._neuSetR('${tipo}', 0)" id="btn-val-${tipo}-0">
+                <button type="button" class="btn ${isZero ? 'btn-secondary text-white shadow-sm' : 'btn-outline-secondary'} neu-touch-btn-r font-monospace" style="min-width:56px;" onclick="window._neuSetR('${tipo}', 0)" id="btn-val-${tipo}-0">
                     0 mm
                 </button>
             `;
@@ -1367,7 +1479,7 @@
                 const isActive = i === current;
                 const activeClass = isActive ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary';
                 html += `
-                    <button type="button" class="btn ${activeClass} neu-touch-btn-r" onclick="window._neuSetR('${tipo}', ${i})" id="btn-val-${tipo}-${i}">
+                    <button type="button" class="btn ${activeClass} neu-touch-btn-r font-monospace" onclick="window._neuSetR('${tipo}', ${i})" id="btn-val-${tipo}-${i}">
                         ${i}
                     </button>
                 `;
@@ -1376,7 +1488,7 @@
             const lbl = document.getElementById(`lbl-${tipo}`);
             if (lbl) {
                 lbl.innerText = `${current} mm`;
-                lbl.className = (current > 0) ? 'badge bg-primary px-3 py-1 fs-6 rounded-pill shadow-2xs' : 'badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs';
+                lbl.className = (current > 0) ? 'badge bg-primary px-3 py-1 fs-6 rounded-pill shadow-2xs font-monospace' : 'badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs font-monospace';
             }
         });
         window._neuCalcularPromedio();
@@ -1389,15 +1501,15 @@
         const lbl = document.getElementById(`lbl-${tipo}`);
         if (lbl) {
             lbl.innerText = `${num} mm`;
-            lbl.className = (num > 0) ? 'badge bg-primary px-3 py-1 fs-6 rounded-pill shadow-2xs' : 'badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs';
+            lbl.className = (num > 0) ? 'badge bg-primary px-3 py-1 fs-6 rounded-pill shadow-2xs font-monospace' : 'badge bg-secondary px-3 py-1 fs-6 rounded-pill shadow-2xs font-monospace';
         }
 
         const btnZero = document.getElementById(`btn-val-${tipo}-0`);
-        if (btnZero) btnZero.className = (num === 0) ? 'btn btn-secondary text-white shadow-sm neu-touch-btn-r' : 'btn btn-outline-secondary neu-touch-btn-r';
+        if (btnZero) btnZero.className = (num === 0) ? 'btn btn-secondary text-white shadow-sm neu-touch-btn-r font-monospace' : 'btn btn-outline-secondary neu-touch-btn-r font-monospace';
 
         for (let i = 1; i <= 16; i++) {
             const btn = document.getElementById(`btn-val-${tipo}-${i}`);
-            if (btn) btn.className = (i === num) ? 'btn btn-primary text-white shadow-sm neu-touch-btn-r' : 'btn btn-outline-secondary neu-touch-btn-r';
+            if (btn) btn.className = (i === num) ? 'btn btn-primary text-white shadow-sm neu-touch-btn-r font-monospace' : 'btn btn-outline-secondary neu-touch-btn-r font-monospace';
         }
 
         window._neuCalcularPromedio();
@@ -1418,15 +1530,15 @@
         if (!lbl) return;
 
         if (r1 === 0 && r2 === 0 && r3 === 0 && r4 === 0) {
-            lbl.innerHTML = `<span class="text-muted">Promedio: -- mm (Sin medir)</span>`;
+            lbl.innerHTML = `<span class="text-muted font-monospace">Promedio: -- mm (Sin medir)</span>`;
             return;
         }
 
         const promVal = (r4 > 0) ? ((r1 + r2 + r3 + r4) / 4.0) : ((r1 + r2 + r3) / 3.0);
         const prom = promVal.toFixed(1);
-        let color = promVal > 6.0 ? '#16a34a' : (promVal > 4.0 ? '#d97706' : '#dc2626');
+        let color = promVal > 6.0 ? '#10b981' : (promVal > 4.0 ? '#f59e0b' : '#ef4444');
         let statusBadge = promVal <= 4.0 ? '<span class="badge bg-danger ms-1">CRÍTICA (≤4mm)</span>' : (promVal <= 6.0 ? '<span class="badge bg-warning text-dark ms-1">ALERTA</span>' : '<span class="badge bg-success ms-1">ÓPTIMA</span>');
-        lbl.innerHTML = `Promedio: <b style="color:${color}">${prom} mm</b> ${statusBadge}`;
+        lbl.innerHTML = `Promedio: <b style="color:${color};" class="font-monospace">${prom} mm</b> ${statusBadge}`;
     };
 
     window._neuProcesarFoto = function(num, input) {
@@ -1470,7 +1582,7 @@
         if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = '';
         if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = '';
         if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = 'NUEVA';
-        if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = 'Inspeccion';
+        if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = 'Inspección';
         if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
         if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = '';
 
@@ -1498,7 +1610,7 @@
         const presion_ant = parseInt(document.getElementById('neu-input-pres-ant')?.value || 0, 10);
         const presion_actual = parseInt(document.getElementById('neu-input-pres-act')?.value || 0, 10);
         const estado = document.getElementById('neu-sel-estado')?.value || 'NUEVA';
-        const accion = document.getElementById('neu-sel-accion')?.value || 'Inspeccion';
+        const accion = document.getElementById('neu-sel-accion')?.value || 'Inspección';
         const rot = document.getElementById('neu-sel-rot')?.value || 'NO';
         const observaciones = document.getElementById('neu-input-obs-item')?.value || 'Ninguna';
 
@@ -1588,21 +1700,21 @@
 
             return `
                 <tr>
-                    <td class="ps-3"><span class="badge bg-primary rounded-pill px-2.5 py-1 fs-6">${l.posicion}</span></td>
+                    <td class="ps-3"><span class="badge bg-primary rounded-pill px-2.5 py-1 fs-6 font-monospace">#${l.posicion}</span></td>
                     <td class="fw-bold text-dark">${l.marca || '---'}</td>
-                    <td class="small">${l.medida || '---'}</td>
+                    <td class="small font-monospace">${l.medida || '---'}</td>
                     <td><span class="badge bg-light text-dark border">${l.modelo || '---'}</span></td>
-                    <td class="text-center fw-bold">${l.r1}</td>
-                    <td class="text-center fw-bold">${l.r2}</td>
-                    <td class="text-center fw-bold">${l.r3}</td>
-                    <td class="text-center text-muted small">${l.r4 || 0}</td>
-                    <td class="text-center"><span class="badge ${badgeClass} px-2 py-1">${prom} mm</span></td>
-                    <td class="text-center small">${l.presion_ant} ➔ <b>${l.presion_actual} PSI</b></td>
+                    <td class="text-center fw-bold font-monospace">${l.r1}</td>
+                    <td class="text-center fw-bold font-monospace">${l.r2}</td>
+                    <td class="text-center fw-bold font-monospace">${l.r3}</td>
+                    <td class="text-center text-muted small font-monospace">${l.r4 || 0}</td>
+                    <td class="text-center"><span class="badge ${badgeClass} px-2 py-1 font-monospace">${prom} mm</span></td>
+                    <td class="text-center small font-monospace">${l.presion_ant} ➔ <b>${l.presion_actual} PSI</b></td>
                     <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${l.estado}</span></td>
                     <td><span class="badge bg-info bg-opacity-10 text-info">${l.accion}</span></td>
                     <td>${rotBadge}</td>
-                    <td class="text-center">${fotosBadge}</td>
-                    <td class="text-truncate text-muted small" style="max-width:150px;" title="${l.observaciones || l.obs || ''}">${l.observaciones || l.obs || 'Ninguna'}</td>
+                    <td class="text-center font-monospace">${fotosBadge}</td>
+                    <td class="text-truncate small ${isRot ? 'text-primary fw-bold' : 'text-muted'}" style="max-width:160px;" title="${l.observaciones || l.obs || ''}">${l.observaciones || l.obs || 'Ninguna'}</td>
                     <td class="text-center pe-3">
                         <button class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill" onclick="window._neuEliminarLlanta(${index})"><i class="bi bi-trash"></i></button>
                     </td>
@@ -1638,7 +1750,7 @@
                 if (tipo === 'marcas') document.getElementById('neu-sel-marca').value = valor.toUpperCase();
                 if (tipo === 'medidas') document.getElementById('neu-sel-medida').value = valor.toUpperCase();
                 if (tipo === 'modelos') document.getElementById('neu-sel-modelo').value = valor.toUpperCase();
-                if (tipo === 'acciones') document.getElementById('neu-sel-accion').value = valor.toUpperCase();
+                if (tipo === 'acciones') document.getElementById('neu-sel-accion').value = valor;
             } else {
                 alert(`Error: ${data.error || 'No se pudo registrar'}`);
             }
