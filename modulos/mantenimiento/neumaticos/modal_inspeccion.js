@@ -22,6 +22,7 @@
         "C2": "4X2", "T2": "4X2", "4X2": "4X2",
         "C3": "6X4", "T3": "6X4", "6X4": "6X4",
         "6X2": "6X2",
+        "R2": "R2",
         "S2": "S2", "S3": "S3",
         "T3S3": "T3S3", "C3S3": "T3S3"
     };
@@ -58,6 +59,16 @@
                 { id: 3, z: 2.8,  isDual: true,  tires: [{ id: "5", side: "left", isOuter: true }, { id: "6", side: "left", isOuter: false }, { id: "7", side: "right", isOuter: false }, { id: "8", side: "right", isOuter: true }] }
             ],
             spares: [{ id: "R", pos: [0, 0.4, -0.8] }]
+        },
+        "R2": {
+            name: "R2 Carreta / Burrita (8 Llantas)",
+            totalTires: 8,
+            positions: ["1", "2", "3", "4", "5", "6", "7", "8", "R"],
+            axles: [
+                { id: 1, z: -2.0, isDual: true, tires: [{ id: "1", side: "left", isOuter: true }, { id: "2", side: "left", isOuter: false }, { id: "3", side: "right", isOuter: false }, { id: "4", side: "right", isOuter: true }] },
+                { id: 2, z: 2.0,  isDual: true, tires: [{ id: "5", side: "left", isOuter: true }, { id: "6", side: "left", isOuter: false }, { id: "7", side: "right", isOuter: false }, { id: "8", side: "right", isOuter: true }] }
+            ],
+            spares: [{ id: "R", pos: [0, 0.4, 0.0] }]
         },
         "S2": {
             name: "S2 Semiremolque (8 Llantas)",
@@ -816,11 +827,34 @@
         frameMesh.position.set(0, 0.2, centerZ);
         vehicleGroup.add(frameMesh);
 
-        // 2. Cabina (frente)
-        const cabinGeo = new THREE.BoxGeometry(1.6, 1.2, 1.8);
-        const cabinMesh = new THREE.Mesh(cabinGeo, cabinMat);
-        cabinMesh.position.set(0, 0.8, minZ - 1.2);
-        vehicleGroup.add(cabinMesh);
+        // 2. Elemento Frontal (-Z, apuntando Hacia Arriba en pantalla)
+        if (cfg.name.includes("Carreta") || cfg.name.includes("Remolque") || cfg.name.includes("Semiremolque") || cfg.name.includes("S2") || cfg.name.includes("S3") || cfg.name.includes("R2")) {
+            // Enganche / Lanza de Remolque
+            const hitchGroup = new THREE.Group();
+            const hitchGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.6, 12);
+            const hitchLeft = new THREE.Mesh(hitchGeo, frameMat);
+            hitchLeft.rotation.z = Math.PI / 4;
+            hitchLeft.position.set(-0.35, 0.3, minZ - 1.2);
+            
+            const hitchRight = new THREE.Mesh(hitchGeo, frameMat);
+            hitchRight.rotation.z = -Math.PI / 4;
+            hitchRight.position.set(0.35, 0.3, minZ - 1.2);
+            
+            const kingpinGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.3, 16);
+            const kingpinMesh = new THREE.Mesh(kingpinGeo, frameMat);
+            kingpinMesh.position.set(0, 0.3, minZ - 1.8);
+            
+            hitchGroup.add(hitchLeft);
+            hitchGroup.add(hitchRight);
+            hitchGroup.add(kingpinMesh);
+            vehicleGroup.add(hitchGroup);
+        } else {
+            // Cabina de Camión / Tracto
+            const cabinGeo = new THREE.BoxGeometry(1.6, 1.2, 1.8);
+            const cabinMesh = new THREE.Mesh(cabinGeo, cabinMat);
+            cabinMesh.position.set(0, 0.8, minZ - 1.2);
+            vehicleGroup.add(cabinMesh);
+        }
 
         // Textura procedural de rodamiento de llanta (Canvas2D)
         const treadCanvas = document.createElement('canvas');
@@ -1192,7 +1226,8 @@
                 accion: 'Rotación',
                 rot: 'SI',
                 rotTarget: String(targetId),
-                observaciones: `De Posición #${sourceId} a Posición #${targetId}`
+                observaciones: `De Posición #${sourceId} a Posición #${targetId}`,
+                obs: `De Posición #${sourceId} a Posición #${targetId}`
             };
             window._neuLlantasActuales.push(sourceItem);
         } else {
@@ -1200,6 +1235,7 @@
             sourceItem.rotTarget = String(targetId);
             sourceItem.accion = 'Rotación';
             sourceItem.observaciones = `De Posición #${sourceId} a Posición #${targetId}`;
+            sourceItem.obs = `De Posición #${sourceId} a Posición #${targetId}`;
         }
 
         if (!targetItem) {
@@ -1219,7 +1255,8 @@
                 accion: 'Rotación',
                 rot: 'SI',
                 rotTarget: String(sourceId),
-                observaciones: `De Posición #${targetId} a Posición #${sourceId}`
+                observaciones: `De Posición #${targetId} a Posición #${sourceId}`,
+                obs: `De Posición #${targetId} a Posición #${sourceId}`
             };
             window._neuLlantasActuales.push(targetItem);
         } else {
@@ -1227,6 +1264,7 @@
             targetItem.rotTarget = String(sourceId);
             targetItem.accion = 'Rotación';
             targetItem.observaciones = `De Posición #${targetId} a Posición #${sourceId}`;
+            targetItem.obs = `De Posición #${targetId} a Posición #${sourceId}`;
         }
 
         // Renderizar tabla y 3D
@@ -1564,7 +1602,7 @@
                     <td><span class="badge bg-info bg-opacity-10 text-info">${l.accion}</span></td>
                     <td>${rotBadge}</td>
                     <td class="text-center">${fotosBadge}</td>
-                    <td class="text-truncate text-muted small" style="max-width:150px;" title="${l.observaciones || ''}">${l.observaciones || 'Ninguna'}</td>
+                    <td class="text-truncate text-muted small" style="max-width:150px;" title="${l.observaciones || l.obs || ''}">${l.observaciones || l.obs || 'Ninguna'}</td>
                     <td class="text-center pe-3">
                         <button class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill" onclick="window._neuEliminarLlanta(${index})"><i class="bi bi-trash"></i></button>
                     </td>
