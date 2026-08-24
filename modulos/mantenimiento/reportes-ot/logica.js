@@ -370,7 +370,7 @@ window.rotRenderTabla = function(lista) {
               + '<td style="font-size:0.8rem; font-weight:600; text-transform:uppercase; white-space:nowrap;">' + rotEscHtml(det.supervisor || ot.supervisor || '—') + '</td>'
               + '<td style="white-space:nowrap;">' + rotBadgeSituacion(det.situacion || det.situacion_inicial || 'En Atención') + '</td>'
               + '<td style="font-size:0.78rem; color:var(--subtext); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + rotEscHtml(rawObs) + '">' + rotEscHtml(rawObs || '—') + '</td>'
-              + '<td style="font-weight:700; color:#16a34a; text-align:right;">S/ ' + parseFloat(ot.costo_total||0).toFixed(2) + '</td>'
+              + '<td style="font-weight:700; color:#16a34a; text-align:right;">S/ ' + Number(ot.costo_total||0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>'
               + '<td style="text-align:center;"><button class="btn btn-sm btn-light border shadow-2xs rounded-3" style="color:#2563eb; padding:3px 8px;" onclick="event.stopPropagation(); window.rotAbrirDetalle(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-eye-fill"></i></button></td>'
               + '</tr>';
 
@@ -399,6 +399,10 @@ window.rotRenderTabla = function(lista) {
                     + '<div class="rot-mobile-card-row mb-1">'
                     + '  <span class="rot-mobile-card-label">Técnicos:</span>'
                     + '  <span class="rot-mobile-card-val">' + rotEscHtml(tecsStr) + '</span>'
+                    + '</div>'
+                    + '<div class="rot-mobile-card-row mb-1">'
+                    + '  <span class="rot-mobile-card-label">Costo Total:</span>'
+                    + '  <span class="rot-mobile-card-val fw-bold text-success">S/ ' + Number(ot.costo_total||0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>'
                     + '</div>'
                     + (rawObs ? '<div class="rot-mobile-card-row mt-2 pt-2 border-top"><span class="text-muted small text-truncate" style="max-width:100%">' + rotEscHtml(rawObs) + '</span></div>' : '')
                     + '</div>';
@@ -909,16 +913,17 @@ window.rotAbrirDetalle = function(idOT) {
         rotRenderSecNeumaticos(idOT);
         // Actualizar costo total dinámico
         var costoTr = window.rotOtTrabajosActivos
-            .filter(function(t){ return t.estado === 'Aprobado'; })
             .reduce(function(s, t) {
                 var d2 = {}; try { d2 = typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {}); } catch(e) {}
-                return s + parseFloat(d2.costo || 0);
+                return s + parseFloat(d2.costo || t.costo || 0);
             }, 0);
         var costoMat = window.rotOtMaterialesActivos
-            .filter(function(m){ return m.estado === 'Despachado'; })
-            .reduce(function(s, m){ return s + parseFloat(m.total_pen || 0); }, 0);
+            .filter(function(m){ return (m.estado || '').toLowerCase() !== 'anulado'; })
+            .reduce(function(s, m){ return s + parseFloat(m.total_pen || m.costo_total || 0); }, 0);
+        var costoServ = servicios
+            .reduce(function(s, srv){ return s + parseFloat(srv.total_pen || 0); }, 0);
         var elCosto = document.getElementById('rot-ot-costo-total');
-        if (elCosto) elCosto.textContent = 'S/' + (costoTr + costoMat).toFixed(2);
+        if (elCosto) elCosto.textContent = 'S/ ' + (costoTr + costoMat + costoServ).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     });
     };
 
@@ -2253,9 +2258,9 @@ function rotActualizarKPIs(lista) {
     rotSetKPI('rot-kpi-preventivos',       preventivos);
     rotSetKPI('rot-kpi-cerrada',           cerrada);
     rotSetKPI('rot-kpi-enproceso',         enProceso);
-    rotSetKPI('rot-kpi-costo',             'S/' + costo.toFixed(2));
-    rotSetKPI('rot-kpi-costo-correctivo',  'S/' + costoCorr.toFixed(2));
-    rotSetKPI('rot-kpi-costo-preventivo',  'S/' + costoPrev.toFixed(2));
+    rotSetKPI('rot-kpi-costo',             'S/ ' + costo.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    rotSetKPI('rot-kpi-costo-correctivo',  'S/ ' + costoCorr.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    rotSetKPI('rot-kpi-costo-preventivo',  'S/ ' + costoPrev.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     rotSetKPI('rot-kpi-filtradas',         total);
 }
 
