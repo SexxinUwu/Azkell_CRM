@@ -196,6 +196,7 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
+                flex-shrink: 0;
             }
             .neu-scroll-x {
                 display: flex;
@@ -234,6 +235,10 @@
             .neu-toast.show {
                 opacity: 1 !important;
                 transform: translateX(-50%) translateY(0) !important;
+            }
+            .neu-row-active {
+                background: rgba(37, 99, 235, 0.08) !important;
+                font-weight: 600;
             }
         `;
         document.head.appendChild(style);
@@ -452,12 +457,12 @@
                             </div>
                         </div>
 
-                        <!-- Profundímetro Táctil (R1, R2, R3, R4) -->
+                        <!-- Profundímetro Táctil (R1, R2, R3, R4) con Rango Completo 0..24mm -->
                         <div class="mb-3 p-2.5 rounded-4 bg-light border" style="border-color: #e2e8f0 !important;">
                             <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom flex-wrap gap-2">
                                 <div>
                                     <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-1" style="font-size: 0.88rem;">
-                                        <i class="bi bi-rulers text-primary"></i> Profundímetro Táctil (mm)
+                                        <i class="bi bi-rulers text-primary"></i> Profundímetro Táctil (0 a 24 mm)
                                     </h6>
                                     <small class="text-muted" style="font-size:0.72rem;">Toca el número medido para cada ranura</small>
                                 </div>
@@ -472,7 +477,7 @@
                                     </span>
                                     <div class="d-flex align-items-center gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:28px;height:28px;" onclick="window._neuAjustarR('r1', -1)"><i class="bi bi-dash"></i></button>
-                                        <span class="badge bg-secondary px-2.5 py-1 fs-6 rounded-pill font-monospace" id="lbl-r1">0 mm</span>
+                                        <span class="badge bg-primary px-2.5 py-1 fs-6 rounded-pill font-monospace text-white fw-bold shadow-2xs" id="lbl-r1">0 mm</span>
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:28px;height:28px;" onclick="window._neuAjustarR('r1', 1)"><i class="bi bi-plus"></i></button>
                                     </div>
                                 </div>
@@ -487,7 +492,7 @@
                                     </span>
                                     <div class="d-flex align-items-center gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:28px;height:28px;" onclick="window._neuAjustarR('r2', -1)"><i class="bi bi-dash"></i></button>
-                                        <span class="badge bg-secondary px-2.5 py-1 fs-6 rounded-pill font-monospace" id="lbl-r2">0 mm</span>
+                                        <span class="badge bg-primary px-2.5 py-1 fs-6 rounded-pill font-monospace text-white fw-bold shadow-2xs" id="lbl-r2">0 mm</span>
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:28px;height:28px;" onclick="window._neuAjustarR('r2', 1)"><i class="bi bi-plus"></i></button>
                                     </div>
                                 </div>
@@ -502,7 +507,7 @@
                                     </span>
                                     <div class="d-flex align-items-center gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:28px;height:28px;" onclick="window._neuAjustarR('r3', -1)"><i class="bi bi-dash"></i></button>
-                                        <span class="badge bg-secondary px-2.5 py-1 fs-6 rounded-pill font-monospace" id="lbl-r3">0 mm</span>
+                                        <span class="badge bg-primary px-2.5 py-1 fs-6 rounded-pill font-monospace text-white fw-bold shadow-2xs" id="lbl-r3">0 mm</span>
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:28px;height:28px;" onclick="window._neuAjustarR('r3', 1)"><i class="bi bi-plus"></i></button>
                                     </div>
                                 </div>
@@ -517,7 +522,7 @@
                                     </span>
                                     <div class="d-flex align-items-center gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:28px;height:28px;" onclick="window._neuAjustarR('r4', -1)"><i class="bi bi-dash"></i></button>
-                                        <span class="badge bg-secondary px-2.5 py-1 fs-6 rounded-pill font-monospace" id="lbl-r4">0 mm</span>
+                                        <span class="badge bg-secondary px-2.5 py-1 fs-6 rounded-pill font-monospace text-white fw-bold" id="lbl-r4">0 mm</span>
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold rounded-circle" style="width:28px;height:28px;" onclick="window._neuAjustarR('r4', 1)"><i class="bi bi-plus"></i></button>
                                     </div>
                                 </div>
@@ -598,9 +603,9 @@
                             <input type="text" class="form-control form-control-sm rounded-3" style="height: 38px;" id="neu-input-obs-item" value="" placeholder="Ej: Desgaste regular, sin cortes...">
                         </div>
 
-                        <!-- Botón Agregar Llanta a la Lista -->
+                        <!-- Botón Guardar / Actualizar Llanta en la Lista -->
                         <button class="btn btn-primary rounded-pill py-2.5 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 w-100" style="font-size: 0.88rem;" onclick="window._neuGuardarLlantaEnLista()">
-                            <i class="bi bi-plus-circle-fill fs-6"></i> Guardar Llanta en Inspección y Pasar a la Siguiente
+                            <i class="bi bi-check-circle-fill fs-6"></i> Guardar / Actualizar Llanta y Pasar a la Siguiente
                         </button>
                     </div>
 
@@ -611,9 +616,9 @@
                                 <h6 class="m-0 fw-bold text-dark small">Llantas Agregadas a la Inspección</h6>
                                 <span class="badge bg-primary rounded-pill px-2.5 fs-6 font-monospace" id="neu-tabla-count">0</span>
                             </div>
-                            <small class="text-muted" style="font-size:0.72rem;">Ordenamiento numérico estricto</small>
+                            <small class="text-muted" style="font-size:0.72rem;">Haz clic en cualquier fila para editar su remanente</small>
                         </div>
-                        <div class="table-responsive" style="max-height: 250px;">
+                        <div class="table-responsive" style="max-height: 260px;">
                             <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.78rem;">
                                 <thead class="table-light text-muted fw-bold">
                                     <tr>
@@ -629,10 +634,10 @@
                                         <th class="text-center">Presión</th>
                                         <th>Estado</th>
                                         <th>Acción</th>
-                                        <th>ROT</th>
+                                        <th class="text-center">ROT</th>
                                         <th class="text-center">Fotos</th>
                                         <th>Obs</th>
-                                        <th class="text-center pe-3">Acción</th>
+                                        <th class="text-center pe-3">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="neu-tabla-tbody">
@@ -808,8 +813,8 @@
             precision: "mediump"
         });
         renderer.setSize(width, height);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Optimización de resolución retina sin saturación
-        renderer.shadowMap.enabled = false; // Sombras por rasterización directa para 60 FPS estables
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.shadowMap.enabled = false;
         container.appendChild(renderer.domElement);
 
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -975,7 +980,7 @@
         const rimMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.85, roughness: 0.25 });
         const hubMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7 });
 
-        // Geometrías compartidas (Instanced memory efficiency)
+        // Geometrías compartidas
         const rubberGeo = new THREE.CylinderGeometry(0.58, 0.58, 0.36, 18);
         rubberGeo.rotateZ(Math.PI / 2);
 
@@ -1442,6 +1447,7 @@
         const labelTop = document.getElementById('neu-pos-label-top');
         if (labelTop) labelTop.innerText = pos;
 
+        // Actualizar barra de selección de posiciones
         document.querySelectorAll('#neu-pos-selector button').forEach(btn => {
             btn.className = 'btn btn-outline-secondary neu-touch-btn-pos position-relative font-monospace';
         });
@@ -1499,10 +1505,11 @@
         }
 
         window._neuCalcularPromedio();
+        window._neuRenderTablaLlantas();
         if (window._neuRefrescar3D) window._neuRefrescar3D();
     };
 
-    // Renderizar botonera 0..16mm para R1, R2, R3, R4
+    // Renderizar botonera 0..24mm para R1, R2, R3, R4 con Auto-Scroll
     window._neuRenderBotoneraR = function() {
         ['r1', 'r2', 'r3', 'r4'].forEach(tipo => {
             const container = document.getElementById(`neu-${tipo}-buttons`);
@@ -1517,7 +1524,7 @@
                 </button>
             `;
 
-            for (let i = 1; i <= 16; i++) {
+            for (let i = 1; i <= 24; i++) {
                 const isActive = i === current;
                 const activeClass = isActive ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary';
                 html += `
@@ -1530,28 +1537,42 @@
             const lbl = document.getElementById(`lbl-${tipo}`);
             if (lbl) {
                 lbl.innerText = `${current} mm`;
-                lbl.className = (current > 0) ? 'badge bg-primary px-2.5 py-1 fs-6 rounded-pill font-monospace' : 'badge bg-secondary px-2.5 py-1 fs-6 rounded-pill font-monospace';
+                lbl.className = (current > 0) ? 'badge bg-primary px-2.5 py-1 fs-6 rounded-pill font-monospace text-white fw-bold' : 'badge bg-secondary px-2.5 py-1 fs-6 rounded-pill font-monospace text-white fw-bold';
             }
+
+            // Auto-scroll hacia el valor actual
+            setTimeout(() => {
+                const activeBtn = document.getElementById(`btn-val-${tipo}-${current}`);
+                if (activeBtn) {
+                    activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+            }, 60);
         });
         window._neuCalcularPromedio();
     };
 
     window._neuSetR = function(tipo, val) {
-        const num = Math.max(0, Math.min(20, parseInt(val, 10) || 0));
+        const num = Math.max(0, Math.min(26, parseInt(val, 10) || 0));
         window[`_neuVal${tipo.toUpperCase()}`] = num;
 
         const lbl = document.getElementById(`lbl-${tipo}`);
         if (lbl) {
             lbl.innerText = `${num} mm`;
-            lbl.className = (num > 0) ? 'badge bg-primary px-2.5 py-1 fs-6 rounded-pill font-monospace' : 'badge bg-secondary px-2.5 py-1 fs-6 rounded-pill font-monospace';
+            lbl.className = (num > 0) ? 'badge bg-primary px-2.5 py-1 fs-6 rounded-pill font-monospace text-white fw-bold shadow-2xs' : 'badge bg-secondary px-2.5 py-1 fs-6 rounded-pill font-monospace text-white fw-bold';
         }
 
         const btnZero = document.getElementById(`btn-val-${tipo}-0`);
         if (btnZero) btnZero.className = (num === 0) ? 'btn btn-secondary text-white shadow-sm neu-touch-btn-r font-monospace' : 'btn btn-outline-secondary neu-touch-btn-r font-monospace';
 
-        for (let i = 1; i <= 16; i++) {
+        for (let i = 1; i <= 24; i++) {
             const btn = document.getElementById(`btn-val-${tipo}-${i}`);
             if (btn) btn.className = (i === num) ? 'btn btn-primary text-white shadow-sm neu-touch-btn-r font-monospace' : 'btn btn-outline-secondary neu-touch-btn-r font-monospace';
+        }
+
+        // Auto-scroll del botón seleccionado al centro de la vista
+        const selectedBtn = document.getElementById(`btn-val-${tipo}-${num}`);
+        if (selectedBtn) {
+            selectedBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         }
 
         window._neuCalcularPromedio();
@@ -1579,7 +1600,7 @@
         const promVal = (r4 > 0) ? ((r1 + r2 + r3 + r4) / 4.0) : ((r1 + r2 + r3) / 3.0);
         const prom = promVal.toFixed(1);
         let color = promVal > 6.0 ? '#10b981' : (promVal > 4.0 ? '#f59e0b' : '#ef4444');
-        let statusBadge = promVal <= 4.0 ? '<span class="badge bg-danger ms-1">CRÍTICA (≤4mm)</span>' : (promVal <= 6.0 ? '<span class="badge bg-warning text-dark ms-1">ALERTA</span>' : '<span class="badge bg-success ms-1">ÓPTIMA</span>');
+        let statusBadge = promVal <= 4.0 ? '<span class="badge bg-danger ms-1 text-white">CRÍTICA (≤4mm)</span>' : (promVal <= 6.0 ? '<span class="badge bg-warning text-dark ms-1">ALERTA</span>' : '<span class="badge bg-success ms-1 text-white">ÓPTIMA</span>');
         lbl.innerHTML = `Promedio: <b style="color:${color};" class="font-monospace">${prom} mm</b> ${statusBadge}`;
     };
 
@@ -1631,7 +1652,7 @@
         window._neuLimpiarFotos();
     };
 
-    // ── AGREGAR LLANTA A INSPECTION QUEUE Y SECTOR SEQUENTIAL FOCUS ───────────────
+    // ── GUARDAR / ACTUALIZAR LLANTA EN INSPECCIÓN ─────────────────────────────────
     window._neuGuardarLlantaEnLista = function() {
         const pos = window._neuPosicionActiva || '1';
         const marca = document.getElementById('neu-sel-marca')?.value || '';
@@ -1656,6 +1677,9 @@
         const rot = document.getElementById('neu-sel-rot')?.value || 'NO';
         const observaciones = document.getElementById('neu-input-obs-item')?.value || 'Ninguna';
 
+        const idx = window._neuLlantasActuales.findIndex(l => String(l.posicion) === String(pos));
+        const prevItem = idx !== -1 ? window._neuLlantasActuales[idx] : null;
+
         const item = {
             posicion: String(pos),
             id: String(pos),
@@ -1674,20 +1698,22 @@
             state: estado,
             accion,
             action: accion,
-            rot,
-            observaciones,
-            obs: observaciones,
-            foto1: window._neuFotos.foto1 || null,
-            foto2: window._neuFotos.foto2 || null,
-            foto3: window._neuFotos.foto3 || null,
-            photos: [!!window._neuFotos.foto1, !!window._neuFotos.foto2, !!window._neuFotos.foto3]
+            rot: (rot === 'SI' || (prevItem && prevItem.rot === 'SI')) ? 'SI' : 'NO',
+            rotTarget: prevItem ? prevItem.rotTarget : null,
+            observaciones: (observaciones && observaciones !== 'Ninguna') ? observaciones : (prevItem ? prevItem.observaciones : 'Ninguna'),
+            obs: (observaciones && observaciones !== 'Ninguna') ? observaciones : (prevItem ? prevItem.obs : 'Ninguna'),
+            foto1: window._neuFotos.foto1 || (prevItem ? prevItem.foto1 : null),
+            foto2: window._neuFotos.foto2 || (prevItem ? prevItem.foto2 : null),
+            foto3: window._neuFotos.foto3 || (prevItem ? prevItem.foto3 : null),
+            photos: [!!(window._neuFotos.foto1 || prevItem?.foto1), !!(window._neuFotos.foto2 || prevItem?.foto2), !!(window._neuFotos.foto3 || prevItem?.foto3)]
         };
 
-        const idx = window._neuLlantasActuales.findIndex(l => String(l.posicion) === String(pos));
         if (idx !== -1) {
             window._neuLlantasActuales[idx] = item;
+            showToast(`✅ Remanente actualizado para Llanta #${pos}`);
         } else {
             window._neuLlantasActuales.push(item);
+            showToast(`✅ Llanta #${pos} guardada en inspección`);
         }
 
         window._neuRenderTablaLlantas();
@@ -1699,12 +1725,10 @@
         if (curIdx !== -1 && curIdx < ordenPos.length - 1) {
             const nextPos = ordenPos[curIdx + 1];
             window._neuSeleccionarPosicion(nextPos);
-        } else {
-            showToast(`✅ Inspección registrada para Llanta #${pos}. ¡Unidad completa!`);
         }
     };
 
-    // ── RENDER TABLA CON ORDENAMIENTO NUMÉRICO ESTRICTO ─────────────────────────────
+    // ── RENDER TABLA CON FILAS EDITABLES Y BADGES DE ALTO CONTRASTE ────────────────
     window._neuRenderTablaLlantas = function() {
         const tbody = document.getElementById('neu-tabla-tbody');
         const countBadge = document.getElementById('neu-tabla-count');
@@ -1727,36 +1751,40 @@
 
         tbody.innerHTML = window._neuLlantasActuales.map((l, index) => {
             const prom = l.remanente_promedio;
-            const badgeClass = prom <= 4.0 ? 'bg-danger' : (prom <= 6.0 ? 'bg-warning text-dark' : 'bg-success');
+            const badgeClass = prom <= 4.0 ? 'bg-danger text-white' : (prom <= 6.0 ? 'bg-warning text-dark' : 'bg-success text-white');
             const fotosCount = (l.foto1 ? 1 : 0) + (l.foto2 ? 1 : 0) + (l.foto3 ? 1 : 0);
             const fotosBadge = fotosCount > 0 
-                ? `<span class="badge bg-primary rounded-pill px-2 py-0.5"><i class="bi bi-camera-fill me-1"></i>${fotosCount}</span>` 
+                ? `<span class="badge bg-primary text-white rounded-pill px-2 py-0.5"><i class="bi bi-camera-fill me-1"></i>${fotosCount}</span>` 
                 : `<span class="text-muted small">-</span>`;
 
+            // Badge ROT con contraste 100% garantizado (fondo oscuro -> texto blanco / fondo claro -> texto oscuro)
             const isRot = l.rot === 'SI';
             const rotBadge = isRot 
-                ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2 py-0.5">SÍ 🔄</span>`
-                : `<span class="badge bg-light text-muted border">NO</span>`;
+                ? `<span class="badge rounded-pill shadow-2xs" style="background:#2563eb !important; color:#ffffff !important; font-weight:700; font-size:0.75rem; padding:4px 10px; display:inline-flex; align-items:center; gap:3px;"><i class="bi bi-arrow-repeat"></i> SÍ</span>`
+                : `<span class="badge rounded-pill" style="background:#f1f5f9 !important; color:#475569 !important; border:1px solid #cbd5e1 !important; font-weight:600; font-size:0.75rem; padding:4px 8px;">NO</span>`;
+
+            const isSelected = String(l.posicion) === String(window._neuPosicionActiva);
 
             return `
-                <tr>
-                    <td class="ps-3"><span class="badge bg-primary rounded-pill px-2.5 py-0.5 fs-6 font-monospace">#${l.posicion}</span></td>
+                <tr class="${isSelected ? 'neu-row-active' : ''}" style="cursor: pointer;" onclick="window._neuSeleccionarPosicion('${l.posicion}')" title="Haz clic para editar esta llanta">
+                    <td class="ps-3"><span class="badge bg-primary text-white rounded-pill px-2.5 py-0.5 fs-6 font-monospace">#${l.posicion}</span></td>
                     <td class="fw-bold text-dark">${l.marca || '---'}</td>
                     <td class="small font-monospace">${l.medida || '---'}</td>
                     <td><span class="badge bg-light text-dark border">${l.modelo || '---'}</span></td>
-                    <td class="text-center fw-bold font-monospace">${l.r1}</td>
-                    <td class="text-center fw-bold font-monospace">${l.r2}</td>
-                    <td class="text-center fw-bold font-monospace">${l.r3}</td>
+                    <td class="text-center fw-bold font-monospace text-dark">${l.r1}</td>
+                    <td class="text-center fw-bold font-monospace text-dark">${l.r2}</td>
+                    <td class="text-center fw-bold font-monospace text-dark">${l.r3}</td>
                     <td class="text-center text-muted small font-monospace">${l.r4 || 0}</td>
-                    <td class="text-center"><span class="badge ${badgeClass} px-2 py-0.5 font-monospace">${prom} mm</span></td>
-                    <td class="text-center small font-monospace">${l.presion_ant} ➔ <b>${l.presion_actual} PSI</b></td>
-                    <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${l.estado}</span></td>
-                    <td><span class="badge bg-info bg-opacity-10 text-info">${l.accion}</span></td>
-                    <td>${rotBadge}</td>
+                    <td class="text-center"><span class="badge ${badgeClass} px-2 py-0.5 font-monospace fw-bold">${prom} mm</span></td>
+                    <td class="text-center small font-monospace text-dark">${l.presion_ant} ➔ <b>${l.presion_actual} PSI</b></td>
+                    <td><span class="badge bg-secondary bg-opacity-10 text-secondary fw-semibold">${l.estado}</span></td>
+                    <td><span class="badge bg-info bg-opacity-10 text-info fw-semibold">${l.accion}</span></td>
+                    <td class="text-center">${rotBadge}</td>
                     <td class="text-center font-monospace">${fotosBadge}</td>
                     <td class="text-truncate small ${isRot ? 'text-primary fw-bold' : 'text-muted'}" style="max-width:140px;" title="${l.observaciones || l.obs || ''}">${l.observaciones || l.obs || 'Ninguna'}</td>
-                    <td class="text-center pe-3">
-                        <button class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill" onclick="window._neuEliminarLlanta(${index})"><i class="bi bi-trash"></i></button>
+                    <td class="text-center pe-3 text-nowrap">
+                        <button class="btn btn-outline-primary btn-sm py-0 px-2 rounded-pill me-1" onclick="event.stopPropagation(); window._neuSeleccionarPosicion('${l.posicion}')" title="Editar remanente"><i class="bi bi-pencil-fill"></i></button>
+                        <button class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill" onclick="event.stopPropagation(); window._neuEliminarLlanta(${index})" title="Eliminar"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>
             `;
