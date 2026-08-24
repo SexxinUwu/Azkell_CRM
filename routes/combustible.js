@@ -33,6 +33,7 @@ module.exports = function (db, broadcast, logAudit) {
 
     const TABLE_SQL = `CREATE TABLE IF NOT EXISTS combustible_vales (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        id_remoto INT NULL,
         fecha DATETIME NOT NULL,
         estado VARCHAR(30) NOT NULL DEFAULT 'VÁLIDO',
         correlativo VARCHAR(50) NOT NULL DEFAULT '',
@@ -42,6 +43,8 @@ module.exports = function (db, broadcast, logAudit) {
         estado_caja VARCHAR(30) NOT NULL DEFAULT 'PENDIENTE',
         clase_vehiculo VARCHAR(50) NOT NULL DEFAULT 'TRACTO',
         vehiculo VARCHAR(20) NOT NULL DEFAULT '',
+        vehiculo_marca VARCHAR(100) NULL,
+        vehiculo_modelo VARCHAR(100) NULL,
         conductor VARCHAR(150) NOT NULL DEFAULT '',
         ruta VARCHAR(255) NOT NULL DEFAULT '',
         departamento VARCHAR(80) NOT NULL DEFAULT '',
@@ -70,6 +73,7 @@ module.exports = function (db, broadcast, logAudit) {
         INDEX idx_viaje (viaje),
         INDEX idx_fecha (fecha),
         INDEX idx_correlativo (correlativo),
+        INDEX idx_id_remoto (id_remoto),
         INDEX idx_estado (estado)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
@@ -80,6 +84,17 @@ module.exports = function (db, broadcast, logAudit) {
             const tdb = getDb(req);
             if (!tdb) return;
             await tdb.query(TABLE_SQL);
+            
+            // Migrar columnas adicionales si la tabla ya existía
+            const migCols = [
+                "ALTER TABLE combustible_vales ADD COLUMN id_remoto INT NULL",
+                "ALTER TABLE combustible_vales ADD COLUMN vehiculo_marca VARCHAR(100) NULL",
+                "ALTER TABLE combustible_vales ADD COLUMN vehiculo_modelo VARCHAR(100) NULL"
+            ];
+            for (const q of migCols) {
+                try { await tdb.query(q); } catch(e) {}
+            }
+
             try { await tdb.query("DROP TABLE IF EXISTS combustible_abastecimientos"); } catch(e) {}
             _tenantsInitSet.add(tenantId);
         } catch (err) {
@@ -121,12 +136,29 @@ module.exports = function (db, broadcast, logAudit) {
 
             const tdb = getDb(req);
             const rdb = getRemoteDb();
+            const reimportAll = req.query.reset === 'true' || req.body.reset === true;
 
             console.log('🔄 Iniciando sincronización remota de combustible desde 168.231.98.23 para Marsisa...');
 
-            // Consultar correlativos existentes para no duplicar
-            const [existentesRows] = await tdb.query("SELECT DISTINCT correlativo FROM combustible_vales WHERE correlativo != ''");
-            const existentesSet = new Set(existentesRows.map(r => r.correlativo));
+            if (reimportAll) {
+                await tdb.query("TRUNCATE TABLE combustible_vales");
+            }
+
+            // Consultar catálogo de estaciones para mapear RUC de proveedores
+            const [estacionesRows] = await rdb.query(
+                "SELECT DISTINCT proveedor_razon_social, proveedor_ruc FROM vw_combustible_estacion WHERE proveedor_ruc IS NOT NULL AND proveedor_ruc != ''"
+            );
+            const rucMap = new Map();
+            estacionesRows.forEach(e => {
+                if (e.proveedor_razon_social && e.proveedor_ruc) {
+                    rucMap.set(String(e.proveedor_razon_social).trim().toUpperCase(), String(e.proveedor_ruc).trim());
+                }
+            });
+
+            // Consultar correlativos e IDs existentes para no duplicar
+            const [existentesRows] = await tdb.query("SELECT DISTINCT id_remoto, correlativo FROM combustible_vales WHERE correlativo != '' OR id_remoto IS NOT NULL");
+            const existentesCorrelativos = new Set(existentesRows.map(r => r.correlativo).filter(Boolean));
+            const existentesRemotoIds = new Set(existentesRows.map(r => r.id_remoto).filter(Boolean));
 
             // Consultar los vales de la vista remota
             const [remotoVales] = await rdb.query(
@@ -137,10 +169,13 @@ module.exports = function (db, broadcast, logAudit) {
                 return res.json({ ok: true, sincronizados: 0, totalRemotos: 0, mensaje: 'No hay registros en el servidor remoto.' });
             }
 
-            // Filtrar solo los vales que no estén ya registrados
+            // Filtrar solo los vales que no estén ya registrados por ID remoto o correlativo
             const nuevosVales = remotoVales.filter(v => {
                 const corr = v.serie ? `${v.serie}-${v.numero}` : (v.numero || '');
-                return !corr || !existentesSet.has(corr);
+                const idRemoto = v.id;
+                if (idRemoto && existentesRemotoIds.has(idRemoto)) return false;
+                if (corr && existentesCorrelativos.has(corr)) return false;
+                return true;
             });
 
             if (nuevosVales.length === 0) {
@@ -160,6 +195,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const values = [];
 
                 chunk.forEach(v => {
+                    const id_remoto = v.id || null;
                     const fecha = safeSqlDate(v.fecha);
                     const estado = (v.fl_estado === 1 || v.fl_estado === '1') ? 'VÁLIDO' : 'ANULADO';
                     const correlativo = v.serie ? `${v.serie}-${v.numero}` : (v.numero || '');
@@ -169,6 +205,8 @@ module.exports = function (db, broadcast, logAudit) {
                     const estado_caja = 'PROCESADO';
                     const clase_vehiculo = 'TRACTO';
                     const vehiculo = String(v.placa || 'SIN-PLACA').toUpperCase().trim();
+                    const vehiculo_marca = String(v.vehiculo_marca || '').trim();
+                    const vehiculo_modelo = String(v.vehiculo_modelo || '').trim();
                     const conductor = String(v.conductor_nombre || '').trim();
                     const ruta = String(v.localidad || '').trim();
                     const departamento = '';
@@ -177,7 +215,7 @@ module.exports = function (db, broadcast, logAudit) {
                     const estacion = String(v.estacion || '').trim();
                     const tipo_combustible = String(v.tipo_combustible || 'D2').trim();
                     const proveedor = String(v.proveedor_razon_social || '').trim();
-                    const ruc = '';
+                    const ruc = rucMap.get(proveedor.toUpperCase()) || '';
                     const kilometraje = parseFloat(v.kilometraje || 0);
                     const peso_tn = parseFloat(v.peso || 0);
                     const galones = parseFloat(v.galones || 0);
@@ -193,8 +231,8 @@ module.exports = function (db, broadcast, logAudit) {
                     const tipo = String(v.tipo || 'RECARGA VUELTA').toUpperCase().trim();
 
                     values.push([
-                        fecha, estado, correlativo, estado_pago, viaje, caja, estado_caja, clase_vehiculo,
-                        vehiculo, conductor, ruta, departamento, provincia, distrito, estacion, tipo_combustible,
+                        id_remoto, fecha, estado, correlativo, estado_pago, viaje, caja, estado_caja, clase_vehiculo,
+                        vehiculo, vehiculo_marca, vehiculo_modelo, conductor, ruta, departamento, provincia, distrito, estacion, tipo_combustible,
                         proveedor, ruc, kilometraje, peso_tn, galones, costo_gl, tipo_pago, dias_credito,
                         moneda, importe, numero_comprobante, tipo_cambio, archivo_url, observacion, tipo
                     ]);
@@ -203,8 +241,8 @@ module.exports = function (db, broadcast, logAudit) {
                 if (values.length > 0) {
                     await tdb.query(
                         `INSERT INTO combustible_vales (
-                            fecha, estado, correlativo, estado_pago, viaje, caja, estado_caja, clase_vehiculo,
-                            vehiculo, conductor, ruta, departamento, provincia, distrito, estacion, tipo_combustible,
+                            id_remoto, fecha, estado, correlativo, estado_pago, viaje, caja, estado_caja, clase_vehiculo,
+                            vehiculo, vehiculo_marca, vehiculo_modelo, conductor, ruta, departamento, provincia, distrito, estacion, tipo_combustible,
                             proveedor, ruc, kilometraje, peso_tn, galones, costo_gl, tipo_pago, dias_credito,
                             moneda, importe, numero_comprobante, tipo_cambio, archivo_url, observacion, tipo
                         ) VALUES ?`,
