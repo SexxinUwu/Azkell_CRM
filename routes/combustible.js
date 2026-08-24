@@ -108,7 +108,8 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     function safeSqlDate(val, serie) {
-        if (!val) return new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const defaultYear = (serie && /^\d{4}$/.test(serie)) ? serie : '2025';
+        if (!val) return `${defaultYear}-01-01 00:00:00`;
         try {
             let dt = (val instanceof Date) ? new Date(val.getTime()) : new Date(val);
             if (!isNaN(dt.getTime())) {
@@ -119,7 +120,7 @@ module.exports = function (db, broadcast, logAudit) {
                 return dt.toISOString().slice(0, 19).replace('T', ' ');
             }
         } catch(e) {}
-        return new Date().toISOString().slice(0, 19).replace('T', ' ');
+        return `${defaultYear}-01-01 00:00:00`;
     }
 
     // ============================================================
@@ -218,7 +219,8 @@ module.exports = function (db, broadcast, logAudit) {
                     const correlativo = v.serie ? `${v.serie}-${v.numero}` : (v.numero || '');
                     const estado_pago = (v.tipo_pago || '').toUpperCase().includes('CRED') ? 'NO EXISTE PAGO' : 'PAGADO';
                     const rawViaje = String(v.viaje_numero || '').trim();
-                    const viaje = rawViaje ? (rawViaje.includes('-') ? rawViaje : `${anio}-${rawViaje}`) : '';
+                    const viajeSerie = (v.serie && /^\d{4}$/.test(v.serie)) ? v.serie : anio;
+                    const viaje = rawViaje ? (rawViaje.includes('-') ? rawViaje : `${viajeSerie}-${rawViaje}`) : '';
                     const caja = '';
                     const estado_caja = 'PROCESADO';
                     const vehiculo = String(v.placa || 'SIN-PLACA').toUpperCase().trim();
