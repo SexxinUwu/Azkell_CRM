@@ -183,12 +183,16 @@
         window._cvData.forEach(row => {
             const isSelected = window._cvSeleccionados.has(row.id);
             const estadoBadge = row.estado === 'VÁLIDO' 
-                ? '<span class="badge rounded-pill bg-success bg-opacity-10 text-success fw-bold px-2 py-0.5" style="border:1px solid rgba(22,163,74,0.3); font-size:0.68rem;">VÁLIDO</span>'
-                : '<span class="badge rounded-pill bg-danger bg-opacity-10 text-danger fw-bold px-2 py-0.5" style="border:1px solid rgba(220,38,38,0.3); font-size:0.68rem;">ANULADO</span>';
+                ? '<span class="badge" style="background:#059669; color:#fff; font-size:0.68rem; font-weight:700;">VÁLIDO</span>'
+                : '<span class="badge" style="background:#dc2626; color:#fff; font-size:0.68rem; font-weight:700;">ANULADO</span>';
 
             const pagoBadge = (row.estado_pago || '').toUpperCase() === 'PAGADO'
-                ? '<span class="badge rounded-pill bg-primary bg-opacity-10 text-primary fw-bold px-2 py-0.5" style="font-size:0.68rem;">PAGADO</span>'
-                : '<span class="badge rounded-pill bg-warning bg-opacity-10 text-dark fw-bold px-2 py-0.5" style="font-size:0.68rem;">PENDIENTE</span>';
+                ? '<span class="badge" style="background:#059669; color:#fff; font-size:0.68rem; font-weight:700;">PAGADO</span>'
+                : '<span class="badge" style="background:#dc2626; color:#fff; font-size:0.68rem; font-weight:700;">NO EXISTE PAGO</span>';
+
+            const cajaBadge = (row.estado_caja || '').toUpperCase() === 'PROCESADO'
+                ? '<span class="badge" style="background:#059669; color:#fff; font-size:0.68rem; font-weight:700;">PROCESADO</span>'
+                : esc(row.estado_caja || '—');
 
             const km = parseFloat(row.kilometraje || 0);
             const peso = parseFloat(row.peso_tn || 0);
@@ -202,30 +206,31 @@
                         <input type="checkbox" class="form-check-input cv-row-chk" data-id="${row.id}" ${isSelected ? 'checked' : ''} onchange="window.cvToggleSelectRow(${row.id}, this)">
                     </td>
                     <td>
-                        <div class="d-flex align-items-center gap-1">
-                            <button class="btn btn-outline-primary btn-sm py-0 px-2 rounded-pill" onclick="window.cvAbrirModalEditar(${row.id})" title="Editar Vale" style="font-size:0.72rem;">
-                                <i class="bi bi-pencil"></i>
+                        <div class="dropdown">
+                            <button class="btn btn-sm dropdown-toggle py-0.5 px-2 bg-white text-dark shadow-2xs fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.72rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                EDITAR
                             </button>
-                            <button class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill" onclick="window.cvEliminarVale(${row.id})" title="Anular/Eliminar Vale" style="font-size:0.72rem;">
-                                <i class="bi bi-x-circle"></i>
-                            </button>
+                            <ul class="dropdown-menu shadow-sm" style="font-size: 0.8rem; z-index: 1050;">
+                                <li><a class="dropdown-item py-1" href="javascript:void(0)" onclick="window.cvAbrirModalEditar(${row.id})"><i class="bi bi-pencil me-1.5 text-primary"></i> Editar Vale</a></li>
+                                <li><a class="dropdown-item py-1 text-danger" href="javascript:void(0)" onclick="window.cvEliminarVale(${row.id})"><i class="bi bi-x-circle me-1.5"></i> Anular Vale</a></li>
+                            </ul>
                         </div>
                     </td>
                     <td>${fmtFecha(row.fecha)}</td>
                     <td>${estadoBadge}</td>
                     <td><span class="font-monospace fw-semibold text-secondary">${esc(row.correlativo || '—')}</span></td>
                     <td>${pagoBadge}</td>
-                    <td><span class="badge bg-light text-dark border font-monospace" style="font-size:0.72rem;">${esc(row.viaje || '—')}</span></td>
-                    <td>${esc(row.caja || '—')}</td>
-                    <td>${esc(row.estado_caja || '—')}</td>
-                    <td><span class="text-muted small">${esc(row.clase_vehiculo || 'TRACTO')}</span></td>
+                    <td><span class="font-monospace text-dark fw-semibold" style="font-size:0.75rem;">${esc(row.viaje || '—')}</span></td>
+                    <td><span class="font-monospace text-secondary" style="font-size:0.75rem;">${esc(row.caja || '—')}</span></td>
+                    <td>${cajaBadge}</td>
+                    <td><span class="text-secondary small fw-semibold">${esc(row.clase_vehiculo || 'TRACTO')}</span></td>
                     <td>
-                        <span class="badge bg-primary text-white font-monospace px-2 py-1 shadow-2xs" style="letter-spacing:0.5px;">
+                        <span class="fw-bold text-dark font-monospace" style="font-size:0.8rem; letter-spacing:0.5px;">
                             ${esc(row.vehiculo || '—')}
                         </span>
                     </td>
                     <td class="fw-semibold text-dark text-truncate" style="max-width: 180px;" title="${esc(row.conductor)}">${esc(row.conductor || '—')}</td>
-                    <td class="text-muted small text-truncate" style="max-width: 200px;" title="${esc(row.ruta)}">${esc(row.ruta || '—')}</td>
+                    <td class="text-secondary small text-truncate" style="max-width: 200px;" title="${esc(row.ruta)}">${esc(row.ruta || '—')}</td>
                     <td>${esc(row.departamento || '—')}</td>
                     <td>${esc(row.provincia || '—')}</td>
                     <td>${esc(row.distrito || '—')}</td>
@@ -238,16 +243,14 @@
                     <td class="text-end font-monospace fw-bold text-primary">${gal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
                     <td class="text-end font-monospace">S/ ${costoGl.toFixed(2)}</td>
                     <td><span class="badge bg-light text-secondary border" style="font-size:0.68rem;">${esc(row.tipo_pago || '—')}</span></td>
-                    <td class="text-center">${row.dias_credito || 0}</td>
-                    <td>${esc(row.moneda || 'SOLES')}</td>
-                    <td class="text-end font-monospace fw-bold text-success">S/ ${importe.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
-                    <td><span class="font-monospace text-secondary">${esc(row.numero_comprobante || '—')}</span></td>
-                    <td>${row.tipo_cambio ? row.tipo_cambio.toFixed(3) : '—'}</td>
-                    <td class="text-center">
-                        ${row.archivo_url ? `<a href="${row.archivo_url}" target="_blank" class="btn btn-xs btn-outline-info rounded-pill py-0 px-2" style="font-size:0.7rem;"><i class="bi bi-file-earmark-arrow-down"></i> Ver</a>` : '<span class="text-muted">—</span>'}
-                    </td>
-                    <td class="text-muted small text-truncate" style="max-width: 180px;" title="${esc(row.observacion)}">${esc(row.observacion || '—')}</td>
-                    <td><span class="badge bg-secondary bg-opacity-10 text-secondary border font-monospace" style="font-size:0.68rem;">${esc(row.tipo || '—')}</span></td>
+                    <td class="text-center font-monospace">${row.dias_credito || 0}</td>
+                    <td><span class="badge bg-light text-dark border" style="font-size:0.68rem;">${esc(row.moneda || 'SOLES')}</span></td>
+                    <td class="text-end font-monospace fw-bold text-success">S/ ${importe.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td><span class="font-monospace small text-secondary">${esc(row.numero_comprobante || '—')}</span></td>
+                    <td>${row.tipo_cambio ? row.tipo_cambio : '—'}</td>
+                    <td>${row.archivo_url ? `<a href="${row.archivo_url}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-1"><i class="bi bi-file-earmark-pdf"></i></a>` : '—'}</td>
+                    <td class="text-truncate" style="max-width: 140px;" title="${esc(row.observacion)}">${esc(row.observacion || '—')}</td>
+                    <td><span class="badge bg-secondary bg-opacity-10 text-secondary border" style="font-size:0.68rem;">${esc(row.tipo || 'RECARGA VUELTA')}</span></td>
                 </tr>
             `;
         });
@@ -716,6 +719,110 @@
         } catch (e) {
             alert('Error de conexión al guardar el formulario.');
         }
+    };
+
+    // ── COMPRAS EXTERNAS (FACTURAS DE GRIFOS) ───────────────────────────
+    window._cvComprasExternasData = [];
+    window.cvAbrirModalComprasExternas = function() {
+        const modalEl = document.getElementById('cvModalComprasExternas');
+        if (!modalEl) return;
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+        window.cvCargarComprasExternas();
+    };
+
+    window.cvCargarComprasExternas = async function() {
+        const tbody = document.getElementById('cv-modal-ce-tbody');
+        const countBadge = document.getElementById('cv-modal-ce-count');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando facturas sincronizadas...</td></tr>`;
+        }
+
+        try {
+            const res = await fetch('/api/combustible/compras-externas');
+            const data = await res.json();
+
+            if (data.ok && Array.isArray(data.data)) {
+                window._cvComprasExternasData = data.data;
+                if (countBadge) countBadge.textContent = `${data.data.length} Facturas`;
+                window.cvRenderComprasExternas(data.data);
+            } else {
+                if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-danger">No se pudieron obtener las compras externas.</td></tr>`;
+            }
+        } catch (e) {
+            if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-danger">Error conectando con el servidor.</td></tr>`;
+        }
+    };
+
+    window.cvRenderComprasExternas = function(items) {
+        const tbody = document.getElementById('cv-modal-ce-tbody');
+        if (!tbody) return;
+        if (items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-muted">No se encontraron facturas externas.</td></tr>`;
+            return;
+        }
+
+        const fmtFecha = (f) => {
+            if (!f) return '—';
+            const d = new Date(f);
+            if (isNaN(d.getTime())) return f;
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+        };
+
+        let html = '';
+        items.forEach(r => {
+            const sunatBadge = (r.estado_sunat || '').toUpperCase() === 'ACEPTADA'
+                ? '<span class="badge bg-success bg-opacity-10 text-success fw-bold px-2 py-0.5">ACEPTADA</span>'
+                : `<span class="badge bg-secondary bg-opacity-10 text-secondary fw-bold px-2 py-0.5">${r.estado_sunat || 'EMITIDA'}</span>`;
+
+            const pagoBadge = (r.estado_pago || '').toUpperCase() === 'PAGADO'
+                ? '<span class="badge" style="background:#059669; color:#fff; font-size:0.68rem; font-weight:700;">PAGADO</span>'
+                : '<span class="badge" style="background:#dc2626; color:#fff; font-size:0.68rem; font-weight:700;">PENDIENTE</span>';
+
+            html += `
+                <tr>
+                    <td>${fmtFecha(r.fecha_abastecimiento || r.fecha)}</td>
+                    <td><span class="font-monospace fw-bold text-dark">${r.comprobante || '—'}</span></td>
+                    <td class="text-truncate fw-semibold" style="max-width:180px;">${r.proveedor || '—'}</td>
+                    <td><span class="font-monospace small text-muted">${r.proveedor_ruc || '—'}</span></td>
+                    <td><span class="fw-bold text-primary font-monospace">${r.placa || '—'}</span></td>
+                    <td class="text-truncate" style="max-width:140px;">${r.conductor || '—'}</td>
+                    <td class="text-end font-monospace fw-bold">${parseFloat(r.galones || 0).toFixed(2)}</td>
+                    <td class="text-end font-monospace">S/ ${parseFloat(r.costo_por_galon || 0).toFixed(2)}</td>
+                    <td class="text-end font-monospace fw-bold text-success">S/ ${parseFloat(r.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
+                    <td>${sunatBadge}</td>
+                    <td>${pagoBadge}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    };
+
+    window.cvFiltrarComprasExternas = function(q) {
+        const query = (q || '').toLowerCase().trim();
+        if (!query) {
+            window.cvRenderComprasExternas(window._cvComprasExternasData);
+            return;
+        }
+        const filtered = window._cvComprasExternasData.filter(r => 
+            (r.comprobante || '').toLowerCase().includes(query) ||
+            (r.proveedor || '').toLowerCase().includes(query) ||
+            (r.placa || '').toLowerCase().includes(query) ||
+            (r.conductor || '').toLowerCase().includes(query)
+        );
+        window.cvRenderComprasExternas(filtered);
+    };
+
+    window.cvImprimirTabla = function() {
+        window.print();
+    };
+
+    window.cvLimpiarFiltros = function() {
+        const s = document.getElementById('cv-filter-search'); if (s) s.value = '';
+        const p = document.getElementById('cv-filter-placa'); if (p) p.value = 'ALL';
+        const e = document.getElementById('cv-filter-estado'); if (e) e.value = 'ALL';
+        window.cvCargarDatos(1);
     };
 
     // Auto-inicializar
