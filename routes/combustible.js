@@ -773,19 +773,24 @@ module.exports = function (db, broadcast, logAudit) {
                 params
             );
 
-            const tripMap = {};
+            // 1. Agrupar vales por Vehículo y luego por Viaje
+            const vehiculoMap = {};
 
             rows.forEach(v => {
-                const tripKey = v.viaje || 'SIN-VIAJE';
-                if (!tripMap[tripKey]) {
-                    tripMap[tripKey] = {
+                const vehKey = String(v.vehiculo || 'SIN-PLACA').toUpperCase().trim();
+                const tripKey = String(v.viaje || 'SIN-VIAJE').trim();
+
+                if (!vehiculoMap[vehKey]) vehiculoMap[vehKey] = {};
+                if (!vehiculoMap[vehKey][tripKey]) {
+                    vehiculoMap[vehKey][tripKey] = {
                         viaje: tripKey,
-                        placa: v.vehiculo || 'SIN-PLACA',
+                        placa: vehKey,
                         ruta: v.ruta || 'Sin Ruta',
                         vouchers: []
                     };
                 }
-                tripMap[tripKey].vouchers.push({
+
+                vehiculoMap[vehKey][tripKey].vouchers.push({
                     id: v.id,
                     fecha: v.fecha ? new Date(v.fecha).toISOString().replace('T', ' ').slice(0, 19) : '',
                     producto: v.tipo_combustible || 'D2',
@@ -801,38 +806,83 @@ module.exports = function (db, broadcast, logAudit) {
                 });
             });
 
-            const trips = Object.values(tripMap).map(t => {
-                t.vouchers.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+            // 2. Encadenar odómetros y fechas viaje a viaje para cada vehículo
+            const trips = [];
 
-                const firstV = t.vouchers[0] || {};
-                const lastV = t.vouchers[t.vouchers.length - 1] || {};
+            Object.keys(vehiculoMap).forEach(vehKey => {
+                const tripsObj = vehiculoMap[vehKey];
+                // Convertir a array de viajes del vehículo y ordenar cronológicamente
+                const vehTrips = Object.values(tripsObj).map(t => {
+                    t.vouchers.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '') || (a.id - b.id));
+                    const earliestDate = t.vouchers[0]?.fecha || '';
+                    return { ...t, earliestDate };
+                }).sort((a, b) => a.earliestDate.localeCompare(b.earliestDate));
 
-                const totalGal = t.vouchers.reduce((s, x) => s + x.galones, 0);
-                const totalCost = t.vouchers.reduce((s, x) => s + x.importe, 0);
-                const maxPeso = Math.max(0, ...t.vouchers.map(x => x.peso));
+                vehTrips.forEach((t, i) => {
+                    const totalGal = t.vouchers.reduce((s, x) => s + x.galones, 0);
+                    const totalCost = t.vouchers.reduce((s, x) => s + x.importe, 0);
+                    const maxPeso = Math.max(0, ...t.vouchers.map(x => x.peso));
 
-                const validOdos = t.vouchers.map(x => x.odometro).filter(o => o > 0);
-                const kmInicio = validOdos.length > 0 ? Math.min(...validOdos) : 0;
-                const kmFin = validOdos.length > 0 ? Math.max(...validOdos) : 0;
-                const recorridoKm = (kmFin > kmInicio) ? (kmFin - kmInicio) : 0;
-                const rendimiento = (totalGal > 0 && recorridoKm > 0) ? (recorridoKm / totalGal) : 0;
+                    // Último vale del viaje actual (Cierre)
+                    const lastVCurrent = t.vouchers[t.vouchers.length - 1] || {};
+                    const kmFin = lastVCurrent.odometro || 0;
+                    const fechaFin = lastVCurrent.fecha || 'N/D';
+                    lastVCurrent.esPuntoCierre = true;
 
-                return {
-                    viaje: t.viaje,
-                    placa: t.placa || firstV.vehiculo,
-                    ruta: t.ruta || firstV.ruta,
-                    fechaInicio: firstV.fecha || 'N/D',
-                    fechaFin: lastV.fecha || 'N/D',
-                    kmInicio,
-                    kmFin,
-                    recorridoKm,
-                    pesoMaxTn: maxPeso,
-                    totalGalones: totalGal,
-                    totalGasto: totalCost,
-                    rendimiento,
-                    vouchers: t.vouchers
-                };
+                    let kmInicio = 0;
+                    let fechaInicio = 'N/D';
+                    let voucherPartida = null;
+
+                    if (i > 0) {
+                        // Viene de viaje previo de la misma placa
+                        const prevTrip = vehTrips[i - 1];
+                        const lastVPrev = prevTrip.vouchers[prevTrip.vouchers.length - 1];
+                        if (lastVPrev) {
+                            kmInicio = lastVPrev.odometro || 0;
+                            fechaInicio = lastVPrev.fecha || 'N/D';
+                            voucherPartida = {
+                                ...lastVPrev,
+                                id: `partida_${lastVPrev.id}`,
+                                esPuntoPartida: true,
+                                viajeOriginal: prevTrip.viaje
+                            };
+                        }
+                    } else {
+                        // Primer viaje histórico registrado de esta placa
+                        const firstVCurrent = t.vouchers[0] || {};
+                        kmInicio = firstVCurrent.odometro || 0;
+                        fechaInicio = firstVCurrent.fecha || 'N/D';
+                    }
+
+                    const recorridoKm = (kmFin > kmInicio && kmInicio > 0) ? (kmFin - kmInicio) : 0;
+                    const odometroInconsistente = (kmInicio > 0 && kmFin > 0 && kmFin < kmInicio);
+                    const rendimiento = (totalGal > 0 && recorridoKm > 0) ? (recorridoKm / totalGal) : 0;
+
+                    // Lista de vales para el modal: incluir punto de partida si existe
+                    const modalVouchers = voucherPartida ? [voucherPartida, ...t.vouchers] : [...t.vouchers];
+
+                    trips.push({
+                        viaje: t.viaje,
+                        placa: t.placa,
+                        ruta: t.ruta,
+                        fechaInicio,
+                        fechaFin,
+                        kmInicio,
+                        kmFin,
+                        recorridoKm,
+                        odometroInconsistente,
+                        pesoMaxTn: maxPeso,
+                        totalGalones: totalGal,
+                        totalGasto: totalCost,
+                        rendimiento,
+                        vouchers: modalVouchers,
+                        vouchersPropiosCount: t.vouchers.length
+                    });
+                });
             });
+
+            // Ordenar viajes por fechaFin DESC por defecto
+            trips.sort((a, b) => (b.fechaFin || '').localeCompare(a.fechaFin || ''));
 
             const totalViajes = trips.length;
             const totalGalones = trips.reduce((s, t) => s + t.totalGalones, 0);

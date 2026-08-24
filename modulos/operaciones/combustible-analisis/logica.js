@@ -236,6 +236,11 @@
                 semaforoBadge = `<span class="text-muted font-monospace small">${rTeorico.toFixed(1)} Km/G</span>`;
             }
 
+            const tieneAlertaOdo = t.odometroInconsistente;
+            const semaforoRecorrido = tieneAlertaOdo 
+                ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-0.5" title="Odómetro final menor al inicial"><i class="bi bi-exclamation-triangle-fill me-1"></i>Revisar Odo</span>` 
+                : (t.recorridoKm > 0 ? t.recorridoKm.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—');
+
             html += `
                 <tr>
                     <td>
@@ -254,9 +259,9 @@
                     </td>
                     <td class="text-muted small">${esc(t.fechaInicio)}</td>
                     <td class="text-muted small">${esc(t.fechaFin)}</td>
-                    <td class="text-end font-monospace">${t.kmInicio > 0 ? t.kmInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
-                    <td class="text-end font-monospace">${t.kmFin > 0 ? t.kmFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
-                    <td class="text-end font-monospace fw-bold text-dark">${t.recorridoKm > 0 ? t.recorridoKm.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace text-success fw-bold">${t.kmInicio > 0 ? t.kmInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace text-danger fw-bold">${t.kmFin > 0 ? t.kmFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace fw-bold text-dark">${semaforoRecorrido}</td>
                     <td class="text-end font-monospace fw-bold text-primary">${t.totalGalones.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
                     <td class="text-end font-monospace fw-bold text-success">S/ ${t.totalGasto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
                     <td class="text-end font-monospace fw-bold ${t.rendimiento > 0 ? 'text-indigo-600' : 'text-muted'}">
@@ -265,7 +270,7 @@
                     <td class="text-end font-monospace">${semaforoBadge}</td>
                     <td class="text-center">
                         <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2.5 d-inline-flex align-items-center gap-1" onclick="window.caAbrirModalVales(${idx})" style="font-size:0.72rem;">
-                            <i class="bi bi-receipt"></i> ${t.vouchers.length} vales
+                            <i class="bi bi-receipt"></i> ${t.vouchersPropiosCount || t.vouchers.length} vales
                         </button>
                     </td>
                 </tr>
@@ -289,25 +294,72 @@
         if (sub) {
             sub.innerHTML = `
                 <div><span class="text-muted">Ruta:</span> <strong class="text-dark">${trip.ruta}</strong></div>
+                <div><span class="text-muted">Km Inicial (Partida):</span> <strong class="text-success font-monospace">${trip.kmInicio > 0 ? trip.kmInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
+                <div><span class="text-muted">Km Final (Cierre):</span> <strong class="text-danger font-monospace">${trip.kmFin > 0 ? trip.kmFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
+                <div><span class="text-muted">Recorrido:</span> <strong class="text-dark font-monospace">${trip.recorridoKm > 0 ? trip.recorridoKm.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
                 <div><span class="text-muted">Total Galones:</span> <strong class="text-primary">${trip.totalGalones.toFixed(2)} Gln</strong></div>
                 <div><span class="text-muted">Total Gasto:</span> <strong class="text-success">S/ ${trip.totalGasto.toFixed(2)}</strong></div>
-                <div><span class="text-muted">Rendimiento Real:</span> <strong class="text-dark">${trip.rendimiento > 0 ? trip.rendimiento.toFixed(2) + ' Km/Gal' : 'N/D'}</strong></div>
+                <div><span class="text-muted">Rendimiento:</span> <strong class="text-indigo-600 font-monospace">${trip.rendimiento > 0 ? trip.rendimiento.toFixed(2) + ' Km/Gal' : 'N/D'}</strong></div>
             `;
         }
 
         if (tbody) {
-            tbody.innerHTML = trip.vouchers.map(v => `
-                <tr>
-                    <td class="py-2 px-3">${v.fecha || '—'}</td>
-                    <td class="py-2 px-3"><span class="badge bg-info bg-opacity-10 text-info border">${v.producto}</span></td>
-                    <td class="py-2 px-3 fw-semibold">${v.grifo}</td>
-                    <td class="py-2 px-3 text-end font-monospace">${v.odometro > 0 ? v.odometro.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
-                    <td class="py-2 px-3 text-end font-monospace fw-bold text-primary">${v.galones.toFixed(2)}</td>
-                    <td class="py-2 px-3 text-end font-monospace">S/ ${(v.galones > 0 ? (v.importe / v.galones) : 0).toFixed(2)}</td>
-                    <td class="py-2 px-3 text-end font-monospace fw-bold text-success">S/ ${v.importe.toFixed(2)}</td>
-                    <td class="py-2 px-3 text-truncate" style="max-width:180px;" title="${v.conductor}">${v.conductor}</td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = trip.vouchers.map(v => {
+                if (v.esPuntoPartida) {
+                    return `
+                        <tr style="background: #f0fdf4 !important;">
+                            <td class="py-2.5 px-3">
+                                <span class="fw-bold text-success">${v.fecha || '—'}</span>
+                                <br>
+                                <span class="badge bg-success bg-opacity-15 text-success border border-success fw-bold mt-1" style="font-size:0.68rem;">
+                                    <i class="bi bi-flag-fill me-1"></i> PUNTO DE PARTIDA (Cierre Viaje ${esc(v.viajeOriginal || '')})
+                                </span>
+                            </td>
+                            <td class="py-2.5 px-3"><span class="badge bg-info bg-opacity-10 text-info border">${v.producto}</span></td>
+                            <td class="py-2.5 px-3 fw-semibold">${v.grifo}</td>
+                            <td class="py-2.5 px-3 text-end font-monospace"><strong class="text-success">${v.odometro > 0 ? v.odometro.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'} Km</strong></td>
+                            <td class="py-2.5 px-3 text-end font-monospace text-muted fst-italic small">— Ref. Base —</td>
+                            <td class="py-2.5 px-3 text-end font-monospace text-muted fst-italic small">— Ref. —</td>
+                            <td class="py-2.5 px-3 text-end font-monospace text-muted fst-italic small">— Ref. —</td>
+                            <td class="py-2.5 px-3 text-truncate" style="max-width:180px;" title="${v.conductor}">${v.conductor}</td>
+                        </tr>
+                    `;
+                }
+
+                if (v.esPuntoCierre) {
+                    return `
+                        <tr style="background: #fef2f2 !important;">
+                            <td class="py-2.5 px-3">
+                                <span class="fw-bold text-danger">${v.fecha || '—'}</span>
+                                <br>
+                                <span class="badge bg-danger bg-opacity-15 text-danger border border-danger fw-bold mt-1" style="font-size:0.68rem;">
+                                    <i class="bi bi-check-circle-fill me-1"></i> CIERRE DE VIAJE (Último Abastecimiento)
+                                </span>
+                            </td>
+                            <td class="py-2.5 px-3"><span class="badge bg-info bg-opacity-10 text-info border">${v.producto}</span></td>
+                            <td class="py-2.5 px-3 fw-semibold">${v.grifo}</td>
+                            <td class="py-2.5 px-3 text-end font-monospace"><strong class="text-danger">${v.odometro > 0 ? v.odometro.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'} Km</strong></td>
+                            <td class="py-2.5 px-3 text-end font-monospace fw-bold text-primary">${v.galones.toFixed(2)}</td>
+                            <td class="py-2.5 px-3 text-end font-monospace">S/ ${(v.galones > 0 ? (v.importe / v.galones) : 0).toFixed(2)}</td>
+                            <td class="py-2.5 px-3 text-end font-monospace fw-bold text-success">S/ ${v.importe.toFixed(2)}</td>
+                            <td class="py-2.5 px-3 text-truncate" style="max-width:180px;" title="${v.conductor}">${v.conductor}</td>
+                        </tr>
+                    `;
+                }
+
+                return `
+                    <tr>
+                        <td class="py-2 px-3">${v.fecha || '—'}</td>
+                        <td class="py-2 px-3"><span class="badge bg-info bg-opacity-10 text-info border">${v.producto}</span></td>
+                        <td class="py-2 px-3 fw-semibold">${v.grifo}</td>
+                        <td class="py-2 px-3 text-end font-monospace">${v.odometro > 0 ? v.odometro.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                        <td class="py-2 px-3 text-end font-monospace fw-bold text-primary">${v.galones.toFixed(2)}</td>
+                        <td class="py-2 px-3 text-end font-monospace">S/ ${(v.galones > 0 ? (v.importe / v.galones) : 0).toFixed(2)}</td>
+                        <td class="py-2 px-3 text-end font-monospace fw-bold text-success">S/ ${v.importe.toFixed(2)}</td>
+                        <td class="py-2 px-3 text-truncate" style="max-width:180px;" title="${v.conductor}">${v.conductor}</td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         const modalEl = document.getElementById('caVouchersModal');
