@@ -11,6 +11,13 @@
 
     // Inicializador del módulo
     window.inicializarModuloCombustibleVales = function() {
+        const isMarsisa = (window.location.hostname || '').toLowerCase().includes('marsisa') ||
+                          (localStorage.getItem('tenant_slug') || '').toLowerCase().includes('marsisa') ||
+                          (window.location.hostname || '').includes('localhost');
+        const btnSync = document.getElementById('cv-btn-sync-remoto');
+        if (btnSync) {
+            btnSync.style.display = isMarsisa ? 'inline-flex' : 'none';
+        }
         window._cvCargarCatalogos();
         window.cvCargarDatos();
     };
