@@ -769,7 +769,7 @@ module.exports = function (db, broadcast, logAudit) {
             const whereSQL = `WHERE ${whereClauses.join(' AND ')}`;
 
             const [rows] = await tdb.query(
-                `SELECT * FROM combustible_vales ${whereSQL} ORDER BY fecha ASC, id ASC`,
+                `SELECT *, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha_fmt FROM combustible_vales ${whereSQL} ORDER BY fecha ASC, id ASC`,
                 params
             );
 
@@ -792,7 +792,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                 vehiculoMap[vehKey][tripKey].vouchers.push({
                     id: v.id,
-                    fecha: v.fecha ? new Date(v.fecha).toISOString().replace('T', ' ').slice(0, 19) : '',
+                    fecha: v.fecha_fmt || (v.fecha ? String(v.fecha).replace('T', ' ').slice(0, 19) : ''),
                     producto: v.tipo_combustible || 'D2',
                     grifo: v.estacion || v.proveedor || 'Estación',
                     odometro: parseFloat(v.kilometraje || 0),
