@@ -265,14 +265,15 @@
     border-color: #fecaca;
 }
 
-/* ── Drawers ────────────────────────────────────────────────────── */
+/* ── Drawers (Optimización Acelerada por Hardware) ──────────────── */
 #rotDrawerBackdrop {
     display: none; position: fixed; inset: 0;
-    background: rgba(0, 0, 0, 0.45) !important;
+    background: rgba(15, 23, 42, 0.45) !important;
     z-index: 1089 !important;
-    backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity 0.18s cubic-bezier(0, 0, 0.2, 1);
 }
-#rotDrawerBackdrop.open { display: block !important; }
+#rotDrawerBackdrop.open { display: block !important; opacity: 1 !important; }
 .rot-drawer, .rot-sub-drawer {
     position: fixed !important;
     bottom: 0 !important;
@@ -288,8 +289,11 @@
     border: 1px solid var(--border, #e2e8f0) !important;
     border-bottom: none !important;
     border-radius: 28px 28px 0 0 !important;
-    box-shadow: 0 -16px 56px rgba(0,0,0,.35) !important;
-    transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1) !important;
+    box-shadow: 0 -16px 56px rgba(0,0,0,.25) !important;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
     z-index: 1090 !important;
     display: flex !important;
     flex-direction: column !important;

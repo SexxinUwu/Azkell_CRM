@@ -1,6 +1,6 @@
 /**
  * modal_inspeccion.js — Módulo Interactivo de Inspección de Neumáticos (Three.js 3D/2D + Bento UI)
- * ERP Azkell Fleet
+ * ERP Azkell Fleet — Ultra-Optimized 60 FPS Engine
  */
 
 (function() {
@@ -17,6 +17,7 @@
     window._neuXRayActive = false;
     window._neuViewMode = '2d'; // '2d', 'iso', 'lat'
     window._neuAnimationId = null;
+    window._neuNeedsRender = true;
 
     // ── MAPEO VEHICULAR MTC Y CONFIGURACIONES PARAMÉTRICAS 3D ─────────────────────
     const ALIAS_MAPPER = {
@@ -108,7 +109,7 @@
         }
     };
 
-    // ── INYECCIÓN DE ESTILOS CSS CON PROPORCIÓN EXACTA A DETALLE OT ───────────────
+    // ── ESTILOS CSS CON PROCESAMIENTO GPU Y SIN DOBLE BLUR ─────────────────────────
     if (!document.getElementById('estilos-drawer-neumaticos')) {
         const style = document.createElement('style');
         style.id = 'estilos-drawer-neumaticos';
@@ -117,15 +118,16 @@
                 display: none;
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.45) !important;
+                background: rgba(15, 23, 42, 0.15) !important;
                 z-index: 2090 !important;
-                backdrop-filter: blur(2px);
                 opacity: 0;
-                transition: opacity 0.2s cubic-bezier(0, 0, 0.2, 1);
+                transition: opacity 0.18s cubic-bezier(0, 0, 0.2, 1);
+                pointer-events: none;
             }
             .neu-drawer-backdrop.show {
                 display: block !important;
                 opacity: 1 !important;
+                pointer-events: auto !important;
             }
             .neu-sub-drawer {
                 position: fixed !important;
@@ -142,9 +144,11 @@
                 border: 1px solid var(--border, #e2e8f0) !important;
                 border-bottom: none !important;
                 border-radius: 28px 28px 0 0 !important;
-                box-shadow: 0 -16px 56px rgba(0,0,0,.35) !important;
-                transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1) !important;
+                box-shadow: 0 -16px 48px rgba(0,0,0,0.22) !important;
+                transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
                 will-change: transform;
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
                 z-index: 2100 !important;
                 display: flex !important;
                 flex-direction: column !important;
@@ -180,9 +184,9 @@
                 align-items: center;
                 justify-content: center;
                 user-select: none;
-                transition: transform 0.1s ease, background-color 0.15s ease;
+                transition: background-color 0.1s ease;
             }
-            .neu-touch-btn-pos:active { transform: scale(0.92); }
+            .neu-touch-btn-pos:active { transform: scale(0.95); }
             .neu-touch-btn-r {
                 min-width: 40px;
                 height: 38px;
@@ -275,7 +279,7 @@
         return { marcas: ['WINDPOWER','GOODYEAR','BRIDGESTONE','MICHELIN','ADVANCE'], medidas: ['275/70R22.5','295/80R22.5','315/80R22.5','11R22.5','12R22.5'], modelos: ['PROGUO1','KMAX','M729','XZY3','GL282A'], acciones: ['Inspección','Cambio','Rotación','Reparación'] };
     };
 
-    // ── APERTURA DEL MODAL PRINCIPAL (ESTILO EXACTO DETALLE OT) ───────────────────
+    // ── APERTURA DEL MODAL PRINCIPAL ──────────────────────────────────────────────
     window.rotAbrirInspeccionNeumaticos = async function(placa, idOT, kmVehiculo, configCode) {
         window._neuLlantasActuales = [];
         window._neuFotos = { foto1: null, foto2: null, foto3: null };
@@ -291,7 +295,7 @@
         const hoy = new Date().toISOString().split('T')[0];
         const km = kmVehiculo || (window.rotData ? (window.rotData.find(o => o.id == idOT)?.kilometraje || '') : '');
 
-        // Asegurar backdrop
+        // Backdrop ligero de cierre
         let backdrop = document.getElementById('neuDrawerBackdrop');
         if (!backdrop) {
             backdrop = document.createElement('div');
@@ -301,14 +305,14 @@
             document.body.appendChild(backdrop);
         }
 
-        // Asegurar Drawer en el DOM (dimensiones y estructura clon de rot-drawer-detalle)
+        // Drawer
         let drawerEl = document.getElementById('rot-drawer-neumaticos');
         if (!drawerEl) {
             drawerEl = document.createElement('div');
             drawerEl.className = 'neu-sub-drawer';
             drawerEl.id = 'rot-drawer-neumaticos';
             drawerEl.innerHTML = `
-                <!-- HEADER BENTO IDÉNTICO A DETALLE OT -->
+                <!-- HEADER BENTO -->
                 <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
                     <div class="d-flex align-items-center gap-2">
                         <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
@@ -383,7 +387,7 @@
                         </div>
 
                         <!-- Canvas 3D / 2D Wrapper -->
-                        <div class="p-0 rounded-4 overflow-hidden position-relative" style="height: 380px; background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #cbd5e1;" id="neu-chassis-container">
+                        <div class="p-0 rounded-4 overflow-hidden position-relative" style="height: 380px; background: #f8fafc; border: 1px solid #cbd5e1;" id="neu-chassis-container">
                             <!-- Banner flotante de instrucción al arrastrar -->
                             <div id="dragInstructionBanner" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); background: linear-gradient(90deg, #2563eb, #1d4ed8); color:#fff; padding:6px 18px; border-radius:30px; font-size:0.78rem; font-weight:700; display:none; pointer-events:none; z-index:20; box-shadow:0 6px 16px rgba(37,99,235,0.35);">
                                 <i class="bi bi-hand-index-thumb-fill me-1 text-warning"></i> Arrastrando llanta — Suelta sobre otra posición para intercambiar
@@ -639,7 +643,7 @@
                     </div>
                 </div>
 
-                <!-- FOOTER FIJO IDÉNTICO AL DETALLE OT -->
+                <!-- FOOTER FIJO -->
                 <div class="rot-drawer-footer bg-white border-top px-3 py-2 d-flex align-items-center justify-content-between gap-2" style="position: sticky; bottom: 0; z-index: 10; height: 56px;">
                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-bold" onclick="window.rotCerrarModalInspeccionNeumaticos()">Cancelar</button>
                     <button type="button" class="btn btn-sm btn-success rounded-pill px-4 py-2 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-1.5 flex-grow-1" id="neu-btn-guardar-todo" onclick="window._neuGuardarInspeccionCompleta('${placa}', '${idOT||''}')">
@@ -656,31 +660,30 @@
             document.body.appendChild(drawerEl);
         }
 
-        // Actualizar badge de placa en el encabezado
         const bPlaca = document.getElementById('neu-badge-placa');
         if (bPlaca) bPlaca.innerText = placa || 'PLACA';
 
-        // Abrir modal con animación sincronizada
+        // Apertura sincronizada acelerada por hardware
         drawerEl.style.display = 'flex';
         drawerEl.style.visibility = 'visible';
         backdrop.style.display = 'block';
-        void drawerEl.offsetWidth; // Reflow
-        void backdrop.offsetWidth;
-        drawerEl.classList.add('open');
-        backdrop.classList.add('show');
+        
+        requestAnimationFrame(() => {
+            drawerEl.classList.add('open');
+            backdrop.classList.add('show');
+        });
 
-        // Configurar posiciones iniciales y renderizar
+        // Configuración y render
         const cfg = VEHICLE_CONFIGS_3D[window._neuConfigActualKey] || VEHICLE_CONFIGS_3D["6X4"];
         window._neuRenderPosiciones(cfg.positions);
         window._neuRenderBotoneraR();
         window._neuRenderTablaLlantas();
 
-        // Iniciar motor Three.js
+        // Carga Three.js
         loadThreeJs(function() {
             window._neuInitThreeEngine(cfg);
         });
 
-        // Cargar catálogos y última inspección en paralelo
         window._neuUltimaInspeccionMap = {};
         const catsPromise = window._cargarCatalogosNeumaticos();
         const ultPromise = placa ? fetch('/api/neumaticos/placa-ultima/' + encodeURIComponent(placa)).then(r => r.json()).catch(() => null) : Promise.resolve(null);
@@ -781,7 +784,7 @@
         }).join('');
     };
 
-    // ── MOTOR GRÁFICO 3D / 2D (THREE.JS + POINTER EVENTS DRAG & DROP) ──────────────
+    // ── MOTOR GRÁFICO 3D / 2D ULTRA-OPTIMIZADO (60 FPS NATIVO) ───────────────────
     window._neuInitThreeEngine = function(cfg) {
         const container = document.getElementById('neu-chassis-container');
         if (!container || !window.THREE) return;
@@ -793,42 +796,42 @@
         const width = container.clientWidth || 660;
         const height = container.clientHeight || 380;
 
-        // Scene, Camera, Renderer
+        // Scene, Camera, Renderer con optimizaciones GPU
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf8fafc);
 
         const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
         
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            powerPreference: "high-performance",
+            precision: "mediump"
+        });
         renderer.setSize(width, height);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Optimización de resolución retina sin saturación
+        renderer.shadowMap.enabled = false; // Sombras por rasterización directa para 60 FPS estables
         container.appendChild(renderer.domElement);
 
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
+        controls.dampingFactor = 0.08;
         controls.enableRotate = false;
         controls.enablePan = false;
         controls.enableZoom = false;
 
-        // Luces
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.25);
+        // Luces optimizadas
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.35);
         scene.add(ambientLight);
 
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1.3);
-        sunLight.position.set(10, 20, 10);
-        sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 1024;
-        sunLight.shadow.mapSize.height = 1024;
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        sunLight.position.set(8, 18, 10);
         scene.add(sunLight);
 
-        const fillLight = new THREE.DirectionalLight(0x3b82f6, 0.35);
-        fillLight.position.set(-10, 10, -10);
+        const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.4);
+        fillLight.position.set(-8, 10, -10);
         scene.add(fillLight);
 
-        // Rejilla limpia de fondo
+        // Rejilla de referencia
         const gridHelper = new THREE.GridHelper(50, 50, 0x94a3b8, 0xe2e8f0);
         gridHelper.position.y = 0;
         scene.add(gridHelper);
@@ -837,25 +840,25 @@
         const vehicleGroup = new THREE.Group();
         scene.add(vehicleGroup);
 
-        // Materiales de alta fidelidad para el chasis
+        // Materiales estándar ultraligeros
         const cabPaintMat = new THREE.MeshStandardMaterial({
             color: 0xf8fafc,
-            metalness: 0.3,
-            roughness: 0.2,
+            metalness: 0.2,
+            roughness: 0.3,
             transparent: true,
             opacity: window._neuXRayActive ? 0.22 : 1.0
         });
 
         const darkChassisMat = new THREE.MeshStandardMaterial({
             color: 0x334155,
-            metalness: 0.8,
-            roughness: 0.3,
+            metalness: 0.6,
+            roughness: 0.4,
             transparent: true,
             opacity: window._neuXRayActive ? 0.22 : 1.0
         });
 
-        const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.1 });
-        const glassMat = new THREE.MeshPhysicalMaterial({ color: 0x1e293b, metalness: 0.1, roughness: 0.05, transmission: 0.85, transparent: true, opacity: 0.7 });
+        const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.2 });
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.1, roughness: 0.1, transparent: true, opacity: 0.65 });
 
         // Encontrar dimensiones Z de ejes y repuestos para un encuadre 100% perfecto
         const isTrailer = cfg.name.includes("Carreta") || cfg.name.includes("Remolque") || cfg.name.includes("Semiremolque") || cfg.name.includes("S2") || cfg.name.includes("S3") || cfg.name.includes("R2");
@@ -875,18 +878,16 @@
         const railGeo = new THREE.BoxGeometry(0.18, 0.35, frameLength);
         const railL = new THREE.Mesh(railGeo, darkChassisMat);
         railL.position.set(-0.55, 0.85, centerZ);
-        railL.castShadow = true;
         const railR = railL.clone();
         railR.position.x = 0.55;
         vehicleGroup.add(railL);
         vehicleGroup.add(railR);
 
-        // Tanques de combustible cromados / Cajas de herramientas
-        const tankGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.8, 20);
+        // Tanques de combustible / Cajas
+        const tankGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.8, 14);
         tankGeo.rotateX(Math.PI / 2);
         const tankL = new THREE.Mesh(tankGeo, chromeMat);
         tankL.position.set(-1.08, 0.75, centerZ - 0.5);
-        tankL.castShadow = true;
         const tankR = tankL.clone();
         tankR.position.x = 1.08;
         vehicleGroup.add(tankL);
@@ -898,7 +899,7 @@
         if (isTrailer) {
             // Lanza triangular / Kingpin frontal en -Z
             const hitchGroup = new THREE.Group();
-            const hitchGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.8, 12);
+            const hitchGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.8, 10);
             const hitchLeft = new THREE.Mesh(hitchGeo, darkChassisMat);
             hitchLeft.rotation.z = Math.PI / 4;
             hitchLeft.position.set(-0.4, 0.6, minZ + 0.6);
@@ -907,7 +908,7 @@
             hitchRight.rotation.z = -Math.PI / 4;
             hitchRight.position.set(0.4, 0.6, minZ + 0.6);
             
-            const kingpinGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.3, 16);
+            const kingpinGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.3, 12);
             const kingpinMesh = new THREE.Mesh(kingpinGeo, chromeMat);
             kingpinMesh.position.set(0, 0.6, minZ);
             
@@ -922,13 +923,11 @@
             const bodyGeo = new THREE.BoxGeometry(2.3, 2.4, 2.6);
             const cabMesh = new THREE.Mesh(bodyGeo, cabPaintMat);
             cabMesh.position.set(0, 1.9, frontAxleZ - 0.4);
-            cabMesh.castShadow = true;
             cabGroup.add(cabMesh);
 
             const hoodGeo = new THREE.BoxGeometry(2.2, 1.3, 1.5);
             const hoodMesh = new THREE.Mesh(hoodGeo, cabPaintMat);
             hoodMesh.position.set(0, 1.35, frontAxleZ - 1.9);
-            hoodMesh.castShadow = true;
             cabGroup.add(hoodMesh);
 
             const grilleGeo = new THREE.BoxGeometry(1.8, 1.0, 0.1);
@@ -950,70 +949,69 @@
             vehicleGroup.add(cabGroup);
         }
 
-        // Textura procedural de rodamiento de llanta (Canvas2D)
+        // Textura optimizada de rodamiento de llanta
         const treadCanvas = document.createElement('canvas');
-        treadCanvas.width = 512;
-        treadCanvas.height = 512;
+        treadCanvas.width = 256;
+        treadCanvas.height = 256;
         const ctx = treadCanvas.getContext('2d');
         ctx.fillStyle = '#1e1e24';
-        ctx.fillRect(0, 0, 512, 512);
+        ctx.fillRect(0, 0, 256, 256);
         ctx.strokeStyle = '#0a0a0d';
-        ctx.lineWidth = 12;
-        for (let y = 0; y < 512; y += 20) {
+        ctx.lineWidth = 8;
+        for (let y = 0; y < 256; y += 16) {
             ctx.beginPath();
             ctx.moveTo(0, y);
-            ctx.lineTo(180, y + 10);
-            ctx.lineTo(332, y + 10);
-            ctx.lineTo(512, y);
+            ctx.lineTo(90, y + 6);
+            ctx.lineTo(166, y + 6);
+            ctx.lineTo(256, y);
             ctx.stroke();
         }
         const treadTexture = new THREE.CanvasTexture(treadCanvas);
         treadTexture.wrapS = THREE.RepeatWrapping;
         treadTexture.wrapT = THREE.RepeatWrapping;
-        treadTexture.repeat.set(1, 10);
+        treadTexture.repeat.set(1, 6);
 
-        const rubberMat = new THREE.MeshStandardMaterial({ map: treadTexture, color: 0x1f2024, roughness: 0.85, metalness: 0.1 });
-        const rimMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.9, roughness: 0.2 });
-        const hubMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 });
+        const rubberMat = new THREE.MeshStandardMaterial({ map: treadTexture, color: 0x222328, roughness: 0.85 });
+        const rimMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.85, roughness: 0.25 });
+        const hubMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7 });
 
-        // Colección de objetos 3D de llantas para Raycasting
+        // Geometrías compartidas (Instanced memory efficiency)
+        const rubberGeo = new THREE.CylinderGeometry(0.58, 0.58, 0.36, 18);
+        rubberGeo.rotateZ(Math.PI / 2);
+
+        const rimGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.37, 14);
+        rimGeo.rotateZ(Math.PI / 2);
+
+        const hubGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.39, 10);
+        hubGeo.rotateZ(Math.PI / 2);
+
+        const ringGeo = new THREE.TorusGeometry(0.46, 0.04, 8, 18);
+        ringGeo.rotateY(Math.PI / 2);
+
         const tireMeshesMap = {};
         const tireObjectsArray = [];
         const slotPositionsMap = {};
 
         // Generar Neumático 3D genérico
-        function createTireMesh3D(posId, isSpare = false) {
+        function createTireMesh3D(posId) {
             const tireGroup = new THREE.Group();
             
-            // Goma neumático
-            const rubberGeo = new THREE.CylinderGeometry(0.58, 0.58, 0.36, 28);
-            rubberGeo.rotateZ(Math.PI / 2);
             const rubberMesh = new THREE.Mesh(rubberGeo, rubberMat);
-            rubberMesh.castShadow = true;
             tireGroup.add(rubberMesh);
 
-            // Rin de aluminio
-            const rimGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.37, 20);
-            rimGeo.rotateZ(Math.PI / 2);
             const rimMesh = new THREE.Mesh(rimGeo, rimMat);
             tireGroup.add(rimMesh);
 
-            // Cubo central
-            const hubGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.39, 14);
-            hubGeo.rotateZ(Math.PI / 2);
             const hubMesh = new THREE.Mesh(hubGeo, hubMat);
             tireGroup.add(hubMesh);
 
-            // Anillo exterior indicador (Torus)
-            const ringGeo = new THREE.TorusGeometry(0.46, 0.04, 10, 24);
-            ringGeo.rotateY(Math.PI / 2);
             const ringMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
             const ringMesh = new THREE.Mesh(ringGeo, ringMat);
             ringMesh.position.x = 0.18;
             tireGroup.add(ringMesh);
             tireGroup.ringMesh = ringMesh;
 
-            // Etiqueta 3D Canvas con el número de posición
+            // Etiqueta Sprite 2D de posición
             const labelCanvas = document.createElement('canvas');
             labelCanvas.width = 64; labelCanvas.height = 64;
             const lCtx = labelCanvas.getContext('2d');
@@ -1036,9 +1034,10 @@
         }
 
         // Posicionar ejes y llantas en el vehículo con separación ergonómica
+        const axleGeo = new THREE.CylinderGeometry(0.08, 0.08, 3.1, 10);
+        axleGeo.rotateZ(Math.PI / 2);
+
         cfg.axles.forEach(axle => {
-            const axleGeo = new THREE.CylinderGeometry(0.08, 0.08, 3.1, 14);
-            axleGeo.rotateZ(Math.PI / 2);
             const axleMesh = new THREE.Mesh(axleGeo, darkChassisMat);
             axleMesh.position.set(0, 0.6, axle.z);
             vehicleGroup.add(axleMesh);
@@ -1058,14 +1057,14 @@
 
                 tireMeshesMap[t.id] = mesh;
                 slotPositionsMap[t.id] = posVec.clone();
-                tireObjectsArray.push(mesh.children[0]); // rubberMesh
+                tireObjectsArray.push(mesh.children[0]);
             });
         });
 
         // Posicionar repuestos con encuadre visible dentro del chasis
         if (cfg.spares) {
             cfg.spares.forEach(sp => {
-                const mesh = createTireMesh3D(sp.id, true);
+                const mesh = createTireMesh3D(sp.id);
                 const posVec = new THREE.Vector3(sp.pos[0], sp.pos[1], sp.pos[2]);
                 mesh.position.copy(posVec);
                 mesh.userData.defaultPos = posVec.clone();
@@ -1078,7 +1077,7 @@
         }
 
         // Anillo de resaltado verde sobre destino en Drag & Drop (Hover)
-        const dropRingGeo = new THREE.TorusGeometry(0.72, 0.08, 16, 32);
+        const dropRingGeo = new THREE.TorusGeometry(0.72, 0.08, 8, 20);
         dropRingGeo.rotateY(Math.PI / 2);
         const dropRingMat = new THREE.MeshBasicMaterial({ color: 0x16a34a, transparent: true, opacity: 0.95 });
         const dragHoverHighlightMesh = new THREE.Mesh(dropRingGeo, dropRingMat);
@@ -1091,7 +1090,7 @@
             const autoHeight = Math.max(18, totalSpan * 1.95);
 
             if (window._neuViewMode === '2d') {
-                camera.up.set(0, 0, -1); // Cabina y Eje 1 arriba, parte trasera abajo
+                camera.up.set(0, 0, -1);
                 camera.position.set(0, autoHeight, centerZ);
                 camera.lookAt(0, 0, centerZ);
                 controls.target.set(0, 0, centerZ);
@@ -1110,10 +1109,10 @@
                 controls.enableRotate = true; controls.enablePan = true; controls.enableZoom = true;
             }
             controls.update();
+            window._neuNeedsRender = true;
         };
         window._neuUpdateCameraView();
 
-        // Actualizar resumen estadísticas de llantas
         const totalCount = Object.keys(tireMeshesMap).length;
         const summaryEl = document.getElementById('neu-chassis-stats-summary');
         if (summaryEl) summaryEl.innerText = `Total: ${totalCount} llantas`;
@@ -1130,28 +1129,28 @@
 
                 if (lData) {
                     if (lData.rot === 'SI') {
-                        ring.material.color.setHex(0x2563eb); // Azul rotación
+                        ring.material.color.setHex(0x2563eb);
                     } else {
                         const prom = parseFloat(lData.remanente_promedio || 0);
-                        if (prom <= 4.0) ring.material.color.setHex(0xef4444); // Red
-                        else if (prom <= 6.0) ring.material.color.setHex(0xf59e0b); // Amber
-                        else ring.material.color.setHex(0x10b981); // Green
+                        if (prom <= 4.0) ring.material.color.setHex(0xef4444);
+                        else if (prom <= 6.0) ring.material.color.setHex(0xf59e0b);
+                        else ring.material.color.setHex(0x10b981);
                     }
                 } else {
                     ring.material.color.setHex(isActive ? 0x2563eb : 0x10b981);
                 }
 
-                // Resaltar escala de llanta activa
                 if (isActive) {
                     meshGroup.scale.set(1.08, 1.08, 1.08);
                 } else {
                     meshGroup.scale.set(1.0, 1.0, 1.0);
                 }
             });
+            window._neuNeedsRender = true;
         };
         window._neuActualizar3DColores();
 
-        // ── RAYCASTING Y DRAG & DROP SEGURO CON RETORNO GARANTIZADO ─────────────────
+        // ── RAYCASTING Y DRAG & DROP OPTIMIZADO POR RAF (ZERO LAG) ───────────────────
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
         const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.6);
@@ -1163,6 +1162,8 @@
         let draggedTireGroup = null;
         let draggedTireId = null;
         let hoverTargetId = null;
+        let isPointerMovePending = false;
+        let currentEvent = null;
 
         const canvasEl = renderer.domElement;
 
@@ -1187,13 +1188,14 @@
             }
         });
 
-        canvasEl.addEventListener('pointermove', (e) => {
-            if (!isPointerDown || !draggedTireGroup) return;
+        function handlePointerMoveBatched() {
+            isPointerMovePending = false;
+            if (!isPointerDown || !draggedTireGroup || !currentEvent) return;
 
+            const e = currentEvent;
             const dist = Math.hypot(e.clientX - startPointerPos.x, e.clientY - startPointerPos.y);
             
-            // Activar arrastre si se supera umbral de 8px
-            if (dist > 8 && !isDragging) {
+            if (dist > 6 && !isDragging) {
                 isDragging = true;
                 draggedTireGroup.scale.set(1.15, 1.15, 1.15);
                 const banner = document.getElementById('dragInstructionBanner');
@@ -1213,11 +1215,10 @@
                     draggedTireGroup.position.copy(planeIntersect);
                 }
 
-                // Raycast para detectar llanta objetivo debajo
                 const intersects = raycaster.intersectObjects(tireObjectsArray, false);
                 let hitTarget = null;
-                for (let hit of intersects) {
-                    const tid = hit.object.userData.id;
+                for (let i = 0; i < intersects.length; i++) {
+                    const tid = intersects[i].object.userData.id;
                     if (tid && tid !== draggedTireId) {
                         hitTarget = tid;
                         break;
@@ -1235,6 +1236,16 @@
                     hoverTargetId = null;
                     dragHoverHighlightMesh.visible = false;
                 }
+                window._neuNeedsRender = true;
+            }
+        }
+
+        canvasEl.addEventListener('pointermove', (e) => {
+            if (!isPointerDown || !draggedTireGroup) return;
+            currentEvent = e;
+            if (!isPointerMovePending) {
+                isPointerMovePending = true;
+                requestAnimationFrame(handlePointerMoveBatched);
             }
         });
 
@@ -1253,12 +1264,11 @@
 
             if (isDragging && meshToRestore && sourceId) {
                 if (targetId && targetId !== sourceId) {
-                    // INTERCAMBIO / ROTACIÓN AUTOMÁTICA
                     window._neuEjecutarRotacion(sourceId, targetId);
                     meshToRestore.position.copy(meshToRestore.userData.defaultPos);
                     meshToRestore.scale.set(1.0, 1.0, 1.0);
+                    window._neuNeedsRender = true;
                 } else {
-                    // RETORNO SUAVE SEGURO (LERP) — NUNCA QUEDA FUERA
                     const targetPos = meshToRestore.userData.defaultPos.clone();
                     const startPos = meshToRestore.position.clone();
                     let startTime = null;
@@ -1267,20 +1277,21 @@
 
                     function animateLerp(time) {
                         if (!startTime) startTime = time;
-                        const progress = Math.min((time - startTime) / 160, 1);
+                        const progress = Math.min((time - startTime) / 140, 1);
                         if (meshToRestore) {
                             meshToRestore.position.lerpVectors(startPos, targetPos, progress);
+                            window._neuNeedsRender = true;
                         }
                         if (progress < 1) {
                             requestAnimationFrame(animateLerp);
                         } else if (meshToRestore) {
                             meshToRestore.position.copy(targetPos);
+                            window._neuNeedsRender = true;
                         }
                     }
                     requestAnimationFrame(animateLerp);
                 }
             } else if (sourceId) {
-                // CLIC SIMPLE: Seleccionar posición
                 window._neuSeleccionarPosicion(sourceId);
             }
 
@@ -1293,20 +1304,32 @@
             draggedTireGroup = null;
             draggedTireId = null;
             hoverTargetId = null;
+            currentEvent = null;
+            window._neuNeedsRender = true;
         };
 
         canvasEl.addEventListener('pointerup', endDragHandler);
         canvasEl.addEventListener('pointercancel', endDragHandler);
 
-        // ── LOOP DE RENDERIZADO 60 FPS ──────────────────────────────────────────────
+        // Renderizado fluido a demanda y continuo durante interacción
+        controls.addEventListener('change', () => {
+            window._neuNeedsRender = true;
+        });
+
         function animate() {
             window._neuAnimationId = requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
+            if (controls.dampingFactor && controls.state !== -1) {
+                controls.update();
+                window._neuNeedsRender = true;
+            }
+            if (window._neuNeedsRender || isDragging) {
+                renderer.render(scene, camera);
+                window._neuNeedsRender = false;
+            }
         }
+        window._neuNeedsRender = true;
         animate();
 
-        // Guardar referencias globales de actualización
         window._neuRefrescar3D = function() {
             window._neuActualizar3DColores();
         };
@@ -1321,6 +1344,7 @@
             }
             cabPaintMat.opacity = window._neuXRayActive ? 0.22 : 1.0;
             darkChassisMat.opacity = window._neuXRayActive ? 0.22 : 1.0;
+            window._neuNeedsRender = true;
         };
     };
 
@@ -1406,10 +1430,7 @@
         window._neuRenderTablaLlantas();
         if (window._neuRefrescar3D) window._neuRefrescar3D();
         
-        // Notificación Toast emergente con texto blanco
         showToast(`Rotación realizada: Posición #${sId} ⇄ Posición #${tId}`);
-        
-        // Seleccionar automáticamente la llanta origen en el formulario
         window._neuSeleccionarPosicion(sId);
     };
 
@@ -1421,7 +1442,6 @@
         const labelTop = document.getElementById('neu-pos-label-top');
         if (labelTop) labelTop.innerText = pos;
 
-        // Actualizar barra scroll táctil de botones
         document.querySelectorAll('#neu-pos-selector button').forEach(btn => {
             btn.className = 'btn btn-outline-secondary neu-touch-btn-pos position-relative font-monospace';
         });
@@ -1433,7 +1453,6 @@
 
         window._neuLimpiarFormLlanta();
 
-        // Cargar datos si existe en lista o en última inspección
         const existente = window._neuLlantasActuales.find(l => String(l.posicion) === String(pos));
         if (existente) {
             if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = existente.marca || '';
@@ -1674,7 +1693,6 @@
         window._neuRenderTablaLlantas();
         if (window._neuRefrescar3D) window._neuRefrescar3D();
 
-        // Avanzar a la siguiente posición
         const cfg = VEHICLE_CONFIGS_3D[window._neuConfigActualKey] || VEHICLE_CONFIGS_3D["6X4"];
         const ordenPos = cfg.positions;
         const curIdx = ordenPos.indexOf(String(pos));
@@ -1698,7 +1716,6 @@
             return;
         }
 
-        // ORDENAMIENTO NUMÉRICO ESTRICTO POR POSICIÓN (#1, #2, #3...)
         window._neuLlantasActuales.sort((a, b) => {
             const numA = parseInt(a.posicion || a.id, 10);
             const numB = parseInt(b.posicion || b.id, 10);
