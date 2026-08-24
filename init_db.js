@@ -781,6 +781,50 @@ const TABLAS = [
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_placa (placa)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+    },
+    {
+        nombre: 'combustible_vales',
+        sql: `CREATE TABLE IF NOT EXISTS combustible_vales (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            fecha DATETIME NOT NULL,
+            estado VARCHAR(30) NOT NULL DEFAULT 'VÁLIDO',
+            correlativo VARCHAR(50) NOT NULL DEFAULT '',
+            estado_pago VARCHAR(30) NOT NULL DEFAULT 'NO PAGADO',
+            viaje VARCHAR(50) NOT NULL DEFAULT '',
+            caja VARCHAR(50) NOT NULL DEFAULT '',
+            estado_caja VARCHAR(30) NOT NULL DEFAULT 'PENDIENTE',
+            clase_vehiculo VARCHAR(50) NOT NULL DEFAULT 'TRACTO',
+            vehiculo VARCHAR(20) NOT NULL DEFAULT '',
+            conductor VARCHAR(150) NOT NULL DEFAULT '',
+            ruta VARCHAR(255) NOT NULL DEFAULT '',
+            departamento VARCHAR(80) NOT NULL DEFAULT '',
+            provincia VARCHAR(80) NOT NULL DEFAULT '',
+            distrito VARCHAR(80) NOT NULL DEFAULT '',
+            estacion VARCHAR(150) NOT NULL DEFAULT '',
+            tipo_combustible VARCHAR(50) NOT NULL DEFAULT 'D2',
+            proveedor VARCHAR(200) NOT NULL DEFAULT '',
+            ruc VARCHAR(20) NOT NULL DEFAULT '',
+            kilometraje DECIMAL(12,2) NOT NULL DEFAULT 0,
+            peso_tn DECIMAL(10,2) NOT NULL DEFAULT 0,
+            galones DECIMAL(10,2) NOT NULL DEFAULT 0,
+            costo_gl DECIMAL(10,2) NOT NULL DEFAULT 0,
+            tipo_pago VARCHAR(50) NOT NULL DEFAULT 'ANTICIPO',
+            dias_credito INT NOT NULL DEFAULT 0,
+            moneda VARCHAR(20) NOT NULL DEFAULT 'SOLES',
+            importe DECIMAL(12,2) NOT NULL DEFAULT 0,
+            numero_comprobante VARCHAR(50) NOT NULL DEFAULT '',
+            tipo_cambio DECIMAL(8,4) NULL,
+            archivo_url VARCHAR(255) NULL,
+            observacion TEXT NULL,
+            tipo VARCHAR(80) NOT NULL DEFAULT 'RECARGA VUELTA',
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_vehiculo (vehiculo),
+            INDEX idx_viaje (viaje),
+            INDEX idx_fecha (fecha),
+            INDEX idx_correlativo (correlativo),
+            INDEX idx_estado (estado)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     }
 ];
 
@@ -889,6 +933,9 @@ async function initDB(db) {
         for (const colDef of colsPlacas) {
             try { await promisePool.query(`ALTER TABLE placas ADD COLUMN ${colDef}`); } catch(e) {}
         }
+
+        // Limpieza de tablas obsoletas no utilizadas
+        try { await promisePool.query("DROP TABLE IF EXISTS combustible_abastecimientos"); } catch(e) {}
 
         console.log(`✅ Default configurations, catalogs and roles seeded`);
     } catch (err) {

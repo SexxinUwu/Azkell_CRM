@@ -195,21 +195,7 @@ app.get(['/api/proxy/documento', '/api/proxy/sunat'], async (req, res) => {
     }
 });
 
-// Endpoint seguro para Abastecimientos de Combustible
-app.get('/api/combustible/abastecimientos', async (req, res) => {
-    try {
-        if (typeof db !== 'undefined' && db.query) {
-            const [tables] = await db.query("SHOW TABLES LIKE 'combustible_abastecimientos'");
-            if (tables && tables.length > 0) {
-                const [data] = await db.query("SELECT * FROM combustible_abastecimientos ORDER BY fecha DESC, id DESC LIMIT 500");
-                return res.json(data || []);
-            }
-        }
-        res.json([]);
-    } catch(e) {
-        res.json([]);
-    }
-});
+
 
 const _geoCacheMap = new Map();
 app.get('/api/proxy/geocode', async (req, res) => {
@@ -2790,6 +2776,7 @@ app.use('/api/checklist', require('./routes/checklist')(db, broadcast, logAudit)
 app.use('/api/clientes', require('./routes/clientes')(db, logAudit));
 app.use('/api/disponibilidad-flota', require('./routes/disponibilidad')(db, logAudit));
 app.use('/api/neumaticos', require('./routes/neumaticos')(db, broadcast, logAudit));
+app.use('/api/combustible', require('./routes/combustible')(db, broadcast, logAudit));
 
 const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
 app.use('/api/script', legacyRoutes);
