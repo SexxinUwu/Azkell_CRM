@@ -7,43 +7,53 @@
 
 #moduloCombustibleValesContenedor {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 1rem 1.25rem 2.5rem 1.25rem !important;
+    padding: 0.75rem 1.25rem 0.5rem 1.25rem !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    overflow-x: hidden !important;
+    overflow: hidden !important;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 58px);
+    max-height: calc(100vh - 58px);
 }
 
 /* Bento Header & Cards */
 .cv-filter-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    padding: 0.6rem 1rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    margin-bottom: 1rem;
+    margin-bottom: 0.55rem;
+    flex-shrink: 0;
 }
 
 /* Tabla Estilizada y Scroll Aislado */
 .cv-table-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 14px;
+    border-radius: 12px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.03);
     overflow: hidden;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 .cv-table-header {
-    padding: 0.75rem 1.25rem;
+    padding: 0.45rem 1rem;
     background: #ffffff;
     border-bottom: 1px solid #f1f5f9;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    flex-shrink: 0;
 }
 .cv-table {
     width: 100%;
@@ -58,7 +68,7 @@
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding: 0.7rem 0.65rem;
+    padding: 0.65rem 0.65rem;
     border-bottom: 1px solid #1e293b;
     white-space: nowrap;
     position: sticky;
@@ -66,7 +76,7 @@
     z-index: 10;
 }
 .cv-table td {
-    padding: 0.6rem 0.65rem;
+    padding: 0.52rem 0.65rem;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
     color: #1e293b;
@@ -81,7 +91,9 @@
 
 .cv-scroll-table {
     overflow-x: auto !important;
-    max-height: calc(100vh - 290px);
+    overflow-y: auto !important;
+    flex: 1 1 auto;
+    min-height: 0;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
@@ -114,9 +126,23 @@
     opacity: 1;
 }
 
+.cv-table-footer {
+    padding: 0.4rem 1rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background: #f8fafc;
+    flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
     #moduloCombustibleValesContenedor {
         padding: 0.5rem 0.5rem 80px 0.5rem !important;
+        height: auto;
+        max-height: none;
     }
 }
 </style>
@@ -124,10 +150,10 @@
 <div id="moduloCombustibleValesContenedor">
     <!-- Header Ejecutivo MarsisaSoft Style -->
     <div class="cv-filter-card">
-        <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3 pb-2.5 border-bottom">
+        <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 pb-2 border-bottom">
             <div>
                 <div class="d-flex align-items-center gap-2">
-                    <h4 class="fw-bold text-dark m-0" style="letter-spacing:-0.02em;">Vales de Combustible</h4>
+                    <h5 class="fw-bold text-dark m-0" style="letter-spacing:-0.02em;">Vales de Combustible</h5>
                     <span class="badge bg-success bg-opacity-10 text-success border px-2.5 py-0.5 rounded-pill small fw-bold">Combustible</span>
                 </div>
             </div>
@@ -142,30 +168,30 @@
         </div>
 
         <!-- Filtros MarsisaSoft: Fecha Desde, Fecha Hasta, Buscar, Compras Externas -->
-        <div class="row g-2 align-items-end mt-2">
+        <div class="row g-2 align-items-end mt-1.5">
             <div class="col-12 col-sm-6 col-md-3 col-lg-2">
-                <label class="form-label text-muted small fw-bold mb-1">Fecha Desde</label>
+                <label class="form-label text-muted small fw-bold mb-0.5" style="font-size:0.75rem;">Fecha Desde</label>
                 <input type="date" class="form-control form-control-sm" id="cv-filter-fecha-desde" value="2024-10-01">
             </div>
             <div class="col-12 col-sm-6 col-md-3 col-lg-2">
-                <label class="form-label text-muted small fw-bold mb-1">Fecha Hasta</label>
+                <label class="form-label text-muted small fw-bold mb-0.5" style="font-size:0.75rem;">Fecha Hasta</label>
                 <input type="date" class="form-control form-control-sm" id="cv-filter-fecha-hasta" value="2027-08-24">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label text-muted small fw-bold mb-1">Placa</label>
+                <label class="form-label text-muted small fw-bold mb-0.5" style="font-size:0.75rem;">Placa</label>
                 <select class="form-select form-select-sm" id="cv-filter-placa" onchange="window.cvAplicarFiltros()">
                     <option value="ALL">Todas las Placas</option>
                 </select>
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label text-muted small fw-bold mb-1">Estado</label>
+                <label class="form-label text-muted small fw-bold mb-0.5" style="font-size:0.75rem;">Estado</label>
                 <select class="form-select form-select-sm" id="cv-filter-estado" onchange="window.cvAplicarFiltros()">
                     <option value="ALL">Todos los Estados</option>
                     <option value="VÁLIDO">VÁLIDO</option>
                     <option value="ANULADO">ANULADO</option>
                 </select>
             </div>
-            <div class="col-12 col-lg-4 d-flex align-items-end gap-2">
+            <div class="col-12 col-lg-4 d-flex align-items-end gap-1.5">
                 <button class="btn btn-warning btn-sm fw-bold px-3 shadow-2xs text-white d-flex align-items-center gap-1" style="background:#f59e0b; border-color:#d97706;" onclick="window.cvAplicarFiltros()">
                     <i class="bi bi-search"></i> Buscar
                 </button>
@@ -176,9 +202,6 @@
                     <i class="bi bi-arrow-counterclockwise"></i>
                 </button>
             </div>
-        </div>
-    </div>
-
     <!-- Tabla Encapsulada con Barra de Acciones Integrada -->
     <div class="cv-table-card">
         <div class="cv-table-header">
@@ -271,8 +294,8 @@
         </div>
 
         <!-- Paginación Footer -->
-        <div class="p-3 border-top d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2 bg-light">
-            <div class="text-muted small" id="cv-paginacion-leyenda">
+        <div class="cv-table-footer">
+            <div class="text-muted small fw-semibold" id="cv-paginacion-leyenda">
                 Mostrando 0 a 0 de 0 vales
             </div>
             <div class="d-flex align-items-center gap-1" id="cv-paginacion-botones">
