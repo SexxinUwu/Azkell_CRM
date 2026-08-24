@@ -287,10 +287,10 @@
                     <i class="bi bi-sort-down text-primary me-1"></i> Orden
                 </label>
                 <select id="ca-sort-by" onchange="window.caAplicarFiltros(true)" class="form-select form-select-sm fw-semibold">
-                    <option value="trip_desc">Viaje ▼</option>
-                    <option value="trip_asc">Viaje ▲</option>
-                    <option value="date_desc">Fecha ▼</option>
-                    <option value="date_asc">Fecha ▲</option>
+                    <option value="date_desc" selected>Fecha ▼ (Recientes)</option>
+                    <option value="date_asc">Fecha ▲ (Antiguos)</option>
+                    <option value="trip_desc">Viaje ▼ (Mayor N°)</option>
+                    <option value="trip_asc">Viaje ▲ (Menor N°)</option>
                     <option value="gal_desc">Galones ▼</option>
                     <option value="cost_desc">Gasto ▼</option>
                 </select>

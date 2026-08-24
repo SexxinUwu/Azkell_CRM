@@ -881,12 +881,8 @@ module.exports = function (db, broadcast, logAudit) {
                 });
             });
 
-            // Ordenar viajes por N° Viaje DESC por defecto (SIN-VIAJE al final)
-            trips.sort((a, b) => {
-                if (a.viaje === 'SIN-VIAJE') return 1;
-                if (b.viaje === 'SIN-VIAJE') return -1;
-                return (b.viaje || '').localeCompare(a.viaje || '', undefined, { numeric: true });
-            });
+            // Ordenar viajes por Fecha Fin DESC por defecto (los más recientes en el tiempo primero)
+            trips.sort((a, b) => (b.fechaFin || '').localeCompare(a.fechaFin || '') || (b.viaje || '').localeCompare(a.viaje || ''));
 
             const totalViajes = trips.length;
             const totalGalones = trips.reduce((s, t) => s + t.totalGalones, 0);
