@@ -281,7 +281,7 @@
         } catch (e) {
             console.error('Error cargando catálogos de neumáticos:', e);
         }
-        return { marcas: ['WINDPOWER','GOODYEAR','BRIDGESTONE','MICHELIN','ADVANCE'], medidas: ['275/70R22.5','295/80R22.5','315/80R22.5','11R22.5','12R22.5'], modelos: ['PROGUO1','KMAX','M729','XZY3','GL282A'], acciones: ['Inspección','Cambio','Rotación','Reparación'] };
+        return { marcas: ['WINDPOWER','GOODYEAR','BRIDGESTONE','MICHELIN','ADVANCE'], medidas: ['275/70R22.5','295/80R22.5','315/80R22.5','11R22.5','12R22.5'], modelos: ['PROGUO1','KMAX','M729','XZY3','GL282A'], acciones: ['Inspección','Rotación','Cambio','Reparación','Reencauche','Baja'] };
     };
 
     // ── APERTURA DEL MODAL PRINCIPAL ──────────────────────────────────────────────
@@ -556,7 +556,14 @@
                                     <label class="form-label text-muted fw-bold small m-0" style="font-size:0.72rem;">Acción</label>
                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('acciones')" class="text-primary small fw-bold" style="font-size:0.7rem;">+ Nueva</a>
                                 </div>
-                                <select class="form-select form-select-sm rounded-3 fw-semibold" style="height: 38px;" id="neu-sel-accion"></select>
+                                <select class="form-select form-select-sm rounded-3 fw-semibold" style="height: 38px;" id="neu-sel-accion">
+                                    <option value="Inspección">Inspección</option>
+                                    <option value="Rotación">Rotación</option>
+                                    <option value="Cambio">Cambio</option>
+                                    <option value="Reparación">Reparación</option>
+                                    <option value="Reencauche">Reencauche</option>
+                                    <option value="Baja">Baja</option>
+                                </select>
                             </div>
                             <div class="col-12 col-sm-2">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.72rem;">ROT (Rotación)</label>
@@ -759,7 +766,7 @@
         window._neuSeleccionarPosicion('1');
     };
 
-    // ── RELLENAR SELECTS / DATALISTS ─────────────────────────────────────────────
+    // ── RELLENAR SELECTS / DATALISTS CON SOPORTE ROBUSTO DE ACCIONES ─────────────
     window._neuRellenarSelects = function(cats) {
         const dlMarca  = document.getElementById('dl-neu-marcas');
         const dlMedida = document.getElementById('dl-neu-medidas');
@@ -769,9 +776,38 @@
         if (dlMarca && cats.marcas) dlMarca.innerHTML = cats.marcas.map(m => `<option value="${m}">`).join('');
         if (dlMedida && cats.medidas) dlMedida.innerHTML = cats.medidas.map(m => `<option value="${m}">`).join('');
         if (dlModelo && cats.modelos) dlModelo.innerHTML = cats.modelos.map(m => `<option value="${m}">`).join('');
-        if (selAccion && cats.acciones) {
-            selAccion.innerHTML = cats.acciones.map(a => `<option value="${a}">${a}</option>`).join('');
-            selAccion.value = 'Inspección';
+        
+        if (selAccion) {
+            const defaultAcciones = ['Inspección', 'Rotación', 'Cambio', 'Reparación', 'Reencauche', 'Baja'];
+            const allAcciones = Array.from(new Set([...defaultAcciones, ...(cats.acciones || [])]));
+            const curVal = selAccion.value;
+            selAccion.innerHTML = allAcciones.map(a => `<option value="${a}">${a}</option>`).join('');
+            if (curVal) {
+                window._neuSetAccionSelect(curVal);
+            }
+        }
+    };
+
+    // Helper para asignar valor al select de acción sin fallos por mayúsculas/acentos
+    window._neuSetAccionSelect = function(val) {
+        const sel = document.getElementById('neu-sel-accion');
+        if (!sel) return;
+        const target = (val || 'Inspección').trim();
+        sel.value = target;
+        if (sel.selectedIndex === -1) {
+            const targetNorm = target.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            for (let i = 0; i < sel.options.length; i++) {
+                const optNorm = sel.options[i].value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+                if (optNorm === targetNorm) {
+                    sel.selectedIndex = i;
+                    return;
+                }
+            }
+            const opt = document.createElement('option');
+            opt.value = target;
+            opt.innerText = target;
+            sel.appendChild(opt);
+            sel.value = target;
         }
     };
 
@@ -851,7 +887,7 @@
             metalness: 0.2,
             roughness: 0.3,
             transparent: true,
-            opacity: window._neuXRayActive ? 0.22 : 1.0
+            opacity: window._neuXRayActive ? 0.18 : 1.0
         });
 
         const darkChassisMat = new THREE.MeshStandardMaterial({
@@ -859,13 +895,13 @@
             metalness: 0.6,
             roughness: 0.4,
             transparent: true,
-            opacity: window._neuXRayActive ? 0.22 : 1.0
+            opacity: window._neuXRayActive ? 0.20 : 1.0
         });
 
         const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.2 });
         const glassMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.1, roughness: 0.1, transparent: true, opacity: 0.65 });
 
-        // Encontrar dimensiones Z de ejes y repuestos para un encuadre 100% perfecto
+        // Identificar si es carreta o semiremolque (S2, S3, R2)
         const isTrailer = cfg.name.includes("Carreta") || cfg.name.includes("Remolque") || cfg.name.includes("Semiremolque") || cfg.name.includes("S2") || cfg.name.includes("S3") || cfg.name.includes("R2");
         
         let allZ = [];
@@ -888,15 +924,35 @@
         vehicleGroup.add(railL);
         vehicleGroup.add(railR);
 
-        // Tanques de combustible / Cajas
-        const tankGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.8, 14);
-        tankGeo.rotateX(Math.PI / 2);
-        const tankL = new THREE.Mesh(tankGeo, chromeMat);
-        tankL.position.set(-1.08, 0.75, centerZ - 0.5);
-        const tankR = tankL.clone();
-        tankR.position.x = 1.08;
-        vehicleGroup.add(tankL);
-        vehicleGroup.add(tankR);
+        // Tanques de combustible (SOLO PARA CAMIONES / TRACTOS — NUNCA EN SEMIREMOLQUES S2/S3/R2)
+        let tankGroup = null;
+        if (!isTrailer) {
+            tankGroup = new THREE.Group();
+            const tankGeo = new THREE.CylinderGeometry(0.32, 0.32, 1.6, 14);
+            tankGeo.rotateX(Math.PI / 2);
+            
+            const tankMat = new THREE.MeshStandardMaterial({ 
+                color: 0x64748b, 
+                metalness: 0.8, 
+                roughness: 0.3,
+                transparent: true,
+                opacity: window._neuXRayActive ? 0.0 : 1.0
+            });
+
+            // Ubicar tanques entre cabina y ejes traseros (sin tapar llantas)
+            const frontAxleZ = Math.min(...cfg.axles.map(a => a.z));
+            const tankZ = frontAxleZ + 2.0;
+
+            const tankL = new THREE.Mesh(tankGeo, tankMat);
+            tankL.position.set(-1.05, 0.75, tankZ);
+            const tankR = tankL.clone();
+            tankR.position.x = 1.05;
+
+            tankGroup.add(tankL);
+            tankGroup.add(tankR);
+            tankGroup.visible = !window._neuXRayActive;
+            vehicleGroup.add(tankGroup);
+        }
 
         // Elemento Frontal (-Z = Frente apuntando Hacia Arriba)
         const frontAxleZ = Math.min(...cfg.axles.map(a => a.z));
@@ -1347,8 +1403,11 @@
                     ? 'btn btn-sm btn-warning text-dark py-1 px-2.5 rounded-pill fw-bold' 
                     : 'btn btn-sm btn-outline-warning py-1 px-2.5 rounded-pill fw-bold';
             }
-            cabPaintMat.opacity = window._neuXRayActive ? 0.22 : 1.0;
-            darkChassisMat.opacity = window._neuXRayActive ? 0.22 : 1.0;
+            cabPaintMat.opacity = window._neuXRayActive ? 0.18 : 1.0;
+            darkChassisMat.opacity = window._neuXRayActive ? 0.20 : 1.0;
+            if (tankGroup) {
+                tankGroup.visible = !window._neuXRayActive;
+            }
             window._neuNeedsRender = true;
         };
     };
@@ -1471,7 +1530,11 @@
             if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = (existente.presion_ant || existente.presion_ant === 0) ? existente.presion_ant : '';
             if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = (existente.presion_actual || existente.presion_actual === 0) ? existente.presion_actual : '';
             if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = existente.estado || 'NUEVA';
-            if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = existente.accion || 'Inspección';
+            
+            // Asignación garantizada de acción (Rotación si fue rotada, o existente.accion)
+            const accionVal = (existente.rot === 'SI' || existente.accion === 'Rotación') ? 'Rotación' : (existente.accion || 'Inspección');
+            window._neuSetAccionSelect(accionVal);
+            
             if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = existente.rot || 'NO';
             if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = existente.observaciones || existente.obs || '';
             
@@ -1500,7 +1563,10 @@
             if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = prev.presion_actual || 100;
             if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = prev.presion_actual || 100;
             if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = prev.estado || 'NUEVA';
-            if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = 'Inspección';
+            window._neuSetAccionSelect('Inspección');
+            if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
+        } else {
+            window._neuSetAccionSelect('Inspección');
             if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
         }
 
@@ -1645,7 +1711,7 @@
         if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = '';
         if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = '';
         if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = 'NUEVA';
-        if (document.getElementById('neu-sel-accion')) document.getElementById('neu-sel-accion').value = 'Inspección';
+        window._neuSetAccionSelect('Inspección');
         if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
         if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = '';
 
@@ -1680,6 +1746,8 @@
         const idx = window._neuLlantasActuales.findIndex(l => String(l.posicion) === String(pos));
         const prevItem = idx !== -1 ? window._neuLlantasActuales[idx] : null;
 
+        const isRotacion = (rot === 'SI' || accion === 'Rotación' || (prevItem && prevItem.rot === 'SI'));
+
         const item = {
             posicion: String(pos),
             id: String(pos),
@@ -1696,9 +1764,9 @@
             psiActual: presion_actual,
             estado,
             state: estado,
-            accion,
-            action: accion,
-            rot: (rot === 'SI' || (prevItem && prevItem.rot === 'SI')) ? 'SI' : 'NO',
+            accion: isRotacion ? 'Rotación' : accion,
+            action: isRotacion ? 'Rotación' : accion,
+            rot: isRotacion ? 'SI' : 'NO',
             rotTarget: prevItem ? prevItem.rotTarget : null,
             observaciones: (observaciones && observaciones !== 'Ninguna') ? observaciones : (prevItem ? prevItem.observaciones : 'Ninguna'),
             obs: (observaciones && observaciones !== 'Ninguna') ? observaciones : (prevItem ? prevItem.obs : 'Ninguna'),
@@ -1818,7 +1886,7 @@
                 if (tipo === 'marcas') document.getElementById('neu-sel-marca').value = valor.toUpperCase();
                 if (tipo === 'medidas') document.getElementById('neu-sel-medida').value = valor.toUpperCase();
                 if (tipo === 'modelos') document.getElementById('neu-sel-modelo').value = valor.toUpperCase();
-                if (tipo === 'acciones') document.getElementById('neu-sel-accion').value = valor;
+                if (tipo === 'acciones') window._neuSetAccionSelect(valor);
             } else {
                 alert(`Error: ${data.error || 'No se pudo registrar'}`);
             }
