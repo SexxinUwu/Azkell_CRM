@@ -209,10 +209,12 @@ module.exports = function (db, broadcast, logAudit) {
                 chunk.forEach(v => {
                     const id_remoto = v.id || null;
                     const fecha = safeSqlDate(v.fecha);
+                    const anio = fecha.slice(0, 4);
                     const estado = (v.fl_estado === 1 || v.fl_estado === '1') ? 'VÁLIDO' : 'ANULADO';
                     const correlativo = v.serie ? `${v.serie}-${v.numero}` : (v.numero || '');
-                    const estado_pago = (v.tipo_pago || '').toUpperCase().includes('CRED') ? 'PENDIENTE' : 'PAGADO';
-                    const viaje = String(v.viaje_numero || '').trim();
+                    const estado_pago = (v.tipo_pago || '').toUpperCase().includes('CRED') ? 'NO EXISTE PAGO' : 'PAGADO';
+                    const rawViaje = String(v.viaje_numero || '').trim();
+                    const viaje = rawViaje ? (rawViaje.includes('-') ? rawViaje : `${anio}-${rawViaje}`) : '';
                     const caja = '';
                     const estado_caja = 'PROCESADO';
                     const vehiculo = String(v.placa || 'SIN-PLACA').toUpperCase().trim();
@@ -837,6 +839,38 @@ module.exports = function (db, broadcast, logAudit) {
             });
         } catch (err) {
             console.error("Error obteniendo catálogos de combustible:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // ============================================================
+    // 11. 🛒 CONSULTAR COMPRAS EXTERNAS (vw_combustible_compra_externa)
+    // ============================================================
+    router.get('/compras-externas', async (req, res) => {
+        try {
+            const rdb = getRemoteDb();
+            const [rows] = await rdb.query(
+                `SELECT * FROM vw_combustible_compra_externa ORDER BY fecha DESC LIMIT 500`
+            );
+            res.json({ ok: true, data: rows || [] });
+        } catch (err) {
+            console.error("Error consultando compras externas:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // ============================================================
+    // 12. ⛽ DIRECTORIO DE ESTACIONES / GRIFOS (vw_combustible_estacion)
+    // ============================================================
+    router.get('/estaciones-catalogo', async (req, res) => {
+        try {
+            const rdb = getRemoteDb();
+            const [rows] = await rdb.query(
+                `SELECT * FROM vw_combustible_estacion ORDER BY estacion_nombre ASC`
+            );
+            res.json({ ok: true, data: rows || [] });
+        } catch (err) {
+            console.error("Error consultando catálogo de estaciones:", err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });
