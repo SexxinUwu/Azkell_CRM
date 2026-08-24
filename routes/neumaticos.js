@@ -737,13 +737,21 @@ module.exports = function (db, broadcast, logAudit) {
                 ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci
             `, [placa]);
 
+            // Obtener datos de la última inspección
             const datosPosiciones = {};
             rows.forEach(r => {
                 const k = String(r.posicion || '').trim().toUpperCase();
                 if (k) datosPosiciones[k] = r;
             });
 
-            res.json({ ok: true, placa, datosPosiciones });
+            // Obtener configuración registrada del vehículo desde la tabla placas
+            const [pRows] = await tdb.query(`
+                SELECT configuracion, tipo FROM placas WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?)) LIMIT 1
+            `, [placa]);
+
+            const configPlaca = (pRows && pRows.length > 0) ? (pRows[0].configuracion || pRows[0].tipo || '') : '';
+
+            res.json({ ok: true, placa, configuracion: configPlaca, datosPosiciones });
         } catch (err) {
             console.error("Error en placa-ultima:", err);
             res.status(500).json({ ok: false, error: err.message });

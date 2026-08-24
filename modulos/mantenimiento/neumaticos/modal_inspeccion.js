@@ -676,8 +676,17 @@
         const [cats, resUlt] = await Promise.all([catsPromise, ultPromise]);
         
         if (cats) window._neuRellenarSelects(cats);
-        if (resUlt && resUlt.ok && resUlt.datosPosiciones) {
-            window._neuUltimaInspeccionMap = resUlt.datosPosiciones;
+        if (resUlt && resUlt.ok) {
+            if (resUlt.datosPosiciones) {
+                window._neuUltimaInspeccionMap = resUlt.datosPosiciones;
+            }
+            if (resUlt.configuracion && !configCode) {
+                const autoKey = String(resUlt.configuracion).toUpperCase().trim();
+                const mappedAuto = ALIAS_MAPPER[autoKey] || ALIAS_MAPPER[autoKey.replace(/[^A-Z0-9]/g, '')];
+                if (mappedAuto && mappedAuto !== window._neuConfigActualKey) {
+                    window._neuCambiarConfiguracion(mappedAuto);
+                }
+            }
         }
 
         window._neuSeleccionarPosicion('1');
