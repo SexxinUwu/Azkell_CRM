@@ -544,9 +544,9 @@
                             <td class="py-2.5 px-3"><span class="badge bg-info bg-opacity-10 text-info border">${v.producto}</span></td>
                             <td class="py-2.5 px-3 fw-semibold">${v.grifo}</td>
                             <td class="py-2.5 px-3 text-end font-monospace"><strong class="text-success">${v.odometro > 0 ? v.odometro.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'} Km</strong></td>
-                            <td class="py-2.5 px-3 text-end font-monospace text-muted fst-italic small">— Ref. Base —</td>
-                            <td class="py-2.5 px-3 text-end font-monospace text-muted fst-italic small">— Ref. —</td>
-                            <td class="py-2.5 px-3 text-end font-monospace text-muted fst-italic small">— Ref. —</td>
+                            <td class="py-2.5 px-3 text-end font-monospace fw-bold text-primary">${v.galones > 0 ? v.galones.toFixed(2) : '0.00'}</td>
+                            <td class="py-2.5 px-3 text-end font-monospace">S/ ${(v.galones > 0 ? (v.importe / v.galones) : 0).toFixed(2)}</td>
+                            <td class="py-2.5 px-3 text-end font-monospace fw-bold text-success">S/ ${(v.importe || 0).toFixed(2)}</td>
                             <td class="py-2.5 px-3 text-truncate" style="max-width:180px;" title="${v.conductor}">${v.conductor}</td>
                         </tr>
                     `;
