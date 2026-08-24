@@ -107,11 +107,15 @@ module.exports = function (db, broadcast, logAudit) {
         next();
     });
 
-    function safeSqlDate(val) {
+    function safeSqlDate(val, serie) {
         if (!val) return new Date().toISOString().slice(0, 19).replace('T', ' ');
         try {
-            const dt = (val instanceof Date) ? val : new Date(val);
+            let dt = (val instanceof Date) ? new Date(val.getTime()) : new Date(val);
             if (!isNaN(dt.getTime())) {
+                const currentYear = new Date().getFullYear();
+                if (dt.getFullYear() > currentYear && serie && /^\d{4}$/.test(serie)) {
+                    dt.setFullYear(parseInt(serie, 10));
+                }
                 return dt.toISOString().slice(0, 19).replace('T', ' ');
             }
         } catch(e) {}
@@ -208,7 +212,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                 chunk.forEach(v => {
                     const id_remoto = v.id || null;
-                    const fecha = safeSqlDate(v.fecha);
+                    const fecha = safeSqlDate(v.fecha, v.serie);
                     const anio = fecha.slice(0, 4);
                     const estado = (v.fl_estado === 1 || v.fl_estado === '1') ? 'VÁLIDO' : 'ANULADO';
                     const correlativo = v.serie ? `${v.serie}-${v.numero}` : (v.numero || '');
