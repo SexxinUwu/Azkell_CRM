@@ -556,7 +556,7 @@
                                     <label class="form-label text-muted fw-bold small m-0" style="font-size:0.72rem;">Acción</label>
                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('acciones')" class="text-primary small fw-bold" style="font-size:0.7rem;">+ Nueva</a>
                                 </div>
-                                <select class="form-select form-select-sm rounded-3 fw-semibold" style="height: 38px;" id="neu-sel-accion">
+                                <select class="form-select form-select-sm rounded-3 fw-semibold" style="height: 38px;" id="neu-sel-accion" onchange="window._neuOnChangeAccion(this.value)">
                                     <option value="Inspección">Inspección</option>
                                     <option value="Rotación">Rotación</option>
                                     <option value="Instalación">Instalación</option>
@@ -568,7 +568,7 @@
                             </div>
                             <div class="col-12 col-sm-2">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.72rem;">ROT (Rotación)</label>
-                                <select class="form-select form-select-sm rounded-3 fw-semibold" style="height: 38px;" id="neu-sel-rot">
+                                <select class="form-select form-select-sm rounded-3 fw-semibold" style="height: 38px;" id="neu-sel-rot" onchange="window._neuOnChangeRot(this.value)">
                                     <option value="NO">NO</option>
                                     <option value="SI">SI</option>
                                 </select>
@@ -849,6 +849,23 @@
         opt.innerText = target;
         sel.appendChild(opt);
         sel.value = target;
+    };
+
+    window._neuOnChangeAccion = function(val) {
+        const isRot = (val === 'Rotación');
+        const selRot = document.getElementById('neu-sel-rot');
+        if (selRot) selRot.value = isRot ? 'SI' : 'NO';
+    };
+
+    window._neuOnChangeRot = function(val) {
+        const isRot = (val === 'SI');
+        if (isRot) {
+            window._neuSetAccionSelect('Rotación');
+        } else {
+            const pos = window._neuPosicionActiva || '1';
+            const tieneHistorial = window._neuUltimaInspeccionMap && window._neuUltimaInspeccionMap[String(pos).toUpperCase()];
+            window._neuSetAccionSelect(tieneHistorial ? 'Inspección' : 'Instalación');
+        }
     };
 
     // ── RENDER POSICIONES EN BARRA TÁCTIL ─────────────────────────────────────────
@@ -1558,7 +1575,10 @@
 
         window._neuLimpiarFormLlanta();
 
+        const posKey = String(pos).toUpperCase();
+        const tieneHistorial = !!(window._neuUltimaInspeccionMap && window._neuUltimaInspeccionMap[posKey]);
         const existente = window._neuLlantasActuales.find(l => String(l.posicion) === String(pos));
+
         if (existente) {
             if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = existente.marca || '';
             if (document.getElementById('neu-sel-medida')) document.getElementById('neu-sel-medida').value = existente.medida || '';
@@ -1571,11 +1591,20 @@
             if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = (existente.presion_actual || existente.presion_actual === 0) ? existente.presion_actual : '';
             if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = existente.estado || 'NUEVA';
             
-            // Asignación garantizada de acción (Rotación si fue rotada, o existente.accion)
-            const accionVal = (existente.rot === 'SI' || existente.accion === 'Rotación') ? 'Rotación' : (existente.accion || 'Inspección');
+            // Asignación de acción según estado y flujo de trabajo
+            let accionVal = existente.accion;
+            let rotVal = existente.rot || 'NO';
+
+            if (existente.rot === 'SI' || existente.accion === 'Rotación') {
+                accionVal = 'Rotación';
+                rotVal = 'SI';
+            } else if (!accionVal || accionVal === '—') {
+                accionVal = tieneHistorial ? 'Inspección' : 'Instalación';
+                rotVal = 'NO';
+            }
+
             window._neuSetAccionSelect(accionVal);
-            
-            if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = existente.rot || 'NO';
+            if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = rotVal;
             if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = existente.observaciones || existente.obs || '';
             
             window._neuFotos = { foto1: existente.foto1 || null, foto2: existente.foto2 || null, foto3: existente.foto3 || null };
@@ -1591,8 +1620,9 @@
                     }
                 }
             });
-        } else if (window._neuUltimaInspeccionMap && window._neuUltimaInspeccionMap[String(pos).toUpperCase()]) {
-            const prev = window._neuUltimaInspeccionMap[String(pos).toUpperCase()];
+        } else if (tieneHistorial) {
+            // Posición con registro histórico previo -> Por defecto 'Inspección'
+            const prev = window._neuUltimaInspeccionMap[posKey];
             if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = prev.marca || 'WINDPOWER';
             if (document.getElementById('neu-sel-medida')) document.getElementById('neu-sel-medida').value = prev.medida || '275/70R22.5';
             if (document.getElementById('neu-sel-modelo')) document.getElementById('neu-sel-modelo').value = prev.modelo || 'PROGUO1';
@@ -1606,7 +1636,8 @@
             window._neuSetAccionSelect('Inspección');
             if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
         } else {
-            window._neuSetAccionSelect('Inspección');
+            // Posición o placa nueva sin registro previo -> Por defecto 'Instalación'
+            window._neuSetAccionSelect('Instalación');
             if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
         }
 
@@ -1751,7 +1782,11 @@
         if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = '';
         if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = '';
         if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = 'NUEVA';
-        window._neuSetAccionSelect('Inspección');
+        
+        const pos = window._neuPosicionActiva || '1';
+        const tieneHistorial = !!(window._neuUltimaInspeccionMap && window._neuUltimaInspeccionMap[String(pos).toUpperCase()]);
+        window._neuSetAccionSelect(tieneHistorial ? 'Inspección' : 'Instalación');
+        
         if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
         if (document.getElementById('neu-input-obs-item')) document.getElementById('neu-input-obs-item').value = '';
 
@@ -1786,7 +1821,7 @@
         const idx = window._neuLlantasActuales.findIndex(l => String(l.posicion) === String(pos));
         const prevItem = idx !== -1 ? window._neuLlantasActuales[idx] : null;
 
-        const isRotacion = (rot === 'SI' || accion === 'Rotación' || (prevItem && prevItem.rot === 'SI'));
+        const isRotacion = (rot === 'SI' || accion === 'Rotación');
 
         const item = {
             posicion: String(pos),
@@ -1807,7 +1842,7 @@
             accion: isRotacion ? 'Rotación' : accion,
             action: isRotacion ? 'Rotación' : accion,
             rot: isRotacion ? 'SI' : 'NO',
-            rotTarget: prevItem ? prevItem.rotTarget : null,
+            rotTarget: isRotacion ? (prevItem ? prevItem.rotTarget : null) : null,
             observaciones: (observaciones && observaciones !== 'Ninguna') ? observaciones : (prevItem ? prevItem.observaciones : 'Ninguna'),
             obs: (observaciones && observaciones !== 'Ninguna') ? observaciones : (prevItem ? prevItem.obs : 'Ninguna'),
             foto1: window._neuFotos.foto1 || (prevItem ? prevItem.foto1 : null),
