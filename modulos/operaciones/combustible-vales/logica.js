@@ -7,6 +7,8 @@
     window._cvTotalRegistros = 0;
     window._cvSeleccionados = new Set();
     window._cvParsedImportData = [];
+    window._cvSortBy = 'correlativo';
+    window._cvSortDir = 'DESC';
     let _cvSearchTimeout = null;
 
     // Inicializador del módulo
@@ -18,8 +20,35 @@
         if (btnSync) {
             btnSync.style.display = isMarsisa ? 'inline-flex' : 'none';
         }
+        window.cvActualizarIconosOrden();
         window._cvCargarCatalogos();
         window.cvCargarDatos();
+    };
+
+    // ── GESTOR DE ORDENAMIENTO POR COLUMNA ──────────────────────────────────────────
+    window.cvOrdenarPor = function(col) {
+        if (window._cvSortBy === col) {
+            window._cvSortDir = (window._cvSortDir === 'ASC' ? 'DESC' : 'ASC');
+        } else {
+            window._cvSortBy = col;
+            window._cvSortDir = (col === 'fecha' || col === 'correlativo' || col === 'kilometraje' || col === 'galones' || col === 'importe') ? 'DESC' : 'ASC';
+        }
+        window.cvActualizarIconosOrden();
+        window.cvCargarDatos(1);
+    };
+
+    window.cvActualizarIconosOrden = function() {
+        document.querySelectorAll('.cv-sort-icon').forEach(icon => {
+            icon.className = 'bi bi-arrow-down-up cv-sort-icon text-muted';
+        });
+        const activeIcon = document.getElementById(`cv-ico-${window._cvSortBy}`);
+        if (activeIcon) {
+            if (window._cvSortDir === 'ASC') {
+                activeIcon.className = 'bi bi-arrow-up cv-sort-icon text-warning fw-bold';
+            } else {
+                activeIcon.className = 'bi bi-arrow-down cv-sort-icon text-warning fw-bold';
+            }
+        }
     };
 
     // ── SINCRONIZACIÓN DIRECTA DESDE HOST REMOTO (168.231.98.23) ───────────────────
@@ -90,7 +119,9 @@
 
         const params = new URLSearchParams({
             page: window._cvPaginaActual,
-            limit: window._cvLimitePorPagina
+            limit: window._cvLimitePorPagina,
+            sort_by: window._cvSortBy || 'correlativo',
+            sort_dir: window._cvSortDir || 'DESC'
         });
 
         const s = document.getElementById('cv-filter-search')?.value;

@@ -96,6 +96,24 @@
     border-radius: 4px;
 }
 
+.cv-sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.cv-sortable:hover {
+    background: #1e293b !important;
+    color: #38bdf8 !important;
+}
+.cv-sort-icon {
+    font-size: 0.68rem;
+    opacity: 0.6;
+    margin-left: 3px;
+}
+.cv-sortable:hover .cv-sort-icon {
+    opacity: 1;
+}
+
 @media (max-width: 768px) {
     #moduloCombustibleValesContenedor {
         padding: 0.5rem 0.5rem 80px 0.5rem !important;
@@ -208,37 +226,37 @@
                             <input type="checkbox" class="form-check-input" id="cv-chk-all" onchange="window.cvToggleSelectAll(this)">
                         </th>
                         <th>ACCIÓN</th>
-                        <th>FECHA</th>
-                        <th>ESTADO</th>
-                        <th>CORRELATIVO</th>
-                        <th>ESTADO PAGO</th>
-                        <th>VIAJE</th>
-                        <th>CAJA</th>
-                        <th>ESTADO CAJA</th>
-                        <th>CLASE VEHICULO</th>
-                        <th>VEHICULO</th>
-                        <th>CONDUCTOR</th>
-                        <th>RUTA</th>
-                        <th>DEPARTAMENTO</th>
-                        <th>PROVINCIA</th>
-                        <th>DISTRITO</th>
-                        <th>ESTACIÓN</th>
-                        <th>TIPO COMBUSTIBLE</th>
-                        <th>PROVEEDOR</th>
-                        <th>RUC</th>
-                        <th class="text-end">KILOMETRAJE</th>
-                        <th class="text-end">PESO (Tn)</th>
-                        <th class="text-end">GALONES</th>
-                        <th class="text-end">COSTO/GL</th>
-                        <th>TIPO PAGO</th>
-                        <th>DÍAS CRÉDITO</th>
-                        <th>MONEDA</th>
-                        <th class="text-end">IMPORTE</th>
-                        <th>NÚMERO COMPROBANTE</th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('fecha')">FECHA <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-fecha"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('estado')">ESTADO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-estado"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('correlativo')">CORRELATIVO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-correlativo"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('estado_pago')">ESTADO PAGO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-estado_pago"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('viaje')">VIAJE <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-viaje"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('caja')">CAJA <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-caja"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('estado_caja')">ESTADO CAJA <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-estado_caja"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('clase_vehiculo')">CLASE VEHICULO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-clase_vehiculo"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('vehiculo')">VEHICULO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-vehiculo"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('conductor')">CONDUCTOR <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-conductor"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('ruta')">RUTA <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-ruta"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('departamento')">DEPARTAMENTO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-departamento"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('provincia')">PROVINCIA <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-provincia"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('distrito')">DISTRITO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-distrito"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('estacion')">ESTACIÓN <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-estacion"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('tipo_combustible')">TIPO COMBUSTIBLE <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-tipo_combustible"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('proveedor')">PROVEEDOR <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-proveedor"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('ruc')">RUC <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-ruc"></i></th>
+                        <th class="cv-sortable text-end" onclick="window.cvOrdenarPor('kilometraje')">KILOMETRAJE <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-kilometraje"></i></th>
+                        <th class="cv-sortable text-end" onclick="window.cvOrdenarPor('peso_tn')">PESO (Tn) <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-peso_tn"></i></th>
+                        <th class="cv-sortable text-end" onclick="window.cvOrdenarPor('galones')">GALONES <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-galones"></i></th>
+                        <th class="cv-sortable text-end" onclick="window.cvOrdenarPor('costo_gl')">COSTO/GL <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-costo_gl"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('tipo_pago')">TIPO PAGO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-tipo_pago"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('dias_credito')">DÍAS CRÉDITO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-dias_credito"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('moneda')">MONEDA <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-moneda"></i></th>
+                        <th class="cv-sortable text-end" onclick="window.cvOrdenarPor('importe')">IMPORTE <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-importe"></i></th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('numero_comprobante')">NÚMERO COMPROBANTE <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-numero_comprobante"></i></th>
                         <th>TIPO CAMBIO</th>
                         <th>ARCHIVO</th>
                         <th>OBSERVACIÓN</th>
-                        <th>TIPO</th>
+                        <th class="cv-sortable" onclick="window.cvOrdenarPor('tipo')">TIPO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-tipo"></i></th>
                     </tr>
                 </thead>
                 <tbody id="cv-tbody">

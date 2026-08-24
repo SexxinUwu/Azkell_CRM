@@ -380,11 +380,46 @@ module.exports = function (db, broadcast, logAudit) {
             const costoPromedioGalon = totalGalones > 0 ? (totalGasto / totalGalones) : 0;
             const totalPages = Math.ceil(totalRegistros / limit) || 1;
 
-            // Registros paginados
+            // Ordenamiento dinámico
+            const validSortCols = {
+                'fecha': 'fecha',
+                'correlativo': 'correlativo',
+                'estado': 'estado',
+                'estado_pago': 'estado_pago',
+                'viaje': 'viaje',
+                'caja': 'caja',
+                'estado_caja': 'estado_caja',
+                'clase_vehiculo': 'clase_vehiculo',
+                'vehiculo': 'vehiculo',
+                'conductor': 'conductor',
+                'ruta': 'ruta',
+                'departamento': 'departamento',
+                'provincia': 'provincia',
+                'distrito': 'distrito',
+                'estacion': 'estacion',
+                'tipo_combustible': 'tipo_combustible',
+                'proveedor': 'proveedor',
+                'ruc': 'ruc',
+                'kilometraje': 'kilometraje',
+                'peso_tn': 'peso_tn',
+                'galones': 'galones',
+                'costo_gl': 'costo_gl',
+                'tipo_pago': 'tipo_pago',
+                'dias_credito': 'dias_credito',
+                'moneda': 'moneda',
+                'importe': 'importe',
+                'numero_comprobante': 'numero_comprobante',
+                'tipo': 'tipo'
+            };
+
+            const sortCol = validSortCols[req.query.sort_by] || 'correlativo';
+            const sortDir = (req.query.sort_dir || 'DESC').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+            // Registros paginados con orden dinámico
             const [rows] = await tdb.query(
                 `SELECT * FROM combustible_vales 
                  ${whereSQL} 
-                 ORDER BY correlativo DESC, id_remoto DESC 
+                 ORDER BY ${sortCol} ${sortDir}, id_remoto DESC 
                  LIMIT ? OFFSET ?`,
                 [...params, limit, offset]
             );
