@@ -92,15 +92,41 @@ module.exports = function (db, broadcast, logAudit) {
         next();
     });
 
+    function safeSqlDate(val) {
+        if (!val) return new Date().toISOString().slice(0, 19).replace('T', ' ');
+        try {
+            const dt = (val instanceof Date) ? val : new Date(val);
+            if (!isNaN(dt.getTime())) {
+                return dt.toISOString().slice(0, 19).replace('T', ' ');
+            }
+        } catch(e) {}
+        return new Date().toISOString().slice(0, 19).replace('T', ' ');
+    }
+
     // ============================================================
     // 1. 🔄 SINCRONIZACIÓN DIRECTA DESDE LA BASE DE DATOS EXTERNA (168.231.98.23)
     // ============================================================
     router.post('/sincronizar-remoto', async (req, res) => {
         try {
+            const tenantId = req.tenantSlug || req.headers['x-tenant-id'] || 'default';
+            const host = (req.headers.host || '').toLowerCase();
+            const isMarsisa = tenantId.toLowerCase().includes('marsisa') || host.includes('marsisa') || tenantId === 'master';
+
+            if (!isMarsisa) {
+                return res.status(400).json({
+                    ok: false,
+                    error: 'La sincronización remota con MarsisaSoft solo está habilitada para la empresa Marsisa (marsisa.azkell.com).'
+                });
+            }
+
             const tdb = getDb(req);
             const rdb = getRemoteDb();
 
-            console.log('🔄 Iniciando sincronización remota de combustible desde 168.231.98.23...');
+            console.log('🔄 Iniciando sincronización remota de combustible desde 168.231.98.23 para Marsisa...');
+
+            // Consultar correlativos existentes para no duplicar
+            const [existentesRows] = await tdb.query("SELECT DISTINCT correlativo FROM combustible_vales WHERE correlativo != ''");
+            const existentesSet = new Set(existentesRows.map(r => r.correlativo));
 
             // Consultar los vales de la vista remota
             const [remotoVales] = await rdb.query(
@@ -111,15 +137,30 @@ module.exports = function (db, broadcast, logAudit) {
                 return res.json({ ok: true, sincronizados: 0, totalRemotos: 0, mensaje: 'No hay registros en el servidor remoto.' });
             }
 
+            // Filtrar solo los vales que no estén ya registrados
+            const nuevosVales = remotoVales.filter(v => {
+                const corr = v.serie ? `${v.serie}-${v.numero}` : (v.numero || '');
+                return !corr || !existentesSet.has(corr);
+            });
+
+            if (nuevosVales.length === 0) {
+                return res.json({
+                    ok: true,
+                    totalRemotos: remotoVales.length,
+                    sincronizados: 0,
+                    mensaje: 'Todos los vales de MarsisaSoft ya se encuentran sincronizados en el ERP.'
+                });
+            }
+
             let sincronizados = 0;
             const batchSize = 100;
 
-            for (let i = 0; i < remotoVales.length; i += batchSize) {
-                const chunk = remotoVales.slice(i, i + batchSize);
+            for (let i = 0; i < nuevosVales.length; i += batchSize) {
+                const chunk = nuevosVales.slice(i, i + batchSize);
                 const values = [];
 
                 chunk.forEach(v => {
-                    const fecha = v.fecha ? new Date(v.fecha).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' ');
+                    const fecha = safeSqlDate(v.fecha);
                     const estado = (v.fl_estado === 1 || v.fl_estado === '1') ? 'VÁLIDO' : 'ANULADO';
                     const correlativo = v.serie ? `${v.serie}-${v.numero}` : (v.numero || '');
                     const estado_pago = (v.tipo_pago || '').toUpperCase().includes('CRED') ? 'PENDIENTE' : 'PAGADO';
@@ -173,14 +214,14 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             }
 
-            if (logAudit) logAudit(req, 'COMBUSTIBLE', 'SINCRONIZACION_REMOTA', `Sincronizados ${sincronizados} vales desde servidor externo`);
+            if (logAudit) logAudit(req, 'COMBUSTIBLE', 'SINCRONIZACION_REMOTA', `Sincronizados ${sincronizados} nuevos vales desde MarsisaSoft`);
             if (broadcast) broadcast({ type: 'COMBUSTIBLE_VALES_SINCRONIZADOS', cantidad: sincronizados });
 
             res.json({
                 ok: true,
                 totalRemotos: remotoVales.length,
                 sincronizados,
-                mensaje: `Se sincronizaron exitosamente ${sincronizados} vales desde el servidor remoto.`
+                mensaje: `Se sincronizaron exitosamente ${sincronizados} nuevos vales desde MarsisaSoft.`
             });
         } catch (err) {
             console.error("❌ Error en sincronización remota de combustible:", err);
