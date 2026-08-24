@@ -126,7 +126,7 @@ window.rotCargar = function() {
 window.rotChipEstado = function(btn, estado) {
     document.querySelectorAll('#moduloReportesOT .rot-chip').forEach(function(c) { c.classList.remove('active'); });
     if (btn) btn.classList.add('active');
-    window._rotFiltroEstado = estado;
+    window._rotFiltroEstado = estado || '';
     window.rotFiltrar();
 };
 
@@ -138,7 +138,7 @@ window.rotFiltrar = function() {
     var filMes  = rotVal('rot-fil-mes');        // 'YYYY-MM'
     var filDesde= rotVal('rot-fil-desde');       // 'YYYY-MM-DD'
     var filHasta= rotVal('rot-fil-hasta');
-    var filEst  = window._rotFiltroEstado || '';
+    var filEst  = window._rotFiltroEstado || rotVal('rot-fil-estado') || '';
 
     var resultado = window.rotData.filter(function(ot) {
         var det = rotDetalles(ot);
@@ -166,8 +166,32 @@ window.rotFiltrar = function() {
         if (filDesde && fechaOT < filDesde) return false;
         // Filtro hasta
         if (filHasta && fechaOT > filHasta) return false;
-        // Filtro estado (aprobación)
-        if (filEst && ot.aprobacion !== filEst) return false;
+        
+        // Filtro estado / tipo OT
+        if (filEst) {
+            var estOT = ot.estado || 'Pendiente';
+            var tipoOT = (det.tipo_ot || ot.tipo || '').toUpperCase();
+
+            if (filEst === 'Correctivo') {
+                if (!tipoOT.includes('CORRECTIVO')) return false;
+            } else if (filEst === 'Preventivo') {
+                if (!tipoOT.includes('PREVENTIVO')) return false;
+            } else if (filEst === 'Pendiente') {
+                if (estOT !== 'Pendiente' && ['En Proceso', 'Pausada', 'Finalizado', 'Cerrada', 'Anulado'].includes(estOT)) return false;
+            } else if (filEst === 'En Proceso') {
+                if (estOT !== 'En Proceso' && estOT !== 'Pausada') return false;
+            } else if (filEst === 'Pausada') {
+                if (estOT !== 'Pausada') return false;
+            } else if (filEst === 'Finalizado' || filEst === 'Finalizadas' || filEst === 'Cerrada') {
+                if (estOT !== 'Finalizado' && estOT !== 'Cerrada' && ot.aprobacion !== 'Cerrada') return false;
+            } else if (filEst === 'Anulado') {
+                if (estOT !== 'Anulado') return false;
+            } else {
+                var target = filEst.toLowerCase();
+                var matchEst = (estOT.toLowerCase() === target) || ((ot.aprobacion || '').toLowerCase() === target);
+                if (!matchEst) return false;
+            }
+        }
         return true;
     });
 
