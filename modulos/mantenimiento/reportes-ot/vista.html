@@ -427,16 +427,16 @@
                     </div>
                     <div class="mb-2">
                         <label class="small fw-bold text-secondary mb-1">MES</label>
-                        <input type="month" id="rot-fil-mes" class="form-control form-control-sm rounded-3" onchange="window.rotFiltrar()">
+                        <input type="month" id="rot-fil-mes" class="form-control form-control-sm rounded-3" onchange="document.getElementById('rot-fil-desde').value=''; document.getElementById('rot-fil-hasta').value=''; window.rotFiltrar();">
                     </div>
                     <div class="mb-3">
                         <label class="small fw-bold text-secondary mb-1">RANGO FECHAS</label>
                         <div class="d-flex gap-1 align-items-center">
-                            <input type="date" id="rot-fil-desde" class="form-control form-control-sm rounded-3" onchange="window.rotFiltrar()">
-                            <input type="date" id="rot-fil-hasta" class="form-control form-control-sm rounded-3" onchange="window.rotFiltrar()">
+                            <input type="date" id="rot-fil-desde" class="form-control form-control-sm rounded-3" onchange="document.getElementById('rot-fil-mes').value=''; window.rotFiltrar();">
+                            <input type="date" id="rot-fil-hasta" class="form-control form-control-sm rounded-3" onchange="document.getElementById('rot-fil-mes').value=''; window.rotFiltrar();">
                         </div>
                     </div>
-                    <button class="btn btn-light border text-danger w-100 fw-bold small rounded-3" onclick="document.getElementById('rot-fil-ot').value=''; document.getElementById('rot-fil-placa').value=''; document.getElementById('rot-fil-mes').value=''; document.getElementById('rot-fil-desde').value=''; document.getElementById('rot-fil-hasta').value=''; window.rotFiltrar();">
+                    <button class="btn btn-light border text-danger w-100 fw-bold small rounded-3" onclick="window._rotFiltroEstado=''; document.querySelectorAll('#moduloReportesOT .ck-segment-item').forEach((b,i)=>b.classList.toggle('active', i===0)); document.querySelectorAll('#moduloReportesOT .ck-kpi-card').forEach((b,i)=>b.classList.toggle('active', i===0)); document.getElementById('rot-fil-ot').value=''; document.getElementById('rot-fil-placa').value=''; document.getElementById('rot-fil-mes').value=''; document.getElementById('rot-fil-desde').value=''; document.getElementById('rot-fil-hasta').value=''; window.rotFiltrar();">
                         <i class="bi bi-trash me-1"></i> Limpiar Filtros
                     </button>
                 </div>
@@ -476,6 +476,7 @@
                 <tr>
                     <th style="min-width:110px; text-align:center;">Acciones</th>
                     <th style="min-width:110px;">N° OT</th>
+                    <th style="min-width:95px; white-space:nowrap;">Fecha</th>
                     <th style="min-width:85px;">Placa</th>
                     <th style="min-width:105px;">Kilometraje</th>
                     <th style="min-width:185px;">Tipo / Sub Tipo</th>
@@ -483,7 +484,6 @@
                     <th style="min-width:130px; white-space:nowrap;">Status Rampa</th>
                     <th style="min-width:180px; max-width:260px;">Observaciones</th>
                     <th style="min-width:95px; text-align:right;">Costo Total</th>
-                    <th style="min-width:95px; white-space:nowrap;">Fecha</th>
                     <th style="width:40px; text-align:center;">Ver</th>
                 </tr>
             </thead>

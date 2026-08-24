@@ -142,7 +142,8 @@ window.rotFiltrar = function() {
 
     var resultado = window.rotData.filter(function(ot) {
         var det = rotDetalles(ot);
-        var fechaOT = rotFechaISO(ot.creado_en);
+        var rawFecha = ot.fecha_ingreso || ot.creado_en || ot.created_at || (det ? (det.fecha_ingreso || det.fecha) : '');
+        var fechaOT = rotFechaISO(rawFecha);
 
         // Búsqueda libre (N° OT, técnico, supervisor, placa)
         if (libre) {
@@ -160,12 +161,14 @@ window.rotFiltrar = function() {
         if (filOT && String(ot.ticket_entrada || ot.id_ot || '').toLowerCase().indexOf(filOT) === -1) return false;
         // Filtro placa
         if (filPlaca && (ot.placa || '').toUpperCase().indexOf(filPlaca) === -1) return false;
-        // Filtro mes
-        if (filMes && fechaOT.slice(0, 7) !== filMes) return false;
-        // Filtro desde
-        if (filDesde && fechaOT < filDesde) return false;
-        // Filtro hasta
-        if (filHasta && fechaOT > filHasta) return false;
+
+        // Filtro fecha (mes / desde / hasta)
+        if (filMes || filDesde || filHasta) {
+            if (!fechaOT) return false;
+            if (filMes && fechaOT.slice(0, 7) !== filMes) return false;
+            if (filDesde && fechaOT < filDesde) return false;
+            if (filHasta && fechaOT > filHasta) return false;
+        }
         
         // Filtro estado / tipo OT
         if (filEst) {
@@ -360,6 +363,7 @@ window.rotRenderTabla = function(lista) {
         html += '<tr class="' + (esActiva ? 'rot-tr-activa' : '') + '" data-id="' + rotEscHtml(idOT) + '" onclick="window.rotAbrirDetalle(\'' + rotEscHtml(idOT) + '\')">'
               + '<td onclick="event.stopPropagation();" style="white-space:nowrap;padding:8px 10px;">' + rotBotonesAccion(ot) + '</td>'
               + '<td style="font-weight:700;color:var(--primary,#2563eb);white-space:nowrap;">' + rotEscHtml(idOT) + '</td>'
+              + '<td style="font-size:0.78rem; color:var(--subtext); white-space:nowrap; font-weight:600;">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>'
               + '<td style="font-weight:700;"><span class="badge bg-light border text-dark fw-bold px-2 py-1">' + rotEscHtml(ot.placa || '—') + '</span></td>'
               + '<td style="font-size:0.84rem; font-weight:600;">' + rotFmtKmCol(det) + '</td>'
               + '<td style="white-space:nowrap;"><span class="badge rounded-pill fw-bold text-uppercase" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-size:0.68rem; padding:2px 8px;">' + rotEscHtml(det.tipo_ot || ot.tipo || '—') + (subTipo !== '—' ? ' • ' + rotEscHtml(subTipo) : '') + '</span></td>'
@@ -367,7 +371,6 @@ window.rotRenderTabla = function(lista) {
               + '<td style="white-space:nowrap;">' + rotBadgeSituacion(det.situacion || det.situacion_inicial || 'En Atención') + '</td>'
               + '<td style="font-size:0.78rem; color:var(--subtext); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + rotEscHtml(rawObs) + '">' + rotEscHtml(rawObs || '—') + '</td>'
               + '<td style="font-weight:700; color:#16a34a; text-align:right;">S/ ' + parseFloat(ot.costo_total||0).toFixed(2) + '</td>'
-              + '<td style="font-size:0.78rem; color:var(--subtext); white-space:nowrap;">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>'
               + '<td style="text-align:center;"><button class="btn btn-sm btn-light border shadow-2xs rounded-3" style="color:#2563eb; padding:3px 8px;" onclick="event.stopPropagation(); window.rotAbrirDetalle(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-eye-fill"></i></button></td>'
               + '</tr>';
 
@@ -2298,7 +2301,27 @@ function rotFmtFechaHora(val) {
 
 function rotFechaISO(iso) {
     if (!iso) return '';
-    return typeof iso === 'string' ? iso.split('T')[0] : '';
+    if (iso instanceof Date) {
+        var yyyy = iso.getFullYear();
+        var mm = String(iso.getMonth() + 1).padStart(2, '0');
+        var dd = String(iso.getDate()).padStart(2, '0');
+        return yyyy + '-' + mm + '-' + dd;
+    }
+    var str = String(iso).trim();
+    if (str.includes('T')) return str.split('T')[0];
+    if (str.includes(' ')) {
+        var p = str.split(' ')[0];
+        if (p.includes('-')) return p;
+    }
+    if (str.length >= 10 && str.charAt(4) === '-' && str.charAt(7) === '-') return str.slice(0, 10);
+    var d = new Date(str.replace('Z',''));
+    if (!isNaN(d.getTime())) {
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+    }
+    return '';
 }
 
 function rotBadgeAprobacion(estado) {
