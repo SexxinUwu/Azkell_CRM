@@ -422,38 +422,44 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.35) !important;
-    z-index: 1059;
+    background: rgba(15, 23, 42, 0.45) !important;
+    z-index: 1059 !important;
+    opacity: 0;
+    transition: opacity 0.18s cubic-bezier(0, 0, 0.2, 1);
 }
-#srDrawerBackdrop.open { display: block !important; }
+#srDrawerBackdrop.open { display: block !important; opacity: 1 !important; }
 #moduloStatusRampa .sr-drawer,
 .sr-drawer-global {
-    position: fixed;
+    position: fixed !important;
     bottom: 0 !important;
     left: 50% !important;
     top: auto !important;
     right: auto !important;
-    transform: translateX(-50%) translateY(100%);
+    transform: translate3d(-50%, 100%, 0) !important;
     width: 100% !important;
     max-width: 700px !important;
     height: 92vh !important;
     max-height: 92vh !important;
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
+    background: var(--surface, #ffffff) !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
     border-bottom: none !important;
     border-radius: 28px 28px 0 0 !important;
-    box-shadow: 0 -12px 48px rgba(0,0,0,.18) !important;
-    transition: transform .25s ease !important;
-    z-index: 1060;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    visibility: hidden;
+    box-shadow: 0 -16px 56px rgba(0,0,0,.22) !important;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    z-index: 1060 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
     margin: 0 !important;
 }
 .sr-drawer-global.open {
-    transform: translateX(-50%) translateY(0) !important;
+    transform: translate3d(-50%, 0, 0) !important;
     visibility: visible !important;
+    display: flex !important;
 }
 /* ── Drawer header ─────────────────────────────────────────────── */
 
@@ -474,23 +480,27 @@
     #moduloStatusRampa .sr-hist-wrap { padding-bottom: 120px !important; }
     #moduloStatusRampa .sr-top-wrap { border-top: none !important; }
 
-    /* Drawers a Bottom Sheet estilo Inventario */
+    /* Drawers a Bottom Sheet acelerado por GPU */
     #moduloStatusRampa .sr-drawer,
     .sr-drawer-global,
     #sr-config-rampas {
-        top: auto !important; bottom: -100vh !important; right: 0 !important;
-        width: 100vw !important; height: 92vh !important;
-        max-width: none !important;
-        border-radius: 22px 22px 0 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        max-width: 100% !important;
+        height: 92vh !important;
+        transform: translate3d(0, 100%, 0) !important;
+        border-radius: 24px 24px 0 0 !important;
         border-left: none !important;
-        transition: bottom .35s cubic-bezier(.4,0,.2,1) !important;
-        box-shadow: 0 -12px 48px rgba(0,0,0,.2) !important;
-        visibility: visible !important;
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        box-shadow: 0 -16px 56px rgba(0,0,0,.22) !important;
+        visibility: hidden !important;
     }
     #moduloStatusRampa .sr-drawer.open,
     .sr-drawer-global.open,
     #sr-config-rampas.open {
-        bottom: 0 !important; right: 0 !important;
+        transform: translate3d(0, 0, 0) !important;
+        visibility: visible !important;
+        display: flex !important;
     }
 
     /* Barra de controles compacta */

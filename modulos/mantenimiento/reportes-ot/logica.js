@@ -858,11 +858,22 @@ window.rotAbrirDetalle = function(idOT) {
             </div>
         </div>
     `;
-    footer.innerHTML = ftHtml;
-    footer.style.display = 'flex';
+
+    var drawer = document.getElementById('rot-drawer-detalle');
+    var back   = document.getElementById('rotDrawerBackdrop');
+    var body   = document.getElementById('rot-drawer-body');
+    var footer = document.getElementById('rot-drawer-footer');
+
+    if (body) {
+        body.innerHTML = html;
+    }
+    if (footer) {
+        footer.innerHTML = ftHtml;
+        footer.style.display = 'flex';
+    }
 
     if (back) back.classList.add('open');
-    drawer.classList.add('open');
+    if (drawer) drawer.classList.add('open');
 
     // Fetch trabajos + materiales + backlog + inspecciones + neumáticos en paralelo
     window.rotOtTrabajosActivos   = [];
