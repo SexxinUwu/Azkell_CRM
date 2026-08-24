@@ -4,6 +4,8 @@
     window._caTripGroups = [];
     window._caFilteredTrips = [];
     window._caMatrizRendimiento = [];
+    window._caPaginaActual = 1;
+    window._caLimitePorPagina = 50;
 
     // Inicializador del módulo
     window.inicializarModuloCombustibleAnalisis = function() {
@@ -51,7 +53,7 @@
                 if (bannerCount) bannerCount.textContent = `(${data.trips.length} viajes consolidados)`;
 
                 window.caPoblarFiltros();
-                window.caAplicarFiltros();
+                window.caAplicarFiltros(true);
             } else {
                 if (tbody) tbody.innerHTML = `<tr><td colspan="13" class="text-center text-muted py-4">No hay vales registrados para analizar.</td></tr>`;
             }
@@ -61,15 +63,27 @@
         }
     };
 
-    // Poblar selects de filtros
+    // Poblar selects de filtros dinámicamente
     window.caPoblarFiltros = function() {
+        const selYear = document.getElementById('ca-filter-year');
         const selFuel = document.getElementById('ca-filter-fuel');
         const selPlate = document.getElementById('ca-filter-plate');
 
+        const allYears = new Set();
         const allFuels = new Set();
         const allPlates = new Set();
 
         window._caTripGroups.forEach(t => {
+            // Extraer año de serie de viaje o fecha
+            if (t.viaje && t.viaje !== 'SIN-VIAJE') {
+                const yMatch = t.viaje.match(/^(\d{4})/);
+                if (yMatch) allYears.add(yMatch[1]);
+            }
+            if (t.fechaFin && t.fechaFin !== 'N/D') {
+                const yDate = t.fechaFin.slice(0, 4);
+                if (yDate.match(/^\d{4}$/)) allYears.add(yDate);
+            }
+
             if (t.placa && t.placa !== 'SIN-PLACA') allPlates.add(t.placa);
             if (t.vouchers) {
                 t.vouchers.forEach(v => {
@@ -78,9 +92,19 @@
             }
         });
 
+        // Poblar Años (ordenados DESC: 2026, 2025, 2024...)
+        if (selYear) {
+            const sortedYears = Array.from(allYears).sort((a, b) => b.localeCompare(a));
+            const latestYear = sortedYears[0] || '2026';
+            
+            selYear.innerHTML = sortedYears.map(y => `<option value="${y}">${y}${y === latestYear ? ' (Año Actual)' : ''}</option>`).join('') +
+                `<option value="ALL">Todos los Años</option>`;
+            selYear.value = latestYear;
+        }
+
         if (selFuel) {
             const cur = selFuel.value;
-            selFuel.innerHTML = '<option value="ALL">Todos los Combustibles</option>' +
+            selFuel.innerHTML = '<option value="ALL">Todos</option>' +
                 Array.from(allFuels).sort().map(f => `<option value="${f}">${f}</option>`).join('');
             if (allFuels.has(cur)) selFuel.value = cur;
         }
@@ -93,21 +117,67 @@
         }
     };
 
+    // Cambiar página
+    window.caCambiarPagina = function(p) {
+        window._caPaginaActual = p;
+        window.caRenderTabla();
+    };
+
+    // Cambiar tamaño de página
+    window.caCambiarTamanoPagina = function(val) {
+        window._caLimitePorPagina = val === 'ALL' ? 'ALL' : parseInt(val, 10);
+        window._caPaginaActual = 1;
+        window.caRenderTabla();
+    };
+
+    // Alternar Ordenamiento
+    window.caToggleSort = function(col) {
+        const selSort = document.getElementById('ca-sort-by');
+        if (!selSort) return;
+        const cur = selSort.value;
+
+        if (col === 'trip') {
+            selSort.value = cur === 'trip_desc' ? 'trip_asc' : 'trip_desc';
+        } else if (col === 'date_start') {
+            selSort.value = cur === 'date_asc' ? 'date_desc' : 'date_asc';
+        } else if (col === 'date_end') {
+            selSort.value = cur === 'date_desc' ? 'date_asc' : 'date_desc';
+        } else if (col === 'gal') {
+            selSort.value = cur === 'gal_desc' ? 'trip_desc' : 'gal_desc';
+        } else if (col === 'cost') {
+            selSort.value = cur === 'cost_desc' ? 'trip_desc' : 'cost_desc';
+        }
+        window.caAplicarFiltros(false);
+    };
+
     // Aplicar Filtros y Ordenamiento
-    window.caAplicarFiltros = function() {
+    window.caAplicarFiltros = function(resetPage = false) {
+        if (resetPage) window._caPaginaActual = 1;
+
+        const yearFilter = document.getElementById('ca-filter-year')?.value || '2026';
         const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
         const plateFilter = document.getElementById('ca-filter-plate')?.value || 'ALL';
         const searchVal = (document.getElementById('ca-search-input')?.value || '').toLowerCase().trim();
         const sortBy = document.getElementById('ca-sort-by')?.value || 'trip_desc';
 
         window._caFilteredTrips = window._caTripGroups.filter(t => {
+            // Filtro por Año
+            if (yearFilter !== 'ALL') {
+                const matchViajeYear = t.viaje && t.viaje.startsWith(yearFilter);
+                const matchFechaYear = t.fechaFin && t.fechaFin.startsWith(yearFilter);
+                if (!matchViajeYear && !matchFechaYear) return false;
+            }
+
+            // Filtro por Placa
             if (plateFilter !== 'ALL' && t.placa !== plateFilter) return false;
             
+            // Filtro por Combustible
             if (fuelFilter !== 'ALL') {
                 const hasFuel = (t.vouchers || []).some(v => v.producto === fuelFilter);
                 if (!hasFuel) return false;
             }
 
+            // Filtro por Búsqueda rápida
             if (searchVal) {
                 const matchViaje = (t.viaje || '').toLowerCase().includes(searchVal);
                 const matchPlaca = (t.placa || '').toLowerCase().includes(searchVal);
@@ -119,16 +189,28 @@
             return true;
         });
 
-        // Ordenamiento
+        // Ordenamiento (N° Viaje Mayor a Menor por defecto)
         window._caFilteredTrips.sort((a, b) => {
             switch (sortBy) {
-                case 'trip_asc': return (a.viaje || '').localeCompare(b.viaje || '', undefined, { numeric: true });
-                case 'trip_desc': return (b.viaje || '').localeCompare(a.viaje || '', undefined, { numeric: true });
+                case 'trip_asc': {
+                    if (a.viaje === 'SIN-VIAJE') return 1;
+                    if (b.viaje === 'SIN-VIAJE') return -1;
+                    return (a.viaje || '').localeCompare(b.viaje || '', undefined, { numeric: true });
+                }
+                case 'trip_desc': {
+                    if (a.viaje === 'SIN-VIAJE') return 1;
+                    if (b.viaje === 'SIN-VIAJE') return -1;
+                    return (b.viaje || '').localeCompare(a.viaje || '', undefined, { numeric: true });
+                }
                 case 'date_asc': return (a.fechaInicio || '').localeCompare(b.fechaInicio || '');
                 case 'date_desc': return (b.fechaFin || '').localeCompare(a.fechaFin || '');
                 case 'gal_desc': return b.totalGalones - a.totalGalones;
                 case 'cost_desc': return b.totalGasto - a.totalGasto;
-                default: return (b.viaje || '').localeCompare(a.viaje || '', undefined, { numeric: true });
+                default: {
+                    if (a.viaje === 'SIN-VIAJE') return 1;
+                    if (b.viaje === 'SIN-VIAJE') return -1;
+                    return (b.viaje || '').localeCompare(a.viaje || '', undefined, { numeric: true });
+                }
             }
         });
 
@@ -163,7 +245,7 @@
         const subI = document.getElementById('ca-kpi-gasto-sub');
         const subK = document.getElementById('ca-kpi-km-sub');
 
-        if (subV) subV.textContent = `${trips.reduce((s, t) => s + t.vouchers.length, 0)} vales individuales`;
+        if (subV) subV.textContent = `${trips.reduce((s, t) => s + (t.vouchersPropiosCount || t.vouchers.length), 0)} vales individuales`;
         if (subG) subG.textContent = `${promGalViaje.toFixed(1)} Gal/viaje prom.`;
         if (subI) subI.textContent = `S/ ${promPrecioGal.toFixed(2)} / Galón prom.`;
         if (subK) subK.textContent = `${promKmGal.toFixed(2)} Km/Gal promedio`;
@@ -196,15 +278,16 @@
         return parseFloat(match.km_30 || 9.0);
     }
 
-    // Renderizar Tabla Consolidada
+    // Renderizar Tabla Consolidada con Paginación de 50 registros
     window.caRenderTabla = function() {
         const tbody = document.getElementById('ca-trip-tbody');
         const counter = document.getElementById('ca-filtered-results-counter');
+        const total = window._caFilteredTrips.length;
 
-        if (counter) counter.textContent = `Mostrando ${window._caFilteredTrips.length.toLocaleString()} viajes`;
+        if (counter) counter.textContent = `Mostrando ${total.toLocaleString()} viajes`;
         if (!tbody) return;
 
-        if (window._caFilteredTrips.length === 0) {
+        if (total === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="13" class="text-center py-5 text-muted">
@@ -213,13 +296,25 @@
                     </td>
                 </tr>
             `;
+            window.caRenderPaginacion(0, 1, 50);
             return;
         }
+
+        const limit = window._caLimitePorPagina;
+        const totalPages = limit === 'ALL' ? 1 : Math.ceil(total / limit) || 1;
+        if (window._caPaginaActual > totalPages) window._caPaginaActual = totalPages;
+        if (window._caPaginaActual < 1) window._caPaginaActual = 1;
+        const page = window._caPaginaActual;
+
+        const startIdx = limit === 'ALL' ? 0 : (page - 1) * limit;
+        const endIdx = limit === 'ALL' ? total : Math.min(startIdx + limit, total);
+        const pagedTrips = window._caFilteredTrips.slice(startIdx, endIdx);
 
         const esc = (s) => String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
         let html = '';
-        window._caFilteredTrips.forEach((t, idx) => {
+        pagedTrips.forEach((t, i) => {
+            const globalIdx = startIdx + i;
             const rTeorico = obtenerRendimientoTeorico(t.ruta, t.pesoMaxTn);
             let semaforoBadge = '—';
 
@@ -269,7 +364,7 @@
                     </td>
                     <td class="text-end font-monospace">${semaforoBadge}</td>
                     <td class="text-center">
-                        <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2.5 d-inline-flex align-items-center gap-1" onclick="window.caAbrirModalVales(${idx})" style="font-size:0.72rem;">
+                        <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2.5 d-inline-flex align-items-center gap-1" onclick="window.caAbrirModalVales(${globalIdx})" style="font-size:0.72rem;">
                             <i class="bi bi-receipt"></i> ${t.vouchersPropiosCount || t.vouchers.length} vales
                         </button>
                     </td>
@@ -278,6 +373,64 @@
         });
 
         tbody.innerHTML = html;
+        window.caRenderPaginacion(total, page, limit);
+    };
+
+    // Renderizar Paginación
+    window.caRenderPaginacion = function(total, page, limit) {
+        const infoEl = document.getElementById('ca-pagination-info');
+        const btnsEl = document.getElementById('ca-pagination-buttons');
+        if (!infoEl || !btnsEl) return;
+
+        if (total === 0) {
+            infoEl.textContent = 'Mostrando 0 de 0 viajes';
+            btnsEl.innerHTML = '';
+            return;
+        }
+
+        const totalPages = limit === 'ALL' ? 1 : Math.ceil(total / limit);
+        const start = limit === 'ALL' ? 1 : (page - 1) * limit + 1;
+        const end = limit === 'ALL' ? total : Math.min(page * limit, total);
+
+        infoEl.innerHTML = `Mostrando <strong>${start}</strong> a <strong>${end}</strong> de <strong>${total.toLocaleString()}</strong> viajes`;
+
+        if (totalPages <= 1) {
+            btnsEl.innerHTML = '';
+            return;
+        }
+
+        let btns = `
+            <button class="btn btn-outline-secondary btn-sm rounded-pill py-0 px-2" style="font-size:0.75rem;" ${page === 1 ? 'disabled' : ''} onclick="window.caCambiarPagina(${page - 1})">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+        `;
+
+        // Generar botones de páginas alrededor de la página actual
+        let startPage = Math.max(1, page - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+        if (startPage > 1) {
+            btns += `<button class="btn btn-outline-secondary btn-sm rounded-pill py-0 px-2" style="font-size:0.75rem;" onclick="window.caCambiarPagina(1)">1</button>`;
+            if (startPage > 2) btns += `<span class="px-1 text-muted small">...</span>`;
+        }
+
+        for (let p = startPage; p <= endPage; p++) {
+            btns += `<button class="btn btn-sm rounded-pill py-0 px-2.5 ${p === page ? 'btn-primary text-white fw-bold' : 'btn-outline-secondary'}" style="font-size:0.75rem;" onclick="window.caCambiarPagina(${p})">${p}</button>`;
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) btns += `<span class="px-1 text-muted small">...</span>`;
+            btns += `<button class="btn btn-outline-secondary btn-sm rounded-pill py-0 px-2" style="font-size:0.75rem;" onclick="window.caCambiarPagina(${totalPages})">${totalPages}</button>`;
+        }
+
+        btns += `
+            <button class="btn btn-outline-secondary btn-sm rounded-pill py-0 px-2" style="font-size:0.75rem;" ${page === totalPages ? 'disabled' : ''} onclick="window.caCambiarPagina(${page + 1})">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        `;
+
+        btnsEl.innerHTML = btns;
     };
 
     // Modal de Vales de un Viaje

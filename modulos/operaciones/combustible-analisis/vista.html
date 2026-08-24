@@ -235,32 +235,42 @@
     <!-- Panel de Filtros -->
     <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
         <div class="row g-2 align-items-center">
-            <!-- Filtro Combustible -->
-            <div class="col-12 col-sm-6 col-md-3">
+            <!-- Filtro Año -->
+            <div class="col-6 col-sm-4 col-md-2">
                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-funnel-fill text-primary me-1"></i> Tipo Combustible
+                    <i class="bi bi-calendar3 text-primary me-1"></i> Año
                 </label>
-                <select id="ca-filter-fuel" onchange="window.caAplicarFiltros()" class="form-select form-select-sm fw-semibold">
-                    <option value="ALL">Todos los Combustibles</option>
+                <select id="ca-filter-year" onchange="window.caAplicarFiltros(true)" class="form-select form-select-sm fw-bold text-primary">
+                    <option value="ALL">Todos los Años</option>
+                </select>
+            </div>
+
+            <!-- Filtro Combustible -->
+            <div class="col-6 col-sm-4 col-md-2">
+                <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
+                    <i class="bi bi-funnel-fill text-primary me-1"></i> Combustible
+                </label>
+                <select id="ca-filter-fuel" onchange="window.caAplicarFiltros(true)" class="form-select form-select-sm fw-semibold">
+                    <option value="ALL">Todos</option>
                 </select>
             </div>
 
             <!-- Filtro Placa -->
-            <div class="col-12 col-sm-6 col-md-3">
+            <div class="col-12 col-sm-4 col-md-3">
                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
                     <i class="bi bi-truck text-primary me-1"></i> Vehículo / Placa
                 </label>
-                <select id="ca-filter-plate" onchange="window.caAplicarFiltros()" class="form-select form-select-sm fw-semibold">
+                <select id="ca-filter-plate" onchange="window.caAplicarFiltros(true)" class="form-select form-select-sm fw-semibold">
                     <option value="ALL">Todas las Placas (Mostrar Todos)</option>
                 </select>
             </div>
 
             <!-- Ordenar Por -->
-            <div class="col-12 col-sm-6 col-md-3">
+            <div class="col-12 col-sm-6 col-md-2">
                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
                     <i class="bi bi-sort-down text-primary me-1"></i> Ordenar Por
                 </label>
-                <select id="ca-sort-by" onchange="window.caAplicarFiltros()" class="form-select form-select-sm fw-semibold">
+                <select id="ca-sort-by" onchange="window.caAplicarFiltros(true)" class="form-select form-select-sm fw-semibold">
                     <option value="trip_desc">N° Viaje (Mayor a Menor)</option>
                     <option value="trip_asc">N° Viaje (Menor a Mayor)</option>
                     <option value="date_desc">Fecha Fin (Más Reciente)</option>
@@ -277,7 +287,7 @@
                 </label>
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="ca-search-input" onkeyup="window.caAplicarFiltros()" placeholder="Buscar viaje, ruta, chofer..." class="form-control border-start-0">
+                    <input type="text" id="ca-search-input" onkeyup="window.caAplicarFiltros(true)" placeholder="Buscar viaje, ruta, chofer..." class="form-control border-start-0">
                 </div>
             </div>
         </div>
@@ -285,14 +295,25 @@
 
     <!-- Tabla Dinámica Consolidada por Viaje -->
     <div class="ca-table-card">
-        <div class="ca-table-header">
+        <div class="ca-table-header p-2.5 px-3 bg-white border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-table text-primary fs-5"></i>
                 <h6 class="fw-bold text-dark m-0">Tabla Dinámica Consolidada por Viaje</h6>
             </div>
-            <span id="ca-filtered-results-counter" class="badge bg-secondary bg-opacity-10 text-dark border px-3 py-1.5 rounded-pill fw-bold" style="font-size:0.75rem;">
-                Mostrando 0 viajes
-            </span>
+            <div class="d-flex align-items-center gap-3">
+                <span id="ca-filtered-results-counter" class="badge bg-secondary bg-opacity-10 text-dark border px-3 py-1.5 rounded-pill fw-bold" style="font-size:0.75rem;">
+                    Mostrando 0 viajes
+                </span>
+                <div class="d-flex align-items-center gap-1">
+                    <span class="text-muted small">Por pág:</span>
+                    <select id="ca-page-size" class="form-select form-select-sm py-0 ps-2 pe-4" style="width: auto; font-size:0.78rem;" onchange="window.caCambiarTamanoPagina(this.value)">
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                        <option value="ALL">Todos</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
         <div class="ca-scroll-table">
@@ -335,6 +356,16 @@
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Footer de Paginación -->
+        <div class="p-2.5 px-3 bg-light border-top d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2" id="ca-pagination-wrapper">
+            <div class="text-muted small fw-semibold" id="ca-pagination-info">
+                Mostrando 0 de 0 viajes
+            </div>
+            <div class="d-flex align-items-center gap-1" id="ca-pagination-buttons">
+                <!-- Botones de página -->
+            </div>
         </div>
     </div>
 </div>
