@@ -281,7 +281,7 @@
         } catch (e) {
             console.error('Error cargando catálogos de neumáticos:', e);
         }
-        return { marcas: ['WINDPOWER','GOODYEAR','BRIDGESTONE','MICHELIN','ADVANCE'], medidas: ['275/70R22.5','295/80R22.5','315/80R22.5','11R22.5','12R22.5'], modelos: ['PROGUO1','KMAX','M729','XZY3','GL282A'], acciones: ['Inspección','Rotación','Cambio','Reparación','Reencauche','Baja'] };
+        return { marcas: ['WINDPOWER','GOODYEAR','BRIDGESTONE','MICHELIN','ADVANCE'], medidas: ['275/70R22.5','295/80R22.5','315/80R22.5','11R22.5','12R22.5'], modelos: ['PROGUO1','KMAX','M729','XZY3','GL282A'], acciones: ['Inspección','Rotación','Instalación','Cambio','Reparación','Reencauche','Baja'] };
     };
 
     // ── APERTURA DEL MODAL PRINCIPAL ──────────────────────────────────────────────
@@ -559,6 +559,7 @@
                                 <select class="form-select form-select-sm rounded-3 fw-semibold" style="height: 38px;" id="neu-sel-accion">
                                     <option value="Inspección">Inspección</option>
                                     <option value="Rotación">Rotación</option>
+                                    <option value="Instalación">Instalación</option>
                                     <option value="Cambio">Cambio</option>
                                     <option value="Reparación">Reparación</option>
                                     <option value="Reencauche">Reencauche</option>
@@ -767,19 +768,60 @@
     };
 
     // ── RELLENAR SELECTS / DATALISTS CON SOPORTE ROBUSTO DE ACCIONES ─────────────
+    // ── RELLENAR SELECTS / DATALISTS CON SOPORTE ROBUSTO DE ACCIONES ─────────────
     window._neuRellenarSelects = function(cats) {
         const dlMarca  = document.getElementById('dl-neu-marcas');
         const dlMedida = document.getElementById('dl-neu-medidas');
         const dlModelo = document.getElementById('dl-neu-modelos');
         const selAccion = document.getElementById('neu-sel-accion');
 
-        if (dlMarca && cats.marcas) dlMarca.innerHTML = cats.marcas.map(m => `<option value="${m}">`).join('');
-        if (dlMedida && cats.medidas) dlMedida.innerHTML = cats.medidas.map(m => `<option value="${m}">`).join('');
-        if (dlModelo && cats.modelos) dlModelo.innerHTML = cats.modelos.map(m => `<option value="${m}">`).join('');
+        if (dlMarca && cats.marcas) {
+            const uniqueMarcas = Array.from(new Set((cats.marcas || []).map(m => (m || '').trim().toUpperCase()))).filter(Boolean);
+            dlMarca.innerHTML = uniqueMarcas.map(m => `<option value="${m}">`).join('');
+        }
+        if (dlMedida && cats.medidas) {
+            const uniqueMedidas = Array.from(new Set((cats.medidas || []).map(m => (m || '').trim().toUpperCase()))).filter(Boolean);
+            dlMedida.innerHTML = uniqueMedidas.map(m => `<option value="${m}">`).join('');
+        }
+        if (dlModelo && cats.modelos) {
+            const uniqueModelos = Array.from(new Set((cats.modelos || []).map(m => (m || '').trim().toUpperCase()))).filter(Boolean);
+            dlModelo.innerHTML = uniqueModelos.map(m => `<option value="${m}">`).join('');
+        }
         
         if (selAccion) {
-            const defaultAcciones = ['Inspección', 'Rotación', 'Cambio', 'Reparación', 'Reencauche', 'Baja'];
-            const allAcciones = Array.from(new Set([...defaultAcciones, ...(cats.acciones || [])]));
+            const defaultAcciones = ['Inspección', 'Rotación', 'Instalación', 'Cambio', 'Reparación', 'Reencauche', 'Baja'];
+            const rawAcciones = [...defaultAcciones, ...(cats.acciones || [])];
+            
+            const accionMap = {
+                'INSPECCION': 'Inspección',
+                'INSPECCIÓN': 'Inspección',
+                'ROTACION': 'Rotación',
+                'ROTACIÓN': 'Rotación',
+                'INSTALACION': 'Instalación',
+                'INSTALACIÓN': 'Instalación',
+                'CAMBIO': 'Cambio',
+                'REPARACION': 'Reparación',
+                'REPARACIÓN': 'Reparación',
+                'REENCAUCHE': 'Reencauche',
+                'BAJA': 'Baja',
+                'ALINEACION': 'Alineación',
+                'ALINEACIÓN': 'Alineación',
+                'BALANCEO': 'Balanceo',
+                'PARCHADO': 'Parchado'
+            };
+
+            const uniqueMap = new Map();
+            rawAcciones.forEach(a => {
+                if (!a) return;
+                const clean = a.trim();
+                const normKey = clean.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+                const displayVal = accionMap[normKey] || (clean.charAt(0).toUpperCase() + clean.slice(1));
+                if (!uniqueMap.has(normKey)) {
+                    uniqueMap.set(normKey, displayVal);
+                }
+            });
+
+            const allAcciones = Array.from(uniqueMap.values());
             const curVal = selAccion.value;
             selAccion.innerHTML = allAcciones.map(a => `<option value="${a}">${a}</option>`).join('');
             if (curVal) {
@@ -793,22 +835,20 @@
         const sel = document.getElementById('neu-sel-accion');
         if (!sel) return;
         const target = (val || 'Inspección').trim();
-        sel.value = target;
-        if (sel.selectedIndex === -1) {
-            const targetNorm = target.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-            for (let i = 0; i < sel.options.length; i++) {
-                const optNorm = sel.options[i].value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-                if (optNorm === targetNorm) {
-                    sel.selectedIndex = i;
-                    return;
-                }
+        const targetNorm = target.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
+        for (let i = 0; i < sel.options.length; i++) {
+            const optNorm = sel.options[i].value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            if (optNorm === targetNorm) {
+                sel.selectedIndex = i;
+                return;
             }
-            const opt = document.createElement('option');
-            opt.value = target;
-            opt.innerText = target;
-            sel.appendChild(opt);
-            sel.value = target;
         }
+        const opt = document.createElement('option');
+        opt.value = target;
+        opt.innerText = target;
+        sel.appendChild(opt);
+        sel.value = target;
     };
 
     // ── RENDER POSICIONES EN BARRA TÁCTIL ─────────────────────────────────────────

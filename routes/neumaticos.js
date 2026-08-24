@@ -217,17 +217,47 @@ module.exports = function (db, broadcast, logAudit) {
     router.get('/catalogos', async (req, res) => {
         try {
             const tdb = getDb(req);
-            const [marcas]   = await tdb.query("SELECT nombre FROM cat_neumaticos_marcas WHERE activo = 1 ORDER BY nombre ASC");
-            const [modelos]  = await tdb.query("SELECT nombre FROM cat_neumaticos_modelos WHERE activo = 1 ORDER BY nombre ASC");
-            const [medidas]  = await tdb.query("SELECT nombre FROM cat_neumaticos_medidas WHERE activo = 1 ORDER BY nombre ASC");
-            const [acciones] = await tdb.query("SELECT nombre FROM cat_neumaticos_acciones WHERE activo = 1 ORDER BY id ASC");
+            const [marcas]   = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_marcas WHERE activo = 1 ORDER BY nombre ASC");
+            const [modelos]  = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_modelos WHERE activo = 1 ORDER BY nombre ASC");
+            const [medidas]  = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_medidas WHERE activo = 1 ORDER BY nombre ASC");
+            const [acciones] = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_acciones WHERE activo = 1 ORDER BY id ASC");
+
+            const accionMap = {
+                'INSPECCION': 'Inspección',
+                'INSPECCIÓN': 'Inspección',
+                'ROTACION': 'Rotación',
+                'ROTACIÓN': 'Rotación',
+                'INSTALACION': 'Instalación',
+                'INSTALACIÓN': 'Instalación',
+                'CAMBIO': 'Cambio',
+                'REPARACION': 'Reparación',
+                'REPARACIÓN': 'Reparación',
+                'REENCAUCHE': 'Reencauche',
+                'BAJA': 'Baja',
+                'ALINEACION': 'Alineación',
+                'ALINEACIÓN': 'Alineación',
+                'BALANCEO': 'Balanceo',
+                'PARCHADO': 'Parchado'
+            };
+
+            const defaultAcciones = ['Inspección', 'Rotación', 'Instalación', 'Cambio', 'Reparación', 'Reencauche', 'Baja'];
+            const uniqueAccionesMap = new Map();
+            [...defaultAcciones, ...acciones.map(r => r.nombre)].forEach(a => {
+                if (!a) return;
+                const clean = a.trim();
+                const normKey = clean.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+                const displayVal = accionMap[normKey] || (clean.charAt(0).toUpperCase() + clean.slice(1));
+                if (!uniqueAccionesMap.has(normKey)) {
+                    uniqueAccionesMap.set(normKey, displayVal);
+                }
+            });
 
             res.json({
                 ok: true,
-                marcas:   marcas.map(r => r.nombre),
-                modelos:  modelos.map(r => r.nombre),
-                medidas:  medidas.map(r => r.nombre),
-                acciones: acciones.map(r => r.nombre),
+                marcas:   Array.from(new Set(marcas.map(r => (r.nombre || '').trim().toUpperCase()))).filter(Boolean),
+                modelos:  Array.from(new Set(modelos.map(r => (r.nombre || '').trim().toUpperCase()))).filter(Boolean),
+                medidas:  Array.from(new Set(medidas.map(r => (r.nombre || '').trim().toUpperCase()))).filter(Boolean),
+                acciones: Array.from(uniqueAccionesMap.values()),
                 estados:  ['NUEVA', 'RENCAUCHADA']
             });
         } catch (err) {
