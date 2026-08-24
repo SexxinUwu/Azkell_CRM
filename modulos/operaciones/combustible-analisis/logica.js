@@ -1,5 +1,7 @@
 // ── LÓGICA DE ANÁLISIS DE COMBUSTIBLE — ERP AZKELL FLEET (OPERACIONES) ───────────
 (function() {
+    const esc = (s) => String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
     window._caRawData = [];
     window._caTripGroups = [];
     window._caFilteredTrips = [];
@@ -95,12 +97,17 @@
         // Poblar Años (ordenados DESC: 2026, 2025, 2024...)
         if (selYear) {
             const sortedYears = Array.from(allYears).sort((a, b) => b.localeCompare(a));
-            const latestYear = sortedYears[0] || '2026';
-            
-            selYear.innerHTML = sortedYears.map(y => `<option value="${y}">${y}${y === latestYear ? ' (Año Actual)' : ''}</option>`).join('') +
-                `<option value="ALL">Todos los Años</option>`;
-            selYear.value = latestYear;
+            selYear.innerHTML = `<option value="ALL">Todos</option>` +
+                sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
+            selYear.value = 'ALL';
         }
+
+        // Por defecto: Fecha de hoy en ambos inputs
+        const today = new Date().toISOString().slice(0, 10);
+        const inpFrom = document.getElementById('ca-filter-date-from');
+        const inpTo = document.getElementById('ca-filter-date-to');
+        if (inpFrom && !inpFrom.value) inpFrom.value = today;
+        if (inpTo && !inpTo.value) inpTo.value = today;
 
         if (selFuel) {
             const cur = selFuel.value;
@@ -111,10 +118,36 @@
 
         if (selPlate) {
             const cur = selPlate.value;
-            selPlate.innerHTML = '<option value="ALL">Todas las Placas (Mostrar Todos)</option>' +
+            selPlate.innerHTML = '<option value="ALL">Todas las Placas</option>' +
                 Array.from(allPlates).sort().map(p => `<option value="${p}">${p}</option>`).join('');
             if (allPlates.has(cur)) selPlate.value = cur;
         }
+    };
+
+    // Cambiar filtro por año rápido
+    window.caCambiarFiltroAno = function(year) {
+        const inpFrom = document.getElementById('ca-filter-date-from');
+        const inpTo = document.getElementById('ca-filter-date-to');
+        if (year === 'ALL') {
+            if (inpFrom) inpFrom.value = '';
+            if (inpTo) inpTo.value = '';
+        } else {
+            if (inpFrom) inpFrom.value = `${year}-01-01`;
+            if (inpTo) inpTo.value = `${year}-12-31`;
+        }
+        window.caAplicarFiltros(true);
+    };
+
+    // Restablecer rango de fechas a hoy
+    window.caLimpiarFiltrosFechas = function() {
+        const today = new Date().toISOString().slice(0, 10);
+        const inpFrom = document.getElementById('ca-filter-date-from');
+        const inpTo = document.getElementById('ca-filter-date-to');
+        if (inpFrom) inpFrom.value = today;
+        if (inpTo) inpTo.value = today;
+        const selYear = document.getElementById('ca-filter-year');
+        if (selYear) selYear.value = 'ALL';
+        window.caAplicarFiltros(true);
     };
 
     // Cambiar página
@@ -154,18 +187,30 @@
     window.caAplicarFiltros = function(resetPage = false) {
         if (resetPage) window._caPaginaActual = 1;
 
-        const yearFilter = document.getElementById('ca-filter-year')?.value || '2026';
+        const dateFrom = document.getElementById('ca-filter-date-from')?.value;
+        const dateTo = document.getElementById('ca-filter-date-to')?.value;
         const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
         const plateFilter = document.getElementById('ca-filter-plate')?.value || 'ALL';
         const searchVal = (document.getElementById('ca-search-input')?.value || '').toLowerCase().trim();
         const sortBy = document.getElementById('ca-sort-by')?.value || 'trip_desc';
 
         window._caFilteredTrips = window._caTripGroups.filter(t => {
-            // Filtro por Año
-            if (yearFilter !== 'ALL') {
-                const matchViajeYear = t.viaje && t.viaje.startsWith(yearFilter);
-                const matchFechaYear = t.fechaFin && t.fechaFin.startsWith(yearFilter);
-                if (!matchViajeYear && !matchFechaYear) return false;
+            // Filtro Rango de Fechas (Solapamiento con período del viaje)
+            if (dateFrom || dateTo) {
+                const dInicio = (t.fechaInicio && t.fechaInicio !== 'N/D') ? t.fechaInicio.slice(0, 10) : '';
+                const dFin = (t.fechaFin && t.fechaFin !== 'N/D') ? t.fechaFin.slice(0, 10) : '';
+                const tripMin = dInicio || dFin;
+                const tripMax = dFin || dInicio;
+
+                if (!tripMin && !tripMax) return false;
+
+                if (dateFrom && dateTo) {
+                    if (tripMax < dateFrom || tripMin > dateTo) return false;
+                } else if (dateFrom) {
+                    if (tripMax < dateFrom) return false;
+                } else if (dateTo) {
+                    if (tripMin > dateTo) return false;
+                }
             }
 
             // Filtro por Placa
@@ -344,7 +389,7 @@
                         </span>
                     </td>
                     <td>
-                        <span class="badge bg-primary bg-opacity-10 text-primary border font-monospace px-2 py-1 fw-bold" style="font-size:0.75rem;">
+                        <span class="badge border font-monospace px-2.5 py-1 fw-bold" style="background:#f1f5f9; color:#0f172a !important; border-color:#cbd5e1 !important; font-size:0.78rem; letter-spacing:0.5px;">
                             ${esc(t.placa)}
                         </span>
                     </td>

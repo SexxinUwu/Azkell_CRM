@@ -234,14 +234,30 @@
 
     <!-- Panel de Filtros -->
     <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
-        <div class="row g-2 align-items-center">
-            <!-- Filtro Año -->
+        <div class="row g-2 align-items-end">
+            <!-- Filtro Fecha Desde -->
             <div class="col-6 col-sm-4 col-md-2">
+                <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
+                    <i class="bi bi-calendar-event text-primary me-1"></i> Fecha Desde
+                </label>
+                <input type="date" id="ca-filter-date-from" onchange="window.caAplicarFiltros(true)" class="form-control form-control-sm fw-semibold">
+            </div>
+
+            <!-- Filtro Fecha Hasta -->
+            <div class="col-6 col-sm-4 col-md-2">
+                <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
+                    <i class="bi bi-calendar-check text-primary me-1"></i> Fecha Hasta
+                </label>
+                <input type="date" id="ca-filter-date-to" onchange="window.caAplicarFiltros(true)" class="form-control form-control-sm fw-semibold">
+            </div>
+
+            <!-- Filtro Año -->
+            <div class="col-6 col-sm-4 col-md-1">
                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
                     <i class="bi bi-calendar3 text-primary me-1"></i> Año
                 </label>
-                <select id="ca-filter-year" onchange="window.caAplicarFiltros(true)" class="form-select form-select-sm fw-bold text-primary">
-                    <option value="ALL">Todos los Años</option>
+                <select id="ca-filter-year" onchange="window.caCambiarFiltroAno(this.value)" class="form-select form-select-sm fw-bold text-primary">
+                    <option value="ALL">Todos</option>
                 </select>
             </div>
 
@@ -256,38 +272,40 @@
             </div>
 
             <!-- Filtro Placa -->
-            <div class="col-12 col-sm-4 col-md-3">
+            <div class="col-12 col-sm-4 col-md-2">
                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
                     <i class="bi bi-truck text-primary me-1"></i> Vehículo / Placa
                 </label>
                 <select id="ca-filter-plate" onchange="window.caAplicarFiltros(true)" class="form-select form-select-sm fw-semibold">
-                    <option value="ALL">Todas las Placas (Mostrar Todos)</option>
+                    <option value="ALL">Todas las Placas</option>
                 </select>
             </div>
 
             <!-- Ordenar Por -->
-            <div class="col-12 col-sm-6 col-md-2">
+            <div class="col-6 col-sm-6 col-md-1">
                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-sort-down text-primary me-1"></i> Ordenar Por
+                    <i class="bi bi-sort-down text-primary me-1"></i> Orden
                 </label>
                 <select id="ca-sort-by" onchange="window.caAplicarFiltros(true)" class="form-select form-select-sm fw-semibold">
-                    <option value="trip_desc">N° Viaje (Mayor a Menor)</option>
-                    <option value="trip_asc">N° Viaje (Menor a Mayor)</option>
-                    <option value="date_desc">Fecha Fin (Más Reciente)</option>
-                    <option value="date_asc">Fecha Inicio (Más Antiguo)</option>
-                    <option value="gal_desc">Mayor Consumo (Galones)</option>
-                    <option value="cost_desc">Mayor Gasto (S/)</option>
+                    <option value="trip_desc">Viaje ▼</option>
+                    <option value="trip_asc">Viaje ▲</option>
+                    <option value="date_desc">Fecha ▼</option>
+                    <option value="date_asc">Fecha ▲</option>
+                    <option value="gal_desc">Galones ▼</option>
+                    <option value="cost_desc">Gasto ▼</option>
                 </select>
             </div>
 
             <!-- Búsqueda Rápida -->
-            <div class="col-12 col-sm-6 col-md-3">
+            <div class="col-6 col-sm-6 col-md-2">
                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-search text-primary me-1"></i> Búsqueda Rápida
+                    <i class="bi bi-search text-primary me-1"></i> Buscar
                 </label>
                 <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="ca-search-input" onkeyup="window.caAplicarFiltros(true)" placeholder="Buscar viaje, ruta, chofer..." class="form-control border-start-0">
+                    <input type="text" id="ca-search-input" onkeyup="window.caAplicarFiltros(true)" placeholder="Viaje, placa, chofer..." class="form-control">
+                    <button class="btn btn-outline-secondary" type="button" onclick="window.caLimpiarFiltrosFechas()" title="Restablecer fechas a hoy">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
                 </div>
             </div>
         </div>
