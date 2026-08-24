@@ -244,13 +244,19 @@ window.verificarSesionGuardada = function() {
     var _cL = function(key) { return isAdm || window.checkPerm(key, 'l'); };
     var _cHub = function(key) { 
         if (isAdm) return true;
-        try { return window._permCache[key] && window._permCache[key].enabled === 1; } catch(e) { return false; }
+        try { 
+            if (!window._permCache || window._permCache[key] === undefined) return true; 
+            var val = window._permCache[key];
+            if (typeof val === 'boolean') return val;
+            return val && (val.enabled === 1 || val.enabled === true || val.l === 1 || val.l === true);
+        } catch(e) { return true; }
     };
 
     // DASHBOARD
     var vDash = _cL('dashboard');
     safe('nav-dashboard', vDash);
     safe('mbnav-dashboard', vDash);
+    safe('wrap-dashboard', vDash);
 
     // FLOTA — hub: hub_flota
     var showFlotaHub = _cHub('hub_flota');
@@ -310,6 +316,7 @@ window.verificarSesionGuardada = function() {
     safe('nav-neumaticos-toggle', vNeumaticos);
     safe('mbnav-neumaticos-analisis', vNeumaticos);
     safe('mbnav-neumaticos-ultimas',  vNeumaticos);
+    safe('nav-incidencias-ruta', _cL('otros_mant') || _cL('reportes_ot') || _cL('status_rampa'));
     safe('nav-otros-mant',      showOtrosMant);
     safe('mbnav-otros-mant',    showOtrosMant);
 
@@ -351,17 +358,47 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-clientes',    vClientes);
     safe('wrap-directorio', vCond || vClientes);
 
+    // OPERACIONES
+    var vOpRutas = _cL('op_rutas');
+    var vOpAsig  = _cL('op_asignacion');
+    var vOpMon   = _cL('op_monitoreo');
+    var showOp   = vOpRutas || vOpAsig || vOpMon || _cL('operaciones');
+    safe('nav-op-rutas', vOpRutas || _cL('operaciones'));
+    safe('nav-op-asignacion', vOpAsig || _cL('operaciones'));
+    safe('nav-op-monitoreo', vOpMon || _cL('operaciones'));
+    safe('wrap-operaciones', showOp);
+
+    // RRHH
+    var vRrhhPers = _cL('rrhh_personal');
+    var vRrhhAsis = _cL('rrhh_asistencia');
+    var vRrhhNom  = _cL('rrhh_nomina');
+    var showRrhh  = vRrhhPers || vRrhhAsis || vRrhhNom || _cL('rrhh');
+    safe('nav-rrhh-personal', vRrhhPers || _cL('rrhh'));
+    safe('nav-rrhh-asistencia', vRrhhAsis || _cL('rrhh'));
+    safe('nav-rrhh-nomina', vRrhhNom || _cL('rrhh'));
+    safe('wrap-rrhh', showRrhh);
+
+    // TESORERÍA
+    var vTesoCaja = _cL('tesoreria_caja');
+    var vTesoFlujo = _cL('tesoreria_flujo');
+    var vTesoCuentas = _cL('tesoreria_cuentas');
+    var showTeso = vTesoCaja || vTesoFlujo || vTesoCuentas || _cL('tesoreria');
+    safe('nav-tesoreria-caja', vTesoCaja || _cL('tesoreria'));
+    safe('nav-tesoreria-flujo', vTesoFlujo || _cL('tesoreria'));
+    safe('nav-tesoreria-cuentas', vTesoCuentas || _cL('tesoreria'));
+    safe('wrap-tesoreria', showTeso);
+
     // SEGURIDAD
     var showSeguridadHub = _cHub('hub_seguridad');
-    var vChecklist = showSeguridadHub && _cL('checklist');
+    var vChecklistSeg = showSeguridadHub && _cL('checklist');
     var vAsist     = showSeguridadHub && _cL('asist');
     
-    safe('nav-seg-unidades',    vChecklist);
-    safe('mbnav-seg-unidades',  vChecklist);
+    safe('nav-seg-unidades',    vChecklistSeg);
+    safe('mbnav-seg-unidades',  vChecklistSeg);
     safe('nav-seg-asistencia',  vAsist);
     safe('mbnav-seg-asistencia',vAsist);
 
-    var showSeg = vChecklist || vAsist;
+    var showSeg = vChecklistSeg || vAsist;
     safe('wrap-seguridad', showSeg);
     safe('bnav-seguridad', showSeg);
 
@@ -384,7 +421,7 @@ window.verificarSesionGuardada = function() {
     var vCfgFleetrun = showAdmHub && (isAdm || _cL('cfg_fleetrun'));
     var vCfgInteg    = showAdmHub && (isAdm || _cL('cfg_integ'));
     
-    var showAdm = vCfgFamilias || vCfgUnidades || vCfgSistemas || vCfgMarcas || vCfgFrec || vCfgKits || vCfgTiposMp || vCfgMetrica || vCfgSituacion || vCfgPersonal || vCfgFleetrun || vCfgInteg;
+    var showAdm = vCfgFamilias || vCfgUnidades || vCfgSistemas || vCfgMarcas || vCfgFrec || vCfgKits || vCfgTiposMp || vCfgMetrica || vCfgSituacion || vCfgPersonal || vCfgFleetrun || vCfgInteg || _cL('administracion');
 
     var isSuperAdminDomain = window.location.hostname.includes('admin.azkell.com') || window.location.hostname.startsWith('admin.');
     var isMasterRole = (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com') || (rolLogueado === 'Fundador' || rolLogueado === 'SuperAdmin');
@@ -405,7 +442,9 @@ window.verificarSesionGuardada = function() {
     safe('wrap-administracion', showAdm);
     safe('nav-administracion',  showAdm);
     safe('mbnav-administracion', showAdm);
-    safe('mbnav-configuracion', showAdm || vCfgEmpresa || vUsuarios || vAuditoria);
+    var showConfiguracion = isAdm || showAdm || vCfgEmpresa || vUsuarios || vAuditoria;
+    safe('wrap-configuracion', showConfiguracion);
+    safe('mbnav-configuracion', showConfiguracion);
 
     // ── AISLAMIENTO TOTAL DEL PORTAL SUPERADMIN (admin.azkell.com) ──────
     if (isSuperAdminDomain) {
@@ -414,12 +453,17 @@ window.verificarSesionGuardada = function() {
         safe('wrap-mantenimiento', false);
         safe('wrap-almacen', false);
         safe('wrap-directorio', false);
+        safe('wrap-operaciones', false);
+        safe('wrap-rrhh', false);
+        safe('wrap-tesoreria', false);
         safe('wrap-seguridad', false);
+        safe('wrap-configuracion', false);
         safe('wrap-usuarios', false);
         safe('wrap-auditoria', false);
         safe('wrap-administracion', false);
         safe('nav-cfg-empresa', false);
     }
+    // ─────────────────────────────────────────────────────────────────
     // ─────────────────────────────────────────────────────────────────
 
     // --- Mostrar app y cargar módulo guardado o por defecto ---
@@ -1342,29 +1386,77 @@ window.checkPerm = function(modKey, action) {
         var p = window._permCache;
         if (p && p.admin === true) return true;
         var keyAliases = {
-            'ot': ['ot', 'reportes_ot', 'trabajos_ot', 'status_rampa'],
-            'reportes_ot': ['reportes_ot', 'ot', 'trabajos_ot'],
-            'trabajos_ot': ['trabajos_ot', 'ot', 'reportes_ot'],
-            'fleet': ['fleetrun', 'fleet', 'cfg_mant'],
-            'fleetrun': ['fleetrun', 'fleet', 'cfg_mant'],
-            'combustible': ['combustible', 'comb'],
-            'comb': ['comb', 'combustible'],
-            'neumaticos': ['neumaticos', 'neumaticos_analisis', 'neumaticos_ultimas', 'neu', 'llantas'],
-            'neumaticos_analisis': ['neumaticos_analisis', 'neumaticos', 'neu', 'llantas'],
-            'neumaticos_ultimas': ['neumaticos_ultimas', 'neumaticos', 'neu', 'llantas'],
-            'neu': ['neu', 'neumaticos', 'neumaticos_analisis', 'neumaticos_ultimas', 'llantas'],
-            'pers_mant': ['cfg_personal', 'pers_mant'],
-            'cfg_personal': ['cfg_personal', 'pers_mant'],
-            'cond': ['cond', 'conductores'],
-            'conductores': ['conductores', 'cond'],
-            'checklist': ['checklist', 'unid'],
-            'unid': ['unid', 'checklist'],
-            'cfg_mant': ['cfg_mant', 'cfg_frec', 'cfg_kits', 'cfg_tipos_mp', 'cfg_metrica', 'cfg_situacion'],
-            'cfg_frec': ['cfg_frec', 'cfg_mant'],
-            'cfg_kits': ['cfg_kits', 'cfg_mant'],
-            'cfg_tipos_mp': ['cfg_tipos_mp', 'cfg_mant'],
-            'cfg_metrica': ['cfg_metrica', 'cfg_mant'],
-            'cfg_situacion': ['cfg_situacion', 'cfg_mant']
+            'ot': ['ot', 'reportes_ot', 'trabajos_ot', 'status_rampa', 'mantenimiento'],
+            'reportes_ot': ['reportes_ot', 'ot', 'trabajos_ot', 'mantenimiento'],
+            'trabajos_ot': ['trabajos_ot', 'ot', 'reportes_ot', 'mantenimiento'],
+            'status_rampa': ['status_rampa', 'ot', 'reportes_ot', 'mantenimiento'],
+            'insp': ['insp', 'inspecciones', 'neumaticos', 'mantenimiento'],
+            'inspecciones': ['inspecciones', 'insp', 'neumaticos', 'mantenimiento'],
+            'fleet': ['fleetrun', 'fleet', 'cfg_mant', 'mantenimiento'],
+            'fleetrun': ['fleetrun', 'fleet', 'cfg_mant', 'mantenimiento'],
+            'combustible': ['combustible', 'comb', 'otros_mant', 'mantenimiento'],
+            'comb': ['comb', 'combustible', 'otros_mant', 'mantenimiento'],
+            'neumaticos': ['neumaticos', 'neumaticos_analisis', 'neumaticos_ultimas', 'neu', 'llantas', 'otros_mant', 'insp', 'mantenimiento'],
+            'neumaticos_analisis': ['neumaticos_analisis', 'neumaticos', 'neu', 'llantas', 'otros_mant', 'insp', 'mantenimiento'],
+            'neumaticos_ultimas': ['neumaticos_ultimas', 'neumaticos', 'neu', 'llantas', 'otros_mant', 'insp', 'mantenimiento'],
+            'neu': ['neu', 'neumaticos', 'neumaticos_analisis', 'neumaticos_ultimas', 'llantas', 'otros_mant', 'insp', 'mantenimiento'],
+            'plan': ['plan', 'otros_mant', 'mantenimiento'],
+            'backlog': ['backlog', 'otros_mant', 'mantenimiento'],
+            'kpis': ['kpis', 'otros_mant', 'mantenimiento'],
+            'productividad': ['productividad', 'otros_mant', 'mantenimiento'],
+            'fin_taller': ['fin_taller', 'otros_mant', 'mantenimiento'],
+            'otros_mant': ['otros_mant', 'plan', 'backlog', 'kpis', 'productividad', 'fin_taller', 'combustible', 'neumaticos', 'mantenimiento'],
+            'pers_mant': ['cfg_personal', 'pers_mant', 'otros_mant', 'mantenimiento'],
+            'cfg_personal': ['cfg_personal', 'pers_mant', 'administracion'],
+
+            'disponibilidad': ['disponibilidad', 'status', 'fleet', 'gps', 'flota'],
+            'gps': ['gps', 'ubicacion', 'flota'],
+            'ubicacion': ['ubicacion', 'gps', 'flota'],
+            'status': ['status', 'status_flota', 'flota'],
+            'status_flota': ['status_flota', 'status', 'flota'],
+            'docs_flota': ['docs_flota', 'status', 'placas', 'flota'],
+            'placas': ['placas', 'checklist', 'unid', 'flota'],
+
+            'inv': ['inv', 'inventario', 'almacen'],
+            'inventario': ['inventario', 'inv', 'almacen'],
+            'ent_inv': ['ent_inv', 'entradas', 'almacen'],
+            'sal_inv': ['sal_inv', 'salidas', 'almacen'],
+            'kardex': ['kardex', 'almacen'],
+            'prov_inv': ['prov_inv', 'ent_inv', 'sal_inv', 'inv', 'almacen'],
+            'dash_alm': ['dash_alm', 'inv', 'almacen'],
+
+            'cond': ['cond', 'conductores', 'directorio'],
+            'conductores': ['conductores', 'cond', 'directorio'],
+            'clientes': ['clientes', 'cond', 'directorio'],
+
+            'checklist': ['checklist', 'unid', 'placas', 'seguridad', 'mantenimiento'],
+            'unid': ['unid', 'checklist', 'placas', 'seguridad', 'mantenimiento'],
+            'asist': ['asist', 'seguridad'],
+
+            'usuarios': ['usuarios', 'seg', 'configuracion'],
+            'mod_auditoria': ['mod_auditoria', 'auditoria', 'configuracion'],
+            'cfg_empresa': ['cfg_empresa', 'administracion', 'configuracion'],
+            'administracion': ['administracion', 'cfg_mant', 'configuracion'],
+            'cfg_mant': ['cfg_mant', 'cfg_frec', 'cfg_kits', 'cfg_tipos_mp', 'cfg_metrica', 'cfg_situacion', 'administracion'],
+            'cfg_frec': ['cfg_frec', 'cfg_mant', 'administracion'],
+            'cfg_kits': ['cfg_kits', 'cfg_mant', 'administracion'],
+            'cfg_tipos_mp': ['cfg_tipos_mp', 'cfg_mant', 'administracion'],
+            'cfg_metrica': ['cfg_metrica', 'cfg_mant', 'administracion'],
+            'cfg_situacion': ['cfg_situacion', 'cfg_mant', 'administracion'],
+            'cfg_familias': ['cfg_familias', 'administracion'],
+            'cfg_unidades': ['cfg_unidades', 'administracion'],
+            'cfg_sistemas': ['cfg_sistemas', 'administracion'],
+            'cfg_marcas': ['cfg_marcas', 'administracion'],
+
+            'op_rutas': ['op_rutas', 'operaciones'],
+            'op_asignacion': ['op_asignacion', 'operaciones'],
+            'op_monitoreo': ['op_monitoreo', 'operaciones'],
+            'rrhh_personal': ['rrhh_personal', 'rrhh'],
+            'rrhh_asistencia': ['rrhh_asistencia', 'rrhh'],
+            'rrhh_nomina': ['rrhh_nomina', 'rrhh'],
+            'tesoreria_caja': ['tesoreria_caja', 'tesoreria'],
+            'tesoreria_flujo': ['tesoreria_flujo', 'tesoreria'],
+            'tesoreria_cuentas': ['tesoreria_cuentas', 'tesoreria']
         };
 
         var keysToCheck = [modKey];
