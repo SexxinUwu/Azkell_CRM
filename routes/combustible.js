@@ -136,7 +136,9 @@ module.exports = function (db, broadcast, logAudit) {
 
             const tdb = getDb(req);
             const rdb = getRemoteDb();
-            const reimportAll = req.query.reset === 'true' || req.body.reset === true;
+            const body = req.body || {};
+            const query = req.query || {};
+            const reimportAll = query.reset === 'true' || body.reset === true;
 
             console.log('🔄 Iniciando sincronización remota de combustible desde 168.231.98.23 para Marsisa...');
 
