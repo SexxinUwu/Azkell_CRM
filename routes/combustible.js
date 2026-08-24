@@ -384,7 +384,7 @@ module.exports = function (db, broadcast, logAudit) {
             const [rows] = await tdb.query(
                 `SELECT * FROM combustible_vales 
                  ${whereSQL} 
-                 ORDER BY fecha DESC, id DESC 
+                 ORDER BY correlativo DESC, id_remoto DESC 
                  LIMIT ? OFFSET ?`,
                 [...params, limit, offset]
             );
