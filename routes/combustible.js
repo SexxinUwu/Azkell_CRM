@@ -769,9 +769,27 @@ module.exports = function (db, broadcast, logAudit) {
             const whereSQL = `WHERE ${whereClauses.join(' AND ')}`;
 
             const [rows] = await tdb.query(
-                `SELECT *, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha_fmt FROM combustible_vales ${whereSQL} ORDER BY fecha ASC, id ASC`,
+                `SELECT * FROM combustible_vales ${whereSQL} ORDER BY fecha ASC, id ASC`,
                 params
             );
+
+            const peruDateFmt = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/Lima',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+
+            const formatPeruDate = (f) => {
+                if (!f) return '';
+                const d = new Date(f);
+                if (isNaN(d.getTime())) return String(f);
+                return peruDateFmt.format(d).replace(',', '');
+            };
 
             // 1. Agrupar vales por Vehículo y luego por Viaje
             const vehiculoMap = {};
@@ -792,7 +810,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                 vehiculoMap[vehKey][tripKey].vouchers.push({
                     id: v.id,
-                    fecha: v.fecha_fmt || (v.fecha ? String(v.fecha).replace('T', ' ').slice(0, 19) : ''),
+                    fecha: formatPeruDate(v.fecha),
                     producto: v.tipo_combustible || 'D2',
                     grifo: v.estacion || v.proveedor || 'Estación',
                     odometro: parseFloat(v.kilometraje || 0),
