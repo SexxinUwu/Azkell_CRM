@@ -157,6 +157,16 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             });
 
+            // Consultar catálogo de placas para obtener la clase real del vehículo (TRACTO, SEMIREMOLQUE, CAMION, etc.)
+            const [placasRows] = await tdb.query("SELECT placa, tipo, sub_tipo FROM placas");
+            const placaClaseMap = new Map();
+            placasRows.forEach(p => {
+                if (p.placa) {
+                    const claseVal = (p.tipo || p.sub_tipo || 'TRACTO').toUpperCase().trim();
+                    placaClaseMap.set(p.placa.trim().toUpperCase(), claseVal);
+                }
+            });
+
             // Consultar correlativos e IDs existentes para no duplicar
             const [existentesRows] = await tdb.query("SELECT DISTINCT id_remoto, correlativo FROM combustible_vales WHERE correlativo != '' OR id_remoto IS NOT NULL");
             const existentesCorrelativos = new Set(existentesRows.map(r => r.correlativo).filter(Boolean));
@@ -205,8 +215,8 @@ module.exports = function (db, broadcast, logAudit) {
                     const viaje = String(v.viaje_numero || '').trim();
                     const caja = '';
                     const estado_caja = 'PROCESADO';
-                    const clase_vehiculo = 'TRACTO';
                     const vehiculo = String(v.placa || 'SIN-PLACA').toUpperCase().trim();
+                    const clase_vehiculo = placaClaseMap.get(vehiculo) || 'TRACTO';
                     const vehiculo_marca = String(v.vehiculo_marca || '').trim();
                     const vehiculo_modelo = String(v.vehiculo_modelo || '').trim();
                     const conductor = String(v.conductor_nombre || '').trim();
