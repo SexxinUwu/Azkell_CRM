@@ -474,8 +474,29 @@ window.verificarSesionGuardada = function() {
     if (appCrmEl) appCrmEl.style.display = 'flex';
 
     window.esRutaValidaYPermitida = function(r) {
-        if (!r || r === 'login') return false;
-        if (isAdm) return true;
+        if (!r) return false;
+        // Rutas públicas y de acceso al sistema siempre permitidas
+        if (r === 'login' || r === 'sistema/login') return true;
+
+        var rol = (localStorage.getItem('fleet_rol') || window.rolLogueado || '').toLowerCase();
+        var user = (localStorage.getItem('fleet_user') || window.usuarioLogueado || '').toLowerCase();
+        var correo = (localStorage.getItem('fleet_correo') || '').toLowerCase();
+        var esAdmin = isAdm || rol.includes('admin') || rol.includes('fundador') || user.includes('admin') || correo.includes('admin');
+        if (esAdmin) return true;
+
+        // Dashboard permitido por defecto salvo que explícitamente se deshabilite
+        if (r === 'dashboard') {
+            var pCache = window._permCache;
+            if (!pCache) return true;
+            if (pCache.admin === true) return true;
+            if (pCache.dashboard !== undefined) {
+                var d = pCache.dashboard;
+                if (typeof d === 'boolean') return d;
+                if (typeof d === 'object') return (d.l === 1 || d.l === true || d.enabled === 1 || d.enabled === true);
+            }
+            return true;
+        }
+
         var rMap = {
             'dashboard': 'dashboard',
             'flota/disponibilidad': 'disponibilidad',
@@ -732,15 +753,32 @@ window._cerrarEscaner = function() {
 function cerrarSesion() {
     if (window.cerrarSSE) window.cerrarSSE();
     window._permCache = null; // Invalidar cache de permisos
-    localStorage.removeItem('fleet_user'); localStorage.removeItem('fleet_rol'); localStorage.removeItem('fleet_correo'); localStorage.removeItem('fleet_ultimo_acceso'); localStorage.removeItem('fleet_permisos'); localStorage.removeItem('fleet_token');
+    localStorage.removeItem('fleet_user'); 
+    localStorage.removeItem('fleet_rol'); 
+    localStorage.removeItem('fleet_correo'); 
+    localStorage.removeItem('fleet_ultimo_acceso'); 
+    localStorage.removeItem('fleet_permisos'); 
+    localStorage.removeItem('fleet_token');
+    sessionStorage.removeItem('fleet_rutaActual');
     usuarioLogueado = ''; rolLogueado = ''; permisosUsuario = {};
 
-    // 🧹 Limpieza Total de Pantalla
-    ['menuMantenimiento', 'menuAlmacen', 'menuFlota'].forEach(id => { const el = document.getElementById(id); if (!el) return; el.classList.remove('show'); el.style.display = 'none'; const inst = bootstrap.Collapse.getInstance(el); if (inst) inst.dispose(); });
-    document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
+    // 🧹 Limpieza Total de Pantalla y Ocultar Cascarón App
+    const sb = document.getElementById('sidebarMenu');
+    const tb = document.querySelector('.topbar');
+    if (sb) sb.style.display = 'none';
+    if (tb) tb.style.display = 'none';
 
-    let appCrmEl2 = document.getElementById('app-crm');
-    if (appCrmEl2) appCrmEl2.style.display = 'none';
+    ['menuMantenimiento', 'menuAlmacen', 'menuFlota'].forEach(id => { 
+        const el = document.getElementById(id); 
+        if (!el) return; 
+        el.classList.remove('show'); 
+        el.style.display = 'none'; 
+        const inst = (typeof bootstrap !== 'undefined' && bootstrap.Collapse) ? bootstrap.Collapse.getInstance(el) : null; 
+        if (inst) inst.dispose(); 
+    });
+    document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
+    document.querySelectorAll('.modal-backdrop, .offcanvas-backdrop, #rotDrawerBackdrop').forEach(el => el.remove());
+
     cargarModuloAislado('login');
 }
 
@@ -1951,7 +1989,12 @@ window.applyAccent = function(hex, save) {
         }
         const response = await _orig(urlFinal, options);
         if (response.status === 401) {
-            setTimeout(function() { if (typeof cerrarSesion === 'function') cerrarSesion(); }, 0);
+            // Ignorar 401 provenientes de servicios de terceros o configuraciones externas (ej. Wialon GPS)
+            const urlIgnore = ['/api/login', '/api/script/obtenerDatosWialon', '/api/wialon', '/api/configuracion', '/api/proxy'];
+            const shouldIgnore = urlIgnore.some(u => urlStr.includes(u));
+            if (!shouldIgnore && token) {
+                setTimeout(function() { if (typeof cerrarSesion === 'function') cerrarSesion(); }, 0);
+            }
         }
         return response;
     };
@@ -3691,8 +3734,23 @@ window.cargarModuloAislado = async function(rutaModulo) {
         return;
     }
 
-    // Verificación de seguridad de permisos para la ruta solicitada
-    if (typeof window.esRutaValidaYPermitida === 'function' && !window.esRutaValidaYPermitida(rutaModulo)) {
+    // Si la ruta es login, ocultar inmediatamente barra de navegación y topbar para pantalla completa
+    if (rutaModulo === 'login') {
+        const sb = document.getElementById('sidebarMenu');
+        const tb = document.querySelector('.topbar');
+        if (sb) sb.style.display = 'none';
+        if (tb) tb.style.display = 'none';
+        const main = document.querySelector('.main-area');
+        if (main) main.style.padding = '0';
+        if (root) root.style.padding = '0';
+    } else {
+        const main = document.querySelector('.main-area');
+        if (main) main.style.padding = '';
+        if (root) root.style.padding = '15px 25px';
+    }
+
+    // Verificación de seguridad de permisos para la ruta solicitada (login siempre permitido)
+    if (rutaModulo !== 'login' && typeof window.esRutaValidaYPermitida === 'function' && !window.esRutaValidaYPermitida(rutaModulo)) {
         if (window._navProgress && typeof window._navProgress.done === 'function') window._navProgress.done();
         root.innerHTML = '<div class="container-fluid py-5 text-center">' +
             '<div class="card p-5 mx-auto border-0 rounded-4 shadow-sm" style="max-width:480px; background:#fff; border:1.5px solid #e2e8f0 !important;">' +
