@@ -806,7 +806,7 @@ module.exports = function (db, broadcast, logAudit) {
                 });
             });
 
-            // 2. Encadenar odómetros y fechas viaje a viaje para cada vehículo
+            // 2. Encadenar odómetros y fechas viaje a viaje para cada vehículo (Global y por Combustible)
             const trips = [];
 
             Object.keys(vehiculoMap).forEach(vehKey => {
@@ -818,48 +818,74 @@ module.exports = function (db, broadcast, logAudit) {
                     return { ...t, earliestDate };
                 }).sort((a, b) => a.earliestDate.localeCompare(b.earliestDate));
 
-                vehTrips.forEach((t, i) => {
+                // Rastrear el último voucher despachado por cada tipo de combustible en esta placa
+                const lastVoucherByFuel = {};
+
+                vehTrips.forEach((t) => {
                     const totalGal = t.vouchers.reduce((s, x) => s + x.galones, 0);
                     const totalCost = t.vouchers.reduce((s, x) => s + x.importe, 0);
                     const maxPeso = Math.max(0, ...t.vouchers.map(x => x.peso));
 
-                    // Último vale del viaje actual (Cierre)
+                    // Último vale del viaje actual (Cierre General)
                     const lastVCurrent = t.vouchers[t.vouchers.length - 1] || {};
                     const kmFin = lastVCurrent.odometro || 0;
                     const fechaFin = lastVCurrent.fecha || 'N/D';
-                    lastVCurrent.esPuntoCierre = true;
 
-                    let kmInicio = 0;
-                    let fechaInicio = 'N/D';
-                    let voucherPartida = null;
+                    // Puntos de partida específicos por tipo de combustible
+                    const fuelStats = {};
+                    const fuelsInTrip = new Set(t.vouchers.map(v => (v.producto || 'D2').toUpperCase()));
 
-                    if (i > 0) {
-                        // Viene de viaje previo de la misma placa
-                        const prevTrip = vehTrips[i - 1];
-                        const lastVPrev = prevTrip.vouchers[prevTrip.vouchers.length - 1];
-                        if (lastVPrev) {
-                            kmInicio = lastVPrev.odometro || 0;
-                            fechaInicio = lastVPrev.fecha || 'N/D';
-                            voucherPartida = {
-                                ...lastVPrev,
-                                id: `partida_${lastVPrev.id}`,
-                                esPuntoPartida: true,
-                                viajeOriginal: prevTrip.viaje
-                            };
-                        }
-                    } else {
-                        // Primer viaje histórico registrado de esta placa
-                        const firstVCurrent = t.vouchers[0] || {};
-                        kmInicio = firstVCurrent.odometro || 0;
-                        fechaInicio = firstVCurrent.fecha || 'N/D';
-                    }
+                    fuelsInTrip.forEach(fuelType => {
+                        const fuelVouchers = t.vouchers.filter(v => (v.producto || 'D2').toUpperCase() === fuelType);
+                        const firstVFuel = fuelVouchers[0] || {};
+                        const lastVFuel = fuelVouchers[fuelVouchers.length - 1] || {};
+                        const prevVFuel = lastVoucherByFuel[fuelType];
 
-                    const recorridoKm = (kmFin > kmInicio && kmInicio > 0) ? (kmFin - kmInicio) : 0;
-                    const odometroInconsistente = (kmInicio > 0 && kmFin > 0 && kmFin < kmInicio);
+                        const fKmFin = lastVFuel.odometro || 0;
+                        const fFechaFin = lastVFuel.fecha || 'N/D';
+                        const fKmInicio = prevVFuel ? (prevVFuel.odometro || 0) : (firstVFuel.odometro || 0);
+                        const fFechaInicio = prevVFuel ? (prevVFuel.fecha || 'N/D') : (firstVFuel.fecha || 'N/D');
+                        const fRecorrido = (fKmFin > fKmInicio && fKmInicio > 0) ? (fKmFin - fKmInicio) : 0;
+                        const fGalones = fuelVouchers.reduce((s, x) => s + x.galones, 0);
+                        const fGasto = fuelVouchers.reduce((s, x) => s + x.importe, 0);
+                        const fRendimiento = (fGalones > 0 && fRecorrido > 0) ? (fRecorrido / fGalones) : 0;
+
+                        const fPartidaVoucher = prevVFuel ? {
+                            ...prevVFuel,
+                            id: `partida_${fuelType}_${prevVFuel.id}`,
+                            esPuntoPartida: true,
+                            viajeOriginal: prevVFuel.viaje
+                        } : null;
+
+                        fuelStats[fuelType] = {
+                            kmInicio: fKmInicio,
+                            kmFin: fKmFin,
+                            fechaInicio: fFechaInicio,
+                            fechaFin: fFechaFin,
+                            recorridoKm: fRecorrido,
+                            totalGalones: fGalones,
+                            totalGasto: fGasto,
+                            rendimiento: fRendimiento,
+                            voucherPartida: fPartidaVoucher,
+                            vouchers: fPartidaVoucher ? [fPartidaVoucher, ...fuelVouchers] : [...fuelVouchers]
+                        };
+
+                        // Actualizar último voucher histórico de este combustible para el siguiente viaje
+                        lastVoucherByFuel[fuelType] = { ...lastVFuel, viaje: t.viaje };
+                    });
+
+                    // Por defecto: usar D2 si existe para odómetro / km, o el general
+                    const d2Stats = fuelStats['D2'] || null;
+                    const kmInicio = d2Stats ? d2Stats.kmInicio : (t.vouchers[0]?.odometro || 0);
+                    const fechaInicio = d2Stats ? d2Stats.fechaInicio : (t.vouchers[0]?.fecha || 'N/D');
+                    const recorridoKm = d2Stats ? d2Stats.recorridoKm : ((kmFin > kmInicio && kmInicio > 0) ? (kmFin - kmInicio) : 0);
                     const rendimiento = (totalGal > 0 && recorridoKm > 0) ? (recorridoKm / totalGal) : 0;
 
-                    // Lista de vales para el modal: incluir punto de partida si existe
-                    const modalVouchers = voucherPartida ? [voucherPartida, ...t.vouchers] : [...t.vouchers];
+                    // Marcar cierre en el último voucher del viaje
+                    lastVCurrent.esPuntoCierre = true;
+
+                    // Vales del modal por defecto (incluye punto de partida de D2 si existe)
+                    const modalVouchers = (d2Stats && d2Stats.voucherPartida) ? [d2Stats.voucherPartida, ...t.vouchers] : [...t.vouchers];
 
                     trips.push({
                         viaje: t.viaje,
@@ -870,13 +896,14 @@ module.exports = function (db, broadcast, logAudit) {
                         kmInicio,
                         kmFin,
                         recorridoKm,
-                        odometroInconsistente,
+                        odometroInconsistente: (kmInicio > 0 && kmFin > 0 && kmFin < kmInicio),
                         pesoMaxTn: maxPeso,
                         totalGalones: totalGal,
                         totalGasto: totalCost,
                         rendimiento,
                         vouchers: modalVouchers,
-                        vouchersPropiosCount: t.vouchers.length
+                        vouchersPropiosCount: t.vouchers.length,
+                        fuelStats
                     });
                 });
             });

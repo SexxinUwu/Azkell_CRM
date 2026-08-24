@@ -357,14 +357,29 @@
 
         const esc = (s) => String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
+
         let html = '';
         pagedTrips.forEach((t, i) => {
             const globalIdx = startIdx + i;
+            
+            // Si hay filtro de combustible activo, usar estadísticas específicas de ese combustible
+            const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
+
+            const fInicio = fs ? fs.fechaInicio : t.fechaInicio;
+            const fFin = fs ? fs.fechaFin : t.fechaFin;
+            const kInicio = fs ? fs.kmInicio : t.kmInicio;
+            const kFin = fs ? fs.kmFin : t.kmFin;
+            const recKm = fs ? fs.recorridoKm : t.recorridoKm;
+            const totGal = fs ? fs.totalGalones : t.totalGalones;
+            const totGasto = fs ? fs.totalGasto : t.totalGasto;
+            const rend = fs ? fs.rendimiento : t.rendimiento;
+
             const rTeorico = obtenerRendimientoTeorico(t.ruta, t.pesoMaxTn);
             let semaforoBadge = '—';
 
-            if (t.rendimiento > 0 && rTeorico > 0) {
-                const ratio = t.rendimiento / rTeorico;
+            if (rend > 0 && rTeorico > 0) {
+                const ratio = rend / rTeorico;
                 if (ratio >= 0.95) {
                     semaforoBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-0.5 rounded-pill fw-bold" title="Óptimo / Eficiente">${rTeorico.toFixed(1)} Km/G</span>`;
                 } else if (ratio >= 0.85) {
@@ -376,10 +391,12 @@
                 semaforoBadge = `<span class="text-muted font-monospace small">${rTeorico.toFixed(1)} Km/G</span>`;
             }
 
-            const tieneAlertaOdo = t.odometroInconsistente;
+            const tieneAlertaOdo = (kInicio > 0 && kFin > 0 && kFin < kInicio);
             const semaforoRecorrido = tieneAlertaOdo 
                 ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-0.5" title="Odómetro final menor al inicial"><i class="bi bi-exclamation-triangle-fill me-1"></i>Revisar Odo</span>` 
-                : (t.recorridoKm > 0 ? t.recorridoKm.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—');
+                : (recKm > 0 ? recKm.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—');
+
+            const valesCount = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
 
             html += `
                 <tr>
@@ -397,20 +414,20 @@
                         <i class="bi bi-geo-alt-fill text-danger me-1 small"></i>
                         <span class="fw-semibold text-dark">${esc(t.ruta)}</span>
                     </td>
-                    <td class="text-muted small">${esc(t.fechaInicio)}</td>
-                    <td class="text-muted small">${esc(t.fechaFin)}</td>
-                    <td class="text-end font-monospace text-success fw-bold">${t.kmInicio > 0 ? t.kmInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
-                    <td class="text-end font-monospace text-danger fw-bold">${t.kmFin > 0 ? t.kmFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-muted small">${esc(fInicio)}</td>
+                    <td class="text-muted small">${esc(fFin)}</td>
+                    <td class="text-end font-monospace text-success fw-bold">${kInicio > 0 ? kInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace text-danger fw-bold">${kFin > 0 ? kFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bold text-dark">${semaforoRecorrido}</td>
-                    <td class="text-end font-monospace fw-bold text-primary">${t.totalGalones.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
-                    <td class="text-end font-monospace fw-bold text-success">S/ ${t.totalGasto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
-                    <td class="text-end font-monospace fw-bold ${t.rendimiento > 0 ? 'text-indigo-600' : 'text-muted'}">
-                        ${t.rendimiento > 0 ? t.rendimiento.toFixed(2) : '—'}
+                    <td class="text-end font-monospace fw-bold text-primary">${totGal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
+                    <td class="text-end font-monospace fw-bold text-success">S/ ${totGasto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
+                    <td class="text-end font-monospace fw-bold ${rend > 0 ? 'text-indigo-600' : 'text-muted'}">
+                        ${rend > 0 ? rend.toFixed(2) : '—'}
                     </td>
                     <td class="text-end font-monospace">${semaforoBadge}</td>
                     <td class="text-center">
                         <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2.5 d-inline-flex align-items-center gap-1" onclick="window.caAbrirModalVales(${globalIdx})" style="font-size:0.72rem;">
-                            <i class="bi bi-receipt"></i> ${t.vouchersPropiosCount || t.vouchers.length} vales
+                            <i class="bi bi-receipt"></i> ${valesCount} vales
                         </button>
                     </td>
                 </tr>
@@ -484,31 +501,31 @@
         if (!trip) return;
 
         const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
+        const fs = (fuelFilter !== 'ALL' && trip.fuelStats && trip.fuelStats[fuelFilter]) ? trip.fuelStats[fuelFilter] : null;
+
+        const kInicio = fs ? fs.kmInicio : trip.kmInicio;
+        const kFin = fs ? fs.kmFin : trip.kmFin;
+        const recKm = fs ? fs.recorridoKm : trip.recorridoKm;
+        const totGal = fs ? fs.totalGalones : trip.totalGalones;
+        const totGasto = fs ? fs.totalGasto : trip.totalGasto;
+        const rend = fs ? fs.rendimiento : trip.rendimiento;
+        const vouchersList = fs ? fs.vouchers : (trip.vouchers || []);
+
         const title = document.getElementById('ca-modal-title');
         const sub = document.getElementById('ca-modal-sub-header');
         const tbody = document.getElementById('ca-modal-table-body');
-
-        // Filtrar lista de vales estrictamente por el combustible activo
-        let vouchersList = trip.vouchers || [];
-        if (fuelFilter !== 'ALL') {
-            vouchersList = vouchersList.filter(v => v.producto === fuelFilter);
-        }
-
-        const vPropios = vouchersList.filter(v => !v.esPuntoPartida);
-        const modalGalones = vPropios.reduce((s, x) => s + (x.galones || 0), 0);
-        const modalGasto = vPropios.reduce((s, x) => s + (x.importe || 0), 0);
 
         if (title) title.textContent = `Detalle de Vales ${fuelFilter !== 'ALL' ? '(' + fuelFilter + ')' : ''} — Viaje ${trip.viaje} (${trip.placa})`;
 
         if (sub) {
             sub.innerHTML = `
                 <div><span class="text-muted">Ruta:</span> <strong class="text-dark">${trip.ruta}</strong></div>
-                <div><span class="text-muted">Km Inicial (Partida):</span> <strong class="text-success font-monospace">${trip.kmInicio > 0 ? trip.kmInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
-                <div><span class="text-muted">Km Final (Cierre):</span> <strong class="text-danger font-monospace">${trip.kmFin > 0 ? trip.kmFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
-                <div><span class="text-muted">Recorrido:</span> <strong class="text-dark font-monospace">${trip.recorridoKm > 0 ? trip.recorridoKm.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
-                <div><span class="text-muted">Total Galones ${fuelFilter !== 'ALL' ? '(' + fuelFilter + ')' : ''}:</span> <strong class="text-primary">${modalGalones.toFixed(2)} Gln</strong></div>
-                <div><span class="text-muted">Total Gasto ${fuelFilter !== 'ALL' ? '(' + fuelFilter + ')' : ''}:</span> <strong class="text-success">S/ ${modalGasto.toFixed(2)}</strong></div>
-                ${fuelFilter === 'ALL' ? `<div><span class="text-muted">Rendimiento:</span> <strong class="text-indigo-600 font-monospace">${trip.rendimiento > 0 ? trip.rendimiento.toFixed(2) + ' Km/Gal' : 'N/D'}</strong></div>` : ''}
+                <div><span class="text-muted">Km Inicial (${fuelFilter !== 'ALL' ? fuelFilter : 'Partida'}):</span> <strong class="text-success font-monospace">${kInicio > 0 ? kInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
+                <div><span class="text-muted">Km Final (${fuelFilter !== 'ALL' ? fuelFilter : 'Cierre'}):</span> <strong class="text-danger font-monospace">${kFin > 0 ? kFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
+                <div><span class="text-muted">Recorrido:</span> <strong class="text-dark font-monospace">${recKm > 0 ? recKm.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
+                <div><span class="text-muted">Total Galones ${fuelFilter !== 'ALL' ? '(' + fuelFilter + ')' : ''}:</span> <strong class="text-primary">${totGal.toFixed(2)} Gln</strong></div>
+                <div><span class="text-muted">Total Gasto ${fuelFilter !== 'ALL' ? '(' + fuelFilter + ')' : ''}:</span> <strong class="text-success">S/ ${totGasto.toFixed(2)}</strong></div>
+                <div><span class="text-muted">Rendimiento:</span> <strong class="text-indigo-600 font-monospace">${rend > 0 ? rend.toFixed(2) + ' Km/Gal' : 'N/D'}</strong></div>
             `;
         }
 
@@ -521,7 +538,7 @@
                                 <span class="fw-bold text-success">${v.fecha || '—'}</span>
                                 <br>
                                 <span class="badge bg-success bg-opacity-15 text-success border border-success fw-bold mt-1" style="font-size:0.68rem;">
-                                    <i class="bi bi-flag-fill me-1"></i> PUNTO DE PARTIDA (Cierre Viaje ${esc(v.viajeOriginal || '')})
+                                    <i class="bi bi-flag-fill me-1"></i> PUNTO DE PARTIDA ${v.producto} (Cierre Viaje ${esc(v.viajeOriginal || '')})
                                 </span>
                             </td>
                             <td class="py-2.5 px-3"><span class="badge bg-info bg-opacity-10 text-info border">${v.producto}</span></td>
@@ -542,7 +559,7 @@
                                 <span class="fw-bold text-danger">${v.fecha || '—'}</span>
                                 <br>
                                 <span class="badge bg-danger bg-opacity-15 text-danger border border-danger fw-bold mt-1" style="font-size:0.68rem;">
-                                    <i class="bi bi-check-circle-fill me-1"></i> CIERRE DE VIAJE (Último Abastecimiento)
+                                    <i class="bi bi-check-circle-fill me-1"></i> CIERRE DE VIAJE (${v.producto})
                                 </span>
                             </td>
                             <td class="py-2.5 px-3"><span class="badge bg-info bg-opacity-10 text-info border">${v.producto}</span></td>
