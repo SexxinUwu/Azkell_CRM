@@ -128,26 +128,6 @@
                             <i class="bi bi-person-gear nav-icon"></i>
                             <span class="link-text" data-i18n="nav.trabajos_ot">Historial de Trabajos</span>
                         </a>
-                        <!-- Submenú desplegable Combustible -->
-                        <div class="nav-submenu-group">
-                            <a id="nav-combustible-toggle" class="nav-item d-flex align-items-center justify-content-between" onclick="var el=document.getElementById('submenu-combustible'); var chev=document.getElementById('chev-combustible'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="bi bi-fuel-pump-fill nav-icon"></i>
-                                    <span class="link-text">Combustible</span>
-                                </div>
-                                <i class="bi bi-chevron-down nav-sub-chevron" id="chev-combustible" style="font-size:0.75rem; transition: transform 0.2s ease;"></i>
-                            </a>
-                            <div class="nav-submenu-items d-none ps-3" id="submenu-combustible">
-                                <a id="nav-combustible-vales" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('mantenimiento/combustible-vales')">
-                                    <i class="bi bi-receipt nav-icon me-1" style="font-size: 0.82rem;"></i>
-                                    <span class="link-text" style="font-size: 0.82rem;">Vales de Combustible</span>
-                                </a>
-                                <a id="nav-combustible-analisis" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('mantenimiento/combustible-analisis')">
-                                    <i class="bi bi-graph-up-arrow nav-icon me-1" style="font-size: 0.82rem;"></i>
-                                    <span class="link-text" style="font-size: 0.82rem;">Análisis de Combustible</span>
-                                </a>
-                            </div>
-                        </div>
                         <!-- Submenú desplegable Neumáticos -->
                         <div class="nav-submenu-group">
                             <a id="nav-neumaticos-toggle" class="nav-item d-flex align-items-center justify-content-between" onclick="var el=document.getElementById('submenu-neumaticos'); var chev=document.getElementById('chev-neumaticos'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
@@ -248,7 +228,7 @@
                 <div id="wrap-operaciones">
                     <button class="nav-section-toggle" data-section="operaciones" aria-expanded="false" onclick="window.toggleNavSection('operaciones')">
                         <span class="link-text">Operaciones</span>
-                        <span class="section-badge">3</span>
+                        <span class="section-badge">4</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-operaciones">
@@ -264,6 +244,26 @@
                             <i class="bi bi-activity nav-icon"></i>
                             <span class="link-text">Monitoreo de Operaciones</span>
                         </a>
+                        <!-- Submenú desplegable Combustible -->
+                        <div class="nav-submenu-group">
+                            <a id="nav-combustible-toggle" class="nav-item d-flex align-items-center justify-content-between" onclick="var el=document.getElementById('submenu-combustible'); var chev=document.getElementById('chev-combustible'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-fuel-pump-fill nav-icon"></i>
+                                    <span class="link-text">Combustible</span>
+                                </div>
+                                <i class="bi bi-chevron-down nav-sub-chevron" id="chev-combustible" style="font-size:0.75rem; transition: transform 0.2s ease;"></i>
+                            </a>
+                            <div class="nav-submenu-items d-none ps-3" id="submenu-combustible">
+                                <a id="nav-combustible-vales" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/combustible-vales')">
+                                    <i class="bi bi-receipt nav-icon me-1" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Vales de Combustible</span>
+                                </a>
+                                <a id="nav-combustible-analisis" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/combustible-analisis')">
+                                    <i class="bi bi-graph-up-arrow nav-icon me-1" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Análisis de Combustible</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
