@@ -362,30 +362,30 @@ window.verificarSesionGuardada = function() {
     var vOpRutas = _cL('op_rutas');
     var vOpAsig  = _cL('op_asignacion');
     var vOpMon   = _cL('op_monitoreo');
-    var showOp   = vOpRutas || vOpAsig || vOpMon || _cL('operaciones');
-    safe('nav-op-rutas', vOpRutas || _cL('operaciones'));
-    safe('nav-op-asignacion', vOpAsig || _cL('operaciones'));
-    safe('nav-op-monitoreo', vOpMon || _cL('operaciones'));
+    var showOp   = vOpRutas || vOpAsig || vOpMon;
+    safe('nav-op-rutas', vOpRutas);
+    safe('nav-op-asignacion', vOpAsig);
+    safe('nav-op-monitoreo', vOpMon);
     safe('wrap-operaciones', showOp);
 
     // RRHH
     var vRrhhPers = _cL('rrhh_personal');
     var vRrhhAsis = _cL('rrhh_asistencia');
     var vRrhhNom  = _cL('rrhh_nomina');
-    var showRrhh  = vRrhhPers || vRrhhAsis || vRrhhNom || _cL('rrhh');
-    safe('nav-rrhh-personal', vRrhhPers || _cL('rrhh'));
-    safe('nav-rrhh-asistencia', vRrhhAsis || _cL('rrhh'));
-    safe('nav-rrhh-nomina', vRrhhNom || _cL('rrhh'));
+    var showRrhh  = vRrhhPers || vRrhhAsis || vRrhhNom;
+    safe('nav-rrhh-personal', vRrhhPers);
+    safe('nav-rrhh-asistencia', vRrhhAsis);
+    safe('nav-rrhh-nomina', vRrhhNom);
     safe('wrap-rrhh', showRrhh);
 
     // TESORERÍA
     var vTesoCaja = _cL('tesoreria_caja');
     var vTesoFlujo = _cL('tesoreria_flujo');
     var vTesoCuentas = _cL('tesoreria_cuentas');
-    var showTeso = vTesoCaja || vTesoFlujo || vTesoCuentas || _cL('tesoreria');
-    safe('nav-tesoreria-caja', vTesoCaja || _cL('tesoreria'));
-    safe('nav-tesoreria-flujo', vTesoFlujo || _cL('tesoreria'));
-    safe('nav-tesoreria-cuentas', vTesoCuentas || _cL('tesoreria'));
+    var showTeso = vTesoCaja || vTesoFlujo || vTesoCuentas;
+    safe('nav-tesoreria-caja', vTesoCaja);
+    safe('nav-tesoreria-flujo', vTesoFlujo);
+    safe('nav-tesoreria-cuentas', vTesoCuentas);
     safe('wrap-tesoreria', showTeso);
 
     // SEGURIDAD
@@ -473,13 +473,90 @@ window.verificarSesionGuardada = function() {
     let appCrmEl = document.getElementById('app-crm');
     if (appCrmEl) appCrmEl.style.display = 'flex';
 
+    window.esRutaValidaYPermitida = function(r) {
+        if (!r || r === 'login') return false;
+        if (isAdm) return true;
+        var rMap = {
+            'dashboard': 'dashboard',
+            'flota/disponibilidad': 'disponibilidad',
+            'flota/ubicacion': 'gps',
+            'flota/status': 'status',
+            'flota/documentos': 'docs_flota',
+            'flota/placas': 'placas',
+            'mantenimiento/status-rampa': 'status_rampa',
+            'mantenimiento/checklist': 'checklist',
+            'mantenimiento/inspecciones': 'insp',
+            'mantenimiento/fleetrun': 'fleetrun',
+            'mantenimiento/reportes-ot': 'reportes_ot',
+            'mantenimiento/trabajos-ot': 'trabajos_ot',
+            'mantenimiento/combustible': 'combustible',
+            'mantenimiento/neumaticos': 'neumaticos',
+            'mantenimiento/neumaticos-analisis': 'neumaticos',
+            'mantenimiento/neumaticos-ultimas': 'neumaticos',
+            'mantenimiento/otros': 'otros_mant',
+            'almacen/dashboard-financiero': 'dash_alm',
+            'almacen/inventario': 'inv',
+            'almacen/entradas': 'ent_inv',
+            'almacen/salidas': 'sal_inv',
+            'almacen/kardex': 'kardex',
+            'almacen/proveedores': 'prov_inv',
+            'directorio/conductores': 'cond',
+            'directorio/clientes': 'clientes',
+            'operaciones/rutas': 'op_rutas',
+            'operaciones/asignacion': 'op_asignacion',
+            'operaciones/monitoreo': 'op_monitoreo',
+            'rrhh/personal': 'rrhh_personal',
+            'rrhh/asistencia': 'rrhh_asistencia',
+            'rrhh/nomina': 'rrhh_nomina',
+            'tesoreria/caja-chica': 'tesoreria_caja',
+            'tesoreria/flujo-caja': 'tesoreria_flujo',
+            'tesoreria/cuentas': 'tesoreria_cuentas',
+            'seguridad/unidades': 'checklist',
+            'seguridad/asistencia': 'asist',
+            'sistema/usuarios': 'usuarios',
+            'sistema/auditoria': 'mod_auditoria',
+            'administracion': 'administracion'
+        };
+        var permKey = rMap[r] || r;
+        return window.checkPerm(permKey, 'l');
+    };
+
+    window.obtenerPrimeraRutaPermitida = function() {
+        if (isAdm || window.checkPerm('dashboard', 'l')) return 'dashboard';
+        var posibles = [
+            'mantenimiento/neumaticos-analisis',
+            'mantenimiento/status-rampa',
+            'mantenimiento/reportes-ot',
+            'mantenimiento/inspecciones',
+            'mantenimiento/checklist',
+            'mantenimiento/fleetrun',
+            'mantenimiento/trabajos-ot',
+            'mantenimiento/combustible',
+            'flota/disponibilidad',
+            'flota/status',
+            'flota/ubicacion',
+            'almacen/inventario',
+            'almacen/salidas',
+            'almacen/entradas',
+            'directorio/conductores',
+            'operaciones/rutas',
+            'rrhh/personal',
+            'tesoreria/caja-chica',
+            'seguridad/unidades'
+        ];
+        for (var i = 0; i < posibles.length; i++) {
+            if (window.esRutaValidaYPermitida(posibles[i])) return posibles[i];
+        }
+        return 'dashboard';
+    };
+
     let rutaGuardada = sessionStorage.getItem('fleet_rutaActual');
     if (isSuperAdminDomain) {
         cargarModuloAislado('sistema/superadmin');
-    } else if (rutaGuardada && rutaGuardada !== 'login') {
+    } else if (rutaGuardada && rutaGuardada !== 'login' && window.esRutaValidaYPermitida(rutaGuardada)) {
         cargarModuloAislado(rutaGuardada);
     } else {
-        cargarModuloAislado('dashboard');
+        cargarModuloAislado(window.obtenerPrimeraRutaPermitida());
     }
 
     // --- Iniciar sincronización SSE en tiempo real ---
@@ -1386,58 +1463,60 @@ window.checkPerm = function(modKey, action) {
         var p = window._permCache;
         if (p && p.admin === true) return true;
         var keyAliases = {
-            'ot': ['ot', 'reportes_ot', 'trabajos_ot', 'status_rampa', 'mantenimiento'],
-            'reportes_ot': ['reportes_ot', 'ot', 'trabajos_ot', 'mantenimiento'],
-            'trabajos_ot': ['trabajos_ot', 'ot', 'reportes_ot', 'mantenimiento'],
-            'status_rampa': ['status_rampa', 'ot', 'reportes_ot', 'mantenimiento'],
-            'insp': ['insp', 'inspecciones', 'neumaticos', 'mantenimiento'],
-            'inspecciones': ['inspecciones', 'insp', 'neumaticos', 'mantenimiento'],
-            'fleet': ['fleetrun', 'fleet', 'cfg_mant', 'mantenimiento'],
-            'fleetrun': ['fleetrun', 'fleet', 'cfg_mant', 'mantenimiento'],
-            'combustible': ['combustible', 'comb', 'otros_mant', 'mantenimiento'],
-            'comb': ['comb', 'combustible', 'otros_mant', 'mantenimiento'],
-            'neumaticos': ['neumaticos', 'neumaticos_analisis', 'neumaticos_ultimas', 'neu', 'llantas', 'otros_mant', 'insp', 'mantenimiento'],
-            'neumaticos_analisis': ['neumaticos_analisis', 'neumaticos', 'neu', 'llantas', 'otros_mant', 'insp', 'mantenimiento'],
-            'neumaticos_ultimas': ['neumaticos_ultimas', 'neumaticos', 'neu', 'llantas', 'otros_mant', 'insp', 'mantenimiento'],
-            'neu': ['neu', 'neumaticos', 'neumaticos_analisis', 'neumaticos_ultimas', 'llantas', 'otros_mant', 'insp', 'mantenimiento'],
-            'plan': ['plan', 'otros_mant', 'mantenimiento'],
-            'backlog': ['backlog', 'otros_mant', 'mantenimiento'],
-            'kpis': ['kpis', 'otros_mant', 'mantenimiento'],
-            'productividad': ['productividad', 'otros_mant', 'mantenimiento'],
-            'fin_taller': ['fin_taller', 'otros_mant', 'mantenimiento'],
-            'otros_mant': ['otros_mant', 'plan', 'backlog', 'kpis', 'productividad', 'fin_taller', 'combustible', 'neumaticos', 'mantenimiento'],
-            'pers_mant': ['cfg_personal', 'pers_mant', 'otros_mant', 'mantenimiento'],
-            'cfg_personal': ['cfg_personal', 'pers_mant', 'administracion'],
+            'dashboard': ['dashboard', 'dash'],
+            'ot': ['ot', 'reportes_ot'],
+            'reportes_ot': ['reportes_ot', 'ot'],
+            'trabajos_ot': ['trabajos_ot'],
+            'status_rampa': ['status_rampa'],
+            'insp': ['insp', 'inspecciones'],
+            'inspecciones': ['inspecciones', 'insp'],
+            'fleet': ['fleetrun', 'fleet'],
+            'fleetrun': ['fleetrun', 'fleet'],
+            'combustible': ['combustible', 'comb'],
+            'comb': ['comb', 'combustible'],
+            'neumaticos': ['neumaticos', 'neumaticos_analisis', 'neumaticos_ultimas', 'neu', 'llantas'],
+            'neumaticos_analisis': ['neumaticos_analisis', 'neumaticos', 'neu', 'llantas'],
+            'neumaticos_ultimas': ['neumaticos_ultimas', 'neumaticos', 'neu', 'llantas'],
+            'neu': ['neu', 'neumaticos', 'neumaticos_analisis', 'neumaticos_ultimas', 'llantas'],
+            'plan': ['plan', 'planificacion'],
+            'backlog': ['backlog', 'backlog_taller'],
+            'kpis': ['kpis', 'kpis_taller'],
+            'productividad': ['productividad'],
+            'fin_taller': ['fin_taller', 'finanzas_taller'],
+            'otros_mant': ['otros_mant'],
+            'pers_mant': ['cfg_personal', 'pers_mant'],
+            'cfg_personal': ['cfg_personal', 'pers_mant'],
 
-            'disponibilidad': ['disponibilidad', 'status', 'fleet', 'gps', 'flota'],
-            'gps': ['gps', 'ubicacion', 'flota'],
-            'ubicacion': ['ubicacion', 'gps', 'flota'],
-            'status': ['status', 'status_flota', 'flota'],
-            'status_flota': ['status_flota', 'status', 'flota'],
-            'docs_flota': ['docs_flota', 'status', 'placas', 'flota'],
-            'placas': ['placas', 'checklist', 'unid', 'flota'],
+            'disponibilidad': ['disponibilidad'],
+            'gps': ['gps', 'ubicacion'],
+            'ubicacion': ['ubicacion', 'gps'],
+            'status': ['status', 'status_flota'],
+            'status_flota': ['status_flota', 'status'],
+            'docs_flota': ['docs_flota'],
+            'placas': ['placas', 'unid'],
+            'unid': ['unid', 'placas'],
 
-            'inv': ['inv', 'inventario', 'almacen'],
-            'inventario': ['inventario', 'inv', 'almacen'],
-            'ent_inv': ['ent_inv', 'entradas', 'almacen'],
-            'sal_inv': ['sal_inv', 'salidas', 'almacen'],
-            'kardex': ['kardex', 'almacen'],
-            'prov_inv': ['prov_inv', 'ent_inv', 'sal_inv', 'inv', 'almacen'],
-            'dash_alm': ['dash_alm', 'inv', 'almacen'],
+            'inv': ['inv', 'inventario'],
+            'inventario': ['inventario', 'inv'],
+            'ent_inv': ['ent_inv', 'entradas'],
+            'sal_inv': ['sal_inv', 'salidas'],
+            'kardex': ['kardex'],
+            'prov_inv': ['prov_inv', 'proveedores'],
+            'dash_alm': ['dash_alm', 'finanzas_inv'],
 
-            'cond': ['cond', 'conductores', 'directorio'],
-            'conductores': ['conductores', 'cond', 'directorio'],
-            'clientes': ['clientes', 'cond', 'directorio'],
+            'cond': ['cond', 'conductores', 'personal'],
+            'conductores': ['conductores', 'cond', 'personal'],
+            'clientes': ['clientes'],
 
-            'checklist': ['checklist', 'unid', 'placas', 'seguridad', 'mantenimiento'],
-            'unid': ['unid', 'checklist', 'placas', 'seguridad', 'mantenimiento'],
-            'asist': ['asist', 'seguridad'],
+            'checklist': ['checklist'],
+            'seg_checklist': ['seg_checklist', 'checklist'],
+            'asist': ['asist', 'seg_asistencia'],
 
-            'usuarios': ['usuarios', 'seg', 'configuracion'],
-            'mod_auditoria': ['mod_auditoria', 'auditoria', 'configuracion'],
-            'cfg_empresa': ['cfg_empresa', 'administracion', 'configuracion'],
-            'administracion': ['administracion', 'cfg_mant', 'configuracion'],
-            'cfg_mant': ['cfg_mant', 'cfg_frec', 'cfg_kits', 'cfg_tipos_mp', 'cfg_metrica', 'cfg_situacion', 'administracion'],
+            'usuarios': ['usuarios', 'seg'],
+            'mod_auditoria': ['mod_auditoria', 'auditoria'],
+            'cfg_empresa': ['cfg_empresa'],
+            'administracion': ['administracion', 'cfg_mant'],
+            'cfg_mant': ['cfg_mant', 'administracion'],
             'cfg_frec': ['cfg_frec', 'cfg_mant', 'administracion'],
             'cfg_kits': ['cfg_kits', 'cfg_mant', 'administracion'],
             'cfg_tipos_mp': ['cfg_tipos_mp', 'cfg_mant', 'administracion'],
@@ -1448,15 +1527,15 @@ window.checkPerm = function(modKey, action) {
             'cfg_sistemas': ['cfg_sistemas', 'administracion'],
             'cfg_marcas': ['cfg_marcas', 'administracion'],
 
-            'op_rutas': ['op_rutas', 'operaciones'],
-            'op_asignacion': ['op_asignacion', 'operaciones'],
-            'op_monitoreo': ['op_monitoreo', 'operaciones'],
-            'rrhh_personal': ['rrhh_personal', 'rrhh'],
-            'rrhh_asistencia': ['rrhh_asistencia', 'rrhh'],
-            'rrhh_nomina': ['rrhh_nomina', 'rrhh'],
-            'tesoreria_caja': ['tesoreria_caja', 'tesoreria'],
-            'tesoreria_flujo': ['tesoreria_flujo', 'tesoreria'],
-            'tesoreria_cuentas': ['tesoreria_cuentas', 'tesoreria']
+            'op_rutas': ['op_rutas'],
+            'op_asignacion': ['op_asignacion'],
+            'op_monitoreo': ['op_monitoreo'],
+            'rrhh_personal': ['rrhh_personal'],
+            'rrhh_asistencia': ['rrhh_asistencia'],
+            'rrhh_nomina': ['rrhh_nomina'],
+            'tesoreria_caja': ['tesoreria_caja'],
+            'tesoreria_flujo': ['tesoreria_flujo'],
+            'tesoreria_cuentas': ['tesoreria_cuentas']
         };
 
         var keysToCheck = [modKey];
@@ -3609,6 +3688,21 @@ window.cargarModuloAislado = async function(rutaModulo) {
         root.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted fw-bold">Cargando módulo...</p></div>';
     } else {
         console.error('Elemento root-dinamico no encontrado');
+        return;
+    }
+
+    // Verificación de seguridad de permisos para la ruta solicitada
+    if (typeof window.esRutaValidaYPermitida === 'function' && !window.esRutaValidaYPermitida(rutaModulo)) {
+        if (window._navProgress && typeof window._navProgress.done === 'function') window._navProgress.done();
+        root.innerHTML = '<div class="container-fluid py-5 text-center">' +
+            '<div class="card p-5 mx-auto border-0 rounded-4 shadow-sm" style="max-width:480px; background:#fff; border:1.5px solid #e2e8f0 !important;">' +
+            '<div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width:64px; height:64px; background:#fee2e2; color:#ef4444; font-size:1.8rem;">' +
+            '<i class="bi bi-shield-lock-fill"></i>' +
+            '</div>' +
+            '<h4 class="fw-bold text-dark mb-2">Acceso Restringido</h4>' +
+            '<p class="text-muted small mb-4">No tienes permisos asignados para acceder a este módulo en el ERP. Solicita los accesos correspondientes a tu administrador.</p>' +
+            '<div><button class="btn btn-primary fw-semibold px-4 rounded-3" onclick="window.cargarModuloAislado(window.obtenerPrimeraRutaPermitida ? window.obtenerPrimeraRutaPermitida() : \'dashboard\')">Ir a mi módulo asignado</button></div>' +
+            '</div></div>';
         return;
     }
 

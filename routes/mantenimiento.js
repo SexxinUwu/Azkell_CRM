@@ -5,8 +5,9 @@ module.exports = function (db, logAudit) {
 
     // GET /api/mantenimiento/inspecciones/config
     router.get('/inspecciones/config', (req, res) => {
+        const targetDb = req.db || db;
         const query = 'SELECT * FROM mant_insp_templates ORDER BY orden ASC';
-        db.query(query, (err, rows) => {
+        targetDb.query(query, (err, rows) => {
             if (err) {
                 console.error('Error al obtener config de inspecciones:', err);
                 return res.status(500).json({ ok: false, error: err.message });
@@ -22,7 +23,8 @@ module.exports = function (db, logAudit) {
             return res.status(400).json({ ok: false, error: 'Formato inválido. Se esperaba un array de templates.' });
         }
 
-        db.getConnection((err, conn) => {
+        const targetDb = req.db || db;
+        targetDb.getConnection((err, conn) => {
             if (err) {
                 console.error('Error getConnection:', err);
                 return res.status(500).json({ ok: false, error: err.message });
