@@ -202,23 +202,23 @@
                     <td>
                         <span class="badge bg-dark text-white fw-bold px-2 py-1" style="font-size:0.75rem;">${r.placa}</span>
                     </td>
-                    <td class="fw-semibold text-dark">${r.conductor || '<span class="text-muted">No asignado</span>'}</td>
-                    <td><span class="badge bg-light text-secondary border fw-semibold">${r.marca || '—'}</span></td>
-                    <td class="fw-semibold text-secondary">${r.ubicacion || '—'}</td>
-                    <td><span class="badge bg-light text-dark border">${r.tipo_unidad || 'TRACTO'}</span></td>
+                    <td class="fw-bold text-dark">${r.conductor || '<span class="text-dark fw-bold">—</span>'}</td>
+                    <td><span class="badge bg-white text-dark border border-secondary fw-bold">${r.marca || '—'}</span></td>
+                    <td class="fw-bold text-dark">${r.ubicacion || '—'}</td>
+                    <td><span class="badge bg-white text-dark border border-secondary fw-bold">${r.tipo_unidad || 'TRACTO'}</span></td>
                     <td class="text-center">${badgeTransbordo}</td>
-                    <td class="fw-semibold text-dark" style="max-width:200px;">${r.motivo || '—'}</td>
-                    <td class="text-secondary" style="max-width:240px; font-size:0.78rem;">${r.falla || '—'}</td>
+                    <td class="fw-bold text-dark" style="max-width:200px;">${r.motivo || '—'}</td>
+                    <td class="fw-bold text-dark" style="max-width:240px; font-size:0.82rem;">${r.falla || '—'}</td>
                     <td>${badgeArea}</td>
-                    <td class="text-secondary fw-semibold">${r.responsable || '—'}</td>
+                    <td class="fw-bold text-dark">${r.responsable || '—'}</td>
                     <td style="min-width: 180px;">${desgloseHtml}</td>
-                    <td class="fw-bolder text-primary text-nowrap" style="font-size:0.85rem;">S/ ${totalFormateado}</td>
+                    <td class="fw-bolder text-primary text-nowrap" style="font-size:0.90rem;">S/ ${totalFormateado}</td>
                     <td class="text-center">${badgeSolucion}</td>
                     <td class="text-end text-nowrap">
-                        <button class="btn btn-sm btn-light border py-1 px-2 me-1" title="Editar" onclick='window.incAbrirModalEditar(${JSON.stringify(r)})'>
+                        <button class="btn btn-sm btn-light border border-secondary text-dark py-1 px-2 me-1 fw-bold" title="Editar" onclick='window.incAbrirModalEditar(${JSON.stringify(r)})'>
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="btn btn-sm btn-light border text-danger py-1 px-2" title="Eliminar" onclick="window.incEliminar(${r.id})">
+                        <button class="btn btn-sm btn-light border border-danger text-danger py-1 px-2 fw-bold" title="Eliminar" onclick="window.incEliminar(${r.id})">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
