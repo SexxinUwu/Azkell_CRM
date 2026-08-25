@@ -325,7 +325,14 @@
             </div>
             <p class="text-secondary m-0" style="font-size:0.83rem;">Monitoreo, registro de fallas viales, control de auxilio mecánico y desglose de costos en carretera</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;" onclick="window.incDescargarPlantilla()">
+                <i class="bi bi-file-earmark-excel text-success"></i> Plantilla Excel
+            </button>
+            <button class="btn btn-outline-primary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;" onclick="document.getElementById('inc-file-input').click()">
+                <i class="bi bi-upload"></i> Importar Excel
+            </button>
+            <input type="file" id="inc-file-input" accept=".xlsx, .xls, .csv" style="display:none;" onchange="window.incProcesarArchivoExcel(event)">
             <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;" onclick="window.incCargarDatos()">
                 <i class="bi bi-arrow-clockwise"></i> Actualizar
             </button>

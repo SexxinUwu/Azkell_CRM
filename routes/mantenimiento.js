@@ -134,14 +134,8 @@ module.exports = function (db, logAudit) {
                 p.placa, 
                 p.marca, 
                 COALESCE(p.tipo, '') AS tipo,
-                COALESCE(d.conductor_principal, '') AS conductor
+                COALESCE(p.cliente, '') AS conductor
             FROM placas p
-            LEFT JOIN (
-                SELECT placa, GROUP_CONCAT(nombre SEPARATOR ' / ') AS conductor_principal
-                FROM conductores
-                WHERE estado = 'Activo'
-                GROUP BY placa
-            ) d ON p.placa = d.placa
             WHERE p.estado != 'Inactiva'
             ORDER BY p.placa ASC
         `;
@@ -477,6 +471,100 @@ module.exports = function (db, logAudit) {
             }
 
             res.json({ ok: true, message: 'Incidencia eliminada correctamente.' });
+        });
+    });
+
+    // POST /api/mantenimiento/incidencias-ruta/importar
+    router.post('/incidencias-ruta/importar', (req, res) => {
+        const targetDb = req.db || db;
+        const { registros } = req.body;
+
+        if (!Array.isArray(registros) || registros.length === 0) {
+            return res.status(400).json({ ok: false, error: 'No se recibieron registros para importar.' });
+        }
+
+        const creadoPor = req.user?.nombre || req.user?.correo || 'Importación Masiva';
+        const currentYear = new Date().getFullYear();
+
+        let insertados = 0;
+        let errores = 0;
+
+        const insertPromises = registros.map((r, index) => {
+            return new Promise((resolve) => {
+                const placa = (r.placa || '').toUpperCase().trim();
+                const fecha = r.fecha_falla;
+
+                if (!placa || !fecha) {
+                    errores++;
+                    return resolve();
+                }
+
+                const rand = Math.floor(10000 + Math.random() * 90000);
+                const codigo = `INC-${currentYear}-${rand}-${index+1}`;
+
+                let items = [];
+                if (Array.isArray(r.costos_detalle)) {
+                    items = r.costos_detalle;
+                } else if (r.costo_individual_texto) {
+                    // Si viene como texto del Excel ej: "- PIÑON 120 - MANO DE OBRA 120"
+                    const lineas = r.costo_individual_texto.split('\n');
+                    lineas.forEach(l => {
+                        const trimmed = l.trim().replace(/^[-•*]\s*/, '');
+                        if (trimmed) {
+                            const partes = trimmed.match(/^(.*?)(?:S\/?\.?\s*)?(\d+(?:\.\d+)?)$/i);
+                            if (partes) {
+                                items.push({ concepto: partes[1].trim(), monto: parseFloat(partes[2]) || 0 });
+                            } else {
+                                items.push({ concepto: trimmed, monto: 0 });
+                            }
+                        }
+                    });
+                }
+
+                let totalCalculado = parseFloat(r.total_costo) || items.reduce((acc, it) => acc + (parseFloat(it.monto) || 0), 0);
+
+                const sql = `
+                    INSERT INTO mant_incidencias_ruta (
+                        codigo, fecha_falla, placa, conductor, marca, ubicacion,
+                        tipo_unidad, transbordo, motivo, falla, area_responsable,
+                        responsable, costos_detalle, total_costo, solucionado,
+                        observaciones, creado_por
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `;
+
+                const values = [
+                    codigo,
+                    fecha,
+                    placa,
+                    r.conductor || '',
+                    r.marca || '',
+                    r.ubicacion || '',
+                    r.tipo_unidad || '',
+                    (r.transbordo || '').toUpperCase() === 'SI' ? 'SI' : 'NO',
+                    r.motivo || '',
+                    r.falla || '',
+                    r.area_responsable || 'Mantenimiento',
+                    r.responsable || '',
+                    JSON.stringify(items),
+                    totalCalculado,
+                    (r.solucionado || '').toUpperCase() === 'ATENDIDO' ? 'Atendido' : 'Pendiente',
+                    r.observaciones || '',
+                    creadoPor
+                ];
+
+                targetDb.query(sql, values, (err) => {
+                    if (err) errores++;
+                    else insertados++;
+                    resolve();
+                });
+            });
+        });
+
+        Promise.all(insertPromises).then(() => {
+            if (logAudit) {
+                logAudit(req, 'Incidencias Ruta', 'Importación Masiva', `Se importaron ${insertados} incidencias en ruta desde Excel.`);
+            }
+            res.json({ ok: true, insertados, errores, total: registros.length });
         });
     });
 
