@@ -996,20 +996,186 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ============================================================
-    // 12. ⛽ DIRECTORIO DE ESTACIONES / GRIFOS (vw_combustible_estacion)
+    // 13. 🛰️ CONSULTAR TELEMETRÍA E INFORME 25 DE WIALON POR VIAJE / INTERVALO
     // ============================================================
-    router.get('/estaciones-catalogo', async (req, res) => {
+    router.get('/wialon-telemetria', async (req, res) => {
         try {
-            const rdb = getRemoteDb();
-            const [rows] = await rdb.query(
-                `SELECT * FROM vw_combustible_estacion ORDER BY estacion_nombre ASC`
+            const { placa, fechaInicio, fechaFin } = req.query;
+            if (!placa || !fechaInicio || !fechaFin) {
+                return res.status(400).json({ ok: false, error: 'Parámetros requeridos: placa, fechaInicio, fechaFin' });
+            }
+
+            const dbLocal = req.db;
+            const [intgRows] = await dbLocal.promise().query(
+                "SELECT clave, valor FROM integraciones_api WHERE clave IN ('wialon_token', 'wialon_url')"
             );
-            res.json({ ok: true, data: rows || [] });
+
+            let token = '';
+            let baseUrl = 'https://hst-api.wialon.us/wialon/ajax.html';
+            intgRows.forEach(r => {
+                if (r.clave === 'wialon_token') token = (r.valor || '').trim();
+                if (r.clave === 'wialon_url' && r.valor) baseUrl = r.valor.trim();
+            });
+
+            if (!token) {
+                return res.json({ ok: false, error: 'Token Wialon no configurado en Sistema → Integraciones' });
+            }
+
+            // 1. Iniciar Sesión en Wialon
+            const loginRes = await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({ token }))}`);
+            const loginData = await loginRes.json();
+            if (!loginData.eid) {
+                return res.json({ ok: false, error: 'Error autenticando con Wialon. Verifica el token en Integraciones.' });
+            }
+            const sid = loginData.eid;
+
+            // 2. Buscar ID de la unidad por Placa
+            const cleanPlaca = String(placa).replace(/[^A-Z0-9]/gi, '').toUpperCase();
+            const unitParams = {
+                spec: {
+                    itemsType: "avl_unit",
+                    propName: "sys_name",
+                    propValueMask: `*${cleanPlaca}*`,
+                    sortType: "sys_name"
+                },
+                force: 1,
+                flags: 1,
+                from: 0,
+                to: 1
+            };
+            const unitRes = await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(unitParams))}&sid=${sid}`);
+            const unitData = await unitRes.json();
+            const unit = unitData.items && unitData.items[0];
+
+            if (!unit) {
+                await fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
+                return res.json({ ok: true, data: null, message: `Unidad con placa ${cleanPlaca} no encontrada en Wialon.` });
+            }
+
+            // 3. Buscar Recursos y Plantilla "25.Informe de Combustible"
+            const resParams = {
+                spec: {
+                    itemsType: "avl_resource",
+                    propName: "sys_name",
+                    propValueMask: "*",
+                    sortType: "sys_name"
+                },
+                force: 1,
+                flags: 8193,
+                from: 0,
+                to: 0
+            };
+            const resRes = await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(resParams))}&sid=${sid}`);
+            const resData = await resRes.json();
+
+            let targetResourceId = null;
+            let targetTemplateId = null;
+
+            if (resData.items) {
+                for (const r of resData.items) {
+                    if (r.rep) {
+                        for (const rep of Object.values(r.rep)) {
+                            if (rep.n && (rep.n.includes('25') || rep.n.toLowerCase().includes('informe de combustible'))) {
+                                targetResourceId = r.id;
+                                targetTemplateId = rep.id;
+                                break;
+                            }
+                        }
+                    }
+                    if (targetResourceId && targetTemplateId) break;
+                }
+            }
+
+            if (!targetResourceId || !targetTemplateId) {
+                await fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
+                return res.json({ ok: false, error: 'No se encontró la plantilla de Informe 25 en Wialon.' });
+            }
+
+            // 4. Convertir fechaInicio y fechaFin a UNIX Timestamps (Hora Perú UTC-5)
+            const parseToUnix = (dateStr) => {
+                // Acepta "YYYY-MM-DD HH:mm:ss" o "YYYY-MM-DD"
+                if (!dateStr || dateStr === 'N/D') return null;
+                const d = new Date(dateStr.replace(' ', 'T') + (dateStr.includes('T') || dateStr.length <= 10 ? '' : '-05:00'));
+                return isNaN(d.getTime()) ? null : Math.floor(d.getTime() / 1000);
+            };
+
+            const fromUnix = parseToUnix(fechaInicio);
+            const toUnix = parseToUnix(fechaFin);
+
+            if (!fromUnix || !toUnix || toUnix <= fromUnix) {
+                await fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
+                return res.json({ ok: false, error: 'Rango de fechas inválido para el viaje' });
+            }
+
+            // 5. Ejecutar Informe 25
+            const execParams = {
+                reportResourceId: targetResourceId,
+                reportTemplateId: targetTemplateId,
+                reportObjectId: unit.id,
+                reportObjectSecId: 0,
+                interval: { from: fromUnix, to: toUnix, flags: 0 }
+            };
+
+            const execRes = await fetch(`${baseUrl}?svc=report/exec_report&params=${encodeURIComponent(JSON.stringify(execParams))}&sid=${sid}`);
+            const execData = await execRes.json();
+
+            let kmInicialGps = null;
+            let kmFinalGps = null;
+            let recorridoKmGps = null;
+            let combustibleConsumidoGps = null;
+            let rendimientoGps = null;
+
+            if (execData.reportResult && Array.isArray(execData.reportResult.stats)) {
+                execData.reportResult.stats.forEach(([key, val]) => {
+                    const k = String(key || '').toLowerCase();
+                    const cleanNum = (str) => {
+                        if (!str) return null;
+                        const match = String(str).replace(/,/g, '').match(/[-+]?[0-9]*\.?[0-9]+/);
+                        return match ? parseFloat(match[0]) : null;
+                    };
+
+                    if (k.includes('initial mileage in trips') || k.includes('kilometraje inicial')) {
+                        kmInicialGps = cleanNum(val);
+                    } else if (k.includes('final mileage in trips') || k.includes('kilometraje final')) {
+                        kmFinalGps = cleanNum(val);
+                    } else if (k.includes('kilometraje en viajes') || k.includes('mileage in trips')) {
+                        recorridoKmGps = cleanNum(val);
+                    } else if (k.includes('fuel consumed in trips') || k.includes('combustible consumido en viajes') || (k === 'fuel consumed' && combustibleConsumidoGps === null)) {
+                        combustibleConsumidoGps = cleanNum(val);
+                    } else if (k.includes('avg. fuel consumption') || k.includes('rendimiento')) {
+                        rendimientoGps = cleanNum(val);
+                    }
+                });
+            }
+
+            // Si recorrido no vino directo, calcular diferencia
+            if (recorridoKmGps === null && kmInicialGps !== null && kmFinalGps !== null && kmFinalGps >= kmInicialGps) {
+                recorridoKmGps = Math.round((kmFinalGps - kmInicialGps) * 100) / 100;
+            }
+
+            // 6. Limpiar y Cerrar Sesión
+            await fetch(`${baseUrl}?svc=report/cleanup_result&params=%7B%7D&sid=${sid}`).catch(() => {});
+            await fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
+
+            res.json({
+                ok: true,
+                data: {
+                    placa: cleanPlaca,
+                    unitName: unit.nm,
+                    kmInicialGps,
+                    kmFinalGps,
+                    recorridoKmGps,
+                    combustibleConsumidoGps,
+                    rendimientoGps
+                }
+            });
+
         } catch (err) {
-            console.error("Error consultando catálogo de estaciones:", err);
+            console.error("Error consultando telemetría Wialon:", err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });
 
     return router;
 };
+
