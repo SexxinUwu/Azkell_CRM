@@ -596,9 +596,9 @@
                 let jsonRows = [];
 
                 if (typeof XLSX !== 'undefined') {
-                    const workbook = XLSX.read(data, { type: 'array' });
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
                     const firstSheet = workbook.SheetNames[0];
-                    jsonRows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { raw: false });
+                    jsonRows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { raw: false, dateNF: 'yyyy-mm-dd' });
                 } else {
                     alert('Librería XLSX no cargada. Por favor recarga la página.');
                     return;
@@ -609,19 +609,27 @@
                     return;
                 }
 
-                // Helper para parsear fechas de Excel en cualquier formato (06-ene-26, 05/02/2026, 2026-02-05, número serial)
+                // Helper infalible para parsear fechas de Excel en cualquier formato
                 const parsearFechaExcel = (raw) => {
                     if (!raw) return '';
                     if (raw instanceof Date && !isNaN(raw)) {
-                        return raw.toISOString().split('T')[0];
+                        const y = raw.getUTCFullYear();
+                        const m = String(raw.getUTCMonth() + 1).padStart(2, '0');
+                        const d = String(raw.getUTCDate()).padStart(2, '0');
+                        return `${y}-${m}-${d}`;
                     }
                     let str = String(raw).trim();
                     if (!str) return '';
 
-                    // Si es número serial de Excel (ej: 46050)
+                    // Si es número serial de Excel (ej: 46028 -> 2026-01-08)
                     if (/^\d{5}$/.test(str)) {
                         const dateObj = new Date(Math.round((Number(str) - 25569) * 86400 * 1000));
-                        if (!isNaN(dateObj)) return dateObj.toISOString().split('T')[0];
+                        if (!isNaN(dateObj)) {
+                            const y = dateObj.getUTCFullYear();
+                            const m = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+                            const d = String(dateObj.getUTCDate()).padStart(2, '0');
+                            return `${y}-${m}-${d}`;
+                        }
                     }
 
                     const meses = {
@@ -629,7 +637,7 @@
                         'jul': '07', 'ago': '08', 'set': '09', 'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'
                     };
 
-                    // Formato 06-ene-26 o 06-ene-2026 o 6-ene-26
+                    // Formato 06-ene-26 o 06-ene-2026
                     let mTexto = str.match(/^(\d{1,2})[-\/ ]([a-zA-Z]{3,4})[-\/ ](\d{2,4})$/);
                     if (mTexto) {
                         let dia = mTexto[1].padStart(2, '0');
@@ -640,20 +648,31 @@
                         return `${anio}-${mes}-${dia}`;
                     }
 
-                    // Formato DD/MM/YYYY o DD-MM-YYYY o D/M/YY
-                    let mNum = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
-                    if (mNum) {
-                        let d = mNum[1].padStart(2, '0');
-                        let m = mNum[2].padStart(2, '0');
-                        let y = mNum[3];
-                        if (y.length === 2) y = '20' + y;
-                        return `${y}-${m}-${d}`;
-                    }
-
                     // Formato YYYY-MM-DD
                     let mIso = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
                     if (mIso) {
                         return `${mIso[1]}-${mIso[2].padStart(2, '0')}-${mIso[3].padStart(2, '0')}`;
+                    }
+
+                    // Formato con barras o guiones: p1/p2/p3
+                    let mNum = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+                    if (mNum) {
+                        let p1 = parseInt(mNum[1], 10);
+                        let p2 = parseInt(mNum[2], 10);
+                        let anio = mNum[3];
+                        if (anio.length === 2) anio = '20' + anio;
+
+                        let dia, mes;
+                        // Si p2 > 12, p1 es mes y p2 es dia (formato US M/D/Y)
+                        if (p2 > 12) {
+                            mes = String(p1).padStart(2, '0');
+                            dia = String(p2).padStart(2, '0');
+                        } else {
+                            // Por defecto en Perú / LATAM es D/M/Y
+                            dia = String(p1).padStart(2, '0');
+                            mes = String(p2).padStart(2, '0');
+                        }
+                        return `${anio}-${mes}-${dia}`;
                     }
 
                     return str;
