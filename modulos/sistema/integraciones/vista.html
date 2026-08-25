@@ -155,14 +155,19 @@
 
         <form onsubmit="return false;" autocomplete="off">
             <div class="intg-field">
-                <label>Token de autenticación</label>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                    <label style="margin-bottom:0;">Token de autenticación</label>
+                    <button type="button" class="btn btn-sm btn-warning text-dark fw-bold" style="font-size: 0.74rem; padding: 2px 10px; border-radius: 6px;" onclick="window.intgConectarWialon()">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Iniciar Sesión en Wialon y Conectar
+                    </button>
+                </div>
                 <div class="input-wrap">
-                    <input type="password" id="intg-wialon-token" placeholder="Pega aquí tu token de Wialon…" autocomplete="off" />
+                    <input type="password" id="intg-wialon-token" placeholder="Se completará automáticamente al iniciar sesión en Wialon…" autocomplete="off" />
                     <button type="button" class="btn-toggle-pwd" onclick="intgTogglePwd('intg-wialon-token', this)" title="Mostrar/Ocultar">
                         <i class="bi bi-eye"></i>
                     </button>
                 </div>
-                <div class="intg-hint">Obten el token desde tu cuenta Wialon → Recursos → Usuario → Token de acceso.</div>
+                <div class="intg-hint">Haz clic en <strong>"Iniciar Sesión en Wialon y Conectar"</strong> para ingresar tus credenciales y vincular el token automáticamente.</div>
                 <div class="intg-meta" id="intg-wialon-meta"></div>
             </div>
 
