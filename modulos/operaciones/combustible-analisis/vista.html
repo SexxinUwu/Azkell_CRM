@@ -150,6 +150,7 @@
                 <div class="d-flex align-items-center gap-2">
                     <h4 class="fw-bold text-dark m-0" style="letter-spacing:-0.02em;">Control de Combustible por Viaje</h4>
                     <span class="badge bg-primary bg-opacity-10 text-primary border px-2.5 py-1 rounded-pill small fw-bold">Operaciones</span>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2.5 py-1 rounded-pill small fw-semibold" id="ca-record-count-info" style="font-size:0.7rem;">Cargando...</span>
                 </div>
                 <p class="text-muted small m-0">Tabla dinámica de abastecimientos, gasto y análisis comparativo de rendimiento Km/Galón</p>
             </div>
@@ -168,20 +169,6 @@
             <button onclick="window.caExportarResumenExcel()" class="btn btn-success btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-white">
                 <i class="bi bi-file-earmark-excel-fill"></i> Exportar Resumen
             </button>
-        </div>
-    </div>
-
-    <!-- Banner Informativo -->
-    <div id="ca-file-banner" class="alert alert-primary border-0 rounded-4 py-2.5 px-3 mb-3 d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 shadow-2xs" style="background:#eef2ff; color:#3730a3; border: 1px solid #c7d2fe !important;">
-        <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-info-circle-fill text-primary fs-5"></i>
-            <div>
-                <span class="fw-bold" id="ca-loaded-source">Base de Datos del ERP</span>
-                <span class="text-primary fw-semibold ms-2" id="ca-record-count-info">(Cargando datos...)</span>
-            </div>
-        </div>
-        <div class="badge bg-white text-primary border px-3 py-1.5 rounded-pill fw-semibold shadow-2xs">
-            <i class="bi bi-shield-check me-1"></i> Análisis Dinámico Consolidado
         </div>
     </div>
 

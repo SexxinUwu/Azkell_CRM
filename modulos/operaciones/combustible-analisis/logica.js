@@ -49,10 +49,8 @@
             if (data.ok && Array.isArray(data.trips)) {
                 window._caTripGroups = data.trips;
                 
-                const bannerSource = document.getElementById('ca-loaded-source');
                 const bannerCount = document.getElementById('ca-record-count-info');
-                if (bannerSource) bannerSource.textContent = 'Base de Datos de Combustible (ERP)';
-                if (bannerCount) bannerCount.textContent = `(${data.trips.length} viajes consolidados)`;
+                if (bannerCount) bannerCount.textContent = `${data.trips.length.toLocaleString()} viajes`;
 
                 window.caPoblarFiltros();
                 window.caAplicarFiltros(true);
