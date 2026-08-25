@@ -484,6 +484,179 @@
         }
     };
 
+    // Descargar Plantilla Excel
+    window.incDescargarPlantilla = function() {
+        const encabezados = [
+            'FECHA FALLA',
+            'PLACA',
+            'CONDUCTOR',
+            'MARCA',
+            'UBICACION',
+            'UNIDAD DE NEGOCIO',
+            'TRANSBORDO',
+            'MOTIVO',
+            'FALLA',
+            'Responsabilidad de Area',
+            'RESPONSABLE',
+            'COSTO',
+            'TOTAL COSTO',
+            'Se dio solucion?'
+        ];
+
+        const ejemploFila1 = [
+            '2026-08-20',
+            'ADH-982',
+            'CARLOS MENDOZA',
+            'SCANIA',
+            'MATUCANA',
+            'TRACTO',
+            'NO',
+            'FUGA REFRIGERANTE',
+            'SE SALIO MANGUERA DEL RADIADOR',
+            'Mantenimiento',
+            'FALLA MECANICA',
+            '- PAGO DE HORA EXTRA PERSONAL 50\n- PAGO DE PEAJE 20',
+            '70',
+            'Atendido'
+        ];
+
+        const ejemploFila2 = [
+            '2026-08-21',
+            'AZP-977',
+            'JORGE RAMIREZ',
+            'VOLVO',
+            'PUCALLPA',
+            'CAMION',
+            'SI',
+            'UNIDAD NO ARRANCA',
+            'SE SALIO PIÑON DEL ARRANCADOR',
+            'Mantenimiento',
+            'FALLA MECANICA',
+            '- PIÑON 120\n- MANO DE OBRA 120\n- OTROS GASTOS 100',
+            '340',
+            'Pendiente'
+        ];
+
+        if (typeof XLSX !== 'undefined') {
+            const ws = XLSX.utils.aoa_to_sheet([encabezados, ejemploFila1, ejemploFila2]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Incidencias');
+            XLSX.writeFile(wb, 'Plantilla_Incidencias_Ruta.xlsx');
+        } else {
+            // Fallback a CSV
+            let csvContent = '\uFEFF' + [encabezados, ejemploFila1, ejemploFila2].map(e => e.map(val => `"${(val+'').replace(/"/g, '""')}"`).join(',')).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Plantilla_Incidencias_Ruta.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    };
+
+    // Procesar e Importar Archivo Excel
+    window.incProcesarArchivoExcel = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                let jsonRows = [];
+
+                if (typeof XLSX !== 'undefined') {
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.SheetNames[0];
+                    jsonRows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { raw: false });
+                } else {
+                    alert('Librería XLSX no cargada. Por favor recarga la página.');
+                    return;
+                }
+
+                if (!jsonRows || jsonRows.length === 0) {
+                    alert('El archivo seleccionado no contiene filas de datos.');
+                    return;
+                }
+
+                // Mapear columnas del Excel al payload del backend
+                const normalizar = (str) => (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+                const registrosParaSubir = jsonRows.map(row => {
+                    const findVal = (keys) => {
+                        for (const k of Object.keys(row)) {
+                            const normK = normalizar(k);
+                            if (keys.some(cand => normK.includes(normalizar(cand)))) {
+                                return row[k];
+                            }
+                        }
+                        return '';
+                    };
+
+                    let fechaFalla = findVal(['fecha falla', 'fecha', 'dia']);
+                    // Normalizar fecha si viene en formato DD/MM/YYYY
+                    if (fechaFalla && fechaFalla.includes('/')) {
+                        const parts = fechaFalla.split('/');
+                        if (parts.length === 3) {
+                            if (parts[2].length === 4) {
+                                fechaFalla = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                            }
+                        }
+                    }
+
+                    return {
+                        fecha_falla: fechaFalla || new Date().toISOString().split('T')[0],
+                        placa: findVal(['placa', 'vehiculo', 'unidad']),
+                        conductor: findVal(['conductor', 'chofer']),
+                        marca: findVal(['marca']),
+                        ubicacion: findVal(['ubicacion', 'lugar', 'ruta']),
+                        tipo_unidad: findVal(['unidad de negocio', 'tipo', 'clase']),
+                        transbordo: findVal(['transbordo']),
+                        motivo: findVal(['motivo', 'problema']),
+                        falla: findVal(['falla', 'diagnostico']),
+                        area_responsable: findVal(['responsabilidad de area', 'area', 'responsabilidad']),
+                        responsable: findVal(['responsable', 'causa']),
+                        costo_individual_texto: findVal(['costo', 'desglose']),
+                        total_costo: parseFloat((findVal(['total costo', 'total']) || '').toString().replace(/[^0-9.]/g, '')) || 0,
+                        solucionado: findVal(['se dio solucion', 'solucion', 'estado', 'atendido'])
+                    };
+                }).filter(r => r.placa);
+
+                if (registrosParaSubir.length === 0) {
+                    alert('No se encontraron registros con columna PLACA válida en el archivo.');
+                    return;
+                }
+
+                if (!confirm(`Se detectaron ${registrosParaSubir.length} registros listos para importar. ¿Deseas proceder?`)) {
+                    event.target.value = '';
+                    return;
+                }
+
+                const res = await fetch('/api/mantenimiento/incidencias-ruta/importar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ registros: registrosParaSubir })
+                });
+
+                const respData = await res.json();
+                if (respData.ok) {
+                    alert(`✅ Importación completada con éxito:\n• Insertados: ${respData.insertados}\n• Errores/Omitidos: ${respData.errores}`);
+                    window.incCargarDatos(1);
+                } else {
+                    alert('Error en importación: ' + (respData.error || 'No se pudo procesar el archivo'));
+                }
+            } catch (err) {
+                console.error('Error importando Excel:', err);
+                alert('Error al leer el archivo Excel.');
+            } finally {
+                event.target.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
     // Auto-inicialización si el DOM ya está listo
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
         window.init_mantenimiento_incidencias_ruta();
@@ -491,3 +664,4 @@
         document.addEventListener('DOMContentLoaded', window.init_mantenimiento_incidencias_ruta);
     }
 })();
+
