@@ -130,7 +130,18 @@ function sincronizarEsquemasGlobalesTenants() {
                                             pendingTasks--;
                                         });
                                     });
-                                } else { pendingTasks--; }
+                                } else {
+                                    // Si no está en refDb, revisar si está en TABLAS de init_db
+                                    try {
+                                        const { TABLAS } = require('../init_db');
+                                        const found = TABLAS.find(t => t.nombre === table);
+                                        if (found) {
+                                            rootConn.query(`USE \`${tDb}\``, () => {
+                                                rootConn.query(found.sql, () => { pendingTasks--; });
+                                            });
+                                        } else { pendingTasks--; }
+                                    } catch(e) { pendingTasks--; }
+                                }
                             });
                         } else {
                             rootConn.query(`SHOW COLUMNS FROM \`${refDb}\`.\`${table}\``, (errC1, colsRef) => {

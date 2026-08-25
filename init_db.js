@@ -857,25 +857,40 @@ const TABLAS = [
     }
 ];
 
-/**
- * @param {import('mysql2').Pool} db
- */
-async function initDB(db) {
-    const promisePool = db.promise();
-    const resultados = [];
-    for (const tabla of TABLAS) {
+async function initDB(defaultDb) {
+    try {
+        const promisePool = defaultDb.promise();
+        
+        // Obtener todas las bases de datos tenant (ej. azkell_tenant_marsisa, azkell_tenant_azkell, etc.)
+        let databasesToInit = [];
         try {
-            await promisePool.query(tabla.sql);
-            console.log(`✅ Tabla verificada: ${tabla.nombre}`);
-            resultados.push({ tabla: tabla.nombre, ok: true });
-        } catch (err) {
-            console.error(`❌ Error en tabla ${tabla.nombre}:`, err.message);
-            resultados.push({ tabla: tabla.nombre, ok: false, error: err.message });
+            const [dbs] = await promisePool.query("SHOW DATABASES LIKE 'azkell_tenant_%'");
+            databasesToInit = dbs.map(d => Object.values(d)[0]);
+        } catch (e) {
+            databasesToInit = [];
         }
-    }
 
-    const ok = resultados.filter(r => r.ok).length;
-    const fail = resultados.filter(r => !r.ok).length;
+        // Si no se encontraron por query, al menos inicializar la BD por defecto
+        if (!databasesToInit.length) {
+            databasesToInit = [process.env.DB_NAME || 'azkell_tenant_marsisa'];
+        }
+
+        console.log(`📦 [Multi-Tenant initDB] Verificando esquemas en: ${databasesToInit.join(', ')}`);
+
+        for (const dbName of databasesToInit) {
+            for (const tabla of TABLAS) {
+                try {
+                    await promisePool.query(`USE \`${dbName}\``);
+                    await promisePool.query(tabla.sql);
+                } catch (err) {
+                    console.error(`❌ Error en tabla ${tabla.nombre} (${dbName}):`, err.message);
+                }
+            }
+        }
+        console.log(`✅ [Multi-Tenant initDB] Tablas verificadas en todas las empresas.`);
+    } catch (errGlobal) {
+        console.error('❌ Error global en initDB:', errGlobal.message);
+    }
     console.log(`\n📦 init_db.js — ${ok} tablas OK, ${fail} con error\n`);
 
     try {
@@ -972,4 +987,4 @@ async function initDB(db) {
     }
 }
 
-module.exports = { initDB };
+module.exports = { initDB, TABLAS };
