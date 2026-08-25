@@ -505,144 +505,165 @@
         <form id="inc-form" onsubmit="event.preventDefault(); window.incGuardarRegistro();">
             <input type="hidden" id="inc-form-id">
 
-            <div class="row g-3">
-                
-                <!-- Fecha Falla -->
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">FECHA DE LA FALLA (<span class="text-danger">*</span>)</label>
-                    <input type="date" id="inc-form-fecha" class="form-control rounded-3" required>
-                </div>
-
-                <!-- Placa (con auto-fill) -->
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">PLACA DE LA UNIDAD (<span class="text-danger">*</span>)</label>
-                    <select id="inc-form-placa" class="form-select rounded-3" required onchange="window.incOnPlacaChange(this.value)">
-                        <option value="">Selecciona una placa...</option>
-                    </select>
-                </div>
-
-                <!-- Conductor -->
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">CONDUCTOR</label>
-                    <input type="text" id="inc-form-conductor" class="form-control rounded-3" placeholder="Nombre del conductor">
-                </div>
-
-                <!-- Marca -->
-                <div class="col-6 col-md-3">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">MARCA</label>
-                    <input type="text" id="inc-form-marca" class="form-control rounded-3 bg-light" placeholder="Ej. SCANIA" readonly>
-                </div>
-
-                <!-- Unidad de Negocio / Tipo -->
-                <div class="col-6 col-md-3">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">UNIDAD DE NEGOCIO / TIPO</label>
-                    <input type="text" id="inc-form-tipo" class="form-control rounded-3" placeholder="Ej. CAMION, TRACTO">
-                </div>
-
-                <!-- Ubicación (Manual) -->
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">UBICACIÓN (MANUAL) (<span class="text-danger">*</span>)</label>
-                    <input type="text" id="inc-form-ubicacion" class="form-control rounded-3" placeholder="Ej. Matucana, Arequipa, Km 120" required>
-                </div>
-
-                <!-- Transbordo (SI/NO) -->
-                <div class="col-6 col-md-3">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">¿TRANSBORDO?</label>
-                    <select id="inc-form-transbordo" class="form-select rounded-3">
-                        <option value="NO">NO</option>
-                        <option value="SI">SI</option>
-                    </select>
-                </div>
-
-                <!-- Responsabilidad de Área -->
-                <div class="col-6 col-md-3">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">RESP. DE ÁREA</label>
-                    <select id="inc-form-area" class="form-select rounded-3">
-                        <option value="Mantenimiento">Mantenimiento</option>
-                        <option value="Flota">Flota</option>
-                        <option value="Operaciones">Operaciones</option>
-                    </select>
-                </div>
-
-                <!-- Responsable -->
-                <div class="col-12">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">RESPONSABLE / CAUSA</label>
-                    <input type="text" id="inc-form-responsable" class="form-control rounded-3" placeholder="Ej. Falla Mecánica, Conductor...">
-                </div>
-
-                <!-- Motivo -->
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">MOTIVO PRINCIPAL</label>
-                    <input type="text" id="inc-form-motivo" class="form-control rounded-3" placeholder="Ej. UNIDAD NO ARRANCA, FUGA REFRIGERANTE...">
-                </div>
-
-                <!-- Falla Detallada -->
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">FALLA DETALLADA / DIAGNÓSTICO</label>
-                    <input type="text" id="inc-form-falla" class="form-control rounded-3" placeholder="Ej. Se salió piñón del arrancador, manguera rota...">
-                </div>
-
-                <!-- SECCIÓN DINÁMICA DE COSTOS -->
-                <div class="col-12 mt-3">
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-receipt text-primary"></i>
-                            <span class="fw-bold text-dark" style="font-size:0.83rem;">Desglose de Costos de Auxilio / Reparación</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold" onclick="window.incAgregarFilaCosto()">
-                            <i class="bi bi-plus-lg"></i> Agregar Ítem de Gasto
-                        </button>
+            <!-- ── SECCIÓN 1: DATOS DE LA UNIDAD Y CONDUCTOR ─────────── -->
+            <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:0.95rem;">
+                    <i class="bi bi-truck text-primary"></i> Identificación de la Unidad y Conductor
+                </h6>
+                <div class="row g-3">
+                    
+                    <!-- Fecha Falla -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">FECHA DE LA FALLA (<span class="text-danger">*</span>)</label>
+                        <input type="date" id="inc-form-fecha" class="form-control" required>
                     </div>
 
-                    <div class="inc-costos-table bg-white">
-                        <table class="table align-middle m-0">
-                            <thead>
-                                <tr>
-                                    <th>CONCEPTO / DESCRIPCIÓN (EJ. PIÑON, MANO DE OBRA, PEAJE)</th>
-                                    <th style="width: 170px;">MONTO (S/.)</th>
-                                    <th style="width: 44px;" class="text-center"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="inc-costos-tbody">
-                                <!-- Filas de costos dinámicas -->
-                            </tbody>
-                            <tfoot>
-                                <tr class="bg-light fw-bold">
-                                    <td class="text-end text-secondary">TOTAL COSTO CALCULADO:</td>
-                                    <td>
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-text bg-white fw-bold">S/</span>
-                                            <input type="text" id="inc-form-total-costo" class="form-control fw-bolder text-primary bg-white" value="0.00" readonly>
-                                        </div>
-                                    </td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                    <!-- Placa (con auto-fill) -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">PLACA PRINCIPAL (<span class="text-danger">*</span>)</label>
+                        <select id="inc-form-placa" class="form-select text-uppercase fw-bold" required onchange="window.incOnPlacaChange(this.value)">
+                            <option value="">Selecciona una placa...</option>
+                        </select>
                     </div>
-                </div>
 
-                <!-- SE DIO SOLUCIÓN? INTERACTIVO -->
-                <div class="col-12 mt-3">
-                    <div class="p-3 bg-white rounded-3 border d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
-                        <div>
-                            <span class="fw-bold d-block text-dark" style="font-size:0.82rem;">¿Se dio solución al incidente en ruta?</span>
-                            <span class="text-secondary" style="font-size:0.73rem;">Indica si la unidad fue atendida o sigue pendiente</span>
-                        </div>
-                        
-                        <div class="solucion-toggle-wrap" id="inc-toggle-wrap" onclick="window.incAlternarSolucionForm()">
-                            <div class="solucion-toggle-btn active-pend" id="btn-toggle-pend">
-                                <i class="bi bi-clock me-1"></i> Pendiente
-                            </div>
-                            <div class="solucion-toggle-btn" id="btn-toggle-atend">
-                                <i class="bi bi-check-lg me-1"></i> Atendido
-                            </div>
-                        </div>
-                        <input type="hidden" id="inc-form-solucion" value="Pendiente">
+                    <!-- Marca -->
+                    <div class="col-6 col-md-6">
+                        <label class="form-label">MARCA DEL VEHÍCULO</label>
+                        <input type="text" id="inc-form-marca" class="form-control bg-light fw-bold text-uppercase" placeholder="Ej. SCANIA / VOLVO" readonly>
                     </div>
-                </div>
 
+                    <!-- Unidad de Negocio / Tipo -->
+                    <div class="col-6 col-md-6">
+                        <label class="form-label">UNIDAD DE NEGOCIO / CLASE</label>
+                        <input type="text" id="inc-form-tipo" class="form-control text-uppercase fw-semibold" placeholder="Ej. CAMION, TRACTO, CARRETA">
+                    </div>
+
+                    <!-- Conductor -->
+                    <div class="col-12">
+                        <label class="form-label">CONDUCTOR ASIGNADO</label>
+                        <input type="text" id="inc-form-conductor" class="form-control text-uppercase fw-semibold" placeholder="Nombre completo del conductor">
+                    </div>
+
+                </div>
             </div>
+
+            <!-- ── SECCIÓN 2: DETALLE DEL EVENTO MECÁNICO EN RUTA ──────── -->
+            <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:0.95rem;">
+                    <i class="bi bi-geo-alt-fill text-danger"></i> Ubicación y Diagnóstico del Incidente
+                </h6>
+                <div class="row g-3">
+                    
+                    <!-- Ubicación (Manual) -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">UBICACIÓN / LUGAR DEL EVENTO (<span class="text-danger">*</span>)</label>
+                        <input type="text" id="inc-form-ubicacion" class="form-control text-uppercase" placeholder="Ej. MATUCANA, AREQUIPA, KM 145" required>
+                    </div>
+
+                    <!-- Transbordo (SI/NO) -->
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">¿TRANSBORDO?</label>
+                        <select id="inc-form-transbordo" class="form-select fw-bold">
+                            <option value="NO">NO</option>
+                            <option value="SI">SI</option>
+                        </select>
+                    </div>
+
+                    <!-- Responsabilidad de Área -->
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">RESP. DE ÁREA</label>
+                        <select id="inc-form-area" class="form-select fw-bold">
+                            <option value="Mantenimiento">Mantenimiento</option>
+                            <option value="Flota">Flota</option>
+                            <option value="Operaciones">Operaciones</option>
+                        </select>
+                    </div>
+
+                    <!-- Responsable -->
+                    <div class="col-12">
+                        <label class="form-label">RESPONSABLE / CAUSA PRINCIPAL</label>
+                        <input type="text" id="inc-form-responsable" class="form-control text-uppercase" placeholder="Ej. FALLA MECANICA, CONDUCTOR, FACTOR CLIMATICO...">
+                    </div>
+
+                    <!-- Motivo -->
+                    <div class="col-12">
+                        <label class="form-label">MOTIVO PRINCIPAL (<span class="text-danger">*</span>)</label>
+                        <input type="text" id="inc-form-motivo" class="form-control text-uppercase fw-semibold" placeholder="Ej. UNIDAD NO ARRANCA, FUGA DE COMBUSTIBLE, LLANTA REVENTADA">
+                    </div>
+
+                    <!-- Falla Detallada -->
+                    <div class="col-12">
+                        <label class="form-label">FALLA DETALLADA / TRABAJO REQUERIDO</label>
+                        <textarea id="inc-form-falla" class="form-control text-uppercase" rows="2" placeholder="Describa el diagnóstico exacto o componentes afectados..."></textarea>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ── SECCIÓN 3: DESGLOSE DE COSTOS Y AUXILIO MECÁNICO ──── -->
+            <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 m-0" style="font-size:0.95rem;">
+                            <i class="bi bi-cash-stack text-success"></i> Desglose de Gastos y Auxilio Mecánico
+                        </h6>
+                        <small class="text-muted" style="font-size:0.73rem;">Detalla cada concepto individual (repuesto, peaje, mano de obra)</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.incAgregarFilaCosto()">
+                        <i class="bi bi-plus-circle-fill"></i> Agregar Gasto
+                    </button>
+                </div>
+
+                <div class="inc-costos-table bg-white">
+                    <table class="table align-middle m-0">
+                        <thead>
+                            <tr>
+                                <th>CONCEPTO (EJ. PIÑON, MANO DE OBRA, AUXILIO)</th>
+                                <th style="width: 180px;">MONTO (S/.)</th>
+                                <th style="width: 46px;" class="text-center"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="inc-costos-tbody">
+                            <!-- Filas dinámicas -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-light fw-bold border-top">
+                                <td class="text-end text-secondary" style="font-size:0.85rem;">TOTAL COSTO CALCULADO:</td>
+                                <td>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white fw-bold text-success border-end-0">S/</span>
+                                        <input type="text" id="inc-form-total-costo" class="form-control fw-bolder text-dark bg-white border-start-0 fs-6" value="0.00" readonly>
+                                    </div>
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── SECCIÓN 4: ESTADO DE ATENCIÓN Y SOLUCIÓN ───────────── -->
+            <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+                    <div>
+                        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 m-0" style="font-size:0.95rem;">
+                            <i class="bi bi-shield-check text-primary"></i> Estado de Solución del Incidente
+                        </h6>
+                        <small class="text-muted" style="font-size:0.73rem;">Indica si la unidad fue atendida y continuó ruta o aún sigue pendiente</small>
+                    </div>
+                    
+                    <div class="solucion-toggle-wrap" id="inc-toggle-wrap" onclick="window.incAlternarSolucionForm()">
+                        <div class="solucion-toggle-btn active-pend" id="btn-toggle-pend">
+                            <i class="bi bi-clock me-1"></i> Pendiente
+                        </div>
+                        <div class="solucion-toggle-btn" id="btn-toggle-atend">
+                            <i class="bi bi-check-lg me-1"></i> Atendido
+                        </div>
+                    </div>
+                    <input type="hidden" id="inc-form-solucion" value="Pendiente">
+                </div>
+            </div>
+
         </form>
       </div>
 
