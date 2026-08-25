@@ -480,6 +480,35 @@ const TABLAS = [
         )`
     },
     {
+        nombre: 'mant_incidencias_ruta',
+        sql: `CREATE TABLE IF NOT EXISTS mant_incidencias_ruta (
+            id               INT AUTO_INCREMENT PRIMARY KEY,
+            codigo           VARCHAR(30) UNIQUE NOT NULL,
+            fecha_falla      DATE NOT NULL,
+            placa            VARCHAR(20) NOT NULL,
+            conductor        VARCHAR(150) DEFAULT '',
+            marca            VARCHAR(50) DEFAULT '',
+            ubicacion        VARCHAR(150) DEFAULT '',
+            tipo_unidad      VARCHAR(50) DEFAULT '',
+            transbordo       ENUM('SI', 'NO') DEFAULT 'NO',
+            motivo           VARCHAR(255) DEFAULT '',
+            falla            TEXT,
+            area_responsable ENUM('Mantenimiento', 'Flota', 'Operaciones') DEFAULT 'Mantenimiento',
+            responsable      VARCHAR(100) DEFAULT '',
+            costos_detalle   JSON NULL,
+            total_costo      DECIMAL(12,2) DEFAULT 0.00,
+            solucionado      ENUM('Atendido', 'Pendiente') DEFAULT 'Pendiente',
+            observaciones    TEXT NULL,
+            creado_por       VARCHAR(100) DEFAULT '',
+            created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_fecha (fecha_falla),
+            INDEX idx_placa (placa),
+            INDEX idx_solucionado (solucionado),
+            INDEX idx_area (area_responsable)
+        )`
+    },
+    {
         nombre: 'ot_backlog',
         sql: `CREATE TABLE IF NOT EXISTS ot_backlog (
             id            INT AUTO_INCREMENT PRIMARY KEY,

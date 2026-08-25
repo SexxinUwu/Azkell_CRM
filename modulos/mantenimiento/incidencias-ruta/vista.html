@@ -1,131 +1,667 @@
-<!-- Módulo: Incidencias en Ruta -->
+<!-- ================================================================ -->
+<!-- MÓDULO: INCIDENCIAS EN RUTA (ERP AZKELL FLEET)                     -->
+<!-- ================================================================ -->
 <style>
 #root-dinamico { padding: 0 !important; }
-.mod-wrap-mantenimiento-incidencias-ruta {
-    padding: 1.25rem;
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+.mod-incidencias-ruta {
+    padding: 1rem 1.25rem 3rem 1.25rem;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #1e293b;
 }
+
+/* ── Bento KPI Cards ─────────────────────────────────────────── */
+.inc-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+.inc-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.08);
+}
+.inc-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+/* ── Barra de Filtros & Acciones ─────────────────────────────── */
+.inc-filter-bar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.inc-search-input {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.5rem 0.85rem 0.5rem 2.25rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    width: 100%;
+}
+.inc-search-input:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+    outline: none;
+}
+.inc-select {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+}
+.inc-select:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    outline: none;
+}
+
+/* ── Tabla Estilo Excel Pro ─────────────────────────────────── */
+.inc-table-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+}
+.inc-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.82rem;
+}
+.inc-table thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.inc-table tbody tr {
+    transition: background 0.15s ease;
+}
+.inc-table tbody tr:hover {
+    background: #f8fafc;
+}
+.inc-table tbody td {
+    padding: 0.7rem 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #1e293b;
+}
+
+/* ── Badges y Píldoras ───────────────────────────────────────── */
+.badge-solucion-atendido {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    font-weight: 700;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.badge-solucion-atendido:hover {
+    transform: scale(1.04);
+    box-shadow: 0 2px 6px rgba(22, 163, 74, 0.2);
+}
+.badge-solucion-pendiente {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    font-weight: 700;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.badge-solucion-pendiente:hover {
+    transform: scale(1.04);
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.2);
+}
+.badge-transbordo-si {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+    border-radius: 8px;
+}
+.badge-transbordo-no {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 8px;
+}
+.badge-area {
+    font-size: 0.73rem;
+    font-weight: 700;
+    padding: 0.25rem 0.65rem;
+    border-radius: 8px;
+}
+.badge-area-mant { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+.badge-area-flota { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+.badge-area-ops { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+
+.costo-item-chip {
+    font-size: 0.73rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 0.15rem 0.45rem;
+    display: inline-block;
+    margin: 2px 0;
+}
+
+/* ── MODAL DRAWER BOTTOM-SHEET (Animación de abajo hacia arriba) ─ */
+.inc-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 1060;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.inc-drawer-overlay.active {
+    display: block;
+    opacity: 1;
+}
+.inc-drawer-sheet {
+    position: fixed;
+    left: 50%;
+    bottom: -100%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 900px;
+    max-height: 92vh;
+    background: #ffffff;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+    z-index: 1070;
+    display: flex;
+    flex-direction: column;
+    transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+}
+.inc-drawer-sheet.active {
+    bottom: 0;
+}
+.inc-drawer-header {
+    padding: 1.25rem 1.75rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+}
+.inc-drawer-body {
+    padding: 1.5rem 1.75rem;
+    overflow-y: auto;
+    flex-grow: 1;
+    scrollbar-width: thin;
+}
+.inc-drawer-footer {
+    padding: 1rem 1.75rem;
+    border-top: 1px solid #f1f5f9;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.inc-drag-indicator {
+    width: 40px;
+    height: 5px;
+    background: #cbd5e1;
+    border-radius: 10px;
+    margin: 0.5rem auto 0 auto;
+}
+
+/* ── Toggle Switch Solución ──────────────────────────────────── */
+.solucion-toggle-wrap {
+    display: inline-flex;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    border-radius: 30px;
+    padding: 3px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.25s ease;
+}
+.solucion-toggle-wrap.is-atendido {
+    background: #dcfce7;
+    border-color: #bbf7d0;
+}
+.solucion-toggle-btn {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    color: #64748b;
+}
+.solucion-toggle-btn.active-pend {
+    background: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+}
+.solucion-toggle-btn.active-atend {
+    background: #16a34a;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35);
+}
+
+/* ── Tabla de Sub-Costos en Formulario ───────────────────────── */
+.inc-costos-table {
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.inc-costos-table thead th {
+    background: #f8fafc;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.75rem;
+    color: #475569;
+    font-weight: 700;
+}
+.inc-costos-table tbody td {
+    padding: 0.4rem 0.6rem;
+    border-top: 1px solid #f1f5f9;
+}
+
 @media (max-width: 768px) {
-    .mod-wrap-mantenimiento-incidencias-ruta { padding: 0.75rem 0.75rem 90px 0.75rem; }
+    .mod-incidencias-ruta { padding: 0.75rem 0.75rem 80px 0.75rem; }
+    .inc-drawer-sheet { max-height: 96vh; border-radius: 20px 20px 0 0; }
+    .inc-drawer-header, .inc-drawer-body, .inc-drawer-footer { padding: 1rem; }
 }
 </style>
 
-<div class="mod-wrap-mantenimiento-incidencias-ruta container-fluid">
-    <!-- Header principal -->
-    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+<div class="mod-incidencias-ruta container-fluid">
+    
+    <!-- Encabezado Principal -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3">
         <div>
             <div class="d-flex align-items-center gap-2 mb-1">
                 <h4 class="fw-bolder text-dark m-0" style="letter-spacing:-0.02em;">Incidencias en Ruta</h4>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold" style="font-size:0.7rem;">Módulo ERP</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold" style="font-size:0.7rem;">Mantenimiento & Flota</span>
             </div>
-            <p class="text-secondary m-0" style="font-size:0.83rem;">Control, auxilio mecánico y seguimiento en tiempo real de fallas en carretera</p>
+            <p class="text-secondary m-0" style="font-size:0.83rem;">Monitoreo, registro de fallas viales, control de auxilio mecánico y desglose de costos en carretera</p>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;" onclick="location.reload()">
+            <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;" onclick="window.incCargarDatos()">
                 <i class="bi bi-arrow-clockwise"></i> Actualizar
             </button>
-            <button class="btn btn-primary rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1" style="font-size:0.82rem; background:var(--primary, #0284c7); border:none;" onclick="alert('Formulario de registro en desarrollo.')">
-                <i class="bi bi-plus-lg"></i> Nuevo Registro
+            <button class="btn btn-primary rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1 shadow-sm" style="font-size:0.82rem; background:#0284c7; border:none;" onclick="window.incAbrirModalNuevo()">
+                <i class="bi bi-plus-lg"></i> Registrar Incidencia
             </button>
         </div>
     </div>
 
-    <!-- Cards KPI Bento -->
-    <div class="row g-3 mb-4">
+    <!-- KPIs Bento Cards -->
+    <div class="row g-3 mb-3">
         
+        <!-- Total Incidencias -->
         <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-2xs p-3 rounded-4 bg-white d-flex flex-row align-items-center gap-3" style="border:1px solid var(--border)!important;">
-                <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:44px;height:44px;background:#0284c7;font-size:1.2rem;">
+            <div class="inc-kpi-card">
+                <div class="inc-kpi-icon" style="background:#e0f2fe; color:#0284c7;">
                     <i class="bi bi-exclamation-triangle-fill"></i>
                 </div>
                 <div>
-                    <div class="text-secondary fw-semibold" style="font-size:0.75rem;">Total Registradas</div>
-                    <div class="fw-bolder text-dark" style="font-size:1.15rem;line-height:1.2;">12</div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Total Incidencias</div>
+                    <div class="fw-bolder text-dark" id="kpi-total-incidencias" style="font-size:1.35rem; line-height:1.2;">0</div>
                 </div>
             </div>
         </div>
-    
+
+        <!-- Pendientes -->
         <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-2xs p-3 rounded-4 bg-white d-flex flex-row align-items-center gap-3" style="border:1px solid var(--border)!important;">
-                <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:44px;height:44px;background:#d97706;font-size:1.2rem;">
-                    <i class="bi bi-tools"></i>
-                </div>
-                <div>
-                    <div class="text-secondary fw-semibold" style="font-size:0.75rem;">En Auxilio Mecánico</div>
-                    <div class="fw-bolder text-dark" style="font-size:1.15rem;line-height:1.2;">2</div>
-                </div>
-            </div>
-        </div>
-    
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-2xs p-3 rounded-4 bg-white d-flex flex-row align-items-center gap-3" style="border:1px solid var(--border)!important;">
-                <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:44px;height:44px;background:#16a34a;font-size:1.2rem;">
-                    <i class="bi bi-check-circle-fill"></i>
-                </div>
-                <div>
-                    <div class="text-secondary fw-semibold" style="font-size:0.75rem;">Resueltas en Ruta</div>
-                    <div class="fw-bolder text-dark" style="font-size:1.15rem;line-height:1.2;">9</div>
-                </div>
-            </div>
-        </div>
-    
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-2xs p-3 rounded-4 bg-white d-flex flex-row align-items-center gap-3" style="border:1px solid var(--border)!important;">
-                <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:44px;height:44px;background:#7c3aed;font-size:1.2rem;">
+            <div class="inc-kpi-card" style="border-left:4px solid #ef4444 !important;">
+                <div class="inc-kpi-icon" style="background:#fee2e2; color:#ef4444;">
                     <i class="bi bi-clock-history"></i>
                 </div>
                 <div>
-                    <div class="text-secondary fw-semibold" style="font-size:0.75rem;">Tiempo Prom. Auxilio</div>
-                    <div class="fw-bolder text-dark" style="font-size:1.15rem;line-height:1.2;">42 min</div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Pendientes de Solución</div>
+                    <div class="fw-bolder text-danger" id="kpi-pendientes" style="font-size:1.35rem; line-height:1.2;">0</div>
                 </div>
             </div>
         </div>
-    
+
+        <!-- Atendidas -->
+        <div class="col-6 col-md-3">
+            <div class="inc-kpi-card" style="border-left:4px solid #16a34a !important;">
+                <div class="inc-kpi-icon" style="background:#dcfce7; color:#16a34a;">
+                    <i class="bi bi-check2-circle"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Atendidas / Resueltas</div>
+                    <div class="fw-bolder text-success" id="kpi-atendidas" style="font-size:1.35rem; line-height:1.2;">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Costo Total Acumulado -->
+        <div class="col-6 col-md-3">
+            <div class="inc-kpi-card" style="border-left:4px solid #7c3aed !important;">
+                <div class="inc-kpi-icon" style="background:#ede9fe; color:#7c3aed;">
+                    <i class="bi bi-currency-dollar"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Costo Total Acumulado</div>
+                    <div class="fw-bolder text-dark" id="kpi-costo-total" style="font-size:1.35rem; line-height:1.2;">S/ 0.00</div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <!-- Barra de Búsqueda y Filtros -->
-    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border:1px solid var(--border)!important;">
-        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
-            <div class="position-relative flex-grow-1" style="max-width:420px;">
-                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
-                <input type="text" class="form-control ps-5 py-2 rounded-3 border-0 bg-light" placeholder="Buscar por código, placa o nombre..." style="font-size:0.83rem;">
+    <!-- Barra de Filtros Inteligente -->
+    <div class="inc-filter-bar mb-3">
+        <div class="row g-2 align-items-center">
+            
+            <!-- Buscador -->
+            <div class="col-12 col-md-4">
+                <div class="position-relative">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
+                    <input type="text" id="inc-filter-search" class="inc-search-input" placeholder="Buscar por código, placa, motivo, conductor, falla...">
+                </div>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-light border rounded-3 px-3 py-2 text-secondary fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;">
-                    <i class="bi bi-funnel"></i> Filtros
-                </button>
-                <button class="btn btn-light border rounded-3 px-3 py-2 text-secondary fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;">
-                    <i class="bi bi-download"></i> Exportar
-                </button>
+
+            <!-- Filtro Mes -->
+            <div class="col-6 col-md-2">
+                <select id="inc-filter-mes" class="form-select inc-select" onchange="window.incCargarDatos(1)">
+                    <option value="ALL">Todos los Meses</option>
+                    <option value="1">Enero</option>
+                    <option value="2">Febrero</option>
+                    <option value="3">Marzo</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Mayo</option>
+                    <option value="6">Junio</option>
+                    <option value="7">Julio</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Septiembre</option>
+                    <option value="10">Octubre</option>
+                    <option value="11">Noviembre</option>
+                    <option value="12">Diciembre</option>
+                </select>
             </div>
+
+            <!-- Filtro Placa -->
+            <div class="col-6 col-md-2">
+                <select id="inc-filter-placa" class="form-select inc-select" onchange="window.incCargarDatos(1)">
+                    <option value="ALL">Todas las Placas</option>
+                </select>
+            </div>
+
+            <!-- Filtro Responsabilidad Área -->
+            <div class="col-6 col-md-2">
+                <select id="inc-filter-area" class="form-select inc-select" onchange="window.incCargarDatos(1)">
+                    <option value="ALL">Todas las Áreas</option>
+                    <option value="Mantenimiento">Mantenimiento</option>
+                    <option value="Flota">Flota</option>
+                    <option value="Operaciones">Operaciones</option>
+                </select>
+            </div>
+
+            <!-- Filtro Estado Solución -->
+            <div class="col-6 col-md-2">
+                <select id="inc-filter-solucion" class="form-select inc-select" onchange="window.incCargarDatos(1)">
+                    <option value="ALL">Todos los Estados</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Atendido">Atendido</option>
+                </select>
+            </div>
+
         </div>
     </div>
 
-    <!-- Tabla Data -->
-    <div class="card border-0 shadow-2xs rounded-4 overflow-hidden bg-white" style="border:1px solid var(--border)!important;">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle m-0" style="font-size:0.83rem;">
-                <thead class="bg-light text-secondary fw-bold border-bottom">
+    <!-- Tabla de Incidencias en Ruta (Réplica Excel Mejorada) -->
+    <div class="inc-table-card">
+        <div class="table-responsive" style="max-height: 60vh;">
+            <table class="table table-hover align-middle inc-table">
+                <thead>
                     <tr>
-                        <th>ID INCIDENCIA</th><th>PLACA</th><th>CONDUCTOR</th><th>UBICACIÓN / RUTA</th><th>TIPO FALLA</th><th>SEVERIDAD</th><th>ESTADO</th><th>ACCIONES</th>
+                        <th>FECHA FALLA</th>
+                        <th>PLACA</th>
+                        <th>CONDUCTOR</th>
+                        <th>MARCA</th>
+                        <th>UBICACIÓN</th>
+                        <th>UNIDAD / TIPO</th>
+                        <th>TRANSBORDO</th>
+                        <th>MOTIVO</th>
+                        <th>FALLA DETALLADA</th>
+                        <th>ÁREA RESP.</th>
+                        <th>RESPONSABLE</th>
+                        <th>DESGLOSE COSTOS</th>
+                        <th>TOTAL COSTO</th>
+                        <th class="text-center">¿SE DIO SOLUCIÓN?</th>
+                        <th class="text-end">ACCIONES</th>
                     </tr>
                 </thead>
-                <tbody>
-                    
-        <tr>
-            <td class="fw-bold text-dark">INC-2026-001</td><td class="">ADH-982</td><td class="">Carlos Mendoza</td><td class="">Km 145 Panamericana Sur</td><td class="">Falla Neumático Posterior</td><td class=""><span class="badge bg-danger">Alta</span></td><td><span class="badge bg-warning text-dark">En Auxilio</span></td><td class="text-end"><button class="btn btn-sm btn-light border py-1 px-2" style="font-size:0.75rem;"><i class="bi bi-three-dots"></i></button></td>
-        </tr>
-    
-        <tr>
-            <td class="fw-bold text-dark">INC-2026-002</td><td class="">AZP-977</td><td class="">Jorge Ramírez</td><td class="">Variante de Pasamayo</td><td class="">Recalentamiento Motor</td><td class=""><span class="badge bg-danger">Crítica</span></td><td><span class="badge bg-warning text-dark">Unidad Rescate</span></td><td class="text-end"><button class="btn btn-sm btn-light border py-1 px-2" style="font-size:0.75rem;"><i class="bi bi-three-dots"></i></button></td>
-        </tr>
-    
-        <tr>
-            <td class="fw-bold text-dark">INC-2026-003</td><td class="">ACX-979</td><td class="">Miguel Paredes</td><td class="">Peaje Lurín</td><td class="">Fuga de Aire Frenos</td><td class=""><span class="badge bg-warning text-dark">Media</span></td><td><span class="badge bg-success">Resuelta</span></td><td class="text-end"><button class="btn btn-sm btn-light border py-1 px-2" style="font-size:0.75rem;"><i class="bi bi-three-dots"></i></button></td>
-        </tr>
-    
+                <tbody id="inc-tbody">
+                    <!-- Filas inyectadas dinámicamente -->
                 </tbody>
             </table>
         </div>
+
+        <!-- Paginación -->
+        <div class="d-flex align-items-center justify-content-between px-3 py-2 bg-light border-top" style="font-size:0.8rem;">
+            <div class="text-secondary" id="inc-paginacion-info">Mostrando 0 registros</div>
+            <div class="d-flex align-items-center gap-1" id="inc-paginacion-controles"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ================================================================ -->
+<!-- MODAL DRAWER BOTTOM SHEET: NUEVA / EDITAR INCIDENCIA             -->
+<!-- ================================================================ -->
+<div class="inc-drawer-overlay" id="inc-drawer-overlay" onclick="window.incCerrarModal()"></div>
+
+<div class="inc-drawer-sheet" id="inc-drawer-sheet">
+    <div class="inc-drag-indicator"></div>
+    
+    <div class="inc-drawer-header">
+        <div class="d-flex align-items-center gap-2">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:#e0f2fe; color:#0284c7;">
+                <i class="bi bi-tools"></i>
+            </div>
+            <div>
+                <h5 class="fw-bold m-0 text-dark" id="inc-modal-titulo">Registrar Incidencia en Ruta</h5>
+                <span class="text-secondary" style="font-size:0.75rem;">Completa los datos del evento mecánico ocurrido en ruta</span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" onclick="window.incCerrarModal()"></button>
+    </div>
+
+    <div class="inc-drawer-body">
+        <form id="inc-form" onsubmit="event.preventDefault(); window.incGuardarRegistro();">
+            <input type="hidden" id="inc-form-id">
+
+            <div class="row g-3">
+                
+                <!-- Fecha Falla -->
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">FECHA DE LA FALLA *</label>
+                    <input type="date" id="inc-form-fecha" class="form-control rounded-3" required>
+                </div>
+
+                <!-- Placa (con auto-fill) -->
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">PLACA DE LA UNIDAD *</label>
+                    <select id="inc-form-placa" class="form-select rounded-3" required onchange="window.incOnPlacaChange(this.value)">
+                        <option value="">Selecciona una placa...</option>
+                    </select>
+                </div>
+
+                <!-- Conductor -->
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">CONDUCTOR</label>
+                    <input type="text" id="inc-form-conductor" class="form-control rounded-3" placeholder="Nombre del conductor">
+                </div>
+
+                <!-- Marca -->
+                <div class="col-6 col-md-4">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">MARCA</label>
+                    <input type="text" id="inc-form-marca" class="form-control rounded-3 bg-light" placeholder="Ej. SCANIA, VOLVO, ISUZU" readonly>
+                </div>
+
+                <!-- Unidad de Negocio / Tipo -->
+                <div class="col-6 col-md-4">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">UNIDAD DE NEGOCIO / TIPO</label>
+                    <input type="text" id="inc-form-tipo" class="form-control rounded-3" placeholder="Ej. CAMION, TRACTO, CARRETA">
+                </div>
+
+                <!-- Ubicación (Manual) -->
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">UBICACIÓN (MANUAL) *</label>
+                    <input type="text" id="inc-form-ubicacion" class="form-control rounded-3" placeholder="Ej. Matucana, Arequipa, Km 120" required>
+                </div>
+
+                <!-- Transbordo (SI/NO) -->
+                <div class="col-6 col-md-4">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">¿HUBO TRANSBORDO?</label>
+                    <select id="inc-form-transbordo" class="form-select rounded-3">
+                        <option value="NO">NO</option>
+                        <option value="SI">SI</option>
+                    </select>
+                </div>
+
+                <!-- Responsabilidad de Área -->
+                <div class="col-6 col-md-4">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">RESPONSABILIDAD DE ÁREA</label>
+                    <select id="inc-form-area" class="form-select rounded-3">
+                        <option value="Mantenimiento">Mantenimiento</option>
+                        <option value="Flota">Flota</option>
+                        <option value="Operaciones">Operaciones</option>
+                    </select>
+                </div>
+
+                <!-- Responsable -->
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">RESPONSABLE / CAUSA</label>
+                    <input type="text" id="inc-form-responsable" class="form-control rounded-3" placeholder="Ej. Falla Mecánica, Conductor...">
+                </div>
+
+                <!-- Motivo -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">MOTIVO PRINCIPAL</label>
+                    <input type="text" id="inc-form-motivo" class="form-control rounded-3" placeholder="Ej. UNIDAD NO ARRANCA, FUGA REFRIGERANTE...">
+                </div>
+
+                <!-- Falla Detallada -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">FALLA DETALLADA / DIAGNÓSTICO</label>
+                    <input type="text" id="inc-form-falla" class="form-control rounded-3" placeholder="Ej. Se salió piñón del arrancador, manguera rota...">
+                </div>
+
+                <!-- SECCIÓN DINÁMICA DE COSTOS -->
+                <div class="col-12 mt-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-receipt text-primary"></i>
+                            <span class="fw-bold text-dark" style="font-size:0.85rem;">Desglose de Costos de Auxilio / Reparación</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold" onclick="window.incAgregarFilaCosto()">
+                            <i class="bi bi-plus-lg"></i> Agregar Ítem de Gasto
+                        </button>
+                    </div>
+
+                    <div class="inc-costos-table">
+                        <table class="table align-middle m-0">
+                            <thead>
+                                <tr>
+                                    <th>CONCEPTO / DESCRIPCIÓN (EJ. PIÑON, MANO DE OBRA, PEAJE)</th>
+                                    <th style="width: 180px;">MONTO (S/.)</th>
+                                    <th style="width: 50px;" class="text-center"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="inc-costos-tbody">
+                                <!-- Filas de costos dinámicas -->
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-light fw-bold">
+                                    <td class="text-end text-secondary">TOTAL COSTO CALCULADO:</td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-white fw-bold">S/</span>
+                                            <input type="text" id="inc-form-total-costo" class="form-control fw-bolder text-primary bg-white" value="0.00" readonly>
+                                        </div>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SE DIO SOLUCIÓN? INTERACTIVO -->
+                <div class="col-12 mt-3">
+                    <div class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+                        <div>
+                            <span class="fw-bold d-block text-dark" style="font-size:0.83rem;">¿Se dio solución al incidente en ruta?</span>
+                            <span class="text-secondary" style="font-size:0.75rem;">Indica si la unidad ya fue asistida y continuó ruta o sigue pendiente</span>
+                        </div>
+                        
+                        <div class="solucion-toggle-wrap" id="inc-toggle-wrap" onclick="window.incAlternarSolucionForm()">
+                            <div class="solucion-toggle-btn active-pend" id="btn-toggle-pend">
+                                <i class="bi bi-clock me-1"></i> Pendiente
+                            </div>
+                            <div class="solucion-toggle-btn" id="btn-toggle-atend">
+                                <i class="bi bi-check-lg me-1"></i> Atendido
+                            </div>
+                        </div>
+                        <input type="hidden" id="inc-form-solucion" value="Pendiente">
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+    <div class="inc-drawer-footer">
+        <button type="button" class="btn btn-light rounded-3 px-4 fw-semibold" onclick="window.incCerrarModal()">
+            Cancelar
+        </button>
+        <button type="button" class="btn btn-primary rounded-3 px-4 fw-bold shadow-sm" style="background:#0284c7; border:none;" onclick="window.incGuardarRegistro()">
+            <i class="bi bi-check2-circle"></i> Guardar Registro
+        </button>
     </div>
 </div>
