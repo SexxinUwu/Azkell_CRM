@@ -20,6 +20,15 @@
         if (btnSync) {
             btnSync.style.display = isMarsisa ? 'inline-flex' : 'none';
         }
+
+        // Configurar por defecto siempre Fecha Actual de Perú (America/Lima UTC-5)
+        const getTodayPeru = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        const today = getTodayPeru();
+        const fd = document.getElementById('cv-filter-fecha-desde');
+        const fh = document.getElementById('cv-filter-fecha-hasta');
+        if (fd && !fd.value) fd.value = today;
+        if (fh && !fh.value) fh.value = today;
+
         window.cvActualizarIconosOrden();
         window._cvCargarCatalogos();
         window.cvCargarDatos();
@@ -850,9 +859,14 @@
     };
 
     window.cvLimpiarFiltros = function() {
+        const getTodayPeru = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        const today = getTodayPeru();
         const s = document.getElementById('cv-filter-search'); if (s) s.value = '';
         const p = document.getElementById('cv-filter-placa'); if (p) p.value = 'ALL';
         const e = document.getElementById('cv-filter-estado'); if (e) e.value = 'ALL';
+        const c = document.getElementById('cv-filter-combustible'); if (c) c.value = 'ALL';
+        const fd = document.getElementById('cv-filter-fecha-desde'); if (fd) fd.value = today;
+        const fh = document.getElementById('cv-filter-fecha-hasta'); if (fh) fh.value = today;
         window.cvCargarDatos(1);
     };
 
