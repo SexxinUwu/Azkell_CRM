@@ -153,7 +153,8 @@ module.exports = function (db, broadcast, logAudit) {
     const DEFAULT_ACCIONES = ['Inspección', 'Rotación', 'Instalación', 'Cambio', 'Reparación', 'Reencauche', 'Baja'];
 
     async function asegurarTablasNeumaticosTenant(tdb, tenantId) {
-        if (!tdb) return;
+        if (!tdb || _tenantsInitSet.has(tenantId)) return;
+        _tenantsInitSet.add(tenantId);
         try {
             const pool = (typeof tdb.promise === 'function') ? tdb.promise() : tdb;
             for (const sql of TABLES_SQL) {
@@ -172,24 +173,23 @@ module.exports = function (db, broadcast, logAudit) {
                 try { await pool.query(q); } catch(e) {}
             }
 
-            // Sembrar catálogos de marcas
-            for (const m of DEFAULT_MARCAS) {
-                try { await pool.query("INSERT IGNORE INTO cat_neumaticos_marcas (nombre) VALUES (?)", [m]); } catch(e) {}
+            // Sembrar catálogos en lote (Batch Inserts en 1 sola consulta cada uno)
+            if (DEFAULT_MARCAS.length > 0) {
+                const vals = DEFAULT_MARCAS.map(m => [m]);
+                try { await pool.query("INSERT IGNORE INTO cat_neumaticos_marcas (nombre) VALUES ?", [vals]); } catch(e) {}
             }
-            // Sembrar catálogos de medidas
-            for (const med of DEFAULT_MEDIDAS) {
-                try { await pool.query("INSERT IGNORE INTO cat_neumaticos_medidas (nombre) VALUES (?)", [med]); } catch(e) {}
+            if (DEFAULT_MEDIDAS.length > 0) {
+                const vals = DEFAULT_MEDIDAS.map(m => [m]);
+                try { await pool.query("INSERT IGNORE INTO cat_neumaticos_medidas (nombre) VALUES ?", [vals]); } catch(e) {}
             }
-            // Sembrar catálogos de acciones
-            for (const ac of DEFAULT_ACCIONES) {
-                try { await pool.query("INSERT IGNORE INTO cat_neumaticos_acciones (nombre) VALUES (?)", [ac]); } catch(e) {}
+            if (DEFAULT_ACCIONES.length > 0) {
+                const vals = DEFAULT_ACCIONES.map(m => [m]);
+                try { await pool.query("INSERT IGNORE INTO cat_neumaticos_acciones (nombre) VALUES ?", [vals]); } catch(e) {}
             }
-            // Sembrar catálogos de modelos
-            for (const mod of DEFAULT_MODELOS) {
-                try { await pool.query("INSERT IGNORE INTO cat_neumaticos_modelos (nombre) VALUES (?)", [mod]); } catch(e) {}
+            if (DEFAULT_MODELOS.length > 0) {
+                const vals = DEFAULT_MODELOS.map(m => [m]);
+                try { await pool.query("INSERT IGNORE INTO cat_neumaticos_modelos (nombre) VALUES ?", [vals]); } catch(e) {}
             }
-
-            _tenantsInitSet.add(tenantId);
         } catch(err) {
             console.error(`⚠️ Error asegurando tablas de neumáticos en tenant [${tenantId}]:`, err.message);
         }
@@ -197,9 +197,9 @@ module.exports = function (db, broadcast, logAudit) {
 
     // Middleware para auto-migrar la BD del tenant en caliente
     router.use(async (req, res, next) => {
-        const tenantId = req.tenantSlug || req.headers['x-tenant-id'] || 'default';
+        const tenantId = (req && req.tenantId) ? req.tenantId : (req.tenantSlug || req.headers['x-tenant-id'] || 'default');
         const tdb = getDb(req);
-        if (tdb) {
+        if (tdb && !_tenantsInitSet.has(tenantId)) {
             await asegurarTablasNeumaticosTenant(tdb, tenantId);
         }
         next();
@@ -636,121 +636,128 @@ module.exports = function (db, broadcast, logAudit) {
         try {
             const tdb = getDb(req);
 
-            // Limpiar automáticamente inspecciones huérfanas sin llantas registradas
-            try {
-                await tdb.query(`
-                    DELETE FROM neumaticos_inspecciones 
-                    WHERE id_inspeccion NOT IN (SELECT DISTINCT id_inspeccion FROM neumaticos_inspecciones_det)
-                `);
-            } catch(e) {}
+            // Ejecutar consultas agregadas en paralelo para máxima velocidad
+            const [
+                [totalInspRows],
+                [vigenciasRows],
+                [criticasRows],
+                [unidadesUsoRows],
+                [marcasTopRows],
+                [listadoRows]
+            ] = await Promise.all([
+                // 1. Total de inspecciones registradas
+                tdb.query("SELECT COUNT(*) as total FROM neumaticos_inspecciones"),
 
-            // Total de unidades con inspección
-            const [totalInsp] = await tdb.query("SELECT COUNT(*) as total FROM neumaticos_inspecciones");
-            
-            // Vigencia de inspecciones de la flota activa en uso
-            const [vigencias] = await tdb.query(`
-                SELECT 
-                    CAST(COALESCE(SUM(CASE WHEN fecha_proxima >= CURDATE() THEN 1 ELSE 0 END), 0) AS UNSIGNED) as vigentes,
-                    CAST(COALESCE(SUM(CASE WHEN fecha_proxima < CURDATE() THEN 1 ELSE 0 END), 0) AS UNSIGNED) as no_vigentes
-                FROM (
-                    SELECT i1.placa, i1.fecha_proxima
+                // 2. Vigencia de inspecciones de la flota activa en uso
+                tdb.query(`
+                    SELECT 
+                        CAST(COALESCE(SUM(CASE WHEN i1.fecha_proxima >= CURDATE() THEN 1 ELSE 0 END), 0) AS UNSIGNED) as vigentes,
+                        CAST(COALESCE(SUM(CASE WHEN i1.fecha_proxima < CURDATE() THEN 1 ELSE 0 END), 0) AS UNSIGNED) as no_vigentes
                     FROM neumaticos_inspecciones i1
                     INNER JOIN (
                         SELECT placa, MAX(fecha_inspeccion) as max_fecha
                         FROM neumaticos_inspecciones
                         GROUP BY placa
                     ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
-                    LEFT JOIN placas p ON i1.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
+                    LEFT JOIN placas p ON i1.placa = p.placa
                     WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
-                ) as ultimas
-            `);
+                `),
 
-            // Total de llantas en estado crítico (Remanente <= 4mm) en la última inspección de flota activa
-            const [criticas] = await tdb.query(`
-                SELECT COUNT(*) as total_criticas
-                FROM neumaticos_inspecciones_det d
-                INNER JOIN (
-                    SELECT i1.placa, i1.id_inspeccion
-                    FROM neumaticos_inspecciones i1
+                // 3. Total de llantas críticas en la última inspección de flota activa
+                tdb.query(`
+                    SELECT COUNT(*) as total_criticas
+                    FROM neumaticos_inspecciones_det d
                     INNER JOIN (
-                        SELECT placa, MAX(fecha_inspeccion) as max_fecha
-                        FROM neumaticos_inspecciones
-                        GROUP BY placa
-                    ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
-                    LEFT JOIN placas p ON i1.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
+                        SELECT i1.id_inspeccion
+                        FROM neumaticos_inspecciones i1
+                        INNER JOIN (
+                            SELECT placa, MAX(fecha_inspeccion) as max_fecha
+                            FROM neumaticos_inspecciones
+                            GROUP BY placa
+                        ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
+                        LEFT JOIN placas p ON i1.placa = p.placa
+                        WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
+                    ) last_i ON d.id_inspeccion = last_i.id_inspeccion
+                    WHERE d.alerta_cambio = 1 OR d.r1 <= 4 OR d.r2 <= 4 OR d.r3 <= 4
+                `),
+
+                // 4. Total de unidades activas en uso
+                tdb.query(`
+                    SELECT COUNT(*) as total_unidades_en_uso
+                    FROM placas
+                    WHERE UPPER(TRIM(COALESCE(en_uso, 'SI'))) != 'NO'
+                `),
+
+                // 5. Desglose de marcas top
+                tdb.query(`
+                    SELECT marca, COUNT(*) as cantidad
+                    FROM neumaticos_inspecciones_det
+                    WHERE marca != '' AND marca IS NOT NULL
+                    GROUP BY marca
+                    ORDER BY cantidad DESC
+                    LIMIT 8
+                `),
+
+                // 6. Listado de última inspección o estado por unidad activa con agregación en O(1)
+                tdb.query(`
+                    SELECT 
+                        p.placa,
+                        p.cliente as dueno,
+                        p.marca as marca_unidad,
+                        p.tipo as tipo_unidad,
+                        p.motora,
+                        last_i.id_inspeccion,
+                        last_i.fecha_inspeccion,
+                        last_i.km_vehiculo,
+                        last_i.fecha_proxima,
+                        DATEDIFF(last_i.fecha_proxima, CURDATE()) as dias_restantes,
+                        COALESCE(det_stats.total_llantas, 0) as total_llantas,
+                        COALESCE(det_stats.total_criticas, 0) as total_criticas
+                    FROM placas p
+                    LEFT JOIN (
+                        SELECT i1.id_inspeccion, i1.placa, i1.fecha_inspeccion, i1.km_vehiculo, i1.fecha_proxima
+                        FROM neumaticos_inspecciones i1
+                        INNER JOIN (
+                            SELECT placa, MAX(fecha_inspeccion) as max_fecha
+                            FROM neumaticos_inspecciones
+                            GROUP BY placa
+                        ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
+                    ) last_i ON p.placa = last_i.placa
+                    LEFT JOIN (
+                        SELECT 
+                            id_inspeccion,
+                            COUNT(*) as total_llantas,
+                            SUM(CASE WHEN alerta_cambio = 1 OR r1 <= 4 OR r2 <= 4 OR r3 <= 4 THEN 1 ELSE 0 END) as total_criticas
+                        FROM neumaticos_inspecciones_det
+                        GROUP BY id_inspeccion
+                    ) det_stats ON last_i.id_inspeccion = det_stats.id_inspeccion
                     WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
-                ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci
-                WHERE d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0
-            `);
+                    ORDER BY 
+                        CASE WHEN last_i.fecha_inspeccion IS NULL THEN 0 ELSE 1 END ASC,
+                        last_i.fecha_inspeccion DESC
+                `)
+            ]);
 
-            // Total de vehículos/unidades activas en uso (en_uso != 'NO')
-            const [unidadesUso] = await tdb.query(`
-                SELECT COUNT(*) as total_unidades_en_uso
-                FROM placas
-                WHERE UPPER(TRIM(COALESCE(en_uso, 'SI'))) != 'NO'
-            `);
-
-            // Desglose por Marcas más usadas
-            const [marcasTop] = await tdb.query(`
-                SELECT marca, COUNT(*) as cantidad
-                FROM neumaticos_inspecciones_det
-                WHERE marca != ''
-                GROUP BY marca
-                ORDER BY cantidad DESC
-                LIMIT 8
-            `);
-
-            // Listado de última inspección o estado por unidad activa
-            const [listado] = await tdb.query(`
-                SELECT 
-                    p.placa,
-                    p.cliente as dueno,
-                    p.marca as marca_unidad,
-                    p.tipo as tipo_unidad,
-                    p.motora,
-                    last_i.id_inspeccion,
-                    last_i.fecha_inspeccion,
-                    last_i.km_vehiculo,
-                    last_i.fecha_proxima,
-                    DATEDIFF(last_i.fecha_proxima, CURDATE()) as dias_restantes,
-                    (SELECT COUNT(*) FROM neumaticos_inspecciones_det d WHERE d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci) as total_llantas,
-                    (SELECT COUNT(*) FROM neumaticos_inspecciones_det d WHERE d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci AND (d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0)) as total_criticas
-                FROM placas p
-                LEFT JOIN (
-                    SELECT i1.id_inspeccion, i1.placa, i1.fecha_inspeccion, i1.km_vehiculo, i1.fecha_proxima
-                    FROM neumaticos_inspecciones i1
-                    INNER JOIN (
-                        SELECT placa, MAX(fecha_inspeccion) as max_fecha
-                        FROM neumaticos_inspecciones
-                        GROUP BY placa
-                    ) i2 ON i1.placa COLLATE utf8mb4_unicode_ci = i2.placa COLLATE utf8mb4_unicode_ci AND i1.fecha_inspeccion = i2.max_fecha
-                ) last_i ON p.placa COLLATE utf8mb4_unicode_ci = last_i.placa COLLATE utf8mb4_unicode_ci
-                WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
-                ORDER BY 
-                    CASE WHEN last_i.fecha_inspeccion IS NULL THEN 0 ELSE 1 END ASC,
-                    last_i.fecha_inspeccion DESC
-            `);
-
-            const totalUso = unidadesUso[0]?.total_unidades_en_uso || 0;
-            const vig = vigencias[0]?.vigentes || 0;
-            const noVig = vigencias[0]?.no_vigentes || 0;
+            const totalUso = unidadesUsoRows[0]?.total_unidades_en_uso || 0;
+            const vig = vigenciasRows[0]?.vigentes || 0;
+            const noVig = vigenciasRows[0]?.no_vigentes || 0;
             const sinInsp = Math.max(0, totalUso - (vig + noVig));
 
             res.json({
                 ok: true,
                 resumen: {
-                    total_inspecciones: totalInsp[0]?.total || 0,
+                    total_inspecciones: totalInspRows[0]?.total || 0,
                     vigentes: vig,
                     no_vigentes: noVig,
                     sin_inspeccion: sinInsp,
-                    llantas_criticas: criticas[0]?.total_criticas || 0,
+                    llantas_criticas: criticasRows[0]?.total_criticas || 0,
                     unidades_en_uso: totalUso
                 },
-                marcas: marcasTop,
-                inspecciones: listado
+                marcas: marcasTopRows || [],
+                inspecciones: listadoRows || []
             });
         } catch (err) {
-            console.error("Error en análisis de neumáticos:", err);
+            console.error("Error en dashboard de neumáticos:", err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });
