@@ -27,45 +27,58 @@
         }
     };
 
-    // Cargar Catálogo de Placas para el selector y autocompletado
+    // Cargar Catálogo de Placas y Conductores para los combos de búsqueda interactiva
     window.incCargarCatalogos = async function() {
         try {
             const res = await fetch('/api/mantenimiento/incidencias-ruta/catalogo-placas');
             const data = await res.json();
-            if (data.ok && Array.isArray(data.data)) {
-                window._incCatalogoPlacas = data.data;
+            if (data.ok) {
+                window._incCatalogoPlacas = data.data || [];
+                window._incCatalogoConductores = data.conductores || [];
 
-                // Llenar selector de filtros
+                // Llenar selector de filtros de placa
                 const selFiltro = document.getElementById('inc-filter-placa');
                 if (selFiltro) {
                     selFiltro.innerHTML = '<option value="ALL">Todas las Placas</option>' +
-                        data.data.map(p => `<option value="${p.placa}">${p.placa}</option>`).join('');
+                        (data.data || []).map(p => `<option value="${p.placa}">${p.placa}</option>`).join('');
                 }
 
-                // Llenar selector del formulario modal
-                const selForm = document.getElementById('inc-form-placa');
-                if (selForm) {
-                    selForm.innerHTML = '<option value="">Selecciona una placa...</option>' +
-                        data.data.map(p => `<option value="${p.placa}">${p.placa} - ${p.marca || ''}</option>`).join('');
+                // Inicializar combo interactivo de Placa
+                if (typeof window._cbInit === 'function') {
+                    const itemsPlacas = (data.data || []).map(p => ({
+                        value: p.placa,
+                        label: p.placa + (p.marca ? ' - ' + p.marca : '')
+                    }));
+                    window._cbInit('inc-form-placa', itemsPlacas, 'SELECCIONE PLACA...');
+
+                    // Callback cuando el usuario selecciona una placa en el combo
+                    window._cbOnSelect('inc-form-placa', function(val) {
+                        window.incOnPlacaChange(val);
+                    });
+
+                    // Inicializar combo interactivo de Conductor
+                    const itemsCond = (data.conductores || []).map(c => ({
+                        value: c,
+                        label: c
+                    }));
+                    window._cbInit('inc-form-conductor', itemsCond, 'SELECCIONE CONDUCTOR O ESCRIBA NOMBRE...');
                 }
             }
         } catch (e) {
-            console.error('Error cargando catálogo de placas para incidencias:', e);
+            console.error('Error cargando catálogos para incidencias:', e);
         }
     };
 
-    // Al cambiar la placa en el formulario, auto-llenar marca, tipo y conductor
+    // Al cambiar la placa en el combo, auto-llenar marca y tipo de unidad
     window.incOnPlacaChange = function(placaSeleccionada) {
         if (!placaSeleccionada) return;
         const encontrada = (window._incCatalogoPlacas || []).find(p => p.placa === placaSeleccionada);
         if (encontrada) {
             const elMarca = document.getElementById('inc-form-marca');
             const elTipo = document.getElementById('inc-form-tipo');
-            const elCond = document.getElementById('inc-form-conductor');
 
             if (elMarca) elMarca.value = encontrada.marca || '';
             if (elTipo && !elTipo.value) elTipo.value = encontrada.tipo || '';
-            if (elCond && !elCond.value) elCond.value = encontrada.conductor || '';
         }
     };
 
@@ -267,6 +280,17 @@
         document.getElementById('inc-form-id').value = '';
         document.getElementById('inc-modal-titulo').textContent = 'Registrar Incidencia en Ruta';
 
+        // Resetear combos interactivos
+        const txtPlaca = document.getElementById('inc-form-placa-txt');
+        const valPlaca = document.getElementById('inc-form-placa');
+        if (txtPlaca) txtPlaca.value = '';
+        if (valPlaca) valPlaca.value = '';
+
+        const txtCond = document.getElementById('inc-form-conductor-txt');
+        const valCond = document.getElementById('inc-form-conductor');
+        if (txtCond) txtCond.value = '';
+        if (valCond) valCond.value = '';
+
         // Fecha por defecto: Hoy
         const hoy = new Date().toISOString().split('T')[0];
         document.getElementById('inc-form-fecha').value = hoy;
@@ -288,8 +312,19 @@
         document.getElementById('inc-modal-titulo').textContent = `Editar Incidencia (${item.codigo || item.placa})`;
 
         document.getElementById('inc-form-fecha').value = item.fecha_falla || '';
-        document.getElementById('inc-form-placa').value = item.placa || '';
-        document.getElementById('inc-form-conductor').value = item.conductor || '';
+        
+        // Sincronizar combo de Placa
+        const txtPlaca = document.getElementById('inc-form-placa-txt');
+        const valPlaca = document.getElementById('inc-form-placa');
+        if (txtPlaca) txtPlaca.value = item.placa || '';
+        if (valPlaca) valPlaca.value = item.placa || '';
+
+        // Sincronizar combo de Conductor
+        const txtCond = document.getElementById('inc-form-conductor-txt');
+        const valCond = document.getElementById('inc-form-conductor');
+        if (txtCond) txtCond.value = item.conductor || '';
+        if (valCond) valCond.value = item.conductor || '';
+
         document.getElementById('inc-form-marca').value = item.marca || '';
         document.getElementById('inc-form-tipo').value = item.tipo_unidad || '';
         document.getElementById('inc-form-ubicacion').value = item.ubicacion || '';
@@ -404,7 +439,8 @@
     window.incGuardarRegistro = async function() {
         const id = document.getElementById('inc-form-id').value;
         const fecha_falla = document.getElementById('inc-form-fecha').value;
-        const placa = document.getElementById('inc-form-placa').value;
+        const placa = (document.getElementById('inc-form-placa')?.value || document.getElementById('inc-form-placa-txt')?.value || '').trim();
+        const conductor = (document.getElementById('inc-form-conductor')?.value || document.getElementById('inc-form-conductor-txt')?.value || '').trim();
 
         if (!fecha_falla || !placa) {
             alert('Por favor completa los campos requeridos: Fecha de falla y Placa.');
@@ -425,7 +461,7 @@
         const payload = {
             fecha_falla,
             placa,
-            conductor: document.getElementById('inc-form-conductor').value,
+            conductor,
             marca: document.getElementById('inc-form-marca').value,
             tipo_unidad: document.getElementById('inc-form-tipo').value,
             ubicacion: document.getElementById('inc-form-ubicacion').value,

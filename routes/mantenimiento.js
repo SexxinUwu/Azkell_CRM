@@ -129,22 +129,36 @@ module.exports = function (db, logAudit) {
     // GET /api/mantenimiento/incidencias-ruta/catalogo-placas
     router.get('/incidencias-ruta/catalogo-placas', (req, res) => {
         const targetDb = req.db || db;
-        const query = `
+        const queryPlacas = `
             SELECT 
                 p.placa, 
                 p.marca, 
-                COALESCE(p.tipo, '') AS tipo,
-                COALESCE(p.cliente, '') AS conductor
+                COALESCE(p.tipo, '') AS tipo
             FROM placas p
             WHERE p.estado != 'Inactiva'
             ORDER BY p.placa ASC
         `;
-        targetDb.query(query, (err, rows) => {
+        const queryConductores = `
+            SELECT nombre 
+            FROM conductores 
+            WHERE estado = 'Activo'
+            ORDER BY nombre ASC
+        `;
+
+        targetDb.query(queryPlacas, (err, placasRows) => {
             if (err) {
                 console.error('Error catalogo placas incidencias:', err);
                 return res.status(500).json({ ok: false, error: err.message });
             }
-            res.json({ ok: true, data: rows || [] });
+
+            targetDb.query(queryConductores, (errCond, condRows) => {
+                const conductores = (!errCond && condRows) ? condRows.map(c => c.nombre) : [];
+                res.json({
+                    ok: true,
+                    data: placasRows || [],
+                    conductores: conductores
+                });
+            });
         });
     });
 
