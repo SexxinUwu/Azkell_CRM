@@ -519,6 +519,7 @@ module.exports = function (db, logAudit) {
 
                     if (!placa || !fecha) {
                         errores++;
+                        console.warn(`[Importar Incidencias] Fila ${index + 1} omitida por falta de placa (${placa}) o fecha (${fecha})`);
                         return resolve();
                     }
 
@@ -526,15 +527,14 @@ module.exports = function (db, logAudit) {
                     const marcaFinal = r.marca || placaDb.marca || '';
                     const tipoFinal = r.tipo_unidad || placaDb.tipo || 'TRACTO';
 
-                    const rand = Math.floor(10000 + Math.random() * 90000);
-                    const codigo = `INC-${currentYear}-${rand}-${index+1}`;
+                    const uniqueSuffix = Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 7) + '-' + (index + 1);
+                    const codigo = `INC-${currentYear}-${uniqueSuffix}`.toUpperCase();
 
                     let items = [];
                     if (Array.isArray(r.costos_detalle)) {
                         items = r.costos_detalle;
                     } else if (r.costo_individual_texto) {
-                        // Si viene como texto del Excel ej: "- PIÑON 120 - MANO DE OBRA 120"
-                        const lineas = r.costo_individual_texto.split('\n');
+                        const lineas = String(r.costo_individual_texto).split('\n');
                         lineas.forEach(l => {
                             const trimmed = l.trim().replace(/^[-•*]\s*/, '');
                             if (trimmed) {
@@ -574,14 +574,18 @@ module.exports = function (db, logAudit) {
                         r.responsable || '',
                         JSON.stringify(items),
                         totalCalculado,
-                        (r.solucionado || '').toUpperCase() === 'ATENDIDO' ? 'Atendido' : 'Pendiente',
+                        (r.solucionado || '').toUpperCase() === 'PENDIENTE' ? 'Pendiente' : 'Atendido',
                         r.observaciones || '',
                         creadoPor
                     ];
 
                     targetDb.query(sql, values, (err) => {
-                        if (err) errores++;
-                        else insertados++;
+                        if (err) {
+                            errores++;
+                            console.error(`[Importar Incidencias] Error insertando fila ${index + 1} (${placa} - ${fecha}):`, err.message);
+                        } else {
+                            insertados++;
+                        }
                         resolve();
                     });
                 });
