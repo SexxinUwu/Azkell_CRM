@@ -509,6 +509,9 @@ module.exports = function (db, logAudit) {
                 });
             }
 
+            let insertados = 0;
+            let errores = 0;
+
             const insertPromises = registros.map((r, index) => {
                 return new Promise((resolve) => {
                     const placa = (r.placa || '').toUpperCase().trim();
