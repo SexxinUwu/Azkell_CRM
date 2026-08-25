@@ -237,7 +237,54 @@
     margin-bottom: 0.35rem !important;
 }
 
-/* ── Toggle Switch Solución ──────────────────────────────────── */
+/* ── Permitir que los desplegables de búsqueda floten sobre las cards sin cortarse ── */
+#modalIncidenciaRuta .modal-body {
+    overflow-y: auto !important;
+    overflow-x: visible !important;
+}
+#modalIncidenciaRuta .card {
+    overflow: visible !important;
+    position: relative;
+    z-index: 1;
+}
+#modalIncidenciaRuta .card:focus-within {
+    z-index: 50 !important;
+}
+#modalIncidenciaRuta .position-relative {
+    position: relative !important;
+}
+#modalIncidenciaRuta .position-relative:focus-within {
+    z-index: 100 !important;
+}
+#modalIncidenciaRuta .cb-dropdown {
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-height: 220px !important;
+    z-index: 1050 !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    overflow-y: auto !important;
+}
+#modalIncidenciaRuta .cb-opt {
+    padding: 9px 14px !important;
+    font-size: 0.86rem !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+    cursor: pointer !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    transition: background-color 0.15s ease !important;
+}
+#modalIncidenciaRuta .cb-opt:last-child {
+    border-bottom: none !important;
+}
+#modalIncidenciaRuta .cb-opt:hover {
+    background-color: #eff6ff !important;
+    color: #0284c7 !important;
+}
 .solucion-toggle-wrap {
     display: inline-flex;
     background: #fee2e2;
