@@ -10,7 +10,7 @@
 - **Stack:**
   - **Backend:** Node.js + Express (`server.js`)
   - **Frontend:** Vanilla JS (ES6), HTML5, CSS3, Bootstrap 5
-  - **DB:** MySQL en Aiven (case-sensitive, tablas minúsculas)
+  - **DB:** MySQL en VPS propio (case-sensitive, tablas minúsculas)
   - **Deploy:** Render (producción) — URLs relativas `/api/...` nunca absolutas
   - **IA:** Gemini 2.5 Flash vía `consultarGemini` (en `server.js`)
 - **Estado:** Migrado de monolito a SPA "App Shell" — aún en migración
@@ -67,7 +67,7 @@ if(!chartInst) chartInst = initGrafico('canvasId');
 - Wrapped en `try/catch`
 - Validar `if (!response.ok)` para evitar crashes
 
-### MySQL en Aiven
+### MySQL en VPS Propio
 - Nombres de tabla: **minúsculas exactas** (case-sensitive)
 - Ej: `FROM usuarios` NO `FROM Usuarios`
 
