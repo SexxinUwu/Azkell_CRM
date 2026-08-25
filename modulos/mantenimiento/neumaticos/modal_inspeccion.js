@@ -246,25 +246,43 @@
 
     // ── CARGADOR EXTERNO DE THREE.JS Y ORBITCONTROLS ─────────────────────────────
     function loadThreeJs(callback) {
-        if (window.THREE && window.THREE.OrbitControls) {
+        if (window.THREE && (window.THREE.OrbitControls || window.OrbitControls)) {
+            if (!window.THREE.OrbitControls && window.OrbitControls) {
+                window.THREE.OrbitControls = window.OrbitControls;
+            }
             callback();
             return;
         }
-        if (window.THREE && !window.THREE.OrbitControls) {
+
+        function loadOrbit() {
+            if (window.THREE && window.THREE.OrbitControls) {
+                callback();
+                return;
+            }
             var script2 = document.createElement('script');
-            script2.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js';
-            script2.onload = callback;
+            script2.src = 'https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js';
+            script2.onload = function() {
+                if (!window.THREE.OrbitControls && window.OrbitControls) {
+                    window.THREE.OrbitControls = window.OrbitControls;
+                }
+                callback();
+            };
+            script2.onerror = function() {
+                // Fallback si falla CDN
+                callback();
+            };
             document.head.appendChild(script2);
+        }
+
+        if (window.THREE) {
+            loadOrbit();
             return;
         }
+
         var script1 = document.createElement('script');
         script1.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-        script1.onload = function() {
-            var script2 = document.createElement('script');
-            script2.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js';
-            script2.onload = callback;
-            document.head.appendChild(script2);
-        };
+        script1.onload = loadOrbit;
+        script1.onerror = function() { callback(); };
         document.head.appendChild(script1);
     }
 
@@ -950,12 +968,23 @@
         renderer.shadowMap.enabled = false;
         container.appendChild(renderer.domElement);
 
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.08;
-        controls.enableRotate = false;
-        controls.enablePan = false;
-        controls.enableZoom = false;
+        const OrbitCtrlClass = (window.THREE && window.THREE.OrbitControls) || window.OrbitControls;
+        const controls = OrbitCtrlClass ? new OrbitCtrlClass(camera, renderer.domElement) : {
+            enableDamping: false,
+            dampingFactor: 0.08,
+            enableRotate: false,
+            enablePan: false,
+            enableZoom: false,
+            addEventListener: function() {},
+            update: function() {}
+        };
+        if (controls.enableDamping !== undefined) {
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.08;
+            controls.enableRotate = false;
+            controls.enablePan = false;
+            controls.enableZoom = false;
+        }
 
         // Luces optimizadas
         const ambientLight = new THREE.AmbientLight(0xffffff, 1.35);
