@@ -858,8 +858,8 @@ const TABLAS = [
 ];
 
 async function initDB(defaultDb) {
+    const promisePool = defaultDb.promise();
     try {
-        const promisePool = defaultDb.promise();
         
         // Obtener todas las bases de datos tenant (ej. azkell_tenant_marsisa, azkell_tenant_azkell, etc.)
         let databasesToInit = [];
@@ -891,7 +891,6 @@ async function initDB(defaultDb) {
     } catch (errGlobal) {
         console.error('❌ Error global en initDB:', errGlobal.message);
     }
-    console.log(`\n📦 init_db.js — ${ok} tablas OK, ${fail} con error\n`);
 
     try {
         await promisePool.query("INSERT IGNORE INTO configuracion_erp (clave, valor) VALUES ('empresa_nombre', 'Azkell Fleet')");
