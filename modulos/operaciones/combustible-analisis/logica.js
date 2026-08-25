@@ -102,8 +102,11 @@
             selYear.value = 'ALL';
         }
 
+        // Helper fecha de hoy en hora local de Perú (America/Lima UTC-5)
+        const getTodayPeru = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+
         // Por defecto: Fecha de hoy en ambos inputs
-        const today = new Date().toISOString().slice(0, 10);
+        const today = getTodayPeru();
         const inpFrom = document.getElementById('ca-filter-date-from');
         const inpTo = document.getElementById('ca-filter-date-to');
         if (inpFrom && !inpFrom.value) inpFrom.value = today;
@@ -140,7 +143,7 @@
 
     // Restablecer rango de fechas a hoy
     window.caLimpiarFiltrosFechas = function() {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
         const inpFrom = document.getElementById('ca-filter-date-from');
         const inpTo = document.getElementById('ca-filter-date-to');
         if (inpFrom) inpFrom.value = today;
