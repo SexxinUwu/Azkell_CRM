@@ -19,12 +19,29 @@
     align-items: center;
     gap: 0.85rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-    transition: all 0.2s ease;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
+    position: relative;
 }
-.inc-kpi-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.08);
+.inc-kpi-clickable {
+    cursor: pointer;
+}
+.inc-kpi-clickable:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.12);
+    border-color: #94a3b8;
+}
+.inc-kpi-clickable:hover .inc-kpi-chevron {
+    color: #0284c7 !important;
+    transform: translateX(3px);
+}
+.inc-kpi-clickable.active {
+    background: #f8fafc;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2), 0 8px 20px -4px rgba(15, 23, 42, 0.1);
+}
+.inc-kpi-chevron {
+    transition: transform 0.2s ease, color 0.2s ease;
 }
 .inc-kpi-icon {
     width: 44px;
@@ -35,6 +52,10 @@
     justify-content: center;
     font-size: 1.25rem;
     flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+.inc-kpi-clickable:hover .inc-kpi-icon {
+    transform: scale(1.08);
 }
 
 /* ── Barra de Filtros & Acciones ─────────────────────────────── */
@@ -416,12 +437,12 @@
         </div>
     </div>
 
-    <!-- KPIs Bento Cards -->
+    <!-- KPIs Bento Cards Interactivos -->
     <div class="row g-3 mb-3">
         
         <!-- Total Incidencias -->
         <div class="col-6 col-md-3">
-            <div class="inc-kpi-card">
+            <div class="inc-kpi-card inc-kpi-clickable active" id="kpi-card-total" onclick="window.incFiltrarPorKPI('ALL')" title="Ver todas las incidencias">
                 <div class="inc-kpi-icon" style="background:#e0f2fe; color:#0284c7;">
                     <i class="bi bi-exclamation-triangle-fill"></i>
                 </div>
@@ -429,12 +450,13 @@
                     <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Total Incidencias</div>
                     <div class="fw-bolder text-dark" id="kpi-total-incidencias" style="font-size:1.35rem; line-height:1.2;">0</div>
                 </div>
+                <i class="bi bi-chevron-right ms-auto inc-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
             </div>
         </div>
 
         <!-- Pendientes -->
         <div class="col-6 col-md-3">
-            <div class="inc-kpi-card" style="border-left:4px solid #ef4444 !important;">
+            <div class="inc-kpi-card inc-kpi-clickable" id="kpi-card-pendientes" onclick="window.incFiltrarPorKPI('Pendiente')" style="border-left:4px solid #ef4444 !important;" title="Filtrar solo pendientes de solución">
                 <div class="inc-kpi-icon" style="background:#fee2e2; color:#ef4444;">
                     <i class="bi bi-clock-history"></i>
                 </div>
@@ -442,12 +464,13 @@
                     <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Pendientes de Solución</div>
                     <div class="fw-bolder text-danger" id="kpi-pendientes" style="font-size:1.35rem; line-height:1.2;">0</div>
                 </div>
+                <i class="bi bi-chevron-right ms-auto inc-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
             </div>
         </div>
 
         <!-- Atendidas -->
         <div class="col-6 col-md-3">
-            <div class="inc-kpi-card" style="border-left:4px solid #16a34a !important;">
+            <div class="inc-kpi-card inc-kpi-clickable" id="kpi-card-atendidas" onclick="window.incFiltrarPorKPI('Atendido')" style="border-left:4px solid #16a34a !important;" title="Filtrar solo atendidas / resueltas">
                 <div class="inc-kpi-icon" style="background:#dcfce7; color:#16a34a;">
                     <i class="bi bi-check2-circle"></i>
                 </div>
@@ -455,12 +478,13 @@
                     <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Atendidas / Resueltas</div>
                     <div class="fw-bolder text-success" id="kpi-atendidas" style="font-size:1.35rem; line-height:1.2;">0</div>
                 </div>
+                <i class="bi bi-chevron-right ms-auto inc-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
             </div>
         </div>
 
         <!-- Costo Total Acumulado -->
         <div class="col-6 col-md-3">
-            <div class="inc-kpi-card" style="border-left:4px solid #7c3aed !important;">
+            <div class="inc-kpi-card inc-kpi-clickable" id="kpi-card-costo" onclick="window.incFiltrarPorKPI('COSTO')" style="border-left:4px solid #7c3aed !important;" title="Ordenar por mayor costo acumulado">
                 <div class="inc-kpi-icon" style="background:#ede9fe; color:#7c3aed;">
                     <i class="bi bi-currency-dollar"></i>
                 </div>
@@ -468,6 +492,7 @@
                     <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Costo Total Acumulado</div>
                     <div class="fw-bolder text-dark" id="kpi-costo-total" style="font-size:1.35rem; line-height:1.2;">S/ 0.00</div>
                 </div>
+                <i class="bi bi-chevron-right ms-auto inc-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
             </div>
         </div>
 

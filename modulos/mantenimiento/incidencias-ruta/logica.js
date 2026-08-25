@@ -16,6 +16,35 @@
         window.incSetupEventos();
     };
 
+    // Filtrar interactivamente haciendo clic en los Cards Bento KPI
+    window.incFiltrarPorKPI = function(tipo) {
+        // Remover clase active de todas las cards
+        document.querySelectorAll('.inc-kpi-clickable').forEach(card => card.classList.remove('active'));
+
+        const selSolucion = document.getElementById('inc-filter-solucion');
+
+        if (tipo === 'ALL') {
+            document.getElementById('kpi-card-total')?.classList.add('active');
+            if (selSolucion) selSolucion.value = 'ALL';
+            window._incSortField = 'fecha_falla';
+            window._incSortDir = 'DESC';
+        } else if (tipo === 'Pendiente') {
+            document.getElementById('kpi-card-pendientes')?.classList.add('active');
+            if (selSolucion) selSolucion.value = 'Pendiente';
+        } else if (tipo === 'Atendido') {
+            document.getElementById('kpi-card-atendidas')?.classList.add('active');
+            if (selSolucion) selSolucion.value = 'Atendido';
+        } else if (tipo === 'COSTO') {
+            document.getElementById('kpi-card-costo')?.classList.add('active');
+            if (selSolucion) selSolucion.value = 'ALL';
+            window._incSortField = 'total_costo';
+            window._incSortDir = 'DESC';
+        }
+
+        window.incActualizarIconosOrden();
+        window.incCargarDatos(1);
+    };
+
     // Alternar orden al hacer clic en un encabezado
     window.incOrdenarPor = function(columna) {
         if (window._incSortField === columna) {
