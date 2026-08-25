@@ -189,69 +189,52 @@
     margin: 2px 0;
 }
 
-/* ── MODAL DRAWER BOTTOM-SHEET (Animación de abajo hacia arriba) ─ */
-.inc-drawer-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(4px);
-    z-index: 1060;
-    display: none;
-    opacity: 0;
-    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+/* ── Floating Drawer Modal & Inputs Styling (Idéntico a Reporte de Fallas) ──────────────────────── */
+.inc-floating-drawer-dialog {
+    max-width: 740px !important;
+    width: 100% !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+    margin: 0 auto !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: auto !important;
 }
-.inc-drawer-overlay.active {
-    display: block;
-    opacity: 1;
+.inc-floating-drawer-content {
+    height: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 28px 28px 0 0 !important;
+    border-bottom: none !important;
+    box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.25) !important;
+    overflow: hidden !important;
+    background: #f8fafc !important;
 }
-.inc-drawer-sheet {
-    position: fixed;
-    left: 50%;
-    bottom: -100%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 900px;
-    max-height: 92vh;
-    background: #ffffff;
-    border-radius: 24px 24px 0 0;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
-    z-index: 1070;
-    display: flex;
-    flex-direction: column;
-    transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    overflow: hidden;
+
+#modalIncidenciaRuta .form-control,
+#modalIncidenciaRuta .form-select {
+    min-height: 42px !important;
+    border-radius: 12px !important;
+    font-size: 0.90rem !important;
+    font-weight: 600 !important;
+    border-color: #cbd5e1 !important;
+    padding: 0.5rem 0.85rem !important;
+    background-color: #ffffff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.inc-drawer-sheet.active {
-    bottom: 0;
+#modalIncidenciaRuta .form-control:focus,
+#modalIncidenciaRuta .form-select:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
 }
-.inc-drawer-header {
-    padding: 1.25rem 1.75rem;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #ffffff;
-}
-.inc-drawer-body {
-    padding: 1.5rem 1.75rem;
-    overflow-y: auto;
-    flex-grow: 1;
-    scrollbar-width: thin;
-}
-.inc-drawer-footer {
-    padding: 1rem 1.75rem;
-    border-top: 1px solid #f1f5f9;
-    background: #f8fafc;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-.inc-drag-indicator {
-    width: 40px;
-    height: 5px;
-    background: #cbd5e1;
-    border-radius: 10px;
-    margin: 0.5rem auto 0 auto;
+#modalIncidenciaRuta .form-label {
+    font-size: 0.74rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    color: #475569 !important;
+    margin-bottom: 0.35rem !important;
 }
 
 /* ── Toggle Switch Solución ──────────────────────────────────── */
@@ -498,73 +481,73 @@
 </div>
 
 <!-- ================================================================ -->
-<!-- MODAL DRAWER BOTTOM SHEET: NUEVA / EDITAR INCIDENCIA             -->
+<!-- 📋 MODAL FORMULARIO DE INCIDENCIA (FLOTANTE DESDE ABAJO TIPO REPORTE DE FALLAS) -->
 <!-- ================================================================ -->
-<div class="inc-drawer-overlay" id="inc-drawer-overlay" onclick="window.incCerrarModal()"></div>
-
-<div class="inc-drawer-sheet" id="inc-drawer-sheet">
-    <div class="inc-drag-indicator"></div>
-    
-    <div class="inc-drawer-header">
+<div class="modal fade" id="modalIncidenciaRuta" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-scrollable inc-floating-drawer-dialog">
+    <div class="modal-content border-0 inc-floating-drawer-content">
+      
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center gap-2">
             <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:#e0f2fe; color:#0284c7;">
                 <i class="bi bi-tools"></i>
             </div>
             <div>
-                <h5 class="fw-bold m-0 text-dark" id="inc-modal-titulo">Registrar Incidencia en Ruta</h5>
+                <h5 class="modal-title fw-bolder text-primary m-0" id="inc-modal-titulo" style="font-size: 1.15rem;">Registrar Incidencia en Ruta</h5>
                 <span class="text-secondary" style="font-size:0.75rem;">Completa los datos del evento mecánico ocurrido en ruta</span>
             </div>
         </div>
-        <button type="button" class="btn-close" onclick="window.incCerrarModal()"></button>
-    </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
 
-    <div class="inc-drawer-body">
+      <div class="modal-body p-3 p-md-4 custom-scrollbar" style="font-family: inherit;">
         <form id="inc-form" onsubmit="event.preventDefault(); window.incGuardarRegistro();">
             <input type="hidden" id="inc-form-id">
 
             <div class="row g-3">
                 
                 <!-- Fecha Falla -->
-                <div class="col-12 col-md-4">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">FECHA DE LA FALLA *</label>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">FECHA DE LA FALLA (<span class="text-danger">*</span>)</label>
                     <input type="date" id="inc-form-fecha" class="form-control rounded-3" required>
                 </div>
 
                 <!-- Placa (con auto-fill) -->
-                <div class="col-12 col-md-4">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">PLACA DE LA UNIDAD *</label>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">PLACA DE LA UNIDAD (<span class="text-danger">*</span>)</label>
                     <select id="inc-form-placa" class="form-select rounded-3" required onchange="window.incOnPlacaChange(this.value)">
                         <option value="">Selecciona una placa...</option>
                     </select>
                 </div>
 
                 <!-- Conductor -->
-                <div class="col-12 col-md-4">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">CONDUCTOR</label>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">CONDUCTOR</label>
                     <input type="text" id="inc-form-conductor" class="form-control rounded-3" placeholder="Nombre del conductor">
                 </div>
 
                 <!-- Marca -->
-                <div class="col-6 col-md-4">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">MARCA</label>
-                    <input type="text" id="inc-form-marca" class="form-control rounded-3 bg-light" placeholder="Ej. SCANIA, VOLVO, ISUZU" readonly>
+                <div class="col-6 col-md-3">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">MARCA</label>
+                    <input type="text" id="inc-form-marca" class="form-control rounded-3 bg-light" placeholder="Ej. SCANIA" readonly>
                 </div>
 
                 <!-- Unidad de Negocio / Tipo -->
-                <div class="col-6 col-md-4">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">UNIDAD DE NEGOCIO / TIPO</label>
-                    <input type="text" id="inc-form-tipo" class="form-control rounded-3" placeholder="Ej. CAMION, TRACTO, CARRETA">
+                <div class="col-6 col-md-3">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">UNIDAD DE NEGOCIO / TIPO</label>
+                    <input type="text" id="inc-form-tipo" class="form-control rounded-3" placeholder="Ej. CAMION, TRACTO">
                 </div>
 
                 <!-- Ubicación (Manual) -->
-                <div class="col-12 col-md-4">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">UBICACIÓN (MANUAL) *</label>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">UBICACIÓN (MANUAL) (<span class="text-danger">*</span>)</label>
                     <input type="text" id="inc-form-ubicacion" class="form-control rounded-3" placeholder="Ej. Matucana, Arequipa, Km 120" required>
                 </div>
 
                 <!-- Transbordo (SI/NO) -->
-                <div class="col-6 col-md-4">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">¿HUBO TRANSBORDO?</label>
+                <div class="col-6 col-md-3">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">¿TRANSBORDO?</label>
                     <select id="inc-form-transbordo" class="form-select rounded-3">
                         <option value="NO">NO</option>
                         <option value="SI">SI</option>
@@ -572,8 +555,8 @@
                 </div>
 
                 <!-- Responsabilidad de Área -->
-                <div class="col-6 col-md-4">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">RESPONSABILIDAD DE ÁREA</label>
+                <div class="col-6 col-md-3">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">RESP. DE ÁREA</label>
                     <select id="inc-form-area" class="form-select rounded-3">
                         <option value="Mantenimiento">Mantenimiento</option>
                         <option value="Flota">Flota</option>
@@ -582,20 +565,20 @@
                 </div>
 
                 <!-- Responsable -->
-                <div class="col-12 col-md-4">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">RESPONSABLE / CAUSA</label>
+                <div class="col-12">
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">RESPONSABLE / CAUSA</label>
                     <input type="text" id="inc-form-responsable" class="form-control rounded-3" placeholder="Ej. Falla Mecánica, Conductor...">
                 </div>
 
                 <!-- Motivo -->
                 <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">MOTIVO PRINCIPAL</label>
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">MOTIVO PRINCIPAL</label>
                     <input type="text" id="inc-form-motivo" class="form-control rounded-3" placeholder="Ej. UNIDAD NO ARRANCA, FUGA REFRIGERANTE...">
                 </div>
 
                 <!-- Falla Detallada -->
                 <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold text-secondary" style="font-size:0.78rem;">FALLA DETALLADA / DIAGNÓSTICO</label>
+                    <label class="form-label fw-bold text-secondary" style="font-size:0.74rem;">FALLA DETALLADA / DIAGNÓSTICO</label>
                     <input type="text" id="inc-form-falla" class="form-control rounded-3" placeholder="Ej. Se salió piñón del arrancador, manguera rota...">
                 </div>
 
@@ -604,20 +587,20 @@
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-receipt text-primary"></i>
-                            <span class="fw-bold text-dark" style="font-size:0.85rem;">Desglose de Costos de Auxilio / Reparación</span>
+                            <span class="fw-bold text-dark" style="font-size:0.83rem;">Desglose de Costos de Auxilio / Reparación</span>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold" onclick="window.incAgregarFilaCosto()">
                             <i class="bi bi-plus-lg"></i> Agregar Ítem de Gasto
                         </button>
                     </div>
 
-                    <div class="inc-costos-table">
+                    <div class="inc-costos-table bg-white">
                         <table class="table align-middle m-0">
                             <thead>
                                 <tr>
                                     <th>CONCEPTO / DESCRIPCIÓN (EJ. PIÑON, MANO DE OBRA, PEAJE)</th>
-                                    <th style="width: 180px;">MONTO (S/.)</th>
-                                    <th style="width: 50px;" class="text-center"></th>
+                                    <th style="width: 170px;">MONTO (S/.)</th>
+                                    <th style="width: 44px;" class="text-center"></th>
                                 </tr>
                             </thead>
                             <tbody id="inc-costos-tbody">
@@ -641,10 +624,10 @@
 
                 <!-- SE DIO SOLUCIÓN? INTERACTIVO -->
                 <div class="col-12 mt-3">
-                    <div class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+                    <div class="p-3 bg-white rounded-3 border d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
                         <div>
-                            <span class="fw-bold d-block text-dark" style="font-size:0.83rem;">¿Se dio solución al incidente en ruta?</span>
-                            <span class="text-secondary" style="font-size:0.75rem;">Indica si la unidad ya fue asistida y continuó ruta o sigue pendiente</span>
+                            <span class="fw-bold d-block text-dark" style="font-size:0.82rem;">¿Se dio solución al incidente en ruta?</span>
+                            <span class="text-secondary" style="font-size:0.73rem;">Indica si la unidad fue atendida o sigue pendiente</span>
                         </div>
                         
                         <div class="solucion-toggle-wrap" id="inc-toggle-wrap" onclick="window.incAlternarSolucionForm()">
@@ -661,14 +644,17 @@
 
             </div>
         </form>
-    </div>
+      </div>
 
-    <div class="inc-drawer-footer">
-        <button type="button" class="btn btn-light rounded-3 px-4 fw-semibold" onclick="window.incCerrarModal()">
+      <div class="modal-footer border-top bg-white px-4 py-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-light rounded-3 px-4 fw-semibold" data-bs-dismiss="modal">
             Cancelar
         </button>
         <button type="button" class="btn btn-primary rounded-3 px-4 fw-bold shadow-sm" style="background:#0284c7; border:none;" onclick="window.incGuardarRegistro()">
             <i class="bi bi-check2-circle"></i> Guardar Registro
         </button>
+      </div>
+
     </div>
+  </div>
 </div>
