@@ -351,9 +351,10 @@
                         <th class="sortable" onclick="window.caToggleSort('date_end')">
                             Fecha Fin <i class="bi bi-arrow-down-up text-muted ms-1"></i>
                         </th>
-                        <th class="text-end">Km Inicio</th>
-                        <th class="text-end">Km Fin</th>
-                        <th class="text-end">Recorrido (Km)</th>
+                        <!-- Odómetros Vales Físicos (ERP) -->
+                        <th class="text-end">Km Inicio (Vales)</th>
+                        <th class="text-end">Km Fin (Vales)</th>
+                        <th class="text-end">Recorrido (Vales)</th>
                         <th class="text-end sortable" onclick="window.caToggleSort('gal')">
                             Total Gal. <i class="bi bi-arrow-down-up text-muted ms-1"></i>
                         </th>
@@ -362,12 +363,27 @@
                         </th>
                         <th class="text-end">Km / Gal (Real)</th>
                         <th class="text-end">Km / Gal (Teórico)</th>
-                        <th class="text-center">Detalle</th>
+                        
+                        <!-- Telemetría GPS Wialon (Encabezados Celestes) -->
+                        <th class="text-end th-gps" style="background:#0284c7 !important; color:#ffffff !important; border-left: 2px solid #0369a1;">
+                            <i class="bi bi-geo-alt-fill me-1"></i>Km Ini (GPS)
+                        </th>
+                        <th class="text-end th-gps" style="background:#0284c7 !important; color:#ffffff !important;">
+                            <i class="bi bi-geo-alt-fill me-1"></i>Km Fin (GPS)
+                        </th>
+                        <th class="text-end th-gps" style="background:#0284c7 !important; color:#ffffff !important;">
+                            <i class="bi bi-speedometer me-1"></i>Recorrido (GPS)
+                        </th>
+                        <th class="text-end th-gps" style="background:#0284c7 !important; color:#ffffff !important; border-right: 2px solid #0369a1;">
+                            <i class="bi bi-fuel-pump me-1"></i>Comb. Consumido (GPS)
+                        </th>
+
+                        <th class="text-center">Detalle / GPS</th>
                     </tr>
                 </thead>
                 <tbody id="ca-trip-tbody">
                     <tr>
-                        <td colspan="13" class="text-center py-5 text-muted">
+                        <td colspan="17" class="text-center py-5 text-muted">
                             <div class="spinner-border spinner-border-sm text-primary me-2"></div>
                             Cargando análisis dinámico...
                         </td>

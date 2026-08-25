@@ -398,6 +398,13 @@
 
             const valesCount = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
 
+            // Datos de Telemetría GPS Wialon
+            const gps = t.wialonGps || null;
+            const gpsKmIni = (gps && gps.kmInicialGps !== null && gps.kmInicialGps !== undefined) ? gps.kmInicialGps.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—';
+            const gpsKmFin = (gps && gps.kmFinalGps !== null && gps.kmFinalGps !== undefined) ? gps.kmFinalGps.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—';
+            const gpsRecKm = (gps && gps.recorridoKmGps !== null && gps.recorridoKmGps !== undefined) ? `${gps.recorridoKmGps.toLocaleString('es-PE', { minimumFractionDigits: 1 })} Km` : '—';
+            const gpsComb = (gps && gps.combustibleConsumidoGps !== null && gps.combustibleConsumidoGps !== undefined) ? `${gps.combustibleConsumidoGps.toLocaleString('es-PE', { minimumFractionDigits: 2 })} Gal` : '—';
+
             html += `
                 <tr>
                     <td>
@@ -416,6 +423,8 @@
                     </td>
                     <td class="text-muted small">${esc(fInicio)}</td>
                     <td class="text-muted small">${esc(fFin)}</td>
+                    
+                    <!-- Vales Físicos (ERP) -->
                     <td class="text-end font-monospace text-success fw-bold">${kInicio > 0 ? kInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-danger fw-bold">${kFin > 0 ? kFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bold text-dark">${semaforoRecorrido}</td>
@@ -425,10 +434,30 @@
                         ${rend > 0 ? rend.toFixed(2) : '—'}
                     </td>
                     <td class="text-end font-monospace">${semaforoBadge}</td>
+
+                    <!-- Telemetría GPS Wialon (Celdas Celestes) -->
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.04); color:#0369a1; border-left: 2px solid #bae6fd;">
+                        ${gpsKmIni}
+                    </td>
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.04); color:#0369a1;">
+                        ${gpsKmFin}
+                    </td>
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.08); color:#0284c7;">
+                        ${gpsRecKm}
+                    </td>
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.08); color:#0284c7; border-right: 2px solid #bae6fd;">
+                        ${gpsComb}
+                    </td>
+
                     <td class="text-center">
-                        <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2.5 d-inline-flex align-items-center gap-1" onclick="window.caAbrirModalVales(${globalIdx})" style="font-size:0.72rem;">
-                            <i class="bi bi-receipt"></i> ${valesCount} vales
-                        </button>
+                        <div class="d-inline-flex align-items-center gap-1">
+                            <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2 d-inline-flex align-items-center gap-1" onclick="window.caAbrirModalVales(${globalIdx})" style="font-size:0.72rem;" title="Ver vales físicos">
+                                <i class="bi bi-receipt"></i> ${valesCount}
+                            </button>
+                            <button class="btn btn-outline-info btn-sm rounded-pill py-0 px-2 d-inline-flex align-items-center gap-1" id="btn-gps-${globalIdx}" onclick="window.caConsultarGpsViaje(${globalIdx})" style="font-size:0.72rem; color:#0284c7; border-color:#0284c7;" title="Consultar Informe 25 Wialon">
+                                <i class="bi bi-broadcast"></i> GPS
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -436,6 +465,55 @@
 
         tbody.innerHTML = html;
         window.caRenderPaginacion(total, page, limit);
+    };
+
+    // 🛰️ Consultar Telemetría e Informe 25 de Wialon para un Viaje
+    window.caConsultarGpsViaje = async function(tripIdx) {
+        const trip = window._caFilteredTrips[tripIdx];
+        if (!trip) return;
+
+        const btn = document.getElementById(`btn-gps-${tripIdx}`);
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        }
+
+        try {
+            const params = new URLSearchParams({
+                placa: trip.placa,
+                fechaInicio: trip.fechaInicio,
+                fechaFin: trip.fechaFin
+            });
+
+            const resp = await fetch(`/api/combustible/wialon-telemetria?${params.toString()}`);
+            const result = await resp.json();
+
+            if (result.ok && result.data) {
+                trip.wialonGps = result.data;
+                if (typeof window.mostrarAlerta === 'function') {
+                    window.mostrarAlerta(`✓ GPS Wialon sincronizado para viaje ${trip.viaje} (${trip.placa})`, 'success');
+                }
+                window.caRenderizarTabla();
+            } else {
+                const msg = result.error || result.message || 'No se obtuvieron datos de GPS para este viaje';
+                if (typeof window.mostrarAlerta === 'function') {
+                    window.mostrarAlerta(`⚠️ ${msg}`, 'warning');
+                }
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-broadcast"></i> GPS';
+                }
+            }
+        } catch (err) {
+            console.error("Error consultando GPS:", err);
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta(`Error al consultar Wialon: ${err.message}`, 'danger');
+            }
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-broadcast"></i> GPS';
+            }
+        }
     };
 
     // Renderizar Paginación
