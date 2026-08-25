@@ -36,7 +36,7 @@ function intgCargar() {
 }
 
 // ── Guardar una integración ──────────────────────────────────────
-window.intgGuardar = function(cual) {
+window.intgGuardar = function(cual, callback) {
     var correo = localStorage.getItem('fleet_correo') || '';
     var pares = [];
 
@@ -63,11 +63,47 @@ window.intgGuardar = function(cual) {
         .then(function() {
             if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Integración guardada correctamente', 'success');
             intgCargar();
+            if (typeof callback === 'function') callback();
         })
         .catch(function(err) {
             console.error('Error guardando integración:', err);
             if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar', 'danger');
         });
+};
+
+// ── Iniciar sesión en Wialon y Conectar Automáticamente ───────────
+var _wialonMsgHandlerAttached = false;
+
+window.intgConectarWialon = function() {
+    if (!_wialonMsgHandlerAttached) {
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'WIALON_AUTH_SUCCESS' && e.data.token) {
+                var token = e.data.token;
+                var el = document.getElementById('intg-wialon-token');
+                if (el) el.value = token;
+
+                if (typeof window.mostrarAlerta === 'function') {
+                    window.mostrarAlerta('✓ Token de Wialon capturado con éxito. Guardando credenciales...', 'info');
+                }
+
+                // Guardar automáticamente en BD y ejecutar prueba de conexión
+                window.intgGuardar('wialon', function() {
+                    window.intgProbarWialon();
+                });
+            }
+        });
+        _wialonMsgHandlerAttached = true;
+    }
+
+    var redirectUri = encodeURIComponent(window.location.origin + '/wialon_callback.html');
+    var authUrl = 'https://hosting.wialon.us/login.html?access_type=-1&duration=0&client_id=%22ACCESO%20API%20STHEFANO%20AVILA%22&response_type=token&redirect_uri=' + redirectUri;
+    
+    var w = 720;
+    var h = 640;
+    var left = Math.max(0, (window.screen.width / 2) - (w / 2));
+    var top = Math.max(0, (window.screen.height / 2) - (h / 2));
+
+    window.open(authUrl, 'wialon_oauth_login', 'width=' + w + ',height=' + h + ',top=' + top + ',left=' + left + ',menubar=no,toolbar=no,location=no,status=no,resizable=yes');
 };
 
 // ── Probar conexión Wialon ───────────────────────────────────────
