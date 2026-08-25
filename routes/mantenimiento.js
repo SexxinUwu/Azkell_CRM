@@ -165,7 +165,7 @@ module.exports = function (db, logAudit) {
     // GET /api/mantenimiento/incidencias-ruta
     router.get('/incidencias-ruta', (req, res) => {
         const targetDb = req.db || db;
-        const { search, mes, anio, placa, area, solucionado, page = 1, limit = 50 } = req.query;
+            const { search, mes, anio, placa, area, solucionado, sortField = 'fecha_falla', sortDir = 'DESC', page = 1, limit = 50 } = req.query;
 
         let whereClauses = ['1=1'];
         let params = [];
@@ -202,6 +202,27 @@ module.exports = function (db, logAudit) {
         }
 
         const whereSql = whereClauses.join(' AND ');
+
+        // Validar campo de ordenación para evitar inyección
+        const allowedSortFields = {
+            'fecha_falla': 'fecha_falla',
+            'placa': 'placa',
+            'conductor': 'conductor',
+            'marca': 'marca',
+            'ubicacion': 'ubicacion',
+            'tipo_unidad': 'tipo_unidad',
+            'transbordo': 'transbordo',
+            'motivo': 'motivo',
+            'falla': 'falla',
+            'area_responsable': 'area_responsable',
+            'responsable': 'responsable',
+            'total_costo': 'total_costo',
+            'solucionado': 'solucionado',
+            'id': 'id'
+        };
+
+        const sanitizedSortField = allowedSortFields[sortField] || 'fecha_falla';
+        const sanitizedSortDir = String(sortDir).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
         // Query para KPIs y Totales
         const kpiQuery = `
@@ -246,7 +267,7 @@ module.exports = function (db, logAudit) {
                     creado_por, created_at
                 FROM mant_incidencias_ruta
                 WHERE ${whereSql}
-                ORDER BY fecha_falla DESC, id DESC
+                ORDER BY ${sanitizedSortField} ${sanitizedSortDir}, id DESC
                 LIMIT ? OFFSET ?
             `;
 

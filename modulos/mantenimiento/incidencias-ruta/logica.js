@@ -5,6 +5,8 @@
     window._incPaginaActual = 1;
     window._incLimitePorPagina = 50;
     window._incTotalPaginas = 1;
+    window._incSortField = 'fecha_falla';
+    window._incSortDir = 'DESC'; // Por defecto el último arriba
     let _incSearchTimeout = null;
 
     // Inicializador del módulo (llamado por el router SPA de logica.js)
@@ -12,6 +14,34 @@
         window.incCargarCatalogos();
         window.incCargarDatos();
         window.incSetupEventos();
+    };
+
+    // Alternar orden al hacer clic en un encabezado
+    window.incOrdenarPor = function(columna) {
+        if (window._incSortField === columna) {
+            window._incSortDir = window._incSortDir === 'ASC' ? 'DESC' : 'ASC';
+        } else {
+            window._incSortField = columna;
+            // Para fecha y costo iniciar DESC (más reciente/más alto primero), para texto iniciar ASC
+            window._incSortDir = (columna === 'fecha_falla' || columna === 'total_costo' || columna === 'id') ? 'DESC' : 'ASC';
+        }
+        window.incActualizarIconosOrden();
+        window.incCargarDatos(1);
+    };
+
+    // Actualizar iconos de orden en los encabezados
+    window.incActualizarIconosOrden = function() {
+        const iconos = document.querySelectorAll('.inc-sort-icon');
+        iconos.forEach(icon => {
+            icon.className = 'bi bi-arrow-down-up inc-sort-icon ms-1';
+        });
+
+        const iconoActivo = document.getElementById(`sort-icon-${window._incSortField}`);
+        if (iconoActivo) {
+            iconoActivo.className = window._incSortDir === 'ASC'
+                ? 'bi bi-sort-down-alt inc-sort-icon active ms-1'
+                : 'bi bi-sort-down inc-sort-icon active ms-1';
+        }
     };
 
     // Configurar listeners de búsqueda y eventos
@@ -25,6 +55,7 @@
                 }, 300);
             });
         }
+        window.incActualizarIconosOrden();
     };
 
     // Cargar Catálogo de Placas y Conductores para los combos de búsqueda interactiva
@@ -64,8 +95,8 @@
                     window._cbInit('inc-form-conductor', itemsCond, 'SELECCIONE CONDUCTOR O ESCRIBA NOMBRE...');
                 }
             }
-        } catch (e) {
-            console.error('Error cargando catálogos para incidencias:', e);
+        } catch (err) {
+            console.error('Error cargando catálogos de incidencias:', err);
         }
     };
 
@@ -99,7 +130,9 @@
 
         const params = new URLSearchParams({
             page: window._incPaginaActual,
-            limit: window._incLimitePorPagina
+            limit: window._incLimitePorPagina,
+            sortField: window._incSortField || 'fecha_falla',
+            sortDir: window._incSortDir || 'DESC'
         });
 
         const search = document.getElementById('inc-filter-search')?.value;
@@ -125,6 +158,7 @@
                 window.incRenderKPIs(data.kpis);
                 window.incRenderTabla(data.data || []);
                 window.incRenderPaginacion(data.total || 0);
+                window.incActualizarIconosOrden();
             } else {
                 if (tbody) tbody.innerHTML = `<tr><td colspan="15" class="text-center text-danger py-4">Error: ${data.error || 'No se pudieron cargar los datos'}</td></tr>`;
             }
