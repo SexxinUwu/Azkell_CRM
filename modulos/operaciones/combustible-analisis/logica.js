@@ -493,7 +493,7 @@
                 if (typeof window.mostrarAlerta === 'function') {
                     window.mostrarAlerta(`✓ GPS Wialon sincronizado para viaje ${trip.viaje} (${trip.placa})`, 'success');
                 }
-                window.caRenderizarTabla();
+                window.caRenderTabla();
             } else {
                 const msg = result.error || result.message || 'No se obtuvieron datos de GPS para este viaje';
                 if (typeof window.mostrarAlerta === 'function') {

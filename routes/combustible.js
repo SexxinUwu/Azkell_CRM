@@ -1029,7 +1029,7 @@ module.exports = function (db, broadcast, logAudit) {
             }
             const sid = loginData.eid;
 
-            // 2. Buscar ID de la unidad por Placa
+            // 2. Buscar ID de la unidad por Placa (soporta placas con guión o sufijos como 'BTJ985 - CHOFER')
             const cleanPlaca = String(placa).replace(/[^A-Z0-9]/gi, '').toUpperCase();
             const unitParams = {
                 spec: {
@@ -1041,11 +1041,19 @@ module.exports = function (db, broadcast, logAudit) {
                 force: 1,
                 flags: 1,
                 from: 0,
-                to: 1
+                to: 10
             };
             const unitRes = await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(unitParams))}&sid=${sid}`);
             const unitData = await unitRes.json();
-            const unit = unitData.items && unitData.items[0];
+            
+            // Buscar coincidencia exacta o que contenga la placa
+            let unit = null;
+            if (unitData.items && unitData.items.length > 0) {
+                unit = unitData.items.find(u => {
+                    const uPlaca = String(u.nm || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+                    return uPlaca.includes(cleanPlaca);
+                }) || unitData.items[0];
+            }
 
             if (!unit) {
                 await fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
@@ -1092,11 +1100,15 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             // 4. Convertir fechaInicio y fechaFin a UNIX Timestamps (Hora Perú UTC-5)
+            // Redondeando a minutos (sin segundos) como estándar de intervalos Wialon
             const parseToUnix = (dateStr) => {
-                // Acepta "YYYY-MM-DD HH:mm:ss" o "YYYY-MM-DD"
                 if (!dateStr || dateStr === 'N/D') return null;
-                const d = new Date(dateStr.replace(' ', 'T') + (dateStr.includes('T') || dateStr.length <= 10 ? '' : '-05:00'));
-                return isNaN(d.getTime()) ? null : Math.floor(d.getTime() / 1000);
+                // Si viene 'YYYY-MM-DD HH:mm:ss' o 'YYYY-MM-DD', redondear segundos
+                const cleanStr = String(dateStr).trim();
+                const d = new Date(cleanStr.replace(' ', 'T') + (cleanStr.includes('T') || cleanStr.length <= 10 ? '' : '-05:00'));
+                if (isNaN(d.getTime())) return null;
+                d.setSeconds(0, 0); // Ajustar segundos a 00
+                return Math.floor(d.getTime() / 1000);
             };
 
             const fromUnix = parseToUnix(fechaInicio);
