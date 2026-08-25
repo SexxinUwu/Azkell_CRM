@@ -769,7 +769,13 @@ module.exports = function (db, broadcast, logAudit) {
             const whereSQL = `WHERE ${whereClauses.join(' AND ')}`;
 
             const [rows] = await tdb.query(
-                `SELECT * FROM combustible_vales ${whereSQL} ORDER BY fecha ASC, id ASC`,
+                `SELECT 
+                    id, fecha, estado, correlativo, viaje, vehiculo, conductor, ruta,
+                    estacion, proveedor, tipo_combustible, kilometraje, peso_tn, galones,
+                    importe, numero_comprobante, tipo
+                FROM combustible_vales 
+                ${whereSQL} 
+                ORDER BY fecha ASC, id ASC`,
                 params
             );
 
