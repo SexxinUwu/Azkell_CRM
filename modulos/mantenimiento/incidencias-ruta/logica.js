@@ -518,15 +518,13 @@
         }
     };
 
-    // Descargar Plantilla Excel
+    // Descargar Plantilla Excel (Sin Marca ni Tipo, el sistema los autocompleta por Placa)
     window.incDescargarPlantilla = function() {
         const encabezados = [
             'FECHA FALLA',
             'PLACA',
             'CONDUCTOR',
-            'MARCA',
             'UBICACION',
-            'UNIDAD DE NEGOCIO',
             'TRANSBORDO',
             'MOTIVO',
             'FALLA',
@@ -539,11 +537,9 @@
 
         const ejemploFila1 = [
             '2026-08-20',
-            'ADH-982',
+            'ADH982',
             'CARLOS MENDOZA',
-            'SCANIA',
             'MATUCANA',
-            'TRACTO',
             'NO',
             'FUGA REFRIGERANTE',
             'SE SALIO MANGUERA DEL RADIADOR',
@@ -556,11 +552,9 @@
 
         const ejemploFila2 = [
             '2026-08-21',
-            'AZP-977',
+            'AZP977',
             'JORGE RAMIREZ',
-            'VOLVO',
             'PUCALLPA',
-            'CAMION',
             'SI',
             'UNIDAD NO ARRANCA',
             'SE SALIO PIÑON DEL ARRANCADOR',
@@ -640,13 +634,16 @@
                         }
                     }
 
+                    const placaNormalizada = (findVal(['placa', 'vehiculo', 'unidad']) || '').toUpperCase().trim();
+                    const placaInfo = (window._incCatalogoPlacas || []).find(p => p.placa === placaNormalizada);
+
                     return {
                         fecha_falla: fechaFalla || new Date().toISOString().split('T')[0],
-                        placa: findVal(['placa', 'vehiculo', 'unidad']),
+                        placa: placaNormalizada,
                         conductor: findVal(['conductor', 'chofer']),
-                        marca: findVal(['marca']),
+                        marca: findVal(['marca']) || (placaInfo ? placaInfo.marca : ''),
                         ubicacion: findVal(['ubicacion', 'lugar', 'ruta']),
-                        tipo_unidad: findVal(['unidad de negocio', 'tipo', 'clase']),
+                        tipo_unidad: findVal(['unidad de negocio', 'tipo', 'clase']) || (placaInfo ? placaInfo.tipo : ''),
                         transbordo: findVal(['transbordo']),
                         motivo: findVal(['motivo', 'problema']),
                         falla: findVal(['falla', 'diagnostico']),
