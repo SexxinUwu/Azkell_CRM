@@ -230,9 +230,20 @@
 
             const totalFormateado = (parseFloat(r.total_costo) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+            // Formatear visualmente la fecha como DD/MM/YYYY
+            let fechaVisual = '—';
+            if (r.fecha_falla) {
+                const fParts = String(r.fecha_falla).split('T')[0].split('-');
+                if (fParts.length === 3) {
+                    fechaVisual = `${fParts[2]}/${fParts[1]}/${fParts[0]}`;
+                } else {
+                    fechaVisual = r.fecha_falla;
+                }
+            }
+
             return `
                 <tr>
-                    <td class="fw-bold text-dark text-nowrap">${r.fecha_falla || '—'}</td>
+                    <td class="fw-bold text-dark text-nowrap">${fechaVisual}</td>
                     <td>
                         <span class="badge bg-dark text-white fw-bold px-2 py-1" style="font-size:0.75rem;">${r.placa}</span>
                     </td>
