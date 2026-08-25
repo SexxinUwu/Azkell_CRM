@@ -243,23 +243,23 @@
 
             return `
                 <tr>
-                    <td class="fw-bold text-dark text-nowrap">${fechaVisual}</td>
-                    <td>
+                    <td class="fw-bold text-dark text-nowrap" style="min-width:110px;">${fechaVisual}</td>
+                    <td class="text-nowrap" style="min-width:100px;">
                         <span class="badge bg-dark text-white fw-bold px-2 py-1" style="font-size:0.75rem;">${r.placa}</span>
                     </td>
-                    <td class="fw-bold text-dark">${r.conductor || '<span class="text-dark fw-bold">—</span>'}</td>
-                    <td><span class="badge bg-white text-dark border border-secondary fw-bold">${r.marca || '—'}</span></td>
-                    <td class="fw-bold text-dark">${r.ubicacion || '—'}</td>
-                    <td><span class="badge bg-white text-dark border border-secondary fw-bold">${r.tipo_unidad || 'TRACTO'}</span></td>
-                    <td class="text-center">${badgeTransbordo}</td>
-                    <td class="fw-bold text-dark" style="max-width:200px;">${r.motivo || '—'}</td>
-                    <td class="fw-bold text-dark" style="max-width:240px; font-size:0.82rem;">${r.falla || '—'}</td>
-                    <td>${badgeArea}</td>
-                    <td class="fw-bold text-dark">${r.responsable || '—'}</td>
-                    <td style="min-width: 180px;">${desgloseHtml}</td>
-                    <td class="fw-bolder text-primary text-nowrap" style="font-size:0.90rem;">S/ ${totalFormateado}</td>
-                    <td class="text-center">${badgeSolucion}</td>
-                    <td class="text-end text-nowrap">
+                    <td class="fw-bold text-dark text-nowrap" style="min-width:170px;">${r.conductor || '<span class="text-dark fw-bold">—</span>'}</td>
+                    <td class="text-nowrap" style="min-width:100px;"><span class="badge bg-white text-dark border border-secondary fw-bold">${r.marca || '—'}</span></td>
+                    <td class="fw-bold text-dark" style="min-width:200px;">${r.ubicacion || '—'}</td>
+                    <td class="text-nowrap" style="min-width:120px;"><span class="badge bg-white text-dark border border-secondary fw-bold">${r.tipo_unidad || 'TRACTO'}</span></td>
+                    <td class="text-center text-nowrap" style="min-width:100px;">${badgeTransbordo}</td>
+                    <td class="fw-bold text-dark" style="min-width:280px;">${r.motivo || '—'}</td>
+                    <td class="fw-bold text-dark" style="min-width:380px; font-size:0.83rem;">${r.falla || '—'}</td>
+                    <td class="text-nowrap" style="min-width:130px;">${badgeArea}</td>
+                    <td class="fw-bold text-dark text-nowrap" style="min-width:150px;">${r.responsable || '—'}</td>
+                    <td style="min-width:200px;">${desgloseHtml}</td>
+                    <td class="fw-bolder text-primary text-nowrap" style="min-width:120px; font-size:0.90rem;">S/ ${totalFormateado}</td>
+                    <td class="text-center text-nowrap" style="min-width:130px;">${badgeSolucion}</td>
+                    <td class="text-end text-nowrap" style="min-width:90px;">
                         <button class="btn btn-sm btn-light border border-secondary text-dark py-1 px-2 me-1 fw-bold" title="Editar" onclick='window.incAbrirModalEditar(${JSON.stringify(r)})'>
                             <i class="bi bi-pencil"></i>
                         </button>
