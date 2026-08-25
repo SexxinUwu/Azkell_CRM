@@ -609,33 +609,88 @@
                     return;
                 }
 
-                // Mapear columnas del Excel al payload del backend
-                const normalizar = (str) => (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                // Helper para parsear fechas de Excel en cualquier formato (06-ene-26, 05/02/2026, 2026-02-05, número serial)
+                const parsearFechaExcel = (raw) => {
+                    if (!raw) return '';
+                    if (raw instanceof Date && !isNaN(raw)) {
+                        return raw.toISOString().split('T')[0];
+                    }
+                    let str = String(raw).trim();
+                    if (!str) return '';
+
+                    // Si es número serial de Excel (ej: 46050)
+                    if (/^\d{5}$/.test(str)) {
+                        const dateObj = new Date(Math.round((Number(str) - 25569) * 86400 * 1000));
+                        if (!isNaN(dateObj)) return dateObj.toISOString().split('T')[0];
+                    }
+
+                    const meses = {
+                        'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04', 'may': '05', 'jun': '06',
+                        'jul': '07', 'ago': '08', 'set': '09', 'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'
+                    };
+
+                    // Formato 06-ene-26 o 06-ene-2026 o 6-ene-26
+                    let mTexto = str.match(/^(\d{1,2})[-\/ ]([a-zA-Z]{3,4})[-\/ ](\d{2,4})$/);
+                    if (mTexto) {
+                        let dia = mTexto[1].padStart(2, '0');
+                        let mesStr = mTexto[2].toLowerCase().substring(0, 3);
+                        let mes = meses[mesStr] || '01';
+                        let anio = mTexto[3];
+                        if (anio.length === 2) anio = '20' + anio;
+                        return `${anio}-${mes}-${dia}`;
+                    }
+
+                    // Formato DD/MM/YYYY o DD-MM-YYYY o D/M/YY
+                    let mNum = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+                    if (mNum) {
+                        let d = mNum[1].padStart(2, '0');
+                        let m = mNum[2].padStart(2, '0');
+                        let y = mNum[3];
+                        if (y.length === 2) y = '20' + y;
+                        return `${y}-${m}-${d}`;
+                    }
+
+                    // Formato YYYY-MM-DD
+                    let mIso = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+                    if (mIso) {
+                        return `${mIso[1]}-${mIso[2].padStart(2, '0')}-${mIso[3].padStart(2, '0')}`;
+                    }
+
+                    return str;
+                };
+
+                const normalizar = (str) => (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
 
                 const registrosParaSubir = jsonRows.map(row => {
-                    const findVal = (keys) => {
-                        for (const k of Object.keys(row)) {
+                    const rowKeys = Object.keys(row);
+                    const findVal = (exactKeyList) => {
+                        // 1. Primero búsqueda exacta normalizada
+                        for (const k of rowKeys) {
                             const normK = normalizar(k);
-                            if (keys.some(cand => normK.includes(normalizar(cand)))) {
-                                return row[k];
+                            for (const target of exactKeyList) {
+                                if (normK === normalizar(target)) {
+                                    return row[k];
+                                }
+                            }
+                        }
+                        // 2. Si no encuentra exacta, búsqueda por inclusión pero evitando falsos positivos
+                        for (const k of rowKeys) {
+                            const normK = normalizar(k);
+                            for (const target of exactKeyList) {
+                                const normTarget = normalizar(target);
+                                if (normK.includes(normTarget) && !normK.includes('fechafalla') && normTarget === 'falla') {
+                                    return row[k];
+                                }
                             }
                         }
                         return '';
                     };
 
-                    let fechaFalla = findVal(['fecha falla', 'fecha', 'dia']);
-                    // Normalizar fecha si viene en formato DD/MM/YYYY
-                    if (fechaFalla && fechaFalla.includes('/')) {
-                        const parts = fechaFalla.split('/');
-                        if (parts.length === 3) {
-                            if (parts[2].length === 4) {
-                                fechaFalla = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                            }
-                        }
-                    }
+                    const rawFecha = findVal(['fecha falla', 'fechafalla', 'fecha', 'dia']);
+                    const fechaFalla = parsearFechaExcel(rawFecha);
 
-                    const placaNormalizada = (findVal(['placa', 'vehiculo', 'unidad']) || '').toUpperCase().trim();
-                    const placaInfo = (window._incCatalogoPlacas || []).find(p => p.placa === placaNormalizada);
+                    const placaNormalizada = (findVal(['placa', 'vehiculo', 'unidad']) || '').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+                    const placaInfo = (window._incCatalogoPlacas || []).find(p => p.placa.replace(/[^A-Z0-9]/g, '') === placaNormalizada);
 
                     return {
                         fecha_falla: fechaFalla || new Date().toISOString().split('T')[0],
@@ -643,15 +698,15 @@
                         conductor: findVal(['conductor', 'chofer']),
                         marca: findVal(['marca']) || (placaInfo ? placaInfo.marca : ''),
                         ubicacion: findVal(['ubicacion', 'lugar', 'ruta']),
-                        tipo_unidad: findVal(['unidad de negocio', 'tipo', 'clase']) || (placaInfo ? placaInfo.tipo : ''),
+                        tipo_unidad: findVal(['unidad de negocio', 'unidaddenegocio', 'tipo', 'clase']) || (placaInfo ? placaInfo.tipo : ''),
                         transbordo: findVal(['transbordo']),
                         motivo: findVal(['motivo', 'problema']),
-                        falla: findVal(['falla', 'diagnostico']),
-                        area_responsable: findVal(['responsabilidad de area', 'area', 'responsabilidad']),
+                        falla: findVal(['falla', 'diagnostico', 'falladetallada']),
+                        area_responsable: findVal(['responsabilidad de area', 'responsabilidaddearea', 'area', 'responsabilidad']),
                         responsable: findVal(['responsable', 'causa']),
                         costo_individual_texto: findVal(['costo', 'desglose']),
-                        total_costo: parseFloat((findVal(['total costo', 'total']) || '').toString().replace(/[^0-9.]/g, '')) || 0,
-                        solucionado: findVal(['se dio solucion', 'solucion', 'estado', 'atendido'])
+                        total_costo: parseFloat((findVal(['total costo', 'totalcosto', 'total']) || '').toString().replace(/[^0-9.]/g, '')) || 0,
+                        solucionado: findVal(['se dio solucion', 'sediosolucion', 'solucion', 'estado', 'atendido'])
                     };
                 }).filter(r => r.placa);
 
