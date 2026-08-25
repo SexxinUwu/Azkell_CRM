@@ -122,5 +122,363 @@ module.exports = function (db, logAudit) {
     router.post('/checklist/presign-read', handlePresignRead);
     router.post('/presign-read', handlePresignRead);
 
+    // =========================================================================
+    // MÓDULO: INCIDENCIAS EN RUTA
+    // =========================================================================
+
+    // GET /api/mantenimiento/incidencias-ruta/catalogo-placas
+    router.get('/incidencias-ruta/catalogo-placas', (req, res) => {
+        const targetDb = req.db || db;
+        const query = `
+            SELECT 
+                p.placa, 
+                p.marca, 
+                COALESCE(p.tipo, '') AS tipo,
+                COALESCE(d.conductor_principal, '') AS conductor
+            FROM placas p
+            LEFT JOIN (
+                SELECT placa, GROUP_CONCAT(nombre SEPARATOR ' / ') AS conductor_principal
+                FROM conductores
+                WHERE estado = 'Activo'
+                GROUP BY placa
+            ) d ON p.placa = d.placa
+            WHERE p.estado != 'Inactiva'
+            ORDER BY p.placa ASC
+        `;
+        targetDb.query(query, (err, rows) => {
+            if (err) {
+                console.error('Error catalogo placas incidencias:', err);
+                return res.status(500).json({ ok: false, error: err.message });
+            }
+            res.json({ ok: true, data: rows || [] });
+        });
+    });
+
+    // GET /api/mantenimiento/incidencias-ruta
+    router.get('/incidencias-ruta', (req, res) => {
+        const targetDb = req.db || db;
+        const { search, mes, anio, placa, area, solucionado, page = 1, limit = 50 } = req.query;
+
+        let whereClauses = ['1=1'];
+        let params = [];
+
+        if (search && search.trim()) {
+            const term = `%${search.trim()}%`;
+            whereClauses.push('(codigo LIKE ? OR placa LIKE ? OR conductor LIKE ? OR motivo LIKE ? OR falla LIKE ? OR ubicacion LIKE ? OR responsable LIKE ?)');
+            params.push(term, term, term, term, term, term, term);
+        }
+
+        if (placa && placa !== 'ALL') {
+            whereClauses.push('placa = ?');
+            params.push(placa);
+        }
+
+        if (area && area !== 'ALL') {
+            whereClauses.push('area_responsable = ?');
+            params.push(area);
+        }
+
+        if (solucionado && solucionado !== 'ALL') {
+            whereClauses.push('solucionado = ?');
+            params.push(solucionado);
+        }
+
+        if (mes && mes !== 'ALL') {
+            whereClauses.push('MONTH(fecha_falla) = ?');
+            params.push(parseInt(mes, 10));
+        }
+
+        if (anio && anio !== 'ALL') {
+            whereClauses.push('YEAR(fecha_falla) = ?');
+            params.push(parseInt(anio, 10));
+        }
+
+        const whereSql = whereClauses.join(' AND ');
+
+        // Query para KPIs y Totales
+        const kpiQuery = `
+            SELECT 
+                COUNT(*) AS totalRegistros,
+                COALESCE(SUM(CASE WHEN solucionado = 'Pendiente' THEN 1 ELSE 0 END), 0) AS totalPendientes,
+                COALESCE(SUM(CASE WHEN solucionado = 'Atendido' THEN 1 ELSE 0 END), 0) AS totalAtendidos,
+                COALESCE(SUM(total_costo), 0) AS costoTotalAcumulado,
+                COALESCE(SUM(CASE WHEN area_responsable = 'Mantenimiento' THEN 1 ELSE 0 END), 0) AS areaMantenimiento,
+                COALESCE(SUM(CASE WHEN area_responsable = 'Flota' THEN 1 ELSE 0 END), 0) AS areaFlota,
+                COALESCE(SUM(CASE WHEN area_responsable = 'Operaciones' THEN 1 ELSE 0 END), 0) AS areaOperaciones
+            FROM mant_incidencias_ruta
+            WHERE ${whereSql}
+        `;
+
+        targetDb.query(kpiQuery, params, (errKpi, kpiRows) => {
+            if (errKpi) {
+                console.error('Error calculando KPIs incidencias:', errKpi);
+                return res.status(500).json({ ok: false, error: errKpi.message });
+            }
+
+            const kpis = kpiRows[0] || {
+                totalRegistros: 0,
+                totalPendientes: 0,
+                totalAtendidos: 0,
+                costoTotalAcumulado: 0,
+                areaMantenimiento: 0,
+                areaFlota: 0,
+                areaOperaciones: 0
+            };
+
+            const pageNum = parseInt(page, 10) || 1;
+            const limitNum = parseInt(limit, 10) || 50;
+            const offset = (pageNum - 1) * limitNum;
+
+            const dataQuery = `
+                SELECT 
+                    id, codigo, DATE_FORMAT(fecha_falla, '%Y-%m-%d') AS fecha_falla,
+                    placa, conductor, marca, ubicacion, tipo_unidad,
+                    transbordo, motivo, falla, area_responsable, responsable,
+                    costos_detalle, total_costo, solucionado, observaciones,
+                    creado_por, created_at
+                FROM mant_incidencias_ruta
+                WHERE ${whereSql}
+                ORDER BY fecha_falla DESC, id DESC
+                LIMIT ? OFFSET ?
+            `;
+
+            const queryParams = [...params, limitNum, offset];
+
+            targetDb.query(dataQuery, queryParams, (errData, dataRows) => {
+                if (errData) {
+                    console.error('Error obteniendo registros de incidencias:', errData);
+                    return res.status(500).json({ ok: false, error: errData.message });
+                }
+
+                // Parsear costos_detalle si viene como string
+                const formatted = (dataRows || []).map(row => {
+                    let items = [];
+                    if (row.costos_detalle) {
+                        try {
+                            items = typeof row.costos_detalle === 'string' ? JSON.parse(row.costos_detalle) : row.costos_detalle;
+                        } catch (e) {
+                            items = [];
+                        }
+                    }
+                    return {
+                        ...row,
+                        costos_detalle: items
+                    };
+                });
+
+                res.json({
+                    ok: true,
+                    data: formatted,
+                    kpis,
+                    total: kpis.totalRegistros,
+                    totalPages: Math.ceil(kpis.totalRegistros / limitNum) || 1,
+                    page: pageNum
+                });
+            });
+        });
+    });
+
+    // POST /api/mantenimiento/incidencias-ruta
+    router.post('/incidencias-ruta', (req, res) => {
+        const targetDb = req.db || db;
+        const {
+            fecha_falla,
+            placa,
+            conductor,
+            marca,
+            ubicacion,
+            tipo_unidad,
+            transbordo,
+            motivo,
+            falla,
+            area_responsable,
+            responsable,
+            costos_detalle,
+            solucionado,
+            observaciones
+        } = req.body;
+
+        if (!fecha_falla || !placa) {
+            return res.status(400).json({ ok: false, error: 'Fecha de falla y placa son obligatorios.' });
+        }
+
+        // Calcular costo total desde el array de costos_detalle
+        let items = Array.isArray(costos_detalle) ? costos_detalle : [];
+        let totalCalculado = items.reduce((acc, it) => acc + (parseFloat(it.monto) || 0), 0);
+
+        const fechaObj = new Date(fecha_falla);
+        const year = fechaObj.getFullYear() || new Date().getFullYear();
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        const codigo = `INC-${year}-${rand}`;
+        const creadoPor = req.user?.nombre || req.user?.correo || 'Sistema';
+
+        const insertQuery = `
+            INSERT INTO mant_incidencias_ruta (
+                codigo, fecha_falla, placa, conductor, marca, ubicacion,
+                tipo_unidad, transbordo, motivo, falla, area_responsable,
+                responsable, costos_detalle, total_costo, solucionado,
+                observaciones, creado_por
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        const values = [
+            codigo,
+            fecha_falla,
+            placa.toUpperCase().trim(),
+            conductor || '',
+            marca || '',
+            ubicacion || '',
+            tipo_unidad || '',
+            transbordo === 'SI' ? 'SI' : 'NO',
+            motivo || '',
+            falla || '',
+            area_responsable || 'Mantenimiento',
+            responsable || '',
+            JSON.stringify(items),
+            totalCalculado,
+            solucionado === 'Atendido' ? 'Atendido' : 'Pendiente',
+            observaciones || '',
+            creadoPor
+        ];
+
+        targetDb.query(insertQuery, values, (err, result) => {
+            if (err) {
+                console.error('Error insertando incidencia en ruta:', err);
+                return res.status(500).json({ ok: false, error: err.message });
+            }
+
+            if (logAudit) {
+                logAudit(req, 'Incidencias Ruta', 'Nueva Incidencia', `Registrada falla de unidad ${placa} en ${ubicacion || 'Ruta'} con código ${codigo}`);
+            }
+
+            res.json({ ok: true, id: result.insertId, codigo, message: 'Incidencia guardada con éxito.' });
+        });
+    });
+
+    // PUT /api/mantenimiento/incidencias-ruta/:id
+    router.put('/incidencias-ruta/:id', (req, res) => {
+        const targetDb = req.db || db;
+        const { id } = req.params;
+        const {
+            fecha_falla,
+            placa,
+            conductor,
+            marca,
+            ubicacion,
+            tipo_unidad,
+            transbordo,
+            motivo,
+            falla,
+            area_responsable,
+            responsable,
+            costos_detalle,
+            solucionado,
+            observaciones
+        } = req.body;
+
+        let items = Array.isArray(costos_detalle) ? costos_detalle : [];
+        let totalCalculado = items.reduce((acc, it) => acc + (parseFloat(it.monto) || 0), 0);
+
+        const updateQuery = `
+            UPDATE mant_incidencias_ruta SET
+                fecha_falla = ?,
+                placa = ?,
+                conductor = ?,
+                marca = ?,
+                ubicacion = ?,
+                tipo_unidad = ?,
+                transbordo = ?,
+                motivo = ?,
+                falla = ?,
+                area_responsable = ?,
+                responsable = ?,
+                costos_detalle = ?,
+                total_costo = ?,
+                solucionado = ?,
+                observaciones = ?
+            WHERE id = ?
+        `;
+
+        const values = [
+            fecha_falla,
+            placa ? placa.toUpperCase().trim() : '',
+            conductor || '',
+            marca || '',
+            ubicacion || '',
+            tipo_unidad || '',
+            transbordo === 'SI' ? 'SI' : 'NO',
+            motivo || '',
+            falla || '',
+            area_responsable || 'Mantenimiento',
+            responsable || '',
+            JSON.stringify(items),
+            totalCalculado,
+            solucionado === 'Atendido' ? 'Atendido' : 'Pendiente',
+            observaciones || '',
+            id
+        ];
+
+        targetDb.query(updateQuery, values, (err, result) => {
+            if (err) {
+                console.error('Error actualizando incidencia:', err);
+                return res.status(500).json({ ok: false, error: err.message });
+            }
+
+            if (logAudit) {
+                logAudit(req, 'Incidencias Ruta', 'Actualizar Incidencia', `Actualizados datos de la incidencia ID ${id} (${placa})`);
+            }
+
+            res.json({ ok: true, message: 'Incidencia actualizada con éxito.' });
+        });
+    });
+
+    // PATCH /api/mantenimiento/incidencias-ruta/:id/toggle-solucion
+    router.patch('/incidencias-ruta/:id/toggle-solucion', (req, res) => {
+        const targetDb = req.db || db;
+        const { id } = req.params;
+
+        const getQuery = 'SELECT solucionado, placa, codigo FROM mant_incidencias_ruta WHERE id = ?';
+        targetDb.query(getQuery, [id], (err, rows) => {
+            if (err || !rows || rows.length === 0) {
+                return res.status(404).json({ ok: false, error: 'Incidencia no encontrada.' });
+            }
+
+            const actual = rows[0].solucionado;
+            const nuevo = actual === 'Atendido' ? 'Pendiente' : 'Atendido';
+
+            targetDb.query('UPDATE mant_incidencias_ruta SET solucionado = ? WHERE id = ?', [nuevo, id], (errUp) => {
+                if (errUp) {
+                    console.error('Error al cambiar solución:', errUp);
+                    return res.status(500).json({ ok: false, error: errUp.message });
+                }
+
+                if (logAudit) {
+                    logAudit(req, 'Incidencias Ruta', 'Cambio de Estado Solución', `Estado de ${rows[0].codigo} (${rows[0].placa}) cambiado a ${nuevo}`);
+                }
+
+                res.json({ ok: true, nuevoEstado: nuevo });
+            });
+        });
+    });
+
+    // DELETE /api/mantenimiento/incidencias-ruta/:id
+    router.delete('/incidencias-ruta/:id', (req, res) => {
+        const targetDb = req.db || db;
+        const { id } = req.params;
+
+        targetDb.query('DELETE FROM mant_incidencias_ruta WHERE id = ?', [id], (err, result) => {
+            if (err) {
+                console.error('Error eliminando incidencia:', err);
+                return res.status(500).json({ ok: false, error: err.message });
+            }
+
+            if (logAudit) {
+                logAudit(req, 'Incidencias Ruta', 'Eliminar Incidencia', `Eliminada la incidencia ID ${id}`);
+            }
+
+            res.json({ ok: true, message: 'Incidencia eliminada correctamente.' });
+        });
+    });
+
     return router;
 };
