@@ -200,6 +200,27 @@
     border-bottom: 2px solid #cbd5e1;
     white-space: nowrap;
     padding: 10px 12px;
+    user-select: none;
+}
+.inc-sortable-th {
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.inc-sortable-th:hover {
+    background: #e2e8f0 !important;
+    color: #2563eb !important;
+}
+.inc-sort-icon {
+    font-size: 0.75rem;
+    opacity: 0.45;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.inc-sortable-th:hover .inc-sort-icon {
+    opacity: 0.9;
+}
+.inc-sort-icon.active {
+    opacity: 1 !important;
+    color: #2563eb !important;
 }
 
 /* ── Floating Drawer Modal & Inputs Styling (Idéntico a Reporte de Fallas) ──────────────────────── */
@@ -508,20 +529,46 @@
             <table class="table table-hover align-middle inc-table">
                 <thead>
                     <tr>
-                        <th>FECHA FALLA</th>
-                        <th>PLACA</th>
-                        <th>CONDUCTOR</th>
-                        <th>MARCA</th>
-                        <th>UBICACIÓN</th>
-                        <th>UNIDAD / TIPO</th>
-                        <th>TRANSBORDO</th>
-                        <th>MOTIVO</th>
-                        <th>FALLA DETALLADA</th>
-                        <th>ÁREA RESP.</th>
-                        <th>RESPONSABLE</th>
+                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('fecha_falla')" title="Clic para ordenar por Fecha">
+                            FECHA <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-fecha_falla"></i>
+                        </th>
+                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('placa')" title="Clic para ordenar por Placa">
+                            PLACA <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-placa"></i>
+                        </th>
+                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('conductor')" title="Clic para ordenar por Conductor">
+                            CONDUCTOR <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-conductor"></i>
+                        </th>
+                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('marca')" title="Clic para ordenar por Marca">
+                            MARCA <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-marca"></i>
+                        </th>
+                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('ubicacion')" title="Clic para ordenar por Ubicación">
+                            UBICACIÓN <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-ubicacion"></i>
+                        </th>
+                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('tipo_unidad')" title="Clic para ordenar por Tipo de Unidad">
+                            UNIDAD / TIPO <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-tipo_unidad"></i>
+                        </th>
+                        <th class="inc-sortable-th text-center" onclick="window.incOrdenarPor('transbordo')" title="Clic para ordenar por Transbordo">
+                            TRANSBORDO <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-transbordo"></i>
+                        </th>
+                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('motivo')" title="Clic para ordenar por Motivo">
+                            MOTIVO <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-motivo"></i>
+                        </th>
+                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('falla')" title="Clic para ordenar por Falla">
+                            FALLA <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-falla"></i>
+                        </th>
+                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('area_responsable')" title="Clic para ordenar por Área Responsable">
+                            ÁREA RESP. <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-area_responsable"></i>
+                        </th>
+                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('responsable')" title="Clic para ordenar por Responsable">
+                            RESPONSABLE <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-responsable"></i>
+                        </th>
                         <th>DESGLOSE COSTOS</th>
-                        <th>TOTAL COSTO</th>
-                        <th class="text-center">¿SE DIO SOLUCIÓN?</th>
+                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('total_costo')" title="Clic para ordenar por Total Costo">
+                            TOTAL COSTO <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-total_costo"></i>
+                        </th>
+                        <th class="inc-sortable-th text-center" onclick="window.incOrdenarPor('solucionado')" title="Clic para ordenar por Solución">
+                            ¿SE DIO SOLUCIÓN? <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-solucionado"></i>
+                        </th>
                         <th class="text-end">ACCIONES</th>
                     </tr>
                 </thead>
