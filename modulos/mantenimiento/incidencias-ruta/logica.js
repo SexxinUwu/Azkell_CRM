@@ -318,20 +318,18 @@
     };
 
     window.incMostrarDrawer = function() {
-        const overlay = document.getElementById('inc-drawer-overlay');
-        const sheet = document.getElementById('inc-drawer-sheet');
-        if (overlay && sheet) {
-            overlay.classList.add('active');
-            sheet.classList.add('active');
+        const modalEl = document.getElementById('modalIncidenciaRuta');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
         }
     };
 
     window.incCerrarModal = function() {
-        const overlay = document.getElementById('inc-drawer-overlay');
-        const sheet = document.getElementById('inc-drawer-sheet');
-        if (overlay && sheet) {
-            sheet.classList.remove('active');
-            overlay.classList.remove('active');
+        const modalEl = document.getElementById('modalIncidenciaRuta');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
         }
     };
 
