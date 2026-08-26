@@ -63,6 +63,49 @@
                     </a>
                 </div>
 
+                <!-- OPERACIONES -->
+                <div id="wrap-operaciones">
+                    <button class="nav-section-toggle" data-section="operaciones" aria-expanded="false" onclick="window.toggleNavSection('operaciones')">
+                        <span class="link-text">Operaciones</span>
+                        <span class="section-badge">4</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items nav-section-collapsed" id="section-items-operaciones">
+                        <a id="nav-op-rutas" class="nav-item" onclick="cargarModuloAislado('operaciones/rutas')">
+                            <i class="bi bi-map-fill nav-icon"></i>
+                            <span class="link-text">Control de Rutas y Viajes</span>
+                        </a>
+                        <a id="nav-op-asignacion" class="nav-item" onclick="cargarModuloAislado('operaciones/asignacion')">
+                            <i class="bi bi-truck-front-fill nav-icon"></i>
+                            <span class="link-text">Asignación de Unidades</span>
+                        </a>
+                        <a id="nav-op-monitoreo" class="nav-item" onclick="cargarModuloAislado('operaciones/monitoreo')">
+                            <i class="bi bi-activity nav-icon"></i>
+                            <span class="link-text">Monitoreo de Operaciones</span>
+                        </a>
+                        <!-- Submenú desplegable Combustible -->
+                        <div class="nav-submenu-group">
+                            <a id="nav-combustible-toggle" class="nav-item d-flex align-items-center justify-content-between" onclick="var el=document.getElementById('submenu-combustible'); var chev=document.getElementById('chev-combustible'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-fuel-pump-fill nav-icon"></i>
+                                    <span class="link-text">Combustible</span>
+                                </div>
+                                <i class="bi bi-chevron-down nav-sub-chevron" id="chev-combustible" style="font-size:0.75rem; transition: transform 0.2s ease;"></i>
+                            </a>
+                            <div class="nav-submenu-items d-none ps-3" id="submenu-combustible">
+                                <a id="nav-combustible-vales" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/combustible-vales')">
+                                    <i class="bi bi-receipt nav-icon me-1" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Vales de Combustible</span>
+                                </a>
+                                <a id="nav-combustible-analisis" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/combustible-analisis')">
+                                    <i class="bi bi-graph-up-arrow nav-icon me-1" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Análisis de Combustible</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- FLOTA -->
                 <div id="wrap-flota">
                     <button class="nav-section-toggle" data-section="flota" aria-expanded="false" onclick="window.toggleNavSection('flota')">
@@ -205,68 +248,6 @@
                     </div>
                 </div>
 
-                <!-- DIRECTORIO -->
-                <div id="wrap-directorio">
-                    <button class="nav-section-toggle" data-section="directorio" aria-expanded="false" onclick="window.toggleNavSection('directorio')">
-                        <span class="link-text" data-i18n="nav.directorio">Directorio</span>
-                        <span class="section-badge">2</span>
-                        <i class="bi bi-chevron-down section-chevron"></i>
-                    </button>
-                    <div class="nav-section-items nav-section-collapsed" id="section-items-directorio">
-                        <a id="nav-conductores" class="nav-item" onclick="cargarModuloAislado('directorio/conductores')">
-                            <i class="bi bi-person-vcard-fill nav-icon"></i>
-                            <span class="link-text" data-i18n="nav.conductores">Personal</span>
-                        </a>
-                        <a id="nav-clientes" class="nav-item" onclick="cargarModuloAislado('directorio/clientes')">
-                            <i class="bi bi-building-fill nav-icon"></i>
-                            <span class="link-text" data-i18n="nav.clientes">Clientes</span>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- OPERACIONES -->
-                <div id="wrap-operaciones">
-                    <button class="nav-section-toggle" data-section="operaciones" aria-expanded="false" onclick="window.toggleNavSection('operaciones')">
-                        <span class="link-text">Operaciones</span>
-                        <span class="section-badge">4</span>
-                        <i class="bi bi-chevron-down section-chevron"></i>
-                    </button>
-                    <div class="nav-section-items nav-section-collapsed" id="section-items-operaciones">
-                        <a id="nav-op-rutas" class="nav-item" onclick="cargarModuloAislado('operaciones/rutas')">
-                            <i class="bi bi-map-fill nav-icon"></i>
-                            <span class="link-text">Control de Rutas y Viajes</span>
-                        </a>
-                        <a id="nav-op-asignacion" class="nav-item" onclick="cargarModuloAislado('operaciones/asignacion')">
-                            <i class="bi bi-truck-front-fill nav-icon"></i>
-                            <span class="link-text">Asignación de Unidades</span>
-                        </a>
-                        <a id="nav-op-monitoreo" class="nav-item" onclick="cargarModuloAislado('operaciones/monitoreo')">
-                            <i class="bi bi-activity nav-icon"></i>
-                            <span class="link-text">Monitoreo de Operaciones</span>
-                        </a>
-                        <!-- Submenú desplegable Combustible -->
-                        <div class="nav-submenu-group">
-                            <a id="nav-combustible-toggle" class="nav-item d-flex align-items-center justify-content-between" onclick="var el=document.getElementById('submenu-combustible'); var chev=document.getElementById('chev-combustible'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="bi bi-fuel-pump-fill nav-icon"></i>
-                                    <span class="link-text">Combustible</span>
-                                </div>
-                                <i class="bi bi-chevron-down nav-sub-chevron" id="chev-combustible" style="font-size:0.75rem; transition: transform 0.2s ease;"></i>
-                            </a>
-                            <div class="nav-submenu-items d-none ps-3" id="submenu-combustible">
-                                <a id="nav-combustible-vales" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/combustible-vales')">
-                                    <i class="bi bi-receipt nav-icon me-1" style="font-size: 0.82rem;"></i>
-                                    <span class="link-text" style="font-size: 0.82rem;">Vales de Combustible</span>
-                                </a>
-                                <a id="nav-combustible-analisis" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/combustible-analisis')">
-                                    <i class="bi bi-graph-up-arrow nav-icon me-1" style="font-size: 0.82rem;"></i>
-                                    <span class="link-text" style="font-size: 0.82rem;">Análisis de Combustible</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- RRHH -->
                 <div id="wrap-rrhh">
                     <button class="nav-section-toggle" data-section="rrhh" aria-expanded="false" onclick="window.toggleNavSection('rrhh')">
@@ -328,6 +309,25 @@
                         <a id="nav-seg-asistencia" class="nav-item" onclick="cargarModuloAislado('seguridad/asistencia')">
                             <i class="bi bi-people-fill nav-icon"></i>
                             <span class="link-text" data-i18n="nav.tareo">Tareo</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- DIRECTORIO -->
+                <div id="wrap-directorio">
+                    <button class="nav-section-toggle" data-section="directorio" aria-expanded="false" onclick="window.toggleNavSection('directorio')">
+                        <span class="link-text" data-i18n="nav.directorio">Directorio</span>
+                        <span class="section-badge">2</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items nav-section-collapsed" id="section-items-directorio">
+                        <a id="nav-conductores" class="nav-item" onclick="cargarModuloAislado('directorio/conductores')">
+                            <i class="bi bi-person-vcard-fill nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.conductores">Personal</span>
+                        </a>
+                        <a id="nav-clientes" class="nav-item" onclick="cargarModuloAislado('directorio/clientes')">
+                            <i class="bi bi-building-fill nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.clientes">Clientes</span>
                         </a>
                     </div>
                 </div>
