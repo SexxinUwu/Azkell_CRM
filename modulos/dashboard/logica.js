@@ -776,6 +776,20 @@ window._initDashboardReal = function(retries) {
     let ctx1 = document.getElementById('chartDashFleetrunStatus');
     let ctx2 = document.getElementById('chartGeneralInspecciones');
 
+    // Actualizar Hero Header Móvil con nombre real del usuario autenticado
+    let lsUser = localStorage.getItem('fleet_user') || window.usuarioLogueado || '';
+    let greetEl = document.getElementById('dash-mob-greeting');
+    let avatarEl = document.getElementById('dash-mob-avatar');
+    if (lsUser && greetEl) {
+        let primerNombre = lsUser.trim().split(' ')[0] || lsUser;
+        greetEl.textContent = 'Hola, ' + primerNombre + ' 👋';
+    }
+    if (lsUser && avatarEl) {
+        let partes = lsUser.trim().split(' ');
+        let iniciales = partes.length > 1 ? (partes[0][0] + partes[1][0]) : lsUser.substring(0, 2);
+        avatarEl.textContent = iniciales.toUpperCase();
+    }
+
     if (!ctx1 || !ctx2) {
         if (retries >= 10) { console.warn('Dashboard: canvas no encontrado después de 10 intentos, abortando.'); return; }
         setTimeout(function() { window.init_dashboard(retries + 1); }, 200);
