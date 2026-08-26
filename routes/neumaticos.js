@@ -361,6 +361,33 @@ module.exports = function (db, broadcast, logAudit) {
                 [id]
             );
 
+            // Generar URLs pre-firmadas para las fotos de S3
+            const { s3KeyFromUrl } = require('../utils/s3');
+            for (const d of detalles) {
+                for (let k = 1; k <= 3; k++) {
+                    const field = `foto${k}`;
+                    if (d[field] && typeof d[field] === 'string' && !d[field].startsWith('data:image')) {
+                        const s3Key = s3KeyFromUrl(d[field]) || d[field];
+                        if (s3Key && !s3Key.startsWith('http')) {
+                            try {
+                                d[field] = await getPresignedUrl(s3Key, 7200); // URL firmada por 2 horas
+                            } catch (e) {
+                                console.warn(`Error presigning ${field}:`, e.message);
+                            }
+                        } else if (d[field].includes('.amazonaws.com/')) {
+                            const extractedKey = s3KeyFromUrl(d[field]);
+                            if (extractedKey) {
+                                try {
+                                    d[field] = await getPresignedUrl(extractedKey, 7200);
+                                } catch (e) {
+                                    console.warn(`Error presigning ${field}:`, e.message);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             res.json({ ok: true, data: { ...cabecera[0], detalles } });
         } catch (err) {
             console.error("Error obteniendo detalle de inspección de neumáticos:", err);
