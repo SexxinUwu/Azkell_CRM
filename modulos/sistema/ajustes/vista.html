@@ -228,11 +228,7 @@
 <div id="moduloAjustes" class="modulo-wrapper">
     <!-- Header -->
     <div class="ajustes-header-nav">
-        <div class="ajustes-header-btn-back" onclick="cargarModuloAislado('dashboard')">
-            <i class="bi bi-chevron-left"></i>
-        </div>
         <h1 class="ajustes-header-title">Ajustes</h1>
-        <div style="width: 38px;"></div>
     </div>
 
     <!-- Perfil Hero Card -->
@@ -253,7 +249,7 @@
     <div class="ajustes-group-box">
         <a href="#" class="ajustes-item" id="btn-instalar-ajustes" onclick="window.instalarPWAApp()">
             <div class="ajustes-item-icon-wrap" style="color: #10b981;">
-                <i class="bi bi-cloud-arrow-down"></i>
+                <i class="bi bi-cloud-arrow-down-fill"></i>
             </div>
             <div class="ajustes-item-content">
                 <p class="ajustes-item-title" style="color: #10b981;">Instalar App</p>
@@ -262,8 +258,8 @@
         </a>
         
         <a href="#" class="ajustes-item" onclick="window.cargarConfigSection('apariencia')">
-            <div class="ajustes-item-icon-wrap">
-                <i class="bi bi-brightness-high"></i>
+            <div class="ajustes-item-icon-wrap" style="color: #8b5cf6;">
+                <i class="bi bi-palette2"></i>
             </div>
             <div class="ajustes-item-content">
                 <p class="ajustes-item-title">Tema y Apariencia</p>
@@ -272,8 +268,8 @@
         </a>
         
         <a href="#" class="ajustes-item" onclick="window.cargarConfigSection('accesibilidad')">
-            <div class="ajustes-item-icon-wrap">
-                <i class="bi bi-eye"></i>
+            <div class="ajustes-item-icon-wrap" style="color: #06b6d4;">
+                <i class="bi bi-universal-access"></i>
             </div>
             <div class="ajustes-item-content">
                 <p class="ajustes-item-title">Accesibilidad</p>
@@ -282,8 +278,8 @@
         </a>
         
         <a href="#" class="ajustes-item" onclick="window.cargarConfigSection('idioma')">
-            <div class="ajustes-item-icon-wrap">
-                <i class="bi bi-globe"></i>
+            <div class="ajustes-item-icon-wrap" style="color: #3b82f6;">
+                <i class="bi bi-translate"></i>
             </div>
             <div class="ajustes-item-content">
                 <p class="ajustes-item-title">Idioma</p>
@@ -299,8 +295,8 @@
     
     <div class="ajustes-group-box" id="ajustes-admin-group-box">
         <a href="#" class="ajustes-item" id="ajustes-item-usuarios" onclick="cargarModuloAislado('sistema/usuarios')">
-            <div class="ajustes-item-icon-wrap">
-                <i class="bi bi-person"></i>
+            <div class="ajustes-item-icon-wrap" style="color: #10b981;">
+                <i class="bi bi-people-fill"></i>
             </div>
             <div class="ajustes-item-content">
                 <p class="ajustes-item-title">Usuarios</p>
@@ -309,8 +305,8 @@
         </a>
         
         <a href="#" class="ajustes-item" id="ajustes-item-auditoria" onclick="cargarModuloAislado('sistema/auditoria')">
-            <div class="ajustes-item-icon-wrap">
-                <i class="bi bi-shield-check"></i>
+            <div class="ajustes-item-icon-wrap" style="color: #f97316;">
+                <i class="bi bi-journal-code"></i>
             </div>
             <div class="ajustes-item-content">
                 <p class="ajustes-item-title">Auditoría</p>
@@ -319,8 +315,8 @@
         </a>
 
         <a href="#" class="ajustes-item" id="ajustes-item-admin" onclick="cargarModuloAislado('administracion')">
-            <div class="ajustes-item-icon-wrap">
-                <i class="bi bi-grid"></i>
+            <div class="ajustes-item-icon-wrap" style="color: #2563eb;">
+                <i class="bi bi-grid-fill"></i>
             </div>
             <div class="ajustes-item-content">
                 <p class="ajustes-item-title">Administración</p>
