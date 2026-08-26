@@ -401,11 +401,27 @@ module.exports = function (db, broadcast, logAudit) {
                 try { await tdb.query(q); } catch(e) {}
             }
 
-            // Generar ID único
-            const cleanPlaca = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-            const cleanFecha = (fecha_inspeccion || '').replace(/-/g, '').substring(0, 8);
-            const rand = Math.floor(1000 + Math.random() * 9000);
-            const id_inspeccion = `INSP-NEU-${cleanFecha}-${cleanPlaca}-${rand}`;
+            // Generar ID Correlativo Limpio (Ej: NEU-2026-0001)
+            const anioActual = new Date(fecha_inspeccion || Date.now()).getFullYear() || 2026;
+            let id_inspeccion = '';
+            try {
+                const [countRows] = await tdb.query(
+                    "SELECT COUNT(*) as total FROM neumaticos_inspecciones WHERE id_inspeccion LIKE ? OR fecha_inspeccion LIKE ?", 
+                    [`NEU-${anioActual}-%`, `${anioActual}%`]
+                );
+                const nextNum = (countRows[0]?.total || 0) + 1;
+                id_inspeccion = `NEU-${anioActual}-${String(nextNum).padStart(4, '0')}`;
+                
+                // Verificar colisión por si acaso
+                const [exists] = await tdb.query("SELECT id_inspeccion FROM neumaticos_inspecciones WHERE id_inspeccion = ?", [id_inspeccion]);
+                if (exists.length > 0) {
+                    const randExtra = Math.floor(1000 + Math.random() * 9000);
+                    id_inspeccion = `NEU-${anioActual}-${String(nextNum + randExtra).padStart(4, '0')}`;
+                }
+            } catch (errCorr) {
+                const rand = Math.floor(1000 + Math.random() * 9000);
+                id_inspeccion = `NEU-${anioActual}-${rand}`;
+            }
 
             // Calcular fecha próxima
             let fechaProxima = null;
@@ -1062,10 +1078,9 @@ module.exports = function (db, broadcast, logAudit) {
 
                 if (!placa || items.length === 0) continue;
 
-                const cleanPlaca = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-                const cleanFecha = (fecha_inspeccion || '').replace(/-/g, '').substring(0, 8);
+                const anioActual = new Date(fecha_inspeccion || Date.now()).getFullYear() || 2026;
                 const rand = Math.floor(1000 + Math.random() * 9000);
-                const id_inspeccion = insp.id_inspeccion || `INSP-NEU-${cleanFecha}-${cleanPlaca}-${rand}`;
+                const id_inspeccion = insp.id_inspeccion || `NEU-${anioActual}-${rand}`;
 
                 let fechaProxima = null;
                 try {

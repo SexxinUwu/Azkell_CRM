@@ -2558,7 +2558,9 @@ function rotRenderSecNeumaticos(idOt) {
                 : '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill small ms-2"><i class="bi bi-check-circle-fill me-1"></i>Óptimas</span>';
             
             html += `
-                <div class="d-flex align-items-center justify-content-between p-2 mb-2 rounded-3 border bg-light" style="font-size:0.8rem; border-color: var(--border, #e2e8f0) !important;">
+                <div class="d-flex align-items-center justify-content-between p-2 mb-2 rounded-3 border bg-light" 
+                     style="font-size:0.8rem; border-color: var(--border, #e2e8f0) !important; cursor: pointer;" 
+                     onclick="window.rotVerDetalleInspeccionNeumatico('${rotEscHtml(item.id_inspeccion)}')">
                     <div>
                         <div class="fw-bold text-dark d-flex align-items-center">
                             <span class="text-primary fw-bold me-2">${rotEscHtml(item.id_inspeccion)}</span>
@@ -2571,7 +2573,12 @@ function rotRenderSecNeumaticos(idOt) {
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-1">
-                        <button class="btn btn-sm btn-outline-danger border-0 p-1 rounded-circle" 
+                        <button class="btn btn-sm btn-outline-secondary py-1 px-2.5 rounded-pill fw-bold small" 
+                                onclick="event.stopPropagation(); window.rotVerDetalleInspeccionNeumatico('${rotEscHtml(item.id_inspeccion)}')" 
+                                title="Ver Resumen Completo">
+                            <i class="bi bi-eye-fill me-1"></i> Ver
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger border-0 p-1 rounded-circle ms-1" 
                                 onclick="event.stopPropagation(); window.rotEliminarInspeccionNeumatico('${rotEscHtml(item.id_inspeccion)}', '${rotEscHtml(idOt)}')" 
                                 title="Eliminar Inspección">
                             <i class="bi bi-trash3-fill fs-6"></i>
@@ -2583,6 +2590,21 @@ function rotRenderSecNeumaticos(idOt) {
     }
     body.innerHTML = html;
 }
+
+window.rotVerDetalleInspeccionNeumatico = function(idInspeccion) {
+    if (typeof window.neuVerDetalleModal === 'function') {
+        window.neuVerDetalleModal(idInspeccion);
+    } else {
+        var script = document.createElement('script');
+        script.src = '/modulos/mantenimiento/neumaticos-analisis/logica.js?v=' + Date.now();
+        script.onload = function() {
+            if (typeof window.neuVerDetalleModal === 'function') {
+                window.neuVerDetalleModal(idInspeccion);
+            }
+        };
+        document.body.appendChild(script);
+    }
+};
 
 window.rotEliminarInspeccionNeumatico = function(idInspeccion, idOt) {
     if (!confirm('¿Estás seguro de eliminar esta inspección de neumáticos (' + idInspeccion + ')? Esta acción no se puede deshacer.')) return;

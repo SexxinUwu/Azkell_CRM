@@ -370,32 +370,35 @@
 
         // Drawer
         let drawerEl = document.getElementById('rot-drawer-neumaticos');
-        if (!drawerEl) {
-            drawerEl = document.createElement('div');
-            drawerEl.className = 'neu-sub-drawer';
-            drawerEl.id = 'rot-drawer-neumaticos';
-            drawerEl.innerHTML = `
-                <!-- HEADER BENTO -->
-                <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
-                    <div class="d-flex align-items-center gap-2">
-                        <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
-                                onclick="window.rotCerrarModalInspeccionNeumaticos()" 
-                                title="Volver" 
-                                style="width: 34px; height: 34px; color: var(--subtext);">
-                            <i class="bi bi-arrow-left"></i>
-                        </button>
-                        <div>
-                            <span class="rot-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
-                                <i class="bi bi-disc-fill text-primary"></i> Inspección de Neumáticos
-                                <span class="badge bg-primary rounded-pill px-2.5 py-0.5 fs-6 font-monospace" id="neu-badge-placa">${placa || 'PLACA'}</span>
-                            </span>
-                            <small class="text-muted d-block" style="font-size: 0.72rem;">Control táctil de cocadas, presiones y chasis interactivo</small>
-                        </div>
-                    </div>
-                    <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.rotCerrarModalInspeccionNeumaticos()" style="color:var(--subtext);" title="Cerrar">
-                        <i class="bi bi-x-lg"></i>
+        if (drawerEl) {
+            drawerEl.remove(); // Limpiar instancia previa para recrear con los datos y placa exactos de la OT
+        }
+
+        drawerEl = document.createElement('div');
+        drawerEl.className = 'neu-sub-drawer';
+        drawerEl.id = 'rot-drawer-neumaticos';
+        drawerEl.innerHTML = `
+            <!-- HEADER BENTO -->
+            <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
+                            onclick="window.rotCerrarModalInspeccionNeumaticos()" 
+                            title="Volver" 
+                            style="width: 34px; height: 34px; color: var(--subtext);">
+                        <i class="bi bi-arrow-left"></i>
                     </button>
+                    <div>
+                        <span class="rot-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+                            <i class="bi bi-disc-fill text-primary"></i> Inspección de Neumáticos
+                            <span class="badge bg-primary rounded-pill px-2.5 py-0.5 fs-6 font-monospace" id="neu-badge-placa">${placa || 'PLACA'}</span>
+                        </span>
+                        <small class="text-muted d-block" style="font-size: 0.72rem;">Control táctil de cocadas, presiones y chasis interactivo</small>
+                    </div>
                 </div>
+                <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.rotCerrarModalInspeccionNeumaticos()" style="color:var(--subtext);" title="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
 
                 <!-- BODY SCROLL -->
                 <div class="p-3 overflow-auto custom-scrollbar flex-grow-1" id="neu-drawer-scroll-body" style="background: #f8fafc; padding-bottom: 90px !important;">
@@ -729,7 +732,6 @@
                 </div>
             `;
             document.body.appendChild(drawerEl);
-        }
 
         const bPlaca = document.getElementById('neu-badge-placa');
         if (bPlaca) bPlaca.innerText = placa || 'PLACA';
