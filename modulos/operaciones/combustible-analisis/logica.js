@@ -413,17 +413,8 @@
             const gpsVelMax = (gpsData && gpsData.velocidadMaxGps !== null && gpsData.velocidadMaxGps !== undefined)
                 ? `${Number(gpsData.velocidadMaxGps).toLocaleString('es-PE', { minimumFractionDigits: 0 })} km/h`
                 : '<span class="text-muted opacity-50">—</span>';
-            const gpsRpmMedia = (gpsData && gpsData.rpmMediaGps !== null && gpsData.rpmMediaGps !== undefined)
-                ? `${Number(gpsData.rpmMediaGps).toLocaleString('es-PE', { minimumFractionDigits: 0 })}`
-                : '<span class="text-muted opacity-50">—</span>';
-            const gpsRpmMediaMax = (gpsData && gpsData.rpmMediaMaxGps !== null && gpsData.rpmMediaMaxGps !== undefined)
-                ? `${Number(gpsData.rpmMediaMaxGps).toLocaleString('es-PE', { minimumFractionDigits: 0 })}`
-                : '<span class="text-muted opacity-50">—</span>';
-            const gpsRpmMax = (gpsData && gpsData.rpmMaxGps !== null && gpsData.rpmMaxGps !== undefined)
-                ? `${Number(gpsData.rpmMaxGps).toLocaleString('es-PE', { minimumFractionDigits: 0 })}`
-                : '<span class="text-muted opacity-50">—</span>';
-            const gpsRpmMaxMax = (gpsData && gpsData.rpmMaxMaxGps !== null && gpsData.rpmMaxMaxGps !== undefined)
-                ? `${Number(gpsData.rpmMaxMaxGps).toLocaleString('es-PE', { minimumFractionDigits: 0 })}`
+            const gpsRalenti = (gpsData && gpsData.consumoRalentiGps !== null && gpsData.consumoRalentiGps !== undefined)
+                ? `${Number(gpsData.consumoRalentiGps).toLocaleString('es-PE', { minimumFractionDigits: 2 })} gal/h`
                 : '<span class="text-muted opacity-50">—</span>';
             const gpsHorasMotor = (gpsData && gpsData.horasMotorGps)
                 ? `${gpsData.horasMotorGps}`
@@ -468,16 +459,7 @@
                         ${gpsVelMax}
                     </td>
                     <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.05); color:#0284c7;">
-                        ${gpsRpmMedia}
-                    </td>
-                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.05); color:#0284c7;">
-                        ${gpsRpmMediaMax}
-                    </td>
-                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.05); color:#0284c7;">
-                        ${gpsRpmMax}
-                    </td>
-                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.05); color:#0284c7;">
-                        ${gpsRpmMaxMax}
+                        ${gpsRalenti}
                     </td>
                     <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.08); color:#0369a1; border-right: 2px solid #bae6fd;">
                         ${gpsHorasMotor}
@@ -775,6 +757,7 @@
                 "COMB. CONSUMIDO (GPS CAN)": (gps && gps.combustibleConsumidoGps !== null && gps.combustibleConsumidoGps !== undefined) ? parseFloat(Number(gps.combustibleConsumidoGps).toFixed(2)) : '—',
                 "RENDIMIENTO (GPS CAN)": (gps && gps.rendimientoGps !== null && gps.rendimientoGps !== undefined) ? parseFloat(Number(gps.rendimientoGps).toFixed(2)) : '—',
                 "VELOCIDAD MÁXIMA (GPS)": (gps && gps.velocidadMaxGps !== null && gps.velocidadMaxGps !== undefined) ? parseFloat(Number(gps.velocidadMaxGps).toFixed(0)) : '—',
+                "CONSUMO PROMEDIO EN RALENTÍ (GAL/H)": (gps && gps.consumoRalentiGps !== null && gps.consumoRalentiGps !== undefined) ? parseFloat(Number(gps.consumoRalentiGps).toFixed(2)) : '—',
                 "RPM MEDIA (RPM)": (gps && gps.rpmMediaGps !== null && gps.rpmMediaGps !== undefined) ? parseFloat(Number(gps.rpmMediaGps).toFixed(0)) : '—',
                 "RPM MEDIA (MÁXIMA RPM)": (gps && gps.rpmMediaMaxGps !== null && gps.rpmMediaMaxGps !== undefined) ? parseFloat(Number(gps.rpmMediaMaxGps).toFixed(0)) : '—',
                 "RPM MÁXIMA (RPM)": (gps && gps.rpmMaxGps !== null && gps.rpmMaxGps !== undefined) ? parseFloat(Number(gps.rpmMaxGps).toFixed(0)) : '—',
@@ -803,6 +786,7 @@
             { wch: 26 }, // COMB. CONSUMIDO (GPS CAN)
             { wch: 22 }, // RENDIMIENTO (GPS CAN)
             { wch: 22 }, // VELOCIDAD MÁXIMA (GPS)
+            { wch: 32 }, // CONSUMO PROMEDIO EN RALENTÍ (GAL/H)
             { wch: 18 }, // RPM MEDIA (RPM)
             { wch: 25 }, // RPM MEDIA (MÁXIMA RPM)
             { wch: 18 }, // RPM MÁXIMA (RPM)
