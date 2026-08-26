@@ -279,6 +279,7 @@ window.verificarSesionGuardada = function() {
 
     var showFlota = vDisponibilidad || vGps || vStatus || vPlacas || vDocsFlota;
     safe('wrap-flota', showFlota);
+    safe('bnav-flota', showFlota);
 
     // MANTENIMIENTO
     var showMantHub  = _cHub('hub_mant');
@@ -324,6 +325,7 @@ window.verificarSesionGuardada = function() {
 
     var showMant = vStatusRampa || vChecklist || vInsp || vFleetrun || vReportesOT || vTrabajosOT || vCombustible || vNeumaticos || showOtrosMant;
     safe('wrap-mantenimiento', showMant);
+    safe('bnav-mantenimiento', showMant);
 
     // ALMACÉN
     var showAlmacenHub = _cHub('hub_almacen');
@@ -349,6 +351,7 @@ window.verificarSesionGuardada = function() {
 
     var showAlm = vDashAlm || vInv || vEnt || vSal || vKardex || vProv;
     safe('wrap-almacen', showAlm);
+    safe('bnav-almacen', showAlm);
 
     // DIRECTORIO
     var showDirectorioHub = _cHub('hub_directorio');
@@ -358,7 +361,9 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-conductores', vCond);
     safe('nav-clientes',      vClientes);
     safe('mbnav-clientes',    vClientes);
-    safe('wrap-directorio', vCond || vClientes);
+    var showDirectorio = vCond || vClientes;
+    safe('wrap-directorio', showDirectorio);
+    safe('bnav-directorio', showDirectorio);
 
     // OPERACIONES
     var vOpRutas = _cL('op_rutas');
@@ -366,9 +371,15 @@ window.verificarSesionGuardada = function() {
     var vOpMon   = _cL('op_monitoreo');
     var showOp   = vOpRutas || vOpAsig || vOpMon;
     safe('nav-op-rutas', vOpRutas);
+    safe('mbnav-op-rutas', vOpRutas);
     safe('nav-op-asignacion', vOpAsig);
+    safe('mbnav-op-asignacion', vOpAsig);
     safe('nav-op-monitoreo', vOpMon);
+    safe('mbnav-op-monitoreo', vOpMon);
+    safe('mbnav-op-combustible-vales', _cL('combustible_vales') || vOpMon);
+    safe('mbnav-op-combustible-analisis', _cL('combustible_analisis') || vOpMon);
     safe('wrap-operaciones', showOp);
+    safe('bnav-operaciones', showOp);
 
     // RRHH
     var vRrhhPers = _cL('rrhh_personal');
@@ -376,9 +387,13 @@ window.verificarSesionGuardada = function() {
     var vRrhhNom  = _cL('rrhh_nomina');
     var showRrhh  = vRrhhPers || vRrhhAsis || vRrhhNom;
     safe('nav-rrhh-personal', vRrhhPers);
+    safe('mbnav-rrhh-personal', vRrhhPers);
     safe('nav-rrhh-asistencia', vRrhhAsis);
+    safe('mbnav-rrhh-asistencia', vRrhhAsis);
     safe('nav-rrhh-nomina', vRrhhNom);
+    safe('mbnav-rrhh-nomina', vRrhhNom);
     safe('wrap-rrhh', showRrhh);
+    safe('bnav-rrhh', showRrhh);
 
     // TESORERÍA
     var vTesoCaja = _cL('tesoreria_caja');
@@ -386,9 +401,13 @@ window.verificarSesionGuardada = function() {
     var vTesoCuentas = _cL('tesoreria_cuentas');
     var showTeso = vTesoCaja || vTesoFlujo || vTesoCuentas;
     safe('nav-tesoreria-caja', vTesoCaja);
+    safe('mbnav-tesoreria-caja', vTesoCaja);
     safe('nav-tesoreria-flujo', vTesoFlujo);
+    safe('mbnav-tesoreria-flujo', vTesoFlujo);
     safe('nav-tesoreria-cuentas', vTesoCuentas);
+    safe('mbnav-tesoreria-cuentas', vTesoCuentas);
     safe('wrap-tesoreria', showTeso);
+    safe('bnav-tesoreria', showTeso);
 
     // SEGURIDAD
     var showSeguridadHub = _cHub('hub_seguridad');
@@ -3329,11 +3348,14 @@ function actualizarBottomNavActivo(ruta) {
     document.querySelectorAll('.bottom-nav-item').forEach(function(el) { el.classList.remove('active'); });
     var id = '';
     if (ruta === 'dashboard') id = 'bnav-dashboard';
+    else if (ruta.startsWith('operaciones/')) id = 'bnav-operaciones';
     else if (ruta.startsWith('flota/')) id = 'bnav-flota';
     else if (ruta.startsWith('mantenimiento/')) id = 'bnav-mantenimiento';
     else if (ruta.startsWith('almacen/')) id = 'bnav-almacen';
-    else if (ruta.startsWith('directorio/')) id = 'bnav-directorio';
+    else if (ruta.startsWith('rrhh/')) id = 'bnav-rrhh';
+    else if (ruta.startsWith('tesoreria/')) id = 'bnav-tesoreria';
     else if (ruta.startsWith('seguridad/')) id = 'bnav-seguridad';
+    else if (ruta.startsWith('directorio/')) id = 'bnav-directorio';
     else if (ruta.startsWith('sistema/') || ruta.startsWith('administracion')) id = 'bnav-config';
     
     if (id) { var el = document.getElementById(id); if (el) el.classList.add('active'); }
