@@ -3,11 +3,6 @@
 // ============================================================
 
 window.init_ajustes = function() {
-    if (!window.checkPerm('cfg_empresa', 'l')) {
-        var wrap = document.getElementById('ajustes-app') || document.querySelector('.container-fluid');
-        if (wrap) window.showNoPermMsg(wrap);
-        return;
-    }
     // Rellenar datos del usuario
     let nombreEl = document.getElementById('ajustes-user-name');
     let roleEl   = document.getElementById('ajustes-user-role');
@@ -37,17 +32,26 @@ window.init_ajustes = function() {
         themeSwitch.checked = isDark;
     }
 
-    // Mostrar u ocultar sección de administración según permisos
-    let adminSec = document.getElementById('ajustes-admin-section');
-    if (adminSec) {
-        // Asumiendo que si tiene permiso de crear usuarios, es admin. Puedes ajustar esto.
-        let isAdmin = window.checkPerm ? window.checkPerm('usuarios', 'l') : true;
-        if (isAdmin || (userData && userData.rol === 'ADMINISTRADOR')) {
-            adminSec.style.display = 'block';
-        } else {
-            adminSec.style.display = 'none';
-        }
-    }
+    // Mostrar u ocultar sección de administración y sus opciones según permisos
+    let rol = (lsRol || '').toLowerCase();
+    let isAdm = rol.includes('admin') || rol.includes('fundador') || (lsUser || '').toLowerCase().includes('admin');
+
+    let _cL = function(k) { return window.checkPerm ? window.checkPerm(k, 'l') : false; };
+    let vUsuarios   = isAdm || _cL('usuarios');
+    let vAuditoria  = isAdm || _cL('mod_auditoria');
+    let vAdminHub   = isAdm || _cL('administracion') || _cL('cfg_mant');
+
+    let itemUsuarios   = document.getElementById('ajustes-item-usuarios');
+    let itemAuditoria  = document.getElementById('ajustes-item-auditoria');
+    let itemAdmin      = document.getElementById('ajustes-item-admin');
+    let adminSecHeader = document.getElementById('ajustes-admin-section-header');
+
+    if (itemUsuarios)   itemUsuarios.style.display   = vUsuarios ? 'flex' : 'none';
+    if (itemAuditoria)  itemAuditoria.style.display  = vAuditoria ? 'flex' : 'none';
+    if (itemAdmin)      itemAdmin.style.display      = vAdminHub ? 'flex' : 'none';
+
+    let hasAnyAdmin = vUsuarios || vAuditoria || vAdminHub;
+    if (adminSecHeader) adminSecHeader.style.display = hasAnyAdmin ? 'flex' : 'none';
 
     // Configurar texto del idioma
     let langEl = document.getElementById('ajustes-lang-text');

@@ -444,7 +444,7 @@ window.verificarSesionGuardada = function() {
     safe('wrap-administracion', showAdm);
     safe('nav-administracion',  showAdm);
     safe('mbnav-administracion', showAdm);
-    var showConfiguracion = isAdm || showAdm || vCfgEmpresa || vUsuarios || vAuditoria;
+    var showConfiguracion = true; // Accesible para todos los usuarios (preferencias personales)
     safe('wrap-configuracion', showConfiguracion);
     safe('mbnav-configuracion', showConfiguracion);
 
@@ -477,8 +477,8 @@ window.verificarSesionGuardada = function() {
 
     window.esRutaValidaYPermitida = function(r) {
         if (!r) return false;
-        // Rutas públicas y de acceso al sistema siempre permitidas
-        if (r === 'login' || r === 'sistema/login') return true;
+        // Rutas públicas y de acceso al sistema/preferencias siempre permitidas
+        if (r === 'login' || r === 'sistema/login' || r === 'sistema/configuracion' || r === 'sistema/ajustes' || r === 'sistema/perfil') return true;
 
         var rol = (localStorage.getItem('fleet_rol') || window.rolLogueado || '').toLowerCase();
         var user = (localStorage.getItem('fleet_user') || window.usuarioLogueado || '').toLowerCase();
