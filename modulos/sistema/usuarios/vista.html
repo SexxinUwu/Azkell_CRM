@@ -114,12 +114,12 @@
 .gu-list-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
+    gap: 14px;
+    padding: 12px 14px;
     cursor: pointer;
     transition: background 0.12s, transform 0.1s;
-    border-radius: 14px;
-    margin-bottom: 4px;
+    border-radius: 16px;
+    margin-bottom: 6px;
     border: 1px solid transparent;
 }
 .gu-list-item:hover { background: #f1f5f9; }
@@ -127,21 +127,41 @@
     background: #eff6ff;
     border-color: #bfdbfe;
 }
-.gu-role-dot {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
+.gu-role-icon {
+    font-size: 1.45rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ffffff;
-    font-weight: 800;
     flex-shrink: 0;
+    line-height: 1;
 }
 .gu-list-info { flex: 1; min-width: 0; }
-.gu-list-name { font-size: 0.9rem; font-weight: 700; color: var(--text, #0f172a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.gu-list-sub  { font-size: 0.76rem; color: var(--subtext, #64748b); font-weight: 500; margin-top: 1px; }
+.gu-list-name { font-size: 0.92rem; font-weight: 700; color: var(--text, #0f172a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gu-list-sub  { font-size: 0.78rem; color: var(--subtext, #64748b); font-weight: 500; margin-top: 1px; }
 .gu-list-chevron { color: #cbd5e1; font-size: 0.9rem; }
+
+/* ─── FAB Animaciones (Material Design 3 & Inventario Copy) ───────── */
+#gu-fab-btn {
+    transition: all .35s cubic-bezier(.175,.885,.32,1.275) !important;
+}
+#gu-fab-btn.fab-open {
+    transform: rotate(135deg) !important;
+    background: #0f172a !important;
+    box-shadow: 0 8px 24px rgba(15,23,42,.4) !important;
+}
+#gu-fab-menu {
+    transition: opacity .25s ease, transform .3s cubic-bezier(.4,0,.2,1) !important;
+    transform: translateY(20px);
+    opacity: 0;
+    pointer-events: none;
+}
+#gu-fab-menu.fab-menu-open {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+#gu-fab-menu > div:nth-child(1) { transition-delay: .05s; }
+#gu-fab-menu > div:nth-child(2) { transition-delay: .1s; }
 
 /* ── Panel Derecho Desktop ─────────────────────────── */
 .gu-panel {
@@ -377,42 +397,51 @@
         </div>
     </div>
 
-    <!-- ── 5. BOTÓN FLOTANTE (FAB) PARA MÓVIL ────────────────────────── -->
-    <div class="d-md-none position-fixed" style="bottom: 84px; right: 1.25rem; z-index: 1040;">
-        <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
-                onclick="window.guAbrirSelectorAccionMobile && window.guAbrirSelectorAccionMobile()"
-                style="width: 58px; height: 58px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.6rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;"
-                title="Nueva Acción">
-            <i class="bi bi-plus-lg"></i>
-        </button>
-    </div>
-</div>
-
-<!-- Modal Bottom-Sheet: Selector de Acción en Móvil (Nuevo Usuario / Nuevo Rol) -->
-<div class="offcanvas offcanvas-bottom bnav-sheet h-auto" tabindex="-1" id="modalAccionUsuariosMobile">
-    <div class="bnav-sheet-header">
-        <div class="bnav-sheet-title"><i class="bi bi-plus-circle text-primary"></i> Crear Registro</div>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-    </div>
-    <div class="offcanvas-body px-3 pb-4">
-        <div class="bnav-group-box">
-            <div class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('modalAccionUsuariosMobile')).hide(); window.guNuevoMiembro && window.guNuevoMiembro();">
-                <div class="bnav-row-icon" style="color: #0284c7;"><i class="bi bi-person-plus"></i></div>
-                <div class="bnav-row-content">
-                    <p class="bnav-row-title">Nuevo Usuario</p>
-                    <p class="bnav-row-desc">Crear acceso, nombre, correo y rol asignado</p>
-                </div>
-                <i class="bi bi-chevron-right bnav-row-chevron"></i>
+    <!-- ── 5. BOTÓN FLOTANTE (FAB) ANIMADO PARA MÓVIL (IDÉNTICO A INVENTARIO) ── -->
+    <div id="gu-fab-wrap" class="d-md-none" style="display:flex;position:fixed;bottom:104px;right:1rem;z-index:1041;align-items:flex-end;flex-direction:column;">
+        <!-- Backdrop blur -->
+        <div id="gu-fab-backdrop" onclick="window._guFABClose()"
+             style="display:none;position:fixed;inset:0;backdrop-filter:blur(5px);
+                    -webkit-backdrop-filter:blur(5px);background:rgba(0,0,0,.28);z-index:-1;"></div>
+        
+        <!-- Menú expandido (Material Design 3 style) -->
+        <div id="gu-fab-menu" style="display:none;flex-direction:column;align-items:flex-end;gap:1rem;margin-bottom:1rem;">
+            <!-- NUEVO ROL -->
+            <div style="display:flex;align-items:center;gap:.75rem;">
+                <span style="background:#0f172a;color:#fff!important;padding:.45rem .95rem;border-radius:14px;
+                             font-size:.7rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;
+                             box-shadow:0 4px 14px rgba(0,0,0,.25);-webkit-text-fill-color:#fff;">NUEVO ROL</span>
+                <button onclick="window._guFABClose(); window.guNuevoRol && window.guNuevoRol()"
+                        style="width:56px;height:56px;border-radius:18px;background:#10b981;border:2px solid #fff;
+                               color:#fff!important;font-size:1.3rem;display:flex;align-items:center;justify-content:center;
+                               box-shadow:0 6px 20px rgba(16,185,129,.4);cursor:pointer;transition:transform .15s;">
+                    <i class="bi bi-shield-plus"></i>
+                </button>
             </div>
-            <div class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('modalAccionUsuariosMobile')).hide(); window.guNuevoRol && window.guNuevoRol();">
-                <div class="bnav-row-icon" style="color: #10b981;"><i class="bi bi-shield-plus"></i></div>
-                <div class="bnav-row-content">
-                    <p class="bnav-row-title">Nuevo Rol</p>
-                    <p class="bnav-row-desc">Configurar nuevo perfil y matriz de permisos</p>
-                </div>
-                <i class="bi bi-chevron-right bnav-row-chevron"></i>
+
+            <!-- NUEVO USUARIO -->
+            <div style="display:flex;align-items:center;gap:.75rem;">
+                <span style="background:#0f172a;color:#fff!important;padding:.45rem .95rem;border-radius:14px;
+                             font-size:.7rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;
+                             box-shadow:0 4px 14px rgba(0,0,0,.25);-webkit-text-fill-color:#fff;">NUEVO USUARIO</span>
+                <button onclick="window._guFABClose(); window.guNuevoMiembro && window.guNuevoMiembro()"
+                        style="width:56px;height:56px;border-radius:18px;background:#0284c7;border:2px solid #fff;
+                               color:#fff!important;font-size:1.3rem;display:flex;align-items:center;justify-content:center;
+                               box-shadow:0 6px 20px rgba(2,132,199,.4);cursor:pointer;transition:transform .15s;">
+                    <i class="bi bi-person-plus"></i>
+                </button>
             </div>
         </div>
+
+        <!-- Botón principal FAB -->
+        <button id="gu-fab-btn" onclick="window._guFABToggle()"
+                style="width:60px;height:60px;border-radius:18px;background:#0284c7;border:none;color:#fff;
+                       font-size:1.5rem;box-shadow:0 6px 24px rgba(2,132,199,.5);
+                       display:flex;align-items:center;justify-content:center;
+                       transition:transform .25s cubic-bezier(.4,0,.2,1),background .2s;
+                       flex-shrink:0;">
+            <i class="bi bi-plus-lg" id="gu-fab-icon"></i>
+        </button>
     </div>
 </div>
 

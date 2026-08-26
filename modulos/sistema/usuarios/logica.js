@@ -170,7 +170,7 @@ function _guRenderUserItem(u) {
     var isSel = window._guSeleccionado && window._guSeleccionado.tipo === 'usuario' && window._guSeleccionado.id === u.id;
     var fnClick = 'window.guSeleccionarUsuario';
     return '<div class="gu-list-item' + (isSel?' selected':'') + '" onclick="' + fnClick + '(\'' + u.id + '\')">'
-        + '<div class="gu-role-dot" style="background:' + color + ';font-size:.65rem;">' + _guInitials(u.nombre||u.correo) + '</div>'
+        + '<div class="gu-role-icon" style="color:' + color + ';"><i class="bi bi-person"></i></div>'
         + '<div class="gu-list-info"><div class="gu-list-name">' + _guEsc(u.nombre||u.correo) + '</div>'
         + '<div class="gu-list-sub">' + _guEsc(u.cargo||u.correo||'') + (u.ultimo_acceso ? ' · ' + _guRelTime(u.ultimo_acceso) : '') + '</div></div>'
         + '<i class="bi bi-chevron-right gu-list-chevron"></i></div>';
@@ -188,10 +188,11 @@ window.guRenderLista = function() {
             window.dataGlobalRoles.forEach(function(r) {
                 var isSel = window._guSeleccionado && window._guSeleccionado.tipo === 'rol' && window._guSeleccionado.id == r.id;
                 var cnt = r.miembros || 0;
+                var rColor = r.color || '#2563eb';
                 html += '<div class="gu-list-item' + (isSel ? ' selected' : '') + '" onclick="window.guSeleccionarRol(' + r.id + ')">'
-                    + '<div class="gu-role-dot" style="background:' + (r.color||'#5865F2') + ';"><i class="bi bi-shield-fill" style="font-size:.7rem;"></i></div>'
+                    + '<div class="gu-role-icon" style="color:' + rColor + ';"><i class="bi bi-shield-check"></i></div>'
                     + '<div class="gu-list-info"><div class="gu-list-name">' + _guEsc(r.nombre) + '</div>'
-                    + '<div class="gu-list-sub">' + cnt + ' miembro' + (cnt!==1?'s':'') + (r.es_admin ? ' · <span style="color:#ED4245;font-weight:700;">Admin</span>' : '') + '</div></div>'
+                    + '<div class="gu-list-sub">' + cnt + ' miembro' + (cnt!==1?'s':'') + (r.es_admin ? ' · <span style="color:#ef4444;font-weight:700;">Admin</span>' : '') + '</div></div>'
                     + '<i class="bi bi-chevron-right gu-list-chevron"></i></div>';
             });
         }
@@ -199,7 +200,7 @@ window.guRenderLista = function() {
         if (!window.dataGlobalUsuarios.length) {
             html = '<div class="text-center py-4 text-muted" style="font-size:.8rem;padding:20px;">No hay miembros.</div>';
         } else {
-            // Agrupar por rol (Discord-style)
+            // Agrupar por rol
             var grupos = {};
             var sinRol = [];
             window.dataGlobalUsuarios.forEach(function(u) {
@@ -220,15 +221,15 @@ window.guRenderLista = function() {
             });
             gruposOrdenados.forEach(function(g) {
                 var r = g.rol;
-                var color = r ? (r.color||'#6b7280') : '#6b7280';
+                var color = r ? (r.color||'#0284c7') : '#0284c7';
                 var nombre = r ? r.nombre : 'Desconocido';
-                html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px 4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--subtext);">'
+                html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px 4px;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--subtext);">'
                     + '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;"></div>'
                     + _guEsc(nombre) + ' — ' + g.users.length + '</div>';
                 g.users.forEach(function(u) { html += _guRenderUserItem(u); });
             });
             if (sinRol.length) {
-                html += '<div style="padding:10px 14px 4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--subtext);">SIN ROL — ' + sinRol.length + '</div>';
+                html += '<div style="padding:10px 14px 4px;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--subtext);">SIN ROL — ' + sinRol.length + '</div>';
                 sinRol.forEach(function(u) { html += _guRenderUserItem(u); });
             }
         }
@@ -236,12 +237,38 @@ window.guRenderLista = function() {
     list.innerHTML = html;
 };
 
-// ── Selector de Acción Móvil (+ FAB) ──────────────────────────
-window.guAbrirSelectorAccionMobile = function() {
-    var modalEl = document.getElementById('modalAccionUsuariosMobile');
-    if (modalEl && window.bootstrap) {
-        bootstrap.Offcanvas.getOrCreateInstance(modalEl).show();
+// ── FAB Toggle / Close para Móvil (Copia exacta de Inventario) ────
+window._guFABToggle = function() {
+    var menu = document.getElementById('gu-fab-menu');
+    var btn  = document.getElementById('gu-fab-btn');
+    var bd   = document.getElementById('gu-fab-backdrop');
+    if (!menu) return;
+    var isOpen = menu.classList.contains('fab-menu-open');
+    if (isOpen) {
+        menu.classList.remove('fab-menu-open');
+        if (btn) btn.classList.remove('fab-open');
+        if (bd)  bd.style.display = 'none';
+        setTimeout(function(){ if (!menu.classList.contains('fab-menu-open')) menu.style.display = 'none'; }, 250);
+    } else {
+        menu.style.display = 'flex';
+        requestAnimationFrame(function() {
+            menu.classList.add('fab-menu-open');
+        });
+        if (btn) btn.classList.add('fab-open');
+        if (bd)  bd.style.display = 'block';
     }
+};
+
+window._guFABClose = function() {
+    var menu = document.getElementById('gu-fab-menu');
+    var btn  = document.getElementById('gu-fab-btn');
+    var bd   = document.getElementById('gu-fab-backdrop');
+    if (menu) {
+        menu.classList.remove('fab-menu-open');
+        setTimeout(function(){ if (!menu.classList.contains('fab-menu-open')) menu.style.display = 'none'; }, 250);
+    }
+    if (btn)  btn.classList.remove('fab-open');
+    if (bd)   bd.style.display = 'none';
 };
 
 // ── Panel ROL ─────────────────────────────────────────────────
