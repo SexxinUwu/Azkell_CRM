@@ -432,9 +432,23 @@
                     <!-- BENTO 2: Esquema Interactivo 3D/2D de Chasis -->
                     <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important; position:relative;">
                         <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
-                            <h6 class="fw-bold m-0 small text-dark d-flex align-items-center gap-1">
-                                <i class="bi bi-truck text-primary"></i> ESQUEMA VISUAL DE EJES Y LLANTAS
-                            </h6>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h6 class="fw-bold m-0 small text-dark d-flex align-items-center gap-1">
+                                    <i class="bi bi-truck text-primary"></i> ESQUEMA VISUAL DE EJES Y LLANTAS
+                                </h6>
+                                <select class="form-select form-select-sm rounded-pill fw-bold text-primary bg-light border-0 shadow-2xs py-1 px-3" 
+                                        id="neu-sel-chassis-config" 
+                                        onchange="window._neuCambiarConfiguracion(this.value)" 
+                                        style="font-size: 0.76rem; width: auto; cursor: pointer;">
+                                    <option value="R2">R2 Carreta / Burrita (8 Llantas)</option>
+                                    <option value="S2">S2 Semirremolque (8 Llantas)</option>
+                                    <option value="S3">S3 Semirremolque (12 Llantas)</option>
+                                    <option value="4X2">4x2 / C2 / T2 (6 Llantas)</option>
+                                    <option value="6X4">6x4 / C3 / T3 (10 Llantas)</option>
+                                    <option value="6X2">6x2 (8 Llantas)</option>
+                                    <option value="T3S3">T3S3 Combinación (22 Llantas)</option>
+                                </select>
+                            </div>
                             
                             <div class="d-flex align-items-center gap-1 flex-wrap">
                                 <button class="btn btn-sm btn-primary py-1 px-2.5 rounded-pill fw-bold" id="btn-view-2d" onclick="window._neuSetViewMode('2d')" style="font-size: 0.76rem;">
@@ -819,6 +833,10 @@
     // ── CAMBIO DINÁMICO DE CONFIGURACIÓN VEHICULAR ────────────────────────────────
     window._neuCambiarConfiguracion = function(newKey) {
         window._neuConfigActualKey = newKey;
+        const selCfg = document.getElementById('neu-sel-chassis-config');
+        if (selCfg && selCfg.value !== newKey) {
+            selCfg.value = newKey;
+        }
         const cfg = VEHICLE_CONFIGS_3D[newKey] || VEHICLE_CONFIGS_3D["6X4"];
         window._neuRenderPosiciones(cfg.positions);
         if (window._neuInitThreeEngine) {
