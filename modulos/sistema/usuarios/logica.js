@@ -120,6 +120,21 @@ window.guCargarTodo = async function(forzar) {
         var cm = document.getElementById('gu-count-miembros');
         if (cr) cr.textContent = '(' + window.dataGlobalRoles.length + ')';
         if (cm) cm.textContent = '(' + window.dataGlobalUsuarios.length + ')';
+
+        // Llenar KPIs
+        var kpiUsers = document.getElementById('gu-kpi-total-usuarios');
+        var kpiRoles = document.getElementById('gu-kpi-total-roles');
+        var kpiAdmins = document.getElementById('gu-kpi-total-admins');
+        
+        var totalAdmins = window.dataGlobalUsuarios.filter(function(u){
+            var rol = window.dataGlobalRoles.find(function(r){ return r.id == u.rol_id; });
+            return (rol && !!rol.es_admin) || (u.correo||'').toLowerCase() === 'admin@azkell.com';
+        }).length;
+
+        if (kpiUsers) kpiUsers.textContent = window.dataGlobalUsuarios.length;
+        if (kpiRoles) kpiRoles.textContent = window.dataGlobalRoles.length;
+        if (kpiAdmins) kpiAdmins.textContent = totalAdmins;
+
         window.guSetTab(window._guTabActiva || 'roles');
     } catch(e) {
         if (list) list.innerHTML = '<div class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>' + e.message + '</div>';

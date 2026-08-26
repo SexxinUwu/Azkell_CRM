@@ -28,36 +28,34 @@
 #moduloUsuarios .ck-kpi-card {
     background: var(--surface, #ffffff) !important;
     border: 1px solid var(--border, #e2e8f0) !important;
-    border-radius: 18px !important;
-    padding: 0.85rem 1rem !important;
+    border-radius: 20px !important;
+    padding: 0.85rem 1.15rem !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
-    gap: 0.85rem !important;
+    gap: 1rem !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02) !important;
     cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
     user-select: none;
-    min-height: 62px !important;
+    min-height: 64px !important;
 }
 #moduloUsuarios .ck-kpi-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05) !important;
 }
 #moduloUsuarios .ck-kpi-card.active {
-    border-color: #2563eb !important;
+    border-color: #0284c7 !important;
     background: #f8fafc !important;
 }
 #moduloUsuarios .ck-kpi-icon {
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 12px !important;
+    font-size: 1.65rem !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 1.15rem !important;
     flex-shrink: 0 !important;
+    line-height: 1 !important;
 }
 
 /* ── Segmented Control iOS Tab ──────────────────── */
@@ -320,7 +318,7 @@
     <div class="row g-2 mb-3">
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card active" onclick="window.guSetTab && window.guSetTab('miembros')">
-                <div class="ck-kpi-icon" style="background: rgba(37,99,235,0.08); color:#2563eb;">
+                <div class="ck-kpi-icon" style="color:#0284c7;">
                     <i class="bi bi-people"></i>
                 </div>
                 <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
@@ -331,7 +329,7 @@
         </div>
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" onclick="window.guSetTab && window.guSetTab('roles')">
-                <div class="ck-kpi-icon" style="background: rgba(16,185,129,0.08); color:#10b981;">
+                <div class="ck-kpi-icon" style="color:#10b981;">
                     <i class="bi bi-shield-check"></i>
                 </div>
                 <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
@@ -342,7 +340,7 @@
         </div>
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card">
-                <div class="ck-kpi-icon" style="background: rgba(239,68,68,0.08); color:#ef4444;">
+                <div class="ck-kpi-icon" style="color:#ef4444;">
                     <i class="bi bi-key"></i>
                 </div>
                 <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
@@ -353,7 +351,7 @@
         </div>
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card">
-                <div class="ck-kpi-icon" style="background: rgba(147,51,234,0.08); color:#9333ea;">
+                <div class="ck-kpi-icon" style="color:#9333ea;">
                     <i class="bi bi-check-circle"></i>
                 </div>
                 <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
