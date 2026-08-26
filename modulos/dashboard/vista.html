@@ -1,77 +1,161 @@
 <style>
-/* ─── DASHBOARD MOBILE ──────────────────────────────────────── */
+/* ─── DASHBOARD MOBILE GROUPED INSET CARDS (DISEÑO OPCIÓN A) ─── */
 @media (max-width: 767.98px) {
     .topbar { display: none !important; }
     #root-dinamico, .main-area { 
         padding: 0 !important; 
-        overflow: hidden !important; 
+        overflow-y: auto !important; 
         display: flex !important;
         flex-direction: column !important;
+        background: var(--bg, #f8fafc) !important;
     }
 
     #moduloDashboard {
-        padding: 0 !important;
+        padding: 1rem !important;
         margin: 0 !important;
-        background: transparent !important;
+        background: var(--bg, #f8fafc) !important;
         flex: 1 1 0;
-        overflow-y: auto !important;
+        padding-bottom: 6rem !important;
     }
     #moduloDashboard .controls-row {
         display: none !important;
     }
     #kpi-metrics-row {
-        padding: 1rem 1rem 0.5rem 1rem;
-        margin: 0 !important;
-        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 0 1.25rem 0 !important;
     }
-    /* KPI cards: sin cuadro negro detrás */
+    
+    /* Hero Greeting Header */
+    .dash-mob-header-wrap {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+    }
+    .dash-mob-greeting-title {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--text, #0f172a);
+        margin: 0;
+    }
+    .dash-mob-greeting-sub {
+        font-size: 0.78rem;
+        color: var(--subtext, #64748b);
+        font-weight: 600;
+        margin: 2px 0 0 0;
+    }
+    .dash-mob-btn-reload {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: var(--surface, #ffffff);
+        border: 1px solid var(--border, #e2e8f0);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text, #1e293b);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        cursor: pointer;
+        transition: transform 0.1s;
+    }
+    .dash-mob-btn-reload:active { transform: scale(0.95); }
+
+    /* KPI Grid Cards al estilo Inset */
     .kpi-metric-card {
-        background: var(--surface) !important;
-        border-color: var(--border) !important;
+        background: var(--surface, #ffffff) !important;
+        border: 1px solid var(--border, #e2e8f0) !important;
+        border-radius: 20px !important;
+        padding: 1.1rem !important;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.02) !important;
+        border-top: 1px solid var(--border, #e2e8f0) !important; /* Reemplaza la barra superior gruesa */
+        transition: transform 0.1s;
     }
+    .kpi-metric-card:active { transform: scale(0.98); }
+    .kpi-metric-value {
+        font-size: 1.65rem !important;
+        font-weight: 800 !important;
+        color: var(--text, #0f172a) !important;
+        margin: 0.35rem 0 0.15rem 0 !important;
+        letter-spacing: -0.02em;
+    }
+    .kpi-metric-label {
+        font-size: 0.74rem !important;
+        font-weight: 700 !important;
+        color: var(--subtext, #64748b) !important;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    
+    .kpi-metric-icon-wrap {
+        border-radius: 12px !important;
+        width: 36px !important; 
+        height: 36px !important;
+        font-size: 1.15rem !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .kpi-metric-icon-wrap.primary { background: rgba(37,99,235,0.08) !important; color: #2563eb !important; }
+    .kpi-metric-icon-wrap.success { background: rgba(16,185,129,0.08) !important; color: #10b981 !important; }
+    .kpi-metric-icon-wrap.warning { background: rgba(245,158,11,0.08) !important; color: #f59e0b !important; }
+    .kpi-metric-icon-wrap.danger  { background: rgba(239,68,68,0.08) !important; color: #ef4444 !important; }
+
+    /* Grouped Inset Section */
+    .dash-section-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--subtext, #94a3b8);
+        text-transform: capitalize;
+        letter-spacing: 0.02em;
+        margin: 0 0 0.5rem 0.25rem;
+    }
+
     #dash-mob-alerts-wrap {
-        padding: 0 1rem;
-        margin-bottom: 1rem;
+        padding: 0 !important;
+        margin-bottom: 1.25rem !important;
     }
     .dash-mob-alert-list {
-        background: var(--surface);
-        border-radius: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        background: var(--surface, #ffffff) !important;
+        border-radius: 20px !important;
+        border: 1px solid var(--border, #e2e8f0) !important;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.02) !important;
         overflow: hidden;
     }
     .dash-mob-alert-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 1rem 1.25rem;
+        padding: 1rem 1.25rem !important;
         text-decoration: none;
-        color: var(--text);
-        border-bottom: 1px solid var(--border);
-        transition: background 0.2s;
+        color: var(--text, #1e293b) !important;
+        border-bottom: 1px solid var(--border, #f1f5f9) !important;
+        transition: background 0.15s;
     }
-    .dash-mob-alert-item:active { background: var(--bg); }
-    .dash-mob-alert-item:last-child { border-bottom: none; }
-    
-    .kpi-metric-icon-wrap {
-        border-radius: 12px;
-        width: 32px; height: 32px;
-        font-size: 1rem;
+    .dash-mob-alert-item:active { background: rgba(0,0,0,0.03); }
+    .dash-mob-alert-item:last-child { border-bottom: none !important; }
+
+    /* Clima Card Móvil Grouped Inset */
+    #dash-weather-card {
+        background: var(--surface, #ffffff) !important;
+        border: 1px solid var(--border, #e2e8f0) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.02) !important;
+        padding: 1.25rem !important;
+        margin-bottom: 1.25rem;
     }
 }
 </style>
 <div id="moduloDashboard" class="modulo-wrapper" style="display: flex; flex-direction: column;">
 
     <!-- Mobile Header -->
-    <div class="d-flex d-md-none align-items-center justify-content-between px-3 pt-3 pb-1" id="dash-mob-header">
-        <div class="d-flex align-items-center gap-2">
-            <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(88, 101, 242, 0.12); color: #5865F2; display: flex; align-items: center; justify-content: center; font-size: 1.15rem;">
-                <i class="bi bi-grid-1x2-fill"></i>
-            </div>
-            <h4 class="m-0 fw-bold" style="font-size: 1.25rem; color: var(--text);">Dashboard</h4>
+    <div class="d-flex d-md-none dash-mob-header-wrap" id="dash-mob-header">
+        <div>
+            <h2 class="dash-mob-greeting-title">Dashboard</h2>
+            <p class="dash-mob-greeting-sub">Resumen de operaciones en tiempo real</p>
         </div>
-        <button class="btn btn-sm btn-light border shadow-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; color: var(--text);" onclick="recargarDashboard()" title="Actualizar">
+        <div class="dash-mob-btn-reload" onclick="recargarDashboard()" title="Actualizar">
             <i class="bi bi-arrow-clockwise"></i>
-        </button>
+        </div>
     </div>
 
     <!-- Header Desktop -->
@@ -91,7 +175,7 @@
         <div class="col-6 col-md-3">
             <div class="kpi-metric-card">
                 <div class="kpi-metric-top">
-                    <div class="kpi-metric-icon-wrap primary"><i class="bi bi-truck-front-fill"></i></div>
+                    <div class="kpi-metric-icon-wrap primary"><i class="bi bi-truck-front"></i></div>
                     <div class="kpi-metric-trend-wrap" id="kpi-trend-flota"></div>
                 </div>
                 <div class="kpi-metric-value" id="kpi-val-flota">—</div>
@@ -113,7 +197,7 @@
         <div class="col-6 col-md-3">
             <div class="kpi-metric-card warning" style="cursor:pointer;" title="Ver inspecciones por vencer" onclick="localStorage.setItem('fleet_insp_nav_filter','PRÓXIMO A VENCER');cargarModuloAislado('mantenimiento/inspecciones')">
                 <div class="kpi-metric-top">
-                    <div class="kpi-metric-icon-wrap warning"><i class="bi bi-clock-history"></i></div>
+                    <div class="kpi-metric-icon-wrap warning"><i class="bi bi-clock"></i></div>
                     <div class="kpi-metric-trend-wrap" id="kpi-trend-porvencer"></div>
                 </div>
                 <div class="kpi-metric-value" id="kpi-val-porvencer">—</div>
@@ -124,7 +208,7 @@
         <div class="col-6 col-md-3">
             <div class="kpi-metric-card danger" style="cursor:pointer;" title="Ver inspecciones vencidas" onclick="localStorage.setItem('fleet_insp_nav_filter','NO VIGENTE');cargarModuloAislado('mantenimiento/inspecciones')">
                 <div class="kpi-metric-top">
-                    <div class="kpi-metric-icon-wrap danger"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                    <div class="kpi-metric-icon-wrap danger"><i class="bi bi-exclamation-triangle"></i></div>
                     <div class="kpi-metric-trend-wrap" id="kpi-trend-vencidas"></div>
                 </div>
                 <div class="kpi-metric-value" id="kpi-val-vencidas">—</div>
@@ -136,24 +220,25 @@
 
     <!-- ── ACCIONES RÁPIDAS MÓVIL (d-block d-md-none) ─── -->
     <div class="d-block d-md-none" id="dash-mob-alerts-wrap">
+        <h3 class="dash-section-title">Mantenimiento Preventivo</h3>
         <div class="dash-mob-alert-list">
             <a href="#" class="dash-mob-alert-item" onclick="event.preventDefault(); localStorage.setItem('fleet_fleetrun_nav_filter','VENCIDO'); cargarModuloAislado('mantenimiento/fleetrun')">
                 <div class="d-flex align-items-center gap-3">
                     <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></div>
-                    <span class="fw-semibold" style="font-size:0.85rem;">MP Fleetrun Vencidos</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;">MP Fleetrun Vencidos</span>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bold text-muted" id="dash-mob-fleet-vencidos">—</span>
+                    <span class="badge bg-danger-subtle text-danger fw-bold rounded-pill px-2" id="dash-mob-fleet-vencidos" style="font-size:0.75rem;">—</span>
                     <i class="bi bi-chevron-right text-muted opacity-50"></i>
                 </div>
             </a>
             <a href="#" class="dash-mob-alert-item" onclick="event.preventDefault(); localStorage.setItem('fleet_fleetrun_nav_filter','POR VENCER'); cargarModuloAislado('mantenimiento/fleetrun')">
                 <div class="d-flex align-items-center gap-3">
-                    <div style="width:8px;height:8px;border-radius:50%;background:#eab308;"></div>
-                    <span class="fw-semibold" style="font-size:0.85rem;">MP Fleetrun Por Vencer</span>
+                    <div style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></div>
+                    <span class="fw-semibold" style="font-size:0.9rem;">MP Fleetrun Por Vencer</span>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bold text-muted" id="dash-mob-fleet-porvencer">—</span>
+                    <span class="badge bg-warning-subtle text-warning fw-bold rounded-pill px-2" id="dash-mob-fleet-porvencer" style="font-size:0.75rem;">—</span>
                     <i class="bi bi-chevron-right text-muted opacity-50"></i>
                 </div>
             </a>
