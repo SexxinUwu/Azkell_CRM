@@ -1172,28 +1172,47 @@ module.exports = function (db, broadcast, logAudit) {
                 execData.reportResult.tables.forEach(tbl => {
                     if (Array.isArray(tbl.header) && Array.isArray(tbl.total)) {
                         tbl.header.forEach((h, hIdx) => {
-                            const headerLower = String(h || '').toLowerCase();
+                            const headerLower = String(h || '').toLowerCase().trim();
                             const valStr = tbl.total[hIdx];
 
-                            if (headerLower.includes('distancia') || headerLower.includes('kilometraje') || headerLower.includes('recorrido')) {
-                                if (recorridoKmGps === null) recorridoKmGps = cleanNum(valStr);
-                            } else if (headerLower.includes('combustible consumido') || headerLower.includes('consumo')) {
-                                if (combustibleConsumidoGps === null) combustibleConsumidoGps = cleanNum(valStr);
+                            // Descartar explícitamente kilometraje inicial y final
+                            const esKmInicial = headerLower.includes('inicial') || headerLower.includes('initial') || headerLower.includes('inicio');
+                            const esKmFinal = headerLower.includes('final');
+
+                            if (!esKmInicial && !esKmFinal) {
+                                if (headerLower === 'kilometraje' || headerLower === 'kilometraje en viajes' || headerLower.includes('distancia') || headerLower.includes('recorrido')) {
+                                    const num = cleanNum(valStr);
+                                    if (num !== null) recorridoKmGps = num;
+                                }
+                            }
+
+                            if (headerLower.includes('combustible consumido') || headerLower.includes('consumo')) {
+                                const num = cleanNum(valStr);
+                                if (num !== null && combustibleConsumidoGps === null) combustibleConsumidoGps = num;
                             } else if (headerLower.includes('rendimiento') || headerLower.includes('km/gal')) {
-                                if (rendimientoGps === null) rendimientoGps = cleanNum(valStr);
+                                const num = cleanNum(valStr);
+                                if (num !== null && rendimientoGps === null) rendimientoGps = num;
                             }
                         });
                     }
                 });
             }
 
-            // Si aún faltó algún dato, extraer de las estadísticas globales (stats)
+            // Si aún faltó algún dato, extraer de las estadísticas globales (stats) excluyendo "Contador"
             if (execData.reportResult && Array.isArray(execData.reportResult.stats)) {
                 execData.reportResult.stats.forEach(([key, val]) => {
-                    const k = String(key || '').toLowerCase();
-                    if ((k.includes('kilometraje en viajes') || k.includes('mileage in trips') || k.includes('distancia')) && recorridoKmGps === null) {
-                        recorridoKmGps = cleanNum(val);
-                    } else if ((k.includes('fuel consumed') || k.includes('combustible consumido')) && combustibleConsumidoGps === null) {
+                    const k = String(key || '').toLowerCase().trim();
+                    const esContador = k.includes('contador') || k.includes('counter');
+                    const esInicial = k.includes('inicial') || k.includes('initial');
+                    const esFinal = k.includes('final');
+
+                    if (!esContador && !esInicial && !esFinal) {
+                        if ((k.includes('kilometraje en viajes') || k.includes('mileage in trips') || k.includes('distancia') || k === 'kilometraje') && recorridoKmGps === null) {
+                            recorridoKmGps = cleanNum(val);
+                        }
+                    }
+
+                    if ((k.includes('fuel consumed') || k.includes('combustible consumido')) && combustibleConsumidoGps === null) {
                         combustibleConsumidoGps = cleanNum(val);
                     } else if ((k.includes('rendimiento') || k.includes('avg. fuel consumption')) && rendimientoGps === null) {
                         rendimientoGps = cleanNum(val);
