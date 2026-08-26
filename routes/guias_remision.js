@@ -5,17 +5,18 @@ module.exports = function(db, tenantStorage) {
 
     // Helper para obtener conexión tenant
     const getDb = (req) => {
-        if (tenantStorage && typeof tenantStorage.getStore === 'function') {
-            const storeDb = tenantStorage.getStore();
-            if (storeDb) return storeDb;
-        }
-        return req.db || db;
+        const d = (req && req.db) ? req.db : db;
+        if (!d) return null;
+        return (typeof d.promise === 'function') ? d.promise() : d;
     };
 
     // Crear tablas de Guías de Remisión si no existen
     const initTables = async (dbConn) => {
         try {
-            await dbConn.promise().query(`
+            if (!dbConn) return;
+            const queryFn = typeof dbConn.query === 'function' ? dbConn.query.bind(dbConn) : null;
+            if (!queryFn) return;
+            await dbConn.query(`
                 CREATE TABLE IF NOT EXISTS guias_remision (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     numero_guia VARCHAR(30) NOT NULL UNIQUE,
@@ -75,7 +76,7 @@ module.exports = function(db, tenantStorage) {
             const dbConn = getDb(req);
             await initTables(dbConn);
 
-            const [rows] = await dbConn.promise().query(
+            const [rows] = await dbConn.query(
                 "SELECT clave, valor FROM integraciones_api WHERE clave IN ('sunat_client_id', 'sunat_client_secret', 'sunat_ruc_emisor', 'sunat_usuario_sol', 'sunat_modo_entorno')"
             );
 
@@ -118,7 +119,7 @@ module.exports = function(db, tenantStorage) {
             }
 
             for (const [clave, valor] of Object.entries(toSave)) {
-                await dbConn.promise().query(
+                await dbConn.query(
                     "INSERT INTO integraciones_api (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?",
                     [clave, valor, valor]
                 );
@@ -178,12 +179,12 @@ module.exports = function(db, tenantStorage) {
 
             query += ` ORDER BY g.fecha_emision DESC, g.id DESC LIMIT 500`;
 
-            const [guias] = await dbConn.promise().query(query, params);
+            const [guias] = await dbConn.query(query, params);
 
             // Obtener ítems de cada guía
             if (guias.length > 0) {
                 const guiaIds = guias.map(g => g.id);
-                const [items] = await dbConn.promise().query(
+                const [items] = await dbConn.query(
                     `SELECT * FROM guias_remision_items WHERE guia_id IN (?)`,
                     [guiaIds]
                 );
@@ -220,13 +221,13 @@ module.exports = function(db, tenantStorage) {
             const cleanNumero = String(numero).trim().toUpperCase();
 
             // Verificar si ya existe registrada en la base de datos
-            const [existentes] = await dbConn.promise().query(
+            const [existentes] = await dbConn.query(
                 "SELECT * FROM guias_remision WHERE numero_guia = ?",
                 [cleanNumero]
             );
 
             // Obtener credenciales SUNAT
-            const [rows] = await dbConn.promise().query(
+            const [rows] = await dbConn.query(
                 "SELECT clave, valor FROM integraciones_api WHERE clave IN ('sunat_client_id', 'sunat_client_secret', 'sunat_ruc_emisor', 'sunat_usuario_sol', 'sunat_clave_sol', 'sunat_modo_entorno')"
             );
 
@@ -303,7 +304,7 @@ module.exports = function(db, tenantStorage) {
             // Si ya existía en la BD, reutilizar sus datos guardados
             if (existentes.length > 0) {
                 const guiaExist = existentes[0];
-                const [itemsExist] = await dbConn.promise().query("SELECT * FROM guias_remision_items WHERE guia_id = ?", [guiaExist.id]);
+                const [itemsExist] = await dbConn.query("SELECT * FROM guias_remision_items WHERE guia_id = ?", [guiaExist.id]);
                 guiaData = {
                     ...guiaExist,
                     items: itemsExist || []
@@ -312,7 +313,7 @@ module.exports = function(db, tenantStorage) {
             }
 
             // Insertar nueva guía en BD
-            const [insertRes] = await dbConn.promise().query(`
+            const [insertRes] = await dbConn.query(`
                 INSERT INTO guias_remision (
                     numero_guia, tipo_documento, fecha_emision, fecha_traslado,
                     remitente_ruc, remitente_razon_social, destinatario_ruc, destinatario_razon_social,
@@ -335,7 +336,7 @@ module.exports = function(db, tenantStorage) {
             // Insertar ítems
             if (guiaData.items && guiaData.items.length > 0) {
                 for (const item of guiaData.items) {
-                    await dbConn.promise().query(`
+                    await dbConn.query(`
                         INSERT INTO guias_remision_items (guia_id, codigo, descripcion, cantidad, unidad_medida, peso_unitario)
                         VALUES (?, ?, ?, ?, ?, ?)
                     `, [newId, item.codigo, item.descripcion, item.cantidad, item.unidad_medida, item.peso_unitario || 0]);
@@ -356,7 +357,7 @@ module.exports = function(db, tenantStorage) {
             await initTables(dbConn);
             const { id } = req.params;
 
-            await dbConn.promise().query("DELETE FROM guias_remision WHERE id = ?", [id]);
+            await dbConn.query("DELETE FROM guias_remision WHERE id = ?", [id]);
             res.json({ ok: true, message: "Guía eliminada con éxito." });
         } catch (err) {
             console.error("Error eliminando guia:", err);
