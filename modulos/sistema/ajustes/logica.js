@@ -45,6 +45,7 @@ window.init_ajustes = function() {
     let itemAuditoria  = document.getElementById('ajustes-item-auditoria');
     let itemAdmin      = document.getElementById('ajustes-item-admin');
     let adminSecHeader = document.getElementById('ajustes-admin-section-header');
+    let adminGroupBox  = document.getElementById('ajustes-admin-group-box');
 
     if (itemUsuarios)   itemUsuarios.style.display   = vUsuarios ? 'flex' : 'none';
     if (itemAuditoria)  itemAuditoria.style.display  = vAuditoria ? 'flex' : 'none';
@@ -52,6 +53,7 @@ window.init_ajustes = function() {
 
     let hasAnyAdmin = vUsuarios || vAuditoria || vAdminHub;
     if (adminSecHeader) adminSecHeader.style.display = hasAnyAdmin ? 'flex' : 'none';
+    if (adminGroupBox)  adminGroupBox.style.display  = hasAnyAdmin ? 'block' : 'none';
 
     // Configurar texto del idioma
     let langEl = document.getElementById('ajustes-lang-text');
