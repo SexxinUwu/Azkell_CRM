@@ -36,11 +36,11 @@
         #pantalla-login .login-card {
             background-color: var(--login-bg-card);
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
             display: flex;
             flex-direction: column;
-            padding: 2.25rem 2rem;
-            border-radius: 32px;
+            padding: 2.75rem 2.25rem 2.25rem 2.25rem;
+            border-radius: 36px;
             box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
             position: relative;
             transition: all 0.3s ease;
@@ -51,14 +51,16 @@
                 padding: 0;
                 background: var(--login-bg-card);
                 align-items: stretch;
+                overflow-y: auto;
             }
             #pantalla-login .login-card {
                 max-width: 100%;
+                min-height: 100vh;
                 border-radius: 0;
                 box-shadow: none;
-                padding: 2.5rem 1.5rem 2rem 1.5rem;
+                padding: 3rem 1.75rem 2.5rem 1.75rem;
                 flex: 1;
-                justify-content: center;
+                justify-content: flex-start;
             }
         }
 
@@ -71,14 +73,15 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 130px;
-            margin-bottom: 1.25rem;
+            height: 165px;
+            margin-bottom: 1.5rem;
         }
         #pantalla-login .logo-box img {
             max-height: 100%;
             width: auto;
             object-fit: contain;
-            transform: scale(1.1);
+            transform: scale(1.25);
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.06));
         }
         #pantalla-login .branding h1 {
             font-size: 1.65rem;
