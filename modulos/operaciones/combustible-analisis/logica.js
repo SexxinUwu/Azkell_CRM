@@ -413,15 +413,11 @@
 
             html += `
                 <tr>
-                    <td>
-                        <span class="badge px-2.5 py-1 font-monospace fw-bold" style="background:#eff6ff !important; color:#0f172a !important; border: 1px solid #93c5fd !important; font-size:0.78rem; letter-spacing:0.02em;">
-                            #${esc(t.numViaje || t.viaje)}
-                        </span>
+                    <td class="font-monospace fw-bold text-dark" style="color: #0f172a !important; font-size: 0.84rem;">
+                        #${esc(t.numViaje || t.viaje)}
                     </td>
-                    <td>
-                        <span class="badge bg-dark px-2.5 py-1 font-monospace fw-bold text-white shadow-2xs" style="font-size:0.78rem;">
-                            ${esc(t.placa)}
-                        </span>
+                    <td class="font-monospace fw-bold text-dark" style="color: #0f172a !important; font-size: 0.84rem;">
+                        ${esc(t.placa)}
                     </td>
                     <td class="text-truncate" style="max-width: 180px;" title="${esc(t.ruta)}">
                         <i class="bi bi-geo-alt-fill text-danger me-1 small"></i>
@@ -439,7 +435,6 @@
                     <td class="text-end font-monospace fw-bold ${rend > 0 ? 'text-indigo-600' : 'text-muted'}">
                         ${rend > 0 ? rend.toFixed(2) : '—'}
                     </td>
-                    <td class="text-end font-monospace">${semaforoBadge}</td>
 
                     <!-- Telemetría GPS Wialon CAN Bus (Celdas Celestes) -->
                     <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.05); color:#0284c7; border-left: 2px solid #bae6fd;">
