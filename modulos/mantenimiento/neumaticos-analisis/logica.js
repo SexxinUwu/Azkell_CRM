@@ -382,12 +382,15 @@
                     let fotosHtml = '<span class="text-muted small">—</span>';
                     if (fotos.length > 0) {
                         fotosHtml = `
-                            <div class="d-flex align-items-center justify-content-center gap-1">
+                            <div class="d-flex align-items-center justify-content-center gap-1.5">
                                 ${fotos.map((url, idx) => `
-                                    <img src="${url}" class="rounded-2 border shadow-2xs" 
-                                         style="width: 28px; height: 28px; object-fit: cover; cursor: pointer;" 
-                                         onclick="window.neuVerFotoModal('${url}')" 
-                                         title="Ver Foto ${idx + 1}" alt="Foto ${idx + 1}">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-primary py-0.5 px-2.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1 shadow-2xs" 
+                                            style="font-size: 0.72rem;" 
+                                            onclick="window.neuAbrirFotoNuevaVentana('${encodeURI(url)}')"
+                                            title="Ver Fotografía ${idx + 1} en nueva ventana">
+                                        <i class="bi bi-camera-fill"></i> Ver ${fotos.length > 1 ? (idx + 1) : ''}
+                                    </button>
                                 `).join('')}
                             </div>
                         `;
@@ -577,6 +580,32 @@
             setTimeout(() => {
                 if (!backdrop.classList.contains('show')) backdrop.style.display = 'none';
             }, 210);
+        }
+    };
+
+    window.neuAbrirFotoNuevaVentana = function(url) {
+        if (!url) return;
+        if (url.startsWith('data:image')) {
+            const w = window.open('');
+            if (w) {
+                w.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Fotografía de Neumático</title>
+                        <style>
+                            body { margin: 0; background: #0b0f19; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; }
+                            img { max-width: 95vw; max-height: 95vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); object-fit: contain; }
+                        </style>
+                    </head>
+                    <body>
+                        <img src="${url}" alt="Foto Neumático">
+                    </body>
+                    </html>
+                `);
+            }
+        } else {
+            window.open(url, '_blank');
         }
     };
 
