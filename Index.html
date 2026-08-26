@@ -734,32 +734,36 @@
             font-size: 1.2rem;
         }
         
-        /* Contenedor Agrupado de Opciones */
+        /* Contenedor de Opciones Independientes */
         .bnav-group-box {
-            background: var(--surface, #ffffff);
-            border-radius: 20px;
-            border: 1px solid var(--border, #e2e8f0);
-            overflow: hidden;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.02);
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
             margin-bottom: 1rem;
         }
 
-        /* Fila individual del menú */
+        /* Casilla individual independiente */
         .bnav-row-item {
             display: flex;
             align-items: center;
-            padding: 0.95rem 1.25rem;
-            background: transparent;
-            border-bottom: 1px solid var(--border, #f1f5f9);
+            padding: 0.9rem 1.15rem;
+            background: var(--surface, #ffffff);
+            border: 1px solid var(--border, #e2e8f0);
+            border-radius: 16px;
             cursor: pointer;
             text-decoration: none;
-            transition: background 0.15s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
         }
         .bnav-row-item:last-child {
-            border-bottom: none;
+            border-bottom: 1px solid var(--border, #e2e8f0);
         }
         .bnav-row-item:active {
-            background: rgba(0,0,0,0.04);
+            transform: scale(0.985);
+            background: rgba(0,0,0,0.02);
         }
 
         /* Icono minimalista directo sin cuadrados de fondo */
@@ -781,9 +785,9 @@
             justify-content: center;
         }
         .bnav-row-title {
-            font-weight: 600;
+            font-weight: 700;
             font-size: 0.92rem;
-            color: var(--text, #1e293b);
+            color: var(--text, #0f172a);
             margin: 0;
             line-height: 1.2;
         }
@@ -922,7 +926,7 @@
                     </div>
                     <i class="bi bi-chevron-down bnav-row-chevron" id="mbchev-neumaticos"></i>
                 </div>
-                <div class="d-none ps-3 bg-light-subtle" id="mbnav-submenu-neumaticos">
+                <div class="d-none ps-3 d-flex flex-column gap-2" id="mbnav-submenu-neumaticos">
                     <div id="mbnav-neumaticos-analisis" class="bnav-row-item" style="border-left: 3px solid #06b6d4;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/neumaticos-analisis'); setBottomNavActive('bnav-mantenimiento');">
                         <div class="bnav-row-icon" style="color: #06b6d4;"><i class="bi bi-graph-up"></i></div>
                         <div class="bnav-row-content">
@@ -1055,7 +1059,7 @@
                     </div>
                     <i class="bi bi-chevron-down bnav-row-chevron" id="mbchev-combustible"></i>
                 </div>
-                <div class="d-none ps-3 bg-light-subtle" id="mbnav-submenu-combustible">
+                <div class="d-none ps-3 d-flex flex-column gap-2" id="mbnav-submenu-combustible">
                     <div id="mbnav-op-combustible-vales" class="bnav-row-item" style="border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/combustible-vales'); setBottomNavActive('bnav-operaciones');">
                         <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-receipt"></i></div>
                         <div class="bnav-row-content">
