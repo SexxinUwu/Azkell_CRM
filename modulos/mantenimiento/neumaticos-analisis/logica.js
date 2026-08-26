@@ -376,6 +376,22 @@
                     const presAnt = d.presion_ant ? `<span class="text-muted d-block" style="font-size:0.7rem;">(Ant: ${d.presion_ant})</span>` : '';
                     const obs = d.observaciones || 'Ninguna';
 
+                    // Fotos
+                    const fotos = [d.foto1, d.foto2, d.foto3].filter(f => f && typeof f === 'string' && f.trim() !== '');
+                    let fotosHtml = '<span class="text-muted small">—</span>';
+                    if (fotos.length > 0) {
+                        fotosHtml = `
+                            <div class="d-flex align-items-center justify-content-center gap-1">
+                                ${fotos.map((url, idx) => `
+                                    <img src="${url}" class="rounded-2 border shadow-2xs" 
+                                         style="width: 28px; height: 28px; object-fit: cover; cursor: pointer;" 
+                                         onclick="window.neuVerFotoModal('${url}')" 
+                                         title="Ver Foto ${idx + 1}" alt="Foto ${idx + 1}">
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+
                     return `
                         <tr>
                             <td class="text-center align-middle">
@@ -401,6 +417,9 @@
                             </td>
                             <td class="text-center align-middle">
                                 ${badgeWear}
+                            </td>
+                            <td class="text-center align-middle">
+                                ${fotosHtml}
                             </td>
                             <td class="align-middle text-muted" style="font-size:0.78rem;">
                                 ${obs}
@@ -497,14 +516,15 @@
                     <!-- BENTO 2: TABLA DE LLANTAS EVALUADAS (CON SCROLLBAR INVISIBLE) -->
                     <div class="card border-0 rounded-4 overflow-hidden bg-white shadow-2xs mb-3" style="border: 1px solid #e2e8f0 !important;">
                         <div class="neu-detalle-table-wrap" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                            <table class="table table-hover align-middle mb-0" style="min-width: 680px; width: 100%; border-collapse: collapse;">
+                            <table class="table table-hover align-middle mb-0" style="min-width: 720px; width: 100%; border-collapse: collapse;">
                                 <thead>
                                     <tr style="background: #ffffff; border-bottom: 1.5px solid #e2e8f0;">
-                                        <th style="width: 50px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">POS</th>
-                                        <th style="width: 190px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px;">MARCA / MEDIDA / MODELO</th>
-                                        <th style="width: 130px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">R1 R2 R3 R4 (MM)</th>
-                                        <th style="width: 110px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">PRESIÓN PSI</th>
-                                        <th style="width: 130px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">ESTADO</th>
+                                        <th style="width: 45px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">POS</th>
+                                        <th style="width: 180px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px;">MARCA / MEDIDA / MODELO</th>
+                                        <th style="width: 125px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">R1 R2 R3 R4 (MM)</th>
+                                        <th style="width: 105px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">PRESIÓN PSI</th>
+                                        <th style="width: 125px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">ESTADO</th>
+                                        <th style="width: 75px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">FOTOS</th>
                                         <th style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px;">OBSERVACIONES</th>
                                     </tr>
                                 </thead>
@@ -557,6 +577,46 @@
                 if (!backdrop.classList.contains('show')) backdrop.style.display = 'none';
             }, 210);
         }
+    };
+
+    window.neuVerFotoModal = function(url) {
+        if (!url) return;
+        let modalEl = document.getElementById('modalFotoNeumaticoLightbox');
+        if (!modalEl) {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div class="modal fade" id="modalFotoNeumaticoLightbox" tabindex="-1" style="z-index: 2200 !important;">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden bg-dark">
+                            <div class="modal-header border-0 px-4 py-3 bg-dark text-white d-flex justify-content-between align-items-center">
+                                <h6 class="modal-title fw-bold m-0 text-white d-flex align-items-center gap-2">
+                                    <i class="bi bi-camera-fill text-primary"></i> Fotografía de Neumático
+                                </h6>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body p-0 text-center bg-black d-flex align-items-center justify-content-center" style="min-height: 380px; max-height: 75vh; overflow: hidden;">
+                                <img id="img-lightbox-neumatico" src="" class="img-fluid" style="max-height: 75vh; width: auto; object-fit: contain;">
+                            </div>
+                            <div class="modal-footer border-0 bg-dark px-4 py-2.5 d-flex justify-content-between align-items-center">
+                                <a id="btn-descargar-foto-neu" href="" target="_blank" download class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i> Abrir Original
+                                </a>
+                                <button type="button" class="btn btn-sm btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(div);
+            modalEl = document.getElementById('modalFotoNeumaticoLightbox');
+        }
+
+        const img = document.getElementById('img-lightbox-neumatico');
+        if (img) img.src = url;
+        const btnD = document.getElementById('btn-descargar-foto-neu');
+        if (btnD) btnD.href = url;
+
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
 
     window.abrirModalInspeccionNeumaticos = function(placa, idOT, km) {
