@@ -867,18 +867,17 @@ module.exports = function (db, broadcast, logAudit) {
                     p.marca as marca_unidad,
                     p.tipo as tipo_unidad,
                     p.motora
-                FROM neumaticos_inspecciones_det d
-                INNER JOIN (
-                    SELECT i1.placa, i1.id_inspeccion
+                FROM (
+                    SELECT i1.placa, i1.id_inspeccion, i1.fecha_inspeccion, i1.km_vehiculo
                     FROM neumaticos_inspecciones i1
                     INNER JOIN (
                         SELECT placa, MAX(fecha_inspeccion) as max_fecha
                         FROM neumaticos_inspecciones
                         GROUP BY placa
                     ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
-                ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci
-                INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci
-                LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
+                ) i
+                INNER JOIN neumaticos_inspecciones_det d ON d.id_inspeccion = i.id_inspeccion
+                LEFT JOIN placas p ON p.placa = i.placa
                 WHERE 1=1
             `;
             const params = [];
@@ -942,18 +941,17 @@ module.exports = function (db, broadcast, logAudit) {
                         WHEN d.posicion = 'R' THEN 'Repuesto'
                         ELSE 'Arrastre'
                     END as tipo_posicion
-                FROM neumaticos_inspecciones_det d
-                INNER JOIN (
-                    SELECT i1.placa, i1.id_inspeccion
+                FROM (
+                    SELECT i1.placa, i1.id_inspeccion, i1.fecha_inspeccion, i1.km_vehiculo
                     FROM neumaticos_inspecciones i1
                     INNER JOIN (
                         SELECT placa, MAX(fecha_inspeccion) as max_fecha
                         FROM neumaticos_inspecciones
                         GROUP BY placa
                     ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
-                ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci
-                INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci
-                LEFT JOIN placas p ON i.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
+                ) i
+                INNER JOIN neumaticos_inspecciones_det d ON d.id_inspeccion = i.id_inspeccion
+                LEFT JOIN placas p ON p.placa = i.placa
                 WHERE (d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0)
             `;
             const params = [];

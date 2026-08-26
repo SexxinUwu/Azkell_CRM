@@ -340,87 +340,214 @@
 
             let rows = '';
             if (detalles.length === 0) {
-                rows = `<tr><td colspan="14" class="text-center py-4 text-muted">No se encontraron llantas registradas para esta inspección.</td></tr>`;
+                rows = `<tr><td colspan="6" class="text-center py-5 text-muted">No se encontraron llantas registradas para esta inspección.</td></tr>`;
             } else {
                 rows = detalles.map(d => {
+                    const pos = String(d.posicion || '-').toUpperCase();
+                    const marca = (d.marca || '---').toUpperCase();
+                    const medida = (d.medida || '---').toUpperCase();
+                    const modelo = (d.modelo || '').toUpperCase();
+                    const estadoMat = (d.estado || 'NUEVA').toUpperCase();
+                    
+                    const r1 = d.r1 !== null && d.r1 !== undefined ? d.r1 : 0;
+                    const r2 = d.r2 !== null && d.r2 !== undefined ? d.r2 : 0;
+                    const r3 = d.r3 !== null && d.r3 !== undefined ? d.r3 : 0;
+                    const r4 = d.r4 !== null && d.r4 !== undefined ? d.r4 : 0;
+                    
                     const prom = parseFloat(d.remanente_promedio || 0);
-                    const badge = prom <= 4 ? 'bg-danger' : (prom <= 6 ? 'bg-warning text-dark' : 'bg-success');
-                    const fotosCount = (d.foto1 ? 1 : 0) + (d.foto2 ? 1 : 0) + (d.foto3 ? 1 : 0);
-                    const fotosHtml = fotosCount > 0 
-                        ? `<button class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill" onclick="window.neuVerFotoModal('${d.foto1||d.foto2||d.foto3}')"><i class="bi bi-camera-fill me-1"></i>${fotosCount}</button>` 
-                        : `<span class="text-muted small">-</span>`;
+                    let badgeWear = '';
+                    if (prom <= 4.0) {
+                        badgeWear = `<span class="badge rounded-pill px-2 py-1 fw-bold text-white shadow-2xs" style="background:#dc2626; font-size:0.75rem;"><i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>Crítica (≤4mm)</span>`;
+                    } else if (prom <= 6.0) {
+                        badgeWear = `<span class="badge rounded-pill px-2 py-1 fw-bold text-dark shadow-2xs" style="background:#fef3c7; color:#b45309 !important; border:1px solid #fde68a; font-size:0.75rem;"><i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>Alerta (4-6mm)</span>`;
+                    } else {
+                        badgeWear = `<span class="badge rounded-pill px-2 py-1 fw-bold text-dark shadow-2xs" style="background:#ecfdf5; color:#047857 !important; border:1px solid #a7f3d0; font-size:0.75rem;"><i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>Óptima (>6mm)</span>`;
+                    }
+
+                    const presAct = d.presion_actual ? `<b>${d.presion_actual} PSI</b>` : '---';
+                    const presAnt = d.presion_ant ? `<span class="text-muted d-block" style="font-size:0.7rem;">(Ant: ${d.presion_ant})</span>` : '';
+                    const obs = d.observaciones || 'Ninguna';
 
                     return `
                         <tr>
-                            <td class="ps-3"><span class="badge bg-primary rounded-pill px-2 fs-6">${d.posicion}</span></td>
-                            <td class="fw-bold">${d.marca}</td>
-                            <td>${d.medida}</td>
-                            <td><span class="badge bg-light text-dark border">${d.modelo}</span></td>
-                            <td class="text-center fw-bold">${d.r1}</td>
-                            <td class="text-center fw-bold">${d.r2}</td>
-                            <td class="text-center fw-bold">${d.r3}</td>
-                            <td class="text-center text-muted small">${d.r4 || 0}</td>
-                            <td class="text-center"><span class="badge ${badge} px-2 py-1">${prom} mm</span></td>
-                            <td class="text-center small">${d.presion_ant || 0} ➔ <b>${d.presion_actual} PSI</b></td>
-                            <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${d.estado}</span></td>
-                            <td><span class="badge bg-info bg-opacity-10 text-info">${d.accion}</span></td>
-                            <td><span class="badge ${d.rot !== 'NO' ? 'bg-warning text-dark' : 'bg-light text-muted border'}">${d.rot || 'NO'}</span></td>
-                            <td class="text-center">${fotosHtml}</td>
-                            <td class="small text-muted text-truncate" style="max-width:140px;">${d.observaciones || '---'}</td>
+                            <td class="text-center align-middle">
+                                <span class="badge rounded-circle p-0 d-inline-flex align-items-center justify-content-center fw-bold shadow-xs text-white" 
+                                      style="width: 28px; height: 28px; background: #0f172a; font-size: 0.8rem; letter-spacing: -0.02em;">
+                                    ${pos}
+                                </span>
+                            </td>
+                            <td class="align-middle">
+                                <div class="fw-bold text-dark font-monospace" style="font-size:0.86rem; line-height: 1.1;">
+                                    ${marca} ${modelo ? `(${modelo})` : ''}
+                                </div>
+                                <div class="text-muted small mt-0.5" style="font-size:0.72rem;">
+                                    ${medida} • <span class="fw-semibold text-secondary">${estadoMat}</span>
+                                </div>
+                            </td>
+                            <td class="text-center align-middle font-monospace fw-bold text-dark" style="font-size:0.86rem; letter-spacing: 0.08em;">
+                                ${r1} &nbsp;${r2} &nbsp;${r3} &nbsp;<span class="text-muted">${r4}</span>
+                            </td>
+                            <td class="text-center align-middle" style="font-size:0.82rem;">
+                                ${presAct}
+                                ${presAnt}
+                            </td>
+                            <td class="text-center align-middle">
+                                ${badgeWear}
+                            </td>
+                            <td class="align-middle text-muted" style="font-size:0.78rem;">
+                                ${obs}
+                            </td>
                         </tr>
                     `;
                 }).join('');
             }
 
-            let mEl = document.getElementById('modalVerDetalleNeumaticos');
-            if (!mEl) {
-                const div = document.createElement('div');
-                div.innerHTML = `
-                    <div class="modal fade" id="modalVerDetalleNeumaticos" tabindex="-1" style="z-index: 2050 !important;">
-                        <div class="modal-dialog modal-xl modal-fullscreen-md-down modal-dialog-centered modal-dialog-scrollable" style="z-index: 2051;">
-                            <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
-                                <div class="modal-header border-bottom bg-light px-4 py-3">
-                                    <h6 class="modal-title fw-bold text-dark d-flex align-items-center gap-2 m-0" id="mvd-title">Detalle de Inspección</h6>
-                                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body p-4" id="mvd-body"></div>
-                                <div class="modal-footer border-top bg-light px-4 py-3">
-                                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(div);
-                mEl = document.getElementById('modalVerDetalleNeumaticos');
+            // Backdrop
+            let backdrop = document.getElementById('neuDetalleBackdrop');
+            if (!backdrop) {
+                backdrop = document.createElement('div');
+                backdrop.id = 'neuDetalleBackdrop';
+                backdrop.className = 'neu-drawer-backdrop';
+                backdrop.onclick = window.neuCerrarDetalleModal;
+                document.body.appendChild(backdrop);
             }
 
-            document.getElementById('mvd-title').innerHTML = `<i class="bi bi-disc-fill text-primary"></i> Inspección: <span class="text-primary">${insp.id_inspeccion}</span> — <span class="badge bg-dark">${insp.placa}</span>`;
-            document.getElementById('mvd-body').innerHTML = `
-                <div class="row g-2 mb-3 p-3 bg-light rounded-3 border">
-                    <div class="col-6 col-md-3"><strong>Fecha:</strong> ${(insp.fecha_inspeccion||'').split('T')[0]}</div>
-                    <div class="col-6 col-md-3"><strong>KM Tablero:</strong> ${Number(insp.km_vehiculo||0).toLocaleString()} KM</div>
-                    <div class="col-6 col-md-3"><strong>Días Prop.:</strong> ${insp.dias_propuestos||30}</div>
-                    <div class="col-6 col-md-3"><strong>Próxima Insp.:</strong> ${(insp.fecha_proxima||'').split('T')[0]}</div>
-                    ${insp.observaciones ? `<div class="col-12 mt-2"><strong>Observaciones:</strong> ${insp.observaciones}</div>` : ''}
+            // Drawer
+            let drawerEl = document.getElementById('neu-drawer-visor-detalle');
+            if (drawerEl) {
+                drawerEl.remove();
+            }
+
+            drawerEl = document.createElement('div');
+            drawerEl.id = 'neu-drawer-visor-detalle';
+            drawerEl.className = 'neu-sub-drawer';
+            drawerEl.style.zIndex = '2150';
+            drawerEl.innerHTML = `
+                <style>
+                    #neu-drawer-visor-detalle .neu-detalle-table-wrap::-webkit-scrollbar {
+                        display: none !important;
+                        height: 0px !important;
+                    }
+                    #neu-drawer-visor-detalle .neu-detalle-table-wrap {
+                        -ms-overflow-style: none !important;
+                        scrollbar-width: none !important;
+                    }
+                </style>
+                <!-- HEADER BENTO -->
+                <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px; flex-shrink: 0;">
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
+                                onclick="window.neuCerrarDetalleModal()" 
+                                title="Volver" 
+                                style="width: 34px; height: 34px; color: var(--subtext);">
+                            <i class="bi bi-arrow-left"></i>
+                        </button>
+                        <div>
+                            <span class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+                                <i class="bi bi-disc-fill text-primary"></i> Inspección: <span class="text-primary font-monospace">${insp.id_inspeccion}</span>
+                                <span class="badge bg-dark rounded-pill px-2.5 py-0.5 fs-6 font-monospace">${insp.placa}</span>
+                            </span>
+                            <small class="text-muted d-block" style="font-size: 0.72rem;">Reporte integral de remanentes, presiones y estado de llantas</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.neuCerrarDetalleModal()" style="color:var(--subtext);" title="Cerrar">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover table-sm align-middle mb-0" style="font-size:0.8rem;">
-                        <thead class="table-light text-muted fw-bold">
-                            <tr>
-                                <th class="ps-3">Pos</th><th>Marca</th><th>Medida</th><th>Modelo</th>
-                                <th class="text-center">R1</th><th class="text-center">R2</th><th class="text-center">R3</th><th class="text-center">R4</th>
-                                <th class="text-center">Prom</th><th class="text-center">Presión</th><th>Estado</th><th>Acción</th><th>ROT</th><th class="text-center">Fotos</th><th>Obs</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
+
+                <!-- BODY SCROLL -->
+                <div class="p-3 overflow-auto custom-scrollbar flex-grow-1" style="background: #f8fafc; padding-bottom: 30px !important;">
+                    
+                    <!-- BENTO 1: FICHA RESUMEN DE INSPECCIÓN -->
+                    <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="row g-2" style="font-size: 0.82rem;">
+                            <div class="col-6 col-sm-3">
+                                <span class="text-muted d-block small fw-bold" style="font-size: 0.7rem; text-transform:uppercase;">Fecha</span>
+                                <span class="fw-bold text-dark font-monospace">${(insp.fecha_inspeccion||'').split('T')[0] || '---'}</span>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <span class="text-muted d-block small fw-bold" style="font-size: 0.7rem; text-transform:uppercase;">KM Tablero</span>
+                                <span class="fw-bold text-dark font-monospace">${Number(insp.km_vehiculo||0).toLocaleString()} KM</span>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <span class="text-muted d-block small fw-bold" style="font-size: 0.7rem; text-transform:uppercase;">Días Propuestos</span>
+                                <span class="fw-bold text-dark font-monospace">${insp.dias_propuestos||30} días</span>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <span class="text-muted d-block small fw-bold" style="font-size: 0.7rem; text-transform:uppercase;">Próxima Inspección</span>
+                                <span class="fw-bold text-primary font-monospace">${(insp.fecha_proxima||'').split('T')[0] || '---'}</span>
+                            </div>
+                            ${insp.observaciones ? `
+                                <div class="col-12 mt-2 pt-2 border-top">
+                                    <span class="text-muted d-block small fw-bold" style="font-size: 0.7rem; text-transform:uppercase;">Observaciones Generales</span>
+                                    <span class="text-secondary fw-medium">${insp.observaciones}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- BENTO 2: TABLA DE LLANTAS EVALUADAS (CON SCROLLBAR INVISIBLE) -->
+                    <div class="card border-0 rounded-4 overflow-hidden bg-white shadow-2xs mb-3" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="neu-detalle-table-wrap" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <table class="table table-hover align-middle mb-0" style="min-width: 680px; width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #ffffff; border-bottom: 1.5px solid #e2e8f0;">
+                                        <th style="width: 50px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">POS</th>
+                                        <th style="width: 190px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px;">MARCA / MEDIDA / MODELO</th>
+                                        <th style="width: 130px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">R1 R2 R3 R4 (MM)</th>
+                                        <th style="width: 110px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">PRESIÓN PSI</th>
+                                        <th style="width: 130px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">ESTADO</th>
+                                        <th style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px;">OBSERVACIONES</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${rows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- FOOTER FIJO -->
+                <div class="bg-white border-top px-3 py-2.5 d-flex align-items-center justify-content-end" style="position: sticky; bottom: 0; z-index: 10; height: 56px; flex-shrink: 0;">
+                    <button type="button" class="btn btn-sm btn-secondary rounded-pill px-4 py-1.5 fw-bold" onclick="window.neuCerrarDetalleModal()">Cerrar</button>
                 </div>
             `;
+            document.body.appendChild(drawerEl);
 
-            bootstrap.Modal.getOrCreateInstance(mEl).show();
+            // Apertura con aceleración por hardware
+            drawerEl.style.display = 'flex';
+            drawerEl.style.visibility = 'visible';
+            backdrop.style.display = 'block';
+            
+            requestAnimationFrame(() => {
+                drawerEl.classList.add('open');
+                backdrop.classList.add('show');
+            });
+
         } catch (e) {
             alert(`Error: ${e.message}`);
+        }
+    };
+
+    window.neuCerrarDetalleModal = function() {
+        const drawerEl = document.getElementById('neu-drawer-visor-detalle');
+        const backdrop = document.getElementById('neuDetalleBackdrop');
+        if (drawerEl) {
+            drawerEl.classList.remove('open');
+            setTimeout(() => {
+                if (!drawerEl.classList.contains('open')) {
+                    drawerEl.style.visibility = 'hidden';
+                    drawerEl.style.display = 'none';
+                }
+            }, 210);
+        }
+        if (backdrop) {
+            backdrop.classList.remove('show');
+            setTimeout(() => {
+                if (!backdrop.classList.contains('show')) backdrop.style.display = 'none';
+            }, 210);
         }
     };
 
