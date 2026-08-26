@@ -381,17 +381,22 @@
                     const fotos = [d.foto1, d.foto2, d.foto3].filter(f => f && typeof f === 'string' && f.trim() !== '');
                     let fotosHtml = '<span class="text-muted small">—</span>';
                     if (fotos.length > 0) {
+                        if (!window._neuFotosMap) window._neuFotosMap = {};
                         fotosHtml = `
                             <div class="d-flex align-items-center justify-content-center gap-1.5">
-                                ${fotos.map((url, idx) => `
-                                    <button type="button" 
-                                            class="btn btn-sm btn-outline-primary py-0.5 px-2.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1 shadow-2xs" 
-                                            style="font-size: 0.72rem;" 
-                                            onclick="window.neuAbrirFotoNuevaVentana('${encodeURI(url)}')"
-                                            title="Ver Fotografía ${idx + 1} en nueva ventana">
-                                        <i class="bi bi-camera-fill"></i> Ver ${fotos.length > 1 ? (idx + 1) : ''}
-                                    </button>
-                                `).join('')}
+                                ${fotos.map((url, idx) => {
+                                    const fotoId = `foto_${d.id || d.id_neumatico || 'pos' + pos}_${idx}_${Date.now()}`;
+                                    window._neuFotosMap[fotoId] = url;
+                                    return `
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-primary py-0.5 px-2.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1 shadow-2xs" 
+                                                style="font-size: 0.72rem;" 
+                                                onclick="window.neuAbrirFotoPorKey('${fotoId}')"
+                                                title="Ver Fotografía ${idx + 1} en nueva ventana">
+                                            <i class="bi bi-camera-fill"></i> Ver ${fotos.length > 1 ? (idx + 1) : ''}
+                                        </button>
+                                    `;
+                                }).join('')}
                             </div>
                         `;
                     }
@@ -581,6 +586,12 @@
                 if (!backdrop.classList.contains('show')) backdrop.style.display = 'none';
             }, 210);
         }
+    };
+
+    window.neuAbrirFotoPorKey = function(key) {
+        if (!window._neuFotosMap || !window._neuFotosMap[key]) return;
+        const url = window._neuFotosMap[key];
+        window.neuAbrirFotoNuevaVentana(url);
     };
 
     window.neuAbrirFotoNuevaVentana = function(url) {
