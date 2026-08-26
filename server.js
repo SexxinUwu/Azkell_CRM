@@ -94,6 +94,7 @@ app.use((req, res, next) => {
     });
 });
 app.use('/api/superadmin', require('./routes/superadmin')());
+app.use('/api/guias-remision', require('./routes/guias_remision')(db, tenantStorage));
 
 // ── CONFIGURACION ERP ─────────────────────────────────────────────────────────
 app.get('/api/configuracion', async (req, res) => {
