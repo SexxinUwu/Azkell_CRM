@@ -106,6 +106,7 @@
                 cutout: '70%',
                 plugins: {
                     legend: { display: false },
+                    datalabels: false,
                     tooltip: {
                         callbacks: {
                             label: function(ctx) {
