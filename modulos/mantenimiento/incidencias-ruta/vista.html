@@ -646,168 +646,222 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- 2. PESTAÑA: MÉTRICAS & GRÁFICAS SEGMENTADAS (PANTALLA COMPLETA) -->
+    <!-- 2. PESTAÑA: MÉTRICAS & GRÁFICAS SEGMENTADAS (DISEÑO EJECUTIVO 1:1) -->
     <!-- ============================================================ -->
     <div id="inc-view-graficas" style="display: none;">
         
-        <!-- Header Filtro Anual de Gráficas -->
+        <!-- Header Filtro Anual de Gráficas & Botón PDF -->
         <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2 mb-3 p-3 bg-white border rounded-4 shadow-2xs">
             <div>
-                <h6 class="fw-bolder text-dark m-0 d-flex align-items-center gap-2">
-                    <i class="bi bi-bar-chart-line-fill text-primary"></i> Tablero Analítico de Incidencias en Ruta
-                </h6>
-                <p class="text-muted small m-0">Diagnóstico predictivo de fallas viales, impacto financiero en carretera y unidades críticas</p>
+                <span class="text-primary fw-bold small text-uppercase" style="font-size:0.72rem; letter-spacing:0.06em;">Tablero de Control Gerencial</span>
+                <h4 class="fw-bolder text-dark m-0" style="letter-spacing:-0.02em;">Indicadores Clave de Rendimiento (KPIs) & Analítica Predictiva</h4>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <span class="small fw-bold text-secondary">Año Fiscal:</span>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="small fw-bold text-secondary">Período:</span>
                 <select id="inc-analytics-anio" class="form-select form-select-sm rounded-pill px-3 fw-bold border-secondary-subtle" style="width: 110px;" onchange="window.incCargarGraficas()">
                     <option value="2026" selected>2026</option>
                     <option value="2025">2025</option>
                     <option value="2024">2024</option>
                 </select>
-                <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" onclick="window.incCargarGraficas()">
+                <button class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.incExportarPDFGraficas()">
+                    <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Exportar PDF
+                </button>
+                <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold d-flex align-items-center gap-1" onclick="window.incCargarGraficas()">
                     <i class="bi bi-arrow-clockwise"></i> Recargar
                 </button>
             </div>
         </div>
 
-        <!-- Bento Mini-KPIs Analíticos de Alto Impacto -->
-        <div class="row g-3 mb-3">
-            <div class="col-6 col-lg-3">
-                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-1">
-                        <span class="text-muted small fw-bold text-uppercase" style="font-size:0.7rem;">Costo Promedio / Falla</span>
-                        <div class="rounded-3 p-1.5" style="background:#eff6ff; color:#2563eb;"><i class="bi bi-calculator fs-6"></i></div>
-                    </div>
-                    <h4 class="fw-bold text-primary m-0" id="ga-kpi-costo-prom">S/ 0.00</h4>
-                    <small class="text-muted d-block" style="font-size:0.72rem;">Gasto promedio por rescate vial</small>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-1">
-                        <span class="text-muted small fw-bold text-uppercase" style="font-size:0.7rem;">Tasa de Transbordos</span>
-                        <div class="rounded-3 p-1.5" style="background:#fffbeb; color:#d97706;"><i class="bi bi-shuffle fs-6"></i></div>
-                    </div>
-                    <h4 class="fw-bold text-warning m-0" id="ga-kpi-transbordo">0%</h4>
-                    <small class="text-muted d-block" id="ga-kpi-transbordo-sub" style="font-size:0.72rem;">0 de 0 con pase de carga</small>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-1">
-                        <span class="text-muted small fw-bold text-uppercase" style="font-size:0.7rem;">Eficacia de Cierre</span>
-                        <div class="rounded-3 p-1.5" style="background:#ecfdf5; color:#059669;"><i class="bi bi-shield-check fs-6"></i></div>
-                    </div>
-                    <h4 class="fw-bold text-success m-0" id="ga-kpi-eficacia">100%</h4>
-                    <small class="text-muted d-block" id="ga-kpi-eficacia-sub" style="font-size:0.72rem;">0 casos pendientes</small>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-1">
-                        <span class="text-muted small fw-bold text-uppercase" style="font-size:0.7rem;">Gasto Anual Total</span>
-                        <div class="rounded-3 p-1.5" style="background:#f5f3ff; color:#7c3aed;"><i class="bi bi-cash-stack fs-6"></i></div>
-                    </div>
-                    <h4 class="fw-bold text-dark m-0" id="ga-kpi-gasto-anual">S/ 0.00</h4>
-                    <small class="text-muted d-block" style="font-size:0.72rem;">Presupuesto ejecutado en ruta</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Gráficos Segmentados Bento -->
-        <div class="row g-3 mb-3">
+        <!-- CONTENEDOR EXPORTABLE A PDF (SECCIÓN GERENCIAL LIMPIA) -->
+        <div id="inc-graficas-pdf-content">
             
-            <!-- 1. GRÁFICO 1: EVOLUCIÓN MENSUAL (INCIDENCIAS VS COSTO) -->
-            <div class="col-12 col-xl-8">
-                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-2 pb-2 border-bottom">
-                        <div>
-                            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
-                                <i class="bi bi-graph-up-arrow text-primary"></i> 1. Evolución Mensual de Incidencias & Costos
-                            </h6>
-                            <small class="text-muted" style="font-size:0.72rem;">Comportamiento estacional: barras de cantidad de auxilios y curva de gasto en Soles (S/)</small>
-                        </div>
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill small">Mensual</span>
-                    </div>
-                    <div style="position: relative; height: 280px; width: 100%;">
-                        <canvas id="chartIncMensual"></canvas>
+            <!-- BLOQUE 1: KPIs SUPERIORES CON LÍNEA DE COLOR SUPERIOR (1:1 IMAGEN 4) -->
+            <div class="row g-2 g-md-3 mb-3">
+                
+                <!-- 1. Total Incidencias (Azul) -->
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100 position-relative overflow-hidden" style="border: 1px solid #e2e8f0 !important; border-top: 4px solid #0284c7 !important;">
+                        <h3 class="fw-bolder text-dark m-0 mb-1" id="ga-kpi-total">0</h3>
+                        <div class="fw-bold text-secondary text-uppercase" style="font-size:0.68rem; letter-spacing:0.04em;">Total Incidencias</div>
+                        <small class="text-muted d-block" style="font-size:0.68rem;">100% Casos Registrados</small>
                     </div>
                 </div>
+
+                <!-- 2. Fallas Mecánicas (Rojo) -->
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100 position-relative overflow-hidden" style="border: 1px solid #e2e8f0 !important; border-top: 4px solid #ef4444 !important;">
+                        <h3 class="fw-bolder text-danger m-0 mb-1" id="ga-kpi-porc-mecanica">0%</h3>
+                        <div class="fw-bold text-secondary text-uppercase" style="font-size:0.68rem; letter-spacing:0.04em;">Fallas Mecánicas</div>
+                        <small class="text-muted d-block" id="ga-kpi-cnt-mecanica" style="font-size:0.68rem;">0 Eventos Técnicos</small>
+                    </div>
+                </div>
+
+                <!-- 3. Por Garantía (Verde) -->
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100 position-relative overflow-hidden" style="border: 1px solid #e2e8f0 !important; border-top: 4px solid #10b981 !important;">
+                        <h3 class="fw-bolder text-success m-0 mb-1" id="ga-kpi-porc-garantia">0%</h3>
+                        <div class="fw-bold text-secondary text-uppercase" style="font-size:0.68rem; letter-spacing:0.04em;">Por Garantía</div>
+                        <small class="text-muted d-block" id="ga-kpi-cnt-garantia" style="font-size:0.68rem;">0 Casos Cubiertos</small>
+                    </div>
+                </div>
+
+                <!-- 4. Resp. Conductor (Amarillo/Naranja) -->
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100 position-relative overflow-hidden" style="border: 1px solid #e2e8f0 !important; border-top: 4px solid #f59e0b !important;">
+                        <h3 class="fw-bolder text-warning m-0 mb-1" id="ga-kpi-porc-conductor">0%</h3>
+                        <div class="fw-bold text-secondary text-uppercase" style="font-size:0.68rem; letter-spacing:0.04em;">Resp. Conductor</div>
+                        <small class="text-muted d-block" id="ga-kpi-cnt-conductor" style="font-size:0.68rem;">0 Malas Maniobras</small>
+                    </div>
+                </div>
+
+                <!-- 5. Tasa Resolución (Teal) -->
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100 position-relative overflow-hidden" style="border: 1px solid #e2e8f0 !important; border-top: 4px solid #06b6d4 !important;">
+                        <h3 class="fw-bolder text-info m-0 mb-1" id="ga-kpi-porc-resolucion">0%</h3>
+                        <div class="fw-bold text-secondary text-uppercase" style="font-size:0.68rem; letter-spacing:0.04em;">Tasa Resolución</div>
+                        <small class="text-muted d-block" id="ga-kpi-cnt-resolucion" style="font-size:0.68rem;">0 Atendidos / 0 Pend.</small>
+                    </div>
+                </div>
+
+                <!-- 6. Sin Transbordo (Morado) -->
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100 position-relative overflow-hidden" style="border: 1px solid #e2e8f0 !important; border-top: 4px solid #8b5cf6 !important;">
+                        <h3 class="fw-bolder text-primary m-0 mb-1" id="ga-kpi-porc-sintransbordo">0%</h3>
+                        <div class="fw-bold text-secondary text-uppercase" style="font-size:0.68rem; letter-spacing:0.04em;">Sin Transbordo</div>
+                        <small class="text-muted d-block" style="font-size:0.68rem;">Continuidad de Servicio</small>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- 2. GRÁFICO 2: DISTRIBUCIÓN POR ÁREA RESPONSABLE -->
-            <div class="col-12 col-xl-4">
-                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
-                        <div>
-                            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
-                                <i class="bi bi-pie-chart text-primary"></i> 2. Incidencias por Área Responsable
-                            </h6>
-                            <small class="text-muted" style="font-size:0.72rem;">Proporción entre Mantenimiento, Flota y Operaciones</small>
+            <!-- BLOQUE 2: DIAGNÓSTICO EJECUTIVO PREDICTIVO & DONUT DE RESPONSABILIDAD (1:1 IMAGEN 4) -->
+            <div class="row g-3 mb-3">
+                
+                <!-- Diagnóstico Predictivo Dinámico -->
+                <div class="col-12 col-lg-7">
+                    <div class="card border-0 rounded-4 p-3 p-md-4 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:0.95rem;">
+                            <i class="bi bi-cpu text-primary"></i> Diagnóstico Ejecutivo de Gestión Predictiva
+                        </h6>
+                        <ul class="list-unstyled d-flex flex-column gap-2 mb-3" id="ga-predictivo-list" style="font-size:0.83rem; line-height: 1.5; color:#334155;">
+                            <!-- Inyectado dinámicamente con análisis de datos real -->
+                        </ul>
+                        <div class="p-2.5 rounded-3 border-start border-4 border-primary bg-light mt-auto" style="font-size:0.8rem; background: #f0fdf4 !important; border-color: #22c55e !important;">
+                            <b class="text-dark">Meta Estratégica:</b> <span id="ga-predictivo-meta" class="text-secondary">Reducir el índice de paradas no programadas mediante protocolos de inspección pre-viaje y mantenimiento preventivo continuo.</span>
                         </div>
-                    </div>
-                    <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 280px;">
-                        <div style="position: relative; height: 210px; width: 210px;">
-                            <canvas id="chartIncArea"></canvas>
-                        </div>
-                        <div id="chartIncAreaLegend" class="d-flex justify-content-center gap-3 mt-2 flex-wrap small fw-bold" style="font-size:0.75rem;"></div>
                     </div>
                 </div>
+
+                <!-- Donut Interactivo de Responsabilidad Operativa con Clic para Ver Detalle -->
+                <div class="col-12 col-lg-5">
+                    <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                            <div>
+                                <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
+                                    <i class="bi bi-pie-chart-fill text-primary"></i> Distribución por Responsabilidad Operativa
+                                </h6>
+                                <small class="text-muted" style="font-size:0.7rem;">Haz clic en cualquier segmento para ver el detalle de incidentes</small>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 250px;">
+                            <div style="position: relative; height: 210px; width: 210px; cursor: pointer;">
+                                <canvas id="chartIncArea"></canvas>
+                            </div>
+                            <div id="chartIncAreaLegend" class="d-flex justify-content-center gap-3 mt-3 flex-wrap small fw-bold" style="font-size:0.76rem;"></div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- 3. GRÁFICO 3: TOP PLACAS CON MAYOR INCIDENCIAS -->
-            <div class="col-12 col-lg-6">
-                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
-                        <div>
-                            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
-                                <i class="bi bi-truck-front text-danger"></i> 3. Top Placas con Mayor Cantidad de Fallas
-                            </h6>
-                            <small class="text-muted" style="font-size:0.72rem;">Unidades críticas con mayor frecuencia de detenciones en carretera</small>
+            <!-- BLOQUE 3: COMPORTAMIENTO TEMPORAL & DESGLOSE ESTADÍSTICO MENSUAL (1:1 IMAGEN 5) -->
+            <div class="row g-3 mb-3">
+                
+                <!-- Gráfico de Evolución Mensual -->
+                <div class="col-12 col-lg-7">
+                    <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                            <div>
+                                <span class="text-primary fw-bold small text-uppercase" style="font-size:0.68rem; letter-spacing:0.04em;">Comportamiento Temporal</span>
+                                <h6 class="fw-bold text-dark m-0 small">Evolución y Tendencia Mensual de Incidencias</h6>
+                            </div>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill small">Histórico</span>
                         </div>
-                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill small">Top 8</span>
-                    </div>
-                    <div style="position: relative; height: 260px; width: 100%;">
-                        <canvas id="chartIncTopPlacas"></canvas>
+                        <div style="position: relative; height: 280px; width: 100%;">
+                            <canvas id="chartIncMensual"></canvas>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Desglose Estadístico Mensual en Tabla con Semáforos -->
+                <div class="col-12 col-lg-5">
+                    <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                            <h6 class="fw-bold text-dark m-0 small">Desglose Estadístico Mensual</h6>
+                            <span class="badge bg-light text-dark border small" id="ga-tabla-meses-resumen">8 Meses</span>
+                        </div>
+                        <div class="table-responsive" style="max-height: 240px;">
+                            <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.78rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="fw-bold text-secondary">MES</th>
+                                        <th class="fw-bold text-secondary text-center">FALLAS</th>
+                                        <th class="fw-bold text-secondary text-center">% TOTAL</th>
+                                        <th class="fw-bold text-secondary text-center">ESTADO</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ga-tbody-desglose-mensual">
+                                    <!-- Inyectado dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-2 rounded-3 bg-light border-start border-3 border-primary mt-2" style="font-size:0.75rem;">
+                            <b class="text-dark">Hallazgo Crítico:</b> <span id="ga-hallazgo-critico" class="text-secondary">Calculando tendencia de paradas...</span>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- 4. GRÁFICO 4: PARETO DE FALLAS MÁS FRECUENTES -->
-            <div class="col-12 col-lg-6">
-                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
-                        <div>
-                            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
-                                <i class="bi bi-tools text-warning"></i> 4. Top Fallas y Motivos Frecuentes (Pareto 80/20)
-                            </h6>
-                            <small class="text-muted" style="font-size:0.72rem;">Causas raíz mecánicas, eléctricas o de desgaste con mayor recurrencia</small>
+            <!-- BLOQUE 4: TOP PLACAS CRÍTICAS & TOP FALLAS RECURRENTES -->
+            <div class="row g-3 mb-3">
+                
+                <!-- Top Placas con Clic para Ver Historial de Fallas de la Unidad -->
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                            <div>
+                                <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
+                                    <i class="bi bi-truck-front text-danger"></i> Top Placas con Mayor Cantidad de Fallas
+                                </h6>
+                                <small class="text-muted" style="font-size:0.7rem;">Haz clic en cualquier barra de placa para ver sus fallas detalladas</small>
+                            </div>
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill small">Top 8</span>
                         </div>
-                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill small">Causas</span>
-                    </div>
-                    <div style="position: relative; height: 260px; width: 100%;">
-                        <canvas id="chartIncTopFallas"></canvas>
+                        <div style="position: relative; height: 260px; width: 100%; cursor: pointer;">
+                            <canvas id="chartIncTopPlacas"></canvas>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- 5. GRÁFICO 5: INCIDENCIAS POR RESPONSABLE / CONDUCTOR -->
-            <div class="col-12">
-                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
-                        <div>
-                            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
-                                <i class="bi bi-people-fill text-info"></i> 5. Incidencias Atendidas por Responsable
-                            </h6>
-                            <small class="text-muted" style="font-size:0.72rem;">Carga de gestión, rescates y resolución por personal asignado</small>
+                <!-- Top Fallas / Motivos (Pareto) -->
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                            <div>
+                                <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
+                                    <i class="bi bi-tools text-warning"></i> Top Fallas y Motivos Frecuentes (Pareto 80/20)
+                                </h6>
+                                <small class="text-muted" style="font-size:0.7rem;">Causas raíz con mayor recurrencia técnica</small>
+                            </div>
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill small">Causas</span>
                         </div>
-                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill small">Personal</span>
-                    </div>
-                    <div style="position: relative; height: 240px; width: 100%;">
-                        <canvas id="chartIncResponsables"></canvas>
+                        <div style="position: relative; height: 260px; width: 100%;">
+                            <canvas id="chartIncTopFallas"></canvas>
+                        </div>
                     </div>
                 </div>
+
             </div>
 
         </div>
