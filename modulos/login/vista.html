@@ -65,33 +65,34 @@
         /* Branding */
         #pantalla-login .branding {
             text-align: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.75rem;
         }
         #pantalla-login .logo-box {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 85px;
+            height: 130px;
             margin-bottom: 1.25rem;
         }
         #pantalla-login .logo-box img {
             max-height: 100%;
-            max-width: 220px;
+            width: auto;
             object-fit: contain;
+            transform: scale(1.1);
         }
         #pantalla-login .branding h1 {
-            font-size: 1.55rem;
+            font-size: 1.65rem;
             font-weight: 800;
             color: var(--login-text-main);
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.5rem;
             letter-spacing: -0.02em;
         }
         #pantalla-login .branding p {
-            font-size: 0.85rem;
+            font-size: 0.86rem;
             color: var(--login-text-muted);
-            line-height: 1.4;
+            line-height: 1.45;
             margin: 0 auto;
-            max-width: 320px;
+            max-width: 340px;
         }
 
         /* Segmented Control iOS Tab */
@@ -105,7 +106,7 @@
         }
         #pantalla-login .segmented-btn {
             flex: 1;
-            padding: 8px 16px;
+            padding: 9px 16px;
             border-radius: 10px;
             font-size: 0.88rem;
             font-weight: 700;
@@ -125,23 +126,30 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
 
-        /* Form Inputs estilo iOS Inset */
+        /* Formulario y Form Groups */
+        #pantalla-login form {
+            display: block;
+            width: 100%;
+        }
         #pantalla-login .form-group {
-            margin-bottom: 1rem;
+            display: block;
+            width: 100%;
+            margin-bottom: 1.15rem;
             text-align: left;
         }
         #pantalla-login .input-label {
-            font-size: 0.76rem;
+            font-size: 0.78rem;
             font-weight: 700;
             color: var(--login-text-muted);
             text-transform: uppercase;
             letter-spacing: 0.03em;
-            margin-bottom: 0.4rem;
+            margin-bottom: 0.45rem;
             display: block;
         }
         #pantalla-login .input-container {
             display: flex;
             align-items: center;
+            width: 100%;
             background: var(--login-input-bg);
             border: 1px solid var(--login-border);
             border-radius: 16px;
@@ -159,9 +167,11 @@
             margin-right: 0.75rem;
             display: flex;
             align-items: center;
+            flex-shrink: 0;
         }
         #pantalla-login .input-field {
             width: 100%;
+            flex: 1;
             padding: 0.85rem 0;
             border: none;
             background: transparent;
@@ -183,6 +193,7 @@
             padding: 0;
             display: flex;
             align-items: center;
+            flex-shrink: 0;
         }
 
         /* Checkbox & Forgot Password */
@@ -190,7 +201,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: 0.5rem 0 1.5rem 0;
+            margin: 0.75rem 0 1.5rem 0;
+            width: 100%;
         }
         #pantalla-login .remember-wrap {
             display: flex;
@@ -268,29 +280,29 @@
             background: rgba(16, 185, 129, 0.08);
             border: 1px dashed var(--login-primary);
             border-radius: 16px;
-            padding: 1.25rem;
+            padding: 1.5rem 1.25rem;
             text-align: center;
             display: none;
             margin-bottom: 1.5rem;
             animation: fadeIn 0.25s ease;
         }
         #pantalla-login .login-alert-box i {
-            font-size: 1.75rem;
+            font-size: 2rem;
             color: var(--login-primary);
             margin-bottom: 0.5rem;
             display: block;
         }
         #pantalla-login .login-alert-box h4 {
-            font-size: 0.95rem;
+            font-size: 1rem;
             font-weight: 800;
             color: var(--login-text-main);
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.35rem;
         }
         #pantalla-login .login-alert-box p {
-            font-size: 0.8rem;
+            font-size: 0.84rem;
             color: var(--login-text-muted);
             margin: 0;
-            line-height: 1.35;
+            line-height: 1.4;
         }
 
         /* Toast */
@@ -330,13 +342,13 @@
             <span id="toast-message">Mensaje</span>
         </div>
 
-        <!-- Branding & Logo -->
+        <!-- Branding & Logo Grande -->
         <div class="branding">
             <div class="logo-box">
                 <img src="/login-logo-2001.png" alt="Azkell Fleet Logo">
             </div>
-            <h1>¡Bienvenido!</h1>
-            <p>Ingresa tus credenciales para acceder a la plataforma ERP de Azkell Fleet.</p>
+            <h1>Iniciar sesión</h1>
+            <p>Monitorea, controla y optimiza tus recursos con Azkell Fleet. Todo el poder de tu operación en una sola pantalla, ahora con una interfaz moderna y rápida.</p>
         </div>
 
         <!-- Segmented Tab: Iniciar Sesión / Registrarse -->
@@ -353,7 +365,7 @@
         <div class="login-alert-box" id="box-registro-info">
             <i class="bi bi-shield-lock"></i>
             <h4>Acceso Restringido</h4>
-            <p>El registro de nuevas cuentas está gestionado por la empresa. Comunícate con el <strong>Administrador de Sistemas</strong> para solicitar tus accesos.</p>
+            <p>El registro de nuevas cuentas está gestionado centralizadamente. Comunícate con el <strong>Administrador de Sistemas</strong> para solicitar tus credenciales de acceso.</p>
         </div>
 
         <!-- Formulario -->
