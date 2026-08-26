@@ -46,10 +46,7 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'SEGURIDAD',     key:'asist',         nombre:'Tareo de Asistencia',desc:'Asistencia del personal',     lcad:true  },
     { grupo:'CONFIGURACIÓN', key:'usuarios',      nombre:'Usuarios y Roles', desc:'Gestión de accesos y seguridad',lcad:true },
     { grupo:'CONFIGURACIÓN', key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad global',  lcad:true  },
-    { grupo:'CONFIGURACIÓN', key:'cfg_apariencia',nombre:'Apariencia',       desc:'Personalización visual',        lcad:true  },
-    { grupo:'CONFIGURACIÓN', key:'cfg_accesibilidad',nombre:'Accesibilidad', desc:'Ajustes de uso',                lcad:true  },
-    { grupo:'CONFIGURACIÓN', key:'cfg_idioma',    nombre:'Idioma',           desc:'Idiomas del sistema',           lcad:true  },
-    { grupo:'CONFIGURACIÓN', key:'administracion',nombre:'Administración',   desc:'Hub de administración maestra', lcad:true  }
+    { grupo:'CONFIGURACIÓN', key:'administracion',nombre:'Administración / Empresa', desc:'Hub de administración maestra', lcad:true }
 ];
 
 
