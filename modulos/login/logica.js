@@ -133,6 +133,44 @@ window.init_login = function() {
     }
 };
 
+// Alternar entre Tab Iniciar Sesión y Registrarse
+window.cambiarTabLogin = function(tab) {
+    const tabLogin = document.getElementById('tab-login');
+    const tabReg = document.getElementById('tab-register');
+    const form = document.getElementById('loginForm');
+    const boxReg = document.getElementById('box-registro-info');
+
+    if (tab === 'register') {
+        if(tabLogin) tabLogin.classList.remove('active');
+        if(tabReg) tabReg.classList.add('active');
+        if(form) form.style.display = 'none';
+        if(boxReg) boxReg.style.display = 'block';
+    } else {
+        if(tabReg) tabReg.classList.remove('active');
+        if(tabLogin) tabLogin.classList.add('active');
+        if(boxReg) boxReg.style.display = 'none';
+        if(form) form.style.display = 'flex';
+    }
+};
+
+// Alerta para recuperación de contraseña
+window.mostrarOlvidoPassword = function() {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Recuperar Contraseña',
+            html: '<p style="font-size:0.95rem; color:#64748b; margin-top:0.5rem;">Por motivos de seguridad institucional, el restablecimiento de contraseñas es gestionado directamente por el área de TI.</p><div style="background:#f1f5f9; padding:12px; border-radius:12px; margin-top:10px; font-size:0.88rem; font-weight:600; color:#334155;"><i class="bi bi-headset me-2 text-primary"></i> Contacta a tu administrador o envía un correo a soporte interno.</div>',
+            icon: 'info',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#10b981',
+            customClass: {
+                popup: 'rounded-4'
+            }
+        });
+    } else {
+        alert('Por motivos de seguridad, comunícate con el Administrador de Sistemas para restablecer tu contraseña.');
+    }
+};
+
 window.showLoginToast = function(message, type = 'error') {
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toast-message');

@@ -3,323 +3,319 @@
         :root {
             --login-primary: #10b981;
             --login-primary-hover: #059669;
-            --login-bg-body: #f3f4f6; /* Usado como fallback, pero dejaremos transparente en web */
-            --login-bg-color: #ffffff;
-            --login-text-main: #111827;
-            --login-text-muted: #6b7280;
-            --login-border-color: #e5e7eb;
-            --login-input-bg: #ffffff;
-            --login-icon-bg: #f1f5f9;
-            --login-icon-hover: #e2e8f0;
+            --login-bg-body: #f8fafc;
+            --login-bg-card: #ffffff;
+            --login-text-main: #0f172a;
+            --login-text-muted: #64748b;
+            --login-border: #e2e8f0;
+            --login-input-bg: #f8fafc;
             --login-danger: #ef4444;
             --login-success: #10b981;
         }
 
-        /* Tema Oscuro Local al Login */
         #pantalla-login[data-login-theme="dark"] {
-            --login-bg-body: #020617;
-            --login-bg-color: #0a1128;
+            --login-bg-body: #090d16;
+            --login-bg-card: #111827;
             --login-text-main: #f8fafc;
             --login-text-muted: #94a3b8;
-            --login-border-color: #1e293b;
-            --login-input-bg: #111c3a;
-            --login-icon-bg: #1e293b;
-            --login-icon-hover: #334155;
+            --login-border: #1e293b;
+            --login-input-bg: #0f172a;
         }
 
         #pantalla-login {
-            background-color: transparent; /* Que continúe el fondo por defecto del body de la app */
             background: linear-gradient(135deg, #022c22 0%, #064e3b 40%, #0f172a 100%);
             width: 100vw;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 1.5rem 1rem;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         #pantalla-login .login-card {
-            background-color: var(--login-bg-color);
+            background-color: var(--login-bg-card);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             display: flex;
             flex-direction: column;
-            padding: 32px 24px;
-            border-radius: 40px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            padding: 2.25rem 2rem;
+            border-radius: 32px;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
             position: relative;
+            transition: all 0.3s ease;
         }
 
-        /* En móvil ocupa toda la pantalla */
         @media (max-width: 767px) {
             #pantalla-login {
-                background: var(--login-bg-body); /* Fondo sólido claro u oscuro en móvil */
+                padding: 0;
+                background: var(--login-bg-card);
                 align-items: stretch;
             }
             #pantalla-login .login-card {
                 max-width: 100%;
                 border-radius: 0;
                 box-shadow: none;
-                padding-top: 16px;
+                padding: 2.5rem 1.5rem 2rem 1.5rem;
                 flex: 1;
+                justify-content: center;
             }
         }
 
-        #pantalla-login .header {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-
-        /* Ocultar la luna en PC */
-        @media (min-width: 768px) {
-            #pantalla-login .header {
-                display: none;
-            }
-            #pantalla-login .login-card {
-                padding-top: 40px;
-            }
-        }
-
-        #pantalla-login .icon-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background-color: var(--login-icon-bg);
-            border: none;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: var(--login-text-main);
-            font-size: 18px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        #pantalla-login .icon-btn:hover {
-            background-color: var(--login-icon-hover);
-        }
-
+        /* Branding */
         #pantalla-login .branding {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 1.5rem;
         }
-
         #pantalla-login .logo-box {
-            width: 64px;
-            height: 64px;
-            background-color: var(--login-primary);
-            border-radius: 18px;
             display: flex;
             justify-content: center;
             align-items: center;
-            color: white;
-            font-size: 32px;
-            margin: 0 auto 16px auto;
-            box-shadow: 0 10px 20px -10px var(--login-primary);
+            height: 85px;
+            margin-bottom: 1.25rem;
         }
-
+        #pantalla-login .logo-box img {
+            max-height: 100%;
+            max-width: 220px;
+            object-fit: contain;
+        }
         #pantalla-login .branding h1 {
-            font-size: 26px;
-            font-weight: 700;
+            font-size: 1.55rem;
+            font-weight: 800;
             color: var(--login-text-main);
-            margin-bottom: 6px;
-            transition: color 0.3s ease;
+            margin-bottom: 0.35rem;
+            letter-spacing: -0.02em;
         }
-
         #pantalla-login .branding p {
-            font-size: 14px;
+            font-size: 0.85rem;
             color: var(--login-text-muted);
-            max-width: 90%;
-            margin: 0 auto;
             line-height: 1.4;
-            transition: color 0.3s ease;
+            margin: 0 auto;
+            max-width: 320px;
         }
 
-        #pantalla-login form {
+        /* Segmented Control iOS Tab */
+        #pantalla-login .ios-segmented-control {
             display: flex;
-            flex-direction: column;
+            background: var(--login-input-bg);
+            padding: 4px;
+            border-radius: 14px;
+            border: 1px solid var(--login-border);
+            margin-bottom: 1.5rem;
+        }
+        #pantalla-login .segmented-btn {
+            flex: 1;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            border: none;
+            background: transparent;
+            color: var(--login-text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        #pantalla-login .segmented-btn.active {
+            background: var(--login-bg-card);
+            color: var(--login-text-main);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
 
+        /* Form Inputs estilo iOS Inset */
         #pantalla-login .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 1rem;
             text-align: left;
         }
-
-        #pantalla-login .form-label {
+        #pantalla-login .input-label {
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: var(--login-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-bottom: 0.4rem;
             display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--login-text-main);
-            margin-bottom: 8px;
-            transition: color 0.3s ease;
         }
-
-        #pantalla-login .form-label span {
-            color: var(--login-primary);
-        }
-
-        #pantalla-login .input-wrapper {
-            position: relative;
-        }
-
-        #pantalla-login .input-field {
-            width: 100%;
-            padding: 14px 16px;
-            background-color: var(--login-input-bg);
-            border: 1px solid var(--login-border-color);
-            border-radius: 12px;
-            font-size: 15px;
-            color: var(--login-text-main);
-            outline: none;
+        #pantalla-login .input-container {
+            display: flex;
+            align-items: center;
+            background: var(--login-input-bg);
+            border: 1px solid var(--login-border);
+            border-radius: 16px;
+            padding: 0 1rem;
             transition: all 0.2s ease;
         }
-
-        #pantalla-login .input-field::placeholder {
-            color: #9ca3af;
-        }
-
-        #pantalla-login .input-field:focus {
+        #pantalla-login .input-container:focus-within {
             border-color: var(--login-primary);
-            box-shadow: 0 0 0 4px rgba(59, 94, 246, 0.15);
+            background: var(--login-bg-card);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
         }
-
+        #pantalla-login .input-icon {
+            font-size: 1.15rem;
+            color: var(--login-text-muted);
+            margin-right: 0.75rem;
+            display: flex;
+            align-items: center;
+        }
+        #pantalla-login .input-field {
+            width: 100%;
+            padding: 0.85rem 0;
+            border: none;
+            background: transparent;
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: var(--login-text-main);
+            outline: none;
+        }
+        #pantalla-login .input-field::placeholder {
+            color: #94a3b8;
+            font-weight: 400;
+        }
         #pantalla-login .toggle-password {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #9ca3af;
-            font-size: 20px;
-            cursor: pointer;
             background: none;
             border: none;
-            padding: 4px;
+            color: var(--login-text-muted);
+            font-size: 1.15rem;
+            cursor: pointer;
+            padding: 0;
             display: flex;
+            align-items: center;
         }
 
-        #pantalla-login .form-actions {
+        /* Checkbox & Forgot Password */
+        #pantalla-login .form-options {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 4px;
-            margin-bottom: 24px;
+            margin: 0.5rem 0 1.5rem 0;
         }
-
-        #pantalla-login .remember-me {
+        #pantalla-login .remember-wrap {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 13px;
+            font-size: 0.82rem;
+            font-weight: 600;
             color: var(--login-text-muted);
             cursor: pointer;
-            transition: color 0.3s ease;
-            margin-bottom: 0;
+            user-select: none;
         }
-
-        #pantalla-login .custom-checkbox {
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            border: 1px solid var(--login-border-color);
+        #pantalla-login .remember-wrap input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
             border-radius: 4px;
-            display: grid;
-            place-content: center;
+            accent-color: var(--login-primary);
             cursor: pointer;
-            transition: all 0.2s ease;
-            background-color: var(--login-input-bg);
-            margin: 0;
+        }
+        #pantalla-login .forgot-link {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--login-primary);
+            text-decoration: none;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        #pantalla-login .forgot-link:hover {
+            opacity: 0.8;
+            text-decoration: underline;
         }
 
-        #pantalla-login .custom-checkbox::before {
-            content: "";
-            width: 10px;
-            height: 10px;
-            transform: scale(0);
-            transition: 120ms transform ease-in-out;
-            box-shadow: inset 1em 1em white;
-            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-        }
-
-        #pantalla-login .custom-checkbox:checked {
-            background-color: var(--login-primary);
-            border-color: var(--login-primary);
-        }
-
-        #pantalla-login .custom-checkbox:checked::before {
-            transform: scale(1);
-        }
-
-        #pantalla-login .btn-primary {
+        /* Botón de Login */
+        #pantalla-login .btn-submit {
             width: 100%;
-            background-color: var(--login-primary);
-            color: white;
+            background: var(--login-primary);
+            color: #ffffff;
             border: none;
-            border-radius: 12px;
-            padding: 16px;
-            font-size: 16px;
-            font-weight: 600;
+            border-radius: 16px;
+            padding: 0.95rem;
+            font-size: 0.98rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28);
+            transition: transform 0.1s, background 0.2s;
             display: flex;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
-
-        #pantalla-login .btn-primary:active {
+        #pantalla-login .btn-submit:active {
             transform: scale(0.98);
         }
-
-        #pantalla-login .btn-primary.loading .btn-text {
-            opacity: 0;
+        #pantalla-login .btn-submit.loading .btn-text {
+            display: none;
         }
-
-        #pantalla-login .loader {
-            position: absolute;
+        #pantalla-login .btn-submit .loader {
+            display: none;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255,255,255,0.3);
             border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-            opacity: 0;
-            visibility: hidden;
+            border-top-color: #ffffff;
+            animation: spin 0.8s linear infinite;
         }
-
-        #pantalla-login .btn-primary.loading .loader {
-            opacity: 1;
-            visibility: visible;
+        #pantalla-login .btn-submit.loading .loader {
+            display: block;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
+        /* Modal Alerta Contactar Administrador / Soporte */
+        #pantalla-login .login-alert-box {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px dashed var(--login-primary);
+            border-radius: 16px;
+            padding: 1.25rem;
+            text-align: center;
+            display: none;
+            margin-bottom: 1.5rem;
+            animation: fadeIn 0.25s ease;
+        }
+        #pantalla-login .login-alert-box i {
+            font-size: 1.75rem;
+            color: var(--login-primary);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        #pantalla-login .login-alert-box h4 {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--login-text-main);
+            margin-bottom: 0.25rem;
+        }
+        #pantalla-login .login-alert-box p {
+            font-size: 0.8rem;
+            color: var(--login-text-muted);
+            margin: 0;
+            line-height: 1.35;
+        }
+
+        /* Toast */
         #pantalla-login .toast {
             position: absolute;
-            top: 20px;
+            top: 16px;
             left: 50%;
             transform: translateX(-50%) translateY(-100px);
-            background: var(--login-bg-color);
+            background: var(--login-bg-card);
             color: var(--login-text-main);
-            border: 1px solid var(--login-border-color);
-            padding: 12px 20px;
+            border: 1px solid var(--login-border);
+            padding: 10px 18px;
             border-radius: 100px;
-            font-size: 13px;
-            font-weight: 500;
+            font-size: 0.82rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
             opacity: 0;
-            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             z-index: 100;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
             width: max-content;
             max-width: 90%;
         }
-
         #pantalla-login .toast.show {
             transform: translateX(-50%) translateY(0);
             opacity: 1;
@@ -328,49 +324,73 @@
 
     <div class="login-card">
         
-        <!-- Notificación -->
+        <!-- Notificación Toast -->
         <div id="toast" class="toast">
-            <i class="bi bi-info-circle-fill" id="toast-icon"></i>
+            <i class="bi bi-info-circle" id="toast-icon"></i>
             <span id="toast-message">Mensaje</span>
         </div>
 
-
-        <!-- Branding -->
+        <!-- Branding & Logo -->
         <div class="branding">
-            <div class="logo-box" style="background-color: transparent; box-shadow: none; width: auto; height: 160px; margin-bottom: 20px;">
-                <img src="/login-logo-2001.png" alt="Azkell Fleet Logo" style="height: 100%; width: auto; object-fit: contain; transform: scale(1.2);">
+            <div class="logo-box">
+                <img src="/login-logo-2001.png" alt="Azkell Fleet Logo">
             </div>
-            <h1>Iniciar sesión</h1>
-            <p>Monitorea, controla y optimiza tus recursos con Azkell Fleet. Todo el poder de tu operación en una sola pantalla, ahora con una interfaz moderna y rápida.</p>
+            <h1>¡Bienvenido!</h1>
+            <p>Ingresa tus credenciales para acceder a la plataforma ERP de Azkell Fleet.</p>
+        </div>
+
+        <!-- Segmented Tab: Iniciar Sesión / Registrarse -->
+        <div class="ios-segmented-control">
+            <button type="button" class="segmented-btn active" id="tab-login" onclick="window.cambiarTabLogin('login')">
+                <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+            </button>
+            <button type="button" class="segmented-btn" id="tab-register" onclick="window.cambiarTabLogin('register')">
+                <i class="bi bi-person-plus"></i> Registrarse
+            </button>
+        </div>
+
+        <!-- Alerta Dinámica de Registro -->
+        <div class="login-alert-box" id="box-registro-info">
+            <i class="bi bi-shield-lock"></i>
+            <h4>Acceso Restringido</h4>
+            <p>El registro de nuevas cuentas está gestionado por la empresa. Comunícate con el <strong>Administrador de Sistemas</strong> para solicitar tus accesos.</p>
         </div>
 
         <!-- Formulario -->
         <form id="loginForm" onsubmit="iniciarSesion(event, this)">
             
             <div class="form-group">
-                <label class="form-label" for="email">Correo electrónico<span>*</span></label>
-                <div class="input-wrapper">
+                <label class="input-label" for="email">Correo Electrónico</label>
+                <div class="input-container">
+                    <span class="input-icon"><i class="bi bi-envelope"></i></span>
                     <input type="email" id="email" name="correo" class="input-field" placeholder="ejemplo@azkell.com" required autocomplete="email">
                 </div>
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="password">Contraseña<span>*</span></label>
-                <div class="input-wrapper">
+                <label class="input-label" for="password">Contraseña</label>
+                <div class="input-container">
+                    <span class="input-icon"><i class="bi bi-lock"></i></span>
                     <input type="password" id="password" name="password" class="input-field" placeholder="••••••••" required autocomplete="current-password">
                     <button type="button" class="toggle-password" id="togglePassword" aria-label="Mostrar contraseña">
-                        <i class="bi bi-eye-slash-fill" id="eyeIcon"></i>
+                        <i class="bi bi-eye-slash" id="eyeIcon"></i>
                     </button>
                 </div>
             </div>
 
-            <div style="margin-bottom: 24px;"></div>
+            <div class="form-options">
+                <label class="remember-wrap">
+                    <input type="checkbox" id="remember" name="remember">
+                    <span>Recordarme</span>
+                </label>
+                <a href="#" class="forgot-link" onclick="event.preventDefault(); window.mostrarOlvidoPassword();">¿Olvidaste tu contraseña?</a>
+            </div>
 
-            <button type="submit" class="btn-primary" id="btn-login">
-                <span class="btn-text" id="btn-text-content">Iniciar sesión</span>
+            <button type="submit" class="btn-submit" id="btn-login">
+                <span class="btn-text" id="btn-text-content">Iniciar Sesión</span>
                 <div class="loader"></div>
             </button>
-            <div id="mensaje-login" class="text-danger mt-3 fw-bold text-center" style="display:none; font-size: 0.9rem;"></div>
+            <div id="mensaje-login" class="text-danger mt-3 fw-bold text-center" style="display:none; font-size: 0.85rem;"></div>
         </form>
 
     </div>
