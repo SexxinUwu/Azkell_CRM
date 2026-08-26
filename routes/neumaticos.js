@@ -1,4 +1,5 @@
 const express = require('express');
+const { uploadToS3, getPresignedUrl } = require('../utils/s3');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
@@ -462,6 +463,37 @@ module.exports = function (db, broadcast, logAudit) {
                     const rProm = (r4 > 0) ? (r1 + r2 + r3 + r4) / 4.0 : (r1 + r2 + r3) / 3.0;
                     const alertaCambio = rProm <= 4.0 ? 1 : 0;
 
+                    let foto1Url = it.foto1 || null;
+                    let foto2Url = it.foto2 || null;
+                    let foto3Url = it.foto3 || null;
+
+                    // Si vienen en base64, subir a AWS S3
+                    const posClean = String(it.posicion || '1').toUpperCase();
+                    if (foto1Url && foto1Url.startsWith('data:image')) {
+                        try {
+                            const b64Data = foto1Url.replace(/^data:image\/\w+;base64,/, '');
+                            const buffer = Buffer.from(b64Data, 'base64');
+                            const s3Key = `neumaticos/${placa.toUpperCase()}/${id_inspeccion}_pos${posClean}_foto1_${Date.now()}.jpg`;
+                            foto1Url = await uploadToS3(buffer, s3Key, 'image/jpeg');
+                        } catch(e) { console.warn('Error subiendo foto1 a S3:', e.message); }
+                    }
+                    if (foto2Url && foto2Url.startsWith('data:image')) {
+                        try {
+                            const b64Data = foto2Url.replace(/^data:image\/\w+;base64,/, '');
+                            const buffer = Buffer.from(b64Data, 'base64');
+                            const s3Key = `neumaticos/${placa.toUpperCase()}/${id_inspeccion}_pos${posClean}_foto2_${Date.now()}.jpg`;
+                            foto2Url = await uploadToS3(buffer, s3Key, 'image/jpeg');
+                        } catch(e) { console.warn('Error subiendo foto2 a S3:', e.message); }
+                    }
+                    if (foto3Url && foto3Url.startsWith('data:image')) {
+                        try {
+                            const b64Data = foto3Url.replace(/^data:image\/\w+;base64,/, '');
+                            const buffer = Buffer.from(b64Data, 'base64');
+                            const s3Key = `neumaticos/${placa.toUpperCase()}/${id_inspeccion}_pos${posClean}_foto3_${Date.now()}.jpg`;
+                            foto3Url = await uploadToS3(buffer, s3Key, 'image/jpeg');
+                        } catch(e) { console.warn('Error subiendo foto3 a S3:', e.message); }
+                    }
+
                     await tdb.query(`
                         INSERT INTO neumaticos_inspecciones_det
                         (id_inspeccion, id_neumatico, posicion, marca, medida, modelo, r1, r2, r3, r4, presion_ant, presion_actual, estado, accion, rot, observaciones, foto1, foto2, foto3, alerta_cambio)
@@ -469,7 +501,7 @@ module.exports = function (db, broadcast, logAudit) {
                     `, [
                         id_inspeccion,
                         it.id_neumatico || null,
-                        String(it.posicion || '1').toUpperCase(),
+                        posClean,
                         (it.marca || '').toUpperCase(),
                         (it.medida || '').toUpperCase(),
                         (it.modelo || '').toUpperCase(),
@@ -480,12 +512,12 @@ module.exports = function (db, broadcast, logAudit) {
                         parseInt(it.presion_ant || 0, 10),
                         parseInt(it.presion_actual || 0, 10),
                         (it.estado || 'NUEVA').toUpperCase(),
-                        it.accion || 'Inspeccion',
-                        it.rot || 'NO',
-                        it.observaciones || '',
-                        it.foto1 || null,
-                        it.foto2 || null,
-                        it.foto3 || null,
+                        (it.accion || 'Inspección'),
+                        (it.rot || 'NO').toUpperCase(),
+                        it.observaciones || it.obs || '',
+                        foto1Url,
+                        foto2Url,
+                        foto3Url,
                         alertaCambio
                     ]);
 
