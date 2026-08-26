@@ -413,13 +413,13 @@
 
             html += `
                 <tr>
-                    <td class="font-monospace fw-bold text-primary">
-                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-2 py-1">
+                    <td>
+                        <span class="badge px-2.5 py-1 font-monospace fw-bold" style="background:#eff6ff !important; color:#0f172a !important; border: 1px solid #93c5fd !important; font-size:0.78rem; letter-spacing:0.02em;">
                             #${esc(t.numViaje || t.viaje)}
                         </span>
                     </td>
                     <td>
-                        <span class="badge bg-dark px-2 py-1 font-monospace fw-bold text-white shadow-2xs">
+                        <span class="badge bg-dark px-2.5 py-1 font-monospace fw-bold text-white shadow-2xs" style="font-size:0.78rem;">
                             ${esc(t.placa)}
                         </span>
                     </td>
