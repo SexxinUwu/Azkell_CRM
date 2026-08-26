@@ -317,6 +317,7 @@ window.verificarSesionGuardada = function() {
     safe('nav-combustible-analisis', vCombustible);
     safe('mbnav-combustible',        vCombustible);
     safe('nav-neumaticos-toggle', vNeumaticos);
+    safe('mbnav-neumaticos-toggle',   vNeumaticos);
     safe('mbnav-neumaticos-analisis', vNeumaticos);
     safe('mbnav-neumaticos-ultimas',  vNeumaticos);
     safe('nav-incidencias-ruta', _cL('otros_mant') || _cL('reportes_ot') || _cL('status_rampa'));

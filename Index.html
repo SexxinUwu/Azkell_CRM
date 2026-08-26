@@ -826,18 +826,23 @@
                 <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-person-gear"></i></div>
                 <div><p class="bnav-card-title" data-i18n="nav.trabajos_ot">Historial de Trabajos</p><p class="bnav-card-desc">Tareas adicionales</p></div>
             </div>
-            <div id="mbnav-combustible" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/combustible'); setBottomNavActive('bnav-mantenimiento');">
-                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-fuel-pump-fill"></i></div>
-                <div><p class="bnav-card-title">Combustible</p><p class="bnav-card-desc">Control y consumo</p></div>
+            <!-- Grupo Desplegable Neumáticos -->
+            <div class="bnav-card mb-2" id="mbnav-neumaticos-toggle" onclick="var el=document.getElementById('mbnav-submenu-neumaticos'); var chev=document.getElementById('mbchev-neumaticos'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
+                <div class="bnav-card-icon" style="background: rgba(37,99,235,.1); color: #2563eb;"><i class="bi bi-disc-fill"></i></div>
+                <div class="flex-grow-1"><p class="bnav-card-title">Neumáticos</p><p class="bnav-card-desc">Análisis e historial de inspecciones</p></div>
+                <i class="bi bi-chevron-down ms-auto" id="mbchev-neumaticos" style="color: var(--subtext); font-size: 1rem; transition: transform 0.2s ease;"></i>
             </div>
-            <div id="mbnav-neumaticos-analisis" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/neumaticos-analisis'); setBottomNavActive('bnav-mantenimiento');">
-                <div class="bnav-card-icon" style="background: rgba(37,99,235,.1); color: #2563eb;"><i class="bi bi-graph-up-arrow"></i></div>
-                <div><p class="bnav-card-title">Análisis Neumáticos</p><p class="bnav-card-desc">Métricas y desgaste</p></div>
+            <div class="d-none ps-3 mb-2" id="mbnav-submenu-neumaticos">
+                <div id="mbnav-neumaticos-analisis" class="bnav-card mb-2" style="background: var(--surface); border-left: 3px solid #2563eb;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/neumaticos-analisis'); setBottomNavActive('bnav-mantenimiento');">
+                    <div class="bnav-card-icon" style="width: 38px; height: 38px; font-size: 1.15rem; background: rgba(37,99,235,.1); color: #2563eb;"><i class="bi bi-graph-up-arrow"></i></div>
+                    <div><p class="bnav-card-title" style="font-size: 0.95rem;">Análisis Neumáticos</p><p class="bnav-card-desc">Métricas y desgaste</p></div>
+                </div>
+                <div id="mbnav-neumaticos-ultimas" class="bnav-card mb-2" style="background: var(--surface); border-left: 3px solid #2563eb;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/neumaticos-ultimas'); setBottomNavActive('bnav-mantenimiento');">
+                    <div class="bnav-card-icon" style="width: 38px; height: 38px; font-size: 1.15rem; background: rgba(37,99,235,.1); color: #2563eb;"><i class="bi bi-clock-history"></i></div>
+                    <div><p class="bnav-card-title" style="font-size: 0.95rem;">Últimas Inspecciones</p><p class="bnav-card-desc">Histórico de neumáticos</p></div>
+                </div>
             </div>
-            <div id="mbnav-neumaticos-ultimas" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/neumaticos-ultimas'); setBottomNavActive('bnav-mantenimiento');">
-                <div class="bnav-card-icon" style="background: rgba(37,99,235,.1); color: #2563eb;"><i class="bi bi-clock-history"></i></div>
-                <div><p class="bnav-card-title">Últimas Inspecciones</p><p class="bnav-card-desc">Histórico de neumáticos</p></div>
-            </div>
+
             <div id="mbnav-otros-mant" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/otros'); setBottomNavActive('bnav-mantenimiento');">
                 <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-grid-fill"></i></div>
                 <div><p class="bnav-card-title" data-i18n="nav.otros">Otros</p><p class="bnav-card-desc">Módulos complementarios</p></div>
