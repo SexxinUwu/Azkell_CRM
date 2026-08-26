@@ -375,9 +375,10 @@ window.verificarSesionGuardada = function() {
     safe('nav-op-asignacion', vOpAsig);
     safe('mbnav-op-asignacion', vOpAsig);
     safe('nav-op-monitoreo', vOpMon);
-    safe('mbnav-op-monitoreo', vOpMon);
-    safe('mbnav-op-combustible-vales', _cL('combustible_vales') || vOpMon);
-    safe('mbnav-op-combustible-analisis', _cL('combustible_analisis') || vOpMon);
+    var vCombOp = _cL('combustible_vales') || _cL('combustible_analisis') || vOpMon || _cL('combustible');
+    safe('mbnav-op-combustible-toggle', vCombOp);
+    safe('mbnav-op-combustible-vales', _cL('combustible_vales') || vOpMon || _cL('combustible'));
+    safe('mbnav-op-combustible-analisis', _cL('combustible_analisis') || vOpMon || _cL('combustible'));
     safe('wrap-operaciones', showOp);
     safe('bnav-operaciones', showOp);
 

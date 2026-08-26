@@ -898,13 +898,21 @@
                 <div class="bnav-card-icon" style="background: rgba(16,185,129,.1); color: #10b981;"><i class="bi bi-activity"></i></div>
                 <div><p class="bnav-card-title">Monitoreo de Operaciones</p><p class="bnav-card-desc">Estado de viajes en tiempo real</p></div>
             </div>
-            <div id="mbnav-op-combustible-vales" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/combustible-vales'); setBottomNavActive('bnav-operaciones');">
-                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-receipt"></i></div>
-                <div><p class="bnav-card-title">Vales de Combustible</p><p class="bnav-card-desc">Registro y asignación de vales</p></div>
+            <!-- Grupo Desplegable Combustible -->
+            <div class="bnav-card mb-2" id="mbnav-op-combustible-toggle" onclick="var el=document.getElementById('mbnav-submenu-combustible'); var chev=document.getElementById('mbchev-combustible'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
+                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-fuel-pump-fill"></i></div>
+                <div class="flex-grow-1"><p class="bnav-card-title">Combustible</p><p class="bnav-card-desc">Vales y métricas de consumo</p></div>
+                <i class="bi bi-chevron-down ms-auto" id="mbchev-combustible" style="color: var(--subtext); font-size: 1rem; transition: transform 0.2s ease;"></i>
             </div>
-            <div id="mbnav-op-combustible-analisis" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/combustible-analisis'); setBottomNavActive('bnav-operaciones');">
-                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-graph-up-arrow"></i></div>
-                <div><p class="bnav-card-title">Análisis de Combustible</p><p class="bnav-card-desc">Rendimiento y consumos</p></div>
+            <div class="d-none ps-3 mb-2" id="mbnav-submenu-combustible">
+                <div id="mbnav-op-combustible-vales" class="bnav-card mb-2" style="background: var(--surface); border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/combustible-vales'); setBottomNavActive('bnav-operaciones');">
+                    <div class="bnav-card-icon" style="width: 38px; height: 38px; font-size: 1.15rem; background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-receipt"></i></div>
+                    <div><p class="bnav-card-title" style="font-size: 0.95rem;">Vales de Combustible</p><p class="bnav-card-desc">Registro y asignación de vales</p></div>
+                </div>
+                <div id="mbnav-op-combustible-analisis" class="bnav-card mb-2" style="background: var(--surface); border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/combustible-analisis'); setBottomNavActive('bnav-operaciones');">
+                    <div class="bnav-card-icon" style="width: 38px; height: 38px; font-size: 1.15rem; background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-graph-up-arrow"></i></div>
+                    <div><p class="bnav-card-title" style="font-size: 0.95rem;">Análisis de Combustible</p><p class="bnav-card-desc">Rendimiento y consumos</p></div>
+                </div>
             </div>
         </div>
     </div>
