@@ -1166,6 +1166,7 @@ module.exports = function (db, broadcast, logAudit) {
             let rpmMaxGps = null;
             let rpmMaxMaxGps = null;
             let horasMotorGps = null;
+            let consumoRalentiGps = null;
 
             const cleanNum = (str) => {
                 if (!str) return null;
@@ -1193,7 +1194,10 @@ module.exports = function (db, broadcast, logAudit) {
                                 }
                             }
 
-                            if (headerLower.includes('combustible consumido') || headerLower.includes('consumo')) {
+                            if (headerLower.includes('consumo promedio en ralentí') || headerLower.includes('consumo promedio en ralenti') || headerLower.includes('idle')) {
+                                const num = cleanNum(valStr);
+                                if (num !== null && consumoRalentiGps === null) consumoRalentiGps = num;
+                            } else if (headerLower.includes('combustible consumido') || headerLower.includes('consumo')) {
                                 const num = cleanNum(valStr);
                                 if (num !== null && combustibleConsumidoGps === null) combustibleConsumidoGps = num;
                             } else if (headerLower.includes('rendimiento') || headerLower.includes('km/gal')) {
@@ -1246,6 +1250,8 @@ module.exports = function (db, broadcast, logAudit) {
                         velocidadMaxGps = cleanNum(val);
                     } else if ((k.includes('engine hours') || k.includes('horas de motor') || k.includes('horas motor')) && horasMotorGps === null) {
                         horasMotorGps = String(val).trim();
+                    } else if ((k.includes('idle') || k.includes('ralentí') || k.includes('ralenti')) && consumoRalentiGps === null) {
+                        consumoRalentiGps = cleanNum(val);
                     }
                 });
             }
@@ -1273,7 +1279,8 @@ module.exports = function (db, broadcast, logAudit) {
                     rpmMediaMaxGps,
                     rpmMaxGps,
                     rpmMaxMaxGps,
-                    horasMotorGps
+                    horasMotorGps,
+                    consumoRalentiGps
                 }
             });
 
