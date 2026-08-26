@@ -1160,6 +1160,12 @@ module.exports = function (db, broadcast, logAudit) {
             let recorridoKmGps = null;
             let combustibleConsumidoGps = null;
             let rendimientoGps = null;
+            let velocidadMaxGps = null;
+            let rpmMediaGps = null;
+            let rpmMediaMaxGps = null;
+            let rpmMaxGps = null;
+            let rpmMaxMaxGps = null;
+            let horasMotorGps = null;
 
             const cleanNum = (str) => {
                 if (!str) return null;
@@ -1172,7 +1178,8 @@ module.exports = function (db, broadcast, logAudit) {
                 execData.reportResult.tables.forEach(tbl => {
                     if (Array.isArray(tbl.header) && Array.isArray(tbl.total)) {
                         tbl.header.forEach((h, hIdx) => {
-                            const headerLower = String(h || '').toLowerCase().trim();
+                            const headerRaw = String(h || '').trim();
+                            const headerLower = headerRaw.toLowerCase();
                             const valStr = tbl.total[hIdx];
 
                             // Descartar explícitamente kilometraje inicial y final
@@ -1192,6 +1199,25 @@ module.exports = function (db, broadcast, logAudit) {
                             } else if (headerLower.includes('rendimiento') || headerLower.includes('km/gal')) {
                                 const num = cleanNum(valStr);
                                 if (num !== null && rendimientoGps === null) rendimientoGps = num;
+                            } else if (headerLower.includes('velocidad máxima') || headerLower.includes('velocidad maxima') || headerLower.includes('max speed')) {
+                                const num = cleanNum(valStr);
+                                if (num !== null && velocidadMaxGps === null) velocidadMaxGps = num;
+                            } else if (headerRaw.includes('RPM Media (RPM)') || (headerLower.includes('rpm media') && !headerLower.includes('máxima rpm') && !headerLower.includes('maxima rpm'))) {
+                                const num = cleanNum(valStr);
+                                if (num !== null && rpmMediaGps === null) rpmMediaGps = num;
+                            } else if (headerRaw.includes('RPM Media (Máxima RPM)') || headerRaw.includes('RPM Media (Maxima RPM)')) {
+                                const num = cleanNum(valStr);
+                                if (num !== null && rpmMediaMaxGps === null) rpmMediaMaxGps = num;
+                            } else if (headerRaw.includes('RPM Máxima (RPM)') || headerRaw.includes('RPM Maxima (RPM)')) {
+                                const num = cleanNum(valStr);
+                                if (num !== null && rpmMaxGps === null) rpmMaxGps = num;
+                            } else if (headerRaw.includes('RPM Máxima (Máxima RPM)') || headerRaw.includes('RPM Maxima (Maxima RPM)')) {
+                                const num = cleanNum(valStr);
+                                if (num !== null && rpmMaxMaxGps === null) rpmMaxMaxGps = num;
+                            } else if (headerLower.includes('horas de motor') || headerLower.includes('horas motor') || headerLower.includes('duración del viaje') || headerLower.includes('duracion')) {
+                                if (valStr && horasMotorGps === null) {
+                                    horasMotorGps = String(valStr).trim();
+                                }
                             }
                         });
                     }
@@ -1216,6 +1242,10 @@ module.exports = function (db, broadcast, logAudit) {
                         combustibleConsumidoGps = cleanNum(val);
                     } else if ((k.includes('rendimiento') || k.includes('avg. fuel consumption')) && rendimientoGps === null) {
                         rendimientoGps = cleanNum(val);
+                    } else if ((k.includes('max speed') || k.includes('velocidad máxima') || k.includes('velocidad maxima')) && velocidadMaxGps === null) {
+                        velocidadMaxGps = cleanNum(val);
+                    } else if ((k.includes('engine hours') || k.includes('horas de motor') || k.includes('horas motor')) && horasMotorGps === null) {
+                        horasMotorGps = String(val).trim();
                     }
                 });
             }
@@ -1237,7 +1267,13 @@ module.exports = function (db, broadcast, logAudit) {
                     plantilla: templateName,
                     recorridoKmGps,
                     combustibleConsumidoGps,
-                    rendimientoGps
+                    rendimientoGps,
+                    velocidadMaxGps,
+                    rpmMediaGps,
+                    rpmMediaMaxGps,
+                    rpmMaxGps,
+                    rpmMaxMaxGps,
+                    horasMotorGps
                 }
             });
 
