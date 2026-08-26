@@ -699,37 +699,74 @@
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
 
-    // Exportar Resumen Consolidado a Excel
+    // Exportar Resumen Consolidado a Excel (con Telemetría GPS CAN Bus)
     window.caExportarResumenExcel = function() {
         if (typeof XLSX === 'undefined') {
             alert('Librería SheetJS no disponible.');
             return;
         }
 
-        if (window._caFilteredTrips.length === 0) {
+        if (!window._caFilteredTrips || window._caFilteredTrips.length === 0) {
             alert('No hay viajes para exportar.');
             return;
         }
 
-        const exportData = window._caFilteredTrips.map(t => ({
-            "N° VIAJE": t.viaje,
-            "PLACA": t.placa,
-            "RUTA": t.ruta,
-            "FECHA INICIO": t.fechaInicio,
-            "FECHA FIN": t.fechaFin,
-            "KM INICIAL": t.kmInicio,
-            "KM FINAL": t.kmFin,
-            "RECORRIDO (KM)": t.recorridoKm,
-            "TOTAL GALONES": t.totalGalones,
-            "TOTAL GASTO (S/)": t.totalGasto,
-            "KM / GALÓN REAL": t.rendimiento > 0 ? parseFloat(t.rendimiento.toFixed(2)) : 'N/D',
-            "CANTIDAD VALES": t.vouchers.length
-        }));
+        const exportData = window._caFilteredTrips.map(t => {
+            const fs = t.firstSegment;
+            const kInicio = fs ? fs.kInicio : t.kmInicio;
+            const kFin = fs ? fs.kFin : t.kmFin;
+            const recKm = fs ? fs.recorridoKm : t.recorridoKm;
+            const totGal = fs ? fs.totalGalones : t.totalGalones;
+            const totGasto = fs ? fs.totalGasto : t.totalGasto;
+            const rend = fs ? fs.rendimiento : t.rendimiento;
+            const valesCount = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
+
+            const gps = t.gpsTelemetria || t.wialonGps || null;
+
+            return {
+                "N° VIAJE": t.numViaje || t.viaje || '---',
+                "PLACA": t.placa || '---',
+                "RUTA": t.ruta || '---',
+                "FECHA INICIO": t.fechaInicio || '---',
+                "FECHA FIN": t.fechaFin || '---',
+                "KM INICIO (VALES)": kInicio > 0 ? parseFloat(kInicio.toFixed(1)) : '—',
+                "KM FIN (VALES)": kFin > 0 ? parseFloat(kFin.toFixed(1)) : '—',
+                "RECORRIDO (VALES)": recKm > 0 ? parseFloat(recKm.toFixed(1)) : '—',
+                "TOTAL GALONES": totGal > 0 ? parseFloat(totGal.toFixed(2)) : 0,
+                "TOTAL GASTO (S/)": totGasto > 0 ? parseFloat(totGasto.toFixed(2)) : 0,
+                "KM / GALÓN (REAL)": rend > 0 ? parseFloat(rend.toFixed(2)) : '—',
+                "KILOMETRAJE (GPS CAN)": (gps && gps.recorridoKmGps !== null && gps.recorridoKmGps !== undefined) ? parseFloat(Number(gps.recorridoKmGps).toFixed(2)) : '—',
+                "COMB. CONSUMIDO (GPS CAN)": (gps && gps.combustibleConsumidoGps !== null && gps.combustibleConsumidoGps !== undefined) ? parseFloat(Number(gps.combustibleConsumidoGps).toFixed(2)) : '—',
+                "RENDIMIENTO (GPS CAN)": (gps && gps.rendimientoGps !== null && gps.rendimientoGps !== undefined) ? parseFloat(Number(gps.rendimientoGps).toFixed(2)) : '—',
+                "CANTIDAD VALES": valesCount
+            };
+        });
 
         const ws = XLSX.utils.json_to_sheet(exportData);
+
+        // Auto-ajuste de ancho de columnas
+        const colWidths = [
+            { wch: 18 }, // N° VIAJE
+            { wch: 12 }, // PLACA
+            { wch: 25 }, // RUTA
+            { wch: 20 }, // FECHA INICIO
+            { wch: 20 }, // FECHA FIN
+            { wch: 18 }, // KM INICIO (VALES)
+            { wch: 18 }, // KM FIN (VALES)
+            { wch: 18 }, // RECORRIDO (VALES)
+            { wch: 15 }, // TOTAL GALONES
+            { wch: 16 }, // TOTAL GASTO (S/)
+            { wch: 18 }, // KM / GALÓN (REAL)
+            { wch: 22 }, // KILOMETRAJE (GPS CAN)
+            { wch: 26 }, // COMB. CONSUMIDO (GPS CAN)
+            { wch: 22 }, // RENDIMIENTO (GPS CAN)
+            { wch: 15 }  // CANTIDAD VALES
+        ];
+        ws['!cols'] = colWidths;
+
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Consolidado_Viajes");
-        XLSX.writeFile(wb, `Analisis_Combustible_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        XLSX.writeFile(wb, `Analisis_Combustible_CAN_${new Date().toISOString().slice(0, 10)}.xlsx`);
     };
 
     // Auto-inicializar
