@@ -306,10 +306,6 @@ function _guBuildRolPanel(rol) {
     });
     html += '<input type="text" class="gu-input-inset" id="guRolColor" value="' + _guEsc(colorActual) + '" '
         + 'placeholder="#5865F2" style="max-width:120px; margin-bottom:0;" oninput="window._guHexColorInput(this.value)"></div>'
-
-        + '<div class="gu-field-label" style="margin-top:14px;">Prioridad / Orden</div>'
-        + '<input type="number" id="guRolOrden" class="gu-input-inset" value="' + (rol.orden||0) + '" min="0" max="9999" style="max-width:120px; margin-bottom:4px;">'
-        + '<div style="font-size:.74rem;color:var(--subtext);font-weight:500;">Número menor aparece primero en la lista.</div>'
         + '</div>';
 
     // Permisos
