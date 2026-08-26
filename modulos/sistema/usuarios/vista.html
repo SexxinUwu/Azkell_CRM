@@ -1,4 +1,4 @@
-<!-- Módulo Gestión de Usuarios — Azkell ERP (Apple & Bento ERP) -->
+<!-- Módulo Gestión de Usuarios — Azkell ERP (Apple Grouped Inset & Bento ERP) -->
 <style>
 /* ── Reset root-dinamico padding for full-bleed ─────────── */
 #root-dinamico, .main-area {
@@ -6,7 +6,7 @@
 }
 
 #moduloUsuarios {
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     padding: 1rem 1.25rem 3rem 1.25rem !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -15,44 +15,44 @@
     flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
+    background: var(--bg, #f8fafc);
 }
 
 @media (max-width: 768px) {
     #moduloUsuarios {
-        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+        padding: 0.75rem 0.75rem 100px 0.75rem !important;
     }
 }
 
-/* ── KPIs Apple Compact Bento Cards ─────────────── */
+/* ── KPIs Grouped Inset Cards ─────────────── */
 #moduloUsuarios .ck-kpi-card {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 14px !important;
-    padding: 0.55rem 0.85rem !important;
+    background: var(--surface, #ffffff) !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
+    border-radius: 18px !important;
+    padding: 0.85rem 1rem !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
-    gap: 0.75rem !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    gap: 0.85rem !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02) !important;
     cursor: pointer;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
     user-select: none;
-    min-height: 56px !important;
+    min-height: 62px !important;
 }
 #moduloUsuarios .ck-kpi-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05) !important;
 }
 #moduloUsuarios .ck-kpi-card.active {
     border-color: #2563eb !important;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25) !important;
     background: #f8fafc !important;
 }
 #moduloUsuarios .ck-kpi-icon {
-    width: 38px !important;
-    height: 38px !important;
-    border-radius: 10px !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 12px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -60,34 +60,36 @@
     flex-shrink: 0 !important;
 }
 
-/* ── Control Bar & Apple Search ──────────────────── */
+/* ── Segmented Control iOS Tab ──────────────────── */
 #moduloUsuarios .ck-apple-segmented {
-    background: #e2e8f0 !important;
+    background: rgba(0,0,0,0.06) !important;
     padding: 4px !important;
     border-radius: 14px !important;
     display: inline-flex !important;
     gap: 3px !important;
-    border: 1px solid #cbd5e1 !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
 }
 #moduloUsuarios .ck-segment-item {
     border: none;
     background: transparent;
-    padding: 6px 16px;
+    padding: 7px 18px;
     border-radius: 10px;
-    font-size: 0.84rem;
-    font-weight: 600;
-    color: #64748b;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--subtext, #64748b);
     transition: all 0.18s ease;
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
-#moduloUsuarios .ck-segment-item:hover { color: #0f172a; }
+#moduloUsuarios .ck-segment-item:hover { color: var(--text, #0f172a); }
 #moduloUsuarios .ck-segment-item.active {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    font-weight: 700 !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    background: var(--surface, #ffffff) !important;
+    color: var(--text, #0f172a) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
 }
 
 /* ── Split Layout Bento ───────────────────────────── */
@@ -98,25 +100,25 @@
     gap: 1rem;
 }
 .gu-list {
-    width: 320px;
+    width: 340px;
     flex-shrink: 0;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 18px;
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 20px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    padding: 12px;
+    padding: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.02);
 }
 .gu-list-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     padding: 10px 14px;
     cursor: pointer;
-    transition: background .12s, transform .1s;
-    border-radius: 12px;
+    transition: background 0.12s, transform 0.1s;
+    border-radius: 14px;
     margin-bottom: 4px;
     border: 1px solid transparent;
 }
@@ -126,43 +128,31 @@
     border-color: #bfdbfe;
 }
 .gu-role-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-.gu-list-info { flex: 1; min-width: 0; }
-.gu-list-name { font-size: 0.88rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.gu-list-sub  { font-size: 0.72rem; color: #64748b; font-weight: 500; }
-.gu-list-chevron { display: none; }
-.gu-add-btn {
-    margin: 8px 0;
-    padding: 9px 12px;
-    border: 1.5px dashed #cbd5e1;
-    border-radius: 12px;
-    background: #f8fafc;
-    color: #2563eb;
-    font-size: 0.82rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all .15s;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    color: #ffffff;
+    font-weight: 800;
+    flex-shrink: 0;
 }
-.gu-add-btn:hover { background: #eff6ff; border-color: #2563eb; }
+.gu-list-info { flex: 1; min-width: 0; }
+.gu-list-name { font-size: 0.9rem; font-weight: 700; color: var(--text, #0f172a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gu-list-sub  { font-size: 0.76rem; color: var(--subtext, #64748b); font-weight: 500; margin-top: 1px; }
+.gu-list-chevron { color: #cbd5e1; font-size: 0.9rem; }
 
-/* ── Panel Derecho Bento ─────────────────────────── */
+/* ── Panel Derecho Desktop ─────────────────────────── */
 .gu-panel {
     flex: 1 1 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     position: relative;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 18px;
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 20px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.02);
 }
 .gu-panel-body { padding: 24px 32px 80px; flex: 1; overflow-y: auto; }
@@ -180,71 +170,103 @@
 .gu-panel-empty i { font-size: 3rem; color: #cbd5e1; }
 
 .gu-section-header { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; padding: 0 0 8px; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; }
-.gu-field-label { font-size: 0.72rem; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 6px; display: block; }
-.dc-input {
+.gu-field-label { font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 6px; display: block; }
+
+/* Inset inputs */
+.gu-input-inset {
     width: 100%;
-    padding: 9px 12px;
-    border: 1px solid #cbd5e1;
-    border-radius: 10px;
-    background: #ffffff;
-    color: #0f172a;
-    font-size: 0.88rem;
-    margin-bottom: 18px;
+    padding: 11px 14px;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 14px;
+    background: var(--bg, #f8fafc);
+    color: var(--text, #0f172a);
+    font-size: 0.92rem;
+    font-weight: 600;
+    margin-bottom: 16px;
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
-.dc-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+.gu-input-inset:focus { border-color: #2563eb; background: #ffffff; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
 
 .gu-colors { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; align-items: center; margin-bottom: 24px; }
-.gu-color-swatch { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform .1s, border-color .1s; display: flex; align-items: center; justify-content: center; color: #fff; }
+.gu-color-swatch { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform .1s, border-color .1s; display: flex; align-items: center; justify-content: center; color: #fff; }
 .gu-color-swatch.selected { border-color: #0f172a; transform: scale(1.15); }
 .gu-color-swatch:hover { transform: scale(1.15); }
 
 /* Permisos */
-.gu-perm-group { font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 20px 0 10px; }
+.gu-perm-group { font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 18px 0 10px; }
 .gu-perm-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; gap: 14px; }
 .gu-perm-row:last-child { border-bottom: none; }
 .gu-perm-info { flex: 1; }
 .gu-perm-name { font-size: 0.88rem; font-weight: 700; color: #0f172a; }
-.gu-perm-desc { font-size: 0.78rem; color: #64748b; margin-top: 2px; line-height: 1.35; }
+.gu-perm-desc { font-size: 0.76rem; color: #64748b; margin-top: 2px; line-height: 1.35; }
 .gu-perm-actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
 
-/* Toggles Switches */
+/* Toggles Switches iOS */
 .dc-toggle { display: none; }
 .dc-toggle-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.dc-toggle-label { display: inline-block; width: 36px; height: 20px; border-radius: 12px; background: #cbd5e1; cursor: pointer; position: relative; transition: background .15s; flex-shrink: 0; }
-.dc-toggle:checked + .dc-toggle-label { background: #2563eb; }
-.dc-toggle-label::after { content: ''; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: left .15s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.dc-toggle-label { display: inline-block; width: 38px; height: 22px; border-radius: 14px; background: #cbd5e1; cursor: pointer; position: relative; transition: background .15s; flex-shrink: 0; }
+.dc-toggle:checked + .dc-toggle-label { background: #10b981; }
+.dc-toggle-label::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: left .15s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
 .dc-toggle:checked + .dc-toggle-label::after { left: 19px; }
 .dc-toggle-label.danger { background: #cbd5e1; }
 .dc-toggle:checked + .dc-toggle-label.danger { background: #ef4444; }
 .dc-toggle-label.readonly { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
-.gu-perm-hub { background: #f8fafc; border-radius: 12px; padding: 12px 14px; border: 1px solid #e2e8f0 !important; margin: 4px 0; }
-.gu-hub-expand-btn { background: transparent; border: 1px solid #cbd5e1; color: #64748b; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; transition: all .15s; margin-left: 6px; }
-.gu-hub-expand-btn:hover { border-color: #2563eb; color: #2563eb; }
-.gu-hub-children { overflow: hidden; transition: all .2s ease; }
-.gu-perm-child { display: flex; align-items: center; padding: 10px 0 10px 20px; border-bottom: 1px solid #f1f5f9; gap: 14px; border-left: 2px solid #93c5fd; margin-left: 8px; padding-left: 16px; }
-
-.gu-badge-admin { display: inline-flex; align-items: center; gap: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 20px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; }
-.gu-badge-todos { display: inline-flex; align-items: center; gap: 4px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 20px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; }
 .gu-perm-label { font-size: 0.62rem; color: #64748b; text-align: center; white-space: nowrap; font-weight: 600; }
 
-.gu-member-chip { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
-.gu-avatar { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; color: #fff; flex-shrink: 0; }
-.gu-member-name { font-size: 0.88rem; font-weight: 700; color: #0f172a; flex: 1; }
-.gu-member-cargo { font-size: 0.75rem; color: #64748b; }
-
 .gu-panel-actions { display: flex; gap: 10px; padding: 14px 32px; background: #ffffff; border-top: 1px solid #e2e8f0; flex-shrink: 0; align-items: center; justify-content: flex-end; }
-.btn-gu-danger { background: transparent; border: 1px solid #fecaca; color: #dc2626; font-size: 0.84rem; font-weight: 700; padding: 7px 16px; border-radius: 8px; cursor: pointer; transition: all .15s; margin-right: auto; }
+.btn-gu-danger { background: transparent; border: 1px solid #fecaca; color: #dc2626; font-size: 0.84rem; font-weight: 700; padding: 8px 18px; border-radius: 12px; cursor: pointer; transition: all .15s; margin-right: auto; }
 .btn-gu-danger:hover { background: #fef2f2; }
-.btn-gu-save { background: #2563eb; border: none; color: #fff; font-size: 0.84rem; font-weight: 700; padding: 8px 22px; border-radius: 8px; cursor: pointer; transition: background .15s; box-shadow: 0 1px 3px rgba(37,99,235,0.3); }
-.btn-gu-save:hover { background: #1d4ed8; }
+.btn-gu-save { background: #2563eb; border: none; color: #fff; font-size: 0.88rem; font-weight: 700; padding: 10px 24px; border-radius: 14px; cursor: pointer; transition: transform .1s, background .15s; box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
+.btn-gu-save:active { transform: scale(0.98); }
 
 @media (max-width: 767px) {
-    .gu-list { width: 100%; border-right: none; }
+    .gu-list { width: 100%; border: 1px solid var(--border, #e2e8f0); border-radius: 20px; }
     .gu-panel { display: none; }
     .gu-body { flex-direction: column; }
+    .gu-list-chevron { display: block; }
+}
+
+/* ── MODAL BOTTOM SHEET MODERNO (1:1 REPORTE DE FALLAS / IOS MODAL) ── */
+.gu-bottom-sheet {
+    border-radius: 28px 28px 0 0 !important;
+    border-top: 1px solid var(--border, #e2e8f0) !important;
+    box-shadow: 0 -12px 48px rgba(0,0,0,.2) !important;
+    background: var(--bg, #f8fafc) !important;
+    max-height: 90vh !important;
+    height: 90vh !important;
+}
+.gu-sheet-header {
+    background: var(--surface, #ffffff);
+    padding: 1.15rem 1.25rem;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 28px 28px 0 0;
+}
+.gu-sheet-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text, #0f172a);
+    margin: 0;
+}
+.gu-sheet-body {
+    padding: 1.25rem 1.25rem 80px 1.25rem;
+    overflow-y: auto;
+}
+.gu-sheet-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--surface, #ffffff);
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border, #e2e8f0);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    z-index: 10;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.03);
 }
 </style>
 
@@ -253,12 +275,12 @@
     <!-- ── 1. ENCABEZADO OFICIAL ERP ───────────────────────────────── -->
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         <div class="d-flex align-items-center gap-3">
-            <div style="width: 44px; height: 44px; background: #eff6ff; color: #2563eb; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
-                <i class="bi bi-shield-lock-fill"></i>
+            <div style="width: 44px; height: 44px; background: rgba(37,99,235,0.08); color: #2563eb; border-radius: 14px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-shield-lock"></i>
             </div>
             <div>
-                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Gestión de Usuarios</h4>
-                <span id="gu-subtitle" class="text-secondary small">Control de accesos, roles y permisos del ERP</span>
+                <h4 class="fw-bold m-0" style="color: var(--text, #0f172a); letter-spacing: -0.02em;">Gestión de Usuarios</h4>
+                <span id="gu-subtitle" class="text-secondary small" style="font-weight: 500;">Control de accesos, roles y matriz de permisos</span>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -269,27 +291,27 @@
                 <i class="bi bi-shield-plus text-success"></i> <span>+ Nuevo Rol</span>
             </button>
             <button class="btn btn-primary fw-bold text-white rounded-3 px-3 py-2 shadow-2xs d-none d-md-inline-flex align-items-center gap-1" onclick="window.guNuevoMiembro && window.guNuevoMiembro()" style="background:#2563eb; border-color:#2563eb;">
-                <i class="bi bi-person-plus-fill"></i> <span>+ Nuevo Usuario</span>
+                <i class="bi bi-person-plus"></i> <span>+ Nuevo Usuario</span>
             </button>
         </div>
     </div>
 
-    <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO 56px) ──────── -->
+    <!-- ── 2. BENTO KPIS ROW (GROUPED INSET) ──────── -->
     <div class="row g-2 mb-3">
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card active" onclick="window.guSetTab && window.guSetTab('miembros')">
-                <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
-                    <i class="bi bi-people-fill"></i>
+                <div class="ck-kpi-icon" style="background: rgba(37,99,235,0.08); color:#2563eb;">
+                    <i class="bi bi-people"></i>
                 </div>
                 <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
                     <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Total Usuarios</span>
-                    <h2 id="gu-kpi-total-usuarios" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
+                    <h2 id="gu-kpi-total-usuarios" class="fw-bolder m-0 lh-1" style="font-size: 1.35rem; color: var(--text, #0f172a);">0</h2>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" onclick="window.guSetTab && window.guSetTab('roles')">
-                <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+                <div class="ck-kpi-icon" style="background: rgba(16,185,129,0.08); color:#10b981;">
                     <i class="bi bi-shield-check"></i>
                 </div>
                 <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
@@ -300,8 +322,8 @@
         </div>
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card">
-                <div class="ck-kpi-icon" style="background:#fef2f2; color:#ef4444;">
-                    <i class="bi bi-key-fill"></i>
+                <div class="ck-kpi-icon" style="background: rgba(239,68,68,0.08); color:#ef4444;">
+                    <i class="bi bi-key"></i>
                 </div>
                 <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
                     <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Administradores</span>
@@ -311,12 +333,12 @@
         </div>
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card">
-                <div class="ck-kpi-icon" style="background:#faf5ff; color:#9333ea;">
-                    <i class="bi bi-check-circle-fill"></i>
+                <div class="ck-kpi-icon" style="background: rgba(147,51,234,0.08); color:#9333ea;">
+                    <i class="bi bi-check-circle"></i>
                 </div>
                 <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
                     <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Seguridad ERP</span>
-                    <h2 class="fw-bolder m-0 text-primary lh-1" style="font-size: 1.15rem;">Activa</h2>
+                    <h2 class="fw-bolder m-0 lh-1" style="font-size: 1.15rem; color:#9333ea;">Activa</h2>
                 </div>
             </div>
         </div>
@@ -326,10 +348,10 @@
     <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
         <div class="ck-apple-segmented">
             <button type="button" class="ck-segment-item active" id="gu-tab-roles" onclick="document.querySelectorAll('#moduloUsuarios .ck-segment-item').forEach(b=>b.classList.remove('active')); this.classList.add('active'); window.guSetTab && window.guSetTab('roles');">
-                <i class="bi bi-shield-fill me-1"></i>Roles <span id="gu-count-roles" class="badge bg-light text-dark rounded-pill ms-1"></span>
+                <i class="bi bi-shield"></i> Roles <span id="gu-count-roles" class="badge bg-light text-dark rounded-pill ms-1"></span>
             </button>
             <button type="button" class="ck-segment-item" id="gu-tab-miembros" onclick="document.querySelectorAll('#moduloUsuarios .ck-segment-item').forEach(b=>b.classList.remove('active')); this.classList.add('active'); window.guSetTab && window.guSetTab('miembros');">
-                <i class="bi bi-people me-1"></i>Usuarios <span id="gu-count-miembros" class="badge bg-light text-dark rounded-pill ms-1"></span>
+                <i class="bi bi-people"></i> Usuarios <span id="gu-count-miembros" class="badge bg-light text-dark rounded-pill ms-1"></span>
             </button>
         </div>
     </div>
@@ -346,8 +368,8 @@
             <div class="gu-panel-body">
                 <div class="gu-panel-empty" id="guPanelEmpty">
                     <i class="bi bi-shield-lock"></i>
-                    <div class="fw-bold" style="font-size:.9rem; color:#0f172a;">Selecciona un rol o usuario</div>
-                    <div style="font-size:.78rem; color:#64748b;">Haz clic en la lista para ver y editar sus permisos y accesos.</div>
+                    <div class="fw-bold" style="font-size:.95rem; color:#0f172a;">Selecciona un rol o usuario</div>
+                    <div style="font-size:.8rem; color:#64748b;">Haz clic en la lista para ver y editar sus permisos y accesos.</div>
                 </div>
                 <div id="guPanelContent" style="display:none;"></div>
             </div>
@@ -355,8 +377,8 @@
         </div>
     </div>
 
-    <!-- ── 5. BOTÓN FLOTANTE (FAB) PARA MÓVIL (1:1 Reporte de Fallas) ── -->
-    <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1040;">
+    <!-- ── 5. BOTÓN FLOTANTE (FAB) PARA MÓVIL ────────────────────────── -->
+    <div class="d-md-none position-fixed" style="bottom: 84px; right: 1.25rem; z-index: 1040;">
         <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
                 onclick="window.guAbrirSelectorAccionMobile && window.guAbrirSelectorAccionMobile()"
                 style="width: 58px; height: 58px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.6rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;"
@@ -366,52 +388,42 @@
     </div>
 </div>
 
-<!-- Modal Action Sheet: Opciones de Creación en Móvil -->
-<div class="modal fade" id="modalAccionUsuariosMobile" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width: 380px; margin: auto; padding: 1rem;">
-    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: #ffffff;">
-      <div class="modal-header border-bottom px-3 py-2 bg-light">
-        <div class="d-flex align-items-center gap-2">
-          <i class="bi bi-plus-circle-fill text-primary fs-5"></i>
-          <span class="fw-bold text-dark" style="font-size: 0.95rem;">¿Qué deseas crear?</span>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body p-3 d-flex flex-column gap-2">
-        <button type="button" class="btn btn-light border p-3 rounded-3 d-flex align-items-center gap-3 text-start w-100" 
-                onclick="bootstrap.Modal.getInstance(document.getElementById('modalAccionUsuariosMobile')).hide(); window.guNuevoMiembro && window.guNuevoMiembro();">
-          <div style="width: 44px; height: 44px; border-radius: 12px; background: #eff6ff; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
-            <i class="bi bi-person-plus-fill"></i>
-          </div>
-          <div>
-            <div class="fw-bold text-dark" style="font-size: 0.92rem;">Nuevo Usuario</div>
-            <div class="text-secondary small" style="font-size: 0.75rem;">Crear acceso, nombre, correo y rol asignado</div>
-          </div>
-        </button>
-
-        <button type="button" class="btn btn-light border p-3 rounded-3 d-flex align-items-center gap-3 text-start w-100" 
-                onclick="bootstrap.Modal.getInstance(document.getElementById('modalAccionUsuariosMobile')).hide(); window.guNuevoRol && window.guNuevoRol();">
-          <div style="width: 44px; height: 44px; border-radius: 12px; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
-            <i class="bi bi-shield-plus"></i>
-          </div>
-          <div>
-            <div class="fw-bold text-dark" style="font-size: 0.92rem;">Nuevo Rol</div>
-            <div class="text-secondary small" style="font-size: 0.75rem;">Configurar nuevo perfil y matriz de permisos</div>
-          </div>
-        </button>
-      </div>
+<!-- Modal Bottom-Sheet: Selector de Acción en Móvil (Nuevo Usuario / Nuevo Rol) -->
+<div class="offcanvas offcanvas-bottom bnav-sheet h-auto" tabindex="-1" id="modalAccionUsuariosMobile">
+    <div class="bnav-sheet-header">
+        <div class="bnav-sheet-title"><i class="bi bi-plus-circle text-primary"></i> Crear Registro</div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
-  </div>
+    <div class="offcanvas-body px-3 pb-4">
+        <div class="bnav-group-box">
+            <div class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('modalAccionUsuariosMobile')).hide(); window.guNuevoMiembro && window.guNuevoMiembro();">
+                <div class="bnav-row-icon" style="color: #0284c7;"><i class="bi bi-person-plus"></i></div>
+                <div class="bnav-row-content">
+                    <p class="bnav-row-title">Nuevo Usuario</p>
+                    <p class="bnav-row-desc">Crear acceso, nombre, correo y rol asignado</p>
+                </div>
+                <i class="bi bi-chevron-right bnav-row-chevron"></i>
+            </div>
+            <div class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('modalAccionUsuariosMobile')).hide(); window.guNuevoRol && window.guNuevoRol();">
+                <div class="bnav-row-icon" style="color: #10b981;"><i class="bi bi-shield-plus"></i></div>
+                <div class="bnav-row-content">
+                    <p class="bnav-row-title">Nuevo Rol</p>
+                    <p class="bnav-row-desc">Configurar nuevo perfil y matriz de permisos</p>
+                </div>
+                <i class="bi bi-chevron-right bnav-row-chevron"></i>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Offcanvas para móvil y paneles -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasGU" style="width:min(480px,100vw); background:#ffffff; border:none; margin:12px; height:calc(100% - 24px); border-radius:20px; box-shadow:-4px 0 30px rgba(0,0,0,0.15); z-index:1045;">
-    <div class="offcanvas-header" style="background:#ffffff; border-bottom:1px solid #e2e8f0; border-radius:20px 20px 0 0; padding:16px 20px;">
-        <h6 class="offcanvas-title fw-bold" id="offcanvasGUTitle" style="color:#0f172a; font-size:1rem;">Detalle</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" style="opacity:0.6; transition:all 0.2s;"></button>
+<!-- Offcanvas Bottom Sheet para Formulario Móvil (90vh - Saliendo desde abajo) -->
+<div class="offcanvas offcanvas-bottom gu-bottom-sheet" tabindex="-1" id="offcanvasGU">
+    <div class="gu-sheet-header">
+        <h5 class="gu-sheet-title" id="offcanvasGUTitle">Detalle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
-    <div class="offcanvas-body p-0" style="overflow-y:auto; position:relative;">
-        <div id="guOffcanvasContent" style="padding:20px 20px 80px;"></div>
-        <div id="guOffcanvasActions" style="display:none; position:sticky; bottom:0; background:#ffffff; padding:14px 20px; border-top:1px solid #e2e8f0; border-radius:0 0 20px 20px; justify-content:flex-end; gap:10px; z-index:10; box-shadow:0 -4px 10px rgba(0,0,0,0.02);"></div>
+    <div class="gu-sheet-body">
+        <div id="guOffcanvasContent"></div>
     </div>
+    <div class="gu-sheet-footer" id="guOffcanvasActions" style="display:none;"></div>
 </div>
