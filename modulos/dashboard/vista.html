@@ -32,11 +32,26 @@
         align-items: center;
         margin-bottom: 1.25rem;
     }
+    .dash-mob-avatar-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #38bdf8, #2563eb);
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px rgba(37,99,235,0.22);
+        flex-shrink: 0;
+    }
     .dash-mob-greeting-title {
-        font-size: 1.25rem;
+        font-size: 1.2rem;
         font-weight: 800;
         color: var(--text, #0f172a);
         margin: 0;
+        line-height: 1.2;
     }
     .dash-mob-greeting-sub {
         font-size: 0.78rem;
@@ -147,11 +162,18 @@
 </style>
 <div id="moduloDashboard" class="modulo-wrapper" style="display: flex; flex-direction: column;">
 
-    <!-- Mobile Header -->
-    <div class="d-flex d-md-none dash-mob-header-wrap" id="dash-mob-header">
-        <div>
-            <h2 class="dash-mob-greeting-title">Dashboard</h2>
-            <p class="dash-mob-greeting-sub">Resumen de operaciones en tiempo real</p>
+    <!-- Mobile Hero Header Dinámico -->
+    <div class="d-flex d-md-none dash-mob-header-wrap align-items-center" id="dash-mob-header">
+        <div class="d-flex align-items-center gap-3">
+            <div class="dash-mob-avatar-badge" id="dash-mob-avatar">SA</div>
+            <div>
+                <h2 class="dash-mob-greeting-title" id="dash-mob-greeting">Hola, Sthefano 👋</h2>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <span class="badge bg-success-subtle text-success fw-bold rounded-pill px-2 py-1" style="font-size: 0.65rem; letter-spacing: 0.02em;">
+                        <i class="bi bi-circle-fill me-1" style="font-size: 0.45rem;"></i> Sistema Operativo
+                    </span>
+                </div>
+            </div>
         </div>
         <div class="dash-mob-btn-reload" onclick="recargarDashboard()" title="Actualizar">
             <i class="bi bi-arrow-clockwise"></i>
