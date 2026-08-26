@@ -735,7 +735,7 @@
                 "TOTAL GALONES": totGal > 0 ? parseFloat(totGal.toFixed(2)) : 0,
                 "TOTAL GASTO (S/)": totGasto > 0 ? parseFloat(totGasto.toFixed(2)) : 0,
                 "KM / GALÓN (REAL)": rend > 0 ? parseFloat(rend.toFixed(2)) : '—',
-                "KILOMETRAJE (GPS CAN)": (gps && gps.recorridoKmGps !== null && gps.recorridoKmGps !== undefined) ? parseFloat(Number(gps.recorridoKmGps).toFixed(2)) : '—',
+                "RECORRIDO (GPS CAN)": (gps && gps.recorridoKmGps !== null && gps.recorridoKmGps !== undefined) ? parseFloat(Number(gps.recorridoKmGps).toFixed(2)) : '—',
                 "COMB. CONSUMIDO (GPS CAN)": (gps && gps.combustibleConsumidoGps !== null && gps.combustibleConsumidoGps !== undefined) ? parseFloat(Number(gps.combustibleConsumidoGps).toFixed(2)) : '—',
                 "RENDIMIENTO (GPS CAN)": (gps && gps.rendimientoGps !== null && gps.rendimientoGps !== undefined) ? parseFloat(Number(gps.rendimientoGps).toFixed(2)) : '—',
                 "CANTIDAD VALES": valesCount
@@ -757,7 +757,7 @@
             { wch: 15 }, // TOTAL GALONES
             { wch: 16 }, // TOTAL GASTO (S/)
             { wch: 18 }, // KM / GALÓN (REAL)
-            { wch: 22 }, // KILOMETRAJE (GPS CAN)
+            { wch: 22 }, // RECORRIDO (GPS CAN)
             { wch: 26 }, // COMB. CONSUMIDO (GPS CAN)
             { wch: 22 }, // RENDIMIENTO (GPS CAN)
             { wch: 15 }  // CANTIDAD VALES
