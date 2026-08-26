@@ -56,7 +56,7 @@
             if (lblSinInsp) lblSinInsp.innerText = `${sinInsp} (${porcSinInsp}%)`;
 
             // 2. Render Chart Vigencia Donut con 3 segmentos (100% de la flota)
-            if (document.getElementById('neu-chart-vigencia')) {
+            if (document.getElementById('chartNeuVigencia')) {
                 window.neuRenderChartVigencia(vig, novig, sinInsp);
             }
 
