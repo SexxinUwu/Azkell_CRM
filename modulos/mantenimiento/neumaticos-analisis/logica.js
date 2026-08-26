@@ -32,17 +32,21 @@
             const porcNoVig = totalUnidadesEnUso > 0 ? Math.round((novig / totalUnidadesEnUso) * 100) : 0;
             const porcSinInsp = Math.max(0, 100 - porcVig - porcNoVig);
 
-            document.getElementById('kpi-neu-total-insp').innerText = total;
+            const kpiTotal = document.getElementById('kpi-neu-total-insp');
+            if (kpiTotal) kpiTotal.innerText = total;
             const usoEl = document.getElementById('kpi-neu-unidades-uso');
             if (usoEl) usoEl.innerText = totalUnidadesEnUso.toLocaleString();
 
-            document.getElementById('kpi-neu-vigentes').innerText = vig;
+            const kpiVig = document.getElementById('kpi-neu-vigentes');
+            if (kpiVig) kpiVig.innerText = vig;
             
             const porcEl = document.getElementById('kpi-neu-porc-vigente');
             if (porcEl) porcEl.innerText = `${vig} de ${totalUnidadesEnUso} unidades al día (${porcVig}%)`;
 
-            document.getElementById('kpi-neu-criticas').innerText = crit;
-            document.getElementById('kpi-neu-vencidas').innerText = novig;
+            const kpiCrit = document.getElementById('kpi-neu-criticas');
+            if (kpiCrit) kpiCrit.innerText = crit;
+            const kpiNovig = document.getElementById('kpi-neu-vencidas');
+            if (kpiNovig) kpiNovig.innerText = novig;
 
             const lblVig = document.getElementById('lbl-vigentes-cnt');
             if (lblVig) lblVig.innerText = `${vig} (${porcVig}%)`;
@@ -52,10 +56,14 @@
             if (lblSinInsp) lblSinInsp.innerText = `${sinInsp} (${porcSinInsp}%)`;
 
             // 2. Render Chart Vigencia Donut con 3 segmentos (100% de la flota)
-            window.neuRenderChartVigencia(vig, novig, sinInsp);
+            if (document.getElementById('neu-chart-vigencia')) {
+                window.neuRenderChartVigencia(vig, novig, sinInsp);
+            }
 
             // 3. Render Tabla
-            window.neuFiltrarTablaInsp();
+            if (document.getElementById('neu-tbody-inspecciones')) {
+                window.neuFiltrarTablaInsp();
+            }
 
         } catch (e) {
             console.error("Error en neuAnalisisCargar:", e);

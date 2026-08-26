@@ -859,18 +859,18 @@ module.exports = function (db, broadcast, logAudit) {
                     d.accion,
                     d.rot,
                     d.observaciones,
-                    d.foto1,
-                    d.foto2,
-                    d.foto3,
+                    (d.foto1 IS NOT NULL AND d.foto1 != '') as tiene_foto1,
+                    (d.foto2 IS NOT NULL AND d.foto2 != '') as tiene_foto2,
+                    (d.foto3 IS NOT NULL AND d.foto3 != '') as tiene_foto3,
                     d.alerta_cambio,
                     p.cliente as dueno,
                     p.marca as marca_unidad,
                     p.tipo as tipo_unidad,
                     p.motora
                 FROM (
-                    SELECT i1.placa, i1.id_inspeccion, i1.fecha_inspeccion, i1.km_vehiculo
+                    SELECT i1.id_inspeccion, i1.placa, i1.fecha_inspeccion, i1.km_vehiculo
                     FROM neumaticos_inspecciones i1
-                    INNER JOIN (
+                    JOIN (
                         SELECT placa, MAX(fecha_inspeccion) as max_fecha
                         FROM neumaticos_inspecciones
                         GROUP BY placa
@@ -927,9 +927,9 @@ module.exports = function (db, broadcast, logAudit) {
                     d.accion,
                     d.rot,
                     d.observaciones,
-                    d.foto1,
-                    d.foto2,
-                    d.foto3,
+                    (d.foto1 IS NOT NULL AND d.foto1 != '') as tiene_foto1,
+                    (d.foto2 IS NOT NULL AND d.foto2 != '') as tiene_foto2,
+                    (d.foto3 IS NOT NULL AND d.foto3 != '') as tiene_foto3,
                     p.cliente as dueno,
                     p.marca as marca_unidad,
                     p.tipo as tipo_unidad,
@@ -942,9 +942,9 @@ module.exports = function (db, broadcast, logAudit) {
                         ELSE 'Arrastre'
                     END as tipo_posicion
                 FROM (
-                    SELECT i1.placa, i1.id_inspeccion, i1.fecha_inspeccion, i1.km_vehiculo
+                    SELECT i1.id_inspeccion, i1.placa, i1.fecha_inspeccion, i1.km_vehiculo
                     FROM neumaticos_inspecciones i1
-                    INNER JOIN (
+                    JOIN (
                         SELECT placa, MAX(fecha_inspeccion) as max_fecha
                         FROM neumaticos_inspecciones
                         GROUP BY placa
