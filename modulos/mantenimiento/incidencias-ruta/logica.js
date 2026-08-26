@@ -259,7 +259,7 @@
         return window.Chart || (typeof Chart !== 'undefined' ? Chart : null);
     }
 
-    // ── 1. Gráfico Mensual (Barras + Línea con números exactos) ──
+    // ── 1. Gráfico Mensual (Barras + Línea con números exactos sobre cada barra) ──
     window.incRenderGraficoMensual = function(mensualData) {
         const canvas = document.getElementById('chartIncMensual');
         if (!canvas) return;
@@ -278,8 +278,35 @@
         // Colores de barras: resaltar en rojo el pico máximo y en azul los demás
         const barColors = incidencias.map(v => v === maxVal && v > 0 ? '#ef4444' : '#0284c7');
 
+        // Plugin simple personalizado para dibujar las cantidades encima de cada punto/barra
+        const drawNumbersPlugin = {
+            id: 'drawNumbersPlugin',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                chart.data.datasets.forEach((dataset, i) => {
+                    // Solo pintar los números en la serie de barras
+                    if (dataset.type === 'bar') {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((bar, index) => {
+                            const val = dataset.data[index];
+                            if (val > 0) {
+                                ctx.save();
+                                ctx.fillStyle = '#0f172a';
+                                ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(val, bar.x, bar.y - 4);
+                                ctx.restore();
+                            }
+                        });
+                    }
+                });
+            }
+        };
+
         window._incCharts.mensual = new C(canvas.getContext('2d'), {
             type: 'bar',
+            plugins: [drawNumbersPlugin],
             data: {
                 labels: labels,
                 datasets: [
@@ -307,6 +334,9 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: {
+                    padding: { top: 18 }
+                },
                 plugins: {
                     legend: { display: false },
                     datalabels: false,
@@ -323,7 +353,8 @@
                     y: {
                         beginAtZero: true,
                         ticks: { stepSize: 5 },
-                        grid: { color: '#f1f5f9' }
+                        grid: { color: '#f1f5f9' },
+                        suggestedMax: maxVal + 4
                     }
                 }
             }
@@ -603,8 +634,12 @@
                 return `
                     <tr>
                         <td class="font-monospace fw-bold text-dark">${it.fecha_falla || '---'}</td>
-                        <td><span class="badge bg-dark font-monospace">${it.placa}</span></td>
-                        <td class="fw-semibold">${it.conductor || '---'}</td>
+                        <td>
+                            <span class="badge px-2.5 py-1 fw-bold font-monospace" style="background:#0f172a !important; color:#ffffff !important; border-radius:6px; letter-spacing:0.05em; font-size:0.82rem; display:inline-block; border:1px solid #334155;">
+                                ${it.placa || '---'}
+                            </span>
+                        </td>
+                        <td class="fw-semibold text-dark">${it.conductor || '---'}</td>
                         <td class="text-secondary">${it.ubicacion || '---'}</td>
                         <td>
                             <b>${it.motivo || '---'}</b>
