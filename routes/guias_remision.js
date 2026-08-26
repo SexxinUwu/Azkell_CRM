@@ -51,7 +51,7 @@ module.exports = function(db, tenantStorage) {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             `);
 
-            await dbConn.promise().query(`
+            await dbConn.query(`
                 CREATE TABLE IF NOT EXISTS guias_remision_items (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     guia_id INT NOT NULL,
