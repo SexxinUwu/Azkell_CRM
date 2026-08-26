@@ -399,22 +399,27 @@
 
             const valesCount = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
 
-            // Datos de Telemetría GPS Wialon
-            const gps = t.wialonGps || null;
-            const gpsKmIni = (gps && gps.kmInicialGps !== null && gps.kmInicialGps !== undefined) ? gps.kmInicialGps.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—';
-            const gpsKmFin = (gps && gps.kmFinalGps !== null && gps.kmFinalGps !== undefined) ? gps.kmFinalGps.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—';
-            const gpsRecKm = (gps && gps.recorridoKmGps !== null && gps.recorridoKmGps !== undefined) ? `${gps.recorridoKmGps.toLocaleString('es-PE', { minimumFractionDigits: 1 })} Km` : '—';
-            const gpsComb = (gps && gps.combustibleConsumidoGps !== null && gps.combustibleConsumidoGps !== undefined) ? `${gps.combustibleConsumidoGps.toLocaleString('es-PE', { minimumFractionDigits: 2 })} Gal` : '—';
+            // Telemetría GPS Wialon CAN Bus
+            const gpsData = t.gpsTelemetria;
+            const gpsRecKm = (gpsData && gpsData.recorridoKmGps !== null && gpsData.recorridoKmGps !== undefined)
+                ? `${Number(gpsData.recorridoKmGps).toLocaleString('es-PE', { minimumFractionDigits: 1 })} km`
+                : '<span class="text-muted opacity-50">—</span>';
+            const gpsComb = (gpsData && gpsData.combustibleConsumidoGps !== null && gpsData.combustibleConsumidoGps !== undefined)
+                ? `${Number(gpsData.combustibleConsumidoGps).toLocaleString('es-PE', { minimumFractionDigits: 2 })} gal`
+                : '<span class="text-muted opacity-50">—</span>';
+            const gpsRend = (gpsData && gpsData.rendimientoGps !== null && gpsData.rendimientoGps !== undefined)
+                ? `${Number(gpsData.rendimientoGps).toFixed(2)} km/g`
+                : '<span class="text-muted opacity-50">—</span>';
 
             html += `
                 <tr>
-                    <td>
-                        <span class="badge bg-slate-900 text-white font-monospace px-2.5 py-1" style="background:#0f172a; font-size:0.75rem;">
-                            ${esc(t.viaje)}
+                    <td class="font-monospace fw-bold text-primary">
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-2 py-1">
+                            #${esc(t.numViaje || t.viaje)}
                         </span>
                     </td>
                     <td>
-                        <span class="badge border font-monospace px-2.5 py-1 fw-bold" style="background:#f1f5f9; color:#0f172a !important; border-color:#cbd5e1 !important; font-size:0.78rem; letter-spacing:0.5px;">
+                        <span class="badge bg-dark px-2 py-1 font-monospace fw-bold text-white shadow-2xs">
                             ${esc(t.placa)}
                         </span>
                     </td>
@@ -436,18 +441,15 @@
                     </td>
                     <td class="text-end font-monospace">${semaforoBadge}</td>
 
-                    <!-- Telemetría GPS Wialon (Celdas Celestes) -->
-                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.04); color:#0369a1; border-left: 2px solid #bae6fd;">
-                        ${gpsKmIni}
-                    </td>
-                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.04); color:#0369a1;">
-                        ${gpsKmFin}
-                    </td>
-                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.08); color:#0284c7;">
+                    <!-- Telemetría GPS Wialon CAN Bus (Celdas Celestes) -->
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.05); color:#0284c7; border-left: 2px solid #bae6fd;">
                         ${gpsRecKm}
                     </td>
-                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.08); color:#0284c7; border-right: 2px solid #bae6fd;">
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.05); color:#0284c7;">
                         ${gpsComb}
+                    </td>
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.08); color:#0369a1; border-right: 2px solid #bae6fd;">
+                        ${gpsRend}
                     </td>
 
                     <td class="text-center">
@@ -455,8 +457,8 @@
                             <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2 d-inline-flex align-items-center gap-1" onclick="window.caAbrirModalVales(${globalIdx})" style="font-size:0.72rem;" title="Ver vales físicos">
                                 <i class="bi bi-receipt"></i> ${valesCount}
                             </button>
-                            <button class="btn btn-outline-info btn-sm rounded-pill py-0 px-2 d-inline-flex align-items-center gap-1" id="btn-gps-${globalIdx}" onclick="window.caConsultarGpsViaje(${globalIdx})" style="font-size:0.72rem; color:#0284c7; border-color:#0284c7;" title="Consultar Informe 25 Wialon">
-                                <i class="bi bi-broadcast"></i> GPS
+                            <button class="btn btn-outline-info btn-sm rounded-pill py-0 px-2 d-inline-flex align-items-center gap-1" id="btn-gps-${globalIdx}" onclick="window.caConsultarGpsViaje(${globalIdx})" style="font-size:0.72rem; color:#0284c7; border-color:#0284c7;" title="Consultar Telemetría CAN Bus Wialon">
+                                <i class="bi bi-broadcast"></i> CAN
                             </button>
                         </div>
                     </td>
@@ -468,7 +470,7 @@
         window.caRenderPaginacion(total, page, limit);
     };
 
-    // 🛰️ Consultar Telemetría e Informe 25 de Wialon para un Viaje
+    // 🛰️ Consultar Telemetría e Informe 3.2.1 CAN Bus de Wialon para un Viaje
     window.caConsultarGpsViaje = async function(tripIdx) {
         const trip = window._caFilteredTrips[tripIdx];
         if (!trip) return;
@@ -490,29 +492,30 @@
             const result = await resp.json();
 
             if (result.ok && result.data) {
+                trip.gpsTelemetria = result.data;
                 trip.wialonGps = result.data;
                 if (typeof window.mostrarAlerta === 'function') {
-                    window.mostrarAlerta(`✓ GPS Wialon sincronizado para viaje ${trip.viaje} (${trip.placa})`, 'success');
+                    window.mostrarAlerta(`✓ Telemetría CAN Bus sincronizada para viaje ${trip.viaje || trip.numViaje} (${trip.placa})`, 'success');
                 }
                 window.caRenderTabla();
             } else {
-                const msg = result.error || result.message || 'No se obtuvieron datos de GPS para este viaje';
+                const msg = result.error || result.message || 'No se obtuvieron datos de GPS CAN para este viaje';
                 if (typeof window.mostrarAlerta === 'function') {
                     window.mostrarAlerta(`⚠️ ${msg}`, 'warning');
                 }
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="bi bi-broadcast"></i> GPS';
+                    btn.innerHTML = '<i class="bi bi-broadcast"></i> CAN';
                 }
             }
         } catch (err) {
-            console.error("Error consultando GPS:", err);
+            console.error("Error consultando GPS CAN:", err);
             if (typeof window.mostrarAlerta === 'function') {
-                window.mostrarAlerta(`Error al consultar Wialon: ${err.message}`, 'danger');
+                window.mostrarAlerta(`Error al consultar Wialon CAN: ${err.message}`, 'danger');
             }
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-broadcast"></i> GPS';
+                btn.innerHTML = '<i class="bi bi-broadcast"></i> CAN';
             }
         }
     };

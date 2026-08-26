@@ -1066,7 +1066,7 @@ module.exports = function (db, broadcast, logAudit) {
                 return res.json({ ok: true, data: null, message: `Unidad con placa ${cleanPlaca} no encontrada en Wialon.` });
             }
 
-            // 3. Buscar Recursos y Plantilla "25.Informe de Combustible"
+            // 3. Buscar Recursos y Plantilla "3.2.1 Informe: Viajes - Unidad CAN" (con fallback a Informe 25)
             const resParams = {
                 spec: {
                     itemsType: "avl_resource",
@@ -1084,36 +1084,56 @@ module.exports = function (db, broadcast, logAudit) {
 
             let targetResourceId = null;
             let targetTemplateId = null;
+            let templateName = '';
 
             if (resData.items) {
+                // Prioridad 1: Buscar Plantilla 3.2.1 CAN
                 for (const r of resData.items) {
                     if (r.rep) {
                         for (const rep of Object.values(r.rep)) {
-                            if (rep.n && (rep.n.includes('25') || rep.n.toLowerCase().includes('informe de combustible'))) {
+                            const n = (rep.n || '').toLowerCase();
+                            if (n.includes('3.2.1') || n.includes('viajes - unidad can')) {
                                 targetResourceId = r.id;
                                 targetTemplateId = rep.id;
+                                templateName = rep.n;
                                 break;
                             }
                         }
                     }
                     if (targetResourceId && targetTemplateId) break;
                 }
+
+                // Fallback: Si no existe 3.2.1, buscar Informe 25
+                if (!targetResourceId || !targetTemplateId) {
+                    for (const r of resData.items) {
+                        if (r.rep) {
+                            for (const rep of Object.values(r.rep)) {
+                                const n = (rep.n || '').toLowerCase();
+                                if (n.includes('25') || n.includes('informe de combustible')) {
+                                    targetResourceId = r.id;
+                                    targetTemplateId = rep.id;
+                                    templateName = rep.n;
+                                    break;
+                                }
+                            }
+                        }
+                        if (targetResourceId && targetTemplateId) break;
+                    }
+                }
             }
 
             if (!targetResourceId || !targetTemplateId) {
                 await fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
-                return res.json({ ok: false, error: 'No se encontró la plantilla de Informe 25 en Wialon.' });
+                return res.json({ ok: false, error: 'No se encontró la plantilla de Informe 3.2.1 CAN ni Informe 25 en Wialon.' });
             }
 
             // 4. Convertir fechaInicio y fechaFin a UNIX Timestamps (Hora Perú UTC-5)
-            // Redondeando a minutos (sin segundos) como estándar de intervalos Wialon
             const parseToUnix = (dateStr) => {
                 if (!dateStr || dateStr === 'N/D') return null;
-                // Si viene 'YYYY-MM-DD HH:mm:ss' o 'YYYY-MM-DD', redondear segundos
                 const cleanStr = String(dateStr).trim();
                 const d = new Date(cleanStr.replace(' ', 'T') + (cleanStr.includes('T') || cleanStr.length <= 10 ? '' : '-05:00'));
                 if (isNaN(d.getTime())) return null;
-                d.setSeconds(0, 0); // Ajustar segundos a 00
+                d.setSeconds(0, 0);
                 return Math.floor(d.getTime() / 1000);
             };
 
@@ -1125,7 +1145,7 @@ module.exports = function (db, broadcast, logAudit) {
                 return res.json({ ok: false, error: 'Rango de fechas inválido para el viaje' });
             }
 
-            // 5. Ejecutar Informe 25
+            // 5. Ejecutar Informe 3.2.1 CAN
             const execParams = {
                 reportResourceId: targetResourceId,
                 reportTemplateId: targetTemplateId,
@@ -1137,38 +1157,53 @@ module.exports = function (db, broadcast, logAudit) {
             const execRes = await fetch(`${baseUrl}?svc=report/exec_report&params=${encodeURIComponent(JSON.stringify(execParams))}&sid=${sid}`);
             const execData = await execRes.json();
 
-            let kmInicialGps = null;
-            let kmFinalGps = null;
             let recorridoKmGps = null;
             let combustibleConsumidoGps = null;
             let rendimientoGps = null;
 
+            const cleanNum = (str) => {
+                if (!str) return null;
+                const match = String(str).replace(/,/g, '').match(/[-+]?[0-9]*\.?[0-9]+/);
+                return match ? parseFloat(match[0]) : null;
+            };
+
+            // Extraer desde las tablas resultantes del informe 3.2.1 CAN (unit_trips)
+            if (execData.reportResult && Array.isArray(execData.reportResult.tables)) {
+                execData.reportResult.tables.forEach(tbl => {
+                    if (Array.isArray(tbl.header) && Array.isArray(tbl.total)) {
+                        tbl.header.forEach((h, hIdx) => {
+                            const headerLower = String(h || '').toLowerCase();
+                            const valStr = tbl.total[hIdx];
+
+                            if (headerLower.includes('distancia') || headerLower.includes('kilometraje') || headerLower.includes('recorrido')) {
+                                if (recorridoKmGps === null) recorridoKmGps = cleanNum(valStr);
+                            } else if (headerLower.includes('combustible consumido') || headerLower.includes('consumo')) {
+                                if (combustibleConsumidoGps === null) combustibleConsumidoGps = cleanNum(valStr);
+                            } else if (headerLower.includes('rendimiento') || headerLower.includes('km/gal')) {
+                                if (rendimientoGps === null) rendimientoGps = cleanNum(valStr);
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Si aún faltó algún dato, extraer de las estadísticas globales (stats)
             if (execData.reportResult && Array.isArray(execData.reportResult.stats)) {
                 execData.reportResult.stats.forEach(([key, val]) => {
                     const k = String(key || '').toLowerCase();
-                    const cleanNum = (str) => {
-                        if (!str) return null;
-                        const match = String(str).replace(/,/g, '').match(/[-+]?[0-9]*\.?[0-9]+/);
-                        return match ? parseFloat(match[0]) : null;
-                    };
-
-                    if (k.includes('initial mileage in trips') || k.includes('kilometraje inicial')) {
-                        kmInicialGps = cleanNum(val);
-                    } else if (k.includes('final mileage in trips') || k.includes('kilometraje final')) {
-                        kmFinalGps = cleanNum(val);
-                    } else if (k.includes('kilometraje en viajes') || k.includes('mileage in trips')) {
+                    if ((k.includes('kilometraje en viajes') || k.includes('mileage in trips') || k.includes('distancia')) && recorridoKmGps === null) {
                         recorridoKmGps = cleanNum(val);
-                    } else if (k.includes('fuel consumed in trips') || k.includes('combustible consumido en viajes') || (k === 'fuel consumed' && combustibleConsumidoGps === null)) {
+                    } else if ((k.includes('fuel consumed') || k.includes('combustible consumido')) && combustibleConsumidoGps === null) {
                         combustibleConsumidoGps = cleanNum(val);
-                    } else if (k.includes('avg. fuel consumption') || k.includes('rendimiento')) {
+                    } else if ((k.includes('rendimiento') || k.includes('avg. fuel consumption')) && rendimientoGps === null) {
                         rendimientoGps = cleanNum(val);
                     }
                 });
             }
 
-            // Si recorrido no vino directo, calcular diferencia
-            if (recorridoKmGps === null && kmInicialGps !== null && kmFinalGps !== null && kmFinalGps >= kmInicialGps) {
-                recorridoKmGps = Math.round((kmFinalGps - kmInicialGps) * 100) / 100;
+            // Calcular rendimiento si tenemos recorrido y combustible consumido
+            if (rendimientoGps === null && recorridoKmGps > 0 && combustibleConsumidoGps > 0) {
+                rendimientoGps = Math.round((recorridoKmGps / combustibleConsumidoGps) * 100) / 100;
             }
 
             // 6. Limpiar y Cerrar Sesión
@@ -1180,8 +1215,7 @@ module.exports = function (db, broadcast, logAudit) {
                 data: {
                     placa: cleanPlaca,
                     unitName: unit.nm,
-                    kmInicialGps,
-                    kmFinalGps,
+                    plantilla: templateName,
                     recorridoKmGps,
                     combustibleConsumidoGps,
                     rendimientoGps
