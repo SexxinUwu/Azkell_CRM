@@ -149,7 +149,7 @@ window.cambiarTabLogin = function(tab) {
         if(tabReg) tabReg.classList.remove('active');
         if(tabLogin) tabLogin.classList.add('active');
         if(boxReg) boxReg.style.display = 'none';
-        if(form) form.style.display = 'flex';
+        if(form) form.style.display = 'block';
     }
 };
 
