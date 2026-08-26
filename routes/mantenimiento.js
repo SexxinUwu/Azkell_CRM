@@ -307,6 +307,125 @@ module.exports = function (db, logAudit) {
         });
     });
 
+    // GET /api/mantenimiento/incidencias-ruta/analytics
+    router.get('/incidencias-ruta/analytics', (req, res) => {
+        const targetDb = req.db || db;
+        const { anio } = req.query;
+        const targetYear = parseInt(anio, 10) || new Date().getFullYear();
+
+        const sql = `
+            SELECT 
+                id,
+                fecha_falla,
+                MONTH(fecha_falla) as mes_num,
+                placa,
+                tipo_unidad,
+                falla,
+                motivo,
+                area_responsable,
+                COALESCE(NULLIF(TRIM(responsable), ''), 'Sin Asignar') as responsable,
+                total_costo,
+                solucionado,
+                transbordo
+            FROM mant_incidencias_ruta
+            WHERE YEAR(fecha_falla) = ?
+        `;
+
+        targetDb.query(sql, [targetYear], (err, rows) => {
+            if (err) {
+                console.error('Error al obtener analytics de incidencias:', err);
+                return res.status(500).json({ ok: false, error: err.message });
+            }
+
+            const total = rows.length;
+            const totalCosto = rows.reduce((sum, r) => sum + (parseFloat(r.total_costo) || 0), 0);
+            const totalTransbordos = rows.filter(r => (r.transbordo || '').toUpperCase() === 'SI').length;
+            const totalPendientes = rows.filter(r => (r.solucionado || '').toUpperCase() === 'PENDIENTE').length;
+            const totalAtendidos = rows.filter(r => (r.solucionado || '').toUpperCase() === 'ATENDIDO').length;
+            const costoPromedio = total > 0 ? (totalCosto / total) : 0;
+            const tasaTransbordo = total > 0 ? Math.round((totalTransbordos / total) * 100) : 0;
+
+            // 1. Mensual (1 al 12)
+            const mesesLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic'];
+            const mensualIncidencias = Array(12).fill(0);
+            const mensualCostos = Array(12).fill(0);
+
+            rows.forEach(r => {
+                const mIdx = r.mes_num - 1;
+                if (mIdx >= 0 && mIdx < 12) {
+                    mensualIncidencias[mIdx]++;
+                    mensualCostos[mIdx] += (parseFloat(r.total_costo) || 0);
+                }
+            });
+
+            // 2. Top Placas
+            const placasMap = {};
+            rows.forEach(r => {
+                const plc = (r.placa || 'Desconocido').toUpperCase().trim();
+                if (!placasMap[plc]) placasMap[plc] = { count: 0, costo: 0, tipo: r.tipo_unidad || 'Tracto' };
+                placasMap[plc].count++;
+                placasMap[plc].costo += (parseFloat(r.total_costo) || 0);
+            });
+            const topPlacas = Object.keys(placasMap)
+                .map(k => ({ placa: k, count: placasMap[k].count, costo: placasMap[k].costo, tipo: placasMap[k].tipo }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 8);
+
+            // 3. Distribución por Área
+            const areaMap = {};
+            rows.forEach(r => {
+                const area = (r.area_responsable || 'Mantenimiento').trim();
+                areaMap[area] = (areaMap[area] || 0) + 1;
+            });
+
+            // 4. Distribución por Responsable (Top 8)
+            const respMap = {};
+            rows.forEach(r => {
+                const resp = (r.responsable || 'Sin Asignar').trim();
+                respMap[resp] = (respMap[resp] || 0) + 1;
+            });
+            const topResponsables = Object.keys(respMap)
+                .map(k => ({ nombre: k, count: respMap[k] }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 8);
+
+            // 5. Pareto de Fallas / Motivos más comunes (Top 8)
+            const fallasMap = {};
+            rows.forEach(r => {
+                let falla = (r.falla || r.motivo || 'Otros').trim();
+                if (falla.length > 30) falla = falla.substring(0, 30) + '...';
+                fallasMap[falla] = (fallasMap[falla] || 0) + 1;
+            });
+            const topFallas = Object.keys(fallasMap)
+                .map(k => ({ falla: k, count: fallasMap[k] }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 8);
+
+            res.json({
+                ok: true,
+                anio: targetYear,
+                resumen: {
+                    total,
+                    totalCosto,
+                    costoPromedio,
+                    totalTransbordos,
+                    tasaTransbordo,
+                    totalPendientes,
+                    totalAtendidos
+                },
+                mensual: {
+                    labels: mesesLabels,
+                    incidencias: mensualIncidencias,
+                    costos: mensualCostos
+                },
+                topPlacas,
+                areaMap,
+                topResponsables,
+                topFallas
+            });
+        });
+    });
+
     // POST /api/mantenimiento/incidencias-ruta
     router.post('/incidencias-ruta', (req, res) => {
         const targetDb = req.db || db;

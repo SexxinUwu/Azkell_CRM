@@ -6,14 +6,398 @@
     window._incLimitePorPagina = 50;
     window._incTotalPaginas = 1;
     window._incSortField = 'fecha_falla';
-    window._incSortDir = 'DESC'; // Por defecto el último arriba
+    window._incSortDir = 'DESC';
     let _incSearchTimeout = null;
+
+    window._incTabActiva = 'matriz'; // 'matriz' | 'graficas'
+    window._incCharts = {
+        mensual: null,
+        area: null,
+        topPlacas: null,
+        topFallas: null,
+        responsables: null
+    };
 
     // Inicializador del módulo (llamado por el router SPA de logica.js)
     window.init_mantenimiento_incidencias_ruta = function() {
         window.incCargarCatalogos();
         window.incCargarDatos();
         window.incSetupEventos();
+    };
+
+    // Alternar entre Matriz de Registros y Gráficas Analíticas
+    window.incCambiarTab = function(tab) {
+        window._incTabActiva = tab;
+        const viewMatriz = document.getElementById('inc-view-matriz');
+        const viewGraficas = document.getElementById('inc-view-graficas');
+        const btnMatriz = document.getElementById('btn-tab-inc-matriz');
+        const btnGraficas = document.getElementById('btn-tab-inc-graficas');
+
+        if (tab === 'graficas') {
+            if (viewMatriz) viewMatriz.style.display = 'none';
+            if (viewGraficas) viewGraficas.style.display = 'block';
+
+            if (btnMatriz) {
+                btnMatriz.classList.remove('active', 'btn-primary');
+                btnMatriz.classList.add('text-secondary');
+            }
+            if (btnGraficas) {
+                btnGraficas.classList.add('active', 'btn-primary', 'text-white');
+                btnGraficas.classList.remove('text-secondary');
+            }
+
+            // Cargar y renderizar gráficos
+            window.incCargarGraficas();
+        } else {
+            if (viewMatriz) viewMatriz.style.display = 'block';
+            if (viewGraficas) viewGraficas.style.display = 'none';
+
+            if (btnMatriz) {
+                btnMatriz.classList.add('active', 'btn-primary', 'text-white');
+                btnMatriz.classList.remove('text-secondary');
+            }
+            if (btnGraficas) {
+                btnGraficas.classList.remove('active', 'btn-primary', 'text-white');
+                btnGraficas.classList.add('text-secondary');
+            }
+        }
+    };
+
+    // Cargar Datos Analíticos para Gráficos desde el Backend
+    window.incCargarGraficas = async function() {
+        const anio = document.getElementById('inc-analytics-anio')?.value || new Date().getFullYear();
+        try {
+            const res = await fetch(`/api/mantenimiento/incidencias-ruta/analytics?anio=${encodeURIComponent(anio)}`);
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || 'Error al obtener analítica');
+
+            // 1. Render Mini KPIs Bento
+            const r = data.resumen || {};
+            const elCostoProm = document.getElementById('ga-kpi-costo-prom');
+            if (elCostoProm) elCostoProm.innerText = `S/ ${(r.costoPromedio || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            const elTransbordo = document.getElementById('ga-kpi-transbordo');
+            if (elTransbordo) elTransbordo.innerText = `${r.tasaTransbordo || 0}%`;
+            const elTransSub = document.getElementById('ga-kpi-transbordo-sub');
+            if (elTransSub) elTransSub.innerText = `${r.totalTransbordos || 0} de ${r.total || 0} con pase de carga`;
+
+            const elEficacia = document.getElementById('ga-kpi-eficacia');
+            const porcEficacia = (r.total > 0) ? Math.round(((r.totalAtendidos || 0) / r.total) * 100) : 100;
+            if (elEficacia) elEficacia.innerText = `${porcEficacia}%`;
+            const elEficaciaSub = document.getElementById('ga-kpi-eficacia-sub');
+            if (elEficaciaSub) elEficaciaSub.innerText = `${r.totalPendientes || 0} casos pendientes`;
+
+            const elGastoAnual = document.getElementById('ga-kpi-gasto-anual');
+            if (elGastoAnual) elGastoAnual.innerText = `S/ ${(r.totalCosto || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // 2. Render de los 5 Gráficos
+            window.incRenderGraficoMensual(data.mensual || {});
+            window.incRenderGraficoArea(data.areaMap || {});
+            window.incRenderGraficoTopPlacas(data.topPlacas || []);
+            window.incRenderGraficoTopFallas(data.topFallas || []);
+            window.incRenderGraficoResponsables(data.topResponsables || []);
+
+        } catch (err) {
+            console.error('Error cargando gráficas de incidencias:', err);
+        }
+    };
+
+    // Helper Chart Constructor Seguro
+    function _getChart() {
+        return window.Chart || (typeof Chart !== 'undefined' ? Chart : null);
+    }
+
+    // ── 1. Gráfico Mensual (Incidencias + Gasto) ──
+    window.incRenderGraficoMensual = function(mensualData) {
+        const canvas = document.getElementById('chartIncMensual');
+        if (!canvas) return;
+        const C = _getChart();
+        if (!C) return;
+
+        if (window._incCharts.mensual) {
+            window._incCharts.mensual.destroy();
+            window._incCharts.mensual = null;
+        }
+
+        const labels = mensualData.labels || ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic'];
+        const incidencias = mensualData.incidencias || [];
+        const costos = mensualData.costos || [];
+
+        window._incCharts.mensual = new C(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Gasto en Carretera (S/)',
+                        data: costos,
+                        borderColor: '#7c3aed',
+                        backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.35,
+                        yAxisID: 'y1',
+                        pointRadius: 4,
+                        pointBackgroundColor: '#7c3aed'
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Cant. Incidencias',
+                        data: incidencias,
+                        backgroundColor: '#0284c7',
+                        borderRadius: 6,
+                        barThickness: 18,
+                        yAxisID: 'y'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 11, weight: 'bold' } } },
+                    datalabels: false,
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                if (ctx.dataset.yAxisID === 'y1') {
+                                    return ` Gasto: S/ ${Number(ctx.raw || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+                                }
+                                return ` Incidencias: ${ctx.raw} eventos`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: 'N° Incidencias', font: { size: 10 } },
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: 'Gasto S/', font: { size: 10 } },
+                        grid: { drawOnChartArea: false },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    };
+
+    // ── 2. Gráfico por Área (Donut) ──
+    window.incRenderGraficoArea = function(areaMap) {
+        const canvas = document.getElementById('chartIncArea');
+        if (!canvas) return;
+        const C = _getChart();
+        if (!C) return;
+
+        if (window._incCharts.area) {
+            window._incCharts.area.destroy();
+            window._incCharts.area = null;
+        }
+
+        const labels = Object.keys(areaMap);
+        const data = Object.values(areaMap);
+        const colors = ['#0284c7', '#7c3aed', '#f59e0b', '#10b981', '#64748b'];
+
+        window._incCharts.area = new C(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: labels.length ? labels : ['Sin Datos'],
+                datasets: [{
+                    data: data.length ? data : [1],
+                    backgroundColor: data.length ? colors.slice(0, labels.length) : ['#e2e8f0'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: { display: false },
+                    datalabels: false,
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ` ${ctx.label}: ${ctx.raw} incidencias`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Leyenda HTML personalizada
+        const legendDiv = document.getElementById('chartIncAreaLegend');
+        if (legendDiv) {
+            legendDiv.innerHTML = labels.map((l, i) => `
+                <div class="d-flex align-items-center gap-1.5">
+                    <span class="rounded-circle" style="width:10px; height:10px; background:${colors[i % colors.length]};"></span>
+                    <span>${l}: <b>${areaMap[l]}</b></span>
+                </div>
+            `).join('');
+        }
+    };
+
+    // ── 3. Gráfico Top Placas (Barras Horizontales) ──
+    window.incRenderGraficoTopPlacas = function(topPlacas) {
+        const canvas = document.getElementById('chartIncTopPlacas');
+        if (!canvas) return;
+        const C = _getChart();
+        if (!C) return;
+
+        if (window._incCharts.topPlacas) {
+            window._incCharts.topPlacas.destroy();
+            window._incCharts.topPlacas = null;
+        }
+
+        const labels = topPlacas.map(p => `${p.placa} (${p.tipo})`);
+        const data = topPlacas.map(p => p.count);
+
+        window._incCharts.topPlacas = new C(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels.length ? labels : ['Sin Datos'],
+                datasets: [{
+                    label: 'Cantidad de Fallas',
+                    data: data.length ? data : [0],
+                    backgroundColor: '#ef4444',
+                    borderRadius: 6,
+                    barThickness: 16
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: false,
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                const p = topPlacas[ctx.dataIndex];
+                                return ` ${ctx.raw} fallas — Gasto: S/ ${(p?.costo || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { display: true } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    };
+
+    // ── 4. Gráfico Top Fallas (Pareto Horizontal) ──
+    window.incRenderGraficoTopFallas = function(topFallas) {
+        const canvas = document.getElementById('chartIncTopFallas');
+        if (!canvas) return;
+        const C = _getChart();
+        if (!C) return;
+
+        if (window._incCharts.topFallas) {
+            window._incCharts.topFallas.destroy();
+            window._incCharts.topFallas = null;
+        }
+
+        const labels = topFallas.map(f => f.falla);
+        const data = topFallas.map(f => f.count);
+
+        window._incCharts.topFallas = new C(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels.length ? labels : ['Sin Datos'],
+                datasets: [{
+                    label: 'Frecuencia',
+                    data: data.length ? data : [0],
+                    backgroundColor: '#f59e0b',
+                    borderRadius: 6,
+                    barThickness: 16
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: false,
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ` ${ctx.raw} ocurrencias registradas`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { display: true } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    };
+
+    // ── 5. Gráfico por Responsables (Barras Verticales) ──
+    window.incRenderGraficoResponsables = function(topResponsables) {
+        const canvas = document.getElementById('chartIncResponsables');
+        if (!canvas) return;
+        const C = _getChart();
+        if (!C) return;
+
+        if (window._incCharts.responsables) {
+            window._incCharts.responsables.destroy();
+            window._incCharts.responsables = null;
+        }
+
+        const labels = topResponsables.map(r => r.nombre);
+        const data = topResponsables.map(r => r.count);
+
+        window._incCharts.responsables = new C(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels.length ? labels : ['Sin Asignar'],
+                datasets: [{
+                    label: 'Incidencias Gestionadas',
+                    data: data.length ? data : [0],
+                    backgroundColor: '#06b6d4',
+                    borderRadius: 6,
+                    barThickness: 22
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: false,
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ` ${ctx.raw} incidencias atendidas`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { display: true } }
+                }
+            }
+        });
     };
 
     // Filtrar interactivamente haciendo clic en los Cards Bento KPI

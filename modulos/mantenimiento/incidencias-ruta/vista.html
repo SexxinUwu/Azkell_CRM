@@ -411,8 +411,8 @@
 
 <div class="mod-incidencias-ruta container-fluid">
     
-    <!-- Encabezado Principal -->
-    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3">
+    <!-- Encabezado Principal con Switcher de Pestañas -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
         <div>
             <div class="d-flex align-items-center gap-2 mb-1">
                 <h4 class="fw-bolder text-dark m-0" style="letter-spacing:-0.02em;">Incidencias en Ruta</h4>
@@ -420,7 +420,18 @@
             </div>
             <p class="text-secondary m-0" style="font-size:0.83rem;">Monitoreo, registro de fallas viales, control de auxilio mecánico y desglose de costos en carretera</p>
         </div>
+
         <div class="d-flex align-items-center gap-2 flex-wrap">
+            <!-- Conmutador de Pestañas Matriz vs Gráficas -->
+            <div class="btn-group p-1 bg-light rounded-pill border shadow-2xs" role="group">
+                <button type="button" class="btn btn-sm rounded-pill fw-bold px-3 py-1.5 active" id="btn-tab-inc-matriz" onclick="window.incCambiarTab('matriz')">
+                    <i class="bi bi-table me-1"></i> Matriz
+                </button>
+                <button type="button" class="btn btn-sm rounded-pill fw-bold px-3 py-1.5 text-secondary" id="btn-tab-inc-graficas" onclick="window.incCambiarTab('graficas')">
+                    <i class="bi bi-pie-chart-fill me-1 text-primary"></i> Gráficas
+                </button>
+            </div>
+
             <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;" onclick="window.incDescargarPlantilla()">
                 <i class="bi bi-file-earmark-excel text-success"></i> Plantilla Excel
             </button>
@@ -437,186 +448,368 @@
         </div>
     </div>
 
-    <!-- KPIs Bento Cards Interactivos -->
-    <div class="row g-3 mb-3">
-        
-        <!-- Total Incidencias -->
-        <div class="col-6 col-md-3">
-            <div class="inc-kpi-card inc-kpi-clickable active" id="kpi-card-total" onclick="window.incFiltrarPorKPI('ALL')" title="Ver todas las incidencias">
-                <div class="inc-kpi-icon" style="background:#e0f2fe; color:#0284c7;">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                </div>
-                <div>
-                    <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Total Incidencias</div>
-                    <div class="fw-bolder text-dark" id="kpi-total-incidencias" style="font-size:1.35rem; line-height:1.2;">0</div>
-                </div>
-                <i class="bi bi-chevron-right ms-auto inc-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
-            </div>
-        </div>
-
-        <!-- Pendientes -->
-        <div class="col-6 col-md-3">
-            <div class="inc-kpi-card inc-kpi-clickable" id="kpi-card-pendientes" onclick="window.incFiltrarPorKPI('Pendiente')" style="border-left:4px solid #ef4444 !important;" title="Filtrar solo pendientes de solución">
-                <div class="inc-kpi-icon" style="background:#fee2e2; color:#ef4444;">
-                    <i class="bi bi-clock-history"></i>
-                </div>
-                <div>
-                    <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Pendientes de Solución</div>
-                    <div class="fw-bolder text-danger" id="kpi-pendientes" style="font-size:1.35rem; line-height:1.2;">0</div>
-                </div>
-                <i class="bi bi-chevron-right ms-auto inc-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
-            </div>
-        </div>
-
-        <!-- Atendidas -->
-        <div class="col-6 col-md-3">
-            <div class="inc-kpi-card inc-kpi-clickable" id="kpi-card-atendidas" onclick="window.incFiltrarPorKPI('Atendido')" style="border-left:4px solid #16a34a !important;" title="Filtrar solo atendidas / resueltas">
-                <div class="inc-kpi-icon" style="background:#dcfce7; color:#16a34a;">
-                    <i class="bi bi-check2-circle"></i>
-                </div>
-                <div>
-                    <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Atendidas / Resueltas</div>
-                    <div class="fw-bolder text-success" id="kpi-atendidas" style="font-size:1.35rem; line-height:1.2;">0</div>
-                </div>
-                <i class="bi bi-chevron-right ms-auto inc-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
-            </div>
-        </div>
-
-        <!-- Costo Total Acumulado -->
-        <div class="col-6 col-md-3">
-            <div class="inc-kpi-card inc-kpi-clickable" id="kpi-card-costo" onclick="window.incFiltrarPorKPI('COSTO')" style="border-left:4px solid #7c3aed !important;" title="Ordenar por mayor costo acumulado">
-                <div class="inc-kpi-icon" style="background:#ede9fe; color:#7c3aed;">
-                    <i class="bi bi-currency-dollar"></i>
-                </div>
-                <div>
-                    <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Costo Total Acumulado</div>
-                    <div class="fw-bolder text-dark" id="kpi-costo-total" style="font-size:1.35rem; line-height:1.2;">S/ 0.00</div>
-                </div>
-                <i class="bi bi-chevron-right ms-auto inc-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Barra de Filtros Inteligente -->
-    <div class="inc-filter-bar mb-3">
-        <div class="row g-2 align-items-center">
+    <!-- ============================================================ -->
+    <!-- 1. PESTAÑA: MATRIZ DE REGISTROS                              -->
+    <!-- ============================================================ -->
+    <div id="inc-view-matriz">
+        <!-- KPIs Bento Cards Interactivos -->
+        <div class="row g-3 mb-3">
             
-            <!-- Buscador -->
-            <div class="col-12 col-md-4">
-                <div class="position-relative">
-                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
-                    <input type="text" id="inc-filter-search" class="inc-search-input" placeholder="Buscar por código, placa, motivo, conductor, falla...">
+            <!-- Total Incidencias -->
+            <div class="col-6 col-md-3">
+                <div class="inc-kpi-card inc-kpi-clickable active" id="kpi-card-total" onclick="window.incFiltrarPorKPI('ALL')" title="Ver todas las incidencias">
+                    <div class="inc-kpi-icon" style="background:#e0f2fe; color:#0284c7;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <div>
+                        <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Total Incidencias</div>
+                        <div class="fw-bolder text-dark" id="kpi-total-incidencias" style="font-size:1.35rem; line-height:1.2;">0</div>
+                    </div>
+                    <i class="bi bi-chevron-right ms-auto inc-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
                 </div>
             </div>
 
-            <!-- Filtro Mes -->
-            <div class="col-6 col-md-2">
-                <select id="inc-filter-mes" class="form-select inc-select" onchange="window.incCargarDatos(1)">
-                    <option value="ALL">Todos los Meses</option>
-                    <option value="1">Enero</option>
-                    <option value="2">Febrero</option>
-                    <option value="3">Marzo</option>
-                    <option value="4">Abril</option>
-                    <option value="5">Mayo</option>
-                    <option value="6">Junio</option>
-                    <option value="7">Julio</option>
-                    <option value="8">Agosto</option>
-                    <option value="9">Septiembre</option>
-                    <option value="10">Octubre</option>
-                    <option value="11">Noviembre</option>
-                    <option value="12">Diciembre</option>
-                </select>
+            <!-- Pendientes -->
+            <div class="col-6 col-md-3">
+                <div class="inc-kpi-card inc-kpi-clickable" id="kpi-card-pendientes" onclick="window.incFiltrarPorKPI('Pendiente')" style="border-left:4px solid #ef4444 !important;" title="Filtrar solo pendientes de solución">
+                    <div class="inc-kpi-icon" style="background:#fee2e2; color:#ef4444;">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                        <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Pendientes de Solución</div>
+                        <div class="fw-bolder text-danger" id="kpi-pendientes" style="font-size:1.35rem; line-height:1.2;">0</div>
+                    </div>
+                    <i class="bi bi-chevron-right ms-auto inc-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
+                </div>
             </div>
 
-            <!-- Filtro Placa -->
-            <div class="col-6 col-md-2">
-                <select id="inc-filter-placa" class="form-select inc-select" onchange="window.incCargarDatos(1)">
-                    <option value="ALL">Todas las Placas</option>
-                </select>
+            <!-- Atendidas -->
+            <div class="col-6 col-md-3">
+                <div class="inc-kpi-card inc-kpi-clickable" id="kpi-card-atendidas" onclick="window.incFiltrarPorKPI('Atendido')" style="border-left:4px solid #16a34a !important;" title="Filtrar solo atendidas / resueltas">
+                    <div class="inc-kpi-icon" style="background:#dcfce7; color:#16a34a;">
+                        <i class="bi bi-check2-circle"></i>
+                    </div>
+                    <div>
+                        <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Atendidas / Resueltas</div>
+                        <div class="fw-bolder text-success" id="kpi-atendidas" style="font-size:1.35rem; line-height:1.2;">0</div>
+                    </div>
+                    <i class="bi bi-chevron-right ms-auto inc-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
+                </div>
             </div>
 
-            <!-- Filtro Responsabilidad Área -->
-            <div class="col-6 col-md-2">
-                <select id="inc-filter-area" class="form-select inc-select" onchange="window.incCargarDatos(1)">
-                    <option value="ALL">Todas las Áreas</option>
-                    <option value="Mantenimiento">Mantenimiento</option>
-                    <option value="Flota">Flota</option>
-                    <option value="Operaciones">Operaciones</option>
-                </select>
+            <!-- Costo Total Acumulado -->
+            <div class="col-6 col-md-3">
+                <div class="inc-kpi-card inc-kpi-clickable" id="kpi-card-costo" onclick="window.incFiltrarPorKPI('COSTO')" style="border-left:4px solid #7c3aed !important;" title="Ordenar por mayor costo acumulado">
+                    <div class="inc-kpi-icon" style="background:#ede9fe; color:#7c3aed;">
+                        <i class="bi bi-currency-dollar"></i>
+                    </div>
+                    <div>
+                        <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Costo Total Acumulado</div>
+                        <div class="fw-bolder text-dark" id="kpi-costo-total" style="font-size:1.35rem; line-height:1.2;">S/ 0.00</div>
+                    </div>
+                    <i class="bi bi-chevron-right ms-auto inc-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
+                </div>
             </div>
 
-            <!-- Filtro Estado Solución -->
-            <div class="col-6 col-md-2">
-                <select id="inc-filter-solucion" class="form-select inc-select" onchange="window.incCargarDatos(1)">
-                    <option value="ALL">Todos los Estados</option>
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="Atendido">Atendido</option>
-                </select>
+        </div>
+
+        <!-- Barra de Filtros Inteligente -->
+        <div class="inc-filter-bar mb-3">
+            <div class="row g-2 align-items-center">
+                
+                <!-- Buscador -->
+                <div class="col-12 col-md-4">
+                    <div class="position-relative">
+                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
+                        <input type="text" id="inc-filter-search" class="inc-search-input" placeholder="Buscar por código, placa, motivo, conductor, falla...">
+                    </div>
+                </div>
+
+                <!-- Filtro Mes -->
+                <div class="col-6 col-md-2">
+                    <select id="inc-filter-mes" class="form-select inc-select" onchange="window.incCargarDatos(1)">
+                        <option value="ALL">Todos los Meses</option>
+                        <option value="1">Enero</option>
+                        <option value="2">Febrero</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Mayo</option>
+                        <option value="6">Junio</option>
+                        <option value="7">Julio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                </div>
+
+                <!-- Filtro Placa -->
+                <div class="col-6 col-md-2">
+                    <select id="inc-filter-placa" class="form-select inc-select" onchange="window.incCargarDatos(1)">
+                        <option value="ALL">Todas las Placas</option>
+                    </select>
+                </div>
+
+                <!-- Filtro Responsabilidad Área -->
+                <div class="col-6 col-md-2">
+                    <select id="inc-filter-area" class="form-select inc-select" onchange="window.incCargarDatos(1)">
+                        <option value="ALL">Todas las Áreas</option>
+                        <option value="Mantenimiento">Mantenimiento</option>
+                        <option value="Flota">Flota</option>
+                        <option value="Operaciones">Operaciones</option>
+                    </select>
+                </div>
+
+                <!-- Filtro Estado Solución -->
+                <div class="col-6 col-md-2">
+                    <select id="inc-filter-solucion" class="form-select inc-select" onchange="window.incCargarDatos(1)">
+                        <option value="ALL">Todos los Estados</option>
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="Atendido">Atendido</option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Tabla de Incidencias en Ruta (Réplica Excel Mejorada) -->
+        <div class="inc-table-card">
+            <div class="table-responsive" style="max-height: 60vh;">
+                <table class="table table-hover align-middle inc-table">
+                    <thead>
+                        <tr>
+                            <th class="inc-sortable-th" onclick="window.incOrdenarPor('fecha_falla')" title="Clic para ordenar por Fecha">
+                                FECHA <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-fecha_falla"></i>
+                            </th>
+                            <th class="inc-sortable-th" onclick="window.incOrdenarPor('placa')" title="Clic para ordenar por Placa">
+                                PLACA <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-placa"></i>
+                            </th>
+                            <th class="inc-sortable-th" onclick="window.incOrdenarPor('conductor')" title="Clic para ordenar por Conductor">
+                                CONDUCTOR <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-conductor"></i>
+                            </th>
+                            <th class="inc-sortable-th" onclick="window.incOrdenarPor('marca')" title="Clic para ordenar por Marca">
+                                MARCA <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-marca"></i>
+                            </th>
+                            <th class="inc-sortable-th" onclick="window.incOrdenarPor('ubicacion')" title="Clic para ordenar por Ubicación">
+                                UBICACIÓN <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-ubicacion"></i>
+                            </th>
+                            <th class="inc-sortable-th" onclick="window.incOrdenarPor('tipo_unidad')" title="Clic para ordenar por Tipo de Unidad">
+                                UNIDAD / TIPO <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-tipo_unidad"></i>
+                            </th>
+                            <th class="inc-sortable-th text-center" onclick="window.incOrdenarPor('transbordo')" title="Clic para ordenar por Transbordo">
+                                TRANSBORDO <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-transbordo"></i>
+                            </th>
+                            <th class="inc-sortable-th" onclick="window.incOrdenarPor('motivo')" title="Clic para ordenar por Motivo">
+                                MOTIVO <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-motivo"></i>
+                            </th>
+                            <th class="inc-sortable-th" onclick="window.incOrdenarPor('falla')" title="Clic para ordenar por Falla">
+                                FALLA <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-falla"></i>
+                            </th>
+                            <th class="inc-sortable-th" onclick="window.incOrdenarPor('area_responsable')" title="Clic para ordenar por Área Responsable">
+                                ÁREA RESP. <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-area_responsable"></i>
+                            </th>
+                            <th class="inc-sortable-th" onclick="window.incOrdenarPor('responsable')" title="Clic para ordenar por Responsable">
+                                RESPONSABLE <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-responsable"></i>
+                            </th>
+                            <th>DESGLOSE COSTOS</th>
+                            <th class="inc-sortable-th" onclick="window.incOrdenarPor('total_costo')" title="Clic para ordenar por Costo Total">
+                                TOTAL COSTO <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-total_costo"></i>
+                            </th>
+                            <th class="inc-sortable-th text-center" onclick="window.incOrdenarPor('solucionado')" title="Clic para ordenar por Estado">
+                                SOLUCIÓN <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-solucionado"></i>
+                            </th>
+                            <th>OBSERVACIONES</th>
+                            <th class="text-center" style="width:90px;">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inc-tbody">
+                        <!-- Renderizado dinámico desde logica.js -->
+                    </tbody>
+                </table>
             </div>
 
+            <!-- Paginación -->
+            <div class="d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2 p-3 border-top bg-light rounded-bottom-4">
+                <span class="text-secondary small fw-semibold" id="inc-paginacion-info">Mostrando 0 de 0 registros</span>
+                <div class="btn-group shadow-2xs">
+                    <button class="btn btn-sm btn-outline-secondary px-3" id="inc-btn-prev" onclick="window.incCambiarPagina(-1)">
+                        <i class="bi bi-chevron-left me-1"></i> Anterior
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary px-3 disabled" id="inc-btn-page-num">1 / 1</button>
+                    <button class="btn btn-sm btn-outline-secondary px-3" id="inc-btn-next" onclick="window.incCambiarPagina(1)">
+                        Siguiente <i class="bi bi-chevron-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Tabla de Incidencias en Ruta (Réplica Excel Mejorada) -->
-    <div class="inc-table-card">
-        <div class="table-responsive" style="max-height: 60vh;">
-            <table class="table table-hover align-middle inc-table">
-                <thead>
-                    <tr>
-                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('fecha_falla')" title="Clic para ordenar por Fecha">
-                            FECHA <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-fecha_falla"></i>
-                        </th>
-                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('placa')" title="Clic para ordenar por Placa">
-                            PLACA <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-placa"></i>
-                        </th>
-                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('conductor')" title="Clic para ordenar por Conductor">
-                            CONDUCTOR <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-conductor"></i>
-                        </th>
-                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('marca')" title="Clic para ordenar por Marca">
-                            MARCA <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-marca"></i>
-                        </th>
-                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('ubicacion')" title="Clic para ordenar por Ubicación">
-                            UBICACIÓN <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-ubicacion"></i>
-                        </th>
-                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('tipo_unidad')" title="Clic para ordenar por Tipo de Unidad">
-                            UNIDAD / TIPO <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-tipo_unidad"></i>
-                        </th>
-                        <th class="inc-sortable-th text-center" onclick="window.incOrdenarPor('transbordo')" title="Clic para ordenar por Transbordo">
-                            TRANSBORDO <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-transbordo"></i>
-                        </th>
-                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('motivo')" title="Clic para ordenar por Motivo">
-                            MOTIVO <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-motivo"></i>
-                        </th>
-                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('falla')" title="Clic para ordenar por Falla">
-                            FALLA <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-falla"></i>
-                        </th>
-                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('area_responsable')" title="Clic para ordenar por Área Responsable">
-                            ÁREA RESP. <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-area_responsable"></i>
-                        </th>
-                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('responsable')" title="Clic para ordenar por Responsable">
-                            RESPONSABLE <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-responsable"></i>
-                        </th>
-                        <th>DESGLOSE COSTOS</th>
-                        <th class="inc-sortable-th" onclick="window.incOrdenarPor('total_costo')" title="Clic para ordenar por Total Costo">
-                            TOTAL COSTO <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-total_costo"></i>
-                        </th>
-                        <th class="inc-sortable-th text-center" onclick="window.incOrdenarPor('solucionado')" title="Clic para ordenar por Solución">
-                            ¿SE DIO SOLUCIÓN? <i class="bi bi-arrow-down-up inc-sort-icon ms-1" id="sort-icon-solucionado"></i>
-                        </th>
-                        <th class="text-end">ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody id="inc-tbody">
-                    <!-- Filas inyectadas dinámicamente -->
-                </tbody>
-            </table>
+    <!-- ============================================================ -->
+    <!-- 2. PESTAÑA: MÉTRICAS & GRÁFICAS SEGMENTADAS (PANTALLA COMPLETA) -->
+    <!-- ============================================================ -->
+    <div id="inc-view-graficas" style="display: none;">
+        
+        <!-- Header Filtro Anual de Gráficas -->
+        <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2 mb-3 p-3 bg-white border rounded-4 shadow-2xs">
+            <div>
+                <h6 class="fw-bolder text-dark m-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-bar-chart-line-fill text-primary"></i> Tablero Analítico de Incidencias en Ruta
+                </h6>
+                <p class="text-muted small m-0">Diagnóstico predictivo de fallas viales, impacto financiero en carretera y unidades críticas</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="small fw-bold text-secondary">Año Fiscal:</span>
+                <select id="inc-analytics-anio" class="form-select form-select-sm rounded-pill px-3 fw-bold border-secondary-subtle" style="width: 110px;" onchange="window.incCargarGraficas()">
+                    <option value="2026" selected>2026</option>
+                    <option value="2025">2025</option>
+                    <option value="2024">2024</option>
+                </select>
+                <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" onclick="window.incCargarGraficas()">
+                    <i class="bi bi-arrow-clockwise"></i> Recargar
+                </button>
+            </div>
         </div>
 
-        <!-- Paginación -->
-        <div class="d-flex align-items-center justify-content-between px-3 py-2 bg-light border-top" style="font-size:0.8rem;">
-            <div class="text-secondary" id="inc-paginacion-info">Mostrando 0 registros</div>
-            <div class="d-flex align-items-center gap-1" id="inc-paginacion-controles"></div>
+        <!-- Bento Mini-KPIs Analíticos de Alto Impacto -->
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="text-muted small fw-bold text-uppercase" style="font-size:0.7rem;">Costo Promedio / Falla</span>
+                        <div class="rounded-3 p-1.5" style="background:#eff6ff; color:#2563eb;"><i class="bi bi-calculator fs-6"></i></div>
+                    </div>
+                    <h4 class="fw-bold text-primary m-0" id="ga-kpi-costo-prom">S/ 0.00</h4>
+                    <small class="text-muted d-block" style="font-size:0.72rem;">Gasto promedio por rescate vial</small>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="text-muted small fw-bold text-uppercase" style="font-size:0.7rem;">Tasa de Transbordos</span>
+                        <div class="rounded-3 p-1.5" style="background:#fffbeb; color:#d97706;"><i class="bi bi-shuffle fs-6"></i></div>
+                    </div>
+                    <h4 class="fw-bold text-warning m-0" id="ga-kpi-transbordo">0%</h4>
+                    <small class="text-muted d-block" id="ga-kpi-transbordo-sub" style="font-size:0.72rem;">0 de 0 con pase de carga</small>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="text-muted small fw-bold text-uppercase" style="font-size:0.7rem;">Eficacia de Cierre</span>
+                        <div class="rounded-3 p-1.5" style="background:#ecfdf5; color:#059669;"><i class="bi bi-shield-check fs-6"></i></div>
+                    </div>
+                    <h4 class="fw-bold text-success m-0" id="ga-kpi-eficacia">100%</h4>
+                    <small class="text-muted d-block" id="ga-kpi-eficacia-sub" style="font-size:0.72rem;">0 casos pendientes</small>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="text-muted small fw-bold text-uppercase" style="font-size:0.7rem;">Gasto Anual Total</span>
+                        <div class="rounded-3 p-1.5" style="background:#f5f3ff; color:#7c3aed;"><i class="bi bi-cash-stack fs-6"></i></div>
+                    </div>
+                    <h4 class="fw-bold text-dark m-0" id="ga-kpi-gasto-anual">S/ 0.00</h4>
+                    <small class="text-muted d-block" style="font-size:0.72rem;">Presupuesto ejecutado en ruta</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos Segmentados Bento -->
+        <div class="row g-3 mb-3">
+            
+            <!-- 1. GRÁFICO 1: EVOLUCIÓN MENSUAL (INCIDENCIAS VS COSTO) -->
+            <div class="col-12 col-xl-8">
+                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-2 pb-2 border-bottom">
+                        <div>
+                            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
+                                <i class="bi bi-graph-up-arrow text-primary"></i> 1. Evolución Mensual de Incidencias & Costos
+                            </h6>
+                            <small class="text-muted" style="font-size:0.72rem;">Comportamiento estacional: barras de cantidad de auxilios y curva de gasto en Soles (S/)</small>
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill small">Mensual</span>
+                    </div>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartIncMensual"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. GRÁFICO 2: DISTRIBUCIÓN POR ÁREA RESPONSABLE -->
+            <div class="col-12 col-xl-4">
+                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                        <div>
+                            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
+                                <i class="bi bi-pie-chart text-primary"></i> 2. Incidencias por Área Responsable
+                            </h6>
+                            <small class="text-muted" style="font-size:0.72rem;">Proporción entre Mantenimiento, Flota y Operaciones</small>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 280px;">
+                        <div style="position: relative; height: 210px; width: 210px;">
+                            <canvas id="chartIncArea"></canvas>
+                        </div>
+                        <div id="chartIncAreaLegend" class="d-flex justify-content-center gap-3 mt-2 flex-wrap small fw-bold" style="font-size:0.75rem;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. GRÁFICO 3: TOP PLACAS CON MAYOR INCIDENCIAS -->
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                        <div>
+                            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
+                                <i class="bi bi-truck-front text-danger"></i> 3. Top Placas con Mayor Cantidad de Fallas
+                            </h6>
+                            <small class="text-muted" style="font-size:0.72rem;">Unidades críticas con mayor frecuencia de detenciones en carretera</small>
+                        </div>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill small">Top 8</span>
+                    </div>
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="chartIncTopPlacas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. GRÁFICO 4: PARETO DE FALLAS MÁS FRECUENTES -->
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                        <div>
+                            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
+                                <i class="bi bi-tools text-warning"></i> 4. Top Fallas y Motivos Frecuentes (Pareto 80/20)
+                            </h6>
+                            <small class="text-muted" style="font-size:0.72rem;">Causas raíz mecánicas, eléctricas o de desgaste con mayor recurrencia</small>
+                        </div>
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill small">Causas</span>
+                    </div>
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="chartIncTopFallas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. GRÁFICO 5: INCIDENCIAS POR RESPONSABLE / CONDUCTOR -->
+            <div class="col-12">
+                <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                        <div>
+                            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
+                                <i class="bi bi-people-fill text-info"></i> 5. Incidencias Atendidas por Responsable
+                            </h6>
+                            <small class="text-muted" style="font-size:0.72rem;">Carga de gestión, rescates y resolución por personal asignado</small>
+                        </div>
+                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill small">Personal</span>
+                    </div>
+                    <div style="position: relative; height: 240px; width: 100%;">
+                        <canvas id="chartIncResponsables"></canvas>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
