@@ -308,36 +308,85 @@ function _guBuildRolPanel(rol) {
         + 'placeholder="#5865F2" style="max-width:120px; margin-bottom:0;" oninput="window._guHexColorInput(this.value)"></div>'
         + '</div>';
 
-    // Permisos
-    html += '<div style="background:var(--surface,#fff); border:1px solid var(--border,#e2e8f0); border-radius:20px; padding:18px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">'
-        + '<div class="gu-section-header">Permisos de Módulos</div>';
-    var lastGrp = '';
+    // Permisos Segmentados por Módulo (Casillas Independientes estilo Ajustes)
+    html += '<div style="margin-bottom:16px;">'
+        + '<div class="gu-section-header" style="margin-bottom:12px;">Permisos de Módulos</div>';
+
+    // Agrupar submódulos por grupo principal
+    var gruposModulos = {};
     window._GU_MODULOS.forEach(function(mod) {
-        if (mod.grupo !== lastGrp) {
-            html += '<div class="gu-perm-group">' + mod.grupo + '</div>';
-            lastGrp = mod.grupo;
-        }
-        if (!mod.lcad) {
-            var lv = p[mod.key] ? (p[mod.key]['l'] ? true : false) : false;
-            html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
-                + '<div class="gu-perm-desc">' + mod.desc + '</div></div>'
-                + '<div class="gu-perm-actions"><div class="dc-toggle-wrap">'
-                + '<input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-l"' + (lv?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'l\')">'
-                + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-' + mod.key + '-l"></label>'
-                + '<span class="gu-perm-label">Leer</span></div></div></div>';
-        } else {
-            var m = p[mod.key] || {};
-            var accs = ['l','c','e','d'];
-            var lbls = ['Leer','Crear','Editar','Elim'];
-            html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
-                + '<div class="gu-perm-desc">' + mod.desc + '</div></div><div class="gu-perm-actions">';
-            accs.forEach(function(a,i) {
-                html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-' + a + '"' + (m[a]?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'' + a + '\')">'
-                    + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-' + mod.key + '-' + a + '"></label>'
-                    + '<span class="gu-perm-label">' + lbls[i] + '</span></div>';
-            });
-            html += '</div></div>';
-        }
+        if (!gruposModulos[mod.grupo]) gruposModulos[mod.grupo] = [];
+        gruposModulos[mod.grupo].push(mod);
+    });
+
+    var iconosArea = {
+        'DASHBOARD': 'bi-grid-1x2 text-primary',
+        'FLOTA': 'bi-truck text-info',
+        'MANTENIMIENTO': 'bi-tools text-warning',
+        'ALMACÉN': 'bi-box-seam text-success',
+        'DIRECTORIO': 'bi-person-lines-fill text-danger',
+        'OPERACIONES': 'bi-geo-alt text-primary',
+        'RRHH': 'bi-people text-info',
+        'TESORERÍA': 'bi-cash-stack text-success',
+        'SEGURIDAD': 'bi-shield-check text-danger',
+        'CONFIGURACIÓN': 'bi-gear text-secondary'
+    };
+
+    Object.keys(gruposModulos).forEach(function(grupoKey, gIdx) {
+        var mods = gruposModulos[grupoKey];
+        var iconoClase = iconosArea[grupoKey] || 'bi-folder text-primary';
+        
+        // Verificar si algún submódulo de este grupo está activo
+        var grupoActivo = mods.some(function(m) {
+            if (!m.lcad) return p[m.key] && p[m.key]['l'];
+            var perm = p[m.key] || {};
+            return perm.l || perm.c || perm.e || perm.d;
+        });
+
+        html += '<div style="background:var(--surface,#fff); border:1px solid var(--border,#e2e8f0); border-radius:20px; padding:16px; margin-bottom:12px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">'
+            + '<div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="window._guToggleGrupoPermiso(\'grp-' + gIdx + '\')">'
+            + '<div style="display:flex; align-items:center; gap:12px;">'
+            + '<div style="font-size:1.35rem; display:flex; align-items:center;"><i class="bi ' + iconoClase + '"></i></div>'
+            + '<div><div style="font-size:0.95rem; font-weight:800; color:var(--text,#0f172a);">' + grupoKey + '</div>'
+            + '<div style="font-size:0.75rem; color:var(--subtext,#64748b);">' + mods.length + ' submódulo' + (mods.length!==1?'s':'') + ' disponibles</div></div>'
+            + '</div>'
+            + '<div style="display:flex; align-items:center; gap:10px;" onclick="event.stopPropagation()">'
+            + '<div class="dc-toggle-wrap">'
+            + '<input type="checkbox" class="dc-toggle" id="chk-grp-' + gIdx + '" ' + (grupoActivo?'checked':'') + ' onchange="window._guToggleMasterGrupo(this, \'grp-' + gIdx + '\', \'' + grupoKey + '\')">'
+            + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="chk-grp-' + gIdx + '"></label>'
+            + '</div>'
+            + '<i class="bi bi-chevron-down" id="arrow-grp-' + gIdx + '" style="font-size:0.85rem; color:#94a3b8; transition:transform 0.2s; ' + (grupoActivo?'transform:rotate(180deg);':'') + '" onclick="window._guToggleGrupoPermiso(\'grp-' + gIdx + '\')"></i>'
+            + '</div>'
+            + '</div>'
+
+            // Contenedor expandible de submódulos
+            + '<div id="body-grp-' + gIdx + '" style="display:' + (grupoActivo?'block':'none') + '; margin-top:14px; padding-top:12px; border-top:1px solid #f1f5f9;">';
+
+        mods.forEach(function(mod) {
+            if (!mod.lcad) {
+                var lv = p[mod.key] ? (p[mod.key]['l'] ? true : false) : false;
+                html += '<div class="gu-perm-row" style="padding:10px 0;"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
+                    + '<div class="gu-perm-desc">' + mod.desc + '</div></div>'
+                    + '<div class="gu-perm-actions"><div class="dc-toggle-wrap">'
+                    + '<input type="checkbox" class="dc-toggle mod-chk-' + gIdx + '" id="pt-' + mod.key + '-l"' + (lv?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'l\')">'
+                    + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-' + mod.key + '-l"></label>'
+                    + '<span class="gu-perm-label">Leer</span></div></div></div>';
+            } else {
+                var m = p[mod.key] || {};
+                var accs = ['l','c','e','d'];
+                var lbls = ['Leer','Crear','Editar','Elim'];
+                html += '<div class="gu-perm-row" style="padding:10px 0;"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
+                    + '<div class="gu-perm-desc">' + mod.desc + '</div></div><div class="gu-perm-actions">';
+                accs.forEach(function(a,i) {
+                    html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle mod-chk-' + gIdx + '" id="pt-' + mod.key + '-' + a + '"' + (m[a]?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'' + a + '\')">'
+                        + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-' + mod.key + '-' + a + '"></label>'
+                        + '<span class="gu-perm-label">' + lbls[i] + '</span></div>';
+                });
+                html += '</div></div>';
+            }
+        });
+
+        html += '</div></div>';
     });
     html += '</div>';
 
@@ -368,6 +417,32 @@ function _guBuildRolPanel(rol) {
     }
     return html;
 }
+
+// ── Acordeón y Switch Maestro por Módulo ─────────────────────
+window._guToggleGrupoPermiso = function(grpId) {
+    var body = document.getElementById('body-' + grpId);
+    var arrow = document.getElementById('arrow-' + grpId);
+    if (!body) return;
+    var isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    if (arrow) arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+};
+
+window._guToggleMasterGrupo = function(masterChk, grpId, grupoKey) {
+    var body = document.getElementById('body-' + grpId);
+    var arrow = document.getElementById('arrow-' + grpId);
+    var isChecked = masterChk.checked;
+
+    // Abrir o cerrar acordeón automáticamente
+    if (body) body.style.display = isChecked ? 'block' : 'none';
+    if (arrow) arrow.style.transform = isChecked ? 'rotate(180deg)' : 'rotate(0deg)';
+
+    // Activar/desactivar todos los switches hijos del grupo
+    var subToggles = document.querySelectorAll('.' + 'mod-chk-' + grpId.replace('grp-', ''));
+    subToggles.forEach(function(t) {
+        t.checked = isChecked;
+    });
+};
 
 window.guVerComoRol = function(rolId) {
     var rol = window.dataGlobalRoles.find(function(r){ return r.id == rolId; });
