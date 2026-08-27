@@ -11,6 +11,9 @@ var _sguChecklist = {};
 var _sguPhotos = { salida: [], retorno: [] };
 var _sguEditMode = 'salida';
 var _sguActiveTab = 'activos';
+var _sguLoadedAll = false;
+var _sguLoadingAll = false;
+var _sguStats = { total: 0, en_ruta: 0, completados: 0, alertas: 0 };
 var _sguRecursos = { placas: [], conductores: [] };
 var _sguVehiculosCache = null;
 
@@ -151,11 +154,54 @@ window._sguSyncDocPlaca = async function(placa, tipo) {
 
     if (!pStr || pStr.length < 3) {
         if (boxEl) boxEl.style.display = 'none';
+        if (isTracto) {
+            var hintEl = document.getElementById('sgu-f-km-hint');
+            if (hintEl) hintEl.classList.add('d-none');
+        }
         return;
     }
 
     if (lblEl) lblEl.textContent = pStr;
     if (boxEl) boxEl.style.display = 'block';
+
+    // ── Autocompletar Último Kilometraje Registrado para el Tracto ──────
+    if (isTracto && _sguView === 'form') {
+        var kmInput = document.getElementById('sgu-f-km');
+        var kmHint = document.getElementById('sgu-f-km-hint');
+
+        // 1. Búsqueda instantánea en caché local
+        var pInputClean = pStr.replace(/[^A-Z0-9]/g, '');
+        var recReciente = (_sguRecords || []).find(function(r) {
+            var pR = (r.placa_tracto || '').replace(/[^A-Z0-9]/g, '').toUpperCase();
+            return pR === pInputClean && (r.retorno_km || r.salida_km);
+        });
+
+        if (recReciente && kmInput) {
+            var ultKmLocal = (recReciente.retorno_km && Number(recReciente.retorno_km) > 0) ? recReciente.retorno_km : recReciente.salida_km;
+            if (ultKmLocal) {
+                kmInput.value = ultKmLocal;
+                if (kmHint) {
+                    kmHint.textContent = 'Último km: ' + ultKmLocal + ' km';
+                    kmHint.classList.remove('d-none');
+                }
+                window._sguCheckFormReady();
+            }
+        }
+
+        // 2. Consulta al servidor para asegurar el dato exacto de la base de datos
+        _sguFetch('/api/seguridad/unidades/ultimo-km/' + encodeURIComponent(pStr))
+            .then(function(res) {
+                if (res && res.ok && res.ultimoKm && kmInput) {
+                    kmInput.value = res.ultimoKm;
+                    if (kmHint) {
+                        kmHint.textContent = 'Último km: ' + res.ultimoKm + ' km';
+                        kmHint.classList.remove('d-none');
+                    }
+                    window._sguCheckFormReady();
+                }
+            })
+            .catch(function(){});
+    }
 
     var doc = await _sguObtenerDocVehiculo(pStr);
     if (!doc) return;
@@ -179,7 +225,7 @@ window._sguSyncDocPlaca = async function(placa, tipo) {
     }
 };
 
-// ── INIT Y CARGA ─────────────────────────────────────────────────
+// ── INIT Y CARGA (PERFIL EN RUTA POR DEFECTO / CARGA BAJO DEMANDA) ─
 window.init_unidades = function() {
     if (!window.checkPerm('checklist', 'l')) {
         var wrap = document.getElementById('sgu-app') || document.querySelector('.container-fluid');
@@ -187,13 +233,36 @@ window.init_unidades = function() {
         return;
     }
     _sguView = 'list';
+    _sguActiveTab = 'activos';
+    _sguLoadedAll = false;
+
     _sguLoadResources();
+    _sguLoadStats();
     _sguLoadTemplate(function() {
-        _sguLoadRecords(function() {
+        // Cargar por defecto solo unidades en ruta para velocidad instantánea
+        _sguLoadRecords(false, function() {
             window._sguShowView('list');
         });
     });
 };
+
+function _sguLoadStats(cb) {
+    _sguFetch('/api/seguridad/unidades/stats').then(function(data) {
+        if (data) {
+            _sguStats = data;
+            var elTotal = document.getElementById('sgu-kpi-val-total');
+            var elRuta = document.getElementById('sgu-kpi-val-ruta');
+            var elComp = document.getElementById('sgu-kpi-val-completados');
+            var elAlert = document.getElementById('sgu-kpi-val-alertas');
+
+            if (elTotal) elTotal.textContent = _sguStats.total;
+            if (elRuta) elRuta.textContent = _sguStats.en_ruta;
+            if (elComp) elComp.textContent = _sguStats.completados;
+            if (elAlert) elAlert.textContent = _sguStats.alertas;
+        }
+        if (cb) cb();
+    }).catch(function(){ if (cb) cb(); });
+}
 
 function _sguLoadResources() {
     _sguFetch('/api/seguridad/recursos').then(function(data) {
@@ -202,15 +271,41 @@ function _sguLoadResources() {
     }).catch(function(){});
 }
 
-function _sguLoadRecords(cb) {
-    _sguFetch('/api/seguridad/unidades').then(function(data) {
+function _sguLoadRecords(full, cb) {
+    var url = full ? '/api/seguridad/unidades' : '/api/seguridad/unidades?estado=en_ruta';
+    _sguFetch(url).then(function(data) {
         _sguRecords = data || [];
+        if (full) {
+            _sguLoadedAll = true;
+            _sguStats.total = _sguRecords.length;
+            _sguStats.en_ruta = _sguRecords.filter(function(r){ return r.estado === 'en_ruta'; }).length;
+            _sguStats.completados = _sguRecords.filter(function(r){ return r.estado === 'completado'; }).length;
+            _sguStats.alertas = _sguRecords.filter(function(r){ return r.salida_has_alert || r.retorno_has_alert; }).length;
+        } else {
+            _sguStats.en_ruta = _sguRecords.length;
+        }
         if (cb) cb();
     }).catch(function(e) {
-        _sguRecords = [];
+        if (!full) _sguRecords = [];
         if (cb) cb();
     });
 }
+
+window._sguEnsureAllRecordsLoaded = function(cb) {
+    if (_sguLoadedAll) {
+        if (cb) cb();
+        return;
+    }
+    if (_sguLoadingAll) return;
+    _sguLoadingAll = true;
+
+    _sguToast('Cargando registros anteriores...', 'bi-hourglass-split');
+    _sguLoadRecords(true, function() {
+        _sguLoadingAll = false;
+        _sguToast('Historial cargado');
+        if (cb) cb();
+    });
+};
 
 function _sguLoadTemplate(cb) {
     _sguFetch('/api/seguridad/template').then(function(data) {
@@ -220,8 +315,9 @@ function _sguLoadTemplate(cb) {
 }
 
 window._sguRefresh = function() {
-    _sguToast('Actualizando expedientes...', 'bi-arrow-clockwise');
-    _sguLoadRecords(function() {
+    _sguToast('Actualizando...', 'bi-arrow-clockwise');
+    _sguLoadStats();
+    _sguLoadRecords(_sguLoadedAll, function() {
         _sguRenderList();
         _sguToast('Datos actualizados');
     });
@@ -351,10 +447,27 @@ window._sguSetTab = function(tab) {
         if (k) k.classList.add('active');
     }
 
+    // Si el usuario pide ver "todos", "historial" o "alertas" y no se han descargado, traerlos bajo demanda
+    if (tab !== 'activos' && !_sguLoadedAll) {
+        window._sguEnsureAllRecordsLoaded(function() {
+            _sguRenderList();
+        });
+        return;
+    }
+
     _sguRenderList();
 };
 
-window._sguFilterList = function() { _sguRenderList(); };
+window._sguFilterList = function() {
+    var search = (document.getElementById('sgu-search') || {}).value || '';
+    if (search.trim().length > 0 && !_sguLoadedAll) {
+        window._sguEnsureAllRecordsLoaded(function() {
+            _sguRenderList();
+        });
+        return;
+    }
+    _sguRenderList();
+};
 
 // ── RENDER LISTA / DASHBOARD BENTO ───────────────────────────────
 function _sguRenderList() {
@@ -362,10 +475,10 @@ function _sguRenderList() {
     var mobileContainer = document.getElementById('sgu-mobile-records-list');
     if (!tableBody && !mobileContainer) return;
 
-    var countTotal = _sguRecords.length;
-    var countRuta = _sguRecords.filter(function(r) { return r.estado === 'en_ruta'; }).length;
-    var countComp = _sguRecords.filter(function(r) { return r.estado === 'completado'; }).length;
-    var countAlert = _sguRecords.filter(function(r) { return r.salida_has_alert || r.retorno_has_alert; }).length;
+    var countTotal = _sguLoadedAll ? _sguRecords.length : (_sguStats.total || _sguRecords.length);
+    var countRuta = _sguRecords.filter(function(r) { return r.estado === 'en_ruta'; }).length || _sguStats.en_ruta;
+    var countComp = _sguLoadedAll ? _sguRecords.filter(function(r) { return r.estado === 'completado'; }).length : (_sguStats.completados || 0);
+    var countAlert = _sguLoadedAll ? _sguRecords.filter(function(r) { return r.salida_has_alert || r.retorno_has_alert; }).length : (_sguStats.alertas || 0);
 
     var elTotal = document.getElementById('sgu-kpi-val-total');
     var elRuta = document.getElementById('sgu-kpi-val-ruta');
@@ -418,7 +531,7 @@ function _sguRenderList() {
             ? '<span class="sgu-badge sgu-badge-alerta" title="Presentó observaciones"><i class="bi bi-exclamation-triangle-fill"></i> CON NOVEDAD</span>'
             : '<span class="sgu-badge sgu-badge-ok"><i class="bi bi-shield-check"></i> CONFORME</span>';
 
-        var deleteBtn = isAdmin ? '<button class="sgu-action-btn sgu-btn-del-cell" onclick="event.stopPropagation(); window._sguDeleteRecord(\'' + rec.id + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '';
+        var deleteBtn = isAdmin ? '<button class="sgu-action-btn sgu-btn-del-cell" onclick="event.stopPropagation(); window._sguDeleteRecord(\'' + rec.id + '\')" title="Eliminar"><i class="bi bi-trash3-fill text-danger"></i></button>' : '';
 
         var actionBtn = isEnRuta
             ? '<button class="sgu-action-btn sgu-btn-ingresar-cell" onclick="event.stopPropagation(); window._sguShowView(\'detail\',\'' + rec.id + '\')"><i class="bi bi-arrow-left-circle-fill"></i> Ingresar</button>'
@@ -533,6 +646,11 @@ function _sguInitForm() {
     document.getElementById('sgu-f-conductor').value = '';
     document.getElementById('sgu-f-destino').value = '';
     document.getElementById('sgu-f-km').value = '';
+    var hintEl = document.getElementById('sgu-f-km-hint');
+    if (hintEl) {
+        hintEl.textContent = '';
+        hintEl.classList.add('d-none');
+    }
 
     var bT = document.getElementById('sgu-doc-box-tracto');
     var bC = document.getElementById('sgu-doc-box-carreta');

@@ -475,15 +475,17 @@
     border-color: #0f172a;
 }
 .sgu-btn-del-cell {
-    background: #fff;
-    color: #94a3b8;
-    border-color: #e2e8f0;
+    background: #fef2f2;
+    color: #ef4444;
+    border: 1px solid #fee2e2;
     padding: 5px 8px;
+    transition: all 0.15s ease;
 }
 .sgu-btn-del-cell:hover {
     background: #fee2e2;
     color: #dc2626;
-    border-color: #fecaca;
+    border-color: #fca5a5;
+    transform: scale(1.05);
 }
 
 /* ── Formularios Bento (Salida y Retorno) ────────────────────────── */
@@ -983,7 +985,10 @@
                             <input type="text" class="sgu-form-input-clean text-uppercase" id="sgu-f-destino" placeholder="Ej. LIMA - CUSCO" oninput="window._sguCheckFormReady()">
                         </div>
                         <div class="col-12 col-md-6">
-                            <label class="sgu-form-label">Kilometraje de Salida</label>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="sgu-form-label mb-0">Kilometraje de Salida</label>
+                                <small class="text-primary fw-bold d-none" id="sgu-f-km-hint" style="font-size: 0.72rem;"></small>
+                            </div>
                             <input type="number" class="sgu-form-input-clean" id="sgu-f-km" placeholder="Ej. 145200" oninput="window._sguCheckFormReady()">
                         </div>
                     </div>

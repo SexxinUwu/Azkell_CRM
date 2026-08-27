@@ -13,8 +13,13 @@
         _loading[src] = new Promise(function(resolve, reject) {
             var s = document.createElement('script');
             s.src = src;
+            s.async = true;
             s.onload = function() { _loaded[src] = true; delete _loading[src]; resolve(); };
-            s.onerror = function() { delete _loading[src]; reject(new Error('Failed to load: ' + src)); };
+            s.onerror = function() { 
+                delete _loading[src]; 
+                console.warn('Recurso no disponible temporalmente:', src);
+                resolve(); // Resolvemos para no romper la cadena de precarga
+            };
             document.head.appendChild(s);
         });
         return _loading[src];
