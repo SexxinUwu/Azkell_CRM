@@ -447,6 +447,7 @@ function _sguRenderList() {
                 '<div class="d-inline-flex align-items-center gap-1">' +
                     actionBtn +
                     '<button class="sgu-action-btn sgu-btn-view-cell" onclick="window._sguCurrentRecord=_sguRecords.find(function(r){return r.id===\''+rec.id+'\'}); window._sguGenerarPDFCompleto()" title="Descargar PDF"><i class="bi bi-file-earmark-pdf text-danger"></i></button>' +
+                    '<button class="sgu-action-btn" style="background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0;" onclick="window._sguCurrentRecord=_sguRecords.find(function(r){return r.id===\''+rec.id+'\'}); window._sguCompartirWhatsApp(\'completo\')" title="Compartir WhatsApp"><i class="bi bi-whatsapp"></i></button>' +
                     deleteBtn +
                 '</div>' +
             '</td>' +
@@ -463,6 +464,7 @@ function _sguRenderList() {
                 '<div class="small text-secondary">' + (rec.salida_fecha || '') + ' ' + (rec.salida_hora || '') + '</div>' +
                 '<div class="d-flex gap-1" onclick="event.stopPropagation();">' +
                     actionBtn +
+                    '<button class="sgu-action-btn" style="background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0;" onclick="window._sguCurrentRecord=_sguRecords.find(function(r){return r.id===\''+rec.id+'\'}); window._sguCompartirWhatsApp(\'completo\')" title="Compartir WhatsApp"><i class="bi bi-whatsapp"></i></button>' +
                     deleteBtn +
                 '</div>' +
             '</div>' +
@@ -746,6 +748,7 @@ async function _sguRenderDetail(recordId) {
     html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerFotos(\'salida\')"><i class="bi bi-images"></i> Fotos (' + (rec.fotos || []).filter(function(f){return f.tipo==='salida';}).length + ')</button>';
     html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguPrevisualizarPDF(\'salida\')"><i class="bi bi-eye text-primary"></i> Ver PDF</button>';
     html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDF(\'salida\')" title="Descargar directo"><i class="bi bi-download text-danger"></i> Descargar</button>';
+    html += '<button class="sgu-btn-top sgu-btn-whatsapp flex-grow-1" onclick="window._sguCompartirWhatsApp(\'salida\')" title="Compartir PDF por WhatsApp"><i class="bi bi-whatsapp"></i> WhatsApp</button>';
     html += '</div>';
 
     html += '</div>';
@@ -805,11 +808,13 @@ async function _sguRenderDetail(recordId) {
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerFotos(\'retorno\')"><i class="bi bi-images"></i> Fotos (' + (rec.fotos || []).filter(function(f){return f.tipo==='retorno';}).length + ')</button>';
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguPrevisualizarPDF(\'retorno\')"><i class="bi bi-eye text-primary"></i> Ver PDF</button>';
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDF(\'retorno\')" title="Descargar directo"><i class="bi bi-download text-danger"></i> Descargar</button>';
+        html += '<button class="sgu-btn-top sgu-btn-whatsapp flex-grow-1" onclick="window._sguCompartirWhatsApp(\'retorno\')" title="Compartir PDF por WhatsApp"><i class="bi bi-whatsapp"></i> WhatsApp</button>';
         html += '</div>';
 
         html += '<div class="pt-3 mt-3 border-top d-flex gap-2 flex-wrap">';
         html += '<button class="sgu-btn-top sgu-btn-primary flex-grow-1" onclick="window._sguPrevisualizarPDFCompleto()"><i class="bi bi-eye"></i> Previsualizar Expediente</button>';
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDFCompleto()"><i class="bi bi-file-earmark-arrow-down text-danger"></i> Descargar Expediente</button>';
+        html += '<button class="sgu-btn-top sgu-btn-whatsapp flex-grow-1" onclick="window._sguCompartirWhatsApp(\'completo\')" title="Compartir Expediente por WhatsApp"><i class="bi bi-whatsapp"></i> WhatsApp</button>';
         if (_sguIsAdmin()) {
             html += '<button class="sgu-btn-top" style="color:#dc2626;" onclick="window._sguDeleteRecord(\'' + rec.id + '\')" title="Eliminar Expediente"><i class="bi bi-trash"></i></button>';
         }
@@ -920,10 +925,10 @@ window._sguCheckReturnReady = function() {
     }
 };
 
-// ── COMPRESIÓN Y OPTIMIZACIÓN DE IMÁGENES EN CLIENTE ─────────────
+// ── COMPRESIÓN Y OPTIMIZACIÓN DE IMÁGENES EN CLIENTE (ULTRA RÁPIDO) ───
 function _sguComprimirImagen(file, maxDimension, quality) {
-    maxDimension = maxDimension || 1400;
-    quality = quality || 0.80;
+    maxDimension = maxDimension || 1280;
+    quality = quality || 0.78;
     return new Promise(function(resolve) {
         if (!file || !file.type || !file.type.match(/image.*/)) {
             return resolve(file);
@@ -932,8 +937,8 @@ function _sguComprimirImagen(file, maxDimension, quality) {
         reader.onload = function(e) {
             var img = new Image();
             img.onload = function() {
-                var w = img.width;
-                var h = img.height;
+                var w = img.naturalWidth || img.width;
+                var h = img.naturalHeight || img.height;
                 if (w > maxDimension || h > maxDimension) {
                     if (w > h) {
                         h = Math.round((h * maxDimension) / w);
@@ -946,7 +951,9 @@ function _sguComprimirImagen(file, maxDimension, quality) {
                 var canvas = document.createElement('canvas');
                 canvas.width = w;
                 canvas.height = h;
-                var ctx = canvas.getContext('2d');
+                var ctx = canvas.getContext('2d', { alpha: false });
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(img, 0, 0, w, h);
                 canvas.toBlob(function(blob) {
                     if (!blob) return resolve(file);
@@ -961,13 +968,16 @@ function _sguComprimirImagen(file, maxDimension, quality) {
     });
 }
 
-// ── REINTENTO AUTOMÁTICO DE SUBIDA (ESTÁNDAR ENTERPRISE) ─────────
+// ── REINTENTO AUTOMÁTICO DE SUBIDA A S3 CON CONTENT-TYPE ESTRICTO ─────
 async function _sguUploadSinglePhotoWithRetry(uploadUrl, fileBlob, s3Key, tipo, maxRetries) {
     maxRetries = maxRetries || 3;
     for (var attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             var res = await fetch(uploadUrl, {
                 method: 'PUT',
+                headers: {
+                    'Content-Type': 'image/jpeg'
+                },
                 body: fileBlob
             });
             if (res.ok) {
@@ -976,31 +986,48 @@ async function _sguUploadSinglePhotoWithRetry(uploadUrl, fileBlob, s3Key, tipo, 
         } catch (e) {
             console.warn('Reintentando foto (' + attempt + '/' + maxRetries + '):', s3Key, e);
             if (attempt < maxRetries) {
-                await new Promise(function(r) { setTimeout(r, 100); });
+                await new Promise(function(r) { setTimeout(r, 200 * attempt); });
             }
         }
     }
     return { ok: false, key: s3Key };
 }
 
-// ── GUARDAR IMÁGENES ULTRA RÁPIDO (PARALELO ENTERPRISE) ──────────
-async function _sguUploadPhotos(registroId, tipo, cb) {
-    var pendientes = (_sguPhotos[tipo] || []).filter(function(p) { return !p.uploaded && p.file; });
-    if (!pendientes.length) return cb();
+// ── COLA DE SUBIDA ASÍNCRONA EN 2DO PLANO (ENTERPRISE BACKGROUND QUEUE) ──
+window._sguQueueBackgroundUpload = async function(registroId, tipo, fotosPendientes) {
+    if (!fotosPendientes || !fotosPendientes.length) return;
 
-    _sguToast('Subiendo imágenes...', 'bi-cloud-arrow-up');
+    var progressCard = document.getElementById('sgu-upload-progress-card');
+    var progressBar = document.getElementById('sgu-upload-progress-bar');
+    var progressText = document.getElementById('sgu-upload-text');
+    var progressCount = document.getElementById('sgu-upload-count');
+    var progressSpinner = document.getElementById('sgu-upload-spinner');
+    var progressCheck = document.getElementById('sgu-upload-check');
+
+    if (progressCard) {
+        progressCard.style.display = 'block';
+        if (progressSpinner) progressSpinner.classList.remove('d-none');
+        if (progressCheck) progressCheck.classList.add('d-none');
+        if (progressBar) progressBar.style.width = '10%';
+        if (progressText) progressText.textContent = 'Optimizando ' + fotosPendientes.length + ' evidencias...';
+        if (progressCount) progressCount.textContent = '10%';
+    }
 
     try {
-        // 1. Optimizar todas las fotos en paralelo en memoria (toma ~30-60ms total)
-        var blobsOptimizados = await Promise.all(pendientes.map(function(p) {
-            return _sguComprimirImagen(p.file);
+        // 1. Optimizar todas las fotos en memoria en paralelo (~30ms)
+        var blobsOptimizados = await Promise.all(fotosPendientes.map(function(p) {
+            return _sguComprimirImagen(p.file, 1280, 0.78);
         }));
 
-        var archivosMetadata = pendientes.map(function(p, idx) {
+        if (progressBar) progressBar.style.width = '30%';
+        if (progressText) progressText.textContent = 'Generando accesos S3...';
+        if (progressCount) progressCount.textContent = '30%';
+
+        var archivosMetadata = fotosPendientes.map(function(p, idx) {
             return { nombre: 'evidencia_' + (idx + 1) + '.jpg', tipo: 'image/jpeg', fase: tipo };
         });
 
-        // 2. Solicitar URLs de subida
+        // 2. Solicitar URLs prefirmadas a AWS S3
         var r = await fetch('/api/seguridad/unidades/' + registroId + '/fotos/presigned', {
             method: 'POST',
             headers: {
@@ -1010,40 +1037,44 @@ async function _sguUploadPhotos(registroId, tipo, cb) {
             body: JSON.stringify({ archivos: archivosMetadata })
         });
 
-        if (!r.ok) throw new Error('Error solicitando permisos de subida');
+        if (!r.ok) throw new Error('Error solicitando permisos a S3');
         var data = await r.json();
         var urls = data.urls || [];
         var exitosos = [];
 
-        // 3. Subida en batches de 6 hilos concurrentes con reintentos automáticos
-        var BATCH_SIZE = 6;
-        for (var i = 0; i < pendientes.length; i += BATCH_SIZE) {
-            var batch = pendientes.slice(i, i + BATCH_SIZE);
-            var batchPromises = batch.map(function(p, bIdx) {
-                var idx = i + bIdx;
-                if (!urls[idx]) return Promise.resolve(null);
-                var uploadUrl = urls[idx].uploadUrl;
-                var s3Key = urls[idx].key;
-                var fileBlob = blobsOptimizados[idx] || p.file;
-                return _sguUploadSinglePhotoWithRetry(uploadUrl, fileBlob, s3Key, tipo, 3);
-            });
+        // 3. Subida concurrente en paralelo con reintentos
+        var totalFotos = fotosPendientes.length;
+        var subidasCompletadas = 0;
 
-            var batchResults = await Promise.all(batchPromises);
-            batchResults.forEach(function(res, bIdx) {
-                if (res && res.ok) {
-                    var idx = i + bIdx;
-                    pendientes[idx].uploaded = true;
-                    exitosos.push({ key: res.key, fase: res.fase });
-                }
-            });
-        }
+        var uploadPromises = fotosPendientes.map(async function(p, idx) {
+            if (!urls[idx]) return null;
+            var uploadUrl = urls[idx].uploadUrl;
+            var s3Key = urls[idx].key;
+            var fileBlob = blobsOptimizados[idx] || p.file;
+
+            var res = await _sguUploadSinglePhotoWithRetry(uploadUrl, fileBlob, s3Key, tipo, 3);
+            if (res && res.ok) {
+                exitosos.push({ key: res.key, fase: res.fase });
+            }
+            subidasCompletadas++;
+            var pct = Math.round(30 + (subidasCompletadas / totalFotos) * 55);
+            if (progressBar) progressBar.style.width = pct + '%';
+            if (progressText) progressText.textContent = 'Subiendo evidencias (' + subidasCompletadas + '/' + totalFotos + ')...';
+            if (progressCount) progressCount.textContent = pct + '%';
+            return res;
+        });
+
+        await Promise.all(uploadPromises);
 
         if (!exitosos.length) {
-            _sguToast('No se pudieron subir las imágenes.', 'bi-x-circle');
-            return cb();
+            throw new Error('No se pudieron subir las imágenes');
         }
 
-        // 4. Confirmación masiva en base de datos (Bulk insert en 1-2ms)
+        if (progressBar) progressBar.style.width = '90%';
+        if (progressText) progressText.textContent = 'Guardando en base de datos...';
+        if (progressCount) progressCount.textContent = '90%';
+
+        // 4. Confirmación masiva en MySQL
         var rConf = await fetch('/api/seguridad/unidades/' + registroId + '/fotos/confirmar', {
             method: 'POST',
             headers: {
@@ -1058,16 +1089,30 @@ async function _sguUploadPhotos(registroId, tipo, cb) {
             throw new Error(errData.error || 'Error en base de datos');
         }
 
-        _sguToast('Imágenes subidas con éxito.');
-        cb();
-    } catch(err) {
-        console.error('Error subida imágenes:', err);
-        _sguToast(err.message || 'Fallo al subir imágenes', 'bi-exclamation-triangle');
-        setTimeout(cb, 500);
-    }
-}
+        // 5. Finalizado con éxito
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressCount) progressCount.textContent = '100%';
+        if (progressSpinner) progressSpinner.classList.add('d-none');
+        if (progressCheck) progressCheck.classList.remove('d-none');
+        if (progressText) progressText.textContent = '✅ ' + exitosos.length + ' evidencias subidas a AWS';
 
-// ── GUARDAR SALIDA / RETORNO ─────────────────────────────────────
+        // Recargar silenciosamente la lista para tener las fotos en memoria
+        _sguLoadRecords();
+
+        setTimeout(function() {
+            if (progressCard) progressCard.style.display = 'none';
+        }, 3000);
+    } catch(err) {
+        console.error('Error en subida en segundo plano:', err);
+        if (progressText) progressText.textContent = '⚠️ ' + (err.message || 'Error en subida');
+        if (progressSpinner) progressSpinner.classList.add('d-none');
+        setTimeout(function() {
+            if (progressCard) progressCard.style.display = 'none';
+        }, 4000);
+    }
+};
+
+// ── GUARDAR SALIDA / RETORNO (OPTIMISTIC UI: 0 MS DE ESPERA) ─────
 window._sguSaveRecord = function() {
     var p = document.getElementById('sgu-f-placa').value.toUpperCase().trim();
     var c = document.getElementById('sgu-f-carreta').value.toUpperCase().trim();
@@ -1099,16 +1144,25 @@ window._sguSaveRecord = function() {
         salida_has_alert: hasAlert
     };
 
+    var fotosParaSubir = (_sguPhotos['salida'] || []).filter(function(item) { return !item.uploaded && item.file; });
+
     _sguFetch('/api/seguridad/unidades', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyOut)
     })
     .then(function(data) {
-        _sguUploadPhotos(data.id, 'salida', function() {
-            _sguToast('Salida registrada con éxito');
-            _sguLoadRecords(function() { window._sguShowView('list'); });
-        });
+        // 1. Liberar la interfaz inmediatamente (Optimistic UI)
+        _sguToast('Salida registrada con éxito');
+        _sguLoadRecords(function() { window._sguShowView('list'); });
+        
+        // 2. Limpiar formulario
+        _sguPhotos['salida'] = [];
+        
+        // 3. Subir fotos en segundo plano
+        if (fotosParaSubir.length > 0) {
+            window._sguQueueBackgroundUpload(data.id, 'salida', fotosParaSubir);
+        }
     })
     .catch(function(e) {
         _sguToast('Error: ' + e.message, 'bi-exclamation-circle');
@@ -1139,16 +1193,26 @@ window._sguSaveReturn = function() {
         estado: 'completado'
     };
 
-    _sguFetch('/api/seguridad/unidades/' + _sguDetailId, {
+    var fotosParaSubir = (_sguPhotos['retorno'] || []).filter(function(item) { return !item.uploaded && item.file; });
+    var registroId = _sguDetailId;
+
+    _sguFetch('/api/seguridad/unidades/' + registroId, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
     })
     .then(function() {
-        _sguUploadPhotos(_sguDetailId, 'retorno', function() {
-            _sguToast('Retorno registrado con éxito');
-            _sguLoadRecords(function() { window._sguShowView('list'); });
-        });
+        // 1. Liberar la interfaz inmediatamente
+        _sguToast('Retorno registrado con éxito');
+        _sguLoadRecords(function() { window._sguShowView('list'); });
+        
+        // 2. Limpiar fotos locales
+        _sguPhotos['retorno'] = [];
+
+        // 3. Subir fotos en segundo plano
+        if (fotosParaSubir.length > 0) {
+            window._sguQueueBackgroundUpload(registroId, 'retorno', fotosParaSubir);
+        }
     })
     .catch(function(e) {
         _sguToast('Error: ' + e.message, 'bi-exclamation-circle');
@@ -1552,10 +1616,23 @@ function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
     window.open(url, '_blank');
 }
 
+function _sguGetPdfFilename(rec, tipo) {
+    if (!rec) return 'Checklist.pdf';
+    var fecha = (tipo === 'retorno' ? (rec.retorno_fecha || rec.salida_fecha) : rec.salida_fecha) || 'FECHA';
+    fecha = String(fecha).replace(/\//g, '-').trim();
+    var p1 = (rec.placa_tracto || 'TRACTO').trim();
+    var p2 = (rec.placa_carreta || 'CARRETA').trim();
+    var km = (tipo === 'retorno' ? (rec.retorno_km || rec.salida_km) : rec.salida_km) || '0';
+    var prefijo = (tipo === 'completo') ? 'Expediente ' : '';
+    var baseName = prefijo + fecha + ' - ' + p1 + ' _ ' + p2 + ' - ' + km + ' km.pdf';
+    return baseName.replace(/[\/\\?%*:|"<>]/g, '-');
+}
+
 window._sguPrevisualizarPDF = async function(tipo) {
     if (!window._sguCurrentRecord) return;
     var rec = window._sguCurrentRecord;
     var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+    var filename = _sguGetPdfFilename(rec, tipo);
 
     _sguToast('Preparando vista previa...', 'bi-eye');
 
@@ -1565,12 +1642,13 @@ window._sguPrevisualizarPDF = async function(tipo) {
         htmlFinal += _sguBuildPhotosPagesHtml(fotosSimple, tipo);
     }
 
-    _sguAbrirVentanaImpresion(htmlFinal, 'Checklist_' + rec.placa_tracto + '_' + tipo + '.pdf', 'Checklist ' + rec.placa_tracto + ' (' + tipo.toUpperCase() + ')');
+    _sguAbrirVentanaImpresion(htmlFinal, filename, 'Checklist ' + rec.placa_tracto + ' (' + tipo.toUpperCase() + ')');
 };
 
 window._sguPrevisualizarPDFCompleto = async function() {
     if (!window._sguCurrentRecord) return;
     var rec = window._sguCurrentRecord;
+    var filename = _sguGetPdfFilename(rec, 'completo');
 
     _sguToast('Preparando vista previa del expediente...', 'bi-eye');
 
@@ -1592,7 +1670,7 @@ window._sguPrevisualizarPDFCompleto = async function() {
         htmlFinal += _sguBuildPhotosPagesHtml(fotosRetorno, 'retorno');
     }
 
-    _sguAbrirVentanaImpresion(htmlFinal, 'Expediente_Completo_' + rec.placa_tracto + '.pdf', 'Expediente Completo ' + rec.placa_tracto);
+    _sguAbrirVentanaImpresion(htmlFinal, filename, 'Expediente Completo ' + rec.placa_tracto);
 };
 
 window._sguGenerarPDF = async function(tipo) {
@@ -1604,6 +1682,7 @@ window._sguGenerarPDF = async function(tipo) {
 
     var rec = window._sguCurrentRecord;
     var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+    var filename = _sguGetPdfFilename(rec, tipo);
 
     _sguToast('Descargando reporte PDF...', 'bi-hourglass-split');
 
@@ -1637,14 +1716,14 @@ window._sguGenerarPDF = async function(tipo) {
 
     var opt = {
         margin:       [8, 8, 8, 8],
-        filename:     'Checklist_' + rec.placa_tracto + '_' + tipo + '.pdf',
+        filename:     filename,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     html2pdf().set(opt).from(div).save().then(function() {
-        _sguToast('PDF descargado correctamente.');
+        _sguToast('PDF descargado: ' + filename);
     }).catch(function(err) {
         _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
     });
@@ -1658,6 +1737,7 @@ window._sguGenerarPDFCompleto = async function() {
 
     if (!window._sguCurrentRecord) return;
     var rec = window._sguCurrentRecord;
+    var filename = _sguGetPdfFilename(rec, 'completo');
 
     _sguToast('Descargando Expediente Completo...', 'bi-hourglass-split');
 
@@ -1707,17 +1787,110 @@ window._sguGenerarPDFCompleto = async function() {
 
     var opt = {
         margin:       [8, 8, 8, 8],
-        filename:     'Expediente_Completo_' + rec.placa_tracto + '.pdf',
+        filename:     filename,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     html2pdf().set(opt).from(div).save().then(function() {
-        _sguToast('Expediente descargado con éxito.');
+        _sguToast('Expediente descargado: ' + filename);
     }).catch(function(err) {
         _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
     });
+};
+
+// ── COMPARTIR PDF POR WHATSAPP (MÓVIL DIRECTO O DESCARGA + WHATSAPP WEB) ──
+window._sguCompartirWhatsApp = async function(tipo) {
+    if (!window._sguCurrentRecord) return;
+    if (typeof html2pdf === 'undefined') {
+        _sguToast('Error: Librería PDF no disponible', 'bi-exclamation-triangle');
+        return;
+    }
+
+    var rec = window._sguCurrentRecord;
+    var filename = _sguGetPdfFilename(rec, tipo);
+    var fechaStr = (tipo === 'retorno' ? (rec.retorno_fecha || rec.salida_fecha) : rec.salida_fecha) || '---';
+    var kmStr = (tipo === 'retorno' ? (rec.retorno_km || rec.salida_km) : rec.salida_km) || '---';
+    var faseStr = tipo === 'salida' ? 'Ida (Salida)' : (tipo === 'retorno' ? 'Vuelta (Retorno)' : 'Expediente Completo');
+
+    _sguToast('Generando PDF para WhatsApp...', 'bi-whatsapp');
+
+    try {
+        var htmlFinal = '';
+        if (tipo === 'completo') {
+            var todasFotos = rec.fotos || [];
+            var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
+            var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
+
+            htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)');
+            if (rec.retorno_fecha || rec.estado === 'completado') {
+                htmlFinal += '<div class="html2pdf__page-break"></div>';
+                htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)');
+            }
+            if (fotosSalida.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosSalida, 'salida');
+            if (fotosRetorno.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosRetorno, 'retorno');
+        } else {
+            var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+            htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)');
+            if (fotos.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotos, tipo);
+        }
+
+        var div = document.createElement('div');
+        div.style.width = '700px';
+        div.style.backgroundColor = '#ffffff';
+        div.innerHTML = htmlFinal;
+
+        var opt = {
+            margin:       [8, 8, 8, 8],
+            filename:     filename,
+            image:        { type: 'jpeg', quality: 0.95 },
+            html2canvas:  { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        var pdfBlob = await html2pdf().set(opt).from(div).outputPdf('blob');
+        var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+        var textoMensaje = '📋 *CHECKLIST DE UNIDADES - AZKELL ERP*\n' +
+            '📄 *Documento:* ' + filename + '\n' +
+            '🔍 *Fase:* ' + faseStr + '\n' +
+            '📅 *Fecha:* ' + fechaStr + '\n' +
+            '🚛 *Tracto:* ' + (rec.placa_tracto || '---') + '\n' +
+            '🚛 *Carreta:* ' + (rec.placa_carreta || '---') + '\n' +
+            '👤 *Conductor:* ' + (rec.conductor || '---') + '\n' +
+            '📍 *Destino:* ' + (rec.destino || '---') + '\n' +
+            '🛣️ *Kilometraje:* ' + kmStr + ' km\n' +
+            '✅ *Estado:* ' + (rec.estado === 'completado' ? 'Completado' : 'En Ruta') + '\n\n' +
+            '📎 _Reporte digital oficial generado automáticamente._';
+
+        // Intento 1: Web Share API nativo (Móviles / Tablets con WhatsApp directo)
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            await navigator.share({
+                files: [pdfFile],
+                title: filename,
+                text: textoMensaje
+            });
+            _sguToast('Compartido con éxito');
+            return;
+        }
+
+        // Intento 2: Descarga automática con el nombre exacto + Apertura de WhatsApp
+        var fileUrl = URL.createObjectURL(pdfBlob);
+        var a = document.createElement('a');
+        a.href = fileUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        var waUrl = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(textoMensaje);
+        window.open(waUrl, '_blank');
+        _sguToast('PDF descargado: ' + filename + ' y WhatsApp abierto.');
+    } catch(err) {
+        console.error('Error al compartir WhatsApp:', err);
+        _sguToast('Error al compartir: ' + err.message, 'bi-exclamation-circle');
+    }
 };
 
 // =========================================================
