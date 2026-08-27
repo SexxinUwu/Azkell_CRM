@@ -1985,25 +1985,47 @@ window._sguCompartirWhatsApp = async function(tipo) {
     var kmStr = (tipo === 'retorno' ? (rec.retorno_km || rec.salida_km) : rec.salida_km) || '---';
     var faseStr = tipo === 'salida' ? 'Ida (Salida)' : (tipo === 'retorno' ? 'Vuelta (Retorno)' : 'Expediente Completo');
 
-    _sguToast('Generando PDF para WhatsApp...', 'bi-whatsapp');
+    _sguToast('Generando PDF con fotos para WhatsApp...', 'bi-whatsapp');
 
     try {
+        // Asegurar que tengamos las fotos frescas del registro si no están en memoria
+        if ((!rec.fotos || !rec.fotos.length) && rec.id) {
+            try {
+                var freshData = await _sguFetch('/api/seguridad/unidades');
+                if (freshData && freshData.length) {
+                    var match = freshData.find(function(r){ return r.id === rec.id; });
+                    if (match && match.fotos) {
+                        rec.fotos = match.fotos;
+                        window._sguCurrentRecord.fotos = match.fotos;
+                    }
+                }
+            } catch(e){}
+        }
+
         var todasFotos = rec.fotos || [];
         var fotosSalida = [];
         var fotosRetorno = [];
 
         for (var i = 0; i < todasFotos.length; i++) {
             var f = todasFotos[i];
+            if (!f || !f.url) continue;
             try {
-                var res = await fetch(f.url, { mode: 'cors', cache: 'no-store' });
-                var blob = await res.blob();
-                var b64 = await new Promise(function(resolve) {
-                    var r = new FileReader();
-                    r.onloadend = function() { resolve(r.result); };
-                    r.readAsDataURL(blob);
-                });
-                if (f.tipo === 'salida') fotosSalida.push({ b64: b64, num: fotosSalida.length + 1 });
-                else fotosRetorno.push({ b64: b64, num: fotosRetorno.length + 1 });
+                var fetchPromise = fetch(f.url, { mode: 'cors', cache: 'no-store' });
+                var timeoutPromise = new Promise(function(_, reject) { setTimeout(function(){ reject(new Error('timeout')); }, 3500); });
+                var res = await Promise.race([fetchPromise, timeoutPromise]);
+                if (res.ok) {
+                    var blob = await res.blob();
+                    var b64 = await new Promise(function(resolve) {
+                        var r = new FileReader();
+                        r.onloadend = function() { resolve(r.result); };
+                        r.readAsDataURL(blob);
+                    });
+                    if (f.tipo === 'salida') fotosSalida.push({ b64: b64, num: fotosSalida.length + 1 });
+                    else fotosRetorno.push({ b64: b64, num: fotosRetorno.length + 1 });
+                } else {
+                    if (f.tipo === 'salida') fotosSalida.push({ b64: f.url, num: fotosSalida.length + 1 });
+                    else fotosRetorno.push({ b64: f.url, num: fotosRetorno.length + 1 });
+                }
             } catch(e) {
                 if (f.tipo === 'salida') fotosSalida.push({ b64: f.url, num: fotosSalida.length + 1 });
                 else fotosRetorno.push({ b64: f.url, num: fotosRetorno.length + 1 });
@@ -2053,18 +2075,23 @@ window._sguCompartirWhatsApp = async function(tipo) {
             '✅ *Estado:* ' + (rec.estado === 'completado' ? 'Completado' : 'En Ruta') + '\n\n' +
             '📎 _Reporte digital oficial generado automáticamente._';
 
-        // Intento 1: Web Share API nativo (Móviles / Tablets con WhatsApp directo)
+        // Intento 1: Web Share API nativo si el gesto sigue activo
         if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-            await navigator.share({
-                files: [pdfFile],
-                title: filename,
-                text: textoMensaje
-            });
-            _sguToast('Compartido con éxito');
-            return;
+            try {
+                await navigator.share({
+                    files: [pdfFile],
+                    title: filename,
+                    text: textoMensaje
+                });
+                _sguToast('Compartido con éxito');
+                return;
+            } catch(eShare) {
+                // Si el token de gesto expiró o el usuario canceló, usamos el fallback garantizado
+                console.log('Share nativo declinado o expirado, ejecutando descarga + WhatsApp:', eShare);
+            }
         }
 
-        // Intento 2: Descarga automática con el nombre exacto + Apertura de WhatsApp
+        // Intento 2 (Garantizado): Descarga automática del PDF + Apertura de WhatsApp
         var fileUrl = URL.createObjectURL(pdfBlob);
         var a = document.createElement('a');
         a.href = fileUrl;
@@ -2078,7 +2105,7 @@ window._sguCompartirWhatsApp = async function(tipo) {
         _sguToast('PDF descargado: ' + filename + ' y WhatsApp abierto.');
     } catch(err) {
         console.error('Error al compartir WhatsApp:', err);
-        _sguToast('Error al compartir: ' + err.message, 'bi-exclamation-circle');
+        _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
     }
 };
 
