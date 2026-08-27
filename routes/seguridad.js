@@ -444,17 +444,23 @@ module.exports = (db, logAudit) => {
                 const empresasSet = new Set();
 
                 rowsP.forEach(r => {
-                    const emp = (r.cliente || 'GENERAL').toUpperCase().trim();
-                    if (emp && emp !== 'NULL') empresasSet.add(emp);
+                    const empRaw = (r.cliente || 'GENERAL').toUpperCase().trim();
+                    if (empRaw && empRaw !== 'NULL') empresasSet.add(empRaw);
 
-                    const tipoUpper = (r.tipo || '').toUpperCase();
-                    const isNoMotora = r.motora === '0' || r.motora === 0 || 
+                    const motoraStr = String(r.motora || '').toUpperCase().trim();
+                    const tipoUpper = (r.tipo || '').toUpperCase().trim();
+
+                    const isNoMotora = motoraStr.includes('NO') || 
+                                       motoraStr === '0' ||
                                        tipoUpper.includes('SEMIREMOLQUE') || 
+                                       tipoUpper.includes('SEMIRREMOLQUE') || 
                                        tipoUpper.includes('CARRETA') || 
                                        tipoUpper.includes('FURGON') || 
                                        tipoUpper.includes('PLATAFORMA') || 
                                        tipoUpper.includes('TANQUE') || 
-                                       tipoUpper.includes('TOLVA');
+                                       tipoUpper.includes('TOLVA') ||
+                                       tipoUpper.includes('BATEA') ||
+                                       tipoUpper.includes('CAMA');
 
                     if (isNoMotora) {
                         recursos.carretasGlobales.push(r.placa);
