@@ -70,17 +70,20 @@ module.exports = (db, logAudit) => {
             db.query('SELECT * FROM seg_unidades_fotos WHERE registro_id IN (?) ORDER BY orden ASC', [ids], async (err2, fotosRows) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 
-                const fotosByRecord = {};
-                const presignPromises = (fotosRows || []).map(async (f) => {
-                    if (!fotosByRecord[f.registro_id]) fotosByRecord[f.registro_id] = [];
+                const fotosWithPresign = await Promise.all((fotosRows || []).map(async (f) => {
                     const key = s3KeyFromUrl(f.url);
                     let finalUrl = f.url;
                     if (key) {
                         try { finalUrl = await getPresignedUrl(key, 86400); } catch(e) {}
                     }
-                    fotosByRecord[f.registro_id].push({ id: f.id, tipo: f.tipo, url: finalUrl, orden: f.orden, key: key });
-                });
-                await Promise.all(presignPromises);
+                    return { id: f.id, registro_id: f.registro_id, tipo: f.tipo, url: finalUrl, orden: f.orden, key: key };
+                }));
+
+                const fotosByRecord = {};
+                for (const f of fotosWithPresign) {
+                    if (!fotosByRecord[f.registro_id]) fotosByRecord[f.registro_id] = [];
+                    fotosByRecord[f.registro_id].push(f);
+                }
 
                 for (const r of rows) {
                     r.fotos = fotosByRecord[r.id] || [];
