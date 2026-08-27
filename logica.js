@@ -557,7 +557,7 @@ window.verificarSesionGuardada = function() {
             'tesoreria/caja-chica': 'tesoreria_caja',
             'tesoreria/flujo-caja': 'tesoreria_flujo',
             'tesoreria/cuentas': 'tesoreria_cuentas',
-            'seguridad/unidades': 'checklist',
+            'seguridad/unidades': 'seguridad_unidades',
             'seguridad/asistencia': 'asist',
             'sistema/usuarios': 'usuarios',
             'sistema/auditoria': 'mod_auditoria',
