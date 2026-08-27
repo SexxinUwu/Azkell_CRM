@@ -252,6 +252,70 @@
     background: #ffffff !important;
 }
 
+/* ── Modal Confirmación Eliminación (Diseño B) ───────────────────────── */
+.ck-delete-dialog {
+    max-width: 350px !important;
+    width: 90% !important;
+    margin: 1.75rem auto !important;
+}
+.ck-delete-card {
+    background: #ffffff !important;
+    border-radius: 28px !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+    padding: 2.2rem 1.6rem 1.8rem 1.6rem !important;
+    text-align: center;
+}
+.ck-delete-badge-icon {
+    font-size: 3.2rem;
+    color: #e11d48;
+    line-height: 1;
+    margin-bottom: 0.85rem;
+    display: inline-block;
+    filter: drop-shadow(0 6px 12px rgba(225, 29, 72, 0.25));
+}
+.ck-btn-circle {
+    width: 54px;
+    height: 54px;
+    border-radius: 50% !important;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s ease, filter 0.18s ease;
+    outline: none;
+}
+.ck-btn-cancel-circle {
+    background: #18181b !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(24, 24, 27, 0.35);
+}
+.ck-btn-cancel-circle:hover {
+    background: #09090b !important;
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px rgba(24, 24, 27, 0.45);
+    color: #ffffff !important;
+}
+.ck-btn-cancel-circle:active {
+    transform: scale(0.95);
+}
+.ck-btn-delete-circle {
+    background: #e11d48 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(225, 29, 72, 0.45);
+}
+.ck-btn-delete-circle:hover {
+    background: #be123c !important;
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px rgba(225, 29, 72, 0.6);
+    color: #ffffff !important;
+}
+.ck-btn-delete-circle:active {
+    transform: scale(0.95);
+}
+
 /* Mobile 100% Full-Bleed Edge-to-Edge */
 @media (max-width: 768px) {
     .modal {
@@ -293,6 +357,23 @@
         padding: 0.85rem 0.75rem !important;
         margin-bottom: 0.65rem !important;
         border-radius: 14px !important;
+    }
+    #modalEliminarChecklistConfirm .modal-dialog {
+        max-width: 330px !important;
+        width: 88% !important;
+        margin: auto !important;
+        position: relative !important;
+        top: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        border-radius: 28px !important;
+        height: auto !important;
+        max-height: none !important;
+    }
+    #modalEliminarChecklistConfirm .modal-content {
+        border-radius: 28px !important;
+        border: none !important;
+        overflow: hidden;
     }
 }
 </style>
@@ -926,6 +1007,45 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 🗑️ MODAL CONFIRMACIÓN DE ELIMINAR (DISEÑO B)                     -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalEliminarChecklistConfirm" tabindex="-1" aria-hidden="true" style="backdrop-filter: blur(4px);">
+  <div class="modal-dialog modal-dialog-centered ck-delete-dialog">
+    <div class="modal-content ck-delete-card border-0">
+      
+      <!-- Icono Alerta Rojo -->
+      <div class="ck-delete-badge-icon">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+      </div>
+
+      <!-- Título -->
+      <h4 class="fw-bolder text-dark mb-2" style="font-size: 1.25rem; letter-spacing: -0.3px;">
+        ¿Eliminar este reporte?
+      </h4>
+
+      <!-- Descripción -->
+      <p class="text-secondary mb-4 px-2" style="font-size: 0.84rem; line-height: 1.45; font-weight: 500;">
+        Esta acción no se puede deshacer. El reporte será eliminado permanentemente del sistema.
+      </p>
+
+      <!-- Botones de Acción (Diseño B) -->
+      <div class="d-flex align-items-center justify-content-center gap-4">
+        <!-- Cancelar (X negro) -->
+        <button type="button" class="ck-btn-circle ck-btn-cancel-circle" data-bs-dismiss="modal" title="Cancelar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+
+        <!-- Eliminar (Papelera rojo) -->
+        <button type="button" class="ck-btn-circle ck-btn-delete-circle" id="btnEjecutarEliminarChecklist" onclick="window._ejecutarEliminarChecklistConfirmado()" title="Eliminar reporte">
+          <i class="bi bi-trash3-fill"></i>
+        </button>
+      </div>
+
     </div>
   </div>
 </div>

@@ -1867,9 +1867,36 @@ window.abrirDetalleChecklist = async function(id) {
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
 };
 
+window._idChecklistAEliminar = null;
+
 window.eliminarChecklist = function(id) {
     if (!window.guardAction('checklist', 'd')) return;
-    if (!confirm('¿Estás seguro de eliminar este reporte de fallas?')) return;
+    
+    window._idChecklistAEliminar = id;
+    const modalEl = document.getElementById('modalEliminarChecklistConfirm');
+    if (modalEl) {
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalInstance.show();
+    }
+};
+
+// Listener para el botón confirmar eliminar del modal diseño B
+document.addEventListener('DOMContentLoaded', () => {
+    const btnDel = document.getElementById('btnEjecutarEliminarChecklist');
+    if (btnDel) {
+        btnDel.addEventListener('click', window._ejecutarEliminarChecklistConfirmado);
+    }
+});
+
+window._ejecutarEliminarChecklistConfirmado = function() {
+    const id = window._idChecklistAEliminar;
+    if (!id) return;
+
+    const modalEl = document.getElementById('modalEliminarChecklistConfirm');
+    if (modalEl) {
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+    }
 
     fetch(`/api/checklist/${id}`, { method: 'DELETE' })
         .then(r => r.json())
@@ -1880,7 +1907,13 @@ window.eliminarChecklist = function(id) {
                 alert('Error al eliminar: ' + (res.error || 'Desconocido'));
             }
         })
-        .catch(err => alert('Error de red: ' + err.message));
+        .catch(err => {
+            console.error('Error al eliminar reporte:', err);
+            alert('Error de red al intentar eliminar el reporte.');
+        })
+        .finally(() => {
+            window._idChecklistAEliminar = null;
+        });
 };
 
 // ── ESTADO GLOBAL DE GENERACIÓN DE OTs DESDE CHECKLIST ──────────────
