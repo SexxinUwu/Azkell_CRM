@@ -103,14 +103,22 @@ function mostrarConductores(datos) {
                 if (empresa) subParts.push(empresa);
                 if (dni)     subParts.push('DNI ' + dni);
 
+                var idCond = f.idConductor || '';
+                var nombreEsc = (nombre || '').replace(/'/g, "\\'");
+                var delBtnHtml = '<button type="button" class="cond-btn-del-grid ms-1" onclick="event.stopPropagation(); window.solicitarEliminarConductor(\'' + idCond + '\', \'' + nombreEsc + '\')" title="Eliminar personal"><i class="bi bi-trash3-fill"></i></button>';
+
                 var actHtml;
                 if (telf.length >= 9) {
-                    actHtml = '<div class="cond-actions">'
+                    actHtml = '<div class="cond-actions d-flex align-items-center">'
                         + '<a href="tel:' + telf + '" class="cond-btn cond-call" onclick="event.stopPropagation()" title="Llamar"><i class="bi bi-telephone-fill"></i></a>'
                         + '<a href="https://wa.me/51' + telf + '" target="_blank" class="cond-btn cond-wsp" onclick="event.stopPropagation()" title="WhatsApp"><i class="bi bi-whatsapp"></i></a>'
+                        + delBtnHtml
                         + '</div>';
                 } else {
-                    actHtml = '<div class="cond-no-tel"><i class="bi bi-telephone-slash" title="Sin teléfono"></i></div>';
+                    actHtml = '<div class="cond-actions d-flex align-items-center">'
+                        + '<div class="cond-no-tel"><i class="bi bi-telephone-slash" title="Sin teléfono"></i></div>'
+                        + delBtnHtml
+                        + '</div>';
                 }
 
                 var jsonSeguro = JSON.stringify(f).replace(/'/g, "&#39;");
@@ -131,7 +139,7 @@ function mostrarConductores(datos) {
                     + '<td>' + (licencia || '-') + '</td>'
                     + '<td>' + (telf || '-') + '</td>'
                     + '<td>' + estado + '</td>'
-                    + '<td></td>'
+                    + '<td><button class="btn btn-sm btn-outline-danger py-0 px-2 rounded-2" onclick="event.stopPropagation(); window.solicitarEliminarConductor(\'' + idCond + '\', \'' + nombreEsc + '\')" title="Eliminar"><i class="bi bi-trash3-fill"></i></button></td>'
                     + '</tr>';
             });
         }
@@ -262,6 +270,10 @@ function abrirModalConductor(f = null) {
         camposSelect.forEach(id => document.getElementById(id).disabled = true);
         document.getElementById('c_foto_preview').style.pointerEvents = 'none';
 
+        var btnEliminarEl = document.getElementById('btnEliminarConductor');
+        if (btnEliminarEl) {
+            btnEliminarEl.style.display = (window.checkPerm('cond', 'd') !== false) ? 'inline-block' : 'none';
+        }
         document.getElementById('btnEditarConductor').style.display = window.checkPerm('cond', 'e') ? 'inline-block' : 'none';
         document.getElementById('btnGuardarConductor').style.display = 'none';
 
@@ -287,6 +299,8 @@ function abrirModalConductor(f = null) {
         camposSelect.forEach(id => document.getElementById(id).disabled = false);
         document.getElementById('c_foto_preview').style.pointerEvents = 'auto';
 
+        var btnEliminarN = document.getElementById('btnEliminarConductor');
+        if (btnEliminarN) btnEliminarN.style.display = 'none';
         document.getElementById('btnEditarConductor').style.display = 'none';
         document.getElementById('btnGuardarConductor').style.display = 'inline-block';
     }
@@ -525,4 +539,94 @@ window.importarExcelConductores = function(event) {
     };
     reader.readAsArrayBuffer(file);
     event.target.value = '';
+};
+
+// ── 🗑️ GESTIÓN DE ELIMINACIÓN (DISEÑO CIRCULAR ERP) ────────────────
+window._condIdAEliminar = null;
+
+window.solicitarEliminarConductor = function(id, nombre) {
+    if (!id) return;
+    window._condIdAEliminar = id;
+    var elNom = document.getElementById('cond-delete-nombre');
+    if (elNom) elNom.textContent = nombre ? ('"' + nombre + '"') : 'este personal';
+
+    // Si el modal de edición está abierto, ocultarlo temporalmente
+    var modalCondEl = document.getElementById('modalConductor');
+    if (modalCondEl) {
+        var modalInst = bootstrap.Modal.getInstance(modalCondEl);
+        if (modalInst) modalInst.hide();
+    }
+
+    var delModalEl = document.getElementById('cond-delete-modal');
+    if (delModalEl) {
+        bootstrap.Modal.getOrCreateInstance(delModalEl).show();
+    }
+};
+
+window.solicitarEliminarConductorActual = function() {
+    var id = document.getElementById('c_id').value;
+    var nombre = document.getElementById('c_nombre').value;
+    if (!id) return;
+    window.solicitarEliminarConductor(id, nombre);
+};
+
+window.ejecutarEliminarConductorConfirmado = function() {
+    var id = window._condIdAEliminar;
+    if (!id) return;
+
+    var delModalEl = document.getElementById('cond-delete-modal');
+    if (delModalEl) {
+        var delInst = bootstrap.Modal.getInstance(delModalEl);
+        if (delInst) delInst.hide();
+    }
+
+    var btnConfirm = document.getElementById('cond-btn-confirm-delete');
+    if (btnConfirm) btnConfirm.disabled = true;
+
+    // Actualización optimista en interfaz
+    if (window.dataGlobalConductores && window.dataGlobalConductores.length) {
+        window.dataGlobalConductores = window.dataGlobalConductores.filter(function(c) {
+            return String(c.idConductor) !== String(id);
+        });
+        if (window._masterConductores && window._masterConductores.length) {
+            window._masterConductores = window._masterConductores.filter(function(c) {
+                return String(c.idConductor) !== String(id);
+            });
+        }
+        mostrarConductores(window.dataGlobalConductores);
+    }
+
+    fetch('/api/conductores/' + id, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (localStorage.getItem('fleet_token') || '')
+        }
+    })
+    .then(function(res) {
+        if (!res.ok) throw new Error('Error al eliminar personal en el servidor');
+        return res.json();
+    })
+    .then(function(data) {
+        if (typeof window.rotToast === 'function') {
+            window.rotToast('Personal eliminado correctamente', 'bg-success');
+        } else if (typeof _sguToast === 'function') {
+            _sguToast('Personal eliminado correctamente');
+        } else if (typeof toast === 'function') {
+            toast('Personal eliminado correctamente', 'success');
+        }
+        if (typeof window.init_conductores === 'function') {
+            window.init_conductores();
+        }
+    })
+    .catch(function(err) {
+        alert('Error al eliminar: ' + err.message);
+        if (typeof window.init_conductores === 'function') {
+            window.init_conductores();
+        }
+    })
+    .finally(function() {
+        window._condIdAEliminar = null;
+        if (btnConfirm) btnConfirm.disabled = false;
+    });
 };
