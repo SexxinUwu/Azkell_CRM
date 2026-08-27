@@ -85,21 +85,44 @@ window.init_status_rampa = function() {
     srCargarCatalogos();
     srCargarEntradas();
     srCargarOTs();
+    srCargarInspecciones();
     srPoblarPlacas();
     srPoblarPersonal();
     if (typeof window.initColPicker === 'function') {
         window.initColPicker('col-picker-sr', 'sr-tabla', [
             {label: 'Fecha Ingreso',  idx: 1, visible: true},
             {label: 'Hora',           idx: 2, visible: true},
-            {label: 'Situación',      idx: 4, visible: true},
-            {label: 'Observaciones',  idx: 5, visible: true},
-            {label: 'Fecha Salida',   idx: 6, visible: true},
-            {label: 'Hora Salida',    idx: 7, visible: true},
-            {label: 'H. Taller',      idx: 8, visible: true},
-            {label: 'OT Relacionadas',idx: 9, visible: true}
+            {label: 'Inspección?',    idx: 4, visible: true},
+            {label: 'Situación',      idx: 5, visible: true},
+            {label: 'Observaciones',  idx: 6, visible: true},
+            {label: 'Fecha Salida',   idx: 7, visible: true},
+            {label: 'Hora Salida',    idx: 8, visible: true},
+            {label: 'H. Taller',      idx: 9, visible: true},
+            {label: 'OT Relacionadas',idx: 10, visible: true}
         ], 'fleet_cols_status_rampa');
     }
 };
+
+window.srInspeccionesData = window.srInspeccionesData || [];
+
+function srCargarInspecciones() {
+    if (window.CACHE && window.CACHE['inspecciones'] && window.CACHE['inspecciones'].length) {
+        window.srInspeccionesData = window.CACHE['inspecciones'];
+        srRenderTabla();
+        return;
+    }
+    fetch('/api/inspecciones')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(data) {
+            window.srInspeccionesData = Array.isArray(data) ? data : (data.data || []);
+            if (window.CACHE) window.CACHE['inspecciones'] = window.srInspeccionesData;
+            srRenderTabla();
+        })
+        .catch(function() {
+            window.srInspeccionesData = [];
+            srRenderTabla();
+        });
+}
 
 // ── Carga entradas desde BD ──────────────────────────────────────
 function srCargarEntradas() {
@@ -348,7 +371,7 @@ function srCargarOTs() {
 
 // ── Calcular horas en taller ─────────────────────────────────────
 function srCalcHorasTaller(e) {
-    if (!e.fechaIngreso || !e.horaIngreso) return '—';
+    if (!e || !e.fechaIngreso || !e.horaIngreso) return '—';
     var start = new Date(e.fechaIngreso + 'T' + e.horaIngreso + ':00');
     var end;
     if (e.fechaSalida && e.horaSalida) {
@@ -369,6 +392,120 @@ window.srFiltrarKPI = function(tipo, btn) {
     document.querySelectorAll('#moduloStatusRampa .ck-kpi-card').forEach(function(el) {
         el.classList.toggle('active', el.id === 'sr-kpi-' + window._srFiltroKPI);
     });
+    srRenderTabla();
+};
+
+// ── Días de Inspección por Placa ─────────────────────────────────
+window.srCalcularDiasInspeccion = function(placa) {
+    if (!placa) {
+        return { 
+            dias: null, 
+            texto: '—', 
+            badgeHtml: '<span class="text-muted" style="font-size:0.75rem;">—</span>', 
+            color: '#94a3b8', 
+            valorNum: 9999 
+        };
+    }
+    var pClean = String(placa).replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    var list = (window.srInspeccionesData || window.dataGlobalInspecciones || (window.CACHE && window.CACHE['inspecciones']) || []);
+    
+    // Buscar la última inspección de esa placa
+    var ultInsp = null;
+    for (var i = 0; i < list.length; i++) {
+        var insp = list[i];
+        var ip = String(insp.placa || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        if (ip === pClean) {
+            if (!ultInsp) {
+                ultInsp = insp;
+            } else {
+                var d1 = new Date(insp.fecha_ingreso || insp.fecha || 0);
+                var d2 = new Date(ultInsp.fecha_ingreso || ultInsp.fecha || 0);
+                if (d1 > d2) ultInsp = insp;
+            }
+        }
+    }
+
+    if (!ultInsp || !ultInsp.fecha_ingreso) {
+        return { 
+            dias: -999, 
+            texto: 'Sin Insp.', 
+            badgeHtml: '<span class="badge bg-danger text-white fw-bold px-2 py-1 shadow-2xs" style="font-size:0.72rem;letter-spacing:0.2px;">Sin Insp.</span>',
+            color: '#dc2626',
+            valorNum: -999,
+            fechaUltima: null
+        };
+    }
+
+    var fIngreso;
+    var fRaw = String(ultInsp.fecha_ingreso);
+    if (fRaw.includes('/')) {
+        var px = fRaw.split('/'); fIngreso = new Date(px[2], px[1] - 1, px[0]);
+    } else {
+        var ds = fRaw.split('T')[0].split('-');
+        fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1]) - 1, parseInt(ds[2])) : new Date(fRaw);
+    }
+
+    var dProp = parseInt(ultInsp.dias_propuestos) || 30;
+    var fProx = new Date(fIngreso.getTime());
+    fProx.setDate(fProx.getDate() + dProp);
+    
+    var hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fProx.setHours(0, 0, 0, 0);
+
+    var diffMs = fProx - hoy;
+    var diasRestantes = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    var color, texto, badgeHtml;
+    if (diasRestantes < 0) {
+        color = '#dc2626'; // Rojo
+        texto = (diasRestantes) + ' d';
+        badgeHtml = '<span class="badge text-white fw-bold px-2 py-1 shadow-2xs" style="background:#dc2626;font-size:0.75rem;letter-spacing:0.3px;">' + diasRestantes + ' d</span>';
+    } else if (diasRestantes <= 7) {
+        color = '#ca8a04'; // Amarillo
+        texto = diasRestantes + ' d';
+        badgeHtml = '<span class="badge text-dark fw-bold px-2 py-1 shadow-2xs" style="background:#fef08a;border:1px solid #fde047;font-size:0.75rem;letter-spacing:0.3px;">' + diasRestantes + ' d</span>';
+    } else {
+        color = '#16a34a'; // Verde (> 7 días)
+        texto = diasRestantes + ' d';
+        badgeHtml = '<span class="badge text-white fw-bold px-2 py-1 shadow-2xs" style="background:#16a34a;font-size:0.75rem;letter-spacing:0.3px;">' + diasRestantes + ' d</span>';
+    }
+
+    return {
+        dias: diasRestantes,
+        texto: texto,
+        badgeHtml: badgeHtml,
+        color: color,
+        valorNum: diasRestantes,
+        fechaUltima: fIngreso
+    };
+};
+
+// ── Ordenamiento de Columnas ─────────────────────────────────────
+window._srSortCol = window._srSortCol || 'rampa';
+window._srSortAsc = (window._srSortAsc !== undefined) ? window._srSortAsc : true;
+
+window.srOrdenarPor = function(col) {
+    if (window._srSortCol === col) {
+        window._srSortAsc = !window._srSortAsc;
+    } else {
+        window._srSortCol = col;
+        window._srSortAsc = true;
+    }
+
+    // Actualizar íconos visuales en los th
+    var cols = ['rampa','fechaIngreso','horaIngreso','placa','diasInspeccion','situacion','obs','fechaSalida','horaSalida','horasTaller'];
+    cols.forEach(function(c) {
+        var el = document.getElementById('sr-th-' + c);
+        if (el) {
+            if (c === window._srSortCol) {
+                el.className = 'bi ' + (window._srSortAsc ? 'bi-arrow-up text-primary fw-bold' : 'bi-arrow-down text-primary fw-bold') + ' ms-1';
+            } else {
+                el.className = 'bi bi-arrow-down-up ms-1 text-muted';
+            }
+        }
+    });
+
     srRenderTabla();
 };
 
@@ -418,11 +555,14 @@ function srRenderTabla() {
     setEl('kpi-sr-espera', espera);
 
     if (!rampas.length) {
-        var emptyHtml = '<tr><td colspan="10" class="text-center py-5 text-muted" style="background:var(--card-bg);"><i class="bi bi-gear fs-1 d-block mb-2 text-primary"></i><span class="fw-bold">No hay rampas configuradas aún.</span><br><span class="small">Haz clic en <strong>⚙️ Configurar</strong> (arriba a la derecha) para agregar tus rampas o espacios de trabajo.</span></td></tr>';
+        var emptyHtml = '<tr><td colspan="12" class="text-center py-5 text-muted" style="background:var(--card-bg);"><i class="bi bi-gear fs-1 d-block mb-2 text-primary"></i><span class="fw-bold">No hay rampas configuradas aún.</span><br><span class="small">Haz clic en <strong>⚙️ Configurar</strong> (arriba a la derecha) para agregar tus rampas o espacios de trabajo.</span></td></tr>';
         if (tbody) tbody.innerHTML = emptyHtml;
         if (gridMobile) gridMobile.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-gear fs-1 d-block mb-2 text-primary"></i><span class="fw-bold">No hay rampas configuradas aún.</span><br><span class="small">Haz clic en <strong>⚙️ Configurar</strong> para agregar rampas.</span></div>';
         return;
     }
+
+    // Preparar lista de filas consolidadas para poder ordenar
+    var filasConsolidadas = [];
 
     rampas.forEach(function(rampaObj, idx) {
         var rampaId   = rampaObj.id;
@@ -435,83 +575,186 @@ function srRenderTabla() {
         });
 
         if (!entradas.length) {
-            if (!busq || rampaNom.toLowerCase().indexOf(busq) !== -1 || String(rampaId).indexOf(busq) !== -1) {
-                html += '<tr class="sr-row-vacia">';
-                html += '<td style="white-space:nowrap;"><div style="display:flex;align-items:center;gap:5px;"><span class="sr-badge-rampa" style="background:' + color + ';flex-shrink:0;" title="' + _srEsc(rampaNom) + '">' + (idx+1) + '</span><span style="font-size:0.74rem;font-weight:700;color:var(--text);">' + _srEsc(rampaNom) + '</span></div></td>';
-                html += '<td></td><td></td><td></td>';
-                html += '<td><span class="sr-semaforo sr-sem-vacio"><span class="sr-sem-dot"></span>Libre</span></td>';
-                html += '<td></td><td></td><td></td><td></td>';
-                if (window.checkPerm('status_rampa', 'c')) {
-                    html += '<td><button class="btn-sr-reg" onclick="event.stopPropagation();window.srRegistrar(' + rampaId + ')"><i class="bi bi-plus-lg me-1"></i>Ingresar</button></td>';
-                } else {
-                    html += '<td></td>';
-                }
-                html += '</tr>';
+            filasConsolidadas.push({
+                esVacia: true,
+                rampaIdx: idx + 1,
+                rampaId: rampaId,
+                rampaNom: rampaNom,
+                color: color,
+                rampaObj: rampaObj,
+                fechaIngreso: '',
+                horaIngreso: '',
+                placa: '',
+                diasInspeccionVal: 9999,
+                inspInfo: { badgeHtml: '<span class="text-muted" style="font-size:0.75rem;">—</span>', texto: '—', dias: null },
+                situacion: 'Libre',
+                obs: '',
+                fechaSalida: '',
+                horaSalida: '',
+                horasTallerNum: 0,
+                horasTallerStr: '—',
+                otsTxt: '—',
+                e: null
+            });
+        } else {
+            entradas.forEach(function(e) {
+                var otsPlaca = window.srOtData.filter(function(o) {
+                    if (o.id_rampa) return String(o.id_rampa) === String(e._id);
+                    return (o.placa || '').toUpperCase() === (e.placa || '').toUpperCase();
+                });
+                var otsTxt = otsPlaca.length
+                    ? otsPlaca.slice(0,3).map(function(o) {
+                        return '<span class="badge" style="background:rgba(88,101,242,0.1);color:var(--primary,#5865F2);font-weight:700;font-size:0.68rem;margin-right:3px;">' + (o.id_ot || o.ticket_entrada || '—') + '</span>';
+                      }).join('') + (otsPlaca.length > 3 ? '<span style="font-size:0.72rem;color:var(--subtext)">+' + (otsPlaca.length - 3) + '</span>' : '')
+                    : '<span style="color:var(--subtext);font-size:0.8rem;">—</span>';
 
-                var emptyBtn = window.checkPerm('status_rampa', 'c') ? '<button class="btn btn-sm fw-bold px-3 py-1" style="background:#eff6ff; color:#2563eb; border-radius:2rem; font-size:0.8rem;" onclick="event.stopPropagation();window.srRegistrar(' + rampaId + ')">+ Ingresar</button>' : '';
-                htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0" style="border-radius:1rem; border:1px solid var(--border)!important; flex-shrink:0!important; min-height:fit-content!important;">' +
-                                  '<div class="d-flex align-items-center justify-content-between">' +
-                                      '<div class="d-flex align-items-center gap-3">' +
-                                          '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:40px;height:40px;background:' + color + ';font-size:1.1rem;">' + (idx+1) + '</div>' +
-                                          '<div>' +
-                                              '<div class="fw-bold text-dark" style="font-size:0.95rem;">' + _srEsc(rampaNom) + '</div>' +
-                                              '<div style="font-size:0.75rem; color:#059669; font-weight:700;"><i class="bi bi-circle-fill me-1" style="font-size:0.4rem;"></i>Libre & Disponible</div>' +
-                                          '</div>' +
-                                      '</div>' + emptyBtn +
-                                  '</div>' +
-                              '</div>';
-            }
-            return;
+                var obsTextoCol = (e.obs || '').trim();
+                if (!obsTextoCol && otsPlaca && otsPlaca.length > 0) {
+                    var obsOTList = [];
+                    otsPlaca.forEach(function(o) {
+                        var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
+                        var mot = (det.motivo || o.observaciones || '').trim();
+                        mot = mot.replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '').replace(/^OT\s+OT-[^:]+:\s*/gim, '').trim();
+                        if (mot) obsOTList.push(mot);
+                    });
+                    if (obsOTList.length > 0) obsTextoCol = Array.from(new Set(obsOTList)).join('\n');
+                }
+                var obsFormateada = typeof window.srFormatearTareas === 'function' ? window.srFormatearTareas(obsTextoCol) : obsTextoCol;
+                var inspInfo = window.srCalcularDiasInspeccion(e.placa);
+
+                var hrsStr = srCalcHorasTaller(e);
+                var hrsNum = parseFloat(hrsStr) || 0;
+
+                filasConsolidadas.push({
+                    esVacia: false,
+                    rampaIdx: idx + 1,
+                    rampaId: rampaId,
+                    rampaNom: rampaNom,
+                    color: color,
+                    rampaObj: rampaObj,
+                    fechaIngreso: e.fechaIngreso || '',
+                    horaIngreso: e.horaIngreso || '',
+                    placa: e.placa || '',
+                    diasInspeccionVal: (inspInfo.valorNum !== undefined) ? inspInfo.valorNum : 9999,
+                    inspInfo: inspInfo,
+                    situacion: e.situacion || '',
+                    obs: obsFormateada || '',
+                    fechaSalida: e.fechaSalida || '',
+                    horaSalida: e.horaSalida || '',
+                    horasTallerNum: hrsNum,
+                    horasTallerStr: hrsStr,
+                    otsTxt: otsTxt,
+                    e: e
+                });
+            });
+        }
+    });
+
+    // Filtro KPI
+    if (window._srFiltroKPI && window._srFiltroKPI !== 'total') {
+        filasConsolidadas = filasConsolidadas.filter(function(row) {
+            if (window._srFiltroKPI === 'libres') return row.esVacia;
+            if (row.esVacia) return false;
+            var sit = (row.situacion || '').toLowerCase();
+            var esEsp = sit.indexOf('espera') !== -1 || sit.indexOf('lavado') !== -1 || sit.indexOf('auxilio') !== -1;
+            if (window._srFiltroKPI === 'espera') return esEsp;
+            if (window._srFiltroKPI === 'ocupadas') return !esEsp;
+            return true;
+        });
+    }
+
+    // Filtro Buscador
+    if (busq) {
+        filasConsolidadas = filasConsolidadas.filter(function(row) {
+            return (row.rampaNom || '').toLowerCase().indexOf(busq) !== -1 ||
+                   String(row.rampaId).indexOf(busq) !== -1 ||
+                   (row.placa || '').toLowerCase().indexOf(busq) !== -1 ||
+                   (row.situacion || '').toLowerCase().indexOf(busq) !== -1 ||
+                   (row.obs || '').toLowerCase().indexOf(busq) !== -1;
+        });
+    }
+
+    // Ordenamiento
+    var sortCol = window._srSortCol || 'rampa';
+    var isAsc = window._srSortAsc;
+
+    filasConsolidadas.sort(function(a, b) {
+        var vA, vB;
+        if (sortCol === 'rampa') {
+            vA = a.rampaIdx; vB = b.rampaIdx;
+        } else if (sortCol === 'fechaIngreso') {
+            vA = a.fechaIngreso || ''; vB = b.fechaIngreso || '';
+        } else if (sortCol === 'horaIngreso') {
+            vA = a.horaIngreso || ''; vB = b.horaIngreso || '';
+        } else if (sortCol === 'placa') {
+            vA = a.placa || ''; vB = b.placa || '';
+        } else if (sortCol === 'diasInspeccion') {
+            vA = a.diasInspeccionVal; vB = b.diasInspeccionVal;
+        } else if (sortCol === 'situacion') {
+            vA = a.situacion || ''; vB = b.situacion || '';
+        } else if (sortCol === 'obs') {
+            vA = a.obs || ''; vB = b.obs || '';
+        } else if (sortCol === 'fechaSalida') {
+            vA = a.fechaSalida || ''; vB = b.fechaSalida || '';
+        } else if (sortCol === 'horaSalida') {
+            vA = a.horaSalida || ''; vB = b.horaSalida || '';
+        } else if (sortCol === 'horasTaller') {
+            vA = a.horasTallerNum; vB = b.horasTallerNum;
+        } else {
+            vA = a.rampaIdx; vB = b.rampaIdx;
         }
 
-        entradas.forEach(function(e) {
-            if (busq) {
-                var match = rampaNom.toLowerCase().indexOf(busq) !== -1 ||
-                    String(e.rampa).indexOf(busq) !== -1 ||
-                    (e.placa || '').toLowerCase().indexOf(busq) !== -1 ||
-                    (e.situacion || '').toLowerCase().indexOf(busq) !== -1 ||
-                    (e.obs || '').toLowerCase().indexOf(busq) !== -1;
-                if (!match) return;
-            }
-            var esActiva = (window.srDetalleId === e._id);
-            var otsPlaca = window.srOtData.filter(function(o) {
-                if (o.id_rampa) return String(o.id_rampa) === String(e._id);
-                return (o.placa || '').toUpperCase() === e.placa.toUpperCase();
-            });
-            var otsTxt = otsPlaca.length
-                ? otsPlaca.slice(0,3).map(function(o) {
-                    return '<span class="badge" style="background:rgba(88,101,242,0.1);color:var(--primary,#5865F2);font-weight:700;font-size:0.68rem;margin-right:3px;">' + (o.id_ot || o.ticket_entrada || '—') + '</span>';
-                  }).join('') + (otsPlaca.length > 3 ? '<span style="font-size:0.72rem;color:var(--subtext)">+' + (otsPlaca.length - 3) + '</span>' : '')
-                : '<span style="color:var(--subtext);font-size:0.8rem;">—</span>';
+        if (typeof vA === 'string') {
+            var cmp = vA.localeCompare(vB);
+            return isAsc ? cmp : -cmp;
+        }
+        return isAsc ? (vA - vB) : (vB - vA);
+    });
 
-            var obsTextoCol = (e.obs || '').trim();
-            if (!obsTextoCol && otsPlaca && otsPlaca.length > 0) {
-                var obsOTList = [];
-                otsPlaca.forEach(function(o) {
-                    var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
-                    var mot = (det.motivo || o.observaciones || '').trim();
-                    mot = mot.replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '').replace(/^OT\s+OT-[^:]+:\s*/gim, '').trim();
-                    if (mot) {
-                        obsOTList.push(mot);
-                    }
-                });
-                if (obsOTList.length > 0) {
-                    obsTextoCol = Array.from(new Set(obsOTList)).join('\n');
-                }
+    // Generar HTML final
+    filasConsolidadas.forEach(function(row) {
+        if (row.esVacia) {
+            html += '<tr class="sr-row-vacia">';
+            html += '<td style="white-space:nowrap;"><div style="display:flex;align-items:center;gap:5px;"><span class="sr-badge-rampa" style="background:' + row.color + ';flex-shrink:0;" title="' + _srEsc(row.rampaNom) + '">' + row.rampaIdx + '</span><span style="font-size:0.74rem;font-weight:700;color:var(--text);">' + _srEsc(row.rampaNom) + '</span></div></td>';
+            html += '<td></td><td></td><td></td><td><span class="text-muted" style="font-size:0.75rem;">—</span></td>';
+            html += '<td><span class="sr-semaforo sr-sem-vacio"><span class="sr-sem-dot"></span>Libre</span></td>';
+            html += '<td></td><td></td><td></td><td></td><td></td>';
+            if (window.checkPerm('status_rampa', 'c')) {
+                html += '<td><button class="btn-sr-reg" onclick="event.stopPropagation();window.srRegistrar(' + row.rampaId + ')"><i class="bi bi-plus-lg me-1"></i>Ingresar</button></td>';
+            } else {
+                html += '<td></td>';
             }
-            var obsFormateada = typeof window.srFormatearTareas === 'function' ? window.srFormatearTareas(obsTextoCol) : obsTextoCol;
+            html += '</tr>';
+
+            var emptyBtn = window.checkPerm('status_rampa', 'c') ? '<button class="btn btn-sm fw-bold px-3 py-1" style="background:#eff6ff; color:#2563eb; border-radius:2rem; font-size:0.8rem;" onclick="event.stopPropagation();window.srRegistrar(' + row.rampaId + ')">+ Ingresar</button>' : '';
+            htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0" style="border-radius:1rem; border:1px solid var(--border)!important; flex-shrink:0!important; min-height:fit-content!important;">' +
+                              '<div class="d-flex align-items-center justify-content-between">' +
+                                  '<div class="d-flex align-items-center gap-3">' +
+                                      '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:40px;height:40px;background:' + row.color + ';font-size:1.1rem;">' + row.rampaIdx + '</div>' +
+                                      '<div>' +
+                                          '<div class="fw-bold text-dark" style="font-size:0.95rem;">' + _srEsc(row.rampaNom) + '</div>' +
+                                          '<div style="font-size:0.75rem; color:#059669; font-weight:700;"><i class="bi bi-circle-fill me-1" style="font-size:0.4rem;"></i>Libre & Disponible</div>' +
+                                      '</div>' +
+                                  '</div>' + emptyBtn +
+                              '</div>' +
+                          '</div>';
+        } else {
+            var e = row.e;
+            var esActiva = (window.srDetalleId === e._id);
+            var badgeSit = srBadgeSituacion(e.situacion, true);
 
             html += '<tr class="sr-ocupada' + (esActiva ? ' sr-activa' : '') + '" data-id="' + e._id + '" onclick="window.srAbrirDetalle(' + e._id + ')">';
-            html += '<td style="white-space:nowrap;"><div style="display:flex;align-items:center;gap:5px;"><span class="sr-badge-rampa" style="background:' + color + ';flex-shrink:0;" title="' + _srEsc(rampaNom) + '">' + (idx+1) + '</span><span style="font-size:0.74rem;font-weight:700;color:var(--text);">' + _srEsc(rampaNom) + '</span></div></td>';
+            html += '<td style="white-space:nowrap;"><div style="display:flex;align-items:center;gap:5px;"><span class="sr-badge-rampa" style="background:' + row.color + ';flex-shrink:0;" title="' + _srEsc(row.rampaNom) + '">' + row.rampaIdx + '</span><span style="font-size:0.74rem;font-weight:700;color:var(--text);">' + _srEsc(row.rampaNom) + '</span></div></td>';
             html += '<td>' + (e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '') + '</td>';
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
-            html += '<td>' + srBadgeSituacion(e.situacion, true) + '</td>';
-            html += '<td><div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + _srEsc(obsFormateada || '—').replace(/"/g,'&quot;') + '">' + _srEsc(obsFormateada || '—') + '</div></td>';
+            html += '<td>' + row.inspInfo.badgeHtml + '</td>';
+            html += '<td>' + badgeSit + '</td>';
+            html += '<td><div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + _srEsc(row.obs || '—').replace(/"/g,'&quot;') + '">' + _srEsc(row.obs || '—') + '</div></td>';
             html += '<td>' + (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '') + '</td>';
             html += '<td>' + (e.horaSalida || '') + '</td>';
-            html += '<td style="font-weight:700;font-size:0.8rem;color:var(--primary,#5865F2);">' + srCalcHorasTaller(e) + '</td>';
-            html += '<td>' + otsTxt + '</td>';
+            html += '<td style="font-weight:700;font-size:0.8rem;color:var(--primary,#5865F2);">' + row.horasTallerStr + '</td>';
+            html += '<td>' + row.otsTxt + '</td>';
             html += '<td>';
             if (window.checkPerm('ot', 'e')) {
                 html += '<button class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;padding:2px 8px;" onclick="event.stopPropagation();window.srEditarRampa(' + e._id + ')" title="Editar"><i class="bi bi-pencil"></i></button> ';
@@ -520,10 +763,8 @@ function srRenderTabla() {
             html += '</td></tr>';
 
             // Mobile Card
-            var badgeSit = srBadgeSituacion(e.situacion, true);
             var fInStr = (e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '—') + (e.horaIngreso ? ' • ' + e.horaIngreso : '');
             var fOutStr = (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '—') + (e.horaSalida ? ' • ' + e.horaSalida : '');
-            var kmStr = e.km ? Number(e.km).toLocaleString('es-PE') : '-';
 
             htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0 mb-3 bg-white" ' +
                               'style="border-radius:1.15rem; border:1px solid var(--border)!important; flex-shrink:0!important; min-height:fit-content!important; cursor:pointer;" ' +
@@ -531,17 +772,18 @@ function srRenderTabla() {
                               '<div class="d-flex align-items-center justify-content-between mb-2">' +
                                   '<div class="d-flex align-items-center gap-2">' +
                                       '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold shadow-2xs" ' +
-                                           'style="width:38px;height:38px;background:' + color + ';font-size:1.05rem;flex-shrink:0;">' + (idx+1) + '</div>' +
+                                           'style="width:38px;height:38px;background:' + row.color + ';font-size:1.05rem;flex-shrink:0;">' + row.rampaIdx + '</div>' +
                                       '<div class="d-flex align-items-center gap-2">' +
-                                          '<span class="fw-bold text-dark" style="font-size:0.95rem;">' + _srEsc(rampaNom) + '</span>' +
+                                          '<span class="fw-bold text-dark" style="font-size:0.95rem;">' + _srEsc(row.rampaNom) + '</span>' +
                                           '<span class="fw-bold text-dark" style="font-size:1.05rem;letter-spacing:0.02em;">' + (e.placa || '—') + '</span>' +
                                       '</div>' +
                                   '</div>' +
-                                  '<div>' + badgeSit + '</div>' +
-                              '</div>' +
-                              (obsFormateada ? (
+                                  '<div class="d-flex align-items-center gap-1">' +
+                                      row.inspInfo.badgeHtml +
+                                      badgeSit +
+                              (row.obs ? (
                                   '<div class="mb-2" style="font-size:0.73rem;font-weight:700;color:#475569;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' +
-                                      _srEsc(obsFormateada) +
+                                      _srEsc(row.obs) +
                                   '</div>'
                               ) : '') +
                               '<div class="p-2 mb-2 d-flex align-items-center justify-content-between" style="background:#f8fafc;border-radius:12px;border:1px solid #f1f5f9;">' +
@@ -563,16 +805,16 @@ function srRenderTabla() {
                                   '<i class="bi bi-chevron-right text-muted" style="font-size:0.85rem;"></i>' +
                               '</div>' +
                               '<div class="d-flex justify-content-between align-items-center pt-1" style="font-size:0.75rem;color:#64748b;">' +
-                                  '<span class="fw-semibold">KM: ' + kmStr + '</span>' +
+                                  '<span class="fw-semibold">KM: ' + (e.km ? Number(e.km).toLocaleString('es-PE') : '—') + '</span>' +
                                   '<span class="badge rounded-pill d-inline-flex align-items-center gap-1" style="background:rgba(37,99,235,0.08);color:#2563eb;font-weight:700;font-size:0.74rem;padding:4px 10px;">' +
-                                      '<i class="bi bi-clock"></i> ' + srCalcHorasTaller(e) +
+                                      '<i class="bi bi-clock"></i> ' + row.horasTallerStr +
                                   '</span>' +
                               '</div>' +
                           '</div>';
-        });
+        }
     });
 
-    if (tbody) tbody.innerHTML = html || '<tr><td colspan="10" class="text-center py-4 text-muted">No se encontraron registros</td></tr>';
+    if (tbody) tbody.innerHTML = html || '<tr><td colspan="12" class="text-center py-4 text-muted">No se encontraron registros</td></tr>';
     if (gridMobile) gridMobile.innerHTML = htmlMobile || '<div class="text-center py-4 text-muted">No se encontraron registros</div>';
 }
 
@@ -3514,6 +3756,9 @@ window.srDescargarPlantillaParabrisas = function(id) {
         return;
     }
 
+    // Calcular días para inspección técnica
+    var inspInfo = window.srCalcularDiasInspeccion(e.placa);
+
     // Buscar todas las OTs vinculadas
     var otsPlaca = (window.srOtData || []).filter(function(o) {
         if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
@@ -3989,12 +4234,22 @@ window.srDescargarPlantillaParabrisas = function(id) {
                         </div>
                         <div class="sub-header-left">ORDEN EN PARABRISAS</div>
                     </div>
-                    <div class="sub-header-right">
-                        <div class="doc-title-right">FORMATO DE CONTROL DE TALLER</div>
-                        <div class="doc-code-right">OT: ${_srEsc(otCodigoStr)}</div>
+                    <div class="sub-header-right" style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+                        <div style="border:1.5px solid #000; padding:3px 8px; font-size:8px; font-weight:800; text-align:right; line-height:1.25; background:#fff;">
+                            <div>CÓDIGO: F-MAN-002</div>
+                            <div>VERSIÓN: 0</div>
+                            <div>F. EMISIÓN: 10/11/2025</div>
+                        </div>
+                        <div class="doc-code-right" style="margin-top:2px;">OT: ${_srEsc(otCodigoStr)}</div>
                     </div>
                 </div>
-                <h1 class="main-title">TRABAJOS A REALIZAR</h1>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-top:6px; margin-bottom:4px; gap:12px;">
+                    <h1 class="main-title" style="margin:0; flex:1; text-align:left;">TRABAJOS A REALIZAR</h1>
+                    <div style="border:2.5px solid ${inspInfo.color}; background:${inspInfo.dias < 0 ? '#fef2f2' : (inspInfo.dias <= 7 ? '#fefce8' : '#f0fdf4')}; padding:4px 14px; border-radius:8px; text-align:center; min-width:150px; flex-shrink:0; box-shadow:0 2px 5px rgba(0,0,0,0.06);">
+                        <div style="font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:0.08em; color:${inspInfo.color}; line-height:1;">DÍAS PARA INSPECCIÓN</div>
+                        <div style="font-family:'Oswald', sans-serif; font-size:24px; font-weight:900; color:${inspInfo.color}; line-height:1.1; margin-top:1px;">${inspInfo.dias !== null && inspInfo.dias !== -999 ? (inspInfo.dias >= 0 ? '+' + inspInfo.dias : inspInfo.dias) + ' DÍAS' : 'SIN REGISTRO'}</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Grid de Datos Principales -->
@@ -4097,6 +4352,448 @@ window.srDescargarPlantillaParabrisas = function(id) {
     }
     win.document.open();
     win.document.write(html);
+    win.document.close();
+    win.onload = function() {
+        setTimeout(function() {
+            win.print();
+        }, 400);
+    };
+};
+
+// ================================================================
+// PDF OFICIAL DE STATUS RAMPA HORIZONTAL (F-MAN-005) - 1 SOLA PÁGINA
+// ================================================================
+window.srAbrirPDFStatus = function() {
+    var rampas = window.srCatRampas || [];
+    if (!rampas.length) {
+        alert('No hay rampas configuradas para exportar.');
+        return;
+    }
+
+    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+    var empNombre = localStorage.getItem('fleet_empresa_nombre') || window._EMPRESA_NOMBRE || 'AZKELL FLEET / MARSISA';
+    
+    // Obtener usuario activo
+    var emisorNombre = 'Supervisor de Taller';
+    var uTop = document.getElementById('nombre-usuario-top');
+    if (uTop && uTop.textContent && uTop.textContent.trim()) {
+        emisorNombre = uTop.textContent.trim();
+    } else {
+        emisorNombre = localStorage.getItem('fleet_nombre_usuario') || localStorage.getItem('fleet_user') || window.usuarioActual || 'Saul Henry Rosas';
+    }
+
+    // Calcular KPIs
+    var totalRampas = rampas.length;
+    var ocupadas = 0;
+    var libres = 0;
+    var espera = 0;
+
+    rampas.forEach(function(rObj) {
+        var rId = rObj.id;
+        var rNom = rObj.nombre_rampa || ('Rampa ' + rId);
+        var entries = (window.srEntradas || []).filter(function(e) {
+            var rStr = String(e.rampa || '').trim().toLowerCase();
+            var nomLower = String(rNom || '').trim().toLowerCase();
+            return String(e.rampa) === String(rId) || rStr === nomLower;
+        });
+
+        if (!entries.length) {
+            libres++;
+        } else {
+            var sit = (entries[0].situacion || '').toLowerCase();
+            if (sit.indexOf('espera') !== -1 || sit.indexOf('lavado') !== -1 || sit.indexOf('auxilio') !== -1) {
+                espera++;
+            } else {
+                ocupadas++;
+            }
+        }
+    });
+
+    // Fecha y hora actual formateadas
+    var ahora = new Date();
+    var dd = String(ahora.getDate()).padStart(2, '0');
+    var mm = String(ahora.getMonth() + 1).padStart(2, '0');
+    var yyyy = ahora.getFullYear();
+    var hh = String(ahora.getHours()).padStart(2, '0');
+    var min = String(ahora.getMinutes()).padStart(2, '0');
+    var fechaEmisionStr = dd + '/' + mm + '/' + yyyy + ' ' + hh + ':' + min;
+
+    // Generar filas de la tabla
+    var filasHtml = '';
+    rampas.forEach(function(rampaObj, idx) {
+        var rampaId   = rampaObj.id;
+        var rampaNom  = rampaObj.nombre_rampa || ('Rampa ' + rampaId);
+        var entradas  = (window.srEntradas || []).filter(function(e) { 
+            var rStr = String(e.rampa || '').trim().toLowerCase();
+            var nomLower = String(rampaNom || '').trim().toLowerCase();
+            return String(e.rampa) === String(rampaId) || rStr === nomLower;
+        });
+
+        if (!entradas.length) {
+            filasHtml += `
+            <tr style="background:#f8fafc; color:#64748b;">
+                <td style="font-weight:bold; text-align:center; padding:3px 2px;">${idx + 1}</td>
+                <td style="font-weight:700; color:#334155; padding:3px 4px;">${_srEsc(rampaNom)}</td>
+                <td style="text-align:center; padding:3px 2px;">—</td>
+                <td style="text-align:center; padding:3px 2px;">—</td>
+                <td style="text-align:center; font-weight:bold; padding:3px 2px;">—</td>
+                <td style="text-align:center; padding:3px 2px;"><span style="color:#94a3b8; font-size:7.5px;">—</span></td>
+                <td style="text-align:center; padding:3px 2px;"><span style="color:#16a34a; font-weight:800; font-size:8px;">LIBRE</span></td>
+                <td style="padding:3px 4px; color:#94a3b8; font-size:7.5px;">Disponible para ingreso</td>
+                <td style="text-align:center; padding:3px 2px;">—</td>
+                <td style="text-align:center; padding:3px 2px;">—</td>
+                <td style="text-align:center; padding:3px 2px;">—</td>
+                <td style="text-align:center; padding:3px 2px;">—</td>
+            </tr>`;
+        } else {
+            entradas.forEach(function(e) {
+                var otsPlaca = (window.srOtData || []).filter(function(o) {
+                    if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
+                    return (o.placa || '').toUpperCase() === (e.placa || '').toUpperCase();
+                });
+                var otsTxt = otsPlaca.length
+                    ? otsPlaca.map(function(o) { return o.id_ot || o.ticket_entrada || ''; }).filter(Boolean).join(', ')
+                    : '—';
+
+                var obsTextoCol = (e.obs || '').trim();
+                if (!obsTextoCol && otsPlaca && otsPlaca.length > 0) {
+                    var obsOTList = [];
+                    otsPlaca.forEach(function(o) {
+                        var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
+                        var mot = (det.motivo || o.observaciones || '').trim();
+                        mot = mot.replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '').replace(/^OT\s+OT-[^:]+:\s*/gim, '').trim();
+                        if (mot) obsOTList.push(mot);
+                    });
+                    if (obsOTList.length > 0) obsTextoCol = Array.from(new Set(obsOTList)).join(' · ');
+                }
+
+                var inspInfo = window.srCalcularDiasInspeccion(e.placa);
+                var fIn = e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '—';
+                var hIn = e.horaIngreso || '—';
+                var fOut = e.fechaSalida ? srFmtFecha(e.fechaSalida) : '—';
+                var hOut = e.horaSalida || '—';
+                var hTaller = srCalcHorasTaller(e);
+
+                var inspBadgeStyle = '';
+                if (inspInfo.dias < 0) {
+                    inspBadgeStyle = 'background:#fee2e2; color:#dc2626; border:1px solid #f87171;';
+                } else if (inspInfo.dias <= 7) {
+                    inspBadgeStyle = 'background:#fef9c3; color:#a16207; border:1px solid #facc15;';
+                } else {
+                    inspBadgeStyle = 'background:#dcfce7; color:#15803d; border:1px solid #86efac;';
+                }
+
+                var sitStyle = 'color:#1e293b;';
+                var sitLower = (e.situacion || '').toLowerCase();
+                if (sitLower.includes('espera')) sitStyle = 'color:#d97706; font-weight:bold;';
+                else if (sitLower.includes('trabajo') || sitLower.includes('proceso')) sitStyle = 'color:#2563eb; font-weight:bold;';
+                else if (sitLower.includes('listo') || sitLower.includes('conclu')) sitStyle = 'color:#16a34a; font-weight:bold;';
+
+                filasHtml += `
+                <tr style="background:#fff; color:#0f172a;">
+                    <td style="font-weight:bold; text-align:center; padding:3px 2px;">${idx + 1}</td>
+                    <td style="font-weight:800; color:#0f172a; padding:3px 4px;">${_srEsc(rampaNom)}</td>
+                    <td style="text-align:center; padding:3px 2px; font-size:7.5px;">${fIn}</td>
+                    <td style="text-align:center; padding:3px 2px; font-size:7.5px;">${hIn}</td>
+                    <td style="text-align:center; font-weight:900; color:#000; font-size:9.5px; padding:3px 2px; letter-spacing:0.3px;">${_srEsc(e.placa || '—')}</td>
+                    <td style="text-align:center; padding:2px 2px;">
+                        <span style="display:inline-block; font-weight:900; font-size:8px; padding:1px 4px; border-radius:3px; ${inspBadgeStyle}">
+                            ${inspInfo.texto}
+                        </span>
+                    </td>
+                    <td style="text-align:center; font-size:7.5px; padding:3px 2px; ${sitStyle}">${_srEsc(e.situacion || '—')}</td>
+                    <td style="padding:3px 4px; font-size:7.5px; line-height:1.2; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${_srEsc(obsTextoCol)}">
+                        ${_srEsc(obsTextoCol || '—')}
+                    </td>
+                    <td style="text-align:center; padding:3px 2px; font-size:7.5px;">${fOut}</td>
+                    <td style="text-align:center; padding:3px 2px; font-size:7.5px;">${hOut}</td>
+                    <td style="text-align:center; font-weight:700; color:#2563eb; padding:3px 2px; font-size:8px;">${hTaller}</td>
+                    <td style="text-align:center; font-size:7.5px; padding:3px 2px; color:#475569;">${_srEsc(otsTxt)}</td>
+                </tr>`;
+            });
+        }
+    });
+
+    var htmlDoc = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estatus de Unidades en Taller - F-MAN-005</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Oswald:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        @page {
+            size: landscape;
+            margin: 5mm 6mm;
+        }
+        body {
+            margin: 0;
+            padding: 12px;
+            background-color: #f1f5f9;
+            font-family: 'Montserrat', sans-serif;
+            color: #0f172a;
+            display: flex;
+            justify-content: center;
+        }
+        .page-container {
+            width: 285mm;
+            max-height: 198mm;
+            background: #fff;
+            padding: 6mm 8mm;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 1.5px solid #000;
+        }
+        .header-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+            margin-bottom: 6px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 28%;
+        }
+        .company-logo {
+            height: 38px;
+            max-width: 120px;
+            object-fit: contain;
+        }
+        .company-name {
+            font-size: 11px;
+            font-weight: 900;
+            color: #0f172a;
+            line-height: 1.1;
+            text-transform: uppercase;
+        }
+        .header-center {
+            text-align: center;
+            flex: 1;
+        }
+        .doc-title {
+            font-size: 14px;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            color: #000;
+            margin: 0;
+            text-transform: uppercase;
+        }
+        .doc-subtitle {
+            font-size: 8.5px;
+            font-weight: 700;
+            color: #475569;
+            margin-top: 1px;
+        }
+        .header-right {
+            border: 1.5px solid #000;
+            padding: 3px 8px;
+            font-size: 8px;
+            font-weight: 800;
+            text-align: right;
+            line-height: 1.3;
+            width: 22%;
+            background: #fff;
+        }
+        .kpi-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin-bottom: 6px;
+            font-size: 8px;
+        }
+        .kpi-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .kpi-val {
+            font-weight: 900;
+            font-size: 9.5px;
+        }
+        .status-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8px;
+            table-layout: fixed;
+        }
+        .status-table th {
+            background: #0f172a;
+            color: #fff;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: 4px 2px;
+            border: 1px solid #000;
+            font-size: 7.5px;
+            letter-spacing: 0.02em;
+        }
+        .status-table td {
+            border: 1px solid #cbd5e1;
+            padding: 2.5px 3px;
+            vertical-align: middle;
+        }
+        .footer-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1.5px solid #000;
+            padding-top: 4px;
+            margin-top: 6px;
+            font-size: 7.5px;
+            color: #475569;
+            font-weight: 600;
+        }
+        #btnPdfPrint {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 800;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            z-index: 9999;
+        }
+        #btnPdfPrint:hover {
+            background: #1d4ed8;
+        }
+        @media print {
+            body {
+                background: transparent !important;
+                padding: 0 !important;
+            }
+            .page-container {
+                box-shadow: none !important;
+                border: 1.5px solid #000 !important;
+                width: 100% !important;
+                height: 100% !important;
+                max-height: 198mm !important;
+                margin: 0 !important;
+                padding: 4mm 6mm !important;
+            }
+            #btnPdfPrint {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="btnPdfPrint" onclick="window.print()">
+        <svg width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
+        Imprimir / Guardar PDF (A4 Horizontal)
+    </button>
+
+    <div class="page-container">
+        <div>
+            <!-- Header Oficial ISO -->
+            <div class="header-box">
+                <div class="header-left">
+                    <img src="${empLogoUrl}" alt="Logo" class="company-logo">
+                    <span class="company-name">${_srEsc(empNombre)}</span>
+                </div>
+                <div class="header-center">
+                    <h1 class="doc-title">ESTATUS DE UNIDADES EN TALLER</h1>
+                    <div class="doc-subtitle">CONTROL DE OCUPACIÓN DE BAHÍAS Y TURNOS DE MANTENIMIENTO</div>
+                </div>
+                <div class="header-right">
+                    <div>CÓDIGO: F-MAN-005</div>
+                    <div>VERSIÓN: 0</div>
+                    <div>F. EMISIÓN: 10/11/2025</div>
+                </div>
+            </div>
+
+            <!-- Barra Resumen KPIs & Metadatos -->
+            <div class="kpi-bar">
+                <div class="kpi-item">
+                    <span>EMISIÓN:</span>
+                    <strong style="color:#0f172a;">${fechaEmisionStr}</strong>
+                </div>
+                <div class="kpi-item">
+                    <span>EMITIDO POR:</span>
+                    <strong style="color:#0f172a;">${_srEsc(emisorNombre)}</strong>
+                </div>
+                <div style="border-left:1px solid #cbd5e1; height:14px;"></div>
+                <div class="kpi-item">
+                    <span>TOTAL RAMPAS:</span>
+                    <span class="kpi-val" style="color:#0f172a;">${totalRampas}</span>
+                </div>
+                <div class="kpi-item">
+                    <span>OCUPADAS:</span>
+                    <span class="kpi-val" style="color:#dc2626;">${ocupadas}</span>
+                </div>
+                <div class="kpi-item">
+                    <span>EN ESPERA / LAVADO:</span>
+                    <span class="kpi-val" style="color:#d97706;">${espera}</span>
+                </div>
+                <div class="kpi-item">
+                    <span>LIBRES:</span>
+                    <span class="kpi-val" style="color:#16a34a;">${libres}</span>
+                </div>
+            </div>
+
+            <!-- Tabla Consolidada Horizontal -->
+            <table class="status-table">
+                <thead>
+                    <tr>
+                        <th style="width:24px; text-align:center;">#</th>
+                        <th style="width:75px;">RAMPA</th>
+                        <th style="width:58px; text-align:center;">F. INGRESO</th>
+                        <th style="width:38px; text-align:center;">HORA</th>
+                        <th style="width:55px; text-align:center;">PLACA</th>
+                        <th style="width:55px; text-align:center;">INSPECCIÓN?</th>
+                        <th style="width:68px; text-align:center;">SITUACIÓN</th>
+                        <th>OBSERVACIONES / TRABAJOS A REALIZAR</th>
+                        <th style="width:58px; text-align:center;">SALIDA (EST.)</th>
+                        <th style="width:38px; text-align:center;">HORA</th>
+                        <th style="width:48px; text-align:center;">H. TALLER</th>
+                        <th style="width:75px; text-align:center;">OT RELACIONADAS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasHtml}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer Oficial -->
+        <div class="footer-box">
+            <div>Sistema ERP Azkell Fleet · Módulo de Control de Bahías y Mantenimiento</div>
+            <div style="text-align:center;">Semáforo Inspección: <span style="color:#16a34a; font-weight:800;">>7d Vigente</span> | <span style="color:#ca8a04; font-weight:800;">0-7d Próximo</span> | <span style="color:#dc2626; font-weight:800;"><0d Vencido</span></div>
+            <div style="font-weight:800;">DOCUMENTO OFICIAL · HOJA 1 DE 1</div>
+        </div>
+    </div>
+</body>
+</html>`;
+
+    var win = window.open('', '_blank');
+    if (!win) {
+        alert('Por favor, permite ventanas emergentes para previsualizar el PDF.');
+        return;
+    }
+    win.document.open();
+    win.document.write(htmlDoc);
     win.document.close();
     win.onload = function() {
         setTimeout(function() {
