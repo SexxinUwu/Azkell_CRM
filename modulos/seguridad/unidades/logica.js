@@ -77,8 +77,18 @@ function _sguOpenDrawer(drawerId) {
 
 // ── API HELPERS ──────────────────────────────────────────────────
 function _sguFetch(url, opts) {
+    opts = opts || {};
+    opts.headers = opts.headers || {};
+    var token = localStorage.getItem('fleet_token') || localStorage.getItem('token') || '';
+    if (token && !opts.headers['Authorization']) {
+        opts.headers['Authorization'] = 'Bearer ' + token;
+    }
     return fetch(url, opts).then(function(r) {
-        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Error del servidor'); });
+        if (!r.ok) {
+            return r.json().catch(function(){ return {}; }).then(function(e) { 
+                throw new Error(e.error || ('Error ' + r.status)); 
+            });
+        }
         return r.json();
     });
 }
@@ -299,10 +309,8 @@ window._sguEnsureAllRecordsLoaded = function(cb) {
     if (_sguLoadingAll) return;
     _sguLoadingAll = true;
 
-    _sguToast('Cargando registros anteriores...', 'bi-hourglass-split');
     _sguLoadRecords(true, function() {
         _sguLoadingAll = false;
-        _sguToast('Historial cargado');
         if (cb) cb();
     });
 };
@@ -560,11 +568,18 @@ function _sguRenderList() {
                 '<div class="d-inline-flex align-items-center gap-1">' +
                     actionBtn +
                     '<button class="sgu-action-btn sgu-btn-view-cell" onclick="window._sguCurrentRecord=_sguRecords.find(function(r){return r.id===\''+rec.id+'\'}); window._sguGenerarPDFCompleto()" title="Descargar PDF"><i class="bi bi-file-earmark-pdf text-danger"></i></button>' +
-                    '<button class="sgu-action-btn" style="background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0;" onclick="window._sguCurrentRecord=_sguRecords.find(function(r){return r.id===\''+rec.id+'\'}); window._sguCompartirWhatsApp(\'completo\')" title="Compartir WhatsApp"><i class="bi bi-whatsapp"></i></button>' +
+                    '<button class="sgu-action-btn sgu-btn-wa-card" style="padding:4px 8px; font-size:0.8rem;" onclick="window._sguCurrentRecord=_sguRecords.find(function(r){return r.id===\''+rec.id+'\'}); window._sguCompartirWhatsApp(\'completo\')" title="Compartir WhatsApp"><i class="bi bi-whatsapp"></i></button>' +
                     deleteBtn +
                 '</div>' +
             '</td>' +
         '</tr>';
+
+        var fechaMobileText = '';
+        if (rec.estado === 'completado' && rec.retorno_fecha) {
+            fechaMobileText = '<div class="fw-bold text-dark" style="font-size:0.78rem;"><i class="bi bi-calendar-check text-success me-1"></i>' + (rec.salida_fecha || '--') + ' <span class="text-muted fw-normal">al</span> ' + (rec.retorno_fecha || '--') + '</div>';
+        } else {
+            fechaMobileText = '<div class="small text-secondary"><i class="bi bi-calendar-event text-warning me-1"></i>' + (rec.salida_fecha || '') + ' ' + (rec.salida_hora || '') + '</div>';
+        }
 
         htmlMobile += '<div class="sgu-form-card p-3 mb-2" onclick="window._sguShowView(\'detail\',\'' + rec.id + '\')">' +
             '<div class="d-flex justify-content-between align-items-center mb-2">' +
@@ -574,10 +589,10 @@ function _sguRenderList() {
             '<div class="fw-bold text-dark mb-1">' + (rec.conductor || '---') + '</div>' +
             '<div class="text-secondary small mb-2"><i class="bi bi-geo-alt me-1"></i>' + (rec.destino || '---') + '</div>' +
             '<div class="d-flex justify-content-between align-items-center pt-2 border-top">' +
-                '<div class="small text-secondary">' + (rec.salida_fecha || '') + ' ' + (rec.salida_hora || '') + '</div>' +
-                '<div class="d-flex gap-1" onclick="event.stopPropagation();">' +
+                fechaMobileText +
+                '<div class="d-flex align-items-center gap-1" onclick="event.stopPropagation();">' +
                     actionBtn +
-                    '<button class="sgu-action-btn" style="background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0;" onclick="window._sguCurrentRecord=_sguRecords.find(function(r){return r.id===\''+rec.id+'\'}); window._sguCompartirWhatsApp(\'completo\')" title="Compartir WhatsApp"><i class="bi bi-whatsapp"></i></button>' +
+                    '<button class="sgu-btn-wa-card" onclick="window._sguCurrentRecord=_sguRecords.find(function(r){return r.id===\''+rec.id+'\'}); window._sguCompartirWhatsApp(\'completo\')" title="Compartir WhatsApp"><i class="bi bi-whatsapp"></i></button>' +
                     deleteBtn +
                 '</div>' +
             '</div>' +
@@ -690,11 +705,14 @@ window._sguCheckFormReady = function() {
     var chkCount = Object.keys(_sguChecklist).length;
     var totalItems = 0;
     _sguGlobalTemplate.forEach(function(cat) { totalItems += (cat.items || []).length; });
-    var hasChecklist = totalItems > 0 && chkCount === totalItems;
+    var hasChecklist = totalItems > 0 && chkCount >= totalItems;
     var btnChk = document.getElementById('sgu-btn-open-checklist');
     if (btnChk) {
         if (hasChecklist) {
             btnChk.innerHTML = '<i class="bi bi-check-lg"></i> Completo';
+            btnChk.classList.add('done');
+        } else if (chkCount > 0) {
+            btnChk.innerHTML = chkCount + '/' + totalItems + ' Ítems';
             btnChk.classList.add('done');
         } else {
             btnChk.innerHTML = 'Llenar';
@@ -702,10 +720,9 @@ window._sguCheckFormReady = function() {
         }
     }
 
-    var valid = (p !== '' && c !== '' && d !== '' && k !== '' && hasPhotos && hasChecklist);
     var btnSave = document.getElementById('sgu-btn-save');
     if (btnSave) {
-        btnSave.disabled = !valid;
+        btnSave.disabled = false;
     }
 };
 
@@ -1024,11 +1041,14 @@ window._sguCheckReturnReady = function() {
     var chkCount = Object.keys(_sguChecklist).length;
     var totalItems = 0;
     _sguGlobalTemplate.forEach(function(cat) { totalItems += (cat.items || []).length; });
-    var hasChecklist = totalItems > 0 && chkCount === totalItems;
+    var hasChecklist = totalItems > 0 && chkCount >= totalItems;
     var btnChk = document.getElementById('sgu-det-btn-chk');
     if (btnChk) {
         if (hasChecklist) {
             btnChk.innerHTML = '<i class="bi bi-check-lg"></i> Completo';
+            btnChk.classList.add('done');
+        } else if (chkCount > 0) {
+            btnChk.innerHTML = chkCount + '/' + totalItems + ' Ítems';
             btnChk.classList.add('done');
         } else {
             btnChk.innerHTML = 'Llenar';
@@ -1036,10 +1056,9 @@ window._sguCheckReturnReady = function() {
         }
     }
 
-    var valid = (km !== '' && hasPhotos && hasChecklist);
     var btnSave = document.getElementById('sgu-det-btn-save');
     if (btnSave) {
-        btnSave.disabled = !valid;
+        btnSave.disabled = false;
     }
 };
 
@@ -1238,6 +1257,26 @@ window._sguSaveRecord = function() {
     var dest = document.getElementById('sgu-f-destino').value.trim();
     var km = document.getElementById('sgu-f-km').value.trim();
 
+    if (!p) {
+        _sguToast('Por favor, ingresa la Placa del Tracto', 'bi-exclamation-triangle');
+        document.getElementById('sgu-f-placa').focus();
+        return;
+    }
+    if (!cond) {
+        _sguToast('Por favor, ingresa el Conductor', 'bi-exclamation-triangle');
+        document.getElementById('sgu-f-conductor').focus();
+        return;
+    }
+
+    // Auto-completar ítems del checklist que el usuario no haya marcado
+    (_sguGlobalTemplate || []).forEach(function(cat) {
+        (cat.items || []).forEach(function(item) {
+            if (!_sguChecklist[item]) {
+                _sguChecklist[item] = 'bueno';
+            }
+        });
+    });
+
     var hasAlert = false;
     for (var key in _sguChecklist) { if (_sguChecklist[key] === 'mal') { hasAlert = true; break; } }
 
@@ -1272,24 +1311,36 @@ window._sguSaveRecord = function() {
     .then(function(data) {
         // 1. Liberar la interfaz inmediatamente (Optimistic UI)
         _sguToast('Salida registrada con éxito');
-        _sguLoadRecords(function() { window._sguShowView('list'); });
-        
-        // 2. Limpiar formulario
         _sguPhotos['salida'] = [];
+        _sguLoadRecords(false, function() { window._sguShowView('list'); });
         
-        // 3. Subir fotos en segundo plano
+        // 2. Subir fotos en segundo plano
         if (fotosParaSubir.length > 0) {
             window._sguQueueBackgroundUpload(data.id, 'salida', fotosParaSubir);
         }
     })
     .catch(function(e) {
         _sguToast('Error: ' + e.message, 'bi-exclamation-circle');
-        window._sguCheckFormReady();
+        var btn = document.getElementById('sgu-btn-save');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2-circle"></i> Registrar Salida Definitiva';
+        }
     });
 };
 
 window._sguSaveReturn = function() {
     var km = document.getElementById('sgu-det-km-retorno').value.trim();
+
+    // Auto-completar ítems del checklist que el usuario no haya marcado
+    (_sguGlobalTemplate || []).forEach(function(cat) {
+        (cat.items || []).forEach(function(item) {
+            if (!_sguChecklist[item]) {
+                _sguChecklist[item] = 'bueno';
+            }
+        });
+    });
+
     var hasAlert = false;
     for (var key in _sguChecklist) { if (_sguChecklist[key] === 'mal') { hasAlert = true; break; } }
 
@@ -1322,19 +1373,21 @@ window._sguSaveReturn = function() {
     .then(function() {
         // 1. Liberar la interfaz inmediatamente
         _sguToast('Retorno registrado con éxito');
-        _sguLoadRecords(function() { window._sguShowView('list'); });
-        
-        // 2. Limpiar fotos locales
         _sguPhotos['retorno'] = [];
+        _sguLoadRecords(false, function() { window._sguShowView('list'); });
 
-        // 3. Subir fotos en segundo plano
+        // 2. Subir fotos en segundo plano
         if (fotosParaSubir.length > 0) {
             window._sguQueueBackgroundUpload(registroId, 'retorno', fotosParaSubir);
         }
     })
     .catch(function(e) {
         _sguToast('Error: ' + e.message, 'bi-exclamation-circle');
-        window._sguCheckReturnReady();
+        var btn = document.getElementById('sgu-det-btn-save');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2-circle"></i> Confirmar Retorno';
+        }
     });
 };
 
