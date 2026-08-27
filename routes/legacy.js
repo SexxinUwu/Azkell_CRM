@@ -1199,51 +1199,70 @@ router.post('/:metodo', async (req, res) => {
             const [token, baseUrl] = await Promise.all([obtenerTokenWialon(), obtenerUrlWialon()]);
             if (!token) return { error: 'Token Wialon no configurado. Configúralo en Sistema → Integraciones.' };
 
-            const loginRes = await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({token: token}))}`);
-            const loginData = await loginRes.json();
-            if (!loginData.eid) return { error: "Fallo Login Wialon. Verifica el token en Sistema → Integraciones." };
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-            const sid = loginData.eid;
-            const searchParams = { "spec": { "itemsType": "avl_unit", "propName": "sys_name", "propValueMask": "*", "sortType": "sys_name" }, "force": 1, "flags": 9221, "from": 0, "to": 0 };
-            const searchRes = await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(searchParams))}&sid=${sid}`);
-            const searchData = await searchRes.json();
+            try {
+                const loginRes = await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({token: token}))}`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                if (!loginRes.ok) return { error: "Fallo HTTP en API Wialon." };
+                const loginData = await loginRes.json();
+                if (!loginData || !loginData.eid) return { error: "Fallo Login Wialon. Verifica el token en Sistema → Integraciones." };
 
-            if (!searchData.items) return [];
+                const sid = loginData.eid;
+                const searchParams = { "spec": { "itemsType": "avl_unit", "propName": "sys_name", "propValueMask": "*", "sortType": "sys_name" }, "force": 1, "flags": 9221, "from": 0, "to": 0 };
+                
+                const searchController = new AbortController();
+                const searchTimeout = setTimeout(() => searchController.abort(), 6000);
+                const searchRes = await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(searchParams))}&sid=${sid}`, {
+                    signal: searchController.signal
+                });
+                clearTimeout(searchTimeout);
+                if (!searchRes.ok) return [];
+                const searchData = await searchRes.json();
 
-            const vehiculosLive = [];
-            searchData.items.forEach(item => {
-                const rawName = item.nm ? item.nm.toUpperCase().trim() : "";
-                let placaLimpia = rawName.replace(/[^A-Z0-9]/g, '');
-                const matchPlaca = placaLimpia.match(/[A-Z0-9]{6}/);
-                if (matchPlaca) placaLimpia = matchPlaca[0];
+                if (!searchData || !searchData.items) return [];
 
-                if (rawName) {
-                    vehiculosLive.push({
-                        nombre_wialon: rawName, placa: placaLimpia,
-                        km: item.cnm_km ? Math.round(item.cnm_km) : 0,
-                        horas: item.cneh ? Math.round(item.cneh) : 0,
-                        lat: item.pos ? item.pos.y : 0, lng: item.pos ? item.pos.x : 0
-                    });
-                }
-            });
+                const vehiculosLive = [];
+                searchData.items.forEach(item => {
+                    const rawName = item.nm ? item.nm.toUpperCase().trim() : "";
+                    let placaLimpia = rawName.replace(/[^A-Z0-9]/g, '');
+                    const matchPlaca = placaLimpia.match(/[A-Z0-9]{6}/);
+                    if (matchPlaca) placaLimpia = matchPlaca[0];
 
-            fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(e=>{});
+                    if (rawName) {
+                        vehiculosLive.push({
+                            nombre_wialon: rawName, placa: placaLimpia,
+                            km: item.cnm_km ? Math.round(item.cnm_km) : 0,
+                            horas: item.cneh ? Math.round(item.cneh) : 0,
+                            lat: item.pos ? item.pos.y : 0, lng: item.pos ? item.pos.x : 0
+                        });
+                    }
+                });
 
-            // ── Snapshot automático de KM GPS (una vez por día por placa) ──
-            const hoy = new Date().toISOString().split('T')[0];
-            vehiculosLive.forEach(v => {
-                if (!v.placa || (!v.km && !v.horas)) return;
-                db.query(
-                    `INSERT IGNORE INTO km_snapshots (placa, fecha, km_gps, horas_motor)
-                     VALUES (?, ?, ?, ?)`,
-                    [v.placa, hoy, v.km || 0, v.horas || 0],
-                    () => {}
-                );
-            });
+                fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(e=>{});
 
-            _wialonCache = vehiculosLive;
-            _wialonCacheTime = Date.now();
-            return vehiculosLive;
+                // ── Snapshot automático de KM GPS (una vez por día por placa) ──
+                const hoy = new Date().toISOString().split('T')[0];
+                vehiculosLive.forEach(v => {
+                    if (!v.placa || (!v.km && !v.horas)) return;
+                    db.query(
+                        `INSERT IGNORE INTO km_snapshots (placa, fecha, km_gps, horas_motor)
+                         VALUES (?, ?, ?, ?)`,
+                        [v.placa, hoy, v.km || 0, v.horas || 0],
+                        () => {}
+                    );
+                });
+
+                _wialonCache = vehiculosLive;
+                _wialonCacheTime = Date.now();
+                return vehiculosLive;
+            } catch(fetchErr) {
+                console.warn('Advertencia Wialon Fetch:', fetchErr.message);
+                return { error: 'No se pudo conectar con el servidor GPS: ' + fetchErr.message };
+            }
         })();
 
         try {

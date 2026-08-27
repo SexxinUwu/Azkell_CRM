@@ -16,15 +16,50 @@ module.exports = (db, logAudit) => {
     // UNIDADES — Checklist de Camiones
     // ════════════════════════════════════════════════════════════════
 
+    // ── GET /seguridad/unidades/stats — Estadísticas resumidas (1ms) ──
+    router.get('/seguridad/unidades/stats', (req, res) => {
+        const sql = `
+            SELECT 
+                COUNT(*) as total,
+                COALESCE(SUM(CASE WHEN estado = 'en_ruta' THEN 1 ELSE 0 END), 0) as en_ruta,
+                COALESCE(SUM(CASE WHEN estado = 'completado' THEN 1 ELSE 0 END), 0) as completados,
+                COALESCE(SUM(CASE WHEN salida_has_alert = 1 OR retorno_has_alert = 1 THEN 1 ELSE 0 END), 0) as alertas
+            FROM seg_unidades_registros
+        `;
+        db.query(sql, (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            const s = (rows && rows[0]) || { total: 0, en_ruta: 0, completados: 0, alertas: 0 };
+            res.json({
+                total: Number(s.total) || 0,
+                en_ruta: Number(s.en_ruta) || 0,
+                completados: Number(s.completados) || 0,
+                alertas: Number(s.alertas) || 0
+            });
+        });
+    });
+
     // ── GET /seguridad/unidades — Listar registros ────────────────
     router.get('/seguridad/unidades', async (req, res) => {
         let sql = `SELECT r.* FROM seg_unidades_registros r`;
         const params = [];
+        const wheres = [];
+
+        if (req.query.estado) {
+            wheres.push('r.estado = ?');
+            params.push(req.query.estado);
+        }
         if (req.query.fecha) {
-            sql += ' WHERE r.salida_fecha = ?';
+            wheres.push('r.salida_fecha = ?');
             params.push(req.query.fecha);
         }
+        if (wheres.length) {
+            sql += ' WHERE ' + wheres.join(' AND ');
+        }
         sql += ' ORDER BY r.created_at DESC';
+        if (req.query.limit) {
+            sql += ' LIMIT ?';
+            params.push(parseInt(req.query.limit, 10));
+        }
         
         db.query(sql, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
@@ -340,6 +375,51 @@ module.exports = (db, logAudit) => {
         } catch (e) {
             res.status(500).json({ ok: false, error: e.message, diagnostic, hint: 'Revisa las variables de entorno de AWS en Railway' });
         }
+    });
+
+    // ── GET /seguridad/unidades/ultimo-km/:placa — Obtener último kilometraje registrado ──
+    router.get('/seguridad/unidades/ultimo-km/:placa', (req, res) => {
+        const placa = (req.params.placa || '').trim().toUpperCase();
+        const placaLimpia = placa.replace(/[^A-Z0-9]/g, '');
+
+        if (!placaLimpia) return res.json({ ok: false, ultimoKm: null });
+
+        // 1. Buscar en seg_unidades_registros el último retorno o salida
+        const sql = `
+            SELECT salida_km, retorno_km, salida_fecha, retorno_fecha, created_at
+            FROM seg_unidades_registros
+            WHERE REPLACE(REPLACE(placa_tracto, '-', ''), ' ', '') = ?
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+        `;
+
+        db.query(sql, [placaLimpia], (err, rows) => {
+            if (!err && rows && rows.length > 0) {
+                const r = rows[0];
+                const ultimoKm = (r.retorno_km && Number(r.retorno_km) > 0) ? Number(r.retorno_km) : (Number(r.salida_km) || null);
+                if (ultimoKm) {
+                    return res.json({
+                        ok: true,
+                        ultimoKm: ultimoKm,
+                        fecha: r.retorno_fecha || r.salida_fecha,
+                        tipo: r.retorno_km ? 'retorno' : 'salida'
+                    });
+                }
+            }
+
+            // 2. Fallback: buscar en tabla placas (odómetro)
+            db.query(
+                `SELECT odometro, km_inicial FROM placas WHERE REPLACE(REPLACE(placa, '-', ''), ' ', '') = ? LIMIT 1`,
+                [placaLimpia],
+                (errP, rowsP) => {
+                    if (!errP && rowsP && rowsP.length > 0) {
+                        const km = Number(rowsP[0].odometro) || Number(rowsP[0].km_inicial) || null;
+                        return res.json({ ok: true, ultimoKm: km, tipo: 'placa' });
+                    }
+                    res.json({ ok: true, ultimoKm: null });
+                }
+            );
+        });
     });
 
     // ── GET /seguridad/recursos — Autocomplete Placas y Directorio ──
