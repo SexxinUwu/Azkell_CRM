@@ -638,6 +638,9 @@
                 <i class="bi bi-gear fs-6"></i> <span class="d-none d-md-inline">Configurar</span>
             </button>
             <div id="col-picker-sr" class="d-none d-md-flex"></div>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" id="sr-btn-pdf" onclick="window.srAbrirPDFStatus()" title="Previsualizar PDF Horizontal">
+                <i class="bi bi-file-earmark-pdf text-danger"></i> <span class="d-none d-md-inline">Ver PDF</span>
+            </button>
             <button class="btn btn-success shadow-sm px-3 py-2 fw-bold text-white d-flex align-items-center gap-1 rounded-3" id="sr-btn-excel" onclick="window.srExportarExcel()" title="Exportar Excel">
                 <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Excel</span>
             </button>
@@ -727,15 +730,16 @@
             <table id="sr-tabla">
                 <thead>
                     <tr>
-                        <th style="width:130px">Rampa</th>
-                        <th style="width:90px">Fecha Ingreso</th>
-                        <th style="width:52px">Hora</th>
-                        <th style="width:72px">Placa</th>
-                        <th style="width:108px">Situación</th>
-                        <th style="width:180px">Observaciones</th>
-                        <th style="width:90px">Fecha Salida (Est.)</th>
-                        <th style="width:52px">Hora</th>
-                        <th style="width:68px">H. Taller</th>
+                        <th style="width:125px; cursor:pointer;" onclick="window.srOrdenarPor('rampa')" title="Ordenar por Rampa">Rampa <i id="sr-th-rampa" class="bi bi-arrow-down-up ms-1 text-muted" style="font-size:0.68rem;"></i></th>
+                        <th style="width:90px; cursor:pointer;" onclick="window.srOrdenarPor('fechaIngreso')" title="Ordenar por Fecha Ingreso">Fecha Ingreso <i id="sr-th-fechaIngreso" class="bi bi-arrow-down-up ms-1 text-muted" style="font-size:0.68rem;"></i></th>
+                        <th style="width:52px; cursor:pointer;" onclick="window.srOrdenarPor('horaIngreso')" title="Ordenar por Hora">Hora <i id="sr-th-horaIngreso" class="bi bi-arrow-down-up ms-1 text-muted" style="font-size:0.68rem;"></i></th>
+                        <th style="width:75px; cursor:pointer;" onclick="window.srOrdenarPor('placa')" title="Ordenar por Placa">Placa <i id="sr-th-placa" class="bi bi-arrow-down-up ms-1 text-muted" style="font-size:0.68rem;"></i></th>
+                        <th style="width:85px; cursor:pointer;" onclick="window.srOrdenarPor('diasInspeccion')" title="Ordenar por Días de Inspección">Inspección? <i id="sr-th-diasInspeccion" class="bi bi-arrow-down-up ms-1 text-muted" style="font-size:0.68rem;"></i></th>
+                        <th style="width:105px; cursor:pointer;" onclick="window.srOrdenarPor('situacion')" title="Ordenar por Situación">Situación <i id="sr-th-situacion" class="bi bi-arrow-down-up ms-1 text-muted" style="font-size:0.68rem;"></i></th>
+                        <th style="width:180px; cursor:pointer;" onclick="window.srOrdenarPor('obs')" title="Ordenar por Observaciones">Observaciones <i id="sr-th-obs" class="bi bi-arrow-down-up ms-1 text-muted" style="font-size:0.68rem;"></i></th>
+                        <th style="width:90px; cursor:pointer;" onclick="window.srOrdenarPor('fechaSalida')" title="Ordenar por Fecha Salida">Fecha Salida (Est.) <i id="sr-th-fechaSalida" class="bi bi-arrow-down-up ms-1 text-muted" style="font-size:0.68rem;"></i></th>
+                        <th style="width:52px; cursor:pointer;" onclick="window.srOrdenarPor('horaSalida')" title="Ordenar por Hora Salida">Hora <i id="sr-th-horaSalida" class="bi bi-arrow-down-up ms-1 text-muted" style="font-size:0.68rem;"></i></th>
+                        <th style="width:68px; cursor:pointer;" onclick="window.srOrdenarPor('horasTaller')" title="Ordenar por Horas en Taller">H. Taller <i id="sr-th-horasTaller" class="bi bi-arrow-down-up ms-1 text-muted" style="font-size:0.68rem;"></i></th>
                         <th style="width:118px">OT Relacionadas</th>
                         <th style="width:80px"></th>
                     </tr>
