@@ -206,6 +206,88 @@
 }
 #cond-fab:active { transform: scale(.91); }
 
+/* ── Modal Confirmación Eliminación (Diseño Circular ERP) ─── */
+.cond-delete-dialog {
+    max-width: 350px !important;
+    width: 90% !important;
+    margin: 1.75rem auto !important;
+}
+.cond-delete-card {
+    background: #ffffff !important;
+    border-radius: 28px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12) !important;
+    padding: 2.2rem 1.6rem 1.8rem 1.6rem !important;
+    text-align: center;
+    transform: translateZ(0);
+}
+.cond-delete-badge-icon {
+    font-size: 3.2rem;
+    color: #e11d48;
+    line-height: 1;
+    margin-bottom: 0.85rem;
+    display: inline-block;
+}
+.cond-btn-circle {
+    width: 54px;
+    height: 54px;
+    border-radius: 50% !important;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    outline: none;
+    will-change: transform;
+}
+.cond-btn-cancel-circle {
+    background: #18181b !important;
+    color: #ffffff !important;
+}
+.cond-btn-cancel-circle:hover {
+    background: #09090b !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.cond-btn-cancel-circle:active {
+    transform: scale(0.95);
+}
+.cond-btn-delete-circle {
+    background: #e11d48 !important;
+    color: #ffffff !important;
+}
+.cond-btn-delete-circle:hover {
+    background: #be123c !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.cond-btn-delete-circle:active {
+    transform: scale(0.95);
+}
+
+.cond-btn-del-grid {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #fee2e2;
+    background: #fff5f5;
+    color: #dc2626;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.cond-btn-del-grid:hover {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fca5a5;
+    transform: scale(1.05);
+}
+
 @media (max-width: 768px) {
     .topbar { display: none !important; }
     #root-dinamico, .main-area { 
@@ -447,12 +529,50 @@
                 </div><!-- /modal-body -->
 
                 <div class="modal-footer" style="padding:.75rem 1.25rem;border-top:1px solid var(--border);gap:.5rem;">
+                    <button type="button" class="btn btn-sm btn-outline-danger fw-bold me-auto" id="btnEliminarConductor" onclick="window.solicitarEliminarConductorActual()" style="border-radius:10px; display:none;">
+                        <i class="bi bi-trash3-fill me-1"></i>Eliminar
+                    </button>
                     <button type="button" class="btn btn-sm btn-outline-secondary fw-bold" data-bs-dismiss="modal" style="border-radius:10px;">Cerrar</button>
                     <button type="button" class="btn btn-sm btn-warning fw-bold text-dark" id="btnEditarConductor" onclick="activarEdicionConductor()" style="border-radius:10px;"><i class="bi bi-pencil-square me-1"></i>Editar</button>
                     <button type="submit" class="btn btn-sm fw-bold" id="btnGuardarConductor" style="border-radius:10px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border:none;color:#fff;padding:.45rem 1.1rem;box-shadow:0 3px 10px rgba(37,99,235,.3);"><i class="bi bi-save me-1"></i>Guardar</button>
                 </div>
             </form>
 
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL CONFIRMACIÓN ELIMINAR (DISEÑO CIRCULAR ERP) ════════════ -->
+<div class="modal fade" id="cond-delete-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cond-delete-dialog">
+        <div class="modal-content cond-delete-card border-0">
+            <!-- Icono Alerta Rojo -->
+            <div class="cond-delete-badge-icon">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+
+            <!-- Título -->
+            <h4 class="fw-bolder text-dark mb-2" style="font-size: 1.25rem; letter-spacing: -0.3px;">
+                ¿Eliminar este personal?
+            </h4>
+
+            <!-- Descripción -->
+            <p class="text-secondary mb-4 px-2" style="font-size: 0.84rem; line-height: 1.45; font-weight: 500;">
+                ¿Estás seguro de que deseas eliminar a <strong id="cond-delete-nombre" class="text-dark">este registro</strong>? Esta acción no se puede deshacer.
+            </p>
+
+            <!-- Botones de Acción (Diseño Circular ERP) -->
+            <div class="d-flex align-items-center justify-content-center gap-4">
+                <!-- Cancelar (X negro) -->
+                <button type="button" class="cond-btn-circle cond-btn-cancel-circle" data-bs-dismiss="modal" title="Cancelar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+
+                <!-- Eliminar (Papelera rojo) -->
+                <button type="button" class="cond-btn-circle cond-btn-delete-circle" id="cond-btn-confirm-delete" onclick="window.ejecutarEliminarConductorConfirmado()" title="Eliminar definitivamente">
+                    <i class="bi bi-trash3-fill"></i>
+                </button>
+            </div>
         </div>
     </div>
 </div>

@@ -2114,6 +2114,15 @@ app.get('/api/conductores-lista', (req, res) => {
     });
 });
 
+app.delete('/api/conductores/:id', (req, res) => {
+    const id = req.params.id;
+    db.query("DELETE FROM conductores WHERE idConductor = ?", [id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (typeof broadcast === 'function') broadcast('conductores', 'eliminar');
+        res.json({ ok: true, mensaje: 'Personal eliminado correctamente' });
+    });
+});
+
 app.post('/api/conductores/importarMasivo', (req, res) => {
     const lista = req.body.conductores || [];
     if (!lista.length) return res.status(400).json({ error: 'Sin datos' });
