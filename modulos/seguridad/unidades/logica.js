@@ -360,10 +360,14 @@ window._sguCargarPortalStats = function() {
         html += '</div>';
         html += '</div>';
 
-        grid.innerHTML = html;
     }).catch(function(err) {
         console.error('Error cargando empresas stats:', err);
-        grid.innerHTML = '<div class="col-12 text-center py-4 text-danger"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i> Error al cargar empresas.</div>';
+        grid.innerHTML = '<div class="col-12 text-center py-4">' +
+            '<i class="bi bi-arrow-repeat text-muted fs-3 d-block mb-2 spin"></i>' +
+            '<p class="text-secondary small mb-2">Sincronizando con el servidor...</p>' +
+            '<button class="btn btn-sm btn-primary rounded-pill px-3" onclick="window._sguCargarPortalStats()">' +
+            '<i class="bi bi-arrow-clockwise me-1"></i> Cargar Empresas</button>' +
+            '</div>';
     });
 };
 
