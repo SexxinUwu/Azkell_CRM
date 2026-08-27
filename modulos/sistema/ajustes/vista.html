@@ -15,12 +15,17 @@
 }
 
 .ajustes-inner-container {
-    max-width: 650px;
     width: 100%;
+    max-width: 900px;
     margin: 0 auto !important;
     background: transparent !important;
     display: flex;
     flex-direction: column;
+}
+@media (min-width: 992px) {
+    .ajustes-inner-container {
+        max-width: 1050px;
+    }
 }
 
 /* Header nativo estilo iOS */

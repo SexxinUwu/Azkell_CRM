@@ -558,15 +558,17 @@ window._sguShowView = function(view, id) {
         if (el) {
             el.style.display = 'none';
             el.classList.remove('active');
+            el.classList.remove('d-none');
         }
     });
     var target = document.getElementById('sgu-' + view);
     if (target) {
+        target.classList.remove('d-none');
         target.style.display = 'block';
         target.classList.add('active');
     }
 
-    if (view === 'portal') { /* el portal se actualiza en _sguCargarPortalStats */ }
+    if (view === 'portal') { window._sguCargarPortalStats(); }
     else if (view === 'list') { _sguRenderList(); }
     else if (view === 'form') { _sguInitForm(); }
     else if (view === 'detail') { _sguRenderDetail(id); }
