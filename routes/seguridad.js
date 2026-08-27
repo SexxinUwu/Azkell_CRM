@@ -477,41 +477,41 @@ module.exports = (db, logAudit) => {
 
     // ── GET /seguridad/empresas-stats — Métricas en vivo por empresa ──
     router.get('/seguridad/empresas-stats', (req, res) => {
-        const sqlEmpresas = `
-            SELECT DISTINCT UPPER(TRIM(cliente)) AS empresa, COUNT(*) as total_tractos
-            FROM placas 
-            WHERE cliente IS NOT NULL AND TRIM(cliente) <> '' AND TRIM(cliente) <> 'NULL'
-            GROUP BY UPPER(TRIM(cliente))
-            ORDER BY total_tractos DESC
-        `;
+        db.query('SELECT placa, cliente FROM placas WHERE cliente IS NOT NULL AND TRIM(cliente) <> "" AND TRIM(cliente) <> "NULL"', (errP, placasRows) => {
+            if (errP) return res.status(500).json({ error: errP.message });
 
-        db.query(sqlEmpresas, (errE, empRows) => {
-            if (errE) return res.status(500).json({ error: errE.message });
-            
-            // Obtener registros de seguridad para calcular en ruta y completados por empresa
-            db.query(`
-                SELECT r.id, r.estado, r.salida_has_alert, r.retorno_has_alert, r.placa_tracto,
-                       p.cliente AS empresa_placa
-                FROM seg_unidades_registros r
-                LEFT JOIN placas p ON UPPER(REPLACE(p.placa, '-', '')) = UPPER(REPLACE(r.placa_tracto, '-', ''))
-            `, (errR, regRows) => {
+            const placaToEmpresa = {};
+            const empCountMap = {};
+
+            (placasRows || []).forEach(p => {
+                const emp = (p.cliente || '').toUpperCase().trim();
+                if (emp && emp !== 'NULL') {
+                    empCountMap[emp] = (empCountMap[emp] || 0) + 1;
+                    const cleanP = (p.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    if (cleanP) placaToEmpresa[cleanP] = emp;
+                }
+            });
+
+            db.query('SELECT id, estado, salida_has_alert, retorno_has_alert, placa_tracto FROM seg_unidades_registros', (errR, regRows) => {
                 if (errR) return res.status(500).json({ error: errR.message });
 
                 const statsMap = {};
-                (empRows || []).forEach(e => {
-                    statsMap[e.empresa] = {
-                        empresa: e.empresa,
-                        total_flota: e.total_tractos || 0,
+                Object.keys(empCountMap).forEach(emp => {
+                    statsMap[emp] = {
+                        empresa: emp,
+                        total_flota: empCountMap[emp] || 0,
                         en_ruta: 0,
                         completados: 0,
                         alertas: 0
                     };
                 });
 
-                let globalStats = { empresa: 'TODAS', total_flota: 0, en_ruta: 0, completados: 0, alertas: 0 };
+                let globalStats = { empresa: 'TODAS', total_flota: (placasRows || []).length, en_ruta: 0, completados: 0, alertas: 0 };
 
                 (regRows || []).forEach(r => {
-                    const emp = (r.empresa_placa || 'MARSISA').toUpperCase().trim();
+                    const cleanP = (r.placa_tracto || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    const emp = placaToEmpresa[cleanP] || 'MARSISA';
+
                     if (r.estado === 'en_ruta') {
                         globalStats.en_ruta++;
                         if (statsMap[emp]) statsMap[emp].en_ruta++;
@@ -524,8 +524,6 @@ module.exports = (db, logAudit) => {
                         if (statsMap[emp]) statsMap[emp].alertas++;
                     }
                 });
-
-                (empRows || []).forEach(e => { globalStats.total_flota += e.total_tractos || 0; });
 
                 res.json({
                     global: globalStats,

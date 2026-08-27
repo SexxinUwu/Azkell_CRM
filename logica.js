@@ -3714,6 +3714,7 @@ function marcarMenuActivo(ruta) {
 
 window.cargarConfigSection = function(section) {
     window._pendingCfgSection = section;
+    sessionStorage.setItem('pending_cfg_section', section);
     document.querySelectorAll('#sidebarMenu .nav-item').forEach(a => a.classList.remove('active'));
     document.querySelectorAll('.nav-section-toggle').forEach(b => b.classList.remove('section-has-active'));
     const cfgMap = { perfil:'nav-cfg-perfil', apariencia:'nav-cfg-apariencia', accesibilidad:'nav-cfg-accesibilidad', idioma:'nav-cfg-idioma', empresa:'nav-cfg-empresa', usuarios:'nav-cfg-admin', auditoria:'nav-cfg-auditoria' };
@@ -3727,7 +3728,11 @@ window.cargarConfigSection = function(section) {
     if (cfgItems && cfgItems.classList.contains('nav-section-collapsed')) {
         window.toggleNavSection('configuracion');
     }
-    cargarModuloAislado('sistema/configuracion');
+    cargarModuloAislado('sistema/configuracion').then(() => {
+        if (typeof window.showConfig === 'function') {
+            window.showConfig(section);
+        }
+    });
 };
 
 window.cargarModuloAislado = async function(rutaModulo) {
