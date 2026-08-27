@@ -4234,13 +4234,9 @@ window.srDescargarPlantillaParabrisas = function(id) {
                         </div>
                         <div class="sub-header-left">ORDEN EN PARABRISAS</div>
                     </div>
-                    <div class="sub-header-right" style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
-                        <div style="border:1.5px solid #000; padding:3px 8px; font-size:8px; font-weight:800; text-align:right; line-height:1.25; background:#fff;">
-                            <div>CÓDIGO: F-MAN-002</div>
-                            <div>VERSIÓN: 0</div>
-                            <div>F. EMISIÓN: 10/11/2025</div>
-                        </div>
-                        <div class="doc-code-right" style="margin-top:2px;">OT: ${_srEsc(otCodigoStr)}</div>
+                    <div class="sub-header-right">
+                        <div class="doc-title-right">FORMATO DE CONTROL DE TALLER</div>
+                        <div class="doc-code-right">OT: ${_srEsc(otCodigoStr)}</div>
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-top:6px; margin-bottom:4px; gap:12px;">
@@ -4431,19 +4427,17 @@ window.srAbrirPDFStatus = function() {
 
         if (!entradas.length) {
             filasHtml += `
-            <tr style="background:#f8fafc; color:#64748b;">
-                <td style="font-weight:bold; text-align:center; padding:3px 2px;">${idx + 1}</td>
-                <td style="font-weight:700; color:#334155; padding:3px 4px;">${_srEsc(rampaNom)}</td>
-                <td style="text-align:center; padding:3px 2px;">—</td>
-                <td style="text-align:center; padding:3px 2px;">—</td>
-                <td style="text-align:center; font-weight:bold; padding:3px 2px;">—</td>
-                <td style="text-align:center; padding:3px 2px;"><span style="color:#94a3b8; font-size:7.5px;">—</span></td>
-                <td style="text-align:center; padding:3px 2px;"><span style="color:#16a34a; font-weight:800; font-size:8px;">LIBRE</span></td>
-                <td style="padding:3px 4px; color:#94a3b8; font-size:7.5px;">Disponible para ingreso</td>
-                <td style="text-align:center; padding:3px 2px;">—</td>
-                <td style="text-align:center; padding:3px 2px;">—</td>
-                <td style="text-align:center; padding:3px 2px;">—</td>
-                <td style="text-align:center; padding:3px 2px;">—</td>
+            <tr style="background:#fff; color:#000;">
+                <td style="font-weight:800; color:#000; padding:4px 6px; font-size:8.5px;">${_srEsc(rampaNom)}</td>
+                <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
+                <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
+                <td style="text-align:center; font-weight:800; padding:4px 2px; color:#000;">—</td>
+                <td style="text-align:center; padding:4px 2px; color:#000;"><span style="color:#000; font-size:8px;">—</span></td>
+                <td style="text-align:center; padding:4px 2px;"><span style="color:#15803d; font-weight:900; font-size:8.5px; border:1px solid #16a34a; background:#dcfce7; padding:1px 5px; border-radius:3px;">LIBRE</span></td>
+                <td style="padding:4px 6px; color:#000; font-size:8px; font-weight:500;">Disponible para ingreso</td>
+                <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
+                <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
+                <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
             </tr>`;
         } else {
             entradas.forEach(function(e) {
@@ -4451,9 +4445,6 @@ window.srAbrirPDFStatus = function() {
                     if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
                     return (o.placa || '').toUpperCase() === (e.placa || '').toUpperCase();
                 });
-                var otsTxt = otsPlaca.length
-                    ? otsPlaca.map(function(o) { return o.id_ot || o.ticket_entrada || ''; }).filter(Boolean).join(', ')
-                    : '—';
 
                 var obsTextoCol = (e.obs || '').trim();
                 if (!obsTextoCol && otsPlaca && otsPlaca.length > 0) {
@@ -4476,39 +4467,37 @@ window.srAbrirPDFStatus = function() {
 
                 var inspBadgeStyle = '';
                 if (inspInfo.dias < 0) {
-                    inspBadgeStyle = 'background:#fee2e2; color:#dc2626; border:1px solid #f87171;';
+                    inspBadgeStyle = 'background:#fee2e2; color:#b91c1c; border:1.5px solid #dc2626; font-weight:900;';
                 } else if (inspInfo.dias <= 7) {
-                    inspBadgeStyle = 'background:#fef9c3; color:#a16207; border:1px solid #facc15;';
+                    inspBadgeStyle = 'background:#fef9c3; color:#854d0e; border:1.5px solid #ca8a04; font-weight:900;';
                 } else {
-                    inspBadgeStyle = 'background:#dcfce7; color:#15803d; border:1px solid #86efac;';
+                    inspBadgeStyle = 'background:#dcfce7; color:#15803d; border:1.5px solid #16a34a; font-weight:900;';
                 }
 
-                var sitStyle = 'color:#1e293b;';
+                var sitStyle = 'color:#000; font-weight:700;';
                 var sitLower = (e.situacion || '').toLowerCase();
-                if (sitLower.includes('espera')) sitStyle = 'color:#d97706; font-weight:bold;';
-                else if (sitLower.includes('trabajo') || sitLower.includes('proceso')) sitStyle = 'color:#2563eb; font-weight:bold;';
-                else if (sitLower.includes('listo') || sitLower.includes('conclu')) sitStyle = 'color:#16a34a; font-weight:bold;';
+                if (sitLower.includes('espera')) sitStyle = 'color:#b45309; font-weight:800;';
+                else if (sitLower.includes('trabajo') || sitLower.includes('proceso') || sitLower.includes('atencion') || sitLower.includes('atención')) sitStyle = 'color:#1d4ed8; font-weight:800;';
+                else if (sitLower.includes('listo') || sitLower.includes('conclu') || sitLower.includes('finaliz')) sitStyle = 'color:#15803d; font-weight:800;';
 
                 filasHtml += `
-                <tr style="background:#fff; color:#0f172a;">
-                    <td style="font-weight:bold; text-align:center; padding:3px 2px;">${idx + 1}</td>
-                    <td style="font-weight:800; color:#0f172a; padding:3px 4px;">${_srEsc(rampaNom)}</td>
-                    <td style="text-align:center; padding:3px 2px; font-size:7.5px;">${fIn}</td>
-                    <td style="text-align:center; padding:3px 2px; font-size:7.5px;">${hIn}</td>
-                    <td style="text-align:center; font-weight:900; color:#000; font-size:9.5px; padding:3px 2px; letter-spacing:0.3px;">${_srEsc(e.placa || '—')}</td>
-                    <td style="text-align:center; padding:2px 2px;">
-                        <span style="display:inline-block; font-weight:900; font-size:8px; padding:1px 4px; border-radius:3px; ${inspBadgeStyle}">
+                <tr style="background:#fff; color:#000;">
+                    <td style="font-weight:900; color:#000; padding:4px 6px; font-size:8.5px;">${_srEsc(rampaNom)}</td>
+                    <td style="text-align:center; padding:4px 2px; font-size:8px; font-weight:700; color:#000;">${fIn}</td>
+                    <td style="text-align:center; padding:4px 2px; font-size:8px; font-weight:700; color:#000;">${hIn}</td>
+                    <td style="text-align:center; font-weight:900; color:#000; font-size:10px; padding:4px 2px; letter-spacing:0.3px;">${_srEsc(e.placa || '—')}</td>
+                    <td style="text-align:center; padding:3px 2px;">
+                        <span style="display:inline-block; font-size:8.5px; padding:1.5px 5px; border-radius:3px; ${inspBadgeStyle}">
                             ${inspInfo.texto}
                         </span>
                     </td>
-                    <td style="text-align:center; font-size:7.5px; padding:3px 2px; ${sitStyle}">${_srEsc(e.situacion || '—')}</td>
-                    <td style="padding:3px 4px; font-size:7.5px; line-height:1.2; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${_srEsc(obsTextoCol)}">
+                    <td style="text-align:center; font-size:8px; padding:4px 2px; ${sitStyle}">${_srEsc(e.situacion || '—')}</td>
+                    <td style="padding:4px 6px; font-size:8px; font-weight:600; color:#000; line-height:1.25;" title="${_srEsc(obsTextoCol)}">
                         ${_srEsc(obsTextoCol || '—')}
                     </td>
-                    <td style="text-align:center; padding:3px 2px; font-size:7.5px;">${fOut}</td>
-                    <td style="text-align:center; padding:3px 2px; font-size:7.5px;">${hOut}</td>
-                    <td style="text-align:center; font-weight:700; color:#2563eb; padding:3px 2px; font-size:8px;">${hTaller}</td>
-                    <td style="text-align:center; font-size:7.5px; padding:3px 2px; color:#475569;">${_srEsc(otsTxt)}</td>
+                    <td style="text-align:center; padding:4px 2px; font-size:8px; font-weight:700; color:#000;">${fOut}</td>
+                    <td style="text-align:center; padding:4px 2px; font-size:8px; font-weight:700; color:#000;">${hOut}</td>
+                    <td style="text-align:center; font-weight:900; color:#000; padding:4px 2px; font-size:8.5px;">${hTaller}</td>
                 </tr>`;
             });
         }
@@ -4536,7 +4525,7 @@ window.srAbrirPDFStatus = function() {
             padding: 12px;
             background-color: #f1f5f9;
             font-family: 'Montserrat', sans-serif;
-            color: #0f172a;
+            color: #000;
             display: flex;
             justify-content: center;
         }
@@ -4549,7 +4538,7 @@ window.srAbrirPDFStatus = function() {
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            border: 1.5px solid #000;
+            border: 2px solid #000;
         }
         .header-box {
             display: flex;
@@ -4573,7 +4562,7 @@ window.srAbrirPDFStatus = function() {
         .company-name {
             font-size: 11px;
             font-weight: 900;
-            color: #0f172a;
+            color: #000;
             line-height: 1.1;
             text-transform: uppercase;
         }
@@ -4591,15 +4580,16 @@ window.srAbrirPDFStatus = function() {
         }
         .doc-subtitle {
             font-size: 8.5px;
-            font-weight: 700;
-            color: #475569;
+            font-weight: 800;
+            color: #000;
             margin-top: 1px;
         }
         .header-right {
             border: 1.5px solid #000;
             padding: 3px 8px;
             font-size: 8px;
-            font-weight: 800;
+            font-weight: 900;
+            color: #000;
             text-align: right;
             line-height: 1.3;
             width: 22%;
@@ -4610,41 +4600,46 @@ window.srAbrirPDFStatus = function() {
             align-items: center;
             justify-content: space-between;
             background: #f8fafc;
-            border: 1px solid #cbd5e1;
+            border: 1.5px solid #000;
             border-radius: 4px;
             padding: 4px 8px;
             margin-bottom: 6px;
             font-size: 8px;
+            color: #000;
         }
         .kpi-item {
             display: flex;
             align-items: center;
             gap: 4px;
+            color: #000;
+            font-weight: 700;
         }
         .kpi-val {
             font-weight: 900;
-            font-size: 9.5px;
+            font-size: 10px;
         }
         .status-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 8px;
             table-layout: fixed;
+            color: #000;
         }
         .status-table th {
-            background: #0f172a;
+            background: #000;
             color: #fff;
-            font-weight: 800;
+            font-weight: 900;
             text-transform: uppercase;
-            padding: 4px 2px;
+            padding: 5px 3px;
             border: 1px solid #000;
-            font-size: 7.5px;
+            font-size: 8px;
             letter-spacing: 0.02em;
         }
         .status-table td {
-            border: 1px solid #cbd5e1;
-            padding: 2.5px 3px;
+            border: 1px solid #000;
+            padding: 3px 4px;
             vertical-align: middle;
+            color: #000 !important;
         }
         .footer-box {
             display: flex;
@@ -4653,15 +4648,15 @@ window.srAbrirPDFStatus = function() {
             border-top: 1.5px solid #000;
             padding-top: 4px;
             margin-top: 6px;
-            font-size: 7.5px;
-            color: #475569;
-            font-weight: 600;
+            font-size: 8px;
+            color: #000;
+            font-weight: 700;
         }
         #btnPdfPrint {
             position: fixed;
             top: 15px;
             right: 20px;
-            background: #2563eb;
+            background: #0284c7;
             color: #fff;
             border: none;
             padding: 8px 16px;
@@ -4670,14 +4665,14 @@ window.srAbrirPDFStatus = function() {
             font-weight: 800;
             border-radius: 6px;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+            box-shadow: 0 4px 12px rgba(2,132,199,0.4);
             display: flex;
             align-items: center;
             gap: 6px;
             z-index: 9999;
         }
         #btnPdfPrint:hover {
-            background: #1d4ed8;
+            background: #0369a1;
         }
         @media print {
             body {
@@ -4686,7 +4681,7 @@ window.srAbrirPDFStatus = function() {
             }
             .page-container {
                 box-shadow: none !important;
-                border: 1.5px solid #000 !important;
+                border: 2px solid #000 !important;
                 width: 100% !important;
                 height: 100% !important;
                 max-height: 198mm !important;
@@ -4728,16 +4723,16 @@ window.srAbrirPDFStatus = function() {
             <div class="kpi-bar">
                 <div class="kpi-item">
                     <span>EMISIÓN:</span>
-                    <strong style="color:#0f172a;">${fechaEmisionStr}</strong>
+                    <strong style="color:#000;">${fechaEmisionStr}</strong>
                 </div>
                 <div class="kpi-item">
                     <span>EMITIDO POR:</span>
-                    <strong style="color:#0f172a;">${_srEsc(emisorNombre)}</strong>
+                    <strong style="color:#000;">${_srEsc(emisorNombre)}</strong>
                 </div>
-                <div style="border-left:1px solid #cbd5e1; height:14px;"></div>
+                <div style="border-left:1.5px solid #000; height:14px;"></div>
                 <div class="kpi-item">
                     <span>TOTAL RAMPAS:</span>
-                    <span class="kpi-val" style="color:#0f172a;">${totalRampas}</span>
+                    <span class="kpi-val" style="color:#000;">${totalRampas}</span>
                 </div>
                 <div class="kpi-item">
                     <span>OCUPADAS:</span>
@@ -4745,30 +4740,28 @@ window.srAbrirPDFStatus = function() {
                 </div>
                 <div class="kpi-item">
                     <span>EN ESPERA / LAVADO:</span>
-                    <span class="kpi-val" style="color:#d97706;">${espera}</span>
+                    <span class="kpi-val" style="color:#b45309;">${espera}</span>
                 </div>
                 <div class="kpi-item">
                     <span>LIBRES:</span>
-                    <span class="kpi-val" style="color:#16a34a;">${libres}</span>
+                    <span class="kpi-val" style="color:#15803d;">${libres}</span>
                 </div>
             </div>
 
-            <!-- Tabla Consolidada Horizontal -->
+            <!-- Tabla Consolidada Horizontal (Sin columnas # y OT Relacionadas, optimizada) -->
             <table class="status-table">
                 <thead>
                     <tr>
-                        <th style="width:24px; text-align:center;">#</th>
-                        <th style="width:75px;">RAMPA</th>
-                        <th style="width:58px; text-align:center;">F. INGRESO</th>
-                        <th style="width:38px; text-align:center;">HORA</th>
-                        <th style="width:55px; text-align:center;">PLACA</th>
-                        <th style="width:55px; text-align:center;">INSPECCIÓN?</th>
-                        <th style="width:68px; text-align:center;">SITUACIÓN</th>
-                        <th>OBSERVACIONES / TRABAJOS A REALIZAR</th>
-                        <th style="width:58px; text-align:center;">SALIDA (EST.)</th>
-                        <th style="width:38px; text-align:center;">HORA</th>
-                        <th style="width:48px; text-align:center;">H. TALLER</th>
-                        <th style="width:75px; text-align:center;">OT RELACIONADAS</th>
+                        <th style="width:85px; text-align:left; padding-left:6px;">RAMPA</th>
+                        <th style="width:68px; text-align:center;">F. INGRESO</th>
+                        <th style="width:44px; text-align:center;">HORA</th>
+                        <th style="width:68px; text-align:center;">PLACA</th>
+                        <th style="width:72px; text-align:center;">INSPECCIÓN?</th>
+                        <th style="width:82px; text-align:center;">SITUACIÓN</th>
+                        <th style="text-align:left; padding-left:6px;">OBSERVACIONES / TRABAJOS A REALIZAR</th>
+                        <th style="width:68px; text-align:center;">SALIDA (EST.)</th>
+                        <th style="width:44px; text-align:center;">HORA</th>
+                        <th style="width:55px; text-align:center;">H. TALLER</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -4780,8 +4773,8 @@ window.srAbrirPDFStatus = function() {
         <!-- Footer Oficial -->
         <div class="footer-box">
             <div>Sistema ERP Azkell Fleet · Módulo de Control de Bahías y Mantenimiento</div>
-            <div style="text-align:center;">Semáforo Inspección: <span style="color:#16a34a; font-weight:800;">>7d Vigente</span> | <span style="color:#ca8a04; font-weight:800;">0-7d Próximo</span> | <span style="color:#dc2626; font-weight:800;"><0d Vencido</span></div>
-            <div style="font-weight:800;">DOCUMENTO OFICIAL · HOJA 1 DE 1</div>
+            <div style="text-align:center;">Semáforo Inspección: <span style="color:#15803d; font-weight:900;">>7d Vigente</span> | <span style="color:#854d0e; font-weight:900;">0-7d Próximo</span> | <span style="color:#b91c1c; font-weight:900;"><0d Vencido</span></div>
+            <div style="font-weight:900;">DOCUMENTO OFICIAL · HOJA 1 DE 1</div>
         </div>
     </div>
 </body>
