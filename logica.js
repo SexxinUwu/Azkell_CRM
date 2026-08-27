@@ -3860,10 +3860,13 @@ window.cargarModuloAislado = async function(rutaModulo) {
         const script = document.createElement('script');
         script.id = scriptId;
         script.src = `${_rutaDisco}/logica.js?v=${Date.now()}`;
+        let funcionInitFull = `init_${rutaModulo.replace(/[\/-]/g, '_')}`;
         let nombreCarpeta = (rutaModulo.split('/')[1] || rutaModulo.split('/')[0]).replace(/-/g, '_');
         let funcionInit = `init_${nombreCarpeta}`;
         script.onload = function() {
-            if (typeof window[funcionInit] === 'function') {
+            if (typeof window[funcionInitFull] === 'function') {
+                window[funcionInitFull]();
+            } else if (typeof window[funcionInit] === 'function') {
                 window[funcionInit]();
             } else {
                 // Fallback: módulos con guiones en el nombre (ej: init_configuracion-mp)

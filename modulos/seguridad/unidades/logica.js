@@ -236,10 +236,10 @@ window._sguSyncDocPlaca = async function(placa, tipo) {
 };
 
 // ── INIT Y CARGA (PERFIL EN RUTA POR DEFECTO / CARGA BAJO DEMANDA) ─
-window.init_unidades = function() {
-    if (!window.checkPerm('checklist', 'l')) {
+window.init_seguridad_unidades = window.init_unidades = function() {
+    if (!window.checkPerm('seguridad_unidades', 'l') && !window.checkPerm('checklist', 'l')) {
         var wrap = document.getElementById('sgu-app') || document.querySelector('.container-fluid');
-        if (wrap) window.showNoPermMsg(wrap);
+        if (wrap && typeof window.showNoPermMsg === 'function') window.showNoPermMsg(wrap);
         return;
     }
     _sguView = 'list';
