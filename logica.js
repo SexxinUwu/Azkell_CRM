@@ -319,12 +319,13 @@ window.verificarSesionGuardada = function() {
     safe('nav-neumaticos-toggle', vNeumaticos);
     safe('mbnav-neumaticos-toggle',   vNeumaticos);
     safe('mbnav-neumaticos-analisis', vNeumaticos);
-    safe('mbnav-neumaticos-ultimas',  vNeumaticos);
-    safe('nav-incidencias-ruta', _cL('otros_mant') || _cL('reportes_ot') || _cL('status_rampa'));
+    var vIncidencias = showMantHub && (_cL('incidencias_ruta') || _cL('otros_mant') || _cL('reportes_ot') || _cL('status_rampa'));
+    safe('nav-incidencias-ruta',   vIncidencias);
+    safe('mbnav-incidencias-ruta', vIncidencias);
     safe('nav-otros-mant',      showOtrosMant);
     safe('mbnav-otros-mant',    showOtrosMant);
 
-    var showMant = vStatusRampa || vChecklist || vInsp || vFleetrun || vReportesOT || vTrabajosOT || vCombustible || vNeumaticos || showOtrosMant;
+    var showMant = vStatusRampa || vChecklist || vInsp || vFleetrun || vReportesOT || vTrabajosOT || vCombustible || vNeumaticos || vIncidencias || showOtrosMant;
     safe('wrap-mantenimiento', showMant);
     safe('bnav-mantenimiento', showMant);
 
@@ -1565,9 +1566,10 @@ window.checkPerm = function(modKey, action) {
             'kpis': ['kpis', 'kpis_taller'],
             'productividad': ['productividad'],
             'fin_taller': ['fin_taller', 'finanzas_taller'],
-            'otros_mant': ['otros_mant'],
             'pers_mant': ['cfg_personal', 'pers_mant'],
             'cfg_personal': ['cfg_personal', 'pers_mant'],
+            'incidencias_ruta': ['incidencias_ruta', 'incidencias', 'mant_incidencias_ruta'],
+            'incidencias': ['incidencias', 'incidencias_ruta'],
 
             'disponibilidad': ['disponibilidad'],
             'gps': ['gps', 'ubicacion'],
