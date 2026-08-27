@@ -413,7 +413,7 @@ window.verificarSesionGuardada = function() {
 
     // SEGURIDAD
     var showSeguridadHub = _cHub('hub_seguridad');
-    var vChecklistSeg = showSeguridadHub && (_cL('seguridad_unidades') || _cL('checklist') || _cL('seg_unidades') || _cL('seg_checklist'));
+    var vChecklistSeg = showSeguridadHub && (_cL('seguridad_unidades') || _cL('seg_unidades') || _cL('seg_checklist'));
     var vAsist     = showSeguridadHub && (_cL('asist') || _cL('seg_asistencia'));
     
     safe('nav-seg-unidades',    vChecklistSeg);
@@ -1575,10 +1575,10 @@ window.checkPerm = function(modKey, action) {
             'conductores': ['conductores', 'cond', 'personal'],
             'clientes': ['clientes'],
 
-            'checklist': ['checklist', 'seguridad_unidades', 'seg_checklist'],
-            'seguridad_unidades': ['seguridad_unidades', 'seg_unidades', 'checklist', 'seg_checklist'],
-            'seg_unidades': ['seg_unidades', 'seguridad_unidades', 'checklist'],
-            'seg_checklist': ['seg_checklist', 'seguridad_unidades', 'checklist'],
+            'checklist': ['checklist', 'mant_fallas'],
+            'seguridad_unidades': ['seguridad_unidades', 'seg_unidades', 'seg_checklist'],
+            'seg_unidades': ['seg_unidades', 'seguridad_unidades', 'seg_checklist'],
+            'seg_checklist': ['seg_checklist', 'seguridad_unidades'],
             'asist': ['asist', 'seg_asistencia'],
             'seg_asistencia': ['seg_asistencia', 'asist'],
 
