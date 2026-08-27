@@ -103,6 +103,57 @@
     transform: scale(0.95);
 }
 
+/* ── Botón WhatsApp Corporativo ────────────────────────────────── */
+.sgu-btn-whatsapp {
+    background: #25d366 !important;
+    color: #ffffff !important;
+    border: 1px solid #20bd5a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(37, 211, 102, 0.25) !important;
+    transition: all 0.18s ease !important;
+}
+.sgu-btn-whatsapp:hover {
+    background: #1eb857 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35) !important;
+}
+.sgu-btn-whatsapp:active {
+    transform: translateY(0);
+}
+
+/* ── Widget Flotante de Subida en Segundo Plano ───────────────── */
+#sgu-upload-progress-card {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1060;
+    min-width: 300px;
+    max-width: 360px;
+    background: #0f172a;
+    color: #ffffff;
+    border-radius: 18px;
+    padding: 14px 18px;
+    box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    display: none;
+    animation: sguSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateZ(0);
+}
+@keyframes sguSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+#sgu-upload-progress-card .progress {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    overflow: hidden;
+}
+#sgu-upload-progress-bar {
+    background: linear-gradient(90deg, #38bdf8, #22c55e);
+    transition: width 0.2s ease;
+}
+
 .sgu-bottom-spacer {
     height: 120px;
     width: 100%;
@@ -1146,5 +1197,20 @@
                 </button>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- ═══ WIDGET FLOTANTE: PROGRESO DE SUBIDA EN 2DO PLANO ════════════ -->
+<div id="sgu-upload-progress-card">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="d-flex align-items-center gap-2">
+            <span class="spinner-border spinner-border-sm text-info" id="sgu-upload-spinner" role="status"></span>
+            <i class="bi bi-check-circle-fill text-success d-none" id="sgu-upload-check"></i>
+            <span class="fw-bold small" id="sgu-upload-text">Subiendo evidencias...</span>
+        </div>
+        <span class="badge bg-white bg-opacity-10 text-white font-monospace small" id="sgu-upload-count">0%</span>
+    </div>
+    <div class="progress">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" id="sgu-upload-progress-bar" style="width: 0%;"></div>
     </div>
 </div>
