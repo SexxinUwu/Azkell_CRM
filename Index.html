@@ -828,6 +828,14 @@
         </div>
         <div class="offcanvas-body px-3 pb-4">
             <div class="bnav-group-box">
+                <div id="mbnav-disponibilidad-flota" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetFlota')).hide(); cargarModuloAislado('flota/disponibilidad'); setBottomNavActive('bnav-flota');">
+                    <div class="bnav-row-icon" style="color: #0284c7;"><i class="bi bi-calendar-check"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Disponibilidad</p>
+                        <p class="bnav-row-desc">Programación y estado de flota</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
                 <div id="mbnav-ubicacion" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetFlota')).hide(); cargarModuloAislado('flota/ubicacion'); setBottomNavActive('bnav-flota');">
                     <div class="bnav-row-icon" style="color: #2563eb;"><i class="bi bi-geo-alt"></i></div>
                     <div class="bnav-row-content">
@@ -947,6 +955,15 @@
                         </div>
                         <i class="bi bi-chevron-right bnav-row-chevron"></i>
                     </div>
+                </div>
+
+                <div id="mbnav-incidencias-ruta" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/incidencias-ruta'); setBottomNavActive('bnav-mantenimiento');">
+                    <div class="bnav-row-icon" style="color: #eab308;"><i class="bi bi-exclamation-triangle"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Incidencias en Ruta</p>
+                        <p class="bnav-row-desc">Fallas, auxilio mecánico y alertas</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
 
                 <div id="mbnav-otros-mant" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/otros'); setBottomNavActive('bnav-mantenimiento');">
@@ -1242,6 +1259,14 @@
                     <div class="bnav-row-content">
                         <p class="bnav-row-title" data-i18n="nav.auditoria">Auditoría</p>
                         <p class="bnav-row-desc">Registro de actividad y logs del sistema</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
+                <div id="mbnav-cfg-empresa" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); window.cargarConfigSection('empresa'); setBottomNavActive('bnav-config');">
+                    <div class="bnav-row-icon" style="color: #3b82f6;"><i class="bi bi-building"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Empresa</p>
+                        <p class="bnav-row-desc">Datos fiscales y logo institucional</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
