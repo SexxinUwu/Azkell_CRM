@@ -106,22 +106,33 @@ window.init_status_rampa = function() {
 window.srInspeccionesData = window.srInspeccionesData || [];
 
 function srCargarInspecciones() {
+    if (window.dataGlobalInspecciones && Array.isArray(window.dataGlobalInspecciones) && window.dataGlobalInspecciones.length > 0 && window.dataGlobalInspecciones[0] !== '__CARGADO__') {
+        window.srInspeccionesData = window.dataGlobalInspecciones;
+        srRenderTabla();
+        return;
+    }
     if (window.CACHE && window.CACHE['inspecciones'] && window.CACHE['inspecciones'].length) {
         window.srInspeccionesData = window.CACHE['inspecciones'];
         srRenderTabla();
         return;
     }
-    fetch('/api/inspecciones')
-        .then(function(r) { return r.ok ? r.json() : []; })
-        .then(function(data) {
-            window.srInspeccionesData = Array.isArray(data) ? data : (data.data || []);
-            if (window.CACHE) window.CACHE['inspecciones'] = window.srInspeccionesData;
-            srRenderTabla();
-        })
-        .catch(function() {
-            window.srInspeccionesData = [];
-            srRenderTabla();
-        });
+    fetch('/api/script/obtenerDatosInspecciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ args: [] })
+    })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(res) {
+        var items = (res && res.data && Array.isArray(res.data)) ? res.data : [];
+        window.srInspeccionesData = items;
+        window.dataGlobalInspecciones = items;
+        if (window.CACHE) window.CACHE['inspecciones'] = items;
+        srRenderTabla();
+    })
+    .catch(function() {
+        window.srInspeccionesData = window.dataGlobalInspecciones || [];
+        srRenderTabla();
+    });
 }
 
 // ── Carga entradas desde BD ──────────────────────────────────────
