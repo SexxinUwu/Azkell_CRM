@@ -822,12 +822,16 @@ window._sguExportarExcel = function() {
 };
 
 function _sguGetUsuarioActivo() {
-    return localStorage.getItem('fleet_user_nombre') || 
-           localStorage.getItem('fleet_user') || 
+    var topEl = document.getElementById('nombre-usuario-top');
+    var topName = topEl ? (topEl.innerText || topEl.textContent || '').trim() : '';
+    if (topName && topName !== 'Usuario' && topName !== 'Cargando...' && topName !== '---') {
+        return topName;
+    }
+    return localStorage.getItem('fleet_user') || 
+           localStorage.getItem('fleet_user_nombre') || 
            localStorage.getItem('fleet_nombre_usuario') || 
-           localStorage.getItem('usuario_nombre') || 
-           localStorage.getItem('user_nombre') || 
-           window.usuarioActual || 
+           (typeof usuarioLogueado !== 'undefined' && usuarioLogueado) ||
+           (typeof window.usuarioActual !== 'undefined' && window.usuarioActual) || 
            'Oficial de Seguridad';
 }
 
@@ -1702,7 +1706,8 @@ window._sguSaveRecord = function() {
         salida_checklist_json: _sguChecklist,
         salida_has_alert: hasAlert,
         firma_salida_conductor: sigConductor,
-        firma_salida_vigilancia: sigVigilancia
+        firma_salida_vigilancia: sigVigilancia,
+        creado_por: _sguGetUsuarioActivo()
     };
 
     var fotosParaSubir = (_sguPhotos['salida'] || []).filter(function(item) { return !item.uploaded && item.file; });
@@ -1768,6 +1773,7 @@ window._sguSaveReturn = function() {
         retorno_has_alert: hasAlert,
         firma_retorno_conductor: sigConductor,
         firma_retorno_vigilancia: sigVigilancia,
+        retorno_creado_por: _sguGetUsuarioActivo(),
         estado: 'completado'
     };
 
