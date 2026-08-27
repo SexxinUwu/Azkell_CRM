@@ -4439,15 +4439,15 @@ window.srAbrirPDFStatus = function() {
 
     function getSitColorPdf(sit) {
         if (!sit) return '#64748b';
-        var s = String(sit).toLowerCase().trim();
-        if (s === 'en atención' || s.indexOf('atenci') !== -1 || s.indexOf('proceso') !== -1) return '#16a34a'; // Verde
-        if (s === 'finalizado' || s.indexOf('listo') !== -1 || s.indexOf('conclu') !== -1) return '#dc2626'; // Rojo
-        if (s.indexOf('espera') !== -1) return '#ca8a04'; // Amarillo
-        if (s.indexOf('tercero') !== -1) return '#9333ea'; // Morado
-        if (s.indexOf('inoperat') !== -1) return '#64748b'; // Plomo
-        if (s.indexOf('anulad') !== -1) return '#64748b'; // Plomo
-        if (s.indexOf('operat') !== -1) return '#1e3a8a'; // Azul marino
-        if (s.indexOf('libre') !== -1) return '#64748b'; // Gris
+        var s = String(sit).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        if (s.includes('atencion') || s.includes('proceso') || s.includes('trabajo')) return '#16a34a'; // Verde
+        if (s.includes('finaliz') || s.includes('listo') || s.includes('conclu')) return '#dc2626'; // Rojo
+        if (s.includes('espera')) return '#d97706'; // Amarillo
+        if (s.includes('tercero')) return '#9333ea'; // Morado
+        if (s.includes('inoperat')) return '#64748b'; // Plomo
+        if (s.includes('anulad')) return '#64748b'; // Plomo
+        if (s.includes('operat')) return '#1e3a8a'; // Azul marino
+        if (s.includes('libre')) return '#64748b'; // Gris
         return '#000000';
     }
 
@@ -4469,8 +4469,8 @@ window.srAbrirPDFStatus = function() {
                 <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
                 <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
                 <td style="text-align:center; font-weight:800; padding:4px 2px; color:#000;">—</td>
-                <td style="text-align:center; padding:4px 2px;"><span style="color:#64748b; font-weight:700; font-size:8px;">—</span></td>
-                <td style="text-align:center; padding:4px 2px;"><span style="color:#64748b; font-weight:800; font-size:8.5px;">LIBRE</span></td>
+                <td style="text-align:center; padding:4px 2px;"><span style="color:#64748b !important; font-weight:700; font-size:8px;">—</span></td>
+                <td style="text-align:center; padding:4px 2px;"><span style="color:#64748b !important; font-weight:800; font-size:8.5px;">LIBRE</span></td>
                 <td style="padding:4px 6px; color:#000; font-size:8px; font-weight:500;">Disponible para ingreso</td>
                 <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
                 <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
@@ -4506,7 +4506,7 @@ window.srAbrirPDFStatus = function() {
                 if (inspInfo.dias < 0) {
                     inspColor = '#dc2626'; // Rojo
                 } else if (inspInfo.dias <= 7) {
-                    inspColor = '#ca8a04'; // Amarillo
+                    inspColor = '#d97706'; // Amarillo
                 } else {
                     inspColor = '#16a34a'; // Verde
                 }
@@ -4520,11 +4520,15 @@ window.srAbrirPDFStatus = function() {
                     <td style="text-align:center; padding:4px 2px; font-size:8px; font-weight:700; color:#000;">${hIn}</td>
                     <td style="text-align:center; font-weight:900; color:#000; font-size:10px; padding:4px 2px; letter-spacing:0.3px;">${_srEsc(e.placa || '—')}</td>
                     <td style="text-align:center; padding:4px 2px;">
-                        <span style="color:${inspColor}; font-weight:900; font-size:8.5px;">
+                        <span style="color:${inspColor} !important; font-weight:900; font-size:8.5px;">
                             ${inspInfo.texto}
                         </span>
                     </td>
-                    <td style="text-align:center; font-size:8.5px; font-weight:800; padding:4px 2px; color:${sitColor};">${_srEsc(e.situacion || '—')}</td>
+                    <td style="text-align:center; padding:4px 2px;">
+                        <span style="color:${sitColor} !important; font-size:8.5px; font-weight:800;">
+                            ${_srEsc(e.situacion || '—')}
+                        </span>
+                    </td>
                     <td style="padding:4px 6px; font-size:8px; font-weight:600; color:#000; line-height:1.25;" title="${_srEsc(obsTextoCol)}">
                         ${_srEsc(obsTextoCol || '—')}
                     </td>
@@ -4672,7 +4676,7 @@ window.srAbrirPDFStatus = function() {
             border: 1px solid #000;
             padding: 3px 4px;
             vertical-align: middle;
-            color: #000 !important;
+            color: #000;
         }
         .footer-box {
             display: flex;
