@@ -4743,7 +4743,7 @@ window.srAbrirPDFStatus = function() {
                 </div>
                 <div class="header-center">
                     <h1 class="doc-title">ESTATUS DE UNIDADES EN TALLER</h1>
-                    <div class="doc-subtitle">CONTROL DE OCUPACIÓN DE BAHÍAS Y TURNOS DE MANTENIMIENTO</div>
+                    <div class="doc-subtitle">CONTROL DE OCUPACIÓN DE RAMPA Y TURNOS DE MANTENIMIENTO</div>
                 </div>
                 <div class="header-right">
                     <div>CÓDIGO: F-MAN-005</div>
@@ -4805,7 +4805,7 @@ window.srAbrirPDFStatus = function() {
 
         <!-- Footer Oficial -->
         <div class="footer-box">
-            <div>Sistema ERP Azkell Fleet · Módulo de Control de Bahías y Mantenimiento</div>
+            <div>Sistema ERP Azkell Fleet · Módulo de Control de Rampa y Mantenimiento</div>
             <div style="text-align:center;">Semáforo Inspección: <span style="color:#15803d; font-weight:900;">>7d Vigente</span> | <span style="color:#854d0e; font-weight:900;">0-7d Próximo</span> | <span style="color:#b91c1c; font-weight:900;"><0d Vencido</span></div>
             <div style="font-weight:900;">DOCUMENTO OFICIAL · HOJA 1 DE 1</div>
         </div>
