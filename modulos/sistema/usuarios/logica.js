@@ -42,7 +42,7 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'TESORERÍA',     key:'tesoreria_caja',nombre:'Caja Chica',       desc:'Gastos y rendiciones',          lcad:true  },
     { grupo:'TESORERÍA',     key:'tesoreria_flujo',nombre:'Flujo de Caja',   desc:'Ingresos y egresos proyectados',lcad:true  },
     { grupo:'TESORERÍA',     key:'tesoreria_cuentas',nombre:'Cuentas Cobrar/Pagar',desc:'Gestión de créditos y pagos',lcad:true},
-    { grupo:'SEGURIDAD',     key:'checklist',     nombre:'CheckList Unidades',desc:'Fichas y control de ingreso/salida', lcad:true },
+    { grupo:'SEGURIDAD',     key:'seguridad_unidades', nombre:'CheckList Unidades',desc:'Fichas y control de ingreso/salida', lcad:true },
     { grupo:'SEGURIDAD',     key:'asist',         nombre:'Tareo de Asistencia',desc:'Asistencia del personal',     lcad:true  },
     { grupo:'CONFIGURACIÓN', key:'usuarios',      nombre:'Usuarios y Roles', desc:'Gestión de accesos y seguridad',lcad:true },
     { grupo:'CONFIGURACIÓN', key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad global',  lcad:true  },
@@ -537,15 +537,17 @@ window.guGuardarRol = async function() {
         if (!res.ok) throw new Error(json.error || res.statusText);
         var newId = eId || json.id;
         
-        // Cerrar modal offcanvas en móvil si está abierto
+        var isMobile = (window.innerWidth < 768);
         var ob = document.getElementById('offcanvasGU');
-        if (ob && window.bootstrap && window.innerWidth < 768) {
+        if (ob && window.bootstrap && isMobile) {
             var inst = bootstrap.Offcanvas.getInstance(ob);
             if (inst) inst.hide();
         }
 
         await window.guCargarTodo(true);
-        if (newId) window.guSeleccionarRol(newId);
+        if (newId && !isMobile) {
+            window.guSeleccionarRol(newId);
+        }
     } catch(e) {
         alert('Error: ' + e.message);
         if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Guardar Cambios'; }
