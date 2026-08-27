@@ -3,10 +3,10 @@
 // ============================================================
 
 window.init_configuracion = function() {
-    // 1. Identificar panel de destino
-    const sectionTarget = window._pendingCfgSection || sessionStorage.getItem('pending_cfg_section') || 'apariencia';
-    window._pendingCfgSection = null;
-    sessionStorage.removeItem('pending_cfg_section');
+    // 1. Identificar panel de destino con persistencia
+    const sectionTarget = window._activeConfigSection || sessionStorage.getItem('active_config_section') || 'apariencia';
+    window._activeConfigSection = sectionTarget;
+    sessionStorage.setItem('active_config_section', sectionTarget);
     window.showConfig(sectionTarget);
 
     // 2. Sincronizar Switch Dark Mode
@@ -54,6 +54,9 @@ window.showConfig = function(panel) {
         'idioma': 'Idioma del Sistema'
     };
 
+    window._activeConfigSection = panel;
+    sessionStorage.setItem('active_config_section', panel);
+
     const headerTitle = document.getElementById('cfg-header-title');
     if (headerTitle && titleMap[panel]) {
         headerTitle.textContent = titleMap[panel];
@@ -64,8 +67,10 @@ window.showConfig = function(panel) {
         if (el) {
             if (p === panel) {
                 el.classList.remove('d-none');
+                el.style.display = 'block';
             } else {
                 el.classList.add('d-none');
+                el.style.display = 'none';
             }
         }
     });
