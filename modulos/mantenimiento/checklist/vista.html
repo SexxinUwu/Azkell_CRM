@@ -252,7 +252,7 @@
     background: #ffffff !important;
 }
 
-/* ── Modal Confirmación Eliminación (Diseño B) ───────────────────────── */
+/* ── Modal Confirmación Eliminación (Diseño B - Ultra Optimizado) ─── */
 .ck-delete-dialog {
     max-width: 350px !important;
     width: 90% !important;
@@ -261,10 +261,11 @@
 .ck-delete-card {
     background: #ffffff !important;
     border-radius: 28px !important;
-    border: 1px solid rgba(226, 232, 240, 0.8) !important;
-    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12) !important;
     padding: 2.2rem 1.6rem 1.8rem 1.6rem !important;
     text-align: center;
+    transform: translateZ(0);
 }
 .ck-delete-badge-icon {
     font-size: 3.2rem;
@@ -272,7 +273,6 @@
     line-height: 1;
     margin-bottom: 0.85rem;
     display: inline-block;
-    filter: drop-shadow(0 6px 12px rgba(225, 29, 72, 0.25));
 }
 .ck-btn-circle {
     width: 54px;
@@ -284,18 +284,17 @@
     justify-content: center;
     font-size: 1.35rem;
     cursor: pointer;
-    transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s ease, filter 0.18s ease;
+    transition: transform 0.15s ease, background-color 0.15s ease;
     outline: none;
+    will-change: transform;
 }
 .ck-btn-cancel-circle {
     background: #18181b !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(24, 24, 27, 0.35);
 }
 .ck-btn-cancel-circle:hover {
     background: #09090b !important;
-    transform: scale(1.08);
-    box-shadow: 0 6px 20px rgba(24, 24, 27, 0.45);
+    transform: scale(1.06);
     color: #ffffff !important;
 }
 .ck-btn-cancel-circle:active {
@@ -304,12 +303,10 @@
 .ck-btn-delete-circle {
     background: #e11d48 !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(225, 29, 72, 0.45);
 }
 .ck-btn-delete-circle:hover {
     background: #be123c !important;
-    transform: scale(1.08);
-    box-shadow: 0 6px 20px rgba(225, 29, 72, 0.6);
+    transform: scale(1.06);
     color: #ffffff !important;
 }
 .ck-btn-delete-circle:active {
@@ -1014,7 +1011,7 @@
 <!-- ================================================================= -->
 <!-- 🗑️ MODAL CONFIRMACIÓN DE ELIMINAR (DISEÑO B)                     -->
 <!-- ================================================================= -->
-<div class="modal fade" id="modalEliminarChecklistConfirm" tabindex="-1" aria-hidden="true" style="backdrop-filter: blur(4px);">
+<div class="modal fade" id="modalEliminarChecklistConfirm" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered ck-delete-dialog">
     <div class="modal-content ck-delete-card border-0">
       
