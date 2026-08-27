@@ -465,8 +465,8 @@ module.exports = (db, logAudit) => {
                     if (isNoMotora) {
                         recursos.carretasGlobales.push(r.placa);
                     } else {
-                        if (!recursos.tractosPorEmpresa[emp]) recursos.tractosPorEmpresa[emp] = [];
-                        recursos.tractosPorEmpresa[emp].push(r.placa);
+                        if (!recursos.tractosPorEmpresa[empRaw]) recursos.tractosPorEmpresa[empRaw] = [];
+                        recursos.tractosPorEmpresa[empRaw].push(r.placa);
                     }
                 });
 
