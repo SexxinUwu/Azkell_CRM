@@ -36,6 +36,14 @@ function _sguIsAdmin() {
     return false;
 }
 
+function _sguCanDelete() {
+    if (_sguIsAdmin()) return true;
+    if (typeof window.checkPerm === 'function') {
+        return window.checkPerm('seguridad_unidades', 'd') || window.checkPerm('checklist', 'd');
+    }
+    return false;
+}
+
 function _sguTimestamp() {
     var d = new Date();
     var dd = String(d.getDate()).padStart(2, '0');
@@ -525,7 +533,7 @@ function _sguRenderList() {
 
     var htmlTable = '';
     var htmlMobile = '';
-    var isAdmin = _sguIsAdmin();
+    var canDelete = _sguCanDelete();
 
     filtered.forEach(function(rec) {
         var isEnRuta = rec.estado === 'en_ruta';
@@ -539,7 +547,7 @@ function _sguRenderList() {
             ? '<span class="sgu-badge sgu-badge-alerta" title="Presentó observaciones"><i class="bi bi-exclamation-triangle-fill"></i> CON NOVEDAD</span>'
             : '<span class="sgu-badge sgu-badge-ok"><i class="bi bi-shield-check"></i> CONFORME</span>';
 
-        var deleteBtn = isAdmin ? '<button class="sgu-action-btn sgu-btn-del-cell" onclick="event.stopPropagation(); window._sguDeleteRecord(\'' + rec.id + '\')" title="Eliminar"><i class="bi bi-trash3-fill text-danger"></i></button>' : '';
+        var deleteBtn = canDelete ? '<button class="sgu-action-btn sgu-btn-del-cell" onclick="event.stopPropagation(); window._sguDeleteRecord(\'' + rec.id + '\')" title="Eliminar"><i class="bi bi-trash3-fill text-danger"></i></button>' : '';
 
         var actionBtn = isEnRuta
             ? '<button class="sgu-action-btn sgu-btn-ingresar-cell" onclick="event.stopPropagation(); window._sguShowView(\'detail\',\'' + rec.id + '\')"><i class="bi bi-arrow-left-circle-fill"></i> Ingresar</button>'
@@ -950,7 +958,7 @@ async function _sguRenderDetail(recordId) {
         html += '<button class="sgu-btn-top sgu-btn-primary flex-grow-1" onclick="window._sguPrevisualizarPDFCompleto()"><i class="bi bi-eye"></i> Previsualizar Expediente</button>';
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDFCompleto()"><i class="bi bi-file-earmark-arrow-down text-danger"></i> Descargar Expediente</button>';
         html += '<button class="sgu-btn-top sgu-btn-whatsapp flex-grow-1" onclick="window._sguCompartirWhatsApp(\'completo\')" title="Compartir Expediente por WhatsApp"><i class="bi bi-whatsapp"></i> WhatsApp</button>';
-        if (_sguIsAdmin()) {
+        if (_sguCanDelete()) {
             html += '<button class="sgu-btn-top" style="color:#dc2626;" onclick="window._sguDeleteRecord(\'' + rec.id + '\')" title="Eliminar Expediente"><i class="bi bi-trash"></i></button>';
         }
         html += '</div>';
