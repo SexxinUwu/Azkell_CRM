@@ -101,7 +101,8 @@ module.exports = (db, logAudit) => {
     router.post('/seguridad/unidades', (req, res) => {
         const { placa_tracto, placa_carreta, conductor, destino,
                 salida_fecha, salida_hora, salida_km,
-                salida_template_json, salida_checklist_json, salida_has_alert } = req.body;
+                salida_template_json, salida_checklist_json, salida_has_alert,
+                firma_salida_conductor, firma_salida_vigilancia } = req.body;
 
         if (!placa_tracto || !conductor) {
             return res.status(400).json({ error: 'placa_tracto y conductor son requeridos' });
@@ -131,12 +132,14 @@ module.exports = (db, logAudit) => {
                     `INSERT INTO seg_unidades_registros
                      (id, placa_tracto, placa_carreta, conductor, destino, estado,
                       salida_fecha, salida_hora, salida_km,
-                      salida_template_json, salida_checklist_json, salida_has_alert, creado_por)
-                     VALUES (?, ?, ?, ?, ?, 'en_ruta', ?, ?, ?, ?, ?, ?, ?)`,
+                      salida_template_json, salida_checklist_json, salida_has_alert,
+                      firma_salida_conductor, firma_salida_vigilancia, creado_por)
+                     VALUES (?, ?, ?, ?, ?, 'en_ruta', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [regId, placa_tracto.toUpperCase(), (placa_carreta || '').toUpperCase() || null,
                      conductor, destino || null,
                      salida_fecha || null, salida_hora || null, salida_km || null,
                      templateStr, checklistStr, salida_has_alert ? 1 : 0,
+                     firma_salida_conductor || null, firma_salida_vigilancia || null,
                      (req.user && req.user.nombre) || ''],
                     (err) => {
                         if (err) return res.status(500).json({ error: err.message });
@@ -152,6 +155,8 @@ module.exports = (db, logAudit) => {
     router.put('/seguridad/unidades/:id', (req, res) => {
         const { retorno_fecha, retorno_hora, retorno_km,
                 retorno_template_json, retorno_checklist_json, retorno_has_alert,
+                firma_salida_conductor, firma_salida_vigilancia,
+                firma_retorno_conductor, firma_retorno_vigilancia,
                 estado } = req.body;
 
         const sets = [];
@@ -169,6 +174,10 @@ module.exports = (db, logAudit) => {
             params.push(typeof retorno_checklist_json === 'string' ? retorno_checklist_json : JSON.stringify(retorno_checklist_json));
         }
         if (retorno_has_alert !== undefined)       { sets.push('retorno_has_alert = ?');       params.push(retorno_has_alert ? 1 : 0); }
+        if (firma_salida_conductor !== undefined)  { sets.push('firma_salida_conductor = ?');  params.push(firma_salida_conductor); }
+        if (firma_salida_vigilancia !== undefined) { sets.push('firma_salida_vigilancia = ?'); params.push(firma_salida_vigilancia); }
+        if (firma_retorno_conductor !== undefined) { sets.push('firma_retorno_conductor = ?'); params.push(firma_retorno_conductor); }
+        if (firma_retorno_vigilancia !== undefined){ sets.push('firma_retorno_vigilancia = ?');params.push(firma_retorno_vigilancia); }
         if (estado !== undefined)                  { sets.push('estado = ?');                  params.push(estado); }
 
         if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
