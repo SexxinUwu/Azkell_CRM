@@ -128,6 +128,8 @@ module.exports = (db, logAudit) => {
                 const templateStr  = typeof salida_template_json  === 'string' ? salida_template_json  : JSON.stringify(salida_template_json  || null);
                 const checklistStr = typeof salida_checklist_json  === 'string' ? salida_checklist_json  : JSON.stringify(salida_checklist_json  || null);
 
+                const userSalida = (req.user && req.user.nombre) || (req.user && req.user.email) || req.body.creado_por || 'Seguridad';
+
                 db.query(
                     `INSERT INTO seg_unidades_registros
                      (id, placa_tracto, placa_carreta, conductor, destino, estado,
@@ -140,10 +142,10 @@ module.exports = (db, logAudit) => {
                      salida_fecha || null, salida_hora || null, salida_km || null,
                      templateStr, checklistStr, salida_has_alert ? 1 : 0,
                      firma_salida_conductor || null, firma_salida_vigilancia || null,
-                     (req.user && req.user.nombre) || ''],
+                     userSalida],
                     (err) => {
                         if (err) return res.status(500).json({ error: err.message });
-                        if (typeof logAudit === 'function') logAudit((req.user && req.user.nombre) || '', 'seguridad', 'CREÓ', 'Registro unidad ' + regId);
+                        if (typeof logAudit === 'function') logAudit(userSalida, 'seguridad', 'CREÓ', 'Registro unidad ' + regId);
                         res.json({ ok: true, id: regId });
                     }
                 );
@@ -157,10 +159,13 @@ module.exports = (db, logAudit) => {
                 retorno_template_json, retorno_checklist_json, retorno_has_alert,
                 firma_salida_conductor, firma_salida_vigilancia,
                 firma_retorno_conductor, firma_retorno_vigilancia,
+                retorno_creado_por,
                 estado } = req.body;
 
         const sets = [];
         const params = [];
+
+        const userRetorno = (req.user && req.user.nombre) || (req.user && req.user.email) || retorno_creado_por || req.body.creado_por || 'Seguridad';
 
         if (retorno_fecha !== undefined)           { sets.push('retorno_fecha = ?');           params.push(retorno_fecha); }
         if (retorno_hora !== undefined)            { sets.push('retorno_hora = ?');            params.push(retorno_hora); }
@@ -178,6 +183,11 @@ module.exports = (db, logAudit) => {
         if (firma_salida_vigilancia !== undefined) { sets.push('firma_salida_vigilancia = ?'); params.push(firma_salida_vigilancia); }
         if (firma_retorno_conductor !== undefined) { sets.push('firma_retorno_conductor = ?'); params.push(firma_retorno_conductor); }
         if (firma_retorno_vigilancia !== undefined){ sets.push('firma_retorno_vigilancia = ?');params.push(firma_retorno_vigilancia); }
+        
+        // Guardar automáticamente quién realizó la recepción / retorno
+        sets.push('retorno_creado_por = ?');
+        params.push(userRetorno);
+
         if (estado !== undefined)                  { sets.push('estado = ?');                  params.push(estado); }
 
         if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
@@ -186,7 +196,7 @@ module.exports = (db, logAudit) => {
         db.query('UPDATE seg_unidades_registros SET ' + sets.join(', ') + ' WHERE id = ?', params, (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!result.affectedRows) return res.status(404).json({ error: 'Registro no encontrado' });
-            if (typeof logAudit === 'function') logAudit((req.user && req.user.nombre) || '', 'seguridad', 'MODIFICÓ', 'Unidad ' + req.params.id);
+            if (typeof logAudit === 'function') logAudit(userRetorno, 'seguridad', 'MODIFICÓ', 'Unidad retorno ' + req.params.id);
             res.json({ ok: true });
         });
     });

@@ -718,12 +718,14 @@ function _sguRenderList() {
             (rec.placa_carreta ? ' <span class="text-muted fw-semibold" style="font-size:0.78rem;">/ ' + rec.placa_carreta + '</span>' : '');
 
         var salidaText = '<div class="fw-bold text-dark" style="font-size:0.8rem;">' + (rec.salida_fecha || '--') + ' ' + (rec.salida_hora || '') + '</div>' +
-            '<div class="text-secondary" style="font-size:0.75rem;">' + (rec.salida_km ? rec.salida_km + ' km' : 'Sin Km') + '</div>';
+            '<div class="text-secondary" style="font-size:0.75rem;">' + (rec.salida_km ? rec.salida_km + ' km' : 'Sin Km') + '</div>' +
+            (rec.creado_por ? '<div class="text-muted" style="font-size:0.7rem;"><i class="bi bi-person-badge text-primary"></i> ' + rec.creado_por + '</div>' : '');
 
         var retornoText = isEnRuta
             ? '<span class="text-muted fst-italic" style="font-size:0.78rem;"><i class="bi bi-hourglass-split"></i> En trayecto</span>'
             : '<div class="fw-bold text-dark" style="font-size:0.8rem;">' + (rec.retorno_fecha || '--') + ' ' + (rec.retorno_hora || '') + '</div>' +
-              '<div class="text-secondary" style="font-size:0.75rem;">' + (rec.retorno_km ? rec.retorno_km + ' km' : 'Sin Km') + '</div>';
+              '<div class="text-secondary" style="font-size:0.75rem;">' + (rec.retorno_km ? rec.retorno_km + ' km' : 'Sin Km') + '</div>' +
+              (rec.retorno_creado_por ? '<div class="text-muted" style="font-size:0.7rem;"><i class="bi bi-person-badge text-success"></i> ' + rec.retorno_creado_por + '</div>' : '');
 
         htmlTable += '<tr onclick="window._sguShowView(\'detail\',\'' + rec.id + '\')">' +
             '<td><span class="fw-bold text-primary" style="font-family:monospace;font-size:0.85rem;">' + rec.id + '</span></td>' +
@@ -818,6 +820,16 @@ window._sguExportarExcel = function() {
 
     _sguToast('Descarga iniciada');
 };
+
+function _sguGetUsuarioActivo() {
+    return localStorage.getItem('fleet_user_nombre') || 
+           localStorage.getItem('fleet_user') || 
+           localStorage.getItem('fleet_nombre_usuario') || 
+           localStorage.getItem('usuario_nombre') || 
+           localStorage.getItem('user_nombre') || 
+           window.usuarioActual || 
+           'Oficial de Seguridad';
+}
 
 // ── GESTOR DE FIRMAS DIGITALES EN CANVAS (TOUCH & MOUSE ULTRA FLUIDO) ──
 var _sguSignaturePads = {};
@@ -1158,10 +1170,14 @@ async function _sguRenderDetail(recordId) {
     html += '<span class="badge bg-light text-dark border">' + (rec.salida_fecha || '--') + ' ' + (rec.salida_hora || '') + '</span>';
     html += '</div>';
 
-    html += '<div class="row g-2 mb-3">';
+    html += '<div class="row g-2 mb-2">';
     html += '<div class="col-6"><span class="sgu-form-label">Kilometraje Salida</span><div class="fw-bold text-dark fs-6">' + (rec.salida_km ? rec.salida_km + ' km' : '---') + '</div></div>';
     html += '<div class="col-6"><span class="sgu-form-label">Destino Reportado</span><div class="fw-bold text-dark fs-6">' + (rec.destino || '---') + '</div></div>';
     html += '</div>';
+
+    html += '<div class="small text-secondary mb-3 p-2 rounded bg-light border" style="font-size:0.78rem;">' +
+        '<i class="bi bi-shield-lock-fill text-primary me-1"></i> Despacho registrado por: <strong class="text-dark">' + (rec.creado_por || 'Oficial de Seguridad') + '</strong>' +
+    '</div>';
 
     // Mostrar Firmas Digitales de Salida si existen
     if (rec.firma_salida_conductor || rec.firma_salida_vigilancia) {
@@ -1257,11 +1273,15 @@ async function _sguRenderDetail(recordId) {
         html += '<span class="badge bg-light text-dark border">' + (rec.retorno_fecha || '--') + ' ' + (rec.retorno_hora || '') + '</span>';
         html += '</div>';
 
-        html += '<div class="row g-2 mb-3">';
+        html += '<div class="row g-2 mb-2">';
         html += '<div class="col-6"><span class="sgu-form-label">Kilometraje Llegada</span><div class="fw-bold text-dark fs-6">' + (rec.retorno_km ? rec.retorno_km + ' km' : '---') + '</div></div>';
         var kmRecorrido = (rec.retorno_km && rec.salida_km) ? (Number(rec.retorno_km) - Number(rec.salida_km)) : null;
         html += '<div class="col-6"><span class="sgu-form-label">Km Total Recorrido</span><div class="fw-bold text-primary fs-6">' + (kmRecorrido !== null ? kmRecorrido + ' km' : '---') + '</div></div>';
         html += '</div>';
+
+        html += '<div class="small text-secondary mb-3 p-2 rounded bg-light border" style="font-size:0.78rem;">' +
+            '<i class="bi bi-shield-check text-success me-1"></i> Recepción registrada por: <strong class="text-dark">' + (rec.retorno_creado_por || rec.creado_por || 'Oficial de Seguridad') + '</strong>' +
+        '</div>';
 
         // Mostrar Firmas Digitales de Retorno si existen
         if (rec.firma_retorno_conductor || rec.firma_retorno_vigilancia) {
@@ -2102,8 +2122,9 @@ function _sguBuildPageHtml(rec, tipo, pageLabel) {
     } else {
         h += '<div style="height:35px;"></div>';
     }
+    var inspectorName = (tipo === 'salida' ? rec.creado_por : rec.retorno_creado_por) || rec.creado_por || 'Oficial de Seguridad';
     h += '<div style="border-top:1px dashed #000000;padding-top:4px;font-size:10px;font-weight:bold;color:#000000;">';
-    h += 'INSPECTOR DE SEGURIDAD / VIGILANCIA<br><span style="font-weight:normal;font-size:9px;color:#333333;">VoBo CONTROL ' + (tipo === 'salida' ? 'DESPACHO' : 'RECEPCIÓN') + '</span>';
+    h += 'INSPECTOR DE SEGURIDAD / VIGILANCIA<br><span style="font-weight:normal;font-size:9px;color:#333333;">VoBo CONTROL ' + (tipo === 'salida' ? 'DESPACHO' : 'RECEPCIÓN') + '<br>Oficial: <strong>' + inspectorName + '</strong></span>';
     h += '</div>';
     h += '</td>';
 
