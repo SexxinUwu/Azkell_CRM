@@ -1238,7 +1238,7 @@ window._sguQueueBackgroundUpload = async function(registroId, tipo, fotosPendien
 
         setTimeout(function() {
             if (progressCard) progressCard.style.display = 'none';
-        }, 3000);
+        }, 1500);
     } catch(err) {
         console.error('Error en subida en segundo plano:', err);
         if (progressText) progressText.textContent = '⚠️ ' + (err.message || 'Error en subida');
@@ -1988,12 +1988,30 @@ window._sguCompartirWhatsApp = async function(tipo) {
     _sguToast('Generando PDF para WhatsApp...', 'bi-whatsapp');
 
     try {
+        var todasFotos = rec.fotos || [];
+        var fotosSalida = [];
+        var fotosRetorno = [];
+
+        for (var i = 0; i < todasFotos.length; i++) {
+            var f = todasFotos[i];
+            try {
+                var res = await fetch(f.url, { mode: 'cors', cache: 'no-store' });
+                var blob = await res.blob();
+                var b64 = await new Promise(function(resolve) {
+                    var r = new FileReader();
+                    r.onloadend = function() { resolve(r.result); };
+                    r.readAsDataURL(blob);
+                });
+                if (f.tipo === 'salida') fotosSalida.push({ b64: b64, num: fotosSalida.length + 1 });
+                else fotosRetorno.push({ b64: b64, num: fotosRetorno.length + 1 });
+            } catch(e) {
+                if (f.tipo === 'salida') fotosSalida.push({ b64: f.url, num: fotosSalida.length + 1 });
+                else fotosRetorno.push({ b64: f.url, num: fotosRetorno.length + 1 });
+            }
+        }
+
         var htmlFinal = '';
         if (tipo === 'completo') {
-            var todasFotos = rec.fotos || [];
-            var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
-            var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
-
             htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)');
             if (rec.retorno_fecha || rec.estado === 'completado') {
                 htmlFinal += '<div class="html2pdf__page-break"></div>';
@@ -2002,9 +2020,9 @@ window._sguCompartirWhatsApp = async function(tipo) {
             if (fotosSalida.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosSalida, 'salida');
             if (fotosRetorno.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosRetorno, 'retorno');
         } else {
-            var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+            var fotosBase64 = tipo === 'salida' ? fotosSalida : fotosRetorno;
             htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)');
-            if (fotos.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotos, tipo);
+            if (fotosBase64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
         }
 
         var div = document.createElement('div');
