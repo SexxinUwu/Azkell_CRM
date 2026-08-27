@@ -1083,16 +1083,17 @@ window.renderizarTablaChecklist = function(lista) {
                     </button>
 
                     <!-- Menú Desplegable 3 Puntos (Opciones adicionales) -->
-                    <div class="dropdown d-inline-block">
+                    <div class="dropstart d-inline-block">
                         <button class="btn btn-light border shadow-2xs rounded-3 p-0 d-flex align-items-center justify-content-center" 
                                 type="button" 
                                 data-bs-toggle="dropdown" 
+                                data-bs-boundary="viewport"
                                 aria-expanded="false" 
                                 style="width: 32px; height: 32px; color: #475569;" 
                                 title="Más opciones">
                             <i class="bi bi-three-dots-vertical fs-6"></i>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
+                        <ul class="dropdown-menu shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
                             <li>
                                 <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirDetalleChecklist(${r.id})">
                                     <i class="bi bi-eye text-primary fs-6"></i> Ver Detalle
@@ -1163,7 +1164,7 @@ window.renderizarTablaChecklist = function(lista) {
                     <i class="bi bi-file-earmark-pdf"></i> PDF
                 </button>
                 <div class="dropdown">
-                    <button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius:8px;">
+                    <button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="border-radius:8px;">
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
