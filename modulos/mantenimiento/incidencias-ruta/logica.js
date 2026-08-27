@@ -1083,28 +1083,40 @@
         }).join('');
     };
 
+    // Cambiar Página
+    window.incCambiarPagina = function(delta) {
+        const curPage = window._incPaginaActual || 1;
+        const totalPages = window._incTotalPaginas || 1;
+        const nuevaPagina = curPage + delta;
+        if (nuevaPagina >= 1 && nuevaPagina <= totalPages) {
+            window.incCargarDatos(nuevaPagina);
+        }
+    };
+
     // Renderizar Paginación
     window.incRenderPaginacion = function(totalRegistros) {
         const elInfo = document.getElementById('inc-paginacion-info');
-        const elControles = document.getElementById('inc-paginacion-controles');
-        if (elInfo) elInfo.textContent = `Total: ${totalRegistros} incidencias registradas (Página ${window._incPaginaActual} de ${window._incTotalPaginas})`;
+        const elPageNum = document.getElementById('inc-btn-page-num');
+        const btnPrev = document.getElementById('inc-btn-prev');
+        const btnNext = document.getElementById('inc-btn-next');
 
-        if (!elControles) return;
-        if (window._incTotalPaginas <= 1) {
-            elControles.innerHTML = '';
-            return;
+        const curPage = window._incPaginaActual || 1;
+        const totalPages = window._incTotalPaginas || 1;
+        const limit = window._incLimitePorPagina || 50;
+
+        if (elInfo) {
+            if (totalRegistros === 0) {
+                elInfo.textContent = 'Mostrando 0 de 0 registros';
+            } else {
+                const start = ((curPage - 1) * limit) + 1;
+                const end = Math.min(curPage * limit, totalRegistros);
+                elInfo.textContent = `Mostrando ${start} a ${end} de ${totalRegistros} registros`;
+            }
         }
 
-        let html = `
-            <button class="btn btn-sm btn-light border py-1 px-2" ${window._incPaginaActual <= 1 ? 'disabled' : ''} onclick="window.incCargarDatos(${window._incPaginaActual - 1})">
-                <i class="bi bi-chevron-left"></i>
-            </button>
-            <span class="px-2 fw-bold text-secondary" style="font-size:0.8rem;">${window._incPaginaActual} / ${window._incTotalPaginas}</span>
-            <button class="btn btn-sm btn-light border py-1 px-2" ${window._incPaginaActual >= window._incTotalPaginas ? 'disabled' : ''} onclick="window.incCargarDatos(${window._incPaginaActual + 1})">
-                <i class="bi bi-chevron-right"></i>
-            </button>
-        `;
-        elControles.innerHTML = html;
+        if (elPageNum) elPageNum.textContent = `${curPage} / ${totalPages}`;
+        if (btnPrev) btnPrev.disabled = (curPage <= 1);
+        if (btnNext) btnNext.disabled = (curPage >= totalPages);
     };
 
     // Toggle rápido de solución (Atendido <-> Pendiente) directamente desde la tabla
