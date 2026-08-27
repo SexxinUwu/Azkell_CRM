@@ -1065,11 +1065,9 @@ window._sguCheckReturnReady = function() {
 // ── COMPRESIÓN Y OPTIMIZACIÓN DE IMÁGENES EN CLIENTE (ULTRA RÁPIDO) ───
 function _sguComprimirImagen(file, maxDimension, quality) {
     maxDimension = maxDimension || 1280;
-    quality = quality || 0.78;
+    quality = quality || 0.82;
     return new Promise(function(resolve) {
-        if (!file || !file.type || !file.type.match(/image.*/)) {
-            return resolve(file);
-        }
+        if (!file) return resolve(null);
         var reader = new FileReader();
         reader.onload = function(e) {
             var img = new Image();
@@ -1089,13 +1087,20 @@ function _sguComprimirImagen(file, maxDimension, quality) {
                 canvas.width = w;
                 canvas.height = h;
                 var ctx = canvas.getContext('2d', { alpha: false });
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-                ctx.drawImage(img, 0, 0, w, h);
-                canvas.toBlob(function(blob) {
-                    if (!blob) return resolve(file);
-                    resolve(blob);
-                }, 'image/jpeg', quality);
+                if (ctx) {
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, w, h);
+                    canvas.toBlob(function(blob) {
+                        if (blob && blob.size > 0) {
+                            resolve(blob);
+                        } else {
+                            resolve(file);
+                        }
+                    }, 'image/jpeg', quality);
+                } else {
+                    resolve(file);
+                }
             };
             img.onerror = function() { resolve(file); };
             img.src = e.target.result;
@@ -1107,7 +1112,10 @@ function _sguComprimirImagen(file, maxDimension, quality) {
 
 // ── REINTENTO AUTOMÁTICO DE SUBIDA A S3 CON CONTENT-TYPE ESTRICTO ─────
 async function _sguUploadSinglePhotoWithRetry(uploadUrl, fileBlob, s3Key, tipo, maxRetries) {
-    maxRetries = maxRetries || 3;
+    if (!fileBlob || (fileBlob.size && fileBlob.size === 0)) {
+        return { ok: false, key: s3Key };
+    }
+    maxRetries = maxRetries || 4;
     for (var attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             var res = await fetch(uploadUrl, {
@@ -1123,7 +1131,7 @@ async function _sguUploadSinglePhotoWithRetry(uploadUrl, fileBlob, s3Key, tipo, 
         } catch (e) {
             console.warn('Reintentando foto (' + attempt + '/' + maxRetries + '):', s3Key, e);
             if (attempt < maxRetries) {
-                await new Promise(function(r) { setTimeout(r, 200 * attempt); });
+                await new Promise(function(r) { setTimeout(r, 250 * attempt); });
             }
         }
     }
@@ -1803,10 +1811,12 @@ function _sguGetPdfFilename(rec, tipo) {
     var fecha = (tipo === 'retorno' ? (rec.retorno_fecha || rec.salida_fecha) : rec.salida_fecha) || 'FECHA';
     fecha = String(fecha).replace(/\//g, '-').trim();
     var p1 = (rec.placa_tracto || 'TRACTO').trim();
-    var p2 = (rec.placa_carreta || 'CARRETA').trim();
+    var p2 = (rec.placa_carreta || '').trim();
     var km = (tipo === 'retorno' ? (rec.retorno_km || rec.salida_km) : rec.salida_km) || '0';
-    var prefijo = (tipo === 'completo') ? 'Expediente ' : '';
-    var baseName = prefijo + fecha + ' - ' + p1 + ' _ ' + p2 + ' - ' + km + ' km.pdf';
+    
+    // Si hay carreta: PLACA1 _ PLACA2, si no hay carreta: solo PLACA1
+    var placasStr = (p2 && p2.toUpperCase() !== 'CARRETA' && p2 !== '-') ? (p1 + ' _ ' + p2) : p1;
+    var baseName = fecha + ' - ' + placasStr + ' - ' + km + ' km.pdf';
     return baseName.replace(/[\/\\?%*:|"<>]/g, '-');
 }
 
