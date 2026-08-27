@@ -738,13 +738,13 @@ function srRenderTabla() {
             html += '</tr>';
 
             var emptyBtn = window.checkPerm('status_rampa', 'c') ? '<button class="btn btn-sm fw-bold px-3 py-1" style="background:#eff6ff; color:#2563eb; border-radius:2rem; font-size:0.8rem;" onclick="event.stopPropagation();window.srRegistrar(' + row.rampaId + ')">+ Ingresar</button>' : '';
-            htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0" style="border-radius:1rem; border:1px solid var(--border)!important; flex-shrink:0!important; min-height:fit-content!important;">' +
+            htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0 mb-3 bg-white" style="border-radius:1.15rem; border:1px solid var(--border)!important; flex-shrink:0!important; min-height:fit-content!important;">' +
                               '<div class="d-flex align-items-center justify-content-between">' +
                                   '<div class="d-flex align-items-center gap-3">' +
-                                      '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:40px;height:40px;background:' + row.color + ';font-size:1.1rem;">' + row.rampaIdx + '</div>' +
+                                      '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold shadow-2xs" style="width:40px;height:40px;background:' + row.color + ';font-size:1.1rem;flex-shrink:0;">' + row.rampaIdx + '</div>' +
                                       '<div>' +
                                           '<div class="fw-bold text-dark" style="font-size:0.95rem;">' + _srEsc(row.rampaNom) + '</div>' +
-                                          '<div style="font-size:0.75rem; color:#059669; font-weight:700;"><i class="bi bi-circle-fill me-1" style="font-size:0.4rem;"></i>Libre & Disponible</div>' +
+                                          '<div style="font-size:0.75rem; color:#64748b; font-weight:700;"><i class="bi bi-circle-fill me-1" style="font-size:0.4rem;"></i>Libre & Disponible</div>' +
                                       '</div>' +
                                   '</div>' + emptyBtn +
                               '</div>' +
@@ -759,7 +759,7 @@ function srRenderTabla() {
             html += '<td>' + (e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '') + '</td>';
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
-            html += '<td>' + row.inspInfo.badgeHtml + '</td>';
+            html += '<td style="text-align:center; white-space:nowrap;">' + row.inspInfo.badgeHtml + '</td>';
             html += '<td>' + badgeSit + '</td>';
             html += '<td><div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + _srEsc(row.obs || '—').replace(/"/g,'&quot;') + '">' + _srEsc(row.obs || '—') + '</div></td>';
             html += '<td>' + (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '') + '</td>';
@@ -789,9 +789,11 @@ function srRenderTabla() {
                                           '<span class="fw-bold text-dark" style="font-size:1.05rem;letter-spacing:0.02em;">' + (e.placa || '—') + '</span>' +
                                       '</div>' +
                                   '</div>' +
-                                  '<div class="d-flex align-items-center gap-1">' +
+                                  '<div class="d-flex align-items-center gap-2">' +
                                       row.inspInfo.badgeHtml +
                                       badgeSit +
+                                  '</div>' +
+                              '</div>' +
                               (row.obs ? (
                                   '<div class="mb-2" style="font-size:0.73rem;font-weight:700;color:#475569;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' +
                                       _srEsc(row.obs) +
