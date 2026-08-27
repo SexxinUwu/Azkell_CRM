@@ -1070,51 +1070,57 @@ window._sguCheckReturnReady = function() {
     }
 };
 
-// ── COMPRESIÓN Y OPTIMIZACIÓN DE IMÁGENES EN CLIENTE (ULTRA RÁPIDO) ───
+// ── COMPRESIÓN Y OPTIMIZACIÓN DE IMÁGENES EN CLIENTE (ULTRA RÁPIDO Y MEMORIA CERO) ───
 function _sguComprimirImagen(file, maxDimension, quality) {
-    maxDimension = maxDimension || 1280;
-    quality = quality || 0.82;
+    maxDimension = maxDimension || 1600;
+    quality = quality || 0.85;
     return new Promise(function(resolve) {
         if (!file) return resolve(null);
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            var img = new Image();
-            img.onload = function() {
-                var w = img.naturalWidth || img.width;
-                var h = img.naturalHeight || img.height;
-                if (w > maxDimension || h > maxDimension) {
-                    if (w > h) {
-                        h = Math.round((h * maxDimension) / w);
-                        w = maxDimension;
-                    } else {
-                        w = Math.round((w * maxDimension) / h);
-                        h = maxDimension;
-                    }
-                }
-                var canvas = document.createElement('canvas');
-                canvas.width = w;
-                canvas.height = h;
-                var ctx = canvas.getContext('2d', { alpha: false });
-                if (ctx) {
-                    ctx.imageSmoothingEnabled = true;
-                    ctx.imageSmoothingQuality = 'high';
-                    ctx.drawImage(img, 0, 0, w, h);
-                    canvas.toBlob(function(blob) {
-                        if (blob && blob.size > 0) {
-                            resolve(blob);
-                        } else {
-                            resolve(file);
-                        }
-                    }, 'image/jpeg', quality);
+        var objUrl = null;
+        try {
+            objUrl = URL.createObjectURL(file);
+        } catch(e) {
+            return resolve(file);
+        }
+
+        var img = new Image();
+        img.onload = function() {
+            try { URL.revokeObjectURL(objUrl); } catch(e) {}
+            var w = img.naturalWidth || img.width;
+            var h = img.naturalHeight || img.height;
+            if (w > maxDimension || h > maxDimension) {
+                if (w > h) {
+                    h = Math.round((h * maxDimension) / w);
+                    w = maxDimension;
                 } else {
-                    resolve(file);
+                    w = Math.round((w * maxDimension) / h);
+                    h = maxDimension;
                 }
-            };
-            img.onerror = function() { resolve(file); };
-            img.src = e.target.result;
+            }
+            var canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            var ctx = canvas.getContext('2d', { alpha: false });
+            if (ctx) {
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, w, h);
+                canvas.toBlob(function(blob) {
+                    if (blob && blob.size > 0) {
+                        resolve(blob);
+                    } else {
+                        resolve(file);
+                    }
+                }, 'image/jpeg', quality);
+            } else {
+                resolve(file);
+            }
         };
-        reader.onerror = function() { resolve(file); };
-        reader.readAsDataURL(file);
+        img.onerror = function() {
+            try { URL.revokeObjectURL(objUrl); } catch(e) {}
+            resolve(file);
+        };
+        img.src = objUrl;
     });
 }
 
@@ -1167,10 +1173,15 @@ window._sguQueueBackgroundUpload = async function(registroId, tipo, fotosPendien
     }
 
     try {
-        // 1. Optimizar todas las fotos en memoria en paralelo (~30ms)
-        var blobsOptimizados = await Promise.all(fotosPendientes.map(function(p) {
-            return _sguComprimirImagen(p.file, 1280, 0.78);
-        }));
+        // 1. Optimizar las fotos secuencialmente para garantizar estabilidad en fotos ultra pesadas (hasta 100MB)
+        var blobsOptimizados = [];
+        for (var i = 0; i < fotosPendientes.length; i++) {
+            var b = await _sguComprimirImagen(fotosPendientes[i].file, 1600, 0.85);
+            blobsOptimizados.push(b);
+            var optPct = Math.round(10 + ((i + 1) / fotosPendientes.length) * 20);
+            if (progressBar) progressBar.style.width = optPct + '%';
+            if (progressCount) progressCount.textContent = optPct + '%';
+        }
 
         if (progressBar) progressBar.style.width = '30%';
         if (progressText) progressText.textContent = 'Generando accesos S3...';
@@ -1531,7 +1542,7 @@ window._sguVerFotos = function(tipo) {
         fotos.forEach(function(f, idx) {
             html += '<div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#f8fafc;box-shadow:0 2px 8px rgba(0,0,0,0.04);position:relative;">';
             html += '<a href="' + f.url + '" target="_blank" style="display:block;background:#f1f5f9;min-height:140px;">';
-            html += '<img src="' + f.url + '" style="width:100%;height:140px;object-fit:cover;display:block;" alt="Evidencia ' + (idx + 1) + '" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML=\'<div class=\\\'d-flex flex-column align-items-center justify-content-center h-100 p-3 text-muted text-center\\\' style=\\\'height:140px;font-size:0.75rem;\\\'><i class=\\\'bi bi-cloud-arrow-up fs-3 text-primary mb-1\\\'></i><span>Procesando imagen</span></div>\';">';
+            html += '<img src="' + f.url + '" style="width:100%;height:140px;object-fit:cover;display:block;" alt="Evidencia ' + (idx + 1) + '" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML=\'<div class=\\\'d-flex flex-column align-items-center justify-content-center h-100 p-2 text-muted text-center\\\' style=\\\'height:140px;font-size:0.75rem;cursor:pointer;\\\' onclick=\\\'window.open(\\\\\\\'' + f.url + '\\\\\\\', \\\\\\\'_blank\\\\\\\')\\\'><i class=\\\'bi bi-image fs-3 text-secondary mb-1\\\'></i><span>Foto ' + (idx + 1) + '</span><span class=\\\'badge bg-light text-primary border mt-1\\\'>Ver directa</span></div>\';">';
             html += '</a>';
             html += '<div style="padding:6px 8px;font-size:0.75rem;font-weight:700;color:#475569;text-align:center;background:#fff;border-top:1px solid #f1f5f9;">Foto ' + (idx + 1) + '</div>';
             html += '</div>';
