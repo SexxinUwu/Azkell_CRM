@@ -412,7 +412,7 @@ window.srCalcularDiasInspeccion = function(placa) {
         return { 
             dias: null, 
             texto: '—', 
-            badgeHtml: '<span class="text-muted" style="font-size:0.75rem;">—</span>', 
+            badgeHtml: '<span class="text-secondary fw-semibold" style="font-size:0.85rem;">—</span>', 
             color: '#94a3b8', 
             valorNum: 9999 
         };
@@ -440,7 +440,7 @@ window.srCalcularDiasInspeccion = function(placa) {
         return { 
             dias: -999, 
             texto: 'Sin Insp.', 
-            badgeHtml: '<span class="badge bg-danger text-white fw-bold px-2 py-1 shadow-2xs" style="font-size:0.72rem;letter-spacing:0.2px;">Sin Insp.</span>',
+            badgeHtml: '<span class="fw-bold" style="color:#dc2626; font-size:0.82rem; letter-spacing:0.2px;">Sin Insp.</span>',
             color: '#dc2626',
             valorNum: -999,
             fechaUltima: null
@@ -471,15 +471,15 @@ window.srCalcularDiasInspeccion = function(placa) {
     if (diasRestantes < 0) {
         color = '#dc2626'; // Rojo
         texto = (diasRestantes) + ' d';
-        badgeHtml = '<span class="badge text-white fw-bold px-2 py-1 shadow-2xs" style="background:#dc2626;font-size:0.75rem;letter-spacing:0.3px;">' + diasRestantes + ' d</span>';
+        badgeHtml = '<span class="fw-bold" style="color:#dc2626; font-size:0.85rem; letter-spacing:0.2px;">' + diasRestantes + ' d</span>';
     } else if (diasRestantes <= 7) {
-        color = '#ca8a04'; // Amarillo
+        color = '#d97706'; // Amarillo
         texto = diasRestantes + ' d';
-        badgeHtml = '<span class="badge text-dark fw-bold px-2 py-1 shadow-2xs" style="background:#fef08a;border:1px solid #fde047;font-size:0.75rem;letter-spacing:0.3px;">' + diasRestantes + ' d</span>';
+        badgeHtml = '<span class="fw-bold" style="color:#d97706; font-size:0.85rem; letter-spacing:0.2px;">' + diasRestantes + ' d</span>';
     } else {
         color = '#16a34a'; // Verde (> 7 días)
         texto = diasRestantes + ' d';
-        badgeHtml = '<span class="badge text-white fw-bold px-2 py-1 shadow-2xs" style="background:#16a34a;font-size:0.75rem;letter-spacing:0.3px;">' + diasRestantes + ' d</span>';
+        badgeHtml = '<span class="fw-bold" style="color:#16a34a; font-size:0.85rem; letter-spacing:0.2px;">' + diasRestantes + ' d</span>';
     }
 
     return {
