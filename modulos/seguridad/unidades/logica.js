@@ -1721,10 +1721,28 @@ window._sguGenerarPDFCompleto = async function() {
 };
 
 // =========================================================
-// 🗑️ ELIMINAR REGISTRO
+// 🗑️ ELIMINAR REGISTRO (DISEÑO B)
 // =========================================================
+window._sguIdAEliminar = null;
+
 window._sguDeleteRecord = function(id) {
-    if (!confirm('¿Está seguro de eliminar este expediente? Esta acción borrará el registro y todas sus fotos en la nube.')) return;
+    window._sguIdAEliminar = id;
+    var modalEl = document.getElementById('sgu-delete-modal');
+    if (modalEl) {
+        var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalInstance.show();
+    }
+};
+
+window._sguExecuteDeleteConfirmed = function() {
+    var id = window._sguIdAEliminar;
+    if (!id) return;
+
+    var modalEl = document.getElementById('sgu-delete-modal');
+    if (modalEl) {
+        var modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+    }
 
     _sguToast('Eliminando expediente...', 'bi-hourglass-split');
     fetch('/api/seguridad/unidades/' + id, {
@@ -1740,5 +1758,7 @@ window._sguDeleteRecord = function(id) {
         });
     }).catch(function(e) {
         _sguToast(e.message, 'bi-exclamation-circle');
+    }).finally(function() {
+        window._sguIdAEliminar = null;
     });
 };
