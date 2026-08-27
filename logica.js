@@ -568,8 +568,13 @@ window.verificarSesionGuardada = function() {
     };
 
     window.obtenerPrimeraRutaPermitida = function() {
+        var rol = (localStorage.getItem('fleet_rol') || '').toLowerCase();
+        if (rol.includes('seguridad') && (window.checkPerm('seguridad_unidades', 'l') || window.checkPerm('checklist', 'l'))) {
+            return 'seguridad/unidades';
+        }
         if (isAdm || window.checkPerm('dashboard', 'l')) return 'dashboard';
         var posibles = [
+            'seguridad/unidades',
             'mantenimiento/neumaticos-analisis',
             'mantenimiento/status-rampa',
             'mantenimiento/reportes-ot',
@@ -587,13 +592,23 @@ window.verificarSesionGuardada = function() {
             'directorio/conductores',
             'operaciones/rutas',
             'rrhh/personal',
-            'tesoreria/caja-chica',
-            'seguridad/unidades'
+            'tesoreria/caja-chica'
         ];
         for (var i = 0; i < posibles.length; i++) {
             if (window.esRutaValidaYPermitida(posibles[i])) return posibles[i];
         }
         return 'dashboard';
+    };
+
+    window.irAInicio = function() {
+        var rol = (localStorage.getItem('fleet_rol') || '').toLowerCase();
+        if (rol.includes('seguridad')) {
+            cargarModuloAislado('seguridad/unidades');
+            setBottomNavActive('bnav-seguridad');
+        } else {
+            cargarModuloAislado(window.obtenerPrimeraRutaPermitida ? window.obtenerPrimeraRutaPermitida() : 'dashboard');
+            setBottomNavActive('bnav-dashboard');
+        }
     };
 
     let rutaGuardada = sessionStorage.getItem('fleet_rutaActual');

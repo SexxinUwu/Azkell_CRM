@@ -427,19 +427,110 @@ module.exports = (db, logAudit) => {
         });
     });
 
-    // ── GET /seguridad/recursos — Autocomplete Placas y Directorio ──
+    // ── GET /seguridad/recursos — Autocomplete Placas y Directorio con Carretas Globales ──
     router.get('/seguridad/recursos', (req, res) => {
-        const recursos = { placas: [], conductores: [] };
+        const recursos = { 
+            placas: [], 
+            tractosPorEmpresa: {}, 
+            carretasGlobales: [], 
+            conductores: [],
+            empresas: []
+        };
         
-        // Consultar Placas
-        db.query('SELECT placa FROM placas ORDER BY placa ASC', (errP, rowsP) => {
-            if (!errP && rowsP) recursos.placas = rowsP.map(r => r.placa);
+        // Consultar Placas con clasificación por empresa y tipo
+        db.query('SELECT placa, cliente, tipo, motora FROM placas ORDER BY placa ASC', (errP, rowsP) => {
+            if (!errP && rowsP) {
+                recursos.placas = rowsP.map(r => r.placa);
+                const empresasSet = new Set();
+
+                rowsP.forEach(r => {
+                    const emp = (r.cliente || 'GENERAL').toUpperCase().trim();
+                    if (emp && emp !== 'NULL') empresasSet.add(emp);
+
+                    const tipoUpper = (r.tipo || '').toUpperCase();
+                    const isNoMotora = r.motora === '0' || r.motora === 0 || 
+                                       tipoUpper.includes('SEMIREMOLQUE') || 
+                                       tipoUpper.includes('CARRETA') || 
+                                       tipoUpper.includes('FURGON') || 
+                                       tipoUpper.includes('PLATAFORMA') || 
+                                       tipoUpper.includes('TANQUE') || 
+                                       tipoUpper.includes('TOLVA');
+
+                    if (isNoMotora) {
+                        recursos.carretasGlobales.push(r.placa);
+                    } else {
+                        if (!recursos.tractosPorEmpresa[emp]) recursos.tractosPorEmpresa[emp] = [];
+                        recursos.tractosPorEmpresa[emp].push(r.placa);
+                    }
+                });
+
+                recursos.empresas = Array.from(empresasSet);
+            }
             
             // Consultar Conductores (Directorio)
             db.query('SELECT nombre FROM conductores ORDER BY nombre ASC', (errD, rowsD) => {
                 if (!errD && rowsD) recursos.conductores = rowsD.map(r => r.nombre);
-                
                 res.json(recursos);
+            });
+        });
+    });
+
+    // ── GET /seguridad/empresas-stats — Métricas en vivo por empresa ──
+    router.get('/seguridad/empresas-stats', (req, res) => {
+        const sqlEmpresas = `
+            SELECT DISTINCT UPPER(TRIM(cliente)) AS empresa, COUNT(*) as total_tractos
+            FROM placas 
+            WHERE cliente IS NOT NULL AND TRIM(cliente) <> '' AND TRIM(cliente) <> 'NULL'
+            GROUP BY UPPER(TRIM(cliente))
+            ORDER BY total_tractos DESC
+        `;
+
+        db.query(sqlEmpresas, (errE, empRows) => {
+            if (errE) return res.status(500).json({ error: errE.message });
+            
+            // Obtener registros de seguridad para calcular en ruta y completados por empresa
+            db.query(`
+                SELECT r.id, r.estado, r.salida_has_alert, r.retorno_has_alert, r.placa_tracto,
+                       p.cliente AS empresa_placa
+                FROM seg_unidades_registros r
+                LEFT JOIN placas p ON UPPER(REPLACE(p.placa, '-', '')) = UPPER(REPLACE(r.placa_tracto, '-', ''))
+            `, (errR, regRows) => {
+                if (errR) return res.status(500).json({ error: errR.message });
+
+                const statsMap = {};
+                (empRows || []).forEach(e => {
+                    statsMap[e.empresa] = {
+                        empresa: e.empresa,
+                        total_flota: e.total_tractos || 0,
+                        en_ruta: 0,
+                        completados: 0,
+                        alertas: 0
+                    };
+                });
+
+                let globalStats = { empresa: 'TODAS', total_flota: 0, en_ruta: 0, completados: 0, alertas: 0 };
+
+                (regRows || []).forEach(r => {
+                    const emp = (r.empresa_placa || 'MARSISA').toUpperCase().trim();
+                    if (r.estado === 'en_ruta') {
+                        globalStats.en_ruta++;
+                        if (statsMap[emp]) statsMap[emp].en_ruta++;
+                    } else if (r.estado === 'completado') {
+                        globalStats.completados++;
+                        if (statsMap[emp]) statsMap[emp].completados++;
+                    }
+                    if (r.salida_has_alert || r.retorno_has_alert) {
+                        globalStats.alertas++;
+                        if (statsMap[emp]) statsMap[emp].alertas++;
+                    }
+                });
+
+                (empRows || []).forEach(e => { globalStats.total_flota += e.total_tractos || 0; });
+
+                res.json({
+                    global: globalStats,
+                    empresas: Object.values(statsMap)
+                });
             });
         });
     });

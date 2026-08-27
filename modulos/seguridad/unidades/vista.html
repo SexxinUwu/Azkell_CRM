@@ -777,12 +777,108 @@
     .sgu-desktop-table { display: none; }
     .sgu-mobile-cards { display: flex; flex-direction: column; gap: 0.75rem; }
 }
+
+/* ── ESTILOS PORTAL DE BIENVENIDA MULTI-EMPRESA (BENTO UI) ──────── */
+.sgu-portal-hero {
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.06), rgba(59, 130, 246, 0.02));
+    border: 1px solid rgba(2, 132, 199, 0.15);
+    border-radius: 24px;
+    padding: 1.5rem 1.6rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.sgu-portal-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0284c7, #2563eb);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 800;
+    box-shadow: 0 6px 16px rgba(2, 132, 199, 0.3);
+    flex-shrink: 0;
+}
+.sgu-company-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1.35rem 1.4rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+.sgu-company-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px rgba(2, 132, 199, 0.12);
+    border-color: #0284c7;
+}
+.sgu-company-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    margin-bottom: 1rem;
+}
+.sgu-btn-empresa-chip {
+    background: #eff6ff !important;
+    color: #0284c7 !important;
+    border: 1px solid #bfdbfe !important;
+    font-weight: 700 !important;
+    border-radius: 20px !important;
+    padding: 0.35rem 0.85rem !important;
+}
 </style>
 
 <div id="moduloSegUnidades" class="modulo-wrapper d-flex flex-column h-100">
 
+    <!-- ═══ VISTA 0: PORTAL DE BIENVENIDA MULTI-EMPRESA ═══════════════ -->
+    <div id="sgu-portal" class="sgu-view active">
+        <!-- Hero de Bienvenida -->
+        <div class="sgu-portal-hero">
+            <div class="d-flex align-items-center gap-3">
+                <div class="sgu-portal-avatar" id="sgu-portal-user-avatar">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge bg-primary px-2 py-1 rounded-pill" style="font-size:0.68rem;font-weight:800;letter-spacing:0.04em;">MÓDULO SEGURIDAD</span>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">¡Hola, <span id="sgu-portal-user-name">Oficial de Seguridad</span>! 👋</h3>
+                    <p class="text-secondary mb-0" style="font-size:0.88rem;">¿A qué empresa deseas gestionar / consultar CheckList hoy?</p>
+                </div>
+            </div>
+            <div>
+                <button class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-semibold" style="font-size:0.8rem;" onclick="window._sguCargarPortalStats()">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Actualizar Flota
+                </button>
+            </div>
+        </div>
+
+        <!-- Bento Grid de Empresas -->
+        <div class="row g-3 mb-4" id="sgu-portal-companies-grid">
+            <!-- Renderizado dinámico de tarjetas de empresas (Marsisa, Trahesa, Todas, etc.) -->
+            <div class="col-12 text-center py-4 text-muted">
+                <i class="bi bi-arrow-repeat spin fs-4 d-block mb-2"></i> Cargando empresas disponibles...
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ VISTA PRINCIPAL: LISTA / DASHBOARD ═════════════════════ -->
-    <div id="sgu-list" class="sgu-view active">
+    <div id="sgu-list" class="sgu-view d-none">
 
         <!-- ── 1. ENCABEZADO OFICIAL BENTO ERP (Solo en Vista Principal) ── -->
         <div class="sgu-header-box">
@@ -791,11 +887,17 @@
                     <i class="bi bi-shield-check"></i>
                 </div>
                 <div>
-                    <h4 class="sgu-header-title">CheckList de Unidades</h4>
+                    <div class="d-flex align-items-center gap-2">
+                        <h4 class="sgu-header-title">CheckList de Unidades</h4>
+                        <span class="badge bg-light text-primary border rounded-pill px-2 py-1" id="sgu-active-company-badge" style="font-size:0.72rem;font-weight:800;">TODAS</span>
+                    </div>
                     <p class="sgu-header-sub">Inspección física de vehículos, control de salidas y retornos de flota</p>
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button class="sgu-btn-top" onclick="window._sguIrAPortal()" title="Ir al Portal Multi-Empresa">
+                    <i class="bi bi-grid-fill text-primary"></i> <span class="d-none d-sm-inline">Empresas</span>
+                </button>
                 <button class="sgu-btn-top" onclick="window._sguRefresh()" title="Actualizar">
                     <i class="bi bi-arrow-clockwise fs-6"></i>
                 </button>
