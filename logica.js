@@ -3736,6 +3736,14 @@ window.cargarConfigSection = function(section) {
 };
 
 window.cargarModuloAislado = async function(rutaModulo) {
+    // Si el rol es Seguridad y solicita dashboard, redirigir automáticamente al portal de seguridad
+    if (rutaModulo === 'dashboard') {
+        var rol = (localStorage.getItem('fleet_rol') || '').toLowerCase();
+        if (rol.includes('seguridad')) {
+            rutaModulo = 'seguridad/unidades';
+        }
+    }
+
     // 🔒 GUARDAR RUTA ACTUAL — ignora login para evitar infinite loop
     if (rutaModulo !== 'login') {
         sessionStorage.setItem('fleet_rutaActual', rutaModulo);
