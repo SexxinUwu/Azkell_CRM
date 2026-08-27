@@ -91,7 +91,7 @@
     border: 1px solid #e2e8f0;
     border-radius: 18px;
     box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
-    overflow: hidden;
+    min-height: 320px;
 }
 
 /* Action Capsule Buttons (Desktop) */
@@ -393,8 +393,8 @@
   </div>
 
   <!-- ── 5. VISTA ESCRITORIO (TABLA FLUIDA) ─────────────────────────── -->
-  <div id="checklist-tabla-wrap" class="flex-grow-1 d-none d-md-block">
-    <div class="custom-scrollbar overflow-auto">
+  <div id="checklist-tabla-wrap" class="flex-grow-1 d-none d-md-block" style="min-height: 320px;">
+    <div class="custom-scrollbar overflow-x-auto" style="overflow-y: visible; min-height: 320px;">
       <table class="table table-hover align-middle m-0" id="tablaChecklist" style="font-size: 0.88rem;">
         <thead class="bg-light sticky-top shadow-2xs border-bottom">
           <tr class="text-secondary" style="font-size: 0.75rem; letter-spacing: 0.5px;">
