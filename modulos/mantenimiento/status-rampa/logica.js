@@ -3029,14 +3029,26 @@ window.srSeleccionarDrop = function(dropId, valor) {
 
 // ── Helpers UI ───────────────────────────────────────────────────
 function srBadgeSituacion(sit, ocupada) {
-    if (!ocupada || !sit) return '<span class="sr-semaforo sr-sem-vacio" style="color:#059669; font-weight:700;"><i class="bi bi-circle-fill me-1" style="font-size:0.4rem;"></i>Libre & Disponible</span>';
+    if (!ocupada || !sit) return '<span class="sr-semaforo sr-sem-vacio" style="color:#64748b; font-weight:700;"><i class="bi bi-circle-fill me-1" style="font-size:0.4rem;"></i>Libre & Disponible</span>';
     var bg, c, b;
-    var s = sit.toLowerCase();
-    if (s === 'finalizado') { bg = '#fee2e2'; c = '#dc2626'; b = '#fca5a5'; } // Rojo
-    else if (s === 'en atención') { bg = '#dcfce7'; c = '#16a34a'; b = '#86efac'; } // Verde
-    else if (s.indexOf('espera') !== -1) { bg = '#fef9c3'; c = '#ca8a04'; b = '#fde047'; } // Amarillo
-    else if (s === 'taller tercero') { bg = '#fdf4ff'; c = '#d946ef'; b = '#f5d0fe'; } // Magenta
-    else { bg = '#f1f5f9'; c = '#0f172a'; b = '#cbd5e1'; } // Negro/Default
+    var s = sit.toLowerCase().trim();
+    if (s === 'en atención' || s.indexOf('atenci') !== -1 || s.indexOf('proceso') !== -1) { 
+        bg = '#dcfce7'; c = '#16a34a'; b = '#86efac'; // Verde
+    } else if (s === 'finalizado' || s.indexOf('listo') !== -1 || s.indexOf('conclu') !== -1) { 
+        bg = '#fee2e2'; c = '#dc2626'; b = '#fca5a5'; // Rojo
+    } else if (s.indexOf('espera') !== -1) { 
+        bg = '#fef9c3'; c = '#ca8a04'; b = '#fde047'; // Amarillo
+    } else if (s.indexOf('tercero') !== -1) { 
+        bg = '#f3e8ff'; c = '#9333ea'; b = '#d8b4fe'; // Morado
+    } else if (s.indexOf('inoperat') !== -1) { 
+        bg = '#f1f5f9'; c = '#64748b'; b = '#cbd5e1'; // Plomo
+    } else if (s.indexOf('anulad') !== -1) { 
+        bg = '#f1f5f9'; c = '#64748b'; b = '#cbd5e1'; // Plomo
+    } else if (s.indexOf('operat') !== -1) { 
+        bg = '#dbeafe'; c = '#1e3a8a'; b = '#bfdbfe'; // Azul marino
+    } else { 
+        bg = '#f1f5f9'; c = '#0f172a'; b = '#cbd5e1'; // Default
+    }
 
     return '<span style="background:'+bg+'; color:'+c+'; border:1px solid '+b+'; font-weight:700; font-size:0.75rem; padding:3px 10px; border-radius:2rem; display:inline-block; white-space:nowrap;">' + _srEsc(sit) + '</span>';
 }
@@ -4425,6 +4437,20 @@ window.srAbrirPDFStatus = function() {
     var min = String(ahora.getMinutes()).padStart(2, '0');
     var fechaEmisionStr = dd + '/' + mm + '/' + yyyy + ' ' + hh + ':' + min;
 
+    function getSitColorPdf(sit) {
+        if (!sit) return '#64748b';
+        var s = String(sit).toLowerCase().trim();
+        if (s === 'en atención' || s.indexOf('atenci') !== -1 || s.indexOf('proceso') !== -1) return '#16a34a'; // Verde
+        if (s === 'finalizado' || s.indexOf('listo') !== -1 || s.indexOf('conclu') !== -1) return '#dc2626'; // Rojo
+        if (s.indexOf('espera') !== -1) return '#ca8a04'; // Amarillo
+        if (s.indexOf('tercero') !== -1) return '#9333ea'; // Morado
+        if (s.indexOf('inoperat') !== -1) return '#64748b'; // Plomo
+        if (s.indexOf('anulad') !== -1) return '#64748b'; // Plomo
+        if (s.indexOf('operat') !== -1) return '#1e3a8a'; // Azul marino
+        if (s.indexOf('libre') !== -1) return '#64748b'; // Gris
+        return '#000000';
+    }
+
     // Generar filas de la tabla
     var filasHtml = '';
     rampas.forEach(function(rampaObj, idx) {
@@ -4443,8 +4469,8 @@ window.srAbrirPDFStatus = function() {
                 <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
                 <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
                 <td style="text-align:center; font-weight:800; padding:4px 2px; color:#000;">—</td>
-                <td style="text-align:center; padding:4px 2px; color:#000;"><span style="color:#000; font-size:8px;">—</span></td>
-                <td style="text-align:center; padding:4px 2px;"><span style="color:#15803d; font-weight:900; font-size:8.5px; border:1px solid #16a34a; background:#dcfce7; padding:1px 5px; border-radius:3px;">LIBRE</span></td>
+                <td style="text-align:center; padding:4px 2px;"><span style="color:#64748b; font-weight:700; font-size:8px;">—</span></td>
+                <td style="text-align:center; padding:4px 2px;"><span style="color:#64748b; font-weight:800; font-size:8.5px;">LIBRE</span></td>
                 <td style="padding:4px 6px; color:#000; font-size:8px; font-weight:500;">Disponible para ingreso</td>
                 <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
                 <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
@@ -4476,20 +4502,16 @@ window.srAbrirPDFStatus = function() {
                 var hOut = e.horaSalida || '—';
                 var hTaller = srCalcHorasTaller(e);
 
-                var inspBadgeStyle = '';
+                var inspColor = '#dc2626';
                 if (inspInfo.dias < 0) {
-                    inspBadgeStyle = 'background:#fee2e2; color:#b91c1c; border:1.5px solid #dc2626; font-weight:900;';
+                    inspColor = '#dc2626'; // Rojo
                 } else if (inspInfo.dias <= 7) {
-                    inspBadgeStyle = 'background:#fef9c3; color:#854d0e; border:1.5px solid #ca8a04; font-weight:900;';
+                    inspColor = '#ca8a04'; // Amarillo
                 } else {
-                    inspBadgeStyle = 'background:#dcfce7; color:#15803d; border:1.5px solid #16a34a; font-weight:900;';
+                    inspColor = '#16a34a'; // Verde
                 }
 
-                var sitStyle = 'color:#000; font-weight:700;';
-                var sitLower = (e.situacion || '').toLowerCase();
-                if (sitLower.includes('espera')) sitStyle = 'color:#b45309; font-weight:800;';
-                else if (sitLower.includes('trabajo') || sitLower.includes('proceso') || sitLower.includes('atencion') || sitLower.includes('atención')) sitStyle = 'color:#1d4ed8; font-weight:800;';
-                else if (sitLower.includes('listo') || sitLower.includes('conclu') || sitLower.includes('finaliz')) sitStyle = 'color:#15803d; font-weight:800;';
+                var sitColor = getSitColorPdf(e.situacion);
 
                 filasHtml += `
                 <tr style="background:#fff; color:#000;">
@@ -4497,12 +4519,12 @@ window.srAbrirPDFStatus = function() {
                     <td style="text-align:center; padding:4px 2px; font-size:8px; font-weight:700; color:#000;">${fIn}</td>
                     <td style="text-align:center; padding:4px 2px; font-size:8px; font-weight:700; color:#000;">${hIn}</td>
                     <td style="text-align:center; font-weight:900; color:#000; font-size:10px; padding:4px 2px; letter-spacing:0.3px;">${_srEsc(e.placa || '—')}</td>
-                    <td style="text-align:center; padding:3px 2px;">
-                        <span style="display:inline-block; font-size:8.5px; padding:1.5px 5px; border-radius:3px; ${inspBadgeStyle}">
+                    <td style="text-align:center; padding:4px 2px;">
+                        <span style="color:${inspColor}; font-weight:900; font-size:8.5px;">
                             ${inspInfo.texto}
                         </span>
                     </td>
-                    <td style="text-align:center; font-size:8px; padding:4px 2px; ${sitStyle}">${_srEsc(e.situacion || '—')}</td>
+                    <td style="text-align:center; font-size:8.5px; font-weight:800; padding:4px 2px; color:${sitColor};">${_srEsc(e.situacion || '—')}</td>
                     <td style="padding:4px 6px; font-size:8px; font-weight:600; color:#000; line-height:1.25;" title="${_srEsc(obsTextoCol)}">
                         ${_srEsc(obsTextoCol || '—')}
                     </td>
