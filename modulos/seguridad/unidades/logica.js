@@ -819,6 +819,114 @@ window._sguExportarExcel = function() {
     _sguToast('Descarga iniciada');
 };
 
+// ── GESTOR DE FIRMAS DIGITALES EN CANVAS (TOUCH & MOUSE ULTRA FLUIDO) ──
+var _sguSignaturePads = {};
+
+window._sguSetupSignatureCanvas = function(canvasId) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    var ctx = canvas.getContext('2d');
+    var isDrawing = false;
+    var hasStrokes = false;
+
+    function resizeCanvas() {
+        var rect = canvas.getBoundingClientRect();
+        var ratio = Math.max(window.devicePixelRatio || 1, 1);
+        if (canvas.width !== Math.round(rect.width * ratio) || canvas.height !== Math.round(rect.height * ratio)) {
+            var temp = null;
+            if (hasStrokes) {
+                try { temp = ctx.getImageData(0, 0, canvas.width, canvas.height); } catch(e) {}
+            }
+            canvas.width = Math.round(rect.width * ratio);
+            canvas.height = Math.round(rect.height * ratio);
+            ctx.scale(ratio, ratio);
+            if (temp) {
+                try { ctx.putImageData(temp, 0, 0); } catch(e) {}
+            }
+        }
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+    }
+
+    setTimeout(resizeCanvas, 60);
+
+    function getCoords(e) {
+        var rect = canvas.getBoundingClientRect();
+        var clientX = e.clientX;
+        var clientY = e.clientY;
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        }
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
+    }
+
+    function startDraw(e) {
+        if (e.touches) e.preventDefault();
+        isDrawing = true;
+        hasStrokes = true;
+        var p = getCoords(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+    }
+
+    function moveDraw(e) {
+        if (!isDrawing) return;
+        if (e.touches) e.preventDefault();
+        var p = getCoords(e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+    }
+
+    function endDraw(e) {
+        if (!isDrawing) return;
+        isDrawing = false;
+        ctx.closePath();
+    }
+
+    canvas.onmousedown = startDraw;
+    canvas.onmousemove = moveDraw;
+    canvas.onmouseup = endDraw;
+    canvas.onmouseleave = endDraw;
+
+    canvas.ontouchstart = startDraw;
+    canvas.ontouchmove = moveDraw;
+    canvas.ontouchend = endDraw;
+
+    _sguSignaturePads[canvasId] = {
+        canvas: canvas,
+        ctx: ctx,
+        hasDrawn: function() { return hasStrokes; },
+        clear: function() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasStrokes = false;
+        },
+        getData: function() {
+            if (!hasStrokes) return null;
+            return canvas.toDataURL('image/png');
+        }
+    };
+};
+
+window._sguClearSignature = function(canvasId) {
+    if (_sguSignaturePads[canvasId]) {
+        _sguSignaturePads[canvasId].clear();
+    }
+};
+
+window._sguGetSignatureBase64 = function(canvasId) {
+    if (_sguSignaturePads[canvasId]) {
+        return _sguSignaturePads[canvasId].getData();
+    }
+    return null;
+};
+
 // ── FORM: NUEVA SALIDA ───────────────────────────────────────────
 function _sguInitForm() {
     _sguEditMode = 'salida';
@@ -843,6 +951,14 @@ function _sguInitForm() {
 
     _sguRenderChecklist();
     window._sguCheckFormReady();
+
+    // Inicializar Canvas de Firmas de Salida
+    setTimeout(function() {
+        window._sguSetupSignatureCanvas('sgu-sig-salida-conductor');
+        window._sguSetupSignatureCanvas('sgu-sig-salida-vigilancia');
+        window._sguClearSignature('sgu-sig-salida-conductor');
+        window._sguClearSignature('sgu-sig-salida-vigilancia');
+    }, 120);
 }
 
 window._sguCheckFormReady = function() {
@@ -1047,6 +1163,21 @@ async function _sguRenderDetail(recordId) {
     html += '<div class="col-6"><span class="sgu-form-label">Destino Reportado</span><div class="fw-bold text-dark fs-6">' + (rec.destino || '---') + '</div></div>';
     html += '</div>';
 
+    // Mostrar Firmas Digitales de Salida si existen
+    if (rec.firma_salida_conductor || rec.firma_salida_vigilancia) {
+        html += '<div class="mb-3 pt-2 border-top">';
+        html += '<span class="text-secondary small fw-bold d-block mb-2"><i class="bi bi-pen-fill text-primary me-1"></i> Firmas Digitales de Salida</span>';
+        html += '<div class="row g-2 text-center">';
+        if (rec.firma_salida_conductor) {
+            html += '<div class="col-6"><div class="p-2 border rounded-3 bg-light"><img src="' + rec.firma_salida_conductor + '" class="w-100 rounded bg-white border" style="height:60px;object-fit:contain;"><span class="d-block text-muted mt-1" style="font-size:0.68rem;font-weight:700;">Conductor</span></div></div>';
+        }
+        if (rec.firma_salida_vigilancia) {
+            html += '<div class="col-6"><div class="p-2 border rounded-3 bg-light"><img src="' + rec.firma_salida_vigilancia + '" class="w-100 rounded bg-white border" style="height:60px;object-fit:contain;"><span class="d-block text-muted mt-1" style="font-size:0.68rem;font-weight:700;">Vigilancia</span></div></div>';
+        }
+        html += '</div>';
+        html += '</div>';
+    }
+
     html += '<div class="d-flex gap-2 flex-wrap">';
     html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerDetalles(\'salida\')"><i class="bi bi-list-check"></i> Ver Checklist</button>';
     html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerFotos(\'salida\')"><i class="bi bi-images"></i> Fotos (' + (rec.fotos || []).filter(function(f){return f.tipo==='salida';}).length + ')</button>';
@@ -1089,6 +1220,31 @@ async function _sguRenderDetail(recordId) {
         html += '<button class="sgu-task-btn" id="sgu-det-btn-chk" onclick="window._sguOpenChecklist()">Llenar</button>';
         html += '</div>';
 
+        // Firmas de Retorno (Llegada)
+        html += '<div class="mt-3 pt-3 border-top mb-3">';
+        html += '<div class="d-flex align-items-center justify-content-between mb-2">';
+        html += '<span class="fw-bold text-dark small"><i class="bi bi-pen-fill text-success me-1"></i> Firmas de Llegada (Retorno)</span>';
+        html += '<span class="badge bg-light text-secondary border" style="font-size:0.68rem;">Conductor & Vigilancia</span>';
+        html += '</div>';
+        html += '<div class="row g-2">';
+        html += '<div class="col-12 col-sm-6">';
+        html += '<div class="p-2 rounded-3 border bg-light">';
+        html += '<div class="d-flex align-items-center justify-content-between mb-1">';
+        html += '<span class="text-secondary" style="font-size:0.72rem;font-weight:700;">Conductor (Retorno)</span>';
+        html += '<button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" style="font-size:0.7rem;" onclick="window._sguClearSignature(\'sgu-sig-retorno-conductor\')"><i class="bi bi-eraser-fill"></i> Borrar</button>';
+        html += '</div>';
+        html += '<canvas id="sgu-sig-retorno-conductor" class="sgu-sig-canvas w-100 rounded-2 bg-white border" height="100"></canvas>';
+        html += '</div></div>';
+        html += '<div class="col-12 col-sm-6">';
+        html += '<div class="p-2 rounded-3 border bg-light">';
+        html += '<div class="d-flex align-items-center justify-content-between mb-1">';
+        html += '<span class="text-secondary" style="font-size:0.72rem;font-weight:700;">Vigilancia (Retorno)</span>';
+        html += '<button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" style="font-size:0.7rem;" onclick="window._sguClearSignature(\'sgu-sig-retorno-vigilancia\')"><i class="bi bi-eraser-fill"></i> Borrar</button>';
+        html += '</div>';
+        html += '<canvas id="sgu-sig-retorno-vigilancia" class="sgu-sig-canvas w-100 rounded-2 bg-white border" height="100"></canvas>';
+        html += '</div></div>';
+        html += '</div></div>';
+
         html += '<button class="btn btn-primary w-100 py-2 fw-bold shadow-sm" id="sgu-det-btn-save" onclick="window._sguSaveReturn()" disabled>';
         html += '<i class="bi bi-check-circle-fill me-1"></i> Confirmar Retorno y Cerrar Expediente';
         html += '</button>';
@@ -1106,6 +1262,21 @@ async function _sguRenderDetail(recordId) {
         var kmRecorrido = (rec.retorno_km && rec.salida_km) ? (Number(rec.retorno_km) - Number(rec.salida_km)) : null;
         html += '<div class="col-6"><span class="sgu-form-label">Km Total Recorrido</span><div class="fw-bold text-primary fs-6">' + (kmRecorrido !== null ? kmRecorrido + ' km' : '---') + '</div></div>';
         html += '</div>';
+
+        // Mostrar Firmas Digitales de Retorno si existen
+        if (rec.firma_retorno_conductor || rec.firma_retorno_vigilancia) {
+            html += '<div class="mb-3 pt-2 border-top">';
+            html += '<span class="text-secondary small fw-bold d-block mb-2"><i class="bi bi-pen-fill text-success me-1"></i> Firmas Digitales de Retorno</span>';
+            html += '<div class="row g-2 text-center">';
+            if (rec.firma_retorno_conductor) {
+                html += '<div class="col-6"><div class="p-2 border rounded-3 bg-light"><img src="' + rec.firma_retorno_conductor + '" class="w-100 rounded bg-white border" style="height:60px;object-fit:contain;"><span class="d-block text-muted mt-1" style="font-size:0.68rem;font-weight:700;">Conductor (Retorno)</span></div></div>';
+            }
+            if (rec.firma_retorno_vigilancia) {
+                html += '<div class="col-6"><div class="p-2 border rounded-3 bg-light"><img src="' + rec.firma_retorno_vigilancia + '" class="w-100 rounded bg-white border" style="height:60px;object-fit:contain;"><span class="d-block text-muted mt-1" style="font-size:0.68rem;font-weight:700;">Vigilancia (Retorno)</span></div></div>';
+            }
+            html += '</div>';
+            html += '</div>';
+        }
 
         html += '<div class="d-flex gap-2 flex-wrap">';
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerDetalles(\'retorno\')"><i class="bi bi-list-check"></i> Ver Checklist</button>';
@@ -1131,7 +1302,16 @@ async function _sguRenderDetail(recordId) {
     html += '</div>';
 
     container.innerHTML = html;
-    if (isEnRuta) window._sguCheckFormReady();
+    if (isEnRuta) {
+        window._sguCheckFormReady();
+        // Inicializar canvas de firmas de retorno
+        setTimeout(function() {
+            window._sguSetupSignatureCanvas('sgu-sig-retorno-conductor');
+            window._sguSetupSignatureCanvas('sgu-sig-retorno-vigilancia');
+            window._sguClearSignature('sgu-sig-retorno-conductor');
+            window._sguClearSignature('sgu-sig-retorno-vigilancia');
+        }, 120);
+    }
 
     // Async load docs info for Tracto and Carreta in Detail
     _sguLoadDetailDocs(rec.placa_tracto, rec.placa_carreta);
@@ -1487,6 +1667,9 @@ window._sguSaveRecord = function() {
         btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Guardando...';
     }
 
+    var sigConductor = window._sguGetSignatureBase64('sgu-sig-salida-conductor');
+    var sigVigilancia = window._sguGetSignatureBase64('sgu-sig-salida-vigilancia');
+
     var bodyOut = {
         placa_tracto: p,
         placa_carreta: c,
@@ -1497,7 +1680,9 @@ window._sguSaveRecord = function() {
         salida_km: km,
         salida_template_json: _sguGlobalTemplate,
         salida_checklist_json: _sguChecklist,
-        salida_has_alert: hasAlert
+        salida_has_alert: hasAlert,
+        firma_salida_conductor: sigConductor,
+        firma_salida_vigilancia: sigVigilancia
     };
 
     var fotosParaSubir = (_sguPhotos['salida'] || []).filter(function(item) { return !item.uploaded && item.file; });
@@ -1551,6 +1736,9 @@ window._sguSaveReturn = function() {
         btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Guardando...';
     }
 
+    var sigConductor = window._sguGetSignatureBase64('sgu-sig-retorno-conductor');
+    var sigVigilancia = window._sguGetSignatureBase64('sgu-sig-retorno-vigilancia');
+
     var body = {
         retorno_fecha: ts.date,
         retorno_hora: ts.time,
@@ -1558,6 +1746,8 @@ window._sguSaveReturn = function() {
         retorno_template_json: _sguGlobalTemplate,
         retorno_checklist_json: _sguChecklist,
         retorno_has_alert: hasAlert,
+        firma_retorno_conductor: sigConductor,
+        firma_retorno_vigilancia: sigVigilancia,
         estado: 'completado'
     };
 
@@ -1886,19 +2076,37 @@ function _sguBuildPageHtml(rec, tipo, pageLabel) {
     h += '</div>'; // End top wrapper
 
     // 5. Bloque de Firmas al Pie
+    var firmaCond = tipo === 'salida' ? rec.firma_salida_conductor : rec.firma_retorno_conductor;
+    var firmaVig = tipo === 'salida' ? rec.firma_salida_vigilancia : rec.firma_retorno_vigilancia;
+
     h += '<div style="margin-top:10px;">';
     h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;table-layout:fixed;color:#000000;">';
     h += '<tr>';
-    h += '<td style="width:50%;border:1px solid #000000;padding:32px 10px 6px 10px;text-align:center;vertical-align:bottom;">';
+
+    // Firma Conductor
+    h += '<td style="width:50%;border:1px solid #000000;padding:6px 10px;text-align:center;vertical-align:bottom;height:75px;">';
+    if (firmaCond) {
+        h += '<img src="' + firmaCond + '" style="max-height:48px;max-width:180px;display:block;margin:0 auto 4px auto;" crossorigin="anonymous">';
+    } else {
+        h += '<div style="height:35px;"></div>';
+    }
     h += '<div style="border-top:1px dashed #000000;padding-top:4px;font-size:10px;font-weight:bold;color:#000000;">';
-    h += 'FIRMA DEL CONDUCTOR<br><span style="font-weight:normal;font-size:9px;color:#333333;">' + (rec.conductor || 'DNI: _______________') + '</span>';
+    h += 'FIRMA DEL CONDUCTOR (' + (tipo === 'salida' ? 'SALIDA' : 'RETORNO') + ')<br><span style="font-weight:normal;font-size:9px;color:#333333;">' + (rec.conductor || 'DNI: _______________') + '</span>';
     h += '</div>';
     h += '</td>';
-    h += '<td style="width:50%;border:1px solid #000000;padding:32px 10px 6px 10px;text-align:center;vertical-align:bottom;">';
+
+    // Firma Vigilancia
+    h += '<td style="width:50%;border:1px solid #000000;padding:6px 10px;text-align:center;vertical-align:bottom;height:75px;">';
+    if (firmaVig) {
+        h += '<img src="' + firmaVig + '" style="max-height:48px;max-width:180px;display:block;margin:0 auto 4px auto;" crossorigin="anonymous">';
+    } else {
+        h += '<div style="height:35px;"></div>';
+    }
     h += '<div style="border-top:1px dashed #000000;padding-top:4px;font-size:10px;font-weight:bold;color:#000000;">';
-    h += 'INSPECTOR DE SEGURIDAD / CONTROL<br><span style="font-weight:normal;font-size:9px;color:#333333;">VoBo DESPACHO & FLOTA</span>';
+    h += 'INSPECTOR DE SEGURIDAD / VIGILANCIA<br><span style="font-weight:normal;font-size:9px;color:#333333;">VoBo CONTROL ' + (tipo === 'salida' ? 'DESPACHO' : 'RECEPCIÓN') + '</span>';
     h += '</div>';
     h += '</td>';
+
     h += '</tr>';
     h += '</table>';
     h += '<div style="display:flex;justify-content:space-between;font-size:8.5px;color:#666666;margin-top:4px;padding:0 2px;">';
