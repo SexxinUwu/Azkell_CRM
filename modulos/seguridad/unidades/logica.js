@@ -360,6 +360,7 @@ window._sguCargarPortalStats = function() {
         html += '</div>';
         html += '</div>';
 
+        grid.innerHTML = html;
     }).catch(function(err) {
         console.error('Error cargando empresas stats:', err);
         grid.innerHTML = '<div class="col-12 text-center py-4">' +
