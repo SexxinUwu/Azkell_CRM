@@ -4654,21 +4654,21 @@ window.srAbrirPDFStatus = function() {
         }
         #btnPdfPrint {
             position: fixed;
-            top: 15px;
-            right: 20px;
+            top: 8px;
+            right: 14px;
             background: #0284c7;
             color: #fff;
             border: none;
-            padding: 8px 16px;
+            padding: 5px 12px;
             font-family: 'Montserrat', sans-serif;
-            font-size: 11px;
-            font-weight: 800;
-            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            border-radius: 5px;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(2,132,199,0.4);
+            box-shadow: 0 2px 8px rgba(2,132,199,0.35);
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             z-index: 9999;
         }
         #btnPdfPrint:hover {
@@ -4696,8 +4696,8 @@ window.srAbrirPDFStatus = function() {
 </head>
 <body>
     <button id="btnPdfPrint" onclick="window.print()">
-        <svg width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
-        Imprimir / Guardar PDF (A4 Horizontal)
+        <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
+        Imprimir
     </button>
 
     <div class="page-container">
