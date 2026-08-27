@@ -4,8 +4,9 @@
 
 window.init_configuracion = function() {
     // 1. Identificar panel de destino
-    const sectionTarget = window._pendingCfgSection || 'apariencia';
+    const sectionTarget = window._pendingCfgSection || sessionStorage.getItem('pending_cfg_section') || 'apariencia';
     window._pendingCfgSection = null;
+    sessionStorage.removeItem('pending_cfg_section');
     window.showConfig(sectionTarget);
 
     // 2. Sincronizar Switch Dark Mode

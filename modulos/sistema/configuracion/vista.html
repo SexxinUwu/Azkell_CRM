@@ -1,7 +1,7 @@
-<!-- Módulo: Configuración del Sistema — Azkell ERP (Minimalist & Premium) -->
+<!-- Módulo: Configuración del Sistema — Azkell ERP (Minimalist, Seamless & Premium) -->
 <style>
 #moduloConfiguracion {
-    background: var(--bg, #f8fafc) !important;
+    background: transparent !important;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -9,15 +9,18 @@
     margin: 0 !important;
     padding-left: 1rem;
     padding-right: 1rem;
+    width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box;
 }
 
-@media (min-width: 768px) {
-    #moduloConfiguracion {
-        max-width: 600px;
-        margin: 0 auto !important;
-        padding-top: 1.5rem;
-    }
+.cfg-inner-container {
+    max-width: 650px;
+    width: 100%;
+    margin: 0 auto !important;
+    background: transparent !important;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Header con botón atrás nativo */
@@ -48,12 +51,13 @@
 .cfg-btn-back:active { transform: scale(0.95); background: var(--border, #e2e8f0); }
 
 .cfg-header-title {
-    font-size: 1.15rem;
+    font-size: 1.25rem;
     font-weight: 800;
     color: var(--text, #0f172a);
     margin: 0;
     text-align: center;
     flex-grow: 1;
+    letter-spacing: -0.02em;
 }
 
 /* Títulos de sección */
@@ -182,162 +186,164 @@
 </style>
 
 <div id="moduloConfiguracion" class="modulo-wrapper">
+    <div class="cfg-inner-container">
 
-    <!-- Header con botón atrás hacia Ajustes -->
-    <div class="cfg-header-nav">
-        <button class="cfg-btn-back" onclick="cargarModuloAislado('sistema/ajustes')" title="Volver a Ajustes">
-            <i class="bi bi-chevron-left"></i>
-        </button>
-        <h1 class="cfg-header-title" id="cfg-header-title">Configuración</h1>
-        <div style="width: 38px;"></div> <!-- Spacer para centrar el título -->
-    </div>
-
-    <!-- ════════════════════════════════════════════════════════ -->
-    <!-- 1. PANEL: TEMA Y APARIENCIA                             -->
-    <!-- ════════════════════════════════════════════════════════ -->
-    <div id="cfg-panel-apariencia" class="config-panel d-none">
-        
-        <h2 class="cfg-section-title">Tema del Sistema</h2>
-        <div class="cfg-group-box">
-            <div class="cfg-row-item">
-                <div class="cfg-item-info">
-                    <p class="cfg-item-title"><i class="bi bi-moon-stars" style="color: #8b5cf6;"></i> Modo Oscuro</p>
-                    <p class="cfg-item-desc">Ajusta la paleta a tonos oscuros para mayor comodidad visual.</p>
-                </div>
-                <div class="form-check form-switch m-0">
-                    <input class="form-check-input cfg-switch" type="checkbox" id="cfg-switch-dark" role="switch" onchange="if(window.applyDark) window.applyDark(this.checked, true)">
-                </div>
-            </div>
+        <!-- Header con botón atrás hacia Ajustes -->
+        <div class="cfg-header-nav">
+            <button class="cfg-btn-back" onclick="cargarModuloAislado('sistema/ajustes')" title="Volver a Ajustes">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <h1 class="cfg-header-title" id="cfg-header-title">Configuración</h1>
+            <div style="width: 38px;"></div> <!-- Spacer para centrar el título -->
         </div>
 
-        <h2 class="cfg-section-title">Color de Acento</h2>
-        <div class="cfg-group-box">
-            <div class="p-3">
-                <p class="cfg-item-desc mb-3">Tono principal para botones, enlaces y elementos destacados del ERP.</p>
-                <div class="d-flex flex-wrap gap-3 align-items-center mb-3" id="cfg-swatches">
-                    <div class="cfg-swatch-circle" data-color="#2563eb" title="Azul Corporativo" style="background:#2563eb;" onclick="window.selectAccentColor(this)"></div>
-                    <div class="cfg-swatch-circle" data-color="#10b981" title="Verde Esmeralda" style="background:#10b981;" onclick="window.selectAccentColor(this)"></div>
-                    <div class="cfg-swatch-circle" data-color="#f59e0b" title="Ámbar" style="background:#f59e0b;" onclick="window.selectAccentColor(this)"></div>
-                    <div class="cfg-swatch-circle" data-color="#ef4444" title="Rojo Carmesí" style="background:#ef4444;" onclick="window.selectAccentColor(this)"></div>
-                    <div class="cfg-swatch-circle" data-color="#8b5cf6" title="Violeta" style="background:#8b5cf6;" onclick="window.selectAccentColor(this)"></div>
-                    <div class="cfg-swatch-circle" data-color="#ec4899" title="Rosa" style="background:#ec4899;" onclick="window.selectAccentColor(this)"></div>
-                    <div class="cfg-swatch-circle" data-color="#06b6d4" title="Cian" style="background:#06b6d4;" onclick="window.selectAccentColor(this)"></div>
-                    <div class="cfg-swatch-circle" data-color="#f97316" title="Naranja" style="background:#f97316;" onclick="window.selectAccentColor(this)"></div>
-                </div>
-
-                <div class="d-flex align-items-center justify-content-between pt-2 border-top">
-                    <span class="small text-secondary fw-semibold">Personalizado</span>
-                    <div class="d-flex align-items-center gap-2">
-                        <input type="color" id="cfg-color-custom" style="width:34px;height:30px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;padding:0;background:transparent;" onchange="window.selectAccentColorCustom(this.value)">
-                        <button onclick="window.resetAccentColor()" class="btn btn-sm btn-light border rounded-pill px-3 py-1" style="font-size:0.75rem;font-weight:700;">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i>Restablecer
-                        </button>
+        <!-- ════════════════════════════════════════════════════════ -->
+        <!-- 1. PANEL: TEMA Y APARIENCIA                             -->
+        <!-- ════════════════════════════════════════════════════════ -->
+        <div id="cfg-panel-apariencia" class="config-panel d-none">
+            
+            <h2 class="cfg-section-title">Tema del Sistema</h2>
+            <div class="cfg-group-box">
+                <div class="cfg-row-item">
+                    <div class="cfg-item-info">
+                        <p class="cfg-item-title"><i class="bi bi-moon-stars" style="color: #8b5cf6;"></i> Modo Oscuro</p>
+                        <p class="cfg-item-desc">Ajusta la paleta a tonos oscuros para mayor comodidad visual.</p>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input cfg-switch" type="checkbox" id="cfg-switch-dark" role="switch" onchange="if(window.applyDark) window.applyDark(this.checked, true)">
                     </div>
                 </div>
             </div>
+
+            <h2 class="cfg-section-title">Color de Acento</h2>
+            <div class="cfg-group-box">
+                <div class="p-3">
+                    <p class="cfg-item-desc mb-3">Tono principal para botones, enlaces y elementos destacados del ERP.</p>
+                    <div class="d-flex flex-wrap gap-3 align-items-center mb-3" id="cfg-swatches">
+                        <div class="cfg-swatch-circle" data-color="#2563eb" title="Azul Corporativo" style="background:#2563eb;" onclick="window.selectAccentColor(this)"></div>
+                        <div class="cfg-swatch-circle" data-color="#10b981" title="Verde Esmeralda" style="background:#10b981;" onclick="window.selectAccentColor(this)"></div>
+                        <div class="cfg-swatch-circle" data-color="#f59e0b" title="Ámbar" style="background:#f59e0b;" onclick="window.selectAccentColor(this)"></div>
+                        <div class="cfg-swatch-circle" data-color="#ef4444" title="Rojo Carmesí" style="background:#ef4444;" onclick="window.selectAccentColor(this)"></div>
+                        <div class="cfg-swatch-circle" data-color="#8b5cf6" title="Violeta" style="background:#8b5cf6;" onclick="window.selectAccentColor(this)"></div>
+                        <div class="cfg-swatch-circle" data-color="#ec4899" title="Rosa" style="background:#ec4899;" onclick="window.selectAccentColor(this)"></div>
+                        <div class="cfg-swatch-circle" data-color="#06b6d4" title="Cian" style="background:#06b6d4;" onclick="window.selectAccentColor(this)"></div>
+                        <div class="cfg-swatch-circle" data-color="#f97316" title="Naranja" style="background:#f97316;" onclick="window.selectAccentColor(this)"></div>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between pt-2 border-top">
+                        <span class="small text-secondary fw-semibold">Personalizado</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="color" id="cfg-color-custom" style="width:34px;height:30px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;padding:0;background:transparent;" onchange="window.selectAccentColorCustom(this.value)">
+                            <button onclick="window.resetAccentColor()" class="btn btn-sm btn-light border rounded-pill px-3 py-1" style="font-size:0.75rem;font-weight:700;">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Restablecer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="cfg-section-title">Texto y Tipografía</h2>
+            <div class="cfg-group-box">
+                <div class="cfg-row-item flex-column align-items-stretch">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <p class="cfg-item-title"><i class="bi bi-type" style="color: #3b82f6;"></i> Tamaño de Fuente</p>
+                        <span class="badge bg-light text-primary border rounded-pill px-2 py-1" id="cfg-font-label" style="font-size:0.75rem;font-weight:700;">14px</span>
+                    </div>
+                    <input type="range" class="form-range" id="cfg-font-slider" min="12" max="18" step="1" value="14" oninput="window.applyFontSize(parseInt(this.value), true)">
+                    <div class="d-flex justify-content-between text-muted" style="font-size:0.7rem;">
+                        <span>Compacto (12px)</span>
+                        <span>Predeterminado (14px)</span>
+                        <span>Grande (18px)</span>
+                    </div>
+                </div>
+
+                <div class="cfg-row-item flex-column align-items-stretch">
+                    <p class="cfg-item-title mb-2"><i class="bi bi-fonts" style="color: #6366f1;"></i> Familia Tipográfica</p>
+                    <div class="d-flex flex-wrap gap-2" id="cfg-font-options">
+                        <button class="cfg-font-pill active" data-font="inter" onclick="window.applyFontFamily('inter', true)">Plus Jakarta</button>
+                        <button class="cfg-font-pill" data-font="system" onclick="window.applyFontFamily('system', true)">Sistema (San Francisco)</button>
+                        <button class="cfg-font-pill" data-font="serif" onclick="window.applyFontFamily('serif', true)">Serif</button>
+                        <button class="cfg-font-pill" data-font="mono" onclick="window.applyFontFamily('mono', true)">Monoespacio</button>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
-        <h2 class="cfg-section-title">Texto y Tipografía</h2>
-        <div class="cfg-group-box">
-            <div class="cfg-row-item flex-column align-items-stretch">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <p class="cfg-item-title"><i class="bi bi-type" style="color: #3b82f6;"></i> Tamaño de Fuente</p>
-                    <span class="badge bg-light text-primary border rounded-pill px-2 py-1" id="cfg-font-label" style="font-size:0.75rem;font-weight:700;">14px</span>
+        <!-- ════════════════════════════════════════════════════════ -->
+        <!-- 2. PANEL: ACCESIBILIDAD                                  -->
+        <!-- ════════════════════════════════════════════════════════ -->
+        <div id="cfg-panel-accesibilidad" class="config-panel d-none">
+            
+            <h2 class="cfg-section-title">Efectos y Fluidez</h2>
+            <div class="cfg-group-box">
+                <div class="cfg-row-item">
+                    <div class="cfg-item-info">
+                        <p class="cfg-item-title"><i class="bi bi-lightning-charge" style="color: #eab308;"></i> Reducir Animaciones</p>
+                        <p class="cfg-item-desc">Desactiva transiciones y micro-animaciones para aumentar la velocidad en dispositivos lentos.</p>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input cfg-switch" type="checkbox" id="cfg-switch-anims" role="switch" onchange="window.setReduceMotion(this.checked)">
+                    </div>
                 </div>
-                <input type="range" class="form-range" id="cfg-font-slider" min="12" max="18" step="1" value="14" oninput="window.applyFontSize(parseInt(this.value), true)">
-                <div class="d-flex justify-content-between text-muted" style="font-size:0.7rem;">
-                    <span>Compacto (12px)</span>
-                    <span>Predeterminado (14px)</span>
-                    <span>Grande (18px)</span>
+
+                <div class="cfg-row-item">
+                    <div class="cfg-item-info">
+                        <p class="cfg-item-title"><i class="bi bi-layout-sidebar-inset" style="color: #06b6d4;"></i> Barra Lateral Compacta</p>
+                        <p class="cfg-item-desc">Muestra la barra de navegación de escritorio en modo icono para ganar espacio de trabajo.</p>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input cfg-switch" type="checkbox" id="cfg-switch-compact" role="switch" onchange="window.setSidebarCompact(this.checked)">
+                    </div>
                 </div>
             </div>
 
-            <div class="cfg-row-item flex-column align-items-stretch">
-                <p class="cfg-item-title mb-2"><i class="bi bi-fonts" style="color: #6366f1;"></i> Familia Tipográfica</p>
-                <div class="d-flex flex-wrap gap-2" id="cfg-font-options">
-                    <button class="cfg-font-pill active" data-font="inter" onclick="window.applyFontFamily('inter', true)">Plus Jakarta</button>
-                    <button class="cfg-font-pill" data-font="system" onclick="window.applyFontFamily('system', true)">Sistema (San Francisco)</button>
-                    <button class="cfg-font-pill" data-font="serif" onclick="window.applyFontFamily('serif', true)">Serif</button>
-                    <button class="cfg-font-pill" data-font="mono" onclick="window.applyFontFamily('mono', true)">Monoespacio</button>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════ -->
+        <!-- 3. PANEL: IDIOMA                                         -->
+        <!-- ════════════════════════════════════════════════════════ -->
+        <div id="cfg-panel-idioma" class="config-panel d-none">
+            
+            <h2 class="cfg-section-title">Idioma del Sistema</h2>
+            <div class="cfg-group-box">
+                <div class="cfg-lang-item active" data-lang="es" onclick="window.setLanguage('es')">
+                    <div class="d-flex align-items-center gap-3">
+                        <span style="font-size:1.3rem;">🇵🇪</span>
+                        <div>
+                            <p class="ajustes-item-title">Español</p>
+                            <p class="cfg-item-desc">Español (Perú) — Predeterminado</p>
+                        </div>
+                    </div>
+                    <i class="bi bi-check-circle-fill cfg-lang-check"></i>
+                </div>
+
+                <div class="cfg-lang-item" data-lang="en" onclick="window.setLanguage('en')">
+                    <div class="d-flex align-items-center gap-3">
+                        <span style="font-size:1.3rem;">🇺🇸</span>
+                        <div>
+                            <p class="ajustes-item-title">English</p>
+                            <p class="cfg-item-desc">English (United States)</p>
+                        </div>
+                    </div>
+                    <i class="bi bi-check-circle-fill cfg-lang-check"></i>
+                </div>
+
+                <div class="cfg-lang-item" data-lang="pt" onclick="window.setLanguage('pt')">
+                    <div class="d-flex align-items-center gap-3">
+                        <span style="font-size:1.3rem;">🇧🇷</span>
+                        <div>
+                            <p class="ajustes-item-title">Português</p>
+                            <p class="cfg-item-desc">Português (Brasil)</p>
+                        </div>
+                    </div>
+                    <i class="bi bi-check-circle-fill cfg-lang-check"></i>
                 </div>
             </div>
+
         </div>
 
     </div>
-
-    <!-- ════════════════════════════════════════════════════════ -->
-    <!-- 2. PANEL: ACCESIBILIDAD                                  -->
-    <!-- ════════════════════════════════════════════════════════ -->
-    <div id="cfg-panel-accesibilidad" class="config-panel d-none">
-        
-        <h2 class="cfg-section-title">Efectos y Fluidez</h2>
-        <div class="cfg-group-box">
-            <div class="cfg-row-item">
-                <div class="cfg-item-info">
-                    <p class="cfg-item-title"><i class="bi bi-lightning-charge" style="color: #eab308;"></i> Reducir Animaciones</p>
-                    <p class="cfg-item-desc">Desactiva transiciones y micro-animaciones para aumentar la velocidad en dispositivos lentos.</p>
-                </div>
-                <div class="form-check form-switch m-0">
-                    <input class="form-check-input cfg-switch" type="checkbox" id="cfg-switch-anims" role="switch" onchange="window.setReduceMotion(this.checked)">
-                </div>
-            </div>
-
-            <div class="cfg-row-item">
-                <div class="cfg-item-info">
-                    <p class="cfg-item-title"><i class="bi bi-layout-sidebar-inset" style="color: #06b6d4;"></i> Barra Lateral Compacta</p>
-                    <p class="cfg-item-desc">Muestra la barra de navegación de escritorio en modo icono para ganar espacio de trabajo.</p>
-                </div>
-                <div class="form-check form-switch m-0">
-                    <input class="form-check-input cfg-switch" type="checkbox" id="cfg-switch-compact" role="switch" onchange="window.setSidebarCompact(this.checked)">
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- ════════════════════════════════════════════════════════ -->
-    <!-- 3. PANEL: IDIOMA                                         -->
-    <!-- ════════════════════════════════════════════════════════ -->
-    <div id="cfg-panel-idioma" class="config-panel d-none">
-        
-        <h2 class="cfg-section-title">Idioma del Sistema</h2>
-        <div class="cfg-group-box">
-            <div class="cfg-lang-item active" data-lang="es" onclick="window.setLanguage('es')">
-                <div class="d-flex align-items-center gap-3">
-                    <span style="font-size:1.3rem;">🇵🇪</span>
-                    <div>
-                        <p class="ajustes-item-title">Español</p>
-                        <p class="cfg-item-desc">Español (Perú) — Predeterminado</p>
-                    </div>
-                </div>
-                <i class="bi bi-check-circle-fill cfg-lang-check"></i>
-            </div>
-
-            <div class="cfg-lang-item" data-lang="en" onclick="window.setLanguage('en')">
-                <div class="d-flex align-items-center gap-3">
-                    <span style="font-size:1.3rem;">🇺🇸</span>
-                    <div>
-                        <p class="ajustes-item-title">English</p>
-                        <p class="cfg-item-desc">English (United States)</p>
-                    </div>
-                </div>
-                <i class="bi bi-check-circle-fill cfg-lang-check"></i>
-            </div>
-
-            <div class="cfg-lang-item" data-lang="pt" onclick="window.setLanguage('pt')">
-                <div class="d-flex align-items-center gap-3">
-                    <span style="font-size:1.3rem;">🇧🇷</span>
-                    <div>
-                        <p class="ajustes-item-title">Português</p>
-                        <p class="cfg-item-desc">Português (Brasil)</p>
-                    </div>
-                </div>
-                <i class="bi bi-check-circle-fill cfg-lang-check"></i>
-            </div>
-        </div>
-
-    </div>
-
 </div>
 
 <!-- Toast flotante sutil -->
