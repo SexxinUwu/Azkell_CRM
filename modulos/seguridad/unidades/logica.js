@@ -1178,30 +1178,41 @@ window._sguQueueBackgroundUpload = async function(registroId, tipo, fotosPendien
         var data = await r.json();
         var urls = data.urls || [];
         var exitosos = [];
-
-        // 3. Subida concurrente en paralelo con reintentos
         var totalFotos = fotosPendientes.length;
         var subidasCompletadas = 0;
 
-        var uploadPromises = fotosPendientes.map(async function(p, idx) {
-            if (!urls[idx]) return null;
-            var uploadUrl = urls[idx].uploadUrl;
-            var s3Key = urls[idx].key;
-            var fileBlob = blobsOptimizados[idx] || p.file;
+        // Subida en pool de concurrencia controlada (2 streams paralelos) para no saturar móviles
+        var CONCURRENCY = 2;
+        var queue = fotosPendientes.map(function(p, idx) { return { p: p, idx: idx }; });
 
-            var res = await _sguUploadSinglePhotoWithRetry(uploadUrl, fileBlob, s3Key, tipo, 3);
-            if (res && res.ok) {
-                exitosos.push({ key: res.key, fase: res.fase });
+        async function uploadWorker() {
+            while (queue.length > 0) {
+                var item = queue.shift();
+                var p = item.p;
+                var idx = item.idx;
+                if (!urls[idx]) continue;
+
+                var uploadUrl = urls[idx].uploadUrl;
+                var s3Key = urls[idx].key;
+                var fileBlob = blobsOptimizados[idx] || p.file;
+
+                var res = await _sguUploadSinglePhotoWithRetry(uploadUrl, fileBlob, s3Key, tipo, 4);
+                if (res && res.ok) {
+                    exitosos.push({ key: res.key, fase: res.fase });
+                }
+                subidasCompletadas++;
+                var pct = Math.round(30 + (subidasCompletadas / totalFotos) * 55);
+                if (progressBar) progressBar.style.width = pct + '%';
+                if (progressText) progressText.textContent = 'Subiendo evidencias (' + subidasCompletadas + '/' + totalFotos + ')...';
+                if (progressCount) progressCount.textContent = pct + '%';
             }
-            subidasCompletadas++;
-            var pct = Math.round(30 + (subidasCompletadas / totalFotos) * 55);
-            if (progressBar) progressBar.style.width = pct + '%';
-            if (progressText) progressText.textContent = 'Subiendo evidencias (' + subidasCompletadas + '/' + totalFotos + ')...';
-            if (progressCount) progressCount.textContent = pct + '%';
-            return res;
-        });
+        }
 
-        await Promise.all(uploadPromises);
+        var workers = [];
+        for (var w = 0; w < Math.min(CONCURRENCY, totalFotos); w++) {
+            workers.push(uploadWorker());
+        }
+        await Promise.all(workers);
 
         if (!exitosos.length) {
             throw new Error('No se pudieron subir las imágenes');
@@ -1502,9 +1513,9 @@ window._sguVerFotos = function(tipo) {
     } else {
         var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;">';
         fotos.forEach(function(f, idx) {
-            html += '<div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#f8fafc;box-shadow:0 2px 8px rgba(0,0,0,0.04);">';
-            html += '<a href="' + f.url + '" target="_blank" style="display:block;">';
-            html += '<img src="' + f.url + '" style="width:100%;height:140px;object-fit:cover;display:block;" alt="Evidencia ' + (idx + 1) + '" crossorigin="anonymous">';
+            html += '<div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#f8fafc;box-shadow:0 2px 8px rgba(0,0,0,0.04);position:relative;">';
+            html += '<a href="' + f.url + '" target="_blank" style="display:block;background:#f1f5f9;min-height:140px;">';
+            html += '<img src="' + f.url + '" style="width:100%;height:140px;object-fit:cover;display:block;" alt="Evidencia ' + (idx + 1) + '" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML=\'<div class=\\\'d-flex flex-column align-items-center justify-content-center h-100 p-3 text-muted text-center\\\' style=\\\'height:140px;font-size:0.75rem;\\\'><i class=\\\'bi bi-cloud-arrow-up fs-3 text-primary mb-1\\\'></i><span>Procesando imagen</span></div>\';">';
             html += '</a>';
             html += '<div style="padding:6px 8px;font-size:0.75rem;font-weight:700;color:#475569;text-align:center;background:#fff;border-top:1px solid #f1f5f9;">Foto ' + (idx + 1) + '</div>';
             html += '</div>';

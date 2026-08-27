@@ -71,14 +71,16 @@ module.exports = (db, logAudit) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 
                 const fotosByRecord = {};
-                for (const f of (fotosRows || [])) {
+                const presignPromises = (fotosRows || []).map(async (f) => {
                     if (!fotosByRecord[f.registro_id]) fotosByRecord[f.registro_id] = [];
                     const key = s3KeyFromUrl(f.url);
+                    let finalUrl = f.url;
                     if (key) {
-                        try { f.url = await getPresignedUrl(key); } catch(e) {}
+                        try { finalUrl = await getPresignedUrl(key, 86400); } catch(e) {}
                     }
-                    fotosByRecord[f.registro_id].push({ id: f.id, tipo: f.tipo, url: f.url, orden: f.orden });
-                }
+                    fotosByRecord[f.registro_id].push({ id: f.id, tipo: f.tipo, url: finalUrl, orden: f.orden, key: key });
+                });
+                await Promise.all(presignPromises);
 
                 for (const r of rows) {
                     r.fotos = fotosByRecord[r.id] || [];
