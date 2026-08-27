@@ -2675,14 +2675,18 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
     color: inherit !important;
 }
 
-/* Cuando el bottom nav está visible, añadir padding al área de contenido */
-@media (max-width: 767px) {
-    /* Mover el padding-bottom a los contenedores scrollables en lugar del fondo principal */
-    #root-dinamico { padding-bottom: 0 !important; }
-    .content { padding-bottom: 0 !important; }
+/* Cuando el bottom nav está visible, añadir padding al área de contenido en móviles y tablets */
+@media (max-width: 1024px) {
+    .bottom-nav { display: flex !important; }
+    #root-dinamico { padding-bottom: 90px !important; }
+    .content { padding-bottom: 90px !important; }
     .table-container, .rot-table-wrap, .main-area > .modulo-wrapper > .table-container { 
         padding-bottom: 120px !important; 
     }
+}
+
+@media (min-width: 1025px) {
+    .bottom-nav { display: none !important; }
 }
 
 /* ================================================================
