@@ -3713,12 +3713,14 @@ function marcarMenuActivo(ruta) {
 }
 
 window.cargarConfigSection = function(section) {
-    window._pendingCfgSection = section;
-    sessionStorage.setItem('pending_cfg_section', section);
+    const sec = section || 'apariencia';
+    window._activeConfigSection = sec;
+    sessionStorage.setItem('active_config_section', sec);
+
     document.querySelectorAll('#sidebarMenu .nav-item').forEach(a => a.classList.remove('active'));
     document.querySelectorAll('.nav-section-toggle').forEach(b => b.classList.remove('section-has-active'));
     const cfgMap = { perfil:'nav-cfg-perfil', apariencia:'nav-cfg-apariencia', accesibilidad:'nav-cfg-accesibilidad', idioma:'nav-cfg-idioma', empresa:'nav-cfg-empresa', usuarios:'nav-cfg-admin', auditoria:'nav-cfg-auditoria' };
-    const el = document.getElementById(cfgMap[section] || 'nav-cfg-perfil');
+    const el = document.getElementById(cfgMap[sec] || 'nav-cfg-perfil');
     if (el) el.classList.add('active');
     // Marcar sección configuración como activa
     const cfgBtn = document.querySelector('.nav-section-toggle[data-section="configuracion"]');
@@ -3728,11 +3730,14 @@ window.cargarConfigSection = function(section) {
     if (cfgItems && cfgItems.classList.contains('nav-section-collapsed')) {
         window.toggleNavSection('configuracion');
     }
-    cargarModuloAislado('sistema/configuracion').then(() => {
-        if (typeof window.showConfig === 'function') {
-            window.showConfig(section);
-        }
-    });
+
+    // Si ya estamos dentro del módulo de configuración en el DOM, solo cambiamos el panel
+    if (document.getElementById('moduloConfiguracion') && typeof window.showConfig === 'function') {
+        window.showConfig(sec);
+        return;
+    }
+
+    cargarModuloAislado('sistema/configuracion');
 };
 
 window.cargarModuloAislado = async function(rutaModulo) {
