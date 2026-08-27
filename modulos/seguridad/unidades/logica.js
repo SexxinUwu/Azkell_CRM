@@ -243,24 +243,142 @@ window._sguSyncDocPlaca = async function(placa, tipo) {
     }
 };
 
-// ── INIT Y CARGA (PERFIL EN RUTA POR DEFECTO / CARGA BAJO DEMANDA) ─
+// ── ESTADO MULTI-EMPRESA ──────────────────────────────────────────
+var _sguEmpresaActiva = localStorage.getItem('sgu_empresa_activa') || 'TODAS';
+var _sguEmpresasStatsCache = null;
+
+// ── INIT Y CARGA (PORTAL MULTI-EMPRESA O LISTA DIRECTA) ───────────
 window.init_seguridad_unidades = window.init_unidades = function() {
     if (!window.checkPerm('seguridad_unidades', 'l') && !window.checkPerm('checklist', 'l')) {
         var wrap = document.getElementById('sgu-app') || document.querySelector('.container-fluid');
         if (wrap && typeof window.showNoPermMsg === 'function') window.showNoPermMsg(wrap);
         return;
     }
-    _sguView = 'list';
+
     _sguActiveTab = 'activos';
     _sguLoadedAll = false;
 
+    // Actualizar nombre de usuario en el portal
+    var lsUser = localStorage.getItem('fleet_user') || 'Oficial de Seguridad';
+    var elUserName = document.getElementById('sgu-portal-user-name');
+    var elUserAvatar = document.getElementById('sgu-portal-user-avatar');
+    if (elUserName) elUserName.textContent = lsUser;
+    if (elUserAvatar) {
+        var partes = lsUser.trim().split(' ');
+        var ini = partes.length > 1 ? (partes[0][0] + partes[1][0]) : lsUser.substring(0, 2);
+        elUserAvatar.textContent = ini.toUpperCase();
+    }
+
     _sguLoadResources();
-    _sguLoadStats();
-    _sguLoadTemplate(function() {
-        // Cargar por defecto solo unidades en ruta para velocidad instantánea
-        _sguLoadRecords(false, function() {
-            window._sguShowView('list');
+    _sguLoadTemplate();
+
+    // Por defecto, mostrar siempre el Portal de Bienvenida para que elija la empresa
+    window._sguIrAPortal();
+};
+
+// ── GESTIÓN DE PORTAL DE BIENVENIDA Y CARDS DE EMPRESAS ───────────
+window._sguIrAPortal = function() {
+    window._sguShowView('portal');
+    window._sguCargarPortalStats();
+};
+
+window._sguCargarPortalStats = function() {
+    var grid = document.getElementById('sgu-portal-companies-grid');
+    if (!grid) return;
+
+    grid.innerHTML = '<div class="col-12 text-center py-4 text-muted"><i class="bi bi-arrow-repeat spin fs-4 d-block mb-2"></i> Actualizando estadísticas de empresas...</div>';
+
+    _sguFetch('/api/seguridad/empresas-stats').then(function(data) {
+        _sguEmpresasStatsCache = data;
+        var empresas = (data && data.empresas) || [];
+        var global = (data && data.global) || { empresa: 'TODAS', total_flota: 0, en_ruta: 0, completados: 0, alertas: 0 };
+
+        if (!empresas.length) {
+            empresas = [{ empresa: 'MARSISA', total_flota: 18, en_ruta: 0, completados: 0, alertas: 0 }];
+        }
+
+        var html = '';
+
+        // 1. Tarjeta para cada Empresa individual (Marsisa, Trahesa, etc.)
+        var colorPalettes = [
+            { bg: '#eff6ff', color: '#0284c7', icon: 'bi-building-fill' },
+            { bg: '#f0fdf4', color: '#16a34a', icon: 'bi-truck-front-fill' },
+            { bg: '#fffbeb', color: '#d97706', icon: 'bi-geo-alt-fill' },
+            { bg: '#fdf2f8', color: '#db2777', icon: 'bi-box-seam-fill' }
+        ];
+
+        empresas.forEach(function(emp, idx) {
+            var pal = colorPalettes[idx % colorPalettes.length];
+            html += '<div class="col-12 col-md-6 col-lg-4">';
+            html += '<div class="sgu-company-card" onclick="window._sguSeleccionarEmpresa(\'' + emp.empresa + '\')">';
+            html += '<div>';
+            html += '<div class="d-flex align-items-center justify-content-between mb-2">';
+            html += '<div class="sgu-company-icon" style="background:' + pal.bg + ';color:' + pal.color + ';"><i class="bi ' + pal.icon + '"></i></div>';
+            html += '<span class="badge bg-light text-secondary border rounded-pill px-2 py-1" style="font-size:0.72rem;">' + (emp.total_flota || 0) + ' Unidades</span>';
+            html += '</div>';
+            html += '<h4 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">' + emp.empresa + '</h4>';
+            html += '<p class="text-secondary small mb-3">Gestión de salidas y retornos de flota ' + emp.empresa + '</p>';
+            html += '</div>';
+
+            // Mini KPIs
+            html += '<div class="d-flex align-items-center justify-content-between p-2 rounded-3 mb-3" style="background:#f8fafc;border:1px solid #f1f5f9;">';
+            html += '<div class="text-center flex-fill border-end"><div class="fw-bold text-primary" style="font-size:1.1rem;">' + emp.en_ruta + '</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">En Ruta</span></div>';
+            html += '<div class="text-center flex-fill border-end"><div class="fw-bold text-success" style="font-size:1.1rem;">' + emp.completados + '</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Completados</span></div>';
+            html += '<div class="text-center flex-fill"><div class="fw-bold ' + (emp.alertas > 0 ? 'text-danger' : 'text-secondary') + '" style="font-size:1.1rem;">' + emp.alertas + '</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Alertas</span></div>';
+            html += '</div>';
+
+            html += '<button class="btn btn-primary w-100 rounded-3 fw-bold py-2 shadow-2xs" style="font-size:0.85rem;">';
+            html += '<i class="bi bi-shield-check me-1"></i> Gestionar CheckList ➜';
+            html += '</button>';
+
+            html += '</div>';
+            html += '</div>';
         });
+
+        // 2. Tarjeta Consolidada "Todas las Empresas (Global)"
+        html += '<div class="col-12 col-md-6 col-lg-4">';
+        html += '<div class="sgu-company-card" style="border: 2px dashed #cbd5e1; background: #fafafa;" onclick="window._sguSeleccionarEmpresa(\'TODAS\')">';
+        html += '<div>';
+        html += '<div class="d-flex align-items-center justify-content-between mb-2">';
+        html += '<div class="sgu-company-icon" style="background:#334155;color:#ffffff;"><i class="bi bi-globe2"></i></div>';
+        html += '<span class="badge bg-dark text-white rounded-pill px-2 py-1" style="font-size:0.72rem;">Consolidado</span>';
+        html += '</div>';
+        html += '<h4 class="fw-bold mb-1 text-dark">TODAS LAS EMPRESAS</h4>';
+        html += '<p class="text-secondary small mb-3">Vista general combinada de todas las empresas de la flota</p>';
+        html += '</div>';
+
+        html += '<div class="d-flex align-items-center justify-content-between p-2 rounded-3 mb-3" style="background:#ffffff;border:1px solid #e2e8f0;">';
+        html += '<div class="text-center flex-fill border-end"><div class="fw-bold text-primary" style="font-size:1.1rem;">' + global.en_ruta + '</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">En Ruta</span></div>';
+        html += '<div class="text-center flex-fill border-end"><div class="fw-bold text-success" style="font-size:1.1rem;">' + global.completados + '</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Completados</span></div>';
+        html += '<div class="text-center flex-fill"><div class="fw-bold text-secondary" style="font-size:1.1rem;">' + global.total_flota + '</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Total Flota</span></div>';
+        html += '</div>';
+
+        html += '<button class="btn btn-outline-dark w-100 rounded-3 fw-bold py-2" style="font-size:0.85rem;">';
+        html += '<i class="bi bi-eye me-1"></i> Ver Flota Global ➜';
+        html += '</button>';
+
+        html += '</div>';
+        html += '</div>';
+
+        grid.innerHTML = html;
+    }).catch(function(err) {
+        console.error('Error cargando empresas stats:', err);
+        grid.innerHTML = '<div class="col-12 text-center py-4 text-danger"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i> Error al cargar empresas.</div>';
+    });
+};
+
+window._sguSeleccionarEmpresa = function(empresa) {
+    _sguEmpresaActiva = empresa || 'TODAS';
+    localStorage.setItem('sgu_empresa_activa', _sguEmpresaActiva);
+
+    var badge = document.getElementById('sgu-active-company-badge');
+    if (badge) badge.textContent = _sguEmpresaActiva;
+
+    _sguToast('Cargando ' + _sguEmpresaActiva + '...', 'bi-building');
+
+    _sguLoadStats();
+    _sguLoadRecords(false, function() {
+        window._sguShowView('list');
     });
 };
 
@@ -285,7 +403,10 @@ function _sguLoadStats(cb) {
 function _sguLoadResources() {
     _sguFetch('/api/seguridad/recursos').then(function(data) {
         if (data.placas) _sguRecursos.placas = data.placas;
+        if (data.tractosPorEmpresa) _sguRecursos.tractosPorEmpresa = data.tractosPorEmpresa;
+        if (data.carretasGlobales) _sguRecursos.carretasGlobales = data.carretasGlobales;
         if (data.conductores) _sguRecursos.conductores = data.conductores;
+        if (data.empresas) _sguRecursos.empresas = data.empresas;
     }).catch(function(){});
 }
 
@@ -339,7 +460,7 @@ window._sguRefresh = function() {
     });
 };
 
-// ── AUTOCOMPLETE PERSONALIZADO ───────────────────────────────────
+// ── AUTOCOMPLETE PERSONALIZADO (CONTEXTUAL POR EMPRESA) ───────────
 window._sguHandleAutoInput = function(input, type) {
     var allLists = document.querySelectorAll('.sgu-autocomplete-list');
     allLists.forEach(function(l) {
@@ -350,7 +471,22 @@ window._sguHandleAutoInput = function(input, type) {
     var listEl = input.nextElementSibling;
     if (!listEl || !listEl.classList.contains('sgu-autocomplete-list')) return;
 
-    var items = _sguRecursos[type] || [];
+    var items = [];
+
+    if (type === 'placas') {
+        // Si es placa tracto y hay empresa activa (ej. MARSISA), sugerir primero tractos de esa empresa
+        if (_sguEmpresaActiva && _sguEmpresaActiva !== 'TODAS' && _sguRecursos.tractosPorEmpresa && _sguRecursos.tractosPorEmpresa[_sguEmpresaActiva]) {
+            items = _sguRecursos.tractosPorEmpresa[_sguEmpresaActiva];
+        } else {
+            items = _sguRecursos.placas || [];
+        }
+    } else if (type === 'carretas') {
+        // Carretas globales: todas las carretas y semirremolques de cualquier empresa (alquiladas)
+        items = (_sguRecursos.carretasGlobales && _sguRecursos.carretasGlobales.length) ? _sguRecursos.carretasGlobales : (_sguRecursos.placas || []);
+    } else {
+        items = _sguRecursos[type] || [];
+    }
+
     var filtered = items.filter(function(item) {
         return item.toLowerCase().indexOf(val) >= 0;
     });
@@ -417,7 +553,7 @@ window._sguOpenScanner = function() {
 window._sguShowView = function(view, id) {
     _sguView = view;
     if (id) _sguDetailId = id;
-    ['sgu-list', 'sgu-form', 'sgu-detail', 'sgu-settings'].forEach(function(v) {
+    ['sgu-portal', 'sgu-list', 'sgu-form', 'sgu-detail', 'sgu-settings'].forEach(function(v) {
         var el = document.getElementById(v);
         if (el) {
             el.style.display = 'none';
@@ -430,7 +566,8 @@ window._sguShowView = function(view, id) {
         target.classList.add('active');
     }
 
-    if (view === 'list') { _sguRenderList(); }
+    if (view === 'portal') { /* el portal se actualiza en _sguCargarPortalStats */ }
+    else if (view === 'list') { _sguRenderList(); }
     else if (view === 'form') { _sguInitForm(); }
     else if (view === 'detail') { _sguRenderDetail(id); }
     else if (view === 'settings') { _sguRenderSettings(); }
@@ -491,25 +628,24 @@ function _sguRenderList() {
     var mobileContainer = document.getElementById('sgu-mobile-records-list');
     if (!tableBody && !mobileContainer) return;
 
-    var countTotal = _sguLoadedAll ? _sguRecords.length : (_sguStats.total || _sguRecords.length);
-    var countRuta = _sguRecords.filter(function(r) { return r.estado === 'en_ruta'; }).length || _sguStats.en_ruta;
-    var countComp = _sguLoadedAll ? _sguRecords.filter(function(r) { return r.estado === 'completado'; }).length : (_sguStats.completados || 0);
-    var countAlert = _sguLoadedAll ? _sguRecords.filter(function(r) { return r.salida_has_alert || r.retorno_has_alert; }).length : (_sguStats.alertas || 0);
-
-    var elTotal = document.getElementById('sgu-kpi-val-total');
-    var elRuta = document.getElementById('sgu-kpi-val-ruta');
-    var elComp = document.getElementById('sgu-kpi-val-completados');
-    var elAlert = document.getElementById('sgu-kpi-val-alertas');
-
-    if (elTotal) elTotal.textContent = countTotal;
-    if (elRuta) elRuta.textContent = countRuta;
-    if (elComp) elComp.textContent = countComp;
-    if (elAlert) elAlert.textContent = countAlert;
-
     var search = (document.getElementById('sgu-search') || {}).value || '';
     search = search.toLowerCase().trim();
 
+    // Placas de la empresa activa si no es TODAS
+    var tractosEmpresaActiva = (_sguEmpresaActiva && _sguEmpresaActiva !== 'TODAS' && _sguRecursos.tractosPorEmpresa)
+        ? (_sguRecursos.tractosPorEmpresa[_sguEmpresaActiva] || [])
+        : null;
+
     var filtered = _sguRecords.filter(function(r) {
+        // Filtro por empresa activa (si no es TODAS)
+        if (tractosEmpresaActiva && tractosEmpresaActiva.length > 0) {
+            var pT = (r.placa_tracto || '').toUpperCase().trim();
+            var matchesCompany = tractosEmpresaActiva.some(function(tp) {
+                return tp.replace(/[^A-Z0-9]/g, '') === pT.replace(/[^A-Z0-9]/g, '');
+            });
+            if (!matchesCompany) return false;
+        }
+
         if (_sguActiveTab === 'activos' && r.estado !== 'en_ruta') return false;
         if (_sguActiveTab === 'historial' && r.estado !== 'completado') return false;
         if (_sguActiveTab === 'alertas' && !(r.salida_has_alert || r.retorno_has_alert)) return false;
@@ -521,6 +657,21 @@ function _sguRenderList() {
                (r.conductor || '').toLowerCase().indexOf(search) >= 0 ||
                (r.destino || '').toLowerCase().indexOf(search) >= 0;
     });
+
+    var countTotal = filtered.length;
+    var countRuta = filtered.filter(function(r) { return r.estado === 'en_ruta'; }).length;
+    var countComp = filtered.filter(function(r) { return r.estado === 'completado'; }).length;
+    var countAlert = filtered.filter(function(r) { return r.salida_has_alert || r.retorno_has_alert; }).length;
+
+    var elTotal = document.getElementById('sgu-kpi-val-total');
+    var elRuta = document.getElementById('sgu-kpi-val-ruta');
+    var elComp = document.getElementById('sgu-kpi-val-completados');
+    var elAlert = document.getElementById('sgu-kpi-val-alertas');
+
+    if (elTotal) elTotal.textContent = countTotal;
+    if (elRuta) elRuta.textContent = countRuta;
+    if (elComp) elComp.textContent = countComp;
+    if (elAlert) elAlert.textContent = countAlert;
 
     if (!filtered.length) {
         var emptyHtml = '<tr><td colspan="8" class="text-center py-5 text-secondary">' +

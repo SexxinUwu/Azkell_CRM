@@ -1,102 +1,37 @@
 // ============================================================
-// Módulo: Configuración — window.init_configuracion
+// Módulo: Configuración — window.init_configuracion (v2)
 // ============================================================
 
 window.init_configuracion = function() {
-    // Navegar al panel solicitado desde el sidebar, o default 'apariencia'
+    // 1. Identificar panel de destino
     const sectionTarget = window._pendingCfgSection || 'apariencia';
     window._pendingCfgSection = null;
     window.showConfig(sectionTarget);
 
-    // Poblar datos de perfil desde localStorage
-    const nombre = localStorage.getItem('fleet_user') || '—';
-    const correo = localStorage.getItem('fleet_correo') || localStorage.getItem('fleet_user') || '—';
-    const rol    = localStorage.getItem('fleet_rol') || '—';
-    const acceso = localStorage.getItem('fleet_ultimo_acceso') || null;
-
-    const elNombre = document.getElementById('cfg-perfil-nombre');
-    const elCorreo = document.getElementById('cfg-perfil-correo');
-    const elRol    = document.getElementById('cfg-perfil-rol-badge');
-    const elAcceso = document.getElementById('cfg-perfil-acceso');
-
-    // Cargar datos de empresa
-    const empNombre = localStorage.getItem('fleet_empresa_nombre') || '';
-    const empLogo = localStorage.getItem('fleet_empresa_logo') || '';
-    const inputEmpNombre = document.getElementById('cfg-empresa-nombre');
-    const imgEmpLogo = document.getElementById('cfg-empresa-logo-preview');
-    const placeholderEmpLogo = document.getElementById('cfg-empresa-logo-placeholder');
-    if (inputEmpNombre) inputEmpNombre.value = empNombre;
-    if (imgEmpLogo) {
-        if (empLogo) {
-            imgEmpLogo.src = empLogo;
-            imgEmpLogo.style.display = 'inline-block';
-            if (placeholderEmpLogo) placeholderEmpLogo.style.display = 'none';
-        } else {
-            imgEmpLogo.src = '';
-            imgEmpLogo.style.display = 'none';
-            if (placeholderEmpLogo) placeholderEmpLogo.style.display = 'inline-block';
-        }
-    }
-
-    if (elNombre) elNombre.textContent = nombre;
-    if (elCorreo) elCorreo.textContent = correo;
-
-    // Avatar generado con iniciales
-    var avatarWrap = document.getElementById('cfg-avatar-wrap');
-    if (avatarWrap && typeof window.generarAvatar === 'function') {
-        var av = window.generarAvatar(nombre, 72);
-        // Insertar el div dentro del wrapper circular, reemplazando el ícono genérico
-        avatarWrap.innerHTML = av.replace(
-            'border-radius:' + Math.round(72/3) + 'px',
-            'border-radius:50%;width:100%;height:100%'
-        );
-    }
-    if (elRol) {
-        elRol.textContent = rol.charAt(0).toUpperCase() + rol.slice(1);
-    }
-    if (elAcceso) {
-        if (acceso) {
-            try {
-                elAcceso.textContent = new Date(parseInt(acceso)).toLocaleString('es-PE', {
-                    day: '2-digit', month: 'short', year: 'numeric',
-                    hour: '2-digit', minute: '2-digit'
-                });
-            } catch(e) {
-                elAcceso.textContent = acceso;
-            }
-        } else {
-            elAcceso.textContent = 'No registrado';
-        }
-    }
-
-    // Sincronizar switch dark mode con estado actual
+    // 2. Sincronizar Switch Dark Mode
     const switchDark = document.getElementById('cfg-switch-dark');
     if (switchDark) {
-        switchDark.checked = document.body.classList.contains('dark');
+        switchDark.checked = document.body.classList.contains('dark') || localStorage.getItem('theme') === 'dark';
     }
 
-    // Sincronizar color de acento con el guardado
-    const accentSaved = localStorage.getItem('fleet_accent');
-    if (accentSaved) {
-        _marcarSwatchActivo(accentSaved);
-        const inputColor = document.getElementById('cfg-color-custom');
-        if (inputColor) inputColor.value = accentSaved;
-    } else {
-        _marcarSwatchActivo('#007aff');
-    }
+    // 3. Sincronizar Color de Acento
+    const accentSaved = localStorage.getItem('fleet_accent') || localStorage.getItem('crm_accent') || '#2563eb';
+    _marcarSwatchActivo(accentSaved);
+    const inputColor = document.getElementById('cfg-color-custom');
+    if (inputColor) inputColor.value = accentSaved;
 
-    // Sincronizar slider de fuente
+    // 4. Sincronizar Slider de Fuente
     const fontSaved = parseInt(localStorage.getItem('fleet_fontsize')) || 14;
     const slider = document.getElementById('cfg-font-slider');
     const label  = document.getElementById('cfg-font-label');
     if (slider) slider.value = fontSaved;
     if (label)  label.textContent = fontSaved + 'px';
 
-    // Sincronizar tipo de fuente
+    // 5. Sincronizar Tipo de Fuente
     const fontFamilySaved = localStorage.getItem('fleet_fontfamily') || 'inter';
     if (window.applyFontFamily) window.applyFontFamily(fontFamilySaved, false);
 
-    // Sincronizar switches accesibilidad
+    // 6. Sincronizar Switches de Accesibilidad
     const reduceAnims = localStorage.getItem('fleet_reduce_anims') === 'true';
     const compact     = localStorage.getItem('fleet_sidebar_compact') === 'true';
     const swAnims     = document.getElementById('cfg-switch-anims');
@@ -104,23 +39,18 @@ window.init_configuracion = function() {
     if (swAnims)   swAnims.checked   = reduceAnims;
     if (swCompact) swCompact.checked = compact;
 
-    // Sincronizar idioma activo en las lang-cards
-    const langActual = localStorage.getItem('fleet_idioma') || 'es';
-    document.querySelectorAll('.lang-card').forEach(c => {
-        c.classList.toggle('lang-card-active', c.dataset.lang === langActual);
-    });
+    // 7. Sincronizar Idioma
+    const langActual = localStorage.getItem('fleet_idioma') || localStorage.getItem('idioma') || 'es';
+    _actualizarVistaIdioma(langActual);
 };
 
 // ---- Navegación de paneles ----
 window.showConfig = function(panel) {
-    const panels  = ['apariencia', 'accesibilidad', 'idioma', 'usuarios', 'auditoria', 'empresa'];
+    const panels = ['apariencia', 'accesibilidad', 'idioma'];
     const titleMap = {
-        'apariencia': 'Personalización de Apariencia',
-        'empresa': 'Datos de la Empresa',
-        'accesibilidad': 'Accesibilidad y Efectos',
-        'idioma': 'Configuración de Idioma',
-        'usuarios': 'Gestión de Usuarios',
-        'auditoria': 'Registro de Auditoría'
+        'apariencia': 'Tema y Apariencia',
+        'accesibilidad': 'Accesibilidad',
+        'idioma': 'Idioma del Sistema'
     };
 
     const headerTitle = document.getElementById('cfg-header-title');
@@ -130,7 +60,13 @@ window.showConfig = function(panel) {
 
     panels.forEach(p => {
         const el = document.getElementById('cfg-panel-' + p);
-        if (el) el.classList.toggle('d-none', p !== panel);
+        if (el) {
+            if (p === panel) {
+                el.classList.remove('d-none');
+            } else {
+                el.classList.add('d-none');
+            }
+        }
     });
 };
 
@@ -148,14 +84,12 @@ window.selectAccentColor = function(el) {
 window.selectAccentColorCustom = function(hex) {
     if (!hex) return;
     if (window.applyAccent) window.applyAccent(hex, true);
-    _marcarSwatchActivo(null); // ningún swatch queda activo con color custom
-    const inputColor = document.getElementById('cfg-color-custom');
-    if (inputColor) inputColor.value = hex;
+    _marcarSwatchActivo(null);
     _mostrarToast();
 };
 
 window.resetAccentColor = function() {
-    const defaultAccent = '#007aff';
+    const defaultAccent = '#2563eb';
     if (window.applyAccent) window.applyAccent(defaultAccent, true);
     _marcarSwatchActivo(defaultAccent);
     const inputColor = document.getElementById('cfg-color-custom');
@@ -165,13 +99,11 @@ window.resetAccentColor = function() {
 };
 
 function _marcarSwatchActivo(color) {
-    const swatches = document.querySelectorAll('#cfg-swatches .cfg-swatch');
+    const swatches = document.querySelectorAll('#cfg-swatches .cfg-swatch-circle');
     swatches.forEach(s => {
         const esteColor = (s.dataset.color || '').toLowerCase();
         const isActive  = color && esteColor === color.toLowerCase();
-        s.style.border    = isActive ? '3px solid var(--text)'   : '3px solid transparent';
-        s.style.transform = isActive ? 'scale(1.15)' : 'scale(1)';
-        s.style.boxShadow = isActive ? '0 0 0 2px var(--bg)' : 'none';
+        s.classList.toggle('active', !!isActive);
     });
 }
 
@@ -189,16 +121,15 @@ window.applyFontSize = function(val, save) {
 // ---- Tipo de fuente ----
 window.applyFontFamily = function(key, save) {
     const FONTS = {
-        inter:  "'Inter', system-ui, sans-serif",
-        system: "system-ui, -apple-system, sans-serif",
+        inter:  "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
+        system: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         serif:  "Georgia, 'Times New Roman', serif",
-        mono:   "'Consolas', 'Courier New', monospace",
-        oswald: "'Oswald', sans-serif"
+        mono:   "'Consolas', 'Courier New', monospace"
     };
     const family = FONTS[key] || FONTS.inter;
     document.documentElement.style.setProperty('--font-family', family);
     document.documentElement.style.setProperty('--bs-body-font-family', family);
-    document.querySelectorAll('#cfg-font-options .cfg-font-btn').forEach(b => {
+    document.querySelectorAll('#cfg-font-options .cfg-font-pill').forEach(b => {
         b.classList.toggle('active', b.dataset.font === key);
     });
     if (save) {
@@ -222,71 +153,35 @@ window.setSidebarCompact = function(val) {
     _mostrarToast();
 };
 
-// ---- Toast ----
-window._cfgToastTimer = window._cfgToastTimer || null;
-function _mostrarToast() {
-    const toast = document.getElementById('cfg-toast');
-    if (!toast) return;
-    if (window._cfgToastTimer) clearTimeout(window._cfgToastTimer);
-    toast.classList.add('show');
-    window._cfgToastTimer = setTimeout(() => {
-        toast.classList.remove('show');
-    }, 2000);
-}
-
-// ---- Datos de Empresa ----
-window.guardarDatosEmpresa = async function() {
-    const nombre = document.getElementById('cfg-empresa-nombre').value.trim();
-    let payload = {};
-    if (nombre) {
-        payload.empresa_nombre = nombre;
-    }
-
-    const inputLogo = document.getElementById('cfg-empresa-logo');
-    let b64Logo = null;
-    
-    if (inputLogo.files && inputLogo.files[0]) {
-        const file = inputLogo.files[0];
-        if (file.size > 1024 * 1024) {
-            if (typeof window.mostrarAlerta === 'function') {
-                window.mostrarAlerta('El logo debe pesar menos de 1MB.', 'warning');
-            } else {
-                alert('El logo debe pesar menos de 1MB.');
-            }
-            return;
-        }
-        
-        b64Logo = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.readAsDataURL(file);
-        });
-        payload.empresa_logo = b64Logo;
-    }
-
-    try {
-        const res = await fetch('/api/configuracion', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        if (res.ok) {
-            if (payload.empresa_nombre) localStorage.setItem('fleet_empresa_nombre', payload.empresa_nombre);
-            if (payload.empresa_logo) {
-                localStorage.setItem('fleet_empresa_logo', payload.empresa_logo);
-                document.getElementById('cfg-empresa-logo-preview').src = payload.empresa_logo;
-                document.getElementById('cfg-empresa-logo-preview').style.display = 'inline-block';
-                document.getElementById('cfg-empresa-logo-placeholder').style.display = 'none';
-            }
-            _mostrarToast();
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Configuración global guardada correctamente', 'success');
-        } else {
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error guardando configuración global', 'error');
-        }
-    } catch (e) {
-        console.error("Error saving ERP config:", e);
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error de conexión', 'error');
+// ---- Idioma ----
+window.setLanguage = function(lang) {
+    localStorage.setItem('fleet_idioma', lang);
+    localStorage.setItem('idioma', lang);
+    _actualizarVistaIdioma(lang);
+    _mostrarToast('Idioma actualizado');
+    if (typeof window.applyI18n === 'function') {
+        window.applyI18n();
     }
 };
 
+function _actualizarVistaIdioma(lang) {
+    document.querySelectorAll('.cfg-lang-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.lang === lang);
+    });
+}
+
+// ---- Toast ----
+window._cfgToastTimer = window._cfgToastTimer || null;
+function _mostrarToast(msg) {
+    const toast = document.getElementById('cfg-toast');
+    if (!toast) return;
+    if (msg) {
+        const span = toast.querySelector('span');
+        if (span) span.textContent = msg;
+    }
+    if (window._cfgToastTimer) clearTimeout(window._cfgToastTimer);
+    toast.style.display = 'flex';
+    window._cfgToastTimer = setTimeout(() => {
+        toast.style.display = 'none';
+    }, 2000);
+}
