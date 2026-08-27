@@ -474,14 +474,17 @@ window._sguHandleAutoInput = function(input, type) {
     var items = [];
 
     if (type === 'placas') {
-        // Si es placa tracto y hay empresa activa (ej. MARSISA), sugerir primero tractos de esa empresa
-        if (_sguEmpresaActiva && _sguEmpresaActiva !== 'TODAS' && _sguRecursos.tractosPorEmpresa && _sguRecursos.tractosPorEmpresa[_sguEmpresaActiva]) {
-            items = _sguRecursos.tractosPorEmpresa[_sguEmpresaActiva];
+        // Si es placa tracto y hay empresa activa (ej. MARSISA, TRAHESA), sugerir solo tractos/camiones de esa empresa
+        if (_sguEmpresaActiva && _sguEmpresaActiva !== 'TODAS' && _sguRecursos.tractosPorEmpresa) {
+            var empKey = Object.keys(_sguRecursos.tractosPorEmpresa).find(function(k) {
+                return k.toUpperCase().includes(_sguEmpresaActiva.toUpperCase()) || _sguEmpresaActiva.toUpperCase().includes(k.toUpperCase());
+            });
+            items = (empKey && _sguRecursos.tractosPorEmpresa[empKey]) ? _sguRecursos.tractosPorEmpresa[empKey] : (_sguRecursos.placas || []);
         } else {
             items = _sguRecursos.placas || [];
         }
     } else if (type === 'carretas') {
-        // Carretas globales: todas las carretas y semirremolques de cualquier empresa (alquiladas)
+        // Carretas globales: todas las carretas y semirremolques de TODAS las empresas del sistema
         items = (_sguRecursos.carretasGlobales && _sguRecursos.carretasGlobales.length) ? _sguRecursos.carretasGlobales : (_sguRecursos.placas || []);
     } else {
         items = _sguRecursos[type] || [];
