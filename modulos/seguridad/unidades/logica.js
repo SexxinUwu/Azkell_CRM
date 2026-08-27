@@ -2162,6 +2162,10 @@ window._sguExecuteDeleteConfirmed = function() {
         if (modalInstance) modalInstance.hide();
     }
 
+    // Actualización instantánea en pantalla (Optimistic UI)
+    _sguRecords = _sguRecords.filter(function(r) { return String(r.id) !== String(id); });
+    _sguRenderList();
+
     _sguToast('Eliminando expediente...', 'bi-hourglass-split');
     fetch('/api/seguridad/unidades/' + id, {
         method: 'DELETE',
@@ -2171,11 +2175,18 @@ window._sguExecuteDeleteConfirmed = function() {
         return r.json();
     }).then(function() {
         _sguToast('Expediente eliminado');
-        _sguLoadRecords(function() {
-            window._sguNav('list');
+        _sguLoadStats();
+        _sguLoadRecords(_sguLoadedAll, function() {
+            _sguRenderList();
+            if (_sguView === 'detail' && _sguDetailId === id) {
+                window._sguShowView('list');
+            }
         });
     }).catch(function(e) {
         _sguToast(e.message, 'bi-exclamation-circle');
+        _sguLoadRecords(_sguLoadedAll, function() {
+            _sguRenderList();
+        });
     }).finally(function() {
         window._sguIdAEliminar = null;
     });
