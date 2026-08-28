@@ -165,12 +165,12 @@ module.exports = function (db, broadcast, logAudit) {
             const rdb = getRemoteDb();
             const body = req.body || {};
             const query = req.query || {};
-            const reimportAll = query.reset === 'true' || body.reset === true;
+            const reimportAll = query.reset === 'true' || body.reset === true || query.forzar === 'true' || body.forzar === true;
 
             console.log('🔄 Iniciando sincronización remota de combustible desde 168.231.98.23 para Marsisa...');
 
             if (reimportAll) {
-                await tdb.query("TRUNCATE TABLE combustible_vales");
+                await tdb.query("DELETE FROM combustible_vales");
             }
 
             // Consultar catálogo de estaciones para mapear RUC de proveedores
@@ -194,14 +194,14 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             });
 
-            // Consultar correlativos e IDs existentes para no duplicar
-            const [existentesRows] = await tdb.query("SELECT DISTINCT id_remoto, correlativo FROM combustible_vales WHERE correlativo != '' OR id_remoto IS NOT NULL");
+            // Consultar correlativos e IDs existentes para no duplicar (a menos que se fuerce reimportAll)
+            const [existentesRows] = reimportAll ? [[]] : await tdb.query("SELECT DISTINCT id_remoto, correlativo FROM combustible_vales WHERE correlativo != '' OR id_remoto IS NOT NULL");
             const existentesCorrelativos = new Set(existentesRows.map(r => r.correlativo).filter(Boolean));
             const existentesRemotoIds = new Set(existentesRows.map(r => r.id_remoto).filter(Boolean));
 
             // Consultar los vales de la vista remota
             const [remotoVales] = await rdb.query(
-                `SELECT * FROM vw_combustible_vale ORDER BY fecha DESC LIMIT 5000`
+                `SELECT * FROM vw_combustible_vale ORDER BY fecha DESC LIMIT 10000`
             );
 
             if (!remotoVales || remotoVales.length === 0) {
@@ -209,7 +209,7 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             // Filtrar solo los vales que no estén ya registrados por ID remoto o correlativo
-            const nuevosVales = remotoVales.filter(v => {
+            const nuevosVales = reimportAll ? remotoVales : remotoVales.filter(v => {
                 const corr = v.serie ? `${v.serie}-${v.numero}` : (v.numero || '');
                 const idRemoto = v.id;
                 if (idRemoto && existentesRemotoIds.has(idRemoto)) return false;
@@ -259,7 +259,8 @@ module.exports = function (db, broadcast, logAudit) {
                     const proveedor = String(v.proveedor_razon_social || '').trim();
                     const ruc = rucMap.get(proveedor.toUpperCase()) || '';
                     const kilometraje = parseFloat(v.kilometraje || 0);
-                    const peso_tn = parseFloat(v.peso || 0);
+                    const rawPeso = parseFloat(v.peso || 0);
+                    const peso_tn = rawPeso > 50 ? parseFloat((rawPeso / 1000).toFixed(2)) : parseFloat(rawPeso.toFixed(2));
                     const galones = parseFloat(v.galones || 0);
                     const costo_gl = parseFloat(v.costo_galon || 0);
                     const tipo_pago = String(v.tipo_pago || 'CONTADO').toUpperCase().trim();
