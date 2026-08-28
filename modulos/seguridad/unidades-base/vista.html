@@ -343,7 +343,7 @@
 
 #modalSubUnidad .form-control,
 #modalSubUnidad .form-select {
-    min-height: 42px !important;
+    min-height: 44px !important;
     border-radius: 12px !important;
     font-size: 0.9rem !important;
     font-weight: 600 !important;
@@ -372,6 +372,58 @@
     border-radius: 16px !important;
     border: 1px solid #e2e8f0 !important;
     background: #ffffff !important;
+    overflow: visible !important; /* Importante para que el dropdown flote por encima */
+}
+
+/* ── Autocomplete Flotante Moderno (Exacto a Checklist de Unidades) ─── */
+.sub-autocomplete-wrap {
+    position: relative !important;
+    width: 100% !important;
+}
+
+.sub-autocomplete-list {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1.5px solid #0284c7;
+    border-radius: 12px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 1090;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+}
+
+.sub-autocomplete-list.show {
+    display: block !important;
+}
+
+.sub-autocomplete-item {
+    padding: 0.65rem 0.95rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #1e293b;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.sub-autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.sub-autocomplete-item:hover {
+    background: #eff6ff;
+    color: #0284c7;
+}
+
+.sub-autocomplete-empty {
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    font-style: italic;
 }
 
 @media (max-width: 680px) {
@@ -571,7 +623,7 @@
                         </div>
                     </div>
 
-                    <!-- Card 2: Unidades / Placas y Conductor -->
+                    <!-- Card 2: Unidades / Placas y Conductor (Con Autocomplete Flotante Moderno) -->
                     <div class="card p-3 mb-3 shadow-none">
                         <div class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.88rem;">
                             <i class="bi bi-truck text-primary"></i> Unidades / Placas y Conductor
@@ -579,18 +631,24 @@
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
                                 <label class="form-label">Placa Camión / Tracto (*)</label>
-                                <input type="text" id="sub-form-placa-camion" class="form-control text-uppercase font-monospace" placeholder="SELECCIONE O ESCRIBA PLACA..." list="list-sub-placas-camion" required>
-                                <datalist id="list-sub-placas-camion"></datalist>
+                                <div class="sub-autocomplete-wrap">
+                                    <input type="text" id="sub-form-placa-camion" class="form-control text-uppercase font-monospace" placeholder="SELECCIONE O ESCRIBA PLACA..." autocomplete="off" onfocus="window._subHandleAutoInput(this, 'tractos')" oninput="window._subHandleAutoInput(this, 'tractos')" required>
+                                    <div class="sub-autocomplete-list" id="sub-auto-placa-camion"></div>
+                                </div>
                             </div>
                             <div class="col-12 col-md-6">
                                 <label class="form-label">Placa Semirremolque / Carreta (Opcional)</label>
-                                <input type="text" id="sub-form-placa-carreta" class="form-control text-uppercase font-monospace" placeholder="SELECCIONE O ESCRIBA CARRETA..." list="list-sub-placas-carreta">
-                                <datalist id="list-sub-placas-carreta"></datalist>
+                                <div class="sub-autocomplete-wrap">
+                                    <input type="text" id="sub-form-placa-carreta" class="form-control text-uppercase font-monospace" placeholder="SELECCIONE O ESCRIBA CARRETA..." autocomplete="off" onfocus="window._subHandleAutoInput(this, 'carretas')" oninput="window._subHandleAutoInput(this, 'carretas')">
+                                    <div class="sub-autocomplete-list" id="sub-auto-placa-carreta"></div>
+                                </div>
                             </div>
                             <div class="col-12">
-                                <label class="form-label">Conductor</label>
-                                <input type="text" id="sub-form-conductor" class="form-control text-uppercase" placeholder="SELECCIONE O ESCRIBA NOMBRE DE CONDUCTOR..." list="list-sub-conductores">
-                                <datalist id="list-sub-conductores"></datalist>
+                                <label class="form-label">Conductor Asignado</label>
+                                <div class="sub-autocomplete-wrap">
+                                    <input type="text" id="sub-form-conductor" class="form-control text-uppercase" placeholder="NOMBRE COMPLETO DEL CONDUCTOR..." autocomplete="off" onfocus="window._subHandleAutoInput(this, 'conductores')" oninput="window._subHandleAutoInput(this, 'conductores')">
+                                    <div class="sub-autocomplete-list" id="sub-auto-conductor"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
