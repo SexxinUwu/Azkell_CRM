@@ -562,43 +562,51 @@ module.exports = (db, logAudit) => {
     // STATUS "UNIDADES EN BASE"
     // ════════════════════════════════════════════════════════════════
 
-    // ── Catálogo de Placas para Combos de Selección ───────────────
+    // ── Catálogo de Placas y Conductores para Selección ───────────
     router.get('/seguridad/unidades-base/catalogo-placas', (req, res) => {
-        const sql = `
+        const sqlPlacas = `
             SELECT DISTINCT placa, marca, tipo, tipo_unidad, motora 
             FROM placas 
             ORDER BY placa ASC
         `;
-        db.query(sql, (err, rows) => {
-            if (err) {
-                // Si la tabla placas no tiene alguna columna, fallback simple
-                return db.query('SELECT placa FROM vehiculos_flota ORDER BY placa ASC', (e2, r2) => {
-                    if (e2) return res.json({ tractos: [], carretas: [], todas: [] });
-                    const todas = (r2 || []).map(p => p.placa);
-                    res.json({ tractos: todas, carretas: todas, todas });
-                });
-            }
-
+        db.query(sqlPlacas, (err, rows) => {
             const tractos = [];
             const carretas = [];
             const todas = [];
 
-            (rows || []).forEach(r => {
-                const p = r.placa;
-                if (!p) return;
-                todas.push({ placa: p, marca: r.marca || '', tipo: r.tipo || r.tipo_unidad || '' });
+            if (!err && rows && rows.length) {
+                rows.forEach(r => {
+                    const p = (r.placa || '').trim().toUpperCase();
+                    if (!p) return;
+                    todas.push({ placa: p, marca: r.marca || '', tipo: r.tipo || r.tipo_unidad || '' });
 
-                const tipo = (r.tipo || r.tipo_unidad || '').toUpperCase();
-                const motora = String(r.motora || '').toUpperCase();
+                    const tipo = (r.tipo || r.tipo_unidad || '').toUpperCase();
+                    const motora = String(r.motora || '').toUpperCase();
 
-                if (motora === 'NO' || tipo.includes('REMOLQUE') || tipo.includes('CARRETA') || tipo.includes('FURGON') || tipo.includes('CISTERNA') || tipo.includes('SEMI')) {
-                    carretas.push({ placa: p, marca: r.marca || '', tipo: r.tipo || r.tipo_unidad || '' });
-                } else {
-                    tractos.push({ placa: p, marca: r.marca || '', tipo: r.tipo || r.tipo_unidad || '' });
-                }
+                    // Carreta / Remolque: no motora, o tipo contiene REMOLQUE, CARRETA, FURGON, CISTERNA, SEMI, PLATAFORMA
+                    const esCarreta = motora === 'NO' || 
+                        tipo.includes('REMOLQUE') || 
+                        tipo.includes('CARRETA') || 
+                        tipo.includes('FURGON') || 
+                        tipo.includes('CISTERNA') || 
+                        tipo.includes('SEMI') || 
+                        tipo.includes('PLATAFORMA') || 
+                        tipo.includes('BATEA') || 
+                        tipo.includes('TOLVA');
+
+                    if (esCarreta) {
+                        carretas.push({ placa: p, marca: r.marca || '', tipo: r.tipo || r.tipo_unidad || 'Carreta' });
+                    } else {
+                        tractos.push({ placa: p, marca: r.marca || '', tipo: r.tipo || r.tipo_unidad || 'Tracto / Camión' });
+                    }
+                });
+            }
+
+            // Consultar Conductores del sistema
+            db.query('SELECT DISTINCT nombre FROM conductores WHERE estado != "INACTIVO" OR estado IS NULL ORDER BY nombre ASC', (errC, rowsC) => {
+                const conductores = (!errC && rowsC) ? rowsC.map(c => c.nombre).filter(Boolean) : [];
+                res.json({ tractos, carretas, todas, conductores });
             });
-
-            res.json({ tractos, carretas, todas });
         });
     });
 
@@ -624,8 +632,8 @@ module.exports = (db, logAudit) => {
 
         if (req.query.search) {
             const s = `%${req.query.search.trim()}%`;
-            sql += ' AND (placa_camion LIKE ? OR placa_carreta LIKE ? OR zona LIKE ? OR observacion LIKE ?)';
-            params.push(s, s, s, s);
+            sql += ' AND (placa_camion LIKE ? OR placa_carreta LIKE ? OR conductor LIKE ? OR zona LIKE ? OR observacion LIKE ?)';
+            params.push(s, s, s, s, s);
         }
 
         sql += ' ORDER BY id DESC';
@@ -638,7 +646,7 @@ module.exports = (db, logAudit) => {
 
     // ── Crear Registro de Unidad en Base ──────────────────────────
     router.post('/seguridad/unidades-base', (req, res) => {
-        const { fecha, corte, placa_camion, placa_carreta, zona, estado, observacion } = req.body;
+        const { fecha, corte, placa_camion, placa_carreta, conductor, zona, estado, observacion } = req.body;
         if (!fecha || !corte || !placa_camion) {
             return res.status(400).json({ error: 'Fecha, Corte y Placa Camión son obligatorios.' });
         }
@@ -647,16 +655,17 @@ module.exports = (db, logAudit) => {
 
         const sql = `
             INSERT INTO seg_unidades_base 
-            (fecha, corte, placa_camion, placa_carreta, zona, estado, observacion, usuario)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (fecha, corte, placa_camion, placa_carreta, conductor, zona, estado, observacion, usuario)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const params = [
             fecha,
             corte,
             placa_camion.trim().toUpperCase(),
             (placa_carreta || '').trim().toUpperCase() || null,
-            (zona || 'Base Central').trim(),
-            (estado || 'Disponible').trim(),
+            (conductor || '').trim() || null,
+            (zona || 'Base').trim(),
+            (estado || 'Cargado').trim(),
             (observacion || '').trim() || null,
             usuario
         ];
@@ -670,7 +679,7 @@ module.exports = (db, logAudit) => {
     // ── Actualizar Registro de Unidad en Base ─────────────────────
     router.put('/seguridad/unidades-base/:id', (req, res) => {
         const id = req.params.id;
-        const { fecha, corte, placa_camion, placa_carreta, zona, estado, observacion } = req.body;
+        const { fecha, corte, placa_camion, placa_carreta, conductor, zona, estado, observacion } = req.body;
         if (!fecha || !corte || !placa_camion) {
             return res.status(400).json({ error: 'Fecha, Corte y Placa Camión son obligatorios.' });
         }
@@ -679,7 +688,7 @@ module.exports = (db, logAudit) => {
 
         const sql = `
             UPDATE seg_unidades_base 
-            SET fecha = ?, corte = ?, placa_camion = ?, placa_carreta = ?, zona = ?, estado = ?, observacion = ?, usuario = ?
+            SET fecha = ?, corte = ?, placa_camion = ?, placa_carreta = ?, conductor = ?, zona = ?, estado = ?, observacion = ?, usuario = ?
             WHERE id = ?
         `;
         const params = [
@@ -687,8 +696,9 @@ module.exports = (db, logAudit) => {
             corte,
             placa_camion.trim().toUpperCase(),
             (placa_carreta || '').trim().toUpperCase() || null,
-            (zona || 'Base Central').trim(),
-            (estado || 'Disponible').trim(),
+            (conductor || '').trim() || null,
+            (zona || 'Base').trim(),
+            (estado || 'Cargado').trim(),
             (observacion || '').trim() || null,
             usuario,
             id

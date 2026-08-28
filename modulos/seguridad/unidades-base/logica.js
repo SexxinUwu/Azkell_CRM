@@ -5,7 +5,7 @@
 
 (function() {
     window._subData = window._subData || [];
-    window._subCatalogoPlacas = window._subCatalogoPlacas || { tractos: [], carretas: [], todas: [] };
+    window._subCatalogo = window._subCatalogo || { tractos: [], carretas: [], todas: [], conductores: [] };
     window._subCorteActivo = window._subCorteActivo || 'ALL';
     let _subDebounceTimeout = null;
 
@@ -36,32 +36,38 @@
             filterFecha.value = hoy;
         }
 
-        window.subCargarCatalogoPlacas();
+        window.subCargarCatalogo();
         window.subCargarDatos();
     };
 
-    // ── Cargar Catálogo de Placas para Datalists ──────────────────
-    window.subCargarCatalogoPlacas = async function() {
+    // ── Cargar Catálogo de Placas y Conductores ───────────────────
+    window.subCargarCatalogo = async function() {
         try {
             const res = await fetch('/api/seguridad/unidades-base/catalogo-placas');
             const data = await res.json();
-            window._subCatalogoPlacas = data;
+            window._subCatalogo = data;
 
-            // Llenar datalist de camiones/tractos
+            // 1. Llenar datalist de camiones/tractos (SOLO TRACTOS / CAMIONES)
             const dlCamion = document.getElementById('list-sub-placas-camion');
             if (dlCamion) {
-                const list = (data.tractos && data.tractos.length) ? data.tractos : data.todas || [];
+                const list = (data.tractos && data.tractos.length) ? data.tractos : [];
                 dlCamion.innerHTML = list.map(p => `<option value="${p.placa || p}">${p.marca ? p.marca + ' - ' + (p.tipo || '') : ''}</option>`).join('');
             }
 
-            // Llenar datalist de carretas
+            // 2. Llenar datalist de carretas (SOLO CARRETAS / REMOLQUES)
             const dlCarreta = document.getElementById('list-sub-placas-carreta');
             if (dlCarreta) {
-                const list = (data.carretas && data.carretas.length) ? data.carretas : data.todas || [];
+                const list = (data.carretas && data.carretas.length) ? data.carretas : [];
                 dlCarreta.innerHTML = list.map(p => `<option value="${p.placa || p}">${p.marca ? p.marca + ' - ' + (p.tipo || '') : ''}</option>`).join('');
             }
+
+            // 3. Llenar datalist de conductores
+            const dlConductores = document.getElementById('list-sub-conductores');
+            if (dlConductores && data.conductores) {
+                dlConductores.innerHTML = data.conductores.map(c => `<option value="${c}">${c}</option>`).join('');
+            }
         } catch(e) {
-            console.warn('Advertencia cargando catálogo de placas:', e.message);
+            console.warn('Advertencia cargando catálogo:', e.message);
         }
     };
 
@@ -71,7 +77,7 @@
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="text-center py-5 text-secondary">
+                    <td colspan="9" class="text-center py-4 text-secondary">
                         <div class="spinner-border spinner-border-sm text-primary me-2"></div> Cargando unidades en base...
                     </td>
                 </tr>
@@ -97,11 +103,11 @@
                 window.subRenderTabla(window._subData);
                 window.subCalcularKPIs(window._subData);
             } else {
-                if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Error: ${data.error || 'No se pudieron obtener los datos'}</td></tr>`;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Error: ${data.error || 'No se pudieron obtener los datos'}</td></tr>`;
             }
         } catch(err) {
             console.error('Error cargando unidades en base:', err);
-            if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Error de conexión con el servidor.</td></tr>`;
+            if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Error de conexión con el servidor.</td></tr>`;
         }
     };
 
@@ -113,7 +119,17 @@
         }, 300);
     };
 
-    // ── Renderizar Tabla de Unidades en Base ──────────────────────
+    // ── Clasificar Registro por Tipo de Configuración ─────────────
+    window.subDeterminarTipo = function(r) {
+        const tieneCamion = Boolean(r.placa_camion && r.placa_camion.trim());
+        const tieneCarreta = Boolean(r.placa_carreta && r.placa_carreta.trim() && r.placa_carreta.trim() !== '—');
+
+        if (tieneCamion && tieneCarreta) return 'CAMIÓN + CARRETA';
+        if (tieneCamion && !tieneCarreta) return 'SOLO CAMIÓN / TRACTO';
+        return 'SOLO CARRETA / REMOLQUE';
+    };
+
+    // ── Renderizar Tabla Segmentada por Tipo ───────────────────────
     window.subRenderTabla = function(items = []) {
         const tbody = document.getElementById('sub-tbody');
         if (!tbody) return;
@@ -121,7 +137,7 @@
         if (!items || items.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="text-center py-5 text-secondary">
+                    <td colspan="9" class="text-center py-5 text-secondary">
                         <i class="bi bi-inbox fs-3 d-block mb-2 text-muted"></i>
                         No se encontraron unidades registradas en base con los filtros seleccionados.
                     </td>
@@ -130,43 +146,84 @@
             return;
         }
 
-        tbody.innerHTML = items.map(r => {
-            // Badge Corte
-            let badgeCorte = `<span class="badge-corte-1">${r.corte || 'Corte 1'}</span>`;
-            if (r.corte === 'Corte 2') badgeCorte = `<span class="badge-corte-2">Corte 2</span>`;
-            if (r.corte === 'Corte 3') badgeCorte = `<span class="badge-corte-3">Corte 3</span>`;
+        // Agrupar por segmento
+        const grupos = {
+            'CAMIÓN + CARRETA': [],
+            'SOLO CAMIÓN / TRACTO': [],
+            'SOLO CARRETA / REMOLQUE': []
+        };
 
-            // Badge Estado
-            let badgeEstado = `<span class="badge-estado-disponible">Disponible</span>`;
-            if (r.estado === 'En Espera') badgeEstado = `<span class="badge-estado-espera">En Espera</span>`;
-            if (r.estado === 'En Taller') badgeEstado = `<span class="badge-estado-taller">En Taller</span>`;
-            if (r.estado === 'Cargado') badgeEstado = `<span class="badge-estado-cargado">Cargado</span>`;
-            if (r.estado === 'Vacío') badgeEstado = `<span class="badge bg-light text-dark border">Vacío</span>`;
+        items.forEach(r => {
+            const t = window.subDeterminarTipo(r);
+            if (grupos[t]) grupos[t].push(r);
+            else grupos['CAMIÓN + CARRETA'].push(r);
+        });
 
-            const placaCarretaHtml = r.placa_carreta 
-                ? `<span class="badge bg-light text-dark border border-secondary fw-bold font-monospace">${r.placa_carreta}</span>` 
-                : `<span class="text-muted small">—</span>`;
+        let html = '';
 
-            return `
-                <tr>
-                    <td>${badgeCorte}</td>
-                    <td><span class="badge bg-dark text-white fw-bold font-monospace px-2 py-1">${r.placa_camion}</span></td>
-                    <td>${placaCarretaHtml}</td>
-                    <td class="fw-semibold text-dark">${r.zona || 'Base Central'}</td>
-                    <td>${badgeEstado}</td>
-                    <td class="text-secondary small" style="max-width:300px; word-break:break-word;">${r.observacion || '—'}</td>
-                    <td class="text-secondary small">${r.usuario || 'Seguridad'}</td>
-                    <td class="text-end text-nowrap">
-                        <button class="btn btn-sm btn-light border py-1 px-2 me-1 text-dark" title="Editar" onclick='window.subAbrirModalEditar(${JSON.stringify(r)})'>
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-light border border-danger text-danger py-1 px-2" title="Eliminar" onclick="window.subEliminar(${r.id})">
-                            <i class="bi bi-trash"></i>
-                        </button>
+        const ordenGrupos = [
+            { key: 'CAMIÓN + CARRETA', icon: 'bi-truck-flatbed', color: '#0284c7' },
+            { key: 'SOLO CAMIÓN / TRACTO', icon: 'bi-truck-front-fill', color: '#16a34a' },
+            { key: 'SOLO CARRETA / REMOLQUE', icon: 'bi-box-seam-fill', color: '#d97706' }
+        ];
+
+        ordenGrupos.forEach(g => {
+            const list = grupos[g.key];
+            if (!list || list.length === 0) return;
+
+            // Fila de encabezado de grupo
+            html += `
+                <tr class="sub-section-divider">
+                    <td colspan="9">
+                        <i class="bi ${g.icon} me-1" style="color:${g.color};"></i>
+                        ${g.key} <span class="badge bg-white text-dark border ms-2">${list.length}</span>
                     </td>
                 </tr>
             `;
-        }).join('');
+
+            list.forEach(r => {
+                // Badge Corte
+                let badgeCorte = `<span class="badge-corte-1">${r.corte || 'Corte 1'}</span>`;
+                if (r.corte === 'Corte 2') badgeCorte = `<span class="badge-corte-2">Corte 2</span>`;
+                if (r.corte === 'Corte 3') badgeCorte = `<span class="badge-corte-3">Corte 3</span>`;
+
+                // Badge Estado (Cargado, Con Devolución, Vacío)
+                let badgeEstado = `<span class="badge-estado-cargado">Cargado</span>`;
+                if (r.estado === 'Con Devolución') badgeEstado = `<span class="badge-estado-devolucion">Con Devolución</span>`;
+                if (r.estado === 'Vacío') badgeEstado = `<span class="badge-estado-vacio">Vacío</span>`;
+
+                const placaCarretaHtml = (r.placa_carreta && r.placa_carreta.trim()) 
+                    ? `<span class="badge bg-light text-dark border border-secondary fw-bold font-monospace">${r.placa_carreta}</span>` 
+                    : `<span class="text-muted small">—</span>`;
+
+                const conductorHtml = (r.conductor && r.conductor.trim())
+                    ? `<span class="fw-semibold text-dark">${r.conductor}</span>`
+                    : `<span class="text-muted small">—</span>`;
+
+                html += `
+                    <tr>
+                        <td>${badgeCorte}</td>
+                        <td><span class="badge bg-dark text-white fw-bold font-monospace px-2 py-1">${r.placa_camion || '—'}</span></td>
+                        <td>${placaCarretaHtml}</td>
+                        <td>${conductorHtml}</td>
+                        <td class="fw-semibold text-dark">${r.zona || 'Base'}</td>
+                        <td>${badgeEstado}</td>
+                        <td class="text-secondary small" style="max-width:260px; word-break:break-word;">${r.observacion || '—'}</td>
+                        <td class="text-secondary small">${r.usuario || 'Seguridad'}</td>
+                        <td class="text-end text-nowrap">
+                            <button class="btn btn-sm btn-light border py-1 px-2 me-1 text-dark" title="Editar" onclick='window.subAbrirModalEditar(${JSON.stringify(r)})'>
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-light border border-danger text-danger py-1 px-2" title="Eliminar" onclick="window.subEliminar(${r.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        });
+
+        tbody.innerHTML = html;
     };
 
     // ── Calcular KPIs Bento ───────────────────────────────────────
@@ -226,8 +283,13 @@
 
         const inputFecha = document.getElementById('sub-form-fecha');
         const inputCorte = document.getElementById('sub-form-corte');
+        const inputZona = document.getElementById('sub-form-zona');
+        const inputEstado = document.getElementById('sub-form-estado');
+
         if (inputFecha) inputFecha.value = hoy;
         if (inputCorte) inputCorte.value = corteAuto;
+        if (inputZona) inputZona.value = 'Base';
+        if (inputEstado) inputEstado.value = 'Cargado';
 
         const modalEl = document.getElementById('modalSubUnidad');
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
@@ -245,8 +307,9 @@
         document.getElementById('sub-form-corte').value = r.corte || 'Corte 1';
         document.getElementById('sub-form-placa-camion').value = r.placa_camion || '';
         document.getElementById('sub-form-placa-carreta').value = r.placa_carreta || '';
-        document.getElementById('sub-form-zona').value = r.zona || 'Base Central';
-        document.getElementById('sub-form-estado').value = r.estado || 'Disponible';
+        document.getElementById('sub-form-conductor').value = r.conductor || '';
+        document.getElementById('sub-form-zona').value = r.zona || 'Base';
+        document.getElementById('sub-form-estado').value = r.estado || 'Cargado';
         document.getElementById('sub-form-obs').value = r.observacion || '';
 
         const modalEl = document.getElementById('modalSubUnidad');
@@ -260,6 +323,7 @@
         const corte = document.getElementById('sub-form-corte').value;
         const placaCamion = (document.getElementById('sub-form-placa-camion').value || '').trim();
         const placaCarreta = (document.getElementById('sub-form-placa-carreta').value || '').trim();
+        const conductor = (document.getElementById('sub-form-conductor').value || '').trim();
         const zona = document.getElementById('sub-form-zona').value;
         const estado = document.getElementById('sub-form-estado').value;
         const observacion = document.getElementById('sub-form-obs').value;
@@ -274,7 +338,7 @@
 
         const payload = {
             fecha, corte, placa_camion: placaCamion, placa_carreta: placaCarreta,
-            zona, estado, observacion
+            conductor, zona, estado, observacion
         };
 
         try {
@@ -322,7 +386,7 @@
         }
     };
 
-    // ── Exportador a PDF Oficial (Hoja A4 Centrada, Cabecera ISO F-SEG-0010) ──
+    // ── Exportador a PDF Oficial Segmentado (Hoja A4 Centrada, F-SEG-0010) ──
     window.subExportarPDF = function() {
         const fechaFiltro = document.getElementById('sub-filter-fecha')?.value || new Date().toISOString().split('T')[0];
         const corteFiltro = window._subCorteActivo || 'ALL';
@@ -343,18 +407,57 @@
 
         const empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
 
-        const filasHtml = items.map((r, i) => `
-            <tr>
-                <td style="text-align:center; font-weight:bold; width:28px;">${i + 1}</td>
-                <td style="text-align:center; font-weight:bold; color:#0f172a; width:65px;">${r.corte || 'Corte 1'}</td>
-                <td style="text-align:center; font-family:monospace; font-weight:bold; font-size:11px; width:90px;">${r.placa_camion || '---'}</td>
-                <td style="text-align:center; font-family:monospace; font-size:11px; width:90px;">${r.placa_carreta || '---'}</td>
-                <td style="width:130px; font-weight:500;">${r.zona || 'Base Central'}</td>
-                <td style="text-align:center; font-weight:700; width:85px;">${r.estado || 'Disponible'}</td>
-                <td style="font-size:9.5px; word-break:break-word;">${r.observacion || ''}</td>
-                <td style="text-align:center; font-size:9px; width:85px;">${r.usuario || 'Seguridad'}</td>
-            </tr>
-        `).join('');
+        // Agrupar por tipo para el PDF
+        const grupos = {
+            'CAMIÓN + CARRETA': [],
+            'SOLO CAMIÓN / TRACTO': [],
+            'SOLO CARRETA / REMOLQUE': []
+        };
+
+        items.forEach(r => {
+            const t = window.subDeterminarTipo(r);
+            if (grupos[t]) grupos[t].push(r);
+            else grupos['CAMIÓN + CARRETA'].push(r);
+        });
+
+        let filasHtml = '';
+        let itemIndex = 1;
+
+        const ordenGrupos = [
+            'CAMIÓN + CARRETA',
+            'SOLO CAMIÓN / TRACTO',
+            'SOLO CARRETA / REMOLQUE'
+        ];
+
+        ordenGrupos.forEach(gKey => {
+            const list = grupos[gKey];
+            if (!list || list.length === 0) return;
+
+            // Fila de encabezado de sección en PDF
+            filasHtml += `
+                <tr style="background:#e2e8f0; font-weight:bold;">
+                    <td colspan="9" style="padding: 4px 6px; font-weight:800; font-size:9.5px; text-transform:uppercase; letter-spacing:0.5px; border: 1.5px solid #000;">
+                        ■ ${gKey} (${list.length} ${list.length === 1 ? 'UNIDAD' : 'UNIDADES'})
+                    </td>
+                </tr>
+            `;
+
+            list.forEach(r => {
+                filasHtml += `
+                    <tr>
+                        <td style="text-align:center; font-weight:bold; width:26px;">${itemIndex++}</td>
+                        <td style="text-align:center; font-weight:bold; color:#0f172a; width:60px;">${r.corte || 'Corte 1'}</td>
+                        <td style="text-align:center; font-family:monospace; font-weight:bold; font-size:10.5px; width:80px;">${r.placa_camion || '---'}</td>
+                        <td style="text-align:center; font-family:monospace; font-size:10.5px; width:80px;">${r.placa_carreta || '---'}</td>
+                        <td style="width:130px; font-size:9.5px;">${r.conductor || '---'}</td>
+                        <td style="text-align:center; font-weight:600; width:75px;">${r.zona || 'Base'}</td>
+                        <td style="text-align:center; font-weight:700; width:75px;">${r.estado || 'Cargado'}</td>
+                        <td style="font-size:9px; word-break:break-word;">${r.observacion || ''}</td>
+                        <td style="text-align:center; font-size:8.5px; width:75px;">${r.usuario || 'Seguridad'}</td>
+                    </tr>
+                `;
+            });
+        });
 
         ventana.document.write(`
             <!DOCTYPE html>
@@ -401,7 +504,7 @@
                         width: 210mm;
                         min-height: 297mm;
                         background: #ffffff;
-                        padding: 12mm 12mm;
+                        padding: 10mm 12mm;
                         margin: 0 auto;
                         box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4);
                         box-sizing: border-box;
@@ -410,7 +513,7 @@
                         flex-direction: column;
                     }
 
-                    /* ENCABEZADO NORMATIVA ISO OFICIAL (EXACTO A OT) */
+                    /* ENCABEZADO NORMATIVA ISO OFICIAL */
                     .iso-header { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 6px; table-layout: fixed; }
                     .iso-header td { border: 1px solid #000; text-align: center; vertical-align: middle; }
                     .logo-cell { width: 22%; padding: 4px; }
@@ -424,23 +527,23 @@
                     .val-text { font-weight: normal; margin-left: 4px; }
 
                     /* TABLA DE CONTENIDO */
-                    .content-table { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 8px; font-size: 10px; }
+                    .content-table { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 8px; font-size: 9.5px; }
                     .content-table th { 
                         background-color: #333333 !important; 
                         -webkit-print-color-adjust: exact !important; 
                         print-color-adjust: exact !important; 
                         color: #ffffff !important; 
                         text-align: center; 
-                        padding: 5px 4px; 
+                        padding: 5px 3px; 
                         border: 1px solid #000; 
                         font-weight: 700; 
-                        font-size: 9.5px; 
+                        font-size: 9px; 
                         text-transform: uppercase; 
                     }
-                    .content-table td { border: 1px solid #000; padding: 4px 6px; vertical-align: middle; }
+                    .content-table td { border: 1px solid #000; padding: 3px 5px; vertical-align: middle; }
 
                     /* Footer */
-                    .footer-box { margin-top: auto; border-top: 1px solid #000; padding-top: 6px; display: flex; justify-content: space-between; font-size: 9.5px; color: #333; }
+                    .footer-box { margin-top: auto; border-top: 1px solid #000; padding-top: 6px; display: flex; justify-content: space-between; font-size: 9px; color: #333; }
 
                     @media print {
                         * {
@@ -457,7 +560,7 @@
                             -webkit-print-color-adjust: exact !important; 
                             print-color-adjust: exact !important; 
                         }
-                        @page { size: A4 portrait; margin: 10mm; }
+                        @page { size: A4 portrait; margin: 8mm; }
                     }
                 </style>
             </head>
@@ -492,18 +595,19 @@
                         </tr>
                     </table>
 
-                    <!-- Tabla de Unidades -->
+                    <!-- Tabla de Unidades Segmentada -->
                     <table class="content-table">
                         <thead>
                             <tr>
-                                <th style="width: 28px;">#</th>
-                                <th style="width: 65px;">CORTE</th>
-                                <th style="width: 90px;">PLACA CAMIÓN</th>
-                                <th style="width: 90px;">PLACA CARRETA</th>
-                                <th style="width: 130px;">ZONA / PATIO</th>
-                                <th style="width: 85px;">ESTADO</th>
+                                <th style="width: 26px;">#</th>
+                                <th style="width: 60px;">CORTE</th>
+                                <th style="width: 80px;">PLACA CAMIÓN</th>
+                                <th style="width: 80px;">PLACA CARRETA</th>
+                                <th style="width: 130px;">CONDUCTOR</th>
+                                <th style="width: 75px;">ZONA</th>
+                                <th style="width: 75px;">ESTADO</th>
                                 <th>OBSERVACIONES</th>
-                                <th style="width: 85px;">REGISTRADO POR</th>
+                                <th style="width: 75px;">REGISTRADO POR</th>
                             </tr>
                         </thead>
                         <tbody>
