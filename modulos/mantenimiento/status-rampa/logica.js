@@ -1462,9 +1462,65 @@ window.srExportarExcel = function() {
     XLSX.writeFile(wb, 'Status-Rampas.xlsx');
 };
 
-// ── Tabs ──────────────────────────────────────────────────────────
+// ── Switcher de Vistas: Tablero vs Gráficos ────────────────────────
+window.srModoVistaActual = 'tablero';
+
+window.srCambiarModoVista = function(modo) {
+    window.srModoVistaActual = modo;
+    var paneR = document.getElementById('sr-pane-rampas');
+    var paneH = document.getElementById('sr-pane-historial');
+    var paneG = document.getElementById('sr-pane-graficos');
+    var btnTablero = document.getElementById('sr-btn-view-tablero');
+    var btnGraficos = document.getElementById('sr-btn-view-graficos');
+    var subtabs = document.getElementById('sr-contenedor-subtabs');
+    var searchBox = document.getElementById('sr-contenedor-buscador');
+
+    if (modo === 'graficos') {
+        if (paneR) paneR.style.display = 'none';
+        if (paneH) paneH.style.display = 'none';
+        if (paneG) paneG.style.display = 'flex';
+
+        if (subtabs) subtabs.classList.add('opacity-50', 'pe-none');
+        if (searchBox) searchBox.classList.add('opacity-50', 'pe-none');
+
+        if (btnGraficos) {
+            btnGraficos.style.background = '#eff6ff';
+            btnGraficos.style.color = '#0284c7';
+            btnGraficos.classList.remove('text-secondary');
+        }
+        if (btnTablero) {
+            btnTablero.style.background = 'transparent';
+            btnTablero.style.color = '#64748b';
+            btnTablero.classList.add('text-secondary');
+        }
+    } else {
+        // Modo Tablero (Rampas / Historial)
+        if (paneG) paneG.style.display = 'none';
+        if (subtabs) subtabs.classList.remove('opacity-50', 'pe-none');
+        if (searchBox) searchBox.classList.remove('opacity-50', 'pe-none');
+
+        if (btnTablero) {
+            btnTablero.style.background = '#eff6ff';
+            btnTablero.style.color = '#0284c7';
+            btnTablero.classList.remove('text-secondary');
+        }
+        if (btnGraficos) {
+            btnGraficos.style.background = 'transparent';
+            btnGraficos.style.color = '#64748b';
+            btnGraficos.classList.add('text-secondary');
+        }
+
+        window.srCambiarTab(window.srTabActual || 'rampas');
+    }
+};
+
+// ── Tabs (Rampas / Historial) ──────────────────────────────────────
 window.srCambiarTab = function(tab) {
     window.srTabActual = tab;
+    if (window.srModoVistaActual === 'graficos') {
+        window.srCambiarModoVista('tablero');
+        return;
+    }
     var paneR = document.getElementById('sr-pane-rampas');
     var paneH = document.getElementById('sr-pane-historial');
     var tabR  = document.getElementById('sr-tab-rampas');
