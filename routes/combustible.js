@@ -1048,8 +1048,21 @@ module.exports = function (db, broadcast, logAudit) {
                     const totalGal = t.vouchers.reduce((s, x) => s + x.galones, 0);
                     const totalCost = t.vouchers.reduce((s, x) => s + x.importe, 0);
                     
-                    const maxPesoRaw = Math.max(0, ...t.vouchers.map(x => parseFloat(x.peso || 0)));
-                    const pesoCalculadoTn = maxPesoRaw > 50 ? parseFloat((maxPesoRaw / 1000).toFixed(2)) : parseFloat(maxPesoRaw.toFixed(2));
+                    const rawPesoRaw = Math.max(0, ...t.vouchers.map(x => parseFloat(x.peso || 0)));
+                    const pesoCalculadoTn = rawPesoRaw > 50 ? parseFloat((maxPesoRaw / 1000).toFixed(2)) : parseFloat(maxPesoRaw.toFixed(2));
+
+                    // Desglose de galones y pesos por tramo (IDA vs RETORNO / FIN DE SERVICIO)
+                    const vouchersIda = t.vouchers.filter(v => !v.esPuntoPartida && (v.tipo || '').toUpperCase().includes('IDA'));
+                    const vouchersRetorno = t.vouchers.filter(v => !v.esPuntoPartida && ((v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('SERVICIO')));
+
+                    const galonesIda = vouchersIda.reduce((s, x) => s + (x.galones || 0), 0);
+                    const galonesRetorno = vouchersRetorno.reduce((s, x) => s + (x.galones || 0), 0);
+
+                    const rawPesoIda = Math.max(0, ...vouchersIda.map(x => parseFloat(x.peso || 0)));
+                    const pesoIdaCalculado = rawPesoIda > 50 ? parseFloat((rawPesoIda / 1000).toFixed(2)) : parseFloat(rawPesoIda.toFixed(2));
+
+                    const rawPesoRet = Math.max(0, ...vouchersRetorno.map(x => parseFloat(x.peso || 0)));
+                    const pesoRetornoCalculado = rawPesoRet > 50 ? parseFloat((rawPesoRet / 1000).toFixed(2)) : parseFloat(rawPesoRet.toFixed(2));
 
                     // Último vale del viaje actual (Cierre General)
                     const kmFin = lastVCurrent.odometro || 0;
@@ -1135,6 +1148,10 @@ module.exports = function (db, broadcast, logAudit) {
                         odometroInconsistente: (kmInicio > 0 && kmFin > 0 && kmFin < kmInicio),
                         pesoMaxTn: pesoCalculadoTn,
                         pesoMaxKg: maxPesoRaw,
+                        galonesIda: parseFloat(galonesIda.toFixed(2)),
+                        galonesRetorno: parseFloat(galonesRetorno.toFixed(2)),
+                        pesoIda: (pesoIdaCalculado > 0 ? pesoIdaCalculado : pesoCalculadoTn),
+                        pesoRetorno: pesoRetornoCalculado,
                         totalGalones: totalGal,
                         totalGasto: totalCost,
                         rendimiento,
