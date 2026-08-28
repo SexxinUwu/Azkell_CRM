@@ -599,7 +599,7 @@
         }
     };
 
-    // 📡 Consultar Telemetría CAN Bus para todos los viajes visibles en la página actual
+    // 📡 Consultar Telemetría CAN Bus para todos los viajes visibles en la página actual (Ultra Rápido por Batch)
     window.caConsultarGpsPaginaActual = async function() {
         const total = window._caFilteredTrips.length;
         if (total === 0) {
@@ -617,52 +617,58 @@
         const origHtml = btnSync ? btnSync.innerHTML : '';
         if (btnSync) {
             btnSync.disabled = true;
-            btnSync.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sincronizando...';
+            btnSync.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Consultando CAN (${pagedTrips.length} viajes)...`;
         }
 
-        let syncedCount = 0;
-        let failCount = 0;
+        const t0 = performance.now();
 
-        for (let i = 0; i < pagedTrips.length; i++) {
-            const trip = pagedTrips[i];
-            if (btnSync) {
-                btnSync.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> CAN (${i + 1}/${pagedTrips.length})...`;
-            }
+        try {
+            const batchPayload = pagedTrips.map((t, idx) => ({
+                index: startIdx + idx,
+                id: t.numViaje || t.viaje || `idx-${startIdx + idx}`,
+                placa: t.placa,
+                fechaInicio: t.fechaInicio,
+                fechaFin: t.fechaFin
+            }));
 
-            try {
-                const params = new URLSearchParams({
-                    placa: trip.placa,
-                    fechaInicio: trip.fechaInicio,
-                    fechaFin: trip.fechaFin
+            const resp = await fetch('/api/combustible/wialon-telemetria-batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trips: batchPayload })
+            });
+            const result = await resp.json();
+
+            let syncedCount = 0;
+            if (result.ok && Array.isArray(result.results)) {
+                result.results.forEach(resItem => {
+                    const trip = pagedTrips.find(t => (t.numViaje || t.viaje || '') === resItem.id || t.placa === resItem.placa);
+                    if (trip && resItem.data) {
+                        trip.gpsTelemetria = resItem.data;
+                        trip.wialonGps = resItem.data;
+                        syncedCount++;
+                    }
                 });
-
-                const resp = await fetch(`/api/combustible/wialon-telemetria?${params.toString()}`);
-                const result = await resp.json();
-
-                if (result.ok && result.data) {
-                    trip.gpsTelemetria = result.data;
-                    trip.wialonGps = result.data;
-                    syncedCount++;
-                } else {
-                    failCount++;
-                }
-            } catch (err) {
-                failCount++;
             }
-        }
 
-        window.caRenderTabla();
+            const elapsedSec = ((performance.now() - t0) / 1000).toFixed(1);
+            window.caRenderTabla();
 
-        if (btnSync) {
-            btnSync.disabled = false;
-            btnSync.innerHTML = origHtml || '<i class="bi bi-broadcast"></i> <span>Consultar CAN (GPS)</span>';
-        }
-
-        if (typeof window.mostrarAlerta === 'function') {
-            if (syncedCount > 0) {
-                window.mostrarAlerta(`✓ Sincronizados ${syncedCount} viajes con telemetría CAN Bus Wialon.`, 'success');
-            } else {
-                window.mostrarAlerta(`No se encontraron registros CAN para los viajes en el rango consultado.`, 'warning');
+            if (typeof window.mostrarAlerta === 'function') {
+                if (syncedCount > 0) {
+                    window.mostrarAlerta(`✓ Sincronizados ${syncedCount} viajes con telemetría CAN Bus en ${elapsedSec}s.`, 'success');
+                } else {
+                    window.mostrarAlerta(`No se encontraron registros CAN para los viajes consultados (${elapsedSec}s).`, 'warning');
+                }
+            }
+        } catch (err) {
+            console.error("Error en consulta batch GPS:", err);
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta(`Error al consultar telemetría Wialon: ${err.message}`, 'danger');
+            }
+        } finally {
+            if (btnSync) {
+                btnSync.disabled = false;
+                btnSync.innerHTML = origHtml || '<i class="bi bi-broadcast"></i> <span>Consultar CAN (GPS)</span>';
             }
         }
     };
