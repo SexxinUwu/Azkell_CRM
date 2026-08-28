@@ -397,6 +397,13 @@ window.verificarSesionGuardada = function() {
     safe('wrap-rrhh', showRrhh);
     safe('bnav-rrhh', showRrhh);
 
+    // GERENCIA — EXCLUSIVO ADMINISTRADORES
+    var showGerencia = isAdm;
+    safe('wrap-gerencia', showGerencia);
+    safe('bnav-gerencia', showGerencia);
+    safe('nav-gerencia-aprobaciones-oc', showGerencia);
+    safe('mbnav-gerencia-aprobaciones', showGerencia);
+
     // TESORERÍA
     var vTesoCaja = _cL('tesoreria_caja');
     var vTesoFlujo = _cL('tesoreria_flujo');
@@ -553,7 +560,6 @@ window.verificarSesionGuardada = function() {
             'rrhh/personal': 'rrhh_personal',
             'rrhh/asistencia': 'rrhh_asistencia',
             'rrhh/nomina': 'rrhh_nomina',
-            'gerencia/aprobaciones-oc': 'gerencia_aprobaciones',
             'tesoreria/caja-chica': 'tesoreria_caja',
             'tesoreria/flujo-caja': 'tesoreria_flujo',
             'tesoreria/cuentas': 'tesoreria_cuentas',

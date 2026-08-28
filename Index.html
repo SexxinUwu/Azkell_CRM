@@ -244,8 +244,8 @@
                     </div>
                 </div>
 
-                <!-- GERENCIA -->
-                <div id="wrap-gerencia">
+                <!-- GERENCIA (Exclusivo Administradores) -->
+                <div id="wrap-gerencia" style="display:none;">
                     <button class="nav-section-toggle" data-section="gerencia" aria-expanded="false" onclick="window.toggleNavSection('gerencia')">
                         <span class="link-text">Gerencia</span>
                         <span class="section-badge" id="badge-count-gerencia">4</span>
@@ -702,7 +702,7 @@
         <a class="bottom-nav-item" id="bnav-almacen" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetAlmacen">
             <i class="bi bi-box-seam-fill"></i><span>Almacén</span>
         </a>
-        <a class="bottom-nav-item" id="bnav-gerencia" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetGerencia">
+        <a class="bottom-nav-item" id="bnav-gerencia" style="display:none;" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetGerencia">
             <i class="bi bi-shield-check"></i><span>Gerencia</span>
         </a>
         <a class="bottom-nav-item" id="bnav-rrhh" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetRRHH">
