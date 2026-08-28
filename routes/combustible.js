@@ -842,16 +842,18 @@ module.exports = function (db, broadcast, logAudit) {
                     return { ...t, earliestDate };
                 }).sort((a, b) => a.earliestDate.localeCompare(b.earliestDate));
 
-                // Rastrear el último voucher despachado por cada tipo de combustible en esta placa
+                // Rastrear el último voucher general y por combustible en esta placa
+                let lastVoucherGeneral = null;
                 const lastVoucherByFuel = {};
 
                 vehTrips.forEach((t) => {
+                    const firstVCurrent = t.vouchers[0] || {};
+                    const lastVCurrent = t.vouchers[t.vouchers.length - 1] || {};
                     const totalGal = t.vouchers.reduce((s, x) => s + x.galones, 0);
                     const totalCost = t.vouchers.reduce((s, x) => s + x.importe, 0);
                     const maxPeso = Math.max(0, ...t.vouchers.map(x => x.peso));
 
                     // Último vale del viaje actual (Cierre General)
-                    const lastVCurrent = t.vouchers[t.vouchers.length - 1] || {};
                     const kmFin = lastVCurrent.odometro || 0;
                     const fechaFin = lastVCurrent.fecha || 'N/D';
 
@@ -865,16 +867,17 @@ module.exports = function (db, broadcast, logAudit) {
                         const lastVFuel = fuelVouchers[fuelVouchers.length - 1] || {};
                         const prevVFuel = lastVoucherByFuel[fuelType];
 
+                        const validPrevFuel = (prevVFuel && prevVFuel.fecha <= (firstVFuel.fecha || ''));
                         const fKmFin = lastVFuel.odometro || 0;
                         const fFechaFin = lastVFuel.fecha || 'N/D';
-                        const fKmInicio = prevVFuel ? (prevVFuel.odometro || 0) : (firstVFuel.odometro || 0);
-                        const fFechaInicio = prevVFuel ? (prevVFuel.fecha || 'N/D') : (firstVFuel.fecha || 'N/D');
+                        const fKmInicio = validPrevFuel ? (prevVFuel.odometro || 0) : (firstVFuel.odometro || 0);
+                        const fFechaInicio = validPrevFuel ? (prevVFuel.fecha || 'N/D') : (firstVFuel.fecha || 'N/D');
                         const fRecorrido = (fKmFin > fKmInicio && fKmInicio > 0) ? (fKmFin - fKmInicio) : 0;
                         const fGalones = fuelVouchers.reduce((s, x) => s + x.galones, 0);
                         const fGasto = fuelVouchers.reduce((s, x) => s + x.importe, 0);
                         const fRendimiento = (fGalones > 0 && fRecorrido > 0) ? (fRecorrido / fGalones) : 0;
 
-                        const fPartidaVoucher = prevVFuel ? {
+                        const fPartidaVoucher = validPrevFuel ? {
                             ...prevVFuel,
                             id: `partida_${fuelType}_${prevVFuel.id}`,
                             esPuntoPartida: true,
@@ -898,18 +901,29 @@ module.exports = function (db, broadcast, logAudit) {
                         lastVoucherByFuel[fuelType] = { ...lastVFuel, viaje: t.viaje };
                     });
 
-                    // Por defecto: usar D2 si existe para odómetro / km, o el general
-                    const d2Stats = fuelStats['D2'] || null;
-                    const kmInicio = d2Stats ? d2Stats.kmInicio : (t.vouchers[0]?.odometro || 0);
-                    const fechaInicio = d2Stats ? d2Stats.fechaInicio : (t.vouchers[0]?.fecha || 'N/D');
-                    const recorridoKm = d2Stats ? d2Stats.recorridoKm : ((kmFin > kmInicio && kmInicio > 0) ? (kmFin - kmInicio) : 0);
+                    // Punto de partida general (el último vale del viaje anterior para esta placa)
+                    const validPrevGen = (lastVoucherGeneral && lastVoucherGeneral.fecha <= (firstVCurrent.fecha || ''));
+                    const kmInicio = validPrevGen ? (lastVoucherGeneral.odometro || 0) : (firstVCurrent.odometro || 0);
+                    const fechaInicio = validPrevGen ? (lastVoucherGeneral.fecha || 'N/D') : (firstVCurrent.fecha || 'N/D');
+                    const recorridoKm = (kmFin > kmInicio && kmInicio > 0) ? (kmFin - kmInicio) : 0;
                     const rendimiento = (totalGal > 0 && recorridoKm > 0) ? (recorridoKm / totalGal) : 0;
+
+                    // Punto de partida general para el modal
+                    const genPartidaVoucher = validPrevGen ? {
+                        ...lastVoucherGeneral,
+                        id: `partida_gen_${lastVoucherGeneral.id}`,
+                        esPuntoPartida: true,
+                        viajeOriginal: lastVoucherGeneral.viaje
+                    } : null;
 
                     // Marcar cierre en el último voucher del viaje
                     lastVCurrent.esPuntoCierre = true;
 
-                    // Vales del modal por defecto (incluye punto de partida de D2 si existe)
-                    const modalVouchers = (d2Stats && d2Stats.voucherPartida) ? [d2Stats.voucherPartida, ...t.vouchers] : [...t.vouchers];
+                    // Vales del modal por defecto
+                    const modalVouchers = genPartidaVoucher ? [genPartidaVoucher, ...t.vouchers] : [...t.vouchers];
+
+                    // Actualizar último voucher general para el siguiente viaje
+                    lastVoucherGeneral = { ...lastVCurrent, viaje: t.viaje };
 
                     trips.push({
                         viaje: t.viaje,
