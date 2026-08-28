@@ -610,14 +610,14 @@
                 <div class="mb-3" style="font-size: 3.4rem; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.08));">😴</div>
                 <h4 class="fw-bolder mb-2" style="color: var(--text, #0f172a); font-size: 1.25rem; letter-spacing: -0.3px;">Se te durmió la sesión</h4>
                 <p class="mb-4 px-2" style="color: var(--subtext, #64748b); font-size: 0.84rem; line-height: 1.45; font-weight: 500;">Por seguridad, tu sesión expiró tras 30 minutos de inactividad.</p>
-                <div class="d-flex align-items-center justify-content-center gap-4">
+                <div class="d-flex align-items-center justify-content-center gap-3">
                     <!-- Cerrar Sesión (Círculo Negro con X) -->
-                    <button type="button" class="d-inline-flex align-items-center justify-content-center text-white border-0 shadow-sm" style="width: 54px; height: 54px; border-radius: 50%; background: #18181b; font-size: 1.35rem; cursor: pointer; transition: transform 0.15s ease, background 0.15s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'" onclick="cerrarSesion()" title="Cerrar sesión">
+                    <button type="button" class="d-inline-flex align-items-center justify-content-center text-white border-0 shadow-sm flex-shrink-0" style="width: 46px; height: 46px; border-radius: 50%; background: #18181b; font-size: 1.15rem; cursor: pointer; transition: transform 0.15s ease, background 0.15s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'" onclick="cerrarSesion()" title="Cerrar sesión">
                         <i class="bi bi-x-lg"></i>
                     </button>
-                    <!-- Despertar / Renovar (Círculo Azul con Refrescar) -->
-                    <button type="button" class="d-inline-flex align-items-center justify-content-center text-white border-0 shadow-sm" style="width: 54px; height: 54px; border-radius: 50%; background: #0284c7; font-size: 1.35rem; cursor: pointer; transition: transform 0.15s ease, background 0.15s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'" onclick="window._renovarSesion()" title="¡Despertamos!">
-                        <i class="bi bi-arrow-clockwise"></i>
+                    <!-- Despertar / Renovar Sesión (Botón Azul con texto ¡Despertamos!) -->
+                    <button type="button" class="btn fw-bold text-white rounded-pill px-4 shadow-sm d-inline-flex align-items-center justify-content-center gap-2" style="height: 46px; background: #0284c7; border: none; font-size: 0.92rem; cursor: pointer; transition: transform 0.15s ease, background 0.15s ease;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'" onclick="window._renovarSesion()" title="Renovar sesión">
+                        <i class="bi bi-arrow-clockwise"></i> ¡Despertamos!
                     </button>
                 </div>
             </div>
