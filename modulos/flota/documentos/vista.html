@@ -1821,10 +1821,26 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                             </div>
                             <div class="col-12 col-md-6">
                                 <label class="form-label fw-bold text-secondary small mb-1">Archivo Digital (PDF / Imagen)</label>
-                                <div class="d-flex align-items-center gap-2">
-                                    <input type="file" id="nd_archivo_file" class="form-control border-secondary-subtle" accept=".pdf,image/*" onchange="subirDocumentoS3(this, 'nd_archivo_url', 'nd_link_file', 'nd')">
-                                    <input type="hidden" id="nd_archivo_url">
-                                    <span id="spin_nd" class="spinner-border spinner-border-sm text-primary d-none"></span>
+                                <div class="d-flex flex-column gap-1">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="file" id="nd_archivo_file" class="d-none" accept=".pdf,image/*" onchange="subirDocumentoS3(this, 'nd_archivo_url', 'nd_link_file', 'nd')">
+                                        <input type="hidden" id="nd_archivo_url">
+                                        
+                                        <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-2 px-3 fw-bold rounded-3 flex-shrink-0" style="min-height: 44px; font-size: 0.85rem; border: 1px solid #cbd5e1; background: #f8fafc;" onclick="document.getElementById('nd_archivo_file').click()">
+                                            <i class="bi bi-cloud-arrow-up-fill text-primary fs-6"></i>
+                                            <span>Seleccionar archivo</span>
+                                        </button>
+                                        
+                                        <div class="flex-grow-1 p-2 px-3 rounded-3 border bg-white text-truncate d-flex align-items-center justify-content-between" style="min-height: 44px; font-size: 0.85rem;" id="nd_archivo_display_wrap">
+                                            <span id="nd_archivo_name" class="text-truncate fw-bold" style="color: #94a3b8;">Sin archivos seleccionados</span>
+                                            <button type="button" class="btn btn-sm text-danger p-0 ms-1 d-none" id="nd_archivo_btn_clear" onclick="window.ndLimpiarArchivo()" title="Quitar archivo">
+                                                <i class="bi bi-x-circle-fill fs-6"></i>
+                                            </button>
+                                        </div>
+
+                                        <span id="spin_nd" class="spinner-border spinner-border-sm text-primary d-none"></span>
+                                    </div>
+                                    <small id="nd_archivo_status" class="d-none fw-bold" style="font-size: 0.75rem; color: #16a34a;"></small>
                                 </div>
                             </div>
                         </div>
