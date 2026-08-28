@@ -1003,6 +1003,289 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         border-radius: 14px !important;
     }
 }
+
+/* ── CALENDARIO BENTO DE FLOTA (INSPIRADO EN APPLE / MACOS & ADOTE) ──── */
+.cal-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.cal-header-bar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+.cal-nav-btn {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    border-radius: 10px;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.cal-nav-btn:hover {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+}
+.cal-today-btn {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #0284c7;
+    font-weight: 700;
+    font-size: 0.82rem;
+    padding: 0 12px;
+    height: 34px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.cal-today-btn:hover {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+}
+.cal-title-month {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.3px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.cal-layout-split {
+    display: grid;
+    grid-template-columns: 1fr 310px;
+    gap: 1rem;
+    width: 100%;
+}
+@media (max-width: 1100px) {
+    .cal-layout-split {
+        grid-template-columns: 1fr;
+    }
+}
+.cal-main-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.cal-grid-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 8px 0;
+    margin-bottom: 6px;
+    text-align: center;
+    border: 1px solid #f1f5f9;
+}
+.cal-day-name {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+.cal-grid-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    width: 100%;
+}
+.cal-day-cell {
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    min-height: 120px;
+    padding: 6px 6px 8px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: all 0.15s ease;
+    position: relative;
+}
+.cal-day-cell:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+.cal-day-cell.other-month {
+    background: #fafafa;
+    opacity: 0.45;
+}
+.cal-day-cell.today {
+    background: #f0fdfa !important;
+    border-color: #5eead4 !important;
+    box-shadow: 0 0 0 1.5px #0d9488 inset;
+}
+.cal-day-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+.cal-day-num {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #334155;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+.cal-day-cell.today .cal-day-num {
+    background: #0284c7;
+    color: #ffffff !important;
+    font-weight: 800;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+}
+.cal-events-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex-grow: 1;
+    overflow-y: hidden;
+}
+.cal-event-pill {
+    padding: 3px 6px;
+    border-radius: 7px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+}
+.cal-event-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+.cal-event-pill.vencido {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fee2e2;
+}
+.cal-event-pill.critico {
+    background: #fff7ed;
+    color: #ea580c;
+    border: 1px solid #ffedd5;
+}
+.cal-event-pill.alerta {
+    background: #fefce8;
+    color: #ca8a04;
+    border: 1px solid #fef08a;
+}
+.cal-event-pill.vigente {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #dcfce7;
+}
+.cal-event-more {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #0284c7;
+    background: #eff6ff;
+    padding: 2px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s ease;
+}
+.cal-event-more:hover {
+    background: #dbeafe;
+}
+/* Panel Lateral Bento */
+.cal-sidebar-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1.1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.cal-mini-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    text-align: center;
+}
+.cal-mini-day {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #475569;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.cal-mini-day.has-event {
+    position: relative;
+    font-weight: 800;
+    color: #0284c7;
+}
+.cal-mini-day.has-event::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #0284c7;
+}
+.cal-mini-day.today {
+    background: #0284c7;
+    color: #ffffff !important;
+}
+.cal-upcoming-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.6rem 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.cal-upcoming-card:hover {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+    transform: translateY(-1px);
+}
 </style>
 
 <div id="fleet-module-container">
@@ -1097,7 +1380,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
             </div>
         </div>
 
-        <!-- Switcher de Vistas: Expediente vs Matriz -->
+        <!-- Switcher de Vistas: Expediente vs Matriz vs Calendario -->
         <div class="d-flex align-items-center">
             <div class="bg-white border p-1 rounded-3 d-flex align-items-center gap-1 shadow-2xs">
                 <button type="button" class="btn btn-sm border-0 fw-bold px-3 py-1-5 rounded-2 d-flex align-items-center gap-1" id="btn-view-cards" onclick="cambiarModoVistaDoc('cards')" style="font-size: 0.82rem; background: #eff6ff; color: #0284c7; transition: all 0.2s;">
@@ -1105,6 +1388,9 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                 </button>
                 <button type="button" class="btn btn-sm border-0 fw-bold px-3 py-1-5 rounded-2 d-flex align-items-center gap-1 text-secondary" id="btn-view-matrix" onclick="cambiarModoVistaDoc('matrix')" style="font-size: 0.82rem; background: transparent; transition: all 0.2s;">
                     <i class="bi bi-table"></i> Matriz General
+                </button>
+                <button type="button" class="btn btn-sm border-0 fw-bold px-3 py-1-5 rounded-2 d-flex align-items-center gap-1 text-secondary" id="btn-view-calendar" onclick="cambiarModoVistaDoc('calendar')" style="font-size: 0.82rem; background: transparent; transition: all 0.2s;">
+                    <i class="bi bi-calendar3"></i> Calendario
                 </button>
             </div>
         </div>
@@ -1149,54 +1435,54 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                                     <span class="fh-placa" id="ft-placa">---</span>
                                     <span class="fh-badge" id="ft-tipo">---</span>
                                 </div>
-                                <div class="fh-subtitle"><span id="ft-marca-modelo">---</span> | Año: <span id="ft-anio">---</span> | Chasis: <span id="ft-chasis">---</span></div>
+                                <div class="fh-sub-row">
+                                    <span id="ft-marca-modelo">---</span> | Año: <span id="ft-anio">---</span> | Chasis: <span id="ft-chasis">---</span>
+                                </div>
                             </div>
                         </div>
                         <div class="fh-right">
-                            <div class="health-container">
-                                <span>SALUD:</span>
-                                <div class="health-bar-bg"><div class="health-bar-fill" id="ft-health-bar" style="width: 0%;"></div></div>
-                                <span class="health-text" id="ft-health-txt">0%</span>
+                            <div class="salud-badge">
+                                <span class="sb-label">SALUD:</span>
+                                <div class="sb-bar-bg"><div class="sb-bar-fill" id="ft-salud-bar"></div></div>
+                                <span class="sb-val" id="ft-salud-val">100%</span>
+                            </div>
+                            <div class="fh-actions">
+                                <button class="btn-action-icon" onclick="editarVehiculoActual()" title="Editar Vehículo"><i class="bi bi-pencil"></i></button>
+                                <button class="btn-action-icon" onclick="eliminarVehiculoActual()" title="Eliminar"><i class="bi bi-trash"></i></button>
                             </div>
                         </div>
                     </div>
                     
-                    
-                        <div class="ficha-header-mobile hide-on-desktop" style="display:flex; flex-direction:column; padding:1.5rem 1rem 0 1rem;">
-                            <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
-                                <button class="btn-volver-movil" onclick="volverListaMovil()" style="width:40px; height:40px; border-radius:50%; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#0f172a; font-size:1.2rem; flex-shrink:0;"><i class="bi bi-chevron-left"></i></button>
-                                <div style="display:flex; flex-direction:column; justify-content:center;">
-                                    <div style="display:flex; align-items:center; gap:0.5rem; line-height:1;">
-                                        <span id="ft-placa-movil" style="font-size:1.75rem; font-weight:800; color:#0f172a;">---</span>
-                                    </div>
-                                    <div style="font-size:0.75rem; color:#64748b; margin-top:0.35rem;"><span id="ft-marca-modelo-movil">---</span> | Año: <span id="ft-anio-movil">---</span></div>
-                                </div>
+                    <!-- Ficha Header Compacto EXCLUSIVO Móvil -->
+                    <div class="ficha-header-mobile hide-on-desktop">
+                        <button class="btn-volver-movil" onclick="volverListaMovil()"><i class="bi bi-chevron-left"></i></button>
+                        <div class="fh-main-icon" style="width: 32px; height: 32px; font-size: 0.95rem;"><i class="bi bi-arrow-left-right"></i></div>
+                        <div class="fhm-info">
+                            <div class="fhm-title-row">
+                                <span class="fh-placa" id="ft-placa-m">---</span>
+                                <span class="fh-badge" id="ft-tipo-m">---</span>
                             </div>
-                            
-                            <div class="health-container-movil" style="background:#fff; border-radius:16px; padding:1.25rem; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:1.5rem; border:1px solid #f1f5f9;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                                    <span style="font-size:0.75rem; font-weight:800; color:#475569;">SALUD DE LA UNIDAD</span>
-                                    <span id="ft-health-txt-movil" style="font-size:1.25rem; font-weight:800; color:#0f172a;">0%</span>
-                                </div>
-                                <div style="width:100%; height:8px; border-radius:4px; background:#f1f5f9; overflow:hidden;">
-                                    <div id="ft-health-bar-movil" style="height:100%; background:linear-gradient(90deg, #ef4444, #f59e0b, #10b981); width:0%; transition:width 0.5s;"></div>
-                                </div>
-                            </div>
-                            
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                                <span style="font-size:0.85rem; font-weight:800; color:#64748b; text-transform:uppercase;">Módulos de Control</span>
+                            <div class="fhm-sub-row">
+                                <span id="ft-sub-m">---</span>
                             </div>
                         </div>
+                        <div class="fhm-actions">
+                            <button class="btn-action-icon" onclick="editarVehiculoActual()" title="Editar"><i class="bi bi-pencil"></i></button>
+                            <button class="btn-action-icon" onclick="eliminarVehiculoActual()" title="Eliminar"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
 
-                        <div class="docs-grid" id="docs-grid-container">
-                        </div>
+                <!-- Grid de Documentos (100% Responsive) -->
+                <div class="docs-grid" id="docs-container">
+                    <!-- Renderizado dinámico -->
                 </div>
             </div>
 
-            <!-- Empty State -->
-            <div id="empty-state-panel" class="empty-state">
-                <i class="bi bi-truck empty-icon"></i>
-                <div class="empty-title">Selecciona un vehículo</div>
+            <!-- Empty State cuando no hay selección -->
+            <div id="empty-state-panel" class="empty-state" style="display: flex; height: 100%;">
+                <div class="empty-icon"><i class="bi bi-truck"></i></div>
+                <div class="empty-title">Selecciona una Unidad</div>
                 <div class="empty-desc">Haz clic en un vehículo de la lista para ver su expediente documental.<br><br>¿Tu flota está vacía o eres nuevo? Sube todos tus vehículos rápidamente desde un Excel.</div>
                 <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
                     <button class="btn-outline-modal" onclick="descargarPlantillaVehiculos()"><i class="bi bi-download"></i> Descargar Plantilla</button>
@@ -1261,6 +1547,130 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                 <tbody id="matriz-body">
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- ── 4C. VISTA CALENDARIO GIGANTE BENTO (FULL SCREEN) ───────────── -->
+    <div class="cal-wrapper d-none" id="view-container-calendar">
+        <!-- Barra de Control del Calendario -->
+        <div class="cal-header-bar">
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="cal-nav-btn" onclick="window.calPrevMonth()" title="Mes anterior">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <button type="button" class="cal-today-btn" onclick="window.calGoToday()">
+                    Hoy
+                </button>
+                <button type="button" class="cal-nav-btn" onclick="window.calNextMonth()" title="Mes siguiente">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+                <h4 class="cal-title-month ms-2" id="cal-month-title">
+                    --- 2026
+                </h4>
+            </div>
+
+            <!-- Filtros Rápidos del Calendario -->
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <!-- Selector Tipo Documento -->
+                <select id="cal-filter-tipo" class="form-select form-select-sm fw-bold text-dark border-1 rounded-3" style="width: auto; height: 34px; font-size: 0.8rem; background-color: #f8fafc;" onchange="window.calSetFiltroTipo(this.value)">
+                    <option value="ALL">Todos los Documentos</option>
+                    <option value="soat">SOAT</option>
+                    <option value="rt">Revisión Técnica</option>
+                    <option value="tc">Tarj. Circulación</option>
+                    <option value="matpel">MATPEL</option>
+                    <option value="boni">Bonificación</option>
+                    <option value="sv">Seguro Vehicular</option>
+                    <option value="sc">Seguro de Carga</option>
+                    <option value="fum">Fumigación</option>
+                    <option value="ext">Extintores</option>
+                </select>
+
+                <!-- Buscador de placa en calendario -->
+                <div class="position-relative" style="width: 160px;">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-2 text-muted" style="font-size: 0.75rem;"></i>
+                    <input type="text" id="cal-search-placa" class="form-control form-control-sm ps-4 rounded-3" placeholder="Filtrar placa..." style="height: 34px; font-size: 0.8rem;" oninput="window.renderizarCalendario()">
+                </div>
+
+                <div class="badge bg-primary-subtle text-primary fw-bolder px-3 py-2 rounded-3 d-flex align-items-center gap-1" style="font-size: 0.78rem;">
+                    <i class="bi bi-calendar-check"></i> <span id="cal-badge-total-mes">0 Vencimientos</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Layout Dividido: Grid Calendario + Panel Lateral Bento -->
+        <div class="cal-layout-split">
+            <!-- Grid Principal del Mes -->
+            <div class="cal-main-card">
+                <!-- Cabecera Días de la Semana -->
+                <div class="cal-grid-header">
+                    <div class="cal-day-name">Lun</div>
+                    <div class="cal-day-name">Mar</div>
+                    <div class="cal-day-name">Mié</div>
+                    <div class="cal-day-name">Jue</div>
+                    <div class="cal-day-name">Vie</div>
+                    <div class="cal-day-name">Sáb</div>
+                    <div class="cal-day-name">Dom</div>
+                </div>
+
+                <!-- Celdas de Días del Mes -->
+                <div class="cal-grid-days" id="cal-grid-days">
+                    <!-- Rellenado dinámico por JS -->
+                </div>
+            </div>
+
+            <!-- Panel Lateral Bento de Resumen & Próximos -->
+            <div class="cal-sidebar-card">
+                <!-- Mini Calendario -->
+                <div>
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.5px; font-size: 0.74rem;" id="cal-mini-title">Mini Calendario</span>
+                        <small class="text-primary fw-bold" style="font-size: 0.7rem;">Vista Rápida</small>
+                    </div>
+                    <div class="cal-grid-header p-1 mb-1" style="border-radius: 8px;">
+                        <div class="cal-day-name" style="font-size: 0.65rem;">L</div>
+                        <div class="cal-day-name" style="font-size: 0.65rem;">M</div>
+                        <div class="cal-day-name" style="font-size: 0.65rem;">M</div>
+                        <div class="cal-day-name" style="font-size: 0.65rem;">J</div>
+                        <div class="cal-day-name" style="font-size: 0.65rem;">V</div>
+                        <div class="cal-day-name" style="font-size: 0.65rem;">S</div>
+                        <div class="cal-day-name" style="font-size: 0.65rem;">D</div>
+                    </div>
+                    <div class="cal-mini-month-grid" id="cal-mini-grid">
+                        <!-- Mini grid dinámico -->
+                    </div>
+                </div>
+
+                <hr class="m-0 border-light">
+
+                <!-- Resumen de Métricas del Mes -->
+                <div>
+                    <span class="fw-bold text-dark small text-uppercase d-block mb-2" style="letter-spacing: 0.5px; font-size: 0.74rem;">Estado del Mes</span>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background: #fef2f2; border: 1px solid #fee2e2;">
+                            <span class="fw-bold text-danger small"><i class="bi bi-x-circle-fill me-1"></i> Vencidos este mes</span>
+                            <span class="badge bg-danger fw-bolder" id="cal-stat-vencidos">0</span>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background: #fefce8; border: 1px solid #fef08a;">
+                            <span class="fw-bold text-warning-emphasis small"><i class="bi bi-exclamation-triangle-fill me-1"></i> En Alerta / Próximos</span>
+                            <span class="badge bg-warning text-dark fw-bolder" id="cal-stat-alertas">0</span>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background: #f0fdf4; border: 1px solid #dcfce7;">
+                            <span class="fw-bold text-success small"><i class="bi bi-check-circle-fill me-1"></i> Vigentes en el mes</span>
+                            <span class="badge bg-success fw-bolder" id="cal-stat-vigentes">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="m-0 border-light">
+
+                <!-- Próximos Vencimientos del Mes -->
+                <div class="d-flex flex-column flex-grow-1" style="min-height: 0;">
+                    <span class="fw-bold text-dark small text-uppercase d-block mb-2" style="letter-spacing: 0.5px; font-size: 0.74rem;">Vencimientos en Agenda</span>
+                    <div class="d-flex flex-column gap-2 custom-scrollbar overflow-y-auto pe-1" id="cal-upcoming-list" style="max-height: 240px;">
+                        <!-- Rellenado dinámico -->
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1482,6 +1892,27 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     <div class="p-3 border-top d-flex justify-content-between align-items-center" id="footer-filtros-main" style="background: var(--surface);">
         <button class="btn btn-link text-danger fw-bold text-decoration-none px-0" onclick="window.limpiarTodosFiltrosDoc()">Limpiar todo</button>
         <button class="btn btn-primary fw-bold px-4 rounded-pill" data-bs-dismiss="offcanvas" onclick="filtrarListaLocal()">Aplicar</button>
+    </div>
+<!-- Modal para ver todos los eventos de un día del Calendario -->
+<div class="modal fade" id="modalEventosDia" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 480px;">
+        <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+            <div class="modal-header border-bottom bg-light px-3 py-2-5 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 rounded-3 bg-white border text-primary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                        <i class="bi bi-calendar-event-fill fs-6"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bolder text-dark m-0" id="modalEventosDiaTitulo" style="font-size: 0.95rem;">Vencimientos del Día</h6>
+                        <small class="text-muted" id="modalEventosDiaSub" style="font-size: 0.75rem;">---</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-3 custom-scrollbar" id="modalEventosDiaBody" style="max-height: 400px;">
+                <!-- Rellenado dinámico -->
+            </div>
+        </div>
     </div>
 </div>
 
