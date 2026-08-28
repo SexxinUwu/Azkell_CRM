@@ -1,4 +1,4 @@
-<!-- MÓDULO: ANÁLISIS DE COMBUSTIBLE POR VIAJE — ERP AZKELL FLEET (OPERACIONES) -->
+<!-- MÓDULO: ANÁLISIS DE UREA POR VIAJE — ERP AZKELL FLEET (OPERACIONES) -->
 <style>
 #root-dinamico { padding: 0 !important; }
 /* Bento UI & Analytics Layout a Pantalla Completa */
@@ -118,7 +118,7 @@
 
 .ca-scroll-table {
     overflow-x: auto;
-    max-height: 68vh; /* Altura óptima para aprovechar toda la pantalla vertical */
+    max-height: 68vh;
 }
 .ca-scroll-table::-webkit-scrollbar {
     width: 6px;
@@ -150,16 +150,16 @@
     <!-- Header Bento -->
     <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
         <div class="d-flex align-items-center gap-2">
-            <div class="rounded-3 p-2.5 d-flex align-items-center justify-content-center" style="background: rgba(2, 132, 199, 0.12); color: #0284c7;">
-                <i class="bi bi-fuel-pump-fill fs-4"></i>
+            <div class="rounded-3 p-2.5 d-flex align-items-center justify-content-center" style="background: rgba(6, 182, 212, 0.12); color: #06b6d4;">
+                <i class="bi bi-droplet-half fs-4"></i>
             </div>
             <div>
                 <div class="d-flex align-items-center gap-2">
-                    <h4 class="fw-bold text-dark m-0" style="letter-spacing:-0.02em;">Análisis de Combustible (D2)</h4>
-                    <span class="badge bg-primary bg-opacity-10 text-primary border px-2.5 py-1 rounded-pill small fw-bold">Operaciones</span>
+                    <h4 class="fw-bold text-dark m-0" style="letter-spacing:-0.02em;">Análisis de Urea</h4>
+                    <span class="badge bg-info bg-opacity-10 text-dark border px-2.5 py-1 rounded-pill small fw-bold">Operaciones</span>
                     <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2.5 py-1 rounded-pill small fw-semibold" id="ca-record-count-info" style="font-size:0.7rem;">Cargando...</span>
                 </div>
-                <p class="text-muted small m-0">Auditoría de abastecimientos D2 por viaje, cálculo de rendimiento real y telemetría CAN Bus</p>
+                <p class="text-muted small m-0">Auditoría y control de consumo de Urea (AdBlue) por viaje con telemetría CAN Bus</p>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -169,7 +169,7 @@
             <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.caCargarDatosDesdeERP()">
                 <i class="bi bi-arrow-clockwise"></i> Actualizar
             </button>
-            <label class="cursor-pointer btn btn-primary btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-white m-0" style="cursor: pointer;">
+            <label class="cursor-pointer btn btn-primary btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-white m-0" style="cursor: pointer; background:#0891b2; border-color:#0891b2;">
                 <i class="bi bi-file-earmark-arrow-up-fill"></i> Cargar Marsisa (.xlsx)
                 <input type="file" id="ca-file-input" accept=".xlsx, .xls, .csv" class="d-none" onchange="window.caProcesarArchivoExcel(event)">
             </label>
@@ -194,18 +194,18 @@
 
         <div class="ca-kpi-card">
             <div>
-                <div class="ca-kpi-lbl">Total Galones</div>
-                <div class="ca-kpi-val text-primary" id="ca-kpi-total-galones">0.00</div>
+                <div class="ca-kpi-lbl">Total Galones Urea</div>
+                <div class="ca-kpi-val text-info" id="ca-kpi-total-galones">0.00</div>
                 <div class="ca-kpi-sub" id="ca-kpi-galones-sub">0.0 Gal/viaje prom.</div>
             </div>
-            <div class="ca-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+            <div class="ca-kpi-icon" style="background:#ecfeff; color:#0891b2;">
                 <i class="bi bi-droplet-half"></i>
             </div>
         </div>
 
         <div class="ca-kpi-card">
             <div>
-                <div class="ca-kpi-lbl">Gasto Total (S/)</div>
+                <div class="ca-kpi-lbl">Gasto Total Urea (S/)</div>
                 <div class="ca-kpi-val text-success" id="ca-kpi-total-gasto">S/ 0.00</div>
                 <div class="ca-kpi-sub" id="ca-kpi-gasto-sub">S/ 0.00 / Galón prom.</div>
             </div>
@@ -258,10 +258,12 @@
             <!-- Filtro Combustible -->
             <div class="col-6 col-sm-4 col-md-2">
                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-funnel-fill text-primary me-1"></i> Combustible
+                    <i class="bi bi-funnel-fill text-primary me-1"></i> Tipo
                 </label>
                 <select id="ca-filter-fuel" onchange="window.caAplicarFiltros(true)" class="form-select form-select-sm fw-semibold">
+                    <option value="UREA" selected>UREA</option>
                     <option value="ALL">Todos</option>
+                    <option value="D2">D2</option>
                 </select>
             </div>
 
@@ -310,7 +312,7 @@
         <div class="ca-table-header p-2.5 px-3 bg-white border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-table text-primary fs-5"></i>
-                <h6 class="fw-bold text-dark m-0">Tabla Dinámica Consolidada por Viaje</h6>
+                <h6 class="fw-bold text-dark m-0">Tabla Dinámica de Urea por Viaje</h6>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <button type="button" class="btn btn-sm btn-outline-info rounded-3 px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1.5 shadow-2xs" id="ca-btn-sync-can-page" onclick="window.caConsultarGpsPaginaActual()" style="border-color:#0284c7; color:#0284c7; font-size:0.78rem;" title="Consultar Telemetría CAN Bus para todos los viajes visibles en esta página">
@@ -387,7 +389,7 @@
                     <tr>
                         <td colspan="18" class="text-center py-5 text-muted">
                             <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                            Cargando análisis dinámico...
+                            Cargando análisis dinámico de Urea...
                         </td>
                     </tr>
                 </tbody>

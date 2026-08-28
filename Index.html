@@ -95,7 +95,11 @@
                                 </a>
                                 <a id="nav-combustible-analisis" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/combustible-analisis')">
                                     <i class="bi bi-graph-up-arrow nav-icon me-1" style="font-size: 0.82rem;"></i>
-                                    <span class="link-text" style="font-size: 0.82rem;">Análisis de Combustible</span>
+                                    <span class="link-text" style="font-size: 0.82rem;">Análisis de Combustible (D2)</span>
+                                </a>
+                                <a id="nav-urea-analisis" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/urea-analisis')">
+                                    <i class="bi bi-droplet-half nav-icon me-1 text-info" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Análisis de Urea</span>
                                 </a>
                             </div>
                         </div>
@@ -1056,8 +1060,16 @@
                     <div id="mbnav-op-combustible-analisis" class="bnav-row-item" style="border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/combustible-analisis'); setBottomNavActive('bnav-operaciones');">
                         <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-graph-up"></i></div>
                         <div class="bnav-row-content">
-                            <p class="bnav-row-title">Análisis de Combustible</p>
-                            <p class="bnav-row-desc">Rendimiento y consumos</p>
+                            <p class="bnav-row-title">Análisis de Combustible (D2)</p>
+                            <p class="bnav-row-desc">Rendimiento y consumos D2</p>
+                        </div>
+                        <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                    </div>
+                    <div id="mbnav-op-urea-analisis" class="bnav-row-item" style="border-left: 3px solid #06b6d4;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/urea-analisis'); setBottomNavActive('bnav-operaciones');">
+                        <div class="bnav-row-icon" style="color: #06b6d4;"><i class="bi bi-droplet-half"></i></div>
+                        <div class="bnav-row-content">
+                            <p class="bnav-row-title">Análisis de Urea</p>
+                            <p class="bnav-row-desc">Consumo y control de Urea</p>
                         </div>
                         <i class="bi bi-chevron-right bnav-row-chevron"></i>
                     </div>

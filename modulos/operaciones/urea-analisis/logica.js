@@ -1,4 +1,4 @@
-// ── LÓGICA DE ANÁLISIS DE COMBUSTIBLE — ERP AZKELL FLEET (OPERACIONES) ───────────
+// ── LÓGICA DE ANÁLISIS DE UREA — ERP AZKELL FLEET (OPERACIONES) ───────────
 (function() {
     const esc = (s) => String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -36,7 +36,7 @@
                 <tr>
                     <td colspan="13" class="text-center py-5 text-muted">
                         <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                        Consultando análisis dinámico desde la Base de Datos...
+                        Consultando análisis dinámico de Urea desde la Base de Datos...
                     </td>
                 </tr>
             `;
@@ -58,7 +58,7 @@
                 if (tbody) tbody.innerHTML = `<tr><td colspan="13" class="text-center text-muted py-4">No hay vales registrados para analizar.</td></tr>`;
             }
         } catch (e) {
-            console.error('Error cargando análisis de combustible:', e);
+            console.error('Error cargando análisis de urea:', e);
             if (tbody) tbody.innerHTML = `<tr><td colspan="13" class="text-center text-danger py-4">Error de conexión al cargar análisis.</td></tr>`;
         }
     };
@@ -112,12 +112,12 @@
 
         if (selFuel) {
             const cur = selFuel.value;
-            selFuel.innerHTML = '<option value="ALL">Todos</option>' +
-                Array.from(allFuels).sort().map(f => `<option value="${f}">${f}</option>`).join('');
-            if (cur && allFuels.has(cur)) {
+            selFuel.innerHTML = '<option value="UREA">UREA</option><option value="ALL">Todos</option>' +
+                Array.from(allFuels).filter(f => f !== 'UREA').sort().map(f => `<option value="${f}">${f}</option>`).join('');
+            if (cur && (allFuels.has(cur) || cur === 'ALL')) {
                 selFuel.value = cur;
-            } else if (allFuels.has('D2')) {
-                selFuel.value = 'D2';
+            } else {
+                selFuel.value = 'UREA';
             }
         }
 
@@ -194,7 +194,7 @@
 
         const dateFrom = document.getElementById('ca-filter-date-from')?.value;
         const dateTo = document.getElementById('ca-filter-date-to')?.value;
-        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
+        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'UREA';
         const plateFilter = document.getElementById('ca-filter-plate')?.value || 'ALL';
         const searchVal = (document.getElementById('ca-search-input')?.value || '').toLowerCase().trim();
         const sortBy = document.getElementById('ca-sort-by')?.value || 'date_desc';
@@ -270,7 +270,7 @@
 
     // Calcular y Renderizar Métricas Bento (KPIs)
     window.caRenderKPIs = function() {
-        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
+        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'UREA';
         const trips = window._caFilteredTrips;
         const totalViajes = trips.length;
 
@@ -329,7 +329,7 @@
         });
 
         if (!match && window._caMatrizRendimiento.length > 0) {
-            match = window._caMatrizRendimiento[0]; // fallback representativo
+            match = window._caMatrizRendimiento[0];
         }
 
         if (!match) return null;
@@ -356,7 +356,7 @@
         if (total === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="13" class="text-center py-5 text-muted">
+                    <td colspan="18" class="text-center py-5 text-muted">
                         <i class="bi bi-inbox fs-2 d-block mb-2"></i>
                         No se encontraron viajes con los filtros seleccionados.
                     </td>
@@ -378,13 +378,12 @@
 
         const esc = (s) => String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
+        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'UREA';
 
         let html = '';
         pagedTrips.forEach((t, i) => {
             const globalIdx = startIdx + i;
             
-            // Si hay filtro de combustible activo, usar estadísticas específicas de ese combustible
             const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
 
             const fInicio = fs ? fs.fechaInicio : t.fechaInicio;
@@ -487,7 +486,7 @@
 
                     <td class="text-center">
                         <div class="d-inline-flex align-items-center gap-1">
-                            <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2 d-inline-flex align-items-center gap-1" onclick="window.caAbrirModalVales(${globalIdx})" style="font-size:0.72rem;" title="Ver vales físicos">
+                            <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2 d-inline-flex align-items-center gap-1" onclick="window.caAbrirModalVales(${globalIdx})" style="font-size:0.72rem;" title="Ver vales físicos de Urea">
                                 <i class="bi bi-receipt"></i> ${valesCount}
                             </button>
                             <button class="btn btn-outline-info btn-sm rounded-pill py-0 px-2 d-inline-flex align-items-center gap-1" id="btn-gps-${globalIdx}" onclick="window.caConsultarGpsViaje(${globalIdx})" style="font-size:0.72rem; color:#0284c7; border-color:#0284c7;" title="Consultar Telemetría CAN Bus Wialon">
@@ -696,7 +695,6 @@
             </button>
         `;
 
-        // Generar botones de páginas alrededor de la página actual
         let startPage = Math.max(1, page - 2);
         let endPage = Math.min(totalPages, startPage + 4);
         if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
@@ -729,7 +727,7 @@
         const trip = window._caFilteredTrips[idx];
         if (!trip) return;
 
-        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
+        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'UREA';
         const fs = (fuelFilter !== 'ALL' && trip.fuelStats && trip.fuelStats[fuelFilter]) ? trip.fuelStats[fuelFilter] : null;
 
         const kInicio = fs ? fs.kmInicio : trip.kmInicio;
@@ -744,16 +742,16 @@
         const sub = document.getElementById('ca-modal-sub-header');
         const tbody = document.getElementById('ca-modal-table-body');
 
-        if (title) title.textContent = `Detalle de Vales ${fuelFilter !== 'ALL' ? '(' + fuelFilter + ')' : ''} — Viaje ${trip.viaje} (${trip.placa})`;
+        if (title) title.textContent = `Detalle de Vales de Urea — Viaje ${trip.viaje} (${trip.placa})`;
 
         if (sub) {
             sub.innerHTML = `
                 <div><span class="text-muted">Ruta:</span> <strong class="text-dark">${trip.ruta}</strong></div>
-                <div><span class="text-muted">Km Inicial (${fuelFilter !== 'ALL' ? fuelFilter : 'Partida'}):</span> <strong class="text-success font-monospace">${kInicio > 0 ? kInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
-                <div><span class="text-muted">Km Final (${fuelFilter !== 'ALL' ? fuelFilter : 'Cierre'}):</span> <strong class="text-danger font-monospace">${kFin > 0 ? kFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
+                <div><span class="text-muted">Km Inicial (Urea):</span> <strong class="text-success font-monospace">${kInicio > 0 ? kInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
+                <div><span class="text-muted">Km Final (Urea):</span> <strong class="text-danger font-monospace">${kFin > 0 ? kFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
                 <div><span class="text-muted">Recorrido:</span> <strong class="text-dark font-monospace">${recKm > 0 ? recKm.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km' : 'N/D'}</strong></div>
-                <div><span class="text-muted">Total Galones ${fuelFilter !== 'ALL' ? '(' + fuelFilter + ')' : ''}:</span> <strong class="text-primary">${totGal.toFixed(2)} Gln</strong></div>
-                <div><span class="text-muted">Total Gasto ${fuelFilter !== 'ALL' ? '(' + fuelFilter + ')' : ''}:</span> <strong class="text-success">S/ ${totGasto.toFixed(2)}</strong></div>
+                <div><span class="text-muted">Total Galones Urea:</span> <strong class="text-info">${totGal.toFixed(2)} Gln</strong></div>
+                <div><span class="text-muted">Total Gasto Urea:</span> <strong class="text-success">S/ ${totGasto.toFixed(2)}</strong></div>
                 <div><span class="text-muted">Rendimiento:</span> <strong class="text-indigo-600 font-monospace">${rend > 0 ? rend.toFixed(2) + ' Km/Gal' : 'N/D'}</strong></div>
             `;
         }
@@ -804,57 +802,93 @@
 
                 return `
                     <tr>
-                        <td class="py-2 px-3">${v.fecha || '—'}</td>
-                        <td class="py-2 px-3"><span class="badge bg-info bg-opacity-10 text-info border">${v.producto}</span></td>
-                        <td class="py-2 px-3 fw-semibold">${v.grifo}</td>
-                        <td class="py-2 px-3 text-end font-monospace">${v.odometro > 0 ? v.odometro.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
-                        <td class="py-2 px-3 text-end font-monospace fw-bold text-primary">${v.galones.toFixed(2)}</td>
-                        <td class="py-2 px-3 text-end font-monospace">S/ ${(v.galones > 0 ? (v.importe / v.galones) : 0).toFixed(2)}</td>
-                        <td class="py-2 px-3 text-end font-monospace fw-bold text-success">S/ ${v.importe.toFixed(2)}</td>
-                        <td class="py-2 px-3 text-truncate" style="max-width:180px;" title="${v.conductor}">${v.conductor}</td>
+                        <td class="py-2.5 px-3 font-monospace">${v.fecha || '—'}</td>
+                        <td class="py-2.5 px-3"><span class="badge bg-info bg-opacity-10 text-info border">${v.producto}</span></td>
+                        <td class="py-2.5 px-3 fw-semibold">${v.grifo}</td>
+                        <td class="py-2.5 px-3 text-end font-monospace">${v.odometro > 0 ? v.odometro.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                        <td class="py-2.5 px-3 text-end font-monospace fw-bold text-primary">${v.galones.toFixed(2)}</td>
+                        <td class="py-2.5 px-3 text-end font-monospace">S/ ${(v.galones > 0 ? (v.importe / v.galones) : 0).toFixed(2)}</td>
+                        <td class="py-2.5 px-3 text-end font-monospace fw-bold text-success">S/ ${v.importe.toFixed(2)}</td>
+                        <td class="py-2.5 px-3 text-truncate" style="max-width:180px;" title="${v.conductor}">${v.conductor}</td>
                     </tr>
                 `;
             }).join('');
         }
 
         const modalEl = document.getElementById('caVouchersModal');
-        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            new bootstrap.Modal(modalEl).show();
+        }
     };
 
-    // Modal de la Matriz de Rendimiento Teórico
+    // Modal Matriz de Rendimiento Teórico
     window.caAbrirModalMatrizRendimiento = function() {
         const tbody = document.getElementById('ca-matriz-tbody');
         if (tbody) {
-            if (window._caMatrizRendimiento.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-muted">No se pudo cargar la matriz de rendimiento remoto.</td></tr>`;
+            if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-muted">No se pudo cargar la matriz de rendimiento desde la base de datos.</td></tr>';
             } else {
                 tbody.innerHTML = window._caMatrizRendimiento.map(m => `
                     <tr>
-                        <td class="fw-bold text-dark">${m.punto_inicio || '—'}</td>
-                        <td class="fw-bold text-dark">${m.punto_final || '—'}</td>
-                        <td class="text-end font-monospace">${m.ruta_distancia_km ? parseFloat(m.ruta_distancia_km).toLocaleString() : '—'}</td>
-                        <td><span class="badge bg-primary font-monospace">${m.configuracion_vehicular || 'T3S3'}</span></td>
-                        <td class="text-end font-monospace fw-bold text-success">${m.km_0 || '—'}</td>
-                        <td class="text-end font-monospace">${m.km_5 || '—'}</td>
-                        <td class="text-end font-monospace">${m.km_10 || '—'}</td>
-                        <td class="text-end font-monospace">${m.km_15 || '—'}</td>
-                        <td class="text-end font-monospace">${m.km_20 || '—'}</td>
-                        <td class="text-end font-monospace">${m.km_25 || '—'}</td>
-                        <td class="text-end font-monospace fw-bold text-danger">${m.km_30 || '—'}</td>
-                        <td class="text-end font-monospace text-primary">${m.retorno_vacio || '—'}</td>
+                        <td class="fw-bold">${esc(m.punto_inicio)}</td>
+                        <td class="fw-bold">${esc(m.punto_final)}</td>
+                        <td class="text-end font-monospace">${m.distancia_km ? Number(m.distancia_km).toLocaleString() : '—'}</td>
+                        <td><span class="badge bg-light text-dark border">${esc(m.configuracion_vehicular || 'T3S3')}</span></td>
+                        <td class="text-end font-monospace text-primary fw-bold">${m.km_0 ? Number(m.km_0).toFixed(2) : '—'}</td>
+                        <td class="text-end font-monospace">${m.km_5 ? Number(m.km_5).toFixed(2) : '—'}</td>
+                        <td class="text-end font-monospace">${m.km_10 ? Number(m.km_10).toFixed(2) : '—'}</td>
+                        <td class="text-end font-monospace">${m.km_15 ? Number(m.km_15).toFixed(2) : '—'}</td>
+                        <td class="text-end font-monospace">${m.km_20 ? Number(m.km_20).toFixed(2) : '—'}</td>
+                        <td class="text-end font-monospace">${m.km_25 ? Number(m.km_25).toFixed(2) : '—'}</td>
+                        <td class="text-end font-monospace text-danger fw-bold">${m.km_30 ? Number(m.km_30).toFixed(2) : '—'}</td>
+                        <td class="text-end font-monospace text-muted">${m.retorno_vacio ? Number(m.retorno_vacio).toFixed(2) : '—'}</td>
                     </tr>
                 `).join('');
             }
         }
 
         const modalEl = document.getElementById('caMatrizRendimientoModal');
-        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            new bootstrap.Modal(modalEl).show();
+        }
     };
 
-    // Exportar Resumen Consolidado a Excel (con Telemetría GPS CAN Bus)
+    // Procesar archivo Excel
+    window.caProcesarArchivoExcel = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (typeof XLSX === 'undefined') {
+            alert('Librería XLSX no disponible para procesar el archivo');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(firstSheet);
+
+                if (!rows || rows.length === 0) {
+                    alert('El archivo no contiene filas válidas');
+                    return;
+                }
+
+                alert(`Archivo procesado con ${rows.length} registros. Visualizando datos locales...`);
+            } catch (err) {
+                console.error('Error al parsear Excel:', err);
+                alert('No se pudo procesar el archivo Excel.');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    // Exportar Resumen a Excel
     window.caExportarResumenExcel = function() {
         if (typeof XLSX === 'undefined') {
-            alert('Librería SheetJS no disponible.');
+            alert('Librería XLSX no cargada');
             return;
         }
 
@@ -863,7 +897,7 @@
             return;
         }
 
-        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
+        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'UREA';
 
         const exportData = window._caFilteredTrips.map(t => {
             const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
@@ -978,8 +1012,8 @@
         ws['!cols'] = colWidths;
 
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Consolidado_Viajes");
-        XLSX.writeFile(wb, `Analisis_Combustible_CAN_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Consolidado_Urea");
+        XLSX.writeFile(wb, `Analisis_Urea_${new Date().toISOString().slice(0, 10)}.xlsx`);
     };
 
     // Auto-inicializar
