@@ -1733,8 +1733,8 @@ window._invRenderBottomNav = function() {
     var TABS = [
         { id: 'dashboard',  icon: 'bi-house-fill',            label: 'Inicio',  ruta: 'dashboard',                   perm: null    },
         { id: 'inventario', icon: 'bi-box-seam-fill',         label: 'Stock',   ruta: 'almacen/inventario',           perm: 'inv'   },
-        { id: 'insp',       icon: 'bi-clipboard2-check-fill', label: 'Insp.',   ruta: 'Mantenimiento/inspecciones',   perm: 'insp'  },
-        { id: 'flota',      icon: 'bi-truck-flatbed',         label: 'Flota',   ruta: 'flota/status',                 perm: 'status'},
+        { id: 'insp',       icon: 'bi-clipboard2-check-fill', label: 'Insp.',   ruta: 'mantenimiento/inspecciones',   perm: 'insp'  },
+        { id: 'flota',      icon: 'bi-truck-flatbed',         label: 'Flota',   ruta: 'flota/disponibilidad',         perm: 'disponibilidad'},
         { id: 'gps',        icon: 'bi-geo-alt-fill',          label: 'GPS',     ruta: 'flota/ubicacion',              perm: 'gps'   },
         { id: 'mas',        icon: 'bi-grid-3x3-gap-fill',     label: 'Más',     ruta: null,                           perm: null    }
     ];

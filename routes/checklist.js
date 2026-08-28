@@ -450,35 +450,6 @@ module.exports = function (db, broadcast, logAudit) {
                         } catch(eRampa) {
                             console.warn('Warning taller_rampas auto-sync:', eRampa.message);
                         }
-
-                        // También sincronizar status_flota
-                        const sqlRampa = `
-                            INSERT INTO status_flota
-                            (idRegistro, fecha, corte, unidad_motora, unidad_no_motora, cliente_motora, cliente_nomotora, zona, conductor, estado, observaciones, kilometraje, usuario)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, 'Taller', ?, 'En Reparación', ?, ?, ?)
-                            ON DUPLICATE KEY UPDATE
-                            fecha=?, corte=VALUES(corte), unidad_motora=VALUES(unidad_motora), unidad_no_motora=VALUES(unidad_no_motora),
-                            cliente_motora=VALUES(cliente_motora), cliente_nomotora=VALUES(cliente_nomotora), conductor=VALUES(conductor),
-                            estado='En Reparación', observaciones=VALUES(observaciones), kilometraje=VALUES(kilometraje), usuario=VALUES(usuario);
-                        `;
-                        const fechaStatus = fIngDate;
-                        const motoraVal = item.unidad === 'Tracto' ? placa : (rep.placa_tracto || '');
-                        const nomotoraVal = (item.unidad === 'Remolque' || item.unidad === 'Carreta') ? placa : (rep.placa_remolque || '');
-
-                        await tdb.promise().query(sqlRampa, [
-                            `SF-${idOt}`,
-                            fechaStatus,
-                            id_rampa,
-                            motoraVal,
-                            nomotoraVal,
-                            clienteNombre,
-                            clienteNombre,
-                            rep.conductor || '',
-                            obsRampa,
-                            kmVal,
-                            creado_por || 'Sistema',
-                            fechaStatus
-                        ]).catch(e => console.warn('Warning Status Rampa auto-sync:', e.message));
                     }
 
                 } catch(eOt) {

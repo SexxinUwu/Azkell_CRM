@@ -262,7 +262,6 @@ window.verificarSesionGuardada = function() {
     var showFlotaHub = _cHub('hub_flota');
     var vDisponibilidad = showFlotaHub && _cL('disponibilidad');
     var vGps       = showFlotaHub && _cL('gps');
-    var vStatus    = showFlotaHub && _cL('status');
     var vPlacas    = showFlotaHub && _cL('placas');
     var vDocsFlota = showFlotaHub && _cL('docs_flota');
 
@@ -270,14 +269,12 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-disponibilidad-flota', vDisponibilidad);
     safe('nav-ubicacion',    vGps);
     safe('mbnav-ubicacion',  vGps);
-    safe('nav-status-flota', vStatus);
-    safe('mbnav-status-flota', vStatus);
     safe('nav-placas',       vPlacas);
     safe('mbnav-placas',     vPlacas);
     safe('nav-documentos-flota',   vDocsFlota);
     safe('mbnav-documentos-flota', vDocsFlota);
 
-    var showFlota = vDisponibilidad || vGps || vStatus || vPlacas || vDocsFlota;
+    var showFlota = vDisponibilidad || vGps || vPlacas || vDocsFlota;
     safe('wrap-flota', showFlota);
     safe('bnav-flota', showFlota);
 
@@ -525,7 +522,6 @@ window.verificarSesionGuardada = function() {
             'dashboard': 'dashboard',
             'flota/disponibilidad': 'disponibilidad',
             'flota/ubicacion': 'gps',
-            'flota/status': 'status',
             'flota/documentos': 'docs_flota',
             'flota/placas': 'placas',
             'mantenimiento/status-rampa': 'status_rampa',
@@ -585,7 +581,6 @@ window.verificarSesionGuardada = function() {
             'mantenimiento/trabajos-ot',
             'mantenimiento/combustible',
             'flota/disponibilidad',
-            'flota/status',
             'flota/ubicacion',
             'almacen/inventario',
             'almacen/salidas',
@@ -841,12 +836,12 @@ window.initSSE = function() {
 
     var CACHE_KEY_MAP = {
         fleetrun: 'fleetrun', placas: 'placas', inspecciones: 'statusMant',
-        conductores: 'conductores', status: 'statusFlota', usuarios: 'usuarios'
+        conductores: 'conductores', usuarios: 'usuarios'
     };
     var MODULO_RUTA = {
         fleetrun: 'mantenimiento/fleetrun', placas: 'flota/placas',
         inspecciones: 'mantenimiento/inspecciones', conductores: 'directorio/conductores',
-        status: 'flota/status', usuarios: 'sistema/usuarios',
+        usuarios: 'sistema/usuarios',
         planificacion: 'mantenimiento/planificacion'
     };
 
@@ -1574,8 +1569,6 @@ window.checkPerm = function(modKey, action) {
             'disponibilidad': ['disponibilidad'],
             'gps': ['gps', 'ubicacion'],
             'ubicacion': ['ubicacion', 'gps'],
-            'status': ['status', 'status_flota'],
-            'status_flota': ['status_flota', 'status'],
             'docs_flota': ['docs_flota'],
             'placas': ['placas', 'unid'],
             'unid': ['unid', 'placas'],
@@ -3410,7 +3403,6 @@ var NOMBRES_MODULOS_RECIENTES = {
     'almacen/familias':           'Familias',
     'almacen/marcas':             'Marcas',
     'preferencias/situaciones':   'Situaciones',
-    'flota/status':               'Status Flota',
     'flota/documentos':           'Documentos de Flota',
     'flota/ubicacion':            'GPS',
     'directorio/conductores':     'Personal',
@@ -3442,7 +3434,6 @@ var ICONOS_MODULOS_RECIENTES = {
     'almacen/sistemas':           'bi-diagram-3-fill',
     'almacen/familias':           'bi-tags-fill',
     'almacen/marcas':             'bi-award-fill',
-    'flota/status':               'bi-activity',
     'flota/documentos':           'bi-folder2-open',
     'flota/ubicacion':            'bi-geo-alt-fill',
     'directorio/conductores':     'bi-person-vcard-fill',
@@ -3542,7 +3533,6 @@ const TITULOS_MODULOS = {
     'mantenimiento/status-rampa':     'Status Rampa',
     'mantenimiento/incidencias-ruta': 'Incidencias en Ruta',
     'flota/disponibilidad':        'Disponibilidad de Flota',
-    'flota/status':                'Status de Flota',
     'flota/documentos':            'Documentos de Flota',
     'flota/ubicacion':             'GPS',
     'directorio/conductores':      'Directorio de Personal',
@@ -3592,7 +3582,6 @@ const MENU_IDS = {
     'preferencias/situaciones':    'nav-administracion',
     'administracion':              'nav-administracion',
     'flota/disponibilidad':        'nav-disponibilidad-flota',
-    'flota/status':                'nav-status-flota',
     'flota/documentos':            'nav-documentos-flota',
     'flota/ubicacion':             'nav-ubicacion',
     'directorio/conductores':      'nav-conductores',
@@ -3676,7 +3665,6 @@ const BREADCRUMB_MAP = {
     'mantenimiento/finanzas-taller':  ['Otros','Reporte Financiero'],
     'mantenimiento/planificacion':    ['Otros','Planificación de Mantenimientos'],
     'flota/disponibilidad':       ['Flota','Disponibilidad'],
-    'flota/status':               ['Flota','Status'],
     'flota/documentos':           ['Flota','Placas'],
     'flota/ubicacion':            ['Flota','GPS'],
     'directorio/conductores':     ['Directorio','Personal'],
@@ -4957,7 +4945,7 @@ var FAB_ACCIONES_POR_RUTA = {
         { icon: 'bi-plus-lg', cls: 'primary', texto: 'Nueva Planificación', fn: function() { if(typeof window.abrirModalNuevoPlan==='function') window.abrirModalNuevoPlan(); } }
     ],
     // Sin FAB
-    'flota/status':             null,
+    'flota/disponibilidad':     null,
     'flota/documentos':         null,
     'flota/ubicacion':          null,
     'sistema/auditoria':        null,
