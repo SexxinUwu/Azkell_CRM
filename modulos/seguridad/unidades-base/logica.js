@@ -45,31 +45,70 @@
         try {
             const res = await fetch('/api/seguridad/unidades-base/catalogo-placas');
             const data = await res.json();
-            window._subCatalogo = data;
-
-            // 1. Llenar datalist de camiones/tractos (SOLO TRACTOS / CAMIONES)
-            const dlCamion = document.getElementById('list-sub-placas-camion');
-            if (dlCamion) {
-                const list = (data.tractos && data.tractos.length) ? data.tractos : [];
-                dlCamion.innerHTML = list.map(p => `<option value="${p.placa || p}">${p.marca ? p.marca + ' - ' + (p.tipo || '') : ''}</option>`).join('');
-            }
-
-            // 2. Llenar datalist de carretas (SOLO CARRETAS / REMOLQUES)
-            const dlCarreta = document.getElementById('list-sub-placas-carreta');
-            if (dlCarreta) {
-                const list = (data.carretas && data.carretas.length) ? data.carretas : [];
-                dlCarreta.innerHTML = list.map(p => `<option value="${p.placa || p}">${p.marca ? p.marca + ' - ' + (p.tipo || '') : ''}</option>`).join('');
-            }
-
-            // 3. Llenar datalist de conductores
-            const dlConductores = document.getElementById('list-sub-conductores');
-            if (dlConductores && data.conductores) {
-                dlConductores.innerHTML = data.conductores.map(c => `<option value="${c}">${c}</option>`).join('');
-            }
+            window._subCatalogo = data || { tractos: [], carretas: [], todas: [], conductores: [] };
         } catch(e) {
             console.warn('Advertencia cargando catálogo:', e.message);
         }
     };
+
+    // ── Autocomplete Flotante Moderno (Exacto a Checklist de Unidades) ──
+    window._subHandleAutoInput = function(input, type) {
+        var allLists = document.querySelectorAll('.sub-autocomplete-list');
+        allLists.forEach(function(l) {
+            if (l !== input.nextElementSibling) l.classList.remove('show');
+        });
+
+        var val = input.value.toLowerCase().trim();
+        var listEl = input.nextElementSibling;
+        if (!listEl || !listEl.classList.contains('sub-autocomplete-list')) return;
+
+        var items = [];
+        var catalogo = window._subCatalogo || {};
+
+        if (type === 'tractos') {
+            items = (catalogo.tractos || []).map(p => (p.placa || p).toUpperCase().trim()).filter(Boolean);
+        } else if (type === 'carretas') {
+            items = (catalogo.carretas || []).map(p => (p.placa || p).toUpperCase().trim()).filter(Boolean);
+        } else if (type === 'conductores') {
+            items = (catalogo.conductores || []).map(c => c.toUpperCase().trim()).filter(Boolean);
+        }
+
+        var filtered = items.filter(function(item) {
+            return !val || item.toLowerCase().indexOf(val) >= 0;
+        });
+
+        filtered = filtered.slice(0, 40);
+
+        var html = '';
+        if (filtered.length === 0) {
+            html = '<div class="sub-autocomplete-empty">No se encontraron coincidencias...</div>';
+        } else {
+            filtered.forEach(function(item) {
+                var safeItem = item.replace(/'/g, "\\'");
+                html += '<div class="sub-autocomplete-item" onclick="window._subSelectAutoItem(\'' + input.id + '\', \'' + safeItem + '\')">' + item + '</div>';
+            });
+        }
+
+        listEl.innerHTML = html;
+        listEl.classList.add('show');
+    };
+
+    window._subSelectAutoItem = function(inputId, value) {
+        var input = document.getElementById(inputId);
+        if (input) {
+            input.value = value;
+            var listEl = input.nextElementSibling;
+            if (listEl) listEl.classList.remove('show');
+        }
+    };
+
+    // Cerrar listas de autocomplete al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.sub-autocomplete-wrap')) {
+            var lists = document.querySelectorAll('.sub-autocomplete-list');
+            lists.forEach(function(l) { l.classList.remove('show'); });
+        }
+    });
 
     // ── Cargar Datos de la Tabla ──────────────────────────────────
     window.subCargarDatos = async function() {
