@@ -1429,6 +1429,9 @@ function abrirModalEdicion(placa, tipoDoc) {
 
     const f = document.getElementById('formVehiculoFlota');
     if (f) f.reset();
+    if (typeof window.ndLimpiarArchivo === 'function') {
+        window.ndLimpiarArchivo();
+    }
     
     if (placa) {
         if (typeof window._cbSet === 'function') {
@@ -1461,6 +1464,26 @@ function abrirModalEdicion(placa, tipoDoc) {
         }
     }
 }
+
+window.ndLimpiarArchivo = function() {
+    const fileInp = document.getElementById('nd_archivo_file');
+    if (fileInp) fileInp.value = '';
+    const urlInp = document.getElementById('nd_archivo_url');
+    if (urlInp) urlInp.value = '';
+    const nameEl = document.getElementById('nd_archivo_name');
+    if (nameEl) {
+        nameEl.innerHTML = 'Sin archivos seleccionados';
+        nameEl.style.color = '#94a3b8';
+        nameEl.style.fontWeight = 'bold';
+    }
+    const btnClear = document.getElementById('nd_archivo_btn_clear');
+    if (btnClear) btnClear.classList.add('d-none');
+    const statusEl = document.getElementById('nd_archivo_status');
+    if (statusEl) {
+        statusEl.innerText = '';
+        statusEl.classList.add('d-none');
+    }
+};
 
 function cerrarModalEdicion() {
     const m = document.getElementById('modalEdicionVehiculo');
@@ -1694,6 +1717,24 @@ window.subirDocumentoS3 = async function(input, hiddenId, linkId, docId) {
     const file = input.files[0];
     if(file.size > 25 * 1024 * 1024) return alert('El archivo es muy pesado (Máx 25MB)');
     
+    // Si es el campo del modal de nuevo documento, actualizamos la vista con el nombre en rojo inmediatamente
+    const nameEl = document.getElementById('nd_archivo_name');
+    const btnClear = document.getElementById('nd_archivo_btn_clear');
+    const statusEl = document.getElementById('nd_archivo_status');
+    if (nameEl) {
+        let isPdf = file.name.toLowerCase().endsWith('.pdf');
+        let iconHtml = isPdf ? '<i class="bi bi-file-earmark-pdf-fill text-danger me-1"></i>' : '<i class="bi bi-file-earmark-image-fill text-primary me-1"></i>';
+        nameEl.innerHTML = iconHtml + file.name;
+        nameEl.style.color = '#dc2626';
+        nameEl.style.fontWeight = '800';
+    }
+    if (btnClear) btnClear.classList.remove('d-none');
+    if (statusEl) {
+        statusEl.innerText = 'Subiendo documento...';
+        statusEl.style.color = '#0284c7';
+        statusEl.classList.remove('d-none');
+    }
+
     const spin = document.getElementById('spin_' + docId);
     if(spin) spin.style.display = 'inline-block';
     
@@ -1722,13 +1763,21 @@ window.subirDocumentoS3 = async function(input, hiddenId, linkId, docId) {
         }
         const dLnkBtn = document.getElementById('del_' + docId);
         if(dLnkBtn) dLnkBtn.style.display = 'inline-flex';
-        alert('Documento subido. Recuerda Guardar Configuración.');
+
+        if (statusEl) {
+            statusEl.innerText = '✓ Documento cargado exitosamente.';
+            statusEl.style.color = '#16a34a';
+            statusEl.classList.remove('d-none');
+        }
     } catch(e) {
         console.error(e);
+        if (statusEl) {
+            statusEl.innerText = '✕ Error al subir archivo.';
+            statusEl.style.color = '#dc2626';
+        }
         alert('Error: ' + e.message);
     } finally {
         if(spin) spin.style.display = 'none';
-        input.value = '';
     }
 };
 
