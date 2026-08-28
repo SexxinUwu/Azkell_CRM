@@ -2230,19 +2230,28 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     return h;
 }
 
+var _sguB64Cache = {};
+
 async function _sguConvertirFotosABase64(fotosArray) {
     if (!fotosArray || !fotosArray.length) return [];
-    var resList = [];
-    for (var i = 0; i < fotosArray.length; i++) {
-        var item = fotosArray[i];
+
+    return Promise.all(fotosArray.map(async function(item, i) {
         if (item.b64 && item.b64.startsWith('data:')) {
-            resList.push({ b64: item.b64, num: i + 1, tipo: item.tipo });
-            continue;
+            return { b64: item.b64, num: i + 1, tipo: item.tipo };
         }
         var imgUrl = item.url || item.b64;
-        if (!imgUrl) continue;
+        if (!imgUrl) return { b64: '', num: i + 1, tipo: item.tipo };
+
+        if (_sguB64Cache[imgUrl]) {
+            return { b64: _sguB64Cache[imgUrl], num: i + 1, tipo: item.tipo };
+        }
+
         try {
-            var r = await fetch(imgUrl, { cache: 'no-store' });
+            var ctrl = new AbortController();
+            var timer = setTimeout(function() { ctrl.abort(); }, 3000);
+            var r = await fetch(imgUrl, { signal: ctrl.signal, cache: 'force-cache' });
+            clearTimeout(timer);
+
             if (!r.ok) throw new Error('HTTP ' + r.status);
             var blob = await r.blob();
             var b64 = await new Promise(function(resolve, reject) {
@@ -2251,13 +2260,13 @@ async function _sguConvertirFotosABase64(fotosArray) {
                 reader.onerror = reject;
                 reader.readAsDataURL(blob);
             });
-            resList.push({ b64: b64, num: i + 1, tipo: item.tipo });
+
+            _sguB64Cache[imgUrl] = b64;
+            return { b64: b64, num: i + 1, tipo: item.tipo };
         } catch(err) {
-            console.warn('Error convirtiendo foto a base64:', err);
-            resList.push({ b64: imgUrl, num: i + 1, tipo: item.tipo });
+            return { b64: imgUrl, num: i + 1, tipo: item.tipo };
         }
-    }
-    return resList;
+    }));
 }
 
 function _sguBuildPhotosPagesHtml(fotosArray, tipo) {
