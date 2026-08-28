@@ -2230,6 +2230,36 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     return h;
 }
 
+async function _sguConvertirFotosABase64(fotosArray) {
+    if (!fotosArray || !fotosArray.length) return [];
+    var resList = [];
+    for (var i = 0; i < fotosArray.length; i++) {
+        var item = fotosArray[i];
+        if (item.b64 && item.b64.startsWith('data:')) {
+            resList.push({ b64: item.b64, num: i + 1, tipo: item.tipo });
+            continue;
+        }
+        var imgUrl = item.url || item.b64;
+        if (!imgUrl) continue;
+        try {
+            var r = await fetch(imgUrl, { cache: 'no-store' });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            var blob = await r.blob();
+            var b64 = await new Promise(function(resolve, reject) {
+                var reader = new FileReader();
+                reader.onloadend = function() { resolve(reader.result); };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+            resList.push({ b64: b64, num: i + 1, tipo: item.tipo });
+        } catch(err) {
+            console.warn('Error convirtiendo foto a base64:', err);
+            resList.push({ b64: imgUrl, num: i + 1, tipo: item.tipo });
+        }
+    }
+    return resList;
+}
+
 function _sguBuildPhotosPagesHtml(fotosArray, tipo) {
     if (!fotosArray || fotosArray.length === 0) return '';
 
@@ -2241,7 +2271,7 @@ function _sguBuildPhotosPagesHtml(fotosArray, tipo) {
     h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:10px;table-layout:fixed;">';
     h += '<tr>';
     h += '<td style="width:22%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:4px;">';
-    h += '<img src="' + empLogoUrl + '" style="max-height:44px;max-width:120px;object-fit:contain;" crossorigin="anonymous">';
+    h += '<img src="' + empLogoUrl + '" style="max-height:44px;max-width:120px;object-fit:contain;">';
     h += '</td>';
     h += '<td style="width:78%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:4px;">';
     h += '<div style="font-size:17px;font-weight:bold;text-transform:uppercase;color:#000000;">EVIDENCIAS FOTOGRÁFICAS — FASE ' + tipo.toUpperCase() + '</div>';
@@ -2252,9 +2282,10 @@ function _sguBuildPhotosPagesHtml(fotosArray, tipo) {
 
     h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px;">';
     fotosArray.forEach(function(f, idx) {
+        var src = f.b64 || f.url || '';
         h += '<div style="border:1.5px solid #000000;padding:8px;border-radius:6px;background:#f8fafc;text-align:center;break-inside:avoid;">';
-        h += '<div style="font-size:11px;font-weight:bold;margin-bottom:6px;text-transform:uppercase;color:#0f172a;">EVIDENCIA ' + (idx + 1) + '</div>';
-        h += '<img src="' + (f.b64 || f.url) + '" style="max-width:100%;max-height:220px;height:auto;object-fit:contain;display:block;margin:0 auto;border:1px solid #cbd5e1;border-radius:4px;" crossorigin="anonymous">';
+        h += '<div style="font-size:11px;font-weight:bold;margin-bottom:6px;text-transform:uppercase;color:#0f172a;">EVIDENCIA ' + (f.num || (idx + 1)) + '</div>';
+        h += '<img src="' + src + '" style="max-width:100%;max-height:220px;height:auto;object-fit:contain;display:block;margin:0 auto;border:1px solid #cbd5e1;border-radius:4px;">';
         h += '</div>';
     });
     h += '</div>';
@@ -2325,15 +2356,15 @@ window._sguPrevisualizarPDF = async function(tipo) {
     var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
     var filename = _sguGetPdfFilename(rec, tipo);
 
-    _sguToast('Preparando vista previa...', 'bi-eye');
+    _sguToast('Preparando vista previa con imágenes...', 'bi-eye');
 
     var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
     var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
 
     var htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
     if (fotos.length > 0) {
-        var fotosSimple = fotos.map(function(f, i) { return { url: f.url, num: i + 1 }; });
-        htmlFinal += _sguBuildPhotosPagesHtml(fotosSimple, tipo);
+        var fotosBase64 = await _sguConvertirFotosABase64(fotos);
+        htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
     }
 
     _sguAbrirVentanaImpresion(htmlFinal, filename, 'Checklist ' + rec.placa_tracto + ' (' + tipo.toUpperCase() + ')');
@@ -2344,7 +2375,7 @@ window._sguPrevisualizarPDFCompleto = async function() {
     var rec = window._sguCurrentRecord;
     var filename = _sguGetPdfFilename(rec, 'completo');
 
-    _sguToast('Preparando vista previa del expediente...', 'bi-eye');
+    _sguToast('Preparando expediente completo con imágenes...', 'bi-eye');
 
     var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
     var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
@@ -2361,10 +2392,12 @@ window._sguPrevisualizarPDFCompleto = async function() {
     }
 
     if (fotosSalida.length > 0) {
-        htmlFinal += _sguBuildPhotosPagesHtml(fotosSalida, 'salida');
+        var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
+        htmlFinal += _sguBuildPhotosPagesHtml(fotosSalidaB64, 'salida');
     }
     if (fotosRetorno.length > 0) {
-        htmlFinal += _sguBuildPhotosPagesHtml(fotosRetorno, 'retorno');
+        var fotosRetornoB64 = await _sguConvertirFotosABase64(fotosRetorno);
+        htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
     }
 
     _sguAbrirVentanaImpresion(htmlFinal, filename, 'Expediente Completo ' + rec.placa_tracto);
@@ -2386,23 +2419,7 @@ window._sguGenerarPDF = async function(tipo) {
     var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
     var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
 
-    var fotosBase64 = [];
-    if (fotos.length > 0) {
-        for (var i = 0; i < fotos.length; i++) {
-            try {
-                var res = await fetch(fotos[i].url, { mode: 'cors', cache: 'no-store' });
-                var blob = await res.blob();
-                var b64 = await new Promise(function(resolve) {
-                    var r = new FileReader();
-                    r.onloadend = function() { resolve(r.result); };
-                    r.readAsDataURL(blob);
-                });
-                fotosBase64.push({ b64: b64, num: i + 1 });
-            } catch(e) {
-                fotosBase64.push({ b64: fotos[i].url, num: i + 1 });
-            }
-        }
-    }
+    var fotosBase64 = await _sguConvertirFotosABase64(fotos);
 
     var htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
     if (fotosBase64.length > 0) {
@@ -2445,27 +2462,11 @@ window._sguGenerarPDFCompleto = async function() {
     var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
 
     var todasFotos = rec.fotos || [];
-    var fotosSalida = [];
-    var fotosRetorno = [];
+    var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
+    var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
 
-    for (var i = 0; i < todasFotos.length; i++) {
-        var f = todasFotos[i];
-        if (!f || !f.url) continue;
-        try {
-            var res = await fetch(f.url, { mode: 'cors', cache: 'no-store' });
-            var blob = await res.blob();
-            var b64 = await new Promise(function(resolve) {
-                var r = new FileReader();
-                r.onloadend = function() { resolve(r.result); };
-                r.readAsDataURL(blob);
-            });
-            if (f.tipo === 'salida') fotosSalida.push({ b64: b64, num: fotosSalida.length + 1 });
-            else fotosRetorno.push({ b64: b64, num: fotosRetorno.length + 1 });
-        } catch(e) {
-            if (f.tipo === 'salida') fotosSalida.push({ b64: f.url, num: fotosSalida.length + 1 });
-            else fotosRetorno.push({ b64: f.url, num: fotosRetorno.length + 1 });
-        }
-    }
+    var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
+    var fotosRetornoB64 = await _sguConvertirFotosABase64(fotosRetorno);
 
     var htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
 
@@ -2475,11 +2476,11 @@ window._sguGenerarPDFCompleto = async function() {
     }
 
     // Páginas siguientes: Fotos
-    if (fotosSalida.length > 0) {
-        htmlFinal += _sguBuildPhotosPagesHtml(fotosSalida, 'salida');
+    if (fotosSalidaB64.length > 0) {
+        htmlFinal += _sguBuildPhotosPagesHtml(fotosSalidaB64, 'salida');
     }
-    if (fotosRetorno.length > 0) {
-        htmlFinal += _sguBuildPhotosPagesHtml(fotosRetorno, 'retorno');
+    if (fotosRetornoB64.length > 0) {
+        htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
     }
 
     var div = document.createElement('div');
@@ -2537,34 +2538,11 @@ window._sguCompartirWhatsApp = async function(tipo) {
         }
 
         var todasFotos = rec.fotos || [];
-        var fotosSalida = [];
-        var fotosRetorno = [];
+        var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
+        var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
 
-        for (var i = 0; i < todasFotos.length; i++) {
-            var f = todasFotos[i];
-            if (!f || !f.url) continue;
-            try {
-                var fetchPromise = fetch(f.url, { mode: 'cors', cache: 'no-store' });
-                var timeoutPromise = new Promise(function(_, reject) { setTimeout(function(){ reject(new Error('timeout')); }, 3500); });
-                var res = await Promise.race([fetchPromise, timeoutPromise]);
-                if (res.ok) {
-                    var blob = await res.blob();
-                    var b64 = await new Promise(function(resolve) {
-                        var r = new FileReader();
-                        r.onloadend = function() { resolve(r.result); };
-                        r.readAsDataURL(blob);
-                    });
-                    if (f.tipo === 'salida') fotosSalida.push({ b64: b64, num: fotosSalida.length + 1 });
-                    else fotosRetorno.push({ b64: b64, num: fotosRetorno.length + 1 });
-                } else {
-                    if (f.tipo === 'salida') fotosSalida.push({ b64: f.url, num: fotosSalida.length + 1 });
-                    else fotosRetorno.push({ b64: f.url, num: fotosRetorno.length + 1 });
-                }
-            } catch(e) {
-                if (f.tipo === 'salida') fotosSalida.push({ b64: f.url, num: fotosSalida.length + 1 });
-                else fotosRetorno.push({ b64: f.url, num: fotosRetorno.length + 1 });
-            }
-        }
+        var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
+        var fotosRetornoB64 = await _sguConvertirFotosABase64(fotosRetorno);
 
         var htmlFinal = '';
         if (tipo === 'completo') {
@@ -2573,10 +2551,10 @@ window._sguCompartirWhatsApp = async function(tipo) {
                 htmlFinal += '<div class="html2pdf__page-break"></div>';
                 htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
             }
-            if (fotosSalida.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosSalida, 'salida');
-            if (fotosRetorno.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosRetorno, 'retorno');
+            if (fotosSalidaB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosSalidaB64, 'salida');
+            if (fotosRetornoB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
         } else {
-            var fotosBase64 = tipo === 'salida' ? fotosSalida : fotosRetorno;
+            var fotosBase64 = tipo === 'salida' ? fotosSalidaB64 : fotosRetornoB64;
             htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
             if (fotosBase64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
         }
