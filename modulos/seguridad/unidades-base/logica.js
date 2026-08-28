@@ -574,7 +574,7 @@
             // Fila de encabezado de sección en PDF
             filasHtml += `
                 <tr style="background:#e2e8f0; font-weight:bold;">
-                    <td colspan="9" style="padding: 4px 6px; font-weight:800; font-size:9.5px; text-transform:uppercase; letter-spacing:0.5px; border: 1.5px solid #000;">
+                    <td colspan="8" style="padding: 4px 6px; font-weight:800; font-size:9.5px; text-transform:uppercase; letter-spacing:0.5px; border: 1.5px solid #000;">
                         ■ ${gKey} (${list.length} ${list.length === 1 ? 'UNIDAD' : 'UNIDADES'})
                     </td>
                 </tr>
@@ -587,11 +587,10 @@
                         <td style="text-align:center; font-weight:bold; color:#0f172a; width:60px;">${r.corte || 'Corte 1'}</td>
                         <td style="text-align:center; font-family:monospace; font-weight:bold; font-size:10.5px; width:80px;">${r.placa_camion || '---'}</td>
                         <td style="text-align:center; font-family:monospace; font-size:10.5px; width:80px;">${r.placa_carreta || '---'}</td>
-                        <td style="width:130px; font-size:9.5px;">${r.conductor || '---'}</td>
-                        <td style="text-align:center; font-weight:600; width:75px;">${r.zona || 'Base'}</td>
-                        <td style="text-align:center; font-weight:700; width:75px;">${r.estado || 'Cargado'}</td>
+                        <td style="width:140px; font-size:9.5px;">${r.conductor || '---'}</td>
+                        <td style="text-align:center; font-weight:600; width:80px;">${r.zona || 'Base'}</td>
+                        <td style="text-align:center; font-weight:700; width:80px;">${r.estado || 'Cargado'}</td>
                         <td style="font-size:9px; word-break:break-word;">${r.observacion || ''}</td>
-                        <td style="text-align:center; font-size:8.5px; width:75px;">${r.usuario || 'Seguridad'}</td>
                     </tr>
                 `;
             });
@@ -741,11 +740,10 @@
                                 <th style="width: 60px;">CORTE</th>
                                 <th style="width: 80px;">PLACA CAMIÓN</th>
                                 <th style="width: 80px;">PLACA CARRETA</th>
-                                <th style="width: 130px;">CONDUCTOR</th>
-                                <th style="width: 75px;">ZONA</th>
-                                <th style="width: 75px;">ESTADO</th>
+                                <th style="width: 140px;">CONDUCTOR</th>
+                                <th style="width: 80px;">ZONA</th>
+                                <th style="width: 80px;">ESTADO</th>
                                 <th>OBSERVACIONES</th>
-                                <th style="width: 75px;">REGISTRADO POR</th>
                             </tr>
                         </thead>
                         <tbody>
