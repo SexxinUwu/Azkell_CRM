@@ -215,6 +215,108 @@
 .badge-estado-devolucion { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700; padding: 3px 6px; border-radius: 6px; font-size: 0.72rem; }
 .badge-estado-vacio { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; padding: 3px 6px; border-radius: 6px; font-size: 0.72rem; }
 
+/* Botones de Acción Estilizados */
+.sub-btn-edit-cell {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    padding: 5px 8px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+.sub-btn-edit-cell:hover {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+    transform: scale(1.05);
+}
+
+.sub-btn-del-cell {
+    background: #fef2f2;
+    color: #ef4444;
+    border: 1px solid #fee2e2;
+    padding: 5px 8px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+.sub-btn-del-cell:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
+    transform: scale(1.05);
+}
+
+/* ── Modal Confirmación Eliminación (Diseño B - Ultra Optimizado) ─── */
+.sub-delete-dialog {
+    max-width: 350px !important;
+    width: 90% !important;
+    margin: 1.75rem auto !important;
+}
+.sub-delete-card {
+    background: #ffffff !important;
+    border-radius: 28px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12) !important;
+    padding: 2.2rem 1.6rem 1.8rem 1.6rem !important;
+    text-align: center;
+    transform: translateZ(0);
+}
+.sub-delete-badge-icon {
+    font-size: 3.2rem;
+    color: #e11d48;
+    line-height: 1;
+    margin-bottom: 0.85rem;
+    display: inline-block;
+}
+.sub-btn-circle {
+    width: 54px;
+    height: 54px;
+    border-radius: 50% !important;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    outline: none;
+    will-change: transform;
+}
+.sub-btn-cancel-circle {
+    background: #18181b !important;
+    color: #ffffff !important;
+}
+.sub-btn-cancel-circle:hover {
+    background: #09090b !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.sub-btn-cancel-circle:active {
+    transform: scale(0.95);
+}
+.sub-btn-delete-circle {
+    background: #e11d48 !important;
+    color: #ffffff !important;
+}
+.sub-btn-delete-circle:hover {
+    background: #be123c !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.sub-btn-delete-circle:active {
+    transform: scale(0.95);
+}
+
 /* Modal Drawer */
 .sub-floating-drawer-dialog {
     max-width: 700px !important;
@@ -481,7 +583,7 @@
                                 <datalist id="list-sub-placas-camion"></datalist>
                             </div>
                             <div class="col-12 col-md-6">
-                                <label class="form-label">Placa Carreta / Remolque (Opcional)</label>
+                                <label class="form-label">Placa Semirremolque / Carreta (Opcional)</label>
                                 <input type="text" id="sub-form-placa-carreta" class="form-control text-uppercase font-monospace" placeholder="SELECCIONE O ESCRIBA CARRETA..." list="list-sub-placas-carreta">
                                 <datalist id="list-sub-placas-carreta"></datalist>
                             </div>
@@ -534,6 +636,41 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL CONFIRMACIÓN ELIMINAR (DISEÑO B OFICIAL ERP) ════════════ -->
+<div class="modal fade" id="sub-delete-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered sub-delete-dialog">
+        <div class="modal-content sub-delete-card border-0">
+            <!-- Icono Alerta Rojo -->
+            <div class="sub-delete-badge-icon">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+
+            <!-- Título -->
+            <h4 class="fw-bolder text-dark mb-2" style="font-size: 1.25rem; letter-spacing: -0.3px;">
+                ¿Eliminar este registro?
+            </h4>
+
+            <!-- Descripción -->
+            <p class="text-secondary mb-4 px-2" style="font-size: 0.84rem; line-height: 1.45; font-weight: 500;">
+                Esta acción no se puede deshacer. Se borrará el registro de la unidad en base operativa.
+            </p>
+
+            <!-- Botones de Acción (Diseño B) -->
+            <div class="d-flex align-items-center justify-content-center gap-4">
+                <!-- Cancelar (X negro) -->
+                <button type="button" class="sub-btn-circle sub-btn-cancel-circle" data-bs-dismiss="modal" title="Cancelar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+
+                <!-- Eliminar (Papelera rojo) -->
+                <button type="button" class="sub-btn-circle sub-btn-delete-circle" id="sub-btn-confirm-delete" onclick="window._subEjecutarEliminacionConfirmada()" title="Eliminar registro">
+                    <i class="bi bi-trash3-fill"></i>
+                </button>
             </div>
         </div>
     </div>
