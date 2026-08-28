@@ -548,10 +548,28 @@
         window.caRenderPaginacion(total, page, limit);
     };
 
+    function _caGetTripDates(trip) {
+        const fuelFilter = (document.getElementById('ca-filtro-combustible') || {}).value || 'ALL';
+        const fs = (fuelFilter !== 'ALL' && trip.fuelStats && trip.fuelStats[fuelFilter]) ? trip.fuelStats[fuelFilter] : null;
+        let fIni = fs ? fs.fechaInicio : trip.fechaInicio;
+        let fFin = fs ? fs.fechaFin : trip.fechaFin;
+
+        if ((!fIni || fIni === 'N/D' || fIni === '---') && trip.vouchers && trip.vouchers.length > 0) {
+            const sorted = [...trip.vouchers].filter(v => v.fecha).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            if (sorted.length > 0) {
+                fIni = sorted[0].fecha;
+                fFin = sorted[sorted.length - 1].fecha;
+            }
+        }
+        return { fIni: fIni || trip.fechaInicio, fFin: fFin || trip.fechaFin };
+    }
+
     // 🛰️ Consultar Telemetría e Informe 3.2.1 CAN Bus de Wialon para un Viaje
     window.caConsultarGpsViaje = async function(tripIdx) {
         const trip = window._caFilteredTrips[tripIdx];
         if (!trip) return;
+
+        const { fIni, fFin } = _caGetTripDates(trip);
 
         const btn = document.getElementById(`btn-gps-${tripIdx}`);
         if (btn) {
@@ -562,8 +580,8 @@
         try {
             const params = new URLSearchParams({
                 placa: trip.placa,
-                fechaInicio: trip.fechaInicio,
-                fechaFin: trip.fechaFin
+                fechaInicio: fIni,
+                fechaFin: fFin
             });
 
             const resp = await fetch(`/api/combustible/wialon-telemetria?${params.toString()}`);
@@ -622,13 +640,16 @@
         const t0 = performance.now();
 
         try {
-            const batchPayload = pagedTrips.map((t, idx) => ({
-                index: idx,
-                id: `${t.numViaje || t.viaje || 'idx'}_${t.placa || ''}_${idx}`,
-                placa: t.placa,
-                fechaInicio: t.fechaInicio,
-                fechaFin: t.fechaFin
-            }));
+            const batchPayload = pagedTrips.map((t, idx) => {
+                const { fIni, fFin } = _caGetTripDates(t);
+                return {
+                    index: idx,
+                    id: `${t.numViaje || t.viaje || 'idx'}_${t.placa || ''}_${idx}`,
+                    placa: t.placa,
+                    fechaInicio: fIni,
+                    fechaFin: fFin
+                };
+            });
 
             const resp = await fetch('/api/combustible/wialon-telemetria-batch', {
                 method: 'POST',

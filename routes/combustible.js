@@ -1156,11 +1156,22 @@ module.exports = function (db, broadcast, logAudit) {
         if (!unit) return null;
 
         const parseToUnix = (dateStr) => {
-            if (!dateStr || dateStr === 'N/D') return null;
-            const cleanStr = String(dateStr).trim();
-            const d = new Date(cleanStr.replace(' ', 'T') + (cleanStr.includes('T') || cleanStr.length <= 10 ? '' : '-05:00'));
-            if (isNaN(d.getTime())) return null;
-            return Math.floor(d.getTime() / 1000);
+            if (!dateStr || dateStr === 'N/D' || dateStr === '---' || dateStr === '—') return null;
+            const str = String(dateStr).trim();
+            if (/^\d{10,13}$/.test(str)) {
+                const n = Number(str);
+                return n > 1e11 ? Math.floor(n / 1000) : n;
+            }
+            const ddmmyyyy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+            if (ddmmyyyy) {
+                const [, d, m, y, h, min, s] = ddmmyyyy;
+                const dateObj = new Date(Number(y), Number(m) - 1, Number(d), Number(h || 0), Number(min || 0), Number(s || 0));
+                return Math.floor(dateObj.getTime() / 1000);
+            }
+            const d = new Date(str.includes('T') || str.includes('Z') ? str : (str.replace(' ', 'T') + '-05:00'));
+            if (!isNaN(d.getTime())) return Math.floor(d.getTime() / 1000);
+            const fallback = new Date(str);
+            return isNaN(fallback.getTime()) ? null : Math.floor(fallback.getTime() / 1000);
         };
 
         let fromUnix = parseToUnix(fechaInicio);
@@ -1185,8 +1196,14 @@ module.exports = function (db, broadcast, logAudit) {
             interval: { from: fromUnix, to: toUnix, flags: 0 }
         };
 
-        const execRes = await fetch(`${baseUrl}?svc=report/exec_report&params=${encodeURIComponent(JSON.stringify(execParams))}&sid=${sid}`);
-        const execData = await execRes.json();
+        let execRes = await fetch(`${baseUrl}?svc=report/exec_report&params=${encodeURIComponent(JSON.stringify(execParams))}&sid=${sid}`);
+        let execData = await execRes.json();
+
+        // Si la sesión expiró (error 1 o 4), invalidar caché
+        if (execData && (execData.error === 1 || execData.error === 4)) {
+            _wialonCache.sid = null;
+            _wialonCache.expiresAt = 0;
+        }
 
         let recorridoKmGps = null;
         let combustibleConsumidoGps = null;
