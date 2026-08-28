@@ -152,9 +152,24 @@ window.ckSincronizarViajes = async function(e) {
 window._cbFiltrarViaje = function() {
     const input = document.getElementById('ck_orden_viaje-txt');
     const dd = document.getElementById('ck_orden_viaje-dd');
+    const btnClear = document.getElementById('ck_btn_clear_viaje');
     if (!input || !dd) return;
 
-    const q = (input.value || '').trim().toUpperCase();
+    const val = input.value || '';
+    if (btnClear) {
+        if (val.trim()) btnClear.classList.remove('d-none');
+        else btnClear.classList.add('d-none');
+    }
+
+    // Si el usuario vació el texto manualmente, desvincular todo
+    if (!val.trim()) {
+        const inputHidden = document.getElementById('ck_orden_viaje');
+        if (inputHidden && inputHidden.value) {
+            window.ckLimpiarViajeVinculado(false);
+        }
+    }
+
+    const q = val.trim().toUpperCase();
     const viajes = window.dataGlobalOrdenesViaje || [];
 
     let filtrados = viajes;
@@ -185,7 +200,7 @@ window._cbFiltrarViaje = function() {
         const dataJson = JSON.stringify(v).replace(/"/g, '&quot;');
 
         html += `
-            <div class="p-2 border-bottom cursor-pointer cb-item-viaje" style="transition:background 0.15s ease;" onmousedown="window.ckSeleccionarViaje(${dataJson})" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#ffffff'">
+            <div class="p-2 border-bottom cursor-pointer cb-item-viaje" style="transition:background 0.15s ease;" onmousedown="window.ckSeleccionarViaje(${dataJson})" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#ffffff'">
                 <div class="d-flex align-items-center justify-content-between mb-1">
                     <span class="fw-bold text-primary" style="font-size:0.88rem;"><i class="bi bi-diagram-3-fill me-1"></i>Viaje: ${v.viaje}</span>
                     <span class="badge bg-secondary-subtle text-secondary" style="font-size:0.7rem;">${fechaFmt}</span>
@@ -215,8 +230,10 @@ window.ckSeleccionarViaje = function(v) {
     if (!v) return;
     const inputHidden = document.getElementById('ck_orden_viaje');
     const inputTxt = document.getElementById('ck_orden_viaje-txt');
+    const btnClear = document.getElementById('ck_btn_clear_viaje');
     if (inputHidden) inputHidden.value = v.viaje || '';
     if (inputTxt) inputTxt.value = v.viaje || '';
+    if (btnClear) btnClear.classList.remove('d-none');
 
     // Autocompletar Placa Tracto
     if (v.placa_tracto) {
@@ -274,14 +291,58 @@ window.ckSeleccionarViaje = function(v) {
     }
 };
 
-window.ckLimpiarViajeVinculado = function() {
+window.ckLimpiarViajeVinculado = function(showToast) {
     const inputHidden = document.getElementById('ck_orden_viaje');
     const inputTxt = document.getElementById('ck_orden_viaje-txt');
+    const btnClear = document.getElementById('ck_btn_clear_viaje');
     if (inputHidden) inputHidden.value = '';
     if (inputTxt) inputTxt.value = '';
+    if (btnClear) btnClear.classList.add('d-none');
 
+    // Vaciar Placa Tracto
+    const ptHidden = document.getElementById('ck_placa_tracto');
+    const ptTxt = document.getElementById('ck_placa_tracto-txt');
+    if (ptHidden) ptHidden.value = '';
+    if (ptTxt) ptTxt.value = '';
+
+    // Vaciar Placa Remolque
+    const prHidden = document.getElementById('ck_placa_remolque');
+    const prTxt = document.getElementById('ck_placa_remolque-txt');
+    if (prHidden) prHidden.value = '';
+    if (prTxt) prTxt.value = '';
+
+    // Vaciar Conductor
+    const condHidden = document.getElementById('ck_conductor');
+    const condTxt = document.getElementById('ck_conductor-txt');
+    if (condHidden) condHidden.value = '';
+    if (condTxt) condTxt.value = '';
+
+    // Vaciar Procedencia
+    const procInput = document.getElementById('ck_procedencia');
+    if (procInput) procInput.value = '';
+
+    // Vaciar Kilometraje y Horómetro
+    const kmInput = document.getElementById('ck_kilometraje');
+    if (kmInput) kmInput.value = '';
+    const horoInput = document.getElementById('ck_horometro');
+    if (horoInput) horoInput.value = '';
+
+    // Ocultar tarjetas de documentos informativos
+    const docTracto = document.getElementById('ck-doc-box-tracto');
+    if (docTracto) docTracto.style.display = 'none';
+    const docRemolque = document.getElementById('ck-doc-box-remolque');
+    if (docRemolque) docRemolque.style.display = 'none';
+
+    // Ocultar panel informativo de viaje vinculado
     const infoBox = document.getElementById('ck_viaje_seleccionado_info');
     if (infoBox) infoBox.classList.add('d-none');
+
+    const dd = document.getElementById('ck_orden_viaje-dd');
+    if (dd) dd.style.display = 'none';
+
+    if (showToast && typeof window.showToastNotification === 'function') {
+        window.showToastNotification('Se quitó la orden de viaje y se vaciaron los campos dependientes.', 'info');
+    }
 };
 
 // ── POBLAR PLACAS ────────────────────────────────────────────────
