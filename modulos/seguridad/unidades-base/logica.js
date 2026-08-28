@@ -248,8 +248,12 @@
                 if (r.estado === 'Con Devolución') badgeEstado = `<span class="badge-estado-devolucion">Con Devolución</span>`;
                 if (r.estado === 'Vacío') badgeEstado = `<span class="badge-estado-vacio">Vacío</span>`;
 
+                const placaCamionHtml = (r.placa_camion && r.placa_camion.trim())
+                    ? `<span class="fw-bold text-dark font-monospace" style="font-size:0.9rem;">${r.placa_camion}</span>`
+                    : `<span class="text-muted small">—</span>`;
+
                 const placaCarretaHtml = (r.placa_carreta && r.placa_carreta.trim()) 
-                    ? `<span class="badge bg-light text-dark border border-secondary fw-bold font-monospace">${r.placa_carreta}</span>` 
+                    ? `<span class="fw-bold text-dark font-monospace" style="font-size:0.9rem;">${r.placa_carreta}</span>` 
                     : `<span class="text-muted small">—</span>`;
 
                 const conductorHtml = (r.conductor && r.conductor.trim())
@@ -259,7 +263,7 @@
                 html += `
                     <tr>
                         <td>${badgeCorte}</td>
-                        <td><span class="badge bg-dark text-white fw-bold font-monospace px-2 py-1">${r.placa_camion || '—'}</span></td>
+                        <td>${placaCamionHtml}</td>
                         <td>${placaCarretaHtml}</td>
                         <td>${conductorHtml}</td>
                         <td class="fw-semibold text-dark">${r.zona || 'Base'}</td>
