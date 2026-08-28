@@ -40,51 +40,110 @@
         window.subCargarDatos();
     };
 
+    // ── Helper de Peticiones con Token de Sesión ─────────────────
+    function _subFetch(url, opts) {
+        opts = opts || {};
+        opts.headers = opts.headers || {};
+        var token = localStorage.getItem('fleet_token') || localStorage.getItem('token') || '';
+        if (token && !opts.headers['Authorization']) {
+            opts.headers['Authorization'] = 'Bearer ' + token;
+        }
+        return fetch(url, opts).then(function(r) {
+            if (!r.ok) {
+                return r.json().catch(function(){ return {}; }).then(function(e) { 
+                    throw new Error(e.error || ('Error ' + r.status)); 
+                });
+            }
+            return r.json();
+        });
+    }
+
     // ── Cargar Catálogo de Placas y Conductores ───────────────────
     window.subCargarCatalogo = async function() {
         try {
-            const res = await fetch('/api/seguridad/unidades-base/catalogo-placas');
-            const data = await res.json();
-            window._subCatalogo = data || { tractos: [], carretas: [], todas: [], conductores: [] };
+            // Intentar primero con el endpoint consolidado de recursos de seguridad
+            const data = await _subFetch('/api/seguridad/recursos').catch(() => null);
+            if (data && (data.placas || data.conductores)) {
+                let tractos = [];
+                if (data.tractosPorEmpresa) {
+                    Object.values(data.tractosPorEmpresa).forEach(arr => {
+                        if (Array.isArray(arr)) tractos.push(...arr);
+                    });
+                }
+                if (tractos.length === 0 && data.placas) {
+                    const carretasSet = new Set(data.carretasGlobales || []);
+                    tractos = data.placas.filter(p => !carretasSet.has(p));
+                }
+
+                window._subCatalogo = {
+                    tractos: Array.from(new Set(tractos)),
+                    carretas: data.carretasGlobales || [],
+                    todas: data.placas || [],
+                    conductores: data.conductores || []
+                };
+                return;
+            }
+
+            // Respaldo con endpoint de unidades-base
+            const dataAlt = await _subFetch('/api/seguridad/unidades-base/catalogo-placas');
+            if (dataAlt) {
+                window._subCatalogo = {
+                    tractos: (dataAlt.tractos || []).map(p => p.placa || p),
+                    carretas: (dataAlt.carretas || []).map(p => p.placa || p),
+                    todas: (dataAlt.todas || []).map(p => p.placa || p),
+                    conductores: dataAlt.conductores || []
+                };
+            }
         } catch(e) {
             console.warn('Advertencia cargando catálogo:', e.message);
         }
     };
 
     // ── Autocomplete Flotante Moderno (Exacto a Checklist de Unidades) ──
-    window._subHandleAutoInput = function(input, type) {
+    window._subHandleAutoInput = async function(input, type) {
         var allLists = document.querySelectorAll('.sub-autocomplete-list');
         allLists.forEach(function(l) {
             if (l !== input.nextElementSibling) l.classList.remove('show');
         });
 
-        var val = input.value.toLowerCase().trim();
+        // Asegurar que la card padre tenga prioridad de elevación sobre las de abajo
+        document.querySelectorAll('#modalSubUnidad .card').forEach(c => c.style.zIndex = '1');
+        var parentCard = input.closest('.card');
+        if (parentCard) parentCard.style.zIndex = '1050';
+
+        var val = (input.value || '').toLowerCase().trim();
         var listEl = input.nextElementSibling;
         if (!listEl || !listEl.classList.contains('sub-autocomplete-list')) return;
+
+        // Si el catálogo aún no cargó, intentar cargarlo de inmediato
+        if (!window._subCatalogo || (!window._subCatalogo.tractos?.length && !window._subCatalogo.conductores?.length)) {
+            await window.subCargarCatalogo();
+        }
 
         var items = [];
         var catalogo = window._subCatalogo || {};
 
         if (type === 'tractos') {
-            items = (catalogo.tractos || []).map(p => (p.placa || p).toUpperCase().trim()).filter(Boolean);
+            items = catalogo.tractos || [];
         } else if (type === 'carretas') {
-            items = (catalogo.carretas || []).map(p => (p.placa || p).toUpperCase().trim()).filter(Boolean);
+            items = catalogo.carretas || [];
         } else if (type === 'conductores') {
-            items = (catalogo.conductores || []).map(c => c.toUpperCase().trim()).filter(Boolean);
+            items = catalogo.conductores || [];
         }
 
         var filtered = items.filter(function(item) {
-            return !val || item.toLowerCase().indexOf(val) >= 0;
+            if (!val) return true;
+            return String(item).toLowerCase().includes(val);
         });
 
-        filtered = filtered.slice(0, 40);
+        filtered = filtered.slice(0, 50);
 
         var html = '';
         if (filtered.length === 0) {
             html = '<div class="sub-autocomplete-empty">No se encontraron coincidencias...</div>';
         } else {
             filtered.forEach(function(item) {
-                var safeItem = item.replace(/'/g, "\\'");
+                var safeItem = String(item).replace(/'/g, "\\'");
                 html += '<div class="sub-autocomplete-item" onclick="window._subSelectAutoItem(\'' + input.id + '\', \'' + safeItem + '\')">' + item + '</div>';
             });
         }
@@ -100,6 +159,8 @@
             var listEl = input.nextElementSibling;
             if (listEl) listEl.classList.remove('show');
         }
+        // Restablecer z-index de las cards
+        document.querySelectorAll('#modalSubUnidad .card').forEach(c => c.style.zIndex = '1');
     };
 
     // Cerrar listas de autocomplete al hacer clic fuera
@@ -107,6 +168,7 @@
         if (!e.target.closest('.sub-autocomplete-wrap')) {
             var lists = document.querySelectorAll('.sub-autocomplete-list');
             lists.forEach(function(l) { l.classList.remove('show'); });
+            document.querySelectorAll('#modalSubUnidad .card').forEach(c => c.style.zIndex = '1');
         }
     });
 
@@ -135,8 +197,7 @@
         if (search) params.append('search', search);
 
         try {
-            const res = await fetch(`/api/seguridad/unidades-base?${params.toString()}`);
-            const data = await res.json();
+            const data = await _subFetch(`/api/seguridad/unidades-base?${params.toString()}`);
             if (data.ok) {
                 window._subData = data.data || [];
                 window.subRenderTabla(window._subData);
@@ -405,12 +466,11 @@
             const url = id ? `/api/seguridad/unidades-base/${id}` : '/api/seguridad/unidades-base';
             const method = id ? 'PUT' : 'POST';
 
-            const res = await fetch(url, {
+            const data = await _subFetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            const data = await res.json();
 
             if (data.ok) {
                 window.mostrarToast(id ? 'Registro actualizado correctamente' : 'Unidad registrada en base', 'success');
@@ -448,8 +508,7 @@
         if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
 
         try {
-            const res = await fetch(`/api/seguridad/unidades-base/${id}`, { method: 'DELETE' });
-            const data = await res.json();
+            const data = await _subFetch(`/api/seguridad/unidades-base/${id}`, { method: 'DELETE' });
             if (data.ok) {
                 window.mostrarToast('Registro eliminado correctamente', 'info');
                 window.subCargarDatos();
