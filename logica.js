@@ -553,6 +553,7 @@ window.verificarSesionGuardada = function() {
             'rrhh/personal': 'rrhh_personal',
             'rrhh/asistencia': 'rrhh_asistencia',
             'rrhh/nomina': 'rrhh_nomina',
+            'gerencia/aprobaciones-oc': 'gerencia_aprobaciones',
             'tesoreria/caja-chica': 'tesoreria_caja',
             'tesoreria/flujo-caja': 'tesoreria_flujo',
             'tesoreria/cuentas': 'tesoreria_cuentas',
@@ -2187,7 +2188,7 @@ window.toggleNavSection = function(sectionId) {
 
 window.restoreNavSections = function() {
     try {
-        const all = ['mantenimiento','almacen','flota','directorio','seguridad','rrhh','operaciones','tesoreria','sistema','configuracion','administracion'];
+        const all = ['gerencia','mantenimiento','almacen','flota','directorio','seguridad','rrhh','operaciones','tesoreria','sistema','configuracion','administracion'];
         all.forEach(function(id) {
             const items = document.getElementById('section-items-' + id);
             const btn   = document.querySelector('.nav-section-toggle[data-section="' + id + '"]');
@@ -3543,6 +3544,7 @@ const TITULOS_MODULOS = {
     'administracion':              'Administración',
     'seguridad/unidades':          'Control de Unidades',
     'seguridad/unidades-base':     'Status "Unidades en Base"',
+    'gerencia/aprobaciones-oc':    'Aprobación de Órdenes de Compra',
     'operaciones/combustible-vales': 'Vales de Combustible',
     'operaciones/combustible-analisis': 'Análisis de Combustible (D2)',
     'operaciones/urea-analisis':        'Análisis de Urea',
@@ -3598,6 +3600,7 @@ const MENU_IDS = {
     'directorio/clientes':         'nav-clientes',
     'sistema/usuarios':            'nav-usuarios',
     'sistema/auditoria':           'nav-auditoria',
+    'gerencia/aprobaciones-oc':    'nav-gerencia-aprobaciones-oc',
     'seguridad/unidades':          'nav-seg-unidades',
     'seguridad/unidades-base':     'nav-seg-unidades-base',
 };
@@ -3642,6 +3645,7 @@ const MENU_SECTION = {
     'directorio/conductores':     'directorio',
     'sistema/usuarios':           'configuracion',
     'sistema/auditoria':          'configuracion',
+    'gerencia/aprobaciones-oc':   'gerencia',
     'seguridad/unidades':         'seguridad',
     'seguridad/unidades-base':    'seguridad',
     'operaciones/ordenes-viaje':   'operaciones',
@@ -3691,6 +3695,7 @@ const BREADCRUMB_MAP = {
     'sistema/usuarios':           ['Configuración','Usuarios'],
     'sistema/auditoria':          ['Configuración','Auditoría'],
     'sistema/configuracion':      ['Sistema','Configuración'],
+    'gerencia/aprobaciones-oc':   ['Gerencia','Aprobación de O/C'],
     'seguridad/unidades':         ['Seguridad','Unidades'],
     'seguridad/unidades-base':    ['Seguridad','Unidades en Base'],
 };

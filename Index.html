@@ -244,6 +244,22 @@
                     </div>
                 </div>
 
+                <!-- GERENCIA -->
+                <div id="wrap-gerencia">
+                    <button class="nav-section-toggle" data-section="gerencia" aria-expanded="false" onclick="window.toggleNavSection('gerencia')">
+                        <span class="link-text">Gerencia</span>
+                        <span class="section-badge" id="badge-count-gerencia">4</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items nav-section-collapsed" id="section-items-gerencia">
+                        <a id="nav-gerencia-aprobaciones-oc" class="nav-item" onclick="cargarModuloAislado('gerencia/aprobaciones-oc')">
+                            <i class="bi bi-shield-check nav-icon text-primary"></i>
+                            <span class="link-text">Aprobación de O/C</span>
+                            <span class="nav-item-badge bg-warning text-dark fw-bold rounded-pill px-2 py-0" style="font-size:0.68rem;">4 Pend.</span>
+                        </a>
+                    </div>
+                </div>
+
                 <!-- RRHH -->
                 <div id="wrap-rrhh">
                     <button class="nav-section-toggle" data-section="rrhh" aria-expanded="false" onclick="window.toggleNavSection('rrhh')">
@@ -1107,6 +1123,24 @@
                     <div class="bnav-row-content">
                         <p class="bnav-row-title">Nómina y Pagos</p>
                         <p class="bnav-row-desc">Cálculo de haberes y boletas</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
+            </div>
+        </div>
+    <!-- Gerencia -->
+    <div class="offcanvas offcanvas-bottom bnav-sheet h-auto" tabindex="-1" id="bnavSheetGerencia">
+        <div class="bnav-sheet-header">
+            <div class="bnav-sheet-title"><i class="bi bi-shield-check text-primary"></i> Gerencia & Dirección</div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body px-3 pb-4">
+            <div class="bnav-group-box">
+                <div id="mbnav-gerencia-aprobaciones" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetGerencia')).hide(); cargarModuloAislado('gerencia/aprobaciones-oc');">
+                    <div class="bnav-row-icon" style="color: #0284c7;"><i class="bi bi-patch-check-fill"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Aprobación de Órdenes de Compra</p>
+                        <p class="bnav-row-desc">Autorizaciones directivas y compras pendientes</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
