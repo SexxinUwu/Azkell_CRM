@@ -119,9 +119,22 @@
         }, 300);
     };
 
-    // ── Clasificar Registro por Tipo de Configuración ─────────────
+    // ── Clasificar Registro por Tipo de Configuración y Zona ─────────
     window.subDeterminarTipo = function(r) {
-        const tieneCamion = Boolean(r.placa_camion && r.placa_camion.trim());
+        const zona = (r.zona || 'Base').trim().toUpperCase();
+
+        // 1. Si está en Mantenimiento, se agrupa directamente en Mantenimiento
+        if (zona.includes('MANTENIMIENTO') || zona.includes('TALLER')) {
+            return 'EN MANTENIMIENTO';
+        }
+
+        // 2. Si está en Lavado, se agrupa directamente en Lavado
+        if (zona.includes('LAVADO')) {
+            return 'EN LAVADO';
+        }
+
+        // 3. Si está en Base (patio regular), se clasifica por su composición
+        const tieneCamion = Boolean(r.placa_camion && r.placa_camion.trim() && r.placa_camion.trim() !== '—');
         const tieneCarreta = Boolean(r.placa_carreta && r.placa_carreta.trim() && r.placa_carreta.trim() !== '—');
 
         if (tieneCamion && tieneCarreta) return 'CAMIÓN + CARRETA';
@@ -129,7 +142,7 @@
         return 'SOLO CARRETA / REMOLQUE';
     };
 
-    // ── Renderizar Tabla Segmentada por Tipo ───────────────────────
+    // ── Renderizar Tabla Segmentada por Tipo y Zona ──────────────────
     window.subRenderTabla = function(items = []) {
         const tbody = document.getElementById('sub-tbody');
         if (!tbody) return;
@@ -150,7 +163,9 @@
         const grupos = {
             'CAMIÓN + CARRETA': [],
             'SOLO CAMIÓN / TRACTO': [],
-            'SOLO CARRETA / REMOLQUE': []
+            'SOLO CARRETA / REMOLQUE': [],
+            'EN MANTENIMIENTO': [],
+            'EN LAVADO': []
         };
 
         items.forEach(r => {
@@ -164,7 +179,9 @@
         const ordenGrupos = [
             { key: 'CAMIÓN + CARRETA', icon: 'bi-truck-flatbed', color: '#0284c7' },
             { key: 'SOLO CAMIÓN / TRACTO', icon: 'bi-truck-front-fill', color: '#16a34a' },
-            { key: 'SOLO CARRETA / REMOLQUE', icon: 'bi-box-seam-fill', color: '#d97706' }
+            { key: 'SOLO CARRETA / REMOLQUE', icon: 'bi-box-seam-fill', color: '#d97706' },
+            { key: 'EN MANTENIMIENTO', icon: 'bi-tools', color: '#dc2626' },
+            { key: 'EN LAVADO', icon: 'bi-droplet-fill', color: '#0891b2' }
         ];
 
         ordenGrupos.forEach(g => {
@@ -411,7 +428,9 @@
         const grupos = {
             'CAMIÓN + CARRETA': [],
             'SOLO CAMIÓN / TRACTO': [],
-            'SOLO CARRETA / REMOLQUE': []
+            'SOLO CARRETA / REMOLQUE': [],
+            'EN MANTENIMIENTO': [],
+            'EN LAVADO': []
         };
 
         items.forEach(r => {
@@ -426,7 +445,9 @@
         const ordenGrupos = [
             'CAMIÓN + CARRETA',
             'SOLO CAMIÓN / TRACTO',
-            'SOLO CARRETA / REMOLQUE'
+            'SOLO CARRETA / REMOLQUE',
+            'EN MANTENIMIENTO',
+            'EN LAVADO'
         ];
 
         ordenGrupos.forEach(gKey => {
