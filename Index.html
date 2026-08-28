@@ -594,23 +594,23 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- MODAL SESIÓN EXPIRADA                                         -->
+    <!-- MODAL SESIÓN EXPIRADA (Diseño Moderno Circular Bento)        -->
     <!-- ============================================================ -->
     <div class="modal fade" id="modal-sesion-expirada" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content" style="border-radius:16px; border:1px solid var(--border); background:var(--surface); overflow:hidden;">
-                <div class="modal-body p-4 text-center">
-                    <div class="mb-3" style="font-size:3rem;">😴</div>
-                    <h5 class="fw-bold mb-2" style="color:var(--text);">Se te durmió la sesión</h5>
-                    <p class="mb-4" style="color:var(--subtext); font-size:0.875rem;">Por seguridad, tu sesión expiró tras 30 minutos de inactividad.</p>
-                    <div class="d-flex flex-column gap-2">
-                        <button class="btn btn-primary fw-bold w-100" style="border-radius:10px;" onclick="window._renovarSesion()">
-                            <i class="bi bi-arrow-clockwise me-2"></i>¡Despertamos!
-                        </button>
-                        <button class="btn btn-outline-secondary fw-bold w-100" style="border-radius:10px;" onclick="cerrarSesion()">
-                            Cerrar sesión
-                        </button>
-                    </div>
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 350px; width: 90%; margin: 1.75rem auto;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 28px; background: var(--surface, #ffffff); padding: 2.2rem 1.6rem 1.8rem 1.6rem; text-align: center; border: 1px solid var(--border, #e2e8f0);">
+                <div class="mb-3" style="font-size: 3.4rem; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.08));">😴</div>
+                <h4 class="fw-bolder mb-2" style="color: var(--text, #0f172a); font-size: 1.25rem; letter-spacing: -0.3px;">Se te durmió la sesión</h4>
+                <p class="mb-4 px-2" style="color: var(--subtext, #64748b); font-size: 0.84rem; line-height: 1.45; font-weight: 500;">Por seguridad, tu sesión expiró tras 30 minutos de inactividad.</p>
+                <div class="d-flex align-items-center justify-content-center gap-4">
+                    <!-- Cerrar Sesión (Círculo Negro con X) -->
+                    <button type="button" class="d-inline-flex align-items-center justify-content-center text-white border-0 shadow-sm" style="width: 54px; height: 54px; border-radius: 50%; background: #18181b; font-size: 1.35rem; cursor: pointer; transition: transform 0.15s ease, background 0.15s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'" onclick="cerrarSesion()" title="Cerrar sesión">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                    <!-- Despertar / Renovar (Círculo Azul con Refrescar) -->
+                    <button type="button" class="d-inline-flex align-items-center justify-content-center text-white border-0 shadow-sm" style="width: 54px; height: 54px; border-radius: 50%; background: #0284c7; font-size: 1.35rem; cursor: pointer; transition: transform 0.15s ease, background 0.15s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'" onclick="window._renovarSesion()" title="¡Despertamos!">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
                 </div>
             </div>
         </div>
