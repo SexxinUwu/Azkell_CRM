@@ -114,7 +114,7 @@
                 <div id="wrap-flota">
                     <button class="nav-section-toggle" data-section="flota" aria-expanded="false" onclick="window.toggleNavSection('flota')">
                         <span class="link-text" data-i18n="nav.flota">Flota</span>
-                        <span class="section-badge">5</span>
+                        <span class="section-badge">4</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-flota">
@@ -125,10 +125,6 @@
                         <a id="nav-ubicacion" class="nav-item" onclick="cargarModuloAislado('flota/ubicacion')">
                             <i class="bi bi-geo-alt-fill nav-icon"></i>
                             <span class="link-text" data-i18n="nav.gps">GPS</span>
-                        </a>
-                        <a id="nav-status-flota" class="nav-item" onclick="cargarModuloAislado('flota/status')">
-                            <div class="nav-icon"><i class="bi bi-activity"></i></div>
-                            <span class="link-text" data-i18n="nav.status">Status Flota</span>
                         </a>
                         <a id="nav-documentos-flota" class="nav-item" onclick="cargarModuloAislado('flota/documentos')">
                             <div class="nav-icon"><i class="bi bi-folder2-open"></i></div>
@@ -841,14 +837,6 @@
                     <div class="bnav-row-content">
                         <p class="bnav-row-title" data-i18n="nav.gps">GPS</p>
                         <p class="bnav-row-desc">Rastreo de unidades en tiempo real</p>
-                    </div>
-                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
-                </div>
-                <div id="mbnav-status-flota" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetFlota')).hide(); cargarModuloAislado('flota/status'); setBottomNavActive('bnav-flota');">
-                    <div class="bnav-row-icon" style="color: #3b82f6;"><i class="bi bi-activity"></i></div>
-                    <div class="bnav-row-content">
-                        <p class="bnav-row-title" data-i18n="nav.status">Status Flota</p>
-                        <p class="bnav-row-desc">Estado operativo de las unidades</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>

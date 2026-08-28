@@ -375,7 +375,6 @@ router.post('/eliminarMasivo', (req, res) => {
     if (coleccion === 'Placas') { tabla = 'placas'; campoId = 'placa'; }
     else if (coleccion === 'Fleetrun' || coleccion === 'Mantenimientos') { tabla = 'fleetrun'; }
     else if (coleccion === 'Inspecciones' || coleccion === 'statusMant') { tabla = 'inspecciones'; campoId = 'id'; }
-    else if (coleccion === 'StatusFlota' || coleccion === 'statusFlota') { tabla = 'status_flota'; }
     else return res.status(400).json({ error: "Colección no válida" });
 
     const sql = `DELETE FROM ${tabla} WHERE ${campoId} IN (?)`;
@@ -593,55 +592,6 @@ router.post('/:metodo', async (req, res) => {
         return;
     }
 
-    if (metodo === 'obtenerDatosStatusFlota') {
-        reqDb.query('SELECT * FROM status_flota', (err, results) => {
-            if (err) return res.json({ data: [] });
-            const data = results.map(r => [
-                r.idRegistro || '', r.fecha || '', r.corte || '',
-                r.unidad_motora || '', r.unidad_no_motora || '',
-                r.cliente_motora || '', r.cliente_nomotora || '',
-                r.zona || '', r.conductor || '',
-                r.estado || '', r.observaciones || '', r.kilometraje || '', r.foto || ''
-            ]);
-            return res.json({ data });
-        });
-        return;
-    }
-
-    if (metodo === 'guardarStatusFlota') {
-        const form = req.body.form || {};
-        const id = form.sf_id;
-        const fecha = form.sf_fecha;
-        const corte = form.sf_corte;
-        const motora = form.sf_motora || "";
-        const nomotora = form.sf_nomotora || "";
-        const cliMotora = form.sf_cliente_motora || "";
-        const cliNoMotora = form.sf_cliente_nomotora || "";
-        const zona = form.sf_zona || "";
-        const conductor = form.sf_conductor || "";
-        const estado = form.sf_estado || "";
-        const obs = form.sf_obs || "";
-        const km = form.sf_kilometraje ? parseInt(form.sf_kilometraje) : null;
-        const usuario = form.usuarioAutor || "";
-
-        const query = `
-            INSERT INTO status_flota
-            (idRegistro, fecha, corte, unidad_motora, unidad_no_motora, cliente_motora, cliente_nomotora, zona, conductor, estado, observaciones, kilometraje, usuario)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-            fecha=?, corte=?, unidad_motora=?, unidad_no_motora=?, cliente_motora=?, cliente_nomotora=?, zona=?, conductor=?, estado=?, observaciones=?, kilometraje=?, usuario=?
-        `;
-        const values = [id, fecha, corte, motora, nomotora, cliMotora, cliNoMotora, zona, conductor, estado, obs, km, usuario,
-                        fecha, corte, motora, nomotora, cliMotora, cliNoMotora, zona, conductor, estado, obs, km, usuario];
-        reqDb.query(query, values, (err) => {
-            if (err) { console.error("❌ Error BD Status Flota:", err); return res.json({ data: "Error al guardar en Base de Datos" }); }
-            console.log("✅ Status Flota guardado correctamente");
-            broadcast('status', metodo);
-            return res.json({ data: "Éxito" });
-        });
-        return;
-    }
-
     if (metodo === 'guardarInspeccion') {
         const datos = req.body.form || {};
         const isNew = !datos.id;
@@ -812,7 +762,6 @@ router.post('/:metodo', async (req, res) => {
             _inspeccionesCache = null;
         }
         else if (coleccion === 'Fleetrun') sql = 'DELETE FROM fleetrun WHERE idRegistro IN (?)';
-        else if (coleccion === 'StatusFlota') sql = 'DELETE FROM status_flota WHERE idRegistro IN (?)';
         else if (coleccion === 'Usuarios') sql = 'DELETE FROM usuarios WHERE idUsuario IN (?)';
         else if (coleccion === 'VehiculosFlota') sql = 'DELETE FROM vehiculos_flota WHERE placa IN (?)';
 
@@ -821,7 +770,7 @@ router.post('/:metodo', async (req, res) => {
         db.query(sql, [listaIds], (err) => {
             if (err) { console.error("❌ Error en BD:", err); return res.json({ data: "Error al procesar registro" }); }
             console.log(`✅ Eliminados definitivamente ${listaIds.length} registros de ${coleccion}`);
-            const COLECCION_MODULO = { Placas:'placas', Inspecciones:'inspecciones', Fleetrun:'fleetrun', StatusFlota:'status', Usuarios:'usuarios' };
+            const COLECCION_MODULO = { Placas:'placas', Inspecciones:'inspecciones', Fleetrun:'fleetrun', Usuarios:'usuarios' };
             broadcast(COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'eliminar');
             const usuario = (req.body && req.body.usuario) || 'sistema';
             logAudit(usuario, COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'ELIMINÓ', `${listaIds.length} reg. de ${coleccion}`);

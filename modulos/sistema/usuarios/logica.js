@@ -10,9 +10,8 @@ window._guEsNuevo         = window._guEsNuevo         || false;
 // ── Módulos de permisos ──────────────────────────────────────────
 window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'DASHBOARD',     key:'dashboard',     nombre:'Dashboard Principal', desc:'Vista ejecutiva y métricas generales', lcad:false },
-    { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicación',  desc:'Visualización en tiempo real',  lcad:false },
-    { grupo:'FLOTA',         key:'status',        nombre:'Status Flota',     desc:'Estado y agrupación de unidades', lcad:true  },
     { grupo:'FLOTA',         key:'disponibilidad',nombre:'Disponibilidad',   desc:'Disponibilidad operativa',     lcad:true  },
+    { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicación',  desc:'Visualización en tiempo real',  lcad:false },
     { grupo:'FLOTA',         key:'docs_flota',    nombre:'Documentos Flota', desc:'Control documentario',          lcad:true  },
     { grupo:'FLOTA',         key:'placas',        nombre:'Maestro de Placas',desc:'Configuración técnica de unidades', lcad:true },
     { grupo:'MANTENIMIENTO', key:'status_rampa',  nombre:'Status Rampa',     desc:'Gestión visual en taller',      lcad:true  },
