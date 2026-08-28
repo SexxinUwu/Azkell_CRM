@@ -412,14 +412,14 @@ window.verificarSesionGuardada = function() {
     // SEGURIDAD
     var showSeguridadHub = _cHub('hub_seguridad');
     var vChecklistSeg = showSeguridadHub && (_cL('seguridad_unidades') || _cL('seg_unidades') || _cL('seg_checklist'));
-    var vAsist     = showSeguridadHub && (_cL('asist') || _cL('seg_asistencia'));
+    var vUnidadesBase = showSeguridadHub && (_cL('unidades_base') || _cL('seguridad_unidades'));
     
-    safe('nav-seg-unidades',    vChecklistSeg);
-    safe('mbnav-seg-unidades',  vChecklistSeg);
-    safe('nav-seg-asistencia',  vAsist);
-    safe('mbnav-seg-asistencia',vAsist);
+    safe('nav-seg-unidades',       vChecklistSeg);
+    safe('mbnav-seg-unidades',     vChecklistSeg);
+    safe('nav-seg-unidades-base',  vUnidadesBase);
+    safe('mbnav-seg-unidades-base',vUnidadesBase);
 
-    var showSeg = vChecklistSeg || vAsist;
+    var showSeg = vChecklistSeg || vUnidadesBase;
     safe('wrap-seguridad', showSeg);
     safe('bnav-seguridad', showSeg);
 
@@ -555,7 +555,7 @@ window.verificarSesionGuardada = function() {
             'tesoreria/flujo-caja': 'tesoreria_flujo',
             'tesoreria/cuentas': 'tesoreria_cuentas',
             'seguridad/unidades': 'seguridad_unidades',
-            'seguridad/asistencia': 'asist',
+            'seguridad/unidades-base': 'unidades_base',
             'sistema/usuarios': 'usuarios',
             'sistema/auditoria': 'mod_auditoria',
             'administracion': 'administracion'
@@ -3410,7 +3410,7 @@ var NOMBRES_MODULOS_RECIENTES = {
     'sistema/auditoria':          'Auditoría',
     'sistema/configuracion':      'Configuración',
     'seguridad/unidades':          'Unidades',
-    'seguridad/asistencia':        'Asistencia',
+    'seguridad/unidades-base':     'Unidades en Base',
 };
 var ICONOS_MODULOS_RECIENTES = {
     'dashboard':                  'bi-grid-1x2-fill',
@@ -3441,7 +3441,7 @@ var ICONOS_MODULOS_RECIENTES = {
     'sistema/auditoria':          'bi-journal-code',
     'sistema/configuracion':      'bi-gear-fill',
     'seguridad/unidades':          'bi-truck-front-fill',
-    'seguridad/asistencia':        'bi-people-fill',
+    'seguridad/unidades-base':     'bi-buildings-fill',
 };
 
 function pushReciente(ruta) {
@@ -3540,7 +3540,7 @@ const TITULOS_MODULOS = {
     'sistema/auditoria':           'Bitácora de Auditoría',
     'administracion':              'Administración',
     'seguridad/unidades':          'Control de Unidades',
-    'seguridad/asistencia':        'Asistencia de Personal',
+    'seguridad/unidades-base':     'Status "Unidades en Base"',
 };
 
 const MENU_IDS = {
@@ -3589,7 +3589,7 @@ const MENU_IDS = {
     'sistema/usuarios':            'nav-usuarios',
     'sistema/auditoria':           'nav-auditoria',
     'seguridad/unidades':          'nav-seg-unidades',
-    'seguridad/asistencia':        'nav-seg-asistencia',
+    'seguridad/unidades-base':     'nav-seg-unidades-base',
 };
 
 const MENU_SECTION = {
@@ -3633,7 +3633,7 @@ const MENU_SECTION = {
     'sistema/usuarios':           'configuracion',
     'sistema/auditoria':          'configuracion',
     'seguridad/unidades':         'seguridad',
-    'seguridad/asistencia':       'seguridad',
+    'seguridad/unidades-base':    'seguridad',
 };
 
 const BREADCRUMB_MAP = {
@@ -3672,7 +3672,7 @@ const BREADCRUMB_MAP = {
     'sistema/auditoria':          ['Configuración','Auditoría'],
     'sistema/configuracion':      ['Sistema','Configuración'],
     'seguridad/unidades':         ['Seguridad','Unidades'],
-    'seguridad/asistencia':       ['Seguridad','Asistencia'],
+    'seguridad/unidades-base':    ['Seguridad','Unidades en Base'],
 };
 
 function actualizarTituloHeader(ruta) {

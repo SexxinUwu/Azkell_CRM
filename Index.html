@@ -306,9 +306,9 @@
                             <i class="bi bi-truck-front-fill nav-icon"></i>
                             <span class="link-text" data-i18n="nav.unidades">CheckList de Ingreso/Salidas de Unidades</span>
                         </a>
-                        <a id="nav-seg-asistencia" class="nav-item" onclick="cargarModuloAislado('seguridad/asistencia')">
-                            <i class="bi bi-people-fill nav-icon"></i>
-                            <span class="link-text" data-i18n="nav.tareo">Tareo</span>
+                        <a id="nav-seg-unidades-base" class="nav-item" onclick="cargarModuloAislado('seguridad/unidades-base')">
+                            <i class="bi bi-buildings-fill nav-icon"></i>
+                            <span class="link-text">Status "Unidades en Base"</span>
                         </a>
                     </div>
                 </div>
@@ -1214,11 +1214,11 @@
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
-                <div id="mbnav-seg-asistencia" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetSeguridad')).hide(); cargarModuloAislado('seguridad/asistencia'); setBottomNavActive('bnav-seguridad');">
-                    <div class="bnav-row-icon" style="color: #10b981;"><i class="bi bi-qr-code-scan"></i></div>
+                <div id="mbnav-seg-unidades-base" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetSeguridad')).hide(); cargarModuloAislado('seguridad/unidades-base'); setBottomNavActive('bnav-seguridad');">
+                    <div class="bnav-row-icon" style="color: #0284c7;"><i class="bi bi-buildings"></i></div>
                     <div class="bnav-row-content">
-                        <p class="bnav-row-title" data-i18n="nav.tareo">Tareo</p>
-                        <p class="bnav-row-desc">Control de asistencia con QR</p>
+                        <p class="bnav-row-title">Status Unidades en Base</p>
+                        <p class="bnav-row-desc">Permanencia y control en patio</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
