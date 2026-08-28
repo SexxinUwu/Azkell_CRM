@@ -851,6 +851,7 @@ window.abrirDetallePlaca = function(event, index) {
         'det-tipo': p[5],
         'det-sub_tipo': p[6],
         'det-color': p[7],
+        'det-modelo_motor': p[29] || '—',
         'det-nro_motor': p[8],
         'det-nro_caja': p[9],
         'det-nro_corona': p[10],
@@ -1154,6 +1155,7 @@ window.abrirModalEditarPlaca = function(index) {
         { id: 'e_tipo', idx: 5 },
         { id: 'e_sub_tipo', idx: 6 },
         { id: 'e_color', idx: 7 },
+        { id: 'e_modelo_motor', idx: 29 },
         { id: 'e_nro_motor', idx: 8 },
         { id: 'e_nro_caja', idx: 9 },
         { id: 'e_nro_corona', idx: 10 },
@@ -1276,7 +1278,7 @@ function enviarEdicionPlaca(event, formObj) {
     var placa = get('e_placa');
     var camposRequeridos = [
         'cliente','ruc_dni','marca','modelo_uts','tipo','sub_tipo','color',
-        'nro_motor','nro_caja','nro_corona','nro_vin','configuracion',
+        'nro_motor','modelo_motor','nro_caja','nro_corona','nro_vin','configuracion',
         'tanque_1','tanque_2','tanque_3','capacidad_tanque',
         'anio','combustible','tara','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica', 'wialon_name'
     ];
@@ -1297,6 +1299,7 @@ function enviarEdicionPlaca(event, formObj) {
             case 'tipo': payload[c] = cb('e_tipo'); break;
             case 'sub_tipo': payload[c] = cb('e_sub_tipo'); break;
             case 'color': payload[c] = cb('e_color'); break;
+            case 'modelo_motor': payload[c] = get('e_modelo_motor'); break;
             case 'nro_motor': payload[c] = get('e_nro_motor'); break;
             case 'nro_caja': payload[c] = get('e_nro_caja'); break;
             case 'nro_corona': payload[c] = get('e_nro_corona'); break;

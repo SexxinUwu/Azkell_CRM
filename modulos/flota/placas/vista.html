@@ -574,6 +574,7 @@
 
                 <h6 class="fw-bold text-primary mb-2"><i class="bi bi-upc-scan me-1"></i> <span data-i18n="plates.s.general">1. Datos Generales</span></h6>
                 <div class="detalle-lateral-grid mb-4">
+                    <div class="det-lat-item"><span>Modelo Motor</span><strong id="det-modelo_motor" class="text-primary fw-bold">—</strong></div>
                     <div class="det-lat-item"><span data-i18n="plates.form.motor">Nº Motor</span><strong id="det-nro_motor"></strong></div>
                     <div class="det-lat-item"><span data-i18n="plates.form.caja">Nº Caja</span><strong id="det-nro_caja"></strong></div>
                     <div class="det-lat-item"><span data-i18n="plates.form.corona">Nº Corona</span><strong id="det-nro_corona"></strong></div>
@@ -766,9 +767,10 @@
                         <div id="contenedorCamposAvanzadosReg" class="d-none mt-3">
                             <div class="row">
                                 <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.color">Color</label><div class="position-relative"><input type="text" id="p_color-txt" class="form-control placas-form-control text-uppercase" placeholder="Buscar color…" autocomplete="off" oninput="window._cbFiltrar('p_color')" onfocus="window._cbFiltrar('p_color')" onblur="window._cbHide('p_color')"><input type="hidden" id="p_color" name="p_color"><div id="p_color-dd" class="cb-dropdown"></div></div></div>
-                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.motor">Nº Motor</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_nro_motor" placeholder="..."></div>
-                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.caja">Nº Caja</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_nro_caja" placeholder="..."></div>
-                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.corona">Nº Corona</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_nro_corona" placeholder="..."></div>
+                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label text-primary fw-bold">Modelo Motor</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_modelo_motor" placeholder="Ej: MC11.44, DC13, D13..."></div>
+                                <div class="col-md-2 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.motor">Nº Motor</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_nro_motor" placeholder="..."></div>
+                                <div class="col-md-2 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.caja">Nº Caja</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_nro_caja" placeholder="..."></div>
+                                <div class="col-md-2 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.corona">Nº Corona</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_nro_corona" placeholder="..."></div>
                             </div>
                             <div class="row">
                                 <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.vin">Nº VIN</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_nro_vin" placeholder="Chasis/Serie"></div>
@@ -902,9 +904,10 @@
                         <div id="contenedorCamposAvanzadosEdit" class="d-none mt-3">
                             <div class="row">
                                 <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.color">Color</label><div class="position-relative"><input type="text" id="e_color-txt" class="form-control placas-form-control text-uppercase" placeholder="Buscar color…" autocomplete="off" oninput="window._cbFiltrar('e_color')" onfocus="window._cbFiltrar('e_color')" onblur="window._cbHide('e_color')"><input type="hidden" id="e_color" name="editP_color"><div id="e_color-dd" class="cb-dropdown"></div></div></div>
-                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.motor">Nº Motor</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_nro_motor" id="e_nro_motor"></div>
-                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.caja">Nº Caja</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_nro_caja" id="e_nro_caja"></div>
-                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.corona">Nº Corona</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_nro_corona" id="e_nro_corona"></div>
+                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label text-primary fw-bold">Modelo Motor</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_modelo_motor" id="e_modelo_motor" placeholder="Ej: MC11.44, DC13, D13..."></div>
+                                <div class="col-md-2 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.motor">Nº Motor</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_nro_motor" id="e_nro_motor"></div>
+                                <div class="col-md-2 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.caja">Nº Caja</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_nro_caja" id="e_nro_caja"></div>
+                                <div class="col-md-2 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.corona">Nº Corona</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_nro_corona" id="e_nro_corona"></div>
                             </div>
                             <div class="row">
                                 <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.vin">Nº VIN</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_nro_vin" id="e_nro_vin"></div>

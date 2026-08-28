@@ -468,7 +468,8 @@ router.post('/:metodo', async (req, res) => {
                 r.tanque_2 || '',        // 25: Tanque 2
                 r.tanque_3 || '',        // 26: Tanque 3
                 r.capacidad_tanque || '',// 27: Capacidad Tanque Total
-                r.tara || ''             // 28: Tara
+                r.tara || '',            // 28: Tara
+                r.modelo_motor || ''     // 29: Modelo de Motor
             ]);
             return res.json({ data });
         });
@@ -899,6 +900,7 @@ router.post('/:metodo', async (req, res) => {
         const llantas = isEdit ? form.editP_llantas : form.p_llantas;
         const enuso = isEdit ? form.editP_enuso : form.p_enuso;
         const wialon_name = isEdit ? form.editP_wialon_name : form.p_wialon_name;
+        const modelo_motor = isEdit ? (form.editP_modelo_motor || form.modelo_motor || '') : (form.p_modelo_motor || form.modelo_motor || '');
 
         const t1 = parseFloat(tanque_1) || 0;
         const t2 = parseFloat(tanque_2) || 0;
@@ -909,21 +911,21 @@ router.post('/:metodo', async (req, res) => {
         const query = `
             INSERT INTO placas (
                 placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color,
-                nro_motor, nro_caja, nro_corona, nro_vin, configuracion,
+                nro_motor, modelo_motor, nro_caja, nro_corona, nro_vin, configuracion,
                 tanque_1, tanque_2, tanque_3, capacidad_tanque,
                 anio, combustible, tara, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso, wialon_name
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
             cliente=?, ruc_dni=?, marca=?, modelo_uts=?, tipo=?, sub_tipo=?, color=?,
-            nro_motor=?, nro_caja=?, nro_corona=?, nro_vin=?, configuracion=?,
+            nro_motor=?, modelo_motor=?, nro_caja=?, nro_corona=?, nro_vin=?, configuracion=?,
             tanque_1=?, tanque_2=?, tanque_3=?, capacidad_tanque=?,
             anio=?, combustible=?, tara=?, carga_util=?, peso_neto=?, peso_bruto=?, estado=?, uts=?, motora=?, llantas=?, en_uso=?, wialon_name=?
         `;
 
         const valores = [
             placa, cliente, ruc, marca, modelo, tipo, sub_tipo, color,
-            nro_motor, nro_caja, nro_corona, nro_vin, conf,
+            nro_motor, modelo_motor, nro_caja, nro_corona, nro_vin, conf,
             tanque_1 || '', tanque_2 || '', tanque_3 || '', capFinal,
             anio, comb || '', tara || '', carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, enuso, wialon_name
         ];
