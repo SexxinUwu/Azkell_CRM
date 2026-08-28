@@ -993,6 +993,18 @@ module.exports = function (db, broadcast, logAudit) {
                 return peruDateFmt.format(d).replace(',', '');
             };
 
+            // Consultar modelo de motor y marca de las placas para enriquecer el análisis
+            const [placasRows] = await tdb.query("SELECT placa, modelo_motor, marca, modelo_uts FROM placas");
+            const placaMotorMap = new Map();
+            const placaMarcaMap = new Map();
+            placasRows.forEach(p => {
+                if (p.placa) {
+                    const plKey = p.placa.trim().toUpperCase();
+                    placaMotorMap.set(plKey, p.modelo_motor || '');
+                    placaMarcaMap.set(plKey, p.marca || '');
+                }
+            });
+
             // 1. Agrupar vales por Vehículo y luego por Viaje
             const vehiculoMap = {};
 
@@ -1139,6 +1151,8 @@ module.exports = function (db, broadcast, logAudit) {
                     trips.push({
                         viaje: t.viaje,
                         placa: t.placa,
+                        motor: placaMotorMap.get(t.placa) || '',
+                        marca: placaMarcaMap.get(t.placa) || '',
                         ruta: t.ruta,
                         fechaInicio,
                         fechaFin,

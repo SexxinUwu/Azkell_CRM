@@ -317,21 +317,35 @@
         if (subK) subK.textContent = `${promKmGal.toFixed(2)} Km/Gal promedio`;
     };
 
-    // Helper: Buscar consumo teórico en Galones según Sentido (IDA / RETORNO), Ruta y Peso con regla de TECHO
-    function obtenerConsumoTeoricoGalones(rutaStr, sentidoStr, pesoTn) {
+    // Helper: Buscar consumo teórico en Galones según Sentido (IDA / RETORNO), Ruta, Peso (Regla de Techo) y Motor
+    function obtenerConsumoTeoricoGalones(rutaStr, sentidoStr, pesoTn, motorStr) {
         if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) return 0;
         const rNorm = (rutaStr || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         const sNorm = (sentidoStr || 'IDA').toUpperCase().trim();
+        const mNorm = (motorStr || '').toUpperCase().trim();
         
+        // 1. Búsqueda exacta: Sentido + Ruta + Motor
         let match = window._caMatrizRendimiento.find(m => {
-            const mRuta = (m.ruta || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const mSentido = (m.sentido || 'IDA').toUpperCase().trim();
             if (mSentido !== sNorm) return false;
-            if (mRuta && (rNorm.includes(mRuta) || mRuta.includes(rNorm))) return true;
-            return false;
+            const mRuta = (m.ruta || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const mMotor = (m.motor || '').toUpperCase().trim();
+            const rutaCoincide = mRuta && (rNorm.includes(mRuta) || mRuta.includes(rNorm));
+            const motorCoincide = !mNorm || !mMotor || mNorm.includes(mMotor) || mMotor.includes(mNorm);
+            return rutaCoincide && motorCoincide;
         });
 
-        // Fallback buscando solo por ruta si no se especifica sentido exacto
+        // 2. Fallback: Sentido + Ruta (cualquier motor)
+        if (!match) {
+            match = window._caMatrizRendimiento.find(m => {
+                const mSentido = (m.sentido || 'IDA').toUpperCase().trim();
+                if (mSentido !== sNorm) return false;
+                const mRuta = (m.ruta || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                return mRuta && (rNorm.includes(mRuta) || mRuta.includes(rNorm));
+            });
+        }
+
+        // 3. Fallback general: Solo Ruta
         if (!match) {
             match = window._caMatrizRendimiento.find(m => {
                 const mRuta = (m.ruta || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -356,9 +370,9 @@
     }
 
     // Helper: Rendimiento teórico Km/Galón
-    function obtenerRendimientoTeorico(rutaStr, pesoTn) {
+    function obtenerRendimientoTeorico(rutaStr, pesoTn, motorStr) {
         if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) return null;
-        const consumoGal = obtenerConsumoTeoricoGalones(rutaStr, 'IDA', pesoTn);
+        const consumoGal = obtenerConsumoTeoricoGalones(rutaStr, 'IDA', pesoTn, motorStr);
         const match = window._caMatrizRendimiento.find(m => (rutaStr || '').toUpperCase().includes((m.ruta || '').toUpperCase()));
         const distKm = match ? parseFloat(match.km || 0) : 0;
         if (distKm > 0 && consumoGal > 0) return distKm / consumoGal;
@@ -377,7 +391,7 @@
         if (total === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="15" class="text-center py-5 text-muted">
+                    <td colspan="16" class="text-center py-5 text-muted">
                         <i class="bi bi-inbox fs-2 d-block mb-2"></i>
                         No se encontraron viajes con los filtros seleccionados.
                     </td>
@@ -417,17 +431,17 @@
             const totGasto = fs ? fs.totalGasto : t.totalGasto;
             const rend = fs ? fs.rendimiento : t.rendimiento;
 
-            // ── Cálculo Teórico Matriz (Ida + Retorno con Regla de Techo) ──
-            const galTeoricoIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || t.pesoMaxTn);
+            // ── Cálculo Teórico Matriz (Ida + Retorno con Motor y Regla de Techo) ──
+            const galTeoricoIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || t.pesoMaxTn, t.motor);
             const tieneRetorno = (t.galonesRetorno > 0) || (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('SERVICIO'));
-            const galTeoricoRetorno = tieneRetorno ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0) : 0;
+            const galTeoricoRetorno = tieneRetorno ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor) : 0;
             const galTeoricoTotal = (galTeoricoIda > 0 || galTeoricoRetorno > 0) ? (galTeoricoIda + galTeoricoRetorno) : 0;
 
             let galTeoricoHtml = '<span class="text-muted opacity-50">—</span>';
             let difBadgeHtml = '<span class="text-muted opacity-50">—</span>';
 
             if (galTeoricoTotal > 0 && totGal > 0) {
-                galTeoricoHtml = `<span class="fw-bold font-monospace text-dark" title="Ida: ${galTeoricoIda.toFixed(1)}g | Retorno: ${galTeoricoRetorno.toFixed(1)}g">${galTeoricoTotal.toFixed(2)}</span>`;
+                galTeoricoHtml = `<span class="fw-bold font-monospace text-dark" title="Ida: ${galTeoricoIda.toFixed(1)}g | Retorno: ${galTeoricoRetorno.toFixed(1)}g | Motor: ${t.motor || 'Estándar'}">${galTeoricoTotal.toFixed(2)}</span>`;
                 const dif = totGal - galTeoricoTotal;
                 if (dif > 0) {
                     difBadgeHtml = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger fw-bold font-monospace px-1.5 py-0.5" title="Sobreconsumo sobre la matriz: +${dif.toFixed(2)} gal">+${dif.toFixed(2)} ⚠️</span>`;
@@ -435,8 +449,6 @@
                     difBadgeHtml = `<span class="badge bg-success bg-opacity-10 text-success border border-success fw-bold font-monospace px-1.5 py-0.5" title="Ahorro de combustible frente a la matriz: ${dif.toFixed(2)} gal">${dif.toFixed(2)} ✅</span>`;
                 }
             }
-
-            const rTeorico = obtenerRendimientoTeorico(t.ruta, t.pesoMaxTn);
 
             const tieneAlertaOdo = (kInicio > 0 && kFin > 0 && kFin < kInicio);
             const semaforoRecorrido = tieneAlertaOdo 
@@ -473,6 +485,9 @@
                     </td>
                     <td class="font-monospace fw-bold text-dark" style="color: #0f172a !important; font-size: 0.84rem;">
                         ${esc(t.placa)}
+                    </td>
+                    <td class="small font-monospace">
+                        ${t.motor ? `<span class="badge bg-light text-dark border px-2 py-0.5 fw-semibold" style="font-size:0.75rem;">${esc(t.motor)}</span>` : '<span class="text-muted opacity-50">—</span>'}
                     </td>
                     <td class="text-truncate" style="max-width: 180px;" title="${esc(t.ruta)}">
                         <i class="bi bi-geo-alt-fill text-danger me-1 small"></i>
@@ -544,9 +559,9 @@
                 const totGal = fs ? fs.totalGalones : t.totalGalones;
                 totalSumVales += (totGal || 0);
 
-                const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || t.pesoMaxTn);
+                const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || t.pesoMaxTn, t.motor);
                 const tieneRet = (t.galonesRetorno > 0) || (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('SERVICIO'));
-                const gRet = tieneRet ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0) : 0;
+                const gRet = tieneRet ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor) : 0;
                 totalSumTeorico += (gIda + gRet);
 
                 const gps = t.gpsTelemetria || t.wialonGps;
@@ -565,6 +580,7 @@
             tfoot.innerHTML = `
                 <tr style="background:#f8fafc; border-top: 2px solid #cbd5e1; font-weight: bold;">
                     <td class="ps-3 py-3 font-monospace fw-bolder text-dark" style="font-size:0.88rem;">TOTAL</td>
+                    <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
@@ -954,15 +970,16 @@
             const rend = fs ? fs.rendimiento : t.rendimiento;
             const valesCount = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
 
-            const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || t.pesoMaxTn);
+            const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || t.pesoMaxTn, t.motor);
             const tieneRet = (t.galonesRetorno > 0) || (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('SERVICIO'));
-            const gRet = tieneRet ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0) : 0;
+            const gRet = tieneRet ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor) : 0;
             const gTeoricoTotal = (gIda > 0 || gRet > 0) ? (gIda + gRet) : 0;
             const difGalones = gTeoricoTotal > 0 ? parseFloat((totGal - gTeoricoTotal).toFixed(2)) : null;
 
             return {
                 "N° VIAJE": t.numViaje || t.viaje || '---',
                 "PLACA": t.placa || '---',
+                "MOTOR": t.motor || '---',
                 "RUTA": t.ruta || '---',
                 "PESO (Tn)": (t.pesoMaxTn !== undefined && t.pesoMaxTn > 0) ? parseFloat(t.pesoMaxTn.toFixed(2)) : 0,
                 "FECHA INICIO": fInicio || '---',
