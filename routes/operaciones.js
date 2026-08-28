@@ -122,6 +122,17 @@ module.exports = function (db, broadcast, logAudit) {
     // ── POST /api/operaciones/ordenes-viaje/sincronizar ───────────
     router.post('/ordenes-viaje/sincronizar', async (req, res) => {
         try {
+            const tenantId = req.tenantSlug || req.headers['x-tenant-id'] || 'default';
+            const host = (req.headers.host || '').toLowerCase();
+            const isMarsisa = tenantId.toLowerCase().includes('marsisa') || host.includes('marsisa') || tenantId === 'master' || tenantId === 'default';
+
+            if (!isMarsisa) {
+                return res.status(400).json({
+                    ok: false,
+                    error: 'La sincronización remota de órdenes de viaje solo está habilitada para la empresa Marsisa.'
+                });
+            }
+
             await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos local no disponible' });
