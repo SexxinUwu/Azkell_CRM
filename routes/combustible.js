@@ -1344,23 +1344,17 @@ module.exports = function (db, broadcast, logAudit) {
                 return res.json({ ok: false, error: 'No se encontró la plantilla de telemetría CAN en Wialon' });
             }
 
-            // Ejecutar en tandas paralelas concurrentes de 6 viajes a la vez
-            const CONCURRENCY = 6;
+            // Ejecutar secuencialmente para evitar colisiones de estado en la sesión de reportes de Wialon
             const results = [];
 
-            for (let i = 0; i < trips.length; i += CONCURRENCY) {
-                const chunk = trips.slice(i, i + CONCURRENCY);
-                const chunkPromises = chunk.map(async (t) => {
-                    try {
-                        const data = await consultarTelemetriaViajeWialon(baseUrl, sid, cache, t.placa, t.fechaInicio, t.fechaFin);
-                        return { id: t.id || t.viaje || t.index, index: t.index, placa: t.placa, data };
-                    } catch (err) {
-                        return { id: t.id || t.viaje || t.index, index: t.index, placa: t.placa, data: null, error: err.message };
-                    }
-                });
-
-                const chunkResults = await Promise.all(chunkPromises);
-                results.push(...chunkResults);
+            for (const t of trips) {
+                try {
+                    const data = await consultarTelemetriaViajeWialon(baseUrl, sid, cache, t.placa, t.fechaInicio, t.fechaFin);
+                    results.push({ id: t.id || t.viaje || t.index, index: t.index, placa: t.placa, data });
+                } catch (err) {
+                    console.warn(`Error telemetría viaje ${t.placa}:`, err.message);
+                    results.push({ id: t.id || t.viaje || t.index, index: t.index, placa: t.placa, data: null, error: err.message });
+                }
             }
 
             res.json({ ok: true, results });
