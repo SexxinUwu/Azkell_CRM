@@ -1032,27 +1032,32 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
     // Ficha Header defensivo
     const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val || ''; };
     setTxt('ft-placa', v.placa);
-    document.getElementById('ft-tipo').innerText = v.tipo || '---';
-    document.getElementById('ft-marca-modelo').innerText = `${v.marca || '---'} - ${v.modelo || '---'}`;
-    document.getElementById('ft-anio').innerText = v.anio || '---';
-    document.getElementById('ft-chasis').innerText = v.chasis || '---';
+    setTxt('ft-tipo', v.tipo || '---');
+    setTxt('ft-marca-modelo', `${v.marca || '---'} - ${v.modelo || '---'}`);
+    setTxt('ft-anio', v.anio || '---');
+    setTxt('ft-chasis', v.chasis || '---');
     
-    document.getElementById('ft-health-bar').style.width = `${v._meta.salud}%`;
+    const saludVal = (v._meta && typeof v._meta.salud !== 'undefined') ? v._meta.salud : 100;
+    const healthBar = document.getElementById('ft-health-bar') || document.getElementById('ft-salud-bar');
+    if (healthBar) healthBar.style.width = `${saludVal}%`;
+    const healthTxt = document.getElementById('ft-health-txt') || document.getElementById('ft-salud-val');
+    if (healthTxt) healthTxt.innerText = `${saludVal}%`;
     
-    let detEstTexto = (v._meta.peorEstado.score === 3) ? 'VIGENTE' : (v._meta.peorEstado.score === 0 ? 'VENCIDO' : 'ALERTA');
-    let detEstColor = (v._meta.peorEstado.score === 3) ? '#10b981' : (v._meta.peorEstado.score === 0 ? '#ef4444' : '#f59e0b');
-    let detEstBg = (v._meta.peorEstado.score === 3) ? '#f0fdf4' : (v._meta.peorEstado.score === 0 ? '#fef2f2' : '#fffbeb');
+    const peorEst = (v._meta && v._meta.peorEstado) ? v._meta.peorEstado : { score: 3 };
+    let detEstTexto = (peorEst.score === 3) ? 'VIGENTE' : (peorEst.score === 0 ? 'VENCIDO' : 'ALERTA');
+    let detEstColor = (peorEst.score === 3) ? '#10b981' : (peorEst.score === 0 ? '#ef4444' : '#f59e0b');
+    let detEstBg = (peorEst.score === 3) ? '#f0fdf4' : (peorEst.score === 0 ? '#fef2f2' : '#fffbeb');
     
     const placaMovil = document.getElementById('ft-placa-movil');
     if (placaMovil) {
         let badgeHTMLMovil = `<span style="display:inline-block; background:${detEstBg}; color:${detEstColor}; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.65rem; font-weight:800; margin-left:0.5rem; vertical-align:middle;">${detEstTexto}</span>`;
         placaMovil.innerHTML = v.placa + badgeHTMLMovil;
-        document.getElementById('ft-marca-modelo-movil').innerText = `${v.empresa || ''} - ${v.modelo || ''}`;
-        document.getElementById('ft-anio-movil').innerText = v.anio || '---';
-        document.getElementById('ft-health-txt-movil').innerText = `${Math.round(v._meta.salud)}%`;
-        document.getElementById('ft-health-bar-movil').style.width = `${v._meta.salud}%`;
+        setTxt('ft-marca-modelo-movil', `${v.empresa || ''} - ${v.modelo || ''}`);
+        setTxt('ft-anio-movil', v.anio || '---');
+        setTxt('ft-health-txt-movil', `${Math.round(saludVal)}%`);
+        const hbm = document.getElementById('ft-health-bar-movil');
+        if (hbm) hbm.style.width = `${saludVal}%`;
     }
-    document.getElementById('ft-health-txt').innerText = `${v._meta.salud}%`;
 
     // Definición de documentos estándar
     const defDocs = [
