@@ -365,19 +365,21 @@ window.verificarSesionGuardada = function() {
     safe('bnav-directorio', showDirectorio);
 
     // OPERACIONES
-    var vOpRutas = _cL('op_rutas');
-    var vOpAsig  = _cL('op_asignacion');
-    var vOpMon   = _cL('op_monitoreo');
-    var showOp   = vOpRutas || vOpAsig || vOpMon;
-    safe('nav-op-rutas', vOpRutas);
-    safe('mbnav-op-rutas', vOpRutas);
-    safe('nav-op-asignacion', vOpAsig);
-    safe('mbnav-op-asignacion', vOpAsig);
-    safe('nav-op-monitoreo', vOpMon);
-    var vCombOp = _cL('combustible_vales') || _cL('combustible_analisis') || vOpMon || _cL('combustible');
-    safe('mbnav-op-combustible-toggle', vCombOp);
-    safe('mbnav-op-combustible-vales', _cL('combustible_vales') || vOpMon || _cL('combustible'));
-    safe('mbnav-op-combustible-analisis', _cL('combustible_analisis') || vOpMon || _cL('combustible'));
+    var showOperacionesHub = _cHub('hub_operaciones');
+    var vOpGuias = showOperacionesHub && (_cL('op_guias_remision') || _cL('guias_remision'));
+    var vCombVales = showOperacionesHub && (_cL('combustible_vales') || _cL('combustible'));
+    var vCombAna   = showOperacionesHub && (_cL('combustible_analisis') || _cL('combustible'));
+    var vCombOp    = vCombVales || vCombAna;
+    var showOp     = vOpGuias || vCombOp;
+
+    safe('nav-op-guias-remision',        vOpGuias);
+    safe('mbnav-op-guias-remision',      vOpGuias);
+    safe('nav-combustible-toggle',        vCombOp);
+    safe('mbnav-op-combustible-toggle',  vCombOp);
+    safe('nav-combustible-vales',         vCombVales);
+    safe('mbnav-op-combustible-vales',    vCombVales);
+    safe('nav-combustible-analisis',      vCombAna);
+    safe('mbnav-op-combustible-analisis', vCombAna);
     safe('wrap-operaciones', showOp);
     safe('bnav-operaciones', showOp);
 
