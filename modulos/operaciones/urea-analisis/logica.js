@@ -623,8 +623,8 @@
 
         try {
             const batchPayload = pagedTrips.map((t, idx) => ({
-                index: startIdx + idx,
-                id: t.numViaje || t.viaje || `idx-${startIdx + idx}`,
+                index: idx,
+                id: `${t.numViaje || t.viaje || 'idx'}_${t.placa || ''}_${idx}`,
                 placa: t.placa,
                 fechaInicio: t.fechaInicio,
                 fechaFin: t.fechaFin
@@ -640,11 +640,14 @@
             let syncedCount = 0;
             if (result.ok && Array.isArray(result.results)) {
                 result.results.forEach(resItem => {
-                    const trip = pagedTrips.find(t => (t.numViaje || t.viaje || '') === resItem.id || t.placa === resItem.placa);
+                    const idx = (resItem.index !== undefined && resItem.index !== null) ? resItem.index : -1;
+                    const trip = (idx >= 0 && idx < pagedTrips.length) ? pagedTrips[idx] : pagedTrips.find(t => t.placa === resItem.placa);
                     if (trip && resItem.data) {
                         trip.gpsTelemetria = resItem.data;
                         trip.wialonGps = resItem.data;
-                        syncedCount++;
+                        if (resItem.data.recorridoKmGps !== null || resItem.data.combustibleConsumidoGps !== null || resItem.data.velocidadMaxGps !== null) {
+                            syncedCount++;
+                        }
                     }
                 });
             }

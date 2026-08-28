@@ -1160,13 +1160,22 @@ module.exports = function (db, broadcast, logAudit) {
             const cleanStr = String(dateStr).trim();
             const d = new Date(cleanStr.replace(' ', 'T') + (cleanStr.includes('T') || cleanStr.length <= 10 ? '' : '-05:00'));
             if (isNaN(d.getTime())) return null;
-            d.setSeconds(0, 0);
             return Math.floor(d.getTime() / 1000);
         };
 
-        const fromUnix = parseToUnix(fechaInicio);
-        const toUnix = parseToUnix(fechaFin);
-        if (!fromUnix || !toUnix || toUnix <= fromUnix) return null;
+        let fromUnix = parseToUnix(fechaInicio);
+        let toUnix = parseToUnix(fechaFin);
+        if (!fromUnix && !toUnix) return null;
+        if (!fromUnix) fromUnix = toUnix;
+        if (!toUnix) toUnix = fromUnix;
+
+        // Si es un solo vale en el viaje (diferencia de tiempo <= 5 minutos o idéntica fecha)
+        if (toUnix - fromUnix < 300) {
+            fromUnix = fromUnix - (12 * 3600); // 12 horas antes
+            toUnix = toUnix + (12 * 3600);     // 12 horas después
+        }
+
+        if (toUnix <= fromUnix) return null;
 
         const execParams = {
             reportResourceId: cache.targetResourceId,
@@ -1344,9 +1353,9 @@ module.exports = function (db, broadcast, logAudit) {
                 const chunkPromises = chunk.map(async (t) => {
                     try {
                         const data = await consultarTelemetriaViajeWialon(baseUrl, sid, cache, t.placa, t.fechaInicio, t.fechaFin);
-                        return { id: t.id || t.viaje || t.index, placa: t.placa, data };
+                        return { id: t.id || t.viaje || t.index, index: t.index, placa: t.placa, data };
                     } catch (err) {
-                        return { id: t.id || t.viaje || t.index, placa: t.placa, data: null, error: err.message };
+                        return { id: t.id || t.viaje || t.index, index: t.index, placa: t.placa, data: null, error: err.message };
                     }
                 });
 
