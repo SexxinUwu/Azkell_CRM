@@ -101,6 +101,10 @@
                                     <i class="bi bi-droplet-half nav-icon me-1 text-info" style="font-size: 0.82rem;"></i>
                                     <span class="link-text" style="font-size: 0.82rem;">Análisis de Urea</span>
                                 </a>
+                                <a id="nav-combustible-matriz" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/combustible-matriz')">
+                                    <i class="bi bi-speedometer2 nav-icon me-1 text-warning" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Matriz de Combustible (D2)</span>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -1089,6 +1093,14 @@
                         <div class="bnav-row-content">
                             <p class="bnav-row-title">Análisis de Urea</p>
                             <p class="bnav-row-desc">Consumo y control de Urea</p>
+                        </div>
+                        <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                    </div>
+                    <div id="mbnav-op-combustible-matriz" class="bnav-row-item" style="border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/combustible-matriz'); setBottomNavActive('bnav-operaciones');">
+                        <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-speedometer2"></i></div>
+                        <div class="bnav-row-content">
+                            <p class="bnav-row-title">Matriz de Combustible (D2)</p>
+                            <p class="bnav-row-desc">Consumo teórico por ruta y peso</p>
                         </div>
                         <i class="bi bi-chevron-right bnav-row-chevron"></i>
                     </div>

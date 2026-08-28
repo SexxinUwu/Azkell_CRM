@@ -380,6 +380,8 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-op-combustible-vales',    vCombVales);
     safe('nav-combustible-analisis',      vCombAna);
     safe('mbnav-op-combustible-analisis', vCombAna);
+    safe('nav-combustible-matriz',        vCombOp);
+    safe('mbnav-op-combustible-matriz',   vCombOp);
     safe('wrap-operaciones', showOp);
     safe('bnav-operaciones', showOp);
 
@@ -557,6 +559,7 @@ window.verificarSesionGuardada = function() {
             'operaciones/rutas': 'op_rutas',
             'operaciones/asignacion': 'op_asignacion',
             'operaciones/monitoreo': 'op_monitoreo',
+            'operaciones/combustible-matriz': 'combustible_matriz',
             'rrhh/personal': 'rrhh_personal',
             'rrhh/asistencia': 'rrhh_asistencia',
             'rrhh/nomina': 'rrhh_nomina',
@@ -3554,6 +3557,7 @@ const TITULOS_MODULOS = {
     'operaciones/combustible-vales': 'Vales de Combustible',
     'operaciones/combustible-analisis': 'Análisis de Combustible (D2)',
     'operaciones/urea-analisis':        'Análisis de Urea',
+    'operaciones/combustible-matriz':   'Matriz de Combustible (D2)',
 };
 
 const MENU_IDS = {
@@ -3563,6 +3567,7 @@ const MENU_IDS = {
     'operaciones/combustible-vales': 'nav-combustible-vales',
     'operaciones/combustible-analisis': 'nav-combustible-analisis',
     'operaciones/urea-analisis':        'nav-urea-analisis',
+    'operaciones/combustible-matriz':   'nav-combustible-matriz',
     'mantenimiento/inspecciones':  'nav-inspecciones',
     'flota/placas':       'nav-placas',
     'mantenimiento/fleetrun':      'nav-fleetrun',
@@ -3659,6 +3664,7 @@ const MENU_SECTION = {
     'operaciones/combustible-vales': 'operaciones',
     'operaciones/combustible-analisis': 'operaciones',
     'operaciones/urea-analisis':        'operaciones',
+    'operaciones/combustible-matriz':   'operaciones',
 };
 
 const BREADCRUMB_MAP = {
@@ -3668,6 +3674,7 @@ const BREADCRUMB_MAP = {
     'operaciones/combustible-vales': ['Operaciones','Combustible','Vales'],
     'operaciones/combustible-analisis': ['Operaciones','Combustible','Análisis D2'],
     'operaciones/urea-analisis':        ['Operaciones','Combustible','Análisis Urea'],
+    'operaciones/combustible-matriz':   ['Operaciones','Combustible','Matriz (D2)'],
     'mantenimiento/inspecciones': ['Mantenimiento','Inspecciones'],
     'flota/placas':       ['Flota','Placas'],
     'mantenimiento/fleetrun':     ['Mantenimiento','Fleetrun'],

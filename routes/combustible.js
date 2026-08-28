@@ -77,6 +77,27 @@ module.exports = function (db, broadcast, logAudit) {
         INDEX idx_estado (estado)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
+    const TABLE_MATRIZ_SQL = `CREATE TABLE IF NOT EXISTS combustible_matriz_d2 (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sentido VARCHAR(20) NOT NULL DEFAULT 'IDA',
+        ruta VARCHAR(150) NOT NULL,
+        motor VARCHAR(50) NOT NULL DEFAULT 'MC11.44',
+        confg VARCHAR(20) NOT NULL DEFAULT 'T3',
+        km_0 DECIMAL(10,2) NOT NULL DEFAULT 0,
+        km_5 DECIMAL(10,2) NOT NULL DEFAULT 0,
+        km_10 DECIMAL(10,2) NOT NULL DEFAULT 0,
+        km_15 DECIMAL(10,2) NOT NULL DEFAULT 0,
+        km_20 DECIMAL(10,2) NOT NULL DEFAULT 0,
+        km_25 DECIMAL(10,2) NOT NULL DEFAULT 0,
+        km_30 DECIMAL(10,2) NOT NULL DEFAULT 0,
+        km DECIMAL(10,2) NOT NULL DEFAULT 0,
+        estado VARCHAR(20) NOT NULL DEFAULT 'ACTIVO',
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_ruta (ruta),
+        INDEX idx_motor_confg (motor, confg)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+
     async function ensureTables(req) {
         const tenantId = (req && req.tenantId) ? req.tenantId : 'default';
         if (_tenantsInitSet.has(tenantId)) return;
@@ -84,6 +105,7 @@ module.exports = function (db, broadcast, logAudit) {
             const tdb = getDb(req);
             if (!tdb) return;
             await tdb.query(TABLE_SQL);
+            await tdb.query(TABLE_MATRIZ_SQL);
             
             // Migrar columnas adicionales si la tabla ya existía
             const migCols = [
@@ -288,26 +310,199 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ============================================================
-    // 2. 📊 OBTENER MATRIZ DE RENDIMIENTO TEÓRICO (vw_combustible_rendimiento)
+    // 2. 📊 MATRIZ DE COMBUSTIBLE D2 (LOCAL MYSQL: combustible_matriz_d2)
     // ============================================================
+
+    // Listar registros de la matriz de combustible
+    router.get('/matriz', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const { q, sentido, motor, confg } = req.query;
+
+            let sql = `SELECT * FROM combustible_matriz_d2 WHERE estado = 'ACTIVO'`;
+            const params = [];
+
+            if (sentido && sentido !== 'ALL') {
+                sql += ` AND sentido = ?`;
+                params.push(sentido);
+            }
+            if (motor && motor !== 'ALL') {
+                sql += ` AND motor = ?`;
+                params.push(motor);
+            }
+            if (confg && confg !== 'ALL') {
+                sql += ` AND confg = ?`;
+                params.push(confg);
+            }
+            if (q && String(q).trim()) {
+                sql += ` AND (ruta LIKE ? OR motor LIKE ? OR confg LIKE ?)`;
+                const term = `%${String(q).trim()}%`;
+                params.push(term, term, term);
+            }
+
+            sql += ` ORDER BY sentido ASC, ruta ASC`;
+
+            const [rows] = await tdb.query(sql, params);
+            res.json({ ok: true, data: rows || [] });
+        } catch (err) {
+            console.error("Error al listar matriz de combustible:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // Guardar una nueva ruta en la matriz
+    router.post('/matriz', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const b = req.body;
+            if (!b.ruta || !String(b.ruta).trim()) {
+                return res.status(400).json({ ok: false, error: 'El nombre de la ruta es obligatorio.' });
+            }
+
+            const [result] = await tdb.query(
+                `INSERT INTO combustible_matriz_d2 
+                (sentido, ruta, motor, confg, km_0, km_5, km_10, km_15, km_20, km_25, km_30, km)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    b.sentido || 'IDA',
+                    String(b.ruta).trim().toUpperCase(),
+                    b.motor || 'MC11.44',
+                    b.confg || 'T3',
+                    parseFloat(b.km_0 || 0),
+                    parseFloat(b.km_5 || 0),
+                    parseFloat(b.km_10 || 0),
+                    parseFloat(b.km_15 || 0),
+                    parseFloat(b.km_20 || 0),
+                    parseFloat(b.km_25 || 0),
+                    parseFloat(b.km_30 || 0),
+                    parseFloat(b.km || 0)
+                ]
+            );
+
+            if (logAudit) logAudit(req, 'COMBUSTIBLE', 'CREAR_MATRIZ_RUTA', `Creada ruta ${b.ruta} en matriz D2`);
+            res.json({ ok: true, id: result.insertId, message: 'Ruta agregada a la matriz exitosamente.' });
+        } catch (err) {
+            console.error("Error al guardar ruta en matriz:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // Actualizar una ruta existente en la matriz
+    router.put('/matriz/:id', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const id = parseInt(req.params.id, 10);
+            const b = req.body;
+
+            await tdb.query(
+                `UPDATE combustible_matriz_d2 SET
+                    sentido = ?, ruta = ?, motor = ?, confg = ?,
+                    km_0 = ?, km_5 = ?, km_10 = ?, km_15 = ?, km_20 = ?, km_25 = ?, km_30 = ?, km = ?
+                WHERE id = ?`,
+                [
+                    b.sentido || 'IDA',
+                    String(b.ruta).trim().toUpperCase(),
+                    b.motor || 'MC11.44',
+                    b.confg || 'T3',
+                    parseFloat(b.km_0 || 0),
+                    parseFloat(b.km_5 || 0),
+                    parseFloat(b.km_10 || 0),
+                    parseFloat(b.km_15 || 0),
+                    parseFloat(b.km_20 || 0),
+                    parseFloat(b.km_25 || 0),
+                    parseFloat(b.km_30 || 0),
+                    parseFloat(b.km || 0),
+                    id
+                ]
+            );
+
+            if (logAudit) logAudit(req, 'COMBUSTIBLE', 'ACTUALIZAR_MATRIZ_RUTA', `Actualizada ruta ID ${id} en matriz D2`);
+            res.json({ ok: true, message: 'Ruta actualizada exitosamente.' });
+        } catch (err) {
+            console.error("Error al actualizar ruta en matriz:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // Eliminar una ruta de la matriz (Soft delete)
+    router.delete('/matriz/:id', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const id = parseInt(req.params.id, 10);
+
+            await tdb.query(`UPDATE combustible_matriz_d2 SET estado = 'INACTIVO' WHERE id = ?`, [id]);
+            if (logAudit) logAudit(req, 'COMBUSTIBLE', 'ELIMINAR_MATRIZ_RUTA', `Eliminada ruta ID ${id} de la matriz D2`);
+            res.json({ ok: true, message: 'Ruta eliminada de la matriz.' });
+        } catch (err) {
+            console.error("Error al eliminar ruta en matriz:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // Importación masiva desde Excel
+    router.post('/matriz/importar', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const items = req.body && Array.isArray(req.body.items) ? req.body.items : (Array.isArray(req.body) ? req.body : []);
+
+            if (!items.length) {
+                return res.status(400).json({ ok: false, error: 'No se enviaron filas para importar.' });
+            }
+
+            let insertados = 0;
+            for (const it of items) {
+                const ruta = String(it.ruta || it.RUTA || '').trim().toUpperCase();
+                if (!ruta) continue;
+
+                const sentido = String(it.sentido || it.SENTIDO || 'IDA').trim().toUpperCase();
+                const motor = String(it.motor || it.MOTOR || 'MC11.44').trim().toUpperCase();
+                const confg = String(it.confg || it.CONFG || it.configuracion || 'T3').trim().toUpperCase();
+
+                const parseNum = (val) => {
+                    if (val === null || val === undefined) return 0;
+                    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+                    const clean = String(val).replace(/[^0-9.,-]/g, '').replace(',', '.');
+                    const n = parseFloat(clean);
+                    return isNaN(n) ? 0 : n;
+                };
+
+                const km_0 = parseNum(it['0'] !== undefined ? it['0'] : it.km_0);
+                const km_5 = parseNum(it['5'] !== undefined ? it['5'] : it.km_5);
+                const km_10 = parseNum(it['10'] !== undefined ? it['10'] : it.km_10);
+                const km_15 = parseNum(it['15'] !== undefined ? it['15'] : it.km_15);
+                const km_20 = parseNum(it['20'] !== undefined ? it['20'] : it.km_20);
+                const km_25 = parseNum(it['25'] !== undefined ? it['25'] : it.km_25);
+                const km_30 = parseNum(it['30'] !== undefined ? it['30'] : it.km_30);
+                const km = parseNum(it.KM !== undefined ? it.KM : (it.km !== undefined ? it.km : it.distancia));
+
+                await tdb.query(
+                    `INSERT INTO combustible_matriz_d2 
+                    (sentido, ruta, motor, confg, km_0, km_5, km_10, km_15, km_20, km_25, km_30, km)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [sentido, ruta, motor, confg, km_0, km_5, km_10, km_15, km_20, km_25, km_30, km]
+                );
+                insertados++;
+            }
+
+            if (logAudit) logAudit(req, 'COMBUSTIBLE', 'IMPORTAR_MATRIZ_EXCEL', `Importadas ${insertados} rutas en matriz D2`);
+            res.json({ ok: true, insertados, message: `Se importaron ${insertados} registros a la Matriz de Combustible exitosamente.` });
+        } catch (err) {
+            console.error("Error al importar matriz:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // Endpoint de compatibilidad para análisis (consultando directamente nuestra matriz local)
     router.get('/rendimiento-teorico', async (req, res) => {
         try {
-            const rdb = getRemoteDb();
-            const [rows] = await rdb.query(
-                "SELECT * FROM vw_combustible_rendimiento ORDER BY punto_inicio ASC, punto_final ASC"
+            const tdb = getDb(req);
+            const [rows] = await tdb.query(
+                "SELECT * FROM combustible_matriz_d2 WHERE estado = 'ACTIVO' ORDER BY sentido ASC, ruta ASC"
             );
             res.json({ ok: true, data: rows || [] });
         } catch (err) {
-            console.error("Error obteniendo rendimientos teóricos:", err.message);
-            // Si la conexión remota fallase temporalmente, devolver matriz base de respaldo
-            res.json({
-                ok: true,
-                data: [
-                    { ruta_id: 1, punto_inicio: 'LIMA', punto_final: 'ICA', ruta_distancia_km: 300, configuracion_vehicular: 'T2SE3', km_0: 16.0, km_15: 13.0, km_30: 9.5, retorno_vacio: 15.0 },
-                    { ruta_id: 2, punto_inicio: 'LIMA', punto_final: 'AREQUIPA', ruta_distancia_km: 1010, configuracion_vehicular: 'T3S3', km_0: 14.5, km_15: 11.5, km_30: 8.5, retorno_vacio: 13.5 },
-                    { ruta_id: 3, punto_inicio: 'LIMA', punto_final: 'HUANCAYO', ruta_distancia_km: 310, configuracion_vehicular: 'T3S3', km_0: 12.0, km_15: 9.5, km_30: 7.2, retorno_vacio: 11.0 }
-                ]
-            });
+            console.error("Error obteniendo rendimientos de la matriz local:", err.message);
+            res.json({ ok: true, data: [] });
         }
     });
 

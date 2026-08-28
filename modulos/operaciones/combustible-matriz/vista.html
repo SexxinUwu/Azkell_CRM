@@ -1,0 +1,351 @@
+<!-- Módulo: Matriz de Combustible (D2) -->
+<style>
+#root-dinamico { padding: 0 !important; }
+.mod-wrap-combustible-matriz {
+    padding: 1.25rem 1.5rem;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: var(--text, #0f172a);
+}
+@media (max-width: 768px) {
+    .mod-wrap-combustible-matriz { padding: 0.75rem 0.75rem 90px 0.75rem; }
+}
+
+/* Header & Controls */
+.matriz-table-card {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+/* Table Style matching User Excel Sheet */
+.table-matriz-d2 {
+    font-size: 0.84rem;
+    border-collapse: collapse;
+}
+.table-matriz-d2 th {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.75rem 0.65rem;
+    border: 1px solid #1e293b;
+    vertical-align: middle;
+    text-align: center;
+}
+.table-matriz-d2 th.th-left { text-align: left; }
+.table-matriz-d2 th.th-km {
+    background: #b45309 !important;
+    color: #ffffff !important;
+}
+
+.table-matriz-d2 td {
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    vertical-align: middle;
+}
+.table-matriz-d2 tr:hover td {
+    background-color: #f8fafc;
+}
+.table-matriz-d2 td.td-km {
+    background-color: #fef3c7 !important;
+    color: #92400e !important;
+    font-weight: 700;
+    text-align: right;
+    font-family: monospace;
+    border-left: 2px solid #f59e0b;
+}
+
+.table-matriz-d2 td.td-num {
+    text-align: right;
+    font-family: monospace;
+    font-size: 0.85rem;
+}
+.table-matriz-d2 td.td-num-0 {
+    font-weight: 700;
+    color: #16a34a;
+}
+.table-matriz-d2 td.td-num-30 {
+    font-weight: 700;
+    color: #dc2626;
+}
+
+/* Badges */
+.badge-sentido {
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+}
+.badge-sentido-ida {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+.badge-sentido-retorno {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+</style>
+
+<div class="mod-wrap-combustible-matriz container-fluid">
+    <!-- Header Principal -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                <span class="badge bg-primary text-white rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.72rem; letter-spacing:0.02em;">
+                    <i class="bi bi-fuel-pump-fill me-1"></i> OPERACIONES & COMBUSTIBLE
+                </span>
+                <h4 class="fw-bolder text-dark m-0" style="letter-spacing:-0.02em;">Matriz de Combustible (D2)</h4>
+                <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-0.5" id="matriz-total-badge" style="font-size:0.75rem;">0 rutas</span>
+            </div>
+            <p class="text-secondary m-0" style="font-size:0.83rem;">
+                Matriz de consumo estándar de combustible D2 (Galones) según sentido de viaje, ruta, motor, configuración y peso en toneladas (0 - 30 Tn)
+            </p>
+        </div>
+
+        <!-- Acciones Principales -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5 shadow-2xs" style="font-size:0.82rem;" onclick="window.matrizCargarRutas()">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            </button>
+            <button class="btn btn-outline-primary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5 shadow-2xs" style="font-size:0.82rem;" onclick="window.matrizDescargarPlantilla()">
+                <i class="bi bi-file-earmark-arrow-down"></i> Plantilla Excel
+            </button>
+            <button class="btn btn-primary rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1.5 shadow-2xs" style="font-size:0.82rem;" onclick="window.matrizAbrirModalImportar()">
+                <i class="bi bi-file-earmark-arrow-up-fill"></i> Importar Excel
+            </button>
+            <button class="btn btn-success rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1.5 shadow-2xs" style="font-size:0.82rem;" onclick="window.matrizExportarExcel()">
+                <i class="bi bi-file-earmark-excel-fill"></i> Exportar
+            </button>
+            <button class="btn btn-dark rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1.5 shadow-2xs" style="font-size:0.82rem;" onclick="window.matrizAbrirModalCrear()">
+                <i class="bi bi-plus-lg"></i> Nueva Ruta
+            </button>
+        </div>
+    </div>
+
+    <!-- Barra de Filtros -->
+    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border:1px solid var(--border,#e2e8f0)!important;">
+        <div class="row g-2 align-items-center">
+            <div class="col-12 col-md-5 col-xl-4">
+                <div class="position-relative">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
+                    <input type="text" id="matriz-filtro-buscar" class="form-control ps-5 py-2 rounded-3 border bg-light" placeholder="Buscar por ruta (ej. LIMA - ICA), motor o confg..." style="font-size:0.83rem;" oninput="window.matrizFiltrarTabla()">
+                </div>
+            </div>
+            <div class="col-6 col-md-3 col-xl-2">
+                <select id="matriz-filtro-sentido" class="form-select rounded-3 border bg-light py-2" style="font-size:0.83rem;" onchange="window.matrizFiltrarTabla()">
+                    <option value="ALL">Todos los Sentidos</option>
+                    <option value="IDA">IDA</option>
+                    <option value="RETORNO">RETORNO</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2 col-xl-2">
+                <select id="matriz-filtro-motor" class="form-select rounded-3 border bg-light py-2" style="font-size:0.83rem;" onchange="window.matrizFiltrarTabla()">
+                    <option value="ALL">Todos los Motores</option>
+                    <option value="MC11.44">MC11.44</option>
+                    <option value="ISX">ISX</option>
+                    <option value="D13">D13</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-2 col-xl-2">
+                <select id="matriz-filtro-confg" class="form-select rounded-3 border bg-light py-2" style="font-size:0.83rem;" onchange="window.matrizFiltrarTabla()">
+                    <option value="ALL">Todas las Confg.</option>
+                    <option value="T3">T3</option>
+                    <option value="T3S3">T3S3</option>
+                    <option value="T2SE3">T2SE3</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-auto ms-auto text-end">
+                <button class="btn btn-light border rounded-3 px-3 py-2 text-secondary fw-semibold" style="font-size:0.82rem;" onclick="window.matrizLimpiarFiltros()">
+                    <i class="bi bi-x-circle"></i> Limpiar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Principal de la Matriz -->
+    <div class="matriz-table-card">
+        <div class="table-responsive" style="max-height: calc(100vh - 280px);">
+            <table class="table table-sm table-hover table-matriz-d2 m-0" id="tabla-matriz-d2">
+                <thead>
+                    <tr>
+                        <th class="th-left" style="min-width:90px;">SENTIDO</th>
+                        <th class="th-left" style="min-width:180px;">RUTA</th>
+                        <th style="min-width:95px;">MOTOR</th>
+                        <th style="min-width:80px;">CONFG</th>
+                        <th style="min-width:70px;">0</th>
+                        <th style="min-width:70px;">5</th>
+                        <th style="min-width:70px;">10</th>
+                        <th style="min-width:70px;">15</th>
+                        <th style="min-width:70px;">20</th>
+                        <th style="min-width:70px;">25</th>
+                        <th style="min-width:70px;">30</th>
+                        <th class="th-km" style="min-width:95px;">KM</th>
+                        <th style="min-width:90px;">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="matriz-tbody">
+                    <!-- Filas renderizadas dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="matriz-empty-state" class="card border-0 shadow-2xs rounded-4 p-5 text-center bg-white mt-3 d-none" style="border:1px dashed var(--border,#cbd5e1)!important;">
+        <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle p-3 mb-3 mx-auto" style="width:60px;height:60px;">
+            <i class="bi bi-inbox text-secondary" style="font-size:1.8rem;"></i>
+        </div>
+        <h6 class="fw-bold text-dark mb-1">No se encontraron rutas en la Matriz</h6>
+        <p class="text-secondary mb-3" style="font-size:0.83rem;">No hay registros que coincidan con los filtros de búsqueda.</p>
+        <div>
+            <button class="btn btn-outline-primary btn-sm rounded-3 px-3 fw-bold" onclick="window.matrizAbrirModalCrear()">
+                + Agregar Primera Ruta
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: CREAR / EDITAR RUTA EN LA MATRIZ -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalFormMatriz" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-bottom py-3 px-4 bg-light">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-signpost-2-fill text-primary fs-5"></i>
+                    <h5 class="modal-title fw-bold text-dark m-0" id="modal-matriz-titulo">Nueva Ruta en Matriz</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="form-matriz-ruta" onsubmit="window.matrizGuardarFormulario(event)">
+                    <input type="hidden" id="form-matriz-id">
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-bold small">Sentido:</label>
+                            <select id="form-matriz-sentido" class="form-select rounded-3" required>
+                                <option value="IDA">IDA</option>
+                                <option value="RETORNO">RETORNO</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-9">
+                            <label class="form-label fw-bold small">Ruta (Origen - Destino):</label>
+                            <input type="text" id="form-matriz-ruta" class="form-control rounded-3 text-uppercase" placeholder="Ej: LIMA - ICA" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-bold small">Motor:</label>
+                            <input type="text" id="form-matriz-motor" class="form-control rounded-3" placeholder="Ej: MC11.44" value="MC11.44" required>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-bold small">Configuración:</label>
+                            <input type="text" id="form-matriz-confg" class="form-control rounded-3" placeholder="Ej: T3" value="T3" required>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-bold small text-primary">Distancia Ruta (KM):</label>
+                            <input type="number" step="0.1" id="form-matriz-km" class="form-control rounded-3 fw-bold" placeholder="Ej: 330" required>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Consumos por Toneladas -->
+                    <h6 class="fw-bold text-dark mb-2 border-bottom pb-2">
+                        <i class="bi bi-fuel-pump text-primary me-1"></i> Consumo de Combustible D2 por Tonelada (Galones):
+                    </h6>
+                    <div class="row g-2">
+                        <div class="col-4 col-md">
+                            <label class="form-label small fw-bold text-success">0 Tn:</label>
+                            <input type="number" step="0.01" id="form-matriz-0" class="form-control form-control-sm text-end font-monospace" placeholder="0.00" required>
+                        </div>
+                        <div class="col-4 col-md">
+                            <label class="form-label small fw-bold">5 Tn:</label>
+                            <input type="number" step="0.01" id="form-matriz-5" class="form-control form-control-sm text-end font-monospace" placeholder="0.00" required>
+                        </div>
+                        <div class="col-4 col-md">
+                            <label class="form-label small fw-bold">10 Tn:</label>
+                            <input type="number" step="0.01" id="form-matriz-10" class="form-control form-control-sm text-end font-monospace" placeholder="0.00" required>
+                        </div>
+                        <div class="col-4 col-md">
+                            <label class="form-label small fw-bold">15 Tn:</label>
+                            <input type="number" step="0.01" id="form-matriz-15" class="form-control form-control-sm text-end font-monospace" placeholder="0.00" required>
+                        </div>
+                        <div class="col-4 col-md">
+                            <label class="form-label small fw-bold">20 Tn:</label>
+                            <input type="number" step="0.01" id="form-matriz-20" class="form-control form-control-sm text-end font-monospace" placeholder="0.00" required>
+                        </div>
+                        <div class="col-4 col-md">
+                            <label class="form-label small fw-bold">25 Tn:</label>
+                            <input type="number" step="0.01" id="form-matriz-25" class="form-control form-control-sm text-end font-monospace" placeholder="0.00" required>
+                        </div>
+                        <div class="col-4 col-md">
+                            <label class="form-label small fw-bold text-danger">30 Tn:</label>
+                            <input type="number" step="0.01" id="form-matriz-30" class="form-control form-control-sm text-end font-monospace" placeholder="0.00" required>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-0 pt-4 pb-0 px-0 mt-4 d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary rounded-3 px-3 fw-semibold" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold">
+                            Guardar Ruta
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: IMPORTAR MATRIZ DESDE EXCEL -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalImportarMatriz" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom py-3 px-4 bg-light">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-file-earmark-excel-fill text-success fs-5"></i>
+                    <h5 class="modal-title fw-bold text-dark m-0">Importar Matriz de Combustible</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-secondary mb-3" style="font-size:0.85rem;">
+                    Seleccione un archivo Excel (.xlsx, .xls o .csv) que contenga las columnas:
+                    <br><strong class="text-dark">SENTIDO, RUTA, MOTOR, CONFG, 0, 5, 10, 15, 20, 25, 30, KM</strong>.
+                </p>
+
+                <div class="p-4 border border-2 border-dashed rounded-4 text-center mb-3 bg-light" style="cursor:pointer;" onclick="document.getElementById('input-archivo-matriz').click()">
+                    <i class="bi bi-cloud-arrow-up text-primary fs-1 mb-2 d-block"></i>
+                    <span class="fw-bold text-dark d-block">Haga clic o arrastre el archivo aquí</span>
+                    <span class="text-muted small" id="nombre-archivo-importar">Archivos compatibles: .xlsx, .xls, .csv</span>
+                    <input type="file" id="input-archivo-matriz" accept=".xlsx, .xls, .csv" class="d-none" onchange="window.matrizPrevisualizarArchivo(event)">
+                </div>
+
+                <div id="preview-import-container" class="d-none">
+                    <div class="alert alert-info py-2 px-3 small d-flex align-items-center justify-content-between mb-0">
+                        <span><i class="bi bi-check2-circle me-1"></i> <strong id="preview-filas-count">0</strong> filas detectadas listas para importar.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-4 px-4 d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-3 fw-semibold" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-primary rounded-3 px-4 fw-bold" id="btn-confirmar-importar" disabled onclick="window.matrizEjecutarImportacion()">
+                    Subir e Importar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
