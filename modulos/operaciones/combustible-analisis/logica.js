@@ -114,7 +114,11 @@
             const cur = selFuel.value;
             selFuel.innerHTML = '<option value="ALL">Todos</option>' +
                 Array.from(allFuels).sort().map(f => `<option value="${f}">${f}</option>`).join('');
-            if (allFuels.has(cur)) selFuel.value = cur;
+            if (cur && allFuels.has(cur)) {
+                selFuel.value = cur;
+            } else if (allFuels.has('D2')) {
+                selFuel.value = 'D2';
+            }
         }
 
         if (selPlate) {
@@ -591,6 +595,74 @@
             if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-broadcast"></i> CAN';
+            }
+        }
+    };
+
+    // 📡 Consultar Telemetría CAN Bus para todos los viajes visibles en la página actual
+    window.caConsultarGpsPaginaActual = async function() {
+        const total = window._caFilteredTrips.length;
+        if (total === 0) {
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('No hay viajes visibles en la tabla.', 'warning');
+            return;
+        }
+
+        const limit = window._caLimitePorPagina;
+        const page = window._caPaginaActual || 1;
+        const startIdx = limit === 'ALL' ? 0 : (page - 1) * limit;
+        const endIdx = limit === 'ALL' ? total : Math.min(startIdx + limit, total);
+        const pagedTrips = window._caFilteredTrips.slice(startIdx, endIdx);
+
+        const btnSync = document.getElementById('ca-btn-sync-can-page');
+        const origHtml = btnSync ? btnSync.innerHTML : '';
+        if (btnSync) {
+            btnSync.disabled = true;
+            btnSync.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sincronizando...';
+        }
+
+        let syncedCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < pagedTrips.length; i++) {
+            const trip = pagedTrips[i];
+            if (btnSync) {
+                btnSync.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> CAN (${i + 1}/${pagedTrips.length})...`;
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    placa: trip.placa,
+                    fechaInicio: trip.fechaInicio,
+                    fechaFin: trip.fechaFin
+                });
+
+                const resp = await fetch(`/api/combustible/wialon-telemetria?${params.toString()}`);
+                const result = await resp.json();
+
+                if (result.ok && result.data) {
+                    trip.gpsTelemetria = result.data;
+                    trip.wialonGps = result.data;
+                    syncedCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (err) {
+                failCount++;
+            }
+        }
+
+        window.caRenderTabla();
+
+        if (btnSync) {
+            btnSync.disabled = false;
+            btnSync.innerHTML = origHtml || '<i class="bi bi-broadcast"></i> <span>Consultar CAN (GPS)</span>';
+        }
+
+        if (typeof window.mostrarAlerta === 'function') {
+            if (syncedCount > 0) {
+                window.mostrarAlerta(`✓ Sincronizados ${syncedCount} viajes con telemetría CAN Bus Wialon.`, 'success');
+            } else {
+                window.mostrarAlerta(`No se encontraron registros CAN para los viajes en el rango consultado.`, 'warning');
             }
         }
     };

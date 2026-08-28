@@ -3543,10 +3543,18 @@ const TITULOS_MODULOS = {
     'administracion':              'Administración',
     'seguridad/unidades':          'Control de Unidades',
     'seguridad/unidades-base':     'Status "Unidades en Base"',
+    'operaciones/combustible-vales': 'Vales de Combustible',
+    'operaciones/combustible-analisis': 'Análisis de Combustible (D2)',
+    'operaciones/urea-analisis':        'Análisis de Urea',
 };
 
 const MENU_IDS = {
     'dashboard':                   'nav-dashboard',
+    'operaciones/ordenes-viaje':   'nav-op-ordenes-viaje',
+    'operaciones/guias-remision':  'nav-op-guias-remision',
+    'operaciones/combustible-vales': 'nav-combustible-vales',
+    'operaciones/combustible-analisis': 'nav-combustible-analisis',
+    'operaciones/urea-analisis':        'nav-urea-analisis',
     'mantenimiento/inspecciones':  'nav-inspecciones',
     'flota/placas':       'nav-placas',
     'mantenimiento/fleetrun':      'nav-fleetrun',
@@ -3636,10 +3644,20 @@ const MENU_SECTION = {
     'sistema/auditoria':          'configuracion',
     'seguridad/unidades':         'seguridad',
     'seguridad/unidades-base':    'seguridad',
+    'operaciones/ordenes-viaje':   'operaciones',
+    'operaciones/guias-remision':  'operaciones',
+    'operaciones/combustible-vales': 'operaciones',
+    'operaciones/combustible-analisis': 'operaciones',
+    'operaciones/urea-analisis':        'operaciones',
 };
 
 const BREADCRUMB_MAP = {
     'dashboard':                  [],
+    'operaciones/ordenes-viaje':   ['Operaciones','Órdenes de Viaje'],
+    'operaciones/guias-remision':  ['Operaciones','Guías de Remisión'],
+    'operaciones/combustible-vales': ['Operaciones','Combustible','Vales'],
+    'operaciones/combustible-analisis': ['Operaciones','Combustible','Análisis D2'],
+    'operaciones/urea-analisis':        ['Operaciones','Combustible','Análisis Urea'],
     'mantenimiento/inspecciones': ['Mantenimiento','Inspecciones'],
     'flota/placas':       ['Flota','Placas'],
     'mantenimiento/fleetrun':     ['Mantenimiento','Fleetrun'],

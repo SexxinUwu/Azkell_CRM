@@ -150,16 +150,16 @@
     <!-- Header Bento -->
     <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
         <div class="d-flex align-items-center gap-2">
-            <div class="rounded-3 p-2.5 d-flex align-items-center justify-content-center" style="background: rgba(79, 70, 229, 0.12); color: #4f46e5;">
-                <i class="bi bi-graph-up-arrow fs-4"></i>
+            <div class="rounded-3 p-2.5 d-flex align-items-center justify-content-center" style="background: rgba(2, 132, 199, 0.12); color: #0284c7;">
+                <i class="bi bi-fuel-pump-fill fs-4"></i>
             </div>
             <div>
                 <div class="d-flex align-items-center gap-2">
-                    <h4 class="fw-bold text-dark m-0" style="letter-spacing:-0.02em;">Control de Combustible por Viaje</h4>
+                    <h4 class="fw-bold text-dark m-0" style="letter-spacing:-0.02em;">Análisis de Combustible (D2)</h4>
                     <span class="badge bg-primary bg-opacity-10 text-primary border px-2.5 py-1 rounded-pill small fw-bold">Operaciones</span>
                     <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2.5 py-1 rounded-pill small fw-semibold" id="ca-record-count-info" style="font-size:0.7rem;">Cargando...</span>
                 </div>
-                <p class="text-muted small m-0">Tabla dinámica de abastecimientos, gasto y análisis comparativo de rendimiento Km/Galón</p>
+                <p class="text-muted small m-0">Auditoría de abastecimientos D2 por viaje, cálculo de rendimiento real y telemetría CAN Bus</p>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -312,7 +312,10 @@
                 <i class="bi bi-table text-primary fs-5"></i>
                 <h6 class="fw-bold text-dark m-0">Tabla Dinámica Consolidada por Viaje</h6>
             </div>
-            <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button type="button" class="btn btn-sm btn-outline-info rounded-3 px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1.5 shadow-2xs" id="ca-btn-sync-can-page" onclick="window.caConsultarGpsPaginaActual()" style="border-color:#0284c7; color:#0284c7; font-size:0.78rem;" title="Consultar Telemetría CAN Bus para todos los viajes visibles en esta página">
+                    <i class="bi bi-broadcast"></i> <span>Consultar CAN (GPS)</span>
+                </button>
                 <span id="ca-filtered-results-counter" class="badge bg-secondary bg-opacity-10 text-dark border px-3 py-1.5 rounded-pill fw-bold" style="font-size:0.75rem;">
                     Mostrando 0 viajes
                 </span>
