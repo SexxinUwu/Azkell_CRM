@@ -1435,54 +1435,58 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                                     <span class="fh-placa" id="ft-placa">---</span>
                                     <span class="fh-badge" id="ft-tipo">---</span>
                                 </div>
-                                <div class="fh-sub-row">
-                                    <span id="ft-marca-modelo">---</span> | Año: <span id="ft-anio">---</span> | Chasis: <span id="ft-chasis">---</span>
-                                </div>
+                                <div class="fh-subtitle"><span id="ft-marca-modelo">---</span> | Año: <span id="ft-anio">---</span> | Chasis: <span id="ft-chasis">---</span></div>
                             </div>
                         </div>
                         <div class="fh-right">
-                            <div class="salud-badge">
-                                <span class="sb-label">SALUD:</span>
-                                <div class="sb-bar-bg"><div class="sb-bar-fill" id="ft-salud-bar"></div></div>
-                                <span class="sb-val" id="ft-salud-val">100%</span>
+                            <div class="health-container">
+                                <span>SALUD:</span>
+                                <div class="health-bar-bg"><div class="health-bar-fill" id="ft-health-bar" style="width: 0%;"></div></div>
+                                <span class="health-text" id="ft-health-txt">0%</span>
                             </div>
                             <div class="fh-actions">
-                                <button class="btn-action-icon" onclick="editarVehiculoActual()" title="Editar Vehículo"><i class="bi bi-pencil"></i></button>
-                                <button class="btn-action-icon" onclick="eliminarVehiculoActual()" title="Eliminar"><i class="bi bi-trash"></i></button>
+                                <button class="btn-outline" onclick="editarVehiculoActual()"><i class="bi bi-pencil"></i> Editar</button>
+                                <button class="btn-icon-danger" onclick="eliminarVehiculoActual()"><i class="bi bi-trash"></i></button>
                             </div>
                         </div>
                     </div>
                     
                     <!-- Ficha Header Compacto EXCLUSIVO Móvil -->
-                    <div class="ficha-header-mobile hide-on-desktop">
-                        <button class="btn-volver-movil" onclick="volverListaMovil()"><i class="bi bi-chevron-left"></i></button>
-                        <div class="fh-main-icon" style="width: 32px; height: 32px; font-size: 0.95rem;"><i class="bi bi-arrow-left-right"></i></div>
-                        <div class="fhm-info">
-                            <div class="fhm-title-row">
-                                <span class="fh-placa" id="ft-placa-m">---</span>
-                                <span class="fh-badge" id="ft-tipo-m">---</span>
-                            </div>
-                            <div class="fhm-sub-row">
-                                <span id="ft-sub-m">---</span>
+                    <div class="ficha-header-mobile hide-on-desktop" style="display:flex; flex-direction:column; padding:1.5rem 1rem 0 1rem;">
+                        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+                            <button class="btn-volver-movil" onclick="volverListaMovil()" style="width:40px; height:40px; border-radius:50%; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#0f172a; font-size:1.2rem; flex-shrink:0;"><i class="bi bi-chevron-left"></i></button>
+                            <div style="display:flex; flex-direction:column; justify-content:center;">
+                                <div style="display:flex; align-items:center; gap:0.5rem; line-height:1;">
+                                    <span id="ft-placa-movil" style="font-size:1.75rem; font-weight:800; color:#0f172a;">---</span>
+                                </div>
+                                <div style="font-size:0.75rem; color:#64748b; margin-top:0.35rem;"><span id="ft-marca-modelo-movil">---</span> | Año: <span id="ft-anio-movil">---</span></div>
                             </div>
                         </div>
-                        <div class="fhm-actions">
-                            <button class="btn-action-icon" onclick="editarVehiculoActual()" title="Editar"><i class="bi bi-pencil"></i></button>
-                            <button class="btn-action-icon" onclick="eliminarVehiculoActual()" title="Eliminar"><i class="bi bi-trash"></i></button>
+                        
+                        <div class="health-container-movil" style="background:#fff; border-radius:16px; padding:1.25rem; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:1.5rem; border:1px solid #f1f5f9;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                                <span style="font-size:0.75rem; font-weight:800; color:#475569;">SALUD DE LA UNIDAD</span>
+                                <span id="ft-health-txt-movil" style="font-size:1.25rem; font-weight:800; color:#0f172a;">0%</span>
+                            </div>
+                            <div style="width:100%; height:8px; border-radius:4px; background:#f1f5f9; overflow:hidden;">
+                                <div id="ft-health-bar-movil" style="height:100%; background:linear-gradient(90deg, #ef4444, #f59e0b, #10b981); width:0%; transition:width 0.5s;"></div>
+                            </div>
+                        </div>
+                        
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                            <span style="font-size:0.85rem; font-weight:800; color:#64748b; text-transform:uppercase;">Módulos de Control</span>
                         </div>
                     </div>
-                </div>
 
-                <!-- Grid de Documentos (100% Responsive) -->
-                <div class="docs-grid" id="docs-container">
-                    <!-- Renderizado dinámico -->
+                    <div class="docs-grid" id="docs-grid-container">
+                    </div>
                 </div>
             </div>
 
-            <!-- Empty State cuando no hay selección -->
-            <div id="empty-state-panel" class="empty-state" style="display: flex; height: 100%;">
-                <div class="empty-icon"><i class="bi bi-truck"></i></div>
-                <div class="empty-title">Selecciona una Unidad</div>
+            <!-- Empty State -->
+            <div id="empty-state-panel" class="empty-state">
+                <i class="bi bi-truck empty-icon"></i>
+                <div class="empty-title">Selecciona un vehículo</div>
                 <div class="empty-desc">Haz clic en un vehículo de la lista para ver su expediente documental.<br><br>¿Tu flota está vacía o eres nuevo? Sube todos tus vehículos rápidamente desde un Excel.</div>
                 <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
                     <button class="btn-outline-modal" onclick="descargarPlantillaVehiculos()"><i class="bi bi-download"></i> Descargar Plantilla</button>
