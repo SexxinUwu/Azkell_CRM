@@ -1738,9 +1738,14 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                 <i class="bi bi-cloud-download" style="margin-right:0.5rem;"></i> Descargar
             </button>
         </div>
-        <button class="doc-modal-btn primary" onclick="cerrarDocModal(); abrirModalEdicion(currentPlaca, window._lastDocTipo);">
-            <i class="bi bi-pencil-square" style="margin-right:0.5rem;"></i> Editar Información
-        </button>
+        <div class="d-flex gap-2 mt-2">
+            <button class="doc-modal-btn primary m-0" style="flex: 2;" onclick="cerrarDocModal(); abrirModalEdicion(currentPlaca, window._lastDocTipo);">
+                <i class="bi bi-pencil-square" style="margin-right:0.5rem;"></i> Editar Información
+            </button>
+            <button class="doc-modal-btn text-danger m-0 d-flex align-items-center justify-content-center" style="flex: 1; background: #fee2e2; border: 1px solid #fecaca; font-weight: 700; color: #dc2626;" onclick="window.confirmarEliminarDocActual()">
+                <i class="bi bi-trash-fill" style="margin-right:0.35rem;"></i> Eliminar
+            </button>
+        </div>
     </div>
 </div>
 

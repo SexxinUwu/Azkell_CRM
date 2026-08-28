@@ -2383,6 +2383,51 @@ app.post('/api/documentos-flota/guardar-historial', (req, res) => {
     });
 });
 
+// ── POST /api/documentos-flota/eliminar-documento — Eliminar/Limpiar documento de la flota ──
+app.post('/api/documentos-flota/eliminar-documento', async (req, res) => {
+    const tdb = (req && req.db) ? req.db : db;
+    const { placa, tipoDocKey, urlS3 } = req.body;
+    if (!placa || !tipoDocKey) return res.status(400).json({ error: 'Faltan parámetros requeridos (placa, tipoDocKey)' });
+
+    try {
+        if (urlS3) {
+            const key = s3KeyFromUrl(urlS3);
+            if (key) await deleteFromS3(key);
+        }
+
+        const camposLimpiar = {
+            'SOAT': ['soat_entidad = NULL', 'soat_pago = NULL', 'soat_vencimiento = NULL', 'soat_url = NULL'],
+            'REV_TECNICA': ['rt_emision = NULL', 'rt_vencimiento = NULL', 'rt_url = NULL'],
+            'TARJETA_PROPIEDAD': ['tc_constancia = NULL', 'tc_vencimiento = NULL', 'tc_url = NULL'],
+            'MATPEL': ['matpel_constancia = NULL', 'matpel_vencimiento = NULL', 'matpel_url = NULL'],
+            'BONIFICACION': ['boni_emision = NULL', 'boni_vencimiento = NULL', 'boni_url = NULL'],
+            'SEG_VEHICULAR': ['sv_entidad = NULL', 'sv_asesor = NULL', 'sv_vencimiento = NULL', 'sv_url = NULL'],
+            'SEG_CARRETA': ['sc_entidad = NULL', 'sc_asesor = NULL', 'sc_vencimiento = NULL', 'sc_url = NULL'],
+            'FUMIGACION': ['fum_emision = NULL', 'fum_vencimiento = NULL', 'fum_url = NULL'],
+            'EXTINTOR': ['ext_emision = NULL', 'ext_vencimiento = NULL', 'ext_url = NULL', 'ext_cantidad = 1']
+        };
+
+        const updates = camposLimpiar[tipoDocKey];
+        if (updates && updates.length > 0) {
+            await new Promise((resolve, reject) => {
+                tdb.query(`UPDATE vehiculos_flota SET ${updates.join(', ')} WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?))`, [placa], (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+        }
+
+        // Limpiar historial de ese tipo de documento si existe
+        tdb.query(`DELETE FROM documentos_flota WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?)) AND (UPPER(TRIM(tipo_documento)) = UPPER(TRIM(?)) OR tipo_documento LIKE ?)`, 
+            [placa, tipoDocKey, `%${tipoDocKey}%`], () => {});
+
+        res.json({ ok: true });
+    } catch (e) {
+        console.error('Error eliminando documento:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // ── DELETE /api/vehiculos-flota/:placa ────────────────────────────────────────
 app.delete('/api/vehiculos-flota/:placa', (req, res) => {
     db.query('DELETE FROM vehiculos_flota WHERE placa=?', [req.params.placa], (err) => {
