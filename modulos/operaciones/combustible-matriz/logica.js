@@ -30,6 +30,7 @@
             const json = await res.json();
             if (json.ok && Array.isArray(json.data)) {
                 window._matrizCombustible.rutas = json.data;
+                window.matrizPoblarFiltrosDinamicos(json.data);
                 window.matrizFiltrarTabla();
             } else {
                 if (tbody) tbody.innerHTML = `<tr><td colspan="13" class="text-center text-danger py-4">${json.error || 'Error al obtener datos'}</td></tr>`;
@@ -37,6 +38,45 @@
         } catch (err) {
             console.error("Error al cargar matriz:", err);
             if (tbody) tbody.innerHTML = `<tr><td colspan="13" class="text-center text-danger py-4">Error de conexión al servidor.</td></tr>`;
+        }
+    };
+
+    // 1.1. Poblar Filtros Select Dinámicamente con los Datos de la Tabla
+    window.matrizPoblarFiltrosDinamicos = function(rutas) {
+        const data = rutas || window._matrizCombustible.rutas || [];
+
+        const selSentido = document.getElementById('matriz-filtro-sentido');
+        const selMotor = document.getElementById('matriz-filtro-motor');
+        const selConfg = document.getElementById('matriz-filtro-confg');
+
+        if (selSentido) {
+            const currentVal = selSentido.value || 'ALL';
+            const sentidos = [...new Set(data.map(r => (r.sentido || '').trim().toUpperCase()).filter(Boolean))].sort();
+            let opts = `<option value="ALL">Todos los Sentidos</option>`;
+            sentidos.forEach(s => {
+                opts += `<option value="${s}" ${currentVal === s ? 'selected' : ''}>${s}</option>`;
+            });
+            selSentido.innerHTML = opts;
+        }
+
+        if (selMotor) {
+            const currentVal = selMotor.value || 'ALL';
+            const motores = [...new Set(data.map(r => (r.motor || '').trim().toUpperCase()).filter(Boolean))].sort();
+            let opts = `<option value="ALL">Todos los Motores</option>`;
+            motores.forEach(m => {
+                opts += `<option value="${m}" ${currentVal === m ? 'selected' : ''}>${m}</option>`;
+            });
+            selMotor.innerHTML = opts;
+        }
+
+        if (selConfg) {
+            const currentVal = selConfg.value || 'ALL';
+            const confgs = [...new Set(data.map(r => (r.confg || '').trim().toUpperCase()).filter(Boolean))].sort();
+            let opts = `<option value="ALL">Todas las Confg.</option>`;
+            confgs.forEach(c => {
+                opts += `<option value="${c}" ${currentVal === c ? 'selected' : ''}>${c}</option>`;
+            });
+            selConfg.innerHTML = opts;
         }
     };
 
