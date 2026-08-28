@@ -205,7 +205,7 @@ app.get('/api/proxy/geocode', async (req, res) => {
         return res.json({ display_name: '', address: {} });
     }
 
-    let cacheKey = `${lat.toFixed(3)},${lon.toFixed(3)}`;
+    let cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
     if (_geoCacheMap.has(cacheKey)) {
         return res.json(_geoCacheMap.get(cacheKey));
     }
@@ -213,14 +213,18 @@ app.get('/api/proxy/geocode', async (req, res) => {
     try {
         let fetchCall = global.fetch || require('node-fetch');
         
-        // 1. Intentar con OpenStreetMap Nominatim (Detalle completo de avenida, número, distrito y ciudad)
+        // 1. Intentar con OpenStreetMap Nominatim
         try {
+            const ctrl1 = new AbortController();
+            const to1 = setTimeout(() => ctrl1.abort(), 4000);
             let response = await fetchCall(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
                 headers: {
-                    'User-Agent': 'AzkellERP/1.0 (contact@azkell.com)',
+                    'User-Agent': 'AzkellERP-Fleet/2.0 (admin@azkell.pe)',
                     'Accept-Language': 'es'
-                }
+                },
+                signal: ctrl1.signal
             });
+            clearTimeout(to1);
             if (response.ok) {
                 let data = await response.json();
                 if (data && data.address) {
@@ -242,7 +246,7 @@ app.get('/api/proxy/geocode', async (req, res) => {
                     }
 
                     let cleanName = partes.length > 0 ? partes.join(', ') : (data.display_name || '').replace(/^Sin nombre,\s*/i, '');
-                    if (cleanName) {
+                    if (cleanName && !cleanName.startsWith('Ubicación GPS')) {
                         let resultN = { display_name: cleanName, address: addr };
                         _geoCacheMap.set(cacheKey, resultN);
                         return res.json(resultN);
@@ -252,20 +256,27 @@ app.get('/api/proxy/geocode', async (req, res) => {
         } catch (eN) {}
 
         // 2. Intentar con BigDataCloud API como respaldo
-        let rB = await fetchCall(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=es`);
-        if (rB.ok) {
-            let dB = await rB.json();
-            let loc = dB.locality || dB.city || dB.localityInfo?.informative?.find(i => i.description)?.description || '';
-            let state = dB.principalSubdivision || dB.state || '';
-            let country = dB.countryName || 'Perú';
+        try {
+            const ctrl2 = new AbortController();
+            const to2 = setTimeout(() => ctrl2.abort(), 3500);
+            let rB = await fetchCall(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=es`, {
+                signal: ctrl2.signal
+            });
+            clearTimeout(to2);
+            if (rB.ok) {
+                let dB = await rB.json();
+                let loc = dB.locality || dB.city || dB.localityInfo?.informative?.find(i => i.description)?.description || '';
+                let state = dB.principalSubdivision || dB.state || '';
+                let country = dB.countryName || 'Perú';
 
-            let parts = [loc, state, country].filter(Boolean);
-            if (parts.length > 0) {
-                let resultB = { display_name: parts.join(', '), address: dB };
-                _geoCacheMap.set(cacheKey, resultB);
-                return res.json(resultB);
+                let parts = [loc, state, country].filter(Boolean);
+                if (parts.length > 0) {
+                    let resultB = { display_name: parts.join(', '), address: dB };
+                    _geoCacheMap.set(cacheKey, resultB);
+                    return res.json(resultB);
+                }
             }
-        }
+        } catch(eB) {}
 
         let fallback = { display_name: `Ubicación GPS (${lat.toFixed(4)}, ${lon.toFixed(4)})`, address: {} };
         res.json(fallback);

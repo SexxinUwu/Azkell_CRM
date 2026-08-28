@@ -283,17 +283,17 @@ window.abrirDetalleGPS = function(placa) {
                 </div>
             </div>
 
-            <div class="gps-telemetry-box" style="grid-column: span 1 / -1;">
+            <div class="gps-telemetry-box" style="grid-column: span 1 / -1; min-height: 58px;">
                 <div style="width:40px;height:40px;border-radius:10px;background:#f1f5f9;color:#475569;display:flex;align-items:center;justify-content:center;font-size:1.2rem; flex-shrink:0;">
                     <i class="bi bi-pin-map"></i>
                 </div>
                 <div style="min-width:0; flex:1;">
                     <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Dirección Satelital</span>
-                    <div class="d-flex align-items-center justify-content-between gap-2">
-                        <h6 class="fw-bold m-0 text-dark text-truncate" id="${dirId}" style="font-size:0.92rem;">
+                    <div class="d-flex align-items-start justify-content-between gap-2">
+                        <div class="fw-bold m-0 text-dark" id="${dirId}" style="font-size:0.86rem; line-height:1.25; word-break: break-word;">
                             ${tienePos ? '<span class="spinner-border spinner-border-sm text-primary"></span> Obteniendo dirección...' : '<span class="text-secondary fw-normal">Sin señal</span>'}
-                        </h6>
-                        ${tienePos ? `<button class="btn btn-sm p-0 text-secondary" id="${btnDirId}" title="Copiar"><i class="bi bi-clipboard"></i></button>` : ''}
+                        </div>
+                        ${tienePos ? `<button class="btn btn-sm p-0 text-secondary flex-shrink-0" id="${btnDirId}" title="Copiar dirección"><i class="bi bi-clipboard"></i></button>` : ''}
                     </div>
                 </div>
             </div>
@@ -325,13 +325,24 @@ window.abrirDetalleGPS = function(placa) {
             try {
                 const res = await fetch(`/api/proxy/geocode?lat=${w.lat}&lon=${w.lng}`);
                 const data = await res.json();
-                if (data && data.display_name) {
-                    let d = data.display_name.replace(/^Sin nombre,\s*/i, '');
-                    dirTxt = d || dirTxt;
+                if (data && data.display_name && !data.display_name.startsWith('Ubicación GPS')) {
+                    dirTxt = data.display_name.replace(/^Sin nombre,\s*/i, '');
+                } else {
+                    // Respaldo directo en cliente si el backend devolvió genérico
+                    const resB = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${w.lat}&longitude=${w.lng}&localityLanguage=es`).then(r=>r.json()).catch(()=>null);
+                    if (resB) {
+                        let loc = resB.locality || resB.city || '';
+                        let state = resB.principalSubdivision || resB.state || '';
+                        let parts = [loc, state, 'Perú'].filter(Boolean);
+                        if (parts.length > 0) dirTxt = parts.join(', ');
+                    }
                 }
             } catch(e) {}
 
-            if (dirEl) dirEl.textContent = dirTxt;
+            if (dirEl) {
+                dirEl.textContent = dirTxt;
+                dirEl.setAttribute('title', dirTxt);
+            }
             if (btnEl) {
                 btnEl.onclick = function() {
                     navigator.clipboard.writeText(dirTxt).then(() => {
