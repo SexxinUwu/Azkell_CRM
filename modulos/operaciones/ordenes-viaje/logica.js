@@ -30,12 +30,6 @@ window.ovCargarDatos = async function() {
         var json = await res.json();
         var lista = (json && json.ok && Array.isArray(json.data)) ? json.data : [];
 
-        // Si no hay viajes aún, disparar sincronización inicial
-        if (lista.length === 0) {
-            await window.ovEjecutarSincronizacion(true);
-            return;
-        }
-
         window.dataGlobalOrdenesViajeModulo = lista;
         window.ovActualizarKPIs(lista);
         window.ovAplicarFiltros();
@@ -249,6 +243,16 @@ window.ovEjecutarSincronizacion = async function(isSilent) {
         var data = await res.json();
 
         if (data && data.ok) {
+            if (data.syncSkipped) {
+                if (msgEl) {
+                    msgEl.innerHTML = `<span class="text-muted d-inline-flex align-items-center gap-1"><i class="bi bi-info-circle"></i> Sincronización remota externa solo aplica para Marsisa.</span>`;
+                }
+                if (!isSilent && typeof window.showToastNotification === 'function') {
+                    window.showToastNotification(data.message || 'La sincronización remota externa solo aplica para Marsisa.', 'info');
+                }
+                return;
+            }
+
             var fetchRes = await fetch('/api/operaciones/ordenes-viaje?limit=1500');
             var fetchJson = await fetchRes.json();
             window.dataGlobalOrdenesViajeModulo = (fetchJson && fetchJson.data) || [];

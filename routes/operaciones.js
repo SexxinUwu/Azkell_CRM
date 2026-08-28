@@ -127,9 +127,12 @@ module.exports = function (db, broadcast, logAudit) {
             const isMarsisa = tenantId.toLowerCase().includes('marsisa') || host.includes('marsisa') || tenantId === 'master' || tenantId === 'default';
 
             if (!isMarsisa) {
-                return res.status(400).json({
-                    ok: false,
-                    error: 'La sincronización remota de órdenes de viaje solo está habilitada para la empresa Marsisa.'
+                return res.json({
+                    ok: true,
+                    syncSkipped: true,
+                    insertados: 0,
+                    actualizados: 0,
+                    message: 'La sincronización remota de órdenes de viaje solo aplica para la empresa Marsisa.'
                 });
             }
 

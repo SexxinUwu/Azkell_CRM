@@ -105,13 +105,15 @@ window.ckCargarOrdenesViaje = async function(forceSync) {
         if (json && json.ok && json.data && json.data.length > 0 && !forceSync) {
             window.dataGlobalOrdenesViaje = json.data;
         } else {
-            // Si la tabla local aún no tiene viajes, sincronizar automáticamente
+            // Intentar sincronización limpia solo si no hay datos
             const syncRes = await fetch('/api/operaciones/ordenes-viaje/sincronizar', { method: 'POST' });
             const syncJson = await syncRes.json();
-            if (syncJson && syncJson.ok) {
+            if (syncJson && syncJson.ok && !syncJson.syncSkipped) {
                 const retryRes = await fetch('/api/operaciones/ordenes-viaje?limit=300');
                 const retryJson = await retryRes.json();
                 window.dataGlobalOrdenesViaje = (retryJson && retryJson.data) || [];
+            } else {
+                window.dataGlobalOrdenesViaje = (json && json.data) || [];
             }
         }
     } catch(err) {
@@ -130,12 +132,18 @@ window.ckSincronizarViajes = async function(e) {
         const r = await fetch('/api/operaciones/ordenes-viaje/sincronizar', { method: 'POST' });
         const data = await r.json();
         if (data.ok) {
-            await window.ckCargarOrdenesViaje(true);
-            if (typeof window.showToastNotification === 'function') {
-                window.showToastNotification(`Sincronización completa: ${data.insertados || 0} nuevos viajes`, 'success');
+            if (data.syncSkipped) {
+                if (typeof window.showToastNotification === 'function') {
+                    window.showToastNotification(data.message || 'La sincronización remota externa solo aplica para Marsisa.', 'info');
+                }
+            } else {
+                await window.ckCargarOrdenesViaje(true);
+                if (typeof window.showToastNotification === 'function') {
+                    window.showToastNotification(`Sincronización completa: ${data.insertados || 0} nuevos viajes`, 'success');
+                }
             }
             // Si el dropdown está abierto, refrescarlo
-            window._cbFiltrarViaje();
+            if (typeof window._cbFiltrarViaje === 'function') window._cbFiltrarViaje();
         } else {
             throw new Error(data.error || 'Error desconocido');
         }
