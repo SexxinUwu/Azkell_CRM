@@ -266,11 +266,27 @@
 
     // Calcular y Renderizar Métricas Bento (KPIs)
     window.caRenderKPIs = function() {
+        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
         const trips = window._caFilteredTrips;
         const totalViajes = trips.length;
-        const totalGalones = trips.reduce((s, t) => s + t.totalGalones, 0);
-        const totalGasto = trips.reduce((s, t) => s + t.totalGasto, 0);
-        const totalKm = trips.reduce((s, t) => s + t.recorridoKm, 0);
+
+        let totalGalones = 0;
+        let totalGasto = 0;
+        let totalKm = 0;
+        let totalValesCount = 0;
+
+        trips.forEach(t => {
+            const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
+            const totGal = fs ? fs.totalGalones : t.totalGalones;
+            const totGas = fs ? fs.totalGasto : t.totalGasto;
+            const recKm = fs ? fs.recorridoKm : t.recorridoKm;
+            const vales = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
+
+            totalGalones += totGal;
+            totalGasto += totGas;
+            totalKm += recKm;
+            totalValesCount += vales;
+        });
 
         const promGalViaje = totalViajes > 0 ? (totalGalones / totalViajes) : 0;
         const promPrecioGal = totalGalones > 0 ? (totalGasto / totalGalones) : 0;
@@ -291,7 +307,7 @@
         const subI = document.getElementById('ca-kpi-gasto-sub');
         const subK = document.getElementById('ca-kpi-km-sub');
 
-        if (subV) subV.textContent = `${trips.reduce((s, t) => s + (t.vouchersPropiosCount || t.vouchers.length), 0)} vales individuales`;
+        if (subV) subV.textContent = `${totalValesCount} vales individuales${fuelFilter !== 'ALL' ? ' (' + fuelFilter + ')' : ''}`;
         if (subG) subG.textContent = `${promGalViaje.toFixed(1)} Gal/viaje prom.`;
         if (subI) subI.textContent = `S/ ${promPrecioGal.toFixed(2)} / Galón prom.`;
         if (subK) subK.textContent = `${promKmGal.toFixed(2)} Km/Gal promedio`;
@@ -729,10 +745,14 @@
             return;
         }
 
+        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
+
         const exportData = window._caFilteredTrips.map(t => {
-            const fs = t.firstSegment;
-            const kInicio = fs ? fs.kInicio : t.kmInicio;
-            const kFin = fs ? fs.kFin : t.kmFin;
+            const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
+            const fInicio = fs ? fs.fechaInicio : t.fechaInicio;
+            const fFin = fs ? fs.fechaFin : t.fechaFin;
+            const kInicio = fs ? fs.kmInicio : t.kmInicio;
+            const kFin = fs ? fs.kmFin : t.kmFin;
             const recKm = fs ? fs.recorridoKm : t.recorridoKm;
             const totGal = fs ? fs.totalGalones : t.totalGalones;
             const totGasto = fs ? fs.totalGasto : t.totalGasto;
@@ -745,8 +765,9 @@
                 "N° VIAJE": t.numViaje || t.viaje || '---',
                 "PLACA": t.placa || '---',
                 "RUTA": t.ruta || '---',
-                "FECHA INICIO": t.fechaInicio || '---',
-                "FECHA FIN": t.fechaFin || '---',
+                "TIPO COMBUSTIBLE": fuelFilter !== 'ALL' ? fuelFilter : 'TODOS',
+                "FECHA INICIO": fInicio || '---',
+                "FECHA FIN": fFin || '---',
                 "KM INICIO (VALES)": kInicio > 0 ? parseFloat(kInicio.toFixed(1)) : '—',
                 "KM FIN (VALES)": kFin > 0 ? parseFloat(kFin.toFixed(1)) : '—',
                 "RECORRIDO (VALES)": recKm > 0 ? parseFloat(recKm.toFixed(1)) : '—',
