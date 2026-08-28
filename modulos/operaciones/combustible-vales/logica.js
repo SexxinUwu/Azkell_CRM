@@ -61,19 +61,20 @@
     };
 
     // ── SINCRONIZACIÓN DIRECTA DESDE HOST REMOTO (168.231.98.23) ───────────────────
-    window.cvSincronizarRemoto = async function() {
+    window.cvSincronizarRemoto = async function(forzar = false) {
         const btn = document.getElementById('cv-btn-sync-remoto');
         const oldHtml = btn ? btn.innerHTML : '';
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1.5"></span> Sincronizando...`;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1.5"></span> ${forzar ? 'Resincronizando todo...' : 'Sincronizando...'}`;
         }
 
         try {
-            const res = await fetch('/api/combustible/sincronizar-remoto', { method: 'POST' });
+            const url = forzar ? '/api/combustible/sincronizar-remoto?forzar=true' : '/api/combustible/sincronizar-remoto';
+            const res = await fetch(url, { method: 'POST' });
             const data = await res.json();
             if (data.ok) {
-                alert(`✅ ${data.mensaje || 'Sincronización completada exitosamente.'}`);
+                alert(`✅ ${data.mensaje || (forzar ? 'Resincronización completa finalizada.' : 'Sincronización completada exitosamente.')}`);
                 window._cvCargarCatalogos();
                 window.cvCargarDatos(1);
             } else {

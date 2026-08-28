@@ -143,9 +143,27 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <button id="cv-btn-sync-remoto" class="btn btn-sm rounded-2 px-3 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-white" style="background:#4f46e5;" onclick="window.cvSincronizarRemoto()">
-                    <i class="bi bi-cloud-arrow-down-fill"></i> Sincronizar MarsisaSoft
-                </button>
+                <div class="btn-group shadow-sm">
+                    <button id="cv-btn-sync-remoto" class="btn btn-sm rounded-start-2 px-3 fw-bold text-white d-flex align-items-center gap-1.5" style="background:#4f46e5;" onclick="window.cvSincronizarRemoto(false)">
+                        <i class="bi bi-cloud-arrow-down-fill"></i> Sincronizar MarsisaSoft
+                    </button>
+                    <button type="button" class="btn btn-sm dropdown-toggle dropdown-toggle-split text-white px-2" style="background:#4338ca;" data-bs-toggle="dropdown" aria-expanded="false" title="Más opciones de sincronización">
+                        <span class="visually-hidden">Opciones</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 p-1" style="font-size:0.82rem;">
+                        <li>
+                            <a class="dropdown-item py-2 rounded-2" href="javascript:void(0)" onclick="window.cvSincronizarRemoto(false)">
+                                <i class="bi bi-cloud-arrow-down text-primary me-1.5"></i> Sincronizar Nuevos Vales
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <a class="dropdown-item py-2 rounded-2 text-danger fw-semibold" href="javascript:void(0)" onclick="if(confirm('¿Desea limpiar y volver a descargar todos los vales con sus pesos actualizados desde el servidor remoto?')) window.cvSincronizarRemoto(true)">
+                                <i class="bi bi-arrow-clockwise me-1.5"></i> Forzar Resincronización Completa
+                            </a>
+                        </li>
+                    </ul>
+                </div>
                 <button class="btn btn-warning btn-sm rounded-2 px-3.5 fw-bold shadow-sm text-white d-flex align-items-center gap-1.5" style="background:#f59e0b; border-color:#d97706;" onclick="window.cvAbrirModalNuevo()">
                     <i class="bi bi-plus-lg"></i> + Nuevo
                 </button>
