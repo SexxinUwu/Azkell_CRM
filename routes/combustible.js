@@ -1016,97 +1016,83 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ============================================================
-    // 13. 🛰️ CONSULTAR TELEMETRÍA E INFORME 25 DE WIALON POR VIAJE / INTERVALO
+    // 🛰️ GESTOR DE SESIÓN Y TELEMETRÍA CAN BUS WIALON (ALTO RENDIMIENTO)
     // ============================================================
-    router.get('/wialon-telemetria', async (req, res) => {
-        try {
-            const { placa, fechaInicio, fechaFin } = req.query;
-            if (!placa || !fechaInicio || !fechaFin) {
-                return res.status(400).json({ ok: false, error: 'Parámetros requeridos: placa, fechaInicio, fechaFin' });
+    // 🛰️ GESTOR DE SESIÓN Y TELEMETRÍA CAN BUS WIALON (ALTO RENDIMIENTO)
+    // ============================================================
+    let _wialonCache = {
+        sid: null,
+        token: null,
+        baseUrl: null,
+        expiresAt: 0,
+        unitsMap: new Map(), // cleanPlaca -> unit
+        targetResourceId: null,
+        targetTemplateId: null,
+        templateName: ''
+    };
+
+    async function getWialonContext(dbLocal) {
+        const [intgRows] = await dbLocal.promise().query(
+            "SELECT clave, valor FROM integraciones_api WHERE clave IN ('wialon_token', 'wialon_url')"
+        );
+
+        let token = '';
+        let baseUrl = 'https://hst-api.wialon.us/wialon/ajax.html';
+        intgRows.forEach(r => {
+            if (r.clave === 'wialon_token') token = (r.valor || '').trim();
+            if (r.clave === 'wialon_url' && r.valor) baseUrl = r.valor.trim();
+        });
+
+        if (!token) throw new Error('Token Wialon no configurado en Sistema → Integraciones');
+
+        const now = Date.now();
+        // Reutilizar sesión activa si es del mismo token y no ha expirado (10 min TTL)
+        if (_wialonCache.sid && _wialonCache.token === token && _wialonCache.baseUrl === baseUrl && now < _wialonCache.expiresAt) {
+            return { sid: _wialonCache.sid, baseUrl, cache: _wialonCache };
+        }
+
+        // 1. Iniciar Sesión en Wialon
+        const loginRes = await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({ token }))}`);
+        const loginData = await loginRes.json();
+        if (!loginData.eid) {
+            throw new Error('Error autenticando con Wialon. Verifica el token en Integraciones.');
+        }
+        const sid = loginData.eid;
+
+        // 2. Precargar Recursos y Plantilla "3.2.1 Informe: Viajes - Unidad CAN"
+        const resParams = {
+            spec: { itemsType: "avl_resource", propName: "sys_name", propValueMask: "*", sortType: "sys_name" },
+            force: 1, flags: 8193, from: 0, to: 0
+        };
+        const resRes = await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(resParams))}&sid=${sid}`);
+        const resData = await resRes.json();
+
+        let targetResourceId = null;
+        let targetTemplateId = null;
+        let templateName = '';
+
+        if (resData.items) {
+            for (const r of resData.items) {
+                if (r.rep) {
+                    for (const rep of Object.values(r.rep)) {
+                        const n = (rep.n || '').toLowerCase();
+                        if (n.includes('3.2.1') || n.includes('viajes - unidad can')) {
+                            targetResourceId = r.id;
+                            targetTemplateId = rep.id;
+                            templateName = rep.n;
+                            break;
+                        }
+                    }
+                }
+                if (targetResourceId && targetTemplateId) break;
             }
 
-            const dbLocal = req.db;
-            const [intgRows] = await dbLocal.promise().query(
-                "SELECT clave, valor FROM integraciones_api WHERE clave IN ('wialon_token', 'wialon_url')"
-            );
-
-            let token = '';
-            let baseUrl = 'https://hst-api.wialon.us/wialon/ajax.html';
-            intgRows.forEach(r => {
-                if (r.clave === 'wialon_token') token = (r.valor || '').trim();
-                if (r.clave === 'wialon_url' && r.valor) baseUrl = r.valor.trim();
-            });
-
-            if (!token) {
-                return res.json({ ok: false, error: 'Token Wialon no configurado en Sistema → Integraciones' });
-            }
-
-            // 1. Iniciar Sesión en Wialon
-            const loginRes = await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({ token }))}`);
-            const loginData = await loginRes.json();
-            if (!loginData.eid) {
-                return res.json({ ok: false, error: 'Error autenticando con Wialon. Verifica el token en Integraciones.' });
-            }
-            const sid = loginData.eid;
-
-            // 2. Buscar ID de la unidad por Placa (soporta placas con guión o sufijos como 'BTJ985 - CHOFER')
-            const cleanPlaca = String(placa).replace(/[^A-Z0-9]/gi, '').toUpperCase();
-            const unitParams = {
-                spec: {
-                    itemsType: "avl_unit",
-                    propName: "sys_name",
-                    propValueMask: `*${cleanPlaca}*`,
-                    sortType: "sys_name"
-                },
-                force: 1,
-                flags: 1,
-                from: 0,
-                to: 10
-            };
-            const unitRes = await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(unitParams))}&sid=${sid}`);
-            const unitData = await unitRes.json();
-            
-            // Buscar coincidencia exacta o que contenga la placa
-            let unit = null;
-            if (unitData.items && unitData.items.length > 0) {
-                unit = unitData.items.find(u => {
-                    const uPlaca = String(u.nm || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
-                    return uPlaca.includes(cleanPlaca);
-                }) || unitData.items[0];
-            }
-
-            if (!unit) {
-                await fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
-                return res.json({ ok: true, data: null, message: `Unidad con placa ${cleanPlaca} no encontrada en Wialon.` });
-            }
-
-            // 3. Buscar Recursos y Plantilla "3.2.1 Informe: Viajes - Unidad CAN" (con fallback a Informe 25)
-            const resParams = {
-                spec: {
-                    itemsType: "avl_resource",
-                    propName: "sys_name",
-                    propValueMask: "*",
-                    sortType: "sys_name"
-                },
-                force: 1,
-                flags: 8193,
-                from: 0,
-                to: 0
-            };
-            const resRes = await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(resParams))}&sid=${sid}`);
-            const resData = await resRes.json();
-
-            let targetResourceId = null;
-            let targetTemplateId = null;
-            let templateName = '';
-
-            if (resData.items) {
-                // Prioridad 1: Buscar Plantilla 3.2.1 CAN
+            if (!targetResourceId || !targetTemplateId) {
                 for (const r of resData.items) {
                     if (r.rep) {
                         for (const rep of Object.values(r.rep)) {
                             const n = (rep.n || '').toLowerCase();
-                            if (n.includes('3.2.1') || n.includes('viajes - unidad can')) {
+                            if (n.includes('25') || n.includes('informe de combustible')) {
                                 targetResourceId = r.id;
                                 targetTemplateId = rep.id;
                                 templateName = rep.n;
@@ -1116,191 +1102,262 @@ module.exports = function (db, broadcast, logAudit) {
                     }
                     if (targetResourceId && targetTemplateId) break;
                 }
-
-                // Fallback: Si no existe 3.2.1, buscar Informe 25
-                if (!targetResourceId || !targetTemplateId) {
-                    for (const r of resData.items) {
-                        if (r.rep) {
-                            for (const rep of Object.values(r.rep)) {
-                                const n = (rep.n || '').toLowerCase();
-                                if (n.includes('25') || n.includes('informe de combustible')) {
-                                    targetResourceId = r.id;
-                                    targetTemplateId = rep.id;
-                                    templateName = rep.n;
-                                    break;
-                                }
-                            }
-                        }
-                        if (targetResourceId && targetTemplateId) break;
-                    }
-                }
             }
+        }
 
-            if (!targetResourceId || !targetTemplateId) {
-                await fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
-                return res.json({ ok: false, error: 'No se encontró la plantilla de Informe 3.2.1 CAN ni Informe 25 en Wialon.' });
-            }
+        // 3. Precargar Unidades (avl_unit)
+        const unitsParams = {
+            spec: { itemsType: "avl_unit", propName: "sys_name", propValueMask: "*", sortType: "sys_name" },
+            force: 1, flags: 1, from: 0, to: 0
+        };
+        const unitsRes = await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(unitsParams))}&sid=${sid}`);
+        const unitsData = await unitsRes.json();
+        const unitsMap = new Map();
 
-            // 4. Convertir fechaInicio y fechaFin a UNIX Timestamps (Hora Perú UTC-5)
-            const parseToUnix = (dateStr) => {
-                if (!dateStr || dateStr === 'N/D') return null;
-                const cleanStr = String(dateStr).trim();
-                const d = new Date(cleanStr.replace(' ', 'T') + (cleanStr.includes('T') || cleanStr.length <= 10 ? '' : '-05:00'));
-                if (isNaN(d.getTime())) return null;
-                d.setSeconds(0, 0);
-                return Math.floor(d.getTime() / 1000);
-            };
-
-            const fromUnix = parseToUnix(fechaInicio);
-            const toUnix = parseToUnix(fechaFin);
-
-            if (!fromUnix || !toUnix || toUnix <= fromUnix) {
-                await fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
-                return res.json({ ok: false, error: 'Rango de fechas inválido para el viaje' });
-            }
-
-            // 5. Ejecutar Informe 3.2.1 CAN
-            const execParams = {
-                reportResourceId: targetResourceId,
-                reportTemplateId: targetTemplateId,
-                reportObjectId: unit.id,
-                reportObjectSecId: 0,
-                interval: { from: fromUnix, to: toUnix, flags: 0 }
-            };
-
-            const execRes = await fetch(`${baseUrl}?svc=report/exec_report&params=${encodeURIComponent(JSON.stringify(execParams))}&sid=${sid}`);
-            const execData = await execRes.json();
-
-            let recorridoKmGps = null;
-            let combustibleConsumidoGps = null;
-            let rendimientoGps = null;
-            let velocidadMaxGps = null;
-            let rpmMediaGps = null;
-            let rpmMediaMaxGps = null;
-            let rpmMaxGps = null;
-            let rpmMaxMaxGps = null;
-            let horasMotorGps = null;
-            let consumoRalentiGps = null;
-
-            const cleanNum = (str) => {
-                if (!str) return null;
-                const match = String(str).replace(/,/g, '').match(/[-+]?[0-9]*\.?[0-9]+/);
-                return match ? parseFloat(match[0]) : null;
-            };
-
-            // Extraer desde las tablas resultantes del informe 3.2.1 CAN (unit_trips)
-            if (execData.reportResult && Array.isArray(execData.reportResult.tables)) {
-                execData.reportResult.tables.forEach(tbl => {
-                    if (Array.isArray(tbl.header) && Array.isArray(tbl.total)) {
-                        tbl.header.forEach((h, hIdx) => {
-                            const headerRaw = String(h || '').trim();
-                            const headerLower = headerRaw.toLowerCase();
-                            const valStr = tbl.total[hIdx];
-
-                            // Descartar explícitamente kilometraje inicial y final
-                            const esKmInicial = headerLower.includes('inicial') || headerLower.includes('initial') || headerLower.includes('inicio');
-                            const esKmFinal = headerLower.includes('final');
-
-                            if (!esKmInicial && !esKmFinal) {
-                                if (headerLower === 'kilometraje' || headerLower === 'kilometraje en viajes' || headerLower.includes('distancia') || headerLower.includes('recorrido')) {
-                                    const num = cleanNum(valStr);
-                                    if (num !== null) recorridoKmGps = num;
-                                }
-                            }
-
-                            if (headerLower.includes('consumo promedio en ralentí') || headerLower.includes('consumo promedio en ralenti') || headerLower.includes('idle')) {
-                                const num = cleanNum(valStr);
-                                if (num !== null && consumoRalentiGps === null) consumoRalentiGps = num;
-                            } else if (headerLower.includes('combustible consumido') || headerLower.includes('consumo')) {
-                                const num = cleanNum(valStr);
-                                if (num !== null && combustibleConsumidoGps === null) combustibleConsumidoGps = num;
-                            } else if (headerLower.includes('rendimiento') || headerLower.includes('km/gal')) {
-                                const num = cleanNum(valStr);
-                                if (num !== null && rendimientoGps === null) rendimientoGps = num;
-                            } else if (headerLower.includes('velocidad máxima') || headerLower.includes('velocidad maxima') || headerLower.includes('max speed')) {
-                                const num = cleanNum(valStr);
-                                if (num !== null && velocidadMaxGps === null) velocidadMaxGps = num;
-                            } else if (headerRaw.includes('RPM Media (RPM)') || (headerLower.includes('rpm media') && !headerLower.includes('máxima rpm') && !headerLower.includes('maxima rpm'))) {
-                                const num = cleanNum(valStr);
-                                if (num !== null && rpmMediaGps === null) rpmMediaGps = num;
-                            } else if (headerRaw.includes('RPM Media (Máxima RPM)') || headerRaw.includes('RPM Media (Maxima RPM)')) {
-                                const num = cleanNum(valStr);
-                                if (num !== null && rpmMediaMaxGps === null) rpmMediaMaxGps = num;
-                            } else if (headerRaw.includes('RPM Máxima (RPM)') || headerRaw.includes('RPM Maxima (RPM)')) {
-                                const num = cleanNum(valStr);
-                                if (num !== null && rpmMaxGps === null) rpmMaxGps = num;
-                            } else if (headerRaw.includes('RPM Máxima (Máxima RPM)') || headerRaw.includes('RPM Maxima (Maxima RPM)')) {
-                                const num = cleanNum(valStr);
-                                if (num !== null && rpmMaxMaxGps === null) rpmMaxMaxGps = num;
-                            } else if (headerLower.includes('horas de motor') || headerLower.includes('horas motor') || headerLower.includes('duración del viaje') || headerLower.includes('duracion')) {
-                                if (valStr && horasMotorGps === null) {
-                                    horasMotorGps = String(valStr).trim();
-                                }
-                            }
-                        });
-                    }
-                });
-            }
-
-            // Si aún faltó algún dato, extraer de las estadísticas globales (stats) excluyendo "Contador"
-            if (execData.reportResult && Array.isArray(execData.reportResult.stats)) {
-                execData.reportResult.stats.forEach(([key, val]) => {
-                    const k = String(key || '').toLowerCase().trim();
-                    const esContador = k.includes('contador') || k.includes('counter');
-                    const esInicial = k.includes('inicial') || k.includes('initial');
-                    const esFinal = k.includes('final');
-
-                    if (!esContador && !esInicial && !esFinal) {
-                        if ((k.includes('kilometraje en viajes') || k.includes('mileage in trips') || k.includes('distancia') || k === 'kilometraje') && recorridoKmGps === null) {
-                            recorridoKmGps = cleanNum(val);
-                        }
-                    }
-
-                    if ((k.includes('fuel consumed') || k.includes('combustible consumido')) && combustibleConsumidoGps === null) {
-                        combustibleConsumidoGps = cleanNum(val);
-                    } else if ((k.includes('rendimiento') || k.includes('avg. fuel consumption')) && rendimientoGps === null) {
-                        rendimientoGps = cleanNum(val);
-                    } else if ((k.includes('max speed') || k.includes('velocidad máxima') || k.includes('velocidad maxima')) && velocidadMaxGps === null) {
-                        velocidadMaxGps = cleanNum(val);
-                    } else if ((k.includes('engine hours') || k.includes('horas de motor') || k.includes('horas motor')) && horasMotorGps === null) {
-                        horasMotorGps = String(val).trim();
-                    } else if ((k.includes('idle') || k.includes('ralentí') || k.includes('ralenti')) && consumoRalentiGps === null) {
-                        consumoRalentiGps = cleanNum(val);
-                    }
-                });
-            }
-
-            // Calcular rendimiento si tenemos recorrido y combustible consumido
-            if (rendimientoGps === null && recorridoKmGps > 0 && combustibleConsumidoGps > 0) {
-                rendimientoGps = Math.round((recorridoKmGps / combustibleConsumidoGps) * 100) / 100;
-            }
-
-            // 6. Limpiar y Cerrar Sesión
-            await fetch(`${baseUrl}?svc=report/cleanup_result&params=%7B%7D&sid=${sid}`).catch(() => {});
-            await fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
-
-            res.json({
-                ok: true,
-                data: {
-                    placa: cleanPlaca,
-                    unitName: unit.nm,
-                    plantilla: templateName,
-                    recorridoKmGps,
-                    combustibleConsumidoGps,
-                    rendimientoGps,
-                    velocidadMaxGps,
-                    rpmMediaGps,
-                    rpmMediaMaxGps,
-                    rpmMaxGps,
-                    rpmMaxMaxGps,
-                    horasMotorGps,
-                    consumoRalentiGps
+        if (unitsData.items) {
+            unitsData.items.forEach(u => {
+                const rawName = String(u.nm || '').toUpperCase();
+                const clean = rawName.replace(/[^A-Z0-9]/gi, '');
+                unitsMap.set(clean, u);
+                const m = rawName.match(/([A-Z0-9]{3}-?[A-Z0-9]{3})/i);
+                if (m) {
+                    unitsMap.set(m[1].replace(/[^A-Z0-9]/gi, ''), u);
                 }
             });
+        }
 
+        _wialonCache = {
+            sid,
+            token,
+            baseUrl,
+            expiresAt: now + (10 * 60 * 1000), // 10 min
+            unitsMap,
+            targetResourceId,
+            targetTemplateId,
+            templateName
+        };
+
+        return { sid, baseUrl, cache: _wialonCache };
+    }
+
+    async function consultarTelemetriaViajeWialon(baseUrl, sid, cache, placa, fechaInicio, fechaFin) {
+        const cleanPlaca = String(placa).replace(/[^A-Z0-9]/gi, '').toUpperCase();
+        let unit = cache.unitsMap.get(cleanPlaca);
+
+        if (!unit) {
+            for (const [k, u] of cache.unitsMap.entries()) {
+                if (k.includes(cleanPlaca) || cleanPlaca.includes(k)) {
+                    unit = u;
+                    break;
+                }
+            }
+        }
+
+        if (!unit) return null;
+
+        const parseToUnix = (dateStr) => {
+            if (!dateStr || dateStr === 'N/D') return null;
+            const cleanStr = String(dateStr).trim();
+            const d = new Date(cleanStr.replace(' ', 'T') + (cleanStr.includes('T') || cleanStr.length <= 10 ? '' : '-05:00'));
+            if (isNaN(d.getTime())) return null;
+            d.setSeconds(0, 0);
+            return Math.floor(d.getTime() / 1000);
+        };
+
+        const fromUnix = parseToUnix(fechaInicio);
+        const toUnix = parseToUnix(fechaFin);
+        if (!fromUnix || !toUnix || toUnix <= fromUnix) return null;
+
+        const execParams = {
+            reportResourceId: cache.targetResourceId,
+            reportTemplateId: cache.targetTemplateId,
+            reportObjectId: unit.id,
+            reportObjectSecId: 0,
+            interval: { from: fromUnix, to: toUnix, flags: 0 }
+        };
+
+        const execRes = await fetch(`${baseUrl}?svc=report/exec_report&params=${encodeURIComponent(JSON.stringify(execParams))}&sid=${sid}`);
+        const execData = await execRes.json();
+
+        let recorridoKmGps = null;
+        let combustibleConsumidoGps = null;
+        let rendimientoGps = null;
+        let velocidadMaxGps = null;
+        let rpmMediaGps = null;
+        let rpmMediaMaxGps = null;
+        let rpmMaxGps = null;
+        let rpmMaxMaxGps = null;
+        let horasMotorGps = null;
+        let consumoRalentiGps = null;
+
+        const cleanNum = (str) => {
+            if (!str) return null;
+            const match = String(str).replace(/,/g, '').match(/[-+]?[0-9]*\.?[0-9]+/);
+            return match ? parseFloat(match[0]) : null;
+        };
+
+        if (execData.reportResult && Array.isArray(execData.reportResult.tables)) {
+            execData.reportResult.tables.forEach(tbl => {
+                if (Array.isArray(tbl.header) && Array.isArray(tbl.total)) {
+                    tbl.header.forEach((h, hIdx) => {
+                        const headerRaw = String(h || '').trim();
+                        const headerLower = headerRaw.toLowerCase();
+                        const valStr = tbl.total[hIdx];
+
+                        const esKmInicial = headerLower.includes('inicial') || headerLower.includes('initial') || headerLower.includes('inicio');
+                        const esKmFinal = headerLower.includes('final');
+
+                        if (!esKmInicial && !esKmFinal) {
+                            if (headerLower === 'kilometraje' || headerLower === 'kilometraje en viajes' || headerLower.includes('distancia') || headerLower.includes('recorrido')) {
+                                const num = cleanNum(valStr);
+                                if (num !== null) recorridoKmGps = num;
+                            }
+                        }
+
+                        if (headerLower.includes('consumo promedio en ralentí') || headerLower.includes('consumo promedio en ralenti') || headerLower.includes('idle')) {
+                            const num = cleanNum(valStr);
+                            if (num !== null && consumoRalentiGps === null) consumoRalentiGps = num;
+                        } else if (headerLower.includes('combustible consumido') || headerLower.includes('consumo')) {
+                            const num = cleanNum(valStr);
+                            if (num !== null && combustibleConsumidoGps === null) combustibleConsumidoGps = num;
+                        } else if (headerLower.includes('rendimiento') || headerLower.includes('km/gal')) {
+                            const num = cleanNum(valStr);
+                            if (num !== null && rendimientoGps === null) rendimientoGps = num;
+                        } else if (headerLower.includes('velocidad máxima') || headerLower.includes('velocidad maxima') || headerLower.includes('max speed')) {
+                            const num = cleanNum(valStr);
+                            if (num !== null && velocidadMaxGps === null) velocidadMaxGps = num;
+                        } else if (headerRaw.includes('RPM Media (RPM)') || (headerLower.includes('rpm media') && !headerLower.includes('máxima rpm') && !headerLower.includes('maxima rpm'))) {
+                            const num = cleanNum(valStr);
+                            if (num !== null && rpmMediaGps === null) rpmMediaGps = num;
+                        } else if (headerRaw.includes('RPM Media (Máxima RPM)') || headerRaw.includes('RPM Media (Maxima RPM)')) {
+                            const num = cleanNum(valStr);
+                            if (num !== null && rpmMediaMaxGps === null) rpmMediaMaxGps = num;
+                        } else if (headerRaw.includes('RPM Máxima (RPM)') || headerRaw.includes('RPM Maxima (RPM)')) {
+                            const num = cleanNum(valStr);
+                            if (num !== null && rpmMaxGps === null) rpmMaxGps = num;
+                        } else if (headerRaw.includes('RPM Máxima (Máxima RPM)') || headerRaw.includes('RPM Maxima (Maxima RPM)')) {
+                            const num = cleanNum(valStr);
+                            if (num !== null && rpmMaxMaxGps === null) rpmMaxMaxGps = num;
+                        } else if (headerLower.includes('horas de motor') || headerLower.includes('horas motor') || headerLower.includes('duración del viaje') || headerLower.includes('duracion')) {
+                            if (valStr && horasMotorGps === null) horasMotorGps = String(valStr).trim();
+                        }
+                    });
+                }
+            });
+        }
+
+        if (execData.reportResult && Array.isArray(execData.reportResult.stats)) {
+            execData.reportResult.stats.forEach(([key, val]) => {
+                const k = String(key || '').toLowerCase().trim();
+                const esContador = k.includes('contador') || k.includes('counter');
+                const esInicial = k.includes('inicial') || k.includes('initial');
+                const esFinal = k.includes('final');
+
+                if (!esContador && !esInicial && !esFinal) {
+                    if ((k.includes('kilometraje en viajes') || k.includes('mileage in trips') || k.includes('distancia') || k === 'kilometraje') && recorridoKmGps === null) {
+                        recorridoKmGps = cleanNum(val);
+                    }
+                }
+
+                if ((k.includes('fuel consumed') || k.includes('combustible consumido')) && combustibleConsumidoGps === null) {
+                    combustibleConsumidoGps = cleanNum(val);
+                } else if ((k.includes('rendimiento') || k.includes('avg. fuel consumption')) && rendimientoGps === null) {
+                    rendimientoGps = cleanNum(val);
+                } else if ((k.includes('max speed') || k.includes('velocidad máxima') || k.includes('velocidad maxima')) && velocidadMaxGps === null) {
+                    velocidadMaxGps = cleanNum(val);
+                } else if ((k.includes('engine hours') || k.includes('horas de motor') || k.includes('horas motor')) && horasMotorGps === null) {
+                    horasMotorGps = String(val).trim();
+                } else if ((k.includes('idle') || k.includes('ralentí') || k.includes('ralenti')) && consumoRalentiGps === null) {
+                    consumoRalentiGps = cleanNum(val);
+                }
+            });
+        }
+
+        if (rendimientoGps === null && recorridoKmGps > 0 && combustibleConsumidoGps > 0) {
+            rendimientoGps = Math.round((recorridoKmGps / combustibleConsumidoGps) * 100) / 100;
+        }
+
+        // Limpiar el reporte ejecutado
+        await fetch(`${baseUrl}?svc=report/cleanup_result&params=%7B%7D&sid=${sid}`).catch(() => {});
+
+        return {
+            placa: cleanPlaca,
+            unitName: unit.nm,
+            plantilla: cache.templateName,
+            recorridoKmGps,
+            combustibleConsumidoGps,
+            rendimientoGps,
+            velocidadMaxGps,
+            rpmMediaGps,
+            rpmMediaMaxGps,
+            rpmMaxGps,
+            rpmMaxMaxGps,
+            horasMotorGps,
+            consumoRalentiGps
+        };
+    }
+
+    // ── GET /api/combustible/wialon-telemetria (Individual Rápido con Cache) ────
+    router.get('/wialon-telemetria', async (req, res) => {
+        try {
+            const { placa, fechaInicio, fechaFin } = req.query;
+            if (!placa || !fechaInicio || !fechaFin) {
+                return res.status(400).json({ ok: false, error: 'Parámetros requeridos: placa, fechaInicio, fechaFin' });
+            }
+
+            const dbLocal = req.db;
+            const { sid, baseUrl, cache } = await getWialonContext(dbLocal);
+
+            if (!cache.targetResourceId || !cache.targetTemplateId) {
+                return res.json({ ok: false, error: 'No se encontró la plantilla de telemetría CAN en Wialon' });
+            }
+
+            const data = await consultarTelemetriaViajeWialon(baseUrl, sid, cache, placa, fechaInicio, fechaFin);
+            res.json({ ok: true, data });
         } catch (err) {
-            console.error("Error consultando telemetría Wialon:", err);
-            res.status(500).json({ ok: false, error: err.message });
+            console.error('Error en wialon-telemetria:', err);
+            res.json({ ok: false, error: err.message });
+        }
+    });
+
+    // ── POST /api/combustible/wialon-telemetria-batch (Masivo en Paralelo) ──────
+    router.post('/wialon-telemetria-batch', async (req, res) => {
+        try {
+            const { trips } = req.body;
+            if (!Array.isArray(trips) || trips.length === 0) {
+                return res.json({ ok: true, results: [] });
+            }
+
+            const dbLocal = req.db;
+            const { sid, baseUrl, cache } = await getWialonContext(dbLocal);
+
+            if (!cache.targetResourceId || !cache.targetTemplateId) {
+                return res.json({ ok: false, error: 'No se encontró la plantilla de telemetría CAN en Wialon' });
+            }
+
+            // Ejecutar en tandas paralelas concurrentes de 6 viajes a la vez
+            const CONCURRENCY = 6;
+            const results = [];
+
+            for (let i = 0; i < trips.length; i += CONCURRENCY) {
+                const chunk = trips.slice(i, i + CONCURRENCY);
+                const chunkPromises = chunk.map(async (t) => {
+                    try {
+                        const data = await consultarTelemetriaViajeWialon(baseUrl, sid, cache, t.placa, t.fechaInicio, t.fechaFin);
+                        return { id: t.id || t.viaje || t.index, placa: t.placa, data };
+                    } catch (err) {
+                        return { id: t.id || t.viaje || t.index, placa: t.placa, data: null, error: err.message };
+                    }
+                });
+
+                const chunkResults = await Promise.all(chunkPromises);
+                results.push(...chunkResults);
+            }
+
+            res.json({ ok: true, results });
+        } catch (err) {
+            console.error('Error en wialon-telemetria-batch:', err);
+            res.json({ ok: false, error: err.message });
         }
     });
 
