@@ -558,5 +558,156 @@ module.exports = (db, logAudit) => {
         });
     });
 
+    // ════════════════════════════════════════════════════════════════
+    // STATUS "UNIDADES EN BASE"
+    // ════════════════════════════════════════════════════════════════
+
+    // ── Catálogo de Placas para Combos de Selección ───────────────
+    router.get('/seguridad/unidades-base/catalogo-placas', (req, res) => {
+        const sql = `
+            SELECT DISTINCT placa, marca, tipo, tipo_unidad, motora 
+            FROM placas 
+            ORDER BY placa ASC
+        `;
+        db.query(sql, (err, rows) => {
+            if (err) {
+                // Si la tabla placas no tiene alguna columna, fallback simple
+                return db.query('SELECT placa FROM vehiculos_flota ORDER BY placa ASC', (e2, r2) => {
+                    if (e2) return res.json({ tractos: [], carretas: [], todas: [] });
+                    const todas = (r2 || []).map(p => p.placa);
+                    res.json({ tractos: todas, carretas: todas, todas });
+                });
+            }
+
+            const tractos = [];
+            const carretas = [];
+            const todas = [];
+
+            (rows || []).forEach(r => {
+                const p = r.placa;
+                if (!p) return;
+                todas.push({ placa: p, marca: r.marca || '', tipo: r.tipo || r.tipo_unidad || '' });
+
+                const tipo = (r.tipo || r.tipo_unidad || '').toUpperCase();
+                const motora = String(r.motora || '').toUpperCase();
+
+                if (motora === 'NO' || tipo.includes('REMOLQUE') || tipo.includes('CARRETA') || tipo.includes('FURGON') || tipo.includes('CISTERNA') || tipo.includes('SEMI')) {
+                    carretas.push({ placa: p, marca: r.marca || '', tipo: r.tipo || r.tipo_unidad || '' });
+                } else {
+                    tractos.push({ placa: p, marca: r.marca || '', tipo: r.tipo || r.tipo_unidad || '' });
+                }
+            });
+
+            res.json({ tractos, carretas, todas });
+        });
+    });
+
+    // ── Listar Unidades en Base (Con Filtros por Fecha, Corte y Búsqueda) ──
+    router.get('/seguridad/unidades-base', (req, res) => {
+        let sql = 'SELECT * FROM seg_unidades_base WHERE 1=1';
+        const params = [];
+
+        if (req.query.fecha) {
+            sql += ' AND fecha = ?';
+            params.push(req.query.fecha);
+        }
+
+        if (req.query.corte && req.query.corte !== 'ALL') {
+            sql += ' AND corte = ?';
+            params.push(req.query.corte);
+        }
+
+        if (req.query.estado && req.query.estado !== 'ALL') {
+            sql += ' AND estado = ?';
+            params.push(req.query.estado);
+        }
+
+        if (req.query.search) {
+            const s = `%${req.query.search.trim()}%`;
+            sql += ' AND (placa_camion LIKE ? OR placa_carreta LIKE ? OR zona LIKE ? OR observacion LIKE ?)';
+            params.push(s, s, s, s);
+        }
+
+        sql += ' ORDER BY id DESC';
+
+        db.query(sql, params, (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, data: rows || [] });
+        });
+    });
+
+    // ── Crear Registro de Unidad en Base ──────────────────────────
+    router.post('/seguridad/unidades-base', (req, res) => {
+        const { fecha, corte, placa_camion, placa_carreta, zona, estado, observacion } = req.body;
+        if (!fecha || !corte || !placa_camion) {
+            return res.status(400).json({ error: 'Fecha, Corte y Placa Camión son obligatorios.' });
+        }
+
+        const usuario = (req.user && (req.user.nombre || req.user.usuario)) || req.body.usuario || 'Seguridad';
+
+        const sql = `
+            INSERT INTO seg_unidades_base 
+            (fecha, corte, placa_camion, placa_carreta, zona, estado, observacion, usuario)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const params = [
+            fecha,
+            corte,
+            placa_camion.trim().toUpperCase(),
+            (placa_carreta || '').trim().toUpperCase() || null,
+            (zona || 'Base Central').trim(),
+            (estado || 'Disponible').trim(),
+            (observacion || '').trim() || null,
+            usuario
+        ];
+
+        db.query(sql, params, (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id: result.insertId, message: 'Registro guardado exitosamente.' });
+        });
+    });
+
+    // ── Actualizar Registro de Unidad en Base ─────────────────────
+    router.put('/seguridad/unidades-base/:id', (req, res) => {
+        const id = req.params.id;
+        const { fecha, corte, placa_camion, placa_carreta, zona, estado, observacion } = req.body;
+        if (!fecha || !corte || !placa_camion) {
+            return res.status(400).json({ error: 'Fecha, Corte y Placa Camión son obligatorios.' });
+        }
+
+        const usuario = (req.user && (req.user.nombre || req.user.usuario)) || req.body.usuario || 'Seguridad';
+
+        const sql = `
+            UPDATE seg_unidades_base 
+            SET fecha = ?, corte = ?, placa_camion = ?, placa_carreta = ?, zona = ?, estado = ?, observacion = ?, usuario = ?
+            WHERE id = ?
+        `;
+        const params = [
+            fecha,
+            corte,
+            placa_camion.trim().toUpperCase(),
+            (placa_carreta || '').trim().toUpperCase() || null,
+            (zona || 'Base Central').trim(),
+            (estado || 'Disponible').trim(),
+            (observacion || '').trim() || null,
+            usuario,
+            id
+        ];
+
+        db.query(sql, params, (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, message: 'Registro actualizado exitosamente.' });
+        });
+    });
+
+    // ── Eliminar Registro de Unidad en Base ───────────────────────
+    router.delete('/seguridad/unidades-base/:id', (req, res) => {
+        const id = req.params.id;
+        db.query('DELETE FROM seg_unidades_base WHERE id = ?', [id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, message: 'Registro eliminado correctamente.' });
+        });
+    });
+
     return router;
 };
