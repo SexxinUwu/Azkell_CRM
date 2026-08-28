@@ -425,16 +425,38 @@
 
                     /* TABLA DE CONTENIDO */
                     .content-table { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 8px; font-size: 10px; }
-                    .content-table th { background-color: #444444; color: #ffffff; text-align: center; padding: 4px; border: 1px solid #000; font-weight: 700; font-size: 9.5px; text-transform: uppercase; }
+                    .content-table th { 
+                        background-color: #333333 !important; 
+                        -webkit-print-color-adjust: exact !important; 
+                        print-color-adjust: exact !important; 
+                        color: #ffffff !important; 
+                        text-align: center; 
+                        padding: 5px 4px; 
+                        border: 1px solid #000; 
+                        font-weight: 700; 
+                        font-size: 9.5px; 
+                        text-transform: uppercase; 
+                    }
                     .content-table td { border: 1px solid #000; padding: 4px 6px; vertical-align: middle; }
 
                     /* Footer */
                     .footer-box { margin-top: auto; border-top: 1px solid #000; padding-top: 6px; display: flex; justify-content: space-between; font-size: 9.5px; color: #333; }
 
                     @media print {
+                        * {
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                        }
                         body { background: #ffffff !important; padding: 0 !important; }
                         .btn-print-fixed { display: none !important; }
                         .page-a4 { width: 100% !important; min-height: auto !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
+                        .content-table th { 
+                            background-color: #333333 !important; 
+                            color: #ffffff !important; 
+                            -webkit-print-color-adjust: exact !important; 
+                            print-color-adjust: exact !important; 
+                        }
                         @page { size: A4 portrait; margin: 10mm; }
                     }
                 </style>
