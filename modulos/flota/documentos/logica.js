@@ -1829,6 +1829,7 @@ function volverListaMovil() {
 window.abrirDocModal = function(title, contentRows, est, docUrl, tipoDocKey) {
     window._lastDocTitle = title;
     window._lastDocTipo = tipoDocKey;
+    window._lastDocUrl = docUrl;
     document.getElementById('dm-title').innerText = title;
     
     let html = '';
@@ -1981,4 +1982,47 @@ window.procesarDocumento = function(docUrl, accion) {
         console.error('Error presigning document:', e);
         alert('Ocurrió un error al intentar acceder al documento.');
     });
+};
+
+window.confirmarEliminarDocActual = async function() {
+    const placa = currentPlaca;
+    const tipoDoc = window._lastDocTipo;
+    const title = window._lastDocTitle || 'este documento';
+    const urlS3 = window._lastDocUrl || '';
+
+    if (!placa || !tipoDoc) {
+        alert('No se pudo identificar el documento a eliminar.');
+        return;
+    }
+
+    if (!confirm(`¿Estás seguro de eliminar el registro de "${title}" para la placa ${placa}?\n\nEsta acción limpiará los datos del documento y eliminará el archivo digital asociado.`)) {
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token') || '';
+        const res = await fetch('/api/documentos-flota/eliminar-documento', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                placa: placa,
+                tipoDocKey: tipoDoc,
+                urlS3: urlS3
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+            throw new Error(data.error || 'Error al eliminar el documento');
+        }
+
+        cerrarDocModal();
+        cargarDatosVehiculos();
+    } catch (err) {
+        console.error('Error al eliminar documento:', err);
+        alert('Error al eliminar: ' + err.message);
+    }
 };
