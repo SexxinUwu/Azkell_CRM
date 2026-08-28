@@ -451,6 +451,9 @@
                         <i class="bi bi-geo-alt-fill text-danger me-1 small"></i>
                         <span class="fw-semibold text-dark">${esc(t.ruta)}</span>
                     </td>
+                    <td class="text-end font-monospace fw-bold text-dark">
+                        ${(t.pesoMaxTn !== undefined && t.pesoMaxTn > 0) ? `${t.pesoMaxTn.toLocaleString('es-PE', { minimumFractionDigits: 2 })} <span class="small text-muted font-sans" style="font-size:0.72rem;">Tn</span>` : '<span class="text-muted opacity-50">—</span>'}
+                    </td>
                     <td class="text-muted small">${esc(fInicio)}</td>
                     <td class="text-muted small">${esc(fFin)}</td>
                     
@@ -520,6 +523,7 @@
             tfoot.innerHTML = `
                 <tr style="background:#f8fafc; border-top: 2px solid #cbd5e1; font-weight: bold;">
                     <td class="ps-3 py-3 font-monospace fw-bolder text-dark" style="font-size:0.88rem;">TOTAL</td>
+                    <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
@@ -947,6 +951,7 @@
                 "N° VIAJE": t.numViaje || t.viaje || '---',
                 "PLACA": t.placa || '---',
                 "RUTA": t.ruta || '---',
+                "PESO (Tn)": (t.pesoMaxTn !== undefined && t.pesoMaxTn > 0) ? parseFloat(t.pesoMaxTn.toFixed(2)) : 0,
                 "FECHA INICIO": fInicio || '---',
                 "FECHA FIN": fFin || '---',
                 "KM INICIO (VALES)": kInicio > 0 ? parseFloat(kInicio.toFixed(1)) : '—',

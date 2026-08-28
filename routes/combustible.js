@@ -1046,7 +1046,9 @@ module.exports = function (db, broadcast, logAudit) {
                     const lastVCurrent = t.vouchers[t.vouchers.length - 1] || {};
                     const totalGal = t.vouchers.reduce((s, x) => s + x.galones, 0);
                     const totalCost = t.vouchers.reduce((s, x) => s + x.importe, 0);
-                    const maxPeso = Math.max(0, ...t.vouchers.map(x => x.peso));
+                    
+                    const maxPesoRaw = Math.max(0, ...t.vouchers.map(x => parseFloat(x.peso || 0)));
+                    const pesoCalculadoTn = maxPesoRaw > 50 ? parseFloat((maxPesoRaw / 1000).toFixed(2)) : parseFloat(maxPesoRaw.toFixed(2));
 
                     // Último vale del viaje actual (Cierre General)
                     const kmFin = lastVCurrent.odometro || 0;
@@ -1130,7 +1132,8 @@ module.exports = function (db, broadcast, logAudit) {
                         kmFin,
                         recorridoKm,
                         odometroInconsistente: (kmInicio > 0 && kmFin > 0 && kmFin < kmInicio),
-                        pesoMaxTn: maxPeso,
+                        pesoMaxTn: pesoCalculadoTn,
+                        pesoMaxKg: maxPesoRaw,
                         totalGalones: totalGal,
                         totalGasto: totalCost,
                         rendimiento,
