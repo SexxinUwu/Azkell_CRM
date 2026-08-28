@@ -37,6 +37,7 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'RRHH',          key:'rrhh_personal', nombre:'Gestión Personal', desc:'Legajos y contratos',          lcad:true  },
     { grupo:'RRHH',          key:'rrhh_asistencia',nombre:'Asistencia',      desc:'Tareo y control de asistencia', lcad:true  },
     { grupo:'RRHH',          key:'rrhh_nomina',   nombre:'Nómina y Pagos',   desc:'Gestión de pagos y nómina',     lcad:true  },
+    { grupo:'GERENCIA',      key:'gerencia_aprobaciones', nombre:'Aprobación de O/C', desc:'Autorizaciones y dictamen de compras', lcad:true },
     { grupo:'TESORERÍA',     key:'tesoreria_caja',nombre:'Caja Chica',       desc:'Gastos y rendiciones',          lcad:true  },
     { grupo:'TESORERÍA',     key:'tesoreria_flujo',nombre:'Flujo de Caja',   desc:'Ingresos y egresos proyectados',lcad:true  },
     { grupo:'TESORERÍA',     key:'tesoreria_cuentas',nombre:'Cuentas Cobrar/Pagar',desc:'Gestión de créditos y pagos',lcad:true},
@@ -322,6 +323,7 @@ function _guBuildRolPanel(rol) {
         'DIRECTORIO': 'bi-person-lines-fill text-danger',
         'OPERACIONES': 'bi-geo-alt text-primary',
         'RRHH': 'bi-people text-info',
+        'GERENCIA': 'bi-shield-shaded text-primary',
         'TESORERÍA': 'bi-cash-stack text-success',
         'SEGURIDAD': 'bi-shield-check text-danger',
         'CONFIGURACIÓN': 'bi-gear text-secondary'

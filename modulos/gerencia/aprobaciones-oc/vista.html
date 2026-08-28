@@ -1,0 +1,581 @@
+<!-- Módulo: Gerencia - Aprobación de Órdenes de Compra -->
+<style>
+#root-dinamico { padding: 0 !important; }
+.mod-wrap-gerencia-aprobaciones {
+    padding: 1.25rem 1.5rem;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: var(--text, #1e293b);
+}
+@media (max-width: 768px) {
+    .mod-wrap-gerencia-aprobaciones { padding: 0.75rem 0.75rem 90px 0.75rem; }
+}
+
+/* Bento Cards Header */
+.kpi-bento-card {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 1rem;
+    padding: 1.1rem 1.25rem;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+.kpi-bento-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+}
+.kpi-bento-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+}
+.kpi-bento-card.kpi-pend::before { background: #f59e0b; }
+.kpi-bento-card.kpi-aprob::before { background: #10b981; }
+.kpi-bento-card.kpi-obs::before { background: #6366f1; }
+.kpi-bento-card.kpi-rech::before { background: #ef4444; }
+
+/* Filter Tabs */
+.aprob-tabs-nav {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+.aprob-tab-btn {
+    border: 1px solid var(--border, #e2e8f0);
+    background: var(--surface, #ffffff);
+    color: var(--subtext, #64748b);
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.aprob-tab-btn:hover {
+    background: var(--hover, #f1f5f9);
+    color: var(--text, #0f172a);
+}
+.aprob-tab-btn.active {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+}
+.aprob-tab-btn .badge-pill {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.2);
+}
+.aprob-tab-btn:not(.active) .badge-pill {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+/* OC Card Item */
+.oc-approval-card {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 1.1rem;
+    padding: 1.25rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+.oc-approval-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.08);
+}
+.oc-approval-card.status-pendiente {
+    border-left: 5px solid #f59e0b;
+}
+.oc-approval-card.status-aprobado {
+    border-left: 5px solid #10b981;
+    background: linear-gradient(to right, rgba(16, 185, 129, 0.02), var(--surface, #ffffff));
+}
+.oc-approval-card.status-observado {
+    border-left: 5px solid #6366f1;
+}
+.oc-approval-card.status-rechazado {
+    border-left: 5px solid #ef4444;
+    opacity: 0.85;
+}
+
+/* Pulse animation for Urgent badge */
+@keyframes pulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+.badge-urgente-pulse {
+    animation: pulseGlow 2s infinite;
+}
+
+/* Table Style */
+.table-aprobaciones th {
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #64748b;
+    background: #f8fafc;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.table-aprobaciones td {
+    padding: 1rem;
+    vertical-align: middle;
+    font-size: 0.84rem;
+    border-bottom: 1px solid var(--border, #f1f5f9);
+}
+
+/* Quick Action Buttons */
+.btn-action-approve {
+    background: #10b981;
+    color: white;
+    border: none;
+    font-weight: 600;
+    transition: all 0.15s;
+}
+.btn-action-approve:hover {
+    background: #059669;
+    color: white;
+    transform: scale(1.02);
+}
+.btn-action-reject {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    font-weight: 600;
+}
+.btn-action-reject:hover {
+    background: #fecaca;
+    color: #991b1b;
+}
+.btn-action-obs {
+    background: #e0e7ff;
+    color: #4338ca;
+    border: 1px solid #c7d2fe;
+    font-weight: 600;
+}
+.btn-action-obs:hover {
+    background: #c7d2fe;
+    color: #3730a3;
+}
+</style>
+
+<div class="mod-wrap-gerencia-aprobaciones container-fluid">
+    <!-- Header Principal -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                <span class="badge bg-dark text-white rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.72rem; letter-spacing:0.02em;">
+                    <i class="bi bi-shield-check text-warning me-1"></i> DIRECCIÓN EJECUTIVA
+                </span>
+                <h4 class="fw-bolder text-dark m-0" style="letter-spacing:-0.02em;">Aprobación de Órdenes de Compra</h4>
+            </div>
+            <p class="text-secondary m-0" style="font-size:0.83rem;">
+                Bandeja gerencial para autorización, validación de presupuestos y toma de decisiones en compras y adquisiciones
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5 shadow-2xs" style="font-size:0.82rem;" onclick="window.recargarAprobacionesOC()">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            </button>
+            <button class="btn btn-outline-primary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5 shadow-2xs" style="font-size:0.82rem;" onclick="window.exportarResumenAprobaciones()">
+                <i class="bi bi-file-earmark-excel"></i> Exportar Acta
+            </button>
+            <div class="btn-group p-0.5 bg-light rounded-3 border" role="group">
+                <button type="button" class="btn btn-sm btn-white active fw-bold px-2.5 py-1.5 rounded-2" id="btn-view-cards" onclick="window.cambiarModoVista('cards')" title="Vista Tarjetas">
+                    <i class="bi bi-grid-fill"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-transparent text-secondary fw-semibold px-2.5 py-1.5 rounded-2" id="btn-view-table" onclick="window.cambiarModoVista('table')" title="Vista Tabla">
+                    <i class="bi bi-list-task"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bento KPI Summary -->
+    <div class="row g-3 mb-4">
+        <!-- Pendientes -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-bento-card kpi-pend" style="cursor:pointer;" onclick="window.filtrarPorTab('pendiente')">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Pendientes de Aprobación</span>
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill fw-bold" style="font-size:0.7rem;">
+                        <i class="bi bi-clock-history"></i> Por Revisar
+                    </span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <h3 class="fw-black text-dark m-0" id="kpi-count-pendientes" style="font-size:1.6rem; letter-spacing:-0.03em;">4</h3>
+                    <span class="text-muted fw-semibold" style="font-size:0.8rem;">órdenes</span>
+                </div>
+                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size:0.78rem;">
+                    <span class="text-secondary">Importe Acumulado:</span>
+                    <strong class="text-warning-emphasis fw-bold" id="kpi-monto-pendientes">S/ 38,450.00</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aprobadas -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-bento-card kpi-aprob" style="cursor:pointer;" onclick="window.filtrarPorTab('aprobado')">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Aprobadas este Mes</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold" style="font-size:0.7rem;">
+                        <i class="bi bi-check-circle-fill"></i> Autorizadas
+                    </span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <h3 class="fw-black text-dark m-0" id="kpi-count-aprobadas" style="font-size:1.6rem; letter-spacing:-0.03em;">18</h3>
+                    <span class="text-muted fw-semibold" style="font-size:0.8rem;">órdenes</span>
+                </div>
+                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size:0.78rem;">
+                    <span class="text-secondary">Monto Autorizado:</span>
+                    <strong class="text-success fw-bold" id="kpi-monto-aprobadas">S/ 142,800.00</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Observadas -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-bento-card kpi-obs" style="cursor:pointer;" onclick="window.filtrarPorTab('observado')">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">En Observación / Sustento</span>
+                    <span class="badge bg-indigo-subtle text-indigo border border-indigo-subtle rounded-pill fw-bold" style="font-size:0.7rem; background:#e0e7ff; color:#4338ca;">
+                        <i class="bi bi-chat-left-dots-fill"></i> Esperando Datos
+                    </span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <h3 class="fw-black text-dark m-0" id="kpi-count-observadas" style="font-size:1.6rem; letter-spacing:-0.03em;">2</h3>
+                    <span class="text-muted fw-semibold" style="font-size:0.8rem;">órdenes</span>
+                </div>
+                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size:0.78rem;">
+                    <span class="text-secondary">En Evaluación:</span>
+                    <strong class="text-indigo fw-bold" style="color:#4338ca;" id="kpi-monto-observadas">S/ 8,650.00</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rechazadas -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-bento-card kpi-rech" style="cursor:pointer;" onclick="window.filtrarPorTab('rechazado')">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Rechazadas</span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fw-bold" style="font-size:0.7rem;">
+                        <i class="bi bi-x-circle-fill"></i> Desestimadas
+                    </span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <h3 class="fw-black text-dark m-0" id="kpi-count-rechazadas" style="font-size:1.6rem; letter-spacing:-0.03em;">1</h3>
+                    <span class="text-muted fw-semibold" style="font-size:0.8rem;">orden</span>
+                </div>
+                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size:0.78rem;">
+                    <span class="text-secondary">Ahorro / No ejecutado:</span>
+                    <strong class="text-danger fw-bold" id="kpi-monto-rechazadas">S/ 4,200.00</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Filtros y Búsqueda -->
+    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-4 bg-white" style="border:1px solid var(--border,#e2e8f0)!important;">
+        <div class="row g-3 align-items-center">
+            <!-- Tabs por Estado -->
+            <div class="col-12 col-xl-7">
+                <div class="aprob-tabs-nav">
+                    <button class="aprob-tab-btn" data-tab="todos" onclick="window.filtrarPorTab('todos')">
+                        <i class="bi bi-collection"></i> Todos <span class="badge-pill" id="tab-badge-todos">25</span>
+                    </button>
+                    <button class="aprob-tab-btn active" data-tab="pendiente" onclick="window.filtrarPorTab('pendiente')">
+                        <i class="bi bi-hourglass-split text-warning"></i> Pendientes <span class="badge-pill" id="tab-badge-pendiente">4</span>
+                    </button>
+                    <button class="aprob-tab-btn" data-tab="urgente" onclick="window.filtrarPorTab('urgente')">
+                        <i class="bi bi-lightning-charge-fill text-danger"></i> Urgentes <span class="badge-pill" id="tab-badge-urgente">2</span>
+                    </button>
+                    <button class="aprob-tab-btn" data-tab="aprobado" onclick="window.filtrarPorTab('aprobado')">
+                        <i class="bi bi-check2-circle text-success"></i> Aprobadas <span class="badge-pill" id="tab-badge-aprobado">18</span>
+                    </button>
+                    <button class="aprob-tab-btn" data-tab="observado" onclick="window.filtrarPorTab('observado')">
+                        <i class="bi bi-chat-dots text-primary"></i> Observadas <span class="badge-pill" id="tab-badge-observado">2</span>
+                    </button>
+                    <button class="aprob-tab-btn" data-tab="rechazado" onclick="window.filtrarPorTab('rechazado')">
+                        <i class="bi bi-x-circle text-danger"></i> Rechazadas <span class="badge-pill" id="tab-badge-rechazado">1</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Buscador y Selectores -->
+            <div class="col-12 col-xl-5">
+                <div class="d-flex gap-2">
+                    <div class="position-relative flex-grow-1">
+                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
+                        <input type="text" id="filtro-buscar-oc" class="form-control ps-5 py-2 rounded-3 border bg-light" placeholder="Buscar por N° OC, Proveedor, Solicitante o Placa..." style="font-size:0.83rem;" oninput="window.aplicarFiltrosOC()">
+                    </div>
+                    <select id="filtro-almacen-oc" class="form-select rounded-3 border bg-light py-2" style="font-size:0.83rem; width:150px;" onchange="window.aplicarFiltrosOC()">
+                        <option value="">Todas las Sedes</option>
+                        <option value="Lurín">Sede Lurín</option>
+                        <option value="Callao">Sede Callao</option>
+                        <option value="Arequipa">Sede Arequipa</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal de Items (Cards / Tabla) -->
+    <div id="contenedor-vista-cards" class="row g-3">
+        <!-- Renderizado dinámico desde logica.js -->
+    </div>
+
+    <div id="contenedor-vista-table" class="card border-0 shadow-2xs rounded-4 bg-white overflow-hidden d-none" style="border:1px solid var(--border,#e2e8f0)!important;">
+        <div class="table-responsive">
+            <table class="table table-hover table-aprobaciones m-0">
+                <thead>
+                    <tr>
+                        <th>N° Orden / Fecha</th>
+                        <th>Prioridad</th>
+                        <th>Proveedor / RUC</th>
+                        <th>Destino / Solicitante</th>
+                        <th>Ítems & Justificación</th>
+                        <th class="text-end">Importe Total</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones Gerenciales</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpo-tabla-aprobaciones">
+                    <!-- Renderizado dinámico desde logica.js -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Empty State si no hay resultados -->
+    <div id="empty-state-aprobaciones" class="card border-0 shadow-2xs rounded-4 p-5 text-center bg-white d-none" style="border:1px dashed var(--border,#cbd5e1)!important;">
+        <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle p-3 mb-3 mx-auto" style="width:64px;height:64px;">
+            <i class="bi bi-inbox text-secondary" style="font-size:1.8rem;"></i>
+        </div>
+        <h5 class="fw-bold text-dark mb-1">No se encontraron órdenes de compra</h5>
+        <p class="text-secondary mb-3" style="font-size:0.85rem;">No hay registros que coincidan con los filtros seleccionados en esta bandeja.</p>
+        <div>
+            <button class="btn btn-outline-secondary btn-sm rounded-3 px-3 fw-semibold" onclick="window.limpiarFiltrosOC()">
+                Restablecer Filtros
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: DETALLE EJECUTIVO DE ORDEN DE COMPRA -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalDetalleOC" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+            <!-- Header Modal -->
+            <div class="modal-header border-bottom py-3 px-4 bg-light">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 bg-primary text-white p-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                        <i class="bi bi-file-earmark-text-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="modal-title fw-black text-dark m-0" id="det-codigo-oc">OC-2026-0142</h5>
+                            <span class="badge rounded-pill fw-bold" id="det-badge-prioridad">URGENTE</span>
+                            <span class="badge rounded-pill fw-bold" id="det-badge-estado">PENDIENTE</span>
+                        </div>
+                        <span class="text-secondary" style="font-size:0.8rem;" id="det-fecha-emision">Emitido el 28/08/2026 a las 10:30 AM</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Body Modal -->
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <!-- Columna Izquierda: Información de Compra y Proveedor -->
+                    <div class="col-12 col-lg-8">
+                        <!-- Card Proveedor & Destino -->
+                        <div class="p-3 rounded-3 bg-light border mb-4">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <div class="text-secondary fw-semibold mb-1" style="font-size:0.75rem; text-transform:uppercase;">Proveedor Seleccionado</div>
+                                    <div class="fw-bold text-dark" id="det-proveedor-nombre" style="font-size:0.95rem;">FERREYROS S.A.</div>
+                                    <div class="text-secondary" style="font-size:0.82rem;" id="det-proveedor-ruc">RUC: 20100035123</div>
+                                    <div class="text-secondary" style="font-size:0.8rem;" id="det-proveedor-contacto">Contacto: ventas@ferreyros.com.pe | 987-654-321</div>
+                                </div>
+                                <div class="col-12 col-md-6 border-start-md">
+                                    <div class="text-secondary fw-semibold mb-1" style="font-size:0.75rem; text-transform:uppercase;">Destino & Solicitante</div>
+                                    <div class="fw-bold text-dark" id="det-destino-almacen" style="font-size:0.95rem;">Almacén Central Lurín</div>
+                                    <div class="text-secondary" style="font-size:0.82rem;" id="det-solicitante">Solicitado por: Ing. Carlos Mendoza (Jefe de Taller)</div>
+                                    <div class="text-secondary" style="font-size:0.8rem;" id="det-unidad-destino">Para: Unidad Volvo FH540 (Placa: B9Z-841) | OT: #OT-8492</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Justificación Técnica -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
+                                <i class="bi bi-info-circle-fill text-primary"></i> Justificación Técnica del Requerimiento
+                            </h6>
+                            <div class="p-3 rounded-3 bg-white border" style="font-size:0.86rem; line-height:1.5; color:#334155;" id="det-justificacion">
+                                Se requiere la compra inmediata del Kit de filtros originales CAT y baldes de aceite 15W40 para cumplir con el Mantenimiento Preventivo de 500 horas programado de la unidad tracto B9Z-841 que tiene salida prioritaria el fin de semana.
+                            </div>
+                        </div>
+
+                        <!-- Tabla de Ítems Requeridos -->
+                        <div>
+                            <h6 class="fw-bold text-dark mb-2 d-flex align-items-center justify-content-between">
+                                <span><i class="bi bi-box-seam-fill text-primary me-1"></i> Desglose de Artículos / Servicios</span>
+                                <span class="badge bg-secondary-subtle text-secondary fw-bold rounded-pill" id="det-items-count">3 ítems</span>
+                            </h6>
+                            <div class="border rounded-3 overflow-hidden">
+                                <table class="table table-sm table-striped m-0" style="font-size:0.82rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Descripción</th>
+                                            <th class="text-center">Cant.</th>
+                                            <th class="text-center">U.M.</th>
+                                            <th class="text-end">P. Unitario</th>
+                                            <th class="text-end">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="det-tabla-items-body">
+                                        <!-- Renderizado dinámico -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Resumen Financiero, Comparativas y Acciones -->
+                    <div class="col-12 col-lg-4">
+                        <!-- Cuadro Financiero -->
+                        <div class="card border rounded-4 p-3 bg-light mb-3">
+                            <h6 class="fw-bold text-dark mb-3">Resumen Económico</h6>
+                            <div class="d-flex justify-content-between text-secondary mb-2" style="font-size:0.84rem;">
+                                <span>Subtotal (Neto):</span>
+                                <span class="fw-semibold text-dark" id="det-monto-subtotal">S/ 12,584.75</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-secondary mb-2" style="font-size:0.84rem;">
+                                <span>I.G.V. (18%):</span>
+                                <span class="fw-semibold text-dark" id="det-monto-igv">S/ 2,265.25</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-secondary mb-3" style="font-size:0.84rem;">
+                                <span>Forma de Pago:</span>
+                                <span class="badge bg-white text-dark border fw-bold" id="det-condicion-pago">Crédito 30 Días</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <span class="fw-bold text-dark" style="font-size:0.95rem;">TOTAL ORDEN:</span>
+                                <h4 class="fw-black text-primary m-0" id="det-monto-total">S/ 14,850.00</h4>
+                            </div>
+                        </div>
+
+                        <!-- Cotizaciones Adjuntas Mock -->
+                        <div class="card border rounded-4 p-3 bg-white mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold text-dark m-0" style="font-size:0.85rem;"><i class="bi bi-paperclip"></i> Cotizaciones Adjuntas</h6>
+                                <span class="badge bg-success-subtle text-success fw-bold" style="font-size:0.68rem;">3 Cuadros</span>
+                            </div>
+                            <div class="list-group list-group-flush" style="font-size:0.8rem;">
+                                <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center border-0">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
+                                        <div>
+                                            <div class="fw-bold text-dark">Cotiz_Ferreyros_084.pdf</div>
+                                            <div class="text-muted" style="font-size:0.72rem;">S/ 14,850.00 (Elegida - Mejor Plazo)</div>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-2 py-0 px-2" onclick="alert('Abriendo archivo de cotización...')"><i class="bi bi-eye"></i></button>
+                                </div>
+                                <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center border-0">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
+                                        <div>
+                                            <div class="fw-bold text-secondary">Cotiz_Komatsu_Alt.pdf</div>
+                                            <div class="text-muted" style="font-size:0.72rem;">S/ 15,920.00 (Alternativa 2)</div>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-2 py-0 px-2" onclick="alert('Abriendo archivo de cotización alternativa...')"><i class="bi bi-eye"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Historial de Auditoría / Decisión -->
+                        <div class="card border rounded-4 p-3 bg-white" id="det-panel-historial">
+                            <h6 class="fw-bold text-dark mb-2" style="font-size:0.85rem;"><i class="bi bi-shield-lock"></i> Estado de Decisión</h6>
+                            <div id="det-historial-content" style="font-size:0.8rem;" class="text-secondary">
+                                Pendiente de aprobación por los Socios / Gerencia General.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer con Botones de Decisión Gerencial -->
+            <div class="modal-footer border-top py-3 px-4 bg-light d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-3 fw-semibold" data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+                <div class="d-flex gap-2" id="det-modal-action-buttons">
+                    <button type="button" class="btn btn-action-reject rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1.5" onclick="window.abrirModalAccion('rechazar')">
+                        <i class="bi bi-x-circle-fill"></i> Rechazar Orden
+                    </button>
+                    <button type="button" class="btn btn-action-obs rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1.5" onclick="window.abrirModalAccion('observar')">
+                        <i class="bi bi-chat-dots-fill"></i> Observar / Pedir Sustento
+                    </button>
+                    <button type="button" class="btn btn-action-approve rounded-3 px-4 py-2 fw-bold d-flex align-items-center gap-1.5 shadow-sm" onclick="window.abrirModalAccion('aprobar')">
+                        <i class="bi bi-check-circle-fill"></i> Aprobar Orden de Compra
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: CONFIRMACIÓN DE ACCIÓN GERENCIAL (Aprobar / Rechazar / Observar) -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalConfirmarAccionOC" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0 pt-4 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle p-2 d-flex align-items-center justify-content-center" id="modal-accion-icon-wrap" style="width:40px;height:40px;">
+                        <i class="bi" id="modal-accion-icon" style="font-size:1.2rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark m-0" id="modal-accion-titulo">Confirmar Aprobación</h5>
+                        <span class="text-secondary" style="font-size:0.8rem;" id="modal-accion-subtitulo">Orden de Compra: OC-2026-0142</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <p class="text-secondary mb-3" style="font-size:0.86rem;" id="modal-accion-mensaje">
+                    ¿Está seguro de autorizar la emisión formal y el desembolso correspondiente para esta orden de compra?
+                </p>
+                <div class="mb-2" id="modal-accion-comentario-wrap">
+                    <label class="form-label fw-bold text-dark" style="font-size:0.8rem;" id="modal-accion-comentario-label">Notas de Gerencia / Observaciones:</label>
+                    <textarea id="modal-accion-comentario-txt" class="form-control rounded-3" rows="3" placeholder="Ingrese comentarios o indicaciones..." style="font-size:0.84rem;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-4 px-4 d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-3 fw-semibold" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="button" class="btn rounded-3 px-4 fw-bold" id="modal-accion-btn-confirmar" onclick="window.ejecutarAccionGerencial()">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
