@@ -31,12 +31,27 @@ async function uploadToS3(buffer, key, contentType) {
 /**
  * Genera una URL pre-firmada para leer un objeto de S3 (1 hora por defecto).
  */
-async function getPresignedUrl(key, expiresIn = 3600) {
-    return getSignedUrl(s3, new GetObjectCommand({
+function getMimeTypeFromKey(key) {
+    if (!key) return null;
+    const lower = key.toLowerCase();
+    if (lower.endsWith('.pdf')) return 'application/pdf';
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    return null;
+}
+
+async function getPresignedUrl(key, expiresIn = 3600, responseContentType = null) {
+    const mime = responseContentType || getMimeTypeFromKey(key);
+    const commandParams = {
         Bucket: BUCKET,
-        Key: key,
-        ResponseContentType: 'image/jpeg'
-    }), { expiresIn });
+        Key: key
+    };
+    if (mime) {
+        commandParams.ResponseContentType = mime;
+    }
+    return getSignedUrl(s3, new GetObjectCommand(commandParams), { expiresIn });
 }
 
 /**
