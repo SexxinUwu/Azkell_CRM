@@ -908,7 +908,14 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     width: 100%; padding: 0.8rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; text-align: center; border: none; margin-bottom: 0.5rem; display: block;
 }
 
-/* ── Floating Drawer Modal & Inputs Styling (Exacto 1:1 a Reporte de Fallas) ──────────────────────── */
+/* ── Transición Ultra Rápida e Instantánea para Modal ──── */
+#modalEdicionVehiculo.modal.fade {
+    transition: opacity 0.12s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+#modalEdicionVehiculo.modal.fade .modal-dialog {
+    transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
 .ck-floating-drawer-dialog,
 #modalEdicionVehiculo .modal-dialog {
     max-width: 740px !important;
@@ -1137,6 +1144,17 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     background: #f0fdfa !important;
     border-color: #5eead4 !important;
     box-shadow: 0 0 0 1.5px #0d9488 inset;
+}
+.cal-day-cell.selected {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.35) !important;
+    background: #f0f9ff !important;
+}
+.cal-mini-day.selected {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+    font-weight: 800;
+    border-radius: 6px;
 }
 .cal-day-top {
     display: flex;
@@ -1748,14 +1766,14 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                 <form id="formVehiculoFlota" onsubmit="event.preventDefault(); guardarVehiculo();">
                     
                     <!-- Sección 1: Asignación -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 50; overflow: visible !important;">
                         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.95rem;">
                             <i class="bi bi-truck text-primary"></i> Asignación y Tipo de Documento
                         </h6>
                         <div class="row g-2">
                             <div class="col-12 col-md-6">
                                 <label class="form-label fw-bold text-secondary small mb-1">Vehículo / Placa <span class="text-danger">(*)</span></label>
-                                <div class="cb-wrap position-relative">
+                                <div class="cb-wrap position-relative" style="position: relative; z-index: 100;">
                                     <input type="hidden" id="nd_vehiculo" name="nd_vehiculo">
                                     <input type="text" id="nd_vehiculo-txt" class="form-control border-secondary-subtle text-uppercase fw-semibold"
                                            placeholder="BUSCAR PLACA..." autocomplete="off"
@@ -1764,7 +1782,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                                            onfocus="window._cbFiltrar('nd_vehiculo')"
                                            onblur="window._cbHide('nd_vehiculo')">
                                     <div id="nd_vehiculo-dd" class="cb-dropdown shadow-lg"
-                                         style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1099; background:#fff; max-height:220px; overflow-y:auto; border-radius:12px; border:1px solid #cbd5e1; box-shadow:0 10px 25px -5px rgba(0,0,0,0.15);"></div>
+                                         style="display:none; position:absolute; top:100%; left:0; right:0; z-index:99999 !important; background:#fff; max-height:220px; overflow-y:auto; border-radius:12px; border:1px solid #cbd5e1; box-shadow:0 12px 36px rgba(15,23,42,0.22);"></div>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6">
@@ -1792,7 +1810,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                     </div>
 
                     <!-- Sección 2: Datos del Documento -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 10;">
                         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.95rem;">
                             <i class="bi bi-file-earmark-text text-primary"></i> Constancia y Archivo Adjunto
                         </h6>
@@ -1897,8 +1915,10 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         <button class="btn btn-link text-danger fw-bold text-decoration-none px-0" onclick="window.limpiarTodosFiltrosDoc()">Limpiar todo</button>
         <button class="btn btn-primary fw-bold px-4 rounded-pill" data-bs-dismiss="offcanvas" onclick="filtrarListaLocal()">Aplicar</button>
     </div>
+</div>
+
 <!-- Modal para ver todos los eventos de un día del Calendario -->
-<div class="modal fade" id="modalEventosDia" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalEventosDia" tabindex="-1" aria-hidden="true" style="z-index: 1080;">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 480px;">
         <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
             <div class="modal-header border-bottom bg-light px-3 py-2-5 d-flex align-items-center justify-content-between">

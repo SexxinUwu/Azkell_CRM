@@ -654,7 +654,7 @@ window.renderizarCalendario = function() {
         }
 
         gridHtml += `
-            <div class="cal-day-cell ${todayClass}">
+            <div class="cal-day-cell ${todayClass}" id="cal-day-cell-${d}" onclick="window.calSeleccionarDia(${d}, ${currentMonth}, ${currentYear})">
                 <div class="cal-day-top">
                     <span class="cal-day-num">${d}</span>
                     ${evList.length > 0 ? `<span class="badge rounded-pill bg-light text-secondary border" style="font-size:0.65rem;">${evList.length}</span>` : ''}
@@ -697,7 +697,7 @@ window.renderizarCalendario = function() {
             if (isToday) cls += ' today';
             else if (hasEv) cls += ' has-event';
 
-            miniHtml += `<div class="cal-mini-day ${cls}" onclick="window.calVerEventosDia(${d}, ${currentMonth}, ${currentYear})">${d}</div>`;
+            miniHtml += `<div class="cal-mini-day ${cls}" id="cal-mini-day-${d}" onclick="window.calSeleccionarDia(${d}, ${currentMonth}, ${currentYear})">${d}</div>`;
         }
         for (let d = 1; d <= diasSiguienteMes; d++) {
             miniHtml += `<div class="cal-mini-day text-muted opacity-25">${d}</div>`;
@@ -743,11 +743,52 @@ window.renderizarCalendario = function() {
     }
 };
 
+// Selecciona e interactúa con un día desde el mini-calendario o grid principal
+window.calSeleccionarDia = function(dia, mes, anio) {
+    // 1. Resaltar celda en grid principal
+    document.querySelectorAll('.cal-day-cell').forEach(c => c.classList.remove('selected'));
+    const targetCell = document.getElementById(`cal-day-cell-${dia}`);
+    if (targetCell) {
+        targetCell.classList.add('selected');
+        targetCell.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // 2. Resaltar en mini calendario
+    document.querySelectorAll('.cal-mini-day').forEach(d => d.classList.remove('selected'));
+    const targetMini = document.getElementById(`cal-mini-day-${dia}`);
+    if (targetMini && !targetMini.classList.contains('today')) {
+        targetMini.classList.add('selected');
+    }
+
+    // 3. Comprobar si tiene eventos para abrir modal o mostrar toast
+    const evs = [];
+    vehiculosFlota.forEach(v => {
+        DOC_KEYS_CONFIG.forEach(cfg => {
+            const rawFecha = v[cfg.field];
+            if (!rawFecha) return;
+            const dVen = new Date(rawFecha);
+            if (isNaN(dVen.getTime())) return;
+            if (dVen.getUTCFullYear() === anio && dVen.getUTCMonth() === mes && dVen.getUTCDate() === dia) {
+                evs.push(v);
+            }
+        });
+    });
+
+    if (evs.length > 0) {
+        window.calVerEventosDia(dia, mes, anio);
+    }
+};
+
 // Abre modal de todos los eventos de un día
 window.calVerEventosDia = function(dia, mes, anio) {
     const dStr = String(dia).padStart(2, '0');
     const mStr = String(mes + 1).padStart(2, '0');
     const fechaFmt = `${dStr}/${mStr}/${anio}`;
+
+    let modalEl = document.getElementById('modalEventosDia');
+    if (modalEl && modalEl.parentElement !== document.body) {
+        document.body.appendChild(modalEl);
+    }
 
     const modalTitle = document.getElementById('modalEventosDiaTitulo');
     const modalSub = document.getElementById('modalEventosDiaSub');
@@ -782,7 +823,7 @@ window.calVerEventosDia = function(dia, mes, anio) {
     if (!modalBody) return;
 
     if (evs.length === 0) {
-        modalBody.innerHTML = `<div class="text-center py-4 text-muted">No hay vencimientos registrados para este día.</div>`;
+        modalBody.innerHTML = `<div class="text-center py-4 text-muted"><i class="bi bi-calendar-check fs-3 d-block mb-1 text-secondary opacity-50"></i>No hay vencimientos programados para este día.</div>`;
     } else {
         let html = '<div class="d-flex flex-column gap-2">';
         evs.forEach(ev => {
@@ -808,7 +849,6 @@ window.calVerEventosDia = function(dia, mes, anio) {
         modalBody.innerHTML = html;
     }
 
-    const modalEl = document.getElementById('modalEventosDia');
     if (modalEl) {
         const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
         bsModal.show();
