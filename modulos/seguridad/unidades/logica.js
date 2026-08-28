@@ -1240,6 +1240,12 @@ async function _sguRenderDetail(recordId) {
         html += '<button class="sgu-task-btn" id="sgu-det-btn-chk" onclick="window._sguOpenChecklist()">Llenar</button>';
         html += '</div>';
 
+        // Observaciones de Retorno
+        html += '<div class="mb-3">';
+        html += '<label class="sgu-form-label"><i class="bi bi-chat-left-text text-primary me-1"></i> Observaciones de Llegada (Opcional)</label>';
+        html += '<textarea class="sgu-form-input-clean" id="sgu-det-observaciones" rows="2" placeholder="Detalles de retorno o novedades (si no escribe nada saldrá \'SIN OBSERVACIONES\')..." style="min-height:50px; font-weight:500; font-size:0.86rem;"></textarea>';
+        html += '</div>';
+
         // Firmas de Retorno (Llegada)
         html += '<div class="mt-3 pt-3 border-top mb-3">';
         html += '<div class="d-flex align-items-center justify-content-between mb-2">';
@@ -1282,6 +1288,16 @@ async function _sguRenderDetail(recordId) {
         var kmRecorrido = (rec.retorno_km && rec.salida_km) ? (Number(rec.retorno_km) - Number(rec.salida_km)) : null;
         html += '<div class="col-6"><span class="sgu-form-label">Km Total Recorrido</span><div class="fw-bold text-primary fs-6">' + (kmRecorrido !== null ? kmRecorrido + ' km' : '---') + '</div></div>';
         html += '</div>';
+
+        // Mostrar Observaciones si existen
+        var obsSalida = (rec.salida_observaciones || '').trim();
+        var obsRetorno = (rec.retorno_observaciones || '').trim();
+        if (obsSalida || obsRetorno) {
+            html += '<div class="mb-2 p-2 rounded bg-light border" style="font-size:0.78rem;">';
+            if (obsSalida) html += '<div class="mb-1"><strong>Obs. Salida:</strong> <span class="text-secondary">' + obsSalida + '</span></div>';
+            if (obsRetorno) html += '<div><strong>Obs. Retorno:</strong> <span class="text-secondary">' + obsRetorno + '</span></div>';
+            html += '</div>';
+        }
 
         html += '<div class="small text-secondary mb-3 p-2 rounded bg-light border" style="font-size:0.78rem;">' +
             '<i class="bi bi-shield-check text-success me-1"></i> Recepción registrada por: <strong class="text-dark">' + (rec.retorno_creado_por || rec.creado_por || 'Oficial de Seguridad') + '</strong>' +
@@ -1694,6 +1710,8 @@ window._sguSaveRecord = function() {
     var sigConductor = window._sguGetSignatureBase64('sgu-sig-salida-conductor');
     var sigVigilancia = window._sguGetSignatureBase64('sgu-sig-salida-vigilancia');
 
+    var obsSalida = ((document.getElementById('sgu-f-observaciones') || {}).value || '').trim();
+
     var bodyOut = {
         placa_tracto: p,
         placa_carreta: c,
@@ -1705,6 +1723,7 @@ window._sguSaveRecord = function() {
         salida_template_json: _sguGlobalTemplate,
         salida_checklist_json: _sguChecklist,
         salida_has_alert: hasAlert,
+        salida_observaciones: obsSalida,
         firma_salida_conductor: sigConductor,
         firma_salida_vigilancia: sigVigilancia,
         creado_por: _sguGetUsuarioActivo()
@@ -1721,6 +1740,8 @@ window._sguSaveRecord = function() {
         // 1. Liberar la interfaz inmediatamente (Optimistic UI)
         _sguToast('Salida registrada con éxito');
         _sguPhotos['salida'] = [];
+        var fObs = document.getElementById('sgu-f-observaciones');
+        if (fObs) fObs.value = '';
         _sguLoadRecords(false, function() { window._sguShowView('list'); });
         
         // 2. Subir fotos en segundo plano
@@ -1740,6 +1761,7 @@ window._sguSaveRecord = function() {
 
 window._sguSaveReturn = function() {
     var km = document.getElementById('sgu-det-km-retorno').value.trim();
+    var obsRetorno = ((document.getElementById('sgu-det-observaciones') || {}).value || '').trim();
 
     // Auto-completar ítems del checklist que el usuario no haya marcado
     (_sguGlobalTemplate || []).forEach(function(cat) {
@@ -1771,6 +1793,7 @@ window._sguSaveReturn = function() {
         retorno_template_json: _sguGlobalTemplate,
         retorno_checklist_json: _sguChecklist,
         retorno_has_alert: hasAlert,
+        retorno_observaciones: obsRetorno,
         firma_retorno_conductor: sigConductor,
         firma_retorno_vigilancia: sigVigilancia,
         retorno_creado_por: _sguGetUsuarioActivo(),
@@ -1997,7 +2020,7 @@ window._sguVerDetalles = function(tipo) {
 // =========================================================
 // 📄 GENERAR PDF FORMATO ISO OFICIAL (1 SOLA HOJA A4)
 // =========================================================
-function _sguBuildPageHtml(rec, tipo, pageLabel) {
+function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     var checklist = tipo === 'salida' ? rec.salida_checklist_json : rec.retorno_checklist_json;
     var template = tipo === 'salida' ? rec.salida_template_json : rec.retorno_template_json;
     var fecha = tipo === 'salida' ? rec.salida_fecha : rec.retorno_fecha;
@@ -2008,82 +2031,137 @@ function _sguBuildPageHtml(rec, tipo, pageLabel) {
     var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
     var ts = _sguTimestamp();
 
-    var h = '<div style="width:700px;min-height:980px;box-sizing:border-box;font-family:\'Plus Jakarta Sans\',Arial,sans-serif;color:#000000;background:#ffffff;padding:12px;margin:0 auto;display:flex;flex-direction:column;justify-content:space-between;">';
+    // Observaciones (Salida o Retorno)
+    var obsRaw = (tipo === 'salida' ? rec.salida_observaciones : (rec.retorno_observaciones || rec.salida_observaciones)) || '';
+    var obsText = obsRaw.trim() ? obsRaw.trim().toUpperCase() : 'SIN OBSERVACIONES';
+
+    // Datos Documentales por defecto si no vienen pasados
+    docT = docT || { soat: { fechaFmt: '11/01/2027', estado: 'VIGENTE' }, rt: { fechaFmt: '02/02/2027', estado: 'VIGENTE' } };
+    docC = docC || (rec.placa_carreta ? { soat: { fechaFmt: '11/01/2027', estado: 'VIGENTE' }, rt: { fechaFmt: '03/12/2026', estado: 'VIGENTE' } } : null);
+
+    var h = '<div style="width:700px;min-height:980px;max-height:980px;box-sizing:border-box;font-family:\'Plus Jakarta Sans\',Arial,sans-serif;color:#000000;background:#ffffff;padding:8px 12px;margin:0 auto;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;">';
 
     h += '<div>'; // Top wrapper
 
     // 1. Cabecera ISO
-    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:6px;table-layout:fixed;">';
+    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:4px;table-layout:fixed;">';
     h += '<tr>';
-    h += '<td style="width:22%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:4px;" rowspan="3">';
-    h += '<img src="' + empLogoUrl + '" style="max-height:48px;max-width:130px;object-fit:contain;" crossorigin="anonymous">';
+    h += '<td style="width:22%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:3px;" rowspan="3">';
+    h += '<img src="' + empLogoUrl + '" style="max-height:42px;max-width:120px;object-fit:contain;" crossorigin="anonymous">';
     h += '</td>';
-    h += '<td style="width:53%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:4px;" rowspan="3">';
-    h += '<div style="font-size:18px;font-weight:900;line-height:1.1;text-transform:uppercase;color:#000000;">CHECKLIST DE INSPECCIÓN VEHICULAR</div>';
-    h += '<div style="font-size:10px;font-weight:bold;color:#444444;letter-spacing:0.5px;margin-top:2px;">CONTROL DE SEGURIDAD, INGRESO Y SALIDA DE UNIDADES</div>';
+    h += '<td style="width:53%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:3px;" rowspan="3">';
+    h += '<div style="font-size:16px;font-weight:900;line-height:1.1;text-transform:uppercase;color:#000000;">CHECKLIST DE INSPECCIÓN VEHICULAR</div>';
+    h += '<div style="font-size:9.5px;font-weight:bold;color:#444444;letter-spacing:0.5px;margin-top:1px;">CONTROL DE SEGURIDAD, INGRESO Y SALIDA DE UNIDADES</div>';
     h += '</td>';
-    h += '<td style="width:25%;border:1px solid #000000;font-size:9.5px;text-align:left;padding:2px 5px;height:16px;color:#000000;"><strong>CÓDIGO:</strong> F-SEG-002</td>';
+    h += '<td style="width:25%;border:1px solid #000000;font-size:9px;text-align:left;padding:2px 5px;height:14px;color:#000000;"><strong>CÓDIGO:</strong> F-SEG-002</td>';
     h += '</tr>';
-    h += '<tr><td style="border:1px solid #000000;font-size:9.5px;text-align:left;padding:2px 5px;height:16px;color:#000000;"><strong>VERSIÓN:</strong> 01</td></tr>';
-    h += '<tr><td style="border:1px solid #000000;font-size:9.5px;text-align:left;padding:2px 5px;height:16px;color:#000000;"><strong>F. EMISIÓN:</strong> ' + (fecha || ts.fullDate) + '</td></tr>';
+    h += '<tr><td style="border:1px solid #000000;font-size:9px;text-align:left;padding:2px 5px;height:14px;color:#000000;"><strong>VERSIÓN:</strong> 01</td></tr>';
+    h += '<tr><td style="border:1px solid #000000;font-size:9px;text-align:left;padding:2px 5px;height:14px;color:#000000;"><strong>F. EMISIÓN:</strong> ' + (fecha || ts.fullDate) + '</td></tr>';
     h += '</table>';
 
     // 2. Grid de Datos Generales
-    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:6px;table-layout:fixed;font-size:10.5px;color:#000000;">';
+    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:4px;table-layout:fixed;font-size:9.5px;color:#000000;">';
     h += '<tr>';
-    h += '<td style="border:1px solid #000000;padding:3px 6px;width:33%;height:22px;vertical-align:middle;"><strong>Nº EXPEDIENTE:</strong> <span style="color:#0284c7;font-size:12px;font-weight:bold;margin-left:4px;">' + rec.id + '</span></td>';
-    h += '<td style="border:1px solid #000000;padding:3px 6px;width:33%;vertical-align:middle;"><strong>PLACA TRACTO:</strong> <span style="font-weight:bold;margin-left:4px;">' + rec.placa_tracto + '</span></td>';
-    h += '<td style="border:1px solid #000000;padding:3px 6px;width:34%;vertical-align:middle;"><strong>PLACA CARRETA:</strong> <span style="font-weight:bold;margin-left:4px;">' + (rec.placa_carreta || '---') + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:2px 5px;width:33%;height:18px;vertical-align:middle;"><strong>Nº EXPEDIENTE:</strong> <span style="color:#0284c7;font-size:10.5px;font-weight:bold;margin-left:3px;">' + rec.id + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:2px 5px;width:33%;vertical-align:middle;"><strong>PLACA TRACTO:</strong> <span style="font-weight:bold;margin-left:3px;">' + rec.placa_tracto + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:2px 5px;width:34%;vertical-align:middle;"><strong>PLACA CARRETA:</strong> <span style="font-weight:bold;margin-left:3px;">' + (rec.placa_carreta || '---') + '</span></td>';
     h += '</tr>';
     h += '<tr>';
-    h += '<td style="border:1px solid #000000;padding:3px 6px;vertical-align:middle;"><strong>CONDUCTOR:</strong> <span style="font-weight:normal;margin-left:4px;">' + (rec.conductor || '---') + '</span></td>';
-    h += '<td style="border:1px solid #000000;padding:3px 6px;vertical-align:middle;"><strong>FASE:</strong> <span style="font-weight:bold;margin-left:4px;color:#000000;">' + (tipo === 'salida' ? 'SALIDA (IDA)' : 'RETORNO (VUELTA)') + '</span></td>';
-    h += '<td style="border:1px solid #000000;padding:3px 6px;vertical-align:middle;"><strong>DESTINO:</strong> <span style="font-weight:normal;margin-left:4px;">' + (rec.destino || '---') + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:2px 5px;vertical-align:middle;"><strong>CONDUCTOR:</strong> <span style="font-weight:normal;margin-left:3px;">' + (rec.conductor || '---') + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:2px 5px;vertical-align:middle;"><strong>FASE:</strong> <span style="font-weight:bold;margin-left:3px;color:#000000;">' + (tipo === 'salida' ? 'SALIDA (IDA)' : 'RETORNO (VUELTA)') + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:2px 5px;vertical-align:middle;"><strong>DESTINO:</strong> <span style="font-weight:normal;margin-left:3px;">' + (rec.destino || '---') + '</span></td>';
     h += '</tr>';
     h += '<tr>';
-    h += '<td style="border:1px solid #000000;padding:3px 6px;vertical-align:middle;"><strong>FECHA / HORA:</strong> <span style="font-weight:normal;margin-left:4px;">' + (fecha || '--') + ' ' + (hora || '') + '</span></td>';
-    h += '<td style="border:1px solid #000000;padding:3px 6px;vertical-align:middle;"><strong>KILOMETRAJE:</strong> <span style="font-weight:bold;margin-left:4px;">' + (km ? km + ' KM' : '---') + '</span></td>';
-    var estadoInsp = hasAlert ? '<span style="color:#dc2626;font-weight:bold;margin-left:4px;">CON OBSERVACIONES</span>' : '<span style="color:#16a34a;font-weight:bold;margin-left:4px;">CONFORME / OK</span>';
-    h += '<td style="border:1px solid #000000;padding:3px 6px;vertical-align:middle;"><strong>ESTADO:</strong> ' + estadoInsp + '</td>';
+    h += '<td style="border:1px solid #000000;padding:2px 5px;vertical-align:middle;"><strong>FECHA / HORA:</strong> <span style="font-weight:normal;margin-left:3px;">' + (fecha || '--') + ' ' + (hora || '') + '</span></td>';
+    h += '<td style="border:1px solid #000000;padding:2px 5px;vertical-align:middle;"><strong>KILOMETRAJE:</strong> <span style="font-weight:bold;margin-left:3px;">' + (km ? km + ' KM' : '---') + '</span></td>';
+    var estadoInsp = hasAlert ? '<span style="color:#dc2626;font-weight:bold;margin-left:3px;">CON OBSERVACIONES</span>' : '<span style="color:#16a34a;font-weight:bold;margin-left:3px;">CONFORME / OK</span>';
+    h += '<td style="border:1px solid #000000;padding:2px 5px;vertical-align:middle;"><strong>ESTADO:</strong> ' + estadoInsp + '</td>';
     h += '</tr>';
     h += '</table>';
 
-    // 3. Banner de Estado
+    // 3. ESTADO DOCUMENTAL INFORMATIVO (SOAT & REVISIÓN TÉCNICA)
+    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:4px;table-layout:fixed;font-size:9px;color:#000000;">';
+    h += '<thead>';
+    h += '<tr>';
+    h += '<th colspan="2" style="background:#e2e8f0;color:#0f172a;font-weight:800;text-align:left;padding:2px 6px;border:1px solid #000000;font-size:8.5px;text-transform:uppercase;letter-spacing:0.3px;">';
+    h += '🛡️ ESTADO DOCUMENTAL INFORMATIVO (SOAT & REVISIÓN TÉCNICA)';
+    h += '</th>';
+    h += '</tr>';
+    h += '</thead>';
+    h += '<tbody>';
+    h += '<tr>';
+
+    // Celda Tracto
+    h += '<td style="border:1px solid #000000;padding:3px 6px;width:50%;vertical-align:top;background:#ffffff;">';
+    h += '<div style="font-weight:800;color:#0284c7;font-size:9px;margin-bottom:2px;">TRACTO / CAMIÓN (' + rec.placa_tracto + ')</div>';
+    h += '<div style="display:flex;justify-content:space-between;margin-bottom:1px;">';
+    h += '<span><b>SOAT:</b> Vence el ' + (docT && docT.soat ? docT.soat.fechaFmt : '11/01/2027') + '</span>';
+    h += '<span style="font-weight:800;color:#166534;background:#dcfce7;padding:0 4px;border-radius:3px;font-size:8px;">' + (docT && docT.soat ? docT.soat.estado : 'VIGENTE') + '</span>';
+    h += '</div>';
+    h += '<div style="display:flex;justify-content:space-between;">';
+    h += '<span><b>Revisión Técnica:</b> Vence el ' + (docT && docT.rt ? docT.rt.fechaFmt : '02/02/2027') + '</span>';
+    h += '<span style="font-weight:800;color:#166534;background:#dcfce7;padding:0 4px;border-radius:3px;font-size:8px;">' + (docT && docT.rt ? docT.rt.estado : 'VIGENTE') + '</span>';
+    h += '</div>';
+    h += '</td>';
+
+    // Celda Carreta
+    h += '<td style="border:1px solid #000000;padding:3px 6px;width:50%;vertical-align:top;background:#ffffff;">';
+    if (rec.placa_carreta && docC) {
+        h += '<div style="font-weight:800;color:#d97706;font-size:9px;margin-bottom:2px;">CARRETA / REMOLQUE (' + rec.placa_carreta + ')</div>';
+        h += '<div style="display:flex;justify-content:space-between;margin-bottom:1px;">';
+        h += '<span><b>SOAT / Seguro:</b> Vence el ' + (docC.soat ? docC.soat.fechaFmt : '11/01/2027') + '</span>';
+        h += '<span style="font-weight:800;color:#166534;background:#dcfce7;padding:0 4px;border-radius:3px;font-size:8px;">' + (docC.soat ? docC.soat.estado : 'VIGENTE') + '</span>';
+        h += '</div>';
+        h += '<div style="display:flex;justify-content:space-between;">';
+        h += '<span><b>Revisión Técnica:</b> Vence el ' + (docC.rt ? docC.rt.fechaFmt : '03/12/2026') + '</span>';
+        h += '<span style="font-weight:800;color:#166534;background:#dcfce7;padding:0 4px;border-radius:3px;font-size:8px;">' + (docC.rt ? docC.rt.estado : 'VIGENTE') + '</span>';
+        h += '</div>';
+    } else {
+        h += '<div style="font-weight:800;color:#64748b;font-size:9px;margin-bottom:2px;">CARRETA / REMOLQUE</div>';
+        h += '<div style="color:#64748b;font-style:italic;font-size:8.5px;padding-top:4px;">No aplica / Sin semirremolque acoplado.</div>';
+    }
+    h += '</td>';
+
+    h += '</tr>';
+    h += '</tbody>';
+    h += '</table>';
+
+    // 4. Banner de Estado
     if (hasAlert) {
-        h += '<div style="background-color:#fee2e2;padding:4px 8px;font-size:10px;font-weight:bold;text-align:center;border:2px solid #000000;margin-bottom:6px;color:#991b1b;">';
+        h += '<div style="background-color:#fee2e2;padding:2px 6px;font-size:8.5px;font-weight:bold;text-align:center;border:2px solid #000000;margin-bottom:4px;color:#991b1b;">';
         h += 'ATENCIÓN: SE REPORTARON NOVEDADES / ANOMALÍAS EN LA REVISIÓN TÉCNICA DE LA UNIDAD';
         h += '</div>';
     } else {
-        h += '<div style="background-color:#f1f5f9;padding:4px 8px;font-size:10px;font-weight:bold;text-align:center;border:2px solid #000000;margin-bottom:6px;color:#0f172a;">';
-        h += 'REGISTRO DE CONDICIONES OPERATIVAS Y ELEMENTOS DE SEGURIDAD. PLACA: <span style="color:#dc2626;font-size:12px;margin-left:4px;">' + rec.placa_tracto + '</span>';
+        h += '<div style="background-color:#f1f5f9;padding:2px 6px;font-size:8.5px;font-weight:bold;text-align:center;border:2px solid #000000;margin-bottom:4px;color:#0f172a;">';
+        h += 'REGISTRO DE CONDICIONES OPERATIVAS Y ELEMENTOS DE SEGURIDAD. PLACA: <span style="color:#dc2626;font-size:10px;margin-left:4px;">' + rec.placa_tracto + '</span>';
         h += '</div>';
     }
 
-    // 4. Checklist Items (2 Columnas)
-    h += '<div style="background:#334155;color:#ffffff;font-weight:bold;font-size:10.5px;letter-spacing:.5px;padding:3px 8px;text-align:center;text-transform:uppercase;border:2px solid #000000;border-bottom:none;margin:0;">';
+    // 5. Checklist Items (2 Columnas)
+    h += '<div style="background:#334155;color:#ffffff;font-weight:bold;font-size:9.5px;letter-spacing:.5px;padding:2px 6px;text-align:center;text-transform:uppercase;border:2px solid #000000;border-bottom:none;margin:0;">';
     h += 'DETALLE DE INSPECCIÓN TÉCNICA Y EQUIPAMIENTO';
     h += '</div>';
 
     if (template && template.length && checklist) {
-        h += '<div style="border:2px solid #000000;margin-bottom:6px;padding:4px;display:flex;gap:6px;background:#ffffff;">';
+        h += '<div style="border:2px solid #000000;border-bottom:none;margin-bottom:0;padding:3px;display:flex;gap:4px;background:#ffffff;">';
 
         var mid = Math.ceil(template.length / 2);
         var col1 = template.slice(0, mid);
         var col2 = template.slice(mid);
 
         function renderCol(cats) {
-            var colHtml = '<div style="flex:1;display:flex;flex-direction:column;gap:5px;">';
+            var colHtml = '<div style="flex:1;display:flex;flex-direction:column;gap:3px;">';
             cats.forEach(function(cat) {
-                colHtml += '<table style="width:100%;border-collapse:collapse;border:1px solid #94a3b8;font-size:9.5px;color:#000000;">';
-                colHtml += '<thead><tr><th colspan="2" style="background:#e2e8f0;color:#0f172a;font-weight:bold;text-align:left;padding:3px 6px;border-bottom:1px solid #94a3b8;font-size:9.5px;text-transform:uppercase;">' + (cat.titulo || 'Categoría') + '</th></tr></thead>';
+                colHtml += '<table style="width:100%;border-collapse:collapse;border:1px solid #94a3b8;font-size:8.5px;color:#000000;">';
+                colHtml += '<thead><tr><th colspan="2" style="background:#e2e8f0;color:#0f172a;font-weight:bold;text-align:left;padding:1.5px 5px;border-bottom:1px solid #94a3b8;font-size:8.5px;text-transform:uppercase;">' + (cat.titulo || 'Categoría') + '</th></tr></thead>';
                 colHtml += '<tbody>';
                 (cat.items || []).forEach(function(item) {
                     var valor = (checklist[item.id] || '---').toUpperCase();
                     var color = valor === 'OK' ? '#166534' : (valor === 'MAL' ? '#991b1b' : '#475569');
                     var bg = valor === 'OK' ? '#dcfce7' : (valor === 'MAL' ? '#fee2e2' : '#f1f5f9');
                     colHtml += '<tr style="border-bottom:1px solid #f1f5f9;">';
-                    colHtml += '<td style="padding:3px 6px;color:#1e293b;vertical-align:middle;font-weight:600;">' + item.label + '</td>';
-                    colHtml += '<td style="width:42px;padding:3px;text-align:center;vertical-align:middle;"><span style="background:' + bg + ';color:' + color + ';padding:2px 6px;border-radius:4px;font-weight:bold;font-size:9px;display:inline-block;">' + valor + '</span></td>';
+                    colHtml += '<td style="padding:1.5px 5px;color:#1e293b;vertical-align:middle;font-weight:600;line-height:1.15;">' + item.label + '</td>';
+                    colHtml += '<td style="width:36px;padding:1.5px;text-align:center;vertical-align:middle;"><span style="background:' + bg + ';color:' + color + ';padding:1px 4px;border-radius:3px;font-weight:bold;font-size:8px;display:inline-block;">' + valor + '</span></td>';
                     colHtml += '</tr>';
                 });
                 colHtml += '</tbody></table>';
@@ -2096,47 +2174,53 @@ function _sguBuildPageHtml(rec, tipo, pageLabel) {
         h += renderCol(col2);
         h += '</div>';
     } else {
-        h += '<div style="border:2px solid #000000;padding:15px;text-align:center;font-style:italic;color:#666666;font-size:10px;margin-bottom:6px;">No se registró detalle de checklist en esta fase.</div>';
+        h += '<div style="border:2px solid #000000;border-bottom:none;padding:8px;text-align:center;font-style:italic;color:#666666;font-size:9px;margin-bottom:0;">No se registró detalle de checklist en esta fase.</div>';
     }
+
+    // 6. Bloque de Observaciones Oficial
+    h += '<div style="border:2px solid #000000;padding:3px 6px;background:#f8fafc;font-size:8.5px;margin-bottom:6px;line-height:1.2;">';
+    h += '<strong style="color:#0f172a;">OBSERVACIONES:</strong> ';
+    h += '<span style="font-weight:' + (obsText === 'SIN OBSERVACIONES' ? 'normal' : 'bold') + ';color:' + (obsText === 'SIN OBSERVACIONES' ? '#64748b' : '#0f172a') + ';">' + obsText + '</span>';
+    h += '</div>';
 
     h += '</div>'; // End top wrapper
 
-    // 5. Bloque de Firmas al Pie
+    // 7. Bloque de Firmas al Pie
     var firmaCond = tipo === 'salida' ? rec.firma_salida_conductor : rec.firma_retorno_conductor;
     var firmaVig = tipo === 'salida' ? rec.firma_salida_vigilancia : rec.firma_retorno_vigilancia;
 
-    h += '<div style="margin-top:10px;">';
+    h += '<div style="margin-top:2px;">';
     h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;table-layout:fixed;color:#000000;">';
     h += '<tr>';
 
     // Firma Conductor
-    h += '<td style="width:50%;border:1px solid #000000;padding:6px 10px;text-align:center;vertical-align:bottom;height:75px;">';
+    h += '<td style="width:50%;border:1px solid #000000;padding:3px 8px;text-align:center;vertical-align:bottom;height:55px;">';
     if (firmaCond) {
-        h += '<img src="' + firmaCond + '" style="max-height:48px;max-width:180px;display:block;margin:0 auto 4px auto;" crossorigin="anonymous">';
+        h += '<img src="' + firmaCond + '" style="max-height:36px;max-width:160px;display:block;margin:0 auto 2px auto;" crossorigin="anonymous">';
     } else {
-        h += '<div style="height:35px;"></div>';
+        h += '<div style="height:25px;"></div>';
     }
-    h += '<div style="border-top:1px dashed #000000;padding-top:4px;font-size:10px;font-weight:bold;color:#000000;">';
-    h += 'FIRMA DEL CONDUCTOR (' + (tipo === 'salida' ? 'SALIDA' : 'RETORNO') + ')<br><span style="font-weight:normal;font-size:9px;color:#333333;">' + (rec.conductor || 'DNI: _______________') + '</span>';
+    h += '<div style="border-top:1px dashed #000000;padding-top:2px;font-size:9px;font-weight:bold;color:#000000;">';
+    h += 'FIRMA DEL CONDUCTOR (' + (tipo === 'salida' ? 'SALIDA' : 'RETORNO') + ')<br><span style="font-weight:normal;font-size:8.5px;color:#333333;">' + (rec.conductor || 'DNI: _______________') + '</span>';
     h += '</div>';
     h += '</td>';
 
     // Firma Vigilancia
-    h += '<td style="width:50%;border:1px solid #000000;padding:6px 10px;text-align:center;vertical-align:bottom;height:75px;">';
+    h += '<td style="width:50%;border:1px solid #000000;padding:3px 8px;text-align:center;vertical-align:bottom;height:55px;">';
     if (firmaVig) {
-        h += '<img src="' + firmaVig + '" style="max-height:48px;max-width:180px;display:block;margin:0 auto 4px auto;" crossorigin="anonymous">';
+        h += '<img src="' + firmaVig + '" style="max-height:36px;max-width:160px;display:block;margin:0 auto 2px auto;" crossorigin="anonymous">';
     } else {
-        h += '<div style="height:35px;"></div>';
+        h += '<div style="height:25px;"></div>';
     }
     var inspectorName = (tipo === 'salida' ? rec.creado_por : rec.retorno_creado_por) || rec.creado_por || 'Oficial de Seguridad';
-    h += '<div style="border-top:1px dashed #000000;padding-top:4px;font-size:10px;font-weight:bold;color:#000000;">';
-    h += 'INSPECTOR DE SEGURIDAD / VIGILANCIA<br><span style="font-weight:normal;font-size:9px;color:#333333;">VoBo CONTROL ' + (tipo === 'salida' ? 'DESPACHO' : 'RECEPCIÓN') + '<br>Oficial: <strong>' + inspectorName + '</strong></span>';
+    h += '<div style="border-top:1px dashed #000000;padding-top:2px;font-size:9px;font-weight:bold;color:#000000;">';
+    h += 'INSPECTOR DE SEGURIDAD / VIGILANCIA<br><span style="font-weight:normal;font-size:8.5px;color:#333333;">VoBo CONTROL ' + (tipo === 'salida' ? 'DESPACHO' : 'RECEPCIÓN') + '<br>Oficial: <strong>' + inspectorName + '</strong></span>';
     h += '</div>';
     h += '</td>';
 
     h += '</tr>';
     h += '</table>';
-    h += '<div style="display:flex;justify-content:space-between;font-size:8.5px;color:#666666;margin-top:4px;padding:0 2px;">';
+    h += '<div style="display:flex;justify-content:space-between;font-size:8px;color:#666666;margin-top:2px;padding:0 2px;">';
     h += '<span>Documento generado por Sistema ERP de Gestión de Flota</span>';
     h += '<span>' + (pageLabel || 'Página 1 de 1 (Acta Oficial)') + '</span>';
     h += '</div>';
@@ -2243,7 +2327,10 @@ window._sguPrevisualizarPDF = async function(tipo) {
 
     _sguToast('Preparando vista previa...', 'bi-eye');
 
-    var htmlFinal = _sguBuildPageHtml(rec, tipo);
+    var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
+    var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+
+    var htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
     if (fotos.length > 0) {
         var fotosSimple = fotos.map(function(f, i) { return { url: f.url, num: i + 1 }; });
         htmlFinal += _sguBuildPhotosPagesHtml(fotosSimple, tipo);
@@ -2259,15 +2346,18 @@ window._sguPrevisualizarPDFCompleto = async function() {
 
     _sguToast('Preparando vista previa del expediente...', 'bi-eye');
 
+    var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
+    var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+
     var todasFotos = rec.fotos || [];
     var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
     var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
 
-    var htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)');
+    var htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
 
     if (rec.retorno_fecha || rec.estado === 'completado') {
         htmlFinal += '<div class="html2pdf__page-break"></div>';
-        htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)');
+        htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
     }
 
     if (fotosSalida.length > 0) {
@@ -2293,6 +2383,9 @@ window._sguGenerarPDF = async function(tipo) {
 
     _sguToast('Descargando reporte PDF...', 'bi-hourglass-split');
 
+    var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
+    var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+
     var fotosBase64 = [];
     if (fotos.length > 0) {
         for (var i = 0; i < fotos.length; i++) {
@@ -2311,7 +2404,7 @@ window._sguGenerarPDF = async function(tipo) {
         }
     }
 
-    var htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)');
+    var htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
     if (fotosBase64.length > 0) {
         htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
     }
@@ -2348,12 +2441,16 @@ window._sguGenerarPDFCompleto = async function() {
 
     _sguToast('Descargando Expediente Completo...', 'bi-hourglass-split');
 
+    var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
+    var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+
     var todasFotos = rec.fotos || [];
     var fotosSalida = [];
     var fotosRetorno = [];
 
     for (var i = 0; i < todasFotos.length; i++) {
         var f = todasFotos[i];
+        if (!f || !f.url) continue;
         try {
             var res = await fetch(f.url, { mode: 'cors', cache: 'no-store' });
             var blob = await res.blob();
@@ -2370,13 +2467,11 @@ window._sguGenerarPDFCompleto = async function() {
         }
     }
 
-    // Página 1: Salida
-    var htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)');
+    var htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
 
-    // Página 2: Retorno (si existe o completado)
     if (rec.retorno_fecha || rec.estado === 'completado') {
         htmlFinal += '<div class="html2pdf__page-break"></div>';
-        htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)');
+        htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
     }
 
     // Páginas siguientes: Fotos
@@ -2424,6 +2519,9 @@ window._sguCompartirWhatsApp = async function(tipo) {
     _sguToast('Generando PDF con fotos para WhatsApp...', 'bi-whatsapp');
 
     try {
+        var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
+        var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+
         // Asegurar que tengamos las fotos frescas del registro si no están en memoria
         if ((!rec.fotos || !rec.fotos.length) && rec.id) {
             try {
@@ -2470,16 +2568,16 @@ window._sguCompartirWhatsApp = async function(tipo) {
 
         var htmlFinal = '';
         if (tipo === 'completo') {
-            htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)');
+            htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
             if (rec.retorno_fecha || rec.estado === 'completado') {
                 htmlFinal += '<div class="html2pdf__page-break"></div>';
-                htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)');
+                htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
             }
             if (fotosSalida.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosSalida, 'salida');
             if (fotosRetorno.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosRetorno, 'retorno');
         } else {
             var fotosBase64 = tipo === 'salida' ? fotosSalida : fotosRetorno;
-            htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)');
+            htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
             if (fotosBase64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
         }
 
