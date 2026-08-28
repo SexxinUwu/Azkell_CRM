@@ -102,6 +102,7 @@ module.exports = (db, logAudit) => {
         const { placa_tracto, placa_carreta, conductor, destino,
                 salida_fecha, salida_hora, salida_km,
                 salida_template_json, salida_checklist_json, salida_has_alert,
+                salida_observaciones,
                 firma_salida_conductor, firma_salida_vigilancia } = req.body;
 
         if (!placa_tracto || !conductor) {
@@ -135,12 +136,14 @@ module.exports = (db, logAudit) => {
                      (id, placa_tracto, placa_carreta, conductor, destino, estado,
                       salida_fecha, salida_hora, salida_km,
                       salida_template_json, salida_checklist_json, salida_has_alert,
+                      salida_observaciones,
                       firma_salida_conductor, firma_salida_vigilancia, creado_por)
-                     VALUES (?, ?, ?, ?, ?, 'en_ruta', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                     VALUES (?, ?, ?, ?, ?, 'en_ruta', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [regId, placa_tracto.toUpperCase(), (placa_carreta || '').toUpperCase() || null,
                      conductor, destino || null,
                      salida_fecha || null, salida_hora || null, salida_km || null,
                      templateStr, checklistStr, salida_has_alert ? 1 : 0,
+                     salida_observaciones || null,
                      firma_salida_conductor || null, firma_salida_vigilancia || null,
                      userSalida],
                     (err) => {
@@ -157,6 +160,7 @@ module.exports = (db, logAudit) => {
     router.put('/seguridad/unidades/:id', (req, res) => {
         const { retorno_fecha, retorno_hora, retorno_km,
                 retorno_template_json, retorno_checklist_json, retorno_has_alert,
+                salida_observaciones, retorno_observaciones,
                 firma_salida_conductor, firma_salida_vigilancia,
                 firma_retorno_conductor, firma_retorno_vigilancia,
                 retorno_creado_por,
@@ -179,6 +183,8 @@ module.exports = (db, logAudit) => {
             params.push(typeof retorno_checklist_json === 'string' ? retorno_checklist_json : JSON.stringify(retorno_checklist_json));
         }
         if (retorno_has_alert !== undefined)       { sets.push('retorno_has_alert = ?');       params.push(retorno_has_alert ? 1 : 0); }
+        if (salida_observaciones !== undefined)    { sets.push('salida_observaciones = ?');    params.push(salida_observaciones || null); }
+        if (retorno_observaciones !== undefined)   { sets.push('retorno_observaciones = ?');   params.push(retorno_observaciones || null); }
         if (firma_salida_conductor !== undefined)  { sets.push('firma_salida_conductor = ?');  params.push(firma_salida_conductor); }
         if (firma_salida_vigilancia !== undefined) { sets.push('firma_salida_vigilancia = ?'); params.push(firma_salida_vigilancia); }
         if (firma_retorno_conductor !== undefined) { sets.push('firma_retorno_conductor = ?'); params.push(firma_retorno_conductor); }
