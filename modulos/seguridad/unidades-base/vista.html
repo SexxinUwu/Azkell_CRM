@@ -341,53 +341,76 @@
     background: #f8fafc !important;
 }
 
-#modalSubUnidad .form-control,
-#modalSubUnidad .form-select {
-    min-height: 44px !important;
-    border-radius: 12px !important;
-    font-size: 0.9rem !important;
-    font-weight: 600 !important;
-    border: 1.5px solid #cbd5e1 !important;
-    padding: 0.5rem 0.85rem !important;
-    background-color: #ffffff;
-    transition: all 0.2s ease;
+/* Form Styles Exactos a Checklist de Unidades */
+.sub-form-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1.25rem 1.4rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
 
-#modalSubUnidad .form-control:focus,
-#modalSubUnidad .form-select:focus {
-    border-color: #0284c7 !important;
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+/* Jerarquía de z-index para que los dropdowns nunca queden tapados */
+.sub-card-step-1 { position: relative; z-index: 40; }
+.sub-card-step-2 { position: relative; z-index: 30; }
+.sub-card-step-3 { position: relative; z-index: 20; }
+.sub-card-step-4 { position: relative; z-index: 10; }
+
+.sub-form-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.35rem;
+    display: block;
 }
 
-#modalSubUnidad .form-label {
-    font-size: 0.72rem !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.4px !important;
-    color: #475569 !important;
-    margin-bottom: 0.3rem !important;
+.sub-form-input-clean {
+    width: 100%;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #0f172a;
+    outline: none;
+    transition: all 0.18s ease;
+    min-height: 44px;
 }
 
-#modalSubUnidad .card {
-    border-radius: 16px !important;
-    border: 1px solid #e2e8f0 !important;
-    background: #ffffff !important;
-    position: relative !important;
-    z-index: 1;
+.sub-form-input-clean:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 
-#modalSubUnidad .card:focus-within {
-    z-index: 50 !important;
+.sub-form-select-clean {
+    width: 100%;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #0f172a;
+    outline: none;
+    transition: all 0.18s ease;
+    min-height: 44px;
+}
+
+.sub-form-select-clean:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 
 /* ── Autocomplete Flotante Moderno (Exacto a Checklist de Unidades) ─── */
 .sub-autocomplete-wrap {
     position: relative !important;
     width: 100% !important;
-}
-
-.sub-autocomplete-wrap:focus-within {
-    z-index: 100 !important;
 }
 
 .sub-autocomplete-list {
@@ -401,8 +424,8 @@
     border-radius: 12px;
     max-height: 220px;
     overflow-y: auto;
-    z-index: 9999 !important;
-    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22);
+    z-index: 99999 !important;
+    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.25);
 }
 
 .sub-autocomplete-list.show {
@@ -589,7 +612,7 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     MODAL DRAWER: REGISTRAR / EDITAR (Exacto al estilo Reporte de Fallas)
+     MODAL DRAWER: REGISTRAR / EDITAR (Exacto al estilo Checklist de Unidades)
 ═══════════════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="modalSubUnidad" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog sub-floating-drawer-dialog">
@@ -608,22 +631,22 @@
                 <form id="formSubUnidad" onsubmit="event.preventDefault(); window.subGuardarRegistro();">
                     <input type="hidden" id="sub-form-id" value="">
 
-                    <!-- Card 1: Datos del Reporte -->
-                    <div class="card p-3 mb-3 shadow-none">
+                    <!-- Card 1: Datos del Reporte (z-index: 40) -->
+                    <div class="sub-form-card sub-card-step-1">
                         <div class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.88rem;">
                             <i class="bi bi-calendar2-check-fill text-primary"></i> Datos del Reporte
                         </div>
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
-                                <label class="form-label">Fecha (*)</label>
-                                <input type="date" id="sub-form-fecha" class="form-control" required>
+                                <label class="sub-form-label">Fecha (*)</label>
+                                <input type="date" id="sub-form-fecha" class="sub-form-input-clean" required>
                             </div>
                             <div class="col-12 col-md-6">
-                                <label class="form-label d-flex justify-content-between align-items-center">
+                                <label class="sub-form-label d-flex justify-content-between align-items-center">
                                     <span>Corte Horario (*)</span>
                                     <span class="badge bg-primary-subtle text-primary fw-bold" style="font-size: 0.65rem;">Auto por Hora</span>
                                 </label>
-                                <select id="sub-form-corte" class="form-select" required>
+                                <select id="sub-form-corte" class="sub-form-select-clean" required>
                                     <option value="Corte 1">Corte 1 (05:00 - 11:59)</option>
                                     <option value="Corte 2">Corte 2 (12:00 - 16:59)</option>
                                     <option value="Corte 3">Corte 3 (17:00 - 04:59)</option>
@@ -632,53 +655,53 @@
                         </div>
                     </div>
 
-                    <!-- Card 2: Unidades / Placas y Conductor (Con Autocomplete Flotante Moderno) -->
-                    <div class="card p-3 mb-3 shadow-none">
+                    <!-- Card 2: Unidades / Placas y Conductor (z-index: 30) -->
+                    <div class="sub-form-card sub-card-step-2">
                         <div class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.88rem;">
-                            <i class="bi bi-truck text-primary"></i> Unidades / Placas y Conductor
+                            <i class="bi bi-truck text-primary"></i> Asignación de Unidad y Conductor
                         </div>
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
-                                <label class="form-label">Placa Camión / Tracto (*)</label>
+                                <label class="sub-form-label">Placa Camión / Tracto (*)</label>
                                 <div class="sub-autocomplete-wrap">
-                                    <input type="text" id="sub-form-placa-camion" class="form-control text-uppercase font-monospace" placeholder="SELECCIONE O ESCRIBA PLACA..." autocomplete="off" onfocus="window._subHandleAutoInput(this, 'tractos')" oninput="window._subHandleAutoInput(this, 'tractos')" required>
+                                    <input type="text" id="sub-form-placa-camion" class="sub-form-input-clean text-uppercase font-monospace" placeholder="Ej. A1B-891" autocomplete="off" onfocus="window._subHandleAutoInput(this, 'tractos')" oninput="window._subHandleAutoInput(this, 'tractos')" required>
                                     <div class="sub-autocomplete-list" id="sub-auto-placa-camion"></div>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6">
-                                <label class="form-label">Placa Semirremolque / Carreta (Opcional)</label>
+                                <label class="sub-form-label">Placa Semirremolque / Carreta (Opcional)</label>
                                 <div class="sub-autocomplete-wrap">
-                                    <input type="text" id="sub-form-placa-carreta" class="form-control text-uppercase font-monospace" placeholder="SELECCIONE O ESCRIBA CARRETA..." autocomplete="off" onfocus="window._subHandleAutoInput(this, 'carretas')" oninput="window._subHandleAutoInput(this, 'carretas')">
+                                    <input type="text" id="sub-form-placa-carreta" class="sub-form-input-clean text-uppercase font-monospace" placeholder="Ej. T3X-998" autocomplete="off" onfocus="window._subHandleAutoInput(this, 'carretas')" oninput="window._subHandleAutoInput(this, 'carretas')">
                                     <div class="sub-autocomplete-list" id="sub-auto-placa-carreta"></div>
                                 </div>
                             </div>
                             <div class="col-12">
-                                <label class="form-label">Conductor Asignado</label>
+                                <label class="sub-form-label">Conductor Asignado</label>
                                 <div class="sub-autocomplete-wrap">
-                                    <input type="text" id="sub-form-conductor" class="form-control text-uppercase" placeholder="NOMBRE COMPLETO DEL CONDUCTOR..." autocomplete="off" onfocus="window._subHandleAutoInput(this, 'conductores')" oninput="window._subHandleAutoInput(this, 'conductores')">
+                                    <input type="text" id="sub-form-conductor" class="sub-form-input-clean text-uppercase" placeholder="Nombre completo del conductor" autocomplete="off" onfocus="window._subHandleAutoInput(this, 'conductores')" oninput="window._subHandleAutoInput(this, 'conductores')">
                                     <div class="sub-autocomplete-list" id="sub-auto-conductor"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Card 3: Ubicación y Estado -->
-                    <div class="card p-3 mb-3 shadow-none">
+                    <!-- Card 3: Ubicación y Estado (z-index: 20) -->
+                    <div class="sub-form-card sub-card-step-3">
                         <div class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.88rem;">
                             <i class="bi bi-geo-alt-fill text-primary"></i> Ubicación y Estado
                         </div>
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
-                                <label class="form-label">Zona / Patio (*)</label>
-                                <select id="sub-form-zona" class="form-select" required>
+                                <label class="sub-form-label">Zona / Patio (*)</label>
+                                <select id="sub-form-zona" class="sub-form-select-clean" required>
                                     <option value="Base" selected>Base</option>
                                     <option value="Mantenimiento">Mantenimiento</option>
                                     <option value="Lavado">Lavado</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md-6">
-                                <label class="form-label">Estado de la Unidad (*)</label>
-                                <select id="sub-form-estado" class="form-select" required>
+                                <label class="sub-form-label">Estado de la Unidad (*)</label>
+                                <select id="sub-form-estado" class="sub-form-select-clean" required>
                                     <option value="Cargado" selected>Cargado</option>
                                     <option value="Con Devolución">Con Devolución</option>
                                     <option value="Vacío">Vacío</option>
@@ -687,12 +710,12 @@
                         </div>
                     </div>
 
-                    <!-- Card 4: Observaciones -->
-                    <div class="card p-3 mb-4 shadow-none">
+                    <!-- Card 4: Observaciones (z-index: 10) -->
+                    <div class="sub-form-card sub-card-step-4">
                         <div class="fw-bold text-dark d-flex align-items-center gap-2 mb-2" style="font-size: 0.88rem;">
                             <i class="bi bi-chat-left-text-fill text-primary"></i> Observaciones
                         </div>
-                        <textarea id="sub-form-obs" class="form-control" rows="3" placeholder="Detalles de permanencia, motivo de estancia..." style="min-height: 75px !important;"></textarea>
+                        <textarea id="sub-form-obs" class="sub-form-input-clean" rows="3" placeholder="Detalles de permanencia, motivo de estancia..." style="min-height: 75px !important;"></textarea>
                     </div>
 
                     <!-- Footer Modal -->
