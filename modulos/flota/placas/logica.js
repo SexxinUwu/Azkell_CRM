@@ -634,8 +634,8 @@ function renderizarPaginaPlacas() {
         html += '<tr style="border-bottom: 1px solid var(--border); transition: background 0.2s; cursor:pointer;" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'transparent\'" onclick="abrirDetallePlaca(event, '+indexGlobal+')">';
         html += '<td style="text-align:center; padding:0.75rem 0.5rem;" onclick="event.stopPropagation()">' + checkHtml + '</td>';
         
-        // Mapeo sincronizado con los 28 campos + estado + acciones
-        const ordenVisual = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 25, 26, 27, 13, 14, 28, 15, 16, 17, 19, 20, 21, 22, 18];
+        // Mapeo sincronizado con los campos (incluyendo modelo_motor en idx 29) + estado + acciones
+        const ordenVisual = [0, 1, 2, 3, 4, 5, 6, 7, 29, 8, 9, 10, 11, 12, 24, 25, 26, 27, 13, 14, 28, 15, 16, 17, 19, 20, 21, 22, 18];
         for (let i of ordenVisual) {
             let val = (fila[i] !== undefined && fila[i] !== null && String(fila[i]).trim() !== '') ? String(fila[i]).trim() : '—';
             
@@ -654,6 +654,8 @@ function renderizarPaginaPlacas() {
             
             if (i === 0) {
                 html += '<td style="' + tdStyle + ' font-weight:700;">' + val + '</td>';
+            } else if (i === 29) {
+                html += '<td style="' + tdStyle + ' font-size:0.85rem;">' + (val !== '—' ? '<span class="badge bg-light text-dark border px-2 py-0.5 fw-bold" style="font-size:0.75rem;">' + val + '</span>' : '<span class="text-muted opacity-50">—</span>') + '</td>';
             } else if (i === 18) {
                 html += '<td style="' + tdStyle + ' text-align:center;">' + estadoHtml + '</td>';
             }
@@ -1974,6 +1976,7 @@ window.exportarPlacasExcel = async function() {
         'TIPO',
         'SUB TIPO',
         'COLOR',
+        'MODELO MOTOR',
         'NRO MOTOR',
         'NRO CAJA',
         'NRO CORONA',
@@ -2005,11 +2008,11 @@ window.exportarPlacasExcel = async function() {
     }
     
     // Mapeo sincronizado con las columnas visuales de la tabla principal
-    // 0: Placa, 1: Cliente, 2: RUC/DNI, 3: Marca, 4: Modelo, 5: Tipo, 6: SubTipo, 7: Color
+    // 0: Placa, 1: Cliente, 2: RUC/DNI, 3: Marca, 4: Modelo, 5: Tipo, 6: SubTipo, 7: Color, 29: Modelo Motor
     // 8: NroMotor, 9: NroCaja, 10: NroCorona, 11: NroVIN, 12: Configuracion
     // 24: Tanque 1, 25: Tanque 2, 26: Tanque 3, 27: Cap. Tanque Total
     // 13: Anio, 14: Combustible, 28: Tara, 15: CargaUtil, 16: PesoNeto, 17: PesoBruto, 19: UTS, 20: Motora, 21: Llantas, 22: EnUso, 23: WialonName, 18: Estado
-    var ordenCampos = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 25, 26, 27, 13, 14, 28, 15, 16, 17, 19, 20, 21, 22, 23, 18];
+    var ordenCampos = [0, 1, 2, 3, 4, 5, 6, 7, 29, 8, 9, 10, 11, 12, 24, 25, 26, 27, 13, 14, 28, 15, 16, 17, 19, 20, 21, 22, 23, 18];
     
     for (var i = inicio; i < datos.length; i++) {
         var row = datos[i];
