@@ -7,12 +7,14 @@ module.exports = function (db, broadcast, logAudit) {
     function getDb(req) { return req.db || db; }
 
     // ── Middleware: asegurar tabla reportes_fallas existe en el tenant actual ────
+    // ── Middleware: asegurar tabla reportes_fallas existe en el tenant actual ────
     router.use((req, res, next) => {
         const tdb = getDb(req);
         const createTableSql = `
         CREATE TABLE IF NOT EXISTS reportes_fallas (
             id INT AUTO_INCREMENT PRIMARY KEY,
             folio VARCHAR(50) NOT NULL UNIQUE,
+            orden_viaje VARCHAR(60) DEFAULT NULL,
             fecha_reporte DATETIME DEFAULT CURRENT_TIMESTAMP,
             placa_tracto VARCHAR(20),
             placa_remolque VARCHAR(20),
@@ -31,14 +33,20 @@ module.exports = function (db, broadcast, logAudit) {
             id_rampa VARCHAR(50) DEFAULT NULL,
             ots_generadas_json LONGTEXT,
             creado_por VARCHAR(100),
-            creado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+            creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_orden_viaje (orden_viaje),
+            INDEX idx_placa_tracto (placa_tracto)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `;
         tdb.query(createTableSql, (err) => {
             if (err) console.warn('⚠️ Error inicializando tabla reportes_fallas:', err.message);
-            // Asegurar columna horas_motor en bases de datos existentes
-            tdb.query("ALTER TABLE reportes_fallas ADD COLUMN IF NOT EXISTS horas_motor VARCHAR(50) DEFAULT NULL", (errCol) => {
-                next();
+            // Asegurar columnas adicionales en bases de datos existentes
+            tdb.query("SHOW COLUMNS FROM reportes_fallas LIKE 'orden_viaje'", (errCol, rowsCol) => {
+                if (!errCol && (!rowsCol || rowsCol.length === 0)) {
+                    tdb.query("ALTER TABLE reportes_fallas ADD COLUMN orden_viaje VARCHAR(60) DEFAULT NULL AFTER folio", () => next());
+                } else {
+                    next();
+                }
             });
         });
     });
@@ -64,7 +72,7 @@ module.exports = function (db, broadcast, logAudit) {
     router.get('/', (req, res) => {
         const tdb = getDb(req);
         const sql = `
-            SELECT id, folio, fecha_reporte, placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
+            SELECT id, folio, orden_viaje, fecha_reporte, placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
                    conductor, procedencia, ubicacion_gps, fallas_tracto_json, fallas_remolque_json, fallas_libres_text,
                    fotos_json, firma_conductor, estado, id_rampa, ots_generadas_json, creado_por, creado_en
             FROM reportes_fallas
@@ -164,7 +172,7 @@ module.exports = function (db, broadcast, logAudit) {
     router.post('/', async (req, res) => {
         const tdb = getDb(req);
         const {
-            placa_tracto, placa_remolque, km_inicial, km_final,
+            orden_viaje, placa_tracto, placa_remolque, km_inicial, km_final,
             conductor, procedencia, ubicacion_gps,
             fallas_tracto, fallas_remolque, fallas_libres_text,
             fotos_base64, firma_conductor, creado_por
@@ -212,15 +220,16 @@ module.exports = function (db, broadcast, logAudit) {
 
                 const sql = `
                 INSERT INTO reportes_fallas (
-                    folio, placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
+                    folio, orden_viaje, placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
                     conductor, procedencia, ubicacion_gps,
                     fallas_tracto_json, fallas_remolque_json, fallas_libres_text,
                     fotos_json, firma_conductor, estado, creado_por
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?);
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?);
                 `;
 
                 const values = [
                     folio,
+                    (orden_viaje || '').trim() || null,
                     (placa_tracto || '').trim().toUpperCase(),
                     (placa_remolque || '').trim().toUpperCase(),
                     parseInt(km_inicial, 10) || 0,
@@ -491,7 +500,7 @@ module.exports = function (db, broadcast, logAudit) {
         const tdb = getDb(req);
         const id = req.params.id;
         const {
-            placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
+            orden_viaje, placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
             conductor, procedencia, ubicacion_gps,
             fallas_tracto, fallas_remolque, fallas_libres_text,
             fotos_base64, firma_conductor
@@ -541,6 +550,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             const sql = `
                 UPDATE reportes_fallas SET
+                    orden_viaje = ?,
                     placa_tracto = ?,
                     placa_remolque = ?,
                     km_inicial = ?,
@@ -558,6 +568,7 @@ module.exports = function (db, broadcast, logAudit) {
             `;
 
             const values = [
+                (orden_viaje !== undefined ? (String(orden_viaje).trim() || null) : rep.orden_viaje),
                 (placa_tracto || '').trim().toUpperCase(),
                 (placa_remolque || '').trim().toUpperCase(),
                 parseInt(km_inicial, 10) || 0,

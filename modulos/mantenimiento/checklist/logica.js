@@ -1310,9 +1310,14 @@ window.renderizarTablaChecklist = function(lista) {
         const isFinalizado = (r.estado === 'Finalizado');
 
         // 1. Table row (Desktop)
+        const viajeBadge = r.orden_viaje ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1" style="font-size:0.7rem; font-weight:700;"><i class="bi bi-diagram-3-fill me-1"></i>${r.orden_viaje}</span>` : '';
+
         htmlTable += `
         <tr>
-            <td class="ps-4 fw-bold text-primary font-monospace" style="min-width: 120px; font-size:0.9rem;">${r.folio}</td>
+            <td class="ps-4 fw-bold text-primary font-monospace" style="min-width: 120px; font-size:0.9rem;">
+                <div>${r.folio}</div>
+                ${viajeBadge ? `<div class="mt-1">${viajeBadge}</div>` : ''}
+            </td>
             <td style="min-width: 135px;"><span class="text-secondary fw-medium" style="font-size:0.82rem;">${fechaFmt}</span></td>
             <td style="min-width: 105px;">
                 ${r.placa_tracto ? `<span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-2 text-center" style="min-width: 80px; font-size: 0.82rem; border-radius: 8px; letter-spacing: 0.5px;">${r.placa_tracto}</span>` : '<span class="text-muted small">—</span>'}
@@ -1533,6 +1538,21 @@ window.abrirEditarChecklist = async function(id) {
         const txtC = document.getElementById('ck_conductor-txt');
         if (txtC) txtC.value = r.conductor || '';
 
+        const txtViaje = document.getElementById('ck_orden_viaje-txt');
+        const hidViaje = document.getElementById('ck_orden_viaje');
+        if (txtViaje) txtViaje.value = r.orden_viaje || '';
+        if (hidViaje) hidViaje.value = r.orden_viaje || '';
+        if (r.orden_viaje) {
+            const infoBox = document.getElementById('ck_viaje_seleccionado_info');
+            const lblNum = document.getElementById('ck_lbl_viaje_num');
+            const lblDet = document.getElementById('ck_lbl_viaje_detalles');
+            if (infoBox) infoBox.classList.remove('d-none');
+            if (lblNum) lblNum.textContent = r.orden_viaje;
+            if (lblDet) lblDet.textContent = `Tracto: ${r.placa_tracto || '---'} | Carreta: ${r.placa_remolque || 'Ninguna'} | Conductor: ${r.conductor || '---'}`;
+            const btnClear = document.getElementById('ck_btn_clear_viaje');
+            if (btnClear) btnClear.classList.remove('d-none');
+        }
+
         const inputKm = document.getElementById('ck_kilometraje');
         if (inputKm) inputKm.value = r.km_inicial || '';
         const inputHoras = document.getElementById('ck_horas_remolque');
@@ -1715,6 +1735,8 @@ window.guardarChecklist = function(e) {
         }
 
         const payload = {
+            folio: editId ? undefined : undefined,
+            orden_viaje: (document.getElementById('ck_orden_viaje') || {}).value || '',
             fecha_reporte: fechaRep,
             placa_tracto: placaTracto,
             placa_remolque: placaRemolque,
@@ -3334,4 +3356,115 @@ window.generarPDF_Checklist = async function(id) {
     const blob = new Blob([htmlPDF], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
+};
+
+// ── EXPORTACIÓN PROFESIONAL A EXCEL (SHEETJS) ───────────────────
+window.ckExportarExcel = async function() {
+    const lista = window.dataGlobalChecklist || [];
+    if (!lista || lista.length === 0) {
+        if (typeof window.showToastNotification === 'function') {
+            window.showToastNotification('No hay reportes de fallas disponibles para exportar.', 'warning');
+        } else {
+            alert('No hay reportes de fallas disponibles para exportar.');
+        }
+        return;
+    }
+
+    // Asegurar carga de librería SheetJS
+    if (typeof XLSX === 'undefined') {
+        try {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = '/libs/xlsx.full.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        } catch(e) {
+            console.error('Error cargando SheetJS:', e);
+            alert('No se pudo cargar la librería de exportación a Excel.');
+            return;
+        }
+    }
+
+    try {
+        const rows = lista.map((r, idx) => {
+            const fechaStr = r.fecha_reporte ? new Date(r.fecha_reporte).toLocaleDateString('es-PE') + ' ' + new Date(r.fecha_reporte).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '—';
+            
+            let countFallasTracto = 0;
+            let countFallasRemolque = 0;
+            try {
+                const fT = r.fallas_tracto_json ? (typeof r.fallas_tracto_json === 'string' ? JSON.parse(r.fallas_tracto_json) : r.fallas_tracto_json) : [];
+                const fR = r.fallas_remolque_json ? (typeof r.fallas_remolque_json === 'string' ? JSON.parse(r.fallas_remolque_json) : r.fallas_remolque_json) : [];
+                countFallasTracto = Array.isArray(fT) ? fT.length : 0;
+                countFallasRemolque = Array.isArray(fR) ? fR.length : 0;
+            } catch(e) {}
+
+            let otsTexto = '';
+            if (r.ots_generadas_json) {
+                try {
+                    const ots = typeof r.ots_generadas_json === 'string' ? JSON.parse(r.ots_generadas_json) : r.ots_generadas_json;
+                    if (Array.isArray(ots)) {
+                        otsTexto = ots.map(o => `${o.idOt} (${o.placa || ''})`).join(', ');
+                    }
+                } catch(e) {}
+            }
+
+            return {
+                'N°': idx + 1,
+                'FOLIO': r.folio || `F-${r.id}`,
+                'ORDEN DE VIAJE': r.orden_viaje || 'SIN VIAJE',
+                'FECHA Y HORA': fechaStr,
+                'PLACA TRACTO': r.placa_tracto || '—',
+                'PLACA REMOLQUE / CARRETA': r.placa_remolque || '—',
+                'CONDUCTOR': r.conductor || '—',
+                'PROCEDENCIA / RUTA': r.procedencia || '—',
+                'KILOMETRAJE': r.km_inicial ? Number(r.km_inicial) : 0,
+                'HORAS MOTOR': r.horas_motor || '—',
+                'FALLAS TRACTO': countFallasTracto,
+                'FALLAS REMOLQUE': countFallasRemolque,
+                'TOTAL FALLAS': countFallasTracto + countFallasRemolque,
+                'ESTADO': (r.estado || 'Pendiente').toUpperCase(),
+                'OTS GENERADAS': otsTexto || 'NINGUNA',
+                'CREADO POR': r.creado_por || 'SISTEMA'
+            };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        
+        // Ajustar anchos de columnas
+        const colWidths = [
+            { wch: 6 },  // N°
+            { wch: 16 }, // FOLIO
+            { wch: 20 }, // ORDEN DE VIAJE
+            { wch: 20 }, // FECHA
+            { wch: 15 }, // PLACA TRACTO
+            { wch: 25 }, // PLACA REMOLQUE
+            { wch: 32 }, // CONDUCTOR
+            { wch: 30 }, // RUTA
+            { wch: 14 }, // KM
+            { wch: 14 }, // HORAS
+            { wch: 14 }, // FALLAS TRACTO
+            { wch: 16 }, // FALLAS REMOLQUE
+            { wch: 14 }, // TOTAL FALLAS
+            { wch: 14 }, // ESTADO
+            { wch: 30 }, // OTS
+            { wch: 16 }  // CREADO POR
+        ];
+        ws['!cols'] = colWidths;
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Reportes de Fallas");
+
+        const fechaExport = new Date().toISOString().slice(0, 10);
+        const fileName = `Reportes_Fallas_ERP_Azkell_${fechaExport}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+
+        if (typeof window.showToastNotification === 'function') {
+            window.showToastNotification('Archivo Excel exportado exitosamente con Órdenes de Viaje incluidas.', 'success');
+        }
+    } catch(errExport) {
+        console.error('Error al exportar a Excel:', errExport);
+        alert('Ocurrió un error al generar el archivo Excel: ' + errExport.message);
+    }
 };
