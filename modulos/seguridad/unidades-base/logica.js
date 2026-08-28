@@ -137,7 +137,7 @@
         const tieneCamion = Boolean(r.placa_camion && r.placa_camion.trim() && r.placa_camion.trim() !== '—');
         const tieneCarreta = Boolean(r.placa_carreta && r.placa_carreta.trim() && r.placa_carreta.trim() !== '—');
 
-        if (tieneCamion && tieneCarreta) return 'CAMIÓN + CARRETA';
+        if (tieneCamion && tieneCarreta) return 'CAMIÓN - CARRETA';
         if (tieneCamion && !tieneCarreta) return 'SOLO CAMIÓN / TRACTO';
         return 'SOLO CARRETA / REMOLQUE';
     };
@@ -161,7 +161,7 @@
 
         // Agrupar por segmento
         const grupos = {
-            'CAMIÓN + CARRETA': [],
+            'CAMIÓN - CARRETA': [],
             'SOLO CAMIÓN / TRACTO': [],
             'SOLO CARRETA / REMOLQUE': [],
             'EN MANTENIMIENTO': [],
@@ -171,13 +171,13 @@
         items.forEach(r => {
             const t = window.subDeterminarTipo(r);
             if (grupos[t]) grupos[t].push(r);
-            else grupos['CAMIÓN + CARRETA'].push(r);
+            else grupos['CAMIÓN - CARRETA'].push(r);
         });
 
         let html = '';
 
         const ordenGrupos = [
-            { key: 'CAMIÓN + CARRETA', icon: 'bi-truck-flatbed', color: '#0284c7' },
+            { key: 'CAMIÓN - CARRETA', icon: 'bi-truck-flatbed', color: '#0284c7' },
             { key: 'SOLO CAMIÓN / TRACTO', icon: 'bi-truck-front-fill', color: '#16a34a' },
             { key: 'SOLO CARRETA / REMOLQUE', icon: 'bi-box-seam-fill', color: '#d97706' },
             { key: 'EN MANTENIMIENTO', icon: 'bi-tools', color: '#dc2626' },
@@ -228,11 +228,11 @@
                         <td class="text-secondary small" style="max-width:260px; word-break:break-word;">${r.observacion || '—'}</td>
                         <td class="text-secondary small">${r.usuario || 'Seguridad'}</td>
                         <td class="text-end text-nowrap">
-                            <button class="btn btn-sm btn-light border py-1 px-2 me-1 text-dark" title="Editar" onclick='window.subAbrirModalEditar(${JSON.stringify(r)})'>
-                                <i class="bi bi-pencil"></i>
+                            <button class="sub-btn-edit-cell me-1" title="Editar" onclick='window.subAbrirModalEditar(${JSON.stringify(r)})'>
+                                <i class="bi bi-pencil-fill"></i>
                             </button>
-                            <button class="btn btn-sm btn-light border border-danger text-danger py-1 px-2" title="Eliminar" onclick="window.subEliminar(${r.id})">
-                                <i class="bi bi-trash"></i>
+                            <button class="sub-btn-del-cell" title="Eliminar" onclick="window.subEliminar(${r.id})">
+                                <i class="bi bi-trash3-fill"></i>
                             </button>
                         </td>
                     </tr>
@@ -385,15 +385,30 @@
         }
     };
 
-    // ── Eliminar Registro ─────────────────────────────────────────
-    window.subEliminar = async function(id) {
-        if (!confirm('¿Estás seguro de eliminar este registro de unidad en base?')) return;
+    // ── Eliminar Registro (Modal Diseño B Oficial ERP) ───────────
+    let _subIdParaEliminar = null;
+
+    window.subEliminar = function(id) {
+        _subIdParaEliminar = id;
+        const modalEl = document.getElementById('sub-delete-modal');
+        if (modalEl) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    };
+
+    window._subEjecutarEliminacionConfirmada = async function() {
+        if (!_subIdParaEliminar) return;
+        const id = _subIdParaEliminar;
+        _subIdParaEliminar = null;
+
+        const modalEl = document.getElementById('sub-delete-modal');
+        if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
 
         try {
             const res = await fetch(`/api/seguridad/unidades-base/${id}`, { method: 'DELETE' });
             const data = await res.json();
             if (data.ok) {
-                window.mostrarToast('Registro eliminado', 'info');
+                window.mostrarToast('Registro eliminado correctamente', 'info');
                 window.subCargarDatos();
             } else {
                 window.mostrarToast(data.error || 'No se pudo eliminar', 'danger');
@@ -426,7 +441,7 @@
 
         // Agrupar por tipo para el PDF
         const grupos = {
-            'CAMIÓN + CARRETA': [],
+            'CAMIÓN - CARRETA': [],
             'SOLO CAMIÓN / TRACTO': [],
             'SOLO CARRETA / REMOLQUE': [],
             'EN MANTENIMIENTO': [],
@@ -436,14 +451,14 @@
         items.forEach(r => {
             const t = window.subDeterminarTipo(r);
             if (grupos[t]) grupos[t].push(r);
-            else grupos['CAMIÓN + CARRETA'].push(r);
+            else grupos['CAMIÓN - CARRETA'].push(r);
         });
 
         let filasHtml = '';
         let itemIndex = 1;
 
         const ordenGrupos = [
-            'CAMIÓN + CARRETA',
+            'CAMIÓN - CARRETA',
             'SOLO CAMIÓN / TRACTO',
             'SOLO CARRETA / REMOLQUE',
             'EN MANTENIMIENTO',
