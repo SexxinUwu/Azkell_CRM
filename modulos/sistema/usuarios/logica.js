@@ -42,7 +42,7 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'TESORERÍA',     key:'tesoreria_flujo',nombre:'Flujo de Caja',   desc:'Ingresos y egresos proyectados',lcad:true  },
     { grupo:'TESORERÍA',     key:'tesoreria_cuentas',nombre:'Cuentas Cobrar/Pagar',desc:'Gestión de créditos y pagos',lcad:true},
     { grupo:'SEGURIDAD',     key:'seguridad_unidades', nombre:'CheckList Unidades',desc:'Fichas y control de ingreso/salida', lcad:true },
-    { grupo:'SEGURIDAD',     key:'asist',         nombre:'Tareo de Asistencia',desc:'Asistencia del personal',     lcad:true  },
+    { grupo:'SEGURIDAD',     key:'unidades_base',      nombre:'Unidades en Base',  desc:'Status y control de unidades en base', lcad:true },
     { grupo:'CONFIGURACIÓN', key:'usuarios',      nombre:'Usuarios y Roles', desc:'Gestión de accesos y seguridad',lcad:true },
     { grupo:'CONFIGURACIÓN', key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad global',  lcad:true  },
     { grupo:'CONFIGURACIÓN', key:'administracion',nombre:'Administración / Empresa', desc:'Hub de administración maestra', lcad:true }
