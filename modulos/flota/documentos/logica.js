@@ -304,6 +304,9 @@ function cargarDatosVehiculos() {
         actualizarKPIs();
         renderizarListaLateral();
         renderizarMatriz();
+        if (typeof window.renderizarCalendario === 'function') {
+            window.renderizarCalendario();
+        }
         actualizarDatalistPlacas();
         
         if(currentPlaca) {
@@ -400,14 +403,30 @@ function filtrarSegmentoDoc(tipo, element) {
     currentFiltroKPI = tipo;
     renderizarListaLateral();
     renderizarMatriz();
+    if (document.getElementById('view-container-calendar') && !document.getElementById('view-container-calendar').classList.contains('d-none')) {
+        window.renderizarCalendario();
+    }
 }
 window.filtrarSegmentoDoc = filtrarSegmentoDoc;
 
 window.cambiarModoVistaDoc = function(modo) {
     const btnCards = document.getElementById('btn-view-cards');
     const btnMatrix = document.getElementById('btn-view-matrix');
+    const btnCalendar = document.getElementById('btn-view-calendar');
     const viewCards = document.getElementById('view-container-cards');
     const viewMatrix = document.getElementById('view-container-matrix');
+    const viewCalendar = document.getElementById('view-container-calendar');
+
+    [btnCards, btnMatrix, btnCalendar].forEach(b => {
+        if (b) {
+            b.classList.remove('active');
+            b.style.background = 'transparent';
+            b.style.color = '#64748b';
+        }
+    });
+    [viewCards, viewMatrix, viewCalendar].forEach(v => {
+        if (v) v.classList.add('d-none');
+    });
 
     if (modo === 'matrix') {
         if (btnMatrix) {
@@ -415,15 +434,19 @@ window.cambiarModoVistaDoc = function(modo) {
             btnMatrix.style.background = '#eff6ff';
             btnMatrix.style.color = '#0284c7';
         }
-        if (btnCards) {
-            btnCards.classList.remove('active');
-            btnCards.style.background = 'transparent';
-            btnCards.style.color = '#64748b';
-        }
-        if (viewCards) viewCards.classList.add('d-none');
         if (viewMatrix) {
             viewMatrix.classList.remove('d-none');
             renderizarMatriz();
+        }
+    } else if (modo === 'calendar') {
+        if (btnCalendar) {
+            btnCalendar.classList.add('active');
+            btnCalendar.style.background = '#eff6ff';
+            btnCalendar.style.color = '#0284c7';
+        }
+        if (viewCalendar) {
+            viewCalendar.classList.remove('d-none');
+            window.renderizarCalendario();
         }
     } else {
         if (btnCards) {
@@ -431,14 +454,468 @@ window.cambiarModoVistaDoc = function(modo) {
             btnCards.style.background = '#eff6ff';
             btnCards.style.color = '#0284c7';
         }
-        if (btnMatrix) {
-            btnMatrix.classList.remove('active');
-            btnMatrix.style.background = 'transparent';
-            btnMatrix.style.color = '#64748b';
-        }
         if (viewCards) viewCards.classList.remove('d-none');
-        if (viewMatrix) viewMatrix.classList.add('d-none');
     }
+};
+
+// =========================================================
+// 📅 LÓGICA DEL CALENDARIO BENTO DE VENCIMIENTOS DE FLOTA
+// =========================================================
+window._calDate = new Date();
+window._calFiltroTipo = 'ALL';
+
+const CAL_MESES_ES = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
+window.calPrevMonth = function() {
+    window._calDate.setMonth(window._calDate.getMonth() - 1);
+    window.renderizarCalendario();
+};
+
+window.calNextMonth = function() {
+    window._calDate.setMonth(window._calDate.getMonth() + 1);
+    window.renderizarCalendario();
+};
+
+window.calGoToday = function() {
+    window._calDate = new Date();
+    window.renderizarCalendario();
+};
+
+window.calSetFiltroTipo = function(tipo) {
+    window._calFiltroTipo = tipo;
+    window.renderizarCalendario();
+};
+
+// Definición de tipos de documentos disponibles con metadatos
+const DOC_KEYS_CONFIG = [
+    { key: 'soat', label: 'SOAT', title: 'SOAT', field: 'soat_vencimiento', icon: 'bi-shield-check', bgClass: 'bg-c2', num: 2, tipoKey: 'SOAT' },
+    { key: 'rt', label: 'Rev. Técnica', title: 'REV. TÉCNICA', field: 'rt_vencimiento', icon: 'bi-wrench-adjustable', bgClass: 'bg-c4', num: 4, tipoKey: 'REV_TECNICA' },
+    { key: 'tc', label: 'Tarj. Circulación', title: 'TARJETA DE PROPIEDAD', field: 'tc_vencimiento', icon: 'bi-card-heading', bgClass: 'bg-c1', num: 1, tipoKey: 'TARJETA_PROPIEDAD' },
+    { key: 'matpel', label: 'MATPEL', title: 'TARJ. MATPEL', field: 'matpel_vencimiento', icon: 'bi-box-seam', bgClass: 'bg-c3', num: 3, tipoKey: 'MATPEL' },
+    { key: 'boni', label: 'Bonificación', title: 'BONIFICACIÓN', field: 'boni_vencimiento', icon: 'bi-file-earmark-check', bgClass: 'bg-c5', num: 5, tipoKey: 'BONIFICACION' },
+    { key: 'sv', label: 'Seg. Vehicular', title: 'SEG. VEHICULAR', field: 'sv_vencimiento', icon: 'bi-shield-shaded', bgClass: 'bg-c6', num: 6, tipoKey: 'SEG_VEHICULAR' },
+    { key: 'sc', label: 'Seg. Carreta', title: 'SEG. CARRETA', field: 'sc_vencimiento', icon: 'bi-truck', bgClass: 'bg-c7', num: 7, tipoKey: 'SEG_CARRETA' },
+    { key: 'fum', label: 'Fumigación', title: 'FUMIGACIÓN', field: 'fum_vencimiento', icon: 'bi-bug', bgClass: 'bg-c8', num: 8, tipoKey: 'FUMIGACION' },
+    { key: 'ext', label: 'Extintor', title: 'EXTINTOR', field: 'ext_vencimiento', icon: 'bi-fire', bgClass: 'bg-c9', num: 9, tipoKey: 'EXTINTOR' }
+];
+
+window.renderizarCalendario = function() {
+    const gridContainer = document.getElementById('cal-grid-days');
+    const titleEl = document.getElementById('cal-month-title');
+    const miniTitleEl = document.getElementById('cal-mini-title');
+    const miniGridEl = document.getElementById('cal-mini-grid');
+    const upcomingListEl = document.getElementById('cal-upcoming-list');
+    const statVencidos = document.getElementById('cal-stat-vencidos');
+    const statAlertas = document.getElementById('cal-stat-alertas');
+    const statVigentes = document.getElementById('cal-stat-vigentes');
+    const badgeTotalMes = document.getElementById('cal-badge-total-mes');
+    const searchEl = document.getElementById('cal-search-placa');
+    const searchTxt = (searchEl ? searchEl.value : '').trim().toLowerCase();
+
+    if (!gridContainer) return;
+
+    const currentYear = window._calDate.getFullYear();
+    const currentMonth = window._calDate.getMonth(); // 0-indexed
+
+    if (titleEl) {
+        titleEl.innerHTML = `<i class="bi bi-calendar3 text-primary"></i> ${CAL_MESES_ES[currentMonth]} <span class="text-secondary fw-normal">${currentYear}</span>`;
+    }
+    if (miniTitleEl) {
+        miniTitleEl.innerText = `${CAL_MESES_ES[currentMonth]} ${currentYear}`;
+    }
+
+    // 1. Recolectar todos los vencimientos de la flota que caen en este mes
+    const eventosPorDia = {}; // { '1': [eventos], '2': [eventos] }
+    const todosEventosMes = [];
+    let cntVencidosMes = 0;
+    let cntAlertasMes = 0;
+    let cntVigentesMes = 0;
+
+    vehiculosFlota.forEach(v => {
+        // Filtro por búsqueda de placa
+        if (searchTxt && !v.placa.toLowerCase().includes(searchTxt) && !(v.tipo || '').toLowerCase().includes(searchTxt)) {
+            return;
+        }
+
+        DOC_KEYS_CONFIG.forEach(cfg => {
+            if (window._calFiltroTipo !== 'ALL' && window._calFiltroTipo !== cfg.key) {
+                return;
+            }
+
+            const rawFecha = v[cfg.field];
+            if (!rawFecha) return;
+
+            const dVen = new Date(rawFecha);
+            if (isNaN(dVen.getTime())) return;
+            if (dVen.getFullYear() === 2000 && dVen.getMonth() === 0) return; // Fecha nula / default
+
+            const vYear = dVen.getUTCFullYear();
+            const vMonth = dVen.getUTCMonth();
+            const vDay = dVen.getUTCDate();
+
+            if (vYear === currentYear && vMonth === currentMonth) {
+                const est = calcularEstado(rawFecha);
+                
+                if (est.score === 0) cntVencidosMes++;
+                else if (est.score === 1 || est.score === 2) cntAlertasMes++;
+                else if (est.score === 3) cntVigentesMes++;
+
+                let pillCls = 'vigente';
+                if (est.score === 0) pillCls = 'vencido';
+                else if (est.score === 1) pillCls = 'critico';
+                else if (est.score === 2) pillCls = 'alerta';
+
+                const evento = {
+                    placa: v.placa,
+                    tipoVehiculo: v.tipo || 'CAMIÓN',
+                    docKey: cfg.key,
+                    docTitle: cfg.title,
+                    docLabel: cfg.label,
+                    docIcon: cfg.icon,
+                    tipoKey: cfg.tipoKey,
+                    rawFecha: rawFecha,
+                    fechaFmt: `${String(vDay).padStart(2, '0')}/${String(vMonth + 1).padStart(2, '0')}/${vYear}`,
+                    day: vDay,
+                    est: est,
+                    pillCls: pillCls,
+                    vehiculoObj: v
+                };
+
+                if (!eventosPorDia[vDay]) eventosPorDia[vDay] = [];
+                eventosPorDia[vDay].push(evento);
+                todosEventosMes.push(evento);
+            }
+        });
+    });
+
+    // Actualizar badges y contadores del mes
+    if (statVencidos) statVencidos.innerText = cntVencidosMes;
+    if (statAlertas) statAlertas.innerText = cntAlertasMes;
+    if (statVigentes) statVigentes.innerText = cntVigentesMes;
+    if (badgeTotalMes) badgeTotalMes.innerText = `${todosEventosMes.length} Vencimientos`;
+
+    // 2. Construir la cuadrícula del calendario (Lunes a Domingo)
+    const primerDiaMes = new Date(currentYear, currentMonth, 1);
+    const ultimoDiaMes = new Date(currentYear, currentMonth + 1, 0);
+    const totalDiasMes = ultimoDiaMes.getDate();
+
+    // Índice de inicio (0: Lunes, 6: Domingo)
+    let startDayIdx = (primerDiaMes.getDay() + 6) % 7;
+
+    // Días del mes anterior para rellenar
+    const ultimoDiaMesAnterior = new Date(currentYear, currentMonth, 0).getDate();
+
+    const hoy = new Date();
+    const isHoyCurrentMonth = (hoy.getFullYear() === currentYear && hoy.getMonth() === currentMonth);
+    const hoyDay = hoy.getDate();
+
+    let gridHtml = '';
+
+    // Celdas del mes anterior
+    for (let i = startDayIdx - 1; i >= 0; i--) {
+        const dNum = ultimoDiaMesAnterior - i;
+        gridHtml += `
+            <div class="cal-day-cell other-month">
+                <div class="cal-day-top">
+                    <span class="cal-day-num text-muted">${dNum}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    // Celdas del mes actual
+    for (let d = 1; d <= totalDiasMes; d++) {
+        const isToday = isHoyCurrentMonth && (d === hoyDay);
+        const evList = eventosPorDia[d] || [];
+        const todayClass = isToday ? 'today' : '';
+
+        let eventsHtml = '';
+        const maxVisible = 3;
+        const visibleEvs = evList.slice(0, maxVisible);
+        const extraCount = evList.length - maxVisible;
+
+        visibleEvs.forEach(ev => {
+            eventsHtml += `
+                <div class="cal-event-pill ${ev.pillCls}" onclick="window.calAbrirDocModalDirecto('${ev.placa}', '${ev.docKey}')" title="${ev.placa} - ${ev.docTitle} (${ev.est.text})">
+                    <span class="text-truncate"><i class="bi ${ev.docIcon} me-1"></i><strong>${ev.placa}</strong> • ${ev.docLabel}</span>
+                </div>
+            `;
+        });
+
+        if (extraCount > 0) {
+            eventsHtml += `
+                <div class="cal-event-more" onclick="window.calVerEventosDia(${d}, ${currentMonth}, ${currentYear})">
+                    +${extraCount} más...
+                </div>
+            `;
+        }
+
+        gridHtml += `
+            <div class="cal-day-cell ${todayClass}">
+                <div class="cal-day-top">
+                    <span class="cal-day-num">${d}</span>
+                    ${evList.length > 0 ? `<span class="badge rounded-pill bg-light text-secondary border" style="font-size:0.65rem;">${evList.length}</span>` : ''}
+                </div>
+                <div class="cal-events-wrap custom-scrollbar">
+                    ${eventsHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    // Celdas del mes siguiente para completar la última semana
+    const totalCeldasOcupadas = startDayIdx + totalDiasMes;
+    const totalFilas = Math.ceil(totalCeldasOcupadas / 7);
+    const totalCeldasFinal = totalFilas * 7;
+    const diasSiguienteMes = totalCeldasFinal - totalCeldasOcupadas;
+
+    for (let d = 1; d <= diasSiguienteMes; d++) {
+        gridHtml += `
+            <div class="cal-day-cell other-month">
+                <div class="cal-day-top">
+                    <span class="cal-day-num text-muted">${d}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    gridContainer.innerHTML = gridHtml;
+
+    // 3. Construir Mini Calendario Lateral
+    if (miniGridEl) {
+        let miniHtml = '';
+        for (let i = startDayIdx - 1; i >= 0; i--) {
+            miniHtml += `<div class="cal-mini-day text-muted opacity-25">${ultimoDiaMesAnterior - i}</div>`;
+        }
+        for (let d = 1; d <= totalDiasMes; d++) {
+            const hasEv = Boolean(eventosPorDia[d] && eventosPorDia[d].length > 0);
+            const isToday = isHoyCurrentMonth && (d === hoyDay);
+            let cls = '';
+            if (isToday) cls += ' today';
+            else if (hasEv) cls += ' has-event';
+
+            miniHtml += `<div class="cal-mini-day ${cls}" onclick="window.calVerEventosDia(${d}, ${currentMonth}, ${currentYear})">${d}</div>`;
+        }
+        for (let d = 1; d <= diasSiguienteMes; d++) {
+            miniHtml += `<div class="cal-mini-day text-muted opacity-25">${d}</div>`;
+        }
+        miniGridEl.innerHTML = miniHtml;
+    }
+
+    // 4. Construir Lista de Próximos Vencimientos del Mes
+    if (upcomingListEl) {
+        todosEventosMes.sort((a, b) => a.day - b.day);
+        if (todosEventosMes.length === 0) {
+            upcomingListEl.innerHTML = `
+                <div class="text-center py-4 text-muted small">
+                    <i class="bi bi-calendar2-check fs-4 d-block mb-1 text-secondary opacity-50"></i>
+                    No hay vencimientos programados en este mes.
+                </div>
+            `;
+        } else {
+            let listHtml = '';
+            todosEventosMes.slice(0, 15).forEach(ev => {
+                let badgeBg = '#dcfce7', badgeColor = '#15803d';
+                if (ev.est.score === 0) { badgeBg = '#fee2e2'; badgeColor = '#dc2626'; }
+                else if (ev.est.score === 1) { badgeBg = '#ffedd5'; badgeColor = '#ea580c'; }
+                else if (ev.est.score === 2) { badgeBg = '#fef08a'; badgeColor = '#a16207'; }
+
+                listHtml += `
+                    <div class="cal-upcoming-card" onclick="window.calAbrirDocModalDirecto('${ev.placa}', '${ev.docKey}')">
+                        <div class="d-flex align-items-center gap-2" style="min-width: 0;">
+                            <div class="p-1-5 rounded-3 d-flex align-items-center justify-content-center text-primary" style="background: #f1f5f9; width: 32px; height: 32px; flex-shrink: 0;">
+                                <i class="bi ${ev.docIcon} fs-6"></i>
+                            </div>
+                            <div style="min-width: 0;">
+                                <div class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;">${ev.placa} • <span class="text-secondary">${ev.docLabel}</span></div>
+                                <small class="text-muted d-block" style="font-size: 0.72rem;">Vence: <strong>${ev.fechaFmt}</strong></small>
+                            </div>
+                        </div>
+                        <span class="badge rounded-pill" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.68rem; font-weight: 800;">${ev.est.text}</span>
+                    </div>
+                `;
+            });
+            upcomingListEl.innerHTML = listHtml;
+        }
+    }
+};
+
+// Abre modal de todos los eventos de un día
+window.calVerEventosDia = function(dia, mes, anio) {
+    const dStr = String(dia).padStart(2, '0');
+    const mStr = String(mes + 1).padStart(2, '0');
+    const fechaFmt = `${dStr}/${mStr}/${anio}`;
+
+    const modalTitle = document.getElementById('modalEventosDiaTitulo');
+    const modalSub = document.getElementById('modalEventosDiaSub');
+    const modalBody = document.getElementById('modalEventosDiaBody');
+
+    if (modalTitle) modalTitle.innerText = `Vencimientos del ${dia} de ${CAL_MESES_ES[mes]} ${anio}`;
+    if (modalSub) modalSub.innerText = `Agenda diaria de documentación vehicular`;
+
+    // Buscar todos los eventos de este día
+    const evs = [];
+    vehiculosFlota.forEach(v => {
+        DOC_KEYS_CONFIG.forEach(cfg => {
+            const rawFecha = v[cfg.field];
+            if (!rawFecha) return;
+            const dVen = new Date(rawFecha);
+            if (isNaN(dVen.getTime())) return;
+            if (dVen.getUTCFullYear() === anio && dVen.getUTCMonth() === mes && dVen.getUTCDate() === dia) {
+                evs.push({
+                    placa: v.placa,
+                    tipoVehiculo: v.tipo || 'CAMIÓN',
+                    docKey: cfg.key,
+                    docTitle: cfg.title,
+                    docLabel: cfg.label,
+                    docIcon: cfg.icon,
+                    est: calcularEstado(rawFecha),
+                    fechaFmt: fechaFmt
+                });
+            }
+        });
+    });
+
+    if (!modalBody) return;
+
+    if (evs.length === 0) {
+        modalBody.innerHTML = `<div class="text-center py-4 text-muted">No hay vencimientos registrados para este día.</div>`;
+    } else {
+        let html = '<div class="d-flex flex-column gap-2">';
+        evs.forEach(ev => {
+            let badgeBg = '#dcfce7', badgeColor = '#15803d';
+            if (ev.est.score === 0) { badgeBg = '#fee2e2'; badgeColor = '#dc2626'; }
+            else if (ev.est.score === 1) { badgeBg = '#ffedd5'; badgeColor = '#ea580c'; }
+            else if (ev.est.score === 2) { badgeBg = '#fef08a'; badgeColor = '#a16207'; }
+
+            html += `
+                <div class="p-2-5 rounded-3 border bg-white d-flex align-items-center justify-content-between gap-2 shadow-2xs" style="cursor: pointer;" onclick="bootstrap.Modal.getInstance(document.getElementById('modalEventosDia')).hide(); window.calAbrirDocModalDirecto('${ev.placa}', '${ev.docKey}')">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded-3 bg-light text-primary"><i class="bi ${ev.docIcon} fs-5"></i></div>
+                        <div>
+                            <div class="fw-bold text-dark" style="font-size: 0.88rem;">${ev.placa} • <span class="text-primary">${ev.docTitle}</span></div>
+                            <small class="text-muted" style="font-size: 0.76rem;">${ev.tipoVehiculo} | Vence el ${ev.fechaFmt}</small>
+                        </div>
+                    </div>
+                    <span class="badge rounded-pill" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 800;">${ev.est.text}</span>
+                </div>
+            `;
+        });
+        html += '</div>';
+        modalBody.innerHTML = html;
+    }
+
+    const modalEl = document.getElementById('modalEventosDia');
+    if (modalEl) {
+        const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        bsModal.show();
+    }
+};
+
+// Abre directamente el modal del documento desde el calendario
+window.calAbrirDocModalDirecto = function(placa, docKey) {
+    const v = vehiculosFlota.find(x => x.placa === placa);
+    if (!v) return;
+
+    let title = 'DOCUMENTO';
+    let rows = [];
+    let est = { text: 'Indefinido', class: 's-gray', diff: null };
+    let url = '';
+    let tipoDocKey = '';
+
+    if (docKey === 'soat') {
+        title = 'SOAT';
+        tipoDocKey = 'SOAT';
+        est = calcularEstado(v.soat_vencimiento);
+        rows = [
+            { label: 'Entidad', val: v.soat_entidad },
+            { label: 'Pago', val: v.soat_pago_archivo ? 'Cargado' : 'Pendiente' },
+            { label: 'Vencimiento', val: formatearFechaVista(v.soat_vencimiento) }
+        ];
+        url = v.soat_url;
+    } else if (docKey === 'rt') {
+        title = 'REV. TÉCNICA';
+        tipoDocKey = 'REV_TECNICA';
+        est = calcularEstado(v.rt_vencimiento);
+        rows = [
+            { label: 'Emisión', val: formatearFechaVista(v.rt_emision) },
+            { label: 'Vencimiento', val: formatearFechaVista(v.rt_vencimiento) }
+        ];
+        url = v.rt_url;
+    } else if (docKey === 'tc') {
+        title = 'TARJETA DE PROPIEDAD';
+        tipoDocKey = 'TARJETA_PROPIEDAD';
+        est = calcularEstado(v.tc_vencimiento);
+        rows = [
+            { label: 'N° Constancia', val: v.tc_nro_constancia },
+            { label: 'Vencimiento', val: formatearFechaVista(v.tc_vencimiento) }
+        ];
+        url = v.tc_url;
+    } else if (docKey === 'matpel') {
+        title = 'TARJ. MATPEL';
+        tipoDocKey = 'MATPEL';
+        est = calcularEstado(v.matpel_vencimiento);
+        rows = [
+            { label: 'N° Constancia', val: v.matpel_nro_constancia },
+            { label: 'Vencimiento', val: formatearFechaVista(v.matpel_vencimiento) }
+        ];
+        url = v.matpel_url;
+    } else if (docKey === 'boni') {
+        title = 'BONIFICACIÓN';
+        tipoDocKey = 'BONIFICACION';
+        est = calcularEstado(v.boni_vencimiento);
+        rows = [
+            { label: 'Emisión', val: formatearFechaVista(v.boni_emision) },
+            { label: 'Vencimiento', val: formatearFechaVista(v.boni_vencimiento) }
+        ];
+        url = v.boni_url;
+    } else if (docKey === 'sv') {
+        title = 'SEG. VEHICULAR';
+        tipoDocKey = 'SEG_VEHICULAR';
+        est = calcularEstado(v.sv_vencimiento);
+        rows = [
+            { label: 'Entidad', val: v.sv_entidad },
+            { label: 'Asesor', val: v.sv_asesor },
+            { label: 'Vencimiento', val: formatearFechaVista(v.sv_vencimiento) }
+        ];
+        url = v.sv_url;
+    } else if (docKey === 'sc') {
+        title = 'SEG. CARRETA';
+        tipoDocKey = 'SEG_CARRETA';
+        est = calcularEstado(v.sc_vencimiento);
+        rows = [
+            { label: 'Entidad', val: v.sc_entidad },
+            { label: 'Asesor', val: v.sc_asesor },
+            { label: 'Vencimiento', val: formatearFechaVista(v.sc_vencimiento) }
+        ];
+        url = v.sc_url;
+    } else if (docKey === 'fum') {
+        title = 'FUMIGACIÓN';
+        tipoDocKey = 'FUMIGACION';
+        est = calcularEstado(v.fum_vencimiento);
+        rows = [
+            { label: 'Emisión', val: formatearFechaVista(v.fum_emision) },
+            { label: 'Vencimiento', val: formatearFechaVista(v.fum_vencimiento) }
+        ];
+        url = v.fum_url;
+    } else if (docKey === 'ext') {
+        title = 'EXTINTOR';
+        tipoDocKey = 'EXTINTOR';
+        est = calcularEstado(v.ext_vencimiento);
+        rows = [
+            { label: 'Cantidad', val: v.ext_cantidad || 1 },
+            { label: 'Emisión', val: formatearFechaVista(v.ext_emision) },
+            { label: 'Vencimiento', val: formatearFechaVista(v.ext_vencimiento) }
+        ];
+        url = v.ext_url;
+    }
+
+    // Establecer vehículo actual para acciones
+    currentPlaca = placa;
+    window.abrirDocModal(title, rows, est, url, tipoDocKey);
 };
 
 function filtrarListaLocal() {
