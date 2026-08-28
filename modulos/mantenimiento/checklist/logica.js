@@ -80,9 +80,10 @@ window.init_checklist = function() {
         return;
     }
 
-    // Inicializar comboboxes de placas y conductores
+    // Inicializar comboboxes de placas, conductores y órdenes de viaje
     window.poblarPlacasChecklist();
     window.poblarConductoresChecklist();
+    window.ckCargarOrdenesViaje();
 
     // Renderizar acordeones completos
     window.ckRenderizarTodosAcordeones();
@@ -92,6 +93,195 @@ window.init_checklist = function() {
 
     // Cargar tabla principal
     window.cargarTablaChecklist(true);
+};
+
+// ── INTEGRACIÓN ÓRDENES DE VIAJE (OPERACIONES) ───────────────────
+window.dataGlobalOrdenesViaje = [];
+
+window.ckCargarOrdenesViaje = async function(forceSync) {
+    try {
+        let res = await fetch('/api/operaciones/ordenes-viaje?limit=300');
+        let json = await res.json();
+        if (json && json.ok && json.data && json.data.length > 0 && !forceSync) {
+            window.dataGlobalOrdenesViaje = json.data;
+        } else {
+            // Si la tabla local aún no tiene viajes, sincronizar automáticamente
+            const syncRes = await fetch('/api/operaciones/ordenes-viaje/sincronizar', { method: 'POST' });
+            const syncJson = await syncRes.json();
+            if (syncJson && syncJson.ok) {
+                const retryRes = await fetch('/api/operaciones/ordenes-viaje?limit=300');
+                const retryJson = await retryRes.json();
+                window.dataGlobalOrdenesViaje = (retryJson && retryJson.data) || [];
+            }
+        }
+    } catch(err) {
+        console.warn('Error cargando ordenes de viaje:', err);
+    }
+};
+
+window.ckSincronizarViajes = async function(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const icon = document.getElementById('ck-sync-viajes-icon');
+    const btn = document.getElementById('btnCkSyncViajes');
+    if (icon) icon.classList.add('bi-arrow-repeat-spin');
+    if (btn) btn.disabled = true;
+
+    try {
+        const r = await fetch('/api/operaciones/ordenes-viaje/sincronizar', { method: 'POST' });
+        const data = await r.json();
+        if (data.ok) {
+            await window.ckCargarOrdenesViaje(true);
+            if (typeof window.showToastNotification === 'function') {
+                window.showToastNotification(`Sincronización completa: ${data.insertados || 0} nuevos viajes`, 'success');
+            }
+            // Si el dropdown está abierto, refrescarlo
+            window._cbFiltrarViaje();
+        } else {
+            throw new Error(data.error || 'Error desconocido');
+        }
+    } catch(err) {
+        if (typeof window.showToastNotification === 'function') {
+            window.showToastNotification('Error al sincronizar viajes: ' + err.message, 'error');
+        }
+    } finally {
+        if (icon) icon.classList.remove('bi-arrow-repeat-spin');
+        if (btn) btn.disabled = false;
+    }
+};
+
+window._cbFiltrarViaje = function() {
+    const input = document.getElementById('ck_orden_viaje-txt');
+    const dd = document.getElementById('ck_orden_viaje-dd');
+    if (!input || !dd) return;
+
+    const q = (input.value || '').trim().toUpperCase();
+    const viajes = window.dataGlobalOrdenesViaje || [];
+
+    let filtrados = viajes;
+    if (q) {
+        filtrados = viajes.filter(v => {
+            const num = (v.viaje || '').toUpperCase();
+            const tracto = (v.placa_tracto || '').toUpperCase();
+            const carreta = (v.placa_remolque || '').toUpperCase();
+            const cond = (v.conductor || '').toUpperCase();
+            const ruta = (v.ruta || '').toUpperCase();
+            return num.includes(q) || tracto.includes(q) || carreta.includes(q) || cond.includes(q) || ruta.includes(q);
+        });
+    }
+
+    filtrados = filtrados.slice(0, 50);
+
+    if (filtrados.length === 0) {
+        dd.innerHTML = '<div class="p-3 text-center text-muted small"><i class="bi bi-search me-1"></i>No se encontraron órdenes de viaje coincidentes.<br><button type="button" class="btn btn-xs btn-outline-primary mt-2 rounded-pill" onclick="window.ckSincronizarViajes()">Sincronizar ahora</button></div>';
+        dd.style.display = 'block';
+        return;
+    }
+
+    let html = '';
+    filtrados.forEach(v => {
+        const fechaFmt = v.fecha_viaje ? new Date(v.fecha_viaje).toLocaleDateString('es-PE') : '';
+        const carretaTxt = v.placa_remolque ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1">${v.placa_remolque}</span>` : '<span class="text-muted fst-italic ms-1">Sin carreta</span>';
+        
+        const dataJson = JSON.stringify(v).replace(/"/g, '&quot;');
+
+        html += `
+            <div class="p-2 border-bottom cursor-pointer cb-item-viaje" style="transition:background 0.15s ease;" onmousedown="window.ckSeleccionarViaje(${dataJson})" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#ffffff'">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="fw-bold text-primary" style="font-size:0.88rem;"><i class="bi bi-diagram-3-fill me-1"></i>Viaje: ${v.viaje}</span>
+                    <span class="badge bg-secondary-subtle text-secondary" style="font-size:0.7rem;">${fechaFmt}</span>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-1 mb-1" style="font-size:0.75rem;">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">${v.placa_tracto || 'TRACTO'}</span>
+                    ${carretaTxt}
+                    <span class="text-secondary fw-semibold text-truncate ms-1" style="max-width:200px;"><i class="bi bi-person-fill me-1"></i>${v.conductor || '---'}</span>
+                </div>
+                ${v.ruta ? `<div class="text-truncate mt-1" style="font-size:0.72rem; color:#475569;"><i class="bi bi-signpost-2-fill text-primary me-1"></i><b>Ruta:</b> ${v.ruta}</div>` : ''}
+            </div>
+        `;
+    });
+
+    dd.innerHTML = html;
+    dd.style.display = 'block';
+};
+
+window._cbHideViaje = function() {
+    setTimeout(function() {
+        const dd = document.getElementById('ck_orden_viaje-dd');
+        if (dd) dd.style.display = 'none';
+    }, 250);
+};
+
+window.ckSeleccionarViaje = function(v) {
+    if (!v) return;
+    const inputHidden = document.getElementById('ck_orden_viaje');
+    const inputTxt = document.getElementById('ck_orden_viaje-txt');
+    if (inputHidden) inputHidden.value = v.viaje || '';
+    if (inputTxt) inputTxt.value = v.viaje || '';
+
+    // Autocompletar Placa Tracto
+    if (v.placa_tracto) {
+        const ptHidden = document.getElementById('ck_placa_tracto');
+        const ptTxt = document.getElementById('ck_placa_tracto-txt');
+        if (ptHidden) ptHidden.value = v.placa_tracto;
+        if (ptTxt) ptTxt.value = v.placa_tracto;
+        if (typeof window.ckSyncPlacaTracto === 'function') window.ckSyncPlacaTracto();
+    }
+
+    // Autocompletar Placa Remolque
+    if (v.placa_remolque) {
+        const prHidden = document.getElementById('ck_placa_remolque');
+        const prTxt = document.getElementById('ck_placa_remolque-txt');
+        if (prHidden) prHidden.value = v.placa_remolque;
+        if (prTxt) prTxt.value = v.placa_remolque;
+        if (typeof window.ckSyncPlacaRemolque === 'function') window.ckSyncPlacaRemolque();
+    } else {
+        const prHidden = document.getElementById('ck_placa_remolque');
+        const prTxt = document.getElementById('ck_placa_remolque-txt');
+        if (prHidden) prHidden.value = '';
+        if (prTxt) prTxt.value = '';
+        if (typeof window.ckSyncPlacaRemolque === 'function') window.ckSyncPlacaRemolque();
+    }
+
+    // Autocompletar Conductor
+    if (v.conductor) {
+        const condHidden = document.getElementById('ck_conductor');
+        const condTxt = document.getElementById('ck_conductor-txt');
+        if (condHidden) condHidden.value = v.conductor;
+        if (condTxt) condTxt.value = v.conductor;
+    }
+
+    // Autocompletar Procedencia / Ruta
+    if (v.ruta) {
+        const procInput = document.getElementById('ck_procedencia');
+        if (procInput) procInput.value = v.ruta;
+    }
+
+    // Mostrar panel informativo de viaje vinculado
+    const infoBox = document.getElementById('ck_viaje_seleccionado_info');
+    const lblNum = document.getElementById('ck_lbl_viaje_num');
+    const lblDet = document.getElementById('ck_lbl_viaje_detalles');
+    if (infoBox) infoBox.classList.remove('d-none');
+    if (lblNum) lblNum.textContent = v.viaje;
+    if (lblDet) {
+        lblDet.textContent = `Tracto: ${v.placa_tracto || '---'} | Carreta: ${v.placa_remolque || 'Ninguna'} | Conductor: ${v.conductor || '---'} ${v.ruta ? '| Ruta: ' + v.ruta : ''}`;
+    }
+
+    const dd = document.getElementById('ck_orden_viaje-dd');
+    if (dd) dd.style.display = 'none';
+
+    if (typeof window.showToastNotification === 'function') {
+        window.showToastNotification(`Viaje ${v.viaje} vinculado con éxito. Datos autocompletados.`, 'success');
+    }
+};
+
+window.ckLimpiarViajeVinculado = function() {
+    const inputHidden = document.getElementById('ck_orden_viaje');
+    const inputTxt = document.getElementById('ck_orden_viaje-txt');
+    if (inputHidden) inputHidden.value = '';
+    if (inputTxt) inputTxt.value = '';
+
+    const infoBox = document.getElementById('ck_viaje_seleccionado_info');
+    if (infoBox) infoBox.classList.add('d-none');
 };
 
 // ── POBLAR PLACAS ────────────────────────────────────────────────

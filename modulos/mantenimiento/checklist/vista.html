@@ -539,7 +539,7 @@
                   <h6 class="fw-bold text-dark m-0" style="font-size:0.95rem;">
                     Viaje Asociado <span class="badge bg-secondary-subtle text-secondary fw-normal ms-1" style="font-size:0.7rem;">Opcional</span>
                   </h6>
-                  <small class="text-muted" style="font-size:0.75rem;">Haga clic aquí si desea vincular con una Orden de Viaje / Servicio</small>
+                  <small class="text-muted" style="font-size:0.75rem;">Haga clic aquí si desea vincular con una Orden de Viaje</small>
                 </div>
               </div>
               <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-1" style="font-size:0.75rem;">
@@ -549,21 +549,30 @@
             </div>
             
             <div class="collapse mt-3 pt-3 border-top" id="ck_collapse_viaje_asociado">
-              <p class="text-muted small mb-3">
-                Si esta falla ocurrió durante un viaje, selecciónalo: autocompleta placa, remolque y conductor abajo. No es obligatorio ni bloquea el guardado.
-              </p>
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <p class="text-muted small m-0" style="font-size:0.78rem;">
+                  Al elegir una <b>Orden de Viaje</b>, se autocompletarán las Placas, Conductor y Procedencia automáticamente.
+                </p>
+                <button type="button" class="btn btn-sm btn-outline-primary fw-semibold rounded-pill px-3 py-1 d-flex align-items-center gap-1 flex-shrink-0" style="font-size:0.75rem;" onclick="window.ckSincronizarViajes(event)" id="btnCkSyncViajes">
+                  <i class="bi bi-arrow-repeat" id="ck-sync-viajes-icon"></i>
+                  <span>Sincronizar</span>
+                </button>
+              </div>
               <div class="row g-2">
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-semibold text-secondary small mb-1">Orden de Viaje</label>
-                  <select class="form-select form-select-sm border-secondary-subtle" id="ck_orden_viaje" onchange="window.ckOnSeleccionarViaje(this)">
-                    <option value="">Buscar por Serie-Número, fecha, placa...</option>
-                  </select>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-semibold text-secondary small mb-1">Orden de Servicio</label>
-                  <select class="form-select form-select-sm border-secondary-subtle bg-light" id="ck_orden_servicio" disabled>
-                    <option value="">Se habilita al elegir un viaje.</option>
-                  </select>
+                <div class="col-12">
+                  <label class="form-label fw-semibold text-secondary small mb-1">Orden de Viaje (Buscar por Código, Placa, Conductor o Ruta)</label>
+                  <div class="position-relative">
+                    <input type="text" id="ck_orden_viaje-txt" class="form-control form-control-sm fw-bold border-secondary-subtle text-uppercase" placeholder="BUSCAR ORDEN DE VIAJE (EJ: 2026-00000952, PLACA, CONDUCTOR)..." autocomplete="off" oninput="window._cbFiltrarViaje()" onfocus="window._cbFiltrarViaje()" onblur="window._cbHideViaje()">
+                    <input type="hidden" id="ck_orden_viaje" name="orden_viaje">
+                    <div id="ck_orden_viaje-dd" class="cb-dropdown" style="max-height:240px; overflow-y:auto; z-index:99999;"></div>
+                  </div>
+                  <div id="ck_viaje_seleccionado_info" class="mt-2 p-2 rounded-3 bg-light border border-primary-subtle d-none" style="font-size:0.8rem;">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span class="fw-bold text-primary"><i class="bi bi-check-circle-fill me-1"></i> Viaje Vinculado: <span id="ck_lbl_viaje_num">--</span></span>
+                      <button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" onclick="window.ckLimpiarViajeVinculado()">Quitar vinculación ✕</button>
+                    </div>
+                    <div class="text-muted mt-1 small" id="ck_lbl_viaje_detalles">--</div>
+                  </div>
                 </div>
               </div>
             </div>

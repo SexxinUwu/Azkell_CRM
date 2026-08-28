@@ -2872,6 +2872,7 @@ app.use('/api/clientes', require('./routes/clientes')(db, logAudit));
 app.use('/api/disponibilidad-flota', require('./routes/disponibilidad')(db, logAudit));
 app.use('/api/neumaticos', require('./routes/neumaticos')(db, broadcast, logAudit));
 app.use('/api/combustible', require('./routes/combustible')(db, broadcast, logAudit));
+app.use('/api/operaciones', require('./routes/operaciones')(db, broadcast, logAudit));
 app.use('/api/guias-remision', require('./routes/guias_remision')(db, broadcast, logAudit));
 
 const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
