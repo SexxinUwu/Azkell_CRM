@@ -231,9 +231,13 @@ window.ovLimpiarFiltros = function() {
 
 window.ovEjecutarSincronizacion = async function(isSilent) {
     var btn = document.getElementById('btn-ov-sync');
+    var msgEl = document.getElementById('ov-sync-status-msg');
     if (btn) {
         btn.classList.add('loading');
         btn.disabled = true;
+    }
+    if (msgEl) {
+        msgEl.innerHTML = `<span class="text-primary d-inline-flex align-items-center gap-1"><i class="bi bi-arrow-repeat spin" style="animation: ov-spin 0.8s linear infinite;"></i> Sincronizando con base de datos de Marsisa...</span>`;
     }
 
     try {
@@ -252,14 +256,25 @@ window.ovEjecutarSincronizacion = async function(isSilent) {
             window.ovActualizarKPIs(window.dataGlobalOrdenesViajeModulo);
             window.ovAplicarFiltros();
 
+            var horaActual = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            var cantNuevos = data.insertados || 0;
+            var cantAct = data.actualizados || 0;
+
+            if (msgEl) {
+                msgEl.innerHTML = `<span class="text-success d-inline-flex align-items-center gap-1"><i class="bi bi-check-circle-fill"></i> Sincronización completa (${cantNuevos} nuevos viajes) · ${horaActual}</span>`;
+            }
+
             if (typeof window.showToastNotification === 'function') {
-                window.showToastNotification(`Sincronización completada: ${data.insertados || 0} nuevos viajes insertados.`, 'success');
+                window.showToastNotification(`Sincronización completada: ${cantNuevos} nuevos viajes insertados.`, 'success');
             }
         } else {
             throw new Error((data && data.error) || 'Error durante la sincronización');
         }
     } catch(err) {
         console.error('Error al sincronizar:', err);
+        if (msgEl) {
+            msgEl.innerHTML = `<span class="text-danger d-inline-flex align-items-center gap-1"><i class="bi bi-exclamation-triangle-fill"></i> Error de sincronización: ${err.message}</span>`;
+        }
         if (typeof window.showToastNotification === 'function') {
             window.showToastNotification('Error al sincronizar: ' + err.message, 'error');
         }
