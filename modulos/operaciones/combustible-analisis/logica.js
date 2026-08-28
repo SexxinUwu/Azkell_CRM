@@ -317,15 +317,18 @@
         if (subK) subK.textContent = `${promKmGal.toFixed(2)} Km/Gal promedio`;
     };
 
-    // Helper: Buscar rendimiento teórico esperado para una ruta y tonelaje
+    // Helper: Buscar rendimiento teórico esperado para una ruta y tonelaje desde la nueva Matriz de Combustible
     function obtenerRendimientoTeorico(rutaStr, pesoTn) {
         if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) return null;
-        const rNorm = (rutaStr || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const rNorm = (rutaStr || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         
         let match = window._caMatrizRendimiento.find(m => {
+            const mRuta = (m.ruta || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            if (mRuta && rNorm.includes(mRuta)) return true;
             const pIni = (m.punto_inicio || '').toUpperCase();
             const pFin = (m.punto_final || '').toUpperCase();
-            return (pIni && rNorm.includes(pIni)) && (pFin && rNorm.includes(pFin));
+            if (pIni && pFin && rNorm.includes(pIni) && rNorm.includes(pFin)) return true;
+            return false;
         });
 
         if (!match && window._caMatrizRendimiento.length > 0) {
@@ -335,13 +338,23 @@
         if (!match) return null;
 
         const p = parseFloat(pesoTn || 0);
-        if (p <= 0) return parseFloat(match.km_0 || match.retorno_vacio || 15.0);
-        if (p <= 5) return parseFloat(match.km_5 || 14.5);
-        if (p <= 10) return parseFloat(match.km_10 || 13.5);
-        if (p <= 15) return parseFloat(match.km_15 || 12.5);
-        if (p <= 20) return parseFloat(match.km_20 || 11.5);
-        if (p <= 25) return parseFloat(match.km_25 || 10.0);
-        return parseFloat(match.km_30 || 9.0);
+        let consumoGalones = 0;
+        if (p <= 0) consumoGalones = parseFloat(match.km_0 || match.retorno_vacio || 0);
+        else if (p <= 5) consumoGalones = parseFloat(match.km_5 || 0);
+        else if (p <= 10) consumoGalones = parseFloat(match.km_10 || 0);
+        else if (p <= 15) consumoGalones = parseFloat(match.km_15 || 0);
+        else if (p <= 20) consumoGalones = parseFloat(match.km_20 || 0);
+        else if (p <= 25) consumoGalones = parseFloat(match.km_25 || 0);
+        else consumoGalones = parseFloat(match.km_30 || 0);
+
+        const distanciaKm = parseFloat(match.km || match.ruta_distancia_km || 0);
+
+        if (distanciaKm > 0 && consumoGalones > 0) {
+            return distanciaKm / consumoGalones; // Km / Galón teórico
+        } else if (consumoGalones > 0) {
+            return consumoGalones;
+        }
+        return null;
     }
 
     // Renderizar Tabla Consolidada con Paginación de 50 registros
@@ -452,6 +465,9 @@
                         <i class="bi bi-geo-alt-fill text-danger me-1 small"></i>
                         <span class="fw-semibold text-dark">${esc(t.ruta)}</span>
                     </td>
+                    <td class="text-end font-monospace fw-bold text-dark">
+                        ${(t.pesoMaxTn !== undefined && t.pesoMaxTn > 0) ? `${t.pesoMaxTn.toLocaleString('es-PE', { minimumFractionDigits: 2 })} <span class="small text-muted font-sans" style="font-size:0.72rem;">Tn</span>` : '<span class="text-muted opacity-50">—</span>'}
+                    </td>
                     <td class="text-muted small">${esc(fInicio)}</td>
                     <td class="text-muted small">${esc(fFin)}</td>
                     
@@ -521,6 +537,7 @@
             tfoot.innerHTML = `
                 <tr style="background:#f8fafc; border-top: 2px solid #cbd5e1; font-weight: bold;">
                     <td class="ps-3 py-3 font-monospace fw-bolder text-dark" style="font-size:0.88rem;">TOTAL</td>
+                    <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
@@ -913,6 +930,7 @@
                 "N° VIAJE": t.numViaje || t.viaje || '---',
                 "PLACA": t.placa || '---',
                 "RUTA": t.ruta || '---',
+                "PESO (Tn)": (t.pesoMaxTn !== undefined && t.pesoMaxTn > 0) ? parseFloat(t.pesoMaxTn.toFixed(2)) : 0,
                 "FECHA INICIO": fInicio || '---',
                 "FECHA FIN": fFin || '---',
                 "KM INICIO (VALES)": kInicio > 0 ? parseFloat(kInicio.toFixed(1)) : '—',
