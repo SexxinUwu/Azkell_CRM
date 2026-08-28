@@ -1048,8 +1048,8 @@ module.exports = function (db, broadcast, logAudit) {
                     const totalGal = t.vouchers.reduce((s, x) => s + x.galones, 0);
                     const totalCost = t.vouchers.reduce((s, x) => s + x.importe, 0);
                     
-                    const rawPesoRaw = Math.max(0, ...t.vouchers.map(x => parseFloat(x.peso || 0)));
-                    const pesoCalculadoTn = rawPesoRaw > 50 ? parseFloat((maxPesoRaw / 1000).toFixed(2)) : parseFloat(maxPesoRaw.toFixed(2));
+                    const maxPesoRaw = Math.max(0, ...t.vouchers.map(x => parseFloat(x.peso || 0)));
+                    const pesoCalculadoTn = maxPesoRaw > 50 ? parseFloat((maxPesoRaw / 1000).toFixed(2)) : parseFloat(maxPesoRaw.toFixed(2));
 
                     // Desglose de galones y pesos por tramo (IDA vs RETORNO / FIN DE SERVICIO)
                     const vouchersIda = t.vouchers.filter(v => !v.esPuntoPartida && (v.tipo || '').toUpperCase().includes('IDA'));
