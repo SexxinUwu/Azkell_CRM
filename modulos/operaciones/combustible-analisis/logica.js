@@ -496,6 +496,52 @@
         });
 
         tbody.innerHTML = html;
+
+        // ── Renderizar Fila de TOTAL en el Footer de la Tabla ──
+        const tfoot = document.getElementById('ca-trip-tfoot');
+        if (tfoot) {
+            let totalSumVales = 0;
+            let totalSumGps = 0;
+
+            window._caFilteredTrips.forEach(t => {
+                const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
+                const totGal = fs ? fs.totalGalones : t.totalGalones;
+                totalSumVales += (totGal || 0);
+
+                const gps = t.gpsTelemetria || t.wialonGps;
+                if (gps && gps.combustibleConsumidoGps !== null && gps.combustibleConsumidoGps !== undefined && !isNaN(gps.combustibleConsumidoGps)) {
+                    totalSumGps += parseFloat(gps.combustibleConsumidoGps);
+                }
+            });
+
+            tfoot.innerHTML = `
+                <tr style="background:#f8fafc; border-top: 2px solid #cbd5e1; font-weight: bold;">
+                    <td class="ps-3 py-3 font-monospace fw-bolder text-dark" style="font-size:0.88rem;">TOTAL</td>
+                    <td class="text-center text-muted small">—</td>
+                    <td class="text-center text-muted small">—</td>
+                    <td class="text-center text-muted small">—</td>
+                    <td class="text-center text-muted small">—</td>
+                    <td class="text-end text-muted small">—</td>
+                    <td class="text-end text-muted small">—</td>
+                    <td class="text-end text-muted small">—</td>
+                    <td class="text-end font-monospace fw-bolder text-primary fs-6 py-3" style="background: rgba(2, 132, 199, 0.08);">
+                        ${totalSumVales.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td class="text-end text-muted small">—</td>
+                    <td class="text-end text-muted small">—</td>
+                    <td class="text-end text-muted small" style="background:rgba(2, 132, 199, 0.05); border-left: 2px solid #bae6fd;">—</td>
+                    <td class="text-end font-monospace fw-bolder fs-6 py-3" style="background:rgba(2, 132, 199, 0.12); color:#0284c7 !important;">
+                        ${totalSumGps > 0 ? totalSumGps.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' gal' : '—'}
+                    </td>
+                    <td class="text-end text-muted small" style="background:rgba(2, 132, 199, 0.05);">—</td>
+                    <td class="text-end text-muted small" style="background:rgba(2, 132, 199, 0.05);">—</td>
+                    <td class="text-end text-muted small" style="background:rgba(2, 132, 199, 0.05);">—</td>
+                    <td class="text-end text-muted small" style="background:rgba(2, 132, 199, 0.05); border-right: 2px solid #bae6fd;">—</td>
+                    <td class="text-center text-muted small">—</td>
+                </tr>
+            `;
+        }
+
         window.caRenderPaginacion(total, page, limit);
     };
 
@@ -786,6 +832,48 @@
                 "HORAS DE MOTOR": (gps && gps.horasMotorGps) ? gps.horasMotorGps : '—',
                 "CANTIDAD VALES": valesCount
             };
+        });
+
+        // Calcular fila de Totales para el Excel
+        let sumTotalGalonesVales = 0;
+        let sumTotalGalonesGps = 0;
+
+        window._caFilteredTrips.forEach(t => {
+            const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
+            const totGal = fs ? fs.totalGalones : t.totalGalones;
+            sumTotalGalonesVales += (totGal || 0);
+
+            const gps = t.gpsTelemetria || t.wialonGps;
+            if (gps && gps.combustibleConsumidoGps !== null && gps.combustibleConsumidoGps !== undefined && !isNaN(gps.combustibleConsumidoGps)) {
+                sumTotalGalonesGps += parseFloat(gps.combustibleConsumidoGps);
+            }
+        });
+
+        // Fila de TOTAL al final del reporte
+        exportData.push({
+            "N° VIAJE": "TOTAL",
+            "PLACA": "",
+            "RUTA": "",
+            "TIPO COMBUSTIBLE": fuelFilter !== 'ALL' ? fuelFilter : 'TODOS',
+            "FECHA INICIO": "",
+            "FECHA FIN": "",
+            "KM INICIO (VALES)": "",
+            "KM FIN (VALES)": "",
+            "RECORRIDO (VALES)": "",
+            "TOTAL GALONES": parseFloat(sumTotalGalonesVales.toFixed(2)),
+            "TOTAL GASTO (S/)": "",
+            "KM / GALÓN (REAL)": "",
+            "RECORRIDO (GPS CAN)": "",
+            "COMB. CONSUMIDO (GPS CAN)": sumTotalGalonesGps > 0 ? parseFloat(sumTotalGalonesGps.toFixed(2)) : "—",
+            "RENDIMIENTO (GPS CAN)": "",
+            "VELOCIDAD MÁXIMA (GPS)": "",
+            "CONSUMO PROMEDIO EN RALENTÍ (GAL/H)": "",
+            "RPM MEDIA (RPM)": "",
+            "RPM MEDIA (MÁXIMA RPM)": "",
+            "RPM MÁXIMA (RPM)": "",
+            "RPM MÁXIMA (MÁXIMA RPM)": "",
+            "HORAS DE MOTOR": "",
+            "CANTIDAD VALES": ""
         });
 
         const ws = XLSX.utils.json_to_sheet(exportData);
