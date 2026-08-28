@@ -6,6 +6,7 @@
 (function() {
     window._subData = window._subData || [];
     window._subCatalogoPlacas = window._subCatalogoPlacas || { tractos: [], carretas: [], todas: [] };
+    window._subCorteActivo = window._subCorteActivo || 'ALL';
     let _subDebounceTimeout = null;
 
     // ── Obtener Corte Automático según la Hora Actual ─────────────
@@ -78,7 +79,7 @@
         }
 
         const fecha = document.getElementById('sub-filter-fecha')?.value || '';
-        const corte = document.getElementById('sub-filter-corte')?.value || 'ALL';
+        const corte = window._subCorteActivo || 'ALL';
         const estado = document.getElementById('sub-filter-estado')?.value || 'ALL';
         const search = document.getElementById('sub-filter-search')?.value || '';
 
@@ -190,23 +191,33 @@
 
     // ── Filtrar haciendo clic en los Cards Bento de KPI ──────────
     window.subFiltrarCorteKPI = function(corte) {
+        window._subCorteActivo = corte || 'ALL';
+        
+        // Actualizar active state en cards
         document.querySelectorAll('.sub-kpi-card').forEach(c => c.classList.remove('active'));
-        const selCorte = document.getElementById('sub-filter-corte');
-        if (selCorte) selCorte.value = corte;
-
         if (corte === 'ALL') document.getElementById('kpi-card-total')?.classList.add('active');
         else if (corte === 'Corte 1') document.getElementById('kpi-card-corte1')?.classList.add('active');
         else if (corte === 'Corte 2') document.getElementById('kpi-card-corte2')?.classList.add('active');
         else if (corte === 'Corte 3') document.getElementById('kpi-card-corte3')?.classList.add('active');
 
+        // Actualizar active state en segmented buttons
+        document.querySelectorAll('#sub-segmented-cortes .sub-segment-item').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-corte') === window._subCorteActivo);
+        });
+
         window.subCargarDatos();
+    };
+
+    // ── Filtrar haciendo clic en el Segmented Apple Pill ──────────
+    window.subFiltrarCorteSegmented = function(corte) {
+        window.subFiltrarCorteKPI(corte);
     };
 
     // ── Abrir Modal en Modo Nuevo ─────────────────────────────────
     window.subAbrirModalNuevo = function() {
         document.getElementById('formSubUnidad')?.reset();
         document.getElementById('sub-form-id').value = '';
-        document.getElementById('modalSubTitulo').textContent = 'Registrar Unidad en Base';
+        document.getElementById('modalSubTitulo').textContent = 'Nuevo Registro de Unidad en Base';
         document.getElementById('modalSubSubtitulo').textContent = 'Control de permanencia vehicular';
 
         // Auto-llenar fecha actual y corte según la hora
@@ -289,7 +300,7 @@
             console.error('Error al guardar unidad en base:', err);
             window.mostrarToast('Error de conexión con el servidor', 'danger');
         } finally {
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Guardar'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Guardar Registro'; }
         }
     };
 
@@ -311,10 +322,10 @@
         }
     };
 
-    // ── Exportador a PDF Oficial (Cabecera ISO F-SEG-0010) ───────────
+    // ── Exportador a PDF Oficial (Hoja A4 Centrada, Cabecera ISO F-SEG-0010) ──
     window.subExportarPDF = function() {
         const fechaFiltro = document.getElementById('sub-filter-fecha')?.value || new Date().toISOString().split('T')[0];
-        const corteFiltro = document.getElementById('sub-filter-corte')?.value || 'ALL';
+        const corteFiltro = window._subCorteActivo || 'ALL';
         const fParts = fechaFiltro.split('-');
         const fechaFormateada = fParts.length === 3 ? `${fParts[2]}/${fParts[1]}/${fParts[0]}` : fechaFiltro;
 
@@ -330,16 +341,18 @@
             return;
         }
 
+        const empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+
         const filasHtml = items.map((r, i) => `
             <tr>
-                <td style="text-align:center; font-weight:bold;">${i + 1}</td>
-                <td style="text-align:center; font-weight:bold; color:#0284c7;">${r.corte || 'Corte 1'}</td>
-                <td style="text-align:center; font-family:monospace; font-weight:bold;">${r.placa_camion || '---'}</td>
-                <td style="text-align:center; font-family:monospace;">${r.placa_carreta || '---'}</td>
-                <td>${r.zona || 'Base Central'}</td>
-                <td style="text-align:center; font-weight:600;">${r.estado || 'Disponible'}</td>
-                <td>${r.observacion || ''}</td>
-                <td style="text-align:center; font-size:9px;">${r.usuario || 'Seguridad'}</td>
+                <td style="text-align:center; font-weight:bold; width:28px;">${i + 1}</td>
+                <td style="text-align:center; font-weight:bold; color:#0f172a; width:65px;">${r.corte || 'Corte 1'}</td>
+                <td style="text-align:center; font-family:monospace; font-weight:bold; font-size:11px; width:90px;">${r.placa_camion || '---'}</td>
+                <td style="text-align:center; font-family:monospace; font-size:11px; width:90px;">${r.placa_carreta || '---'}</td>
+                <td style="width:130px; font-weight:500;">${r.zona || 'Base Central'}</td>
+                <td style="text-align:center; font-weight:700; width:85px;">${r.estado || 'Disponible'}</td>
+                <td style="font-size:9.5px; word-break:break-word;">${r.observacion || ''}</td>
+                <td style="text-align:center; font-size:9px; width:85px;">${r.usuario || 'Seguridad'}</td>
             </tr>
         `).join('');
 
@@ -349,84 +362,138 @@
             <head>
                 <meta charset="UTF-8">
                 <title>Status Unidades en Base — F-SEG-0010</title>
-                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
                 <style>
-                    @page { size: A4 portrait; margin: 12mm 10mm 12mm 10mm; }
-                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 10.5px; color: #000; padding: 10px; }
+                    * { box-sizing: border-box; }
+                    body {
+                        background-color: #525659;
+                        margin: 0;
+                        padding: 20px 10px;
+                        font-family: 'Inter', -apple-system, sans-serif;
+                        color: #000000;
+                        display: flex;
+                        justify-content: center;
+                    }
+                    .btn-print-fixed {
+                        position: fixed;
+                        top: 16px;
+                        right: 20px;
+                        z-index: 9999;
+                        background: #111827;
+                        color: #ffffff;
+                        border: 1px solid #374151;
+                        border-radius: 6px;
+                        padding: 8px 18px;
+                        font-weight: 700;
+                        font-size: 13px;
+                        cursor: pointer;
+                        box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
+                    .btn-print-fixed:hover {
+                        background: #1f2937;
+                    }
                     
-                    /* ENCABEZADO NORMATIVA ISO OFICIAL */
-                    .iso-header { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-                    .iso-header td { border: 1.5px solid #000; padding: 5px; text-align: center; vertical-align: middle; }
-                    .logo-cell { width: 22%; text-align: center; }
-                    .title-cell { width: 54%; font-size: 15px; font-weight: 900; letter-spacing: 0.5px; line-height: 1.2; text-transform: uppercase; }
-                    .title-cell .sub-title { font-size: 10px; font-weight: 700; color: #333; display: block; margin-top: 3px; }
-                    .qms-cell { width: 24%; font-size: 9.5px; text-align: left; padding: 4px 8px !important; }
-                    .qms-cell b { display: inline-block; width: 68px; }
+                    /* Hoja A4 Centrada */
+                    .page-a4 {
+                        width: 210mm;
+                        min-height: 297mm;
+                        background: #ffffff;
+                        padding: 12mm 12mm;
+                        margin: 0 auto;
+                        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4);
+                        box-sizing: border-box;
+                        position: relative;
+                        display: flex;
+                        flex-direction: column;
+                    }
+
+                    /* ENCABEZADO NORMATIVA ISO OFICIAL (EXACTO A OT) */
+                    .iso-header { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 6px; table-layout: fixed; }
+                    .iso-header td { border: 1px solid #000; text-align: center; vertical-align: middle; }
+                    .logo-cell { width: 22%; padding: 4px; }
+                    .title-cell { width: 54%; font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 700; line-height: 1.1; text-transform: uppercase; color: #000; }
+                    .title-cell .sub-title { font-size: 10px; font-weight: 500; color: #333; letter-spacing: 0.5px; display: block; margin-top: 3px; }
+                    .qms-item { width: 24%; font-family: 'Oswald', sans-serif; font-size: 9.5px; text-align: left !important; padding: 2px 6px; height: 17px; }
+                    
+                    /* Barra de Información del Reporte */
+                    .info-bar { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 6px; font-size: 10.5px; font-weight: bold; }
+                    .info-bar td { border: 1px solid #000; padding: 4px 6px; vertical-align: middle; }
+                    .val-text { font-weight: normal; margin-left: 4px; }
 
                     /* TABLA DE CONTENIDO */
-                    .tabla-datos { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10px; }
-                    .tabla-datos th { border: 1px solid #000; background: #f1f5f9; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 9.5px; text-transform: uppercase; }
-                    .tabla-datos td { border: 1px solid #ccc; padding: 5px 6px; }
+                    .content-table { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 8px; font-size: 10px; }
+                    .content-table th { background-color: #444444; color: #ffffff; text-align: center; padding: 4px; border: 1px solid #000; font-weight: 700; font-size: 9.5px; text-transform: uppercase; }
+                    .content-table td { border: 1px solid #000; padding: 4px 6px; vertical-align: middle; }
 
-                    /* RESUMEN INFERIOR */
-                    .footer-resumen { margin-top: 15px; display: flex; justify-content: space-between; font-size: 10px; border-top: 1px solid #000; padding-top: 6px; }
-                    
+                    /* Footer */
+                    .footer-box { margin-top: auto; border-top: 1px solid #000; padding-top: 6px; display: flex; justify-content: space-between; font-size: 9.5px; color: #333; }
+
                     @media print {
-                        .no-print { display: none !important; }
-                        body { padding: 0; }
+                        body { background: #ffffff !important; padding: 0 !important; }
+                        .btn-print-fixed { display: none !important; }
+                        .page-a4 { width: 100% !important; min-height: auto !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
+                        @page { size: A4 portrait; margin: 10mm; }
                     }
                 </style>
             </head>
             <body>
-                <!-- Encabezado ISO Solicitado -->
-                <table class="iso-header">
-                    <tr>
-                        <td class="logo-cell" rowspan="3">
-                            <img src="https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500" alt="Logo Empresa" style="max-height: 48px; max-width: 100%; object-fit: contain;">
-                        </td>
-                        <td class="title-cell" rowspan="3">
-                            STATUS "UNIDADES EN BASE"<br>
-                            <span class="sub-title">CONTROL Y SEGURIDAD PATRIMONIAL</span>
-                        </td>
-                        <td class="qms-cell"><b>CÓDIGO:</b> F-SEG-0010</td>
-                    </tr>
-                    <tr><td class="qms-cell"><b>VERSIÓN:</b> 0</td></tr>
-                    <tr><td class="qms-cell"><b>F. EMISIÓN:</b> ${fechaFormateada}</td></tr>
-                </table>
+                <button class="btn-print-fixed" onclick="window.print()">
+                    🖨️ Imprimir / Guardar PDF
+                </button>
 
-                <!-- Metadatos del Reporte -->
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:10.5px; font-weight:600;">
-                    <div><b>Fecha de Registro:</b> ${fechaFormateada}</div>
-                    <div><b>Filtro de Corte:</b> ${corteFiltro === 'ALL' ? 'Todos los Cortes' : corteFiltro}</div>
-                    <div><b>Total Unidades en Base:</b> ${items.length}</div>
-                </div>
-
-                <!-- Tabla de Unidades -->
-                <table class="tabla-datos">
-                    <thead>
+                <div class="page-a4">
+                    <!-- Encabezado ISO Solicitado -->
+                    <table class="iso-header">
                         <tr>
-                            <th style="width:30px;">N°</th>
-                            <th style="width:70px;">CORTE</th>
-                            <th style="width:90px;">PLACA CAMIÓN</th>
-                            <th style="width:90px;">PLACA CARRETA</th>
-                            <th style="width:130px;">ZONA / PATIO</th>
-                            <th style="width:90px;">ESTADO</th>
-                            <th>OBSERVACIÓN</th>
-                            <th style="width:90px;">REGISTRADO POR</th>
+                            <td class="logo-cell" rowspan="3">
+                                <img src="${empLogoUrl}" alt="Logo Empresa" style="max-height: 46px; max-width: 100%; object-fit: contain;">
+                            </td>
+                            <td class="title-cell" rowspan="3">
+                                STATUS "UNIDADES EN BASE"<br>
+                                <span class="sub-title">CONTROL Y SEGURIDAD PATRIMONIAL</span>
+                            </td>
+                            <td class="qms-item"><b>CÓDIGO:</b> F-SEG-0010</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        ${filasHtml}
-                    </tbody>
-                </table>
+                        <tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>
+                        <tr><td class="qms-item"><b>F. EMISIÓN:</b> ${fechaFormateada}</td></tr>
+                    </table>
 
-                <div class="footer-resumen">
-                    <div><b>ERP Azkell Fleet</b> — Módulo de Seguridad y Garita</div>
-                    <div>Generado el: ${new Date().toLocaleDateString('es-PE')} a las ${new Date().toLocaleTimeString('es-PE')}</div>
-                </div>
+                    <!-- Barra de Metadatos -->
+                    <table class="info-bar">
+                        <tr>
+                            <td style="width: 35%;">FECHA: <span class="val-text">${fechaFormateada}</span></td>
+                            <td style="width: 35%;">FILTRO DE CORTE: <span class="val-text">${corteFiltro === 'ALL' ? 'Todos los Cortes' : corteFiltro}</span></td>
+                            <td style="width: 30%;">TOTAL UNIDADES: <span class="val-text" style="font-weight:bold; color:#0284c7;">${items.length}</span></td>
+                        </tr>
+                    </table>
 
-                <div class="mt-4 text-center no-print">
-                    <button class="btn btn-primary px-4 fw-bold" onclick="window.print()">Imprimir / Guardar PDF</button>
+                    <!-- Tabla de Unidades -->
+                    <table class="content-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 28px;">#</th>
+                                <th style="width: 65px;">CORTE</th>
+                                <th style="width: 90px;">PLACA CAMIÓN</th>
+                                <th style="width: 90px;">PLACA CARRETA</th>
+                                <th style="width: 130px;">ZONA / PATIO</th>
+                                <th style="width: 85px;">ESTADO</th>
+                                <th>OBSERVACIONES</th>
+                                <th style="width: 85px;">REGISTRADO POR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filasHtml}
+                        </tbody>
+                    </table>
+
+                    <!-- Footer -->
+                    <div class="footer-box">
+                        <div><b>ERP Azkell Fleet</b> — Módulo de Seguridad y Control Patrimonial</div>
+                        <div>Generado el: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}</div>
+                    </div>
                 </div>
 
                 <script>

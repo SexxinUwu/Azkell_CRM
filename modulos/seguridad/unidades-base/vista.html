@@ -3,61 +3,55 @@
      Cargado por: cargarModuloAislado('seguridad/unidades-base')
 ═══════════════════════════════════════════════════════════════════ -->
 <style>
+/* ── Reset root-dinamico padding for 100% full-bleed ─────────────── */
 #root-dinamico, .main-area {
     padding: 0 !important;
 }
 
-#moduloSegUnidadesBase {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
-    padding: 1rem 1.25rem 140px 1.25rem !important;
+/* ── Container ────────────────────────────────────────────────────── */
+.sub-app-container {
     width: 100% !important;
     max-width: 100% !important;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 0;
-    min-height: 0;
+    padding: 1rem 1.25rem 2.5rem 1.25rem !important;
+    background: transparent;
+    min-height: 100%;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-@media (max-width: 768px) {
-    #moduloSegUnidadesBase {
-        padding: 0.5rem 0.5rem 160px 0.5rem !important;
-    }
-}
-
+/* Header Banner */
 .sub-header-glass {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 1.25rem 1.5rem;
-    box-shadow: 0 4px 20px -2px rgba(0,0,0,0.03);
-    margin-bottom: 1.25rem;
+    border-radius: 18px;
+    padding: 1rem 1.35rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    margin-bottom: 1rem;
 }
 
+/* KPIs Apple Cards */
 .sub-kpi-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.25rem;
+    gap: 0.85rem;
+    margin-bottom: 1rem;
 }
 
 .sub-kpi-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 1.1rem 1.25rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    border-radius: 18px;
+    padding: 0.85rem 1.15rem;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
 }
 
 .sub-kpi-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
-    border-color: #cbd5e1;
+    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
 }
 
 .sub-kpi-card.active {
@@ -68,24 +62,82 @@
 .sub-kpi-icon {
     width: 44px;
     height: 44px;
-    border-radius: 12px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.3rem;
-    flex-shrink: 0;
 }
 
-.sub-table-card {
+/* Control Bar (Search + Apple Segmented Pill) */
+.sub-control-bar {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
-    box-shadow: 0 4px 20px -2px rgba(0,0,0,0.03);
+    padding: 0.75rem 1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    margin-bottom: 1rem;
+}
+
+.sub-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 14px 8px 38px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+
+.sub-apple-search:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+
+.sub-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+.sub-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 16px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+}
+
+.sub-segment-item:hover { color: #0f172a; }
+.sub-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Desktop Table Styling */
+#sub-tabla-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
     overflow: hidden;
 }
 
 .sub-table th {
-    font-size: 0.75rem;
+    font-size: 0.74rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     font-weight: 700;
@@ -112,87 +164,165 @@
 .badge-estado-taller { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 700; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
 .badge-estado-cargado { background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-weight: 700; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
 
-/* ── Modal Bottom-Sheet Segmentado (Mobile & Desktop) ── */
-.sub-bottom-modal .modal-dialog {
-    max-width: 650px;
-    margin: 1.75rem auto;
+/* ── Floating Drawer Modal & Inputs Styling (Exacto a Reporte de Fallas) ── */
+.sub-floating-drawer-dialog {
+    max-width: 720px !important;
+    width: 100% !important;
+    height: 90vh !important;
+    max-height: 90vh !important;
+    margin: 0 auto !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: auto !important;
+}
+
+.sub-floating-drawer-content {
+    height: 100% !important;
+    max-height: 90vh !important;
+    border-radius: 28px 28px 0 0 !important;
+    border-bottom: none !important;
+    box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.25) !important;
+    overflow: hidden !important;
+    background: #f8fafc !important;
+}
+
+#modalSubUnidad .form-control,
+#modalSubUnidad .form-select {
+    min-height: 44px !important;
+    border-radius: 12px !important;
+    font-size: 0.92rem !important;
+    font-weight: 600 !important;
+    border: 1.5px solid #cbd5e1 !important;
+    padding: 0.55rem 0.9rem !important;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+
+#modalSubUnidad .form-control:focus,
+#modalSubUnidad .form-select:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+#modalSubUnidad .form-label {
+    font-size: 0.74rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    color: #475569 !important;
+    margin-bottom: 0.35rem !important;
+}
+
+#modalSubUnidad .card {
+    border-radius: 18px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
 }
 
 @media (max-width: 768px) {
-    .sub-bottom-modal .modal-dialog {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        margin: 0 !important;
-        max-width: 100% !important;
+    .sub-app-container {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+    }
+    .sub-apple-segmented {
         width: 100% !important;
-        transform: translateY(100%);
-        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        display: flex !important;
+        justify-content: space-between !important;
     }
-    .sub-bottom-modal.show .modal-dialog {
-        transform: translateY(0) !important;
+    .sub-segment-item {
+        flex: 1 !important;
+        text-align: center !important;
+        padding: 6px 4px !important;
+        font-size: 0.75rem !important;
     }
-    .sub-bottom-modal .modal-content {
-        border-bottom-left-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-        border-top-left-radius: 24px !important;
-        border-top-right-radius: 24px !important;
-        max-height: 90vh !important;
-        overflow-y: auto !important;
-    }
-}
-
-.sub-form-card {
-    background: #ffffff;
-    border-radius: 20px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
 </style>
 
-<div id="moduloSegUnidadesBase">
+<div class="sub-app-container" id="moduloSegUnidadesBase">
     <!-- Header Banner -->
     <div class="sub-header-glass d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-3">
-            <div style="width:48px; height:48px; border-radius:14px; background:#eff6ff; color:#0284c7; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <div style="width:44px; height:44px; border-radius:14px; background:#eff6ff; color:#0284c7; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
                 <i class="bi bi-buildings-fill"></i>
             </div>
             <div>
-                <h4 class="fw-bold m-0 text-dark">Status "Unidades en Base"</h4>
-                <small class="text-secondary">Control de permanencia, cortes horarios y reporte de unidades en patio</small>
+                <h4 class="fw-bold m-0 text-dark" style="font-size: 1.25rem;">Status "Unidades en Base"</h4>
+                <small class="text-secondary" style="font-size: 0.8rem;">Control de permanencia, cortes horarios y reporte de unidades en patio</small>
             </div>
         </div>
 
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 px-3 fw-semibold" onclick="window.subExportarPDF()">
+            <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 px-3 fw-bold" onclick="window.subExportarPDF()">
                 <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Exportar PDF
             </button>
-            <button class="btn btn-sm btn-primary d-flex align-items-center gap-1 px-3 fw-semibold shadow-sm" onclick="window.subAbrirModalNuevo()">
+            <button class="btn btn-sm btn-primary d-flex align-items-center gap-1 px-3 fw-bold shadow-sm" onclick="window.subAbrirModalNuevo()">
                 <i class="bi bi-plus-lg"></i> Registrar Unidad
             </button>
         </div>
     </div>
 
-    <!-- Filtros de Fecha, Corte y Búsqueda -->
-    <div class="card border-0 shadow-sm p-3 mb-3" style="border-radius: 14px; background:#ffffff;">
-        <div class="row g-2 align-items-center">
-            <div class="col-12 col-md-3">
-                <label class="form-label small fw-bold text-secondary mb-1"><i class="bi bi-calendar-event me-1"></i> Fecha de Consulta</label>
-                <input type="date" id="sub-filter-fecha" class="form-control form-control-sm fw-bold text-dark" onchange="window.subCargarDatos()">
+    <!-- KPIs Bento Cards -->
+    <div class="sub-kpi-grid">
+        <div class="sub-kpi-card active" id="kpi-card-total" onclick="window.subFiltrarCorteKPI('ALL')">
+            <div>
+                <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Total en Base</span>
+                <h2 class="fw-bolder m-0 text-dark" id="sub-kpi-total" style="font-size:1.6rem;">0</h2>
             </div>
-            <div class="col-12 col-md-3">
-                <label class="form-label small fw-bold text-secondary mb-1"><i class="bi bi-clock-history me-1"></i> Corte Horario</label>
-                <select id="sub-filter-corte" class="form-select form-select-sm fw-semibold" onchange="window.subCargarDatos()">
-                    <option value="ALL">Todos los Cortes</option>
-                    <option value="Corte 1">Corte 1 (05:00 - 11:59)</option>
-                    <option value="Corte 2">Corte 2 (12:00 - 16:59)</option>
-                    <option value="Corte 3">Corte 3 (17:00 - 04:59)</option>
-                </select>
+            <div class="sub-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                <i class="bi bi-buildings-fill"></i>
             </div>
-            <div class="col-12 col-md-3">
-                <label class="form-label small fw-bold text-secondary mb-1"><i class="bi bi-tag me-1"></i> Estado</label>
-                <select id="sub-filter-estado" class="form-select form-select-sm fw-semibold" onchange="window.subCargarDatos()">
+        </div>
+
+        <div class="sub-kpi-card" id="kpi-card-corte1" onclick="window.subFiltrarCorteKPI('Corte 1')">
+            <div>
+                <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Corte 1 (05:00 - 12:00)</span>
+                <h2 class="fw-bolder m-0 text-dark" id="sub-kpi-c1" style="font-size:1.6rem;">0</h2>
+            </div>
+            <div class="sub-kpi-icon" style="background:#e0f2fe; color:#0284c7;">
+                <i class="bi bi-sunrise-fill"></i>
+            </div>
+        </div>
+
+        <div class="sub-kpi-card" id="kpi-card-corte2" onclick="window.subFiltrarCorteKPI('Corte 2')">
+            <div>
+                <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Corte 2 (12:00 - 17:00)</span>
+                <h2 class="fw-bolder m-0 text-dark" id="sub-kpi-c2" style="font-size:1.6rem;">0</h2>
+            </div>
+            <div class="sub-kpi-icon" style="background:#fef3c7; color:#d97706;">
+                <i class="bi bi-sun-fill"></i>
+            </div>
+        </div>
+
+        <div class="sub-kpi-card" id="kpi-card-corte3" onclick="window.subFiltrarCorteKPI('Corte 3')">
+            <div>
+                <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Corte 3 (17:00 - 05:00)</span>
+                <h2 class="fw-bolder m-0 text-dark" id="sub-kpi-c3" style="font-size:1.6rem;">0</h2>
+            </div>
+            <div class="sub-kpi-icon" style="background:#f3e8ff; color:#9333ea;">
+                <i class="bi bi-moon-stars-fill"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Control (Buscador Píldora + Filtros + Segmented Apple) -->
+    <div class="sub-control-bar">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                <!-- Buscador Apple -->
+                <div class="position-relative flex-grow-1" style="max-width: 320px; min-width: 220px;">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size: 0.85rem;"></i>
+                    <input type="text" id="sub-filter-search" class="sub-apple-search" placeholder="Buscar placa, zona, obs..." oninput="window.subDebounceBusqueda()">
+                </div>
+
+                <!-- Filtro Fecha -->
+                <div class="d-flex align-items-center gap-1 bg-light border rounded-3 px-2 py-1" style="min-height: 38px;">
+                    <i class="bi bi-calendar-event text-secondary small"></i>
+                    <input type="date" id="sub-filter-fecha" class="border-0 bg-transparent fw-bold text-dark small" style="outline:none; cursor:pointer;" onchange="window.subCargarDatos()">
+                </div>
+
+                <!-- Filtro Estado -->
+                <select id="sub-filter-estado" class="form-select form-select-sm fw-semibold rounded-3" style="max-width: 170px; min-height: 38px;" onchange="window.subCargarDatos()">
                     <option value="ALL">Todos los Estados</option>
                     <option value="Disponible">Disponible</option>
                     <option value="En Espera">En Espera</option>
@@ -201,70 +331,28 @@
                     <option value="Vacío">Vacío</option>
                 </select>
             </div>
-            <div class="col-12 col-md-3">
-                <label class="form-label small fw-bold text-secondary mb-1"><i class="bi bi-search me-1"></i> Buscar Placa / Zona</label>
-                <div class="input-group input-group-sm">
-                    <input type="text" id="sub-filter-search" class="form-control form-control-sm" placeholder="Escribe para buscar..." oninput="window.subDebounceBusqueda()">
-                    <button class="btn btn-outline-secondary" type="button" onclick="window.subCargarDatos()"><i class="bi bi-search"></i></button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Bento KPIs -->
-    <div class="sub-kpi-grid">
-        <div class="sub-kpi-card" id="kpi-card-total" onclick="window.subFiltrarCorteKPI('ALL')">
-            <div class="sub-kpi-icon" style="background:#eff6ff; color:#2563eb;">
-                <i class="bi bi-buildings-fill"></i>
-            </div>
-            <div>
-                <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Total en Base</span>
-                <h4 class="fw-bolder m-0 text-dark" id="sub-kpi-total">0</h4>
-            </div>
-        </div>
-
-        <div class="sub-kpi-card" id="kpi-card-corte1" onclick="window.subFiltrarCorteKPI('Corte 1')">
-            <div class="sub-kpi-icon" style="background:#e0f2fe; color:#0284c7;">
-                <i class="bi bi-sunrise-fill"></i>
-            </div>
-            <div>
-                <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Corte 1 (05:00 - 12:00)</span>
-                <h4 class="fw-bolder m-0 text-dark" id="sub-kpi-c1">0</h4>
-            </div>
-        </div>
-
-        <div class="sub-kpi-card" id="kpi-card-corte2" onclick="window.subFiltrarCorteKPI('Corte 2')">
-            <div class="sub-kpi-icon" style="background:#fef3c7; color:#d97706;">
-                <i class="bi bi-sun-fill"></i>
-            </div>
-            <div>
-                <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Corte 2 (12:00 - 17:00)</span>
-                <h4 class="fw-bolder m-0 text-dark" id="sub-kpi-c2">0</h4>
-            </div>
-        </div>
-
-        <div class="sub-kpi-card" id="kpi-card-corte3" onclick="window.subFiltrarCorteKPI('Corte 3')">
-            <div class="sub-kpi-icon" style="background:#f3e8ff; color:#9333ea;">
-                <i class="bi bi-moon-stars-fill"></i>
-            </div>
-            <div>
-                <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Corte 3 (17:00 - 05:00)</span>
-                <h4 class="fw-bolder m-0 text-dark" id="sub-kpi-c3">0</h4>
+            <!-- Segmented Pill de Cortes Horarios (Apple Style) -->
+            <div class="sub-apple-segmented" id="sub-segmented-cortes">
+                <button type="button" class="sub-segment-item active" data-corte="ALL" onclick="window.subFiltrarCorteSegmented('ALL')">Todos</button>
+                <button type="button" class="sub-segment-item" data-corte="Corte 1" onclick="window.subFiltrarCorteSegmented('Corte 1')">Corte 1</button>
+                <button type="button" class="sub-segment-item" data-corte="Corte 2" onclick="window.subFiltrarCorteSegmented('Corte 2')">Corte 2</button>
+                <button type="button" class="sub-segment-item" data-corte="Corte 3" onclick="window.subFiltrarCorteSegmented('Corte 3')">Corte 3</button>
             </div>
         </div>
     </div>
 
     <!-- Tabla Principal -->
-    <div class="sub-table-card">
+    <div id="sub-tabla-wrap">
         <div class="table-responsive">
             <table class="table sub-table m-0 align-middle">
                 <thead>
                     <tr>
-                        <th style="min-width:110px;">Corte</th>
+                        <th style="min-width:100px;">Corte</th>
                         <th style="min-width:120px;">Placa Camión</th>
                         <th style="min-width:120px;">Placa Carreta</th>
                         <th style="min-width:140px;">Zona / Patio</th>
-                        <th style="min-width:130px;">Estado</th>
+                        <th style="min-width:120px;">Estado</th>
                         <th style="min-width:250px;">Observación</th>
                         <th style="min-width:120px;">Registrado Por</th>
                         <th class="text-end" style="min-width:90px;">Acciones</th>
@@ -283,40 +371,41 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     MODAL BOTTOM-SHEET: REGISTRAR / EDITAR UNIDAD EN BASE
+     MODAL DRAWER: REGISTRAR / EDITAR (Exacto al estilo Reporte de Fallas)
 ═══════════════════════════════════════════════════════════════════ -->
-<div class="modal fade sub-bottom-modal" id="modalSubUnidad" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content sub-form-card border-0 overflow-hidden">
-            <!-- Header -->
-            <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                    <div style="width:38px; height:38px; border-radius:10px; background:#e0f2fe; color:#0284c7; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
-                        <i class="bi bi-buildings"></i>
-                    </div>
-                    <div>
-                        <h5 class="fw-bold m-0 text-dark" id="modalSubTitulo">Registrar Unidad en Base</h5>
-                        <small class="text-secondary" id="modalSubSubtitulo">Control de permanencia vehicular</small>
-                    </div>
+<div class="modal fade" id="modalSubUnidad" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog sub-floating-drawer-dialog">
+        <div class="modal-content sub-floating-drawer-content">
+            <!-- Header Modal -->
+            <div class="modal-header border-0 bg-white px-4 pt-3 pb-2 d-flex justify-content-between align-items-center border-bottom">
+                <div>
+                    <h5 class="fw-bolder m-0 text-dark" id="modalSubTitulo" style="font-size: 1.15rem;">Nuevo Registro de Unidad en Base</h5>
+                    <small class="text-secondary" id="modalSubSubtitulo">Control de permanencia vehicular</small>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <!-- Body -->
-            <div class="modal-body px-4 py-3">
+            <!-- Body Modal (Scrollable con Cards Segmentadas) -->
+            <div class="modal-body p-3 p-md-4 overflow-y-auto">
                 <form id="formSubUnidad" onsubmit="event.preventDefault(); window.subGuardarRegistro();">
                     <input type="hidden" id="sub-form-id" value="">
 
-                    <!-- Segmento de Fecha y Corte Automático -->
-                    <div class="p-3 mb-3 rounded-3" style="background:#f8fafc; border:1px solid #e2e8f0;">
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-dark mb-1">Fecha</label>
-                                <input type="date" id="sub-form-fecha" class="form-control form-control-sm fw-bold" required>
+                    <!-- Card 1: Datos del Reporte -->
+                    <div class="card p-3 mb-3 shadow-none">
+                        <div class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.88rem;">
+                            <i class="bi bi-calendar2-check-fill text-primary"></i> Datos del Reporte
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Fecha (*)</label>
+                                <input type="date" id="sub-form-fecha" class="form-control" required>
                             </div>
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-dark mb-1">Corte <span class="badge bg-primary-subtle text-primary" style="font-size:0.65rem;">Auto</span></label>
-                                <select id="sub-form-corte" class="form-select form-select-sm fw-bold" required>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Corte Horario (*)</span>
+                                    <span class="badge bg-primary-subtle text-primary fw-bold" style="font-size: 0.65rem;">Auto por Hora</span>
+                                </label>
+                                <select id="sub-form-corte" class="form-select" required>
                                     <option value="Corte 1">Corte 1 (05:00 - 11:59)</option>
                                     <option value="Corte 2">Corte 2 (12:00 - 16:59)</option>
                                     <option value="Corte 3">Corte 3 (17:00 - 04:59)</option>
@@ -325,62 +414,68 @@
                         </div>
                     </div>
 
-                    <!-- Placas -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-dark mb-1">Placa Camión / Tracto <span class="text-danger">*</span></label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-light text-secondary"><i class="bi bi-truck-front-fill"></i></span>
-                                <input type="text" id="sub-form-placa-camion" class="form-control form-control-sm text-uppercase fw-bold font-monospace" placeholder="Ej: BDJ-728" list="list-sub-placas-camion" required>
+                    <!-- Card 2: Unidades / Placas -->
+                    <div class="card p-3 mb-3 shadow-none">
+                        <div class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.88rem;">
+                            <i class="bi bi-truck text-primary"></i> Unidades / Placas
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Placa Principal (Tracto / Camión) (*)</label>
+                                <input type="text" id="sub-form-placa-camion" class="form-control text-uppercase font-monospace" placeholder="SELECCIONE O ESCRIBA PLACA..." list="list-sub-placas-camion" required>
                                 <datalist id="list-sub-placas-camion"></datalist>
                             </div>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-dark mb-1">Placa Carreta / Remolque</label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-light text-secondary"><i class="bi bi-truck-flatbed"></i></span>
-                                <input type="text" id="sub-form-placa-carreta" class="form-control form-control-sm text-uppercase fw-bold font-monospace" placeholder="Ej: T8X-970 (Opcional)" list="list-sub-placas-carreta">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Placa Semirremolque / Carreta (Opcional)</label>
+                                <input type="text" id="sub-form-placa-carreta" class="form-control text-uppercase font-monospace" placeholder="SELECCIONE O ESCRIBA CARRETA..." list="list-sub-placas-carreta">
                                 <datalist id="list-sub-placas-carreta"></datalist>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Zona y Estado -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-dark mb-1">Zona / Patio</label>
-                            <select id="sub-form-zona" class="form-select form-select-sm fw-semibold">
-                                <option value="Base Central" selected>Base Central</option>
-                                <option value="Patio Principal">Patio Principal</option>
-                                <option value="Garita / Entrada">Garita / Entrada</option>
-                                <option value="Taller de Mantenimiento">Taller de Mantenimiento</option>
-                                <option value="Zona de Lavado">Zona de Lavado</option>
-                                <option value="Rampa de Carga">Rampa de Carga</option>
-                            </select>
+                    <!-- Card 3: Ubicación y Estado -->
+                    <div class="card p-3 mb-3 shadow-none">
+                        <div class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.88rem;">
+                            <i class="bi bi-geo-alt-fill text-primary"></i> Ubicación y Estado
                         </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-dark mb-1">Estado de la Unidad</label>
-                            <select id="sub-form-estado" class="form-select form-select-sm fw-semibold">
-                                <option value="Disponible" selected>Disponible</option>
-                                <option value="En Espera">En Espera</option>
-                                <option value="En Taller">En Taller</option>
-                                <option value="Cargado">Cargado</option>
-                                <option value="Vacío">Vacío</option>
-                            </select>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Zona / Patio</label>
+                                <select id="sub-form-zona" class="form-select">
+                                    <option value="Base Central" selected>Base Central</option>
+                                    <option value="Patio Principal">Patio Principal</option>
+                                    <option value="Garita / Entrada">Garita / Entrada</option>
+                                    <option value="Taller de Mantenimiento">Taller de Mantenimiento</option>
+                                    <option value="Zona de Lavado">Zona de Lavado</option>
+                                    <option value="Rampa de Carga">Rampa de Carga</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Estado de la Unidad</label>
+                                <select id="sub-form-estado" class="form-select">
+                                    <option value="Disponible" selected>Disponible</option>
+                                    <option value="En Espera">En Espera</option>
+                                    <option value="En Taller">En Taller</option>
+                                    <option value="Cargado">Cargado</option>
+                                    <option value="Vacío">Vacío</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Observaciones -->
-                    <div class="mb-4">
-                        <label class="form-label small fw-bold text-dark mb-1">Observación</label>
-                        <textarea id="sub-form-obs" class="form-control form-control-sm" rows="3" placeholder="Detalles de permanencia, conductor asignado, motivo de estancia..."></textarea>
+                    <!-- Card 4: Observaciones -->
+                    <div class="card p-3 mb-4 shadow-none">
+                        <div class="fw-bold text-dark d-flex align-items-center gap-2 mb-2" style="font-size: 0.88rem;">
+                            <i class="bi bi-chat-left-text-fill text-primary"></i> Observaciones
+                        </div>
+                        <textarea id="sub-form-obs" class="form-control" rows="3" placeholder="Detalles de permanencia, conductor, motivo de estancia..." style="min-height: 80px !important;"></textarea>
                     </div>
 
-                    <!-- Botones de Acción -->
-                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
-                        <button type="button" class="btn btn-sm btn-light border px-3 fw-semibold" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" id="btnSubGuardar" class="btn btn-sm btn-primary px-4 fw-bold shadow-sm">
-                            <i class="bi bi-check-lg me-1"></i> Guardar
+                    <!-- Footer Modal -->
+                    <div class="d-flex justify-content-end gap-2 pt-2">
+                        <button type="button" class="btn btn-light border px-4 fw-semibold rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" id="btnSubGuardar" class="btn btn-primary px-4 fw-bold shadow-sm rounded-3">
+                            <i class="bi bi-check-lg me-1"></i> Guardar Registro
                         </button>
                     </div>
                 </form>
