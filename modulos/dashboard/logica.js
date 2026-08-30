@@ -84,8 +84,8 @@ window.updateGraficoDashFleetrun = function(vigentes, porVencer, vencidos) {
 };
 
 window.procesarFleetrunParaDashboard = async function() {
-    var placas = window.dataGlobalPlacas || [];
-    if (!placas.length) { setTimeout(procesarFleetrunParaDashboard, 500); return; }
+    var placas = await window.obtenerPlacasGlobales();
+    if (!placas || !placas.length) return;
 
     // Si el módulo Fleetrun ya está activo y tiene los valores reales con GPS live, usarlos
     if (window._fleetrun_kpi_venc !== undefined && window._fleetrun_kpi_desde_modulo) {
@@ -305,10 +305,32 @@ window.obtenerInspeccionesGlobales = async function() {
     return await window._peticionInspeccionesInFlight;
 };
 
+window.obtenerPlacasGlobales = async function() {
+    if (window.dataGlobalPlacas && window.dataGlobalPlacas.length > 0) {
+        return window.dataGlobalPlacas;
+    }
+    try {
+        const res = await fetch('/api/script/obtenerDatosPlacas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: [] })
+        });
+        if (res.ok) {
+            const json = await res.json();
+            const data = json.data || [];
+            window.dataGlobalPlacas = data;
+            if (typeof CACHE !== 'undefined') CACHE['placas'] = data;
+            return data;
+        }
+    } catch(e) {
+        console.warn('Dashboard: error cargando placas:', e);
+    }
+    return window.dataGlobalPlacas || [];
+};
+
 window.procesarInspeccionesParaDashboard = async function() {
-    // Si no hay datos de placas, reintentar
-    if (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0) {
-        setTimeout(procesarInspeccionesParaDashboard, 600);
+    let placas = await window.obtenerPlacasGlobales();
+    if (!placas || placas.length === 0) {
         return;
     }
 
@@ -316,10 +338,10 @@ window.procesarInspeccionesParaDashboard = async function() {
 
     let hoy = new Date(); hoy.setHours(0,0,0,0);
     let vigentes = 0, vencidas = 0;
-    let inspecciones = inspData.filter(i => i.estado !== 'Eliminada' && i.tipo_inspeccion !== 'Solo Frenos');
+    let inspecciones = (inspData || []).filter(i => i.estado !== 'Eliminada' && i.tipo_inspeccion !== 'Solo Frenos');
 
     // Todas las placas ACTIVAS (sin filtro de en_uso)
-    let placasActivas = window.dataGlobalPlacas.filter(p => {
+    let placasActivas = placas.filter(p => {
         if ((p[0] || '').toUpperCase() === 'PLACA') return false;
         let estado = normalizeStr(p[18] || p[8] || '');
         return estado === "ACTIVA";
@@ -473,7 +495,8 @@ window.cargarMapaWialonDash = async function() {
 // ============================================================
 
 window.renderKpiMetrics = async function() {
-    var placasActivas = (window.dataGlobalPlacas || []).filter(function(p) {
+    var placas = await window.obtenerPlacasGlobales();
+    var placasActivas = (placas || []).filter(function(p) {
         if ((p[0] || '').toUpperCase() === 'PLACA') return false;
         var estado = normalizeStr(p[18] || p[8] || '');
         return estado === 'ACTIVA';
