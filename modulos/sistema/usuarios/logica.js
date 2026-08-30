@@ -597,8 +597,8 @@ function _guBuildUserPanel(user) {
         + '<input type="text" id="guUserNombre" class="gu-input-inset" value="' + _guEsc(user.nombre||'') + '" placeholder="Ej. Juan Pérez" required>'
         + '<div class="gu-field-label">Cargo</div>'
         + '<input type="text" id="guUserCargo" class="gu-input-inset" value="' + _guEsc(user.cargo||'') + '" placeholder="Ej. Supervisor de Operaciones">'
-        + '<div class="gu-field-label">Correo Electrónico (Login)</div>'
-        + '<input type="email" id="guUserCorreo" class="gu-input-inset" value="' + _guEsc(user.correo||'') + '" placeholder="usuario@azkell.com" required>';
+        + '<div class="gu-field-label">Usuario / DNI / Correo (Login)</div>'
+        + '<input type="text" id="guUserCorreo" class="gu-input-inset" value="' + _guEsc(user.correo||'') + '" placeholder="DNI o correo (ej. 75060024 o usuario@azkell.com)" required>';
 
     // Contraseña: usuario existente vs nuevo
     if (user.id) {
