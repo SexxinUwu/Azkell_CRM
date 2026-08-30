@@ -2390,11 +2390,29 @@ window.init_inspecciones = function () {
         if (panel) panel.style.display = 'none';
         if (btn) btn.innerHTML = '<i class="bi bi-eye-fill"></i> <span data-i18n="common.charts">Gráficos</span>';
     }
-    if (dataGlobalInspecciones && dataGlobalInspecciones.length > 0) {
-        mostrarStatusInspecciones(dataGlobalInspecciones);
-    } else {
-        recargarModulo('statusMant');
-    }
+
+    // Asegurar que las placas estén en memoria antes de filtrar
+    const asegurarPlacasEInsp = async () => {
+        if (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0) {
+            try {
+                const rP = await fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) });
+                const jP = await rP.json();
+                window.dataGlobalPlacas = jP.data || [];
+                dataGlobalPlacas = window.dataGlobalPlacas;
+            } catch(e) {}
+        }
+        if (!window.dataGlobalInspecciones || window.dataGlobalInspecciones.length === 0) {
+            try {
+                const rI = await fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) });
+                const jI = await rI.json();
+                window.dataGlobalInspecciones = jI.data || [];
+                dataGlobalInspecciones = window.dataGlobalInspecciones;
+            } catch(e) {}
+        }
+        mostrarStatusInspecciones(window.dataGlobalInspecciones || []);
+    };
+
+    asegurarPlacasEInsp();
 };
 
 // Alias global para recargarModulo (main logica.js)
