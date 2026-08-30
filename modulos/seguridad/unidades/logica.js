@@ -2671,12 +2671,9 @@ window._sguGenerarPDFCompleto = async function() {
     });
 };
 
-// ── COMPARTIR PDF POR WHATSAPP ──
+// ── COMPARTIR PDF POR WHATSAPP (DIRECTO A LA APP) ──
 window._sguCompartirWhatsApp = async function(tipo) {
-    if (!window._sguCurrentRecord) {
-        _sguToast('No hay registro seleccionado', 'bi-exclamation-triangle');
-        return;
-    }
+    if (!window._sguCurrentRecord) return;
     if (typeof html2pdf === 'undefined') {
         _sguToast('Error: Librería PDF no disponible', 'bi-exclamation-triangle');
         return;
@@ -2684,45 +2681,26 @@ window._sguCompartirWhatsApp = async function(tipo) {
 
     var rec = window._sguCurrentRecord;
     var filename = _sguGetPdfFilename(rec, tipo);
-    _sguToast('Preparando PDF para WhatsApp...', 'bi-whatsapp');
+    _sguToast('Abriendo WhatsApp...', 'bi-whatsapp');
 
     try {
-        var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
-        var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
-
-        if ((!rec.fotos || !rec.fotos.length) && rec.id) {
-            try {
-                var freshData = await _sguFetch('/api/seguridad/unidades');
-                if (freshData && freshData.length) {
-                    var match = freshData.find(function(r){ return r.id === rec.id; });
-                    if (match && match.fotos) {
-                        rec.fotos = match.fotos;
-                        window._sguCurrentRecord.fotos = match.fotos;
-                    }
-                }
-            } catch(e){}
-        }
-
-        var todasFotos = rec.fotos || [];
-        var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
-        var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
-
-        var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
-        var fotosRetornoB64 = await _sguConvertirFotosABase64(fotosRetorno);
-
         var htmlFinal = '';
         if (tipo === 'completo') {
-            htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
+            var todasFotos = rec.fotos || [];
+            var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
+            var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
+
+            htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)');
             if (rec.retorno_fecha || rec.estado === 'completado') {
                 htmlFinal += '<div class="html2pdf__page-break"></div>';
-                htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
+                htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)');
             }
-            if (fotosSalidaB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosSalidaB64, 'salida');
-            if (fotosRetornoB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
+            if (fotosSalida.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosSalida, 'salida');
+            if (fotosRetorno.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosRetorno, 'retorno');
         } else {
-            var fotosBase64 = tipo === 'salida' ? fotosSalidaB64 : fotosRetornoB64;
-            htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
-            if (fotosBase64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
+            var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+            htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)');
+            if (fotos.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotos, tipo);
         }
 
         var div = document.createElement('div');
@@ -2733,86 +2711,38 @@ window._sguCompartirWhatsApp = async function(tipo) {
         var opt = {
             margin:       [8, 8, 8, 8],
             filename:     filename,
-            image:        { type: 'jpeg', quality: 0.95 },
-            html2canvas:  { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
+            image:        { type: 'jpeg', quality: 0.92 },
+            html2canvas:  { scale: 1.8, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
         var pdfBlob = await html2pdf().set(opt).from(div).outputPdf('blob');
         var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-        // Intentar compartir el archivo PDF directamente
+        // En móvil/tablet: Web Share API abre directamente WhatsApp con el archivo adjunto
         if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-            try {
-                await navigator.share({
-                    files: [pdfFile],
-                    title: filename
-                });
-                _sguToast('PDF compartido en WhatsApp con éxito', 'bi-check-circle');
-                return;
-            } catch(eShare) {
-                // Si el navegador requirió gesto de usuario directo (timeout por tiempo de procesamiento), mostrar botón instantáneo
-                if (eShare.name === 'NotAllowedError' || eShare.message?.indexOf('gesture') !== -1) {
-                    _sguShowDirectSharePrompt(pdfFile, filename);
-                    return;
-                }
-                console.log('Share cancelado:', eShare);
-            }
-        } else {
-            // Si el dispositivo/navegador no soporta compartir archivos por API nativa (ej. navegador de escritorio)
-            var fileUrl = URL.createObjectURL(pdfBlob);
-            var a = document.createElement('a');
-            a.href = fileUrl;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.open('https://api.whatsapp.com/send', '_blank');
-            _sguToast('PDF descargado: ' + filename + ' (Adjúntalo en WhatsApp)');
-        }
-    } catch(err) {
-        console.error('Error al preparar PDF para WhatsApp:', err);
-        _sguToast('Error al procesar PDF: ' + err.message, 'bi-exclamation-circle');
-    }
-};
-
-// Modal/Botón de 1 toque si el navegador bloquea el gesto durante la conversión del PDF
-function _sguShowDirectSharePrompt(pdfFile, filename) {
-    var existing = document.getElementById('sgu-direct-share-modal');
-    if (existing) existing.remove();
-
-    var div = document.createElement('div');
-    div.id = 'sgu-direct-share-modal';
-    div.style.cssText = 'position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:99999; width:92%; max-width:420px; background:#ffffff; border-radius:20px; box-shadow:0 12px 40px rgba(0,0,0,0.25); border:1px solid #e2e8f0; padding:16px 18px; animation: fadeInUp 0.25s ease;';
-    
-    div.innerHTML = '<div class="d-flex align-items-center justify-content-between gap-3">' +
-        '<div style="min-width:0; flex:1;">' +
-            '<div class="fw-bold text-dark text-truncate" style="font-size:0.88rem;"><i class="bi bi-file-earmark-pdf-fill text-danger me-1"></i>' + filename + '</div>' +
-            '<div class="text-success small fw-semibold" style="font-size:0.75rem;"><i class="bi bi-check2 me-1"></i>PDF listo para enviar</div>' +
-        '</div>' +
-        '<div class="d-flex align-items-center gap-2 flex-shrink-0">' +
-            '<button type="button" class="btn btn-sm btn-success fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-1" id="sgu-btn-confirm-share" style="background:#25d366; border-color:#25d366; font-size:0.85rem;">' +
-                '<i class="bi bi-whatsapp"></i> Enviar' +
-            '</button>' +
-            '<button type="button" class="btn-close" style="font-size:0.75rem;" onclick="document.getElementById(\'sgu-direct-share-modal\').remove();"></button>' +
-        '</div>' +
-    '</div>';
-
-    document.body.appendChild(div);
-
-    document.getElementById('sgu-btn-confirm-share').onclick = async function() {
-        try {
             await navigator.share({
                 files: [pdfFile],
                 title: filename
             });
-            div.remove();
-        } catch(e) {
-            console.log('Error o cancelación en share:', e);
-            div.remove();
+            return;
         }
-    };
-}
+
+        // Si es navegador de escritorio sin soporte nativo de share de archivos:
+        var fileUrl = URL.createObjectURL(pdfBlob);
+        var a = document.createElement('a');
+        a.href = fileUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.open('https://api.whatsapp.com/send', '_blank');
+        _sguToast('PDF generado: ' + filename);
+    } catch(err) {
+        if (err.name === 'AbortError') return; // Cancelado por el usuario en el menú del celular
+        console.error('Error al compartir WhatsApp:', err);
+    }
+};
 
 // =========================================================
 // 🗑️ ELIMINAR REGISTRO (DISEÑO B)
