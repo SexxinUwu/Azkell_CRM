@@ -2415,7 +2415,7 @@ async function _sguRenderPdfFromTemplate(htmlBody, filename) {
             + '<style>\n'
             + 'body { background-color:#FFFFFF; color:#0F172A; margin:0; padding:0; -webkit-font-smoothing:antialiased; font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif; }\n'
             + '.doc-grid-box { border: 1.5px solid #0F172A; }\n'
-            + '.report-page { width:100%; max-width:820px; box-sizing:border-box; padding:12px 16px; background:#FFFFFF; margin:0 auto; }\n'
+            + '.report-page { width:100%; max-width:820px; box-sizing:border-box; padding:16px 20px; background:#FFFFFF; margin:0 auto; }\n'
             + '.report-page-break { page-break-before:always !important; }\n'
             + '</style>\n</head>\n<body>\n'
             + '<div id="sgu-pdf-render-root" style="width:100%; max-width:820px; margin:0 auto;">' + htmlBody + '</div>\n'
@@ -2427,7 +2427,7 @@ async function _sguRenderPdfFromTemplate(htmlBody, filename) {
                 await new Promise(function(r) { setTimeout(r, 450); });
                 var targetEl = doc.getElementById('sgu-pdf-render-root');
                 var opt = {
-                    margin:       [3, 4, 3, 4],
+                    margin:       0,
                     filename:     filename,
                     image:        { type: 'jpeg', quality: 0.98 },
                     html2canvas:  { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 840 },
@@ -2530,7 +2530,7 @@ function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
         + '<script>\n'
         + 'function descargarDoc() {\n'
         + '  var el = document.getElementById("sgu-pdf-root");\n'
-        + '  var opt = { margin: [3, 4, 3, 4], filename: "' + filename + '", image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 840 }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }, pagebreak: { mode: ["css", "legacy"] } };\n'
+        + '  var opt = { margin: 0, filename: "' + filename + '", image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 840 }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }, pagebreak: { mode: ["css", "legacy"] } };\n'
         + '  html2pdf().set(opt).from(el).save();\n'
         + '}\n'
         + '</scr' + 'ipt>\n'
@@ -2686,62 +2686,65 @@ window._sguGenerarPDFCompleto = async function() {
     }
 };
 
-// ── COMPARTIR PDF POR WHATSAPP (MÓVIL DIRECTO A LA APP / WEB A PÁGINA) ──
+// ── COMPARTIR PDF POR WHATSAPP (MÓVIL DIRECTO A LA APP / DESCARGA + WHATSAPP EN PC) ──
 window._sguCompartirWhatsApp = async function(tipo) {
     if (!window._sguCurrentRecord) return;
     var rec = window._sguCurrentRecord;
     var filename = _sguGetPdfFilename(rec, tipo);
 
-    var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    _sguToast('Preparando PDF para WhatsApp...', 'bi-whatsapp');
+    try {
+        var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
+        var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
 
-    if (isMobile && typeof html2pdf !== 'undefined') {
-        _sguToast('Preparando PDF para WhatsApp...', 'bi-whatsapp');
-        try {
-            var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
-            var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+        var htmlFinal = '';
+        if (tipo === 'completo') {
+            var todasFotos = rec.fotos || [];
+            var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
+            var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
+            var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
+            var fotosRetornoB64 = await _sguConvertirFotosABase64(fotosRetorno);
 
-            var htmlFinal = '';
-            if (tipo === 'completo') {
-                var todasFotos = rec.fotos || [];
-                var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
-                var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
-                var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
-                var fotosRetornoB64 = await _sguConvertirFotosABase64(fotosRetorno);
-
-                htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
-                if (rec.retorno_fecha || rec.estado === 'completado') {
-                    htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
-                }
-                if (fotosSalidaB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosSalidaB64, 'salida');
-                if (fotosRetornoB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
-            } else {
-                var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
-                var fotosBase64 = await _sguConvertirFotosABase64(fotos);
-                htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
-                if (fotosBase64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
+            htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
+            if (rec.retorno_fecha || rec.estado === 'completado') {
+                htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
             }
-
-            var pdfBlob = await _sguRenderPdfFromTemplate(htmlFinal, filename);
-            var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
-
-            if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-                await navigator.share({
-                    files: [pdfFile],
-                    title: filename
-                });
-                return;
-            }
-        } catch(err) {
-            if (err.name === 'AbortError') return;
-            console.warn('Share directo no disponible en este dispositivo:', err);
+            if (fotosSalidaB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosSalidaB64, 'salida');
+            if (fotosRetornoB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
+        } else {
+            var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+            var fotosBase64 = await _sguConvertirFotosABase64(fotos);
+            htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
+            if (fotosBase64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
         }
-    }
 
-    // En navegador Web (PC / Escritorio): Abrir la página oficial con visor de documento y opciones de compartir
-    if (tipo === 'completo') {
-        window._sguPrevisualizarPDFCompleto();
-    } else {
-        window._sguPrevisualizarPDF(tipo);
+        var pdfBlob = await _sguRenderPdfFromTemplate(htmlFinal, filename);
+        var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+        // Si el dispositivo soporta compartir archivos directamente (Móviles / Tablets Android e iOS)
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            await navigator.share({
+                files: [pdfFile],
+                title: filename
+            });
+            return;
+        }
+
+        // Si es PC / Escritorio (donde los navegadores no permiten Web Share con archivos binarios):
+        var fileUrl = URL.createObjectURL(pdfBlob);
+        var a = document.createElement('a');
+        a.href = fileUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        window.open('https://api.whatsapp.com/send', '_blank');
+        _sguToast('PDF descargado: ' + filename + ' y WhatsApp abierto.');
+    } catch(err) {
+        if (err.name === 'AbortError') return; // Cancelado por el usuario en el selector nativo
+        console.error('Error al compartir WhatsApp:', err);
+        _sguToast('Error al procesar PDF: ' + err.message, 'bi-exclamation-circle');
     }
 };
 
