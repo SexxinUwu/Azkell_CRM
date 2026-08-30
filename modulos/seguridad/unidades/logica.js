@@ -2362,8 +2362,7 @@ function _sguBuildPhotosPagesHtml(fotosArray, tipo) {
 
     var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || '';
 
-    var h = '<div class="html2pdf__page-break" style="page-break-before:always;"></div>';
-    h += '<main class="report-page w-full max-w-[840px] bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-4 sm:p-5 text-slate-900 mx-auto mt-4" style="box-sizing:border-box;font-family:\'Inter\',-apple-system,BlinkMacSystemFont,sans-serif;">';
+    var h = '<main class="report-page report-page-break w-full max-w-[840px] bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-4 sm:p-5 text-slate-900 mx-auto" style="box-sizing:border-box;font-family:\'Inter\',-apple-system,BlinkMacSystemFont,sans-serif;page-break-before:always;">';
 
     h += '<header class="doc-grid-box rounded-lg overflow-hidden bg-white mb-3" style="border:1.5px solid #0F172A;">';
     h += '<div class="grid grid-cols-12 divide-x-[1.5px] divide-slate-900" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));">';
@@ -2387,15 +2386,64 @@ function _sguBuildPhotosPagesHtml(fotosArray, tipo) {
     h += '<div class="grid grid-cols-2 gap-3" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
     fotosArray.forEach(function(f, idx) {
         var src = f.b64 || f.url || '';
-        h += '<div class="doc-grid-box rounded-lg p-2.5 bg-slate-50/50 text-center" style="border:1.5px solid #0F172A;">';
-        h += '<div class="text-[10.5px] font-extrabold mb-1.5 uppercase text-slate-900">Evidencia ' + (f.num || (idx + 1)) + '</div>';
-        h += '<img src="' + src + '" style="max-width:100%;max-height:220px;height:auto;object-fit:contain;display:block;margin:0 auto;border:1px solid #E2E8F0;border-radius:6px;">';
+        h += '<div class="doc-grid-box rounded-lg p-2 bg-slate-50/50 text-center" style="border:1.5px solid #0F172A;">';
+        h += '<div class="text-[10.5px] font-extrabold mb-1 uppercase text-slate-900">Evidencia ' + (f.num || (idx + 1)) + '</div>';
+        h += '<img src="' + src + '" style="max-width:100%;max-height:180px;height:auto;object-fit:contain;display:block;margin:0 auto;border:1px solid #E2E8F0;border-radius:6px;">';
         h += '</div>';
     });
     h += '</div>';
 
     h += '</main>';
     return h;
+}
+
+// ── MOTOR DE GENERACIÓN PDF ULTRA ALTA RESOLUCIÓN (IDÉNTICO A VISTA PREVIA) ──
+async function _sguRenderPdfFromTemplate(htmlBody, filename) {
+    return new Promise(function(resolve, reject) {
+        var iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed; top:-10000px; left:-10000px; width:840px; height:1200px; border:none; z-index:-999;';
+        document.body.appendChild(iframe);
+
+        var doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write('<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n'
+            + '<script src="https://cdn.tailwindcss.com"></script>\n'
+            + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+            + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+            + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
+            + '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></scr' + 'ipt>\n'
+            + '<style>\n'
+            + 'body { background-color:#FFFFFF; color:#0F172A; margin:0; padding:0; -webkit-font-smoothing:antialiased; font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif; }\n'
+            + '.doc-grid-box { border: 1.5px solid #0F172A; }\n'
+            + '.report-page { width:100%; max-width:820px; box-sizing:border-box; padding:12px 16px; background:#FFFFFF; margin:0 auto; }\n'
+            + '.report-page-break { page-break-before:always !important; }\n'
+            + '</style>\n</head>\n<body>\n'
+            + '<div id="sgu-pdf-render-root" style="width:100%; max-width:820px; margin:0 auto;">' + htmlBody + '</div>\n'
+            + '</body>\n</html>');
+        doc.close();
+
+        iframe.onload = async function() {
+            try {
+                await new Promise(function(r) { setTimeout(r, 450); });
+                var targetEl = doc.getElementById('sgu-pdf-render-root');
+                var opt = {
+                    margin:       [3, 4, 3, 4],
+                    filename:     filename,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 840 },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak:    { mode: ['css', 'legacy'] }
+                };
+
+                var pdfBlob = await iframe.contentWindow.html2pdf().set(opt).from(targetEl).outputPdf('blob');
+                iframe.remove();
+                resolve(pdfBlob);
+            } catch(e) {
+                iframe.remove();
+                reject(e);
+            }
+        };
+    });
 }
 
 function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
@@ -2410,18 +2458,6 @@ function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
         + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
         + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
         + '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></scr' + 'ipt>\n'
-        + '<script>\n'
-        + '  tailwind.config = {\n'
-        + '    theme: {\n'
-        + '      extend: {\n'
-        + '        fontFamily: {\n'
-        + '          sans: ["-apple-system", "BlinkMacSystemFont", "Inter", "system-ui", "sans-serif"],\n'
-        + '          mono: ["JetBrains Mono", "SF Mono", "Menlo", "monospace"],\n'
-        + '        }\n'
-        + '      }\n'
-        + '    }\n'
-        + '  }\n'
-        + '</script>\n'
         + '<style>\n'
         + 'body {\n'
         + '  background-color: #F1F5F9;\n'
@@ -2433,6 +2469,7 @@ function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
         + '.btn-action { transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); }\n'
         + '.btn-action:hover { transform: translateY(-1px); }\n'
         + '.btn-action:active { transform: scale(0.98); }\n'
+        + '.report-page-break { page-break-before: always !important; }\n'
         + '@media print {\n'
         + '  @page {\n'
         + '    size: A4 portrait;\n'
@@ -2493,7 +2530,7 @@ function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
         + '<script>\n'
         + 'function descargarDoc() {\n'
         + '  var el = document.getElementById("sgu-pdf-root");\n'
-        + '  var opt = { margin: [4,5,4,5], filename: "' + filename + '", image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0 }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } };\n'
+        + '  var opt = { margin: [3, 4, 3, 4], filename: "' + filename + '", image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 840 }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }, pagebreak: { mode: ["css", "legacy"] } };\n'
         + '  html2pdf().set(opt).from(el).save();\n'
         + '}\n'
         + '</scr' + 'ipt>\n'
@@ -2555,7 +2592,6 @@ window._sguPrevisualizarPDFCompleto = async function() {
     var htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
 
     if (rec.retorno_fecha || rec.estado === 'completado') {
-        htmlFinal += '<div class="html2pdf__page-break"></div>';
         htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
     }
 
@@ -2573,102 +2609,81 @@ window._sguPrevisualizarPDFCompleto = async function() {
 
 window._sguGenerarPDF = async function(tipo) {
     if (!window._sguCurrentRecord) return;
-    if (typeof html2pdf === 'undefined') {
-        _sguToast('Error: Librería PDF no disponible', 'bi-exclamation-triangle');
-        return;
-    }
-
     var rec = window._sguCurrentRecord;
     var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
     var filename = _sguGetPdfFilename(rec, tipo);
 
-    _sguToast('Descargando reporte PDF...', 'bi-hourglass-split');
+    _sguToast('Generando PDF en alta resolución...', 'bi-hourglass-split');
 
-    var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
-    var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+    try {
+        var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
+        var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+        var fotosBase64 = await _sguConvertirFotosABase64(fotos);
 
-    var fotosBase64 = await _sguConvertirFotosABase64(fotos);
+        var htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
+        if (fotosBase64.length > 0) {
+            htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
+        }
 
-    var htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
-    if (fotosBase64.length > 0) {
-        htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
-    }
-
-    var div = document.createElement('div');
-    div.style.width = '700px';
-    div.style.backgroundColor = '#ffffff';
-    div.innerHTML = htmlFinal;
-
-    var opt = {
-        margin:       [8, 8, 8, 8],
-        filename:     filename,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(div).save().then(function() {
-        _sguToast('PDF descargado: ' + filename);
-    }).catch(function(err) {
+        var pdfBlob = await _sguRenderPdfFromTemplate(htmlFinal, filename);
+        var fileUrl = URL.createObjectURL(pdfBlob);
+        var a = document.createElement('a');
+        a.href = fileUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        _sguToast('PDF descargado: ' + filename, 'bi-check-circle');
+    } catch(err) {
+        console.error('Error al descargar PDF:', err);
         _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
-    });
+    }
 };
 
 window._sguGenerarPDFCompleto = async function() {
-    if (typeof html2pdf === 'undefined') {
-        _sguToast('Error: Librería PDF no disponible', 'bi-exclamation-triangle');
-        return;
-    }
-
     if (!window._sguCurrentRecord) return;
     var rec = window._sguCurrentRecord;
     var filename = _sguGetPdfFilename(rec, 'completo');
 
-    _sguToast('Descargando Expediente Completo...', 'bi-hourglass-split');
+    _sguToast('Generando Expediente en alta resolución...', 'bi-hourglass-split');
 
-    var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
-    var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+    try {
+        var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
+        var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
 
-    var todasFotos = rec.fotos || [];
-    var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
-    var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
+        var todasFotos = rec.fotos || [];
+        var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
+        var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
 
-    var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
-    var fotosRetornoB64 = await _sguConvertirFotosABase64(fotosRetorno);
+        var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
+        var fotosRetornoB64 = await _sguConvertirFotosABase64(fotosRetorno);
 
-    var htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
+        var htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
 
-    if (rec.retorno_fecha || rec.estado === 'completado') {
-        htmlFinal += '<div class="html2pdf__page-break"></div>';
-        htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
-    }
+        if (rec.retorno_fecha || rec.estado === 'completado') {
+            htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
+        }
 
-    // Páginas siguientes: Fotos
-    if (fotosSalidaB64.length > 0) {
-        htmlFinal += _sguBuildPhotosPagesHtml(fotosSalidaB64, 'salida');
-    }
-    if (fotosRetornoB64.length > 0) {
-        htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
-    }
+        if (fotosSalidaB64.length > 0) {
+            htmlFinal += _sguBuildPhotosPagesHtml(fotosSalidaB64, 'salida');
+        }
+        if (fotosRetornoB64.length > 0) {
+            htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
+        }
 
-    var div = document.createElement('div');
-    div.style.width = '700px';
-    div.style.backgroundColor = '#ffffff';
-    div.innerHTML = htmlFinal;
-
-    var opt = {
-        margin:       [8, 8, 8, 8],
-        filename:     filename,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(div).save().then(function() {
-        _sguToast('Expediente descargado: ' + filename);
-    }).catch(function(err) {
+        var pdfBlob = await _sguRenderPdfFromTemplate(htmlFinal, filename);
+        var fileUrl = URL.createObjectURL(pdfBlob);
+        var a = document.createElement('a');
+        a.href = fileUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        _sguToast('Expediente descargado: ' + filename, 'bi-check-circle');
+    } catch(err) {
+        console.error('Error al generar Expediente:', err);
         _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
-    });
+    }
 };
 
 // ── COMPARTIR PDF POR WHATSAPP (MÓVIL DIRECTO A LA APP / WEB A PÁGINA) ──
@@ -2677,37 +2692,36 @@ window._sguCompartirWhatsApp = async function(tipo) {
     var rec = window._sguCurrentRecord;
     var filename = _sguGetPdfFilename(rec, tipo);
 
-    // Si es móvil o soporta compartir archivos directamente:
-    var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.canShare && navigator.canShare({ files: [new File([''], 'test.pdf', { type: 'application/pdf' })] }));
+    var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
     if (isMobile && typeof html2pdf !== 'undefined') {
-        _sguToast('Abriendo WhatsApp...', 'bi-whatsapp');
+        _sguToast('Preparando PDF para WhatsApp...', 'bi-whatsapp');
         try {
+            var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
+            var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+
             var htmlFinal = '';
             if (tipo === 'completo') {
-                htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)');
+                var todasFotos = rec.fotos || [];
+                var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
+                var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
+                var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
+                var fotosRetornoB64 = await _sguConvertirFotosABase64(fotosRetorno);
+
+                htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
                 if (rec.retorno_fecha || rec.estado === 'completado') {
-                    htmlFinal += '<div class="html2pdf__page-break"></div>';
-                    htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)');
+                    htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
                 }
+                if (fotosSalidaB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosSalidaB64, 'salida');
+                if (fotosRetornoB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
             } else {
-                htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)');
+                var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+                var fotosBase64 = await _sguConvertirFotosABase64(fotos);
+                htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
+                if (fotosBase64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
             }
 
-            var div = document.createElement('div');
-            div.style.width = '700px';
-            div.style.backgroundColor = '#ffffff';
-            div.innerHTML = htmlFinal;
-
-            var opt = {
-                margin:       [6, 6, 6, 6],
-                filename:     filename,
-                image:        { type: 'jpeg', quality: 0.92 },
-                html2canvas:  { scale: 1.6, useCORS: false, logging: false, scrollX: 0, scrollY: 0 },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            var pdfBlob = await html2pdf().set(opt).from(div).outputPdf('blob');
+            var pdfBlob = await _sguRenderPdfFromTemplate(htmlFinal, filename);
             var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
             if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
@@ -2718,8 +2732,8 @@ window._sguCompartirWhatsApp = async function(tipo) {
                 return;
             }
         } catch(err) {
-            if (err.name === 'AbortError') return; // Cancelado por el usuario en el selector nativo
-            console.warn('Share directo no disponible, abriendo vista web:', err);
+            if (err.name === 'AbortError') return;
+            console.warn('Share directo no disponible en este dispositivo:', err);
         }
     }
 
