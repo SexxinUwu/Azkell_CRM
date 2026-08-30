@@ -95,8 +95,15 @@ function cargarTablaFleetrun(forzarRefresh = false) {
     }
     Promise.all([
         fetch('/api/configuracion').then(r => r.json()).catch(() => ({})),
-        fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).catch(() => ({ data: [] }))
-    ]).then(([configData, r]) => {
+        fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).catch(() => ({ data: [] })),
+        (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0) 
+            ? fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).catch(() => ({ data: [] }))
+            : Promise.resolve({ data: window.dataGlobalPlacas })
+    ]).then(([configData, r, rPlacas]) => {
+        if (rPlacas && rPlacas.data && rPlacas.data.length > 0) {
+            window.dataGlobalPlacas = rPlacas.data;
+            dataGlobalPlacas = rPlacas.data;
+        }
         let confStr = configData['fleetrun_uts_umbrales'] || '{}';
         try { window._fleetrun_umbrales_uts = JSON.parse(confStr); } catch(e) { window._fleetrun_umbrales_uts = {}; }
         mostrarFleetrun(r.data || []);

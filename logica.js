@@ -643,11 +643,16 @@ window.verificarSesionGuardada = function() {
                 poblarSelectsFormularios(d);
             }
             recargarWialon();
-            // Si el usuario llegó a Fleetrun antes que las placas cargaran, re-renderizar ahora con el filtro correcto
-            if (sessionStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun'
-                && typeof mostrarFleetrun === 'function'
-                && dataGlobalFleetrun && dataGlobalFleetrun.length > 0) {
+            // Re-renderizar módulos que dependen de las placas si ya cargaron
+            const rutaAct = sessionStorage.getItem('fleet_rutaActual');
+            if (rutaAct === 'mantenimiento/fleetrun' && typeof mostrarFleetrun === 'function' && dataGlobalFleetrun && dataGlobalFleetrun.length > 0) {
                 mostrarFleetrun(dataGlobalFleetrun);
+            }
+            if (rutaAct === 'mantenimiento/inspecciones' && typeof mostrarStatusInspecciones === 'function' && typeof dataGlobalInspecciones !== 'undefined' && dataGlobalInspecciones && dataGlobalInspecciones.length > 0) {
+                mostrarStatusInspecciones(dataGlobalInspecciones);
+            }
+            if ((rutaAct === 'dashboard' || !rutaAct) && typeof window.recargarDashboard === 'function') {
+                window.recargarDashboard();
             }
         });
     fetch('/api/script/obtenerTiposMantenimiento', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => { dataTiposMant = r.data || []; window.dataTiposMant = dataTiposMant; });
