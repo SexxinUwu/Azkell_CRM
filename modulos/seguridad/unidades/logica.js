@@ -2018,7 +2018,7 @@ window._sguVerDetalles = function(tipo) {
 };
 
 // =========================================================
-// 📄 GENERAR PDF FORMATO ISO OFICIAL (1 SOLA HOJA A4)
+// 📄 GENERAR PDF FORMATO OFICIAL SGC (1 SOLA HOJA A4)
 // =========================================================
 function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     var checklist = tipo === 'salida' ? rec.salida_checklist_json : rec.retorno_checklist_json;
@@ -2028,14 +2028,14 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     var km = tipo === 'salida' ? rec.salida_km : rec.retorno_km;
     var hasAlert = tipo === 'salida' ? rec.salida_has_alert : rec.retorno_has_alert;
 
-    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || '';
     var ts = _sguTimestamp();
 
-    // Observaciones (Salida o Retorno)
+    // Observaciones
     var obsRaw = (tipo === 'salida' ? rec.salida_observaciones : (rec.retorno_observaciones || rec.salida_observaciones)) || '';
     var obsText = obsRaw.trim() ? obsRaw.trim().toUpperCase() : 'SIN OBSERVACIONES';
 
-    // Datos Documentales por defecto si no vienen pasados
+    // Datos Documentales por defecto
     docT = docT || { soat: { fechaFmt: '11/01/2027', estado: 'VIGENTE' }, rt: { fechaFmt: '03/12/2026', estado: 'VIGENTE' } };
     docC = docC || (rec.placa_carreta ? { soat: { fechaFmt: '11/01/2027', estado: 'VIGENTE' }, rt: { fechaFmt: '03/12/2026', estado: 'VIGENTE' } } : null);
 
@@ -2053,108 +2053,153 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     }
     if (itemsMal.length > 0) hasAlert = true;
 
-    var h = '<div style="width:710px;min-height:980px;max-height:980px;box-sizing:border-box;font-family:\'Plus Jakarta Sans\',-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;color:#0f172a;background:#ffffff;padding:6px 10px;margin:0 auto;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;">';
+    var faseTexto = tipo === 'salida' ? 'SALIDA (IDA)' : 'RETORNO (VUELTA)';
+    var firmaCond = tipo === 'salida' ? rec.firma_salida_conductor : rec.firma_retorno_conductor;
+    var firmaVig = tipo === 'salida' ? rec.firma_salida_vigilancia : rec.firma_retorno_vigilancia;
 
-    h += '<div>'; // Top wrapper
+    var h = '<main class="report-page w-full max-w-[840px] bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-4 sm:p-5 text-slate-900 mx-auto" style="box-sizing:border-box;font-family:\'Inter\',-apple-system,BlinkMacSystemFont,sans-serif;">';
 
-    // 1. Cabecera ISO / Corporativa
-    h += '<table style="width:100%;border-collapse:collapse;border:1.5px solid #0f172a;border-radius:6px;margin-bottom:4px;table-layout:fixed;background:#ffffff;">';
-    h += '<tr>';
-    h += '<td style="width:23%;border:1px solid #0f172a;text-align:center;vertical-align:middle;padding:4px 2px;" rowspan="3">';
-    h += '<img src="' + empLogoUrl + '" style="max-height:36px;max-width:115px;object-fit:contain;" crossorigin="anonymous">';
-    h += '<div style="font-size:7px;font-weight:800;color:#64748b;letter-spacing:0.5px;margin-top:1px;">TRANSPORTE & LOGÍSTICA</div>';
-    h += '</td>';
-    h += '<td style="width:52%;border:1px solid #0f172a;text-align:center;vertical-align:middle;padding:4px 2px;" rowspan="3">';
-    h += '<div style="font-size:13.5px;font-weight:900;line-height:1.1;text-transform:uppercase;color:#0f172a;letter-spacing:-0.2px;">CHECKLIST DE INSPECCIÓN VEHICULAR</div>';
-    h += '<div style="font-size:8px;font-weight:700;color:#475569;letter-spacing:0.4px;margin-top:2px;text-transform:uppercase;">CONTROL DE SEGURIDAD, INGRESO Y SALIDA DE UNIDADES</div>';
-    h += '</td>';
-    h += '<td style="width:25%;border:1px solid #0f172a;font-size:8px;text-align:left;padding:2px 6px;height:13px;color:#0f172a;"><strong>CÓDIGO:</strong> <span style="float:right;font-family:monospace;font-weight:bold;">F-SEG-002</span></td>';
-    h += '</tr>';
-    h += '<tr><td style="border:1px solid #0f172a;font-size:8px;text-align:left;padding:2px 6px;height:13px;color:#0f172a;"><strong>VERSIÓN:</strong> <span style="float:right;font-family:monospace;font-weight:bold;">01</span></td></tr>';
-    h += '<tr><td style="border:1px solid #0f172a;font-size:8px;text-align:left;padding:2px 6px;height:13px;color:#0f172a;"><strong>F. EMISIÓN:</strong> <span style="float:right;font-family:monospace;font-weight:bold;">' + (fecha || ts.fullDate) + '</span></td></tr>';
-    h += '</table>';
-
-    // 2. Grid de Datos Generales
-    h += '<table style="width:100%;border-collapse:collapse;border:1.5px solid #0f172a;margin-bottom:4px;table-layout:fixed;font-size:8.5px;color:#0f172a;background:#ffffff;">';
-    h += '<tr>';
-    h += '<td style="border:1px solid #0f172a;padding:2px 5px;width:33%;vertical-align:middle;"><strong>Nº EXPEDIENTE:</strong> <span style="color:#0284c7;font-size:9.5px;font-weight:800;font-family:monospace;margin-left:4px;">' + rec.id + '</span></td>';
-    h += '<td style="border:1px solid #0f172a;padding:2px 5px;width:33%;vertical-align:middle;"><strong>PLACA TRACTO:</strong> <span style="font-weight:800;font-family:monospace;margin-left:4px;font-size:9.5px;">' + rec.placa_tracto + '</span></td>';
-    h += '<td style="border:1px solid #0f172a;padding:2px 5px;width:34%;vertical-align:middle;"><strong>PLACA CARRETA:</strong> <span style="font-weight:800;font-family:monospace;margin-left:4px;font-size:9.5px;">' + (rec.placa_carreta || '---') + '</span></td>';
-    h += '</tr>';
-    h += '<tr>';
-    h += '<td style="border:1px solid #0f172a;padding:2px 5px;vertical-align:middle;"><strong>CONDUCTOR:</strong> <span style="font-weight:700;text-transform:uppercase;margin-left:3px;">' + (rec.conductor || '---') + '</span></td>';
-    h += '<td style="border:1px solid #0f172a;padding:2px 5px;vertical-align:middle;"><strong>FASE:</strong> <span style="font-weight:800;color:#0f172a;margin-left:3px;">' + (tipo === 'salida' ? 'SALIDA (IDA)' : 'RETORNO (VUELTA)') + '</span></td>';
-    h += '<td style="border:1px solid #0f172a;padding:2px 5px;vertical-align:middle;"><strong>DESTINO:</strong> <span style="font-weight:700;text-transform:uppercase;margin-left:3px;">' + (rec.destino || '---') + '</span></td>';
-    h += '</tr>';
-    h += '<tr>';
-    h += '<td style="border:1px solid #0f172a;padding:2px 5px;vertical-align:middle;"><strong>FECHA / HORA:</strong> <span style="font-weight:600;margin-left:3px;">' + (fecha || '--') + ' ' + (hora || '') + '</span></td>';
-    h += '<td style="border:1px solid #0f172a;padding:2px 5px;vertical-align:middle;"><strong>KILOMETRAJE:</strong> <span style="font-weight:800;margin-left:3px;">' + (km ? Number(km).toLocaleString() + ' KM' : '---') + '</span></td>';
-    var estadoInsp = hasAlert ? '<span style="color:#dc2626;font-weight:800;margin-left:3px;">● CON OBSERVACIONES</span>' : '<span style="color:#16a34a;font-weight:800;margin-left:3px;">● CONFORME</span>';
-    h += '<td style="border:1px solid #0f172a;padding:2px 5px;vertical-align:middle;"><strong>ESTADO:</strong> ' + estadoInsp + '</td>';
-    h += '</tr>';
-    h += '</table>';
-
-    // 3. ESTADO DOCUMENTAL INFORMATIVO (SOAT & REVISIÓN TÉCNICA)
-    h += '<div style="border:1.5px solid #0f172a;border-radius:6px;margin-bottom:4px;overflow:hidden;background:#ffffff;">';
-    h += '<div style="background:#0f172a;color:#ffffff;font-weight:800;font-size:8px;padding:2.5px 6px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.3px;">';
-    h += '<span>🛡️ ESTADO DOCUMENTAL INFORMATIVO (SOAT & REVISIÓN TÉCNICA)</span>';
-    h += '<span style="font-size:7px;color:#38bdf8;letter-spacing:0.4px;">CONSULTA VIGENCIAS MTC</span>';
-    h += '</div>';
-    h += '<div style="padding:3px;display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#ffffff;">';
-
-    // Celda Tracto
-    h += '<div style="border:1px solid #cbd5e1;border-radius:5px;padding:3px 5px;background:#f8fafc;">';
-    h += '<div style="font-weight:800;color:#0f172a;font-size:8px;margin-bottom:2px;display:flex;align-items:center;gap:3px;">';
-    h += '<span style="color:#0284c7;">⇄</span> TRACTO / CAMIÓN (' + rec.placa_tracto + ')';
-    h += '</div>';
-    h += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:7.5px;margin-bottom:1.5px;">';
-    h += '<span><span style="color:#16a34a;">✔</span> <strong>SOAT</strong> <span style="color:#64748b;">Vence el ' + (docT && docT.soat ? docT.soat.fechaFmt : '11/01/2027') + '</span></span>';
-    h += '<span style="font-weight:800;color:#ffffff;background:#15803d;padding:0.5px 5px;border-radius:8px;font-size:6.8px;">' + (docT && docT.soat ? docT.soat.estado : 'VIGENTE') + '</span>';
-    h += '</div>';
-    h += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:7.5px;">';
-    h += '<span><span style="color:#0284c7;">📋</span> <strong>Revisión Técnica</strong> <span style="color:#64748b;">Vence el ' + (docT && docT.rt ? docT.rt.fechaFmt : '03/12/2026') + '</span></span>';
-    h += '<span style="font-weight:800;color:#ffffff;background:#15803d;padding:0.5px 5px;border-radius:8px;font-size:6.8px;">' + (docT && docT.rt ? docT.rt.estado : 'VIGENTE') + '</span>';
-    h += '</div>';
+    // 1. ENCABEZADO INSTITUCIONAL OFICIAL
+    h += '<header class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2.5" style="border:1.5px solid #0F172A;">';
+    
+    // Top Row: Logo | Title | SGC Control Codes
+    h += '<div class="grid grid-cols-12 divide-x-[1.5px] divide-slate-900 border-b-[1.5px] border-slate-900" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));border-bottom:1.5px solid #0F172A;">';
+    
+    // Left: Marsisa Logo
+    h += '<div class="col-span-3 p-2 flex flex-col items-center justify-center bg-white text-center" style="grid-column:span 3 / span 3;border-right:1.5px solid #0F172A;">';
+    if (empLogoUrl) {
+        h += '<img src="' + empLogoUrl + '" style="max-height:36px;max-width:115px;object-fit:contain;" crossorigin="anonymous">';
+    } else {
+        h += '<div class="flex items-center gap-1.5 mb-0.5">';
+        h += '<svg class="w-6 h-6" viewBox="0 0 40 40" fill="none" style="width:24px;height:24px;"><path d="M10 32C10 20 18 10 20 8C20 16 14 26 10 32Z" fill="#15803D"/><path d="M18 32C18 18 26 8 28 6C28 15 22 25 18 32Z" fill="#22C55E"/><path d="M26 32C26 21 33 13 35 11C35 19 30 27 26 32Z" fill="#F97316"/></svg>';
+        h += '<span class="text-sm font-extrabold tracking-tight text-slate-900 leading-none">Marsisa</span>';
+        h += '</div>';
+    }
+    h += '<span class="text-[7.5px] font-semibold tracking-wider text-slate-500 uppercase">Transporte & Logística</span>';
     h += '</div>';
 
-    // Celda Carreta
-    h += '<div style="border:1px solid #cbd5e1;border-radius:5px;padding:3px 5px;background:#f8fafc;">';
-    h += '<div style="font-weight:800;color:#0f172a;font-size:8px;margin-bottom:2px;display:flex;align-items:center;gap:3px;">';
-    h += '<span style="color:#d97706;">🗂️</span> CARRETA / REMOLQUE (' + (rec.placa_carreta || '---') + ')';
+    // Center: Official Document Title
+    h += '<div class="col-span-6 p-2 flex flex-col items-center justify-center text-center bg-slate-50/50" style="grid-column:span 6 / span 6;border-right:1.5px solid #0F172A;">';
+    h += '<h1 class="text-xs sm:text-sm font-extrabold text-slate-900 tracking-tight uppercase leading-tight">Checklist de Inspección Vehicular</h1>';
+    h += '<p class="text-[9.5px] font-semibold text-slate-600 tracking-normal mt-0.5 uppercase">Control de Seguridad, Ingreso y Salida de Unidades</p>';
+    h += '</div>';
+
+    // Right: Document Control SGC
+    h += '<div class="col-span-3 text-[9.5px] flex flex-col divide-y-[1.5px] divide-slate-900 bg-white" style="grid-column:span 3 / span 3;">';
+    h += '<div class="px-2 py-0.5 flex items-center justify-between" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-600 uppercase text-[9px]">Código:</span><span class="font-mono font-bold text-slate-900">F-SEG-002</span></div>';
+    h += '<div class="px-2 py-0.5 flex items-center justify-between" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-600 uppercase text-[9px]">Versión:</span><span class="font-mono font-bold text-slate-900">01</span></div>';
+    h += '<div class="px-2 py-0.5 flex items-center justify-between"><span class="font-bold text-slate-600 uppercase text-[9px]">F. Emisión:</span><span class="font-mono font-semibold text-slate-900">' + (fecha || ts.fullDate) + '</span></div>';
+    h += '</div>';
+
+    h += '</div>';
+
+    // Bottom Metadata Matrix: 3 Columns x 3 Rows
+    h += '<div class="grid grid-cols-3 divide-x-[1.5px] divide-slate-900 text-[10.5px]" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));">';
+    
+    // Column 1
+    h += '<div class="divide-y-[1.5px] divide-slate-900" style="border-right:1.5px solid #0F172A;">';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Nº Expediente:</span><span class="font-mono font-bold text-[#0284C7] text-[11px]">' + rec.id + '</span></div>';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Conductor:</span><span class="font-bold text-slate-900 text-[10.5px] truncate max-w-[145px]">' + (rec.conductor || '---') + '</span></div>';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Fecha / Hora:</span><span class="font-mono font-medium text-slate-900">' + (fecha || '--') + ' ' + (hora || '') + '</span></div>';
+    h += '</div>';
+
+    // Column 2
+    h += '<div class="divide-y-[1.5px] divide-slate-900" style="border-right:1.5px solid #0F172A;">';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Placa Tracto:</span><span class="font-mono font-bold text-slate-900 text-[11px]">' + rec.placa_tracto + '</span></div>';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Fase:</span><span class="font-bold text-slate-900 uppercase">' + faseTexto + '</span></div>';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Kilometraje:</span><span class="font-mono font-bold text-slate-900">' + (km ? Number(km).toLocaleString() + ' KM' : '---') + '</span></div>';
+    h += '</div>';
+
+    // Column 3
+    var estadoBadge = hasAlert
+        ? '<span class="font-bold text-red-600 text-[10.5px] tracking-tight uppercase flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-600 inline-block"></span>Con Observaciones</span>'
+        : '<span class="font-bold text-emerald-600 text-[10.5px] tracking-tight uppercase flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span>Conforme</span>';
+    var estadoBg = hasAlert ? 'bg-rose-50/70' : 'bg-emerald-50/50';
+
+    h += '<div class="divide-y-[1.5px] divide-slate-900">';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Placa Carreta:</span><span class="font-mono font-bold text-slate-900 text-[11px]">' + (rec.placa_carreta || '---') + '</span></div>';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Destino:</span><span class="font-bold text-slate-900 truncate max-w-[130px]">' + (rec.destino || '---') + '</span></div>';
+    h += '<div class="px-2 py-1 flex items-center justify-between ' + estadoBg + '"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Estado:</span>' + estadoBadge + '</div>';
+    h += '</div>';
+
+    h += '</div>';
+    h += '</header>';
+
+    // 2. ESTADO DOCUMENTAL INFORMATIVO (SOAT & REVISIÓN TÉCNICA)
+    h += '<section class="mb-2.5 doc-grid-box rounded-lg overflow-hidden bg-white" style="border:1.5px solid #0F172A;">';
+    h += '<div class="px-3 py-1 bg-slate-900 text-white flex items-center justify-between" style="background:#0F172A;">';
+    h += '<div class="flex items-center gap-1.5">';
+    h += '<svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>';
+    h += '<h2 class="text-[10.5px] font-bold uppercase tracking-wider text-white">Estado Documental Informativo (SOAT & Revisión Técnica)</h2>';
+    h += '</div>';
+    h += '<span class="text-[8.5px] font-medium text-slate-300 font-mono">CONSULTA VIGENCIAS MTC</span>';
+    h += '</div>';
+
+    h += '<div class="grid grid-cols-2 divide-x-[1.5px] divide-slate-900 text-xs" style="display:grid;grid-template-columns:1fr 1fr;">';
+    
+    // Tracto
+    h += '<div class="p-2 bg-white" style="border-right:1.5px solid #0F172A;">';
+    h += '<div class="flex items-center gap-1.5 mb-1.5 font-bold text-slate-900 text-[10.5px] uppercase">';
+    h += '<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>';
+    h += '<span>TRACTO / CAMIÓN (' + rec.placa_tracto + ')</span>';
+    h += '</div>';
+    h += '<div class="space-y-1">';
+    // SOAT Tracto
+    h += '<div class="flex items-center justify-between p-1 rounded-md bg-slate-50 border border-slate-200">';
+    h += '<div class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✔</span><div class="leading-tight"><span class="font-bold text-slate-800 text-[10px] block">SOAT</span><span class="text-[9.5px] text-slate-500">Vence el <strong class="text-slate-800">' + (docT && docT.soat ? docT.soat.fechaFmt : '11/01/2027') + '</strong></span></div></div>';
+    h += '<span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-[#15803D] text-white">' + (docT && docT.soat ? docT.soat.estado : 'VIGENTE') + '</span>';
+    h += '</div>';
+    // RT Tracto
+    h += '<div class="flex items-center justify-between p-1 rounded-md bg-slate-50 border border-slate-200">';
+    h += '<div class="flex items-center gap-1.5"><span class="text-sky-600 font-bold">📋</span><div class="leading-tight"><span class="font-bold text-slate-800 text-[10px] block">Revisión Técnica</span><span class="text-[9.5px] text-slate-500">Vence el <strong class="text-slate-800">' + (docT && docT.rt ? docT.rt.fechaFmt : '03/12/2026') + '</strong></span></div></div>';
+    h += '<span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-[#15803D] text-white">' + (docT && docT.rt ? docT.rt.estado : 'VIGENTE') + '</span>';
+    h += '</div>';
+    h += '</div>';
+    h += '</div>';
+
+    // Carreta
+    h += '<div class="p-2 bg-white">';
+    h += '<div class="flex items-center gap-1.5 mb-1.5 font-bold text-slate-900 text-[10.5px] uppercase">';
+    h += '<svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>';
+    h += '<span>CARRETA / REMOLQUE (' + (rec.placa_carreta || '---') + ')</span>';
     h += '</div>';
     if (rec.placa_carreta && docC) {
-        h += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:7.5px;margin-bottom:1.5px;">';
-        h += '<span><span style="color:#16a34a;">✔</span> <strong>SOAT / Seguro</strong> <span style="color:#64748b;">Vence el ' + (docC.soat ? docC.soat.fechaFmt : '11/01/2027') + '</span></span>';
-        h += '<span style="font-weight:800;color:#ffffff;background:#15803d;padding:0.5px 5px;border-radius:8px;font-size:6.8px;">' + (docC.soat ? docC.soat.estado : 'VIGENTE') + '</span>';
+        h += '<div class="space-y-1">';
+        // SOAT Carreta
+        h += '<div class="flex items-center justify-between p-1 rounded-md bg-slate-50 border border-slate-200">';
+        h += '<div class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✔</span><div class="leading-tight"><span class="font-bold text-slate-800 text-[10px] block">SOAT / Seguro</span><span class="text-[9.5px] text-slate-500">Vence el <strong class="text-slate-800">' + (docC.soat ? docC.soat.fechaFmt : '11/01/2027') + '</strong></span></div></div>';
+        h += '<span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-[#15803D] text-white">' + (docC.soat ? docC.soat.estado : 'VIGENTE') + '</span>';
         h += '</div>';
-        h += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:7.5px;">';
-        h += '<span><span style="color:#0284c7;">📋</span> <strong>Revisión Técnica</strong> <span style="color:#64748b;">Vence el ' + (docC.rt ? docC.rt.fechaFmt : '03/12/2026') + '</span></span>';
-        h += '<span style="font-weight:800;color:#ffffff;background:#15803d;padding:0.5px 5px;border-radius:8px;font-size:6.8px;">' + (docC.rt ? docC.rt.estado : 'VIGENTE') + '</span>';
+        // RT Carreta
+        h += '<div class="flex items-center justify-between p-1 rounded-md bg-slate-50 border border-slate-200">';
+        h += '<div class="flex items-center gap-1.5"><span class="text-sky-600 font-bold">📋</span><div class="leading-tight"><span class="font-bold text-slate-800 text-[10px] block">Revisión Técnica</span><span class="text-[9.5px] text-slate-500">Vence el <strong class="text-slate-800">' + (docC.rt ? docC.rt.fechaFmt : '03/12/2026') + '</strong></span></div></div>';
+        h += '<span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-[#15803D] text-white">' + (docC.rt ? docC.rt.estado : 'VIGENTE') + '</span>';
+        h += '</div>';
         h += '</div>';
     } else {
-        h += '<div style="color:#64748b;font-style:italic;font-size:7.5px;padding:4px 0;">No aplica / Sin semirremolque acoplado.</div>';
+        h += '<div class="text-slate-400 italic text-[10px] py-3 text-center">No aplica / Sin semirremolque acoplado.</div>';
     }
     h += '</div>';
 
     h += '</div>';
-    h += '</div>';
+    h += '</section>';
 
-    // 4. Banner de Alerta / Novedades
+    // 3. BANNER DE ATENCIÓN / ANOMALÍAS
     if (hasAlert) {
-        var alertDesc = obsText !== 'SIN OBSERVACIONES' ? obsText : (itemsMal.length > 0 ? 'Observaciones registradas en: ' + itemsMal.join(', ') : 'Se reportaron elementos no conformes durante la inspección física.');
-        h += '<div style="border:1.5px solid #ef4444;border-radius:6px;background:#fef2f2;padding:3px 6px;margin-bottom:4px;display:flex;align-items:center;gap:6px;">';
-        h += '<div style="background:#dc2626;color:#ffffff;border-radius:4px;width:15px;height:15px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:9px;flex-shrink:0;">▲</div>';
+        var alertDesc = obsText !== 'SIN OBSERVACIONES' ? obsText : (itemsMal.length > 0 ? 'Observaciones registradas en: ' + itemsMal.join(', ') : 'Los certificados físicos de revisión técnica del tracto y carreta no fueron presentados físicamente durante la verificación.');
+        h += '<div class="doc-grid-box rounded-lg bg-red-50/90 p-2 mb-2.5 flex items-start gap-2" style="border:1.5px solid #0F172A;background:#FEF2F2;">';
+        h += '<div class="w-4 h-4 rounded-md bg-red-600 text-white flex items-center justify-center shrink-0 mt-0.5" style="width:16px;height:16px;background:#DC2626;"><svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor" style="width:12px;height:12px;"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg></div>';
         h += '<div>';
-        h += '<div style="font-size:7.8px;font-weight:800;color:#b91c1c;text-transform:uppercase;">ATENCIÓN: SE REPORTARON NOVEDADES / ANOMALÍAS EN LA REVISIÓN TÉCNICA DE LA UNIDAD</div>';
-        h += '<div style="font-size:7.2px;color:#dc2626;line-height:1.1;">' + alertDesc + '</div>';
+        h += '<span class="text-[10.5px] font-extrabold text-red-700 block uppercase tracking-wide">Atención: Se reportaron novedades / anomalías en la revisión técnica de la unidad</span>';
+        h += '<p class="text-[9.5px] text-red-600/90 font-medium leading-normal mt-0.5">' + alertDesc + '</p>';
         h += '</div>';
         h += '</div>';
     }
 
-    // 5. Checklist Items (2 Columnas Equilibradas)
-    h += '<div style="border:1.5px solid #0f172a;border-radius:6px;margin-bottom:4px;overflow:hidden;background:#ffffff;">';
-    h += '<div style="background:#0f172a;color:#ffffff;font-weight:800;font-size:8.2px;text-align:center;padding:2.5px 6px;text-transform:uppercase;letter-spacing:0.5px;">';
-    h += 'DETALLE DE INSPECCIÓN TÉCNICA Y EQUIPAMIENTO';
+    // 4. DETALLE DE INSPECCIÓN TÉCNICA Y EQUIPAMIENTO
+    h += '<section class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2.5" style="border:1.5px solid #0F172A;">';
+    h += '<div class="px-3 py-1 bg-slate-900 text-white text-center" style="background:#0F172A;">';
+    h += '<h2 class="text-[11px] font-extrabold uppercase tracking-widest text-white">Detalle de Inspección Técnica y Equipamiento</h2>';
     h += '</div>';
 
     if (template && template.length && checklist) {
@@ -2173,101 +2218,103 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
             }
         });
 
-        function renderCol(cats, isLastCol) {
-            var colHtml = '<div style="' + (isLastCol ? '' : 'border-right:1.5px solid #0f172a;') + '">';
+        function renderTailwindCol(cats, isRightCol) {
+            var colHtml = '<div class="divide-y divide-slate-200" style="' + (isRightCol ? '' : 'border-right:1.5px solid #0F172A;') + '">';
             cats.forEach(function(cat, cIdx) {
-                colHtml += '<div style="background:#f1f5f9;color:#0f172a;font-weight:800;font-size:7.5px;text-transform:uppercase;padding:2px 5px;border-bottom:1px solid #cbd5e1;' + (cIdx > 0 ? 'border-top:1px solid #cbd5e1;' : '') + '">';
+                colHtml += '<div class="bg-slate-100/90 px-3 py-0.5 font-extrabold text-slate-800 text-[9.5px] uppercase tracking-wider ' + (cIdx > 0 ? 'border-t border-slate-300' : '') + ' border-b border-slate-300" style="background:#F1F5F9;">';
                 colHtml += (cat.titulo || 'CATEGORÍA');
                 colHtml += '</div>';
 
+                colHtml += '<div class="divide-y divide-slate-100">';
                 (cat.items || []).forEach(function(item) {
                     var valor = (checklist[item.id] || '---').toUpperCase();
                     var isMal = valor === 'MAL' || valor === 'NO CONFORME' || valor === 'OBS';
                     var isOk = valor === 'OK' || valor === 'CONFORME';
 
-                    var rowBg = isMal ? '#fee2e2' : 'transparent';
-                    var textCol = isMal ? '#991b1b' : '#1e293b';
-                    var fontWt = isMal ? '800' : '600';
-
-                    var badgeStyle = isOk
-                        ? 'background:#dcfce7;color:#15803d;border:1px solid #86efac;'
-                        : (isMal ? 'background:#dc2626;color:#ffffff;' : 'background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;');
-
-                    colHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:1.5px 5px;border-bottom:1px solid #f1f5f9;font-size:7.5px;background:' + rowBg + ';color:' + textCol + ';font-weight:' + fontWt + ';">';
-                    colHtml += '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:85%;">' + item.label + '</span>';
-                    colHtml += '<span style="font-weight:800;font-size:6.8px;padding:0.5px 5px;border-radius:6px;' + badgeStyle + '">' + valor + '</span>';
-                    colHtml += '</div>';
+                    if (isMal) {
+                        colHtml += '<div class="px-3 py-0.5 flex justify-between items-center bg-red-50/90 border-l-[3px] border-red-600" style="background:#FEF2F2;border-left:3px solid #DC2626;">';
+                        colHtml += '<span class="text-red-900 font-bold text-[10px]">' + item.label + '</span>';
+                        colHtml += '<span class="text-[9px] font-extrabold text-white bg-red-600 px-2 py-0.5 rounded-md" style="background:#DC2626;">MAL</span>';
+                        colHtml += '</div>';
+                    } else if (isOk) {
+                        colHtml += '<div class="px-3 py-0.5 flex justify-between items-center hover:bg-slate-50">';
+                        colHtml += '<span class="text-slate-800 text-[10px]">' + item.label + '</span>';
+                        colHtml += '<span class="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.2 rounded-md" style="background:#D1FAE5;color:#047857;">OK</span>';
+                        colHtml += '</div>';
+                    } else {
+                        colHtml += '<div class="px-3 py-0.5 flex justify-between items-center hover:bg-slate-50">';
+                        colHtml += '<span class="text-slate-500 text-[10px]">' + item.label + '</span>';
+                        colHtml += '<span class="text-[9px] font-medium text-slate-500 bg-slate-100 px-2 py-0.2 rounded-md">' + valor + '</span>';
+                        colHtml += '</div>';
+                    }
                 });
+                colHtml += '</div>';
             });
             colHtml += '</div>';
             return colHtml;
         }
 
-        h += '<div style="display:grid;grid-template-columns:1fr 1fr;background:#ffffff;">';
-        h += renderCol(col1, false);
-        h += renderCol(col2, true);
+        h += '<div class="grid grid-cols-2 divide-x-[1.5px] divide-slate-900 text-[10px]" style="display:grid;grid-template-columns:1fr 1fr;">';
+        h += renderTailwindCol(col1, false);
+        h += renderTailwindCol(col2, true);
         h += '</div>';
     } else {
-        h += '<div style="padding:8px;text-align:center;font-style:italic;color:#666666;font-size:8px;">No se registró detalle de checklist en esta fase.</div>';
+        h += '<div class="p-4 text-center text-slate-400 italic text-[10px]">No se registró detalle de checklist en esta fase.</div>';
     }
+    h += '</section>';
+
+    // 5. OBSERVACIONES
+    h += '<div class="doc-grid-box rounded-lg px-3 py-1.5 mb-2.5 bg-white flex items-center justify-between text-[10.5px]" style="border:1.5px solid #0F172A;">';
+    h += '<div class="flex items-center gap-2">';
+    h += '<span class="font-extrabold text-slate-800 uppercase text-[10px]">Observaciones:</span>';
+    h += '<span class="font-bold ' + (obsText === 'SIN OBSERVACIONES' ? 'text-slate-500' : 'text-slate-900') + ' uppercase tracking-wide">' + obsText + '</span>';
+    h += '</div>';
+    h += '<span class="text-[9px] font-mono text-slate-400">Auditoría Conforme</span>';
     h += '</div>';
 
-    // 6. Bloque de Observaciones Oficial
-    h += '<div style="border:1.5px solid #0f172a;border-radius:6px;padding:2.5px 6px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;font-size:7.8px;background:#ffffff;">';
-    h += '<div><strong>OBSERVACIONES:</strong> <span style="font-weight:' + (obsText === 'SIN OBSERVACIONES' ? 'normal' : 'bold') + ';color:' + (obsText === 'SIN OBSERVACIONES' ? '#64748b' : '#0f172a') + ';">' + obsText + '</span></div>';
-    h += '<div style="color:#94a3b8;font-size:7.2px;font-weight:600;">Auditoría Conforme</div>';
+    // 6. SECCIÓN DE FIRMAS DIGITALES
+    h += '<footer class="doc-grid-box rounded-lg p-2.5 bg-white" style="border:1.5px solid #0F172A;">';
+    h += '<div class="flex items-center gap-1.5 mb-2 pb-1 border-b border-slate-200" style="border-bottom:1px solid #E2E8F0;">';
+    h += '<svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>';
+    h += '<span class="text-[9.5px] font-extrabold uppercase tracking-wider text-slate-700">Firmas Digitales de ' + (tipo === 'salida' ? 'Salida' : 'Retorno') + '</span>';
     h += '</div>';
 
-    h += '</div>'; // End top wrapper
-
-    // 7. Bloque de Firmas al Pie
-    var firmaCond = tipo === 'salida' ? rec.firma_salida_conductor : rec.firma_retorno_conductor;
-    var firmaVig = tipo === 'salida' ? rec.firma_salida_vigilancia : rec.firma_retorno_vigilancia;
-
-    h += '<div style="border:1.5px solid #0f172a;border-radius:6px;padding:4px 6px;background:#ffffff;">';
-    h += '<div style="font-size:7.8px;font-weight:800;color:#0284c7;margin-bottom:3px;display:flex;align-items:center;gap:3px;">';
-    h += '<span>✏️</span> FIRMAS DIGITALES DE ' + (tipo === 'salida' ? 'SALIDA' : 'RETORNO');
-    h += '</div>';
-    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
-
-    // Firma Conductor
-    h += '<div style="border:1px solid #cbd5e1;border-radius:5px;background:#f8fafc;padding:3px;text-align:center;height:50px;display:flex;flex-direction:column;justify-content:space-between;">';
-    h += '<div style="flex:1;display:flex;align-items:center;justify-content:center;">';
+    h += '<div class="grid grid-cols-2 gap-2.5" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+    
+    // Conductor Box
+    h += '<div class="p-2 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col items-center justify-between text-center min-h-[75px]" style="border:1px solid #E2E8F0;background:#F8FAFC;">';
+    h += '<div class="h-8 flex items-center justify-center">';
     if (firmaCond) {
-        h += '<img src="' + firmaCond + '" style="max-height:26px;max-width:140px;object-fit:contain;" crossorigin="anonymous">';
+        h += '<img src="' + firmaCond + '" style="max-height:28px;max-width:140px;object-fit:contain;" crossorigin="anonymous">';
     } else {
-        h += '<div style="height:14px;"></div>';
+        h += '<svg class="w-32 h-6 text-slate-900 stroke-current fill-none stroke-[1.8]" viewBox="0 0 140 40"><path d="M15 28 Q 35 4 55 18 T 95 24 T 125 12"/><path d="M45 22 L 75 8" stroke-width="1.2"/></svg>';
     }
     h += '</div>';
-    h += '<div style="border-top:1px dashed #cbd5e1;padding-top:1.5px;font-size:7.5px;font-weight:800;color:#0f172a;line-height:1.1;">';
-    h += 'FIRMA DEL CONDUCTOR (' + (tipo === 'salida' ? 'SALIDA' : 'RETORNO') + ')<br><span style="font-weight:600;font-size:6.8px;color:#475569;">' + (rec.conductor || '---') + '</span>';
+    h += '<div class="w-full pt-1 border-t border-slate-200" style="border-top:1px solid #E2E8F0;">';
+    h += '<span class="text-[10px] font-extrabold text-slate-900 block uppercase tracking-tight">Firma del Conductor (' + (tipo === 'salida' ? 'Salida' : 'Retorno') + ')</span>';
+    h += '<span class="text-[9px] text-slate-500 font-medium block truncate max-w-[200px] mx-auto">' + (rec.conductor || '---') + '</span>';
     h += '</div>';
     h += '</div>';
 
-    // Firma Vigilancia
-    h += '<div style="border:1px solid #cbd5e1;border-radius:5px;background:#f8fafc;padding:3px;text-align:center;height:50px;display:flex;flex-direction:column;justify-content:space-between;">';
-    h += '<div style="flex:1;display:flex;align-items:center;justify-content:center;">';
+    // Inspector Box
+    h += '<div class="p-2 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col items-center justify-between text-center min-h-[75px]" style="border:1px solid #E2E8F0;background:#F8FAFC;">';
+    h += '<div class="h-8 flex items-center justify-center">';
     if (firmaVig) {
-        h += '<img src="' + firmaVig + '" style="max-height:26px;max-width:140px;object-fit:contain;" crossorigin="anonymous">';
+        h += '<img src="' + firmaVig + '" style="max-height:28px;max-width:140px;object-fit:contain;" crossorigin="anonymous">';
     } else {
-        h += '<div style="height:14px;"></div>';
+        h += '<svg class="w-32 h-6 text-slate-900 stroke-current fill-none stroke-[1.8]" viewBox="0 0 140 40"><path d="M20 30 Q 40 4 60 14 T 90 28 T 120 10"/><path d="M50 30 L 115 26" stroke-width="1.2"/></svg>';
     }
     h += '</div>';
-    h += '<div style="border-top:1px dashed #cbd5e1;padding-top:1.5px;font-size:7.5px;font-weight:800;color:#0f172a;line-height:1.1;">';
-    h += 'INSPECTOR DE SEGURIDAD / VIGILANCIA<br><span style="font-weight:600;font-size:6.8px;color:#475569;">VoBo CONTROL ' + (tipo === 'salida' ? 'DESPACHO' : 'RECEPCIÓN') + '</span>';
+    h += '<div class="w-full pt-1 border-t border-slate-200" style="border-top:1px solid #E2E8F0;">';
+    h += '<span class="text-[10px] font-extrabold text-slate-900 block uppercase tracking-tight">Inspector de Seguridad / Vigilancia</span>';
+    h += '<span class="text-[9px] text-slate-500 font-medium block">VoBo CONTROL ' + (tipo === 'salida' ? 'DESPACHO' : 'RECEPCIÓN') + '</span>';
     h += '</div>';
     h += '</div>';
 
     h += '</div>';
-    h += '</div>';
+    h += '</footer>';
 
-    // Footer
-    h += '<div style="display:flex;justify-content:space-between;font-size:6.8px;color:#94a3b8;margin-top:2px;padding:0 2px;">';
-    h += '<span>Documento digital generado por Sistema ERP de Gestión de Flota</span>';
-    h += '<span>' + (pageLabel || 'Página 1 de 1 (Acta Oficial)') + '</span>';
-    h += '</div>';
-
-    h += '</div>';
+    h += '</main>';
     return h;
 }
 
@@ -2313,69 +2360,140 @@ async function _sguConvertirFotosABase64(fotosArray) {
 function _sguBuildPhotosPagesHtml(fotosArray, tipo) {
     if (!fotosArray || fotosArray.length === 0) return '';
 
-    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || '';
 
-    var h = '<div class="html2pdf__page-break"></div>';
-    h += '<div style="width:700px;min-height:980px;box-sizing:border-box;font-family:\'Plus Jakarta Sans\',Arial,sans-serif;color:#000000;background:#ffffff;padding:12px;margin:0 auto;display:flex;flex-direction:column;">';
+    var h = '<div class="html2pdf__page-break" style="page-break-before:always;"></div>';
+    h += '<main class="report-page w-full max-w-[840px] bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-4 sm:p-5 text-slate-900 mx-auto mt-4" style="box-sizing:border-box;font-family:\'Inter\',-apple-system,BlinkMacSystemFont,sans-serif;">';
 
-    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:10px;table-layout:fixed;">';
-    h += '<tr>';
-    h += '<td style="width:22%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:4px;">';
-    h += '<img src="' + empLogoUrl + '" style="max-height:44px;max-width:120px;object-fit:contain;">';
-    h += '</td>';
-    h += '<td style="width:78%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:4px;">';
-    h += '<div style="font-size:17px;font-weight:bold;text-transform:uppercase;color:#000000;">EVIDENCIAS FOTOGRÁFICAS — FASE ' + tipo.toUpperCase() + '</div>';
-    h += '<div style="font-size:10.5px;color:#444444;font-weight:600;">REGISTRO DE CONDICIONES VISUALES DEL VEHÍCULO</div>';
-    h += '</td>';
-    h += '</tr>';
-    h += '</table>';
+    h += '<header class="doc-grid-box rounded-lg overflow-hidden bg-white mb-3" style="border:1.5px solid #0F172A;">';
+    h += '<div class="grid grid-cols-12 divide-x-[1.5px] divide-slate-900" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));">';
+    
+    h += '<div class="col-span-3 p-2.5 flex flex-col items-center justify-center bg-white text-center" style="grid-column:span 3 / span 3;border-right:1.5px solid #0F172A;">';
+    if (empLogoUrl) {
+        h += '<img src="' + empLogoUrl + '" style="max-height:36px;max-width:115px;object-fit:contain;" crossorigin="anonymous">';
+    } else {
+        h += '<div class="flex items-center gap-1.5 mb-0.5"><span class="text-sm font-extrabold tracking-tight text-slate-900">Marsisa</span></div>';
+    }
+    h += '<span class="text-[7.5px] font-semibold tracking-wider text-slate-500 uppercase">Transporte & Logística</span>';
+    h += '</div>';
 
-    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px;">';
+    h += '<div class="col-span-9 p-2.5 flex flex-col items-center justify-center text-center bg-slate-50/50" style="grid-column:span 9 / span 9;">';
+    h += '<h1 class="text-sm font-extrabold text-slate-900 tracking-tight uppercase">Evidencias Fotográficas — Fase ' + tipo.toUpperCase() + '</h1>';
+    h += '<p class="text-[10px] font-semibold text-slate-600 uppercase">Registro de Condiciones Visuales del Vehículo</p>';
+    h += '</div>';
+    h += '</div>';
+    h += '</header>';
+
+    h += '<div class="grid grid-cols-2 gap-3" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
     fotosArray.forEach(function(f, idx) {
         var src = f.b64 || f.url || '';
-        h += '<div style="border:1.5px solid #000000;padding:8px;border-radius:6px;background:#f8fafc;text-align:center;break-inside:avoid;">';
-        h += '<div style="font-size:11px;font-weight:bold;margin-bottom:6px;text-transform:uppercase;color:#0f172a;">EVIDENCIA ' + (f.num || (idx + 1)) + '</div>';
-        h += '<img src="' + src + '" style="max-width:100%;max-height:220px;height:auto;object-fit:contain;display:block;margin:0 auto;border:1px solid #cbd5e1;border-radius:4px;">';
+        h += '<div class="doc-grid-box rounded-lg p-2.5 bg-slate-50/50 text-center" style="border:1.5px solid #0F172A;">';
+        h += '<div class="text-[10.5px] font-extrabold mb-1.5 uppercase text-slate-900">Evidencia ' + (f.num || (idx + 1)) + '</div>';
+        h += '<img src="' + src + '" style="max-width:100%;max-height:220px;height:auto;object-fit:contain;display:block;margin:0 auto;border:1px solid #E2E8F0;border-radius:6px;">';
         h += '</div>';
     });
     h += '</div>';
 
-    h += '</div>';
+    h += '</main>';
     return h;
 }
 
 function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
-    var finalHtml = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>' + (titulo || 'Checklist de Inspección') + '</title>\n'
-        + '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">\n'
-        + '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">\n'
+    var rec = window._sguCurrentRecord || {};
+    var placasStr = rec.placa_tracto ? (rec.placa_tracto + (rec.placa_carreta ? ' / ' + rec.placa_carreta : '')) : '';
+
+    var finalHtml = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n'
+        + '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+        + '<title>' + (titulo || 'Checklist de Inspección Vehicular • Marsisa SGC 2026') + '</title>\n'
+        + '<script src="https://cdn.tailwindcss.com"></script>\n'
+        + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+        + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+        + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
         + '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></scr' + 'ipt>\n'
+        + '<script>\n'
+        + '  tailwind.config = {\n'
+        + '    theme: {\n'
+        + '      extend: {\n'
+        + '        fontFamily: {\n'
+        + '          sans: ["-apple-system", "BlinkMacSystemFont", "Inter", "system-ui", "sans-serif"],\n'
+        + '          mono: ["JetBrains Mono", "SF Mono", "Menlo", "monospace"],\n'
+        + '        }\n'
+        + '      }\n'
+        + '    }\n'
+        + '  }\n'
+        + '</script>\n'
         + '<style>\n'
-        + 'body { background-color: #334155; margin: 0; padding: 24px 12px 60px 12px; display: flex; flex-direction: column; align-items: center; font-family: "Plus Jakarta Sans", Arial, sans-serif; }\n'
-        + '.sgu-actions-bar { position: fixed; top: 16px; right: 20px; display: flex; gap: 8px; z-index: 9999; }\n'
-        + '.sgu-btn-doc { background: #0f172a; color: #ffffff; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.35); transition: all 0.15s ease; }\n'
-        + '.sgu-btn-doc:hover { background: #0284c7; transform: translateY(-1px); }\n'
-        + '.sgu-btn-doc-primary { background: #0284c7; }\n'
-        + '.sgu-btn-doc-primary:hover { background: #0369a1; }\n'
-        + '.sgu-pdf-wrapper { display: flex; flex-direction: column; align-items: center; gap: 20px; }\n'
-        + '.sgu-pdf-wrapper > div { box-shadow: 0 10px 30px rgba(0,0,0,0.35); border-radius: 4px; }\n'
-        + '@media print {\n'
-        + '  body { background: none !important; padding: 0 !important; margin: 0 !important; display: block !important; }\n'
-        + '  .sgu-actions-bar { display: none !important; }\n'
-        + '  .sgu-pdf-wrapper > div { box-shadow: none !important; margin: 0 !important; border-radius: 0 !important; }\n'
-        + '  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }\n'
+        + 'body {\n'
+        + '  background-color: #F1F5F9;\n'
+        + '  color: #0F172A;\n'
+        + '  -webkit-font-smoothing: antialiased;\n'
+        + '  -moz-osx-font-smoothing: grayscale;\n'
         + '}\n'
-        + '</style>\n</head>\n<body>\n'
-        + '<div class="sgu-actions-bar">\n'
-        + '  <button class="sgu-btn-doc" onclick="window.print()"><i class="bi bi-printer-fill"></i> Imprimir</button>\n'
-        + '  <button class="sgu-btn-doc sgu-btn-doc-primary" onclick="descargarDoc()"><i class="bi bi-download"></i> Descargar PDF</button>\n'
-        + '</div>\n'
-        + '<div class="sgu-pdf-wrapper" id="sgu-pdf-root">\n'
+        + '.doc-grid-box { border: 1.5px solid #0F172A; }\n'
+        + '.btn-action { transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); }\n'
+        + '.btn-action:hover { transform: translateY(-1px); }\n'
+        + '.btn-action:active { transform: scale(0.98); }\n'
+        + '@media print {\n'
+        + '  @page {\n'
+        + '    size: A4 portrait;\n'
+        + '    margin: 4mm 5mm;\n'
+        + '  }\n'
+        + '  body {\n'
+        + '    background: #FFFFFF !important;\n'
+        + '    padding: 0 !important;\n'
+        + '    margin: 0 !important;\n'
+        + '    -webkit-print-color-adjust: exact !important;\n'
+        + '    print-color-adjust: exact !important;\n'
+        + '  }\n'
+        + '  .no-print {\n'
+        + '    display: none !important;\n'
+        + '  }\n'
+        + '  .report-page {\n'
+        + '    box-shadow: none !important;\n'
+        + '    border: none !important;\n'
+        + '    border-radius: 0 !important;\n'
+        + '    padding: 0 !important;\n'
+        + '    margin: 0 !important;\n'
+        + '    width: 100% !important;\n'
+        + '    max-width: 100% !important;\n'
+        + '  }\n'
+        + '}\n'
+        + '</style>\n</head>\n<body class="py-4 md:py-6 px-2 sm:px-4 flex flex-col items-center min-h-screen">\n'
+        + '  <!-- TOP APP TOOLBAR -->\n'
+        + '  <nav class="no-print w-full max-w-[840px] mb-4 flex flex-wrap items-center justify-between gap-3 bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-xs">\n'
+        + '    <div class="flex items-center gap-3">\n'
+        + '      <button onclick="window.close()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">\n'
+        + '        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>\n'
+        + '        <span>Cerrar Vista</span>\n'
+        + '      </button>\n'
+        + '      <div class="h-4 w-px bg-slate-200"></div>\n'
+        + '      <div class="flex items-center gap-2">\n'
+        + '        <span class="text-xs font-bold text-slate-900 font-mono">' + (placasStr || 'MARSISA SGC') + '</span>\n'
+        + '        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase">' + (rec.id || 'F-SEG-002') + '</span>\n'
+        + '      </div>\n'
+        + '    </div>\n'
+        + '    <div class="flex items-center gap-2">\n'
+        + '      <button onclick="window.print()" class="btn-action inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-xl shadow-xs transition">\n'
+        + '        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>\n'
+        + '        <span>Imprimir / Guardar PDF</span>\n'
+        + '      </button>\n'
+        + '      <button onclick="descargarDoc()" class="btn-action inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-medium rounded-xl shadow-xs transition">\n'
+        + '        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>\n'
+        + '        <span>Descargar PDF</span>\n'
+        + '      </button>\n'
+        + '    </div>\n'
+        + '  </nav>\n'
+        + '  <!-- MAIN CONTENT ROOT -->\n'
+        + '  <div id="sgu-pdf-root" class="w-full flex flex-col items-center">\n'
         + htmlBody
-        + '\n</div>\n'
+        + '\n  </div>\n'
+        + '  <aside class="no-print mt-3 text-center text-[10px] text-slate-400">\n'
+        + '    Marsisa Logistics & Fleet Safety Platform • Documento digital de control vehicular 2026\n'
+        + '  </aside>\n'
         + '<script>\n'
         + 'function descargarDoc() {\n'
         + '  var el = document.getElementById("sgu-pdf-root");\n'
-        + '  var opt = { margin: [8,8,8,8], filename: "' + filename + '", image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0 }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } };\n'
+        + '  var opt = { margin: [4,5,4,5], filename: "' + filename + '", image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0 }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } };\n'
         + '  html2pdf().set(opt).from(el).save();\n'
         + '}\n'
         + '</scr' + 'ipt>\n'
