@@ -958,20 +958,35 @@ module.exports = function (db, broadcast, logAudit) {
 
             if (search && search.trim()) {
                 const q = `%${search.trim()}%`;
-                whereClauses.push("(viaje LIKE ? OR vehiculo LIKE ? OR ruta LIKE ? OR conductor LIKE ?)");
+                whereClauses.push("(cv.viaje LIKE ? OR cv.vehiculo LIKE ? OR cv.ruta LIKE ? OR cv.conductor LIKE ?)");
                 params.push(q, q, q, q);
             }
 
-            const whereSQL = `WHERE ${whereClauses.join(' AND ')}`;
+            const whereSQL = whereClauses.length > 0 
+                ? `WHERE ${whereClauses.map(w => w.replace(/^(\w+)/, 'cv.$1')).join(' AND ')}` 
+                : '';
 
             const [rows] = await tdb.query(
                 `SELECT 
-                    id, fecha, estado, correlativo, viaje, vehiculo, conductor, ruta,
-                    estacion, proveedor, tipo_combustible, kilometraje, peso_tn, galones,
-                    importe, numero_comprobante, tipo
-                FROM combustible_vales 
-                ${whereSQL} 
-                ORDER BY fecha ASC, id ASC`,
+                    cv.id, cv.fecha, cv.estado, cv.correlativo, cv.viaje, cv.vehiculo, cv.conductor,
+                    COALESCE(NULLIF(ov.ruta, ''), NULLIF(cv.ruta, ''), 'Sin Ruta') AS ruta,
+                    cv.estacion, cv.proveedor, cv.tipo_combustible, cv.kilometraje,
+                    CASE 
+                        WHEN ov.peso IS NOT NULL AND ov.peso > 0 THEN 
+                            CASE WHEN ov.peso > 50 THEN ROUND(ov.peso / 1000, 2) ELSE ROUND(ov.peso, 2) END
+                        ELSE cv.peso_tn 
+                    END AS peso_tn,
+                    cv.galones, cv.importe, cv.numero_comprobante, cv.tipo
+                FROM combustible_vales cv
+                LEFT JOIN operaciones_ordenes_viaje ov ON (
+                    cv.viaje IS NOT NULL AND cv.viaje != '' AND cv.viaje != 'SIN-VIAJE' AND (
+                        cv.viaje = ov.viaje 
+                        OR cv.viaje LIKE CONCAT('%', ov.viaje) 
+                        OR ov.viaje LIKE CONCAT('%', cv.viaje)
+                    )
+                )
+                ${whereSQL.replace(/(\b)(viaje|vehiculo|ruta|conductor|fecha|tipo_combustible|estado)(\b)/g, 'cv.$2')} 
+                ORDER BY cv.fecha ASC, cv.id ASC`,
                 params
             );
 
