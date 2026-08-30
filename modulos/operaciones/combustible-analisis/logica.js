@@ -317,42 +317,34 @@
         if (subK) subK.textContent = `${promKmGal.toFixed(2)} Km/Gal promedio`;
     };
 
-    // Helper: Buscar consumo teórico en Galones según Sentido (IDA / RETORNO), Ruta, Peso (Regla de Techo) y Motor
+    // Helper: Buscar consumo teórico en Galones según Sentido (IDA / RETORNO), Ruta, Peso (Regla de Techo) y Motor (BÚSQUEDA ESTRICTA)
     function obtenerConsumoTeoricoGalones(rutaStr, sentidoStr, pesoTn, motorStr) {
         if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) return 0;
         const rNorm = (rutaStr || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         const sNorm = (sentidoStr || 'IDA').toUpperCase().trim();
         const mNorm = (motorStr || '').toUpperCase().trim();
         
-        // 1. Búsqueda exacta: Sentido + Ruta + Motor
+        // 1. Búsqueda con Motor: Sentido + Ruta + Motor coincidentes
         let match = window._caMatrizRendimiento.find(m => {
             const mSentido = (m.sentido || 'IDA').toUpperCase().trim();
             if (mSentido !== sNorm) return false;
             const mRuta = (m.ruta || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const mMotor = (m.motor || '').toUpperCase().trim();
             const rutaCoincide = mRuta && (rNorm.includes(mRuta) || mRuta.includes(rNorm));
-            const motorCoincide = !mNorm || !mMotor || mNorm.includes(mMotor) || mMotor.includes(mNorm);
-            return rutaCoincide && motorCoincide;
+            
+            // Si la unidad tiene motor especificado y la matriz tiene motor -> DEBEN coincidir
+            if (mNorm && mMotor) {
+                return rutaCoincide && (mNorm.includes(mMotor) || mMotor.includes(mNorm));
+            }
+            // Si ninguno especifica motor -> coincide
+            if (!mNorm && !mMotor) {
+                return rutaCoincide;
+            }
+            // Si uno tiene motor y el otro no -> NO coincide (evita cruces incorrectos)
+            return false;
         });
 
-        // 2. Fallback: Sentido + Ruta (cualquier motor)
-        if (!match) {
-            match = window._caMatrizRendimiento.find(m => {
-                const mSentido = (m.sentido || 'IDA').toUpperCase().trim();
-                if (mSentido !== sNorm) return false;
-                const mRuta = (m.ruta || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                return mRuta && (rNorm.includes(mRuta) || mRuta.includes(rNorm));
-            });
-        }
-
-        // 3. Fallback general: Solo Ruta
-        if (!match) {
-            match = window._caMatrizRendimiento.find(m => {
-                const mRuta = (m.ruta || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                return mRuta && (rNorm.includes(mRuta) || mRuta.includes(rNorm));
-            });
-        }
-
+        // Si no existe la combinación de esa ruta para ese motor específico, retornar 0 (debe quedar en blanco)
         if (!match) return 0;
 
         // Regla de Techo: Si el peso está entre dos rangos, toma la columna superior
@@ -431,10 +423,37 @@
             const totGasto = fs ? fs.totalGasto : t.totalGasto;
             const rend = fs ? fs.rendimiento : t.rendimiento;
 
-            // ── Cálculo Teórico Matriz (Ida + Retorno con Motor y Regla de Techo) ──
-            const galTeoricoIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || t.pesoMaxTn, t.motor);
-            const tieneRetorno = (t.galonesRetorno > 0) || (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('SERVICIO'));
-            const galTeoricoRetorno = tieneRetorno ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor) : 0;
+            // ── Vales y métricas específicas por tramo (IDA vs RETORNO) ──
+            const vouchersList = fs ? fs.vouchers : (t.vouchers || []);
+            const vIda = vouchersList.filter(v => !v.esPuntoPartida && (v.tipo || '').toUpperCase().includes('IDA'));
+            const vRet = vouchersList.filter(v => !v.esPuntoPartida && ((v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('SERVICIO')));
+
+            const galRealIda = vIda.reduce((s, x) => s + (x.galones || 0), 0);
+            const galRealRet = vRet.reduce((s, x) => s + (x.galones || 0), 0);
+            const gastoRealIda = vIda.reduce((s, x) => s + (x.importe || 0), 0);
+            const gastoRealRet = vRet.reduce((s, x) => s + (x.importe || 0), 0);
+
+            const rawPesoIda = Math.max(0, ...vIda.map(x => parseFloat(x.peso || 0)));
+            const pesoIdaVal = rawPesoIda > 0 ? (rawPesoIda > 50 ? +(rawPesoIda / 1000).toFixed(2) : +rawPesoIda.toFixed(2)) : (t.pesoIda || t.pesoMaxTn || 0);
+
+            const rawPesoRet = Math.max(0, ...vRet.map(x => parseFloat(x.peso || 0)));
+            const pesoRetVal = rawPesoRet > 0 ? (rawPesoRet > 50 ? +(rawPesoRet / 1000).toFixed(2) : +rawPesoRet.toFixed(2)) : (t.pesoRetorno || 0);
+
+            // Odómetros por tramo
+            const minOdoIda = vIda.length > 0 ? Math.min(...vIda.map(x => x.odometro || 0).filter(Boolean)) : kInicio;
+            const maxOdoIda = vIda.length > 0 ? Math.max(...vIda.map(x => x.odometro || 0).filter(Boolean)) : (vRet.length > 0 ? Math.min(...vRet.map(x => x.odometro || 0).filter(Boolean)) : kFin);
+            const recKmIda = (maxOdoIda > minOdoIda && minOdoIda > 0) ? (maxOdoIda - minOdoIda) : 0;
+            const rendIda = (galRealIda > 0 && recKmIda > 0) ? (recKmIda / galRealIda) : 0;
+
+            const minOdoRet = maxOdoIda || (vRet.length > 0 ? Math.min(...vRet.map(x => x.odometro || 0).filter(Boolean)) : 0);
+            const maxOdoRet = kFin || (vRet.length > 0 ? Math.max(...vRet.map(x => x.odometro || 0).filter(Boolean)) : 0);
+            const recKmRet = (maxOdoRet > minOdoRet && minOdoRet > 0) ? (maxOdoRet - minOdoRet) : 0;
+            const rendRet = (galRealRet > 0 && recKmRet > 0) ? (recKmRet / galRealRet) : 0;
+
+            // ── Cálculo Teórico Matriz Estricto (Ida + Retorno con Motor y Regla de Techo) ──
+            const galTeoricoIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', pesoIdaVal, t.motor);
+            const tieneRetorno = (galRealRet > 0) || (vRet.length > 0);
+            const galTeoricoRetorno = tieneRetorno ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', pesoRetVal, t.motor) : 0;
             const galTeoricoTotal = (galTeoricoIda > 0 || galTeoricoRetorno > 0) ? (galTeoricoIda + galTeoricoRetorno) : 0;
 
             let galTeoricoHtml = '<span class="text-muted opacity-50">—</span>';
@@ -478,10 +497,23 @@
                 ? `${gpsData.horasMotorGps}`
                 : '<span class="text-muted opacity-50">—</span>';
 
+            // Badges Teóricos Tramo Ida
+            const difIda = (galTeoricoIda > 0 && galRealIda > 0) ? (galRealIda - galTeoricoIda) : null;
+            const difIdaHtml = difIda !== null 
+                ? (difIda > 0 ? `<span class="text-danger fw-bold">+${difIda.toFixed(2)}</span>` : `<span class="text-success fw-bold">${difIda.toFixed(2)}</span>`)
+                : '—';
+
+            // Badges Teóricos Tramo Retorno
+            const difRet = (galTeoricoRetorno > 0 && galRealRet > 0) ? (galRealRet - galTeoricoRetorno) : null;
+            const difRetHtml = difRet !== null 
+                ? (difRet > 0 ? `<span class="text-danger fw-bold">+${difRet.toFixed(2)}</span>` : `<span class="text-success fw-bold">${difRet.toFixed(2)}</span>`)
+                : '—';
+
             html += `
-                <tr>
+                <!-- Fila Principal Consolidada -->
+                <tr class="ca-row-main" id="ca-row-${globalIdx}" onclick="window.caToggleDetalleTramo(${globalIdx})">
                     <td class="font-monospace fw-bold text-dark" style="color: #0f172a !important; font-size: 0.84rem;">
-                        #${esc(t.numViaje || t.viaje)}
+                        <i class="bi bi-chevron-right ca-expand-icon text-muted me-1" id="ca-ico-exp-${globalIdx}"></i>#${esc(t.numViaje || t.viaje)}
                     </td>
                     <td class="font-monospace fw-bold text-dark" style="color: #0f172a !important; font-size: 0.84rem;">
                         ${esc(t.placa)}
@@ -531,7 +563,7 @@
                         ${gpsHorasMotor}
                     </td>
 
-                    <td class="text-center">
+                    <td class="text-center" onclick="event.stopPropagation()">
                         <div class="d-inline-flex align-items-center gap-1">
                             <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2 d-inline-flex align-items-center gap-1" onclick="window.caAbrirModalVales(${globalIdx})" style="font-size:0.72rem;" title="Ver vales físicos">
                                 <i class="bi bi-receipt"></i> ${valesCount}
@@ -540,6 +572,58 @@
                                 <i class="bi bi-broadcast"></i> CAN
                             </button>
                         </div>
+                    </td>
+                </tr>
+
+                <!-- Sub-Fila Desglose: TRAMO IDA -->
+                <tr class="ca-tramo-subrow d-none" id="ca-subrow-ida-${globalIdx}">
+                    <td class="ps-4 font-monospace text-muted small">
+                        <span class="ca-tramo-tag ca-tramo-ida"><i class="bi bi-arrow-right-circle-fill"></i> IDA</span>
+                    </td>
+                    <td class="text-muted small">${esc(t.placa)}</td>
+                    <td class="text-muted small">${esc(t.motor || '—')}</td>
+                    <td class="text-muted small"><span class="fw-semibold text-secondary">Ida: ${esc(t.ruta)}</span></td>
+                    <td class="text-end font-monospace fw-bold text-success">
+                        ${pesoIdaVal > 0 ? `${pesoIdaVal.toFixed(2)} Tn` : '<span class="text-muted opacity-50">0.00 Tn (Vacío)</span>'}
+                    </td>
+                    <td class="text-muted small">${esc(vIda[0]?.fecha || fInicio)}</td>
+                    <td class="text-muted small">${esc(vIda[vIda.length - 1]?.fecha || '—')}</td>
+                    <td class="text-end font-monospace text-muted">${minOdoIda > 0 ? minOdoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace text-muted">${maxOdoIda > 0 ? maxOdoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace text-muted">${recKmIda > 0 ? recKmIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace fw-bold text-primary">${galRealIda > 0 ? galRealIda.toFixed(2) : '0.00'}</td>
+                    <td class="text-end font-monospace text-secondary">${galTeoricoIda > 0 ? galTeoricoIda.toFixed(2) : '—'}</td>
+                    <td class="text-end font-monospace">${difIdaHtml}</td>
+                    <td class="text-end font-monospace text-muted">S/ ${gastoRealIda.toFixed(2)}</td>
+                    <td class="text-end font-monospace text-muted">${rendIda > 0 ? rendIda.toFixed(2) : '—'}</td>
+                    <td colspan="7" class="text-muted small fst-italic ps-3">
+                        <i class="bi bi-info-circle me-1"></i>${vIda.length} vale(s) de recarga en tramo de ida
+                    </td>
+                </tr>
+
+                <!-- Sub-Fila Desglose: TRAMO RETORNO -->
+                <tr class="ca-tramo-subrow d-none" id="ca-subrow-ret-${globalIdx}">
+                    <td class="ps-4 font-monospace text-muted small">
+                        <span class="ca-tramo-tag ca-tramo-retorno"><i class="bi bi-arrow-left-circle-fill"></i> RETORNO</span>
+                    </td>
+                    <td class="text-muted small">${esc(t.placa)}</td>
+                    <td class="text-muted small">${esc(t.motor || '—')}</td>
+                    <td class="text-muted small"><span class="fw-semibold text-secondary">Retorno: ${esc(t.ruta)}</span></td>
+                    <td class="text-end font-monospace fw-bold text-primary">
+                        ${pesoRetVal > 0 ? `${pesoRetVal.toFixed(2)} Tn` : '<span class="text-muted opacity-50">0.00 Tn (Vacío)</span>'}
+                    </td>
+                    <td class="text-muted small">${esc(vRet[0]?.fecha || '—')}</td>
+                    <td class="text-muted small">${esc(vRet[vRet.length - 1]?.fecha || fFin)}</td>
+                    <td class="text-end font-monospace text-muted">${minOdoRet > 0 ? minOdoRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace text-muted">${maxOdoRet > 0 ? maxOdoRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace text-muted">${recKmRet > 0 ? recKmRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace fw-bold text-primary">${galRealRet > 0 ? galRealRet.toFixed(2) : '0.00'}</td>
+                    <td class="text-end font-monospace text-secondary">${galTeoricoRetorno > 0 ? galTeoricoRetorno.toFixed(2) : '—'}</td>
+                    <td class="text-end font-monospace">${difRetHtml}</td>
+                    <td class="text-end font-monospace text-muted">S/ ${gastoRealRet.toFixed(2)}</td>
+                    <td class="text-end font-monospace text-muted">${rendRet > 0 ? rendRet.toFixed(2) : '—'}</td>
+                    <td colspan="7" class="text-muted small fst-italic ps-3">
+                        <i class="bi bi-info-circle me-1"></i>${vRet.length} vale(s) de recarga en tramo de retorno
                     </td>
                 </tr>
             `;
@@ -610,6 +694,30 @@
         }
 
         window.caRenderPaginacion(total, page, limit);
+    };
+
+    // Función interactiva para expandir/colapsar el desglose de tramos (Ida / Retorno)
+    window.caToggleDetalleTramo = function(tripIdx) {
+        const rowMain = document.getElementById(`ca-row-${tripIdx}`);
+        const subIda = document.getElementById(`ca-subrow-ida-${tripIdx}`);
+        const subRet = document.getElementById(`ca-subrow-ret-${tripIdx}`);
+        const ico = document.getElementById(`ca-ico-exp-${tripIdx}`);
+
+        if (!rowMain) return;
+
+        const isExpanded = rowMain.classList.contains('expanded');
+
+        if (isExpanded) {
+            rowMain.classList.remove('expanded');
+            if (subIda) subIda.classList.add('d-none');
+            if (subRet) subRet.classList.add('d-none');
+            if (ico) ico.classList.replace('bi-chevron-down', 'bi-chevron-right');
+        } else {
+            rowMain.classList.add('expanded');
+            if (subIda) subIda.classList.remove('d-none');
+            if (subRet) subRet.classList.remove('d-none');
+            if (ico) ico.classList.replace('bi-chevron-right', 'bi-chevron-down');
+        }
     };
 
     function _caGetTripDates(trip) {
