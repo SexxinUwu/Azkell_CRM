@@ -2036,151 +2036,186 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     var obsText = obsRaw.trim() ? obsRaw.trim().toUpperCase() : 'SIN OBSERVACIONES';
 
     // Datos Documentales por defecto si no vienen pasados
-    docT = docT || { soat: { fechaFmt: '11/01/2027', estado: 'VIGENTE' }, rt: { fechaFmt: '02/02/2027', estado: 'VIGENTE' } };
+    docT = docT || { soat: { fechaFmt: '11/01/2027', estado: 'VIGENTE' }, rt: { fechaFmt: '03/12/2026', estado: 'VIGENTE' } };
     docC = docC || (rec.placa_carreta ? { soat: { fechaFmt: '11/01/2027', estado: 'VIGENTE' }, rt: { fechaFmt: '03/12/2026', estado: 'VIGENTE' } } : null);
 
-    var h = '<div style="width:700px;min-height:980px;max-height:980px;box-sizing:border-box;font-family:\'Plus Jakarta Sans\',Arial,sans-serif;color:#000000;background:#ffffff;padding:8px 12px;margin:0 auto;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;">';
+    // Detección de anomalías en items
+    var itemsMal = [];
+    if (template && template.length && checklist) {
+        template.forEach(function(c) {
+            (c.items || []).forEach(function(it) {
+                var v = (checklist[it.id] || '').toUpperCase();
+                if (v === 'MAL' || v === 'NO CONFORME' || v === 'OBS') {
+                    itemsMal.push(it.label);
+                }
+            });
+        });
+    }
+    if (itemsMal.length > 0) hasAlert = true;
+
+    var h = '<div style="width:710px;min-height:980px;max-height:980px;box-sizing:border-box;font-family:\'Plus Jakarta Sans\',-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;color:#0f172a;background:#ffffff;padding:6px 10px;margin:0 auto;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;">';
 
     h += '<div>'; // Top wrapper
 
-    // 1. Cabecera ISO
-    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:4px;table-layout:fixed;">';
+    // 1. Cabecera ISO / Corporativa
+    h += '<table style="width:100%;border-collapse:collapse;border:1.5px solid #0f172a;border-radius:6px;margin-bottom:4px;table-layout:fixed;background:#ffffff;">';
     h += '<tr>';
-    h += '<td style="width:22%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:3px;" rowspan="3">';
-    h += '<img src="' + empLogoUrl + '" style="max-height:42px;max-width:120px;object-fit:contain;" crossorigin="anonymous">';
+    h += '<td style="width:23%;border:1px solid #0f172a;text-align:center;vertical-align:middle;padding:4px 2px;" rowspan="3">';
+    h += '<img src="' + empLogoUrl + '" style="max-height:36px;max-width:115px;object-fit:contain;" crossorigin="anonymous">';
+    h += '<div style="font-size:7px;font-weight:800;color:#64748b;letter-spacing:0.5px;margin-top:1px;">TRANSPORTE & LOGÍSTICA</div>';
     h += '</td>';
-    h += '<td style="width:53%;border:1px solid #000000;text-align:center;vertical-align:middle;padding:3px;" rowspan="3">';
-    h += '<div style="font-size:16px;font-weight:900;line-height:1.1;text-transform:uppercase;color:#000000;">CHECKLIST DE INSPECCIÓN VEHICULAR</div>';
-    h += '<div style="font-size:9.5px;font-weight:bold;color:#444444;letter-spacing:0.5px;margin-top:1px;">CONTROL DE SEGURIDAD, INGRESO Y SALIDA DE UNIDADES</div>';
+    h += '<td style="width:52%;border:1px solid #0f172a;text-align:center;vertical-align:middle;padding:4px 2px;" rowspan="3">';
+    h += '<div style="font-size:13.5px;font-weight:900;line-height:1.1;text-transform:uppercase;color:#0f172a;letter-spacing:-0.2px;">CHECKLIST DE INSPECCIÓN VEHICULAR</div>';
+    h += '<div style="font-size:8px;font-weight:700;color:#475569;letter-spacing:0.4px;margin-top:2px;text-transform:uppercase;">CONTROL DE SEGURIDAD, INGRESO Y SALIDA DE UNIDADES</div>';
     h += '</td>';
-    h += '<td style="width:25%;border:1px solid #000000;font-size:9px;text-align:left;padding:2px 5px;height:14px;color:#000000;"><strong>CÓDIGO:</strong> F-SEG-002</td>';
+    h += '<td style="width:25%;border:1px solid #0f172a;font-size:8px;text-align:left;padding:2px 6px;height:13px;color:#0f172a;"><strong>CÓDIGO:</strong> <span style="float:right;font-family:monospace;font-weight:bold;">F-SEG-002</span></td>';
     h += '</tr>';
-    h += '<tr><td style="border:1px solid #000000;font-size:9px;text-align:left;padding:2px 5px;height:14px;color:#000000;"><strong>VERSIÓN:</strong> 01</td></tr>';
-    h += '<tr><td style="border:1px solid #000000;font-size:9px;text-align:left;padding:2px 5px;height:14px;color:#000000;"><strong>F. EMISIÓN:</strong> ' + (fecha || ts.fullDate) + '</td></tr>';
+    h += '<tr><td style="border:1px solid #0f172a;font-size:8px;text-align:left;padding:2px 6px;height:13px;color:#0f172a;"><strong>VERSIÓN:</strong> <span style="float:right;font-family:monospace;font-weight:bold;">01</span></td></tr>';
+    h += '<tr><td style="border:1px solid #0f172a;font-size:8px;text-align:left;padding:2px 6px;height:13px;color:#0f172a;"><strong>F. EMISIÓN:</strong> <span style="float:right;font-family:monospace;font-weight:bold;">' + (fecha || ts.fullDate) + '</span></td></tr>';
     h += '</table>';
 
     // 2. Grid de Datos Generales
-    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:4px;table-layout:fixed;font-size:9.5px;color:#000000;">';
+    h += '<table style="width:100%;border-collapse:collapse;border:1.5px solid #0f172a;margin-bottom:4px;table-layout:fixed;font-size:8.5px;color:#0f172a;background:#ffffff;">';
     h += '<tr>';
-    h += '<td style="border:1px solid #000000;padding:2px 5px;width:33%;height:18px;vertical-align:middle;"><strong>Nº EXPEDIENTE:</strong> <span style="color:#0284c7;font-size:10.5px;font-weight:bold;margin-left:3px;">' + rec.id + '</span></td>';
-    h += '<td style="border:1px solid #000000;padding:2px 5px;width:33%;vertical-align:middle;"><strong>PLACA TRACTO:</strong> <span style="font-weight:bold;margin-left:3px;">' + rec.placa_tracto + '</span></td>';
-    h += '<td style="border:1px solid #000000;padding:2px 5px;width:34%;vertical-align:middle;"><strong>PLACA CARRETA:</strong> <span style="font-weight:bold;margin-left:3px;">' + (rec.placa_carreta || '---') + '</span></td>';
+    h += '<td style="border:1px solid #0f172a;padding:2px 5px;width:33%;vertical-align:middle;"><strong>Nº EXPEDIENTE:</strong> <span style="color:#0284c7;font-size:9.5px;font-weight:800;font-family:monospace;margin-left:4px;">' + rec.id + '</span></td>';
+    h += '<td style="border:1px solid #0f172a;padding:2px 5px;width:33%;vertical-align:middle;"><strong>PLACA TRACTO:</strong> <span style="font-weight:800;font-family:monospace;margin-left:4px;font-size:9.5px;">' + rec.placa_tracto + '</span></td>';
+    h += '<td style="border:1px solid #0f172a;padding:2px 5px;width:34%;vertical-align:middle;"><strong>PLACA CARRETA:</strong> <span style="font-weight:800;font-family:monospace;margin-left:4px;font-size:9.5px;">' + (rec.placa_carreta || '---') + '</span></td>';
     h += '</tr>';
     h += '<tr>';
-    h += '<td style="border:1px solid #000000;padding:2px 5px;vertical-align:middle;"><strong>CONDUCTOR:</strong> <span style="font-weight:normal;margin-left:3px;">' + (rec.conductor || '---') + '</span></td>';
-    h += '<td style="border:1px solid #000000;padding:2px 5px;vertical-align:middle;"><strong>FASE:</strong> <span style="font-weight:bold;margin-left:3px;color:#000000;">' + (tipo === 'salida' ? 'SALIDA (IDA)' : 'RETORNO (VUELTA)') + '</span></td>';
-    h += '<td style="border:1px solid #000000;padding:2px 5px;vertical-align:middle;"><strong>DESTINO:</strong> <span style="font-weight:normal;margin-left:3px;">' + (rec.destino || '---') + '</span></td>';
+    h += '<td style="border:1px solid #0f172a;padding:2px 5px;vertical-align:middle;"><strong>CONDUCTOR:</strong> <span style="font-weight:700;text-transform:uppercase;margin-left:3px;">' + (rec.conductor || '---') + '</span></td>';
+    h += '<td style="border:1px solid #0f172a;padding:2px 5px;vertical-align:middle;"><strong>FASE:</strong> <span style="font-weight:800;color:#0f172a;margin-left:3px;">' + (tipo === 'salida' ? 'SALIDA (IDA)' : 'RETORNO (VUELTA)') + '</span></td>';
+    h += '<td style="border:1px solid #0f172a;padding:2px 5px;vertical-align:middle;"><strong>DESTINO:</strong> <span style="font-weight:700;text-transform:uppercase;margin-left:3px;">' + (rec.destino || '---') + '</span></td>';
     h += '</tr>';
     h += '<tr>';
-    h += '<td style="border:1px solid #000000;padding:2px 5px;vertical-align:middle;"><strong>FECHA / HORA:</strong> <span style="font-weight:normal;margin-left:3px;">' + (fecha || '--') + ' ' + (hora || '') + '</span></td>';
-    h += '<td style="border:1px solid #000000;padding:2px 5px;vertical-align:middle;"><strong>KILOMETRAJE:</strong> <span style="font-weight:bold;margin-left:3px;">' + (km ? km + ' KM' : '---') + '</span></td>';
-    var estadoInsp = hasAlert ? '<span style="color:#dc2626;font-weight:bold;margin-left:3px;">CON OBSERVACIONES</span>' : '<span style="color:#16a34a;font-weight:bold;margin-left:3px;">CONFORME / OK</span>';
-    h += '<td style="border:1px solid #000000;padding:2px 5px;vertical-align:middle;"><strong>ESTADO:</strong> ' + estadoInsp + '</td>';
+    h += '<td style="border:1px solid #0f172a;padding:2px 5px;vertical-align:middle;"><strong>FECHA / HORA:</strong> <span style="font-weight:600;margin-left:3px;">' + (fecha || '--') + ' ' + (hora || '') + '</span></td>';
+    h += '<td style="border:1px solid #0f172a;padding:2px 5px;vertical-align:middle;"><strong>KILOMETRAJE:</strong> <span style="font-weight:800;margin-left:3px;">' + (km ? Number(km).toLocaleString() + ' KM' : '---') + '</span></td>';
+    var estadoInsp = hasAlert ? '<span style="color:#dc2626;font-weight:800;margin-left:3px;">● CON OBSERVACIONES</span>' : '<span style="color:#16a34a;font-weight:800;margin-left:3px;">● CONFORME</span>';
+    h += '<td style="border:1px solid #0f172a;padding:2px 5px;vertical-align:middle;"><strong>ESTADO:</strong> ' + estadoInsp + '</td>';
     h += '</tr>';
     h += '</table>';
 
     // 3. ESTADO DOCUMENTAL INFORMATIVO (SOAT & REVISIÓN TÉCNICA)
-    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;margin-bottom:4px;table-layout:fixed;font-size:9px;color:#000000;">';
-    h += '<thead>';
-    h += '<tr>';
-    h += '<th colspan="2" style="background:#e2e8f0;color:#0f172a;font-weight:800;text-align:left;padding:2px 6px;border:1px solid #000000;font-size:8.5px;text-transform:uppercase;letter-spacing:0.3px;">';
-    h += '🛡️ ESTADO DOCUMENTAL INFORMATIVO (SOAT & REVISIÓN TÉCNICA)';
-    h += '</th>';
-    h += '</tr>';
-    h += '</thead>';
-    h += '<tbody>';
-    h += '<tr>';
+    h += '<div style="border:1.5px solid #0f172a;border-radius:6px;margin-bottom:4px;overflow:hidden;background:#ffffff;">';
+    h += '<div style="background:#0f172a;color:#ffffff;font-weight:800;font-size:8px;padding:2.5px 6px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.3px;">';
+    h += '<span>🛡️ ESTADO DOCUMENTAL INFORMATIVO (SOAT & REVISIÓN TÉCNICA)</span>';
+    h += '<span style="font-size:7px;color:#38bdf8;letter-spacing:0.4px;">CONSULTA VIGENCIAS MTC</span>';
+    h += '</div>';
+    h += '<div style="padding:3px;display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#ffffff;">';
 
     // Celda Tracto
-    h += '<td style="border:1px solid #000000;padding:3px 6px;width:50%;vertical-align:top;background:#ffffff;">';
-    h += '<div style="font-weight:800;color:#0284c7;font-size:9px;margin-bottom:2px;">TRACTO / CAMIÓN (' + rec.placa_tracto + ')</div>';
-    h += '<div style="display:flex;justify-content:space-between;margin-bottom:1px;">';
-    h += '<span><b>SOAT:</b> Vence el ' + (docT && docT.soat ? docT.soat.fechaFmt : '11/01/2027') + '</span>';
-    h += '<span style="font-weight:800;color:#166534;background:#dcfce7;padding:0 4px;border-radius:3px;font-size:8px;">' + (docT && docT.soat ? docT.soat.estado : 'VIGENTE') + '</span>';
+    h += '<div style="border:1px solid #cbd5e1;border-radius:5px;padding:3px 5px;background:#f8fafc;">';
+    h += '<div style="font-weight:800;color:#0f172a;font-size:8px;margin-bottom:2px;display:flex;align-items:center;gap:3px;">';
+    h += '<span style="color:#0284c7;">⇄</span> TRACTO / CAMIÓN (' + rec.placa_tracto + ')';
     h += '</div>';
-    h += '<div style="display:flex;justify-content:space-between;">';
-    h += '<span><b>Revisión Técnica:</b> Vence el ' + (docT && docT.rt ? docT.rt.fechaFmt : '02/02/2027') + '</span>';
-    h += '<span style="font-weight:800;color:#166534;background:#dcfce7;padding:0 4px;border-radius:3px;font-size:8px;">' + (docT && docT.rt ? docT.rt.estado : 'VIGENTE') + '</span>';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:7.5px;margin-bottom:1.5px;">';
+    h += '<span><span style="color:#16a34a;">✔</span> <strong>SOAT</strong> <span style="color:#64748b;">Vence el ' + (docT && docT.soat ? docT.soat.fechaFmt : '11/01/2027') + '</span></span>';
+    h += '<span style="font-weight:800;color:#ffffff;background:#15803d;padding:0.5px 5px;border-radius:8px;font-size:6.8px;">' + (docT && docT.soat ? docT.soat.estado : 'VIGENTE') + '</span>';
     h += '</div>';
-    h += '</td>';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:7.5px;">';
+    h += '<span><span style="color:#0284c7;">📋</span> <strong>Revisión Técnica</strong> <span style="color:#64748b;">Vence el ' + (docT && docT.rt ? docT.rt.fechaFmt : '03/12/2026') + '</span></span>';
+    h += '<span style="font-weight:800;color:#ffffff;background:#15803d;padding:0.5px 5px;border-radius:8px;font-size:6.8px;">' + (docT && docT.rt ? docT.rt.estado : 'VIGENTE') + '</span>';
+    h += '</div>';
+    h += '</div>';
 
     // Celda Carreta
-    h += '<td style="border:1px solid #000000;padding:3px 6px;width:50%;vertical-align:top;background:#ffffff;">';
+    h += '<div style="border:1px solid #cbd5e1;border-radius:5px;padding:3px 5px;background:#f8fafc;">';
+    h += '<div style="font-weight:800;color:#0f172a;font-size:8px;margin-bottom:2px;display:flex;align-items:center;gap:3px;">';
+    h += '<span style="color:#d97706;">🗂️</span> CARRETA / REMOLQUE (' + (rec.placa_carreta || '---') + ')';
+    h += '</div>';
     if (rec.placa_carreta && docC) {
-        h += '<div style="font-weight:800;color:#d97706;font-size:9px;margin-bottom:2px;">CARRETA / REMOLQUE (' + rec.placa_carreta + ')</div>';
-        h += '<div style="display:flex;justify-content:space-between;margin-bottom:1px;">';
-        h += '<span><b>SOAT / Seguro:</b> Vence el ' + (docC.soat ? docC.soat.fechaFmt : '11/01/2027') + '</span>';
-        h += '<span style="font-weight:800;color:#166534;background:#dcfce7;padding:0 4px;border-radius:3px;font-size:8px;">' + (docC.soat ? docC.soat.estado : 'VIGENTE') + '</span>';
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:7.5px;margin-bottom:1.5px;">';
+        h += '<span><span style="color:#16a34a;">✔</span> <strong>SOAT / Seguro</strong> <span style="color:#64748b;">Vence el ' + (docC.soat ? docC.soat.fechaFmt : '11/01/2027') + '</span></span>';
+        h += '<span style="font-weight:800;color:#ffffff;background:#15803d;padding:0.5px 5px;border-radius:8px;font-size:6.8px;">' + (docC.soat ? docC.soat.estado : 'VIGENTE') + '</span>';
         h += '</div>';
-        h += '<div style="display:flex;justify-content:space-between;">';
-        h += '<span><b>Revisión Técnica:</b> Vence el ' + (docC.rt ? docC.rt.fechaFmt : '03/12/2026') + '</span>';
-        h += '<span style="font-weight:800;color:#166534;background:#dcfce7;padding:0 4px;border-radius:3px;font-size:8px;">' + (docC.rt ? docC.rt.estado : 'VIGENTE') + '</span>';
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:7.5px;">';
+        h += '<span><span style="color:#0284c7;">📋</span> <strong>Revisión Técnica</strong> <span style="color:#64748b;">Vence el ' + (docC.rt ? docC.rt.fechaFmt : '03/12/2026') + '</span></span>';
+        h += '<span style="font-weight:800;color:#ffffff;background:#15803d;padding:0.5px 5px;border-radius:8px;font-size:6.8px;">' + (docC.rt ? docC.rt.estado : 'VIGENTE') + '</span>';
         h += '</div>';
     } else {
-        h += '<div style="font-weight:800;color:#64748b;font-size:9px;margin-bottom:2px;">CARRETA / REMOLQUE</div>';
-        h += '<div style="color:#64748b;font-style:italic;font-size:8.5px;padding-top:4px;">No aplica / Sin semirremolque acoplado.</div>';
+        h += '<div style="color:#64748b;font-style:italic;font-size:7.5px;padding:4px 0;">No aplica / Sin semirremolque acoplado.</div>';
     }
-    h += '</td>';
+    h += '</div>';
 
-    h += '</tr>';
-    h += '</tbody>';
-    h += '</table>';
+    h += '</div>';
+    h += '</div>';
 
-    // 4. Banner de Estado
+    // 4. Banner de Alerta / Novedades
     if (hasAlert) {
-        h += '<div style="background-color:#fee2e2;padding:2px 6px;font-size:8.5px;font-weight:bold;text-align:center;border:2px solid #000000;margin-bottom:4px;color:#991b1b;">';
-        h += 'ATENCIÓN: SE REPORTARON NOVEDADES / ANOMALÍAS EN LA REVISIÓN TÉCNICA DE LA UNIDAD';
+        var alertDesc = obsText !== 'SIN OBSERVACIONES' ? obsText : (itemsMal.length > 0 ? 'Observaciones registradas en: ' + itemsMal.join(', ') : 'Se reportaron elementos no conformes durante la inspección física.');
+        h += '<div style="border:1.5px solid #ef4444;border-radius:6px;background:#fef2f2;padding:3px 6px;margin-bottom:4px;display:flex;align-items:center;gap:6px;">';
+        h += '<div style="background:#dc2626;color:#ffffff;border-radius:4px;width:15px;height:15px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:9px;flex-shrink:0;">▲</div>';
+        h += '<div>';
+        h += '<div style="font-size:7.8px;font-weight:800;color:#b91c1c;text-transform:uppercase;">ATENCIÓN: SE REPORTARON NOVEDADES / ANOMALÍAS EN LA REVISIÓN TÉCNICA DE LA UNIDAD</div>';
+        h += '<div style="font-size:7.2px;color:#dc2626;line-height:1.1;">' + alertDesc + '</div>';
         h += '</div>';
-    } else {
-        h += '<div style="background-color:#f1f5f9;padding:2px 6px;font-size:8.5px;font-weight:bold;text-align:center;border:2px solid #000000;margin-bottom:4px;color:#0f172a;">';
-        h += 'REGISTRO DE CONDICIONES OPERATIVAS Y ELEMENTOS DE SEGURIDAD. PLACA: <span style="color:#dc2626;font-size:10px;margin-left:4px;">' + rec.placa_tracto + '</span>';
         h += '</div>';
     }
 
-    // 5. Checklist Items (2 Columnas)
-    h += '<div style="background:#334155;color:#ffffff;font-weight:bold;font-size:9.5px;letter-spacing:.5px;padding:2px 6px;text-align:center;text-transform:uppercase;border:2px solid #000000;border-bottom:none;margin:0;">';
+    // 5. Checklist Items (2 Columnas Equilibradas)
+    h += '<div style="border:1.5px solid #0f172a;border-radius:6px;margin-bottom:4px;overflow:hidden;background:#ffffff;">';
+    h += '<div style="background:#0f172a;color:#ffffff;font-weight:800;font-size:8.2px;text-align:center;padding:2.5px 6px;text-transform:uppercase;letter-spacing:0.5px;">';
     h += 'DETALLE DE INSPECCIÓN TÉCNICA Y EQUIPAMIENTO';
     h += '</div>';
 
     if (template && template.length && checklist) {
-        h += '<div style="border:2px solid #000000;border-bottom:none;margin-bottom:0;padding:3px;display:flex;gap:4px;background:#ffffff;">';
+        var totalItems = 0;
+        template.forEach(function(cat) { totalItems += (cat.items || []).length; });
 
-        var mid = Math.ceil(template.length / 2);
-        var col1 = template.slice(0, mid);
-        var col2 = template.slice(mid);
+        var col1 = [], col2 = [];
+        var currentCount = 0;
+        template.forEach(function(cat) {
+            var catCount = (cat.items || []).length;
+            if (currentCount < totalItems / 2 || col1.length === 0) {
+                col1.push(cat);
+                currentCount += catCount;
+            } else {
+                col2.push(cat);
+            }
+        });
 
-        function renderCol(cats) {
-            var colHtml = '<div style="flex:1;display:flex;flex-direction:column;gap:3px;">';
-            cats.forEach(function(cat) {
-                colHtml += '<table style="width:100%;border-collapse:collapse;border:1px solid #94a3b8;font-size:8.5px;color:#000000;">';
-                colHtml += '<thead><tr><th colspan="2" style="background:#e2e8f0;color:#0f172a;font-weight:bold;text-align:left;padding:1.5px 5px;border-bottom:1px solid #94a3b8;font-size:8.5px;text-transform:uppercase;">' + (cat.titulo || 'Categoría') + '</th></tr></thead>';
-                colHtml += '<tbody>';
+        function renderCol(cats, isLastCol) {
+            var colHtml = '<div style="' + (isLastCol ? '' : 'border-right:1.5px solid #0f172a;') + '">';
+            cats.forEach(function(cat, cIdx) {
+                colHtml += '<div style="background:#f1f5f9;color:#0f172a;font-weight:800;font-size:7.5px;text-transform:uppercase;padding:2px 5px;border-bottom:1px solid #cbd5e1;' + (cIdx > 0 ? 'border-top:1px solid #cbd5e1;' : '') + '">';
+                colHtml += (cat.titulo || 'CATEGORÍA');
+                colHtml += '</div>';
+
                 (cat.items || []).forEach(function(item) {
                     var valor = (checklist[item.id] || '---').toUpperCase();
-                    var color = valor === 'OK' ? '#166534' : (valor === 'MAL' ? '#991b1b' : '#475569');
-                    var bg = valor === 'OK' ? '#dcfce7' : (valor === 'MAL' ? '#fee2e2' : '#f1f5f9');
-                    colHtml += '<tr style="border-bottom:1px solid #f1f5f9;">';
-                    colHtml += '<td style="padding:1.5px 5px;color:#1e293b;vertical-align:middle;font-weight:600;line-height:1.15;">' + item.label + '</td>';
-                    colHtml += '<td style="width:36px;padding:1.5px;text-align:center;vertical-align:middle;"><span style="background:' + bg + ';color:' + color + ';padding:1px 4px;border-radius:3px;font-weight:bold;font-size:8px;display:inline-block;">' + valor + '</span></td>';
-                    colHtml += '</tr>';
+                    var isMal = valor === 'MAL' || valor === 'NO CONFORME' || valor === 'OBS';
+                    var isOk = valor === 'OK' || valor === 'CONFORME';
+
+                    var rowBg = isMal ? '#fee2e2' : 'transparent';
+                    var textCol = isMal ? '#991b1b' : '#1e293b';
+                    var fontWt = isMal ? '800' : '600';
+
+                    var badgeStyle = isOk
+                        ? 'background:#dcfce7;color:#15803d;border:1px solid #86efac;'
+                        : (isMal ? 'background:#dc2626;color:#ffffff;' : 'background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;');
+
+                    colHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:1.5px 5px;border-bottom:1px solid #f1f5f9;font-size:7.5px;background:' + rowBg + ';color:' + textCol + ';font-weight:' + fontWt + ';">';
+                    colHtml += '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:85%;">' + item.label + '</span>';
+                    colHtml += '<span style="font-weight:800;font-size:6.8px;padding:0.5px 5px;border-radius:6px;' + badgeStyle + '">' + valor + '</span>';
+                    colHtml += '</div>';
                 });
-                colHtml += '</tbody></table>';
             });
             colHtml += '</div>';
             return colHtml;
         }
 
-        h += renderCol(col1);
-        h += renderCol(col2);
+        h += '<div style="display:grid;grid-template-columns:1fr 1fr;background:#ffffff;">';
+        h += renderCol(col1, false);
+        h += renderCol(col2, true);
         h += '</div>';
     } else {
-        h += '<div style="border:2px solid #000000;border-bottom:none;padding:8px;text-align:center;font-style:italic;color:#666666;font-size:9px;margin-bottom:0;">No se registró detalle de checklist en esta fase.</div>';
+        h += '<div style="padding:8px;text-align:center;font-style:italic;color:#666666;font-size:8px;">No se registró detalle de checklist en esta fase.</div>';
     }
+    h += '</div>';
 
     // 6. Bloque de Observaciones Oficial
-    h += '<div style="border:2px solid #000000;padding:3px 6px;background:#f8fafc;font-size:8.5px;margin-bottom:6px;line-height:1.2;">';
-    h += '<strong style="color:#0f172a;">OBSERVACIONES:</strong> ';
-    h += '<span style="font-weight:' + (obsText === 'SIN OBSERVACIONES' ? 'normal' : 'bold') + ';color:' + (obsText === 'SIN OBSERVACIONES' ? '#64748b' : '#0f172a') + ';">' + obsText + '</span>';
+    h += '<div style="border:1.5px solid #0f172a;border-radius:6px;padding:2.5px 6px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;font-size:7.8px;background:#ffffff;">';
+    h += '<div><strong>OBSERVACIONES:</strong> <span style="font-weight:' + (obsText === 'SIN OBSERVACIONES' ? 'normal' : 'bold') + ';color:' + (obsText === 'SIN OBSERVACIONES' ? '#64748b' : '#0f172a') + ';">' + obsText + '</span></div>';
+    h += '<div style="color:#94a3b8;font-size:7.2px;font-weight:600;">Auditoría Conforme</div>';
     h += '</div>';
 
     h += '</div>'; // End top wrapper
@@ -2189,41 +2224,47 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     var firmaCond = tipo === 'salida' ? rec.firma_salida_conductor : rec.firma_retorno_conductor;
     var firmaVig = tipo === 'salida' ? rec.firma_salida_vigilancia : rec.firma_retorno_vigilancia;
 
-    h += '<div style="margin-top:2px;">';
-    h += '<table style="width:100%;border-collapse:collapse;border:2px solid #000000;table-layout:fixed;color:#000000;">';
-    h += '<tr>';
+    h += '<div style="border:1.5px solid #0f172a;border-radius:6px;padding:4px 6px;background:#ffffff;">';
+    h += '<div style="font-size:7.8px;font-weight:800;color:#0284c7;margin-bottom:3px;display:flex;align-items:center;gap:3px;">';
+    h += '<span>✏️</span> FIRMAS DIGITALES DE ' + (tipo === 'salida' ? 'SALIDA' : 'RETORNO');
+    h += '</div>';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
 
     // Firma Conductor
-    h += '<td style="width:50%;border:1px solid #000000;padding:3px 8px;text-align:center;vertical-align:bottom;height:55px;">';
+    h += '<div style="border:1px solid #cbd5e1;border-radius:5px;background:#f8fafc;padding:3px;text-align:center;height:50px;display:flex;flex-direction:column;justify-content:space-between;">';
+    h += '<div style="flex:1;display:flex;align-items:center;justify-content:center;">';
     if (firmaCond) {
-        h += '<img src="' + firmaCond + '" style="max-height:36px;max-width:160px;display:block;margin:0 auto 2px auto;" crossorigin="anonymous">';
+        h += '<img src="' + firmaCond + '" style="max-height:26px;max-width:140px;object-fit:contain;" crossorigin="anonymous">';
     } else {
-        h += '<div style="height:25px;"></div>';
+        h += '<div style="height:14px;"></div>';
     }
-    h += '<div style="border-top:1px dashed #000000;padding-top:2px;font-size:9px;font-weight:bold;color:#000000;">';
-    h += 'FIRMA DEL CONDUCTOR (' + (tipo === 'salida' ? 'SALIDA' : 'RETORNO') + ')<br><span style="font-weight:normal;font-size:8.5px;color:#333333;">' + (rec.conductor || 'DNI: _______________') + '</span>';
     h += '</div>';
-    h += '</td>';
+    h += '<div style="border-top:1px dashed #cbd5e1;padding-top:1.5px;font-size:7.5px;font-weight:800;color:#0f172a;line-height:1.1;">';
+    h += 'FIRMA DEL CONDUCTOR (' + (tipo === 'salida' ? 'SALIDA' : 'RETORNO') + ')<br><span style="font-weight:600;font-size:6.8px;color:#475569;">' + (rec.conductor || '---') + '</span>';
+    h += '</div>';
+    h += '</div>';
 
     // Firma Vigilancia
-    h += '<td style="width:50%;border:1px solid #000000;padding:3px 8px;text-align:center;vertical-align:bottom;height:55px;">';
+    h += '<div style="border:1px solid #cbd5e1;border-radius:5px;background:#f8fafc;padding:3px;text-align:center;height:50px;display:flex;flex-direction:column;justify-content:space-between;">';
+    h += '<div style="flex:1;display:flex;align-items:center;justify-content:center;">';
     if (firmaVig) {
-        h += '<img src="' + firmaVig + '" style="max-height:36px;max-width:160px;display:block;margin:0 auto 2px auto;" crossorigin="anonymous">';
+        h += '<img src="' + firmaVig + '" style="max-height:26px;max-width:140px;object-fit:contain;" crossorigin="anonymous">';
     } else {
-        h += '<div style="height:25px;"></div>';
+        h += '<div style="height:14px;"></div>';
     }
-    var inspectorName = (tipo === 'salida' ? rec.creado_por : rec.retorno_creado_por) || rec.creado_por || 'Oficial de Seguridad';
-    h += '<div style="border-top:1px dashed #000000;padding-top:2px;font-size:9px;font-weight:bold;color:#000000;">';
-    h += 'INSPECTOR DE SEGURIDAD / VIGILANCIA<br><span style="font-weight:normal;font-size:8.5px;color:#333333;">VoBo CONTROL ' + (tipo === 'salida' ? 'DESPACHO' : 'RECEPCIÓN') + '<br>Oficial: <strong>' + inspectorName + '</strong></span>';
     h += '</div>';
-    h += '</td>';
+    h += '<div style="border-top:1px dashed #cbd5e1;padding-top:1.5px;font-size:7.5px;font-weight:800;color:#0f172a;line-height:1.1;">';
+    h += 'INSPECTOR DE SEGURIDAD / VIGILANCIA<br><span style="font-weight:600;font-size:6.8px;color:#475569;">VoBo CONTROL ' + (tipo === 'salida' ? 'DESPACHO' : 'RECEPCIÓN') + '</span>';
+    h += '</div>';
+    h += '</div>';
 
-    h += '</tr>';
-    h += '</table>';
-    h += '<div style="display:flex;justify-content:space-between;font-size:8px;color:#666666;margin-top:2px;padding:0 2px;">';
-    h += '<span>Documento generado por Sistema ERP de Gestión de Flota</span>';
-    h += '<span>' + (pageLabel || 'Página 1 de 1 (Acta Oficial)') + '</span>';
     h += '</div>';
+    h += '</div>';
+
+    // Footer
+    h += '<div style="display:flex;justify-content:space-between;font-size:6.8px;color:#94a3b8;margin-top:2px;padding:0 2px;">';
+    h += '<span>Documento digital generado por Sistema ERP de Gestión de Flota</span>';
+    h += '<span>' + (pageLabel || 'Página 1 de 1 (Acta Oficial)') + '</span>';
     h += '</div>';
 
     h += '</div>';
@@ -2584,17 +2625,25 @@ window._sguCompartirWhatsApp = async function(tipo) {
         var pdfBlob = await html2pdf().set(opt).from(div).outputPdf('blob');
         var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-        var textoMensaje = '📋 *CHECKLIST DE UNIDADES - AZKELL ERP*\n' +
-            '📄 *Documento:* ' + filename + '\n' +
+        var hasAlertRec = tipo === 'salida' ? rec.salida_has_alert : (tipo === 'retorno' ? rec.retorno_has_alert : (rec.salida_has_alert || rec.retorno_has_alert));
+        var estadoEmoji = hasAlertRec ? '⚠️ *CON OBSERVACIONES*' : '✅ *CONFORME*';
+        var obsRaw = (tipo === 'salida' ? rec.salida_observaciones : (rec.retorno_observaciones || rec.salida_observaciones)) || '';
+        var obsTextFmt = obsRaw.trim() ? obsRaw.trim().toUpperCase() : 'SIN OBSERVACIONES';
+
+        var textoMensaje = '📋 *CHECKLIST DE INSPECCIÓN VEHICULAR - MARSISA*\n' +
+            '━━━━━━━━━━━━━━━━━━━━━━━\n' +
+            '📑 *Expediente:* ' + rec.id + '\n' +
             '🔍 *Fase:* ' + faseStr + '\n' +
-            '📅 *Fecha:* ' + fechaStr + '\n' +
+            '📅 *Fecha / Hora:* ' + fechaStr + ' ' + (tipo === 'retorno' ? (rec.retorno_hora || '') : (rec.salida_hora || '')) + '\n' +
             '🚛 *Tracto:* ' + (rec.placa_tracto || '---') + '\n' +
-            '🚛 *Carreta:* ' + (rec.placa_carreta || '---') + '\n' +
+            '🗂️ *Carreta:* ' + (rec.placa_carreta || '---') + '\n' +
             '👤 *Conductor:* ' + (rec.conductor || '---') + '\n' +
             '📍 *Destino:* ' + (rec.destino || '---') + '\n' +
-            '🛣️ *Kilometraje:* ' + kmStr + ' km\n' +
-            '✅ *Estado:* ' + (rec.estado === 'completado' ? 'Completado' : 'En Ruta') + '\n\n' +
-            '📎 _Reporte digital oficial generado automáticamente._';
+            '🛣️ *Kilometraje:* ' + (kmStr ? Number(kmStr).toLocaleString() + ' KM' : '---') + '\n' +
+            '🚦 *Estado:* ' + estadoEmoji + '\n' +
+            '📝 *Observaciones:* ' + obsTextFmt + '\n' +
+            '━━━━━━━━━━━━━━━━━━━━━━━\n' +
+            '📄 _Reporte digital oficial adjunto._';
 
         // Intento 1: Web Share API nativo si el gesto sigue activo
         if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
