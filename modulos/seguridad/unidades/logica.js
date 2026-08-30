@@ -2671,8 +2671,55 @@ window._sguGenerarPDFCompleto = async function() {
     });
 };
 
-// ── COMPARTIR PDF POR WHATSAPP (MÓVIL DIRECTO O DESCARGA + WHATSAPP WEB) ──
-window._sguCompartirWhatsApp = async function(tipo) {
+// ── COMPARTIR POR WHATSAPP (DIRECTO Y SENCILLO) ──
+window._sguCompartirWhatsApp = function(tipo) {
+    if (!window._sguCurrentRecord) {
+        _sguToast('No hay registro seleccionado', 'bi-exclamation-triangle');
+        return;
+    }
+
+    var rec = window._sguCurrentRecord;
+    var faseStr = tipo === 'salida' ? 'Ida (Salida)' : (tipo === 'retorno' ? 'Vuelta (Retorno)' : 'Expediente Completo');
+    var fechaStr = (tipo === 'retorno' ? (rec.retorno_fecha || rec.salida_fecha) : rec.salida_fecha) || '---';
+    var horaStr = (tipo === 'retorno' ? (rec.retorno_hora || rec.salida_hora) : rec.salida_hora) || '';
+    var kmSalida = rec.salida_km ? rec.salida_km + ' km' : '---';
+    var kmRetorno = rec.retorno_km ? rec.retorno_km + ' km' : '---';
+    var tracto = rec.placa_tracto || '---';
+    var carreta = rec.placa_carreta ? (' / ' + rec.placa_carreta) : '';
+    var conductor = rec.conductor || 'Sin conductor';
+    var destino = rec.destino || '---';
+    var empresa = rec.empresa || 'AZKELL';
+    var obsSalida = (rec.salida_observaciones || '').trim();
+    var obsRetorno = (rec.retorno_observaciones || '').trim();
+    var obs = tipo === 'retorno' ? (obsRetorno || 'Sin novedades') : (tipo === 'salida' ? (obsSalida || 'Sin novedades') : ((obsSalida ? 'Salida: ' + obsSalida : '') + (obsRetorno ? ' | Retorno: ' + obsRetorno : '') || 'Sin observaciones'));
+
+    var lineas = [
+        '📋 *CHECKLIST DE CONTROL DE UNIDADES*',
+        '🏢 *Empresa:* ' + empresa,
+        '🆔 *Expediente:* #' + rec.id,
+        '────────────────────',
+        '🚛 *Placa:* ' + tracto + carreta,
+        '👤 *Conductor:* ' + conductor,
+        '📍 *Destino:* ' + destino,
+        '🏷️ *Fase:* ' + faseStr,
+        '📅 *Fecha/Hora:* ' + fechaStr + (horaStr ? (' ' + horaStr) : ''),
+        '🛣️ *Km Salida:* ' + kmSalida + (rec.retorno_km ? (' | *Km Retorno:* ' + kmRetorno) : ''),
+        '⚡ *Estado:* ' + (rec.estado === 'completado' ? '✅ COMPLETADO' : '⏳ EN RUTA'),
+        '📝 *Observaciones:* ' + obs,
+        '────────────────────',
+        '_Azkell ERP — Sistema de Seguridad y Control_'
+    ];
+
+    var texto = lineas.join('\n');
+    var urlWsp = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(texto);
+
+    // Abrir WhatsApp directamente
+    window.open(urlWsp, '_blank');
+    _sguToast('Abriendo WhatsApp...', 'bi-whatsapp');
+};
+
+// ── COMPARTIR ARCHIVO PDF (OPCIONAL VÍA WEB SHARE O DESCARGA) ──
+window._sguCompartirPDFWhatsApp = async function(tipo) {
     if (!window._sguCurrentRecord) return;
     if (typeof html2pdf === 'undefined') {
         _sguToast('Error: Librería PDF no disponible', 'bi-exclamation-triangle');
@@ -2681,17 +2728,12 @@ window._sguCompartirWhatsApp = async function(tipo) {
 
     var rec = window._sguCurrentRecord;
     var filename = _sguGetPdfFilename(rec, tipo);
-    var fechaStr = (tipo === 'retorno' ? (rec.retorno_fecha || rec.salida_fecha) : rec.salida_fecha) || '---';
-    var kmStr = (tipo === 'retorno' ? (rec.retorno_km || rec.salida_km) : rec.salida_km) || '---';
-    var faseStr = tipo === 'salida' ? 'Ida (Salida)' : (tipo === 'retorno' ? 'Vuelta (Retorno)' : 'Expediente Completo');
-
-    _sguToast('Generando PDF con fotos para WhatsApp...', 'bi-whatsapp');
+    _sguToast('Generando PDF con fotos...', 'bi-file-earmark-pdf');
 
     try {
         var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
         var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
 
-        // Asegurar que tengamos las fotos frescas del registro si no están en memoria
         if ((!rec.fotos || !rec.fotos.length) && rec.id) {
             try {
                 var freshData = await _sguFetch('/api/seguridad/unidades');
@@ -2743,7 +2785,6 @@ window._sguCompartirWhatsApp = async function(tipo) {
         var pdfBlob = await html2pdf().set(opt).from(div).outputPdf('blob');
         var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-        // Intento 1: Web Share API nativo si el navegador soporta compartir archivos directamente
         if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
             try {
                 await navigator.share({
@@ -2753,11 +2794,10 @@ window._sguCompartirWhatsApp = async function(tipo) {
                 _sguToast('Compartido con éxito');
                 return;
             } catch(eShare) {
-                console.log('Share nativo declinado o expirado, ejecutando descarga + WhatsApp:', eShare);
+                console.log('Share cancelado o no disponible:', eShare);
             }
         }
 
-        // Intento 2: Descarga directa del archivo PDF y apertura de WhatsApp
         var fileUrl = URL.createObjectURL(pdfBlob);
         var a = document.createElement('a');
         a.href = fileUrl;
@@ -2765,11 +2805,9 @@ window._sguCompartirWhatsApp = async function(tipo) {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-
-        window.open('https://api.whatsapp.com/send', '_blank');
-        _sguToast('PDF descargado: ' + filename + ' y WhatsApp abierto.');
+        _sguToast('PDF descargado: ' + filename);
     } catch(err) {
-        console.error('Error al compartir WhatsApp:', err);
+        console.error('Error al generar PDF:', err);
         _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
     }
 };
