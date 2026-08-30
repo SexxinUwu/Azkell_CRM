@@ -933,62 +933,78 @@ module.exports = function (db, broadcast, logAudit) {
             const tdb = getDb(req);
             const { combustible, placa, search, fecha_desde, fecha_hasta } = req.query;
 
-            const whereClauses = ["cv.estado != 'ANULADO'"];
+            const whereClauses = ["estado != 'ANULADO'"];
             const params = [];
 
             if (placa && placa !== 'ALL') {
-                whereClauses.push("cv.vehiculo = ?");
+                whereClauses.push("vehiculo = ?");
                 params.push(placa.toUpperCase().trim());
             }
 
             if (combustible && combustible !== 'ALL') {
-                whereClauses.push("cv.tipo_combustible = ?");
+                whereClauses.push("tipo_combustible = ?");
                 params.push(combustible.trim());
             }
 
             if (fecha_desde) {
-                whereClauses.push("cv.fecha >= ?");
+                whereClauses.push("fecha >= ?");
                 params.push(`${fecha_desde} 00:00:00`);
             }
 
             if (fecha_hasta) {
-                whereClauses.push("cv.fecha <= ?");
+                whereClauses.push("fecha <= ?");
                 params.push(`${fecha_hasta} 23:59:59`);
             }
 
             if (search && search.trim()) {
                 const q = `%${search.trim()}%`;
-                whereClauses.push("(cv.viaje LIKE ? OR cv.vehiculo LIKE ? OR cv.ruta LIKE ? OR cv.conductor LIKE ?)");
+                whereClauses.push("(viaje LIKE ? OR vehiculo LIKE ? OR ruta LIKE ? OR conductor LIKE ?)");
                 params.push(q, q, q, q);
             }
 
-            const whereSQL = whereClauses.length > 0 
-                ? `WHERE ${whereClauses.join(' AND ')}` 
-                : '';
+            const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
+            // 1. Consultar vales filtrados a máxima velocidad (índice directo)
             const [rows] = await tdb.query(
                 `SELECT 
-                    cv.id, cv.fecha, cv.estado, cv.correlativo, cv.viaje, cv.vehiculo, cv.conductor,
-                    COALESCE(NULLIF(ov.ruta, ''), NULLIF(cv.ruta, ''), 'Sin Ruta') AS ruta,
-                    cv.estacion, cv.proveedor, cv.tipo_combustible, cv.kilometraje,
-                    CASE 
-                        WHEN ov.peso IS NOT NULL AND ov.peso > 0 THEN 
-                            CASE WHEN ov.peso > 50 THEN ROUND(ov.peso / 1000, 2) ELSE ROUND(ov.peso, 2) END
-                        ELSE cv.peso_tn 
-                    END AS peso_tn,
-                    cv.galones, cv.importe, cv.numero_comprobante, cv.tipo
-                FROM combustible_vales cv
-                LEFT JOIN operaciones_ordenes_viaje ov ON (
-                    cv.viaje IS NOT NULL AND cv.viaje != '' AND cv.viaje != 'SIN-VIAJE' AND (
-                        cv.viaje = ov.viaje 
-                        OR cv.viaje LIKE CONCAT('%', ov.viaje) 
-                        OR ov.viaje LIKE CONCAT('%', cv.viaje)
-                    )
-                )
+                    id, fecha, estado, correlativo, viaje, vehiculo, conductor, ruta,
+                    estacion, proveedor, tipo_combustible, kilometraje, peso_tn, galones,
+                    importe, numero_comprobante, tipo
+                FROM combustible_vales 
                 ${whereSQL} 
-                ORDER BY cv.fecha ASC, cv.id ASC`,
+                ORDER BY fecha ASC, id ASC`,
                 params
             );
+
+            // 2. Consultar órdenes de viaje en paralelo y mapear en memoria O(1)
+            const [ovRows] = await tdb.query(`SELECT viaje, ruta, peso FROM operaciones_ordenes_viaje`);
+            const ovMap = new Map();
+            ovRows.forEach(o => {
+                if (o.viaje) {
+                    const raw = String(o.viaje).trim();
+                    ovMap.set(raw, o);
+                    const clean = raw.replace(/^\d{4}-0*/, '');
+                    if (clean) ovMap.set(clean, o);
+                }
+            });
+
+            // Enriquecer ruta y peso instantáneamente sin degradar SQL
+            rows.forEach(v => {
+                if (v.viaje) {
+                    const vKey = String(v.viaje).trim();
+                    const cleanV = vKey.replace(/^\d{4}-0*/, '');
+                    const ov = ovMap.get(vKey) || ovMap.get(cleanV);
+                    if (ov) {
+                        if (ov.ruta && (!v.ruta || v.ruta === 'Sin Ruta')) {
+                            v.ruta = ov.ruta;
+                        }
+                        if (ov.peso && parseFloat(ov.peso) > 0) {
+                            const rawP = parseFloat(ov.peso);
+                            v.peso_tn = rawP > 50 ? parseFloat((rawP / 1000).toFixed(2)) : parseFloat(rawP.toFixed(2));
+                        }
+                    }
+                }
+            });
 
             const peruDateFmt = new Intl.DateTimeFormat('en-CA', {
                 timeZone: 'America/Lima',
