@@ -2446,7 +2446,7 @@ async function _sguRenderPdfFromTemplate(htmlBody, filename) {
     });
 }
 
-function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
+function _sguAbrirVentanaImpresion(htmlBody, filename, titulo, autoPrint) {
     var rec = window._sguCurrentRecord || {};
     var placasStr = rec.placa_tracto ? (rec.placa_tracto + (rec.placa_carreta ? ' / ' + rec.placa_carreta : '')) : '';
 
@@ -2457,7 +2457,6 @@ function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
         + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
         + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
         + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
-        + '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></scr' + 'ipt>\n'
         + '<style>\n'
         + 'body {\n'
         + '  background-color: #F1F5F9;\n'
@@ -2510,13 +2509,9 @@ function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
         + '      </div>\n'
         + '    </div>\n'
         + '    <div class="flex items-center gap-2">\n'
-        + '      <button onclick="window.print()" class="btn-action inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-xl shadow-xs transition">\n'
+        + '      <button onclick="window.print()" class="btn-action inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-medium rounded-xl shadow-xs transition">\n'
         + '        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>\n'
-        + '        <span>Imprimir / Guardar PDF</span>\n'
-        + '      </button>\n'
-        + '      <button onclick="descargarDoc()" class="btn-action inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-medium rounded-xl shadow-xs transition">\n'
-        + '        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>\n'
-        + '        <span>Descargar PDF</span>\n'
+        + '        <span>Guardar / Descargar PDF (Vectorial HD)</span>\n'
         + '      </button>\n'
         + '    </div>\n'
         + '  </nav>\n'
@@ -2527,13 +2522,7 @@ function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
         + '  <aside class="no-print mt-3 text-center text-[10px] text-slate-400">\n'
         + '    Azkell Fleet • Documento digital de control vehicular 2026\n'
         + '  </aside>\n'
-        + '<script>\n'
-        + 'function descargarDoc() {\n'
-        + '  var el = document.getElementById("sgu-pdf-root");\n'
-        + '  var opt = { margin: 0, filename: "' + filename + '", image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 840 }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }, pagebreak: { mode: ["css", "legacy"] } };\n'
-        + '  html2pdf().set(opt).from(el).save();\n'
-        + '}\n'
-        + '</scr' + 'ipt>\n'
+        + (autoPrint ? '<script>window.onload = function() { setTimeout(function(){ window.print(); }, 400); };</scr' + 'ipt>\n' : '')
         + '</body>\n</html>';
 
     var blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
@@ -2572,7 +2561,7 @@ window._sguPrevisualizarPDF = async function(tipo) {
         htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
     }
 
-    _sguAbrirVentanaImpresion(htmlFinal, filename, 'Checklist ' + rec.placa_tracto + ' (' + tipo.toUpperCase() + ')');
+    _sguAbrirVentanaImpresion(htmlFinal, filename, 'Checklist ' + rec.placa_tracto + ' (' + tipo.toUpperCase() + ')', false);
 };
 
 window._sguPrevisualizarPDFCompleto = async function() {
@@ -2604,7 +2593,7 @@ window._sguPrevisualizarPDFCompleto = async function() {
         htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
     }
 
-    _sguAbrirVentanaImpresion(htmlFinal, filename, 'Expediente Completo ' + rec.placa_tracto);
+    _sguAbrirVentanaImpresion(htmlFinal, filename, 'Expediente Completo ' + rec.placa_tracto, false);
 };
 
 window._sguGenerarPDF = async function(tipo) {
@@ -2613,7 +2602,7 @@ window._sguGenerarPDF = async function(tipo) {
     var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
     var filename = _sguGetPdfFilename(rec, tipo);
 
-    _sguToast('Generando PDF en alta resolución...', 'bi-hourglass-split');
+    _sguToast('Abriendo generador PDF Vectorial HD...', 'bi-file-earmark-pdf');
 
     try {
         var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
@@ -2625,17 +2614,9 @@ window._sguGenerarPDF = async function(tipo) {
             htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
         }
 
-        var pdfBlob = await _sguRenderPdfFromTemplate(htmlFinal, filename);
-        var fileUrl = URL.createObjectURL(pdfBlob);
-        var a = document.createElement('a');
-        a.href = fileUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        _sguToast('PDF descargado: ' + filename, 'bi-check-circle');
+        _sguAbrirVentanaImpresion(htmlFinal, filename, 'Checklist ' + rec.placa_tracto + ' (' + tipo.toUpperCase() + ')', true);
     } catch(err) {
-        console.error('Error al descargar PDF:', err);
+        console.error('Error al generar PDF:', err);
         _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
     }
 };
@@ -2645,7 +2626,7 @@ window._sguGenerarPDFCompleto = async function() {
     var rec = window._sguCurrentRecord;
     var filename = _sguGetPdfFilename(rec, 'completo');
 
-    _sguToast('Generando Expediente en alta resolución...', 'bi-hourglass-split');
+    _sguToast('Abriendo generador Expediente Vectorial HD...', 'bi-file-earmark-pdf');
 
     try {
         var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
@@ -2671,15 +2652,7 @@ window._sguGenerarPDFCompleto = async function() {
             htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
         }
 
-        var pdfBlob = await _sguRenderPdfFromTemplate(htmlFinal, filename);
-        var fileUrl = URL.createObjectURL(pdfBlob);
-        var a = document.createElement('a');
-        a.href = fileUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        _sguToast('Expediente descargado: ' + filename, 'bi-check-circle');
+        _sguAbrirVentanaImpresion(htmlFinal, filename, 'Expediente Completo ' + rec.placa_tracto, true);
     } catch(err) {
         console.error('Error al generar Expediente:', err);
         _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
