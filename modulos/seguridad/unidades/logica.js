@@ -2488,7 +2488,7 @@ function _sguAbrirVentanaImpresion(htmlBody, filename, titulo) {
         + htmlBody
         + '\n  </div>\n'
         + '  <aside class="no-print mt-3 text-center text-[10px] text-slate-400">\n'
-        + '    Marsisa Logistics & Fleet Safety Platform • Documento digital de control vehicular 2026\n'
+        + '    Azkell Fleet • Documento digital de control vehicular 2026\n'
         + '  </aside>\n'
         + '<script>\n'
         + 'function descargarDoc() {\n'
