@@ -4,8 +4,8 @@
   "description": "Sistema de Gestión de Flota y Mantenimiento",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1e293b",
-  "theme_color": "#facc15",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "orientation": "portrait",
   "icons": [
     {

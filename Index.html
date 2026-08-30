@@ -17,7 +17,7 @@
             originalWarn.apply(console, args);
         };
     </script>
-    <meta name="theme-color" content="#1e293b">
+    <meta name="theme-color" content="#ffffff">
     <link rel="icon" href="/favicon-2003.png" type="image/png">
     <script>
         if ('serviceWorker' in navigator) {
@@ -721,7 +721,7 @@
         <a class="bottom-nav-item" id="bnav-directorio" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetDirectorio">
             <i class="bi bi-person-lines-fill"></i><span>Directorio</span>
         </a>
-        <a class="bottom-nav-item" id="bnav-config" onclick="cargarModuloAislado('sistema/ajustes'); setBottomNavActive('bnav-config')">
+        <a class="bottom-nav-item" id="bnav-config" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetConfiguracion">
             <i class="bi bi-gear-fill"></i><span>Ajustes</span>
         </a>
     </nav>
@@ -1143,6 +1143,8 @@
                 </div>
             </div>
         </div>
+    </div>
+
     <!-- Gerencia -->
     <div class="offcanvas offcanvas-bottom bnav-sheet h-auto" tabindex="-1" id="bnavSheetGerencia">
         <div class="bnav-sheet-header">
