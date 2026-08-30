@@ -1362,8 +1362,8 @@ window.descargarPlantillaPlacas = async function() {
             return;
         }
         const ws_data = [
-            ['PLACA', 'CLIENTE', 'RUC/DNI', 'MARCA', 'MODELO', 'TIPO', 'SUB TIPO', 'COLOR', 'NRO MOTOR', 'NRO CAJA', 'NRO CORONA', 'NRO VIN', 'CONFIGURACIÓN', 'Tanque 1', 'Tanque 2', 'Tanque 3', 'AÑO', 'COMBUSTIBLE', 'TARA', 'CARGA ÚTIL', 'PESO NETO', 'PESO BRUTO', 'ESTADO', 'UTS', 'MOTORA', 'LLANTAS', 'EN USO'],
-            ['ABC-123', 'EMPRESA EJEMPLO SAC', '20123456789', 'VOLVO', 'FH 460', 'CAMION', 'FURGON', 'BLANCO', 'MOT-999', 'CAJ-888', 'COR-777', 'VIN-555', '6X4', '100', '80', '50', '2024', 'DIESEL', '7.5', '30.5', '8.2', '38.7', 'Activa', 'NACIONAL', 'Motora', '10', 'Si']
+            ['PLACA', 'CLIENTE', 'RUC/DNI', 'MARCA', 'MODELO', 'MODELO MOTOR', 'TIPO', 'SUB TIPO', 'COLOR', 'NRO MOTOR', 'NRO CAJA', 'NRO CORONA', 'NRO VIN', 'CONFIGURACIÓN', 'Tanque 1', 'Tanque 2', 'Tanque 3', 'AÑO', 'COMBUSTIBLE', 'TARA', 'CARGA ÚTIL', 'PESO NETO', 'PESO BRUTO', 'ESTADO', 'UTS', 'MOTORA', 'LLANTAS', 'EN USO'],
+            ['ABC-123', 'EMPRESA EJEMPLO SAC', '20123456789', 'VOLVO', 'FH 460', 'D13', 'CAMION', 'FURGON', 'BLANCO', 'MOT-999', 'CAJ-888', 'COR-777', 'VIN-555', '6X4', '100', '80', '50', '2024', 'DIESEL', '7.5', '30.5', '8.2', '38.7', 'Activa', 'NACIONAL', 'Motora', '10', 'Si']
         ];
         const ws = XLSX.utils.aoa_to_sheet(ws_data);
         const wb = XLSX.utils.book_new();
