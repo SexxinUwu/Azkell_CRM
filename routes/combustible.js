@@ -933,26 +933,26 @@ module.exports = function (db, broadcast, logAudit) {
             const tdb = getDb(req);
             const { combustible, placa, search, fecha_desde, fecha_hasta } = req.query;
 
-            const whereClauses = ["estado != 'ANULADO'"];
+            const whereClauses = ["cv.estado != 'ANULADO'"];
             const params = [];
 
             if (placa && placa !== 'ALL') {
-                whereClauses.push("vehiculo = ?");
+                whereClauses.push("cv.vehiculo = ?");
                 params.push(placa.toUpperCase().trim());
             }
 
             if (combustible && combustible !== 'ALL') {
-                whereClauses.push("tipo_combustible = ?");
+                whereClauses.push("cv.tipo_combustible = ?");
                 params.push(combustible.trim());
             }
 
             if (fecha_desde) {
-                whereClauses.push("fecha >= ?");
+                whereClauses.push("cv.fecha >= ?");
                 params.push(`${fecha_desde} 00:00:00`);
             }
 
             if (fecha_hasta) {
-                whereClauses.push("fecha <= ?");
+                whereClauses.push("cv.fecha <= ?");
                 params.push(`${fecha_hasta} 23:59:59`);
             }
 
@@ -963,7 +963,7 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             const whereSQL = whereClauses.length > 0 
-                ? `WHERE ${whereClauses.map(w => w.replace(/^(\w+)/, 'cv.$1')).join(' AND ')}` 
+                ? `WHERE ${whereClauses.join(' AND ')}` 
                 : '';
 
             const [rows] = await tdb.query(
@@ -985,7 +985,7 @@ module.exports = function (db, broadcast, logAudit) {
                         OR ov.viaje LIKE CONCAT('%', cv.viaje)
                     )
                 )
-                ${whereSQL.replace(/(\b)(viaje|vehiculo|ruta|conductor|fecha|tipo_combustible|estado)(\b)/g, 'cv.$2')} 
+                ${whereSQL} 
                 ORDER BY cv.fecha ASC, cv.id ASC`,
                 params
             );
