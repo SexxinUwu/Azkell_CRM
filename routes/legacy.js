@@ -57,14 +57,14 @@ router.post('/importarPlacasMasivo', async (req, res) => {
 
     const query = `
         INSERT INTO placas (
-            placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color,
+            placa, cliente, ruc_dni, marca, modelo_uts, modelo_motor, tipo, sub_tipo, color,
             nro_motor, nro_caja, nro_corona, nro_vin, configuracion,
             tanque_1, tanque_2, tanque_3, capacidad_tanque,
             anio, combustible, tara, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso
         ) VALUES ?
         ON DUPLICATE KEY UPDATE
             cliente=VALUES(cliente), ruc_dni=VALUES(ruc_dni), marca=VALUES(marca),
-            modelo_uts=VALUES(modelo_uts), tipo=VALUES(tipo), sub_tipo=VALUES(sub_tipo),
+            modelo_uts=VALUES(modelo_uts), modelo_motor=VALUES(modelo_motor), tipo=VALUES(tipo), sub_tipo=VALUES(sub_tipo),
             color=VALUES(color), nro_motor=VALUES(nro_motor), nro_caja=VALUES(nro_caja),
             nro_corona=VALUES(nro_corona), nro_vin=VALUES(nro_vin), configuracion=VALUES(configuracion),
             tanque_1=VALUES(tanque_1), tanque_2=VALUES(tanque_2), tanque_3=VALUES(tanque_3), capacidad_tanque=VALUES(capacidad_tanque),
@@ -102,6 +102,7 @@ router.post('/importarPlacasMasivo', async (req, res) => {
                     r.ruc_dni || r['RUC / DNI'] || r['RUC/DNI'] || r.RUC_DNI || '',
                     r.marca || r.MARCA || '',
                     r.modelo_uts || r['MODELO UTS'] || r.MODELO_UTS || r.modelo || r.MODELO || '',
+                    r.modelo_motor || r['MODELO MOTOR'] || r['MODELO DE MOTOR'] || r['Modelo Motor'] || r.motor || r.MOTOR || '',
                     r.tipo || r.TIPO || '',
                     r.sub_tipo || r['SUB TIPO'] || r.SUB_TIPO || '',
                     r.color || r.COLOR || '',
