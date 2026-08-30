@@ -278,16 +278,25 @@ const el = document.getElementById('id');
 if (el) { el.style.display = 'none'; }
 ```
 
+## 13. Pendientes del ERP
+
+### 📌 Pendientes Operativos y de Desarrollo
+- [ ] **Almacén / Inventario**: Completar endpoints de transacciones y Kardex en tiempo real.
+- [ ] **Operaciones**: Flujo integral de asignación de viajes, tracto y carreta con verificación técnica.
+- [ ] **Auditoría Global**: Consolidar endpoint `obtenerDatosAuditoria` para tracking en vivo en `server.js`.
+- [ ] **Limpieza de Scripts Raíz**: Mover utilitarios temporales `fix_*.js`, `patch.js` y `alter_*.js` a la carpeta `scripts/`.
+- [ ] **Estandarización de Storage**: Asegurar uso exclusivo de claves `fleet_*` eliminando residuos `crm_*`.
+
 ---
 
-## 13. Pending Issues (Crítico)
-
-- [ ] **DB_PORT missing** — `.env` no tiene `DB_PORT`, resulta en `NaN` en pool MySQL
-- [ ] **API keys hardcoded** — Gemini y Wialon en `server.js` (usar `.env`)
-- [ ] **toggleBulkBtn** — función no definida en ningún lado (buscar referencias)
-- [ ] **Almacén/Inventario** — módulo estructurado pero sin endpoints backend
-- [ ] **obtenerDatosAuditoria** — endpoint falta en `server.js`
-- [ ] **localStorage crm_* keys** — 4 módulos aún usan `crm_correo` en lugar de `fleet_*`
+### 🌙 Revisar Fuera de Horario (Ciberseguridad & Arquitectura Apple / Google Tier)
+- [ ] **Migración a Cookies HttpOnly (Protección XSS)**: Reemplazar el almacenamiento de JWT en `localStorage` por Cookies `HttpOnly`, `Secure` y `SameSite=Strict`.
+- [ ] **Blindaje de Headers con Helmet**: Instalar y configurar `helmet` con políticas estrictas de CSP (Content-Security-Policy), HSTS y `X-Frame-Options: DENY`.
+- [ ] **Cierre de Endpoints Públicos Sensibles**: Blindar o retirar rutas expuestas sin autenticación en `server.js` (`/seguridad/limpiar-plantillas`, `/test-s3`, etc.).
+- [ ] **Eliminación de Fallbacks JWT Inseguros**: Exigir `process.env.JWT_SECRET` estricto en el arranque del servidor sin valores por defecto en texto plano.
+- [ ] **Desacople de CDNs Externas (Tailwind / Scripts)**: Empaquetar utilidades de reporte de OT e Inspecciones de forma local/offline sin invocar `cdn.tailwindcss.com`.
+- [ ] **Autenticación 2FA / WebAuthn**: Diseñar soporte para segundo factor de autenticación (TOTP / Google Authenticator / Biometría) para roles de Administrador y Gerencia.
+- [ ] **Registro de Auditoría Criptográfica (Audit Trail)**: Implementar tabla `log_auditoria` inmutable para registrar modificaciones críticas (quién, cuándo, IP, estado anterior y nuevo).
 
 ---
 
@@ -297,11 +306,12 @@ if (el) { el.style.display = 'none'; }
 2. **Instalar deps:** `npm install`
 3. **Crear `.env`:**
    ```
-   DB_HOST=your-aiven-host
-   DB_USER=default
-   DB_PASS=password
-   DB_PORT=12345
+   DB_HOST=tu-vps-ip-o-dominio
+   DB_USER=usuario_mysql
+   DB_PASS=password_seguro
+   DB_PORT=3306
    DB_NAME=azkell_fleet
+   JWT_SECRET=tu_clave_secreta_jwt_fuerte
    GEMINI_API_KEY=xxx
    WIALON_TOKEN=xxx
    ```
