@@ -17,12 +17,14 @@ window.initGraficoDashFleetrun = function() {
     let ctx = document.getElementById('chartDashFleetrunStatus');
     if (!ctx) return null;
     if (window.chartDashFleetrunInst) {
-        window.chartDashFleetrunInst.destroy();
+        try { window.chartDashFleetrunInst.destroy(); } catch(e){}
         window.chartDashFleetrunInst = null;
     }
     Chart.defaults.font.family = 'Inter';
+    const plugins = (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [];
     return new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
+        plugins: plugins,
         data: {
             labels: ['Vigentes', 'Por Vencer', 'Vencidos'],
             datasets: [{
@@ -39,15 +41,17 @@ window.initGraficoDashFleetrun = function() {
                 legend: { position: 'right', labels: { font: { weight: 'bold', size: 11 }, boxWidth: 12, padding: 8 } },
                 datalabels: {
                     display: function(ctx) {
+                        if (!ctx || !ctx.chart || !ctx.chart.data || !ctx.chart.data.datasets || !ctx.chart.data.datasets[0]) return false;
                         var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
-                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return false;
+                        if (!total || (ctx.chart.data.labels && ctx.chart.data.labels[0]==='Sin Datos')) return false;
                         return (ctx.dataset.data[ctx.dataIndex] / total) >= 0.06;
                     },
                     color: '#ffffff',
                     font: { weight: 'bold', size: 11, family: 'Inter' },
                     formatter: function(value, ctx) {
+                        if (!ctx || !ctx.chart || !ctx.chart.data || !ctx.chart.data.datasets || !ctx.chart.data.datasets[0]) return '';
                         var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
-                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return '';
+                        if (!total || (ctx.chart.data.labels && ctx.chart.data.labels[0]==='Sin Datos')) return '';
                         return Math.round(value/total*100)+'%';
                     },
                     anchor: 'center', align: 'center'
@@ -229,11 +233,13 @@ window.initGraficoInspDash = function() {
     let ctx = document.getElementById('chartGeneralInspecciones');
     if (!ctx) return null;
     if (window.chartInspDashInst) {
-        window.chartInspDashInst.destroy();
+        try { window.chartInspDashInst.destroy(); } catch(e){}
         window.chartInspDashInst = null;
     }
+    const plugins = (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [];
     return new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
+        plugins: plugins,
         data: {
             labels: ['Vigentes', 'Vencidas'],
             datasets: [{
@@ -250,15 +256,17 @@ window.initGraficoInspDash = function() {
                 legend: { position: 'right', labels: { font: { weight: 'bold', size: 11 }, boxWidth: 12, padding: 8 } },
                 datalabels: {
                     display: function(ctx) {
+                        if (!ctx || !ctx.chart || !ctx.chart.data || !ctx.chart.data.datasets || !ctx.chart.data.datasets[0]) return false;
                         var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
-                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return false;
+                        if (!total || (ctx.chart.data.labels && ctx.chart.data.labels[0]==='Sin Datos')) return false;
                         return (ctx.dataset.data[ctx.dataIndex] / total) >= 0.06;
                     },
                     color: '#ffffff',
                     font: { weight: 'bold', size: 11 },
                     formatter: function(value, ctx) {
+                        if (!ctx || !ctx.chart || !ctx.chart.data || !ctx.chart.data.datasets || !ctx.chart.data.datasets[0]) return '';
                         var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
-                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return '';
+                        if (!total || (ctx.chart.data.labels && ctx.chart.data.labels[0]==='Sin Datos')) return '';
                         return Math.round(value/total*100)+'%';
                     },
                     anchor: 'center', align: 'center'
