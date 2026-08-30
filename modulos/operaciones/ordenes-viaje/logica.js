@@ -149,7 +149,7 @@ window.ovRenderizarTabla = function() {
     if (pageItems.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center py-5 text-secondary">
+                <td colspan="8" class="text-center py-5 text-secondary">
                     <i class="bi bi-search fs-3 d-block mb-2 text-muted"></i>
                     <div class="fw-bold">No se encontraron órdenes de viaje</div>
                     <small class="text-muted">Intenta ajustando los filtros de búsqueda o haz clic en "Sincronizar Órdenes de Viaje".</small>
@@ -175,6 +175,11 @@ window.ovRenderizarTabla = function() {
             ? `<span class="ov-badge-ruta"><i class="bi bi-signpost-2-fill text-primary me-1"></i>${v.ruta}</span>`
             : `<span class="text-muted small fst-italic">Sin ruta asignada</span>`;
 
+        var pesoVal = parseFloat(v.peso) || 0;
+        var pesoHtml = pesoVal > 0
+            ? `<span class="badge bg-light text-dark border border-secondary-subtle font-monospace px-2 py-1" style="font-size:0.82rem; font-weight:600;"><i class="bi bi-box-seam me-1 text-secondary"></i>${pesoVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</span>`
+            : `<span class="text-muted small fst-italic">—</span>`;
+
         html += `
             <tr>
                 <td>
@@ -199,6 +204,9 @@ window.ovRenderizarTabla = function() {
                 </td>
                 <td>
                     ${rutaHtml}
+                </td>
+                <td style="text-align: right;">
+                    ${pesoHtml}
                 </td>
                 <td style="text-align: center;">
                     <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size:0.72rem; font-weight:700;">ACTIVO</span>

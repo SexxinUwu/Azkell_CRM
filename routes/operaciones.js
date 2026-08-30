@@ -40,6 +40,7 @@ module.exports = function (db, broadcast, logAudit) {
         conductor VARCHAR(150) NOT NULL DEFAULT '',
         placa_tracto VARCHAR(20) NOT NULL DEFAULT '',
         placa_remolque VARCHAR(20) NULL,
+        peso DECIMAL(12,2) NULL DEFAULT 0.00,
         ruta VARCHAR(255) NULL,
         origen VARCHAR(100) NULL,
         destino VARCHAR(100) NULL,
@@ -60,6 +61,10 @@ module.exports = function (db, broadcast, logAudit) {
             const tdb = getDb(req);
             if (!tdb) return;
             await tdb.query(TABLE_SQL);
+            // Asegurar que exista la columna peso en tablas ya creadas
+            try {
+                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN peso DECIMAL(12,2) NULL DEFAULT 0.00 AFTER placa_remolque");
+            } catch (ignore) {}
             _tenantsInitSet.add(tenantId);
         } catch (err) {
             console.error('Error asegurando tabla operaciones_ordenes_viaje:', err);
@@ -142,7 +147,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             const remoteDb = getRemoteDb();
 
-            // Extraer viajes desde la BD remota con sus rutas agrupadas
+            // Extraer viajes desde la BD remota con sus rutas y peso directo de la vista vw_combustible_orden_viaje
             const queryRemota = `
                 SELECT 
                     ov.id_viaje,
@@ -152,7 +157,8 @@ module.exports = function (db, broadcast, logAudit) {
                     ov.conductor,
                     ov.placa_vehiculo AS placa_tracto,
                     ov.placa_remolque,
-                    COALESCE(vales.ruta, '') AS ruta
+                    COALESCE(ov.peso_total, 0) AS peso,
+                    COALESCE(NULLIF(ov.viaje_rutas, ''), vales.ruta, '') AS ruta
                 FROM vw_combustible_orden_viaje ov
                 LEFT JOIN (
                     SELECT viaje_numero, MAX(viaje_rutas) AS ruta
@@ -185,9 +191,10 @@ module.exports = function (db, broadcast, logAudit) {
                     const placaT = String(v.placa_tracto || '').trim().toUpperCase();
                     const placaR = v.placa_remolque ? String(v.placa_remolque).trim().toUpperCase() : null;
                     const cond = String(v.conductor || '').trim().toUpperCase();
+                    const peso = parseFloat(v.peso) || 0;
                     const ruta = String(v.ruta || '').trim();
 
-                    placeholders.push('(?, ?, ?, ?, ?, ?, ?, ?)');
+                    placeholders.push('(?, ?, ?, ?, ?, ?, ?, ?, ?)');
                     values.push(
                         v.id_viaje || null,
                         viajeStr,
@@ -196,6 +203,7 @@ module.exports = function (db, broadcast, logAudit) {
                         cond,
                         placaT,
                         placaR,
+                        peso,
                         ruta
                     );
                 }
@@ -204,7 +212,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                 const batchSql = `
                     INSERT INTO operaciones_ordenes_viaje 
-                        (id_remoto, viaje, fecha_viaje, id_conductor, conductor, placa_tracto, placa_remolque, ruta)
+                        (id_remoto, viaje, fecha_viaje, id_conductor, conductor, placa_tracto, placa_remolque, peso, ruta)
                     VALUES ${placeholders.join(', ')}
                     ON DUPLICATE KEY UPDATE
                         id_remoto = VALUES(id_remoto),
@@ -213,6 +221,7 @@ module.exports = function (db, broadcast, logAudit) {
                         conductor = VALUES(conductor),
                         placa_tracto = VALUES(placa_tracto),
                         placa_remolque = VALUES(placa_remolque),
+                        peso = VALUES(peso),
                         ruta = CASE WHEN VALUES(ruta) != '' THEN VALUES(ruta) ELSE ruta END
                 `;
 
