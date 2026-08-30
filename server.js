@@ -1253,14 +1253,15 @@ app.get('/api/ping', (req, res) => {
 // ============================================================
 app.post('/api/login', (req, res) => {
     const { correo, password } = req.body;
+    const loginInput = (correo || '').trim();
     const sql = `
         SELECT u.*, r.permisos_json AS rol_permisos, r.nombre AS rol_nombre,
                r.color AS rol_color, r.es_admin AS rol_es_admin, r.id AS rol_id_fk
         FROM usuarios u
         LEFT JOIN roles r ON u.rol_id = r.id
-        WHERE u.correo = ?`;
+        WHERE LOWER(TRIM(u.correo)) = LOWER(?) OR u.idUsuario = ? OR u.telefono = ?`;
 
-    db.query(sql, [correo], async (err, results) => {
+    db.query(sql, [loginInput, loginInput, loginInput], async (err, results) => {
         if (err) {
             console.error("🚨 FALLO EN LOGIN SQL:", err.message);
             return res.status(500).json({ exito: false, mensaje: "Error BD: " + err.code });
@@ -1278,12 +1279,12 @@ app.post('/api/login', (req, res) => {
                 passwordValida = (usuario.password === password);
                 if (passwordValida) {
                     const hashed = await bcrypt.hash(password, 10);
-                    db.query('UPDATE usuarios SET password=? WHERE correo=?', [hashed, correo]);
+                    db.query('UPDATE usuarios SET password=? WHERE idUsuario=?', [hashed, usuario.idUsuario]);
                 }
             }
 
             if (passwordValida) {
-                if (usuario.estado === 'Inactivo' && correo.toLowerCase() !== 'admin@azkell.com') {
+                if (usuario.estado === 'Inactivo' && loginInput.toLowerCase() !== 'admin@azkell.com') {
                     return res.json({ exito: false, mensaje: "Cuenta inactiva." });
                 }
 
@@ -1292,7 +1293,7 @@ app.post('/api/login', (req, res) => {
 
                 let esAdminRol = (usuario.rol && usuario.rol.toLowerCase().includes('admin')) || usuario.rol_es_admin;
 
-                if (correo.toLowerCase() === 'admin@azkell.com') {
+                if (loginInput.toLowerCase() === 'admin@azkell.com' || (usuario.correo && usuario.correo.toLowerCase() === 'admin@azkell.com')) {
                     permisosFinales = JSON.stringify({ admin: true });
                     rolFinal = "Fundador";
                 } else if (esAdminRol) {
@@ -1320,8 +1321,8 @@ app.post('/api/login', (req, res) => {
                 else if (/Edg/i.test(ua)) dispositivo = 'Edge (PC)';
 
                 db.query(
-                    'UPDATE usuarios SET ultimo_acceso=NOW(), ultimo_ip=?, ultimo_dispositivo=? WHERE correo=?',
-                    [ip, dispositivo, correo],
+                    'UPDATE usuarios SET ultimo_acceso=NOW(), ultimo_ip=?, ultimo_dispositivo=? WHERE idUsuario=?',
+                    [ip, dispositivo, usuario.idUsuario],
                     (err) => { if (err) console.warn('UPDATE sesion:', err.message); }
                 );
 
