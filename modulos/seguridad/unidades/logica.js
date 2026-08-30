@@ -2625,43 +2625,21 @@ window._sguCompartirWhatsApp = async function(tipo) {
         var pdfBlob = await html2pdf().set(opt).from(div).outputPdf('blob');
         var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-        var hasAlertRec = tipo === 'salida' ? rec.salida_has_alert : (tipo === 'retorno' ? rec.retorno_has_alert : (rec.salida_has_alert || rec.retorno_has_alert));
-        var estadoEmoji = hasAlertRec ? '⚠️ *CON OBSERVACIONES*' : '✅ *CONFORME*';
-        var obsRaw = (tipo === 'salida' ? rec.salida_observaciones : (rec.retorno_observaciones || rec.salida_observaciones)) || '';
-        var obsTextFmt = obsRaw.trim() ? obsRaw.trim().toUpperCase() : 'SIN OBSERVACIONES';
-
-        var textoMensaje = '📋 *CHECKLIST DE INSPECCIÓN VEHICULAR - MARSISA*\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━━\n' +
-            '📑 *Expediente:* ' + rec.id + '\n' +
-            '🔍 *Fase:* ' + faseStr + '\n' +
-            '📅 *Fecha / Hora:* ' + fechaStr + ' ' + (tipo === 'retorno' ? (rec.retorno_hora || '') : (rec.salida_hora || '')) + '\n' +
-            '🚛 *Tracto:* ' + (rec.placa_tracto || '---') + '\n' +
-            '🗂️ *Carreta:* ' + (rec.placa_carreta || '---') + '\n' +
-            '👤 *Conductor:* ' + (rec.conductor || '---') + '\n' +
-            '📍 *Destino:* ' + (rec.destino || '---') + '\n' +
-            '🛣️ *Kilometraje:* ' + (kmStr ? Number(kmStr).toLocaleString() + ' KM' : '---') + '\n' +
-            '🚦 *Estado:* ' + estadoEmoji + '\n' +
-            '📝 *Observaciones:* ' + obsTextFmt + '\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━━\n' +
-            '📄 _Reporte digital oficial adjunto._';
-
-        // Intento 1: Web Share API nativo si el gesto sigue activo
+        // Intento 1: Web Share API nativo si el navegador soporta compartir archivos directamente
         if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
             try {
                 await navigator.share({
                     files: [pdfFile],
-                    title: filename,
-                    text: textoMensaje
+                    title: filename
                 });
                 _sguToast('Compartido con éxito');
                 return;
             } catch(eShare) {
-                // Si el token de gesto expiró o el usuario canceló, usamos el fallback garantizado
                 console.log('Share nativo declinado o expirado, ejecutando descarga + WhatsApp:', eShare);
             }
         }
 
-        // Intento 2 (Garantizado): Descarga automática del PDF + Apertura de WhatsApp
+        // Intento 2: Descarga directa del archivo PDF y apertura de WhatsApp
         var fileUrl = URL.createObjectURL(pdfBlob);
         var a = document.createElement('a');
         a.href = fileUrl;
@@ -2670,8 +2648,7 @@ window._sguCompartirWhatsApp = async function(tipo) {
         a.click();
         document.body.removeChild(a);
 
-        var waUrl = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(textoMensaje);
-        window.open(waUrl, '_blank');
+        window.open('https://api.whatsapp.com/send', '_blank');
         _sguToast('PDF descargado: ' + filename + ' y WhatsApp abierto.');
     } catch(err) {
         console.error('Error al compartir WhatsApp:', err);
