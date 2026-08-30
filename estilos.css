@@ -3649,4 +3649,15 @@ html, body { width: 100vw !important; max-width: 100vw !important; margin: 0 !im
     transition: opacity 0.18s cubic-bezier(0, 0, 0.2, 1) !important;
 }
 
+/* Oscurecimiento profundo y rápido para enfocar la alerta de inactividad sin blur/lag */
+body:has(#modal-sesion-expirada.show) .modal-backdrop.show,
+.modal-backdrop.sesion-inactividad-backdrop {
+    background: rgba(2, 6, 23, 0.82) !important;
+    opacity: 1 !important;
+}
+
+#modal-sesion-expirada {
+    background: rgba(2, 6, 23, 0.72) !important;
+}
+
 
