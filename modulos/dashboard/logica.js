@@ -2,6 +2,9 @@
 // 📊 DASHBOARD MODULE — Módulo Aislado SPA
 // ============================================================
 
+function normalizeStr(str) { return str ? str.toString().trim().toUpperCase() : ""; }
+window.normalizeStr = normalizeStr;
+
 // 🔥 VARIABLES GLOBALES (patrón window para evitar crash en F5)
 window.chartDashFleetrunInst = window.chartDashFleetrunInst || null;
 window.chartInspDashInst     = window.chartInspDashInst     || null;
@@ -20,11 +23,11 @@ window.initGraficoDashFleetrun = function() {
         try { window.chartDashFleetrunInst.destroy(); } catch(e){}
         window.chartDashFleetrunInst = null;
     }
-    Chart.defaults.font.family = 'Inter';
-    const plugins = (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [];
+    if (typeof Chart !== 'undefined' && Chart.defaults && Chart.defaults.font) {
+        Chart.defaults.font.family = 'Inter';
+    }
     return new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
-        plugins: plugins,
         data: {
             labels: ['Vigentes', 'Por Vencer', 'Vencidos'],
             datasets: [{
@@ -65,8 +68,12 @@ window.updateGraficoDashFleetrun = function(vigentes, porVencer, vencidos) {
     if (!window.chartDashFleetrunInst) window.chartDashFleetrunInst = initGraficoDashFleetrun();
     if (!window.chartDashFleetrunInst) return;
     let isDark = document.body.classList.contains('dark');
-    window.chartDashFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
-    window.chartDashFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
+    if (window.chartDashFleetrunInst.options?.plugins?.legend?.labels) {
+        window.chartDashFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
+    }
+    if (window.chartDashFleetrunInst.data?.datasets?.[0]) {
+        window.chartDashFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
+    }
     if (vigentes + porVencer + vencidos === 0) {
         window.chartDashFleetrunInst.data.labels = ['Sin Datos'];
         window.chartDashFleetrunInst.data.datasets[0].data = [1];
@@ -80,7 +87,7 @@ window.updateGraficoDashFleetrun = function(vigentes, porVencer, vencidos) {
         window.chartDashFleetrunInst.data.datasets[0].data = [vigentes, porVencer, vencidos];
         window.chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#16a34a', '#eab308', '#dc2626'];
     }
-    window.chartDashFleetrunInst.update();
+    try { window.chartDashFleetrunInst.update(); } catch(e){ console.warn('Error actualizando gráfico fleetrun:', e); }
 };
 
 window.procesarFleetrunParaDashboard = async function() {
@@ -236,10 +243,8 @@ window.initGraficoInspDash = function() {
         try { window.chartInspDashInst.destroy(); } catch(e){}
         window.chartInspDashInst = null;
     }
-    const plugins = (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [];
     return new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
-        plugins: plugins,
         data: {
             labels: ['Vigentes', 'Vencidas'],
             datasets: [{
@@ -400,10 +405,16 @@ window.procesarInspeccionesParaDashboard = async function() {
         window.chartInspDashInst.data.datasets[0].data = [vigentes, vencidas];
         window.chartInspDashInst.data.datasets[0].backgroundColor = ['#16a34a', '#dc2626'];
     }
-    window.chartInspDashInst.options.plugins.datalabels.color = isDark ? '#ffffff' : '#000000';
-    window.chartInspDashInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
-    window.chartInspDashInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
-    window.chartInspDashInst.update();
+    if (window.chartInspDashInst.options?.plugins?.datalabels) {
+        window.chartInspDashInst.options.plugins.datalabels.color = isDark ? '#ffffff' : '#000000';
+    }
+    if (window.chartInspDashInst.options?.plugins?.legend?.labels) {
+        window.chartInspDashInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
+    }
+    if (window.chartInspDashInst.data?.datasets?.[0]) {
+        window.chartInspDashInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
+    }
+    try { window.chartInspDashInst.update(); } catch(e) { console.warn('Error actualizando gráfico inspecciones:', e); }
 
     // Calcular vencimientos AQUÍ — los datos ya están en window.dataGlobalInspecciones
     if (typeof window.calcularPrediccionVencimientos === 'function') window.calcularPrediccionVencimientos();
@@ -855,9 +866,11 @@ window._initDashboardReal = function(retries) {
     cargarWidgetClima();
 
     // Cargar datos con pequeño delay para que el DOM esté pintado
-    setTimeout(() => {
+    setTimeout(async () => {
+        await window.obtenerPlacasGlobales();
+        await window.obtenerInspeccionesGlobales();
         recargarDashboard();
-    }, 150);
+    }, 100);
 };
 
 // ============================================================
