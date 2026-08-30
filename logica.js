@@ -102,7 +102,10 @@ const google = {
 //  JS_Logica.html — Azkell CRM (Fase Final: Caché + API Wialon)
 // ============================================================
 
-let usuarioLogueado   = ''; let rolLogueado       = ''; let permisosUsuario = {}; const TIEMPO_INACTIVIDAD = 30 * 60 * 1000;
+let usuarioLogueado   = ''; let rolLogueado       = ''; let permisosUsuario = {}; 
+const TIEMPO_ALERTA_INACTIVIDAD = 5 * 60 * 1000; // 5 minutos de inactividad para mostrar alerta
+const TIEMPO_MAX_INACTIVIDAD    = 10 * 60 * 1000; // 10 minutos de inactividad total para cerrar sesión
+const TIEMPO_INACTIVIDAD        = TIEMPO_MAX_INACTIVIDAD; // Compatibilidad retroactiva
 let itemAEliminarID   = ''; let itemAEliminarCol  = ''; let tooltipList       = []; 
 
 // 🔥 SISTEMA DE CACHÉ EN MEMORIA
@@ -131,7 +134,7 @@ window.verificarSesionGuardada = function() {
     const guardadoRol      = localStorage.getItem('fleet_rol');
     const guardadoToken    = localStorage.getItem('fleet_token');
 
-    if (!guardadoUser || !guardadoTime || !guardadoToken || Date.now() - parseInt(guardadoTime) >= TIEMPO_INACTIVIDAD) {
+    if (!guardadoUser || !guardadoTime || !guardadoToken || Date.now() - parseInt(guardadoTime) >= TIEMPO_MAX_INACTIVIDAD) {
         cargarModuloAislado('login');
         return;
     }
@@ -2210,15 +2213,77 @@ window.restoreNavSections = function() {
 function closeSidebar() { document.getElementById('sidebarMenu').classList.remove('mobile-open'); document.getElementById('sidebarBackdrop').classList.remove('active'); }
 function togglePassword(inputId, btn) { const input = document.getElementById(inputId); const icon = btn.querySelector('i'); if (input.type === 'password') { input.type = 'text'; icon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill'); } else { input.type = 'password'; icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill'); } }
 function registrarActividad() { if (usuarioLogueado) localStorage.setItem('fleet_ultimo_acceso', Date.now()); }
+let intervaloCuentaRegresivaSesion = null;
+
 function verificarInactividad() {
-    if (usuarioLogueado) {
-        const ultimo = localStorage.getItem('fleet_ultimo_acceso');
-        if (ultimo && (Date.now() - parseInt(ultimo) > TIEMPO_INACTIVIDAD)) {
-            const modal = document.getElementById('modal-sesion-expirada');
-            if (modal && !document.querySelector('#modal-sesion-expirada.show')) {
-                new bootstrap.Modal(modal).show();
-            }
+    if (!usuarioLogueado) return;
+    const ultimo = localStorage.getItem('fleet_ultimo_acceso');
+    if (!ultimo) return;
+
+    const tiempoPasado = Date.now() - parseInt(ultimo);
+
+    // Si pasaron 10 minutos o más -> Cierre de sesión inmediato
+    if (tiempoPasado >= TIEMPO_MAX_INACTIVIDAD) {
+        detenerCuentaRegresivaSesion();
+        const modalEl = document.getElementById('modal-sesion-expirada');
+        if (modalEl) {
+            const bsM = bootstrap.Modal.getInstance(modalEl);
+            if (bsM) bsM.hide();
         }
+        cerrarSesion();
+        return;
+    }
+
+    // Si pasaron 5 minutos o más -> Mostrar alerta de inactividad
+    if (tiempoPasado >= TIEMPO_ALERTA_INACTIVIDAD) {
+        const modalEl = document.getElementById('modal-sesion-expirada');
+        if (modalEl) {
+            let bsModal = bootstrap.Modal.getInstance(modalEl);
+            if (!bsModal) {
+                bsModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+            }
+            if (!modalEl.classList.contains('show')) {
+                bsModal.show();
+            }
+            iniciarCuentaRegresivaSesion(parseInt(ultimo));
+        }
+    }
+}
+
+function iniciarCuentaRegresivaSesion(ultimoAcceso) {
+    if (intervaloCuentaRegresivaSesion) return; // Ya está corriendo
+
+    const actualizarTexto = () => {
+        const spanTimer = document.getElementById('sesion-timer-cuenta-regresiva');
+        const tiempoRestanteMs = TIEMPO_MAX_INACTIVIDAD - (Date.now() - ultimoAcceso);
+
+        if (tiempoRestanteMs <= 0) {
+            detenerCuentaRegresivaSesion();
+            const modalEl = document.getElementById('modal-sesion-expirada');
+            if (modalEl) {
+                const bsM = bootstrap.Modal.getInstance(modalEl);
+                if (bsM) bsM.hide();
+            }
+            cerrarSesion();
+            return;
+        }
+
+        if (spanTimer) {
+            const totalSegundos = Math.max(0, Math.floor(tiempoRestanteMs / 1000));
+            const minutos = Math.floor(totalSegundos / 60);
+            const segundos = totalSegundos % 60;
+            spanTimer.textContent = `${minutos}:${segundos < 10 ? '0' : ''}${segundos}`;
+        }
+    };
+
+    actualizarTexto();
+    intervaloCuentaRegresivaSesion = setInterval(actualizarTexto, 1000);
+}
+
+function detenerCuentaRegresivaSesion() {
+    if (intervaloCuentaRegresivaSesion) {
+        clearInterval(intervaloCuentaRegresivaSesion);
+        intervaloCuentaRegresivaSesion = null;
     }
 }
 function badgeRol(rol) { const clases = { 'Administrador':'role-admin','Inspector':'role-inspector', 'Mantenimiento':'role-mant','Almacén':'role-alm','Almacen':'role-alm','Flota':'role-flota' }; return `<span class="role-badge ${clases[rol]||''}">${rol}</span>`; }
@@ -3469,6 +3534,7 @@ function pushReciente(ruta) {
 
 // ─── Sesión expirada — renovar ───────────────────────────────────
 window._renovarSesion = function() {
+    detenerCuentaRegresivaSesion();
     var modal = document.getElementById('modal-sesion-expirada');
     if (modal) {
         var bsM = bootstrap.Modal.getInstance(modal);
