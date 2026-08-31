@@ -117,16 +117,37 @@ module.exports = (db, logAudit) => {
         });
     });
 
-    // GET /api/perfil/sesiones
+    // GET /api/perfil/sesiones (Con limpieza automática de sesiones > 12 horas)
     router.get('/perfil/sesiones', (req, res) => {
         if (!req.user || !req.user.correo) return res.status(401).json({ error: 'No autenticado' });
         
+        // Limpieza de sesiones inactivas
+        db.query(
+            'DELETE FROM sesiones_activas WHERE TIMESTAMPDIFF(HOUR, ultima_actividad, NOW()) > 12 OR TIMESTAMPDIFF(DAY, fecha_login, NOW()) >= 1',
+            () => {}
+        );
+
         db.query(
             'SELECT id, ip, dispositivo, fecha_login, ultima_actividad, (token = ?) as actual FROM sesiones_activas WHERE usuario_correo = ? ORDER BY ultima_actividad DESC',
             [req.headers.authorization?.slice(7) || '', req.user.correo],
             (err, results) => {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json(results);
+            }
+        );
+    });
+
+    // DELETE /api/perfil/sesiones-otras (Cerrar todas las demás sesiones excepto la actual)
+    router.delete('/perfil/sesiones-otras', (req, res) => {
+        if (!req.user || !req.user.correo) return res.status(401).json({ error: 'No autenticado' });
+        const currentToken = req.headers.authorization?.slice(7) || '';
+        
+        db.query(
+            'DELETE FROM sesiones_activas WHERE usuario_correo = ? AND token != ?',
+            [req.user.correo, currentToken],
+            (err, result) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ ok: true, eliminadas: result.affectedRows });
             }
         );
     });
@@ -143,6 +164,15 @@ module.exports = (db, logAudit) => {
                 res.json({ ok: true });
             }
         );
+    });
+
+    // POST /api/auth/logout (Eliminar token de base de datos)
+    router.post('/auth/logout', (req, res) => {
+        const token = req.headers.authorization?.slice(7) || '';
+        if (token) {
+            db.query('DELETE FROM sesiones_activas WHERE token = ?', [token], () => {});
+        }
+        res.json({ ok: true });
     });
 
     return router;

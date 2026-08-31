@@ -810,6 +810,16 @@ window._cerrarEscaner = function() {
 };
 
 function cerrarSesion() {
+    var token = localStorage.getItem('fleet_token');
+    if (token) {
+        try {
+            fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                keepalive: true
+            }).catch(function(){});
+        } catch(e) {}
+    }
     if (window.cerrarSSE) window.cerrarSSE();
     window._permCache = null; // Invalidar cache de permisos
     localStorage.removeItem('fleet_user'); 
