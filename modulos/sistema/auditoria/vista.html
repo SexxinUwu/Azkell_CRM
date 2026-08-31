@@ -1,84 +1,582 @@
 <style>
-#moduloAuditoria { display:flex; flex-direction:column; height:100%; background:var(--bg); }
-.audit-header { background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; padding:10px 16px; }
-.audit-chips { background:var(--surface); border-bottom:2px solid var(--border); flex-shrink:0; padding:8px 16px; gap:6px; display:flex; flex-wrap:wrap; align-items:center; }
-.audit-chip { font-size:0.75rem; padding:3px 12px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--subtext); cursor:pointer; transition:all .15s; white-space:nowrap; }
-.audit-chip:hover { border-color:var(--crm-accent); color:var(--crm-accent); }
-.audit-chip.active { background:var(--crm-accent); border-color:var(--crm-accent); color:#fff; }
-.audit-chip.cre { border-color:#22c55e; color:#16a34a; }
-.audit-chip.cre.active { background:#22c55e; color:#fff; }
-.audit-chip.mod { border-color:#f59e0b; color:#b45309; }
-.audit-chip.mod.active { background:#f59e0b; color:#fff; }
-.audit-chip.del { border-color:#ef4444; color:#dc2626; }
-.audit-chip.del.active { background:#ef4444; color:#fff; }
-.audit-feed { flex:1 1 0; overflow-y:auto; padding:4px 0 60px; }
-.audit-day-sep { text-align:center; padding:12px 0 4px; font-size:0.72rem; color:var(--subtext); letter-spacing:1px; text-transform:uppercase; position:relative; }
-.audit-day-sep::before, .audit-day-sep::after { content:''; position:absolute; top:50%; width:calc(50% - 60px); height:1px; background:var(--border); }
-.audit-day-sep::before { left:16px; } .audit-day-sep::after { right:16px; }
-.audit-msg { display:flex; gap:12px; padding:6px 16px 4px; align-items:flex-start; transition:background .1s; }
-.audit-msg:hover { background:var(--surface); }
-.audit-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:700; color:#fff; flex-shrink:0; margin-top:2px; user-select:none; }
-.audit-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:3px; }
-.audit-name { font-size:0.85rem; font-weight:700; color:var(--text); }
-.audit-time { font-size:0.7rem; color:var(--subtext); }
-.audit-badge { font-size:0.63rem; padding:2px 7px; border-radius:10px; font-weight:700; letter-spacing:.4px; }
-.audit-badge-cre { background:rgba(34,197,94,.18); color:#16a34a; }
-.audit-badge-mod { background:rgba(245,158,11,.2); color:#b45309; }
-.audit-badge-del { background:rgba(239,68,68,.18); color:#dc2626; }
-.audit-badge-mod-name { background:rgba(99,102,241,.15); color:#6366f1; }
-.audit-detail { background:var(--surface); border-left:3px solid var(--border); border-radius:0 6px 6px 0; padding:5px 10px; font-size:0.82rem; color:var(--text); margin-top:2px; max-width:100%; word-break:break-word; }
-/* Estilos de Timeline */
-.audit-feed { flex:1 1 0; overflow-y:auto; padding:20px 20px 60px; position:relative; }
-.audit-feed::before { content:''; position:absolute; top:20px; bottom:20px; left:48px; width:2px; background:var(--border); z-index:0; }
-.audit-msg { display:flex; gap:20px; padding:0 0 24px; align-items:flex-start; position:relative; z-index:1; }
-.audit-avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:700; color:#fff; flex-shrink:0; border:4px solid var(--bg); box-shadow:0 0 0 1px var(--border); margin-left:14px; position:relative; z-index:2; }
-.audit-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px; background:var(--surface); padding:10px 14px; border-radius:12px; border:1px solid var(--border); width:100%; }
-.audit-detail { background:transparent; padding:0 14px; font-size:0.82rem; color:var(--text); word-break:break-word; border-left:2px solid var(--border); margin-left:14px; opacity:0.85; }
-.audit-content-wrapper { flex:1; min-width:0; }
-.audit-day-sep { display:inline-block; padding:6px 16px; background:var(--surface); border:1px solid var(--border); border-radius:20px; font-size:0.72rem; font-weight:bold; color:var(--text); position:relative; z-index:2; margin-left:0px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.05); text-transform:uppercase; letter-spacing:1px; }
+/* ── Estilos Principales del Módulo Auditoría ERP ── */
+#moduloAuditoria {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: var(--bg, #f8fafc);
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text, #1e293b);
+    padding: 1rem 1.25rem 2.5rem 1.25rem;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
 
+/* ── Encabezado y KPIs ── */
+.audit-top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.audit-title-area {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.audit-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #6366f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+}
+
+.audit-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+}
+
+.audit-kpi-card {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 16px;
+    padding: 0.85rem 1.15rem;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    user-select: none;
+}
+
+.audit-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.audit-kpi-card.active {
+    border-color: #6366f1;
+    background: rgba(99, 102, 241, 0.04);
+}
+
+.audit-kpi-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+/* ── Barra de Filtros y Herramientas ── */
+.audit-toolbar {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 16px 16px 0 0;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.audit-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.audit-search-input {
+    min-width: 260px;
+    max-width: 380px;
+    position: relative;
+}
+
+.audit-search-input input {
+    border-radius: 10px;
+    padding-left: 2.25rem;
+    font-size: 0.85rem;
+    height: 38px;
+    border: 1px solid var(--border, #cbd5e1);
+    background: var(--bg, #f8fafc);
+    color: var(--text, #1e293b);
+}
+
+.audit-search-input i {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--subtext, #94a3b8);
+    font-size: 0.95rem;
+}
+
+.audit-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+.audit-chip-btn {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border, #e2e8f0);
+    background: var(--surface, #ffffff);
+    color: var(--subtext, #64748b);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    user-select: none;
+}
+
+.audit-chip-btn:hover {
+    border-color: #6366f1;
+    color: #6366f1;
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.audit-chip-btn.active {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+.audit-chip-btn.cre.active { background: #16a34a; border-color: #16a34a; }
+.audit-chip-btn.mod.active { background: #d97706; border-color: #d97706; }
+.audit-chip-btn.del.active { background: #dc2626; border-color: #dc2626; }
+.audit-chip-btn.sync.active { background: #0284c7; border-color: #0284c7; }
+
+/* ── Contenedor de Tabla ERP ── */
+.audit-table-card {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 0 0 16px 16px;
+    border-top: none;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+    overflow: hidden;
+}
+
+.audit-table-responsive {
+    overflow-x: auto;
+    max-height: calc(100vh - 360px);
+    min-height: 380px;
+}
+
+.audit-table {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.85rem;
+}
+
+.audit-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--surface, #ffffff);
+}
+
+.audit-table thead th {
+    background: var(--surface, #ffffff);
+    color: var(--subtext, #64748b);
+    font-weight: 700;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 12px 14px;
+    border-bottom: 2px solid var(--border, #e2e8f0);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.audit-table tbody tr {
+    transition: background 0.12s ease;
+}
+
+.audit-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.03) !important;
+}
+
+.audit-table tbody td {
+    padding: 12px 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border, #f1f5f9);
+    color: var(--text, #1e293b);
+}
+
+/* Badges & Column Styling */
+.audit-id-badge {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: #6366f1;
+    background: rgba(99, 102, 241, 0.08);
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-block;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.audit-user-cell {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.audit-avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.audit-user-name {
+    font-weight: 600;
+    color: var(--text, #0f172a);
+    font-size: 0.83rem;
+    line-height: 1.2;
+    word-break: break-all;
+}
+
+.audit-badge-action {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.audit-badge-mod {
+    background: rgba(245, 158, 11, 0.15);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.audit-badge-cre {
+    background: rgba(34, 197, 94, 0.15);
+    color: #15803d;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.audit-badge-del {
+    background: rgba(239, 68, 68, 0.15);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.audit-badge-sync {
+    background: rgba(14, 165, 233, 0.15);
+    color: #0369a1;
+    border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.audit-badge-module {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.audit-detail-cell {
+    max-width: 480px;
+    font-size: 0.83rem;
+    color: var(--text, #334155);
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+/* Footer / Paginación */
+.audit-table-footer {
+    padding: 10px 16px;
+    background: var(--surface, #ffffff);
+    border-top: 1px solid var(--border, #e2e8f0);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--subtext, #64748b);
+}
+
+/* Modal Detalle */
+.audit-detail-modal-card {
+    background: var(--surface, #ffffff);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid var(--border, #e2e8f0);
+}
+
+.audit-detail-row {
+    display: flex;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border, #f1f5f9);
+    padding-bottom: 0.6rem;
+}
+.audit-detail-row:last-child { border-bottom: none; }
+.audit-detail-label {
+    width: 140px;
+    font-weight: 700;
+    color: var(--subtext, #64748b);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+.audit-detail-val {
+    flex: 1;
+    font-size: 0.88rem;
+    color: var(--text, #0f172a);
+    word-break: break-word;
+}
 </style>
 
 <div id="moduloAuditoria">
-    <!-- Header -->
-    <div class="audit-header d-flex align-items-center gap-2 justify-content-between">
-        <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-journal-text text-primary" style="font-size:1.1rem;"></i>
+    <!-- Encabezado Principal -->
+    <div class="audit-top-header">
+        <div class="audit-title-area">
+            <div class="audit-icon-box">
+                <i class="bi bi-shield-check"></i>
+            </div>
             <div>
-                <div class="fw-bold" style="color:var(--text);font-size:0.88rem;" data-i18n="audit.title">Registro de Actividad</div>
-                <div id="audit-subtitle" style="font-size:0.7rem;color:var(--subtext);">Cargando...</div>
+                <h4 class="mb-0 fw-bold" style="font-size:1.15rem; color:var(--text);" data-i18n="audit.title">
+                    Auditoría y Registro de Actividad
+                </h4>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <span id="audit-subtitle" style="font-size:0.78rem; color:var(--subtext);">Cargando registros...</span>
+                    <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size:0.68rem;">
+                        <i class="bi bi-dot"></i> Monitoreo Activo
+                    </span>
+                </div>
             </div>
         </div>
         <div class="d-flex gap-2 align-items-center">
-            <input type="text" class="form-control form-control-sm" placeholder="Buscar..." id="auditSearch"
-                   style="width:148px;font-size:0.8rem;" oninput="window.filtrarAuditFeed && window.filtrarAuditFeed()">
-            <button class="btn-reload-cache" onclick="window.cargarAuditoria && window.cargarAuditoria(true)" title="Actualizar">
-                <i class="bi bi-arrow-clockwise"></i>
+            <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" style="border-radius:10px; font-weight:600;" onclick="window.exportarAuditoriaCSV()" title="Exportar a CSV">
+                <i class="bi bi-file-earmark-spreadsheet text-success"></i> Exportar CSV
+            </button>
+            <button class="btn btn-sm btn-primary d-flex align-items-center gap-1 shadow-sm" style="border-radius:10px; font-weight:600;" onclick="window.cargarAuditoria(true)" title="Recargar eventos">
+                <i class="bi bi-arrow-clockwise" id="audit-reload-icon"></i> Actualizar
             </button>
         </div>
     </div>
 
-    <!-- Filter chips -->
-    <div class="audit-chips" id="auditChips">
-        <button class="audit-chip active" data-filter="all" onclick="window.setAuditFilter('all')">Todos</button>
-        <button class="audit-chip cre" data-filter="CREÓ" onclick="window.setAuditFilter('CREÓ')">✅ Creó</button>
-        <button class="audit-chip mod" data-filter="MODIFICÓ" onclick="window.setAuditFilter('MODIFICÓ')">📝 Modificó</button>
-        <button class="audit-chip del" data-filter="ELIMINÓ" onclick="window.setAuditFilter('ELIMINÓ')">🗑 Eliminó</button>
-        <select class="form-select form-select-sm ms-auto" id="auditModuloFilter"
-                style="width:130px;font-size:0.75rem;" onchange="window.filtrarAuditFeed && window.filtrarAuditFeed()">
-            <option value="">Todos los módulos</option>
-            <option value="fleetrun">Fleetrun</option>
-            <option value="placas">Placas</option>
-            <option value="inspecciones">Inspecciones</option>
-            <option value="usuarios">Usuarios</option>
-            <option value="status">Status Flota</option>
-        </select>
+    <!-- KPIs Resumen Rápido -->
+    <div class="audit-kpi-grid">
+        <div class="audit-kpi-card active" data-filter="all" onclick="window.setAuditFilter('all')">
+            <div class="audit-kpi-icon" style="background:rgba(99,102,241,0.12); color:#6366f1;">
+                <i class="bi bi-layers-fill"></i>
+            </div>
+            <div>
+                <div style="font-size:0.72rem; font-weight:700; color:var(--subtext); text-transform:uppercase;">Total Eventos</div>
+                <div class="fw-bold" style="font-size:1.25rem; color:var(--text);" id="kpi-total-audit">0</div>
+            </div>
+        </div>
+
+        <div class="audit-kpi-card" data-filter="CREÓ" onclick="window.setAuditFilter('CREÓ')">
+            <div class="audit-kpi-icon" style="background:rgba(34,197,94,0.12); color:#16a34a;">
+                <i class="bi bi-plus-circle-fill"></i>
+            </div>
+            <div>
+                <div style="font-size:0.72rem; font-weight:700; color:var(--subtext); text-transform:uppercase;">Creaciones</div>
+                <div class="fw-bold" style="font-size:1.25rem; color:#16a34a;" id="kpi-creo-audit">0</div>
+            </div>
+        </div>
+
+        <div class="audit-kpi-card" data-filter="MODIFICÓ" onclick="window.setAuditFilter('MODIFICÓ')">
+            <div class="audit-kpi-icon" style="background:rgba(245,158,11,0.12); color:#d97706;">
+                <i class="bi bi-pencil-square"></i>
+            </div>
+            <div>
+                <div style="font-size:0.72rem; font-weight:700; color:var(--subtext); text-transform:uppercase;">Modificaciones</div>
+                <div class="fw-bold" style="font-size:1.25rem; color:#d97706;" id="kpi-mod-audit">0</div>
+            </div>
+        </div>
+
+        <div class="audit-kpi-card" data-filter="ELIMINÓ" onclick="window.setAuditFilter('ELIMINÓ')">
+            <div class="audit-kpi-icon" style="background:rgba(239,68,68,0.12); color:#dc2626;">
+                <i class="bi bi-trash3-fill"></i>
+            </div>
+            <div>
+                <div style="font-size:0.72rem; font-weight:700; color:var(--subtext); text-transform:uppercase;">Eliminaciones</div>
+                <div class="fw-bold" style="font-size:1.25rem; color:#dc2626;" id="kpi-del-audit">0</div>
+            </div>
+        </div>
     </div>
 
-    <!-- Feed Discord -->
-    <div class="audit-feed" id="auditFeed">
-        <div class="text-center py-5 text-muted">
-            <span class="spinner-border spinner-border-sm me-2"></span>Cargando historial...
+    <!-- Barra de Herramientas y Filtros -->
+    <div class="audit-toolbar">
+        <div class="audit-toolbar-row">
+            <!-- Buscador en tiempo real -->
+            <div class="audit-search-input">
+                <i class="bi bi-search"></i>
+                <input type="text" class="form-control form-control-sm" id="auditSearch" 
+                       placeholder="Buscar por ID, usuario, módulo, detalle..."
+                       oninput="window.filtrarAuditFeed && window.filtrarAuditFeed()">
+            </div>
+
+            <!-- Filtro de fechas -->
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="d-flex align-items-center gap-1">
+                    <span style="font-size:0.75rem; font-weight:600; color:var(--subtext);">Desde:</span>
+                    <input type="date" class="form-control form-control-sm" id="auditFechaDesde" style="width:130px; font-size:0.78rem;" onchange="window.filtrarAuditFeed()">
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <span style="font-size:0.75rem; font-weight:600; color:var(--subtext);">Hasta:</span>
+                    <input type="date" class="form-control form-control-sm" id="auditFechaHasta" style="width:130px; font-size:0.78rem;" onchange="window.filtrarAuditFeed()">
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" style="border-radius:8px; font-size:0.75rem;" onclick="window.limpiarFiltrosFecha()" title="Limpiar fechas">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+
+            <!-- Selector de Módulo -->
+            <div class="d-flex align-items-center gap-2">
+                <select class="form-select form-select-sm" id="auditModuloFilter"
+                        style="min-width:160px; font-size:0.8rem; border-radius:10px;" onchange="window.filtrarAuditFeed && window.filtrarAuditFeed()">
+                    <option value="">🌐 Todos los módulos</option>
+                    <option value="COMBUSTIBLE">⛽ Combustible</option>
+                    <option value="OPERACIONES">🚚 Operaciones</option>
+                    <option value="TALLER">🔧 Taller / OT</option>
+                    <option value="MANTENIMIENTO">🛠 Mantenimiento</option>
+                    <option value="FLEETRUN">⏱ Fleetrun</option>
+                    <option value="PLACAS">📋 Placas / Vehículos</option>
+                    <option value="INSPECCIONES">🔍 Inspecciones</option>
+                    <option value="SEGURIDAD">🛡 Seguridad / Garita</option>
+                    <option value="USUARIOS">👥 Usuarios</option>
+                    <option value="ROLES">🎭 Roles</option>
+                    <option value="PERFIL">👤 Perfil</option>
+                    <option value="SISTEMA">⚙ Sistema</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Chips de tipo de acción -->
+        <div class="audit-chips-container" id="auditChips">
+            <button class="audit-chip-btn active" data-filter="all" onclick="window.setAuditFilter('all')">
+                <i class="bi bi-grid-fill"></i> Todos
+            </button>
+            <button class="audit-chip-btn cre" data-filter="CREÓ" onclick="window.setAuditFilter('CREÓ')">
+                <i class="bi bi-plus-circle"></i> Creó
+            </button>
+            <button class="audit-chip-btn mod" data-filter="MODIFICÓ" onclick="window.setAuditFilter('MODIFICÓ')">
+                <i class="bi bi-pencil"></i> Modificó
+            </button>
+            <button class="audit-chip-btn del" data-filter="ELIMINÓ" onclick="window.setAuditFilter('ELIMINÓ')">
+                <i class="bi bi-trash"></i> Eliminó
+            </button>
+            <button class="audit-chip-btn sync" data-filter="SINCRONIZACION" onclick="window.setAuditFilter('SINCRONIZACION')">
+                <i class="bi bi-cloud-arrow-down"></i> Sincronizaciones
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabla de Auditoría Formato ERP -->
+    <div class="audit-table-card">
+        <div class="audit-table-responsive">
+            <table class="audit-table" id="auditTable">
+                <thead>
+                    <tr>
+                        <th style="width:85px; cursor:pointer;" onclick="window.toggleOrdenAudit()" title="Clic para ordenar">
+                            # ID <i class="bi bi-arrow-down-up ms-1" id="audit-sort-icon"></i>
+                        </th>
+                        <th style="width:170px;">Fecha y Hora</th>
+                        <th style="width:230px;">Usuario</th>
+                        <th style="width:150px;">Módulo</th>
+                        <th style="width:140px;">Acción</th>
+                        <th>Detalle de la Operación</th>
+                        <th style="width:80px; text-align:center;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="auditTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <span class="spinner-border spinner-border-sm me-2 text-primary"></span>Cargando registro de auditoría...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer y Paginación -->
+        <div class="audit-table-footer">
+            <div class="d-flex align-items-center gap-2">
+                <span>Mostrar</span>
+                <select class="form-select form-select-sm" id="auditPageSize" style="width:75px; font-size:0.78rem;" onchange="window.cambiarPageSizeAudit(this.value)">
+                    <option value="25">25</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                    <option value="250">250</option>
+                    <option value="999999">Todos</option>
+                </select>
+                <span id="audit-pagination-info">Mostrando 0 de 0</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-1" id="audit-pagination-controls">
+                <!-- Botones de página inyectados dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalle Completo de Auditoría -->
+<div class="modal fade" id="modalDetalleAudit" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:18px; border:1px solid var(--border); background:var(--surface);">
+            <div class="modal-header" style="border-bottom:1px solid var(--border);">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-info-circle-fill text-primary fs-5"></i>
+                    <h5 class="modal-title fw-bold" style="font-size:1.05rem;" id="modalAuditTitle">Detalle de Registro de Auditoría</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4" id="modalAuditContent">
+                <!-- Contenido dinámico inyectado -->
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--border);">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" style="border-radius:8px;">Cerrar</button>
+            </div>
         </div>
     </div>
 </div>
