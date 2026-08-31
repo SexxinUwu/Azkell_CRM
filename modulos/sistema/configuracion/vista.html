@@ -346,6 +346,46 @@
                 </div>
             </div>
 
+        <!-- ════════════════════════════════════════════════════════ -->
+        <!-- 4. PANEL: EMPRESA                                        -->
+        <!-- ════════════════════════════════════════════════════════ -->
+        <div id="cfg-panel-empresa" class="config-panel d-none">
+            
+            <h2 class="cfg-section-title">Identidad Corporativa</h2>
+            <div class="cfg-group-box">
+                <div class="cfg-row-item flex-column align-items-stretch">
+                    <div class="mb-2">
+                        <p class="cfg-item-title"><i class="bi bi-building" style="color: #2563eb;"></i> Nombre de la Empresa</p>
+                        <p class="cfg-item-desc">Nombre comercial que se mostrará en los reportes, fichas técnicas y encabezados del ERP.</p>
+                    </div>
+                    <input type="text" class="form-control" id="cfg-empresa-nombre" placeholder="Ej. Azkell Fleet / Marsisa S.A.C." style="border-radius:12px; border:1px solid var(--border, #e2e8f0); background:var(--bg, #f8fafc); color:var(--text, #1e293b); padding:10px 14px; font-weight:600; font-size:0.92rem;">
+                </div>
+
+                <div class="cfg-row-item flex-column align-items-stretch">
+                    <div class="mb-2">
+                        <p class="cfg-item-title"><i class="bi bi-image" style="color: #10b981;"></i> Logotipo Corporativo</p>
+                        <p class="cfg-item-desc">Formatos recomendados: PNG, WEBP o JPG con fondo transparente. Máximo 1MB.</p>
+                    </div>
+                    <input class="form-control mb-3" type="file" id="cfg-empresa-logo-file" accept="image/png, image/jpeg, image/webp, image/svg+xml" style="border-radius:12px; border:1px solid var(--border, #e2e8f0); background:var(--bg, #f8fafc); color:var(--text, #1e293b); font-size:0.85rem;" onchange="window.handleEmpresaLogoSelected(this)">
+                    
+                    <!-- Preview Container -->
+                    <div class="p-3 rounded-3 text-center" style="background:var(--bg, #f8fafc); border:1px dashed var(--border, #cbd5e1); min-height:90px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+                        <img id="cfg-empresa-logo-preview" src="" alt="Vista previa del logotipo" style="max-height: 60px; max-width: 220px; object-fit: contain; display: none;">
+                        <span id="cfg-empresa-logo-placeholder" style="color: var(--subtext, #94a3b8); font-size: 0.85rem;"><i class="bi bi-image me-1"></i> No hay logotipo cargado</span>
+                        <button type="button" id="cfg-empresa-logo-del-btn" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 mt-1" style="font-size:0.75rem; font-weight:600; display:none;" onclick="window.eliminarLogoEmpresa()">
+                            <i class="bi bi-trash3 me-1"></i> Quitar Logotipo
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón Guardar -->
+            <div class="d-flex justify-content-end mb-4">
+                <button type="button" id="btn-guardar-empresa" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm d-flex align-items-center gap-2" style="font-weight:700; font-size:0.9rem;" onclick="window.guardarDatosEmpresa()">
+                    <i class="bi bi-check2-circle fs-5"></i> <span>Guardar Cambios</span>
+                </button>
+            </div>
+
         </div>
 
     </div>
