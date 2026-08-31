@@ -1,200 +1,289 @@
 <style>
-/* CSS para el módulo Perfil Premium */
+/* ─── MÓDULO MI PERFIL (Bento ERP & Apple Grouped Inset) ─── */
+#moduloPerfil {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 1rem 1.25rem 120px 1.25rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    #moduloPerfil {
+        padding: 0.75rem 0.75rem 130px 0.75rem;
+    }
+}
+
+/* Banner de Portada */
 .perfil-banner {
     width: 100%;
-    height: 250px;
-    background: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop') center/cover no-repeat;
-    border-radius: 16px;
+    height: 160px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+    background-size: cover;
+    background-position: center;
+    border-radius: 22px;
     position: relative;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+@media (min-width: 768px) {
+    .perfil-banner {
+        height: 200px;
+    }
 }
 .perfil-banner-edit {
     position: absolute;
-    top: 16px;
-    right: 16px;
-    background: rgba(255,255,255,0.85);
-    border-radius: 8px;
-    backdrop-filter: blur(4px);
-    transition: all 0.3s;
+    top: 14px;
+    right: 14px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 6px 14px;
+    transition: all 0.2s;
+    cursor: pointer;
 }
 .perfil-banner-edit:hover {
-    background: #fff;
-    transform: translateY(-2px);
+    background: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
+
+/* Avatar Flotante */
 .perfil-avatar-wrap {
-    margin-top: -80px;
-    margin-left: 40px;
+    margin-top: -55px;
+    margin-left: 20px;
     position: relative;
     display: inline-block;
     z-index: 10;
+    flex-shrink: 0;
+}
+@media (min-width: 768px) {
+    .perfil-avatar-wrap {
+        margin-top: -65px;
+        margin-left: 28px;
+    }
 }
 .perfil-avatar {
-    width: 160px;
-    height: 160px;
+    width: 110px;
+    height: 110px;
     border-radius: 50%;
-    border: 6px solid var(--bg, #f4f7fa);
-    background-color: var(--crm-accent, #3b82f6);
+    border: 4px solid var(--surface, #ffffff);
+    background: linear-gradient(135deg, #0284c7, #2563eb);
     background-size: cover;
     background-position: center;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 3rem;
-    font-weight: bold;
-    color: #fff;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #ffffff;
+}
+@media (min-width: 768px) {
+    .perfil-avatar {
+        width: 130px;
+        height: 130px;
+        font-size: 2.6rem;
+        border-width: 5px;
+    }
 }
 .perfil-avatar-edit {
     position: absolute;
-    bottom: 8px;
-    right: 8px;
-    width: 40px;
-    height: 40px;
+    bottom: 4px;
+    right: 4px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    background: var(--crm-accent, #3b82f6);
-    color: #fff;
+    background: #0284c7;
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    border: 3px solid var(--bg, #f4f7fa);
-    transition: transform 0.2s;
+    border: 3px solid var(--surface, #ffffff);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: transform 0.15s;
+    font-size: 0.85rem;
 }
 .perfil-avatar-edit:hover {
     transform: scale(1.1);
 }
+
+/* Tarjetas Bento */
 .perfil-card {
-    background: var(--surface, #fff);
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-    border: 1px solid var(--border);
-    padding: 24px;
-    height: 100%;
+    background: var(--surface, #ffffff);
+    border-radius: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    border: 1px solid var(--border, #e2e8f0);
+    padding: 1.25rem 1.4rem;
+    margin-bottom: 1.25rem;
+    height: auto !important;
+}
+.perfil-card:last-child {
+    margin-bottom: 0;
 }
 .perfil-card-title {
-    font-weight: 700;
-    margin-bottom: 20px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    margin-bottom: 14px;
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--text);
+    color: var(--text, #0f172a);
+    letter-spacing: -0.01em;
 }
+
+/* Insets e Inputs */
+.perfil-input {
+    width: 100%;
+    padding: 9px 13px;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 12px;
+    background: var(--bg, #f8fafc);
+    color: var(--text, #0f172a);
+    font-size: 0.9rem;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.perfil-input:focus {
+    border-color: #2563eb;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.perfil-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--subtext, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 5px;
+    display: block;
+}
+
 .color-picker-btn {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    border: 2px solid transparent;
+    border: 3px solid transparent;
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: transform 0.15s, border-color 0.15s;
+}
+.color-picker-btn:hover {
+    transform: scale(1.12);
 }
 .color-picker-btn.active {
-    border-color: var(--text);
+    border-color: #0f172a;
     transform: scale(1.15);
 }
+
 .session-item {
-    padding: 12px;
-    border-radius: 8px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    margin-bottom: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--bg, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    margin-bottom: 8px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
 }
-[data-bs-theme="dark"] .session-item, body.dark .session-item {
-    background: rgba(255,255,255,0.05);
+.session-item:last-child {
+    margin-bottom: 0;
 }
 </style>
 
-<div class="container-fluid py-3" style="max-width: 1400px;">
+<div id="moduloPerfil">
     <!-- BOTÓN REGRESAR A AJUSTES -->
     <div class="mb-3 d-flex align-items-center justify-content-between">
         <button class="btn btn-sm btn-light bg-white border shadow-2xs text-dark rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-2" onclick="cargarModuloAislado('sistema/ajustes')">
             <i class="bi bi-arrow-left"></i> <span>Volver a Ajustes</span>
         </button>
+        <button class="btn btn-primary px-3 py-2 fw-bold text-white rounded-3 shadow-2xs d-inline-flex align-items-center gap-2" onclick="perfilGuardarDatos()" style="background:#2563eb; border-color:#2563eb;">
+            <i class="bi bi-check-lg"></i> <span>Guardar Cambios</span>
+        </button>
     </div>
 
     <!-- HEADER / BANNER -->
     <div class="perfil-banner" id="p-banner">
-        <button class="btn perfil-banner-edit btn-sm text-dark fw-bold shadow-sm" onclick="document.getElementById('file-banner').click()">
+        <button class="btn perfil-banner-edit text-dark fw-bold shadow-sm" onclick="document.getElementById('file-banner').click()">
             <i class="bi bi-camera"></i> Cambiar Portada
         </button>
         <input type="file" id="file-banner" accept="image/*" class="d-none" onchange="perfilSubirImagen(this, 'banner')">
     </div>
 
-    <!-- AVATAR Y TÍTULO -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-5">
-        <div class="perfil-avatar-wrap">
-            <div class="perfil-avatar" id="p-avatar">
-                <!-- Se llenará con imagen o iniciales -->
+    <!-- AVATAR Y TÍTULO HERO -->
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-end gap-3 mb-4">
+        <div class="d-flex align-items-end gap-3">
+            <div class="perfil-avatar-wrap">
+                <div class="perfil-avatar" id="p-avatar">SH</div>
+                <div class="perfil-avatar-edit" onclick="document.getElementById('file-avatar').click()" title="Cambiar foto">
+                    <i class="bi bi-camera-fill"></i>
+                </div>
+                <input type="file" id="file-avatar" accept="image/*" class="d-none" onchange="perfilSubirImagen(this, 'avatar')">
             </div>
-            <div class="perfil-avatar-edit shadow" onclick="document.getElementById('file-avatar').click()">
-                <i class="bi bi-camera-fill"></i>
+            
+            <div class="pb-1">
+                <h3 class="fw-bolder m-0" id="p-nombre-head" style="color: var(--text, #0f172a); letter-spacing: -0.02em;">Saul Henry Rosas</h3>
+                <span class="badge bg-light text-secondary border mt-1 fw-bold" id="p-cargo-head" style="font-size: 0.75rem;">ADMINISTRADOR</span>
             </div>
-            <input type="file" id="file-avatar" accept="image/*" class="d-none" onchange="perfilSubirImagen(this, 'avatar')">
-        </div>
-        
-        <div class="mt-4 mt-md-0 ms-4 ms-md-0 flex-grow-1 ps-md-4">
-            <h2 class="fw-bold mb-1" id="p-nombre-head">Cargando...</h2>
-            <p class="text-muted mb-0 fs-5" id="p-cargo-head">Usuario del Sistema</p>
-        </div>
-        <div class="mt-3 mt-md-0 ms-4 ms-md-0">
-            <button class="btn btn-primary px-4 fw-bold shadow-sm" onclick="perfilGuardarDatos()">
-                <i class="bi bi-save me-2"></i>Guardar Cambios
-            </button>
         </div>
     </div>
 
-    <div class="row g-4">
-        <!-- COLUMNA IZQUIERDA (Datos y Firma) -->
-        <div class="col-12 col-lg-5">
+    <!-- BENTO GRID (2 COLUMNAS COMPACTAS) -->
+    <div class="row g-3">
+        <!-- COLUMNA IZQUIERDA -->
+        <div class="col-12 col-lg-6">
             <!-- Datos Personales -->
-            <div class="perfil-card mb-4">
-                <h5 class="perfil-card-title"><i class="bi bi-person-lines-fill text-primary"></i> Información Personal</h5>
+            <div class="perfil-card">
+                <h5 class="perfil-card-title"><i class="bi bi-person-badge text-primary"></i> Información Personal</h5>
                 <div class="mb-3">
-                    <label class="form-label text-muted small fw-bold">Nombre Completo</label>
-                    <input type="text" class="form-control" id="p-input-nombre">
+                    <label class="perfil-label">Nombre Completo</label>
+                    <input type="text" class="perfil-input" id="p-input-nombre" placeholder="Nombre completo">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label text-muted small fw-bold">Correo Electrónico (Login)</label>
-                    <input type="email" class="form-control" id="p-input-correo" readonly disabled>
-                    <div class="form-text">El correo de login solo puede ser cambiado por un Administrador. Contactar con soporte para cambiar el correo.</div>
+                    <label class="perfil-label">Correo Electrónico (Login)</label>
+                    <input type="email" class="perfil-input" id="p-input-correo" readonly disabled style="opacity: 0.75; cursor: not-allowed;">
+                    <span class="text-secondary small d-block mt-1" style="font-size: 0.72rem;">El correo de acceso solo puede ser modificado por soporte.</span>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label text-muted small fw-bold">Teléfono / Anexo</label>
-                    <input type="text" class="form-control" id="p-input-telefono" placeholder="+51 999 888 777">
+                <div class="mb-1">
+                    <label class="perfil-label">Teléfono / Anexo</label>
+                    <input type="text" class="perfil-input" id="p-input-telefono" placeholder="+51 999 888 777">
                 </div>
             </div>
 
             <!-- Firma Digital -->
             <div class="perfil-card">
                 <h5 class="perfil-card-title"><i class="bi bi-pen text-primary"></i> Firma Digital</h5>
-                <p class="text-muted small mb-3">Dibuja tu firma para estamparla automáticamente en PDFs y OTs.</p>
+                <p class="text-secondary small mb-2" style="font-size: 0.78rem;">Dibuja tu firma para documentos y reportes del ERP.</p>
                 
-                <div class="border rounded bg-white text-center position-relative" style="height: 150px; overflow: hidden;" id="p-firma-container">
-                    <canvas id="p-firma-canvas" style="width: 100%; height: 100%; touch-action: none;"></canvas>
+                <div class="border rounded-3 bg-white text-center position-relative" style="height: 120px; overflow: hidden; border-color: var(--border, #e2e8f0) !important;" id="p-firma-container">
+                    <canvas id="p-firma-canvas" style="width: 100%; height: 100%; touch-action: none; display: block;"></canvas>
                     <div id="p-firma-preview" style="position: absolute; top:0; left:0; width:100%; height:100%; background: #fff; display:none; align-items:center; justify-content:center;">
-                        <img id="p-firma-img" src="" style="max-height: 120px; max-width: 100%;">
+                        <img id="p-firma-img" src="" style="max-height: 90px; max-width: 90%;">
                     </div>
                 </div>
                 
-                <div class="d-flex justify-content-between mt-3">
-                    <button class="btn btn-outline-secondary btn-sm" onclick="perfilLimpiarFirma()"><i class="bi bi-eraser"></i> Limpiar Canvas</button>
-                    <button class="btn btn-outline-primary btn-sm" onclick="perfilAlternarFirma()" id="btn-alternar-firma"><i class="bi bi-pencil"></i> Redibujar</button>
+                <div class="d-flex justify-content-between mt-2">
+                    <button type="button" class="btn btn-light bg-white border btn-sm fw-semibold" onclick="perfilLimpiarFirma()"><i class="bi bi-eraser me-1"></i> Limpiar</button>
+                    <button type="button" class="btn btn-light bg-white border btn-sm fw-semibold text-primary" onclick="perfilAlternarFirma()" id="btn-alternar-firma"><i class="bi bi-pencil me-1"></i> Redibujar</button>
                 </div>
             </div>
         </div>
 
-        <!-- COLUMNA DERECHA (Seguridad y Ajustes) -->
-        <div class="col-12 col-lg-7">
+        <!-- COLUMNA DERECHA -->
+        <div class="col-12 col-lg-6">
             <!-- Personalización Visual -->
-            <div class="perfil-card mb-4">
+            <div class="perfil-card">
                 <h5 class="perfil-card-title"><i class="bi bi-palette text-primary"></i> Personalización Visual</h5>
                 
-                <div class="row">
-                    <div class="col-12 col-md-6 mb-4">
-                        <label class="form-label text-muted small fw-bold mb-3">Color de Acento (Tema)</label>
-                        <div class="d-flex flex-wrap gap-2" id="p-color-picker">
+                <div class="row g-2">
+                    <div class="col-12 col-sm-6 mb-2">
+                        <label class="perfil-label">Color de Acento</label>
+                        <div class="d-flex flex-wrap gap-2 pt-1" id="p-color-picker">
                             <div class="color-picker-btn" style="background:#3b82f6" onclick="perfilSetColor('#3b82f6')"></div>
                             <div class="color-picker-btn" style="background:#10b981" onclick="perfilSetColor('#10b981')"></div>
                             <div class="color-picker-btn" style="background:#8b5cf6" onclick="perfilSetColor('#8b5cf6')"></div>
@@ -203,9 +292,9 @@
                             <div class="color-picker-btn" style="background:#0f172a" onclick="perfilSetColor('#0f172a')"></div>
                         </div>
                     </div>
-                    <div class="col-12 col-md-6 mb-4">
-                        <label class="form-label text-muted small fw-bold mb-3">Modo Visual</label>
-                        <select class="form-select" id="p-input-tema" onchange="perfilSetTheme(this.value)">
+                    <div class="col-12 col-sm-6 mb-2">
+                        <label class="perfil-label">Modo Visual</label>
+                        <select class="form-select perfil-input" id="p-input-tema" onchange="perfilSetTheme(this.value)">
                             <option value="system">Automático (Sistema)</option>
                             <option value="light">Modo Claro</option>
                             <option value="dark">Modo Oscuro</option>
@@ -215,20 +304,20 @@
             </div>
 
             <!-- Seguridad (Contraseña) -->
-            <div class="perfil-card mb-4">
+            <div class="perfil-card">
                 <h5 class="perfil-card-title"><i class="bi bi-shield-lock text-primary"></i> Seguridad</h5>
                 <form autocomplete="off" onsubmit="event.preventDefault(); perfilCambiarClave();">
-                    <div class="row">
-                        <div class="col-12 col-md-4 mb-3">
-                            <label class="form-label text-muted small fw-bold">Contraseña Actual</label>
-                            <input type="password" class="form-control" id="p-pwd-actual" autocomplete="current-password">
+                    <div class="row g-2">
+                        <div class="col-12 col-sm-6">
+                            <label class="perfil-label">Contraseña Actual</label>
+                            <input type="password" class="perfil-input" id="p-pwd-actual" placeholder="••••••••" autocomplete="current-password">
                         </div>
-                        <div class="col-12 col-md-4 mb-3">
-                            <label class="form-label text-muted small fw-bold">Nueva Contraseña</label>
-                            <input type="password" class="form-control" id="p-pwd-nueva" autocomplete="new-password">
+                        <div class="col-12 col-sm-6">
+                            <label class="perfil-label">Nueva Contraseña</label>
+                            <input type="password" class="perfil-input" id="p-pwd-nueva" placeholder="••••••••" autocomplete="new-password">
                         </div>
-                        <div class="col-12 col-md-4 mb-3 d-flex align-items-end">
-                            <button type="submit" class="btn btn-outline-danger w-100 fw-bold">Actualizar Clave</button>
+                        <div class="col-12 mt-2">
+                            <button type="submit" class="btn btn-outline-danger btn-sm w-100 fw-bold py-2 rounded-3">Actualizar Contraseña</button>
                         </div>
                     </div>
                 </form>
@@ -236,14 +325,11 @@
 
             <!-- Dispositivos y Sesiones -->
             <div class="perfil-card">
-                <h5 class="perfil-card-title"><i class="bi bi-laptop text-primary"></i> Dispositivos Conectados</h5>
-                <p class="text-muted small mb-3">Aquí puedes ver los dispositivos donde has iniciado sesión. Revoca el acceso a los que no reconozcas.</p>
-                
+                <h5 class="perfil-card-title"><i class="bi bi-laptop text-primary"></i> Sesiones Activas</h5>
                 <div id="p-sesiones-list">
-                    <div class="text-center py-4 text-muted"><i class="bi bi-arrow-repeat spin"></i> Cargando sesiones...</div>
+                    <div class="text-center py-3 text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Cargando sesiones...</div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>

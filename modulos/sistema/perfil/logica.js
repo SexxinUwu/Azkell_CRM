@@ -30,7 +30,8 @@ window.perfilCargarDatos = async function() {
                 avEl.innerText = '';
             } else {
                 avEl.style.backgroundImage = 'none';
-                avEl.innerText = (user.nombre || user.correo).charAt(0).toUpperCase();
+                let partes = (user.nombre || user.correo || 'U').trim().split(' ').filter(Boolean);
+                avEl.innerText = partes.length > 1 ? (partes[0][0] + partes[1][0]).toUpperCase() : (user.nombre || user.correo || 'U').substring(0, 2).toUpperCase();
             }
         }
         
