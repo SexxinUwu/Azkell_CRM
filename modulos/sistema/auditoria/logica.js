@@ -10,6 +10,37 @@ window._auditPageSize = 50;
 
 var _AUDIT_COLORS = ['#6366f1','#10b981','#06b6d4','#f59e0b','#8b5cf6','#ef4444','#ec4899','#0284c7','#14b8a6','#e11d48'];
 
+// Mapa de taxonomía ERP para Módulos y Submódulos
+var _ERP_TAXONOMY = {
+    'OPERACIONES': [
+        { key: 'COMBUSTIBLE', label: '⛽ Combustible / Vales' },
+        { key: 'ORDENES_VIAJE', label: '🚚 Órdenes de Viaje' },
+        { key: 'MONITOREO', label: '📡 Monitoreo' }
+    ],
+    'MANTENIMIENTO': [
+        { key: 'TALLER', label: '🔧 Taller & OT' },
+        { key: 'FLEETRUN', label: '⏱ Fleetrun' },
+        { key: 'INSPECCIONES', label: '🔍 Inspecciones' },
+        { key: 'INCIDENCIAS', label: '⚠️ Incidencias Ruta' },
+        { key: 'NEUMATICOS', label: '🛞 Neumáticos' },
+        { key: 'PLANIFICACION', label: '📅 Planificación MP' }
+    ],
+    'SEGURIDAD': [
+        { key: 'GARITA', label: '🛡 Control de Garita' },
+        { key: 'CHECKLIST', label: '📋 Checklist Salida' }
+    ],
+    'FLOTA': [
+        { key: 'PLACAS', label: '🚛 Placas / Unidades' },
+        { key: 'STATUS', label: '🚦 Status Flota' }
+    ],
+    'SISTEMA': [
+        { key: 'USUARIOS', label: '👥 Usuarios' },
+        { key: 'ROLES', label: '🎭 Roles y Permisos' },
+        { key: 'PERFIL', label: '👤 Perfil' },
+        { key: 'AJUSTES', label: '⚙ Ajustes' }
+    ]
+};
+
 function _getAuditUserColor(str) {
     var s = String(str || 'S');
     var h = 0;
@@ -68,19 +99,122 @@ function _formatAuditDate(dateStr) {
     return { full: full, rel: rel };
 }
 
+// Resolver inteligente de Módulo y Sub-Módulo
+function _resolveModuloSubmodulo(rawModulo, rawSubmodulo, rawDetalle) {
+    var m = String(rawModulo || '').toUpperCase().trim();
+    var sm = String(rawSubmodulo || '').toUpperCase().trim();
+    var det = String(rawDetalle || '').toUpperCase();
+
+    var moduloFinal = 'GENERAL';
+    var submoduloFinal = 'General';
+    var iconSub = 'bi-circle';
+
+    // 1. Si ya tiene sub-módulo explícito
+    if (sm) {
+        if (sm.includes('COMBUST') || sm.includes('VALE')) { moduloFinal = 'OPERACIONES'; submoduloFinal = 'Combustible / Vales'; iconSub = 'bi-fuel-pump'; }
+        else if (sm.includes('VIAJE') || sm.includes('ORDEN')) { moduloFinal = 'OPERACIONES'; submoduloFinal = 'Órdenes de Viaje'; iconSub = 'bi-truck'; }
+        else if (sm.includes('OT') || sm.includes('TALLER')) { moduloFinal = 'MANTENIMIENTO'; submoduloFinal = 'Taller & OT'; iconSub = 'bi-wrench-adjustable'; }
+        else if (sm.includes('FLEETRUN')) { moduloFinal = 'MANTENIMIENTO'; submoduloFinal = 'Fleetrun'; iconSub = 'bi-speedometer2'; }
+        else if (sm.includes('INSPEC')) { moduloFinal = 'MANTENIMIENTO'; submoduloFinal = 'Inspecciones'; iconSub = 'bi-clipboard-check'; }
+        else if (sm.includes('INCIDENC')) { moduloFinal = 'MANTENIMIENTO'; submoduloFinal = 'Incidencias Ruta'; iconSub = 'bi-exclamation-triangle'; }
+        else if (sm.includes('NEUMAT') || sm.includes('LLANTA')) { moduloFinal = 'MANTENIMIENTO'; submoduloFinal = 'Neumáticos'; iconSub = 'bi-circle-half'; }
+        else if (sm.includes('PLANIF')) { moduloFinal = 'MANTENIMIENTO'; submoduloFinal = 'Planificación MP'; iconSub = 'bi-calendar-check'; }
+        else if (sm.includes('GARITA') || sm.includes('SEGURIDAD') || sm.includes('SALIDA') || sm.includes('RETORNO')) { moduloFinal = 'SEGURIDAD'; submoduloFinal = 'Control Garita'; iconSub = 'bi-shield-lock'; }
+        else if (sm.includes('CHECKLIST')) { moduloFinal = 'SEGURIDAD'; submoduloFinal = 'Checklist Salida'; iconSub = 'bi-check2-square'; }
+        else if (sm.includes('PLACA') || sm.includes('VEHIC')) { moduloFinal = 'FLOTA'; submoduloFinal = 'Placas / Unidades'; iconSub = 'bi-car-front-fill'; }
+        else if (sm.includes('STATUS')) { moduloFinal = 'FLOTA'; submoduloFinal = 'Status Flota'; iconSub = 'bi-traffic-light'; }
+        else if (sm.includes('USUARIO')) { moduloFinal = 'SISTEMA'; submoduloFinal = 'Usuarios'; iconSub = 'bi-people-fill'; }
+        else if (sm.includes('ROL')) { moduloFinal = 'SISTEMA'; submoduloFinal = 'Roles y Permisos'; iconSub = 'bi-person-badge'; }
+        else if (sm.includes('PERFIL')) { moduloFinal = 'SISTEMA'; submoduloFinal = 'Perfil'; iconSub = 'bi-person-circle'; }
+        else if (sm.includes('AJUSTE') || sm.includes('CONFIG')) { moduloFinal = 'SISTEMA'; submoduloFinal = 'Ajustes'; iconSub = 'bi-sliders'; }
+        else { submoduloFinal = rawSubmodulo; }
+    }
+
+    // 2. Si no tiene sub-módulo explícito, inferir a partir de modulo o detalle
+    if (!sm || submoduloFinal === 'General') {
+        if (m.includes('COMBUSTIBLE')) {
+            moduloFinal = 'OPERACIONES';
+            submoduloFinal = 'Combustible / Vales';
+            iconSub = 'bi-fuel-pump';
+        } else if (m.includes('OPERACION')) {
+            moduloFinal = 'OPERACIONES';
+            if (det.includes('VIAJE') || det.includes('ORDEN')) { submoduloFinal = 'Órdenes de Viaje'; iconSub = 'bi-truck'; }
+            else if (det.includes('VALE') || det.includes('COMBUSTIBLE')) { submoduloFinal = 'Combustible / Vales'; iconSub = 'bi-fuel-pump'; }
+            else { submoduloFinal = 'Operaciones Generales'; iconSub = 'bi-truck'; }
+        } else if (m === 'OT' || m.includes('TALLER')) {
+            moduloFinal = 'MANTENIMIENTO';
+            submoduloFinal = 'Taller & OT';
+            iconSub = 'bi-wrench-adjustable';
+        } else if (m.includes('FLEETRUN')) {
+            moduloFinal = 'MANTENIMIENTO';
+            submoduloFinal = 'Fleetrun';
+            iconSub = 'bi-speedometer2';
+        } else if (m.includes('INSPECCION')) {
+            moduloFinal = 'MANTENIMIENTO';
+            submoduloFinal = 'Inspecciones';
+            iconSub = 'bi-clipboard-check';
+        } else if (m.includes('INCIDENCIA')) {
+            moduloFinal = 'MANTENIMIENTO';
+            submoduloFinal = 'Incidencias Ruta';
+            iconSub = 'bi-exclamation-triangle';
+        } else if (m.includes('NEUMATICO')) {
+            moduloFinal = 'MANTENIMIENTO';
+            submoduloFinal = 'Neumáticos';
+            iconSub = 'bi-circle-half';
+        } else if (m.includes('PLANIFICACION')) {
+            moduloFinal = 'MANTENIMIENTO';
+            submoduloFinal = 'Planificación MP';
+            iconSub = 'bi-calendar-check';
+        } else if (m.includes('SEGURIDAD')) {
+            moduloFinal = 'SEGURIDAD';
+            if (det.includes('CHECKLIST')) { submoduloFinal = 'Checklist Salida'; iconSub = 'bi-check2-square'; }
+            else { submoduloFinal = 'Control Garita'; iconSub = 'bi-shield-lock'; }
+        } else if (m.includes('PLACA') || m.includes('VEHICULO')) {
+            moduloFinal = 'FLOTA';
+            submoduloFinal = 'Placas / Unidades';
+            iconSub = 'bi-car-front-fill';
+        } else if (m.includes('STATUS')) {
+            moduloFinal = 'FLOTA';
+            submoduloFinal = 'Status Flota';
+            iconSub = 'bi-traffic-light';
+        } else if (m.includes('USUARIO')) {
+            moduloFinal = 'SISTEMA';
+            submoduloFinal = 'Usuarios';
+            iconSub = 'bi-people-fill';
+        } else if (m.includes('ROL')) {
+            moduloFinal = 'SISTEMA';
+            submoduloFinal = 'Roles y Permisos';
+            iconSub = 'bi-person-badge';
+        } else if (m.includes('PERFIL')) {
+            moduloFinal = 'SISTEMA';
+            submoduloFinal = 'Perfil';
+            iconSub = 'bi-person-circle';
+        } else if (m.includes('AJUSTE') || m.includes('CONFIG')) {
+            moduloFinal = 'SISTEMA';
+            submoduloFinal = 'Ajustes';
+            iconSub = 'bi-sliders';
+        } else {
+            moduloFinal = m || 'SISTEMA';
+            submoduloFinal = 'General';
+            iconSub = 'bi-gear';
+        }
+    }
+
+    return {
+        modulo: moduloFinal,
+        submodulo: submoduloFinal,
+        iconSub: iconSub
+    };
+}
+
 function _getModuloStyle(mod) {
-    var m = String(mod || 'SISTEMA').toUpperCase();
-    if (m.includes('COMBUSTIBLE')) return { bg: 'rgba(245, 158, 11, 0.12)', color: '#b45309', border: 'rgba(245, 158, 11, 0.3)', icon: 'bi-fuel-pump', label: 'COMBUSTIBLE' };
-    if (m.includes('OPERACION') || m.includes('VIAJE')) return { bg: 'rgba(2, 132, 199, 0.12)', color: '#0369a1', border: 'rgba(2, 132, 199, 0.3)', icon: 'bi-truck', label: 'OPERACIONES' };
-    if (m.includes('TALLER') || m.includes('OT')) return { bg: 'rgba(139, 92, 246, 0.12)', color: '#6d28d9', border: 'rgba(139, 92, 246, 0.3)', icon: 'bi-wrench-adjustable', label: 'TALLER' };
-    if (m.includes('MANTENIMIENTO') || m.includes('INCIDENCIA')) return { bg: 'rgba(6, 182, 212, 0.12)', color: '#0e7490', border: 'rgba(6, 182, 212, 0.3)', icon: 'bi-tools', label: 'MANTENIMIENTO' };
-    if (m.includes('FLEETRUN')) return { bg: 'rgba(99, 102, 241, 0.12)', color: '#4338ca', border: 'rgba(99, 102, 241, 0.3)', icon: 'bi-speedometer2', label: 'FLEETRUN' };
-    if (m.includes('PLACA') || m.includes('VEHICULO')) return { bg: 'rgba(16, 185, 129, 0.12)', color: '#047857', border: 'rgba(16, 185, 129, 0.3)', icon: 'bi-car-front-fill', label: 'PLACAS' };
-    if (m.includes('INSPECCION') || m.includes('CHECKLIST')) return { bg: 'rgba(234, 179, 8, 0.15)', color: '#a16207', border: 'rgba(234, 179, 8, 0.3)', icon: 'bi-clipboard-check', label: 'INSPECCIONES' };
-    if (m.includes('SEGURIDAD') || m.includes('GARITA')) return { bg: 'rgba(236, 72, 153, 0.12)', color: '#be185d', border: 'rgba(236, 72, 153, 0.3)', icon: 'bi-shield-lock-fill', label: 'SEGURIDAD' };
-    if (m.includes('USUARIO') || m.includes('ROL')) return { bg: 'rgba(168, 85, 247, 0.12)', color: '#7e22ce', border: 'rgba(168, 85, 247, 0.3)', icon: 'bi-people-fill', label: m };
-    if (m.includes('PERFIL')) return { bg: 'rgba(59, 130, 246, 0.12)', color: '#1d4ed8', border: 'rgba(59, 130, 246, 0.3)', icon: 'bi-person-circle', label: 'PERFIL' };
-    return { bg: 'rgba(100, 116, 139, 0.12)', color: '#475569', border: 'rgba(100, 116, 139, 0.3)', icon: 'bi-gear-wide-connected', label: m || 'GENERAL' };
+    var m = String(mod || 'GENERAL').toUpperCase();
+    if (m === 'OPERACIONES') return { bg: 'rgba(2, 132, 199, 0.12)', color: '#0369a1', border: 'rgba(2, 132, 199, 0.3)', icon: 'bi-truck' };
+    if (m === 'MANTENIMIENTO') return { bg: 'rgba(6, 182, 212, 0.12)', color: '#0e7490', border: 'rgba(6, 182, 212, 0.3)', icon: 'bi-tools' };
+    if (m === 'SEGURIDAD') return { bg: 'rgba(236, 72, 153, 0.12)', color: '#be185d', border: 'rgba(236, 72, 153, 0.3)', icon: 'bi-shield-lock-fill' };
+    if (m === 'FLOTA') return { bg: 'rgba(16, 185, 129, 0.12)', color: '#047857', border: 'rgba(16, 185, 129, 0.3)', icon: 'bi-car-front-fill' };
+    if (m === 'SISTEMA') return { bg: 'rgba(168, 85, 247, 0.12)', color: '#7e22ce', border: 'rgba(168, 85, 247, 0.3)', icon: 'bi-cpu-fill' };
+    return { bg: 'rgba(100, 116, 139, 0.12)', color: '#475569', border: 'rgba(100, 116, 139, 0.3)', icon: 'bi-gear-wide-connected' };
 }
 
 function _getAccionBadge(acc) {
@@ -100,13 +234,28 @@ function _getAccionBadge(acc) {
     return '<span class="audit-badge-action audit-badge-mod" style="background:rgba(99,102,241,0.12);color:#4f46e5;border-color:rgba(99,102,241,0.3);"><i class="bi bi-activity"></i> ' + (acc || 'ACCIÓN') + '</span>';
 }
 
+window.onModuloFilterChange = function() {
+    var modVal = ((document.getElementById('auditModuloFilter') || {}).value || '').toUpperCase();
+    var subSelect = document.getElementById('auditSubmoduloFilter');
+    
+    if (subSelect) {
+        subSelect.innerHTML = '<option value="">📁 Todos los sub-módulos</option>';
+        if (modVal && _ERP_TAXONOMY[modVal]) {
+            _ERP_TAXONOMY[modVal].forEach(function(item) {
+                subSelect.innerHTML += '<option value="' + item.key + '">' + item.label + '</option>';
+            });
+        }
+    }
+    window.filtrarAuditFeed();
+};
+
 window.cargarAuditoria = async function(forzar) {
     var reloadIcon = document.getElementById('audit-reload-icon');
     if (reloadIcon) reloadIcon.classList.add('bi-spin');
     
     var tbody = document.getElementById('auditTableBody');
     if (tbody && (!window.dataAuditoria || window.dataAuditoria.length === 0 || forzar)) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2 text-primary"></span>Cargando historial de auditoría...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2 text-primary"></span>Cargando historial de auditoría...</td></tr>';
     }
 
     try {
@@ -116,6 +265,10 @@ window.cargarAuditoria = async function(forzar) {
         window.dataAuditoria = (json.data || []).map(function(r) {
             r.usuario = _cleanAuditUser(r.usuario);
             r.id = parseInt(r.id) || 0;
+            var resTax = _resolveModuloSubmodulo(r.modulo, r.submodulo, r.detalle);
+            r.moduloNorm = resTax.modulo;
+            r.submoduloNorm = resTax.submodulo;
+            r.iconSub = resTax.iconSub;
             return r;
         });
         window._auditPage = 1;
@@ -124,7 +277,7 @@ window.cargarAuditoria = async function(forzar) {
     } catch(e) {
         console.error('Error al cargar auditoría:', e);
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle-fill fs-3 d-block mb-2"></i>Error al cargar registros: ' + e.message + '</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle-fill fs-3 d-block mb-2"></i>Error al cargar registros: ' + e.message + '</td></tr>';
         }
     } finally {
         if (reloadIcon) reloadIcon.classList.remove('bi-spin');
@@ -157,6 +310,7 @@ window.renderAuditTable = function() {
 
     var filter = window._auditFilter || 'all';
     var modFilter = ((document.getElementById('auditModuloFilter') || {}).value || '').toUpperCase();
+    var subFilter = ((document.getElementById('auditSubmoduloFilter') || {}).value || '').toUpperCase();
     var search = ((document.getElementById('auditSearch') || {}).value || '').toLowerCase().trim();
     var fechaDesde = (document.getElementById('auditFechaDesde') || {}).value || '';
     var fechaHasta = (document.getElementById('auditFechaHasta') || {}).value || '';
@@ -172,9 +326,27 @@ window.renderAuditTable = function() {
         }
 
         // Filtro por módulo
-        if (modFilter) {
-            var m = String(r.modulo || '').toUpperCase();
-            if (!m.includes(modFilter)) return false;
+        if (modFilter && r.moduloNorm !== modFilter) return false;
+
+        // Filtro por sub-módulo
+        if (subFilter) {
+            var smNorm = (r.submoduloNorm || '').toUpperCase();
+            if (subFilter === 'COMBUSTIBLE' && !smNorm.includes('COMBUST')) return false;
+            if (subFilter === 'ORDENES_VIAJE' && !smNorm.includes('VIAJE')) return false;
+            if (subFilter === 'TALLER' && !smNorm.includes('TALLER')) return false;
+            if (subFilter === 'FLEETRUN' && !smNorm.includes('FLEETRUN')) return false;
+            if (subFilter === 'INSPECCIONES' && !smNorm.includes('INSPEC')) return false;
+            if (subFilter === 'INCIDENCIAS' && !smNorm.includes('INCIDENC')) return false;
+            if (subFilter === 'NEUMATICOS' && !smNorm.includes('NEUMAT')) return false;
+            if (subFilter === 'PLANIFICACION' && !smNorm.includes('PLANIF')) return false;
+            if (subFilter === 'GARITA' && !smNorm.includes('GARITA')) return false;
+            if (subFilter === 'CHECKLIST' && !smNorm.includes('CHECKLIST')) return false;
+            if (subFilter === 'PLACAS' && !smNorm.includes('PLACA')) return false;
+            if (subFilter === 'STATUS' && !smNorm.includes('STATUS')) return false;
+            if (subFilter === 'USUARIOS' && !smNorm.includes('USUARIO')) return false;
+            if (subFilter === 'ROLES' && !smNorm.includes('ROL')) return false;
+            if (subFilter === 'PERFIL' && !smNorm.includes('PERFIL')) return false;
+            if (subFilter === 'AJUSTES' && !smNorm.includes('AJUSTE')) return false;
         }
 
         // Filtro por rango de fechas
@@ -188,7 +360,7 @@ window.renderAuditTable = function() {
 
         // Buscador
         if (search) {
-            var hay = (r.id + ' ' + (r.usuario || '') + ' ' + (r.modulo || '') + ' ' + (r.accion || '') + ' ' + (r.detalle || '') + ' ' + (r.fecha || '')).toLowerCase();
+            var hay = (r.id + ' ' + (r.usuario || '') + ' ' + (r.moduloNorm || '') + ' ' + (r.submoduloNorm || '') + ' ' + (r.accion || '') + ' ' + (r.detalle || '') + ' ' + (r.fecha || '')).toLowerCase();
             if (!hay.includes(search)) return false;
         }
 
@@ -208,7 +380,7 @@ window.renderAuditTable = function() {
     }
 
     if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-1 opacity-25 d-block mb-2"></i>No se encontraron eventos con los filtros seleccionados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-1 opacity-25 d-block mb-2"></i>No se encontraron eventos con los filtros seleccionados.</td></tr>';
         window.renderAuditPagination(0, 0, 0);
         return;
     }
@@ -229,7 +401,7 @@ window.renderAuditTable = function() {
         var uName = r.usuario || 'Sistema';
         var uColor = _getAuditUserColor(uName);
         var uInitials = _getAuditUserInitials(uName);
-        var modStyle = _getModuloStyle(r.modulo);
+        var modStyle = _getModuloStyle(r.moduloNorm);
         var accionBadge = _getAccionBadge(r.accion);
         var rawDetalle = r.detalle || '—';
 
@@ -251,14 +423,20 @@ window.renderAuditTable = function() {
             // 4. Módulo
             + '<td>'
             +   '<span class="audit-badge-module" style="background:' + modStyle.bg + ';color:' + modStyle.color + ';border:1px solid ' + modStyle.border + ';">'
-            +     '<i class="bi ' + modStyle.icon + '"></i> ' + (r.modulo || 'GENERAL')
+            +     '<i class="bi ' + modStyle.icon + '"></i> ' + r.moduloNorm
             +   '</span>'
             + '</td>'
-            // 5. Acción
+            // 5. Sub-Módulo
+            + '<td>'
+            +   '<span class="audit-badge-submodule">'
+            +     '<i class="bi ' + (r.iconSub || 'bi-circle') + ' text-primary"></i> ' + r.submoduloNorm
+            +   '</span>'
+            + '</td>'
+            // 6. Acción
             + '<td>' + accionBadge + '</td>'
-            // 6. Detalle
+            // 7. Detalle
             + '<td><div class="audit-detail-cell">' + rawDetalle + '</div></td>'
-            // 7. Botón Ver Detalle Modal
+            // 8. Botón Ver Detalle Modal
             + '<td class="text-center">'
             +   '<button class="btn btn-sm btn-outline-primary p-1 px-2" style="border-radius:6px; font-size:0.75rem;" onclick="window.verDetalleAudit(' + r.id + ')" title="Ver detalle completo">'
             +     '<i class="bi bi-eye"></i>'
@@ -374,7 +552,8 @@ window.verDetalleAudit = function(id) {
             + '<div class="audit-detail-row"><div class="audit-detail-label">ID Evento:</div><div class="audit-detail-val fw-bold text-primary">#' + item.id + '</div></div>'
             + '<div class="audit-detail-row"><div class="audit-detail-label">Fecha y Hora:</div><div class="audit-detail-val">' + dt.full + ' ' + (dt.rel ? '<span class="badge bg-secondary ms-1">' + dt.rel + '</span>' : '') + '</div></div>'
             + '<div class="audit-detail-row"><div class="audit-detail-label">Usuario:</div><div class="audit-detail-val fw-semibold">' + (item.usuario || 'Sistema') + '</div></div>'
-            + '<div class="audit-detail-row"><div class="audit-detail-label">Módulo:</div><div class="audit-detail-val"><span class="badge bg-light text-dark border">' + (item.modulo || 'GENERAL') + '</span></div></div>'
+            + '<div class="audit-detail-row"><div class="audit-detail-label">Módulo:</div><div class="audit-detail-val"><span class="badge bg-light text-dark border">' + (item.moduloNorm || 'GENERAL') + '</span></div></div>'
+            + '<div class="audit-detail-row"><div class="audit-detail-label">Sub-Módulo:</div><div class="audit-detail-val"><span class="badge bg-light text-primary border"><i class="bi ' + (item.iconSub || 'bi-circle') + ' me-1"></i>' + (item.submoduloNorm || 'General') + '</span></div></div>'
             + '<div class="audit-detail-row"><div class="audit-detail-label">Acción:</div><div class="audit-detail-val">' + _getAccionBadge(item.accion) + '</div></div>'
             + '<div class="audit-detail-row"><div class="audit-detail-label">Descripción / Detalle:</div><div class="audit-detail-val p-3 bg-light rounded border mt-2" style="font-family:monospace; white-space:pre-wrap; font-size:0.85rem;">' + (item.detalle || 'Sin detalle adicional') + '</div></div>'
             + '</div>';
@@ -394,13 +573,14 @@ window.exportarAuditoriaCSV = function() {
         return;
     }
 
-    var headers = ['ID', 'Fecha', 'Usuario', 'Modulo', 'Accion', 'Detalle'];
+    var headers = ['ID', 'Fecha', 'Usuario', 'Modulo', 'Submodulo', 'Accion', 'Detalle'];
     var rows = window.dataAuditoria.map(function(r) {
         return [
             r.id,
             '"' + (r.fecha || '').replace(/"/g, '""') + '"',
             '"' + (r.usuario || '').replace(/"/g, '""') + '"',
-            '"' + (r.modulo || '').replace(/"/g, '""') + '"',
+            '"' + (r.moduloNorm || '').replace(/"/g, '""') + '"',
+            '"' + (r.submoduloNorm || '').replace(/"/g, '""') + '"',
             '"' + (r.accion || '').replace(/"/g, '""') + '"',
             '"' + (r.detalle || '').replace(/"/g, '""') + '"'
         ];

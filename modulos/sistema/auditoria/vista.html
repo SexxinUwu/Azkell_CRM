@@ -106,8 +106,8 @@
 }
 
 .audit-search-input {
-    min-width: 260px;
-    max-width: 380px;
+    min-width: 240px;
+    max-width: 340px;
     position: relative;
 }
 
@@ -283,6 +283,7 @@
     gap: 4px;
     letter-spacing: 0.3px;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .audit-badge-mod {
@@ -319,10 +320,25 @@
     gap: 4px;
     letter-spacing: 0.3px;
     text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.audit-badge-submodule {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg, #f1f5f9);
+    color: var(--text, #334155);
+    border: 1px solid var(--border, #cbd5e1);
+    white-space: nowrap;
 }
 
 .audit-detail-cell {
-    max-width: 480px;
+    max-width: 440px;
     font-size: 0.83rem;
     color: var(--text, #334155);
     line-height: 1.4;
@@ -452,7 +468,7 @@
             <div class="audit-search-input">
                 <i class="bi bi-search"></i>
                 <input type="text" class="form-control form-control-sm" id="auditSearch" 
-                       placeholder="Buscar por ID, usuario, módulo, detalle..."
+                       placeholder="Buscar por ID, usuario, módulo, sub-módulo, detalle..."
                        oninput="window.filtrarAuditFeed && window.filtrarAuditFeed()">
             </div>
 
@@ -472,22 +488,21 @@
             </div>
 
             <!-- Selector de Módulo -->
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
                 <select class="form-select form-select-sm" id="auditModuloFilter"
-                        style="min-width:160px; font-size:0.8rem; border-radius:10px;" onchange="window.filtrarAuditFeed && window.filtrarAuditFeed()">
+                        style="min-width:150px; font-size:0.8rem; border-radius:10px;" onchange="window.onModuloFilterChange()">
                     <option value="">🌐 Todos los módulos</option>
-                    <option value="COMBUSTIBLE">⛽ Combustible</option>
                     <option value="OPERACIONES">🚚 Operaciones</option>
-                    <option value="TALLER">🔧 Taller / OT</option>
                     <option value="MANTENIMIENTO">🛠 Mantenimiento</option>
-                    <option value="FLEETRUN">⏱ Fleetrun</option>
-                    <option value="PLACAS">📋 Placas / Vehículos</option>
-                    <option value="INSPECCIONES">🔍 Inspecciones</option>
-                    <option value="SEGURIDAD">🛡 Seguridad / Garita</option>
-                    <option value="USUARIOS">👥 Usuarios</option>
-                    <option value="ROLES">🎭 Roles</option>
-                    <option value="PERFIL">👤 Perfil</option>
+                    <option value="SEGURIDAD">🛡 Seguridad</option>
+                    <option value="FLOTA">🚛 Flota / Placas</option>
                     <option value="SISTEMA">⚙ Sistema</option>
+                </select>
+
+                <!-- Selector de Sub-Módulo Dinámico -->
+                <select class="form-select form-select-sm" id="auditSubmoduloFilter"
+                        style="min-width:165px; font-size:0.8rem; border-radius:10px;" onchange="window.filtrarAuditFeed && window.filtrarAuditFeed()">
+                    <option value="">📁 Todos los sub-módulos</option>
                 </select>
             </div>
         </div>
@@ -518,20 +533,21 @@
             <table class="audit-table" id="auditTable">
                 <thead>
                     <tr>
-                        <th style="width:85px; cursor:pointer;" onclick="window.toggleOrdenAudit()" title="Clic para ordenar">
+                        <th style="width:75px; cursor:pointer;" onclick="window.toggleOrdenAudit()" title="Clic para ordenar">
                             # ID <i class="bi bi-arrow-down-up ms-1" id="audit-sort-icon"></i>
                         </th>
-                        <th style="width:170px;">Fecha y Hora</th>
-                        <th style="width:230px;">Usuario</th>
-                        <th style="width:150px;">Módulo</th>
-                        <th style="width:140px;">Acción</th>
+                        <th style="width:165px;">Fecha y Hora</th>
+                        <th style="width:210px;">Usuario</th>
+                        <th style="width:140px;">Módulo</th>
+                        <th style="width:160px;">Sub-Módulo</th>
+                        <th style="width:130px;">Acción</th>
                         <th>Detalle de la Operación</th>
-                        <th style="width:80px; text-align:center;">Acción</th>
+                        <th style="width:70px; text-align:center;">Ver</th>
                     </tr>
                 </thead>
                 <tbody id="auditTableBody">
                     <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">
+                        <td colspan="8" class="text-center py-5 text-muted">
                             <span class="spinner-border spinner-border-sm me-2 text-primary"></span>Cargando registro de auditoría...
                         </td>
                     </tr>
