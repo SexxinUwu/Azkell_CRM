@@ -1101,8 +1101,8 @@
             let difBadgeHtml = '<span class="text-muted opacity-50">—</span>';
 
             if (galTeoricoTotal > 0 && totGal > 0) {
-                const descBadge = esSinCarreta ? `<span class="badge bg-warning bg-opacity-25 text-dark border border-warning px-1 py-0 ms-1 fw-bold font-monospace" style="font-size:0.65rem;" title="Descuento -10% por rodar sin carreta: -${galDescontado.toFixed(2)} gal">-10%</span>` : '';
-                galTeoricoHtml = `<span class="fw-bold font-monospace text-dark" title="Ida: ${galTeoricoIda.toFixed(1)}g | Retorno: ${galTeoricoRetorno.toFixed(1)}g | Base: ${galTeoricoBase.toFixed(2)}g${esSinCarreta ? ` | -10% Solo Tracto (-${galDescontado.toFixed(2)}g) => Final: ${galTeoricoTotal.toFixed(2)}g` : ''} | Motor: ${t.motor || 'Estándar'}">${galTeoricoTotal.toFixed(2)}</span>${descBadge}`;
+                const descBadge = esSinCarreta ? `<span class="badge bg-warning bg-opacity-25 text-dark border border-warning px-1 py-0 ms-1 fw-bold font-monospace" style="font-size:0.65rem;" title="Descuento -10% por rodar sin carreta (solo camión): -${galDescontado.toFixed(2)} gal">-10%</span>` : '';
+                galTeoricoHtml = `<span class="fw-bold font-monospace text-dark" title="Ida: ${galTeoricoIda.toFixed(1)}g | Retorno: ${galTeoricoRetorno.toFixed(1)}g | Base: ${galTeoricoBase.toFixed(2)}g${esSinCarreta ? ` | -10% Solo Camión (-${galDescontado.toFixed(2)}g) => Final: ${galTeoricoTotal.toFixed(2)}g` : ''} | Motor: ${t.motor || 'Estándar'}">${galTeoricoTotal.toFixed(2)}</span>${descBadge}`;
                 const dif = totGal - galTeoricoTotal;
                 if (dif > 0) {
                     difBadgeHtml = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger fw-bold font-monospace px-1.5 py-0.5" title="Sobreconsumo sobre la matriz: +${dif.toFixed(2)} gal">+${dif.toFixed(2)} ⚠️</span>`;
