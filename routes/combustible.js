@@ -1102,10 +1102,19 @@ module.exports = function (db, broadcast, logAudit) {
                     const galonesRetorno = vouchersRetorno.reduce((s, x) => s + (x.galones || 0), 0);
 
                     const rawPesoIda = Math.max(0, ...vouchersIda.map(x => parseFloat(x.peso || 0)));
-                    const pesoIdaCalculado = rawPesoIda > 50 ? parseFloat((rawPesoIda / 1000).toFixed(2)) : parseFloat(rawPesoIda.toFixed(2));
+                    let pesoIdaCalculado = rawPesoIda > 50 ? parseFloat((rawPesoIda / 1000).toFixed(2)) : parseFloat(rawPesoIda.toFixed(2));
 
                     const rawPesoRet = Math.max(0, ...vouchersRetorno.map(x => parseFloat(x.peso || 0)));
-                    const pesoRetornoCalculado = rawPesoRet > 50 ? parseFloat((rawPesoRet / 1000).toFixed(2)) : parseFloat(rawPesoRet.toFixed(2));
+                    let pesoRetornoCalculado = rawPesoRet > 50 ? parseFloat((rawPesoRet / 1000).toFixed(2)) : parseFloat(rawPesoRet.toFixed(2));
+
+                    // Regla Operativa: La IDA lleva la carga del viaje y el RETORNO va vacío (0 Tn).
+                    if (pesoIdaCalculado === 0 && pesoRetornoCalculado > 0) {
+                        pesoIdaCalculado = pesoRetornoCalculado;
+                        pesoRetornoCalculado = 0;
+                    } else if (pesoIdaCalculado === 0 && pesoCalculadoTn > 0) {
+                        pesoIdaCalculado = pesoCalculadoTn;
+                        pesoRetornoCalculado = 0;
+                    }
 
                     // Último vale del viaje actual (Cierre General)
                     const kmFin = lastVCurrent.odometro || 0;

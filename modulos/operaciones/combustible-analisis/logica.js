@@ -434,10 +434,16 @@
             const gastoRealRet = vRet.reduce((s, x) => s + (x.importe || 0), 0);
 
             const rawPesoIda = Math.max(0, ...vIda.map(x => parseFloat(x.peso || 0)));
-            const pesoIdaVal = rawPesoIda > 0 ? (rawPesoIda > 50 ? +(rawPesoIda / 1000).toFixed(2) : +rawPesoIda.toFixed(2)) : (t.pesoIda || 0);
+            let pesoIdaVal = rawPesoIda > 0 ? (rawPesoIda > 50 ? +(rawPesoIda / 1000).toFixed(2) : +rawPesoIda.toFixed(2)) : (t.pesoIda || 0);
 
             const rawPesoRet = Math.max(0, ...vRet.map(x => parseFloat(x.peso || 0)));
-            const pesoRetVal = rawPesoRet > 0 ? (rawPesoRet > 50 ? +(rawPesoRet / 1000).toFixed(2) : +rawPesoRet.toFixed(2)) : (t.pesoRetorno || 0);
+            let pesoRetVal = rawPesoRet > 0 ? (rawPesoRet > 50 ? +(rawPesoRet / 1000).toFixed(2) : +rawPesoRet.toFixed(2)) : (t.pesoRetorno || 0);
+
+            // Regla Operativa ERP: La IDA lleva la carga del viaje y el RETORNO va vacío (0 Tn)
+            if (pesoIdaVal === 0 && (pesoRetVal > 0 || (t.pesoMaxTn || 0) > 0)) {
+                pesoIdaVal = pesoRetVal > 0 ? pesoRetVal : (t.pesoMaxTn || 0);
+                pesoRetVal = 0;
+            }
 
             // Odómetros por tramo
             const minOdoIda = vIda.length > 0 ? Math.min(...vIda.map(x => x.odometro || 0).filter(Boolean)) : kInicio;
