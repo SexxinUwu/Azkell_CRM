@@ -196,18 +196,18 @@
         window.caAplicarFiltros(false);
     };
 
-    // ── DRAWER DE FILTROS AVANZADOS JERÁRQUICO (SLIDER ESTILO PLACAS) ──────────
+    // ── DRAWER DE FILTROS AVANZADOS JERÁRQUICO ESTILO iOS ─────────────────────
     window._caCategoriaActivaFiltro = '';
 
     const CA_CATEGORIAS = [
-        { key: 'placas', title: 'Placa / Tracto', icon: 'bi-truck' },
-        { key: 'carretas', title: 'Carreta / Remolque', icon: 'bi-trailers' },
-        { key: 'rutas', title: 'Ruta / Destino', icon: 'bi-signpost-2' },
-        { key: 'choferes', title: 'Conductor / Chofer', icon: 'bi-person-badge' },
-        { key: 'pesos', title: 'Peso / Carga (Tn)', icon: 'bi-speedometer2' },
-        { key: 'combustible', title: 'Tipo de Combustible', icon: 'bi-fuel-pump' },
-        { key: 'anio', title: 'Año de Registro', icon: 'bi-calendar3' },
-        { key: 'orden', title: 'Criterio de Ordenamiento', icon: 'bi-sort-down' }
+        { key: 'placas', title: 'Placa / Tracto', icon: 'bi-truck', color: '#2563eb', bg: '#eff6ff' },
+        { key: 'carretas', title: 'Carreta / Remolque', icon: 'bi-trailers', color: '#d97706', bg: '#fffbeb' },
+        { key: 'rutas', title: 'Ruta / Destino', icon: 'bi-signpost-2', color: '#0d9488', bg: '#f0fdfa' },
+        { key: 'choferes', title: 'Conductor / Chofer', icon: 'bi-person-badge', color: '#7c3aed', bg: '#f5f3ff' },
+        { key: 'pesos', title: 'Peso / Carga (Tn)', icon: 'bi-speedometer2', color: '#0284c7', bg: '#f0f9ff' },
+        { key: 'combustible', title: 'Tipo de Combustible', icon: 'bi-fuel-pump', color: '#16a34a', bg: '#f0fdf4' },
+        { key: 'anio', title: 'Año de Registro', icon: 'bi-calendar3', color: '#475569', bg: '#f1f5f9' },
+        { key: 'orden', title: 'Criterio de Orden', icon: 'bi-arrow-down-up', color: '#64748b', bg: '#f8fafc' }
     ];
 
     window.caAbrirDrawerFiltros = function() {
@@ -236,29 +236,29 @@
         const fState = window._caFiltrosState;
 
         let html = '';
-        CA_CATEGORIAS.forEach(cat => {
+        CA_CATEGORIAS.forEach((cat, idx) => {
             let badgeTxt = '';
             let isActivo = false;
 
             if (cat.key === 'placas') {
                 const s = fState.placas.size;
-                badgeTxt = s > 0 ? `${s} ${s === 1 ? 'sel.' : 'sels.'}` : 'Todas';
+                badgeTxt = s > 0 ? `${s} sel.` : 'Todas';
                 isActivo = s > 0;
             } else if (cat.key === 'carretas') {
                 const s = fState.carretas.size;
-                badgeTxt = s > 0 ? `${s} ${s === 1 ? 'sel.' : 'sels.'}` : 'Todas';
+                badgeTxt = s > 0 ? `${s} sel.` : 'Todas';
                 isActivo = s > 0;
             } else if (cat.key === 'rutas') {
                 const s = fState.rutas.size;
-                badgeTxt = s > 0 ? `${s} ${s === 1 ? 'sel.' : 'sels.'}` : 'Todas';
+                badgeTxt = s > 0 ? `${s} sel.` : 'Todas';
                 isActivo = s > 0;
             } else if (cat.key === 'choferes') {
                 const s = fState.choferes.size;
-                badgeTxt = s > 0 ? `${s} ${s === 1 ? 'sel.' : 'sels.'}` : 'Todos';
+                badgeTxt = s > 0 ? `${s} sel.` : 'Todos';
                 isActivo = s > 0;
             } else if (cat.key === 'pesos') {
                 const s = fState.pesos.size;
-                badgeTxt = s > 0 ? `${s} ${s === 1 ? 'sel.' : 'sels.'}` : 'Todos';
+                badgeTxt = s > 0 ? `${s} sel.` : 'Todos';
                 isActivo = s > 0;
             } else if (cat.key === 'combustible') {
                 badgeTxt = fState.combustible !== 'ALL' ? fState.combustible : 'Todos';
@@ -279,19 +279,23 @@
                 isActivo = false;
             }
 
-            const badgeClass = isActivo ? 'bg-primary text-white' : 'bg-light text-muted border';
+            const borderBottom = idx < CA_CATEGORIAS.length - 1 ? 'border-bottom' : '';
+            const badgeClass = isActivo ? 'bg-primary text-white shadow-2xs' : 'text-muted';
+            const badgeBg = isActivo ? '' : 'background: #f1f5f9;';
 
             html += `
-                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-3 px-3 px-md-4 border-bottom" style="cursor: pointer; transition: background 0.15s ease;" onclick="window.caEntrarFiltroDetalle('${cat.key}', '${cat.title}')">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <i class="bi ${cat.icon} text-primary fs-5"></i>
-                        <span class="fw-bold text-dark" style="font-size:0.92rem;">${cat.title}</span>
+                <div class="d-flex align-items-center justify-content-between p-3 ${borderBottom}" style="cursor: pointer; transition: background 0.12s ease;" onclick="window.caEntrarFiltroDetalle('${cat.key}', '${cat.title}')" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background='#ffffff'">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:34px; height:34px; background:${cat.bg}; color:${cat.color}; font-size:1.05rem;">
+                            <i class="bi ${cat.icon}"></i>
+                        </div>
+                        <span class="fw-semibold text-dark" style="font-size:0.92rem; letter-spacing: -0.01em;">${cat.title}</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <span class="badge rounded-pill ${badgeClass} fw-bold" style="font-size:0.75rem;">${badgeTxt}</span>
-                        <i class="bi bi-chevron-right text-muted opacity-75" style="font-size:0.8rem;"></i>
+                        <span class="badge rounded-pill ${badgeClass} font-monospace fw-semibold px-2.5 py-1" style="${badgeBg} font-size:0.75rem;">${badgeTxt}</span>
+                        <i class="bi bi-chevron-right text-muted opacity-50" style="font-size:0.75rem;"></i>
                     </div>
-                </button>
+                </div>
             `;
         });
 
@@ -302,16 +306,19 @@
         window._caCategoriaActivaFiltro = catKey;
 
         const tituloEl = document.getElementById('ca-titulo-categoria-filtro');
-        const subtituloEl = document.getElementById('ca-subtitulo-categoria-filtro');
         const searchInp = document.getElementById('ca-buscador-opciones-filtro');
+        const clearBtn = document.getElementById('ca-btn-clear-search');
         const quickActions = document.getElementById('ca-detail-quick-actions');
         const listaDetalle = document.getElementById('ca-lista-opciones-detalle');
+        const emptyEl = document.getElementById('ca-filtro-empty-search');
 
         if (tituloEl) tituloEl.innerText = catTitle;
         if (searchInp) {
             searchInp.value = '';
             searchInp.placeholder = `Buscar en ${catTitle.toLowerCase()}...`;
         }
+        if (clearBtn) clearBtn.classList.add('d-none');
+        if (emptyEl) emptyEl.classList.add('d-none');
 
         const trips = window._caTripGroups || [];
         const fState = window._caFiltrosState;
@@ -319,8 +326,7 @@
         let html = '';
 
         if (catKey === 'placas' || catKey === 'carretas' || catKey === 'rutas' || catKey === 'choferes' || catKey === 'pesos') {
-            if (quickActions) quickActions.style.display = 'flex';
-            if (subtituloEl) subtituloEl.innerText = 'Selección múltiple (casillas)';
+            if (quickActions) quickActions.style.setProperty('display', 'flex', 'important');
 
             const mapCounts = {};
             trips.forEach(t => {
@@ -349,28 +355,28 @@
             });
 
             if (keys.length === 0) {
-                html = '<div class="text-center py-4 text-muted small">No hay opciones registradas en el período.</div>';
+                html = '<div class="text-center py-5 text-muted small"><i class="bi bi-info-circle fs-4 d-block mb-1 opacity-50"></i>Sin opciones en el período.</div>';
             } else {
                 const selSet = fState[catKey];
-                html = keys.map(k => {
-                    const checked = selSet.has(k) ? 'checked' : '';
-                    const idChk = `chk-opt-${catKey}-${k.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                html = keys.map((k, idx) => {
+                    const checked = selSet.has(k);
+                    const kEscaped = k.replace(/'/g, "\\'");
+                    const checkClass = checked ? 'bi-check-square-fill text-primary' : 'bi-square text-muted opacity-40';
+                    const bgClass = checked ? 'background: #f0f7ff;' : 'background: #ffffff;';
+
                     return `
-                        <div class="form-check d-flex align-items-center justify-content-between p-2.5 px-3 rounded-3 border-bottom opt-ca-filtro-item" style="cursor: pointer;">
+                        <div class="opt-ca-filtro-item d-flex align-items-center justify-content-between px-3 py-2.5 border-bottom" data-search="${k.toLowerCase()}" onclick="window.caToggleFiltroFila(this, '${catKey}', '${kEscaped}')" style="${bgClass} cursor: pointer; transition: background 0.12s ease;">
                             <div class="d-flex align-items-center gap-2.5 text-truncate pe-2">
-                                <input class="form-check-input m-0 flex-shrink-0" type="checkbox" value="${k}" id="${idChk}" ${checked} style="cursor: pointer; transform: scale(1.15);" onchange="window.caToggleFiltroValor('${catKey}', this.value, this.checked)">
-                                <label class="form-check-label text-dark font-monospace fw-semibold text-truncate mb-0" for="${idChk}" style="cursor: pointer; font-size:0.85rem;" title="${k}">
-                                    ${k}
-                                </label>
+                                <i class="bi ${checkClass} fs-5 flex-shrink-0 ca-chk-icon"></i>
+                                <span class="text-dark font-monospace fw-semibold text-truncate" style="font-size:0.88rem;">${k}</span>
                             </div>
-                            <span class="badge bg-light text-muted border font-monospace" style="font-size:0.75rem;">${mapCounts[k]}</span>
+                            <span class="badge rounded-pill text-muted font-monospace" style="background: #f1f5f9; font-size:0.75rem; padding: 3px 8px;">${mapCounts[k]}</span>
                         </div>
                     `;
                 }).join('');
             }
         } else if (catKey === 'combustible') {
-            if (quickActions) quickActions.style.display = 'none';
-            if (subtituloEl) subtituloEl.innerText = 'Selecciona el tipo de combustible';
+            if (quickActions) quickActions.style.setProperty('display', 'none', 'important');
             const curFuel = fState.combustible || 'ALL';
             const fuels = [
                 { val: 'ALL', label: 'Todos los Combustibles' },
@@ -378,19 +384,17 @@
                 { val: 'UREA', label: 'UREA' }
             ];
             html = fuels.map(f => {
-                const checked = curFuel === f.val ? 'checked' : '';
+                const checked = curFuel === f.val;
+                const iconCheck = checked ? 'bi-check-circle-fill text-primary' : 'bi-circle text-muted opacity-40';
                 return `
-                    <div class="form-check d-flex align-items-center justify-content-between p-3 rounded-3 border-bottom opt-ca-filtro-item" style="cursor: pointer;" onclick="window.caSetFiltroSimple('combustible', '${f.val}')">
-                        <label class="form-check-label text-dark fw-bold mb-0" style="cursor: pointer; font-size:0.88rem;">
-                            ${f.label}
-                        </label>
-                        <input class="form-check-input m-0" type="radio" name="rd-ca-fuel" value="${f.val}" ${checked} style="cursor: pointer;">
+                    <div class="opt-ca-filtro-item d-flex align-items-center justify-content-between px-3 py-3 border-bottom" data-search="${f.label.toLowerCase()}" style="cursor: pointer; background:#ffffff;" onclick="window.caSetFiltroSimple('combustible', '${f.val}')">
+                        <span class="text-dark fw-bold" style="font-size:0.9rem;">${f.label}</span>
+                        <i class="bi ${iconCheck} fs-5"></i>
                     </div>
                 `;
             }).join('');
         } else if (catKey === 'anio') {
-            if (quickActions) quickActions.style.display = 'none';
-            if (subtituloEl) subtituloEl.innerText = 'Selecciona el año de consulta';
+            if (quickActions) quickActions.style.setProperty('display', 'none', 'important');
             const curYear = fState.anio || 'ALL';
             const yearSet = new Set();
             trips.forEach(t => {
@@ -399,20 +403,18 @@
             });
             const years = ['ALL', ...Array.from(yearSet).sort().reverse()];
             html = years.map(y => {
-                const checked = String(curYear) === String(y) ? 'checked' : '';
+                const checked = String(curYear) === String(y);
                 const label = y === 'ALL' ? 'Todos los Años' : `Año ${y}`;
+                const iconCheck = checked ? 'bi-check-circle-fill text-primary' : 'bi-circle text-muted opacity-40';
                 return `
-                    <div class="form-check d-flex align-items-center justify-content-between p-3 rounded-3 border-bottom opt-ca-filtro-item" style="cursor: pointer;" onclick="window.caSetFiltroSimple('anio', '${y}')">
-                        <label class="form-check-label text-dark fw-bold mb-0 font-monospace" style="cursor: pointer; font-size:0.88rem;">
-                            ${label}
-                        </label>
-                        <input class="form-check-input m-0" type="radio" name="rd-ca-year" value="${y}" ${checked} style="cursor: pointer;">
+                    <div class="opt-ca-filtro-item d-flex align-items-center justify-content-between px-3 py-3 border-bottom" data-search="${label.toLowerCase()}" style="cursor: pointer; background:#ffffff;" onclick="window.caSetFiltroSimple('anio', '${y}')">
+                        <span class="text-dark fw-bold font-monospace" style="font-size:0.9rem;">${label}</span>
+                        <i class="bi ${iconCheck} fs-5"></i>
                     </div>
                 `;
             }).join('');
         } else if (catKey === 'orden') {
-            if (quickActions) quickActions.style.display = 'none';
-            if (subtituloEl) subtituloEl.innerText = 'Criterio de ordenamiento';
+            if (quickActions) quickActions.style.setProperty('display', 'none', 'important');
             const curOrd = fState.orden || 'date_desc';
             const ords = [
                 { val: 'date_desc', label: 'Fecha ▼ (Más Recientes Primero)' },
@@ -423,13 +425,12 @@
                 { val: 'cost_desc', label: 'Gasto ▼ (Mayor Costo S/)' }
             ];
             html = ords.map(o => {
-                const checked = curOrd === o.val ? 'checked' : '';
+                const checked = curOrd === o.val;
+                const iconCheck = checked ? 'bi-check-circle-fill text-primary' : 'bi-circle text-muted opacity-40';
                 return `
-                    <div class="form-check d-flex align-items-center justify-content-between p-3 rounded-3 border-bottom opt-ca-filtro-item" style="cursor: pointer;" onclick="window.caSetFiltroSimple('orden', '${o.val}')">
-                        <label class="form-check-label text-dark fw-bold mb-0" style="cursor: pointer; font-size:0.85rem;">
-                            ${o.label}
-                        </label>
-                        <input class="form-check-input m-0" type="radio" name="rd-ca-ord" value="${o.val}" ${checked} style="cursor: pointer;">
+                    <div class="opt-ca-filtro-item d-flex align-items-center justify-content-between px-3 py-3 border-bottom" data-search="${o.label.toLowerCase()}" style="cursor: pointer; background:#ffffff;" onclick="window.caSetFiltroSimple('orden', '${o.val}')">
+                        <span class="text-dark fw-semibold" style="font-size:0.88rem;">${o.label}</span>
+                        <i class="bi ${iconCheck} fs-5"></i>
                     </div>
                 `;
             }).join('');
@@ -437,7 +438,7 @@
 
         if (listaDetalle) listaDetalle.innerHTML = html;
 
-        // Animar slider hacia la izquierda (Vista 2)
+        // Animar slider hacia la izquierda (Vista 2 Detalle)
         document.getElementById('header-ca-flt-main')?.classList.add('d-none');
         document.getElementById('footer-ca-flt-main')?.classList.add('d-none');
         document.getElementById('header-ca-flt-detail')?.classList.remove('d-none');
@@ -446,10 +447,10 @@
         if (slider) slider.style.transform = 'translateX(-100%)';
 
         setTimeout(() => {
-            if (searchInp && (catKey === 'placas' || catKey === 'carretas' || catKey === 'rutas' || catKey === 'choferes')) {
+            if (searchInp && (catKey === 'placas' || catKey === 'carretas' || catKey === 'rutas' || catKey === 'choferes' || catKey === 'pesos')) {
                 searchInp.focus();
             }
-        }, 200);
+        }, 150);
     };
 
     window.caFiltrosNavAtras = function() {
@@ -464,22 +465,74 @@
         if (slider) slider.style.transform = 'translateX(0)';
     };
 
+    // Buscador instantáneo en tiempo real (Corregido para iOS / Bootstrap)
     window.caBuscarEnFiltroOpciones = function(txt) {
-        const q = (txt || '').toLowerCase().trim();
+        const raw = (txt || '').toLowerCase().trim();
+        const clean = raw.replace(/[\s\-_/]/g, '');
+        const clearBtn = document.getElementById('ca-btn-clear-search');
+        if (clearBtn) clearBtn.classList.toggle('d-none', raw.length === 0);
+
         const items = document.querySelectorAll('.opt-ca-filtro-item');
+        let visibleCount = 0;
+
         items.forEach(item => {
-            const lbl = (item.querySelector('label')?.innerText || '').toLowerCase();
-            item.style.display = lbl.includes(q) ? 'flex' : 'none';
+            const val = (item.getAttribute('data-search') || item.textContent || '').toLowerCase();
+            const valClean = val.replace(/[\s\-_/]/g, '');
+
+            const match = !clean || val.includes(raw) || valClean.includes(clean);
+            if (match) {
+                item.classList.remove('d-none');
+                item.style.setProperty('display', 'flex', 'important');
+                visibleCount++;
+            } else {
+                item.classList.add('d-none');
+                item.style.setProperty('display', 'none', 'important');
+            }
         });
+
+        const emptyEl = document.getElementById('ca-filtro-empty-search');
+        if (emptyEl) {
+            if (visibleCount === 0 && raw.length > 0) {
+                emptyEl.classList.remove('d-none');
+            } else {
+                emptyEl.classList.add('d-none');
+            }
+        }
     };
 
-    window.caToggleFiltroValor = function(catKey, val, isChecked) {
-        if (!window._caFiltrosState[catKey]) window._caFiltrosState[catKey] = new Set();
-        if (isChecked) {
-            window._caFiltrosState[catKey].add(val);
-        } else {
-            window._caFiltrosState[catKey].delete(val);
+    window.caLimpiarInputBuscador = function() {
+        const inp = document.getElementById('ca-buscador-opciones-filtro');
+        if (inp) {
+            inp.value = '';
+            inp.focus();
         }
+        window.caBuscarEnFiltroOpciones('');
+    };
+
+    // Alternar selección al hacer clic en cualquier parte de la fila
+    window.caToggleFiltroFila = function(rowEl, catKey, val) {
+        if (!window._caFiltrosState[catKey]) window._caFiltrosState[catKey] = new Set();
+        const setRef = window._caFiltrosState[catKey];
+        const isCurrentlyChecked = setRef.has(val);
+
+        if (isCurrentlyChecked) {
+            setRef.delete(val);
+        } else {
+            setRef.add(val);
+        }
+
+        const newChecked = !isCurrentlyChecked;
+        const icon = rowEl.querySelector('.ca-chk-icon');
+        if (icon) {
+            if (newChecked) {
+                icon.className = 'bi bi-check-square-fill text-primary fs-5 flex-shrink-0 ca-chk-icon';
+                rowEl.style.background = '#f0f7ff';
+            } else {
+                icon.className = 'bi bi-square text-muted opacity-40 fs-5 flex-shrink-0 ca-chk-icon';
+                rowEl.style.background = '#ffffff';
+            }
+        }
+
         window.caActualizarContadorPreviaFiltros();
     };
 
@@ -495,15 +548,21 @@
         const catKey = window._caCategoriaActivaFiltro;
         if (!catKey || !window._caFiltrosState[catKey]) return;
 
-        document.querySelectorAll('.opt-ca-filtro-item').forEach(item => {
-            if (item.style.display !== 'none') {
-                const chk = item.querySelector('input[type="checkbox"]');
-                if (chk) {
-                    chk.checked = checked;
+        const items = document.querySelectorAll('.opt-ca-filtro-item');
+        items.forEach(item => {
+            if (!item.classList.contains('d-none') && item.style.display !== 'none') {
+                const searchVal = item.querySelector('span')?.innerText?.trim();
+                if (searchVal) {
                     if (checked) {
-                        window._caFiltrosState[catKey].add(chk.value);
+                        window._caFiltrosState[catKey].add(searchVal);
+                        const icon = item.querySelector('.ca-chk-icon');
+                        if (icon) icon.className = 'bi bi-check-square-fill text-primary fs-5 flex-shrink-0 ca-chk-icon';
+                        item.style.background = '#f0f7ff';
                     } else {
-                        window._caFiltrosState[catKey].delete(chk.value);
+                        window._caFiltrosState[catKey].delete(searchVal);
+                        const icon = item.querySelector('.ca-chk-icon');
+                        if (icon) icon.className = 'bi bi-square text-muted opacity-40 fs-5 flex-shrink-0 ca-chk-icon';
+                        item.style.background = '#ffffff';
                     }
                 }
             }
@@ -519,7 +578,13 @@
         } else {
             window._caFiltrosState[catKey] = (catKey === 'orden' ? 'date_desc' : 'ALL');
         }
-        document.querySelectorAll('.opt-ca-filtro-item input[type="checkbox"]').forEach(chk => chk.checked = false);
+
+        document.querySelectorAll('.opt-ca-filtro-item').forEach(item => {
+            const icon = item.querySelector('.ca-chk-icon');
+            if (icon) icon.className = 'bi bi-square text-muted opacity-40 fs-5 flex-shrink-0 ca-chk-icon';
+            item.style.background = '#ffffff';
+        });
+
         window.caActualizarContadorPreviaFiltros();
         window.caFiltrosNavAtras();
     };
