@@ -361,6 +361,34 @@
         return consumo > 0 ? consumo : 0;
     }
 
+    // Helper: Buscar Km Teórico según Sentido (IDA / RETORNO), Ruta y Motor
+    function obtenerKmTeorico(rutaStr, sentidoStr, motorStr) {
+        if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) return 0;
+        const rNorm = (rutaStr || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        const sNorm = (sentidoStr || 'IDA').toUpperCase().trim();
+        const mNorm = (motorStr || '').toUpperCase().trim();
+        
+        let match = window._caMatrizRendimiento.find(m => {
+            const mSentido = (m.sentido || 'IDA').toUpperCase().trim();
+            if (mSentido !== sNorm) return false;
+            const mRuta = (m.ruta || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const mMotor = (m.motor || '').toUpperCase().trim();
+            const rutaCoincide = mRuta && (rNorm.includes(mRuta) || mRuta.includes(rNorm));
+            
+            if (mNorm && mMotor) {
+                return rutaCoincide && (mNorm.includes(mMotor) || mMotor.includes(mNorm));
+            }
+            if (!mNorm && !mMotor) {
+                return rutaCoincide;
+            }
+            return false;
+        });
+
+        if (!match) return 0;
+        const distKm = parseFloat(match.km || 0);
+        return distKm > 0 ? distKm : 0;
+    }
+
     // Helper: Rendimiento teórico Km/Galón
     function obtenerRendimientoTeorico(rutaStr, pesoTn, motorStr) {
         if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) return null;
@@ -464,6 +492,10 @@
             const galTeoricoRetorno = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', pesoRetVal, t.motor);
             const galTeoricoTotal = (galTeoricoIda > 0 || galTeoricoRetorno > 0) ? (galTeoricoIda + galTeoricoRetorno) : 0;
 
+            const kmTeoricoIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor);
+            const kmTeoricoRetorno = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor);
+            const kmTeoricoTotal = (kmTeoricoIda > 0 || kmTeoricoRetorno > 0) ? (kmTeoricoIda + kmTeoricoRetorno) : 0;
+
             let galTeoricoHtml = '<span class="text-muted opacity-50">—</span>';
             let difBadgeHtml = '<span class="text-muted opacity-50">—</span>';
 
@@ -543,6 +575,7 @@
                     <td class="text-end font-monospace text-success fw-bold">${kInicio > 0 ? kInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-danger fw-bold">${kFin > 0 ? kFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bold text-dark">${semaforoRecorrido}</td>
+                    <td class="text-end font-monospace fw-semibold" style="color:#d97706;" title="Ida: ${kmTeoricoIda.toFixed(1)} km | Retorno: ${kmTeoricoRetorno.toFixed(1)} km">${kmTeoricoTotal > 0 ? `${kmTeoricoTotal.toLocaleString('es-PE', { minimumFractionDigits: 1 })}` : '<span class="text-muted opacity-50">—</span>'}</td>
                     <td class="text-end font-monospace fw-bold text-primary">${totGal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
                     <td class="text-end font-monospace">${galTeoricoHtml}</td>
                     <td class="text-end font-monospace">${difBadgeHtml}</td>
@@ -599,6 +632,7 @@
                     <td class="text-end font-monospace text-muted">${minOdoIda > 0 ? minOdoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${maxOdoIda > 0 ? maxOdoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${recKmIda > 0 ? recKmIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace text-secondary">${kmTeoricoIda > 0 ? kmTeoricoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bold text-primary">${galRealIda > 0 ? galRealIda.toFixed(2) : '0.00'}</td>
                     <td class="text-end font-monospace text-secondary">${galTeoricoIda > 0 ? galTeoricoIda.toFixed(2) : '—'}</td>
                     <td class="text-end font-monospace">${difIdaHtml}</td>
@@ -625,6 +659,7 @@
                     <td class="text-end font-monospace text-muted">${minOdoRet > 0 ? minOdoRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${maxOdoRet > 0 ? maxOdoRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${recKmRet > 0 ? recKmRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace text-secondary">${kmTeoricoRetorno > 0 ? kmTeoricoRetorno.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bold text-primary">${galRealRet > 0 ? galRealRet.toFixed(2) : '0.00'}</td>
                     <td class="text-end font-monospace text-secondary">${galTeoricoRetorno > 0 ? galTeoricoRetorno.toFixed(2) : '—'}</td>
                     <td class="text-end font-monospace">${difRetHtml}</td>
@@ -645,15 +680,22 @@
             let totalSumVales = 0;
             let totalSumGps = 0;
             let totalSumTeorico = 0;
+            let totalSumKmTeorico = 0;
+            let totalSumKmReal = 0;
 
             window._caFilteredTrips.forEach(t => {
                 const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
                 const totGal = fs ? fs.totalGalones : t.totalGalones;
                 totalSumVales += (totGal || 0);
+                totalSumKmReal += (fs ? fs.recorridoKm : (t.recorridoKm || 0));
 
                 const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || 0, t.motor);
                 const gRet = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor);
                 totalSumTeorico += (gIda + gRet);
+
+                const kIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor);
+                const kRet = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor);
+                totalSumKmTeorico += (kIda + kRet);
 
                 const gps = t.gpsTelemetria || t.wialonGps;
                 if (gps && gps.combustibleConsumidoGps !== null && gps.combustibleConsumidoGps !== undefined && !isNaN(gps.combustibleConsumidoGps)) {
@@ -679,7 +721,8 @@
                     <td class="text-center text-muted small">—</td>
                     <td class="text-end text-muted small">—</td>
                     <td class="text-end text-muted small">—</td>
-                    <td class="text-end text-muted small">—</td>
+                    <td class="text-end font-monospace fw-bold text-dark">${totalSumKmReal > 0 ? totalSumKmReal.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
+                    <td class="text-end font-monospace fw-bold" style="color:#d97706;">${totalSumKmTeorico > 0 ? totalSumKmTeorico.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bolder text-primary fs-6 py-3" style="background: rgba(2, 132, 199, 0.08);">
                         ${totalSumVales.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
@@ -1090,6 +1133,10 @@
             const gTeoricoTotal = (gIda > 0 || gRet > 0) ? (gIda + gRet) : 0;
             const difGalones = gTeoricoTotal > 0 ? parseFloat((totGal - gTeoricoTotal).toFixed(2)) : null;
 
+            const kIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor);
+            const kRet = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor);
+            const kTeoricoTotal = (kIda > 0 || kRet > 0) ? (kIda + kRet) : 0;
+
             return {
                 "N° VIAJE": t.numViaje || t.viaje || '---',
                 "PLACA": t.placa || '---',
@@ -1101,6 +1148,7 @@
                 "KM INICIO (VALES)": kInicio > 0 ? parseFloat(kInicio.toFixed(1)) : '—',
                 "KM FIN (VALES)": kFin > 0 ? parseFloat(kFin.toFixed(1)) : '—',
                 "RECORRIDO (VALES)": recKm > 0 ? parseFloat(recKm.toFixed(1)) : '—',
+                "KM TEÓRICO (MATRIZ)": kTeoricoTotal > 0 ? parseFloat(kTeoricoTotal.toFixed(1)) : '—',
                 "TOTAL GALONES (REAL)": totGal > 0 ? parseFloat(totGal.toFixed(2)) : 0,
                 "GALONES IDA": t.galonesIda || 0,
                 "GALONES RETORNO": t.galonesRetorno || 0,
