@@ -1082,7 +1082,12 @@
             // ── Cálculo Teórico Matriz Estricto (Ida + Retorno con Motor y Regla de Techo) ──
             const galTeoricoIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', pesoIdaVal, t.motor);
             const galTeoricoRetorno = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', pesoRetVal, t.motor);
-            const galTeoricoTotal = (galTeoricoIda > 0 || galTeoricoRetorno > 0) ? (galTeoricoIda + galTeoricoRetorno) : 0;
+            const galTeoricoBase = (galTeoricoIda > 0 || galTeoricoRetorno > 0) ? (galTeoricoIda + galTeoricoRetorno) : 0;
+
+            // Regla Operativa: Si la unidad rueda sin carreta (solo tracto), se le descuenta el 10% del teórico consolidado (Ida + Retorno)
+            const esSinCarreta = !t.carreta || t.carreta === '—' || t.carreta === '-' || (typeof t.carreta === 'string' && (t.carreta.trim() === '' || t.carreta.toUpperCase().includes('SIN CARRETA') || t.carreta.toUpperCase().includes('SOLO TRACTO')));
+            const galTeoricoTotal = (esSinCarreta && galTeoricoBase > 0) ? (galTeoricoBase * 0.90) : galTeoricoBase;
+            const galDescontado = (esSinCarreta && galTeoricoBase > 0) ? (galTeoricoBase * 0.10) : 0;
 
             const kmTeoricoIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor);
             const kmTeoricoRetorno = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor);
@@ -1096,7 +1101,8 @@
             let difBadgeHtml = '<span class="text-muted opacity-50">—</span>';
 
             if (galTeoricoTotal > 0 && totGal > 0) {
-                galTeoricoHtml = `<span class="fw-bold font-monospace text-dark" title="Ida: ${galTeoricoIda.toFixed(1)}g | Retorno: ${galTeoricoRetorno.toFixed(1)}g | Motor: ${t.motor || 'Estándar'}">${galTeoricoTotal.toFixed(2)}</span>`;
+                const descBadge = esSinCarreta ? `<span class="badge bg-warning bg-opacity-25 text-dark border border-warning px-1 py-0 ms-1 fw-bold font-monospace" style="font-size:0.65rem;" title="Descuento -10% por rodar sin carreta: -${galDescontado.toFixed(2)} gal">-10%</span>` : '';
+                galTeoricoHtml = `<span class="fw-bold font-monospace text-dark" title="Ida: ${galTeoricoIda.toFixed(1)}g | Retorno: ${galTeoricoRetorno.toFixed(1)}g | Base: ${galTeoricoBase.toFixed(2)}g${esSinCarreta ? ` | -10% Solo Tracto (-${galDescontado.toFixed(2)}g) => Final: ${galTeoricoTotal.toFixed(2)}g` : ''} | Motor: ${t.motor || 'Estándar'}">${galTeoricoTotal.toFixed(2)}</span>${descBadge}`;
                 const dif = totGal - galTeoricoTotal;
                 if (dif > 0) {
                     difBadgeHtml = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger fw-bold font-monospace px-1.5 py-0.5" title="Sobreconsumo sobre la matriz: +${dif.toFixed(2)} gal">+${dif.toFixed(2)} ⚠️</span>`;
@@ -1327,7 +1333,10 @@
 
                 const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || 0, t.motor);
                 const gRet = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor);
-                totalSumTeorico += (gIda + gRet);
+                const gBase = (gIda + gRet);
+                const esSinCarreta = !t.carreta || t.carreta === '—' || t.carreta === '-' || (typeof t.carreta === 'string' && (t.carreta.trim() === '' || t.carreta.toUpperCase().includes('SIN CARRETA') || t.carreta.toUpperCase().includes('SOLO TRACTO')));
+                const gFinal = (esSinCarreta && gBase > 0) ? (gBase * 0.90) : gBase;
+                totalSumTeorico += gFinal;
 
                 const kIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor);
                 const kRet = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor);
