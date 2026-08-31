@@ -125,6 +125,25 @@ window.perfilRevocarSesion = async function(id) {
     }
 };
 
+window.perfilRevocarOtrasSesiones = async function() {
+    if (!confirm('¿Deseas cerrar todas las demás sesiones excepto la que estás usando ahora?')) return;
+    try {
+        var res = await fetch('/api/perfil/sesiones-otras', {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('fleet_token') }
+        });
+        var data = await res.json();
+        if (data.ok) {
+            alert('Se cerraron ' + (data.eliminadas || 0) + ' sesiones inactivas.');
+            perfilCargarSesiones();
+        } else {
+            throw new Error(data.error || 'Error al cerrar sesiones');
+        }
+    } catch(e) {
+        alert(e.message);
+    }
+};
+
 window.perfilGuardarDatos = async function() {
     try {
         var nombre = document.getElementById('p-input-nombre').value;
