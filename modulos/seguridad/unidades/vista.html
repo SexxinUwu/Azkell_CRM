@@ -1069,7 +1069,7 @@
         </div>
 
         <!-- ── SECCIÓN 1: VIAJE ASOCIADO (OPCIONAL - COLAPSABLE) ───────────────── -->
-        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 100; overflow: visible !important;">
+        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 2; overflow: visible !important;">
             <div class="d-flex align-items-center justify-content-between cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sgu_collapse_viaje" aria-expanded="false" style="user-select: none;">
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-diagram-3-fill text-primary fs-5"></i>
@@ -1093,9 +1093,9 @@
                 <div class="row g-2">
                     <div class="col-12">
                         <label class="form-label fw-semibold text-secondary small mb-1">Orden de Viaje (Buscar por Código, Placa o Conductor)</label>
-                        <div class="position-relative" style="z-index: 105;">
+                        <div class="position-relative" style="z-index: 10;">
                             <input type="text" id="sgu_orden_viaje-txt" class="form-control form-control-sm fw-bold border-secondary-subtle text-uppercase pe-5" placeholder="BUSCAR ORDEN DE VIAJE (EJ: 2026-00000952, PLACA, CONDUCTOR)..." autocomplete="off" oninput="window._sguFiltrarViaje()" onfocus="window._sguFiltrarViaje()" onblur="window._sguHideViaje()">
-                            <button type="button" id="sgu_btn_clear_viaje" class="btn btn-sm text-secondary position-absolute top-50 end-0 translate-middle-y me-2 p-0 border-0 bg-transparent d-none" onclick="window._sguLimpiarViajeVinculado(true)" style="z-index: 106; font-size: 1rem; line-height: 1;" title="Quitar viaje">
+                            <button type="button" id="sgu_btn_clear_viaje" class="btn btn-sm text-secondary position-absolute top-50 end-0 translate-middle-y me-2 p-0 border-0 bg-transparent d-none" onclick="window._sguLimpiarViajeVinculado(true)" style="z-index: 11; font-size: 1rem; line-height: 1;" title="Quitar viaje">
                                 <i class="bi bi-x-circle-fill text-muted"></i>
                             </button>
                             <input type="hidden" id="sgu_orden_viaje" name="orden_viaje">
