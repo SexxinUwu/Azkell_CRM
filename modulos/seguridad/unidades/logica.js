@@ -1461,23 +1461,27 @@ async function _sguRenderDetail(recordId) {
 
         html += '<div class="mb-3">';
         html += '<label class="sgu-form-label">Kilometraje de Llegada (Retorno)</label>';
-        html += '<input type="number" class="sgu-form-input-clean" id="sgu-det-km-retorno" placeholder="Ingrese odómetro actual" oninput="window._sguCheckFormReady()">';
+        html += '<input type="number" class="sgu-form-input-clean" id="sgu-det-km-retorno" placeholder="Ingrese odómetro actual" oninput="window._sguCheckReturnReady()">';
         html += '</div>';
 
-        html += '<div class="sgu-task-box mb-2">';
-        html += '<div class="d-flex align-items-center gap-2">';
-        html += '<i class="bi bi-camera fs-5 text-primary"></i>';
-        html += '<span class="fw-bold text-dark small">Fotos de Llegada</span>';
+        // Verificación e Inspección (Checklist y Evidencias 2 en 1)
+        html += '<div class="mb-3">';
+        html += '<div class="d-flex align-items-center gap-2 mb-2">';
+        html += '<i class="bi bi-list-check text-primary"></i>';
+        html += '<span class="sgu-form-label m-0 fw-bold">Verificación e Inspección</span>';
         html += '</div>';
-        html += '<button class="sgu-task-btn" id="sgu-det-btn-fotos" onclick="window._sguOpenPhotosChooser(\'retorno\')">Añadir</button>';
+        html += '<div class="sgu-task-box mb-1" style="border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between;">';
+        html += '<div class="d-flex align-items-center gap-3">';
+        html += '<div class="sgu-task-icon-wrap" style="background:#eff6ff; color:#2563eb; width:38px; height:38px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">';
+        html += '<i class="bi bi-clipboard-check fs-5"></i>';
         html += '</div>';
-
-        html += '<div class="sgu-task-box mb-3">';
-        html += '<div class="d-flex align-items-center gap-2">';
-        html += '<i class="bi bi-clipboard2-check fs-5 text-success"></i>';
-        html += '<span class="fw-bold text-dark small">Checklist de Llegada</span>';
+        html += '<div>';
+        html += '<span class="fw-bold text-dark d-block" style="font-size:0.88rem;">Checklist y Evidencias</span>';
+        html += '<span class="text-secondary small" id="sgu-det-inspection-desc" style="font-size:0.75rem;">Ítems de seguridad + Fotos</span>';
         html += '</div>';
-        html += '<button class="sgu-task-btn" id="sgu-det-btn-chk" onclick="window._sguOpenChecklist()">Llenar</button>';
+        html += '</div>';
+        html += '<button type="button" class="sgu-task-btn" id="sgu-det-btn-chk" onclick="window._sguOpenChecklist()">Llenar</button>';
+        html += '</div>';
         html += '</div>';
 
         // Observaciones de Retorno
@@ -1650,38 +1654,27 @@ async function _sguLoadDetailDocs(placaTracto, placaCarreta) {
 }
 
 window._sguCheckReturnReady = function() {
-    var k = document.getElementById('sgu-det-km-retorno');
-    if (!k) return;
-    var km = k.value.trim();
-
     var photosList = _sguPhotos['retorno'] || [];
-    var hasPhotos = photosList.length > 0;
-    var btnFotos = document.getElementById('sgu-det-btn-fotos');
-    if (btnFotos) {
-        if (hasPhotos) {
-            btnFotos.innerHTML = '<i class="bi bi-check-lg"></i> ' + photosList.length + ' Foto(s)';
-            btnFotos.classList.add('done');
-        } else {
-            btnFotos.innerHTML = 'Añadir';
-            btnFotos.classList.remove('done');
-        }
-    }
-
     var chkCount = Object.keys(_sguChecklist).length;
     var totalItems = 0;
-    _sguGlobalTemplate.forEach(function(cat) { totalItems += (cat.items || []).length; });
-    var hasChecklist = totalItems > 0 && chkCount >= totalItems;
+    (_sguGlobalTemplate || []).forEach(function(cat) { totalItems += (cat.items || []).length; });
+
     var btnChk = document.getElementById('sgu-det-btn-chk');
+    var descInsp = document.getElementById('sgu-det-inspection-desc');
+
     if (btnChk) {
-        if (hasChecklist) {
-            btnChk.innerHTML = '<i class="bi bi-check-lg"></i> Completo';
+        if (chkCount >= totalItems && totalItems > 0 && photosList.length > 0) {
+            btnChk.innerHTML = '<i class="bi bi-check-lg"></i> Listo (' + photosList.length + ' fotos)';
             btnChk.classList.add('done');
-        } else if (chkCount > 0) {
-            btnChk.innerHTML = chkCount + '/' + totalItems + ' Ítems';
+            if (descInsp) descInsp.textContent = 'Checklist OK & ' + photosList.length + ' foto(s) adjunta(s)';
+        } else if (chkCount > 0 || photosList.length > 0) {
+            btnChk.innerHTML = chkCount + ' ítems / ' + photosList.length + ' fotos';
             btnChk.classList.add('done');
+            if (descInsp) descInsp.textContent = chkCount + ' ítems marcados & ' + photosList.length + ' foto(s)';
         } else {
             btnChk.innerHTML = 'Llenar';
             btnChk.classList.remove('done');
+            if (descInsp) descInsp.textContent = 'Ítems de seguridad + Fotos';
         }
     }
 
