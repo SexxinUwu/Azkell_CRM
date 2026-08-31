@@ -292,7 +292,6 @@ window.verificarSesionGuardada = function() {
     var vFleetrun    = showMantHub && _cL('fleetrun');
     var vReportesOT  = showMantHub && _cL('reportes_ot');
     var vTrabajosOT  = showMantHub && _cL('trabajos_ot');
-    var vCombustible = showMantHub && _cL('combustible');
     var vNeumaticos  = showMantHub && _cL('neumaticos');
     
     var showOtrosMantHub = showMantHub && _cHub('otros_mant');
@@ -315,20 +314,16 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-reportes-ot',   vReportesOT);
     safe('nav-trabajos-ot',     vTrabajosOT);
     safe('mbnav-trabajos-ot',   vTrabajosOT);
-    safe('nav-combustible-toggle',   vCombustible);
-    safe('nav-combustible-vales',    vCombustible);
-    safe('nav-combustible-analisis', vCombustible);
-    safe('mbnav-combustible',        vCombustible);
     safe('nav-neumaticos-toggle', vNeumaticos);
     safe('mbnav-neumaticos-toggle',   vNeumaticos);
     safe('mbnav-neumaticos-analisis', vNeumaticos);
-    var vIncidencias = showMantHub && (_cL('incidencias_ruta') || _cL('otros_mant') || _cL('reportes_ot') || _cL('status_rampa'));
+    var vIncidencias = showMantHub && _cL('incidencias_ruta');
     safe('nav-incidencias-ruta',   vIncidencias);
     safe('mbnav-incidencias-ruta', vIncidencias);
     safe('nav-otros-mant',      showOtrosMant);
     safe('mbnav-otros-mant',    showOtrosMant);
 
-    var showMant = vStatusRampa || vChecklist || vInsp || vFleetrun || vReportesOT || vTrabajosOT || vCombustible || vNeumaticos || vIncidencias || showOtrosMant;
+    var showMant = vStatusRampa || vChecklist || vInsp || vFleetrun || vReportesOT || vTrabajosOT || vNeumaticos || vIncidencias || showOtrosMant;
     safe('wrap-mantenimiento', showMant);
     safe('bnav-mantenimiento', showMant);
 
@@ -505,6 +500,23 @@ window.verificarSesionGuardada = function() {
         safe('wrap-administracion', false);
         safe('nav-cfg-empresa', false);
     }
+    // ── ACTUALIZACIÓN DINÁMICA DE BADGES Y SECCIONES DEL SIDEBAR ──
+    ['operaciones', 'flota', 'mantenimiento', 'almacen', 'directorio', 'seguridad', 'rrhh', 'tesoreria', 'administracion', 'configuracion'].forEach(function(sec) {
+        var wrap = document.getElementById('wrap-' + sec);
+        if (!wrap) return;
+        var badge = wrap.querySelector('.section-badge');
+        var itemsCont = document.getElementById('section-items-' + sec);
+        if (badge && itemsCont) {
+            var visibleItems = 0;
+            itemsCont.querySelectorAll('a.nav-item').forEach(function(item) {
+                if (item.style.display !== 'none') visibleItems++;
+            });
+            badge.textContent = visibleItems;
+            if (visibleItems === 0) {
+                wrap.style.display = 'none';
+            }
+        }
+    });
     // ─────────────────────────────────────────────────────────────────
     // ─────────────────────────────────────────────────────────────────
 
