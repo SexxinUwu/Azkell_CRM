@@ -135,6 +135,7 @@
         carretas: new Set(),
         rutas: new Set(),
         choferes: new Set(),
+        motores: new Set(),
         pesos: new Set(),
         combustible: 'ALL',
         anio: 'ALL',
@@ -196,23 +197,24 @@
         window.caAplicarFiltros(false);
     };
 
-    // ── DRAWER DE FILTROS AVANZADOS JERÁRQUICO ESTILO iOS ─────────────────────
+    // ── DRAWER DE FILTROS AVANZADOS JERÁRQUICO ESTILO iOS / REPORTE DE FALLAS ──
     window._caCategoriaActivaFiltro = '';
 
     const CA_CATEGORIAS = [
-        { key: 'placas', title: 'Placa / Tracto', icon: 'bi-truck', color: '#2563eb', bg: '#eff6ff' },
-        { key: 'carretas', title: 'Carreta / Remolque', icon: 'bi-trailers', color: '#d97706', bg: '#fffbeb' },
-        { key: 'rutas', title: 'Ruta / Destino', icon: 'bi-signpost-2', color: '#0d9488', bg: '#f0fdfa' },
-        { key: 'choferes', title: 'Conductor / Chofer', icon: 'bi-person-badge', color: '#7c3aed', bg: '#f5f3ff' },
-        { key: 'pesos', title: 'Peso / Carga (Tn)', icon: 'bi-speedometer2', color: '#0284c7', bg: '#f0f9ff' },
-        { key: 'combustible', title: 'Tipo de Combustible', icon: 'bi-fuel-pump', color: '#16a34a', bg: '#f0fdf4' },
-        { key: 'anio', title: 'Año de Registro', icon: 'bi-calendar3', color: '#475569', bg: '#f1f5f9' },
-        { key: 'orden', title: 'Criterio de Orden', icon: 'bi-arrow-down-up', color: '#64748b', bg: '#f8fafc' }
+        { key: 'placas', title: 'Placa / Tracto', icon: 'bi-truck', color: '#2563eb', bg: '#eff6ff', desc: 'Unidades motrices' },
+        { key: 'carretas', title: 'Carreta / Remolque', icon: 'bi-trailers', color: '#d97706', bg: '#fffbeb', desc: 'Semirremolques y cisternas' },
+        { key: 'rutas', title: 'Ruta / Destino', icon: 'bi-signpost-2', color: '#0d9488', bg: '#f0fdfa', desc: 'Trayectos y destinos' },
+        { key: 'choferes', title: 'Conductor / Chofer', icon: 'bi-person-badge', color: '#7c3aed', bg: '#f5f3ff', desc: 'Operadores asignados' },
+        { key: 'motores', title: 'Modelo de Motor', icon: 'bi-cpu', color: '#ea580c', bg: '#fff7ed', desc: 'Motor y calibración' },
+        { key: 'pesos', title: 'Peso / Carga (Tn)', icon: 'bi-speedometer2', color: '#0284c7', bg: '#f0f9ff', desc: 'Tonelaje transportado' },
+        { key: 'combustible', title: 'Tipo de Combustible', icon: 'bi-fuel-pump', color: '#16a34a', bg: '#f0fdf4', desc: 'D2 Diésel o UREA' },
+        { key: 'anio', title: 'Año de Registro', icon: 'bi-calendar3', color: '#475569', bg: '#f1f5f9', desc: 'Año de los viajes' },
+        { key: 'orden', title: 'Criterio de Orden', icon: 'bi-arrow-down-up', color: '#64748b', bg: '#f8fafc', desc: 'Criterio de clasificación' }
     ];
 
     window.caAbrirDrawerFiltros = function() {
-        const drawerEl = document.getElementById('caDrawerFiltros');
-        if (!drawerEl) return;
+        const modalEl = document.getElementById('caModalFiltros');
+        if (!modalEl) return;
 
         window.caRenderListaCategoriasFiltro();
 
@@ -224,8 +226,8 @@
         document.getElementById('footer-ca-flt-main')?.classList.remove('d-none');
         document.getElementById('header-ca-flt-detail')?.classList.add('d-none');
 
-        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(drawerEl);
-        offcanvas.show();
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
         window.caActualizarContadorPreviaFiltros();
     };
 
@@ -254,6 +256,10 @@
                 isActivo = s > 0;
             } else if (cat.key === 'choferes') {
                 const s = fState.choferes.size;
+                badgeTxt = s > 0 ? `${s} sel.` : 'Todos';
+                isActivo = s > 0;
+            } else if (cat.key === 'motores') {
+                const s = fState.motores.size;
                 badgeTxt = s > 0 ? `${s} sel.` : 'Todos';
                 isActivo = s > 0;
             } else if (cat.key === 'pesos') {
@@ -286,10 +292,13 @@
             html += `
                 <div class="d-flex align-items-center justify-content-between p-3 ${borderBottom}" style="cursor: pointer; transition: background 0.12s ease;" onclick="window.caEntrarFiltroDetalle('${cat.key}', '${cat.title}')" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background='#ffffff'">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:34px; height:34px; background:${cat.bg}; color:${cat.color}; font-size:1.05rem;">
+                        <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px; height:36px; background:${cat.bg}; color:${cat.color}; font-size:1.1rem;">
                             <i class="bi ${cat.icon}"></i>
                         </div>
-                        <span class="fw-semibold text-dark" style="font-size:0.92rem; letter-spacing: -0.01em;">${cat.title}</span>
+                        <div>
+                            <div class="fw-semibold text-dark" style="font-size:0.94rem; letter-spacing: -0.01em;">${cat.title}</div>
+                            <small class="text-muted" style="font-size:0.75rem;">${cat.desc || ''}</small>
+                        </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge rounded-pill ${badgeClass} font-monospace fw-semibold px-2.5 py-1" style="${badgeBg} font-size:0.75rem;">${badgeTxt}</span>
@@ -325,7 +334,7 @@
 
         let html = '';
 
-        if (catKey === 'placas' || catKey === 'carretas' || catKey === 'rutas' || catKey === 'choferes' || catKey === 'pesos') {
+        if (catKey === 'placas' || catKey === 'carretas' || catKey === 'rutas' || catKey === 'choferes' || catKey === 'motores' || catKey === 'pesos') {
             if (quickActions) quickActions.style.setProperty('display', 'flex', 'important');
 
             const mapCounts = {};
@@ -338,6 +347,10 @@
                 if (catKey === 'rutas' && t.ruta && t.ruta !== '—') mapCounts[t.ruta] = (mapCounts[t.ruta] || 0) + 1;
                 if (catKey === 'choferes') {
                     (t.vouchers || []).forEach(v => { if (v.conductor && v.conductor !== '—') mapCounts[v.conductor] = (mapCounts[v.conductor] || 0) + 1; });
+                }
+                if (catKey === 'motores') {
+                    const mot = (t.motor && t.motor.trim()) ? t.motor.trim() : 'SIN MOTOR';
+                    mapCounts[mot] = (mapCounts[mot] || 0) + 1;
                 }
                 if (catKey === 'pesos') {
                     const pLabel = (t.pesoMaxTn !== undefined && t.pesoMaxTn > 0) ? `${Number(t.pesoMaxTn).toFixed(2)} Tn` : '0.00 Tn (Vacío)';
@@ -614,6 +627,11 @@
             if (fState.rutas.size > 0 && !fState.rutas.has(t.ruta)) return;
             if (fState.choferes.size > 0 && !(t.vouchers || []).some(v => fState.choferes.has(v.conductor))) return;
 
+            if (fState.motores.size > 0) {
+                const mot = (t.motor && t.motor.trim()) ? t.motor.trim() : 'SIN MOTOR';
+                if (!fState.motores.has(mot)) return;
+            }
+
             if (fState.pesos.size > 0) {
                 const pLabel = (t.pesoMaxTn !== undefined && t.pesoMaxTn > 0) ? `${Number(t.pesoMaxTn).toFixed(2)} Tn` : '0.00 Tn (Vacío)';
                 if (!fState.pesos.has(pLabel)) return;
@@ -630,7 +648,8 @@
                 const matchCarreta = (t.carreta || '').toLowerCase().includes(searchVal) || (t.vouchers || []).some(v => (v.carreta || '').toLowerCase().includes(searchVal));
                 const matchRuta = (t.ruta || '').toLowerCase().includes(searchVal);
                 const matchChofer = (t.vouchers || []).some(v => (v.conductor || '').toLowerCase().includes(searchVal));
-                if (!matchViaje && !matchPlaca && !matchCarreta && !matchRuta && !matchChofer) return;
+                const matchMotor = (t.motor || '').toLowerCase().includes(searchVal);
+                if (!matchViaje && !matchPlaca && !matchCarreta && !matchRuta && !matchChofer && !matchMotor) return;
             }
 
             count++;
@@ -646,6 +665,7 @@
             carretas: new Set(),
             rutas: new Set(),
             choferes: new Set(),
+            motores: new Set(),
             pesos: new Set(),
             combustible: 'ALL',
             anio: 'ALL',
@@ -662,6 +682,7 @@
             carretas: new Set(),
             rutas: new Set(),
             choferes: new Set(),
+            motores: new Set(),
             pesos: new Set(),
             combustible: 'ALL',
             anio: 'ALL',
@@ -678,6 +699,7 @@
         else if (tipo === 'carreta') window._caFiltrosState.carretas.delete(valor);
         else if (tipo === 'ruta') window._caFiltrosState.rutas.delete(valor);
         else if (tipo === 'chofer') window._caFiltrosState.choferes.delete(valor);
+        else if (tipo === 'motor') window._caFiltrosState.motores.delete(valor);
         else if (tipo === 'peso') window._caFiltrosState.pesos.delete(valor);
         else if (tipo === 'combustible') window._caFiltrosState.combustible = 'ALL';
         else if (tipo === 'anio') window._caFiltrosState.anio = 'ALL';
@@ -705,6 +727,9 @@
         });
         window._caFiltrosState.choferes.forEach(ch => {
             chips.push(`<span class="badge bg-warning bg-opacity-10 text-dark border px-2.5 py-1 rounded-pill d-flex align-items-center gap-1 fw-semibold"><i class="bi bi-person"></i> ${ch} <i class="bi bi-x-circle-fill ms-1 text-muted" style="cursor:pointer;" onclick="window.caEliminarChipFiltro('chofer', '${ch}')"></i></span>`);
+        });
+        window._caFiltrosState.motores.forEach(m => {
+            chips.push(`<span class="badge bg-warning bg-opacity-10 text-dark border px-2.5 py-1 rounded-pill d-flex align-items-center gap-1 font-monospace fw-semibold"><i class="bi bi-cpu"></i> ${m} <i class="bi bi-x-circle-fill ms-1 text-muted" style="cursor:pointer;" onclick="window.caEliminarChipFiltro('motor', '${m}')"></i></span>`);
         });
         window._caFiltrosState.pesos.forEach(pe => {
             chips.push(`<span class="badge bg-secondary bg-opacity-10 text-dark border px-2.5 py-1 rounded-pill d-flex align-items-center gap-1 font-monospace fw-semibold"><i class="bi bi-speedometer2"></i> ${pe} <i class="bi bi-x-circle-fill ms-1 text-muted" style="cursor:pointer;" onclick="window.caEliminarChipFiltro('peso', '${pe}')"></i></span>`);
@@ -776,6 +801,12 @@
             if (fState.choferes.size > 0) {
                 const matchChofer = (t.vouchers || []).some(v => fState.choferes.has(v.conductor));
                 if (!matchChofer) return false;
+            }
+
+            // Multi-Filtro por Modelo de Motor
+            if (fState.motores.size > 0) {
+                const mot = (t.motor && t.motor.trim()) ? t.motor.trim() : 'SIN MOTOR';
+                if (!fState.motores.has(mot)) return false;
             }
 
             // Multi-Filtro por Peso (Tn)
