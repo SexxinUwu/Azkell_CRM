@@ -151,48 +151,72 @@
     </div>
 
     <!-- Charts & Vehicle Inspector Section -->
+    <!-- Charts & Vehicle Inspector Section (3 Cards HD) -->
     <div class="row g-2 g-md-3 mb-3 mb-md-4">
-        <!-- Donut Chart Vigencia -->
-        <div class="col-lg-5 col-md-12">
+        <!-- 1. Donut Chart Vigencia -->
+        <div class="col-lg-3 col-md-6 col-12">
             <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
                 <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
                     <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
-                        <i class="bi bi-pie-chart-fill text-primary"></i> Estado de Vigencia de Llantas
+                        <i class="bi bi-pie-chart-fill text-primary"></i> Estado de Vigencia
                     </h6>
                     <span class="badge bg-light text-dark border small">Global</span>
                 </div>
-                <div class="d-flex flex-column align-items-center justify-content-center py-2">
-                    <div style="width: 200px; height: 200px; position: relative;">
+                <div class="d-flex flex-column align-items-center justify-content-center py-1">
+                    <div style="width: 150px; height: 150px; position: relative;">
                         <canvas id="chartNeuVigencia"></canvas>
                     </div>
-                    <div class="d-flex justify-content-center gap-3 mt-3 flex-wrap small fw-bold">
-                        <div class="d-flex align-items-center gap-1.5"><span class="rounded-circle" style="width:10px;height:10px;background:#22c55e;"></span> Vigente: <span id="lbl-vigentes-cnt">0</span></div>
-                        <div class="d-flex align-items-center gap-1.5"><span class="rounded-circle" style="width:10px;height:10px;background:#ef4444;"></span> No Vigente: <span id="lbl-novigentes-cnt">0</span></div>
-                        <div class="d-flex align-items-center gap-1.5"><span class="rounded-circle" style="width:10px;height:10px;background:#94a3b8;"></span> Sin Inspección: <span id="lbl-sininsp-cnt">0</span></div>
+                    <div class="d-flex justify-content-center gap-2 mt-2.5 flex-wrap small fw-bold" style="font-size: 0.76rem;">
+                        <div class="d-flex align-items-center gap-1"><span class="rounded-circle" style="width:8px;height:8px;background:#22c55e;"></span> Vig: <span id="lbl-vigentes-cnt">0</span></div>
+                        <div class="d-flex align-items-center gap-1"><span class="rounded-circle" style="width:8px;height:8px;background:#ef4444;"></span> Venc: <span id="lbl-novigentes-cnt">0</span></div>
+                        <div class="d-flex align-items-center gap-1"><span class="rounded-circle" style="width:8px;height:8px;background:#94a3b8;"></span> Pend: <span id="lbl-sininsp-cnt">0</span></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Consulta Rápida por Placa con Chasis Interactivo -->
-        <div class="col-lg-7 col-md-12">
+        <!-- 2. Card: Llantas Rodando por Medida -->
+        <div class="col-lg-4 col-md-6 col-12">
             <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
-                <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3 border-bottom pb-2">
+                <div class="d-flex align-items-center justify-content-between mb-2 border-bottom pb-2">
                     <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
-                        <i class="bi bi-truck text-primary"></i> Visor Interactivo de Unidad
+                        <i class="bi bi-disc-fill text-primary"></i> Llantas por Medida
                     </h6>
-                    <div class="d-flex align-items-center gap-2 w-100 w-sm-auto justify-content-end">
-                        <input type="text" class="form-control form-control-sm rounded-pill px-3 fw-bold text-uppercase flex-grow-1 flex-sm-grow-0" id="neu-quick-search-placa" placeholder="INGRESAR PLACA..." style="max-width: 180px;">
-                        <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold flex-shrink-0" onclick="window.neuConsultarChasisPlaca()">
+                    <span class="badge bg-primary bg-opacity-10 text-primary fw-bold border border-primary border-opacity-25" id="lbl-total-llantas-rodando">
+                        <i class="bi bi-truck me-1"></i>0 Rodando
+                    </span>
+                </div>
+                <div class="d-flex flex-column justify-content-between h-100 pt-1">
+                    <div id="neu-medidas-list" class="d-flex flex-column gap-2 overflow-auto pe-1" style="max-height: 180px;">
+                        <div class="text-center py-3 text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Cargando medidas...</div>
+                    </div>
+                    <div class="border-top pt-2 mt-2 d-flex align-items-center justify-content-between small text-muted" style="font-size: 0.73rem;">
+                        <span><i class="bi bi-check2-circle text-success me-1"></i>Última inspección activa</span>
+                        <span class="fw-bold text-dark" id="lbl-total-medidas-tipos">0 tipos de medida</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Consulta Rápida por Placa con Chasis Interactivo -->
+        <div class="col-lg-5 col-md-12 col-12">
+            <div class="card border-0 rounded-4 p-3 bg-white shadow-2xs h-100" style="border: 1px solid var(--border, #e2e8f0) !important;">
+                <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-2 border-bottom pb-2">
+                    <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
+                        <i class="bi bi-truck text-primary"></i> Visor Interactivo
+                    </h6>
+                    <div class="d-flex align-items-center gap-1.5 w-100 w-sm-auto justify-content-end">
+                        <input type="text" class="form-control form-control-sm rounded-pill px-3 fw-bold text-uppercase flex-grow-1 flex-sm-grow-0" id="neu-quick-search-placa" placeholder="PLACA..." style="max-width: 140px; font-size: 0.78rem;">
+                        <button class="btn btn-primary btn-sm rounded-pill px-2.5 py-1 fw-bold flex-shrink-0" onclick="window.neuConsultarChasisPlaca()">
                             <i class="bi bi-search"></i>
                         </button>
                     </div>
                 </div>
 
-                <div id="neu-visor-placa-content">
-                    <div class="text-center py-4 text-muted small">
-                        <i class="bi bi-truck display-5 text-secondary opacity-50 d-block mb-2"></i>
-                        Ingresa una placa para visualizar el mapa térmico de desgaste de sus llantas.
+                <div id="neu-visor-placa-content" class="d-flex align-items-center justify-content-center py-2">
+                    <div class="text-center py-3 text-muted small">
+                        <i class="bi bi-truck display-6 text-secondary opacity-50 d-block mb-1"></i>
+                        Ingresa una placa para visualizar el mapa térmico de desgaste.
                     </div>
                 </div>
             </div>

@@ -60,6 +60,47 @@
                 window.neuRenderChartVigencia(vig, novig, sinInsp);
             }
 
+            // 2.5. Render Card de Medidas de Llantas Rodando
+            const medidasList = data.medidas || [];
+            const totalLlantasRodando = Number(data.resumen?.total_llantas_rodando || 0);
+
+            const lblTotalRod = document.getElementById('lbl-total-llantas-rodando');
+            if (lblTotalRod) lblTotalRod.innerHTML = `<i class="bi bi-disc-fill me-1"></i>${totalLlantasRodando.toLocaleString()} Rodando`;
+
+            const lblTiposMed = document.getElementById('lbl-total-medidas-tipos');
+            if (lblTiposMed) lblTiposMed.innerText = `${medidasList.length} ${medidasList.length === 1 ? 'medida activa' : 'medidas activas'}`;
+
+            const contMedidas = document.getElementById('neu-medidas-list');
+            if (contMedidas) {
+                if (medidasList.length === 0) {
+                    contMedidas.innerHTML = '<div class="text-center py-3 text-muted small"><i class="bi bi-info-circle me-1"></i>Sin datos de llantas en inspecciones activas.</div>';
+                } else {
+                    const palette = ['#2563eb', '#0284c7', '#0d9488', '#ea580c', '#7c3aed', '#db2777', '#ca8a04', '#475569'];
+                    contMedidas.innerHTML = medidasList.map((m, idx) => {
+                        const cnt = Number(m.cantidad || 0);
+                        const porc = totalLlantasRodando > 0 ? Math.round((cnt / totalLlantasRodando) * 100) : 0;
+                        const color = palette[idx % palette.length];
+                        return `
+                            <div class="p-2 rounded-3 border bg-light bg-opacity-50">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <div class="d-flex align-items-center gap-1.5">
+                                        <span class="rounded-circle flex-shrink-0" style="width:8px;height:8px;background:${color};"></span>
+                                        <span class="fw-bold text-dark font-monospace" style="font-size:0.84rem;">${m.medida}</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-white text-dark border fw-bolder font-monospace" style="font-size:0.75rem;">${cnt} ${cnt === 1 ? 'llanta' : 'llantas'}</span>
+                                        <span class="text-muted small fw-bold" style="font-size:0.72rem; min-width:32px; text-align:right;">${porc}%</span>
+                                    </div>
+                                </div>
+                                <div class="progress" style="height: 5px; background: #e2e8f0; border-radius: 999px;">
+                                    <div class="progress-bar rounded-pill" role="progressbar" style="width: ${porc}%; background: ${color};" aria-valuenow="${porc}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
             // 3. Render Tabla
             if (document.getElementById('neu-tbody-inspecciones')) {
                 window.neuFiltrarTablaInsp();

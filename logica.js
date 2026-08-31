@@ -553,6 +553,7 @@ window.verificarSesionGuardada = function() {
             'mantenimiento/neumaticos': 'neumaticos',
             'mantenimiento/neumaticos-analisis': 'neumaticos',
             'mantenimiento/neumaticos-ultimas': 'neumaticos',
+            'mantenimiento/incidencias-ruta': 'incidencias_ruta',
             'mantenimiento/otros': 'otros_mant',
             'almacen/dashboard-financiero': 'dash_alm',
             'almacen/inventario': 'inv',
@@ -562,10 +563,16 @@ window.verificarSesionGuardada = function() {
             'almacen/proveedores': 'prov_inv',
             'directorio/conductores': 'cond',
             'directorio/clientes': 'clientes',
+            'operaciones/ordenes-viaje': 'op_guias_remision',
+            'operaciones/guias-remision': 'op_guias_remision',
             'operaciones/rutas': 'op_rutas',
             'operaciones/asignacion': 'op_asignacion',
             'operaciones/monitoreo': 'op_monitoreo',
+            'operaciones/combustible-vales': 'combustible_vales',
+            'operaciones/combustible-analisis': 'combustible_analisis',
+            'operaciones/combustible-urea': 'urea_analisis',
             'operaciones/combustible-matriz': 'combustible_matriz',
+            'operaciones/neumaticos-analisis': 'neumaticos',
             'rrhh/personal': 'rrhh_personal',
             'rrhh/asistencia': 'rrhh_asistencia',
             'rrhh/nomina': 'rrhh_nomina',
@@ -584,13 +591,21 @@ window.verificarSesionGuardada = function() {
 
     window.obtenerPrimeraRutaPermitida = function() {
         var rol = (localStorage.getItem('fleet_rol') || '').toLowerCase();
+        if (rol.includes('analista') || rol.includes('combustible')) {
+            if (window.checkPerm('combustible_analisis', 'l')) return 'operaciones/combustible-analisis';
+            if (window.checkPerm('combustible_vales', 'l')) return 'operaciones/combustible-vales';
+            if (window.checkPerm('urea_analisis', 'l')) return 'operaciones/combustible-urea';
+        }
         if (rol.includes('seguridad') && (window.checkPerm('seguridad_unidades', 'l') || window.checkPerm('checklist', 'l'))) {
             return 'seguridad/unidades';
         }
         if (isAdm || window.checkPerm('dashboard', 'l')) return 'dashboard';
         var posibles = [
-            'seguridad/unidades',
+            'operaciones/combustible-analisis',
+            'operaciones/combustible-vales',
+            'operaciones/ordenes-viaje',
             'mantenimiento/neumaticos-analisis',
+            'seguridad/unidades',
             'mantenimiento/status-rampa',
             'mantenimiento/reportes-ot',
             'mantenimiento/inspecciones',
