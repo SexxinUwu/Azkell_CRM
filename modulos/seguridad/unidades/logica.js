@@ -1259,7 +1259,7 @@ function _sguRenderChecklist() {
 
         (cat.items || []).forEach(function(item) {
             var val = _sguChecklist[item.id] || '';
-            html += '<div class="sgu-chk-row d-flex align-items-center justify-content-between py-1.5 px-2 rounded-2 bg-white border border-light">' +
+            html += '<div class="sgu-chk-row d-flex align-items-center justify-content-between py-1.5 px-2 rounded-2 bg-white border border-light" data-chk-item="' + item.id + '">' +
                 '<span class="sgu-chk-label-text small fw-semibold text-secondary" style="font-size:0.82rem;">' + item.label + '</span>' +
                 '<div class="d-flex gap-1">' +
                     '<div class="sgu-chk-btn-circle x ' + (val==='mal'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'mal\')" title="Observado / Dañado"><i class="bi bi-x-lg"></i></div>' +
@@ -1323,16 +1323,30 @@ function _sguRenderChecklist() {
 
 window._sguSetCheck = function(itemId, valor) {
     _sguChecklist[itemId] = valor;
-    _sguRenderChecklist();
+    var row = document.querySelector('[data-chk-item="' + itemId + '"]');
+    if (row) {
+        var btns = row.querySelectorAll('.sgu-chk-btn-circle');
+        btns.forEach(function(b) { b.classList.remove('active'); });
+        var target = row.querySelector('.sgu-chk-btn-circle.' + valor);
+        if (target) target.classList.add('active');
+    }
     window._sguCheckFormReady();
 };
 
 window._sguSetCatCheck = function(catId) {
     var cat = _sguGlobalTemplate.find(function(c) { return c.id === catId; });
     if (cat && cat.items) {
-        cat.items.forEach(function(item) { _sguChecklist[item.id] = 'ok'; });
+        cat.items.forEach(function(item) {
+            _sguChecklist[item.id] = 'ok';
+            var row = document.querySelector('[data-chk-item="' + item.id + '"]');
+            if (row) {
+                var btns = row.querySelectorAll('.sgu-chk-btn-circle');
+                btns.forEach(function(b) { b.classList.remove('active'); });
+                var target = row.querySelector('.sgu-chk-btn-circle.ok');
+                if (target) target.classList.add('active');
+            }
+        });
     }
-    _sguRenderChecklist();
     window._sguCheckFormReady();
 };
 
