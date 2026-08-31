@@ -106,7 +106,14 @@
 }
 </style>
 
-<div class="container-fluid py-4" style="max-width: 1400px;">
+<div class="container-fluid py-3" style="max-width: 1400px;">
+    <!-- BOTÓN REGRESAR A AJUSTES -->
+    <div class="mb-3 d-flex align-items-center justify-content-between">
+        <button class="btn btn-sm btn-light bg-white border shadow-2xs text-dark rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-2" onclick="cargarModuloAislado('sistema/ajustes')">
+            <i class="bi bi-arrow-left"></i> <span>Volver a Ajustes</span>
+        </button>
+    </div>
+
     <!-- HEADER / BANNER -->
     <div class="perfil-banner" id="p-banner">
         <button class="btn perfil-banner-edit btn-sm text-dark fw-bold shadow-sm" onclick="document.getElementById('file-banner').click()">

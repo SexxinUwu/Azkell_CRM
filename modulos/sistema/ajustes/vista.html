@@ -57,13 +57,22 @@
     border-radius: 20px;
     border: 1px solid var(--border, #e2e8f0);
     box-shadow: 0 4px 16px rgba(0,0,0,0.02);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.ajustes-profile-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+}
+.ajustes-profile-card:active {
+    background: rgba(0,0,0,0.02);
 }
 .ajustes-avatar {
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #0284c7, #2563eb);
-    color: #fff;
+    background: linear-gradient(135deg, #0284c7, #2563eb) !important;
+    color: #ffffff !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -71,6 +80,9 @@
     font-weight: 800;
     flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+    background-size: cover;
+    background-position: center;
+    -webkit-text-fill-color: #ffffff !important;
 }
 .ajustes-profile-info { flex: 1; min-width: 0; }
 .ajustes-profile-name { font-size: 1.05rem; font-weight: 800; color: var(--text, #0f172a); margin: 0; line-height: 1.2; }
@@ -208,13 +220,17 @@
             <h1 class="ajustes-header-title">Ajustes</h1>
         </div>
 
-        <!-- Perfil Hero Card -->
-        <div class="ajustes-profile-card">
+        <!-- Perfil Hero Card (Abre Mi Perfil) -->
+        <div class="ajustes-profile-card" onclick="cargarModuloAislado('sistema/perfil')" title="Ver y editar Mi Perfil">
             <div class="ajustes-avatar" id="ajustes-user-avatar">SA</div>
             <div class="ajustes-profile-info">
-                <h2 class="ajustes-profile-name" id="ajustes-user-name">Sthefano Avila</h2>
-                <span class="ajustes-profile-badge" id="ajustes-user-role">SEGURIDAD</span>
-                <p class="ajustes-profile-email" id="ajustes-user-email">seguridad@azkell.com</p>
+                <h2 class="ajustes-profile-name" id="ajustes-user-name">Saul Henry Rosas</h2>
+                <span class="ajustes-profile-badge" id="ajustes-user-role">ADMINISTRADOR</span>
+                <p class="ajustes-profile-email" id="ajustes-user-email">Administrador@azkell.com</p>
+            </div>
+            <div class="d-flex align-items-center text-muted ms-auto">
+                <span class="d-none d-sm-inline small text-secondary me-1" style="font-size: 0.78rem; font-weight: 600;">Editar</span>
+                <i class="bi bi-chevron-right ajustes-item-chevron" style="font-size: 1.1rem;"></i>
             </div>
         </div>
 
@@ -224,6 +240,17 @@
         </div>
         
         <div class="ajustes-group-box">
+            <!-- MI PERFIL -->
+            <a href="#" class="ajustes-item" onclick="cargarModuloAislado('sistema/perfil')" title="Mi Perfil">
+                <div class="ajustes-item-icon-wrap" style="color: #0284c7;">
+                    <i class="bi bi-person-badge"></i>
+                </div>
+                <div class="ajustes-item-content">
+                    <p class="ajustes-item-title">Mi Perfil</p>
+                    <i class="bi bi-chevron-right ajustes-item-chevron"></i>
+                </div>
+            </a>
+
             <a href="#" class="ajustes-item" id="btn-instalar-ajustes" onclick="window.instalarPWAApp()">
                 <div class="ajustes-item-icon-wrap" style="color: #10b981;">
                     <i class="bi bi-cloud-arrow-down"></i>
