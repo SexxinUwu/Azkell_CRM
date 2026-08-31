@@ -27,9 +27,12 @@ window.perfilCargarDatos = async function() {
         if (avEl) {
             if (user.avatar_url) {
                 avEl.style.backgroundImage = 'url(' + user.avatar_url + ')';
+                avEl.style.backgroundColor = '#1e293b';
                 avEl.innerText = '';
             } else {
                 avEl.style.backgroundImage = 'none';
+                avEl.style.backgroundColor = '#1e293b';
+                avEl.style.background = 'linear-gradient(135deg, #1e40af, #2563eb)';
                 let partes = (user.nombre || user.correo || 'U').trim().split(' ').filter(Boolean);
                 avEl.innerText = partes.length > 1 ? (partes[0][0] + partes[1][0]).toUpperCase() : (user.nombre || user.correo || 'U').substring(0, 2).toUpperCase();
             }

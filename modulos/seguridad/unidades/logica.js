@@ -271,6 +271,7 @@ window.init_seguridad_unidades = window.init_unidades = function() {
 
     _sguLoadResources();
     _sguLoadTemplate();
+    window._sguCargarOrdenesViaje();
 
     // Por defecto, mostrar siempre el Portal de Bienvenida para que elija la empresa
     window._sguIrAPortal();
@@ -943,11 +944,281 @@ window._sguGetSignatureBase64 = function(canvasId) {
     return null;
 };
 
+// ── VINCULACIÓN CON ÓRDENES DE VIAJE ───────────────────────────────
+window._sguGlobalOrdenesViaje = [];
+
+window._sguCargarOrdenesViaje = async function() {
+    try {
+        var res = await fetch('/api/operaciones/ordenes-viaje?limit=300');
+        var json = await res.json();
+        if (json && json.ok && json.data) {
+            window._sguGlobalOrdenesViaje = json.data;
+        } else if (Array.isArray(json)) {
+            window._sguGlobalOrdenesViaje = json;
+        } else if (json && json.data && Array.isArray(json.data)) {
+            window._sguGlobalOrdenesViaje = json.data;
+        }
+    } catch(err) {
+        console.warn('Error cargando ordenes de viaje para seguridad:', err);
+    }
+};
+
+window._sguFiltrarViaje = function() {
+    var input = document.getElementById('sgu_orden_viaje-txt');
+    var dd = document.getElementById('sgu_orden_viaje-dd');
+    var btnClear = document.getElementById('sgu_btn_clear_viaje');
+    if (!input || !dd) return;
+
+    var val = input.value || '';
+    if (btnClear) {
+        if (val.trim()) btnClear.classList.remove('d-none');
+        else btnClear.classList.add('d-none');
+    }
+
+    if (!val.trim()) {
+        var inputHidden = document.getElementById('sgu_orden_viaje');
+        if (inputHidden && inputHidden.value) {
+            window._sguLimpiarViajeVinculado(false);
+        }
+    }
+
+    var q = val.trim().toUpperCase();
+    var viajes = window._sguGlobalOrdenesViaje || [];
+
+    var filtrados = viajes;
+    if (q) {
+        filtrados = viajes.filter(function(v) {
+            var num = (v.viaje || v.numero_orden || '').toUpperCase();
+            var tracto = (v.placa_tracto || '').toUpperCase();
+            var carreta = (v.placa_remolque || v.placa_carreta || '').toUpperCase();
+            var cond = (v.conductor || '').toUpperCase();
+            var ruta = (v.ruta || v.destino || '').toUpperCase();
+            return num.includes(q) || tracto.includes(q) || carreta.includes(q) || cond.includes(q) || ruta.includes(q);
+        });
+    }
+
+    filtrados = filtrados.slice(0, 50);
+
+    if (filtrados.length === 0) {
+        dd.innerHTML = '<div class="p-3 text-center text-muted small"><i class="bi bi-search me-1"></i>No se encontraron órdenes de viaje coincidentes.</div>';
+        dd.style.display = 'block';
+        return;
+    }
+
+    var html = '';
+    filtrados.forEach(function(v) {
+        var numViaje = v.viaje || v.numero_orden || '---';
+        var fechaFmt = v.fecha_viaje ? new Date(v.fecha_viaje).toLocaleDateString('es-PE') : '';
+        var carretaPlaca = v.placa_remolque || v.placa_carreta;
+        var carretaTxt = carretaPlaca ? ('<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1">' + carretaPlaca + '</span>') : '<span class="text-muted fst-italic ms-1">Sin carreta</span>';
+        var dataJson = JSON.stringify(v).replace(/"/g, '&quot;');
+
+        html += '<div class="p-2 border-bottom cursor-pointer cb-item-viaje" style="transition:background 0.15s ease;" onmousedown="window._sguSeleccionarViaje(' + dataJson + ')" onmouseover="this.style.background=\'#eff6ff\'" onmouseout="this.style.background=\'#ffffff\'">' +
+            '<div class="d-flex align-items-center justify-content-between mb-1">' +
+                '<span class="fw-bold text-primary" style="font-size:0.88rem;"><i class="bi bi-diagram-3-fill me-1"></i>Viaje: ' + numViaje + '</span>' +
+                '<span class="badge bg-secondary-subtle text-secondary" style="font-size:0.7rem;">' + fechaFmt + '</span>' +
+            '</div>' +
+            '<div class="d-flex flex-wrap align-items-center gap-1 mb-1" style="font-size:0.75rem;">' +
+                '<span class="badge bg-primary-subtle text-primary border border-primary-subtle">' + (v.placa_tracto || 'TRACTO') + '</span>' +
+                carretaTxt +
+                '<span class="text-secondary fw-semibold text-truncate ms-1" style="max-width:200px;"><i class="bi bi-person-fill me-1"></i>' + (v.conductor || '---') + '</span>' +
+            '</div>' +
+            ((v.ruta || v.destino) ? ('<div class="text-truncate mt-1" style="font-size:0.72rem; color:#475569;"><i class="bi bi-signpost-2-fill text-primary me-1"></i><b>Ruta:</b> ' + (v.ruta || v.destino) + '</div>') : '') +
+        '</div>';
+    });
+
+    dd.innerHTML = html;
+    dd.style.display = 'block';
+};
+
+window._sguHideViaje = function() {
+    setTimeout(function() {
+        var dd = document.getElementById('sgu_orden_viaje-dd');
+        if (dd) dd.style.display = 'none';
+    }, 250);
+};
+
+window._sguSeleccionarViaje = function(v) {
+    if (!v) return;
+    var numViaje = v.viaje || v.numero_orden || '';
+    var inputHidden = document.getElementById('sgu_orden_viaje');
+    var inputTxt = document.getElementById('sgu_orden_viaje-txt');
+    var infoBox = document.getElementById('sgu_viaje_seleccionado_info');
+    var lblNum = document.getElementById('sgu_lbl_viaje_num');
+    var lblDetalles = document.getElementById('sgu_lbl_viaje_detalles');
+
+    if (inputHidden) inputHidden.value = numViaje;
+    if (inputTxt) inputTxt.value = numViaje;
+
+    if (infoBox) infoBox.classList.remove('d-none');
+    if (lblNum) lblNum.textContent = numViaje || '--';
+    if (lblDetalles) {
+        lblDetalles.innerHTML = '<strong>Tracto:</strong> ' + (v.placa_tracto || '---') + ' | ' +
+            '<strong>Carreta:</strong> ' + (v.placa_remolque || v.placa_carreta || '---') + ' | ' +
+            '<strong>Conductor:</strong> ' + (v.conductor || '---') + '<br>' +
+            '<strong>Ruta:</strong> ' + (v.ruta || v.destino || '---');
+    }
+
+    // Autocompletar Tracto
+    if (v.placa_tracto) {
+        var fPlaca = document.getElementById('sgu-f-placa');
+        if (fPlaca) {
+            fPlaca.value = v.placa_tracto;
+            window._sguSyncDocPlaca(v.placa_tracto, 'tracto');
+        }
+    }
+
+    // Autocompletar Carreta
+    var carretaPlaca = v.placa_remolque || v.placa_carreta;
+    if (carretaPlaca) {
+        var fCarreta = document.getElementById('sgu-f-carreta');
+        if (fCarreta) {
+            fCarreta.value = carretaPlaca;
+            window._sguSyncDocPlaca(carretaPlaca, 'carreta');
+        }
+    }
+
+    // Autocompletar Conductor
+    if (v.conductor) {
+        var fCond = document.getElementById('sgu-f-conductor');
+        if (fCond) fCond.value = v.conductor;
+    }
+
+    // Autocompletar Destino / Ruta
+    var rutaTxt = v.ruta || v.destino;
+    if (rutaTxt) {
+        var fDest = document.getElementById('sgu-f-destino');
+        if (fDest) fDest.value = rutaTxt;
+    }
+
+    // Cerrar dropdown
+    var dd = document.getElementById('sgu_orden_viaje-dd');
+    if (dd) dd.style.display = 'none';
+
+    window._sguCheckFormReady();
+    _sguToast('Datos autocompletados desde Viaje ' + numViaje, 'bi-check-circle-fill');
+};
+
+window._sguLimpiarViajeVinculado = function(clearText) {
+    if (clearText === undefined) clearText = true;
+    var inputHidden = document.getElementById('sgu_orden_viaje');
+    var inputTxt = document.getElementById('sgu_orden_viaje-txt');
+    var infoBox = document.getElementById('sgu_viaje_seleccionado_info');
+    var btnClear = document.getElementById('sgu_btn_clear_viaje');
+
+    if (inputHidden) inputHidden.value = '';
+    if (clearText && inputTxt) inputTxt.value = '';
+    if (infoBox) infoBox.classList.add('d-none');
+    if (btnClear) btnClear.classList.add('d-none');
+
+    window._sguCheckFormReady();
+};
+
+// ── FOTOS DIRECTAS EN FORMULARIO ─────────────────────────────────
+window._sguHandleDirectPhoto = function(input, tipo) {
+    if (!input.files || !input.files.length) return;
+    _sguPhotos[tipo] = _sguPhotos[tipo] || [];
+    Array.from(input.files).forEach(function(file) {
+        var url = URL.createObjectURL(file);
+        _sguPhotos[tipo].push({ url: url, file: file, uploaded: false });
+    });
+    input.value = '';
+    window._sguRenderPhotosGrid(tipo);
+    window._sguCheckFormReady();
+    _sguToast('Foto adjuntada (' + _sguPhotos[tipo].length + ' en total)', 'bi-camera-fill');
+};
+
+window._sguRenderPhotosGrid = function(tipo) {
+    var grid = document.getElementById(tipo === 'salida' ? 'sgu-salida-photos-grid' : 'sgu-retorno-photos-grid');
+    var badge = document.getElementById(tipo === 'salida' ? 'sgu-photos-count-badge' : 'sgu-det-photos-count-badge');
+    var list = _sguPhotos[tipo] || [];
+
+    if (badge) badge.textContent = list.length + (list.length === 1 ? ' foto' : ' fotos');
+    if (!grid) return;
+
+    if (list.length === 0) {
+        grid.innerHTML = '<div class="text-muted small fst-italic py-2 text-center w-100" style="grid-column: 1 / -1;"><i class="bi bi-camera text-secondary me-1"></i> Aún no se han adjuntado fotos. Tome una foto con la cámara o seleccione desde su galería.</div>';
+        return;
+    }
+
+    var html = '';
+    list.forEach(function(item, idx) {
+        html += '<div class="sgu-photo-thumb-box">' +
+            '<img src="' + item.url + '" class="sgu-photo-thumb-img" alt="Evidencia ' + (idx + 1) + '" onclick="window.open(\'' + item.url + '\')">' +
+            '<button type="button" class="sgu-photo-thumb-del" onclick="window._sguRemovePhoto(\'' + tipo + '\', ' + idx + ')" title="Eliminar foto">' +
+                '<i class="bi bi-x-lg"></i>' +
+            '</button>' +
+        '</div>';
+    });
+    grid.innerHTML = html;
+};
+
+window._sguRemovePhoto = function(tipo, idx) {
+    if (_sguPhotos[tipo] && _sguPhotos[tipo][idx]) {
+        _sguPhotos[tipo].splice(idx, 1);
+        window._sguRenderPhotosGrid(tipo);
+        window._sguCheckFormReady();
+    }
+};
+
+// ── CHECKLIST TÉCNICO EMBEBIDO EN EL FORMULARIO ─────────────────
+window._sguRenderEmbeddedChecklist = function() {
+    var container = document.getElementById('sgu-embedded-checklist-container');
+    if (!container) return;
+
+    if (!_sguGlobalTemplate || !_sguGlobalTemplate.length) {
+        container.innerHTML = '<div class="text-center py-3 text-secondary small">Cargando ítems técnicos...</div>';
+        return;
+    }
+
+    var html = '';
+    _sguGlobalTemplate.forEach(function(cat) {
+        html += '<div class="sgu-chk-group mb-2.5 p-2 rounded-3 bg-light border" style="border-color:#e2e8f0 !important;">' +
+            '<div class="d-flex align-items-center justify-content-between mb-2">' +
+                '<h6 class="fw-bold text-dark m-0" style="font-size:0.85rem;"><i class="bi bi-check2-circle text-primary me-1"></i> ' + (cat.titulo || 'Categoría') + '</h6>' +
+                '<button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0.5 fw-bold" style="font-size:0.7rem;" onclick="window._sguSetCatCheck(\'' + cat.id + '\')">' +
+                    '<i class="bi bi-check2-all"></i> Todo OK' +
+                '</button>' +
+            '</div>' +
+            '<div class="d-flex flex-column gap-1">';
+
+        (cat.items || []).forEach(function(item) {
+            var val = _sguChecklist[item.id] || '';
+            html += '<div class="sgu-chk-row d-flex align-items-center justify-content-between py-1 px-2 rounded-2 bg-white border border-light">' +
+                '<span class="sgu-chk-label-text small fw-semibold text-secondary" style="font-size:0.8rem;">' + item.label + '</span>' +
+                '<div class="d-flex gap-1">' +
+                    '<div class="sgu-chk-btn-circle x ' + (val==='mal'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'mal\')" title="Observado / Dañado"><i class="bi bi-x-lg"></i></div>' +
+                    '<div class="sgu-chk-btn-circle na ' + (val==='na'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'na\')" title="No Aplica">N/A</div>' +
+                    '<div class="sgu-chk-btn-circle ok ' + (val==='ok'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'ok\')" title="Conforme"><i class="bi bi-check-lg"></i></div>' +
+                '</div>' +
+            '</div>';
+        });
+
+        html += '</div></div>';
+    });
+
+    container.innerHTML = html;
+};
+
+window._sguSetAllCategoriesOk = function() {
+    (_sguGlobalTemplate || []).forEach(function(cat) {
+        (cat.items || []).forEach(function(item) {
+            _sguChecklist[item.id] = 'ok';
+        });
+    });
+    window._sguRenderEmbeddedChecklist();
+    window._sguRenderChecklist();
+    window._sguCheckFormReady();
+    _sguToast('Todos los ítems marcados como Conforme (OK)', 'bi-check-all');
+};
+
 // ── FORM: NUEVA SALIDA ───────────────────────────────────────────
 function _sguInitForm() {
     _sguEditMode = 'salida';
     _sguChecklist = {};
     _sguPhotos = { salida: [], retorno: [] };
+
+    window._sguLimpiarViajeVinculado(true);
 
     document.getElementById('sgu-f-placa').value = '';
     document.getElementById('sgu-f-carreta').value = '';
@@ -965,6 +1236,8 @@ function _sguInitForm() {
     if (bT) bT.style.display = 'none';
     if (bC) bC.style.display = 'none';
 
+    window._sguRenderPhotosGrid('salida');
+    window._sguRenderEmbeddedChecklist();
     _sguRenderChecklist();
     window._sguCheckFormReady();
 
@@ -981,44 +1254,6 @@ window._sguCheckFormReady = function() {
     if (_sguView === 'detail' && _sguEditMode === 'retorno') {
         _sguCheckReturnReady();
         return;
-    }
-
-    var p = (document.getElementById('sgu-f-placa') || {}).value || '';
-    var c = (document.getElementById('sgu-f-conductor') || {}).value || '';
-    var d = (document.getElementById('sgu-f-destino') || {}).value || '';
-    var k = (document.getElementById('sgu-f-km') || {}).value || '';
-
-    p = p.trim(); c = c.trim(); d = d.trim(); k = k.trim();
-
-    var photosList = _sguPhotos['salida'] || [];
-    var hasPhotos = photosList.length > 0;
-    var btnPhotos = document.getElementById('sgu-btn-open-photos');
-    if (btnPhotos) {
-        if (hasPhotos) {
-            btnPhotos.innerHTML = '<i class="bi bi-check-lg"></i> ' + photosList.length + ' Foto(s)';
-            btnPhotos.classList.add('done');
-        } else {
-            btnPhotos.innerHTML = 'Añadir';
-            btnPhotos.classList.remove('done');
-        }
-    }
-
-    var chkCount = Object.keys(_sguChecklist).length;
-    var totalItems = 0;
-    _sguGlobalTemplate.forEach(function(cat) { totalItems += (cat.items || []).length; });
-    var hasChecklist = totalItems > 0 && chkCount >= totalItems;
-    var btnChk = document.getElementById('sgu-btn-open-checklist');
-    if (btnChk) {
-        if (hasChecklist) {
-            btnChk.innerHTML = '<i class="bi bi-check-lg"></i> Completo';
-            btnChk.classList.add('done');
-        } else if (chkCount > 0) {
-            btnChk.innerHTML = chkCount + '/' + totalItems + ' Ítems';
-            btnChk.classList.add('done');
-        } else {
-            btnChk.innerHTML = 'Llenar';
-            btnChk.classList.remove('done');
-        }
     }
 
     var btnSave = document.getElementById('sgu-btn-save');
@@ -1038,8 +1273,8 @@ window._sguOpenPhotosChooser = function(tipo) {
     var inputCam = document.getElementById('sgu-input-cam');
     var inputGal = document.getElementById('sgu-input-gal');
 
-    inputCam.onchange = function() { _sguHandlePhotoInput(this, tipo); };
-    inputGal.onchange = function() { _sguHandlePhotoInput(this, tipo); };
+    if (inputCam) inputCam.onchange = function() { _sguHandlePhotoInput(this, tipo); };
+    if (inputGal) inputGal.onchange = function() { _sguHandlePhotoInput(this, tipo); };
 
     _sguOpenDrawer('sgu-photos-bsheet');
 };
@@ -1053,6 +1288,7 @@ function _sguHandlePhotoInput(input, tipo) {
     });
     input.value = '';
     window._sguCloseAllDrawers();
+    window._sguRenderPhotosGrid(tipo);
     _sguToast('Fotos adjuntadas (' + _sguPhotos[tipo].length + ')');
     window._sguCheckFormReady();
 }
@@ -1098,6 +1334,7 @@ function _sguRenderChecklist() {
 window._sguSetCheck = function(itemId, valor) {
     _sguChecklist[itemId] = valor;
     _sguRenderChecklist();
+    window._sguRenderEmbeddedChecklist();
     window._sguCheckFormReady();
 };
 
@@ -1107,6 +1344,7 @@ window._sguSetCatCheck = function(catId) {
         cat.items.forEach(function(item) { _sguChecklist[item.id] = 'ok'; });
     }
     _sguRenderChecklist();
+    window._sguRenderEmbeddedChecklist();
     window._sguCheckFormReady();
 };
 
@@ -1675,6 +1913,7 @@ window._sguSaveRecord = function() {
     var cond = document.getElementById('sgu-f-conductor').value.trim();
     var dest = document.getElementById('sgu-f-destino').value.trim();
     var km = document.getElementById('sgu-f-km').value.trim();
+    var ordenViaje = ((document.getElementById('sgu_orden_viaje') || {}).value || '').trim();
 
     if (!p) {
         _sguToast('Por favor, ingresa la Placa del Tracto', 'bi-exclamation-triangle');
@@ -1682,16 +1921,32 @@ window._sguSaveRecord = function() {
         return;
     }
     if (!cond) {
-        _sguToast('Por favor, ingresa el Conductor', 'bi-exclamation-triangle');
+        _sguToast('Por favor, ingresa el Conductor Asignado', 'bi-exclamation-triangle');
         document.getElementById('sgu-f-conductor').focus();
+        return;
+    }
+    if (!dest) {
+        _sguToast('Por favor, ingresa el Destino / Ruta', 'bi-exclamation-triangle');
+        document.getElementById('sgu-f-destino').focus();
+        return;
+    }
+    if (!km || isNaN(km) || Number(km) <= 0) {
+        _sguToast('El Kilometraje de Salida es OBLIGATORIO', 'bi-exclamation-triangle');
+        var elKm = document.getElementById('sgu-f-km');
+        if (elKm) {
+            elKm.focus();
+            elKm.classList.add('border-danger');
+            setTimeout(function() { elKm.classList.remove('border-danger'); }, 3000);
+        }
         return;
     }
 
     // Auto-completar ítems del checklist que el usuario no haya marcado
     (_sguGlobalTemplate || []).forEach(function(cat) {
         (cat.items || []).forEach(function(item) {
-            if (!_sguChecklist[item]) {
-                _sguChecklist[item] = 'bueno';
+            var itemId = item.id || item;
+            if (!_sguChecklist[itemId]) {
+                _sguChecklist[itemId] = 'ok';
             }
         });
     });
@@ -1717,6 +1972,7 @@ window._sguSaveRecord = function() {
         placa_carreta: c,
         conductor: cond,
         destino: dest,
+        orden_viaje: ordenViaje || null,
         salida_fecha: ts.date,
         salida_hora: ts.time,
         salida_km: km,
