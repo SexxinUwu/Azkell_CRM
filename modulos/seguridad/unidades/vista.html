@@ -1115,8 +1115,8 @@
         </div>
 
         <div class="row g-3">
-            <!-- Columna Izquierda: Asignación y Firmas -->
-            <div class="col-12 col-lg-6">
+            <!-- Columna Izquierda: Asignación de Unidad y Ruta -->
+            <div class="col-12 col-lg-7">
                 <!-- Información de la Unidad y Ruta -->
                 <div class="sgu-form-card">
                     <h6 class="fw-bold text-dark mb-3"><i class="bi bi-truck text-primary me-1"></i> Asignación de Unidad y Ruta</h6>
@@ -1230,34 +1230,57 @@
                         <textarea class="sgu-form-input-clean" id="sgu-f-observaciones" rows="2" placeholder="Detalles de salida, novedades de unidad o conductor (si no escribe nada saldrá 'SIN OBSERVACIONES')..." style="min-height:55px; font-weight:500; font-size:0.86rem;"></textarea>
                     </div>
                 </div>
+            </div>
 
-                <!-- Firmas Digitales de Salida (Ida) -->
+            <!-- Columna Derecha: 1 Solo Botón (2 en 1: Checklist + Fotos) y Firmas -->
+            <div class="col-12 col-lg-5">
                 <div class="sgu-form-card">
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <span class="fw-bold text-dark small"><i class="bi bi-pen-fill text-primary me-1"></i> Firmas de Salida (Ida)</span>
-                        <span class="badge bg-light text-secondary border" style="font-size:0.68rem;">Conductor & Vigilancia</span>
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-12 col-sm-6">
-                            <div class="p-2 rounded-3 border bg-light">
-                                <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <span class="text-secondary" style="font-size:0.72rem;font-weight:700;">Conductor</span>
-                                    <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" style="font-size:0.7rem;" onclick="window._sguClearSignature('sgu-sig-salida-conductor')">
-                                        <i class="bi bi-eraser-fill"></i> Borrar
-                                    </button>
-                                </div>
-                                <canvas id="sgu-sig-salida-conductor" class="sgu-sig-canvas w-100 rounded-2 bg-white border" height="100"></canvas>
+                    <h6 class="fw-bold text-dark mb-3"><i class="bi bi-list-check text-primary me-1"></i> Verificación e Inspección</h6>
+                    
+                    <!-- BOTÓN ÚNICO 2 EN 1: CHECKLIST TÉCNICO Y FOTOS -->
+                    <div class="sgu-task-box">
+                        <div class="d-flex align-items-center gap-3">
+                            <div style="width:42px;height:42px;background:#eff6ff;color:#0284c7;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;">
+                                <i class="bi bi-clipboard2-check"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark" style="font-size:0.9rem;">Checklist y Evidencias</div>
+                                <div class="text-secondary" style="font-size:0.78rem;" id="sgu-inspection-desc">Ítems de seguridad + Fotos</div>
                             </div>
                         </div>
-                        <div class="col-12 col-sm-6">
-                            <div class="p-2 rounded-3 border bg-light">
-                                <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <span class="text-secondary" style="font-size:0.72rem;font-weight:700;">Vigilancia / Seguridad</span>
-                                    <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" style="font-size:0.7rem;" onclick="window._sguClearSignature('sgu-sig-salida-vigilancia')">
-                                        <i class="bi bi-eraser-fill"></i> Borrar
-                                    </button>
+                        <button type="button" class="sgu-task-btn" id="sgu-btn-open-inspection" onclick="window._sguOpenChecklist()">
+                            Llenar
+                        </button>
+                    </div>
+
+                    <!-- Firmas Digitales de Salida (Ida) -->
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="fw-bold text-dark small"><i class="bi bi-pen-fill text-primary me-1"></i> Firmas de Salida (Ida)</span>
+                            <span class="badge bg-light text-secondary border" style="font-size:0.68rem;">Conductor & Vigilancia</span>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-12 col-sm-6">
+                                <div class="p-2 rounded-3 border bg-light">
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <span class="text-secondary" style="font-size:0.72rem;font-weight:700;">Conductor</span>
+                                        <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" style="font-size:0.7rem;" onclick="window._sguClearSignature('sgu-sig-salida-conductor')">
+                                            <i class="bi bi-eraser-fill"></i> Borrar
+                                        </button>
+                                    </div>
+                                    <canvas id="sgu-sig-salida-conductor" class="sgu-sig-canvas w-100 rounded-2 bg-white border" height="100"></canvas>
                                 </div>
-                                <canvas id="sgu-sig-salida-vigilancia" class="sgu-sig-canvas w-100 rounded-2 bg-white border" height="100"></canvas>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <div class="p-2 rounded-3 border bg-light">
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <span class="text-secondary" style="font-size:0.72rem;font-weight:700;">Vigilancia / Seguridad</span>
+                                        <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" style="font-size:0.7rem;" onclick="window._sguClearSignature('sgu-sig-salida-vigilancia')">
+                                            <i class="bi bi-eraser-fill"></i> Borrar
+                                        </button>
+                                    </div>
+                                    <canvas id="sgu-sig-salida-vigilancia" class="sgu-sig-canvas w-100 rounded-2 bg-white border" height="100"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1267,66 +1290,8 @@
                     </button>
                 </div>
             </div>
-
-            <!-- Columna Derecha: Evidencias y Checklist Directos -->
-            <div class="col-12 col-lg-6">
-                <!-- Evidencias Fotográficas Directas -->
-                <div class="sgu-form-card mb-3">
-                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
-                        <div class="d-flex align-items-center gap-2">
-                            <div style="width:32px;height:32px;background:#eff6ff;color:#0284c7;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">
-                                <i class="bi bi-camera"></i>
-                            </div>
-                            <div>
-                                <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">Evidencia Fotográfica</h6>
-                                <small class="text-muted" style="font-size:0.72rem;">Odómetro y carrocería</small>
-                            </div>
-                        </div>
-                        <span class="badge bg-light text-secondary border px-2 py-1" id="sgu-photos-count-badge" style="font-size:0.75rem;">0 fotos</span>
-                    </div>
-
-                    <div class="d-flex gap-2 mb-3">
-                        <label class="btn btn-sm btn-primary rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-1 cursor-pointer flex-grow-1 justify-content-center shadow-sm" style="font-size:0.82rem;">
-                            <i class="bi bi-camera-fill"></i> Tomar Foto (Cámara)
-                            <input type="file" id="sgu-direct-input-cam" accept="image/*" capture="environment" class="d-none" onchange="window._sguHandleDirectPhoto(this, 'salida')">
-                        </label>
-                        <label class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-1 cursor-pointer flex-grow-1 justify-content-center" style="font-size:0.82rem;">
-                            <i class="bi bi-images"></i> Subir Galería
-                            <input type="file" id="sgu-direct-input-gal" accept="image/*" multiple class="d-none" onchange="window._sguHandleDirectPhoto(this, 'salida')">
-                        </label>
-                    </div>
-
-                    <!-- Cuadrícula de fotos adjuntadas -->
-                    <div class="sgu-photo-grid" id="sgu-salida-photos-grid">
-                        <div class="text-muted small fst-italic py-2 text-center w-100" style="grid-column: 1 / -1;">
-                            <i class="bi bi-camera text-secondary me-1"></i> Aún no se han adjuntado fotos. Tome una foto con la cámara o seleccione desde su galería.
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Checklist Técnico Integrado Directo -->
-                <div class="sgu-form-card">
-                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom flex-wrap gap-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <div style="width:32px;height:32px;background:#f0fdf4;color:#16a34a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">
-                                <i class="bi bi-clipboard2-check"></i>
-                            </div>
-                            <div>
-                                <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">Checklist Técnico de Seguridad</h6>
-                                <small class="text-muted" style="font-size:0.72rem;">Ítems de verificación mecánica y física</small>
-                            </div>
-                        </div>
-                        <button type="button" class="btn btn-xs btn-outline-success rounded-pill px-2.5 py-1 fw-bold" onclick="window._sguSetAllCategoriesOk()" style="font-size:0.72rem;">
-                            <i class="bi bi-check2-all"></i> Marcar Todo Conforme
-                        </button>
-                    </div>
-
-                    <div id="sgu-embedded-checklist-container">
-                        <!-- Categorías e ítems técnicos renderizados directamente -->
-                    </div>
-                </div>
-            </div>
         </div>
+        <div class="sgu-bottom-spacer"></div>
     </div>
 
     <!-- ═══ VISTA: DETALLE Y CIERRE DE RETORNO ═════════════════════ -->
@@ -1388,7 +1353,7 @@
     <div class="sgu-drawer-handle"></div>
     <div class="sgu-drawer-header">
         <h5 class="sgu-drawer-title">
-            <i class="bi bi-clipboard2-check text-primary"></i> <span id="sgu-chk-overlay-title">Checklist de Inspección</span>
+            <i class="bi bi-clipboard2-check text-primary"></i> <span id="sgu-chk-overlay-title">Checklist y Evidencias</span>
         </h5>
         <button class="btn btn-sm btn-primary rounded-3 px-3 fw-bold" onclick="window._sguCloseAllDrawers(); window._sguCheckFormReady();">
             Listo / Guardar

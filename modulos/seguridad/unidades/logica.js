@@ -1111,10 +1111,25 @@ window._sguLimpiarViajeVinculado = function(clearText) {
     if (infoBox) infoBox.classList.add('d-none');
     if (btnClear) btnClear.classList.add('d-none');
 
+    // Limpiar campos cargados para que queden en blanco
+    var fPlaca = document.getElementById('sgu-f-placa'); if (fPlaca) fPlaca.value = '';
+    var fCarreta = document.getElementById('sgu-f-carreta'); if (fCarreta) fCarreta.value = '';
+    var fCond = document.getElementById('sgu-f-conductor'); if (fCond) fCond.value = '';
+    var fDest = document.getElementById('sgu-f-destino'); if (fDest) fDest.value = '';
+
+    var bT = document.getElementById('sgu-doc-box-tracto'); if (bT) bT.style.display = 'none';
+    var bC = document.getElementById('sgu-doc-box-carreta'); if (bC) bC.style.display = 'none';
+
+    var hintEl = document.getElementById('sgu-f-km-hint');
+    if (hintEl) {
+        hintEl.textContent = '';
+        hintEl.classList.add('d-none');
+    }
+
     window._sguCheckFormReady();
 };
 
-// ── FOTOS DIRECTAS EN FORMULARIO ─────────────────────────────────
+// ── FOTOS DIRECTAS EN INSPECCIÓN ─────────────────────────────────
 window._sguHandleDirectPhoto = function(input, tipo) {
     if (!input.files || !input.files.length) return;
     _sguPhotos[tipo] = _sguPhotos[tipo] || [];
@@ -1123,93 +1138,17 @@ window._sguHandleDirectPhoto = function(input, tipo) {
         _sguPhotos[tipo].push({ url: url, file: file, uploaded: false });
     });
     input.value = '';
-    window._sguRenderPhotosGrid(tipo);
+    _sguRenderChecklist();
     window._sguCheckFormReady();
     _sguToast('Foto adjuntada (' + _sguPhotos[tipo].length + ' en total)', 'bi-camera-fill');
-};
-
-window._sguRenderPhotosGrid = function(tipo) {
-    var grid = document.getElementById(tipo === 'salida' ? 'sgu-salida-photos-grid' : 'sgu-retorno-photos-grid');
-    var badge = document.getElementById(tipo === 'salida' ? 'sgu-photos-count-badge' : 'sgu-det-photos-count-badge');
-    var list = _sguPhotos[tipo] || [];
-
-    if (badge) badge.textContent = list.length + (list.length === 1 ? ' foto' : ' fotos');
-    if (!grid) return;
-
-    if (list.length === 0) {
-        grid.innerHTML = '<div class="text-muted small fst-italic py-2 text-center w-100" style="grid-column: 1 / -1;"><i class="bi bi-camera text-secondary me-1"></i> Aún no se han adjuntado fotos. Tome una foto con la cámara o seleccione desde su galería.</div>';
-        return;
-    }
-
-    var html = '';
-    list.forEach(function(item, idx) {
-        html += '<div class="sgu-photo-thumb-box">' +
-            '<img src="' + item.url + '" class="sgu-photo-thumb-img" alt="Evidencia ' + (idx + 1) + '" onclick="window.open(\'' + item.url + '\')">' +
-            '<button type="button" class="sgu-photo-thumb-del" onclick="window._sguRemovePhoto(\'' + tipo + '\', ' + idx + ')" title="Eliminar foto">' +
-                '<i class="bi bi-x-lg"></i>' +
-            '</button>' +
-        '</div>';
-    });
-    grid.innerHTML = html;
 };
 
 window._sguRemovePhoto = function(tipo, idx) {
     if (_sguPhotos[tipo] && _sguPhotos[tipo][idx]) {
         _sguPhotos[tipo].splice(idx, 1);
-        window._sguRenderPhotosGrid(tipo);
+        _sguRenderChecklist();
         window._sguCheckFormReady();
     }
-};
-
-// ── CHECKLIST TÉCNICO EMBEBIDO EN EL FORMULARIO ─────────────────
-window._sguRenderEmbeddedChecklist = function() {
-    var container = document.getElementById('sgu-embedded-checklist-container');
-    if (!container) return;
-
-    if (!_sguGlobalTemplate || !_sguGlobalTemplate.length) {
-        container.innerHTML = '<div class="text-center py-3 text-secondary small">Cargando ítems técnicos...</div>';
-        return;
-    }
-
-    var html = '';
-    _sguGlobalTemplate.forEach(function(cat) {
-        html += '<div class="sgu-chk-group mb-2.5 p-2 rounded-3 bg-light border" style="border-color:#e2e8f0 !important;">' +
-            '<div class="d-flex align-items-center justify-content-between mb-2">' +
-                '<h6 class="fw-bold text-dark m-0" style="font-size:0.85rem;"><i class="bi bi-check2-circle text-primary me-1"></i> ' + (cat.titulo || 'Categoría') + '</h6>' +
-                '<button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0.5 fw-bold" style="font-size:0.7rem;" onclick="window._sguSetCatCheck(\'' + cat.id + '\')">' +
-                    '<i class="bi bi-check2-all"></i> Todo OK' +
-                '</button>' +
-            '</div>' +
-            '<div class="d-flex flex-column gap-1">';
-
-        (cat.items || []).forEach(function(item) {
-            var val = _sguChecklist[item.id] || '';
-            html += '<div class="sgu-chk-row d-flex align-items-center justify-content-between py-1 px-2 rounded-2 bg-white border border-light">' +
-                '<span class="sgu-chk-label-text small fw-semibold text-secondary" style="font-size:0.8rem;">' + item.label + '</span>' +
-                '<div class="d-flex gap-1">' +
-                    '<div class="sgu-chk-btn-circle x ' + (val==='mal'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'mal\')" title="Observado / Dañado"><i class="bi bi-x-lg"></i></div>' +
-                    '<div class="sgu-chk-btn-circle na ' + (val==='na'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'na\')" title="No Aplica">N/A</div>' +
-                    '<div class="sgu-chk-btn-circle ok ' + (val==='ok'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'ok\')" title="Conforme"><i class="bi bi-check-lg"></i></div>' +
-                '</div>' +
-            '</div>';
-        });
-
-        html += '</div></div>';
-    });
-
-    container.innerHTML = html;
-};
-
-window._sguSetAllCategoriesOk = function() {
-    (_sguGlobalTemplate || []).forEach(function(cat) {
-        (cat.items || []).forEach(function(item) {
-            _sguChecklist[item.id] = 'ok';
-        });
-    });
-    window._sguRenderEmbeddedChecklist();
-    window._sguRenderChecklist();
-    window._sguCheckFormReady();
-    _sguToast('Todos los ítems marcados como Conforme (OK)', 'bi-check-all');
 };
 
 // ── FORM: NUEVA SALIDA ───────────────────────────────────────────
@@ -1236,8 +1175,6 @@ function _sguInitForm() {
     if (bT) bT.style.display = 'none';
     if (bC) bC.style.display = 'none';
 
-    window._sguRenderPhotosGrid('salida');
-    window._sguRenderEmbeddedChecklist();
     _sguRenderChecklist();
     window._sguCheckFormReady();
 
@@ -1256,44 +1193,45 @@ window._sguCheckFormReady = function() {
         return;
     }
 
+    var tipo = _sguEditMode || 'salida';
+    var photosList = _sguPhotos[tipo] || [];
+    var chkCount = Object.keys(_sguChecklist).length;
+    var totalItems = 0;
+    (_sguGlobalTemplate || []).forEach(function(cat) { totalItems += (cat.items || []).length; });
+
+    var btnInsp = document.getElementById('sgu-btn-open-inspection');
+    var descInsp = document.getElementById('sgu-inspection-desc');
+
+    if (btnInsp) {
+        if (chkCount >= totalItems && totalItems > 0 && photosList.length > 0) {
+            btnInsp.innerHTML = '<i class="bi bi-check-lg"></i> Listo (' + photosList.length + ' fotos)';
+            btnInsp.classList.add('done');
+            if (descInsp) descInsp.textContent = 'Checklist OK & ' + photosList.length + ' foto(s) adjunta(s)';
+        } else if (chkCount > 0 || photosList.length > 0) {
+            btnInsp.innerHTML = chkCount + ' ítems / ' + photosList.length + ' fotos';
+            btnInsp.classList.add('done');
+            if (descInsp) descInsp.textContent = chkCount + ' ítems marcados & ' + photosList.length + ' foto(s)';
+        } else {
+            btnInsp.innerHTML = 'Llenar';
+            btnInsp.classList.remove('done');
+            if (descInsp) descInsp.textContent = 'Ítems de seguridad + Fotos';
+        }
+    }
+
     var btnSave = document.getElementById('sgu-btn-save');
     if (btnSave) {
         btnSave.disabled = false;
     }
 };
 
-// ── OVERLAYS: CHECKLIST & FOTOS (Abajo hacia arriba) ─────────────
+// ── OVERLAY: INSPECCIÓN (CHECKLIST + FOTOS 2 EN 1) ────────────────
 window._sguOpenChecklist = function() {
-    document.getElementById('sgu-chk-overlay-title').textContent = _sguEditMode === 'retorno' ? 'Checklist Retorno (Vuelta)' : 'Checklist Salida (Ida)';
+    document.getElementById('sgu-chk-overlay-title').textContent = _sguEditMode === 'retorno' ? 'Checklist y Evidencias (Retorno)' : 'Checklist y Evidencias (Salida)';
     _sguRenderChecklist();
     _sguOpenDrawer('sgu-checklist-overlay');
 };
 
-window._sguOpenPhotosChooser = function(tipo) {
-    var inputCam = document.getElementById('sgu-input-cam');
-    var inputGal = document.getElementById('sgu-input-gal');
-
-    if (inputCam) inputCam.onchange = function() { _sguHandlePhotoInput(this, tipo); };
-    if (inputGal) inputGal.onchange = function() { _sguHandlePhotoInput(this, tipo); };
-
-    _sguOpenDrawer('sgu-photos-bsheet');
-};
-
-function _sguHandlePhotoInput(input, tipo) {
-    if (!input.files || !input.files.length) return;
-    _sguPhotos[tipo] = _sguPhotos[tipo] || [];
-    Array.from(input.files).forEach(function(file) {
-        var url = URL.createObjectURL(file);
-        _sguPhotos[tipo].push({ url: url, file: file, uploaded: false });
-    });
-    input.value = '';
-    window._sguCloseAllDrawers();
-    window._sguRenderPhotosGrid(tipo);
-    _sguToast('Fotos adjuntadas (' + _sguPhotos[tipo].length + ')');
-    window._sguCheckFormReady();
-}
-
-// ── RENDER CHECKLIST INTERACTIVO ─────────────────────────────────
+// ── RENDER CHECKLIST INTERACTIVO CON FOTOS INTEGRADAS ─────────────
 function _sguRenderChecklist() {
     var container = document.getElementById('sgu-checklist-container');
     if (!container) return;
@@ -1305,28 +1243,80 @@ function _sguRenderChecklist() {
 
     var html = '<div class="alert alert-info border-0 rounded-3 mb-3 d-flex align-items-center gap-2" style="background:#eff6ff;color:#0369a1;font-size:0.85rem;">' +
         '<i class="bi bi-info-circle-fill fs-5"></i>' +
-        '<div>Marque cada componente del vehículo. Utilice <span class="badge bg-danger">X</span> en caso de detectar anomalías o daños mecánicos/físicos.</div>' +
+        '<div>Marque cada componente del vehículo y suba las fotos de evidencia al final. Utilice <span class="badge bg-danger">X</span> en caso de detectar anomalías o daños.</div>' +
     '</div>';
 
+    // 1. Ítems del Checklist Técnico
     _sguGlobalTemplate.forEach(function(cat) {
-        html += '<div class="sgu-chk-group">';
-        html += '<div class="sgu-chk-group-header">';
-        html += '<h6 class="fw-bold text-dark m-0">' + (cat.titulo || 'Categoría') + '</h6>';
-        html += '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" style="font-size:0.75rem;" onclick="window._sguSetCatCheck(\'' + cat.id + '\')"><i class="bi bi-check2-all"></i> Todo OK</button>';
-        html += '</div>';
+        html += '<div class="sgu-chk-group mb-2.5 p-2 rounded-3 bg-light border" style="border-color:#e2e8f0 !important;">' +
+            '<div class="d-flex align-items-center justify-content-between mb-2">' +
+                '<h6 class="fw-bold text-dark m-0" style="font-size:0.88rem;"><i class="bi bi-check2-circle text-primary me-1"></i> ' + (cat.titulo || 'Categoría') + '</h6>' +
+                '<button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-0.5 fw-bold" style="font-size:0.72rem;" onclick="window._sguSetCatCheck(\'' + cat.id + '\')">' +
+                    '<i class="bi bi-check2-all"></i> Todo OK' +
+                '</button>' +
+            '</div>' +
+            '<div class="d-flex flex-column gap-1">';
 
         (cat.items || []).forEach(function(item) {
             var val = _sguChecklist[item.id] || '';
-            html += '<div class="sgu-chk-row">';
-            html += '<span class="sgu-chk-label-text">' + item.label + '</span>';
-            html += '<div class="d-flex gap-1">';
-            html += '<div class="sgu-chk-btn-circle x ' + (val==='mal'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'mal\')" title="Observado / Dañado"><i class="bi bi-x-lg"></i></div>';
-            html += '<div class="sgu-chk-btn-circle na ' + (val==='na'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'na\')" title="No Aplica">N/A</div>';
-            html += '<div class="sgu-chk-btn-circle ok ' + (val==='ok'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'ok\')" title="Conforme"><i class="bi bi-check-lg"></i></div>';
-            html += '</div></div>';
+            html += '<div class="sgu-chk-row d-flex align-items-center justify-content-between py-1.5 px-2 rounded-2 bg-white border border-light">' +
+                '<span class="sgu-chk-label-text small fw-semibold text-secondary" style="font-size:0.82rem;">' + item.label + '</span>' +
+                '<div class="d-flex gap-1">' +
+                    '<div class="sgu-chk-btn-circle x ' + (val==='mal'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'mal\')" title="Observado / Dañado"><i class="bi bi-x-lg"></i></div>' +
+                    '<div class="sgu-chk-btn-circle na ' + (val==='na'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'na\')" title="No Aplica">N/A</div>' +
+                    '<div class="sgu-chk-btn-circle ok ' + (val==='ok'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'ok\')" title="Conforme"><i class="bi bi-check-lg"></i></div>' +
+                '</div>' +
+            '</div>';
         });
-        html += '</div>';
+
+        html += '</div></div>';
     });
+
+    // 2. SECCIÓN INTEGRADA DE EVIDENCIAS FOTOGRÁFICAS (Abajo del checklist)
+    var tipo = _sguEditMode || 'salida';
+    var photosList = _sguPhotos[tipo] || [];
+
+    html += '<div class="sgu-drawer-photos-section mt-4 pt-3 border-top">' +
+        '<div class="d-flex align-items-center justify-content-between mb-2.5">' +
+            '<div>' +
+                '<h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;"><i class="bi bi-camera-fill text-primary me-1"></i> Evidencias Fotográficas</h6>' +
+                '<small class="text-muted" style="font-size:0.75rem;">Fotos de odómetro, carrocería o novedades</small>' +
+            '</div>' +
+            '<span class="badge bg-light text-secondary border px-2 py-1" style="font-size:0.75rem;">' + photosList.length + ' foto(s)</span>' +
+        '</div>' +
+        '<div class="d-flex gap-2 mb-3">' +
+            '<label class="btn btn-sm btn-primary rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-1 cursor-pointer flex-grow-1 justify-content-center shadow-sm" style="font-size:0.85rem;">' +
+                '<i class="bi bi-camera-fill"></i> Tomar Foto (Cámara)' +
+                '<input type="file" accept="image/*" capture="environment" class="d-none" onchange="window._sguHandleDirectPhoto(this, \'' + tipo + '\')">' +
+            '</label>' +
+            '<label class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-1 cursor-pointer flex-grow-1 justify-content-center" style="font-size:0.85rem;">' +
+                '<i class="bi bi-images"></i> Subir Galería' +
+                '<input type="file" accept="image/*" multiple class="d-none" onchange="window._sguHandleDirectPhoto(this, \'' + tipo + '\')">' +
+            '</label>' +
+        '</div>' +
+        '<div class="sgu-photo-grid" id="sgu-drawer-photos-grid">';
+
+    if (photosList.length === 0) {
+        html += '<div class="text-muted small fst-italic py-2 text-center w-100" style="grid-column: 1 / -1;"><i class="bi bi-camera text-secondary me-1"></i> Sin fotos adjuntas. Tome una foto con la cámara o seleccione desde su galería.</div>';
+    } else {
+        photosList.forEach(function(item, idx) {
+            html += '<div class="sgu-photo-thumb-box">' +
+                '<img src="' + item.url + '" class="sgu-photo-thumb-img" alt="Evidencia ' + (idx + 1) + '" onclick="window.open(\'' + item.url + '\')">' +
+                '<button type="button" class="sgu-photo-thumb-del" onclick="window._sguRemovePhoto(\'' + tipo + '\', ' + idx + ')" title="Eliminar foto">' +
+                    '<i class="bi bi-x-lg"></i>' +
+                '</button>' +
+            '</div>';
+        });
+    }
+
+    html += '</div></div>';
+
+    // 3. Botón inferior para Guardar y Cerrar
+    html += '<div class="mt-4 pt-2 mb-3">' +
+        '<button type="button" class="btn btn-primary w-100 py-3 rounded-3 fw-bold shadow-sm" onclick="window._sguCloseAllDrawers(); window._sguCheckFormReady();">' +
+            '<i class="bi bi-check2-circle me-1"></i> Guardar Inspección y Continuar' +
+        '</button>' +
+    '</div>';
 
     container.innerHTML = html;
 }
@@ -1334,7 +1324,6 @@ function _sguRenderChecklist() {
 window._sguSetCheck = function(itemId, valor) {
     _sguChecklist[itemId] = valor;
     _sguRenderChecklist();
-    window._sguRenderEmbeddedChecklist();
     window._sguCheckFormReady();
 };
 
@@ -1344,7 +1333,6 @@ window._sguSetCatCheck = function(catId) {
         cat.items.forEach(function(item) { _sguChecklist[item.id] = 'ok'; });
     }
     _sguRenderChecklist();
-    window._sguRenderEmbeddedChecklist();
     window._sguCheckFormReady();
 };
 
