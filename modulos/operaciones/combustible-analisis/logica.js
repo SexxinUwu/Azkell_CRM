@@ -425,8 +425,9 @@
 
             // ── Vales y métricas específicas por tramo (IDA vs RETORNO) ──
             const vouchersList = fs ? fs.vouchers : (t.vouchers || []);
-            const vIda = vouchersList.filter(v => !v.esPuntoPartida && (v.tipo || '').toUpperCase().includes('IDA'));
-            const vRet = vouchersList.filter(v => !v.esPuntoPartida && ((v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('SERVICIO')));
+            // Solo los vales marcados explícitamente como RETORNO o VUELTA van a retorno; el resto (o vales de servicio/recarga) van a IDA
+            const vRet = vouchersList.filter(v => !v.esPuntoPartida && ((v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('RETORNO')));
+            const vIda = vouchersList.filter(v => !v.esPuntoPartida && !((v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('RETORNO')));
 
             const galRealIda = vIda.reduce((s, x) => s + (x.galones || 0), 0);
             const galRealRet = vRet.reduce((s, x) => s + (x.galones || 0), 0);
@@ -440,19 +441,21 @@
             let pesoRetVal = rawPesoRet > 0 ? (rawPesoRet > 50 ? +(rawPesoRet / 1000).toFixed(2) : +rawPesoRet.toFixed(2)) : (t.pesoRetorno || 0);
 
             // Regla Operativa ERP: La IDA lleva la carga del viaje y el RETORNO va vacío (0 Tn)
-            if (pesoIdaVal === 0 && (pesoRetVal > 0 || (t.pesoMaxTn || 0) > 0)) {
-                pesoIdaVal = pesoRetVal > 0 ? pesoRetVal : (t.pesoMaxTn || 0);
+            if (pesoIdaVal === 0 && (t.pesoMaxTn || 0) > 0) {
+                pesoIdaVal = (t.pesoMaxTn || 0);
+            }
+            if (vRet.length === 0) {
                 pesoRetVal = 0;
             }
 
             // Odómetros por tramo
-            const minOdoIda = vIda.length > 0 ? Math.min(...vIda.map(x => x.odometro || 0).filter(Boolean)) : kInicio;
+            const minOdoIda = kInicio > 0 ? kInicio : (vIda.length > 0 ? Math.min(...vIda.map(x => x.odometro || 0).filter(Boolean)) : 0);
             const maxOdoIda = vIda.length > 0 ? Math.max(...vIda.map(x => x.odometro || 0).filter(Boolean)) : (vRet.length > 0 ? Math.min(...vRet.map(x => x.odometro || 0).filter(Boolean)) : kFin);
             const recKmIda = (maxOdoIda > minOdoIda && minOdoIda > 0) ? (maxOdoIda - minOdoIda) : 0;
             const rendIda = (galRealIda > 0 && recKmIda > 0) ? (recKmIda / galRealIda) : 0;
 
-            const minOdoRet = maxOdoIda || (vRet.length > 0 ? Math.min(...vRet.map(x => x.odometro || 0).filter(Boolean)) : 0);
-            const maxOdoRet = kFin || (vRet.length > 0 ? Math.max(...vRet.map(x => x.odometro || 0).filter(Boolean)) : 0);
+            const minOdoRet = vRet.length > 0 ? (maxOdoIda || Math.min(...vRet.map(x => x.odometro || 0).filter(Boolean))) : 0;
+            const maxOdoRet = vRet.length > 0 ? Math.max(...vRet.map(x => x.odometro || 0).filter(Boolean), kFin) : 0;
             const recKmRet = (maxOdoRet > minOdoRet && minOdoRet > 0) ? (maxOdoRet - minOdoRet) : 0;
             const rendRet = (galRealRet > 0 && recKmRet > 0) ? (recKmRet / galRealRet) : 0;
 
@@ -592,8 +595,8 @@
                     <td class="text-end font-monospace fw-bold text-success">
                         ${pesoIdaVal > 0 ? `${pesoIdaVal.toFixed(2)} Tn` : '<span class="text-muted opacity-50">0.00 Tn (Vacío)</span>'}
                     </td>
-                    <td class="text-muted small">${esc(vIda[0]?.fecha || fInicio)}</td>
-                    <td class="text-muted small">${esc(vIda[vIda.length - 1]?.fecha || '—')}</td>
+                    <td class="text-center text-muted opacity-50">—</td>
+                    <td class="text-center text-muted opacity-50">—</td>
                     <td class="text-end font-monospace text-muted">${minOdoIda > 0 ? minOdoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${maxOdoIda > 0 ? maxOdoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${recKmIda > 0 ? recKmIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
@@ -618,8 +621,8 @@
                     <td class="text-end font-monospace fw-bold text-primary">
                         ${pesoRetVal > 0 ? `${pesoRetVal.toFixed(2)} Tn` : '<span class="text-muted opacity-50">0.00 Tn (Vacío)</span>'}
                     </td>
-                    <td class="text-muted small">${esc(vRet[0]?.fecha || '—')}</td>
-                    <td class="text-muted small">${esc(vRet[vRet.length - 1]?.fecha || fFin)}</td>
+                    <td class="text-center text-muted opacity-50">—</td>
+                    <td class="text-center text-muted opacity-50">—</td>
                     <td class="text-end font-monospace text-muted">${minOdoRet > 0 ? minOdoRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${maxOdoRet > 0 ? maxOdoRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${recKmRet > 0 ? recKmRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
@@ -650,7 +653,7 @@
                 totalSumVales += (totGal || 0);
 
                 const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || 0, t.motor);
-                const tieneRet = (t.galonesRetorno > 0) || (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('SERVICIO'));
+                const tieneRet = (t.galonesRetorno > 0) || (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('RETORNO'));
                 const gRet = tieneRet ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor) : 0;
                 totalSumTeorico += (gIda + gRet);
 
@@ -1085,7 +1088,7 @@
             const valesCount = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
 
             const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || 0, t.motor);
-            const tieneRet = (t.galonesRetorno > 0) || (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('SERVICIO'));
+            const tieneRet = (t.galonesRetorno > 0) || (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('RETORNO'));
             const gRet = tieneRet ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor) : 0;
             const gTeoricoTotal = (gIda > 0 || gRet > 0) ? (gIda + gRet) : 0;
             const difGalones = gTeoricoTotal > 0 ? parseFloat((totGal - gTeoricoTotal).toFixed(2)) : null;

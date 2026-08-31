@@ -1094,9 +1094,10 @@ module.exports = function (db, broadcast, logAudit) {
                     const maxPesoRaw = Math.max(0, ...t.vouchers.map(x => parseFloat(x.peso || 0)));
                     const pesoCalculadoTn = maxPesoRaw > 50 ? parseFloat((maxPesoRaw / 1000).toFixed(2)) : parseFloat(maxPesoRaw.toFixed(2));
 
-                    // Desglose de galones y pesos por tramo (IDA vs RETORNO / FIN DE SERVICIO)
-                    const vouchersIda = t.vouchers.filter(v => !v.esPuntoPartida && (v.tipo || '').toUpperCase().includes('IDA'));
-                    const vouchersRetorno = t.vouchers.filter(v => !v.esPuntoPartida && ((v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('SERVICIO')));
+                    // Desglose de galones y pesos por tramo (IDA vs RETORNO)
+                    // Solo los vales marcados explícitamente como RETORNO o VUELTA van a retorno; el resto (o vales de servicio/recarga) van a IDA
+                    const vouchersRetorno = t.vouchers.filter(v => !v.esPuntoPartida && ((v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('RETORNO')));
+                    const vouchersIda = t.vouchers.filter(v => !v.esPuntoPartida && !((v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('RETORNO')));
 
                     const galonesIda = vouchersIda.reduce((s, x) => s + (x.galones || 0), 0);
                     const galonesRetorno = vouchersRetorno.reduce((s, x) => s + (x.galones || 0), 0);
@@ -1108,11 +1109,10 @@ module.exports = function (db, broadcast, logAudit) {
                     let pesoRetornoCalculado = rawPesoRet > 50 ? parseFloat((rawPesoRet / 1000).toFixed(2)) : parseFloat(rawPesoRet.toFixed(2));
 
                     // Regla Operativa: La IDA lleva la carga del viaje y el RETORNO va vacío (0 Tn).
-                    if (pesoIdaCalculado === 0 && pesoRetornoCalculado > 0) {
-                        pesoIdaCalculado = pesoRetornoCalculado;
-                        pesoRetornoCalculado = 0;
-                    } else if (pesoIdaCalculado === 0 && pesoCalculadoTn > 0) {
+                    if (pesoIdaCalculado === 0 && pesoCalculadoTn > 0) {
                         pesoIdaCalculado = pesoCalculadoTn;
+                    }
+                    if (vouchersRetorno.length === 0) {
                         pesoRetornoCalculado = 0;
                     }
 
