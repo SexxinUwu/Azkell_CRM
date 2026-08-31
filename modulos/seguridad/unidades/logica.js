@@ -1248,20 +1248,20 @@ function _sguRenderChecklist() {
 
     // 1. Ítems del Checklist Técnico
     _sguGlobalTemplate.forEach(function(cat) {
-        html += '<div class="sgu-chk-group mb-2.5 p-2 rounded-3 bg-light border" style="border-color:#e2e8f0 !important;">' +
-            '<div class="d-flex align-items-center justify-content-between mb-2">' +
-                '<h6 class="fw-bold text-dark m-0" style="font-size:0.88rem;"><i class="bi bi-check2-circle text-primary me-1"></i> ' + (cat.titulo || 'Categoría') + '</h6>' +
-                '<button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-0.5 fw-bold" style="font-size:0.72rem;" onclick="window._sguSetCatCheck(\'' + cat.id + '\')">' +
+        html += '<div class="sgu-chk-group">' +
+            '<div class="sgu-chk-group-header">' +
+                '<h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;"><i class="bi bi-check2-circle text-primary me-1"></i> ' + (cat.titulo || 'Categoría') + '</h6>' +
+                '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" style="font-size:0.75rem;" onclick="window._sguSetCatCheck(\'' + cat.id + '\')">' +
                     '<i class="bi bi-check2-all"></i> Todo OK' +
                 '</button>' +
             '</div>' +
-            '<div class="d-flex flex-column gap-1">';
+            '<div>';
 
         (cat.items || []).forEach(function(item) {
             var val = _sguChecklist[item.id] || '';
-            html += '<div class="sgu-chk-row d-flex align-items-center justify-content-between py-1.5 px-2 rounded-2 bg-white border border-light" data-chk-item="' + item.id + '">' +
-                '<span class="sgu-chk-label-text small fw-semibold text-secondary" style="font-size:0.82rem;">' + item.label + '</span>' +
-                '<div class="d-flex gap-1">' +
+            html += '<div class="sgu-chk-row" data-chk-item="' + item.id + '">' +
+                '<span class="sgu-chk-label-text">' + item.label + '</span>' +
+                '<div class="d-flex gap-1.5 align-items-center">' +
                     '<div class="sgu-chk-btn-circle x ' + (val==='mal'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'mal\')" title="Observado / Dañado"><i class="bi bi-x-lg"></i></div>' +
                     '<div class="sgu-chk-btn-circle na ' + (val==='na'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'na\')" title="No Aplica">N/A</div>' +
                     '<div class="sgu-chk-btn-circle ok ' + (val==='ok'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'ok\')" title="Conforme"><i class="bi bi-check-lg"></i></div>' +
