@@ -757,9 +757,11 @@ module.exports = function (db, broadcast, logAudit) {
                     WHERE d.alerta_cambio = 1 OR d.r1 <= 4 OR d.r2 <= 4 OR d.r3 <= 4
                 `),
 
-                // 4. Total de unidades activas en uso
+                // 4. Total de unidades activas en uso y suma teórica de llantas de flota
                 tdb.query(`
-                    SELECT COUNT(*) as total_unidades_en_uso
+                    SELECT 
+                        COUNT(*) as total_unidades_en_uso,
+                        CAST(COALESCE(SUM(CASE WHEN llantas IS NOT NULL AND llantas > 0 THEN llantas ELSE 0 END), 0) AS UNSIGNED) as total_llantas_flota
                     FROM placas
                     WHERE UPPER(TRIM(COALESCE(en_uso, 'SI'))) != 'NO'
                 `),
@@ -836,6 +838,7 @@ module.exports = function (db, broadcast, logAudit) {
             ]);
 
             const totalUso = unidadesUsoRows[0]?.total_unidades_en_uso || 0;
+            const totalFlotaLlantas = unidadesUsoRows[0]?.total_llantas_flota || 1424;
             const vig = vigenciasRows[0]?.vigentes || 0;
             const noVig = vigenciasRows[0]?.no_vigentes || 0;
             const sinInsp = Math.max(0, totalUso - (vig + noVig));
@@ -850,7 +853,8 @@ module.exports = function (db, broadcast, logAudit) {
                     sin_inspeccion: sinInsp,
                     llantas_criticas: criticasRows[0]?.total_criticas || 0,
                     unidades_en_uso: totalUso,
-                    total_llantas_rodando: totalLlantasRodando
+                    total_llantas_rodando: totalLlantasRodando,
+                    total_llantas_flota: totalFlotaLlantas
                 },
                 marcas: marcasTopRows || [],
                 medidas: medidasRows || [],
