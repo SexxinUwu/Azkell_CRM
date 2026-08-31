@@ -315,99 +315,133 @@
         </div>
     </div>
 
-    <!-- OFFCANVAS: FILTRADOR AVANZADO MODERNO ESTILO iOS -->
-    <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="caDrawerFiltros" style="width: 410px; max-width: 100vw; border-left: 1px solid rgba(0,0,0,0.08); background: #f8fafc; z-index: 1065;">
-        
-        <!-- HEADER VISTA 1: CATEGORÍAS PRINCIPALES (iOS Style) -->
-        <div class="offcanvas-header py-3 px-3 px-md-4 bg-white border-bottom" id="header-ca-flt-main">
-            <div class="d-flex align-items-center justify-content-between w-100">
-                <div>
-                    <h6 class="offcanvas-title fw-bold text-dark m-0" style="letter-spacing: -0.02em; font-size: 1.05rem;">Filtros de Viajes</h6>
-                    <span class="text-muted" style="font-size: 0.75rem;">Segmentación de datos en tiempo real</span>
-                </div>
-                <button type="button" class="btn-close shadow-none rounded-circle bg-light p-2" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-            </div>
-        </div>
+    <style>
+        /* ── MODAL FLOTANTE DESDE ABAJO (IDÉNTICO A REPORTE DE FALLAS) ── */
+        .ca-floating-drawer-dialog {
+            max-width: 740px !important;
+            width: 100% !important;
+            height: 90vh !important;
+            max-height: 90vh !important;
+            margin: 0 auto !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            top: auto !important;
+        }
+        .ca-floating-drawer-content {
+            height: 100% !important;
+            max-height: 90vh !important;
+            border-radius: 28px 28px 0 0 !important;
+            border-bottom: none !important;
+            box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.25) !important;
+            overflow: hidden !important;
+            background: #f8fafc !important;
+        }
+    </style>
 
-        <!-- HEADER VISTA 2: DETALLE DE CATEGORÍA (iOS Navigation Bar) -->
-        <div class="offcanvas-header py-3 px-3 px-md-4 bg-white border-bottom d-none" id="header-ca-flt-detail">
-            <div class="d-flex align-items-center justify-content-between w-100">
-                <button type="button" class="btn btn-link text-primary fw-semibold p-0 text-decoration-none d-flex align-items-center gap-1" onclick="window.caFiltrosNavAtras()" style="font-size: 0.92rem;">
-                    <i class="bi bi-chevron-left fw-bold"></i>
-                    <span>Filtros</span>
-                </button>
-                <h6 class="offcanvas-title fw-bold text-dark m-0 text-truncate px-2" id="ca-titulo-categoria-filtro" style="font-size: 0.95rem; max-width: 200px;">Categoría</h6>
-                <button type="button" class="btn btn-link text-primary fw-bold text-decoration-none p-0" onclick="window.caFiltrosNavAtras()" style="font-size: 0.92rem;">
-                    Listo
-                </button>
-            </div>
-        </div>
-
-        <!-- CUERPO CON SLIDER ANIMADO HORIZONTAL -->
-        <div class="offcanvas-body p-0 position-relative" style="overflow-x: hidden; background: #f8fafc;">
-            <div id="ca-filtros-slider" class="d-flex w-100 h-100" style="transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);">
+    <!-- MODAL: FILTRADOR FLOTANTE CENTRADO (ESTILO REPORTE DE FALLAS / iOS) -->
+    <div class="modal fade" id="caModalFiltros" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable ca-floating-drawer-dialog">
+            <div class="modal-content border-0 ca-floating-drawer-content shadow-lg d-flex flex-column h-100">
                 
-                <!-- VISTA 1: LISTA VERTICAL DE CATEGORÍAS (iOS Inset Grouped) -->
-                <div id="ca-filtros-main-view" class="w-100 h-100 flex-shrink-0 d-flex flex-column py-3 px-3 overflow-auto">
-                    <div class="bg-white rounded-4 border shadow-2xs overflow-hidden" id="ca-lista-categorias-filtro">
-                        <!-- Categorías generadas por JS -->
+                <!-- HEADER VISTA 1: CATEGORÍAS PRINCIPALES -->
+                <div class="modal-header py-3 px-3 px-md-4 bg-white border-bottom flex-shrink-0" id="header-ca-flt-main">
+                    <div class="d-flex align-items-center justify-content-between w-100">
+                        <div class="d-flex align-items-center gap-2.5">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:38px; height:38px; background:#eff6ff; color:#2563eb; font-size:1.15rem;">
+                                <i class="bi bi-funnel-fill"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title fw-bold text-dark m-0" style="letter-spacing: -0.02em; font-size: 1.12rem;">Filtros de Viajes</h5>
+                                <span class="text-muted" style="font-size: 0.76rem;">Segmentación de datos y análisis en tiempo real</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close shadow-none rounded-circle bg-light p-2" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                 </div>
 
-                <!-- VISTA 2: OPCIONES Y BUSCADOR DE LA CATEGORÍA SELECCIONADA -->
-                <div id="ca-filtros-detail-view" class="w-100 h-100 flex-shrink-0 d-flex flex-column bg-white">
-                    <!-- Buscador iOS en tiempo real -->
-                    <div class="p-3 border-bottom bg-white">
-                        <div class="d-flex align-items-center gap-2 px-3 py-2 rounded-3 border-0" style="background: #f1f5f9;">
-                            <i class="bi bi-search text-muted" style="font-size: 0.88rem;"></i>
-                            <input type="text" id="ca-buscador-opciones-filtro" class="w-100 bg-transparent border-0 text-dark shadow-none" placeholder="Buscar..." style="outline: none; font-size: 0.88rem;" oninput="window.caBuscarEnFiltroOpciones(this.value)">
-                            <button type="button" id="ca-btn-clear-search" class="btn btn-link p-0 text-muted text-decoration-none d-none" onclick="window.caLimpiarInputBuscador()">
-                                <i class="bi bi-x-circle-fill" style="font-size: 0.85rem;"></i>
-                            </button>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2 px-1" id="ca-detail-quick-actions">
-                            <button type="button" class="btn btn-link btn-sm p-0 text-primary fw-semibold text-decoration-none" style="font-size: 0.78rem;" onclick="window.caMarcarTodasDetalle(true)">Marcar todas</button>
-                            <span class="text-muted" style="font-size:0.75rem;">•</span>
-                            <button type="button" class="btn btn-link btn-sm p-0 text-muted text-decoration-none" style="font-size: 0.78rem;" onclick="window.caMarcarTodasDetalle(false)">Desmarcar todas</button>
-                        </div>
-                    </div>
-
-                    <!-- Lista de Opciones con Scroll -->
-                    <div class="flex-grow-1 overflow-auto" id="ca-lista-opciones-detalle" style="max-height: calc(100vh - 220px);">
-                        <!-- Opciones dinámicas -->
-                    </div>
-
-                    <!-- Mensaje de Búsqueda Vacía -->
-                    <div id="ca-filtro-empty-search" class="text-center py-5 text-muted d-none">
-                        <i class="bi bi-search fs-3 opacity-40 d-block mb-2"></i>
-                        <span class="small fw-semibold">No se encontraron resultados</span>
-                    </div>
-
-                    <!-- Footer de Detalle -->
-                    <div class="p-3 border-top bg-white d-flex justify-content-between align-items-center">
-                        <button type="button" class="btn btn-link text-danger fw-semibold text-decoration-none px-1 small" onclick="window.caLimpiarFiltroCategoriaActual()">
-                            <i class="bi bi-trash3 me-1"></i>Limpiar
+                <!-- HEADER VISTA 2: DETALLE DE CATEGORÍA (iOS Navigation Bar) -->
+                <div class="modal-header py-3 px-3 px-md-4 bg-white border-bottom d-none flex-shrink-0" id="header-ca-flt-detail">
+                    <div class="d-flex align-items-center justify-content-between w-100">
+                        <button type="button" class="btn btn-link text-primary fw-semibold p-0 text-decoration-none d-flex align-items-center gap-1.5" onclick="window.caFiltrosNavAtras()" style="font-size: 0.95rem;">
+                            <i class="bi bi-chevron-left fw-bold"></i>
+                            <span>Filtros</span>
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 py-1.5 fw-bold shadow-2xs" onclick="window.caFiltrosNavAtras()">
-                            Listo <i class="bi bi-check2 ms-1"></i>
+                        <h6 class="modal-title fw-bold text-dark m-0 text-truncate px-2" id="ca-titulo-categoria-filtro" style="font-size: 1.05rem; max-width: 320px;">Categoría</h6>
+                        <button type="button" class="btn btn-link text-primary fw-bold text-decoration-none p-0" onclick="window.caFiltrosNavAtras()" style="font-size: 0.95rem;">
+                            Listo
                         </button>
                     </div>
+                </div>
+
+                <!-- CUERPO CON SLIDER ANIMADO HORIZONTAL -->
+                <div class="modal-body p-0 position-relative flex-grow-1" style="overflow: hidden; background: #f8fafc;">
+                    <div id="ca-filtros-slider" class="d-flex w-100 h-100" style="transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);">
+                        
+                        <!-- VISTA 1: LISTA VERTICAL DE CATEGORÍAS (iOS Inset Grouped) -->
+                        <div id="ca-filtros-main-view" class="w-100 h-100 flex-shrink-0 d-flex flex-column py-3 px-3 px-md-4 overflow-auto">
+                            <div class="bg-white rounded-4 border shadow-2xs overflow-hidden" id="ca-lista-categorias-filtro">
+                                <!-- Categorías generadas por JS -->
+                            </div>
+                        </div>
+
+                        <!-- VISTA 2: OPCIONES Y BUSCADOR DE LA CATEGORÍA SELECCIONADA -->
+                        <div id="ca-filtros-detail-view" class="w-100 h-100 flex-shrink-0 d-flex flex-column bg-white">
+                            <!-- Buscador iOS en tiempo real -->
+                            <div class="p-3 px-md-4 border-bottom bg-white flex-shrink-0">
+                                <div class="d-flex align-items-center gap-2 px-3 py-2 rounded-3 border-0" style="background: #f1f5f9;">
+                                    <i class="bi bi-search text-muted" style="font-size: 0.9rem;"></i>
+                                    <input type="text" id="ca-buscador-opciones-filtro" class="w-100 bg-transparent border-0 text-dark shadow-none" placeholder="Escribe para buscar..." style="outline: none; font-size: 0.9rem;" oninput="window.caBuscarEnFiltroOpciones(this.value)">
+                                    <button type="button" id="ca-btn-clear-search" class="btn btn-link p-0 text-muted text-decoration-none d-none" onclick="window.caLimpiarInputBuscador()">
+                                        <i class="bi bi-x-circle-fill" style="font-size: 0.88rem;"></i>
+                                    </button>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-2.5 px-1" id="ca-detail-quick-actions">
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-primary fw-semibold text-decoration-none" style="font-size: 0.82rem;" onclick="window.caMarcarTodasDetalle(true)">Marcar todas</button>
+                                    <span class="text-muted" style="font-size:0.75rem;">•</span>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-muted text-decoration-none" style="font-size: 0.82rem;" onclick="window.caMarcarTodasDetalle(false)">Desmarcar todas</button>
+                                </div>
+                            </div>
+
+                            <!-- Lista de Opciones con Scroll -->
+                            <div class="flex-grow-1 overflow-auto px-2 px-md-3 py-1" id="ca-lista-opciones-detalle" style="max-height: calc(90vh - 220px);">
+                                <!-- Opciones dinámicas -->
+                            </div>
+
+                            <!-- Mensaje de Búsqueda Vacía -->
+                            <div id="ca-filtro-empty-search" class="text-center py-5 text-muted d-none">
+                                <i class="bi bi-search fs-3 opacity-40 d-block mb-2"></i>
+                                <span class="small fw-semibold">No se encontraron resultados</span>
+                            </div>
+
+                            <!-- Footer de Detalle -->
+                            <div class="p-3 px-md-4 border-top bg-white d-flex justify-content-between align-items-center flex-shrink-0">
+                                <button type="button" class="btn btn-link text-danger fw-semibold text-decoration-none px-1 small" onclick="window.caLimpiarFiltroCategoriaActual()">
+                                    <i class="bi bi-trash3 me-1"></i>Limpiar categoría
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 py-2 fw-bold shadow-2xs" onclick="window.caFiltrosNavAtras()">
+                                    Listo <i class="bi bi-check2 ms-1"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- FOOTER GENERAL VISTA 1 -->
+                <div class="modal-footer p-3 px-md-4 border-top bg-white d-flex justify-content-between align-items-center flex-shrink-0" id="footer-ca-flt-main">
+                    <button type="button" class="btn btn-link text-danger fw-semibold text-decoration-none px-1" onclick="window.caLimpiarTodosFiltrosDrawer()">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Restablecer
+                    </button>
+                    <button type="button" class="btn btn-primary fw-bold px-4 py-2.5 rounded-pill shadow-sm d-flex align-items-center gap-2" data-bs-dismiss="modal" onclick="window.caAplicarFiltros(true)">
+                        <span>Aplicar Filtros</span>
+                        <span class="badge bg-white text-primary rounded-pill fw-bold" id="ca-btn-aplicar-count">0 viajes</span>
+                    </button>
                 </div>
 
             </div>
         </div>
-
-        <!-- FOOTER GENERAL VISTA 1 -->
-        <div class="p-3 px-md-4 border-top bg-white d-flex justify-content-between align-items-center" id="footer-ca-flt-main">
-            <button type="button" class="btn btn-link text-danger fw-semibold text-decoration-none px-1" onclick="window.caLimpiarTodosFiltrosDrawer()">
-                <i class="bi bi-arrow-counterclockwise me-1"></i>Restablecer
-            </button>
-            <button type="button" class="btn btn-primary fw-bold px-4 py-2.5 rounded-pill shadow-sm d-flex align-items-center gap-2" data-bs-dismiss="offcanvas" onclick="window.caAplicarFiltros(true)">
-                <span>Aplicar</span>
-                <span class="badge bg-white text-primary rounded-pill fw-bold" id="ca-btn-aplicar-count">0 viajes</span>
-            </button>
-        </div>
-
     </div>
 
     <!-- Tabla Dinámica Consolidada por Viaje -->
