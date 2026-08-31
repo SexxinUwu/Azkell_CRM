@@ -388,22 +388,33 @@
                         <th class="sortable" onclick="window.caToggleSort('date_end')">
                             Fecha Fin <i class="bi bi-arrow-down-up text-muted ms-1"></i>
                         </th>
-                        <!-- Odómetros Vales Físicos (ERP) -->
+                        <!-- Bloque 1: Vales Físicos (ERP / Real) -->
                         <th class="text-end">Km Inicio (Vales)</th>
                         <th class="text-end">Km Fin (Vales)</th>
                         <th class="text-end">Recorrido (Vales)</th>
                         <th class="text-end sortable" onclick="window.caToggleSort('gal')">
                             Total Gal. <i class="bi bi-arrow-down-up text-muted ms-1"></i>
                         </th>
-                        <th class="text-end" style="min-width: 90px; color:#f59e0b;">Km Teórico</th>
-                        <th class="text-end" style="min-width: 90px; color:#f59e0b;">Gal. Teórico</th>
-                        <th class="text-end" style="min-width: 95px;">Diferencia</th>
+                        <th class="text-end">Km / Gal (Real)</th>
                         <th class="text-end sortable" onclick="window.caToggleSort('cost')">
                             Total (S/) <i class="bi bi-arrow-down-up text-muted ms-1"></i>
                         </th>
-                        <th class="text-end">Km / Gal (Real)</th>
                         
-                        <!-- Telemetría GPS Wialon CAN Bus (Encabezados Celestes) -->
+                        <!-- Bloque 2: Matriz Teórica Estándar (Encabezados Anaranjados con Letra Blanca) -->
+                        <th class="text-end th-teorico" style="background:#ea580c !important; color:#ffffff !important; border-left: 2px solid #c2410c; min-width: 95px;">
+                            <i class="bi bi-map me-1"></i>Km Teórico
+                        </th>
+                        <th class="text-end th-teorico" style="background:#ea580c !important; color:#ffffff !important; min-width: 95px;">
+                            <i class="bi bi-fuel-pump me-1"></i>Gal. Teórico
+                        </th>
+                        <th class="text-end th-teorico" style="background:#ea580c !important; color:#ffffff !important; min-width: 105px;">
+                            <i class="bi bi-speedometer2 me-1"></i>Km / Gal (Teórico)
+                        </th>
+                        <th class="text-end th-teorico" style="background:#ea580c !important; color:#ffffff !important; border-right: 2px solid #c2410c; min-width: 95px;">
+                            Diferencia
+                        </th>
+                        
+                        <!-- Bloque 3: Telemetría GPS Wialon CAN Bus (Encabezados Celestes) -->
                         <th class="text-end th-gps" style="background:#0284c7 !important; color:#ffffff !important; border-left: 2px solid #0369a1;">
                             <i class="bi bi-speedometer me-1"></i>Recorrido (GPS CAN)
                         </th>
@@ -428,7 +439,7 @@
                 </thead>
                 <tbody id="ca-trip-tbody">
                     <tr>
-                        <td colspan="19" class="text-center py-5 text-muted">
+                        <td colspan="24" class="text-center py-5 text-muted">
                             <div class="spinner-border spinner-border-sm text-primary me-2"></div>
                             Cargando análisis dinámico...
                         </td>

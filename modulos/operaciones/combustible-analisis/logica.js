@@ -496,6 +496,10 @@
             const kmTeoricoRetorno = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor);
             const kmTeoricoTotal = (kmTeoricoIda > 0 || kmTeoricoRetorno > 0) ? (kmTeoricoIda + kmTeoricoRetorno) : 0;
 
+            const rendTeoricoIda = (galTeoricoIda > 0 && kmTeoricoIda > 0) ? (kmTeoricoIda / galTeoricoIda) : 0;
+            const rendTeoricoRet = (galTeoricoRetorno > 0 && kmTeoricoRetorno > 0) ? (kmTeoricoRetorno / galTeoricoRetorno) : 0;
+            const rendTeoricoTotal = (galTeoricoTotal > 0 && kmTeoricoTotal > 0) ? (kmTeoricoTotal / galTeoricoTotal) : 0;
+
             let galTeoricoHtml = '<span class="text-muted opacity-50">—</span>';
             let difBadgeHtml = '<span class="text-muted opacity-50">—</span>';
 
@@ -571,20 +575,31 @@
                     <td class="text-muted small">${esc(fInicio)}</td>
                     <td class="text-muted small">${esc(fFin)}</td>
                     
-                    <!-- Vales Físicos (ERP) -->
+                    <!-- Bloque 1: Vales Físicos (ERP / Real) -->
                     <td class="text-end font-monospace text-success fw-bold">${kInicio > 0 ? kInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-danger fw-bold">${kFin > 0 ? kFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bold text-dark">${semaforoRecorrido}</td>
                     <td class="text-end font-monospace fw-bold text-primary">${totGal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
-                    <td class="text-end font-monospace fw-semibold" style="color:#d97706;" title="Ida: ${kmTeoricoIda.toFixed(1)} km | Retorno: ${kmTeoricoRetorno.toFixed(1)} km">${kmTeoricoTotal > 0 ? `${kmTeoricoTotal.toLocaleString('es-PE', { minimumFractionDigits: 1 })}` : '<span class="text-muted opacity-50">—</span>'}</td>
-                    <td class="text-end font-monospace">${galTeoricoHtml}</td>
-                    <td class="text-end font-monospace">${difBadgeHtml}</td>
-                    <td class="text-end font-monospace fw-bold text-success">S/ ${totGasto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
                     <td class="text-end font-monospace fw-bold ${rend > 0 ? 'text-indigo-600' : 'text-muted'}">
                         ${rend > 0 ? `${rend.toFixed(2)} <span class="small text-muted font-sans" style="font-size:0.72rem;">km/g</span>` : '—'}
                     </td>
+                    <td class="text-end font-monospace fw-bold text-success">S/ ${totGasto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
 
-                    <!-- Telemetría GPS Wialon CAN Bus (Celdas Celestes) -->
+                    <!-- Bloque 2: Matriz Teórica Estándar (Celdas Naranjas) -->
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(234, 88, 12, 0.04); color:#ea580c; border-left: 2px solid #fdba74;" title="Ida: ${kmTeoricoIda.toFixed(1)} km | Retorno: ${kmTeoricoRetorno.toFixed(1)} km">
+                        ${kmTeoricoTotal > 0 ? `${kmTeoricoTotal.toLocaleString('es-PE', { minimumFractionDigits: 1 })}` : '<span class="text-muted opacity-50">—</span>'}
+                    </td>
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(234, 88, 12, 0.04); color:#ea580c;" title="Ida: ${galTeoricoIda.toFixed(1)}g | Retorno: ${galTeoricoRetorno.toFixed(1)}g">
+                        ${galTeoricoHtml}
+                    </td>
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(234, 88, 12, 0.07); color:#c2410c;" title="Ida: ${rendTeoricoIda > 0 ? rendTeoricoIda.toFixed(2) : '—'} km/g | Retorno: ${rendTeoricoRet > 0 ? rendTeoricoRet.toFixed(2) : '—'} km/g">
+                        ${rendTeoricoTotal > 0 ? `${rendTeoricoTotal.toFixed(2)} <span class="small font-sans" style="font-size:0.72rem; color:#ea580c;">km/g</span>` : '<span class="text-muted opacity-50">—</span>'}
+                    </td>
+                    <td class="text-end font-monospace" style="background:rgba(234, 88, 12, 0.04); border-right: 2px solid #fdba74;">
+                        ${difBadgeHtml}
+                    </td>
+
+                    <!-- Bloque 3: Telemetría GPS Wialon CAN Bus (Celdas Celestes) -->
                     <td class="text-end font-monospace fw-bold" style="background:rgba(2, 132, 199, 0.05); color:#0284c7; border-left: 2px solid #bae6fd;">
                         ${gpsRecKm}
                     </td>
@@ -633,11 +648,23 @@
                     <td class="text-end font-monospace text-muted">${maxOdoIda > 0 ? maxOdoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${recKmIda > 0 ? recKmIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bold text-primary">${galRealIda > 0 ? galRealIda.toFixed(2) : '0.00'}</td>
-                    <td class="text-end font-monospace text-secondary">${kmTeoricoIda > 0 ? kmTeoricoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
-                    <td class="text-end font-monospace text-secondary">${galTeoricoIda > 0 ? galTeoricoIda.toFixed(2) : '—'}</td>
-                    <td class="text-end font-monospace">${difIdaHtml}</td>
-                    <td class="text-end font-monospace text-muted">S/ ${gastoRealIda.toFixed(2)}</td>
                     <td class="text-end font-monospace text-muted">${rendIda > 0 ? `${rendIda.toFixed(2)} <span class="small text-muted font-sans" style="font-size:0.72rem;">km/g</span>` : '—'}</td>
+                    <td class="text-end font-monospace text-muted">S/ ${gastoRealIda.toFixed(2)}</td>
+
+                    <!-- Teórico Tramo IDA (Celdas Naranjas) -->
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(234, 88, 12, 0.04); color:#ea580c; border-left: 2px solid #fdba74;">
+                        ${kmTeoricoIda > 0 ? kmTeoricoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}
+                    </td>
+                    <td class="text-end font-monospace text-secondary" style="background:rgba(234, 88, 12, 0.04);">
+                        ${galTeoricoIda > 0 ? galTeoricoIda.toFixed(2) : '—'}
+                    </td>
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(234, 88, 12, 0.07); color:#c2410c;">
+                        ${rendTeoricoIda > 0 ? `${rendTeoricoIda.toFixed(2)} <span class="small font-sans" style="font-size:0.72rem; color:#ea580c;">km/g</span>` : '—'}
+                    </td>
+                    <td class="text-end font-monospace" style="background:rgba(234, 88, 12, 0.04); border-right: 2px solid #fdba74;">
+                        ${difIdaHtml}
+                    </td>
+
                     <td colspan="7" class="text-muted small fst-italic ps-3">
                         <i class="bi bi-info-circle me-1"></i>${vIda.length} vale(s) de recarga en tramo de ida
                     </td>
@@ -660,11 +687,23 @@
                     <td class="text-end font-monospace text-muted">${maxOdoRet > 0 ? maxOdoRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${recKmRet > 0 ? recKmRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bold text-primary">${galRealRet > 0 ? galRealRet.toFixed(2) : '0.00'}</td>
-                    <td class="text-end font-monospace text-secondary">${kmTeoricoRetorno > 0 ? kmTeoricoRetorno.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
-                    <td class="text-end font-monospace text-secondary">${galTeoricoRetorno > 0 ? galTeoricoRetorno.toFixed(2) : '—'}</td>
-                    <td class="text-end font-monospace">${difRetHtml}</td>
-                    <td class="text-end font-monospace text-muted">S/ ${gastoRealRet.toFixed(2)}</td>
                     <td class="text-end font-monospace text-muted">${rendRet > 0 ? `${rendRet.toFixed(2)} <span class="small text-muted font-sans" style="font-size:0.72rem;">km/g</span>` : '—'}</td>
+                    <td class="text-end font-monospace text-muted">S/ ${gastoRealRet.toFixed(2)}</td>
+
+                    <!-- Teórico Tramo RETORNO (Celdas Naranjas) -->
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(234, 88, 12, 0.04); color:#ea580c; border-left: 2px solid #fdba74;">
+                        ${kmTeoricoRetorno > 0 ? kmTeoricoRetorno.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}
+                    </td>
+                    <td class="text-end font-monospace text-secondary" style="background:rgba(234, 88, 12, 0.04);">
+                        ${galTeoricoRetorno > 0 ? galTeoricoRetorno.toFixed(2) : '—'}
+                    </td>
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(234, 88, 12, 0.07); color:#c2410c;">
+                        ${rendTeoricoRet > 0 ? `${rendTeoricoRet.toFixed(2)} <span class="small font-sans" style="font-size:0.72rem; color:#ea580c;">km/g</span>` : '—'}
+                    </td>
+                    <td class="text-end font-monospace" style="background:rgba(234, 88, 12, 0.04); border-right: 2px solid #fdba74;">
+                        ${difRetHtml}
+                    </td>
+
                     <td colspan="7" class="text-muted small fst-italic ps-3">
                         <i class="bi bi-info-circle me-1"></i>${vRet.length} vale(s) de recarga en tramo de retorno
                     </td>
@@ -703,12 +742,8 @@
                 }
             });
 
-            const difTotal = totalSumTeorico > 0 ? (totalSumVales - totalSumTeorico) : 0;
-            const difTotalHtml = totalSumTeorico > 0 
-                ? (difTotal > 0 
-                    ? `<span class="badge bg-danger text-white px-2 py-0.5">+${difTotal.toFixed(2)} ⚠️</span>` 
-                    : `<span class="badge bg-success text-white px-2 py-0.5">${difTotal.toFixed(2)} ✅</span>`)
-                : '—';
+            const totalSumRendTeorico = (totalSumTeorico > 0 && totalSumKmTeorico > 0) ? (totalSumKmTeorico / totalSumTeorico) : 0;
+            const totalSumRendReal = (totalSumVales > 0 && totalSumKmReal > 0) ? (totalSumKmReal / totalSumVales) : 0;
 
             tfoot.innerHTML = `
                 <tr style="background:#f8fafc; border-top: 2px solid #cbd5e1; font-weight: bold;">
@@ -725,11 +760,24 @@
                     <td class="text-end font-monospace fw-bolder text-primary fs-6 py-3" style="background: rgba(2, 132, 199, 0.08);">
                         ${totalSumVales.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td class="text-end font-monospace fw-bold" style="color:#d97706;">${totalSumKmTeorico > 0 ? totalSumKmTeorico.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
-                    <td class="text-end font-monospace fw-bold text-dark">${totalSumTeorico > 0 ? totalSumTeorico.toFixed(2) : '—'}</td>
-                    <td class="text-end font-monospace">${difTotalHtml}</td>
+                    <td class="text-end font-monospace fw-bold text-indigo-600">${totalSumRendReal > 0 ? `${totalSumRendReal.toFixed(2)} km/g` : '—'}</td>
                     <td class="text-end text-muted small">—</td>
-                    <td class="text-end text-muted small">—</td>
+                    
+                    <!-- Teórico Totales (Celdas Naranjas) -->
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(234, 88, 12, 0.08); color:#ea580c; border-left: 2px solid #fdba74;">
+                        ${totalSumKmTeorico > 0 ? totalSumKmTeorico.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}
+                    </td>
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(234, 88, 12, 0.08); color:#ea580c;">
+                        ${totalSumTeorico > 0 ? totalSumTeorico.toFixed(2) : '—'}
+                    </td>
+                    <td class="text-end font-monospace fw-bold" style="background:rgba(234, 88, 12, 0.12); color:#c2410c;">
+                        ${totalSumRendTeorico > 0 ? `${totalSumRendTeorico.toFixed(2)} km/g` : '—'}
+                    </td>
+                    <td class="text-end font-monospace" style="background:rgba(234, 88, 12, 0.08); border-right: 2px solid #fdba74;">
+                        ${difTotalHtml}
+                    </td>
+
+                    <!-- GPS Totales (Celdas Celestes) -->
                     <td class="text-end text-muted small" style="background:rgba(2, 132, 199, 0.05); border-left: 2px solid #bae6fd;">—</td>
                     <td class="text-end font-monospace fw-bolder fs-6 py-3" style="background: rgba(2, 132, 199, 0.12); color:#0369a1;">
                         ${totalSumGps > 0 ? totalSumGps.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
@@ -1136,6 +1184,7 @@
             const kIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor);
             const kRet = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor);
             const kTeoricoTotal = (kIda > 0 || kRet > 0) ? (kIda + kRet) : 0;
+            const rendTeoricoTotal = (gTeoricoTotal > 0 && kTeoricoTotal > 0) ? parseFloat((kTeoricoTotal / gTeoricoTotal).toFixed(2)) : '—';
 
             return {
                 "N° VIAJE": t.numViaje || t.viaje || '---',
@@ -1148,8 +1197,14 @@
                 "KM INICIO (VALES)": kInicio > 0 ? parseFloat(kInicio.toFixed(1)) : '—',
                 "KM FIN (VALES)": kFin > 0 ? parseFloat(kFin.toFixed(1)) : '—',
                 "RECORRIDO (VALES)": recKm > 0 ? parseFloat(recKm.toFixed(1)) : '—',
-                "KM TEÓRICO (MATRIZ)": kTeoricoTotal > 0 ? parseFloat(kTeoricoTotal.toFixed(1)) : '—',
                 "TOTAL GALONES (REAL)": totGal > 0 ? parseFloat(totGal.toFixed(2)) : 0,
+                "KM / GALÓN (REAL)": rend > 0 ? parseFloat(rend.toFixed(2)) : '—',
+                "TOTAL GASTO (S/)": totGasto > 0 ? parseFloat(totGasto.toFixed(2)) : 0,
+                "KM TEÓRICO (MATRIZ)": kTeoricoTotal > 0 ? parseFloat(kTeoricoTotal.toFixed(1)) : '—',
+                "GALONES TEÓRICOS (MATRIZ)": gTeoricoTotal > 0 ? parseFloat(gTeoricoTotal.toFixed(2)) : 0,
+                "KM / GALÓN (TEÓRICO MATRIZ)": rendTeoricoTotal,
+                "DIFERENCIA (GALONES)": difGalones !== null ? difGalones : '—',
+                "ESTADO CONSUMO": difGalones !== null ? (difGalones > 0 ? 'SOBRECONSUMO' : 'AHORRO') : '—',
                 "GALONES IDA": t.galonesIda || 0,
                 "GALONES RETORNO": t.galonesRetorno || 0,
                 "GALONES TEÓRICOS (MATRIZ)": gTeoricoTotal > 0 ? parseFloat(gTeoricoTotal.toFixed(2)) : 0,
