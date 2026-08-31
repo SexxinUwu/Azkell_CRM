@@ -68,7 +68,7 @@ function _guEsc(str) {
     return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function _guShowInPanel(contentHtml, actionsHtml, title) {
-    if (window.innerWidth < 768) {
+    if (window.innerWidth < 992) {
         var ob = document.getElementById('offcanvasGU');
         var oc = document.getElementById('guOffcanvasContent');
         var oa = document.getElementById('guOffcanvasActions');
@@ -536,7 +536,7 @@ window.guGuardarRol = async function() {
         if (!res.ok) throw new Error(json.error || res.statusText);
         var newId = eId || json.id;
         
-        var isMobile = (window.innerWidth < 768);
+        var isMobile = (window.innerWidth < 992);
         var ob = document.getElementById('offcanvasGU');
         if (ob && window.bootstrap && isMobile) {
             var inst = bootstrap.Offcanvas.getInstance(ob);
@@ -569,7 +569,7 @@ window.guEliminarRol = async function(id) {
         if (pa) { pa.style.display='none'; pa.innerHTML=''; }
         
         var ob = document.getElementById('offcanvasGU');
-        if (ob && window.bootstrap && window.innerWidth < 768) {
+        if (ob && window.bootstrap && window.innerWidth < 992) {
             var inst = bootstrap.Offcanvas.getInstance(ob);
             if (inst) inst.hide();
         }
@@ -755,10 +755,17 @@ window.guGuardarUsuario = async function() {
             }
         }
         
+        var isMobile = (window.innerWidth < 992);
+        var ob = document.getElementById('offcanvasGU');
+        if (ob && window.bootstrap && isMobile) {
+            var inst = bootstrap.Offcanvas.getInstance(ob);
+            if (inst) inst.hide();
+        }
+
         var newId = eId || json.id;
         var savedPass = password.trim();
         await window.guCargarTodo(true);
-        if (newId) {
+        if (newId && !isMobile) {
             window.guSetTab('miembros');
             setTimeout(function(){ window.guSeleccionarUsuario(newId); }, 50);
         }
@@ -787,6 +794,13 @@ window.guEliminarUsuario = async function(id) {
         if (pe) pe.style.display = '';
         if (pc) { pc.style.display='none'; pc.innerHTML=''; }
         if (pa) { pa.style.display='none'; pa.innerHTML=''; }
+
+        var ob = document.getElementById('offcanvasGU');
+        if (ob && window.bootstrap && window.innerWidth < 992) {
+            var inst = bootstrap.Offcanvas.getInstance(ob);
+            if (inst) inst.hide();
+        }
+
         await window.guCargarTodo(true);
     } catch(e) { alert('Error: ' + e.message); }
 };

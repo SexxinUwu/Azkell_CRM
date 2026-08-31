@@ -9,19 +9,25 @@ window.init_ajustes = function() {
     let emailEl  = document.getElementById('ajustes-user-email');
     let avatarEl = document.getElementById('ajustes-user-avatar');
     
-    let lsUser = localStorage.getItem('fleet_user');
-    let lsRol = localStorage.getItem('fleet_rol');
-    let lsCorreo = localStorage.getItem('fleet_correo');
+    let lsUser = localStorage.getItem('fleet_nombre_usuario') || localStorage.getItem('fleet_user') || window.usuarioLogueado || 'Usuario';
+    let lsRol = localStorage.getItem('fleet_rol') || window.rolLogueado || 'USUARIO';
+    let lsCorreo = localStorage.getItem('fleet_correo') || '';
+    let lsAvatar = localStorage.getItem('fleet_avatar');
 
-    if (lsUser) {
-        let nombre = lsUser;
-        if (nombreEl) nombreEl.textContent = nombre;
-        if (roleEl)   roleEl.textContent   = lsRol && lsRol !== 'null' ? lsRol : 'USUARIO';
-        if (emailEl)  emailEl.textContent  = lsCorreo && lsCorreo !== 'null' ? lsCorreo : '';
-        if (avatarEl) {
-            let partes = nombre.trim().split(' ');
-            let iniciales = partes.length > 1 ? (partes[0][0] + partes[1][0]) : nombre.substring(0,2);
+    if (nombreEl) nombreEl.textContent = lsUser;
+    if (roleEl)   roleEl.textContent   = lsRol && lsRol !== 'null' ? lsRol.toUpperCase() : 'USUARIO';
+    if (emailEl)  emailEl.textContent  = lsCorreo && lsCorreo !== 'null' ? lsCorreo : '';
+    if (avatarEl) {
+        if (lsAvatar) {
+            avatarEl.style.backgroundImage = `url(${lsAvatar})`;
+            avatarEl.style.backgroundSize = 'cover';
+            avatarEl.style.backgroundPosition = 'center';
+            avatarEl.textContent = '';
+        } else {
+            let partes = lsUser.trim().split(' ');
+            let iniciales = partes.length > 1 ? (partes[0][0] + partes[1][0]) : lsUser.substring(0,2);
             avatarEl.textContent = iniciales.toUpperCase();
+            avatarEl.style.backgroundImage = 'none';
         }
     }
 
