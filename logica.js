@@ -4171,11 +4171,6 @@ function rellenarDatalist(id, setObj) {
         Array.from(setObj).sort().forEach(v => { el.innerHTML += `<option value="${v}">`; });
     }
 }
-window.showConfig = function(panel) {
-    const panels  = ['apariencia', 'accesibilidad', 'idioma', 'empresa'];
-    const buttons = document.querySelectorAll('.config-nav-btn');
-    // ... rest of the function implementation
-};
 function autocompletarRuc(clienteIngresado, inputRucId) { let rucInput = document.getElementById(inputRucId); if (!rucInput || !clienteIngresado) return; let match = dataGlobalPlacas.find(p => p[1] && p[1].trim().toLowerCase() === clienteIngresado.trim().toLowerCase() && p[2] && p[2].trim() !== "" && p[2].trim() !== "-"); if (match) { rucInput.value = match[2].trim(); } }
 function rellenarFiltroCheck(idLista, setObj, fnName) {
     const ul = document.getElementById(idLista);
