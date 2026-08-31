@@ -648,19 +648,83 @@ window.verDetalleAudit = function(id) {
     }
 };
 
-window.exportarAuditoriaCSV = function() {
+window.exportarAuditoriaExcel = async function() {
     if (!window.dataAuditoria || !window.dataAuditoria.length) {
-        if (window.Swal) Swal.fire('Sin datos', 'No hay registros para exportar', 'info');
+        if (window.Swal) Swal.fire('Sin datos', 'No hay registros de auditoría para exportar', 'info');
         else alert('No hay registros de auditoría para exportar');
         return;
     }
 
+    // Asegurar carga de librería SheetJS XLSX
+    if (typeof XLSX === 'undefined') {
+        if (typeof window.loadExcel === 'function') {
+            await window.loadExcel();
+        }
+    }
+
+    if (typeof XLSX === 'undefined') {
+        // Fallback por si la librería no pudiera cargarse
+        window.exportarAuditoriaCSVFallback();
+        return;
+    }
+
+    var headers = [
+        'ID Evento',
+        'Fecha y Hora',
+        'Usuario del Sistema',
+        'Módulo Principal',
+        'Sub-Módulo',
+        'Acción Realizada',
+        'Detalle de la Operación'
+    ];
+
+    var dataRows = [headers];
+
+    window.dataAuditoria.forEach(function(r) {
+        var dt = _formatAuditDate(r.fecha);
+        dataRows.push([
+            r.id,
+            dt.full,
+            r.usuario || 'Administrador',
+            r.moduloNorm || 'GENERAL',
+            r.submoduloNorm || 'General',
+            r.accion || 'MODIFICÓ',
+            r.detalleFormatted || r.detalle || '—'
+        ]);
+    });
+
+    var wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.aoa_to_sheet(dataRows);
+
+    // Ajustar anchos de columnas óptimos para Excel
+    ws['!cols'] = [
+        { wch: 12 }, // ID
+        { wch: 22 }, // Fecha
+        { wch: 30 }, // Usuario
+        { wch: 20 }, // Módulo
+        { wch: 26 }, // Submódulo
+        { wch: 16 }, // Acción
+        { wch: 75 }  // Detalle
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Auditoría');
+
+    var fechaHoy = new Date().toISOString().slice(0, 10);
+    var nombreArchivo = 'Auditoria_Azkell_ERP_' + fechaHoy + '.xlsx';
+
+    XLSX.writeFile(wb, nombreArchivo);
+
+    if (window.rotToast) window.rotToast('Reporte Excel generado correctamente', 'bg-success');
+};
+
+window.exportarAuditoriaCSVFallback = function() {
     var headers = ['ID', 'Fecha', 'Usuario', 'Modulo', 'Submodulo', 'Accion', 'Detalle'];
     var rows = window.dataAuditoria.map(function(r) {
+        var dt = _formatAuditDate(r.fecha);
         return [
             r.id,
-            '"' + (r.fecha || '').replace(/"/g, '""') + '"',
-            '"' + (r.usuario || '').replace(/"/g, '""') + '"',
+            '"' + dt.full + '"',
+            '"' + (r.usuario || 'Administrador').replace(/"/g, '""') + '"',
             '"' + (r.moduloNorm || '').replace(/"/g, '""') + '"',
             '"' + (r.submoduloNorm || '').replace(/"/g, '""') + '"',
             '"' + (r.accion || '').replace(/"/g, '""') + '"',
@@ -668,7 +732,7 @@ window.exportarAuditoriaCSV = function() {
         ];
     });
 
-    var csvContent = '\uFEFF' + headers.join(',') + '\n' + rows.map(function(e) { return e.join(','); }).join('\n');
+    var csvContent = '\uFEFF' + headers.join(';') + '\n' + rows.map(function(e) { return e.join(';'); }).join('\n');
     var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     var url = URL.createObjectURL(blob);
     var link = document.createElement('a');
@@ -678,6 +742,8 @@ window.exportarAuditoriaCSV = function() {
     link.click();
     document.body.removeChild(link);
 };
+
+window.exportarAuditoriaCSV = window.exportarAuditoriaExcel;
 
 window.init_auditoria = function() {
     if (!window.checkPerm('mod_auditoria', 'l') && !window.checkPerm('admin', '')) {
