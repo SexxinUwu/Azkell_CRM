@@ -99,7 +99,7 @@ module.exports = (db, logAudit) => {
 
     // ── POST /seguridad/unidades — Crear registro de salida ───────
     router.post('/seguridad/unidades', (req, res) => {
-        const { placa_tracto, placa_carreta, conductor, destino,
+        const { placa_tracto, placa_carreta, conductor, destino, orden_viaje,
                 salida_fecha, salida_hora, salida_km,
                 salida_template_json, salida_checklist_json, salida_has_alert,
                 salida_observaciones,
@@ -133,14 +133,14 @@ module.exports = (db, logAudit) => {
 
                 db.query(
                     `INSERT INTO seg_unidades_registros
-                     (id, placa_tracto, placa_carreta, conductor, destino, estado,
+                     (id, placa_tracto, placa_carreta, conductor, destino, orden_viaje, estado,
                       salida_fecha, salida_hora, salida_km,
                       salida_template_json, salida_checklist_json, salida_has_alert,
                       salida_observaciones,
                       firma_salida_conductor, firma_salida_vigilancia, creado_por)
-                     VALUES (?, ?, ?, ?, ?, 'en_ruta', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                     VALUES (?, ?, ?, ?, ?, ?, 'en_ruta', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [regId, placa_tracto.toUpperCase(), (placa_carreta || '').toUpperCase() || null,
-                     conductor, destino || null,
+                     conductor, destino || null, orden_viaje || null,
                      salida_fecha || null, salida_hora || null, salida_km || null,
                      templateStr, checklistStr, salida_has_alert ? 1 : 0,
                      salida_observaciones || null,
