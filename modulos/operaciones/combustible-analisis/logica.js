@@ -557,6 +557,9 @@
                     <td class="font-monospace fw-bold text-dark" style="color: #0f172a !important; font-size: 0.84rem;">
                         ${esc(t.placa)}
                     </td>
+                    <td class="font-monospace fw-bold text-secondary" style="font-size: 0.82rem;">
+                        ${t.carreta ? `<span class="badge bg-light text-dark border px-2 py-0.5 fw-semibold" style="font-size:0.75rem;">${esc(t.carreta)}</span>` : '<span class="text-muted opacity-50">—</span>'}
+                    </td>
                     <td class="small font-monospace">
                         ${t.motor ? `<span class="badge bg-light text-dark border px-2 py-0.5 fw-semibold" style="font-size:0.75rem;">${esc(t.motor)}</span>` : '<span class="text-muted opacity-50">—</span>'}
                     </td>
@@ -632,6 +635,7 @@
                         <span class="ca-tramo-tag ca-tramo-ida"><i class="bi bi-arrow-right-circle-fill"></i> IDA</span>
                     </td>
                     <td class="text-muted small">${esc(t.placa)}</td>
+                    <td class="text-muted small font-monospace">${t.carreta ? `<span class="badge bg-light text-dark border px-2 py-0.5" style="font-size:0.72rem;">${esc(t.carreta)}</span>` : '—'}</td>
                     <td class="text-muted small">${esc(t.motor || '—')}</td>
                     <td class="text-muted small"><span class="fw-semibold text-secondary">Ida: ${esc(t.ruta)}</span></td>
                     <td class="text-end font-monospace fw-bold text-success">
@@ -671,6 +675,7 @@
                         <span class="ca-tramo-tag ca-tramo-retorno"><i class="bi bi-arrow-left-circle-fill"></i> RETORNO</span>
                     </td>
                     <td class="text-muted small">${esc(t.placa)}</td>
+                    <td class="text-muted small font-monospace">${t.carreta ? `<span class="badge bg-light text-dark border px-2 py-0.5" style="font-size:0.72rem;">${esc(t.carreta)}</span>` : '—'}</td>
                     <td class="text-muted small">${esc(t.motor || '—')}</td>
                     <td class="text-muted small"><span class="fw-semibold text-secondary">Retorno: ${esc(t.ruta)}</span></td>
                     <td class="text-end font-monospace fw-bold text-primary">
@@ -752,6 +757,7 @@
             tfoot.innerHTML = `
                 <tr style="background:#f8fafc; border-top: 2px solid #cbd5e1; font-weight: bold;">
                     <td class="ps-3 py-3 font-monospace fw-bolder text-dark" style="font-size:0.88rem;">TOTAL</td>
+                    <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
@@ -1193,6 +1199,7 @@
             return {
                 "N° VIAJE": t.numViaje || t.viaje || '---',
                 "PLACA": t.placa || '---',
+                "CARRETA": t.carreta || '---',
                 "MOTOR": t.motor || '---',
                 "RUTA": t.ruta || '---',
                 "PESO (Tn)": (t.pesoMaxTn !== undefined && t.pesoMaxTn > 0) ? parseFloat(t.pesoMaxTn.toFixed(2)) : 0,
@@ -1211,11 +1218,6 @@
                 "ESTADO CONSUMO": difGalones !== null ? (difGalones > 0 ? 'SOBRECONSUMO' : 'AHORRO') : '—',
                 "GALONES IDA": t.galonesIda || 0,
                 "GALONES RETORNO": t.galonesRetorno || 0,
-                "GALONES TEÓRICOS (MATRIZ)": gTeoricoTotal > 0 ? parseFloat(gTeoricoTotal.toFixed(2)) : 0,
-                "DIFERENCIA (GALONES)": difGalones !== null ? difGalones : '—',
-                "ESTADO CONSUMO": difGalones !== null ? (difGalones > 0 ? 'SOBRECONSUMO' : 'AHORRO') : '—',
-                "TOTAL GASTO (S/)": totGasto > 0 ? parseFloat(totGasto.toFixed(2)) : 0,
-                "KM / GALÓN (REAL)": rend > 0 ? parseFloat(rend.toFixed(2)) : '—',
                 "RECORRIDO (GPS CAN)": (gps && gps.recorridoKmGps !== null && gps.recorridoKmGps !== undefined) ? parseFloat(Number(gps.recorridoKmGps).toFixed(2)) : '—',
                 "COMB. CONSUMIDO (GPS CAN)": (gps && gps.combustibleConsumidoGps !== null && gps.combustibleConsumidoGps !== undefined) ? parseFloat(Number(gps.combustibleConsumidoGps).toFixed(2)) : '—',
                 "RENDIMIENTO (GPS CAN)": (gps && gps.rendimientoGps !== null && gps.rendimientoGps !== undefined) ? parseFloat(Number(gps.rendimientoGps).toFixed(2)) : '—',
@@ -1249,15 +1251,25 @@
         exportData.push({
             "N° VIAJE": "TOTAL",
             "PLACA": "",
+            "CARRETA": "",
+            "MOTOR": "",
             "RUTA": "",
+            "PESO (Tn)": "",
             "FECHA INICIO": "",
             "FECHA FIN": "",
             "KM INICIO (VALES)": "",
             "KM FIN (VALES)": "",
             "RECORRIDO (VALES)": "",
-            "TOTAL GALONES": parseFloat(sumTotalGalonesVales.toFixed(2)),
-            "TOTAL GASTO (S/)": "",
+            "TOTAL GALONES (REAL)": parseFloat(sumTotalGalonesVales.toFixed(2)),
             "KM / GALÓN (REAL)": "",
+            "TOTAL GASTO (S/)": "",
+            "KM TEÓRICO (MATRIZ)": "",
+            "GALONES TEÓRICOS (MATRIZ)": "",
+            "KM / GALÓN (TEÓRICO MATRIZ)": "",
+            "DIFERENCIA (GALONES)": "",
+            "ESTADO CONSUMO": "",
+            "GALONES IDA": "",
+            "GALONES RETORNO": "",
             "RECORRIDO (GPS CAN)": "",
             "COMB. CONSUMIDO (GPS CAN)": sumTotalGalonesGps > 0 ? parseFloat(sumTotalGalonesGps.toFixed(2)) : "—",
             "RENDIMIENTO (GPS CAN)": "",
@@ -1277,6 +1289,7 @@
         const colWidths = [
             { wch: 18 }, // N° VIAJE
             { wch: 12 }, // PLACA
+            { wch: 12 }, // CARRETA
             { wch: 25 }, // RUTA
             { wch: 20 }, // FECHA INICIO
             { wch: 20 }, // FECHA FIN

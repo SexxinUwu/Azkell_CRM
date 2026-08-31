@@ -977,7 +977,7 @@ module.exports = function (db, broadcast, logAudit) {
             );
 
             // 2. Consultar órdenes de viaje en paralelo y mapear en memoria O(1)
-            const [ovRows] = await tdb.query(`SELECT viaje, ruta, peso FROM operaciones_ordenes_viaje`);
+            const [ovRows] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque FROM operaciones_ordenes_viaje`);
             const ovMap = new Map();
             ovRows.forEach(o => {
                 if (o.viaje) {
@@ -988,7 +988,7 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             });
 
-            // Enriquecer ruta y peso instantáneamente sin degradar SQL
+            // Enriquecer ruta, peso y carreta instantáneamente sin degradar SQL
             rows.forEach(v => {
                 if (v.viaje) {
                     const vKey = String(v.viaje).trim();
@@ -1001,6 +1001,9 @@ module.exports = function (db, broadcast, logAudit) {
                         if (ov.peso && parseFloat(ov.peso) > 0) {
                             const rawP = parseFloat(ov.peso);
                             v.peso_tn = rawP > 50 ? parseFloat((rawP / 1000).toFixed(2)) : parseFloat(rawP.toFixed(2));
+                        }
+                        if (ov.placa_remolque) {
+                            v.carreta = ov.placa_remolque;
                         }
                     }
                 }
@@ -1048,9 +1051,12 @@ module.exports = function (db, broadcast, logAudit) {
                     vehiculoMap[vehKey][tripKey] = {
                         viaje: tripKey,
                         placa: vehKey,
+                        carreta: v.carreta || '',
                         ruta: v.ruta || 'Sin Ruta',
                         vouchers: []
                     };
+                } else if (!vehiculoMap[vehKey][tripKey].carreta && v.carreta) {
+                    vehiculoMap[vehKey][tripKey].carreta = v.carreta;
                 }
 
                 vehiculoMap[vehKey][tripKey].vouchers.push({
@@ -1188,9 +1194,13 @@ module.exports = function (db, broadcast, logAudit) {
                     // Actualizar último voucher general para el siguiente viaje
                     lastVoucherGeneral = { ...lastVCurrent, viaje: t.viaje };
 
+                    const ovInfo = ovMap.get(t.viaje) || ovMap.get(String(t.viaje).replace(/^\d{4}-0*/, ''));
+                    const carretaFinal = (ovInfo && ovInfo.placa_remolque) ? ovInfo.placa_remolque : (t.carreta || '');
+
                     trips.push({
                         viaje: t.viaje,
                         placa: t.placa,
+                        carreta: carretaFinal,
                         motor: placaMotorMap.get(t.placa) || '',
                         marca: placaMarcaMap.get(t.placa) || '',
                         ruta: t.ruta,
