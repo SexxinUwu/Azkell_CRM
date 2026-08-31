@@ -3259,6 +3259,8 @@ body.dark .sidebar {
 
 /* 4. Topbar Glassmorphism y Flotante */
 .topbar {
+    position: relative !important;
+    z-index: 1060 !important;
     border-radius: 20px !important;
     margin: 0 12px 12px 0 !important;
     background: rgba(255, 255, 255, 0.8) !important;
