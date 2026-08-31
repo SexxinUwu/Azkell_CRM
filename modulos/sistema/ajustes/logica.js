@@ -18,16 +18,15 @@ window.init_ajustes = function() {
     if (roleEl)   roleEl.textContent   = lsRol && lsRol !== 'null' ? lsRol.toUpperCase() : 'USUARIO';
     if (emailEl)  emailEl.textContent  = lsCorreo && lsCorreo !== 'null' ? lsCorreo : '';
     if (avatarEl) {
-        if (lsAvatar) {
-            avatarEl.style.backgroundImage = `url(${lsAvatar})`;
-            avatarEl.style.backgroundSize = 'cover';
-            avatarEl.style.backgroundPosition = 'center';
+        if (lsAvatar && lsAvatar !== 'null' && lsAvatar !== 'undefined' && (lsAvatar.startsWith('http') || lsAvatar.startsWith('data:') || lsAvatar.startsWith('/'))) {
+            avatarEl.style.background = `url("${lsAvatar}") center/cover no-repeat`;
             avatarEl.textContent = '';
         } else {
             let partes = lsUser.trim().split(' ');
             let iniciales = partes.length > 1 ? (partes[0][0] + partes[1][0]) : lsUser.substring(0,2);
             avatarEl.textContent = iniciales.toUpperCase();
-            avatarEl.style.backgroundImage = 'none';
+            avatarEl.style.background = 'linear-gradient(135deg, #0284c7, #2563eb)';
+            avatarEl.style.color = '#ffffff';
         }
     }
 
