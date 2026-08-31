@@ -182,7 +182,7 @@
                     <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 small">
                         <i class="bi bi-disc-fill text-primary"></i> Llantas por Medida
                     </h6>
-                    <span class="badge bg-primary bg-opacity-10 text-primary fw-bold border border-primary border-opacity-25" id="lbl-total-llantas-rodando">
+                    <span class="badge rounded-pill px-3 py-1 fw-bold border shadow-2xs" id="lbl-total-llantas-rodando" style="background:#f1f5f9; color:#0f172a !important; border-color:#cbd5e1 !important; font-size:0.8rem;">
                         <i class="bi bi-truck me-1"></i>0 Rodando
                     </span>
                 </div>
@@ -337,11 +337,84 @@
                     </div>
                 </div>
             </div>
+            </div>
             <div class="modal-footer bg-white border-top px-3 px-md-4 py-3 d-flex justify-content-between">
                 <button type="button" class="btn btn-secondary rounded-pill px-3 py-1.5" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-success rounded-pill px-3 px-md-4 py-2 fw-bold shadow-sm d-flex align-items-center gap-2" id="neu-btn-confirm-import" onclick="window.neuEjecutarImportacionBackend()" disabled>
                     <i class="bi bi-cloud-upload-fill"></i> Guardar e Importar Inspecciones
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalle de Llantas por Medida Segmentado por Placas -->
+<div class="modal fade" id="modalNeuMedidaDetalle" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-white border-bottom p-3 p-md-4 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:40px; height:40px; background:#eff6ff; color:#2563eb; font-size:1.3rem;">
+                        <i class="bi bi-disc-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark m-0" id="neu-modal-medida-titulo">Detalle de Llantas — Medida</h5>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            <span class="badge bg-primary rounded-pill px-2.5 py-1 fw-bold" id="neu-modal-medida-badge-llantas">0 Llantas</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-dark border rounded-pill px-2.5 py-1 fw-bold" id="neu-modal-medida-badge-unidades">0 Unidades</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-success btn-sm rounded-pill px-3 fw-bold d-flex align-items-center gap-1.5 shadow-2xs" onclick="window.neuExportarMedidaExcel()">
+                        <i class="bi bi-file-earmark-excel-fill"></i> Exportar Vista Excel
+                    </button>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+
+            <div class="modal-body p-3 p-md-4 bg-light bg-opacity-25">
+                <!-- Filtro buscador interno -->
+                <div class="row g-2 mb-3 align-items-center justify-content-between">
+                    <div class="col-12 col-md-6 col-lg-5">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control border-start-0" id="neu-modal-medida-search" placeholder="Filtrar por placa, tipo, marca de llanta..." onkeyup="window.neuFiltrarModalMedidaTabla(this.value)">
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-auto text-end text-muted small">
+                        <span>Mostrando: <strong class="text-dark" id="neu-modal-medida-filtrados-cnt">0</strong> registros</span>
+                    </div>
+                </div>
+
+                <!-- Tabla de Llantas Instaladas por Placa -->
+                <div class="table-responsive rounded-3 border bg-white shadow-2xs" style="max-height: 480px;">
+                    <table class="table table-hover table-sm align-middle m-0" style="font-size: 0.8rem;">
+                        <thead class="table-light text-muted fw-bold position-sticky top-0" style="z-index: 1;">
+                            <tr>
+                                <th class="ps-3">Placa</th>
+                                <th>Tipo Unidad</th>
+                                <th>Marca / Modelo Unidad</th>
+                                <th>Posición / Eje</th>
+                                <th>Marca Llanta</th>
+                                <th>Modelo Llanta</th>
+                                <th>Medida</th>
+                                <th class="text-center">Remanente (mm)</th>
+                                <th class="text-center">Presión</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-center">Fecha Inspección</th>
+                            </tr>
+                        </thead>
+                        <tbody id="neu-modal-medida-tbody">
+                            <tr><td colspan="11" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando datos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-white border-top p-3 d-flex justify-content-between">
+                <small class="text-muted"><i class="bi bi-shield-check text-success me-1"></i>Datos basados en la última inspección activa de cada unidad</small>
+                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>

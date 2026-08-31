@@ -50,6 +50,8 @@ module.exports = function globalRBAC(req, res, next) {
         '/ot-backlog',
         '/inspecciones-por-ot',
         '/neumaticos/catalogos',
+        '/neumaticos/analisis',
+        '/neumaticos/medida-detalle',
         '/combustible/catalogos',
         '/combustible/rendimiento-teorico',
         '/combustible/matriz',
