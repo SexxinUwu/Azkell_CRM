@@ -177,26 +177,29 @@ window.verificarSesionGuardada = function() {
     // Avatar generado con iniciales en el topbar o desde S3
     const cachedAvatar = localStorage.getItem('fleet_avatar');
     var avatarTopWrap = document.getElementById('topbar-avatar-icon');
+    var nomUser = usuarioLogueado || localStorage.getItem('fleet_user') || 'Usuario';
+    var hasValidAvatarImg = cachedAvatar && cachedAvatar !== 'null' && cachedAvatar !== 'undefined' && (cachedAvatar.startsWith('http') || cachedAvatar.startsWith('data:') || cachedAvatar.startsWith('/'));
+
     if (avatarTopWrap) {
-        if (cachedAvatar) {
+        if (hasValidAvatarImg) {
             avatarTopWrap.outerHTML = '<div class="user-avatar" id="topbar-avatar-icon" style="width:32px;height:32px;border-radius:9px;background:url('+cachedAvatar+') center/cover no-repeat;flex-shrink:0;border:1px solid rgba(0,0,0,0.1);"></div>';
         } else if (typeof window.generarAvatar === 'function') {
-            avatarTopWrap.outerHTML = window.generarAvatar(usuarioLogueado, 32).replace('class="user-avatar"','class="user-avatar" id="topbar-avatar-icon"');
+            avatarTopWrap.outerHTML = window.generarAvatar(nomUser, 32).replace('class="user-avatar"','class="user-avatar" id="topbar-avatar-icon"');
         }
     }
     
     // Avatar grande en dropdown de perfil
     var avatarDrop = document.getElementById('perfil-avatar-dropdown');
     if (avatarDrop) {
-        if (cachedAvatar) {
+        if (hasValidAvatarImg) {
             avatarDrop.innerHTML = '';
             avatarDrop.style.background = 'url('+cachedAvatar+') center/cover no-repeat';
         } else if (typeof window.generarAvatar === 'function') {
-            avatarDrop.innerHTML = window.generarAvatar(usuarioLogueado, 68).replace(
-                'border-radius:' + Math.round(68/3) + 'px',
+            avatarDrop.innerHTML = window.generarAvatar(nomUser, 68).replace(
+                'border-radius:' + Math.round(68/3.2) + 'px',
                 'border-radius:50%;width:100%;height:100%'
             );
-            avatarDrop.style.background = 'rgba(255,255,255,0.15)';
+            avatarDrop.style.background = 'transparent';
         }
     }
 

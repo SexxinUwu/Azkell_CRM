@@ -140,14 +140,22 @@ window.generarEstadoVacio = function(icono, titulo, descripcion, compacto) {
 
 // ─── Avatares Generados ─────────────────────────────────────────
 window.generarAvatar = function(nombre, size) {
-    nombre = nombre || 'U';
-    size   = size   || 36;
-    var initials = nombre.trim().split(/\s+/).map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase();
-    var palette  = ['#2563eb','#7c3aed','#db2777','#ea580c','#16a34a','#0891b2','#9333ea','#c2410c'];
+    nombre = (nombre || 'Usuario').trim();
+    size   = size || 36;
+    var parts = nombre.split(/\s+/).filter(Boolean);
+    var initials = '';
+    if (parts.length >= 2) {
+        initials = (parts[0][0] + parts[1][0]).toUpperCase();
+    } else if (parts.length === 1 && parts[0].length >= 2) {
+        initials = parts[0].substring(0, 2).toUpperCase();
+    } else {
+        initials = (nombre[0] || 'U').toUpperCase();
+    }
+    var palette  = ['#ea580c','#2563eb','#7c3aed','#db2777','#16a34a','#0891b2','#9333ea','#c2410c'];
     var idx      = nombre.split('').reduce(function(a,c){ return a + c.charCodeAt(0); }, 0) % palette.length;
     var color    = palette[idx];
-    var r        = Math.round(size / 3);
-    return '<div class="user-avatar" style="width:' + size + 'px;height:' + size + 'px;background:' + color + ';border-radius:' + r + 'px;display:inline-flex;align-items:center;justify-content:center;font-size:' + Math.round(size * 0.38) + 'px;font-weight:700;color:#fff;flex-shrink:0;">' + initials + '</div>';
+    var r        = Math.round(size / 3.2);
+    return '<div class="user-avatar" style="width:' + size + 'px;height:' + size + 'px;background:' + color + ' !important;border-radius:' + r + 'px;display:inline-flex;align-items:center;justify-content:center;font-size:' + Math.round(size * 0.42) + 'px;font-weight:800;color:#ffffff !important;flex-shrink:0;box-shadow:0 2px 5px rgba(0,0,0,0.12);">' + initials + '</div>';
 };
 
 window._actualizarAvatares = function(nombre) {

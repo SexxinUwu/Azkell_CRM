@@ -740,6 +740,15 @@
             const totalSumRendTeorico = (totalSumTeorico > 0 && totalSumKmTeorico > 0) ? (totalSumKmTeorico / totalSumTeorico) : 0;
             const totalSumRendReal = (totalSumVales > 0 && totalSumKmReal > 0) ? (totalSumKmReal / totalSumVales) : 0;
 
+            let difTotalHtml = '—';
+            if (totalSumTeorico > 0 && totalSumVales > 0) {
+                const diffGal = totalSumVales - totalSumTeorico;
+                const isExceso = diffGal > 0;
+                const color = isExceso ? '#dc2626' : '#16a34a';
+                const sign = isExceso ? '+' : '';
+                difTotalHtml = `<span class="fw-bold" style="color:${color};">${sign}${diffGal.toFixed(2)} G</span>`;
+            }
+
             tfoot.innerHTML = `
                 <tr style="background:#f8fafc; border-top: 2px solid #cbd5e1; font-weight: bold;">
                     <td class="ps-3 py-3 font-monospace fw-bolder text-dark" style="font-size:0.88rem;">TOTAL</td>
