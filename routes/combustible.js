@@ -1195,7 +1195,7 @@ module.exports = function (db, broadcast, logAudit) {
                         pesoMaxKg: maxPesoRaw,
                         galonesIda: parseFloat(galonesIda.toFixed(2)),
                         galonesRetorno: parseFloat(galonesRetorno.toFixed(2)),
-                        pesoIda: (pesoIdaCalculado > 0 ? pesoIdaCalculado : pesoCalculadoTn),
+                        pesoIda: pesoIdaCalculado,
                         pesoRetorno: pesoRetornoCalculado,
                         totalGalones: totalGal,
                         totalGasto: totalCost,
