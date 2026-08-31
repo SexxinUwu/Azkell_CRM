@@ -56,6 +56,7 @@ const TABLAS = [
             fecha        TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
             usuario      VARCHAR(150) NOT NULL DEFAULT '',
             modulo       VARCHAR(50)  DEFAULT NULL,
+            submodulo    VARCHAR(50)  DEFAULT NULL,
             accion       VARCHAR(50)  NOT NULL DEFAULT '',
             detalle      TEXT
         )`
@@ -976,6 +977,10 @@ async function initDB(defaultDb) {
         for (const colDef of colsPlacas) {
             try { await promisePool.query(`ALTER TABLE placas ADD COLUMN ${colDef}`); } catch(e) {}
         }
+
+        // Migración de auditoría (garantizar modulo y submodulo)
+        try { await promisePool.query("ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL"); } catch(e) {}
+        try { await promisePool.query("ALTER TABLE auditoria ADD COLUMN submodulo VARCHAR(50) DEFAULT NULL"); } catch(e) {}
 
         // Limpieza de tablas obsoletas no utilizadas
         try { await promisePool.query("DROP TABLE IF EXISTS combustible_abastecimientos"); } catch(e) {}
