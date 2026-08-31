@@ -575,13 +575,13 @@
                     <td class="text-end font-monospace text-success fw-bold">${kInicio > 0 ? kInicio.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-danger fw-bold">${kFin > 0 ? kFin.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bold text-dark">${semaforoRecorrido}</td>
-                    <td class="text-end font-monospace fw-semibold" style="color:#d97706;" title="Ida: ${kmTeoricoIda.toFixed(1)} km | Retorno: ${kmTeoricoRetorno.toFixed(1)} km">${kmTeoricoTotal > 0 ? `${kmTeoricoTotal.toLocaleString('es-PE', { minimumFractionDigits: 1 })}` : '<span class="text-muted opacity-50">—</span>'}</td>
                     <td class="text-end font-monospace fw-bold text-primary">${totGal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
+                    <td class="text-end font-monospace fw-semibold" style="color:#d97706;" title="Ida: ${kmTeoricoIda.toFixed(1)} km | Retorno: ${kmTeoricoRetorno.toFixed(1)} km">${kmTeoricoTotal > 0 ? `${kmTeoricoTotal.toLocaleString('es-PE', { minimumFractionDigits: 1 })}` : '<span class="text-muted opacity-50">—</span>'}</td>
                     <td class="text-end font-monospace">${galTeoricoHtml}</td>
                     <td class="text-end font-monospace">${difBadgeHtml}</td>
                     <td class="text-end font-monospace fw-bold text-success">S/ ${totGasto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
                     <td class="text-end font-monospace fw-bold ${rend > 0 ? 'text-indigo-600' : 'text-muted'}">
-                        ${rend > 0 ? rend.toFixed(2) : '—'}
+                        ${rend > 0 ? `${rend.toFixed(2)} <span class="small text-muted font-sans" style="font-size:0.72rem;">km/g</span>` : '—'}
                     </td>
 
                     <!-- Telemetría GPS Wialon CAN Bus (Celdas Celestes) -->
@@ -632,12 +632,12 @@
                     <td class="text-end font-monospace text-muted">${minOdoIda > 0 ? minOdoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${maxOdoIda > 0 ? maxOdoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${recKmIda > 0 ? recKmIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
-                    <td class="text-end font-monospace text-secondary">${kmTeoricoIda > 0 ? kmTeoricoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bold text-primary">${galRealIda > 0 ? galRealIda.toFixed(2) : '0.00'}</td>
+                    <td class="text-end font-monospace text-secondary">${kmTeoricoIda > 0 ? kmTeoricoIda.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-secondary">${galTeoricoIda > 0 ? galTeoricoIda.toFixed(2) : '—'}</td>
                     <td class="text-end font-monospace">${difIdaHtml}</td>
                     <td class="text-end font-monospace text-muted">S/ ${gastoRealIda.toFixed(2)}</td>
-                    <td class="text-end font-monospace text-muted">${rendIda > 0 ? rendIda.toFixed(2) : '—'}</td>
+                    <td class="text-end font-monospace text-muted">${rendIda > 0 ? `${rendIda.toFixed(2)} <span class="small text-muted font-sans" style="font-size:0.72rem;">km/g</span>` : '—'}</td>
                     <td colspan="7" class="text-muted small fst-italic ps-3">
                         <i class="bi bi-info-circle me-1"></i>${vIda.length} vale(s) de recarga en tramo de ida
                     </td>
@@ -659,12 +659,12 @@
                     <td class="text-end font-monospace text-muted">${minOdoRet > 0 ? minOdoRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${maxOdoRet > 0 ? maxOdoRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-muted">${recKmRet > 0 ? recKmRet.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
-                    <td class="text-end font-monospace text-secondary">${kmTeoricoRetorno > 0 ? kmTeoricoRetorno.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bold text-primary">${galRealRet > 0 ? galRealRet.toFixed(2) : '0.00'}</td>
+                    <td class="text-end font-monospace text-secondary">${kmTeoricoRetorno > 0 ? kmTeoricoRetorno.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace text-secondary">${galTeoricoRetorno > 0 ? galTeoricoRetorno.toFixed(2) : '—'}</td>
                     <td class="text-end font-monospace">${difRetHtml}</td>
                     <td class="text-end font-monospace text-muted">S/ ${gastoRealRet.toFixed(2)}</td>
-                    <td class="text-end font-monospace text-muted">${rendRet > 0 ? rendRet.toFixed(2) : '—'}</td>
+                    <td class="text-end font-monospace text-muted">${rendRet > 0 ? `${rendRet.toFixed(2)} <span class="small text-muted font-sans" style="font-size:0.72rem;">km/g</span>` : '—'}</td>
                     <td colspan="7" class="text-muted small fst-italic ps-3">
                         <i class="bi bi-info-circle me-1"></i>${vRet.length} vale(s) de recarga en tramo de retorno
                     </td>
@@ -722,10 +722,10 @@
                     <td class="text-end text-muted small">—</td>
                     <td class="text-end text-muted small">—</td>
                     <td class="text-end font-monospace fw-bold text-dark">${totalSumKmReal > 0 ? totalSumKmReal.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
-                    <td class="text-end font-monospace fw-bold" style="color:#d97706;">${totalSumKmTeorico > 0 ? totalSumKmTeorico.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bolder text-primary fs-6 py-3" style="background: rgba(2, 132, 199, 0.08);">
                         ${totalSumVales.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
+                    <td class="text-end font-monospace fw-bold" style="color:#d97706;">${totalSumKmTeorico > 0 ? totalSumKmTeorico.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
                     <td class="text-end font-monospace fw-bold text-dark">${totalSumTeorico > 0 ? totalSumTeorico.toFixed(2) : '—'}</td>
                     <td class="text-end font-monospace">${difTotalHtml}</td>
                     <td class="text-end text-muted small">—</td>
