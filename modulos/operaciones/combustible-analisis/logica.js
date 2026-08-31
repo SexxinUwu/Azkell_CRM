@@ -129,8 +129,20 @@
         }
     };
 
+    // ── ESTADO GLOBAL DE MULTI-FILTROS AVANZADOS ───────────────────────
+    window._caFiltrosState = {
+        placas: new Set(),
+        carretas: new Set(),
+        rutas: new Set(),
+        choferes: new Set(),
+        combustible: 'ALL',
+        anio: 'ALL',
+        orden: 'date_desc'
+    };
+
     // Cambiar filtro por año rápido
     window.caCambiarFiltroAno = function(year) {
+        window._caFiltrosState.anio = year;
         const inpFrom = document.getElementById('ca-filter-date-from');
         const inpTo = document.getElementById('ca-filter-date-to');
         if (year === 'ALL') {
@@ -150,8 +162,6 @@
         const inpTo = document.getElementById('ca-filter-date-to');
         if (inpFrom) inpFrom.value = today;
         if (inpTo) inpTo.value = today;
-        const selYear = document.getElementById('ca-filter-year');
-        if (selYear) selYear.value = 'ALL';
         window.caAplicarFiltros(true);
     };
 
@@ -170,36 +180,308 @@
 
     // Alternar Ordenamiento
     window.caToggleSort = function(col) {
-        const selSort = document.getElementById('ca-sort-by');
-        if (!selSort) return;
-        const cur = selSort.value;
-
+        let cur = window._caFiltrosState.orden || 'date_desc';
         if (col === 'trip') {
-            selSort.value = cur === 'trip_desc' ? 'trip_asc' : 'trip_desc';
+            window._caFiltrosState.orden = cur === 'trip_desc' ? 'trip_asc' : 'trip_desc';
         } else if (col === 'date_start') {
-            selSort.value = cur === 'date_asc' ? 'date_desc' : 'date_asc';
+            window._caFiltrosState.orden = cur === 'date_asc' ? 'date_desc' : 'date_asc';
         } else if (col === 'date_end') {
-            selSort.value = cur === 'date_desc' ? 'date_asc' : 'date_desc';
+            window._caFiltrosState.orden = cur === 'date_desc' ? 'date_asc' : 'date_desc';
         } else if (col === 'gal') {
-            selSort.value = cur === 'gal_desc' ? 'trip_desc' : 'gal_desc';
+            window._caFiltrosState.orden = cur === 'gal_desc' ? 'trip_desc' : 'gal_desc';
         } else if (col === 'cost') {
-            selSort.value = cur === 'cost_desc' ? 'trip_desc' : 'cost_desc';
+            window._caFiltrosState.orden = cur === 'cost_desc' ? 'trip_desc' : 'cost_desc';
         }
         window.caAplicarFiltros(false);
     };
 
-    // Aplicar Filtros y Ordenamiento
+    // ── DRAWER DE FILTROS AVANZADOS (BOTTOM SHEET) ─────────────────────
+    window.caAbrirDrawerFiltros = function() {
+        const drawerEl = document.getElementById('caDrawerFiltros');
+        if (!drawerEl) return;
+
+        window.caPoblarOpcionesDrawer();
+
+        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(drawerEl);
+        offcanvas.show();
+        window.caActualizarContadorPreviaFiltros();
+    };
+
+    window.caPoblarOpcionesDrawer = function() {
+        const trips = window._caTripGroups || [];
+
+        // Conteo de elementos únicos
+        const mapPlacas = {}, mapCarretas = {}, mapRutas = {}, mapChoferes = {};
+
+        trips.forEach(t => {
+            if (t.placa) mapPlacas[t.placa] = (mapPlacas[t.placa] || 0) + 1;
+            if (t.carreta && t.carreta !== '—') mapCarretas[t.carreta] = (mapCarretas[t.carreta] || 0) + 1;
+            if (t.ruta && t.ruta !== '—') mapRutas[t.ruta] = (mapRutas[t.ruta] || 0) + 1;
+            (t.vouchers || []).forEach(v => {
+                if (v.carreta && v.carreta !== '—') mapCarretas[v.carreta] = (mapCarretas[v.carreta] || 0) + 1;
+                if (v.conductor && v.conductor !== '—') mapChoferes[v.conductor] = (mapChoferes[v.conductor] || 0) + 1;
+            });
+        });
+
+        const renderCheckboxList = (contId, map, setSel, prefijo) => {
+            const cont = document.getElementById(contId);
+            if (!cont) return;
+            const keys = Object.keys(map).sort();
+            if (keys.length === 0) {
+                cont.innerHTML = '<div class="text-muted small py-2 text-center">Sin opciones</div>';
+                return;
+            }
+            cont.innerHTML = keys.map(k => {
+                const checked = setSel.has(k) ? 'checked' : '';
+                const idChk = `chk-${prefijo}-${k.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                return `
+                    <div class="form-check form-check-sm d-flex align-items-center justify-content-between p-1 px-2 rounded hover-bg" style="font-size:0.78rem;">
+                        <div class="d-flex align-items-center gap-2 text-truncate pe-1">
+                            <input class="form-check-input flex-shrink-0 m-0 ${prefijo}-chk" type="checkbox" value="${k}" id="${idChk}" ${checked} onchange="window.caActualizarContadorPreviaFiltros()">
+                            <label class="form-check-label text-dark font-monospace fw-semibold text-truncate" for="${idChk}" style="cursor:pointer;" title="${k}">
+                                ${k}
+                            </label>
+                        </div>
+                        <span class="badge bg-light text-muted border font-monospace" style="font-size:0.68rem;">${map[k]}</span>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        renderCheckboxList('ca-lista-check-placas', mapPlacas, window._caFiltrosState.placas, 'ca-placa');
+        renderCheckboxList('ca-lista-check-carretas', mapCarretas, window._caFiltrosState.carretas, 'ca-carreta');
+        renderCheckboxList('ca-lista-check-rutas', mapRutas, window._caFiltrosState.rutas, 'ca-ruta');
+        renderCheckboxList('ca-lista-check-choferes', mapChoferes, window._caFiltrosState.choferes, 'ca-chofer');
+
+        // Selects
+        const selFuel = document.getElementById('ca-filter-fuel-drawer');
+        if (selFuel) selFuel.value = window._caFiltrosState.combustible || 'ALL';
+
+        const selYear = document.getElementById('ca-filter-year-drawer');
+        if (selYear) selYear.value = window._caFiltrosState.anio || 'ALL';
+
+        const selSort = document.getElementById('ca-sort-by-drawer');
+        if (selSort) selSort.value = window._caFiltrosState.orden || 'date_desc';
+    };
+
+    window.caFiltrarOpcionesLista = function(tipo, term) {
+        const q = (term || '').toLowerCase().trim();
+        const mapId = {
+            placas: 'ca-lista-check-placas',
+            carretas: 'ca-lista-check-carretas',
+            rutas: 'ca-lista-check-rutas',
+            choferes: 'ca-lista-check-choferes'
+        };
+        const cont = document.getElementById(mapId[tipo]);
+        if (!cont) return;
+        cont.querySelectorAll('.form-check').forEach(el => {
+            const txt = el.textContent.toLowerCase();
+            el.style.display = txt.includes(q) ? 'flex' : 'none';
+        });
+    };
+
+    window.caSeleccionarTodasOpciones = function(tipo, checked) {
+        const mapPref = {
+            placas: 'ca-placa-chk',
+            carretas: 'ca-carreta-chk',
+            rutas: 'ca-ruta-chk',
+            choferes: 'ca-chofer-chk'
+        };
+        const cls = mapPref[tipo];
+        if (!cls) return;
+        document.querySelectorAll(`.${cls}`).forEach(chk => {
+            if (chk.closest('.form-check').style.display !== 'none') {
+                chk.checked = checked;
+            }
+        });
+        window.caActualizarContadorPreviaFiltros();
+    };
+
+    window.caActualizarContadorPreviaFiltros = function() {
+        const getCheckedValues = (cls) => {
+            const vals = new Set();
+            document.querySelectorAll(`.${cls}:checked`).forEach(chk => vals.add(chk.value));
+            return vals;
+        };
+
+        const selPlacas = getCheckedValues('ca-placa-chk');
+        const selCarretas = getCheckedValues('ca-carreta-chk');
+        const selRutas = getCheckedValues('ca-ruta-chk');
+        const selChoferes = getCheckedValues('ca-chofer-chk');
+        const fuel = document.getElementById('ca-filter-fuel-drawer')?.value || 'ALL';
+
+        // Actualizar badges en headers de columnas del drawer
+        const bP = document.getElementById('ca-count-placas-sel');
+        const bC = document.getElementById('ca-count-carretas-sel');
+        const bR = document.getElementById('ca-count-rutas-sel');
+        const bCh = document.getElementById('ca-count-choferes-sel');
+
+        if (bP) bP.innerText = selPlacas.size === 0 ? 'Todas' : `${selPlacas.size} marcadas`;
+        if (bC) bC.innerText = selCarretas.size === 0 ? 'Todas' : `${selCarretas.size} marcadas`;
+        if (bR) bR.innerText = selRutas.size === 0 ? 'Todas' : `${selRutas.size} marcadas`;
+        if (bCh) bCh.innerText = selChoferes.size === 0 ? 'Todos' : `${selChoferes.size} marcados`;
+
+        // Calcular previa de viajes coincidentes
+        const trips = window._caTripGroups || [];
+        const dateFrom = document.getElementById('ca-filter-date-from')?.value;
+        const dateTo = document.getElementById('ca-filter-date-to')?.value;
+        const searchVal = (document.getElementById('ca-search-input')?.value || '').toLowerCase().trim();
+
+        let count = 0;
+        trips.forEach(t => {
+            if (dateFrom || dateTo) {
+                const dInicio = (t.fechaInicio && t.fechaInicio !== 'N/D') ? t.fechaInicio.slice(0, 10) : '';
+                const dFin = (t.fechaFin && t.fechaFin !== 'N/D') ? t.fechaFin.slice(0, 10) : '';
+                const tripMin = dInicio || dFin;
+                const tripMax = dFin || dInicio;
+                if (!tripMin && !tripMax) return;
+                if (dateFrom && dateTo && (tripMax < dateFrom || tripMin > dateTo)) return;
+                if (dateFrom && !dateTo && tripMax < dateFrom) return;
+                if (!dateFrom && dateTo && tripMin > dateTo) return;
+            }
+
+            if (selPlacas.size > 0 && !selPlacas.has(t.placa)) return;
+            if (selCarretas.size > 0 && !selCarretas.has(t.carreta) && !(t.vouchers || []).some(v => selCarretas.has(v.carreta))) return;
+            if (selRutas.size > 0 && !selRutas.has(t.ruta)) return;
+            if (selChoferes.size > 0 && !(t.vouchers || []).some(v => selChoferes.has(v.conductor))) return;
+
+            if (fuel !== 'ALL') {
+                const hasFuel = (t.vouchers || []).some(v => !v.esPuntoPartida && v.producto === fuel);
+                if (!hasFuel) return;
+            }
+
+            if (searchVal) {
+                const matchViaje = (t.viaje || '').toLowerCase().includes(searchVal);
+                const matchPlaca = (t.placa || '').toLowerCase().includes(searchVal);
+                const matchRuta = (t.ruta || '').toLowerCase().includes(searchVal);
+                const matchChofer = (t.vouchers || []).some(v => (v.conductor || '').toLowerCase().includes(searchVal));
+                if (!matchViaje && !matchPlaca && !matchRuta && !matchChofer) return;
+            }
+
+            count++;
+        });
+
+        const btnCount = document.getElementById('ca-btn-aplicar-count');
+        if (btnCount) btnCount.innerText = `${count} ${count === 1 ? 'viaje' : 'viajes'}`;
+    };
+
+    window.caAplicarFiltrosDesdeDrawer = function() {
+        const getCheckedValues = (cls) => {
+            const vals = new Set();
+            document.querySelectorAll(`.${cls}:checked`).forEach(chk => vals.add(chk.value));
+            return vals;
+        };
+
+        window._caFiltrosState.placas = getCheckedValues('ca-placa-chk');
+        window._caFiltrosState.carretas = getCheckedValues('ca-carreta-chk');
+        window._caFiltrosState.rutas = getCheckedValues('ca-ruta-chk');
+        window._caFiltrosState.choferes = getCheckedValues('ca-chofer-chk');
+        window._caFiltrosState.combustible = document.getElementById('ca-filter-fuel-drawer')?.value || 'ALL';
+        window._caFiltrosState.anio = document.getElementById('ca-filter-year-drawer')?.value || 'ALL';
+        window._caFiltrosState.orden = document.getElementById('ca-sort-by-drawer')?.value || 'date_desc';
+
+        const drawerEl = document.getElementById('caDrawerFiltros');
+        if (drawerEl) {
+            const offcanvas = bootstrap.Offcanvas.getInstance(drawerEl);
+            if (offcanvas) offcanvas.hide();
+        }
+
+        window.caAplicarFiltros(true);
+    };
+
+    window.caLimpiarTodosFiltrosDrawer = function() {
+        document.querySelectorAll('.ca-placa-chk, .ca-carreta-chk, .ca-ruta-chk, .ca-chofer-chk').forEach(chk => chk.checked = false);
+        const selFuel = document.getElementById('ca-filter-fuel-drawer');
+        if (selFuel) selFuel.value = 'ALL';
+        const selYear = document.getElementById('ca-filter-year-drawer');
+        if (selYear) selYear.value = 'ALL';
+        const selSort = document.getElementById('ca-sort-by-drawer');
+        if (selSort) selSort.value = 'date_desc';
+
+        window.caActualizarContadorPreviaFiltros();
+    };
+
+    window.caLimpiarTodosFiltros = function() {
+        window._caFiltrosState = {
+            placas: new Set(),
+            carretas: new Set(),
+            rutas: new Set(),
+            choferes: new Set(),
+            combustible: 'ALL',
+            anio: 'ALL',
+            orden: 'date_desc'
+        };
+        const searchInput = document.getElementById('ca-search-input');
+        if (searchInput) searchInput.value = '';
+
+        window.caLimpiarFiltrosFechas();
+    };
+
+    window.caEliminarChipFiltro = function(tipo, valor) {
+        if (tipo === 'placa') window._caFiltrosState.placas.delete(valor);
+        else if (tipo === 'carreta') window._caFiltrosState.carretas.delete(valor);
+        else if (tipo === 'ruta') window._caFiltrosState.rutas.delete(valor);
+        else if (tipo === 'chofer') window._caFiltrosState.choferes.delete(valor);
+        else if (tipo === 'combustible') window._caFiltrosState.combustible = 'ALL';
+        else if (tipo === 'anio') window._caFiltrosState.anio = 'ALL';
+
+        window.caAplicarFiltros(true);
+    };
+
+    // Renderizar Chips y Badges de Filtros Activos
+    window.caRenderChipsFiltros = function() {
+        const container = document.getElementById('ca-chips-filtros-container');
+        const list = document.getElementById('ca-chips-filtros-list');
+        const badgeBtn = document.getElementById('ca-badge-filtros-activos');
+        if (!container || !list) return;
+
+        const chips = [];
+
+        window._caFiltrosState.placas.forEach(p => {
+            chips.push(`<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill d-flex align-items-center gap-1 font-monospace fw-semibold"><i class="bi bi-truck"></i> ${p} <i class="bi bi-x-circle-fill ms-1" style="cursor:pointer;" onclick="window.caEliminarChipFiltro('placa', '${p}')"></i></span>`);
+        });
+        window._caFiltrosState.carretas.forEach(c => {
+            chips.push(`<span class="badge bg-secondary bg-opacity-10 text-dark border px-2.5 py-1 rounded-pill d-flex align-items-center gap-1 font-monospace fw-semibold"><i class="bi bi-trailers"></i> ${c} <i class="bi bi-x-circle-fill ms-1 text-muted" style="cursor:pointer;" onclick="window.caEliminarChipFiltro('carreta', '${c}')"></i></span>`);
+        });
+        window._caFiltrosState.rutas.forEach(r => {
+            chips.push(`<span class="badge bg-info bg-opacity-10 text-dark border px-2.5 py-1 rounded-pill d-flex align-items-center gap-1 fw-semibold"><i class="bi bi-signpost-2"></i> ${r} <i class="bi bi-x-circle-fill ms-1 text-muted" style="cursor:pointer;" onclick="window.caEliminarChipFiltro('ruta', '${r}')"></i></span>`);
+        });
+        window._caFiltrosState.choferes.forEach(ch => {
+            chips.push(`<span class="badge bg-warning bg-opacity-10 text-dark border px-2.5 py-1 rounded-pill d-flex align-items-center gap-1 fw-semibold"><i class="bi bi-person"></i> ${ch} <i class="bi bi-x-circle-fill ms-1 text-muted" style="cursor:pointer;" onclick="window.caEliminarChipFiltro('chofer', '${ch}')"></i></span>`);
+        });
+        if (window._caFiltrosState.combustible !== 'ALL') {
+            chips.push(`<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill d-flex align-items-center gap-1 fw-semibold"><i class="bi bi-fuel-pump"></i> ${window._caFiltrosState.combustible} <i class="bi bi-x-circle-fill ms-1" style="cursor:pointer;" onclick="window.caEliminarChipFiltro('combustible', '')"></i></span>`);
+        }
+        if (window._caFiltrosState.anio !== 'ALL') {
+            chips.push(`<span class="badge bg-dark text-white px-2.5 py-1 rounded-pill d-flex align-items-center gap-1 fw-semibold"><i class="bi bi-calendar3"></i> Año ${window._caFiltrosState.anio} <i class="bi bi-x-circle-fill ms-1" style="cursor:pointer;" onclick="window.caEliminarChipFiltro('anio', '')"></i></span>`);
+        }
+
+        const totalActivos = chips.length;
+        if (badgeBtn) {
+            badgeBtn.innerText = totalActivos;
+            badgeBtn.style.display = totalActivos > 0 ? 'inline-block' : 'none';
+        }
+
+        if (totalActivos > 0) {
+            container.style.removeProperty('display');
+            container.style.display = 'flex';
+            list.innerHTML = chips.join('');
+        } else {
+            container.style.display = 'none';
+            list.innerHTML = '';
+        }
+    };
+
+    // ── APLICAR FILTROS Y ORDENAMIENTO PRINCIPAL ───────────────────────
     window.caAplicarFiltros = function(resetPage = false) {
         if (resetPage) window._caPaginaActual = 1;
 
         const dateFrom = document.getElementById('ca-filter-date-from')?.value;
         const dateTo = document.getElementById('ca-filter-date-to')?.value;
-        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
-        const plateFilter = document.getElementById('ca-filter-plate')?.value || 'ALL';
         const searchVal = (document.getElementById('ca-search-input')?.value || '').toLowerCase().trim();
-        const sortBy = document.getElementById('ca-sort-by')?.value || 'date_desc';
+        const fState = window._caFiltrosState;
 
-        window._caFilteredTrips = window._caTripGroups.filter(t => {
+        window._caFilteredTrips = (window._caTripGroups || []).filter(t => {
             // Filtro Rango de Fechas (Solapamiento con período del viaje)
             if (dateFrom || dateTo) {
                 const dInicio = (t.fechaInicio && t.fechaInicio !== 'N/D') ? t.fechaInicio.slice(0, 10) : '';
@@ -218,12 +500,27 @@
                 }
             }
 
-            // Filtro por Placa
-            if (plateFilter !== 'ALL' && t.placa !== plateFilter) return false;
+            // Multi-Filtro por Placa
+            if (fState.placas.size > 0 && !fState.placas.has(t.placa)) return false;
+
+            // Multi-Filtro por Carreta
+            if (fState.carretas.size > 0) {
+                const matchCarreta = fState.carretas.has(t.carreta) || (t.vouchers || []).some(v => fState.carretas.has(v.carreta));
+                if (!matchCarreta) return false;
+            }
+
+            // Multi-Filtro por Ruta
+            if (fState.rutas.size > 0 && !fState.rutas.has(t.ruta)) return false;
+
+            // Multi-Filtro por Conductor
+            if (fState.choferes.size > 0) {
+                const matchChofer = (t.vouchers || []).some(v => fState.choferes.has(v.conductor));
+                if (!matchChofer) return false;
+            }
             
             // Filtro por Combustible
-            if (fuelFilter !== 'ALL') {
-                const matchingVouchers = (t.vouchers || []).filter(v => !v.esPuntoPartida && v.producto === fuelFilter);
+            if (fState.combustible !== 'ALL') {
+                const matchingVouchers = (t.vouchers || []).filter(v => !v.esPuntoPartida && v.producto === fState.combustible);
                 if (matchingVouchers.length === 0) return false;
             }
 
@@ -231,15 +528,17 @@
             if (searchVal) {
                 const matchViaje = (t.viaje || '').toLowerCase().includes(searchVal);
                 const matchPlaca = (t.placa || '').toLowerCase().includes(searchVal);
+                const matchCarreta = (t.carreta || '').toLowerCase().includes(searchVal) || (t.vouchers || []).some(v => (v.carreta || '').toLowerCase().includes(searchVal));
                 const matchRuta = (t.ruta || '').toLowerCase().includes(searchVal);
                 const matchChofer = (t.vouchers || []).some(v => (v.conductor || '').toLowerCase().includes(searchVal));
-                if (!matchViaje && !matchPlaca && !matchRuta && !matchChofer) return false;
+                if (!matchViaje && !matchPlaca && !matchCarreta && !matchRuta && !matchChofer) return false;
             }
 
             return true;
         });
 
-        // Ordenamiento (N° Viaje Mayor a Menor por defecto)
+        // Ordenamiento
+        const sortBy = fState.orden || 'date_desc';
         window._caFilteredTrips.sort((a, b) => {
             switch (sortBy) {
                 case 'trip_asc': {
@@ -264,6 +563,7 @@
             }
         });
 
+        window.caRenderChipsFiltros();
         window.caRenderKPIs();
         window.caRenderTabla();
     };

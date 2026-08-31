@@ -80,8 +80,9 @@
                         const cnt = Number(m.cantidad || 0);
                         const porc = totalLlantasRodando > 0 ? Math.round((cnt / totalLlantasRodando) * 100) : 0;
                         const color = palette[idx % palette.length];
+                        const medEscaped = (m.medida || '').replace(/'/g, "\\'");
                         return `
-                            <div class="p-2 rounded-3 border bg-light bg-opacity-50">
+                            <div class="p-2 rounded-3 border bg-light bg-opacity-50 neu-medida-row-hover" style="cursor: pointer; transition: all 0.15s ease;" onclick="window.neuAbrirModalMedidaDetalle('${medEscaped}')" title="Clic para ver unidades con llantas ${m.medida}">
                                 <div class="d-flex align-items-center justify-content-between mb-1">
                                     <div class="d-flex align-items-center gap-1.5">
                                         <span class="rounded-circle flex-shrink-0" style="width:8px;height:8px;background:${color};"></span>
@@ -89,7 +90,8 @@
                                     </div>
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="badge bg-white text-dark border fw-bolder font-monospace" style="font-size:0.75rem;">${cnt} ${cnt === 1 ? 'llanta' : 'llantas'}</span>
-                                        <span class="text-muted small fw-bold" style="font-size:0.72rem; min-width:32px; text-align:right;">${porc}%</span>
+                                        <span class="text-muted small fw-bold" style="font-size:0.72rem; min-width:30px; text-align:right;">${porc}%</span>
+                                        <i class="bi bi-chevron-right text-muted opacity-50" style="font-size:0.7rem;"></i>
                                     </div>
                                 </div>
                                 <div class="progress" style="height: 5px; background: #e2e8f0; border-radius: 999px;">
@@ -1035,6 +1037,157 @@
             xlsxLib.utils.book_append_sheet(wb, ws, "Inspecciones_Neumaticos");
             const fechaStr = new Date().toISOString().split('T')[0];
             xlsxLib.writeFile(wb, `Reporte_Inspecciones_Neumaticos_${fechaStr}.xlsx`);
+        } catch(e) {
+            alert("Error al exportar Excel: " + e.message);
+        }
+    };
+
+    // ── MODAL DETALLE DE LLANTAS POR MEDIDA SEGMENTADO POR PLACA ──────────
+    window._neuModalMedidaData = null;
+    window._neuModalMedidaNombre = '';
+
+    window.neuAbrirModalMedidaDetalle = async function(medida) {
+        window._neuModalMedidaNombre = medida || '';
+        const modalEl = document.getElementById('modalNeuMedidaDetalle');
+        if (!modalEl) return;
+
+        const tituloEl = document.getElementById('neu-modal-medida-titulo');
+        if (tituloEl) tituloEl.innerHTML = `<i class="bi bi-disc text-primary me-2"></i>Llantas Instaladas — Medida: <span class="text-primary font-monospace">${medida}</span>`;
+
+        const badgeLlantas = document.getElementById('neu-modal-medida-badge-llantas');
+        const badgeUnidades = document.getElementById('neu-modal-medida-badge-unidades');
+        const countFiltrados = document.getElementById('neu-modal-medida-filtrados-cnt');
+        const tbody = document.getElementById('neu-modal-medida-tbody');
+        const searchInput = document.getElementById('neu-modal-medida-search');
+        if (searchInput) searchInput.value = '';
+
+        if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Consultando unidades activas con llantas ${medida}...</td></tr>`;
+
+        const modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalInst.show();
+
+        try {
+            const res = await fetch(`/api/neumaticos/medida-detalle?medida=${encodeURIComponent(medida)}`);
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || 'Error al obtener detalle de la medida');
+
+            window._neuModalMedidaData = data.llantas || [];
+            if (badgeLlantas) badgeLlantas.innerText = `${data.total_llantas || 0} Llantas`;
+            if (badgeUnidades) badgeUnidades.innerText = `${data.total_unidades || 0} Unidades`;
+            if (countFiltrados) countFiltrados.innerText = (data.llantas || []).length;
+
+            window.neuRenderModalMedidaTabla(window._neuModalMedidaData);
+        } catch(e) {
+            console.error("Error al abrir modal detalle medida:", e);
+            if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-1"></i>Error: ${e.message}</td></tr>`;
+        }
+    };
+
+    window.neuRenderModalMedidaTabla = function(lista) {
+        const tbody = document.getElementById('neu-modal-medida-tbody');
+        const countFiltrados = document.getElementById('neu-modal-medida-filtrados-cnt');
+        if (countFiltrados) countFiltrados.innerText = lista.length;
+        if (!tbody) return;
+
+        if (lista.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-muted">No se encontraron registros de llantas para esta búsqueda.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = lista.map(item => {
+            const rem = item.remanente_promedio !== null ? Number(item.remanente_promedio).toFixed(1) : (item.r1 || '—');
+            const remNum = Number(rem || 0);
+            let remBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-0.5 rounded-pill font-monospace fw-bold">${rem} mm</span>`;
+            if (remNum <= 4 || item.alerta_cambio === 1) {
+                remBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-0.5 rounded-pill font-monospace fw-bold"><i class="bi bi-exclamation-octagon-fill me-1"></i>${rem} mm</span>`;
+            } else if (remNum <= 7) {
+                remBadge = `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-0.5 rounded-pill font-monospace fw-bold">${rem} mm</span>`;
+            }
+
+            const estado = item.estado || (item.alerta_cambio === 1 ? 'CRÍTICO' : 'BUENO');
+            let estBadge = `<span class="badge bg-light text-dark border px-2 py-0.5 rounded-pill small">${estado}</span>`;
+            if (estado.toUpperCase().includes('CRIT') || item.alerta_cambio === 1) {
+                estBadge = `<span class="badge bg-danger text-white px-2 py-0.5 rounded-pill small fw-bold">CRÍTICO</span>`;
+            } else if (estado.toUpperCase().includes('REG') || estado.toUpperCase().includes('OBS')) {
+                estBadge = `<span class="badge bg-warning text-dark px-2 py-0.5 rounded-pill small fw-bold">REGULAR</span>`;
+            }
+
+            const fInsp = item.fecha_inspeccion ? String(item.fecha_inspeccion).split('T')[0] : '—';
+            const modeloUnidad = [item.marca_unidad, item.modelo_unidad].filter(Boolean).join(' ') || '—';
+
+            return `
+                <tr>
+                    <td class="ps-3 fw-bold text-primary font-monospace">${item.placa}</td>
+                    <td><span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-0.5 rounded-pill">${item.tipo_unidad || 'Unidad'}</span></td>
+                    <td class="text-secondary small">${modeloUnidad}</td>
+                    <td class="fw-bold font-monospace text-dark"><i class="bi bi-pin-map text-muted me-1"></i>${item.posicion || '—'}</td>
+                    <td class="fw-bold text-dark">${item.marca_llanta || '—'}</td>
+                    <td class="text-secondary small font-monospace">${item.modelo_llanta || '—'}</td>
+                    <td class="fw-bold font-monospace text-primary">${item.medida || '—'}</td>
+                    <td class="text-center">${remBadge}</td>
+                    <td class="text-center font-monospace small">${item.presion_actual ? item.presion_actual + ' PSI' : '—'}</td>
+                    <td class="text-center">${estBadge}</td>
+                    <td class="text-center font-monospace text-muted small">${fInsp}</td>
+                </tr>
+            `;
+        }).join('');
+    };
+
+    window.neuFiltrarModalMedidaTabla = function(term) {
+        if (!window._neuModalMedidaData) return;
+        const q = (term || '').toLowerCase().trim();
+        if (!q) {
+            window.neuRenderModalMedidaTabla(window._neuModalMedidaData);
+            return;
+        }
+        const filtrados = window._neuModalMedidaData.filter(i => {
+            return (i.placa && i.placa.toLowerCase().includes(q)) ||
+                   (i.tipo_unidad && i.tipo_unidad.toLowerCase().includes(q)) ||
+                   (i.marca_unidad && i.marca_unidad.toLowerCase().includes(q)) ||
+                   (i.posicion && String(i.posicion).toLowerCase().includes(q)) ||
+                   (i.marca_llanta && i.marca_llanta.toLowerCase().includes(q)) ||
+                   (i.modelo_llanta && i.modelo_llanta.toLowerCase().includes(q)) ||
+                   (i.estado && i.estado.toLowerCase().includes(q));
+        });
+        window.neuRenderModalMedidaTabla(filtrados);
+    };
+
+    window.neuExportarMedidaExcel = async function() {
+        try {
+            if (!window._neuModalMedidaData || window._neuModalMedidaData.length === 0) {
+                alert("No hay registros para exportar en esta medida.");
+                return;
+            }
+            const xlsxLib = await asegurarXLSX();
+            const exportRows = window._neuModalMedidaData.map(i => ({
+                "Placa": i.placa,
+                "Tipo Unidad": i.tipo_unidad || '',
+                "Marca Unidad": i.marca_unidad || '',
+                "Modelo Unidad": i.modelo_unidad || '',
+                "Dueño / Cliente": i.dueno || '',
+                "Posición": i.posicion || '',
+                "Marca Llanta": i.marca_llanta || '',
+                "Modelo Llanta": i.modelo_llanta || '',
+                "Medida": i.medida || '',
+                "R1 (mm)": i.r1 || '',
+                "R2 (mm)": i.r2 || '',
+                "R3 (mm)": i.r3 || '',
+                "Remanente Promedio (mm)": i.remanente_promedio || '',
+                "Presión Actual (PSI)": i.presion_actual || '',
+                "Estado": i.estado || (i.alerta_cambio === 1 ? 'CRÍTICO' : 'BUENO'),
+                "Alerta Cambio": i.alerta_cambio === 1 ? 'SÍ' : 'NO',
+                "Fecha Inspección": i.fecha_inspeccion ? String(i.fecha_inspeccion).split('T')[0] : '',
+                "Km Vehículo": i.km_vehiculo || ''
+            }));
+
+            const wb = xlsxLib.utils.book_new();
+            const ws = xlsxLib.utils.json_to_sheet(exportRows);
+            ws['!cols'] = Object.keys(exportRows[0]).map(k => ({ wch: Math.max(k.length + 4, 14) }));
+
+            const nomMedLimpio = (window._neuModalMedidaNombre || 'Medida').replace(/[^a-zA-Z0-9]/g, '_');
+            xlsxLib.utils.book_append_sheet(wb, ws, `Llantas_${nomMedLimpio.slice(0, 20)}`);
+            const fechaStr = new Date().toISOString().split('T')[0];
+            xlsxLib.writeFile(wb, `Llantas_Medida_${nomMedLimpio}_${fechaStr}.xlsx`);
         } catch(e) {
             alert("Error al exportar Excel: " + e.message);
         }

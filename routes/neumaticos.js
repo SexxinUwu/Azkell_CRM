@@ -862,6 +862,78 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ── GET /api/neumaticos/medida-detalle ────────────────────────
+    router.get('/medida-detalle', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const medidaParam = (req.query.medida || '').trim();
+
+            let sqlWhereMedida = "UPPER(TRIM(COALESCE(d.medida, ''))) = UPPER(TRIM(?))";
+            const params = [medidaParam];
+            if (medidaParam === 'SIN MEDIDA' || medidaParam === 'SIN ESPECIFICAR' || !medidaParam) {
+                sqlWhereMedida = "(d.medida IS NULL OR TRIM(d.medida) = '')";
+                params.length = 0;
+            }
+
+            const [rows] = await tdb.query(`
+                SELECT 
+                    last_i.placa,
+                    p.tipo as tipo_unidad,
+                    p.marca as marca_unidad,
+                    p.modelo_uts as modelo_unidad,
+                    p.cliente as dueno,
+                    d.id,
+                    d.id_neumatico,
+                    d.posicion,
+                    d.marca as marca_llanta,
+                    d.modelo as modelo_llanta,
+                    COALESCE(NULLIF(TRIM(d.medida), ''), 'SIN ESPECIFICAR') as medida,
+                    d.r1,
+                    d.r2,
+                    d.r3,
+                    d.remanente_promedio,
+                    d.presion_actual,
+                    d.estado,
+                    d.alerta_cambio,
+                    last_i.fecha_inspeccion,
+                    last_i.km_vehiculo
+                FROM neumaticos_inspecciones_det d
+                INNER JOIN (
+                    SELECT i1.id_inspeccion, i1.placa, i1.fecha_inspeccion, i1.km_vehiculo
+                    FROM neumaticos_inspecciones i1
+                    INNER JOIN (
+                        SELECT placa, MAX(fecha_inspeccion) as max_fecha
+                        FROM neumaticos_inspecciones
+                        GROUP BY placa
+                    ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha
+                    LEFT JOIN placas p ON i1.placa = p.placa
+                    WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
+                ) last_i ON d.id_inspeccion = last_i.id_inspeccion
+                LEFT JOIN placas p ON last_i.placa = p.placa
+                WHERE ${sqlWhereMedida}
+                ORDER BY last_i.placa ASC, d.posicion ASC
+            `, params);
+
+            // Resumen agrupado por placa
+            const placasMap = {};
+            rows.forEach(r => {
+                if (!placasMap[r.placa]) placasMap[r.placa] = 0;
+                placasMap[r.placa]++;
+            });
+
+            res.json({
+                ok: true,
+                medida: medidaParam,
+                total_llantas: rows.length,
+                total_unidades: Object.keys(placasMap).length,
+                llantas: rows
+            });
+        } catch (err) {
+            console.error("Error en /api/neumaticos/medida-detalle:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     // ============================================================
     // 5.5 🔍 OBTENER ÚLTIMA INSPECCIÓN DE UNA PLACA POR POSICIÓN (AUTOPOBLADO)
     // ============================================================

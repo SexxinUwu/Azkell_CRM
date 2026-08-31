@@ -264,11 +264,11 @@
         </div>
     </div>
 
-    <!-- Panel de Filtros -->
+    <!-- Panel de Filtros Exterior (Fecha Desde, Fecha Hasta, Búsqueda y Botón Filtros Avanzados) -->
     <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
         <div class="row g-2 align-items-end">
             <!-- Filtro Fecha Desde -->
-            <div class="col-6 col-sm-4 col-md-2">
+            <div class="col-6 col-sm-4 col-md-3 col-lg-2">
                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
                     <i class="bi bi-calendar-event text-primary me-1"></i> Fecha Desde
                 </label>
@@ -276,70 +276,171 @@
             </div>
 
             <!-- Filtro Fecha Hasta -->
-            <div class="col-6 col-sm-4 col-md-2">
+            <div class="col-6 col-sm-4 col-md-3 col-lg-2">
                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
                     <i class="bi bi-calendar-check text-primary me-1"></i> Fecha Hasta
                 </label>
                 <input type="date" id="ca-filter-date-to" onchange="window.caAplicarFiltros(true)" class="form-control form-control-sm fw-semibold">
             </div>
 
-            <!-- Filtro Año -->
-            <div class="col-6 col-sm-4 col-md-1">
+            <!-- Búsqueda Rápida en Vivo -->
+            <div class="col-12 col-sm-8 col-md-4 col-lg-4">
                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-calendar3 text-primary me-1"></i> Año
-                </label>
-                <select id="ca-filter-year" onchange="window.caCambiarFiltroAno(this.value)" class="form-select form-select-sm fw-bold text-primary">
-                    <option value="ALL">Todos</option>
-                </select>
-            </div>
-
-            <!-- Filtro Combustible -->
-            <div class="col-6 col-sm-4 col-md-2">
-                <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-funnel-fill text-primary me-1"></i> Combustible
-                </label>
-                <select id="ca-filter-fuel" onchange="window.caAplicarFiltros(true)" class="form-select form-select-sm fw-semibold">
-                    <option value="ALL">Todos</option>
-                </select>
-            </div>
-
-            <!-- Filtro Placa -->
-            <div class="col-12 col-sm-4 col-md-2">
-                <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-truck text-primary me-1"></i> Vehículo / Placa
-                </label>
-                <select id="ca-filter-plate" onchange="window.caAplicarFiltros(true)" class="form-select form-select-sm fw-semibold">
-                    <option value="ALL">Todas las Placas</option>
-                </select>
-            </div>
-
-            <!-- Ordenar Por -->
-            <div class="col-6 col-sm-6 col-md-1">
-                <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-sort-down text-primary me-1"></i> Orden
-                </label>
-                <select id="ca-sort-by" onchange="window.caAplicarFiltros(true)" class="form-select form-select-sm fw-semibold">
-                    <option value="date_desc" selected>Fecha ▼ (Recientes)</option>
-                    <option value="date_asc">Fecha ▲ (Antiguos)</option>
-                    <option value="trip_desc">Viaje ▼ (Mayor N°)</option>
-                    <option value="trip_asc">Viaje ▲ (Menor N°)</option>
-                    <option value="gal_desc">Galones ▼</option>
-                    <option value="cost_desc">Gasto ▼</option>
-                </select>
-            </div>
-
-            <!-- Búsqueda Rápida -->
-            <div class="col-6 col-sm-6 col-md-2">
-                <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-search text-primary me-1"></i> Buscar
+                    <i class="bi bi-search text-primary me-1"></i> Buscar en viajes
                 </label>
                 <div class="input-group input-group-sm">
-                    <input type="text" id="ca-search-input" onkeyup="window.caAplicarFiltros(true)" placeholder="Viaje, placa, chofer..." class="form-control">
-                    <button class="btn btn-outline-secondary" type="button" onclick="window.caLimpiarFiltrosFechas()" title="Restablecer fechas a hoy">
-                        <i class="bi bi-arrow-counterclockwise"></i>
-                    </button>
+                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" id="ca-search-input" onkeyup="window.caAplicarFiltros(true)" placeholder="Viaje, placa, carreta, ruta, chofer..." class="form-control border-start-0">
                 </div>
             </div>
+
+            <!-- Botones de Acción de Filtros -->
+            <div class="col-12 col-sm-4 col-md-2 col-lg-4 d-flex align-items-end gap-2 justify-content-start justify-content-lg-end">
+                <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm" onclick="window.caAbrirDrawerFiltros()">
+                    <i class="bi bi-funnel-fill"></i>
+                    <span>Filtros</span>
+                    <span class="badge rounded-pill bg-white text-primary ms-1" id="ca-badge-filtros-activos" style="display: none; font-size:0.72rem;">0</span>
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 py-1.5 fw-semibold" onclick="window.caLimpiarTodosFiltros()" title="Limpiar todos los filtros y restablecer">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Chips / Etiquetas de Filtros Activos -->
+        <div id="ca-chips-filtros-container" class="d-flex align-items-center gap-1.5 flex-wrap mt-2 pt-2 border-top" style="display: none !important;">
+            <span class="text-muted small fw-bold me-1" style="font-size: 0.72rem;"><i class="bi bi-sliders me-1"></i>Activos:</span>
+            <div id="ca-chips-filtros-list" class="d-flex align-items-center gap-1.5 flex-wrap"></div>
+            <button class="btn btn-link text-danger p-0 ms-auto small text-decoration-none fw-bold" style="font-size: 0.72rem;" onclick="window.caLimpiarTodosFiltros()">Limpiar todos</button>
+        </div>
+    </div>
+
+    <!-- BOTTOM DRAWER: FILTRADOR MULTI-FILTRO AVANZADO (DESLIZANTE DE ABAJO HACIA ARRIBA) -->
+    <div class="offcanvas offcanvas-bottom rounded-top-4 shadow-lg" tabindex="-1" id="caDrawerFiltros" style="height: auto; max-height: 85dvh; border-top: 1px solid var(--border, #e2e8f0); background: #ffffff; z-index: 1065;">
+        <div class="offcanvas-header border-bottom py-2.5 px-3 px-md-4 bg-white d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:34px; height:34px; background:#eff6ff; color:#2563eb;">
+                    <i class="bi bi-funnel-fill fs-6"></i>
+                </div>
+                <div>
+                    <h6 class="offcanvas-title fw-bold text-dark m-0">Filtros Avanzados de Viajes</h6>
+                    <small class="text-muted" style="font-size:0.75rem;">Segmentación múltiple en tiempo real</small>
+                </div>
+            </div>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+
+        <div class="offcanvas-body p-3 p-md-4 bg-light bg-opacity-25" style="overflow-y: auto;">
+            <div class="row g-3">
+                <!-- 1. Placas / Tractos -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card border rounded-3 p-3 bg-white h-100 shadow-2xs">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="fw-bold text-dark small m-0"><i class="bi bi-truck text-primary me-1"></i>Placa / Tracto</label>
+                            <span class="badge bg-light text-muted border small" id="ca-count-placas-sel">Todas</span>
+                        </div>
+                        <input type="text" class="form-control form-control-sm mb-2" id="ca-filter-search-placas" placeholder="Buscar placa..." oninput="window.caFiltrarOpcionesLista('placas', this.value)">
+                        <div class="d-flex gap-1 mb-2">
+                            <button type="button" class="btn btn-link btn-sm p-0 text-primary fw-semibold small text-decoration-none" onclick="window.caSeleccionarTodasOpciones('placas', true)">Marcar todas</button>
+                            <span class="text-muted">|</span>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-muted small text-decoration-none" onclick="window.caSeleccionarTodasOpciones('placas', false)">Desmarcar</button>
+                        </div>
+                        <div id="ca-lista-check-placas" class="d-flex flex-column gap-1 overflow-auto pe-1" style="max-height: 180px;"></div>
+                    </div>
+                </div>
+
+                <!-- 2. Carretas / Semirremolques -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card border rounded-3 p-3 bg-white h-100 shadow-2xs">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="fw-bold text-dark small m-0"><i class="bi bi-trailers text-primary me-1"></i>Carreta / Remolque</label>
+                            <span class="badge bg-light text-muted border small" id="ca-count-carretas-sel">Todas</span>
+                        </div>
+                        <input type="text" class="form-control form-control-sm mb-2" id="ca-filter-search-carretas" placeholder="Buscar carreta..." oninput="window.caFiltrarOpcionesLista('carretas', this.value)">
+                        <div class="d-flex gap-1 mb-2">
+                            <button type="button" class="btn btn-link btn-sm p-0 text-primary fw-semibold small text-decoration-none" onclick="window.caSeleccionarTodasOpciones('carretas', true)">Marcar todas</button>
+                            <span class="text-muted">|</span>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-muted small text-decoration-none" onclick="window.caSeleccionarTodasOpciones('carretas', false)">Desmarcar</button>
+                        </div>
+                        <div id="ca-lista-check-carretas" class="d-flex flex-column gap-1 overflow-auto pe-1" style="max-height: 180px;"></div>
+                    </div>
+                </div>
+
+                <!-- 3. Rutas / Destinos -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card border rounded-3 p-3 bg-white h-100 shadow-2xs">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="fw-bold text-dark small m-0"><i class="bi bi-signpost-2 text-primary me-1"></i>Ruta / Destino</label>
+                            <span class="badge bg-light text-muted border small" id="ca-count-rutas-sel">Todas</span>
+                        </div>
+                        <input type="text" class="form-control form-control-sm mb-2" id="ca-filter-search-rutas" placeholder="Buscar ruta..." oninput="window.caFiltrarOpcionesLista('rutas', this.value)">
+                        <div class="d-flex gap-1 mb-2">
+                            <button type="button" class="btn btn-link btn-sm p-0 text-primary fw-semibold small text-decoration-none" onclick="window.caSeleccionarTodasOpciones('rutas', true)">Marcar todas</button>
+                            <span class="text-muted">|</span>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-muted small text-decoration-none" onclick="window.caSeleccionarTodasOpciones('rutas', false)">Desmarcar</button>
+                        </div>
+                        <div id="ca-lista-check-rutas" class="d-flex flex-column gap-1 overflow-auto pe-1" style="max-height: 180px;"></div>
+                    </div>
+                </div>
+
+                <!-- 4. Conductores & Parámetros -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="d-flex flex-column gap-2.5 h-100">
+                        <!-- Conductor -->
+                        <div class="card border rounded-3 p-2.5 bg-white shadow-2xs">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <label class="fw-bold text-dark small m-0"><i class="bi bi-person-badge text-primary me-1"></i>Conductor</label>
+                                <span class="badge bg-light text-muted border small" id="ca-count-choferes-sel">Todos</span>
+                            </div>
+                            <input type="text" class="form-control form-control-sm mb-1.5" id="ca-filter-search-choferes" placeholder="Buscar chofer..." oninput="window.caFiltrarOpcionesLista('choferes', this.value)">
+                            <div id="ca-lista-check-choferes" class="d-flex flex-column gap-1 overflow-auto pe-1" style="max-height: 90px;"></div>
+                        </div>
+
+                        <!-- Combustible, Año y Orden -->
+                        <div class="card border rounded-3 p-2.5 bg-white shadow-2xs">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="text-muted fw-bold small mb-0.5" style="font-size:0.68rem;">Combustible</label>
+                                    <select id="ca-filter-fuel-drawer" class="form-select form-select-sm" onchange="window.caActualizarContadorPreviaFiltros()">
+                                        <option value="ALL">Todos</option>
+                                        <option value="D2">D2 (Diésel)</option>
+                                        <option value="UREA">UREA</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="text-muted fw-bold small mb-0.5" style="font-size:0.68rem;">Año</label>
+                                    <select id="ca-filter-year-drawer" class="form-select form-select-sm fw-bold text-primary" onchange="window.caActualizarContadorPreviaFiltros()">
+                                        <option value="ALL">Todos</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="text-muted fw-bold small mb-0.5" style="font-size:0.68rem;">Ordenar Por</label>
+                                    <select id="ca-sort-by-drawer" class="form-select form-select-sm" onchange="window.caActualizarContadorPreviaFiltros()">
+                                        <option value="date_desc" selected>Fecha ▼ (Recientes)</option>
+                                        <option value="date_asc">Fecha ▲ (Antiguos)</option>
+                                        <option value="trip_desc">N° Viaje ▼ (Mayor)</option>
+                                        <option value="trip_asc">N° Viaje ▲ (Menor)</option>
+                                        <option value="gal_desc">Galones ▼ (Mayor)</option>
+                                        <option value="cost_desc">Gasto ▼ (Mayor)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Fijo con Acciones -->
+        <div class="offcanvas-footer border-top p-3 px-md-4 bg-white d-flex align-items-center justify-content-between">
+            <button type="button" class="btn btn-link text-danger fw-bold text-decoration-none px-0" onclick="window.caLimpiarTodosFiltrosDrawer()">
+                <i class="bi bi-trash3 me-1"></i>Limpiar todo
+            </button>
+            <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-pill shadow-sm d-flex align-items-center gap-2" onclick="window.caAplicarFiltrosDesdeDrawer()">
+                <i class="bi bi-check2-circle"></i>
+                <span>Aplicar Filtros</span>
+                <span class="badge bg-white text-primary rounded-pill" id="ca-btn-aplicar-count">0</span>
+            </button>
         </div>
     </div>
 
