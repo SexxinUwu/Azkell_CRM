@@ -259,7 +259,10 @@ window.perfilSubirImagen = async function(input, tipo) {
         
         // Actualizar Base de Datos
         var body = {};
-        if (tipo === 'avatar') body.avatar_url = json.fileUrl;
+        if (tipo === 'avatar') {
+            body.avatar_url = json.fileUrl;
+            localStorage.setItem('fleet_avatar', json.fileUrl);
+        }
         if (tipo === 'banner') body.banner_url = json.fileUrl;
         
         var updateRes = await fetch('/api/perfil/me', {
@@ -269,7 +272,9 @@ window.perfilSubirImagen = async function(input, tipo) {
         });
         if (!updateRes.ok) throw new Error('Error al vincular imagen al perfil');
         
+        if (typeof window.verificarSesionGuardada === 'function') window.verificarSesionGuardada();
         perfilCargarDatos();
+        alert(tipo === 'avatar' ? '¡Foto de perfil actualizada con éxito!' : '¡Portada actualizada con éxito!');
         
     } catch(e) {
         alert('Error: ' + e.message);
