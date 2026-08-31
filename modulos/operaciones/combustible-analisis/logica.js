@@ -461,8 +461,7 @@
 
             // ── Cálculo Teórico Matriz Estricto (Ida + Retorno con Motor y Regla de Techo) ──
             const galTeoricoIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', pesoIdaVal, t.motor);
-            const tieneRetorno = (galRealRet > 0) || (vRet.length > 0);
-            const galTeoricoRetorno = tieneRetorno ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', pesoRetVal, t.motor) : 0;
+            const galTeoricoRetorno = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', pesoRetVal, t.motor);
             const galTeoricoTotal = (galTeoricoIda > 0 || galTeoricoRetorno > 0) ? (galTeoricoIda + galTeoricoRetorno) : 0;
 
             let galTeoricoHtml = '<span class="text-muted opacity-50">—</span>';
@@ -653,8 +652,7 @@
                 totalSumVales += (totGal || 0);
 
                 const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || 0, t.motor);
-                const tieneRet = (t.galonesRetorno > 0) || (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('RETORNO'));
-                const gRet = tieneRet ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor) : 0;
+                const gRet = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor);
                 totalSumTeorico += (gIda + gRet);
 
                 const gps = t.gpsTelemetria || t.wialonGps;
@@ -1088,8 +1086,7 @@
             const valesCount = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
 
             const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || 0, t.motor);
-            const tieneRet = (t.galonesRetorno > 0) || (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('RETORNO'));
-            const gRet = tieneRet ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor) : 0;
+            const gRet = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor);
             const gTeoricoTotal = (gIda > 0 || gRet > 0) ? (gIda + gRet) : 0;
             const difGalones = gTeoricoTotal > 0 ? parseFloat((totGal - gTeoricoTotal).toFixed(2)) : null;
 
