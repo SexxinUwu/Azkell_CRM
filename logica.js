@@ -3542,6 +3542,9 @@ window._renovarSesion = function() {
     detenerCuentaRegresivaSesion();
     var modal = document.getElementById('modal-sesion-expirada');
     if (modal) {
+        if (document.activeElement && modal.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
         var bsM = bootstrap.Modal.getInstance(modal);
         if (bsM) bsM.hide();
     }
