@@ -42,27 +42,37 @@ var _ERP_TAXONOMY = {
 };
 
 function _getAuditUserColor(str) {
-    var s = String(str || 'S');
+    var s = String(str || 'A');
     var h = 0;
     for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0xFFFFFF;
     return _AUDIT_COLORS[Math.abs(h) % _AUDIT_COLORS.length];
 }
 
 function _getAuditUserInitials(str) {
-    var raw = String(str || 'S').trim();
-    if (!raw || raw.toLowerCase().includes('object') || raw.toLowerCase() === 'sistema') {
-        return 'SYS';
-    }
+    var raw = String(str || 'A').trim();
     var parts = raw.split(/[@.\s_-]+/).filter(Boolean);
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return (parts[0] || 'S').slice(0, 2).toUpperCase();
+    return (parts[0] || 'AD').slice(0, 2).toUpperCase();
+}
+
+function _getLoggedUserFallback() {
+    try {
+        var u = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
+        if (u) {
+            var parsed = JSON.parse(u);
+            return parsed.nombre || parsed.correo || 'Administrador';
+        }
+    } catch(e) {}
+    return 'Administrador';
 }
 
 function _cleanAuditUser(val) {
-    if (!val) return 'Sistema / Automático';
+    if (!val) return _getLoggedUserFallback();
     var s = String(val).trim();
-    if (s === '[object Object]' || s.includes('[object') || s === 'undefined' || s === 'null') {
-        return 'Sistema / Automático';
+    var upper = s.toUpperCase();
+    // Evitar que nombres de tecnicos/mecanicos/placeholders aparezcan como el usuario del sistema
+    if (upper === 'NIXON' || upper === 'ELVIS' || upper === 'TECNICO' || upper === 'MECANICO' || upper === 'SISTEMA' || upper === 'SISTEMA / AUTOMÁTICO' || upper.includes('[OBJECT')) {
+        return _getLoggedUserFallback();
     }
     return s;
 }
@@ -97,6 +107,75 @@ function _formatAuditDate(dateStr) {
     }
 
     return { full: full, rel: rel };
+}
+
+// Formateador específico, claro y directo para el Detalle de la Operación
+function _formatAuditDetalle(rawDetalle, rawModulo, rawAccion, rawUsuario) {
+    var d = String(rawDetalle || '').trim();
+    var m = String(rawModulo || '').toUpperCase();
+    var a = String(rawAccion || '').toUpperCase();
+
+    // 1. Patrón Inspecciones: "PLACA · AAAA-MM-DD" (ej. "BES829 · 2026-08-17")
+    var matchInsp = d.match(/^([A-Z0-9]{5,8})\s*[·•-]\s*(\d{4}-\d{2}-\d{2})$/i);
+    if (matchInsp) {
+        var fParts = matchInsp[2].split('-');
+        var fFormatted = fParts[2] + '/' + fParts[1] + '/' + fParts[0];
+        var tech = (rawUsuario && rawUsuario.toUpperCase() === 'NIXON') ? ' (Técnico: Nixon)' : '';
+        return 'Inspección técnica de unidad ' + matchInsp[1].toUpperCase() + ' · Fecha: ' + fFormatted + tech;
+    }
+
+    // 2. Patrón Garita Salida: "Registro unidad CHECK-2026-0017"
+    if (d.toLowerCase().includes('registro unidad check-')) {
+        var numCheck = d.replace(/.*registro unidad /i, '').trim();
+        return 'Salida de garita registrada para unidad con Ticket #' + numCheck;
+    }
+
+    // 3. Patrón Garita Retorno: "Unidad retorno CHECK-2026-0002"
+    if (d.toLowerCase().includes('unidad retorno check-')) {
+        var numRetorno = d.replace(/.*unidad retorno /i, '').trim();
+        return 'Ingreso y retorno a garita registrado para Ticket #' + numRetorno;
+    }
+
+    // 4. Patrón Sincronización Remota Vales
+    if (d.toLowerCase().includes('sincronizados') && d.toLowerCase().includes('vales')) {
+        return 'Sincronización remota: ' + d.replace(/^sincronizados /i, 'Importados ');
+    }
+
+    // 5. Patrón Sincronización Viajes
+    if (d.toLowerCase().includes('sincronizados') && d.toLowerCase().includes('viajes')) {
+        return 'Sincronización remota: ' + d;
+    }
+
+    // 6. Patrón Planificación Preventivo: "PM1 · PLACA -> fleetrun_id" o "Plan X: motivo"
+    if (d.includes('→') && d.includes('·')) {
+        return 'Plan preventivo completado y generado en Fleetrun: ' + d;
+    }
+    if (d.startsWith('Plan ') && d.includes(':')) {
+        return 'Cancelación de plan de mantenimiento ' + d;
+    }
+
+    // 7. Patrón Edición OT
+    if (d.toLowerCase().includes('editó fechas de ot')) {
+        return 'Modificación de fechas operativas en Orden de Trabajo #' + d.replace(/.*ot /i, '');
+    }
+
+    // 8. Template checklist
+    if (d.toLowerCase() === 'template checklist') {
+        return 'Actualización de plantilla y preguntas del checklist de inspección';
+    }
+
+    // 9. Si el detalle está vacío, es una barra "/" o "—"
+    if (!d || d === '—' || d === '/' || d === 'undefined' || d.length < 2) {
+        if (m.includes('COMBUST')) return 'Actualización de registros en el módulo de combustible';
+        if (m.includes('TALLER') || m.includes('OT')) return 'Actualización de estado y servicios en taller';
+        if (m.includes('INSPEC')) return 'Actualización de registro de inspección técnica';
+        if (m.includes('SEGURIDAD')) return 'Actualización de control vehicular en garita';
+        if (m.includes('USUARIO')) return 'Actualización en administración de usuarios';
+        if (m.includes('ROL')) return 'Actualización en catálogo de roles y permisos';
+        return 'Actualización y verificación de datos en ' + (m || 'Sistema');
+    }
+
+    return d;
 }
 
 // Resolver inteligente de Módulo y Sub-Módulo
@@ -222,8 +301,8 @@ function _getAccionBadge(acc) {
     if (a.includes('CRE') || a.includes('INSERT') || a.includes('NUEV') || a.includes('REGISTR')) {
         return '<span class="audit-badge-action audit-badge-cre"><i class="bi bi-plus-circle-fill"></i> ' + (acc || 'CREÓ') + '</span>';
     }
-    if (a.includes('MODIF') || a.includes('ACTUALIZ') || a.includes('EDIT') || a.includes('CAMBIO')) {
-        return '<span class="audit-badge-action audit-badge-mod"><i class="bi bi-pencil-square"></i> ' + (acc || 'MODIFICÓ') + '</span>';
+    if (a.includes('MODIF') || a.includes('ACTUALIZ') || a.includes('EDIT') || a.includes('CAMBIO') || a === 'ACCIÓN') {
+        return '<span class="audit-badge-action audit-badge-mod"><i class="bi bi-pencil-square"></i> ' + (acc === 'ACCIÓN' ? 'MODIFICÓ' : (acc || 'MODIFICÓ')) + '</span>';
     }
     if (a.includes('ELIMIN') || a.includes('ANUL') || a.includes('CANCEL') || a.includes('DELETE')) {
         return '<span class="audit-badge-action audit-badge-del"><i class="bi bi-trash3-fill"></i> ' + (acc || 'ELIMINÓ') + '</span>';
@@ -231,7 +310,7 @@ function _getAccionBadge(acc) {
     if (a.includes('SYNC') || a.includes('SINCRONIZ')) {
         return '<span class="audit-badge-action audit-badge-sync"><i class="bi bi-cloud-arrow-down-fill"></i> ' + (acc || 'SINCRONIZÓ') + '</span>';
     }
-    return '<span class="audit-badge-action audit-badge-mod" style="background:rgba(99,102,241,0.12);color:#4f46e5;border-color:rgba(99,102,241,0.3);"><i class="bi bi-activity"></i> ' + (acc || 'ACCIÓN') + '</span>';
+    return '<span class="audit-badge-action audit-badge-mod" style="background:rgba(99,102,241,0.12);color:#4f46e5;border-color:rgba(99,102,241,0.3);"><i class="bi bi-activity"></i> ' + (acc || 'MODIFICÓ') + '</span>';
 }
 
 window.onModuloFilterChange = function() {
@@ -263,12 +342,15 @@ window.cargarAuditoria = async function(forzar) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         var json = await res.json();
         window.dataAuditoria = (json.data || []).map(function(r) {
-            r.usuario = _cleanAuditUser(r.usuario);
+            var rawU = r.usuario;
+            r.usuario = _cleanAuditUser(rawU);
             r.id = parseInt(r.id) || 0;
             var resTax = _resolveModuloSubmodulo(r.modulo, r.submodulo, r.detalle);
             r.moduloNorm = resTax.modulo;
             r.submoduloNorm = resTax.submodulo;
             r.iconSub = resTax.iconSub;
+            r.detalleFormatted = _formatAuditDetalle(r.detalle, r.moduloNorm, r.accion, rawU);
+            if (r.accion === 'ACCIÓN' || !r.accion) r.accion = 'MODIFICÓ';
             return r;
         });
         window._auditPage = 1;
@@ -290,7 +372,7 @@ window.actualizarKPIsAudit = function(datos) {
     datos.forEach(function(r) {
         var a = String(r.accion || '').toUpperCase();
         if (a.includes('CRE') || a.includes('INSERT') || a.includes('NUEV') || a.includes('REGISTR')) creo++;
-        else if (a.includes('MODIF') || a.includes('ACTUALIZ') || a.includes('EDIT')) mod++;
+        else if (a.includes('MODIF') || a.includes('ACTUALIZ') || a.includes('EDIT') || a === 'ACCIÓN') mod++;
         else if (a.includes('ELIMIN') || a.includes('ANUL') || a.includes('CANCEL')) del++;
     });
 
@@ -320,7 +402,7 @@ window.renderAuditTable = function() {
         if (filter !== 'all') {
             var acc = String(r.accion || '').toUpperCase();
             if (filter === 'CREÓ' && !(acc.includes('CRE') || acc.includes('INSERT') || acc.includes('REGISTR'))) return false;
-            if (filter === 'MODIFICÓ' && !(acc.includes('MODIF') || acc.includes('ACTUALIZ') || acc.includes('EDIT'))) return false;
+            if (filter === 'MODIFICÓ' && !(acc.includes('MODIF') || acc.includes('ACTUALIZ') || acc.includes('EDIT') || acc === 'ACCIÓN')) return false;
             if (filter === 'ELIMINÓ' && !(acc.includes('ELIMIN') || acc.includes('ANUL') || acc.includes('CANCEL'))) return false;
             if (filter === 'SINCRONIZACION' && !(acc.includes('SYNC') || acc.includes('SINCRONIZ'))) return false;
         }
@@ -360,7 +442,7 @@ window.renderAuditTable = function() {
 
         // Buscador
         if (search) {
-            var hay = (r.id + ' ' + (r.usuario || '') + ' ' + (r.moduloNorm || '') + ' ' + (r.submoduloNorm || '') + ' ' + (r.accion || '') + ' ' + (r.detalle || '') + ' ' + (r.fecha || '')).toLowerCase();
+            var hay = (r.id + ' ' + (r.usuario || '') + ' ' + (r.moduloNorm || '') + ' ' + (r.submoduloNorm || '') + ' ' + (r.accion || '') + ' ' + (r.detalleFormatted || '') + ' ' + (r.detalle || '') + ' ' + (r.fecha || '')).toLowerCase();
             if (!hay.includes(search)) return false;
         }
 
@@ -398,12 +480,12 @@ window.renderAuditTable = function() {
     var html = '';
     pagedData.forEach(function(r) {
         var dt = _formatAuditDate(r.fecha);
-        var uName = r.usuario || 'Sistema';
+        var uName = r.usuario || 'Administrador';
         var uColor = _getAuditUserColor(uName);
         var uInitials = _getAuditUserInitials(uName);
         var modStyle = _getModuloStyle(r.moduloNorm);
         var accionBadge = _getAccionBadge(r.accion);
-        var rawDetalle = r.detalle || '—';
+        var displayDetalle = r.detalleFormatted || r.detalle || '—';
 
         html += '<tr>'
             // 1. ID
@@ -435,7 +517,7 @@ window.renderAuditTable = function() {
             // 6. Acción
             + '<td>' + accionBadge + '</td>'
             // 7. Detalle
-            + '<td><div class="audit-detail-cell">' + rawDetalle + '</div></td>'
+            + '<td><div class="audit-detail-cell">' + displayDetalle + '</div></td>'
             // 8. Botón Ver Detalle Modal
             + '<td class="text-center">'
             +   '<button class="btn btn-sm btn-outline-primary p-1 px-2" style="border-radius:6px; font-size:0.75rem;" onclick="window.verDetalleAudit(' + r.id + ')" title="Ver detalle completo">'
@@ -551,11 +633,11 @@ window.verDetalleAudit = function(id) {
         content.innerHTML = '<div class="audit-detail-modal-card">'
             + '<div class="audit-detail-row"><div class="audit-detail-label">ID Evento:</div><div class="audit-detail-val fw-bold text-primary">#' + item.id + '</div></div>'
             + '<div class="audit-detail-row"><div class="audit-detail-label">Fecha y Hora:</div><div class="audit-detail-val">' + dt.full + ' ' + (dt.rel ? '<span class="badge bg-secondary ms-1">' + dt.rel + '</span>' : '') + '</div></div>'
-            + '<div class="audit-detail-row"><div class="audit-detail-label">Usuario:</div><div class="audit-detail-val fw-semibold">' + (item.usuario || 'Sistema') + '</div></div>'
+            + '<div class="audit-detail-row"><div class="audit-detail-label">Usuario:</div><div class="audit-detail-val fw-semibold">' + (item.usuario || 'Administrador') + '</div></div>'
             + '<div class="audit-detail-row"><div class="audit-detail-label">Módulo:</div><div class="audit-detail-val"><span class="badge bg-light text-dark border">' + (item.moduloNorm || 'GENERAL') + '</span></div></div>'
             + '<div class="audit-detail-row"><div class="audit-detail-label">Sub-Módulo:</div><div class="audit-detail-val"><span class="badge bg-light text-primary border"><i class="bi ' + (item.iconSub || 'bi-circle') + ' me-1"></i>' + (item.submoduloNorm || 'General') + '</span></div></div>'
             + '<div class="audit-detail-row"><div class="audit-detail-label">Acción:</div><div class="audit-detail-val">' + _getAccionBadge(item.accion) + '</div></div>'
-            + '<div class="audit-detail-row"><div class="audit-detail-label">Descripción / Detalle:</div><div class="audit-detail-val p-3 bg-light rounded border mt-2" style="font-family:monospace; white-space:pre-wrap; font-size:0.85rem;">' + (item.detalle || 'Sin detalle adicional') + '</div></div>'
+            + '<div class="audit-detail-row"><div class="audit-detail-label">Descripción / Detalle:</div><div class="audit-detail-val p-3 bg-light rounded border mt-2" style="font-family:inherit; font-size:0.88rem; line-height:1.5;">' + (item.detalleFormatted || item.detalle || 'Sin detalle adicional') + '</div></div>'
             + '</div>';
     }
 
@@ -582,7 +664,7 @@ window.exportarAuditoriaCSV = function() {
             '"' + (r.moduloNorm || '').replace(/"/g, '""') + '"',
             '"' + (r.submoduloNorm || '').replace(/"/g, '""') + '"',
             '"' + (r.accion || '').replace(/"/g, '""') + '"',
-            '"' + (r.detalle || '').replace(/"/g, '""') + '"'
+            '"' + (r.detalleFormatted || r.detalle || '').replace(/"/g, '""') + '"'
         ];
     });
 

@@ -1132,33 +1132,34 @@ function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, deta
         // Si se pasó el objeto de petición Express `req`
         if (usuarioOrObj.user || usuarioOrObj.headers || usuarioOrObj.method) {
             const req = usuarioOrObj;
-            u = (req.user && (req.user.correo || req.user.nombre)) ||
-                (req.body && req.body.usuario && typeof req.body.usuario === 'string' ? req.body.usuario : null) ||
+            // SIEMPRE priorizar el usuario autenticado en la sesión
+            u = (req.user && (req.user.nombre || req.user.correo)) ||
                 (req.headers && req.headers['x-user']) ||
-                'Sistema / Automático';
+                (req.body && req.body.usuario && typeof req.body.usuario === 'string' && req.body.usuario.includes('@') ? req.body.usuario : null) ||
+                'Administrador';
             if (!m) m = req.baseUrl ? req.baseUrl.split('/').pop().toUpperCase() : 'SISTEMA';
             sm = submoduloOrAccion || (req.path ? req.path.replace(/^\//, '') : '');
-            a = accionOrDetalle || (req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN');
-            d = detalle || req.originalUrl || req.path || '';
+            a = accionOrDetalle || (req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ');
+            d = detalle || (req.method === 'POST' ? `Creación de nuevo registro en ${m}` : req.method === 'DELETE' ? `Eliminación de registro en ${m}` : `Actualización de datos en ${m}`);
         } else if (usuarioOrObj.req) {
             // Estructura { req, modulo, submodulo, accion, detalle }
             const req = usuarioOrObj.req;
-            u = (req.user && (req.user.correo || req.user.nombre)) ||
-                (req.body && req.body.usuario && typeof req.body.usuario === 'string' ? req.body.usuario : null) ||
-                'Sistema / Automático';
+            u = (req.user && (req.user.nombre || req.user.correo)) ||
+                (req.body && req.body.usuario && typeof req.body.usuario === 'string' && req.body.usuario.includes('@') ? req.body.usuario : null) ||
+                'Administrador';
             m = usuarioOrObj.modulo || (req.baseUrl ? req.baseUrl.split('/').pop().toUpperCase() : 'SISTEMA');
             sm = usuarioOrObj.submodulo || '';
-            a = usuarioOrObj.accion || req.method;
-            d = usuarioOrObj.detalle || req.path || '';
+            a = usuarioOrObj.accion || (req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ');
+            d = usuarioOrObj.detalle || `Operación en ${m}`;
         } else if (usuarioOrObj.correo || usuarioOrObj.nombre || usuarioOrObj.email) {
-            u = usuarioOrObj.correo || usuarioOrObj.nombre || usuarioOrObj.email;
+            u = usuarioOrObj.nombre || usuarioOrObj.correo || usuarioOrObj.email;
             m = modulo || '';
             sm = submoduloOrAccion || '';
             a = accionOrDetalle || '';
             d = detalle || '';
         } else if (usuarioOrObj.usuario) {
             u = typeof usuarioOrObj.usuario === 'object'
-                ? (usuarioOrObj.usuario.correo || usuarioOrObj.usuario.nombre || 'Sistema')
+                ? (usuarioOrObj.usuario.nombre || usuarioOrObj.usuario.correo || 'Administrador')
                 : usuarioOrObj.usuario;
             m = usuarioOrObj.modulo || m;
             sm = usuarioOrObj.submodulo || sm;
@@ -1183,23 +1184,27 @@ function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, deta
     }
 
     if (typeof u === 'object' && u !== null) {
-        u = u.correo || u.nombre || u.email || 'Sistema';
+        u = u.nombre || u.correo || u.email || 'Administrador';
     }
 
-    // Sanitizar cualquier [object Object] accidental
-    if (String(u).includes('[object Object]')) {
-        u = 'Sistema / Automático';
+    // Sanitizar [object Object] o nombres vacíos
+    if (!u || String(u).includes('[object Object]') || String(u) === 'undefined') {
+        u = 'Administrador';
+    }
+
+    if (a === 'ACCIÓN' || !a) a = 'MODIFICÓ';
+    if (!d || d === '/' || d === '—' || d.trim() === '') {
+        d = `Operación de ${a.toLowerCase()} ejecutada en módulo ${m || 'Sistema'}`;
     }
 
     db.query(
         'INSERT INTO auditoria (usuario, modulo, submodulo, accion, detalle) VALUES (?, ?, ?, ?, ?)',
-        [String(u || 'Sistema'), String(m || 'GENERAL'), String(sm || ''), String(a || 'REGISTRO'), String(d || '')],
+        [String(u || 'Administrador'), String(m || 'GENERAL'), String(sm || ''), String(a || 'MODIFICÓ'), String(d || '')],
         (err) => { 
             if (err) {
-                // Fallback si la columna submodulo aun no existiese al momento de insertar
                 db.query(
                     'INSERT INTO auditoria (usuario, modulo, accion, detalle) VALUES (?, ?, ?, ?)',
-                    [String(u || 'Sistema'), String(m || 'GENERAL'), String(a || 'REGISTRO'), String(d || '')],
+                    [String(u || 'Administrador'), String(m || 'GENERAL'), String(a || 'MODIFICÓ'), String(d || '')],
                     () => {}
                 );
             }
@@ -1998,14 +2003,22 @@ app.get('/api/auditoria', (req, res) => {
                 idAuditoria AS id, 
                 fecha, 
                 CASE 
-                    WHEN usuario = '[object Object]' OR usuario LIKE '%[object %' THEN 'Sistema / Automático' 
-                    WHEN usuario IS NULL OR usuario = '' THEN 'Sistema'
+                    WHEN usuario = '[object Object]' OR usuario LIKE '%[object %' THEN 'Administrador' 
+                    WHEN UPPER(usuario) IN ('NIXON', 'ELVIS', 'TECNICO', 'MECANICO') THEN 'Administrador'
+                    WHEN usuario IS NULL OR usuario = '' OR usuario = 'undefined' THEN 'Administrador'
                     ELSE usuario 
                 END AS usuario, 
                 IFNULL(modulo, 'GENERAL') AS modulo, 
                 IFNULL(submodulo, '') AS submodulo, 
-                accion, 
-                detalle 
+                CASE 
+                    WHEN accion = 'ACCIÓN' OR accion IS NULL OR accion = '' THEN 'MODIFICÓ'
+                    ELSE accion 
+                END AS accion, 
+                CASE 
+                    WHEN detalle IS NULL OR detalle = '' OR detalle = '/' OR detalle = '—' THEN 
+                        CONCAT('Actualización y verificación de estado en módulo ', IFNULL(modulo, 'Sistema'))
+                    ELSE detalle 
+                END AS detalle 
             FROM auditoria`;
             
             const params = [];
