@@ -1121,10 +1121,60 @@ function requirePerm(modulo, accion) {
     return (req, res, next) => next();
 }
 
-function logAudit(usuario, modulo, accion, detalle) {
+function logAudit(usuarioOrObj, modulo, accion, detalle) {
+    let u = 'Sistema';
+    let m = modulo || '';
+    let a = accion || '';
+    let d = detalle || '';
+
+    if (usuarioOrObj && typeof usuarioOrObj === 'object') {
+        // Si se pasó el objeto de petición Express `req`
+        if (usuarioOrObj.user || usuarioOrObj.headers || usuarioOrObj.method) {
+            const req = usuarioOrObj;
+            u = (req.user && (req.user.correo || req.user.nombre)) ||
+                (req.body && req.body.usuario && typeof req.body.usuario === 'string' ? req.body.usuario : null) ||
+                (req.headers && req.headers['x-user']) ||
+                'Sistema / Automático';
+            if (!m) m = req.baseUrl ? req.baseUrl.split('/').pop().toUpperCase() : 'SISTEMA';
+            if (!a) a = req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN';
+            if (!d) d = req.originalUrl || req.path || '';
+        } else if (usuarioOrObj.req) {
+            // Estructura { req, modulo, accion, detalle }
+            const req = usuarioOrObj.req;
+            u = (req.user && (req.user.correo || req.user.nombre)) ||
+                (req.body && req.body.usuario && typeof req.body.usuario === 'string' ? req.body.usuario : null) ||
+                'Sistema / Automático';
+            m = usuarioOrObj.modulo || (req.baseUrl ? req.baseUrl.split('/').pop().toUpperCase() : 'SISTEMA');
+            a = usuarioOrObj.accion || req.method;
+            d = usuarioOrObj.detalle || req.path || '';
+        } else if (usuarioOrObj.correo || usuarioOrObj.nombre || usuarioOrObj.email) {
+            u = usuarioOrObj.correo || usuarioOrObj.nombre || usuarioOrObj.email;
+        } else if (usuarioOrObj.usuario) {
+            u = typeof usuarioOrObj.usuario === 'object'
+                ? (usuarioOrObj.usuario.correo || usuarioOrObj.usuario.nombre || 'Sistema')
+                : usuarioOrObj.usuario;
+            m = usuarioOrObj.modulo || m;
+            a = usuarioOrObj.accion || a;
+            d = usuarioOrObj.detalle || d;
+        } else {
+            u = 'Sistema / Automático';
+        }
+    } else if (typeof usuarioOrObj === 'string' && usuarioOrObj.trim()) {
+        u = usuarioOrObj.trim();
+    }
+
+    if (typeof u === 'object' && u !== null) {
+        u = u.correo || u.nombre || u.email || 'Sistema';
+    }
+
+    // Sanitizar cualquier [object Object] accidental
+    if (String(u).includes('[object Object]')) {
+        u = 'Sistema / Automático';
+    }
+
     db.query(
         'INSERT INTO auditoria (usuario, modulo, accion, detalle) VALUES (?, ?, ?, ?)',
-        [usuario || 'sistema', modulo || '', accion || '', detalle || ''],
+        [String(u || 'Sistema'), String(m || 'GENERAL'), String(a || 'REGISTRO'), String(d || '')],
         (err) => { if (err) console.warn('Audit log error:', err.message); }
     );
 }
@@ -1914,16 +1964,39 @@ app.put('/api/taller/entradas/:ticket/estado', (req, res) => {
 app.get('/api/auditoria', (req, res) => {
     // Garantizar columna modulo antes de consultar
     db.query('ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL', () => {
-        const { modulo, accion, usuario, limit } = req.query;
-        let sql = 'SELECT idAuditoria AS id, fecha, usuario, IFNULL(modulo,\'\') AS modulo, accion, detalle FROM auditoria';
+        const { modulo, accion, usuario, q, search, desde, hasta, limit } = req.query;
+        let sql = `SELECT 
+            idAuditoria AS id, 
+            fecha, 
+            CASE 
+                WHEN usuario = '[object Object]' OR usuario LIKE '%[object %' THEN 'Sistema / Automático' 
+                WHEN usuario IS NULL OR usuario = '' THEN 'Sistema'
+                ELSE usuario 
+            END AS usuario, 
+            IFNULL(modulo, 'GENERAL') AS modulo, 
+            accion, 
+            detalle 
+        FROM auditoria`;
+        
         const params = [];
         const conditions = [];
         if (modulo) { conditions.push('modulo = ?'); params.push(modulo); }
         if (accion) { conditions.push('accion = ?'); params.push(accion); }
         if (usuario) { conditions.push('usuario LIKE ?'); params.push('%' + usuario + '%'); }
+        if (desde) { conditions.push('DATE(fecha) >= ?'); params.push(desde); }
+        if (hasta) { conditions.push('DATE(fecha) <= ?'); params.push(hasta); }
+        
+        const searchTerm = q || search;
+        if (searchTerm) {
+            conditions.push('(usuario LIKE ? OR detalle LIKE ? OR modulo LIKE ? OR accion LIKE ?)');
+            const sParam = '%' + searchTerm + '%';
+            params.push(sParam, sParam, sParam, sParam);
+        }
+
         if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
         sql += ' ORDER BY idAuditoria DESC LIMIT ?';
-        params.push(Math.min(parseInt(limit) || 300, 500));
+        params.push(Math.min(parseInt(limit) || 500, 1000));
+        
         db.query(sql, params, (err, results) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ data: results });
