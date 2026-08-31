@@ -434,7 +434,7 @@
             const gastoRealRet = vRet.reduce((s, x) => s + (x.importe || 0), 0);
 
             const rawPesoIda = Math.max(0, ...vIda.map(x => parseFloat(x.peso || 0)));
-            const pesoIdaVal = rawPesoIda > 0 ? (rawPesoIda > 50 ? +(rawPesoIda / 1000).toFixed(2) : +rawPesoIda.toFixed(2)) : (t.pesoIda || t.pesoMaxTn || 0);
+            const pesoIdaVal = rawPesoIda > 0 ? (rawPesoIda > 50 ? +(rawPesoIda / 1000).toFixed(2) : +rawPesoIda.toFixed(2)) : (t.pesoIda || 0);
 
             const rawPesoRet = Math.max(0, ...vRet.map(x => parseFloat(x.peso || 0)));
             const pesoRetVal = rawPesoRet > 0 ? (rawPesoRet > 50 ? +(rawPesoRet / 1000).toFixed(2) : +rawPesoRet.toFixed(2)) : (t.pesoRetorno || 0);
@@ -643,7 +643,7 @@
                 const totGal = fs ? fs.totalGalones : t.totalGalones;
                 totalSumVales += (totGal || 0);
 
-                const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || t.pesoMaxTn, t.motor);
+                const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || 0, t.motor);
                 const tieneRet = (t.galonesRetorno > 0) || (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('SERVICIO'));
                 const gRet = tieneRet ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor) : 0;
                 totalSumTeorico += (gIda + gRet);
@@ -1078,7 +1078,7 @@
             const rend = fs ? fs.rendimiento : t.rendimiento;
             const valesCount = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
 
-            const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || t.pesoMaxTn, t.motor);
+            const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || 0, t.motor);
             const tieneRet = (t.galonesRetorno > 0) || (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('VUELTA') || (v.tipo || '').toUpperCase().includes('SERVICIO'));
             const gRet = tieneRet ? obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor) : 0;
             const gTeoricoTotal = (gIda > 0 || gRet > 0) ? (gIda + gRet) : 0;
