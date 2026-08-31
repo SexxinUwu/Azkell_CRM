@@ -63,9 +63,12 @@
             // 2.5. Render Card de Medidas de Llantas Rodando
             const medidasList = data.medidas || [];
             const totalLlantasRodando = Number(data.resumen?.total_llantas_rodando || 0);
+            const totalLlantasFlota = Number(data.resumen?.total_llantas_flota || 1424);
 
             const lblTotalRod = document.getElementById('lbl-total-llantas-rodando');
-            if (lblTotalRod) lblTotalRod.innerHTML = `<i class="bi bi-disc-fill me-1"></i>${totalLlantasRodando.toLocaleString()} Rodando`;
+            if (lblTotalRod) {
+                lblTotalRod.innerHTML = `<i class="bi bi-disc-fill me-1 text-primary"></i><span class="fw-bold">${totalLlantasRodando.toLocaleString()}</span> <span class="text-muted fw-normal">de</span> <span class="fw-bold">${totalLlantasFlota.toLocaleString()}</span>`;
+            }
 
             const lblTiposMed = document.getElementById('lbl-total-medidas-tipos');
             if (lblTiposMed) lblTiposMed.innerText = `${medidasList.length} ${medidasList.length === 1 ? 'medida activa' : 'medidas activas'}`;
