@@ -51,6 +51,8 @@ module.exports = function globalRBAC(req, res, next) {
         '/inspecciones-por-ot',
         '/neumaticos/catalogos',
         '/combustible/catalogos',
+        '/combustible/rendimiento-teorico',
+        '/combustible/matriz',
         '/seguridad/recursos',
         '/seguridad/template',
         '/vehiculos-flota'
@@ -105,12 +107,15 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/almacen/notificaciones')) mod = ['inv', 'ent_inv', 'sal_inv', 'kardex', 'cfg_almacen'];
     else if (path.startsWith('/almacen/configuracion')) mod = ['inv', 'ent_inv', 'sal_inv', 'cfg_almacen'];
 
-    // MANTENIMIENTO
+    // MANTENIMIENTO Y OPERACIONES
     else if (path.startsWith('/neumaticos') || path.includes('neumaticos')) {
         mod = ['neumaticos', 'insp', 'ot', 'fleetrun'];
     }
     else if (path.startsWith('/combustible') || path.includes('combustible')) {
-        mod = ['combustible', 'fleet', 'fleetrun'];
+        mod = ['combustible', 'combustible_vales', 'combustible_analisis', 'urea_analisis', 'combustible_matriz', 'fleet', 'fleetrun'];
+    }
+    else if (path.startsWith('/operaciones') || path.includes('ordenes-viaje') || path.includes('guias-remision') || path.includes('viajes')) {
+        mod = ['op_guias_remision', 'op_rutas', 'op_asignacion', 'op_monitoreo', 'combustible_analisis', 'combustible_vales', 'placas', 'fleet'];
     }
     else if (path.startsWith('/taller-rampas') || path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban')) {
         mod = ['status_rampa', 'ot', 'trabajos_ot', 'fleetrun', 'plan', 'cfg_mant'];
