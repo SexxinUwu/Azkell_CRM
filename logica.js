@@ -375,7 +375,9 @@ window.verificarSesionGuardada = function() {
     var vOpGuias = showOperacionesHub && (_cL('op_guias_remision') || _cL('guias_remision'));
     var vCombVales = showOperacionesHub && (_cL('combustible_vales') || _cL('combustible'));
     var vCombAna   = showOperacionesHub && (_cL('combustible_analisis') || _cL('combustible'));
-    var vCombOp    = vCombVales || vCombAna;
+    var vCombUrea  = showOperacionesHub && (_cL('urea_analisis') || _cL('combustible_analisis') || _cL('combustible'));
+    var vCombMatriz = showOperacionesHub && (_cL('combustible_matriz') || _cL('combustible_analisis') || _cL('combustible'));
+    var vCombOp    = vCombVales || vCombAna || vCombUrea || vCombMatriz;
     var showOp     = vOpGuias || vCombOp;
 
     safe('nav-op-guias-remision',        vOpGuias);
@@ -386,8 +388,10 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-op-combustible-vales',    vCombVales);
     safe('nav-combustible-analisis',      vCombAna);
     safe('mbnav-op-combustible-analisis', vCombAna);
-    safe('nav-combustible-matriz',        vCombOp);
-    safe('mbnav-op-combustible-matriz',   vCombOp);
+    safe('nav-urea-analisis',             vCombUrea);
+    safe('mbnav-op-urea-analisis',        vCombUrea);
+    safe('nav-combustible-matriz',        vCombMatriz);
+    safe('mbnav-op-combustible-matriz',   vCombMatriz);
     safe('wrap-operaciones', showOp);
     safe('bnav-operaciones', showOp);
 
@@ -571,6 +575,7 @@ window.verificarSesionGuardada = function() {
             'operaciones/combustible-vales': 'combustible_vales',
             'operaciones/combustible-analisis': 'combustible_analisis',
             'operaciones/combustible-urea': 'urea_analisis',
+            'operaciones/urea-analisis': 'urea_analisis',
             'operaciones/combustible-matriz': 'combustible_matriz',
             'operaciones/neumaticos-analisis': 'neumaticos',
             'rrhh/personal': 'rrhh_personal',
@@ -585,6 +590,21 @@ window.verificarSesionGuardada = function() {
             'sistema/auditoria': 'mod_auditoria',
             'administracion': 'administracion'
         };
+
+        // Fallbacks inteligentes para submódulos de combustible
+        if (r === 'operaciones/urea-analisis' || r === 'operaciones/combustible-urea') {
+            return window.checkPerm('urea_analisis', 'l') || window.checkPerm('combustible_analisis', 'l') || window.checkPerm('combustible', 'l');
+        }
+        if (r === 'operaciones/combustible-matriz') {
+            return window.checkPerm('combustible_matriz', 'l') || window.checkPerm('combustible_analisis', 'l') || window.checkPerm('combustible', 'l');
+        }
+        if (r === 'operaciones/combustible-analisis' || r === 'mantenimiento/combustible-analisis') {
+            return window.checkPerm('combustible_analisis', 'l') || window.checkPerm('combustible', 'l');
+        }
+        if (r === 'operaciones/combustible-vales' || r === 'mantenimiento/combustible-vales') {
+            return window.checkPerm('combustible_vales', 'l') || window.checkPerm('combustible', 'l');
+        }
+
         var permKey = rMap[r] || r;
         return window.checkPerm(permKey, 'l');
     };
@@ -594,7 +614,8 @@ window.verificarSesionGuardada = function() {
         if (rol.includes('analista') || rol.includes('combustible')) {
             if (window.checkPerm('combustible_analisis', 'l')) return 'operaciones/combustible-analisis';
             if (window.checkPerm('combustible_vales', 'l')) return 'operaciones/combustible-vales';
-            if (window.checkPerm('urea_analisis', 'l')) return 'operaciones/combustible-urea';
+            if (window.checkPerm('urea_analisis', 'l')) return 'operaciones/urea-analisis';
+            if (window.checkPerm('combustible_matriz', 'l')) return 'operaciones/combustible-matriz';
         }
         if (rol.includes('seguridad') && (window.checkPerm('seguridad_unidades', 'l') || window.checkPerm('checklist', 'l'))) {
             return 'seguridad/unidades';
