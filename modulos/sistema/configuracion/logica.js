@@ -43,15 +43,19 @@ window.init_configuracion = function() {
     // 7. Sincronizar Idioma
     const langActual = localStorage.getItem('fleet_idioma') || localStorage.getItem('idioma') || 'es';
     _actualizarVistaIdioma(langActual);
+
+    // 8. Sincronizar Datos de Empresa
+    _cargarDatosEmpresaEnFormulario();
 };
 
 // ---- Navegación de paneles ----
 window.showConfig = function(panel) {
-    const panels = ['apariencia', 'accesibilidad', 'idioma'];
+    const panels = ['apariencia', 'accesibilidad', 'idioma', 'empresa'];
     const titleMap = {
         'apariencia': 'Tema y Apariencia',
         'accesibilidad': 'Accesibilidad',
-        'idioma': 'Idioma del Sistema'
+        'idioma': 'Idioma del Sistema',
+        'empresa': 'Datos de la Empresa'
     };
 
     window._activeConfigSection = panel;
@@ -191,3 +195,148 @@ function _mostrarToast(msg) {
         toast.style.display = 'none';
     }, 2000);
 }
+
+// ---- Datos de la Empresa ----
+window._tempLogoBase64 = null;
+
+function _cargarDatosEmpresaEnFormulario() {
+    const inputNombre = document.getElementById('cfg-empresa-nombre');
+    const previewImg  = document.getElementById('cfg-empresa-logo-preview');
+    const placeholder = document.getElementById('cfg-empresa-logo-placeholder');
+    const delBtn      = document.getElementById('cfg-empresa-logo-del-btn');
+
+    const nombreGuardado = localStorage.getItem('fleet_empresa_nombre') || '';
+    const logoGuardado   = localStorage.getItem('fleet_empresa_logo') || '';
+
+    if (inputNombre) inputNombre.value = nombreGuardado;
+
+    if (previewImg && logoGuardado) {
+        previewImg.src = logoGuardado;
+        previewImg.style.display = 'inline-block';
+        if (placeholder) placeholder.style.display = 'none';
+        if (delBtn) delBtn.style.display = 'inline-block';
+    } else {
+        if (previewImg) { previewImg.src = ''; previewImg.style.display = 'none'; }
+        if (placeholder) placeholder.style.display = 'inline-block';
+        if (delBtn) delBtn.style.display = 'none';
+    }
+
+    // Sincronizar desde API en background si hace falta
+    fetch('/api/configuracion')
+        .then(r => r.json())
+        .then(data => {
+            if (data.empresa_nombre !== undefined && inputNombre && !inputNombre.value) {
+                inputNombre.value = data.empresa_nombre;
+                localStorage.setItem('fleet_empresa_nombre', data.empresa_nombre);
+            }
+            if (data.empresa_logo !== undefined && data.empresa_logo && previewImg && !previewImg.src) {
+                previewImg.src = data.empresa_logo;
+                previewImg.style.display = 'inline-block';
+                if (placeholder) placeholder.style.display = 'none';
+                if (delBtn) delBtn.style.display = 'inline-block';
+                localStorage.setItem('fleet_empresa_logo', data.empresa_logo);
+            }
+        })
+        .catch(e => console.warn("Error obteniendo config empresa:", e));
+}
+
+window.handleEmpresaLogoSelected = function(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) {
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('El logotipo no debe superar 1MB.', 'warning');
+        } else {
+            alert('El logotipo no debe superar 1MB.');
+        }
+        input.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        window._tempLogoBase64 = e.target.result;
+        const previewImg  = document.getElementById('cfg-empresa-logo-preview');
+        const placeholder = document.getElementById('cfg-empresa-logo-placeholder');
+        const delBtn      = document.getElementById('cfg-empresa-logo-del-btn');
+
+        if (previewImg) {
+            previewImg.src = window._tempLogoBase64;
+            previewImg.style.display = 'inline-block';
+        }
+        if (placeholder) placeholder.style.display = 'none';
+        if (delBtn) delBtn.style.display = 'inline-block';
+    };
+    reader.readAsDataURL(file);
+};
+
+window.eliminarLogoEmpresa = function() {
+    window._tempLogoBase64 = '';
+    const fileInput   = document.getElementById('cfg-empresa-logo-file');
+    const previewImg  = document.getElementById('cfg-empresa-logo-preview');
+    const placeholder = document.getElementById('cfg-empresa-logo-placeholder');
+    const delBtn      = document.getElementById('cfg-empresa-logo-del-btn');
+
+    if (fileInput) fileInput.value = '';
+    if (previewImg) { previewImg.src = ''; previewImg.style.display = 'none'; }
+    if (placeholder) placeholder.style.display = 'inline-block';
+    if (delBtn) delBtn.style.display = 'none';
+};
+
+window.guardarDatosEmpresa = async function() {
+    const btn = document.getElementById('btn-guardar-empresa');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> Guardando...';
+    }
+
+    try {
+        const inputNombre = document.getElementById('cfg-empresa-nombre');
+        const nombreVal = inputNombre ? inputNombre.value.trim() : '';
+
+        const payload = {
+            empresa_nombre: nombreVal
+        };
+
+        if (window._tempLogoBase64 !== null) {
+            payload.empresa_logo = window._tempLogoBase64;
+        }
+
+        const res = await fetch('/api/configuracion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.success || res.ok) {
+            localStorage.setItem('fleet_empresa_nombre', nombreVal);
+            if (window._tempLogoBase64 !== null) {
+                localStorage.setItem('fleet_empresa_logo', window._tempLogoBase64);
+                window._tempLogoBase64 = null;
+            }
+
+            _mostrarToast('Datos de empresa guardados');
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta('Datos de la empresa actualizados con éxito.', 'success');
+            }
+        } else {
+            throw new Error(data.error || 'Error al guardar');
+        }
+    } catch (err) {
+        console.error("Error guardando empresa:", err);
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('Error al guardar datos: ' + (err.message || err), 'danger');
+        } else {
+            alert('Error al guardar datos de la empresa');
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+};
+
