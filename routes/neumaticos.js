@@ -718,6 +718,7 @@ module.exports = function (db, broadcast, logAudit) {
                 [criticasRows],
                 [unidadesUsoRows],
                 [marcasTopRows],
+                [medidasRows],
                 [listadoRows]
             ] = await Promise.all([
                 // 1. Total de inspecciones registradas
@@ -773,7 +774,28 @@ module.exports = function (db, broadcast, logAudit) {
                     LIMIT 8
                 `),
 
-                // 6. Listado de última inspección o estado por unidad activa con agregación en O(1)
+                // 6. Desglose de medidas de llantas rodando activas (última inspección)
+                tdb.query(`
+                    SELECT 
+                        COALESCE(NULLIF(TRIM(UPPER(d.medida)), ''), 'SIN ESPECIFICAR') as medida, 
+                        COUNT(*) as cantidad 
+                    FROM neumaticos_inspecciones_det d 
+                    INNER JOIN (
+                        SELECT i1.id_inspeccion 
+                        FROM neumaticos_inspecciones i1 
+                        INNER JOIN (
+                            SELECT placa, MAX(fecha_inspeccion) as max_fecha 
+                            FROM neumaticos_inspecciones 
+                            GROUP BY placa
+                        ) i2 ON i1.placa = i2.placa AND i1.fecha_inspeccion = i2.max_fecha 
+                        LEFT JOIN placas p ON i1.placa = p.placa 
+                        WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
+                    ) last_i ON d.id_inspeccion = last_i.id_inspeccion 
+                    GROUP BY medida 
+                    ORDER BY cantidad DESC
+                `),
+
+                // 7. Listado de última inspección o estado por unidad activa con agregación en O(1)
                 tdb.query(`
                     SELECT 
                         p.placa,
@@ -817,6 +839,7 @@ module.exports = function (db, broadcast, logAudit) {
             const vig = vigenciasRows[0]?.vigentes || 0;
             const noVig = vigenciasRows[0]?.no_vigentes || 0;
             const sinInsp = Math.max(0, totalUso - (vig + noVig));
+            const totalLlantasRodando = (medidasRows || []).reduce((s, m) => s + Number(m.cantidad || 0), 0);
 
             res.json({
                 ok: true,
@@ -826,9 +849,11 @@ module.exports = function (db, broadcast, logAudit) {
                     no_vigentes: noVig,
                     sin_inspeccion: sinInsp,
                     llantas_criticas: criticasRows[0]?.total_criticas || 0,
-                    unidades_en_uso: totalUso
+                    unidades_en_uso: totalUso,
+                    total_llantas_rodando: totalLlantasRodando
                 },
                 marcas: marcasTopRows || [],
+                medidas: medidasRows || [],
                 inspecciones: listadoRows || []
             });
         } catch (err) {
