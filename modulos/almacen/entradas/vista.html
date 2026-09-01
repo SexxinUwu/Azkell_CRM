@@ -296,6 +296,30 @@
     box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
     outline: none;
 }
+/* Botón de código de OC estilo ERP con ícono */
+.btn-oc-code {
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 0.25rem 0.55rem;
+    border-radius: 0.45rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    white-space: nowrap;
+    text-decoration: none;
+}
+.btn-oc-code:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #0284c7;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+}
 </style>
 
 <div id="moduloEntradas" class="modulo-wrapper d-flex flex-column h-100">
@@ -410,7 +434,7 @@
       <table id="tabla-entradas">
         <thead>
           <tr>
-            <th>Código</th>
+            <th>ORDEN COMPRA</th>
               <th>Tipo Orden</th>
             <th>Fecha</th>
             <th class="text-center" style="font-size:0.65rem;">ESTADO</th>

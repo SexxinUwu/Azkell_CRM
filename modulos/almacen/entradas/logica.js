@@ -1017,7 +1017,7 @@ function _entFmtFechaHora(iso, createdAt) {
             var tr0 = document.createElement('tr');
             tr0.className = activeCls.trim();
             tr0.innerHTML =
-                '<td class="text-center"><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
+                '<td class="text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(d.id || '') + '</span></td>' +
                 '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
                 '<td class="text-center col-hide-mob">' + estadoHtml + '</td>' +
@@ -1074,7 +1074,7 @@ function _entFmtFechaHora(iso, createdAt) {
             var provHtml = d.proveedor_nombre ? '<span style="font-size:.78rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>';
 
             tr.innerHTML =
-                 '<td class="text-center" style="vertical-align:middle;"><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
+                 '<td class="text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(d.id || '') + '</span></td>' +
                 '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
