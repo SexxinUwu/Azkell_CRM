@@ -1368,8 +1368,21 @@ router.post('/recepciones-oc/registrar', _multerInv.single('sustento'), async (r
             sustentoUrl = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
         }
 
-        const fechaHora = fecha_recepcion ? new Date(fecha_recepcion) : new Date();
-        const fechaHoraSQL = fechaHora.toISOString().slice(0, 19).replace('T', ' ');
+        let fechaHoraSQL;
+        if (fecha_recepcion) {
+            // Reemplazar 'T' por espacio y asegurar formato YYYY-MM-DD HH:mm:ss
+            fechaHoraSQL = fecha_recepcion.replace('T', ' ');
+            if (fechaHoraSQL.length === 16) fechaHoraSQL += ':00';
+        } else {
+            const ahora = new Date();
+            const yyyy = ahora.getFullYear();
+            const mm = String(ahora.getMonth() + 1).padStart(2, '0');
+            const dd = String(ahora.getDate()).padStart(2, '0');
+            const hh = String(ahora.getHours()).padStart(2, '0');
+            const min = String(ahora.getMinutes()).padStart(2, '0');
+            const ss = String(ahora.getSeconds()).padStart(2, '0');
+            fechaHoraSQL = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+        }
 
         // Determinar si esta entrega completa la orden o es parcial
         const totalRecepcionadoAhora = items.reduce((sum, it) => sum + (parseFloat(it.cantidad_recibida) || 0), 0);

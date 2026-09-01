@@ -251,7 +251,17 @@
                 histBody.innerHTML = `<tr><td colspan="7" class="text-center py-3 text-muted">Aún no se han registrado entregas para esta orden de compra.</td></tr>`;
             } else {
                 histBody.innerHTML = historial.map(h => {
-                    const fechaFormateada = new Date(h.fecha_recepcion).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
+                    let fechaFormateada = '-';
+                    if (h.fecha_recepcion) {
+                        const raw = String(h.fecha_recepcion).replace('T', ' ').slice(0, 16);
+                        const parts = raw.split(' ');
+                        if (parts.length === 2) {
+                            const [yyyy, mm, dd] = parts[0].split('-');
+                            fechaFormateada = `${dd}/${mm}/${yyyy} ${parts[1]}`;
+                        } else {
+                            fechaFormateada = new Date(h.fecha_recepcion).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
+                        }
+                    }
                     const fotoBtn = h.sustento_url_presigned ? `
                         <a href="${h.sustento_url_presigned}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold" style="font-size:0.75rem;">
                             <i class="bi bi-image"></i> Ver Sustento
