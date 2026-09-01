@@ -2915,6 +2915,42 @@ db.query(
     (e) => { if (e) console.warn('CREATE detalle_salidas_inv:', e.message); else console.log('✅ Tabla detalle_salidas_inv verificada'); }
 );
 
+// ── Tabla de Recepciones de Órdenes de Compra (ERP Azkell) ───────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS recepciones_oc (
+        id              INT AUTO_INCREMENT PRIMARY KEY,
+        oc_id           VARCHAR(50)   NOT NULL,
+        fecha_recepcion DATETIME      NOT NULL,
+        usuario         VARCHAR(150)  NULL,
+        almacen         VARCHAR(100)  NULL DEFAULT 'ALM CENTRAL',
+        sustento_url    TEXT          NULL,
+        observacion     TEXT          NULL,
+        tipo_recepcion  ENUM('PARCIAL','TOTAL') NOT NULL DEFAULT 'TOTAL',
+        created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_rec_oc (oc_id),
+        INDEX idx_rec_fecha (fecha_recepcion)
+    )`,
+    (e) => { if (e) console.warn('CREATE recepciones_oc:', e.message); else console.log('✅ Tabla recepciones_oc verificada'); }
+);
+
+db.query(
+    `CREATE TABLE IF NOT EXISTS detalle_recepciones_oc (
+        id                INT AUTO_INCREMENT PRIMARY KEY,
+        recepcion_id      INT           NOT NULL,
+        oc_id             VARCHAR(50)   NOT NULL,
+        inventario_id     VARCHAR(20)   NULL,
+        descripcion       VARCHAR(400)  NULL,
+        cantidad_recibida DECIMAL(14,4) NOT NULL,
+        costo_unitario    DECIMAL(14,4) NOT NULL DEFAULT 0,
+        moneda            VARCHAR(10)   NOT NULL DEFAULT 'PEN',
+        almacen           VARCHAR(100)  NULL DEFAULT 'ALM CENTRAL',
+        INDEX idx_drec_rec (recepcion_id),
+        INDEX idx_drec_oc (oc_id),
+        INDEX idx_drec_item (inventario_id)
+    )`,
+    (e) => { if (e) console.warn('CREATE detalle_recepciones_oc:', e.message); else console.log('✅ Tabla detalle_recepciones_oc verificada'); }
+);
+
 // ── Reparar inventario_id NULL en detalle existentes ────────────────────
 // Actualiza filas cuyo inventario_id es NULL usando la descripción como clave
 db.query(
