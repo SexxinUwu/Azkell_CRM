@@ -804,10 +804,26 @@ router.delete('/marcas/:id', (req, res) => {
 // ALMACÉN — Entradas
 // ============================================================
 router.get('/entradas', (req, res) => {
-    let q = `SELECT e.*, GROUP_CONCAT(CONCAT(COALESCE(i.descripcion, d.descripcion),'|',d.cantidad,'|',d.costo_unitario,'|',d.moneda,'|',d.inventario_id) SEPARATOR ';;') AS items_raw
+    let q = `SELECT e.*, 
+             COALESCE(u.nombre, e.creado_por) AS creador_nombre,
+             COALESCE(p.numero_documento, '') AS proveedor_ruc,
+             COALESCE(p.telefono, '') AS proveedor_telefono,
+             COALESCE(p.email, '') AS proveedor_email,
+             GROUP_CONCAT(CONCAT(
+                 COALESCE(i.descripcion, d.descripcion, ''), '|',
+                 COALESCE(d.cantidad, 0), '|',
+                 COALESCE(d.costo_unitario, 0), '|',
+                 COALESCE(d.moneda, e.moneda, 'PEN'), '|',
+                 COALESCE(d.inventario_id, ''), '|',
+                 COALESCE(i.unidad_medida, 'UND'), '|',
+                 COALESCE(d.importe, 0), '|',
+                 COALESCE(i.codigo_articulo, '')
+             ) SEPARATOR ';;') AS items_raw
              FROM entradas_inv e
              LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
-             LEFT JOIN inventario i ON d.inventario_id = i.id`;
+             LEFT JOIN inventario i ON d.inventario_id = i.id
+             LEFT JOIN proveedores_inv p ON (e.proveedor_id = p.id OR (p.nombre IS NOT NULL AND e.proveedor_nombre = p.nombre) OR (p.razon_social IS NOT NULL AND e.proveedor_nombre = p.razon_social))
+             LEFT JOIN usuarios u ON (e.creado_por = u.correo OR e.creado_por = u.nombre OR e.creado_por = u.idUsuario)`;
     let params = [];
     if (req.query.ot_id) {
         q += ` WHERE e.ot_id = ?`;
@@ -819,8 +835,17 @@ router.get('/entradas', (req, res) => {
         const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
         const signedRows = await Promise.all(rows.map(async (r) => {
             r.items = r.items_raw ? r.items_raw.split(';;').map(s => {
-                const [desc, cant, cu, mon, invId] = s.split('|');
-                return { descripcion: desc, cantidad: parseFloat(cant), costo_unitario: parseFloat(cu), moneda: mon, inventario_id: invId };
+                const [desc, cant, cu, mon, invId, um, imp, codArt] = s.split('|');
+                return { 
+                    descripcion: desc || '', 
+                    cantidad: parseFloat(cant) || 0, 
+                    costo_unitario: parseFloat(cu) || 0, 
+                    moneda: mon || 'PEN', 
+                    inventario_id: invId || '',
+                    unidad_medida: um || 'UND',
+                    importe: parseFloat(imp) || ((parseFloat(cant) || 0) * (parseFloat(cu) || 0)),
+                    codigo_articulo: codArt || ''
+                };
             }) : [];
             delete r.items_raw;
             if (r.url_voucher) { const k = s3KeyFromUrl(r.url_voucher); if (k) r.url_voucher_presigned = await getPresignedUrl(k).catch(()=>r.url_voucher); }
