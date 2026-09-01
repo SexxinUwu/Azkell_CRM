@@ -139,6 +139,17 @@
                 badgeProgreso = `<span class="badge-rec-pendiente">PENDIENTE (0/${oc.total_pedido})</span>`;
             }
 
+            // Formato limpio de fecha y hora
+            let fechaFmt = oc.fecha || '-';
+            if (oc.fecha && String(oc.fecha).includes('T')) {
+                const raw = String(oc.fecha).replace('T', ' ').slice(0, 16);
+                const parts = raw.split(' ');
+                if (parts.length === 2) {
+                    const [yyyy, mm, dd] = parts[0].split('-');
+                    fechaFmt = `${dd}/${mm}/${yyyy} ${parts[1]}`;
+                }
+            }
+
             return `
             <tr>
                 <td>
@@ -152,13 +163,13 @@
                         </button>
                     `}
                 </td>
-                <td class="fw-bold text-dark">${oc.id}</td>
-                <td class="text-secondary fw-semibold">${oc.fecha || '-'}</td>
-                <td class="fw-bold text-dark text-truncate" style="max-width:230px;" title="${oc.proveedor}">${oc.proveedor}</td>
-                <td class="text-secondary fw-semibold text-truncate" style="max-width:160px;" title="${oc.solicitante}">${oc.solicitante}</td>
-                <td class="fw-black text-dark text-nowrap">${oc.moneda} ${(oc.importe || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
-                <td><span class="badge-oc-procesado">${oc.estado_oc}</span></td>
-                <td>${badgeProgreso}</td>
+                <td class="fw-bold text-dark text-nowrap">${oc.id}</td>
+                <td class="text-secondary fw-semibold text-nowrap">${fechaFmt}</td>
+                <td class="fw-bold text-dark" style="min-width:200px; line-height:1.35;">${oc.proveedor}</td>
+                <td class="text-secondary fw-semibold" style="min-width:160px; line-height:1.35;">${oc.solicitante}</td>
+                <td class="fw-black text-dark text-nowrap text-end">${oc.moneda} ${(oc.importe || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
+                <td class="text-center"><span class="badge-oc-procesado">${oc.estado_oc}</span></td>
+                <td class="text-center">${badgeProgreso}</td>
             </tr>
             `;
         }).join('');
