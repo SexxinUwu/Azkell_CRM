@@ -1192,9 +1192,12 @@ function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, deta
         u = 'Administrador';
     }
 
+    if (typeof d !== 'string') {
+        d = d ? (typeof d === 'object' && d.query ? 'Operación en Base de Datos' : String(d)) : '';
+    }
     if (a === 'ACCIÓN' || !a) a = 'MODIFICÓ';
     if (!d || d === '/' || d === '—' || d.trim() === '') {
-        d = `Operación de ${a.toLowerCase()} ejecutada en módulo ${m || 'Sistema'}`;
+        d = `Operación de ${String(a).toLowerCase()} ejecutada en módulo ${m || 'Sistema'}`;
     }
 
     db.query(
