@@ -354,47 +354,73 @@
         </div>
     </div>
 
-    <!-- Barra de Filtros y Búsqueda -->
+    <!-- Barra de Filtros, Fechas y Búsqueda -->
     <div class="card border-0 shadow-2xs rounded-4 p-3 mb-4 bg-white" style="border:1px solid var(--border,#e2e8f0)!important;">
-        <div class="row g-3 align-items-center">
-            <!-- Tabs por Estado -->
-            <div class="col-12 col-xl-7">
-                <div class="aprob-tabs-nav">
-                    <button class="aprob-tab-btn" data-tab="todos" onclick="window.filtrarPorTab('todos')">
-                        <i class="bi bi-collection"></i> Todos <span class="badge-pill" id="tab-badge-todos">25</span>
-                    </button>
-                    <button class="aprob-tab-btn active" data-tab="pendiente" onclick="window.filtrarPorTab('pendiente')">
-                        <i class="bi bi-hourglass-split text-warning"></i> Pendientes <span class="badge-pill" id="tab-badge-pendiente">4</span>
-                    </button>
-                    <button class="aprob-tab-btn" data-tab="urgente" onclick="window.filtrarPorTab('urgente')">
-                        <i class="bi bi-lightning-charge-fill text-danger"></i> Urgentes <span class="badge-pill" id="tab-badge-urgente">2</span>
-                    </button>
-                    <button class="aprob-tab-btn" data-tab="aprobado" onclick="window.filtrarPorTab('aprobado')">
-                        <i class="bi bi-check2-circle text-success"></i> Aprobadas <span class="badge-pill" id="tab-badge-aprobado">18</span>
-                    </button>
-                    <button class="aprob-tab-btn" data-tab="observado" onclick="window.filtrarPorTab('observado')">
-                        <i class="bi bi-chat-dots text-primary"></i> Observadas <span class="badge-pill" id="tab-badge-observado">2</span>
-                    </button>
-                    <button class="aprob-tab-btn" data-tab="rechazado" onclick="window.filtrarPorTab('rechazado')">
-                        <i class="bi bi-x-circle text-danger"></i> Rechazadas <span class="badge-pill" id="tab-badge-rechazado">1</span>
-                    </button>
+        <div class="row g-3 align-items-center mb-3 pb-3 border-bottom">
+            <!-- Selector de Rango de Fechas -->
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="flex-grow-1">
+                        <label class="form-label text-secondary fw-bold mb-1 d-flex align-items-center gap-1" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em;">
+                            <i class="bi bi-calendar-event text-primary"></i> FECHA DESDE
+                        </label>
+                        <input type="date" id="filtro-fecha-desde" class="form-control rounded-3 border bg-light py-1.5 px-2.5 fw-semibold" style="font-size:0.83rem;" onchange="window.aplicarFiltrosOC()">
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="form-label text-secondary fw-bold mb-1 d-flex align-items-center gap-1" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em;">
+                            <i class="bi bi-calendar-check text-primary"></i> FECHA HASTA
+                        </label>
+                        <input type="date" id="filtro-fecha-hasta" class="form-control rounded-3 border bg-light py-1.5 px-2.5 fw-semibold" style="font-size:0.83rem;" onchange="window.aplicarFiltrosOC()">
+                    </div>
                 </div>
             </div>
 
-            <!-- Buscador y Selectores -->
-            <div class="col-12 col-xl-5">
+            <!-- Buscador y Selector de Sede -->
+            <div class="col-12 col-md-6 col-xl-8">
+                <label class="form-label text-secondary fw-bold mb-1" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em;">
+                    Búsqueda Rápida & Filtros
+                </label>
                 <div class="d-flex gap-2">
                     <div class="position-relative flex-grow-1">
                         <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
-                        <input type="text" id="filtro-buscar-oc" class="form-control ps-5 py-2 rounded-3 border bg-light" placeholder="Buscar por N° OC, Proveedor, Solicitante o Placa..." style="font-size:0.83rem;" oninput="window.aplicarFiltrosOC()">
+                        <input type="text" id="filtro-buscar-oc" class="form-control ps-5 py-1.5 rounded-3 border bg-light" placeholder="Buscar por N° OC, Proveedor, Solicitante o Placa..." style="font-size:0.83rem;" oninput="window.aplicarFiltrosOC()">
                     </div>
-                    <select id="filtro-almacen-oc" class="form-select rounded-3 border bg-light py-2" style="font-size:0.83rem; width:150px;" onchange="window.aplicarFiltrosOC()">
+                    <select id="filtro-almacen-oc" class="form-select rounded-3 border bg-light py-1.5" style="font-size:0.83rem; width:160px;" onchange="window.aplicarFiltrosOC()">
                         <option value="">Todas las Sedes</option>
                         <option value="Lurín">Sede Lurín</option>
                         <option value="Callao">Sede Callao</option>
                         <option value="Arequipa">Sede Arequipa</option>
                     </select>
                 </div>
+            </div>
+        </div>
+
+        <!-- Fila de Tabs de Estados -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="aprob-tabs-nav">
+                <button class="aprob-tab-btn" data-tab="todos" onclick="window.filtrarPorTab('todos')">
+                    <i class="bi bi-collection"></i> Todos <span class="badge-pill" id="tab-badge-todos">0</span>
+                </button>
+                <button class="aprob-tab-btn active" data-tab="pendiente" onclick="window.filtrarPorTab('pendiente')">
+                    <i class="bi bi-hourglass-split text-warning"></i> Pendientes <span class="badge-pill" id="tab-badge-pendiente">0</span>
+                </button>
+                <button class="aprob-tab-btn" data-tab="urgente" onclick="window.filtrarPorTab('urgente')">
+                    <i class="bi bi-lightning-charge-fill text-danger"></i> Urgentes <span class="badge-pill" id="tab-badge-urgente">0</span>
+                </button>
+                <button class="aprob-tab-btn" data-tab="aprobado" onclick="window.filtrarPorTab('aprobado')">
+                    <i class="bi bi-check2-circle text-success"></i> Aprobadas <span class="badge-pill" id="tab-badge-aprobado">0</span>
+                </button>
+                <button class="aprob-tab-btn" data-tab="observado" onclick="window.filtrarPorTab('observado')">
+                    <i class="bi bi-chat-dots text-primary"></i> Observadas <span class="badge-pill" id="tab-badge-observado">0</span>
+                </button>
+                <button class="aprob-tab-btn" data-tab="rechazado" onclick="window.filtrarPorTab('rechazado')">
+                    <i class="bi bi-x-circle text-danger"></i> Rechazadas <span class="badge-pill" id="tab-badge-rechazado">0</span>
+                </button>
+            </div>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold" style="font-size:0.75rem;" onclick="window.limpiarFiltrosOC()">
+                    <i class="bi bi-arrow-counterclockwise"></i> Limpiar Filtros
+                </button>
             </div>
         </div>
     </div>

@@ -10,7 +10,7 @@
     const modoGuardado = localStorage.getItem('erp_gerencia_oc_vista');
     const modoInicial = modoGuardado || (isMobile ? 'cards' : 'table');
 
-    // Estado local del módulo
+    // Estado local del módulo (Inicia vacío para datos reales del ERP)
     window._gerenciaOC = window._gerenciaOC || {
         tabActivo: 'pendiente',
         modoVista: modoInicial,
@@ -19,374 +19,44 @@
         tipoAccionModal: null
     };
 
-    // Dataset inicial fiel a las órdenes operativas del ERP (Imagen 1)
-    const MOCK_ORDENES_COMPRA = [
-        {
-            id: '2026-00000374',
-            fecha: '31/03/2026',
-            usuario: 'CYNTHIA EVELYN',
-            proveedor: 'TELEMETRIA PERU E.I.R.L.',
-            ruc: '20601248951',
-            contacto: 'ventas@telemetriaperu.pe | 987-654-321',
-            almacen: 'Lurín',
-            solicitante: 'EVELYN CONDE',
-            destino: 'Unidad CFT-703',
-            prioridad: 'NORMAL',
-            estado: 'pendiente',
-            moneda: 'S/',
-            subtotal: 296.61,
-            igv: 53.39,
-            total: 350.00,
-            condicionPago: 'Crédito 15 Días',
-            justificacion: 'INSTALACION VARILLA COMBUSTIBLE CFT-703',
-            items: [
-                { codigo: 'TELE-VAR-01', descripcion: 'Instalación y calibración de varilla medidora de combustible para unidad CFT-703', cant: 1, um: 'SERV', pu: 350.00, total: 350.00 }
-            ],
-            historial: 'Registrado por CYNTHIA EVELYN el 31/03/2026. Pendiente de aprobación gerencial.'
-        },
-        {
-            id: '2026-00000565',
-            fecha: '08/06/2026',
-            usuario: 'STHEFANO',
-            proveedor: 'NEUMA PERU CONTRATISTAS GENERALES S.A.C.',
-            ruc: '20512894561',
-            contacto: 'pedidos@neumaperu.pe | 945-123-889',
-            almacen: 'Callao',
-            solicitante: 'SAUL ROSAS',
-            destino: 'Flota Transporte Pesado',
-            prioridad: 'ALTA',
-            estado: 'pendiente',
-            moneda: 'US$',
-            subtotal: 1029.00,
-            igv: 185.22,
-            total: 1214.22,
-            condicionPago: 'Crédito 30 Días',
-            justificacion: 'STOCK - REENCAUCHE DE LLANTAS CON FT',
-            items: [
-                { codigo: 'REC-LLAN-295', descripcion: 'Servicio de Reencauche de Llantas 295/80R22.5 con banda FT', cant: 6, um: 'SRV', pu: 202.37, total: 1214.22 }
-            ],
-            historial: 'Registrado por STHEFANO. Pendiente de visto bueno gerencial.'
-        },
-        {
-            id: '2026-00000621',
-            fecha: '26/06/2026',
-            usuario: 'JHONN HAGI',
-            proveedor: 'JOSE ALONSO SANCHEZ RIOJA',
-            ruc: '10458921034',
-            contacto: 'contacto@ferreteriasanchez.pe',
-            almacen: 'Lurín',
-            solicitante: 'SAUL ROSAS',
-            destino: 'Unidad CFR727',
-            prioridad: 'NORMAL',
-            estado: 'pendiente',
-            moneda: 'S/',
-            subtotal: 5.93,
-            igv: 1.07,
-            total: 7.00,
-            condicionPago: 'Contado Contraentrega',
-            justificacion: 'COMPRA DE ESCOBA PARA LA UNIDAD CFR727',
-            items: [
-                { codigo: 'ART-ESC-01', descripcion: 'Escoba de cerda dura para limpieza de tolva CFR727', cant: 1, um: 'UND', pu: 7.00, total: 7.00 }
-            ],
-            historial: 'Registrado por JHONN HAGI. Pendiente de aprobación.'
-        },
-        {
-            id: '2026-00000732',
-            fecha: '25/07/2026',
-            usuario: 'JOSMAURY AYAHIRI',
-            proveedor: 'VANGUARDIA AUTOMOTRIZ S.A.C.',
-            ruc: '20489921034',
-            contacto: 'ventas@vanguardiaauto.pe | 981-224-411',
-            almacen: 'Arequipa',
-            solicitante: 'MARCO ROSAS',
-            destino: 'Unidad CFR820 / CFR727',
-            prioridad: 'URGENTE',
-            estado: 'pendiente',
-            moneda: 'S/',
-            subtotal: 1545.76,
-            igv: 278.24,
-            total: 1824.00,
-            condicionPago: 'Crédito 15 Días',
-            justificacion: 'IMPLEMENTACION DE EJE CFR820/CFR727',
-            items: [
-                { codigo: 'EJE-IMP-HD', descripcion: 'Kit de accesorios y soportes de eje para unidad CFR820/CFR727', cant: 2, um: 'KIT', pu: 912.00, total: 1824.00 }
-            ],
-            historial: 'Registrado con prioridad por taller. Pendiente de aprobación.'
-        },
-        {
-            id: '2026-00000798',
-            fecha: '07/08/2026',
-            usuario: 'DANIEL EDWIN',
-            proveedor: 'SERVILLANTAS E INVERSIONES SAN JUAN S.A',
-            ruc: '20199485712',
-            contacto: 'ventas@servillantassanjuan.pe',
-            almacen: 'Lurín',
-            solicitante: 'ALMACEN',
-            destino: 'Stock Central Llantas',
-            prioridad: 'URGENTE',
-            estado: 'pendiente',
-            moneda: 'US$',
-            subtotal: 3050.85,
-            igv: 549.15,
-            total: 3600.00,
-            condicionPago: 'Crédito 30 Días',
-            justificacion: 'STOCK-COMPRA DE LLANTAS GOOD-YEAR',
-            items: [
-                { codigo: 'LLAN-GY-295', descripcion: 'Neumático 295/80R22.5 Goodyear Armor Max MSD', cant: 8, um: 'UND', pu: 450.00, total: 3600.00 }
-            ],
-            historial: 'Requerimiento de reposición de stock. Pendiente de aprobación.'
-        },
-        {
-            id: '2026-00000831',
-            fecha: '17/08/2026',
-            usuario: 'DANIEL EDWIN',
-            proveedor: 'SERVILLANTAS E INVERSIONES SAN JUAN S.A',
-            ruc: '20199485712',
-            contacto: 'ventas@servillantassanjuan.pe',
-            almacen: 'Lurín',
-            solicitante: 'AMADOR MERINO',
-            destino: 'Flota Cisternas',
-            prioridad: 'ALTA',
-            estado: 'pendiente',
-            moneda: 'US$',
-            subtotal: 1830.51,
-            igv: 329.49,
-            total: 2160.00,
-            condicionPago: 'Crédito 30 Días',
-            justificacion: 'COMPRA DE 06 LLANTAS 295/ DE LA COTIZACION DE 14 UNIDADES',
-            items: [
-                { codigo: 'LLAN-GY-295B', descripcion: 'Neumático 295/80R22.5 Dirección', cant: 6, um: 'UND', pu: 360.00, total: 2160.00 }
-            ],
-            historial: 'Pendiente de aprobación gerencial.'
-        },
-        {
-            id: '2026-00000841',
-            fecha: '20/08/2026',
-            usuario: 'DANIEL EDWIN',
-            proveedor: 'SERVILLANTAS E INVERSIONES SAN JUAN S.A',
-            ruc: '20199485712',
-            contacto: 'ventas@servillantassanjuan.pe',
-            almacen: 'Lurín',
-            solicitante: 'AMADOR MARINO',
-            destino: 'Flota Plataformas',
-            prioridad: 'ALTA',
-            estado: 'pendiente',
-            moneda: 'US$',
-            subtotal: 2440.68,
-            igv: 439.32,
-            total: 2880.00,
-            condicionPago: 'Crédito 30 Días',
-            justificacion: 'COMPRA DE 08 LLANTAS 295/ DE LA COTIZACION DE 14 UNIDADES',
-            items: [
-                { codigo: 'LLAN-GY-295T', descripcion: 'Neumático 295/80R22.5 Tracción', cant: 8, um: 'UND', pu: 360.00, total: 2880.00 }
-            ],
-            historial: 'Pendiente de aprobación gerencial.'
-        },
-        {
-            id: '2026-00000875',
-            fecha: '26/08/2026',
-            usuario: 'DANIEL EDWIN',
-            proveedor: 'COMERCIAL RC S.A.C.',
-            ruc: '20349811234',
-            contacto: 'ventas@comercialrc.pe',
-            almacen: 'Callao',
-            solicitante: 'SAUL ROSAS',
-            destino: 'Taller de Soldadura',
-            prioridad: 'NORMAL',
-            estado: 'pendiente',
-            moneda: 'US$',
-            subtotal: 308.61,
-            igv: 55.55,
-            total: 364.16,
-            condicionPago: 'Crédito 15 Días',
-            justificacion: 'COMPRA DE PRODUCTOS PL. LAC.',
-            items: [
-                { codigo: 'MET-PL-LAC', descripcion: 'Plancha LAC 3mm x 1200 x 2400 para refuerzos de tolva', cant: 2, um: 'PLN', pu: 182.08, total: 364.16 }
-            ],
-            historial: 'Pendiente de aprobación.'
-        },
-        {
-            id: '2026-00000877',
-            fecha: '26/08/2026',
-            usuario: 'DANIEL EDWIN',
-            proveedor: 'VANGUARDIA AUTOMOTRIZ S.A.C.',
-            ruc: '20489921034',
-            contacto: 'ventas@vanguardiaauto.pe',
-            almacen: 'Lurín',
-            solicitante: 'SAUL ROSAS',
-            destino: 'Flota Tractos',
-            prioridad: 'NORMAL',
-            estado: 'pendiente',
-            moneda: 'US$',
-            subtotal: 434.03,
-            igv: 78.09,
-            total: 512.12,
-            condicionPago: 'Crédito 30 Días',
-            justificacion: 'COMPRA DE 04 AROS',
-            items: [
-                { codigo: 'ARO-ALUM-225', descripcion: 'Aro de Aluminio 22.5 x 8.25 Heavy Duty', cant: 4, um: 'UND', pu: 128.03, total: 512.12 }
-            ],
-            historial: 'Pendiente de aprobación.'
-        },
-        {
-            id: '2026-00000895',
-            fecha: '31/08/2026',
-            usuario: 'DANIEL EDWIN',
-            proveedor: 'DIESEL AUTOPARTES DEL PERU S.R.L',
-            ruc: '20603412589',
-            contacto: 'atencion@dieselautopartes.pe',
-            almacen: 'Lurín',
-            solicitante: 'AMADOR MERINO',
-            destino: 'Unidad Scania R450',
-            prioridad: 'URGENTE',
-            estado: 'pendiente',
-            moneda: 'US$',
-            subtotal: 970.91,
-            igv: 174.76,
-            total: 1145.67,
-            condicionPago: 'Contado Contraentrega',
-            justificacion: 'REPARACION DE APS- .CAMBIO DE COMPRESOR , ELIMINACION DE FUGA DE ACEITE , ELIMINACION DE FUGA DE COMBUSTIBLE (PENDIENTE NIPLE DE SCANIA)',
-            items: [
-                { codigo: 'REP-APS-SCN', descripcion: 'Kit Reparación Válvula APS y cambio de compresor', cant: 1, um: 'SERV', pu: 1145.67, total: 1145.67 }
-            ],
-            historial: 'Requerimiento urgente de mantenimiento correctivo.'
-        },
-        {
-            id: '2026-00000896',
-            fecha: '31/08/2026',
-            usuario: 'DANIEL EDWIN',
-            proveedor: 'DIESEL AUTOPARTES DEL PERU S.R.L',
-            ruc: '20603412589',
-            contacto: 'atencion@dieselautopartes.pe',
-            almacen: 'Lurín',
-            solicitante: 'AMADOR MERINO',
-            destino: 'Unidad BES829',
-            prioridad: 'NORMAL',
-            estado: 'pendiente',
-            moneda: 'US$',
-            subtotal: 84.75,
-            igv: 15.25,
-            total: 100.00,
-            condicionPago: 'Contado',
-            justificacion: 'UNIDAD BES829',
-            items: [
-                { codigo: 'REP-MENOR-BES', descripcion: 'Repuestos menores y abrazaderas para unidad BES829', cant: 1, um: 'GLB', pu: 100.00, total: 100.00 }
-            ],
-            historial: 'Pendiente de aprobación.'
-        },
-        {
-            id: '2026-00000897',
-            fecha: '31/08/2026',
-            usuario: 'DANIEL EDWIN',
-            proveedor: 'GRUPO QUIÑONES',
-            ruc: '20100142981',
-            contacto: 'ventas@grupoquinones.pe',
-            almacen: 'Lurín',
-            solicitante: 'AMADOR MERINO',
-            destino: 'Almacén Central',
-            prioridad: 'NORMAL',
-            estado: 'pendiente',
-            moneda: 'S/',
-            subtotal: 733.90,
-            igv: 132.10,
-            total: 866.00,
-            condicionPago: 'Crédito 15 Días',
-            justificacion: 'COMPRA DE REPUESTOS',
-            items: [
-                { codigo: 'REP-VAR-QUIN', descripcion: 'Lote de repuestos y filtros varios según requerimiento de taller', cant: 1, um: 'GLB', pu: 866.00, total: 866.00 }
-            ],
-            historial: 'Pendiente de aprobación.'
-        },
-        {
-            id: '2026-00000138',
-            fecha: '26/08/2026',
-            usuario: 'ALEJANDRO ZEVALLOS',
-            proveedor: 'LUBRICANTES Y COMBUSTIBLES DEL SUR S.A.C.',
-            ruc: '20601248951',
-            contacto: 'gerencia@lubrisur.pe',
-            almacen: 'Lurín',
-            solicitante: 'JEFE DE OPERACIONES',
-            destino: 'Abastecimiento Taller',
-            prioridad: 'NORMAL',
-            estado: 'aprobado',
-            moneda: 'S/',
-            subtotal: 5762.71,
-            igv: 1037.29,
-            total: 6800.00,
-            condicionPago: 'Crédito 30 Días',
-            justificacion: 'ABASTECIMIENTO DE GRASA Y REFRIGERANTE PARA TALLER',
-            items: [
-                { codigo: 'LUB-GRAS-EP2', descripcion: 'Grasa Litio Compleja EP2 para Chasis (Tambor 180 Kg)', cant: 1, um: 'TBR', pu: 3200.00, total: 3200.00 },
-                { codigo: 'REF-ORG-5050', descripcion: 'Refrigerante Fleetguard 50/50 (Cilindro 55 Gal)', cant: 2, um: 'CIL', pu: 1800.00, total: 3600.00 }
-            ],
-            historial: 'Aprobado por Dirección General el 26/08/2026.'
-        },
-        {
-            id: '2026-00000137',
-            fecha: '25/08/2026',
-            usuario: 'ALEJANDRO ZEVALLOS',
-            proveedor: 'TOTAL ENERGIES PERÚ S.A.C.',
-            ruc: '20349811234',
-            contacto: 'atencion@totalenergies.pe',
-            almacen: 'Callao',
-            solicitante: 'ALMACEN AUXILIAR CALLAO',
-            destino: 'Stock Cajas Eaton',
-            prioridad: 'BAJA',
-            estado: 'rechazado',
-            moneda: 'S/',
-            subtotal: 3559.32,
-            igv: 640.68,
-            total: 4200.00,
-            condicionPago: 'Contado',
-            justificacion: 'STOCK DE VALVOLINA PARA CAJAS EATON',
-            items: [
-                { codigo: 'LUB-TOT-80W90', descripcion: 'Aceite Transmisión Total Axle 7 80W90', cant: 10, um: 'BAL', pu: 420.00, total: 4200.00 }
-            ],
-            historial: 'Rechazado: Hay existencia disponible en Lurín para transferencia.'
-        },
-        {
-            id: '2026-00000136',
-            fecha: '24/08/2026',
-            usuario: 'CARLOS MENDOZA',
-            proveedor: 'CUMMINS PERÚ S.A.',
-            ruc: '20100142981',
-            contacto: 'repuestos@cummins.pe',
-            almacen: 'Lurín',
-            solicitante: 'JEFE DE MANTENIMIENTO',
-            destino: 'Unidad D3R-780',
-            prioridad: 'ALTA',
-            estado: 'observado',
-            moneda: 'S/',
-            subtotal: 7330.51,
-            igv: 1319.49,
-            total: 8650.00,
-            condicionPago: 'Crédito 30 Días',
-            justificacion: 'REEMPLAZO PREVENTIVO DE TURBOCARGADOR POR JUEGO AXIAL',
-            items: [
-                { codigo: 'TURB-HOLSET', descripcion: 'Turbocompresor Holset HE300VG Genuino Cummins', cant: 1, um: 'UND', pu: 8650.00, total: 8650.00 }
-            ],
-            historial: 'Observado: Solicitar segunda cotización comparativa antes de autorizar.'
-        }
-    ];
+    // Formateador de fechas a formato YYYY-MM-DD para los inputs
+    function obtenerFechaHoyISO() {
+        const hoy = new Date();
+        const yyyy = hoy.getFullYear();
+        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoy.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
 
-    // Inicialización del dataset
+    // Inicialización del dataset (Inicia en lista vacía)
     function inicializarDataset() {
         try {
-            const guardado = sessionStorage.getItem('erp_gerencia_oc_mock_v2');
+            const guardado = sessionStorage.getItem('erp_gerencia_oc_data');
             if (guardado) {
                 window._gerenciaOC.ordenes = JSON.parse(guardado);
             } else {
-                window._gerenciaOC.ordenes = JSON.parse(JSON.stringify(MOCK_ORDENES_COMPRA));
-                sessionStorage.setItem('erp_gerencia_oc_mock_v2', JSON.stringify(window._gerenciaOC.ordenes));
+                window._gerenciaOC.ordenes = [];
             }
         } catch (e) {
-            window._gerenciaOC.ordenes = JSON.parse(JSON.stringify(MOCK_ORDENES_COMPRA));
+            window._gerenciaOC.ordenes = [];
+        }
+
+        // Establecer fecha de hoy por defecto en los inputs si están vacíos
+        const inputDesde = document.getElementById('filtro-fecha-desde');
+        const inputHasta = document.getElementById('filtro-fecha-hasta');
+        const fechaHoy = obtenerFechaHoyISO();
+
+        if (inputDesde && !inputDesde.value) {
+            inputDesde.value = fechaHoy;
+        }
+        if (inputHasta && !inputHasta.value) {
+            inputHasta.value = fechaHoy;
         }
     }
 
     function guardarEstadoDataset() {
         try {
-            sessionStorage.setItem('erp_gerencia_oc_mock_v2', JSON.stringify(window._gerenciaOC.ordenes));
+            sessionStorage.setItem('erp_gerencia_oc_data', JSON.stringify(window._gerenciaOC.ordenes));
         } catch(e) {}
     }
 
@@ -400,7 +70,7 @@
 
     // Actualizar números de KPIs
     function actualizarKpisYBadges() {
-        const ordenes = window._gerenciaOC.ordenes;
+        const ordenes = window._gerenciaOC.ordenes || [];
         
         const pend = ordenes.filter(o => o.estado === 'pendiente');
         const aprob = ordenes.filter(o => o.estado === 'aprobado');
@@ -408,8 +78,7 @@
         const rech = ordenes.filter(o => o.estado === 'rechazado');
         const urg = ordenes.filter(o => o.prioridad === 'URGENTE' && o.estado === 'pendiente');
 
-        // Sumar montos diferenciando o consolidando
-        const sumMontoSoles = (arr) => arr.reduce((acc, cur) => acc + (cur.moneda === 'S/' ? cur.total : cur.total * 3.75), 0);
+        const sumMontoSoles = (arr) => arr.reduce((acc, cur) => acc + (cur.moneda === 'S/' ? (cur.total || 0) : (cur.total || 0) * 3.75), 0);
 
         // Actualizar contadores Bento
         const elPend = document.getElementById('kpi-count-pendientes');
@@ -485,13 +154,29 @@
         }
     };
 
-    // Aplicar filtros de búsqueda y renderizar lista
+    // Función auxiliar para parsear fechas variadas a formato ISO (YYYY-MM-DD)
+    function normalizarFechaAISO(strFecha) {
+        if (!strFecha) return null;
+        if (strFecha.includes('/')) {
+            const partes = strFecha.split(' ')[0].split('/');
+            if (partes.length === 3) {
+                return `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+            }
+        }
+        return strFecha.split('T')[0];
+    }
+
+    // Aplicar filtros de búsqueda, fechas y renderizar lista
     window.aplicarFiltrosOC = function() {
         const tab = window._gerenciaOC.tabActivo || 'pendiente';
         const txtBuscar = (document.getElementById('filtro-buscar-oc')?.value || '').toLowerCase().trim();
         const selAlmacen = (document.getElementById('filtro-almacen-oc')?.value || '').toLowerCase();
+        const fDesde = document.getElementById('filtro-fecha-desde')?.value || '';
+        const fHasta = document.getElementById('filtro-fecha-hasta')?.value || '';
 
-        let filtradas = window._gerenciaOC.ordenes.filter(item => {
+        const ordenes = window._gerenciaOC.ordenes || [];
+
+        let filtradas = ordenes.filter(item => {
             // Filtro por tab
             if (tab === 'pendiente' && item.estado !== 'pendiente') return false;
             if (tab === 'urgente' && (item.prioridad !== 'URGENTE' || item.estado !== 'pendiente')) return false;
@@ -499,19 +184,26 @@
             if (tab === 'observado' && item.estado !== 'observado') return false;
             if (tab === 'rechazado' && item.estado !== 'rechazado') return false;
 
+            // Filtro por rango de fechas
+            const fechaItemISO = normalizarFechaAISO(item.fecha);
+            if (fechaItemISO) {
+                if (fDesde && fechaItemISO < fDesde) return false;
+                if (fHasta && fechaItemISO > fHasta) return false;
+            }
+
             // Filtro por almacén
-            if (selAlmacen && !item.almacen.toLowerCase().includes(selAlmacen)) return false;
+            if (selAlmacen && item.almacen && !item.almacen.toLowerCase().includes(selAlmacen)) return false;
 
             // Filtro por texto
             if (txtBuscar) {
                 const matchTexto = 
-                    item.id.toLowerCase().includes(txtBuscar) ||
-                    item.proveedor.toLowerCase().includes(txtBuscar) ||
+                    (item.id && item.id.toLowerCase().includes(txtBuscar)) ||
+                    (item.proveedor && item.proveedor.toLowerCase().includes(txtBuscar)) ||
                     (item.usuario && item.usuario.toLowerCase().includes(txtBuscar)) ||
-                    item.ruc.toLowerCase().includes(txtBuscar) ||
-                    item.solicitante.toLowerCase().includes(txtBuscar) ||
-                    item.destino.toLowerCase().includes(txtBuscar) ||
-                    item.justificacion.toLowerCase().includes(txtBuscar);
+                    (item.ruc && item.ruc.toLowerCase().includes(txtBuscar)) ||
+                    (item.solicitante && item.solicitante.toLowerCase().includes(txtBuscar)) ||
+                    (item.destino && item.destino.toLowerCase().includes(txtBuscar)) ||
+                    (item.justificacion && item.justificacion.toLowerCase().includes(txtBuscar));
                 if (!matchTexto) return false;
             }
 
@@ -579,7 +271,7 @@
                         <div class="text-end">
                             <div class="text-secondary fw-bold" style="font-size:0.68rem; text-transform:uppercase;">IMPORTE</div>
                             <div class="fw-black text-dark" style="font-size:1.15rem; letter-spacing:-0.02em;">
-                                ${oc.moneda} ${oc.total.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                ${oc.moneda || 'S/'} ${(oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                             </div>
                         </div>
                     </div>
@@ -588,26 +280,26 @@
                     <div class="d-flex align-items-center justify-content-between text-muted mb-2 pb-2 border-bottom" style="font-size:0.75rem;">
                         <span><i class="bi bi-calendar3"></i> ${oc.fecha}</span>
                         <span><i class="bi bi-person-badge"></i> ${oc.usuario || 'SISTEMA'}</span>
-                        <span class="badge bg-light text-dark border">Sede ${oc.almacen}</span>
+                        <span class="badge bg-light text-dark border">Sede ${oc.almacen || 'Central'}</span>
                     </div>
 
                     <!-- Proveedor & Solicitante -->
                     <div class="mb-2">
                         <div class="text-secondary fw-bold" style="font-size:0.68rem; text-transform:uppercase;">Proveedor</div>
-                        <div class="fw-bold text-dark text-truncate" style="font-size:0.86rem;" title="${oc.proveedor}">${oc.proveedor}</div>
+                        <div class="fw-bold text-dark text-truncate" style="font-size:0.86rem;" title="${oc.proveedor || ''}">${oc.proveedor || 'Sin Proveedor'}</div>
                     </div>
 
                     <div class="mb-2">
                         <div class="text-secondary fw-bold" style="font-size:0.68rem; text-transform:uppercase;">Solicitante / Destino</div>
-                        <div class="text-dark fw-semibold text-truncate" style="font-size:0.82rem;">${oc.solicitante}</div>
-                        <div class="text-muted text-truncate" style="font-size:0.75rem;">${oc.destino}</div>
+                        <div class="text-dark fw-semibold text-truncate" style="font-size:0.82rem;">${oc.solicitante || 'No especificado'}</div>
+                        <div class="text-muted text-truncate" style="font-size:0.75rem;">${oc.destino || ''}</div>
                     </div>
 
                     <!-- Motivo / Justificación -->
                     <div class="p-2 rounded-2 bg-light border mb-3" style="font-size:0.78rem;">
                         <div class="text-secondary fw-bold text-uppercase" style="font-size:0.68rem;"><i class="bi bi-card-text"></i> Motivo:</div>
-                        <div class="text-dark fw-medium text-truncate-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${oc.justificacion}">
-                            ${oc.justificacion}
+                        <div class="text-dark fw-medium text-truncate-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${oc.justificacion || ''}">
+                            ${oc.justificacion || 'Sin motivo detallado'}
                         </div>
                     </div>
                 </div>
@@ -669,7 +361,7 @@
 
             <!-- Columna FECHA -->
             <td class="text-nowrap fw-semibold text-secondary" style="font-size:0.82rem;">
-                ${oc.fecha}
+                ${oc.fecha || ''}
             </td>
 
             <!-- Columna USUARIO -->
@@ -686,25 +378,25 @@
 
             <!-- Columna MOTIVO / JUSTIFICACIÓN -->
             <td>
-                <div class="text-dark fw-medium text-truncate" style="max-width:320px; font-size:0.83rem;" title="${oc.justificacion}">
-                    ${oc.justificacion}
+                <div class="text-dark fw-medium text-truncate" style="max-width:320px; font-size:0.83rem;" title="${oc.justificacion || ''}">
+                    ${oc.justificacion || 'Sin motivo'}
                 </div>
             </td>
 
             <!-- Columna SOLICITANTE -->
-            <td class="fw-semibold text-secondary text-truncate" style="max-width:160px; font-size:0.82rem;" title="${oc.solicitante}">
-                ${oc.solicitante}
+            <td class="fw-semibold text-secondary text-truncate" style="max-width:160px; font-size:0.82rem;" title="${oc.solicitante || ''}">
+                ${oc.solicitante || 'No especificado'}
             </td>
 
             <!-- Columna PROVEEDOR -->
-            <td class="fw-bold text-dark text-truncate" style="max-width:220px; font-size:0.83rem;" title="${oc.proveedor}">
-                ${oc.proveedor}
+            <td class="fw-bold text-dark text-truncate" style="max-width:220px; font-size:0.83rem;" title="${oc.proveedor || ''}">
+                ${oc.proveedor || 'Sin Proveedor'}
             </td>
 
             <!-- Columna IMPORTE -->
             <td class="text-end text-nowrap">
                 <span class="fw-black text-dark" style="font-size:0.92rem; letter-spacing:-0.01em;">
-                    ${oc.moneda} ${oc.total.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                    ${oc.moneda || 'S/'} ${(oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                 </span>
             </td>
         </tr>
@@ -719,49 +411,50 @@
 
         // Inyectar datos en modal
         document.getElementById('det-codigo-oc').innerText = oc.id;
-        document.getElementById('det-fecha-emision').innerText = 'Emitido el ' + oc.fecha;
-        document.getElementById('det-proveedor-nombre').innerText = oc.proveedor;
-        document.getElementById('det-proveedor-ruc').innerText = 'RUC: ' + oc.ruc;
+        document.getElementById('det-fecha-emision').innerText = 'Emitido el ' + (oc.fecha || '');
+        document.getElementById('det-proveedor-nombre').innerText = oc.proveedor || 'No especificado';
+        document.getElementById('det-proveedor-ruc').innerText = 'RUC: ' + (oc.ruc || '-');
         document.getElementById('det-proveedor-contacto').innerText = 'Contacto: ' + (oc.contacto || 'No especificado');
-        document.getElementById('det-destino-almacen').innerText = 'Sede / Almacén: ' + oc.almacen;
-        document.getElementById('det-solicitante').innerText = 'Solicitado por: ' + oc.solicitante;
-        document.getElementById('det-unidad-destino').innerText = 'Destino: ' + oc.destino;
-        document.getElementById('det-justificacion').innerText = oc.justificacion;
+        document.getElementById('det-destino-almacen').innerText = 'Sede / Almacén: ' + (oc.almacen || '-');
+        document.getElementById('det-solicitante').innerText = 'Solicitado por: ' + (oc.solicitante || '-');
+        document.getElementById('det-unidad-destino').innerText = 'Destino: ' + (oc.destino || '-');
+        document.getElementById('det-justificacion').innerText = oc.justificacion || '-';
 
-        document.getElementById('det-monto-subtotal').innerText = oc.moneda + ' ' + oc.subtotal.toLocaleString('es-PE', { minimumFractionDigits: 2 });
-        document.getElementById('det-monto-igv').innerText = oc.moneda + ' ' + oc.igv.toLocaleString('es-PE', { minimumFractionDigits: 2 });
-        document.getElementById('det-condicion-pago').innerText = oc.condicionPago;
-        document.getElementById('det-monto-total').innerText = oc.moneda + ' ' + oc.total.toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        document.getElementById('det-monto-subtotal').innerText = (oc.moneda || 'S/') + ' ' + (oc.subtotal || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        document.getElementById('det-monto-igv').innerText = (oc.moneda || 'S/') + ' ' + (oc.igv || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        document.getElementById('det-condicion-pago').innerText = oc.condicionPago || 'Contado';
+        document.getElementById('det-monto-total').innerText = (oc.moneda || 'S/') + ' ' + (oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 });
 
         // Badges
         const bPrio = document.getElementById('det-badge-prioridad');
-        bPrio.innerText = oc.prioridad;
+        bPrio.innerText = oc.prioridad || 'NORMAL';
         bPrio.className = oc.prioridad === 'URGENTE' ? 'badge bg-danger text-white rounded-pill fw-bold' : 
                           oc.prioridad === 'ALTA' ? 'badge bg-warning text-dark rounded-pill fw-bold' : 
                           'badge bg-secondary text-white rounded-pill fw-bold';
 
         const bEst = document.getElementById('det-badge-estado');
-        bEst.innerText = oc.estado.toUpperCase();
+        bEst.innerText = (oc.estado || 'PENDIENTE').toUpperCase();
         bEst.className = oc.estado === 'pendiente' ? 'badge bg-warning text-dark rounded-pill fw-bold' : 
                          oc.estado === 'aprobado' ? 'badge bg-success text-white rounded-pill fw-bold' : 
                          oc.estado === 'observado' ? 'badge bg-primary text-white rounded-pill fw-bold' : 
                          'badge bg-danger text-white rounded-pill fw-bold';
 
         // Historial
-        document.getElementById('det-historial-content').innerText = oc.historial;
+        document.getElementById('det-historial-content').innerText = oc.historial || 'Sin historial registrado.';
 
         // Items tabla
-        document.getElementById('det-items-count').innerText = oc.items.length + ' ítem' + (oc.items.length > 1 ? 's' : '');
+        const items = oc.items || [];
+        document.getElementById('det-items-count').innerText = items.length + ' ítem' + (items.length > 1 ? 's' : '');
         const cuerpoItems = document.getElementById('det-tabla-items-body');
         if (cuerpoItems) {
-            cuerpoItems.innerHTML = oc.items.map(it => `
+            cuerpoItems.innerHTML = items.map(it => `
                 <tr>
                     <td class="fw-bold text-dark">${it.codigo}</td>
                     <td>${it.descripcion}</td>
                     <td class="text-center fw-bold">${it.cant}</td>
                     <td class="text-center text-muted">${it.um}</td>
-                    <td class="text-end">${oc.moneda} ${it.pu.toFixed(2)}</td>
-                    <td class="text-end fw-bold text-dark">${oc.moneda} ${it.total.toFixed(2)}</td>
+                    <td class="text-end">${oc.moneda || 'S/'} ${(it.pu || 0).toFixed(2)}</td>
+                    <td class="text-end fw-bold text-dark">${oc.moneda || 'S/'} ${(it.total || 0).toFixed(2)}</td>
                 </tr>
             `).join('');
         }
@@ -802,13 +495,13 @@
         const btnConfirmar = document.getElementById('modal-accion-btn-confirmar');
 
         if (txtComentario) txtComentario.value = '';
-        subtitulo.innerText = `Orden de Compra: ${oc.id} • ${oc.proveedor} (${oc.moneda} ${oc.total.toFixed(2)})`;
+        subtitulo.innerText = `Orden de Compra: ${oc.id} • ${oc.proveedor} (${oc.moneda || 'S/'} ${(oc.total || 0).toFixed(2)})`;
 
         if (tipo === 'aprobar') {
             iconWrap.style.background = '#dcfce7';
             icon.className = 'bi bi-check-circle-fill text-success';
             titulo.innerText = 'Autorizar Orden de Compra';
-            mensaje.innerText = `¿Confirma la aprobación ejecutiva de la orden por un importe de ${oc.moneda} ${oc.total.toLocaleString('es-PE', { minimumFractionDigits: 2 })}? El departamento de compras procederá con la emisión y despacho.`;
+            mensaje.innerText = `¿Confirma la aprobación ejecutiva de la orden por un importe de ${oc.moneda || 'S/'} ${(oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}? El departamento de compras procederá con la emisión y despacho.`;
             labelComentario.innerText = 'Instrucciones / Notas de Aprobación (Opcional):';
             btnConfirmar.className = 'btn btn-success rounded-3 px-4 fw-bold';
             btnConfirmar.innerText = 'Aprobar Orden';
@@ -916,14 +609,19 @@
         if (inp) inp.value = '';
         const sel = document.getElementById('filtro-almacen-oc');
         if (sel) sel.value = '';
-        window.filtrarPorTab('todos');
+        const fechaHoy = obtenerFechaHoyISO();
+        const fDesde = document.getElementById('filtro-fecha-desde');
+        const fHasta = document.getElementById('filtro-fecha-hasta');
+        if (fDesde) fDesde.value = fechaHoy;
+        if (fHasta) fHasta.value = fechaHoy;
+        window.filtrarPorTab('pendiente');
     };
 
-    // Recargar dataset inicial
+    // Recargar dataset
     window.recargarAprobacionesOC = function() {
-        sessionStorage.removeItem('erp_gerencia_oc_mock_v2');
+        sessionStorage.removeItem('erp_gerencia_oc_data');
         window.renderizarModuloGerenciaOC();
-        mostrarToastGerencia('🔄 Bandeja Actualizada', 'Se sincronizaron las órdenes de compra pendientes.');
+        mostrarToastGerencia('🔄 Bandeja Sincronizada', 'Se consultaron las órdenes del ERP.');
     };
 
     // Exportar acta
