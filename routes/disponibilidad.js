@@ -9,7 +9,7 @@ module.exports = function (db, logAudit) {
     function auditar(req, accion, detalle) {
         if (typeof logAudit === 'function') {
             const user = req.user?.correo || req.user?.nombre || req.headers['x-user-email'] || req.body?.creado_por || req.body?.actualizado_por || 'Sistema';
-            logAudit(user, 'Disponibilidad Flota', accion, detalle, req.db);
+            logAudit(user, 'Disponibilidad Flota', accion, String(detalle || ''));
         }
     }
     // Asegurar tabla una sola vez al cargar el módulo
