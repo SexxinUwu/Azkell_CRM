@@ -12,6 +12,10 @@
         almacenesDisponibles: ['Principal']
     };
 
+    function _escHtml(str) {
+        return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
     window.init_recepcion_compras = function() {
         // Cargar almacenes dinámicos desde la BD
         fetch('/api/almacen/almacenes-lista')
@@ -144,24 +148,28 @@
 
             return `
             <tr>
-                <td>
+                <td class="text-nowrap" style="width:130px;">
                     ${oc.estado_recepcion === 'COMPLETO' ? `
                         <button class="btn-rec-action btn-ver-historial" onclick="window.abrirModalRecepcion('${oc.id}', true)">
-                            <i class="bi bi-eye-fill"></i> VER DETALLE
+                            <i class="bi bi-eye-fill"></i> Ver Detalle
                         </button>
                     ` : `
                         <button class="btn-rec-action" onclick="window.abrirModalRecepcion('${oc.id}', false)">
-                            RECEPCIONAR
+                            <i class="bi bi-box-arrow-in-down"></i> Recepcionar
                         </button>
                     `}
                 </td>
-                <td class="fw-bold text-dark text-nowrap">${oc.id}</td>
+                <td class="fw-bold text-dark text-nowrap font-monospace" style="font-size:0.76rem;">${oc.id}</td>
                 <td class="text-secondary fw-semibold text-nowrap">${fechaFmt}</td>
-                <td class="fw-bold text-dark" style="min-width:200px; line-height:1.35;">${oc.proveedor}</td>
-                <td class="text-secondary fw-semibold" style="min-width:160px; line-height:1.35;">${oc.solicitante}</td>
-                <td class="fw-black text-dark text-nowrap text-end">${oc.moneda} ${(oc.importe || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
-                <td class="text-center"><span class="badge-oc-procesado">${oc.estado_oc}</span></td>
-                <td class="text-center">${badgeProgreso}</td>
+                <td class="fw-bold text-dark text-nowrap">
+                    <div class="text-truncate" style="max-width: 320px;" title="${_escHtml(oc.proveedor)}">${oc.proveedor}</div>
+                </td>
+                <td class="text-secondary fw-semibold text-nowrap">
+                    <div class="text-truncate" style="max-width: 180px;" title="${_escHtml(oc.solicitante)}">${oc.solicitante}</div>
+                </td>
+                <td class="fw-bold text-dark text-nowrap text-end">${oc.moneda} ${(oc.importe || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
+                <td class="text-center text-nowrap"><span class="badge-oc-procesado">${oc.estado_oc}</span></td>
+                <td class="text-center text-nowrap">${badgeProgreso}</td>
             </tr>
             `;
         }).join('');
