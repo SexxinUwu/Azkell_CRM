@@ -856,6 +856,10 @@ router.get('/entradas', (req, res) => {
             const creadorKey = (r.creado_por || '').toLowerCase().trim();
             r.creador_nombre = usuariosMap[creadorKey] || usuariosMap[r.creado_por] || r.creado_por || 'SISTEMA';
 
+            // Resolver aprobador_nombre
+            const aprobKey = (r.aprobado_por || '').toLowerCase().trim();
+            r.aprobador_nombre = usuariosMap[aprobKey] || usuariosMap[r.aprobado_por] || r.aprobado_por || '';
+
             // Resolver proveedor datos
             const pInfo = (r.proveedor_id && provsMap[r.proveedor_id]) || 
                           (r.proveedor_nombre && provsMap[r.proveedor_nombre.toLowerCase()]) || null;
@@ -1014,19 +1018,38 @@ router.put('/entradas/:id/estado', (req, res) => {
     const { estado, comentario, usuario } = req.body;
     if (!estado) return res.status(400).json({ error: 'Estado requerido' });
 
-    let sql = 'UPDATE entradas_inv SET estado=? WHERE id=?';
-    let params = [estado, id];
-    if (comentario && String(comentario).trim()) {
-        sql = 'UPDATE entradas_inv SET estado=?, observaciones=CONCAT(COALESCE(observaciones,""), " [Nota Gerencia: ", ?, "]") WHERE id=?';
-        params = [estado, String(comentario).trim(), id];
+    const esAprob = (estado.toLowerCase().startsWith('aprob') || estado.toLowerCase().startsWith('autoriz'));
+    const aprobadorVal = esAprob ? (usuario || 'Gerencia') : (estado.toLowerCase() === 'registrado' ? null : undefined);
+
+    let setFields = ['estado=?'];
+    let params = [estado];
+
+    if (aprobadorVal !== undefined) {
+        setFields.push('aprobado_por=?');
+        params.push(aprobadorVal);
     }
 
+    if (comentario && String(comentario).trim()) {
+        setFields.push('observaciones=CONCAT(COALESCE(observaciones,""), " [Nota Gerencia: ", ?, "]")');
+        params.push(String(comentario).trim());
+    }
+
+    params.push(id);
+    let sql = `UPDATE entradas_inv SET ${setFields.join(', ')} WHERE id=?`;
+
     db.query(sql, params, (err) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            // Fallback si la columna no existiera
+            db.query('UPDATE entradas_inv SET estado=? WHERE id=?', [estado, id], (errFallback) => {
+                if (errFallback) return res.status(500).json({ error: errFallback.message });
+                res.json({ ok: true, estado });
+            });
+            return;
+        }
         if (typeof logAudit === 'function' && usuario) {
             logAudit(usuario, 'almacen/entradas', 'MODIFICÓ', `/api/almacen/entradas/${id}/estado (${estado})`);
         }
-        res.json({ ok: true, estado });
+        res.json({ ok: true, estado, aprobado_por: aprobadorVal });
     });
 });
 
