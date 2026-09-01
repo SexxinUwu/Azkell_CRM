@@ -17,6 +17,12 @@
     }
 
     window.init_recepcion_compras = function() {
+        window._recCompras.tabActivo = 'actual';
+        const btnAct = document.getElementById('tab-rec-actual');
+        const btnHist = document.getElementById('tab-rec-historial');
+        btnAct?.classList.add('active');
+        btnHist?.classList.remove('active');
+
         // Cargar almacenes dinámicos desde la BD
         fetch('/api/almacen/almacenes-lista')
             .then(r => r.ok ? r.json() : [])
