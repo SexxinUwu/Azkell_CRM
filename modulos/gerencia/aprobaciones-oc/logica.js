@@ -1,123 +1,312 @@
 // =========================================================================
-// MÓDULO: GERENCIA - APROBACIÓN DE ÓRDENES DE COMPRA
+// MÓDULO: GERENCIA - APROBACIÓN DE ÓRDENES DE COMPRA (ERP AZKELL)
 // =========================================================================
 
 (function() {
     'use strict';
 
+    // Detección inicial: en móvil inicia en 'cards', en escritorio en 'table'
+    const isMobile = window.innerWidth <= 768;
+    const modoGuardado = localStorage.getItem('erp_gerencia_oc_vista');
+    const modoInicial = modoGuardado || (isMobile ? 'cards' : 'table');
+
     // Estado local del módulo
     window._gerenciaOC = window._gerenciaOC || {
         tabActivo: 'pendiente',
-        modoVista: 'cards',
+        modoVista: modoInicial,
         ordenes: [],
         ordenSeleccionada: null,
         tipoAccionModal: null
     };
 
-    // Dataset mockup inicial con datos de negocio realistas del ERP
+    // Dataset inicial fiel a las órdenes operativas del ERP (Imagen 1)
     const MOCK_ORDENES_COMPRA = [
         {
-            id: 'OC-2026-0142',
-            fecha: '2026-08-28 10:30 AM',
-            proveedor: 'FERREYROS S.A.',
-            ruc: '20100035123',
-            contacto: 'ventas@ferreyros.com.pe | 987-654-321',
+            id: '2026-00000374',
+            fecha: '31/03/2026',
+            usuario: 'CYNTHIA EVELYN',
+            proveedor: 'TELEMETRIA PERU E.I.R.L.',
+            ruc: '20601248951',
+            contacto: 'ventas@telemetriaperu.pe | 987-654-321',
             almacen: 'Lurín',
-            solicitante: 'Ing. Carlos Mendoza (Jefe de Taller)',
-            destino: 'Volvo FH540 (Placa: B9Z-841) | OT #OT-8492',
-            prioridad: 'URGENTE',
-            estado: 'pendiente',
-            moneda: 'S/',
-            subtotal: 12584.75,
-            igv: 2265.25,
-            total: 14850.00,
-            condicionPago: 'Crédito 30 Días',
-            justificacion: 'Se requiere la compra inmediata del Kit de filtros originales CAT y baldes de aceite 15W40 para cumplir con el Mantenimiento Preventivo de 500 horas programado de la unidad tracto B9Z-841 que tiene salida prioritaria a ruta minera el fin de semana.',
-            items: [
-                { codigo: 'FLT-CAT-1R0716', descripcion: 'Filtro de Aceite de Motor CAT 1R-0716', cant: 4, um: 'UND', pu: 185.00, total: 740.00 },
-                { codigo: 'FLT-CAT-1R0749', descripcion: 'Filtro Secundario de Combustible CAT', cant: 4, um: 'UND', pu: 220.00, total: 880.00 },
-                { codigo: 'LUB-CAT-15W40', descripcion: 'Aceite de Motor CAT DEO 15W40 (Balde 5 Gal)', cant: 12, um: 'BAL', pu: 910.00, total: 10920.00 },
-                { codigo: 'SERV-ANAL-ACEITE', descripcion: 'Kit Análisis de Aceite SOS Cat', cant: 2, um: 'SERV', pu: 22.37, total: 44.75 }
-            ],
-            historial: 'Registrado por Almacén Lurín el 28/08/2026 10:30 AM. Pendiente de aprobación por Dirección.'
-        },
-        {
-            id: 'OC-2026-0141',
-            fecha: '2026-08-28 09:15 AM',
-            proveedor: 'LLANTAS Y RECAUCHES DEL PERÚ S.A.C.',
-            ruc: '20512894561',
-            contacto: 'pedidos@recalperu.pe | 945-123-889',
-            almacen: 'Callao',
-            solicitante: 'Marcos Alva (Sup. Neumáticos)',
-            destino: 'Flota Cisternas (Renovación de Eje de Tracción)',
-            prioridad: 'ALTA',
-            estado: 'pendiente',
-            moneda: 'S/',
-            subtotal: 15423.73,
-            igv: 2776.27,
-            total: 18200.00,
-            condicionPago: 'Crédito 45 Días',
-            justificacion: 'Reemplazo de 8 llantas que alcanzaron el límite de seguridad de 3mm de remanente según el último reporte de inspección de neumáticos.',
-            items: [
-                { codigo: 'LLAN-MICH-295', descripcion: 'Neumático 295/80R22.5 Michelin X MultiWay 3D XZE', cant: 8, um: 'UND', pu: 1928.00, total: 15424.00 }
-            ],
-            historial: 'Registrado por Sup. Neumáticos. Pendiente de visto bueno gerencial.'
-        },
-        {
-            id: 'OC-2026-0140',
-            fecha: '2026-08-27 04:45 PM',
-            proveedor: 'DISTRIBUIDORA INDUSTRIAL DIESEL E.I.R.L.',
-            ruc: '20489921034',
-            contacto: 'ventas@dieseldist.pe | 981-224-411',
-            almacen: 'Arequipa',
-            solicitante: 'Roberto Salas (Mecánico Senior)',
-            destino: 'Unidad Freightliner Cascadia (Placa: V8T-910)',
-            prioridad: 'MEDIA',
-            estado: 'pendiente',
-            moneda: 'S/',
-            subtotal: 3305.08,
-            igv: 594.92,
-            total: 3900.00,
-            condicionPago: 'Contado Contraentrega',
-            justificacion: 'Falla en inyector N° 3 y sensor de presión de riel común detectado en diagnóstico electrónico por escáner Cummins.',
-            items: [
-                { codigo: 'INJ-BOSCH-CR', descripcion: 'Inyector Common Rail Bosch Reconstruido Certificado', cant: 1, um: 'UND', pu: 2800.00, total: 2800.00 },
-                { codigo: 'SENS-PRESS-RAIL', descripcion: 'Sensor de Presión de Riel Common Rail Cummins ISX', cant: 1, um: 'UND', pu: 505.08, total: 505.08 }
-            ],
-            historial: 'Pendiente de aprobación de Gerencia.'
-        },
-        {
-            id: 'OC-2026-0139',
-            fecha: '2026-08-27 02:20 PM',
-            proveedor: 'IMPEX REPUESTOS AUTOMOTRICES S.A.',
-            ruc: '20199485712',
-            contacto: 'ventas@impex.com.pe | 993-412-005',
-            almacen: 'Lurín',
-            solicitante: 'Almacén Central',
-            destino: 'Reposición Stock Crítico Taller',
+            solicitante: 'EVELYN CONDE',
+            destino: 'Unidad CFT-703',
             prioridad: 'NORMAL',
             estado: 'pendiente',
             moneda: 'S/',
-            subtotal: 1271.19,
-            igv: 228.81,
-            total: 1500.00,
+            subtotal: 296.61,
+            igv: 53.39,
+            total: 350.00,
             condicionPago: 'Crédito 15 Días',
-            justificacion: 'Reposición de zapatas y kits de resortes de freno que alcanzaron el stock mínimo de seguridad en almacén central.',
+            justificacion: 'INSTALACION VARILLA COMBUSTIBLE CFT-703',
             items: [
-                { codigo: 'FRN-ZAP-BENDIX', descripcion: 'Juego de Zapatas de Freno Tipo Q-Plus 4515Q', cant: 4, um: 'JGO', pu: 240.00, total: 960.00 },
-                { codigo: 'FRN-KIT-RES', descripcion: 'Kit de Resortes y Pines de Freno Bendix Heavy Duty', cant: 4, um: 'KIT', pu: 77.80, total: 311.20 }
+                { codigo: 'TELE-VAR-01', descripcion: 'Instalación y calibración de varilla medidora de combustible para unidad CFT-703', cant: 1, um: 'SERV', pu: 350.00, total: 350.00 }
             ],
-            historial: 'Solicitud estándar de almacén. En espera de aprobación.'
+            historial: 'Registrado por CYNTHIA EVELYN el 31/03/2026. Pendiente de aprobación gerencial.'
         },
         {
-            id: 'OC-2026-0138',
-            fecha: '2026-08-26 11:00 AM',
+            id: '2026-00000565',
+            fecha: '08/06/2026',
+            usuario: 'STHEFANO',
+            proveedor: 'NEUMA PERU CONTRATISTAS GENERALES S.A.C.',
+            ruc: '20512894561',
+            contacto: 'pedidos@neumaperu.pe | 945-123-889',
+            almacen: 'Callao',
+            solicitante: 'SAUL ROSAS',
+            destino: 'Flota Transporte Pesado',
+            prioridad: 'ALTA',
+            estado: 'pendiente',
+            moneda: 'US$',
+            subtotal: 1029.00,
+            igv: 185.22,
+            total: 1214.22,
+            condicionPago: 'Crédito 30 Días',
+            justificacion: 'STOCK - REENCAUCHE DE LLANTAS CON FT',
+            items: [
+                { codigo: 'REC-LLAN-295', descripcion: 'Servicio de Reencauche de Llantas 295/80R22.5 con banda FT', cant: 6, um: 'SRV', pu: 202.37, total: 1214.22 }
+            ],
+            historial: 'Registrado por STHEFANO. Pendiente de visto bueno gerencial.'
+        },
+        {
+            id: '2026-00000621',
+            fecha: '26/06/2026',
+            usuario: 'JHONN HAGI',
+            proveedor: 'JOSE ALONSO SANCHEZ RIOJA',
+            ruc: '10458921034',
+            contacto: 'contacto@ferreteriasanchez.pe',
+            almacen: 'Lurín',
+            solicitante: 'SAUL ROSAS',
+            destino: 'Unidad CFR727',
+            prioridad: 'NORMAL',
+            estado: 'pendiente',
+            moneda: 'S/',
+            subtotal: 5.93,
+            igv: 1.07,
+            total: 7.00,
+            condicionPago: 'Contado Contraentrega',
+            justificacion: 'COMPRA DE ESCOBA PARA LA UNIDAD CFR727',
+            items: [
+                { codigo: 'ART-ESC-01', descripcion: 'Escoba de cerda dura para limpieza de tolva CFR727', cant: 1, um: 'UND', pu: 7.00, total: 7.00 }
+            ],
+            historial: 'Registrado por JHONN HAGI. Pendiente de aprobación.'
+        },
+        {
+            id: '2026-00000732',
+            fecha: '25/07/2026',
+            usuario: 'JOSMAURY AYAHIRI',
+            proveedor: 'VANGUARDIA AUTOMOTRIZ S.A.C.',
+            ruc: '20489921034',
+            contacto: 'ventas@vanguardiaauto.pe | 981-224-411',
+            almacen: 'Arequipa',
+            solicitante: 'MARCO ROSAS',
+            destino: 'Unidad CFR820 / CFR727',
+            prioridad: 'URGENTE',
+            estado: 'pendiente',
+            moneda: 'S/',
+            subtotal: 1545.76,
+            igv: 278.24,
+            total: 1824.00,
+            condicionPago: 'Crédito 15 Días',
+            justificacion: 'IMPLEMENTACION DE EJE CFR820/CFR727',
+            items: [
+                { codigo: 'EJE-IMP-HD', descripcion: 'Kit de accesorios y soportes de eje para unidad CFR820/CFR727', cant: 2, um: 'KIT', pu: 912.00, total: 1824.00 }
+            ],
+            historial: 'Registrado con prioridad por taller. Pendiente de aprobación.'
+        },
+        {
+            id: '2026-00000798',
+            fecha: '07/08/2026',
+            usuario: 'DANIEL EDWIN',
+            proveedor: 'SERVILLANTAS E INVERSIONES SAN JUAN S.A',
+            ruc: '20199485712',
+            contacto: 'ventas@servillantassanjuan.pe',
+            almacen: 'Lurín',
+            solicitante: 'ALMACEN',
+            destino: 'Stock Central Llantas',
+            prioridad: 'URGENTE',
+            estado: 'pendiente',
+            moneda: 'US$',
+            subtotal: 3050.85,
+            igv: 549.15,
+            total: 3600.00,
+            condicionPago: 'Crédito 30 Días',
+            justificacion: 'STOCK-COMPRA DE LLANTAS GOOD-YEAR',
+            items: [
+                { codigo: 'LLAN-GY-295', descripcion: 'Neumático 295/80R22.5 Goodyear Armor Max MSD', cant: 8, um: 'UND', pu: 450.00, total: 3600.00 }
+            ],
+            historial: 'Requerimiento de reposición de stock. Pendiente de aprobación.'
+        },
+        {
+            id: '2026-00000831',
+            fecha: '17/08/2026',
+            usuario: 'DANIEL EDWIN',
+            proveedor: 'SERVILLANTAS E INVERSIONES SAN JUAN S.A',
+            ruc: '20199485712',
+            contacto: 'ventas@servillantassanjuan.pe',
+            almacen: 'Lurín',
+            solicitante: 'AMADOR MERINO',
+            destino: 'Flota Cisternas',
+            prioridad: 'ALTA',
+            estado: 'pendiente',
+            moneda: 'US$',
+            subtotal: 1830.51,
+            igv: 329.49,
+            total: 2160.00,
+            condicionPago: 'Crédito 30 Días',
+            justificacion: 'COMPRA DE 06 LLANTAS 295/ DE LA COTIZACION DE 14 UNIDADES',
+            items: [
+                { codigo: 'LLAN-GY-295B', descripcion: 'Neumático 295/80R22.5 Dirección', cant: 6, um: 'UND', pu: 360.00, total: 2160.00 }
+            ],
+            historial: 'Pendiente de aprobación gerencial.'
+        },
+        {
+            id: '2026-00000841',
+            fecha: '20/08/2026',
+            usuario: 'DANIEL EDWIN',
+            proveedor: 'SERVILLANTAS E INVERSIONES SAN JUAN S.A',
+            ruc: '20199485712',
+            contacto: 'ventas@servillantassanjuan.pe',
+            almacen: 'Lurín',
+            solicitante: 'AMADOR MARINO',
+            destino: 'Flota Plataformas',
+            prioridad: 'ALTA',
+            estado: 'pendiente',
+            moneda: 'US$',
+            subtotal: 2440.68,
+            igv: 439.32,
+            total: 2880.00,
+            condicionPago: 'Crédito 30 Días',
+            justificacion: 'COMPRA DE 08 LLANTAS 295/ DE LA COTIZACION DE 14 UNIDADES',
+            items: [
+                { codigo: 'LLAN-GY-295T', descripcion: 'Neumático 295/80R22.5 Tracción', cant: 8, um: 'UND', pu: 360.00, total: 2880.00 }
+            ],
+            historial: 'Pendiente de aprobación gerencial.'
+        },
+        {
+            id: '2026-00000875',
+            fecha: '26/08/2026',
+            usuario: 'DANIEL EDWIN',
+            proveedor: 'COMERCIAL RC S.A.C.',
+            ruc: '20349811234',
+            contacto: 'ventas@comercialrc.pe',
+            almacen: 'Callao',
+            solicitante: 'SAUL ROSAS',
+            destino: 'Taller de Soldadura',
+            prioridad: 'NORMAL',
+            estado: 'pendiente',
+            moneda: 'US$',
+            subtotal: 308.61,
+            igv: 55.55,
+            total: 364.16,
+            condicionPago: 'Crédito 15 Días',
+            justificacion: 'COMPRA DE PRODUCTOS PL. LAC.',
+            items: [
+                { codigo: 'MET-PL-LAC', descripcion: 'Plancha LAC 3mm x 1200 x 2400 para refuerzos de tolva', cant: 2, um: 'PLN', pu: 182.08, total: 364.16 }
+            ],
+            historial: 'Pendiente de aprobación.'
+        },
+        {
+            id: '2026-00000877',
+            fecha: '26/08/2026',
+            usuario: 'DANIEL EDWIN',
+            proveedor: 'VANGUARDIA AUTOMOTRIZ S.A.C.',
+            ruc: '20489921034',
+            contacto: 'ventas@vanguardiaauto.pe',
+            almacen: 'Lurín',
+            solicitante: 'SAUL ROSAS',
+            destino: 'Flota Tractos',
+            prioridad: 'NORMAL',
+            estado: 'pendiente',
+            moneda: 'US$',
+            subtotal: 434.03,
+            igv: 78.09,
+            total: 512.12,
+            condicionPago: 'Crédito 30 Días',
+            justificacion: 'COMPRA DE 04 AROS',
+            items: [
+                { codigo: 'ARO-ALUM-225', descripcion: 'Aro de Aluminio 22.5 x 8.25 Heavy Duty', cant: 4, um: 'UND', pu: 128.03, total: 512.12 }
+            ],
+            historial: 'Pendiente de aprobación.'
+        },
+        {
+            id: '2026-00000895',
+            fecha: '31/08/2026',
+            usuario: 'DANIEL EDWIN',
+            proveedor: 'DIESEL AUTOPARTES DEL PERU S.R.L',
+            ruc: '20603412589',
+            contacto: 'atencion@dieselautopartes.pe',
+            almacen: 'Lurín',
+            solicitante: 'AMADOR MERINO',
+            destino: 'Unidad Scania R450',
+            prioridad: 'URGENTE',
+            estado: 'pendiente',
+            moneda: 'US$',
+            subtotal: 970.91,
+            igv: 174.76,
+            total: 1145.67,
+            condicionPago: 'Contado Contraentrega',
+            justificacion: 'REPARACION DE APS- .CAMBIO DE COMPRESOR , ELIMINACION DE FUGA DE ACEITE , ELIMINACION DE FUGA DE COMBUSTIBLE (PENDIENTE NIPLE DE SCANIA)',
+            items: [
+                { codigo: 'REP-APS-SCN', descripcion: 'Kit Reparación Válvula APS y cambio de compresor', cant: 1, um: 'SERV', pu: 1145.67, total: 1145.67 }
+            ],
+            historial: 'Requerimiento urgente de mantenimiento correctivo.'
+        },
+        {
+            id: '2026-00000896',
+            fecha: '31/08/2026',
+            usuario: 'DANIEL EDWIN',
+            proveedor: 'DIESEL AUTOPARTES DEL PERU S.R.L',
+            ruc: '20603412589',
+            contacto: 'atencion@dieselautopartes.pe',
+            almacen: 'Lurín',
+            solicitante: 'AMADOR MERINO',
+            destino: 'Unidad BES829',
+            prioridad: 'NORMAL',
+            estado: 'pendiente',
+            moneda: 'US$',
+            subtotal: 84.75,
+            igv: 15.25,
+            total: 100.00,
+            condicionPago: 'Contado',
+            justificacion: 'UNIDAD BES829',
+            items: [
+                { codigo: 'REP-MENOR-BES', descripcion: 'Repuestos menores y abrazaderas para unidad BES829', cant: 1, um: 'GLB', pu: 100.00, total: 100.00 }
+            ],
+            historial: 'Pendiente de aprobación.'
+        },
+        {
+            id: '2026-00000897',
+            fecha: '31/08/2026',
+            usuario: 'DANIEL EDWIN',
+            proveedor: 'GRUPO QUIÑONES',
+            ruc: '20100142981',
+            contacto: 'ventas@grupoquinones.pe',
+            almacen: 'Lurín',
+            solicitante: 'AMADOR MERINO',
+            destino: 'Almacén Central',
+            prioridad: 'NORMAL',
+            estado: 'pendiente',
+            moneda: 'S/',
+            subtotal: 733.90,
+            igv: 132.10,
+            total: 866.00,
+            condicionPago: 'Crédito 15 Días',
+            justificacion: 'COMPRA DE REPUESTOS',
+            items: [
+                { codigo: 'REP-VAR-QUIN', descripcion: 'Lote de repuestos y filtros varios según requerimiento de taller', cant: 1, um: 'GLB', pu: 866.00, total: 866.00 }
+            ],
+            historial: 'Pendiente de aprobación.'
+        },
+        {
+            id: '2026-00000138',
+            fecha: '26/08/2026',
+            usuario: 'ALEJANDRO ZEVALLOS',
             proveedor: 'LUBRICANTES Y COMBUSTIBLES DEL SUR S.A.C.',
             ruc: '20601248951',
-            contacto: 'gerencia@lubrisur.pe | 954-112-990',
+            contacto: 'gerencia@lubrisur.pe',
             almacen: 'Lurín',
-            solicitante: 'Jefe de Operaciones',
-            destino: 'Abastecimiento de Grasa y Refrigerante para Taller',
+            solicitante: 'JEFE DE OPERACIONES',
+            destino: 'Abastecimiento Taller',
             prioridad: 'NORMAL',
             estado: 'aprobado',
             moneda: 'S/',
@@ -125,22 +314,23 @@
             igv: 1037.29,
             total: 6800.00,
             condicionPago: 'Crédito 30 Días',
-            justificacion: 'Compra programada mensual de tambor de grasa de litio para chasis y cilindros de refrigerante orgánico 50/50.',
+            justificacion: 'ABASTECIMIENTO DE GRASA Y REFRIGERANTE PARA TALLER',
             items: [
                 { codigo: 'LUB-GRAS-EP2', descripcion: 'Grasa Litio Compleja EP2 para Chasis (Tambor 180 Kg)', cant: 1, um: 'TBR', pu: 3200.00, total: 3200.00 },
-                { codigo: 'REF-ORG-5050', descripcion: 'Refrigerante Fleetguard Compleat EG 50/50 (Cilindro 55 Gal)', cant: 2, um: 'CIL', pu: 1281.35, total: 2562.71 }
+                { codigo: 'REF-ORG-5050', descripcion: 'Refrigerante Fleetguard 50/50 (Cilindro 55 Gal)', cant: 2, um: 'CIL', pu: 1800.00, total: 3600.00 }
             ],
-            historial: 'Aprobado por Gerencia General (Ing. Alejandro Zevallos) el 26/08/2026 03:15 PM.'
+            historial: 'Aprobado por Dirección General el 26/08/2026.'
         },
         {
-            id: 'OC-2026-0137',
-            fecha: '2026-08-25 03:30 PM',
+            id: '2026-00000137',
+            fecha: '25/08/2026',
+            usuario: 'ALEJANDRO ZEVALLOS',
             proveedor: 'TOTAL ENERGIES PERÚ S.A.C.',
             ruc: '20349811234',
-            contacto: 'atencion@totalenergies.pe | 988-771-224',
+            contacto: 'atencion@totalenergies.pe',
             almacen: 'Callao',
-            solicitante: 'Almacén Auxiliar Callao',
-            destino: 'Stock de Valvolina para Cajas Eaton',
+            solicitante: 'ALMACEN AUXILIAR CALLAO',
+            destino: 'Stock Cajas Eaton',
             prioridad: 'BAJA',
             estado: 'rechazado',
             moneda: 'S/',
@@ -148,21 +338,22 @@
             igv: 640.68,
             total: 4200.00,
             condicionPago: 'Contado',
-            justificacion: 'Requerimiento de 10 baldes de aceite de transmisión 80W90.',
+            justificacion: 'STOCK DE VALVOLINA PARA CAJAS EATON',
             items: [
-                { codigo: 'LUB-TOT-80W90', descripcion: 'Aceite Transmisión Total Transmission Axle 7 80W90', cant: 10, um: 'BAL', pu: 355.93, total: 3559.32 }
+                { codigo: 'LUB-TOT-80W90', descripcion: 'Aceite Transmisión Total Axle 7 80W90', cant: 10, um: 'BAL', pu: 420.00, total: 4200.00 }
             ],
-            historial: 'Desestimado por Gerencia el 25/08/2026. Motivo: Se constató existencia de 14 baldes en sede Lurín disponibles para transferencia interna.'
+            historial: 'Rechazado: Hay existencia disponible en Lurín para transferencia.'
         },
         {
-            id: 'OC-2026-0136',
-            fecha: '2026-08-24 09:00 AM',
+            id: '2026-00000136',
+            fecha: '24/08/2026',
+            usuario: 'CARLOS MENDOZA',
             proveedor: 'CUMMINS PERÚ S.A.',
             ruc: '20100142981',
-            contacto: 'repuestos@cummins.pe | 991-002-334',
+            contacto: 'repuestos@cummins.pe',
             almacen: 'Lurín',
-            solicitante: 'Jefe de Mantenimiento',
-            destino: 'Tracto Kenworth T800 (Placa: D3R-780)',
+            solicitante: 'JEFE DE MANTENIMIENTO',
+            destino: 'Unidad D3R-780',
             prioridad: 'ALTA',
             estado: 'observado',
             moneda: 'S/',
@@ -170,23 +361,23 @@
             igv: 1319.49,
             total: 8650.00,
             condicionPago: 'Crédito 30 Días',
-            justificacion: 'Reemplazo preventivo de turbocargador por juego axial excesivo detectado en banco de prueba.',
+            justificacion: 'REEMPLAZO PREVENTIVO DE TURBOCARGADOR POR JUEGO AXIAL',
             items: [
-                { codigo: 'TURB-HOLSET-HE300', descripcion: 'Turbocompresor Holset HE300VG Genuino Cummins', cant: 1, um: 'UND', pu: 7330.51, total: 7330.51 }
+                { codigo: 'TURB-HOLSET', descripcion: 'Turbocompresor Holset HE300VG Genuino Cummins', cant: 1, um: 'UND', pu: 8650.00, total: 8650.00 }
             ],
-            historial: 'Observado por Gerencia el 24/08/2026. Observación: Solicitar segunda cotización comparativa antes de autorizar.'
+            historial: 'Observado: Solicitar segunda cotización comparativa antes de autorizar.'
         }
     ];
 
-    // Inicialización del dataset (guardar o cargar de sessionStorage para persistir cambios en sesión)
+    // Inicialización del dataset
     function inicializarDataset() {
         try {
-            const guardado = sessionStorage.getItem('erp_gerencia_oc_mock');
+            const guardado = sessionStorage.getItem('erp_gerencia_oc_mock_v2');
             if (guardado) {
                 window._gerenciaOC.ordenes = JSON.parse(guardado);
             } else {
                 window._gerenciaOC.ordenes = JSON.parse(JSON.stringify(MOCK_ORDENES_COMPRA));
-                sessionStorage.setItem('erp_gerencia_oc_mock', JSON.stringify(window._gerenciaOC.ordenes));
+                sessionStorage.setItem('erp_gerencia_oc_mock_v2', JSON.stringify(window._gerenciaOC.ordenes));
             }
         } catch (e) {
             window._gerenciaOC.ordenes = JSON.parse(JSON.stringify(MOCK_ORDENES_COMPRA));
@@ -195,7 +386,7 @@
 
     function guardarEstadoDataset() {
         try {
-            sessionStorage.setItem('erp_gerencia_oc_mock', JSON.stringify(window._gerenciaOC.ordenes));
+            sessionStorage.setItem('erp_gerencia_oc_mock_v2', JSON.stringify(window._gerenciaOC.ordenes));
         } catch(e) {}
     }
 
@@ -203,6 +394,7 @@
     window.renderizarModuloGerenciaOC = function() {
         inicializarDataset();
         actualizarKpisYBadges();
+        window.cambiarModoVista(window._gerenciaOC.modoVista, false);
         window.aplicarFiltrosOC();
     };
 
@@ -216,28 +408,29 @@
         const rech = ordenes.filter(o => o.estado === 'rechazado');
         const urg = ordenes.filter(o => o.prioridad === 'URGENTE' && o.estado === 'pendiente');
 
-        const sumMonto = (arr) => arr.reduce((acc, cur) => acc + (cur.total || 0), 0);
+        // Sumar montos diferenciando o consolidando
+        const sumMontoSoles = (arr) => arr.reduce((acc, cur) => acc + (cur.moneda === 'S/' ? cur.total : cur.total * 3.75), 0);
 
         // Actualizar contadores Bento
         const elPend = document.getElementById('kpi-count-pendientes');
         if (elPend) elPend.innerText = pend.length;
         const elPendMonto = document.getElementById('kpi-monto-pendientes');
-        if (elPendMonto) elPendMonto.innerText = 'S/ ' + sumMonto(pend).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        if (elPendMonto) elPendMonto.innerText = 'S/ ' + sumMontoSoles(pend).toLocaleString('es-PE', { minimumFractionDigits: 2 });
 
         const elAprob = document.getElementById('kpi-count-aprobadas');
         if (elAprob) elAprob.innerText = aprob.length;
         const elAprobMonto = document.getElementById('kpi-monto-aprobadas');
-        if (elAprobMonto) elAprobMonto.innerText = 'S/ ' + sumMonto(aprob).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        if (elAprobMonto) elAprobMonto.innerText = 'S/ ' + sumMontoSoles(aprob).toLocaleString('es-PE', { minimumFractionDigits: 2 });
 
         const elObs = document.getElementById('kpi-count-observadas');
         if (elObs) elObs.innerText = obs.length;
         const elObsMonto = document.getElementById('kpi-monto-observadas');
-        if (elObsMonto) elObsMonto.innerText = 'S/ ' + sumMonto(obs).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        if (elObsMonto) elObsMonto.innerText = 'S/ ' + sumMontoSoles(obs).toLocaleString('es-PE', { minimumFractionDigits: 2 });
 
         const elRech = document.getElementById('kpi-count-rechazadas');
         if (elRech) elRech.innerText = rech.length;
         const elRechMonto = document.getElementById('kpi-monto-rechazadas');
-        if (elRechMonto) elRechMonto.innerText = 'S/ ' + sumMonto(rech).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        if (elRechMonto) elRechMonto.innerText = 'S/ ' + sumMontoSoles(rech).toLocaleString('es-PE', { minimumFractionDigits: 2 });
 
         // Actualizar badges en las pestañas
         const bTodos = document.getElementById('tab-badge-todos');
@@ -252,13 +445,6 @@
         if (bObs) bObs.innerText = obs.length;
         const bRech = document.getElementById('tab-badge-rechazado');
         if (bRech) bRech.innerText = rech.length;
-
-        // Actualizar badge lateral en el menú si existe
-        const sideBadge = document.getElementById('badge-count-gerencia');
-        if (sideBadge) {
-            sideBadge.innerText = pend.length > 0 ? pend.length : '0';
-            sideBadge.className = pend.length > 0 ? 'section-badge bg-warning text-dark fw-bold' : 'section-badge';
-        }
     }
 
     // Filtrar por Pestaña
@@ -275,8 +461,12 @@
     };
 
     // Alternar modo de vista (Cards vs Tabla)
-    window.cambiarModoVista = function(modo) {
+    window.cambiarModoVista = function(modo, guardar = true) {
         window._gerenciaOC.modoVista = modo;
+        if (guardar) {
+            try { localStorage.setItem('erp_gerencia_oc_vista', modo); } catch(e) {}
+        }
+
         const btnCards = document.getElementById('btn-view-cards');
         const btnTable = document.getElementById('btn-view-table');
         const wrapCards = document.getElementById('contenedor-vista-cards');
@@ -317,6 +507,7 @@
                 const matchTexto = 
                     item.id.toLowerCase().includes(txtBuscar) ||
                     item.proveedor.toLowerCase().includes(txtBuscar) ||
+                    (item.usuario && item.usuario.toLowerCase().includes(txtBuscar)) ||
                     item.ruc.toLowerCase().includes(txtBuscar) ||
                     item.solicitante.toLowerCase().includes(txtBuscar) ||
                     item.destino.toLowerCase().includes(txtBuscar) ||
@@ -340,111 +531,104 @@
 
         if (emptyState) emptyState.classList.add('d-none');
 
-        // Renderizar Tarjetas
+        // Renderizar Tarjetas (Diseño Móvil / Grid optimizado)
         if (wrapCards) {
             wrapCards.innerHTML = filtradas.map(oc => generarCardHTML(oc)).join('');
         }
 
-        // Renderizar Tabla
+        // Renderizar Tabla (Diseño Fiel a Imagen 1 con estilo moderno ERP)
         if (cuerpoTabla) {
             cuerpoTabla.innerHTML = filtradas.map(oc => generarFilaTablaHTML(oc)).join('');
         }
     };
 
-    // Template para Card Ejecutiva
+    // Template para Card Ejecutiva (Mobile First / Grid)
     function generarCardHTML(oc) {
         let badgePrioridad = '';
         if (oc.prioridad === 'URGENTE') {
-            badgePrioridad = `<span class="badge bg-danger text-white rounded-pill px-2.5 py-1 fw-bold badge-urgente-pulse" style="font-size:0.72rem;"><i class="bi bi-fire"></i> URGENTE</span>`;
+            badgePrioridad = `<span class="badge bg-danger text-white rounded-pill px-2 py-0.5 fw-bold badge-urgente-pulse" style="font-size:0.7rem;"><i class="bi bi-fire"></i> URGENTE</span>`;
         } else if (oc.prioridad === 'ALTA') {
-            badgePrioridad = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill px-2 py-1 fw-bold" style="font-size:0.72rem;"><i class="bi bi-arrow-up-circle"></i> ALTA</span>`;
+            badgePrioridad = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill px-2 py-0.5 fw-bold" style="font-size:0.7rem;">ALTA</span>`;
         } else {
-            badgePrioridad = `<span class="badge bg-light text-secondary border rounded-pill px-2 py-1 fw-semibold" style="font-size:0.72rem;">NORMAL</span>`;
+            badgePrioridad = `<span class="badge bg-light text-secondary border rounded-pill px-2 py-0.5" style="font-size:0.7rem;">NORMAL</span>`;
         }
 
         let badgeEstado = '';
         if (oc.estado === 'pendiente') {
-            badgeEstado = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.72rem;"><i class="bi bi-clock-fill"></i> Pendiente Aprobación</span>`;
+            badgeEstado = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5 fw-bold" style="font-size:0.7rem;"><i class="bi bi-clock-fill"></i> Pendiente</span>`;
         } else if (oc.estado === 'aprobado') {
-            badgeEstado = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.72rem;"><i class="bi bi-check-circle-fill"></i> Aprobada</span>`;
+            badgeEstado = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5 fw-bold" style="font-size:0.7rem;"><i class="bi bi-check-circle-fill"></i> Autorizada</span>`;
         } else if (oc.estado === 'observado') {
-            badgeEstado = `<span class="badge text-indigo rounded-pill px-2.5 py-1 fw-bold" style="background:#e0e7ff; color:#4338ca; font-size:0.72rem;"><i class="bi bi-chat-left-text-fill"></i> Observada</span>`;
+            badgeEstado = `<span class="badge rounded-pill px-2 py-0.5 fw-bold" style="background:#e0e7ff; color:#4338ca; font-size:0.7rem;"><i class="bi bi-chat-dots-fill"></i> Observada</span>`;
         } else {
-            badgeEstado = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.72rem;"><i class="bi bi-x-circle-fill"></i> Rechazada</span>`;
+            badgeEstado = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0.5 fw-bold" style="font-size:0.7rem;"><i class="bi bi-x-circle-fill"></i> Rechazada</span>`;
         }
 
-        const primerItem = oc.items[0] ? `${oc.items[0].cant} ${oc.items[0].um} - ${oc.items[0].descripcion}` : '';
-        const masItems = oc.items.length > 1 ? ` <span class="text-primary fw-semibold" style="font-size:0.75rem;">(+${oc.items.length - 1} ítem${oc.items.length > 2 ? 's' : ''})</span>` : '';
-
         return `
-        <div class="col-12 col-xl-6">
-            <div class="oc-approval-card status-${oc.estado} h-100 d-flex flex-column justify-content-between">
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="oc-approval-card status-${oc.estado} h-100 d-flex flex-column justify-content-between p-3">
                 <div>
                     <!-- Header Card -->
-                    <div class="d-flex align-items-start justify-content-between gap-2 mb-2.5 flex-wrap">
-                        <div class="d-flex align-items-center gap-2">
-                            <h5 class="fw-black text-dark m-0" style="letter-spacing:-0.02em;">${oc.id}</h5>
+                    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                            <span class="btn-oc-code py-1 px-2" onclick="window.verDetalleOC('${oc.id}')" title="Ver Detalle">
+                                <i class="bi bi-eye"></i> ${oc.id}
+                            </span>
                             ${badgePrioridad}
-                            ${badgeEstado}
                         </div>
-                        <span class="text-secondary fw-semibold" style="font-size:0.78rem;"><i class="bi bi-calendar3"></i> ${oc.fecha}</span>
-                    </div>
-
-                    <!-- Datos Principales -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12 col-sm-7">
-                            <div class="text-secondary fw-bold" style="font-size:0.72rem; text-transform:uppercase;">Proveedor</div>
-                            <div class="fw-bold text-dark text-truncate" style="font-size:0.9rem;">${oc.proveedor}</div>
-                            <div class="text-muted" style="font-size:0.78rem;">RUC: ${oc.ruc}</div>
-                        </div>
-                        <div class="col-12 col-sm-5 text-sm-end">
-                            <div class="text-secondary fw-bold" style="font-size:0.72rem; text-transform:uppercase;">Sede / Almacén</div>
-                            <span class="badge bg-light text-dark border fw-bold" style="font-size:0.78rem;">Sede ${oc.almacen}</span>
-                            <div class="text-muted text-truncate" style="font-size:0.76rem;">${oc.solicitante.split('(')[0]}</div>
+                        <div class="text-end">
+                            <div class="text-secondary fw-bold" style="font-size:0.68rem; text-transform:uppercase;">IMPORTE</div>
+                            <div class="fw-black text-dark" style="font-size:1.15rem; letter-spacing:-0.02em;">
+                                ${oc.moneda} ${oc.total.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Desglose Rápido / Justificación -->
-                    <div class="p-2.5 rounded-3 bg-light border mb-3">
-                        <div class="d-flex align-items-center justify-content-between mb-1" style="font-size:0.76rem;">
-                            <span class="fw-bold text-secondary text-uppercase"><i class="bi bi-boxes"></i> Contenido Requerido:</span>
-                            <span class="badge bg-white border text-secondary fw-bold">${oc.items.length} ítem${oc.items.length > 1 ? 's' : ''}</span>
-                        </div>
-                        <div class="text-dark fw-semibold text-truncate" style="font-size:0.83rem;">
-                            ${primerItem}${masItems}
-                        </div>
-                        <div class="text-secondary text-truncate mt-1" style="font-size:0.78rem;" title="${oc.justificacion}">
-                            <i class="bi bi-pin-angle text-primary"></i> ${oc.justificacion}
+                    <!-- Meta datos: Fecha, Usuario y Almacén -->
+                    <div class="d-flex align-items-center justify-content-between text-muted mb-2 pb-2 border-bottom" style="font-size:0.75rem;">
+                        <span><i class="bi bi-calendar3"></i> ${oc.fecha}</span>
+                        <span><i class="bi bi-person-badge"></i> ${oc.usuario || 'SISTEMA'}</span>
+                        <span class="badge bg-light text-dark border">Sede ${oc.almacen}</span>
+                    </div>
+
+                    <!-- Proveedor & Solicitante -->
+                    <div class="mb-2">
+                        <div class="text-secondary fw-bold" style="font-size:0.68rem; text-transform:uppercase;">Proveedor</div>
+                        <div class="fw-bold text-dark text-truncate" style="font-size:0.86rem;" title="${oc.proveedor}">${oc.proveedor}</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <div class="text-secondary fw-bold" style="font-size:0.68rem; text-transform:uppercase;">Solicitante / Destino</div>
+                        <div class="text-dark fw-semibold text-truncate" style="font-size:0.82rem;">${oc.solicitante}</div>
+                        <div class="text-muted text-truncate" style="font-size:0.75rem;">${oc.destino}</div>
+                    </div>
+
+                    <!-- Motivo / Justificación -->
+                    <div class="p-2 rounded-2 bg-light border mb-3" style="font-size:0.78rem;">
+                        <div class="text-secondary fw-bold text-uppercase" style="font-size:0.68rem;"><i class="bi bi-card-text"></i> Motivo:</div>
+                        <div class="text-dark fw-medium text-truncate-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${oc.justificacion}">
+                            ${oc.justificacion}
                         </div>
                     </div>
                 </div>
 
-                <!-- Footer Card con Montos y Botones de Acción -->
-                <div class="pt-2 border-top d-flex align-items-center justify-content-between gap-2 flex-wrap">
-                    <div>
-                        <span class="text-secondary fw-bold" style="font-size:0.72rem; text-transform:uppercase;">Monto Total</span>
-                        <h4 class="fw-black text-dark m-0" style="font-size:1.3rem; letter-spacing:-0.03em;">
-                            ${oc.moneda} ${oc.total.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                        </h4>
-                    </div>
-                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                        <button class="btn btn-outline-secondary btn-sm rounded-3 px-2.5 py-1.5 fw-semibold" onclick="window.verDetalleOC('${oc.id}')" title="Ver Detalle Completo">
-                            <i class="bi bi-eye-fill"></i> Detalle
+                <!-- Footer Card con Acciones Directas -->
+                <div class="pt-2 border-top d-flex align-items-center justify-content-between gap-1 flex-wrap">
+                    <div class="d-flex align-items-center gap-1">
+                        <button class="btn btn-outline-secondary btn-sm rounded-2 px-2 py-1" onclick="window.verDetalleOC('${oc.id}')" title="Ver Detalle">
+                            <i class="bi bi-eye"></i> Detalle
                         </button>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
                         ${oc.estado === 'pendiente' ? `
-                            <button class="btn btn-action-obs btn-sm rounded-3 px-2.5 py-1.5" onclick="window.abrirAccionRapida('${oc.id}', 'observar')" title="Observar / Sustento">
-                                <i class="bi bi-chat-dots"></i>
+                            <button class="btn-oc-denegar" onclick="window.abrirAccionRapida('${oc.id}', 'rechazar')">
+                                <i class="bi bi-hand-thumbs-down-fill"></i> DENEGAR
                             </button>
-                            <button class="btn btn-action-reject btn-sm rounded-3 px-2.5 py-1.5" onclick="window.abrirAccionRapida('${oc.id}', 'rechazar')" title="Rechazar">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                            <button class="btn btn-action-approve btn-sm rounded-3 px-3 py-1.5 shadow-2xs" onclick="window.abrirAccionRapida('${oc.id}', 'aprobar')">
-                                <i class="bi bi-check2-circle"></i> Aprobar
+                            <button class="btn-oc-autorizar" onclick="window.abrirAccionRapida('${oc.id}', 'aprobar')">
+                                <i class="bi bi-hand-thumbs-up-fill"></i> AUTORIZAR
                             </button>
                         ` : `
-                            <button class="btn btn-light border btn-sm rounded-3 px-3 py-1.5 text-secondary fw-semibold" onclick="window.verDetalleOC('${oc.id}')">
-                                <i class="bi bi-journal-text"></i> Ver Dictamen
-                            </button>
+                            ${badgeEstado}
                         `}
                     </div>
                 </div>
@@ -453,64 +637,75 @@
         `;
     }
 
-    // Template para Fila de Tabla
+    // Template para Fila de Tabla (Fiel a Imagen 1 con estética premium)
     function generarFilaTablaHTML(oc) {
-        let badgeEstado = '';
-        if (oc.estado === 'pendiente') {
-            badgeEstado = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1 fw-bold" style="font-size:0.72rem;">Pendiente</span>`;
-        } else if (oc.estado === 'aprobado') {
-            badgeEstado = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 fw-bold" style="font-size:0.72rem;">Aprobada</span>`;
-        } else if (oc.estado === 'observado') {
-            badgeEstado = `<span class="badge rounded-pill px-2 py-1 fw-bold" style="background:#e0e7ff; color:#4338ca; font-size:0.72rem;">Observada</span>`;
-        } else {
-            badgeEstado = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1 fw-bold" style="font-size:0.72rem;">Rechazada</span>`;
-        }
-
         return `
         <tr>
+            <!-- Columna ACCIÓN (Botones idénticos a Imagen 1) -->
             <td>
-                <div class="fw-black text-dark" style="font-size:0.9rem;">${oc.id}</div>
-                <span class="text-muted" style="font-size:0.75rem;">${oc.fecha}</span>
-            </td>
-            <td>
-                ${oc.prioridad === 'URGENTE' ? '<span class="badge bg-danger rounded-pill fw-bold" style="font-size:0.7rem;">URGENTE</span>' : 
-                  oc.prioridad === 'ALTA' ? '<span class="badge bg-warning text-dark rounded-pill fw-bold" style="font-size:0.7rem;">ALTA</span>' : 
-                  '<span class="badge bg-light text-secondary border rounded-pill" style="font-size:0.7rem;">NORMAL</span>'}
-            </td>
-            <td>
-                <div class="fw-bold text-dark text-truncate" style="max-width:200px;">${oc.proveedor}</div>
-                <span class="text-muted" style="font-size:0.76rem;">RUC: ${oc.ruc}</span>
-            </td>
-            <td>
-                <div class="fw-semibold text-dark">Sede ${oc.almacen}</div>
-                <span class="text-muted" style="font-size:0.76rem;">${oc.solicitante.split('(')[0]}</span>
-            </td>
-            <td>
-                <div class="text-dark text-truncate" style="max-width:250px; font-size:0.82rem;" title="${oc.items.map(i=>i.descripcion).join(', ')}">
-                    <strong>${oc.items.length} ítems:</strong> ${oc.items[0]?.descripcion || ''}
-                </div>
-                <div class="text-muted text-truncate" style="max-width:250px; font-size:0.75rem;">
-                    ${oc.destino}
-                </div>
-            </td>
-            <td class="text-end">
-                <div class="fw-black text-dark" style="font-size:0.95rem;">${oc.moneda} ${oc.total.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</div>
-                <span class="text-muted" style="font-size:0.72rem;">${oc.condicionPago}</span>
-            </td>
-            <td class="text-center">
-                ${badgeEstado}
-            </td>
-            <td class="text-end">
-                <div class="d-inline-flex gap-1">
-                    <button class="btn btn-outline-secondary btn-sm rounded-2 py-1 px-2" onclick="window.verDetalleOC('${oc.id}')" title="Ver Detalle">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    ${oc.estado === 'pendiente' ? `
-                        <button class="btn btn-action-approve btn-sm rounded-2 py-1 px-2" onclick="window.abrirAccionRapida('${oc.id}', 'aprobar')" title="Aprobar">
-                            <i class="bi bi-check-lg"></i>
+                ${oc.estado === 'pendiente' ? `
+                    <div class="d-inline-flex align-items-center gap-1">
+                        <button class="btn-oc-autorizar" onclick="window.abrirAccionRapida('${oc.id}', 'aprobar')" title="Autorizar Orden de Compra">
+                            <i class="bi bi-hand-thumbs-up-fill"></i> AUTORIZAR
                         </button>
-                    ` : ''}
+                        <button class="btn-oc-denegar" onclick="window.abrirAccionRapida('${oc.id}', 'rechazar')" title="Denegar Orden de Compra">
+                            <i class="bi bi-hand-thumbs-down-fill"></i> DENEGAR
+                        </button>
+                    </div>
+                ` : oc.estado === 'aprobado' ? `
+                    <span class="badge bg-success text-white rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.72rem;">
+                        <i class="bi bi-check-circle-fill"></i> AUTORIZADO
+                    </span>
+                ` : oc.estado === 'observado' ? `
+                    <span class="badge text-indigo rounded-pill px-2.5 py-1 fw-bold" style="background:#e0e7ff; color:#4338ca; font-size:0.72rem;">
+                        <i class="bi bi-chat-dots-fill"></i> OBSERVADO
+                    </span>
+                ` : `
+                    <span class="badge bg-danger text-white rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.72rem;">
+                        <i class="bi bi-x-circle-fill"></i> DENEGADO
+                    </span>
+                `}
+            </td>
+
+            <!-- Columna FECHA -->
+            <td class="text-nowrap fw-semibold text-secondary" style="font-size:0.82rem;">
+                ${oc.fecha}
+            </td>
+
+            <!-- Columna USUARIO -->
+            <td class="fw-bold text-dark text-truncate" style="max-width:130px; font-size:0.82rem;">
+                ${oc.usuario || 'SISTEMA'}
+            </td>
+
+            <!-- Columna ORDEN COMPRA (Con icono de ojo/modal) -->
+            <td>
+                <span class="btn-oc-code" onclick="window.verDetalleOC('${oc.id}')" title="Ver PDF / Detalle">
+                    <i class="bi bi-eye"></i> ${oc.id}
+                </span>
+            </td>
+
+            <!-- Columna MOTIVO / JUSTIFICACIÓN -->
+            <td>
+                <div class="text-dark fw-medium text-truncate" style="max-width:320px; font-size:0.83rem;" title="${oc.justificacion}">
+                    ${oc.justificacion}
                 </div>
+            </td>
+
+            <!-- Columna SOLICITANTE -->
+            <td class="fw-semibold text-secondary text-truncate" style="max-width:160px; font-size:0.82rem;" title="${oc.solicitante}">
+                ${oc.solicitante}
+            </td>
+
+            <!-- Columna PROVEEDOR -->
+            <td class="fw-bold text-dark text-truncate" style="max-width:220px; font-size:0.83rem;" title="${oc.proveedor}">
+                ${oc.proveedor}
+            </td>
+
+            <!-- Columna IMPORTE -->
+            <td class="text-end text-nowrap">
+                <span class="fw-black text-dark" style="font-size:0.92rem; letter-spacing:-0.01em;">
+                    ${oc.moneda} ${oc.total.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                </span>
             </td>
         </tr>
         `;
@@ -726,7 +921,7 @@
 
     // Recargar dataset inicial
     window.recargarAprobacionesOC = function() {
-        sessionStorage.removeItem('erp_gerencia_oc_mock');
+        sessionStorage.removeItem('erp_gerencia_oc_mock_v2');
         window.renderizarModuloGerenciaOC();
         mostrarToastGerencia('🔄 Bandeja Actualizada', 'Se sincronizaron las órdenes de compra pendientes.');
     };
