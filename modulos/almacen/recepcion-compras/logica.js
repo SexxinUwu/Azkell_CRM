@@ -251,7 +251,7 @@
 
         if (histBody) {
             if (historial.length === 0) {
-                histBody.innerHTML = `<tr><td colspan="7" class="text-center py-3 text-muted">Aún no se han registrado entregas para esta orden de compra.</td></tr>`;
+                histBody.innerHTML = `<tr><td colspan="8" class="text-center py-3 text-muted">Aún no se han registrado entregas para esta orden de compra.</td></tr>`;
             } else {
                 histBody.innerHTML = historial.map(h => {
                     let fechaFormateada = '-';
@@ -271,6 +271,12 @@
                         </a>
                     ` : `<span class="text-muted small">Sin archivo</span>`;
 
+                    const delBtn = `
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" onclick="window.eliminarRegistroRecepcion(${h.recepcion_id}, '${(h.descripcion||'').replace(/'/g, "\\'")}', ${parseFloat(h.cantidad_recibida || 0)})" title="Eliminar / Revertir esta entrega">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    `;
+
                     return `
                     <tr>
                         <td class="fw-semibold text-nowrap">${fechaFormateada}</td>
@@ -280,6 +286,7 @@
                         <td><span class="badge bg-light text-dark border">${h.almacen || 'ALM CENTRAL'}</span></td>
                         <td class="text-secondary small">${h.observacion || '-'}</td>
                         <td class="text-center">${fotoBtn}</td>
+                        <td class="text-center">${delBtn}</td>
                     </tr>
                     `;
                 }).join('');
@@ -291,6 +298,49 @@
         if (modalEl) {
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
+        }
+    };
+
+    // Eliminar / Revertir entrega parcial o total
+    window.eliminarRegistroRecepcion = async function(recepcionId, desc, cant) {
+        if (!recepcionId) return;
+        const msg = `¿Estás seguro de eliminar este registro de entrega (+${cant} ${desc})?\n\nAl eliminarlo, se revertirá la cantidad recepcionada para que puedas volver a registrarla.`;
+        if (!confirm(msg)) return;
+
+        try {
+            const usuario = localStorage.getItem('fleet_user_nombre') || localStorage.getItem('fleet_user') || 'Usuario';
+            const res = await fetch(`/api/almacen/recepciones-oc/${recepcionId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.ok) {
+                throw new Error(data.error || 'No se pudo eliminar el registro de entrega');
+            }
+
+            alert('✅ Registro de entrega eliminado. La cantidad ha sido revertida exitosamente.');
+
+            // Recargar datos actualizados del backend
+            const resReload = await fetch('/api/almacen/recepciones-oc');
+            const dataReload = await resReload.json();
+            window._recCompras.ordenes = Array.isArray(dataReload) ? dataReload : [];
+            actualizarBadgesContadores();
+            window.filtrarTablaRecepciones();
+
+            // Refrescar el modal con los saldos actualizados
+            const currentOcId = window._recCompras.ordenSeleccionada?.id;
+            if (currentOcId) {
+                const ocActualizada = (window._recCompras.ordenes || []).find(o => o.id === currentOcId);
+                if (ocActualizada) {
+                    window.abrirModalRecepcion(ocActualizada.id);
+                } else {
+                    const modalEl = document.getElementById('modalRecepcionOC');
+                    if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+                }
+            }
+        } catch(err) {
+            alert('Error: ' + err.message);
         }
     };
 
