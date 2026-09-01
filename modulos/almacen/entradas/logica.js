@@ -1044,6 +1044,8 @@ function _entFmtFechaHora(iso, createdAt) {
         if (isAnulado) activeCls += ' text-muted opacity-75';
 
         var codLimpio = String(d.id || '').replace(/^ENT-/i, '');
+        var aprobadorVal = d.aprobador_nombre || d.aprobado_por;
+        var aprobadorHtml = aprobadorVal ? '<span class="text-dark fw-bold text-nowrap" style="font-size:0.78rem;"><i class="bi bi-person-check-fill text-success me-1"></i>' + _entEsc(aprobadorVal) + '</span>' : '<span class="text-muted small">—</span>';
 
         if (!items.length) {
             var tr0 = document.createElement('tr');
@@ -1053,6 +1055,7 @@ function _entFmtFechaHora(iso, createdAt) {
                 '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
                 '<td class="text-center col-hide-mob">' + estadoHtml + '</td>' +
+                '<td class="col-hide-mob">' + aprobadorHtml + '</td>' +
                 '<td class="col-hide-mob">' + placaHtml + '</td>' +
                 '<td class="col-hide-mob">' + motivoHtml + '</td>' +
                 '<td class="col-hide-mob">' + (d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
@@ -1110,6 +1113,7 @@ function _entFmtFechaHora(iso, createdAt) {
                 '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
+                '<td class="col-hide-mob">' + aprobadorHtml + '</td>' +
                 '<td>' + placaHtml + '</td>' +
                 '<td>' + motivoHtml + '</td>' +
                 '<td>' + provHtml + '</td>' +
@@ -1662,17 +1666,22 @@ window.abrirModalDetalleOC = function(id) {
     var estEl = document.getElementById('det-oc-estado');
     if (estEl) {
         var estNorm = (d.estado || 'REGISTRADA').toUpperCase();
+        var badgeHtml = '<span class="badge" style="background-color:#64748b; color:#fff; font-size:0.75rem; font-weight:700;">REGISTRADA</span>';
         if (estNorm === 'ANULADO' || estNorm === 'ANULADA' || estNorm === 'RECHAZADO' || estNorm === 'RECHAZADA') {
-            estEl.innerHTML = '<span class="badge" style="background-color:#dc2626; color:#fff; font-size:0.75rem; font-weight:700;">' + estNorm + '</span>';
+            badgeHtml = '<span class="badge" style="background-color:#dc2626; color:#fff; font-size:0.75rem; font-weight:700;">' + estNorm + '</span>';
         } else if (estNorm === 'APROBADO' || estNorm === 'APROBADA' || estNorm === 'AUTORIZADO' || estNorm === 'AUTORIZADA') {
-            estEl.innerHTML = '<span class="badge" style="background-color:#16a34a; color:#fff; font-size:0.75rem; font-weight:700;">APROBADA</span>';
+            badgeHtml = '<span class="badge" style="background-color:#16a34a; color:#fff; font-size:0.75rem; font-weight:700;">APROBADA</span>';
         } else if (estNorm === 'PROCESADO' || estNorm === 'PROCESADA' || estNorm === 'PAGADO' || estNorm === 'PAGADA') {
-            estEl.innerHTML = '<span class="badge" style="background-color:#0284c7; color:#fff; font-size:0.75rem; font-weight:700;">PROCESADA</span>';
+            badgeHtml = '<span class="badge" style="background-color:#0284c7; color:#fff; font-size:0.75rem; font-weight:700;">PROCESADA</span>';
         } else if (estNorm === 'OBSERVADO' || estNorm === 'OBSERVADA') {
-            estEl.innerHTML = '<span class="badge" style="background-color:#f59e0b; color:#fff; font-size:0.75rem; font-weight:700;">OBSERVADA</span>';
-        } else {
-            estEl.innerHTML = '<span class="badge" style="background-color:#64748b; color:#fff; font-size:0.75rem; font-weight:700;">REGISTRADA</span>';
+            badgeHtml = '<span class="badge" style="background-color:#f59e0b; color:#fff; font-size:0.75rem; font-weight:700;">OBSERVADA</span>';
         }
+
+        var aprobadorDetalle = d.aprobador_nombre || d.aprobado_por;
+        if (aprobadorDetalle) {
+            badgeHtml += ' <span class="ms-2 text-dark fw-bold" style="font-size:0.8rem;"><i class="bi bi-person-check-fill text-success me-1"></i>Aprobado por: ' + _entEsc(aprobadorDetalle) + '</span>';
+        }
+        estEl.innerHTML = badgeHtml;
     }
 
     // Adjuntos

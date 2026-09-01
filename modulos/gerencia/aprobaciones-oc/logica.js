@@ -193,8 +193,6 @@
         if (bTodos) bTodos.innerText = ordenes.length;
         const bPend = document.getElementById('tab-badge-pendiente');
         if (bPend) bPend.innerText = pend.length;
-        const bUrg = document.getElementById('tab-badge-urgente');
-        if (bUrg) bUrg.innerText = urg.length;
         const bAprob = document.getElementById('tab-badge-aprobado');
         if (bAprob) bAprob.innerText = aprob.length;
         const bObs = document.getElementById('tab-badge-observado');
@@ -270,7 +268,6 @@
         let filtradas = ordenes.filter(item => {
             // Filtro por tab
             if (tab === 'pendiente' && item.estado !== 'pendiente') return false;
-            if (tab === 'urgente' && (item.prioridad !== 'URGENTE' || item.estado !== 'pendiente')) return false;
             if (tab === 'aprobado' && item.estado !== 'aprobado') return false;
             if (tab === 'observado' && item.estado !== 'observado') return false;
             if (tab === 'rechazado' && item.estado !== 'rechazado') return false;
