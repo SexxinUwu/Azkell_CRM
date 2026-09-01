@@ -84,14 +84,23 @@ window.init_inventario = function() {
         {value:'Inactivo',      label:'Inactivo'},
         {value:'Descontinuado', label:'Descontinuado'}
     ], 'Estado…');
-    window._cbInit('inv-f-almacen', [
-        {value:'',                 label:'— Sin almacén —'},
-        {value:'ALM CENTRAL',      label:'ALM CENTRAL'},
-        {value:'ALM NEUMATICOS',   label:'ALM NEUMATICOS'},
-        {value:'SISTEMAS',         label:'SISTEMAS'},
-        {value:'COMBUSTIBLE',      label:'COMBUSTIBLE'},
-        {value:'ALM LUBRICANTES',  label:'ALM LUBRICANTES'}
-    ], 'Buscar almacén…');
+    window._invCargarAlmacenesSelect = function() {
+        fetch('/api/almacen/almacenes-lista')
+            .then(function(r) { return r.ok ? r.json() : []; })
+            .then(function(alms) {
+                var items = [{ value: '', label: '— Sin almacén —' }].concat(
+                    (alms || []).map(function(a) { return { value: a.nombre, label: a.nombre }; })
+                );
+                window._cbInit('inv-f-almacen', items, 'Buscar almacén…');
+            })
+            .catch(function() {
+                window._cbInit('inv-f-almacen', [
+                    {value:'', label:'— Sin almacén —'},
+                    {value:'Principal', label:'Principal'}
+                ], 'Buscar almacén…');
+            });
+    };
+    window._invCargarAlmacenesSelect();
     // Al seleccionar moneda → mostrar/ocultar campo T/C
     window._cbOnSelect('inv-f-moneda', function() {
         var m = window._cbGet('inv-f-moneda');
@@ -107,121 +116,108 @@ window.init_inventario = function() {
 };
 
 // ── PORTAL MULTI-ALMACÉN (Estilo Seguridad Bento) ────────────────
-window._invListaAlmacenesCatalogo = [
-    { id: 'ALM CENTRAL', nombre: 'ALM CENTRAL', desc: 'Almacén Principal de Repuestos, Insumos y Accesorios', icon: 'bi-box-seam-fill', color: '#0284c7', bg: '#eff6ff' },
-    { id: 'ALM NEUMATICOS', nombre: 'ALM NEUMÁTICOS', desc: 'Control y stock de neumáticos, llantas y bandas de rodamiento', icon: 'bi-circle-fill', color: '#ea580c', bg: '#fff7ed' },
-    { id: 'ALM LUBRICANTES', nombre: 'ALM LUBRICANTES', desc: 'Aceites para motor, transmisión, grasa y refrigerantes', icon: 'bi-droplet-fill', color: '#ca8a04', bg: '#fefce8' },
-    { id: 'COMBUSTIBLE', nombre: 'COMBUSTIBLE', desc: 'Control de tanques, varillaje y abastecimiento de Diesel D2', icon: 'bi-fuel-pump-fill', color: '#16a34a', bg: '#f0fdf4' },
-    { id: 'SISTEMAS', nombre: 'SISTEMAS', desc: 'Equipos telemáticos, GPS, hardware y repuestos electrónicos', icon: 'bi-cpu-fill', color: '#7c3aed', bg: '#f5f3ff' }
-];
-
 window._invRenderPortalAlmacenes = function() {
-    var uName = localStorage.getItem('fleet_user') || 'Encargado de Almacén';
-    if (uName && uName.includes('@')) {
-        var base = uName.split('@')[0].replace(/[._-]/g, ' ');
-        uName = base.charAt(0).toUpperCase() + base.slice(1);
+    var lsUser = localStorage.getItem('fleet_user') || 'Administrador ROSYMAR PERU S.A.C.';
+    var elUserName = document.getElementById('inv-portal-user-name');
+    var elUserAvatar = document.getElementById('inv-portal-user-avatar');
+    if (elUserName) elUserName.textContent = lsUser;
+    if (elUserAvatar) {
+        var partes = lsUser.trim().split(' ');
+        var ini = partes.length > 1 ? (partes[0][0] + partes[1][0]) : lsUser.substring(0, 2);
+        elUserAvatar.textContent = ini.toUpperCase();
     }
-    var elU = document.getElementById('inv-portal-user-name');
-    if (elU) elU.innerText = uName;
 
     var grid = document.getElementById('inv-portal-grid-almacenes');
     if (!grid) return;
 
-    var inventario = window._invData || [];
-    var totalGlobal = inventario.length;
-    var totalCriticosGlobal = inventario.filter(function(d){ return parseFloat(d.stock_actual||0) <= 0 && d.tipo !== 'Servicio'; }).length;
+    // Obtener almacenes configurados en la base de datos
+    fetch('/api/almacen/almacenes-lista')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(almacenesBD) {
+            var almacenes = Array.isArray(almacenesBD) && almacenesBD.length ? almacenesBD : [{ id: 1, nombre: 'Principal', descripcion: 'Almacén Principal Central del ERP' }];
+            var inventario = window._invData || [];
+            var totalGlobal = inventario.length;
+            var enQuiebreGlobal = inventario.filter(function(d){ return parseFloat(d.stock_actual||0) <= 0 && d.tipo !== 'Servicio'; }).length;
 
-    var cardsHtml = window._invListaAlmacenesCatalogo.map(function(alm) {
-        var itemsAlm = inventario.filter(function(d) {
-            var a = (d.almacen || '').toUpperCase().trim();
-            var target = alm.id.toUpperCase().trim();
-            return a === target || (target === 'ALM CENTRAL' && (!a || a === 'PRINCIPAL' || a === 'CENTRAL' || a === 'ALM CENTRAL'));
+            // Paleta de colores idéntica a checklist
+            var colorPalettes = [
+                { bg: '#eff6ff', color: '#0284c7', icon: 'bi-building-fill' },
+                { bg: '#f0fdf4', color: '#16a34a', icon: 'bi-truck-front-fill' },
+                { bg: '#fffbeb', color: '#d97706', icon: 'bi-geo-alt-fill' },
+                { bg: '#fdf2f8', color: '#db2777', icon: 'bi-box-seam-fill' },
+                { bg: '#f5f3ff', color: '#7c3aed', icon: 'bi-cpu-fill' }
+            ];
+
+            var html = '';
+
+            // 1. Tarjeta para cada Almacén (Idéntica a Checklist / Seguridad)
+            almacenes.forEach(function(alm, idx) {
+                var pal = colorPalettes[idx % colorPalettes.length];
+                var itemsAlm = inventario.filter(function(d) {
+                    var a = (d.almacen || '').toUpperCase().trim();
+                    var target = (alm.nombre || '').toUpperCase().trim();
+                    return a === target || (target === 'PRINCIPAL' && (!a || a === 'PRINCIPAL' || a === 'CENTRAL' || a === 'ALM CENTRAL'));
+                });
+
+                var stockOptimo = itemsAlm.filter(function(d) { return parseFloat(d.stock_actual||0) > parseFloat(d.stock_min||0); }).length;
+                var stockCritico = itemsAlm.filter(function(d) { return parseFloat(d.stock_actual||0) <= 0 && d.tipo !== 'Servicio'; }).length;
+
+                html += '<div class="col-12 col-md-6 col-lg-4">';
+                html += '<div class="inv-company-card" onclick="window._invSeleccionarAlmacenPortal(\'' + alm.nombre + '\')">';
+                html += '<div>';
+                html += '<div class="d-flex align-items-center justify-content-between mb-2">';
+                html += '<div class="inv-company-icon" style="background:' + pal.bg + ';color:' + pal.color + ';"><i class="bi ' + pal.icon + '"></i></div>';
+                html += '<span class="badge bg-light text-secondary border rounded-pill px-2 py-1" style="font-size:0.72rem;">' + itemsAlm.length + ' Artículos</span>';
+                html += '</div>';
+                html += '<h4 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">' + (alm.nombre || '').toUpperCase() + '</h4>';
+                html += '<p class="text-secondary small mb-3">' + (alm.descripcion || ('Gestión de inventario y repuestos ' + alm.nombre)) + '</p>';
+                html += '</div>';
+
+                // Mini KPIs estilo Checklist
+                html += '<div class="d-flex align-items-center justify-content-between p-2 rounded-3 mb-3" style="background:#f8fafc;border:1px solid #f1f5f9;">';
+                html += '<div class="text-center flex-fill border-end"><div class="fw-bold text-primary" style="font-size:1.1rem;">' + itemsAlm.length + '</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Total</span></div>';
+                html += '<div class="text-center flex-fill border-end"><div class="fw-bold text-success" style="font-size:1.1rem;">' + stockOptimo + '</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Óptimo</span></div>';
+                html += '<div class="text-center flex-fill"><div class="fw-bold ' + (stockCritico > 0 ? 'text-danger' : 'text-secondary') + '" style="font-size:1.1rem;">' + stockCritico + '</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Crítico</span></div>';
+                html += '</div>';
+
+                html += '<button class="btn btn-primary w-100 rounded-3 fw-bold py-2 shadow-2xs" style="font-size:0.85rem;">';
+                html += '<i class="bi bi-box-seam me-1"></i> Gestionar Inventario ➜';
+                html += '</button>';
+
+                html += '</div>';
+                html += '</div>';
+            });
+
+            // 2. Tarjeta Consolidada "TODOS LOS ALMACENES" (Idéntica a TODAS LAS EMPRESAS)
+            html += '<div class="col-12 col-md-6 col-lg-4">';
+            html += '<div class="inv-company-card" style="border: 2px dashed #cbd5e1; background: #fafafa;" onclick="window._invSeleccionarAlmacenPortal(\'TODOS\')">';
+            html += '<div>';
+            html += '<div class="d-flex align-items-center justify-content-between mb-2">';
+            html += '<div class="inv-company-icon" style="background:#334155;color:#ffffff;"><i class="bi bi-globe2"></i></div>';
+            html += '<span class="badge bg-dark text-white rounded-pill px-2 py-1" style="font-size:0.72rem;">Consolidado</span>';
+            html += '</div>';
+            html += '<h4 class="fw-bold mb-1 text-dark">TODOS LOS ALMACENES</h4>';
+            html += '<p class="text-secondary small mb-3">Vista general combinada de todos los repuestos y suministros del ERP</p>';
+            html += '</div>';
+
+            html += '<div class="d-flex align-items-center justify-content-between p-2 rounded-3 mb-3" style="background:#ffffff;border:1px solid #e2e8f0;">';
+            html += '<div class="text-center flex-fill border-end"><div class="fw-bold text-primary" style="font-size:1.1rem;">' + totalGlobal + '</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Total</span></div>';
+            html += '<div class="text-center flex-fill border-end"><div class="fw-bold text-danger" style="font-size:1.1rem;">' + enQuiebreGlobal + '</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">En Quiebre</span></div>';
+            html += '<div class="text-center flex-fill"><div class="fw-bold text-secondary" style="font-size:1.1rem;">' + totalGlobal + '</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Total ERP</span></div>';
+            html += '</div>';
+
+            html += '<button class="btn btn-outline-dark w-100 rounded-3 fw-bold py-2" style="font-size:0.85rem;">';
+            html += '<i class="bi bi-eye me-1"></i> Ver Catálogo Global ➜';
+            html += '</button>';
+
+            html += '</div>';
+            html += '</div>';
+
+            grid.innerHTML = html;
+        })
+        .catch(function(err) {
+            console.error('Error cargando almacenes:', err);
         });
-
-        var stockOptimo = itemsAlm.filter(function(d) { return parseFloat(d.stock_actual||0) > parseFloat(d.stock_min||0); }).length;
-        var stockCritico = itemsAlm.filter(function(d) { return parseFloat(d.stock_actual||0) <= 0 && d.tipo !== 'Servicio'; }).length;
-
-        return `
-        <div class="col-12 col-md-6 col-xl-4">
-            <div class="card border-0 shadow-2xs rounded-4 p-3.5 bg-white h-100 d-flex flex-column justify-content-between" style="border:1px solid #e2e8f0!important; transition:all 0.2s ease;">
-                <div>
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <div style="width:44px; height:44px; background:${alm.bg}; color:${alm.color}; border-radius:12px; font-size:1.3rem; display:flex; align-items:center; justify-content:center;">
-                            <i class="bi ${alm.icon}"></i>
-                        </div>
-                        <span class="badge bg-light text-dark border rounded-pill px-2.5 py-1" style="font-size:0.75rem; font-weight:800;">
-                            ${itemsAlm.length} Artículos
-                        </span>
-                    </div>
-                    <h5 class="fw-bold text-dark mb-1" style="letter-spacing:-0.01em;">${alm.nombre}</h5>
-                    <p class="text-secondary small mb-3" style="font-size:0.8rem; min-height:36px;">${alm.desc}</p>
-                </div>
-
-                <div>
-                    <div class="row g-2 text-center py-2 px-1 mb-3 rounded-3 bg-light border" style="font-size:0.75rem;">
-                        <div class="col-4">
-                            <span class="text-secondary d-block fw-bold">TOTAL</span>
-                            <strong class="text-dark fs-6">${itemsAlm.length}</strong>
-                        </div>
-                        <div class="col-4 border-start border-end">
-                            <span class="text-success d-block fw-bold">ÓPTIMO</span>
-                            <strong class="text-success fs-6">${stockOptimo}</strong>
-                        </div>
-                        <div class="col-4">
-                            <span class="text-danger d-block fw-bold">CRÍTICO</span>
-                            <strong class="text-danger fs-6">${stockCritico}</strong>
-                        </div>
-                    </div>
-                    <button class="btn btn-primary w-100 rounded-3 py-2 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" 
-                            style="background:${alm.color}; border-color:${alm.color}; font-size:0.85rem;"
-                            onclick="window._invSeleccionarAlmacenPortal('${alm.id}')">
-                        <span>Ingresar al Almacén</span> <i class="bi bi-arrow-right"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        `;
-    }).join('');
-
-    // Card Consolidado: TODOS LOS ALMACENES
-    var cardTodosHtml = `
-    <div class="col-12 col-md-6 col-xl-4">
-        <div class="card border-0 shadow-2xs rounded-4 p-3.5 bg-white h-100 d-flex flex-column justify-content-between" style="border:2px dashed #0284c7!important; background:#f0f9ff!important;">
-            <div>
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <div style="width:44px; height:44px; background:#0284c7; color:#ffffff; border-radius:12px; font-size:1.3rem; display:flex; align-items:center; justify-content:center;">
-                        <i class="bi bi-globe2"></i>
-                    </div>
-                    <span class="badge bg-primary text-white rounded-pill px-2.5 py-1" style="font-size:0.75rem; font-weight:800;">
-                        Consolidado Global
-                    </span>
-                </div>
-                <h5 class="fw-bold text-dark mb-1">TODOS LOS ALMACENES</h5>
-                <p class="text-secondary small mb-3" style="font-size:0.8rem; min-height:36px;">Vista general combinada de todos los repuestos y suministros del ERP</p>
-            </div>
-
-            <div>
-                <div class="row g-2 text-center py-2 px-1 mb-3 rounded-3 bg-white border" style="font-size:0.75rem;">
-                    <div class="col-6 border-end">
-                        <span class="text-secondary d-block fw-bold">TOTAL ÍTEMS</span>
-                        <strong class="text-dark fs-6">${totalGlobal}</strong>
-                    </div>
-                    <div class="col-6">
-                        <span class="text-danger d-block fw-bold">EN QUIEBRE</span>
-                        <strong class="text-danger fs-6">${totalCriticosGlobal}</strong>
-                    </div>
-                </div>
-                <button class="btn btn-outline-primary w-100 rounded-3 py-2 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" 
-                        style="font-size:0.85rem;"
-                        onclick="window._invSeleccionarAlmacenPortal('TODOS')">
-                    <i class="bi bi-eye"></i> <span>Ver Inventario Global</span>
-                </button>
-            </div>
-        </div>
-    </div>
-    `;
-
-    grid.innerHTML = cardsHtml + cardTodosHtml;
 };
 
 window._invSeleccionarAlmacenPortal = function(almacenId) {

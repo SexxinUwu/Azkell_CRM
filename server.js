@@ -2762,6 +2762,28 @@ db.query(
         }
     }
 );
+
+// ── Tabla de Catálogo de Almacenes (ERP Azkell) ───────────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS almacen_almacenes (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(100) NOT NULL UNIQUE,
+        descripcion VARCHAR(255) NULL,
+        es_sistema  TINYINT(1)   NOT NULL DEFAULT 0,
+        activo      TINYINT(1)   NOT NULL DEFAULT 1,
+        orden       INT          NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE almacen_almacenes:', e.message);
+        else {
+            console.log('✅ Tabla almacen_almacenes verificada');
+            db.query(`INSERT IGNORE INTO almacen_almacenes (id, nombre, descripcion, es_sistema, activo, orden) 
+                      VALUES (1, 'Principal', 'Almacén Principal Central del ERP', 1, 1, 1)`, () => {});
+        }
+    }
+);
 db.query(
     `CREATE TABLE IF NOT EXISTS proveedores_inv (
         id               VARCHAR(20)  NOT NULL PRIMARY KEY,

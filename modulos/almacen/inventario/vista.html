@@ -325,24 +325,80 @@
     font-weight: 700 !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
 }
+
+/* ── ESTILOS PORTAL DE BIENVENIDA MULTI-ALMACÉN (IDÉNTICO A CHECKLIST) ──────── */
+.inv-portal-hero {
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.06), rgba(59, 130, 246, 0.02));
+    border: 1px solid rgba(2, 132, 199, 0.15);
+    border-radius: 24px;
+    padding: 1.5rem 1.6rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.inv-portal-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0284c7, #2563eb);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 800;
+    box-shadow: 0 6px 16px rgba(2, 132, 199, 0.3);
+    flex-shrink: 0;
+}
+.inv-company-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1.35rem 1.4rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+.inv-company-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px rgba(2, 132, 199, 0.12);
+    border-color: #0284c7;
+}
+.inv-company-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    margin-bottom: 1rem;
+}
 </style>
 
 <div id="mod-inventario" class="modulo-wrapper d-flex flex-column h-100">
 
     <!-- ═══ VISTA 1: PORTAL DE ALMACENES (Cards estilo Portal Multi-Empresa) ═══ -->
     <div id="inv-portal-almacenes" class="inv-view-container">
-        <!-- Banner de Bienvenida -->
-        <div class="card border-0 shadow-2xs rounded-4 p-4 mb-4 bg-white d-flex flex-row align-items-center justify-content-between flex-wrap gap-3" style="border:1px solid #e2e8f0!important;">
+        <!-- Hero de Bienvenida Idéntico a Checklist -->
+        <div class="inv-portal-hero">
             <div class="d-flex align-items-center gap-3">
-                <div style="width: 52px; height: 52px; background: #0284c7; color: #ffffff; border-radius: 14px; font-size: 1.6rem; display: flex; align-items: center; justify-content: center; font-weight: 800;">
-                    <i class="bi bi-buildings-fill"></i>
+                <div class="inv-portal-avatar" id="inv-portal-user-avatar">
+                    <i class="bi bi-box-seam-fill"></i>
                 </div>
                 <div>
                     <div class="d-flex align-items-center gap-2 mb-1">
                         <span class="badge bg-primary px-2 py-1 rounded-pill" style="font-size:0.68rem;font-weight:800;letter-spacing:0.04em;">MÓDULO INVENTARIO</span>
                     </div>
-                    <h3 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">¡Hola, <span id="inv-portal-user-name">Encargado de Almacén</span>! 👋</h3>
-                    <p class="text-secondary mb-0" style="font-size:0.88rem;">¿A qué almacén deseas ingresar / consultar existencias hoy?</p>
+                    <h3 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">¡Hola, <span id="inv-portal-user-name">Administrador ROSYMAR PERU S.A.C.</span>! 👋</h3>
+                    <p class="text-secondary mb-0" style="font-size:0.88rem;">¿A qué almacén deseas gestionar / consultar inventario hoy?</p>
                 </div>
             </div>
             <div>
