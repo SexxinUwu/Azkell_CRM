@@ -175,6 +175,7 @@ const _stockSQL = `
     ROUND(
       COALESCE(i.stock_regularizado, 0)
       + COALESCE(ent.total_entradas, 0)
+      + COALESCE(rec.total_recepciones, 0)
       - COALESCE(sal.total_salidas, 0)
     , 4) AS stock_actual
   FROM inventario i
@@ -184,20 +185,28 @@ const _stockSQL = `
           SUM(d.cantidad) AS total_entradas
       FROM detalle_entradas_inv d
       JOIN entradas_inv e ON e.id = d.entrada_id
-      -- Nota: No se puede filtrar fácilmente por i.fecha_regularizacion en una tabla derivada pre-agregada sin JOIN a inventario, 
-      -- así que lo incluiremos en el JOIN interno para poder agrupar.
       JOIN inventario inv ON inv.id = d.inventario_id
       WHERE (inv.fecha_regularizacion IS NULL OR DATE(e.created_at) >= DATE(inv.fecha_regularizacion))
         AND (e.estado IS NULL OR e.estado != 'Anulado')
+        AND (e.tipo_orden = 'Entrada directa' OR e.tipo_orden = 'Ajuste')
       GROUP BY d.inventario_id
   ) ent ON ent.inventario_id = i.id
+  LEFT JOIN (
+      SELECT 
+          dr.inventario_id,
+          SUM(dr.cantidad_recibida) AS total_recepciones
+      FROM detalle_recepciones_oc dr
+      JOIN recepciones_oc r ON r.id = dr.recepcion_id
+      JOIN inventario inv ON inv.id = dr.inventario_id
+      WHERE (inv.fecha_regularizacion IS NULL OR DATE(r.created_at) >= DATE(inv.fecha_regularizacion))
+      GROUP BY dr.inventario_id
+  ) rec ON rec.inventario_id = i.id
   LEFT JOIN (
       SELECT 
           inv.id AS mapped_id,
           SUM(d.cantidad) AS total_salidas
       FROM detalle_salidas_inv d
       JOIN salidas_inv s ON s.id = d.salida_id
-      -- Mapear d.inventario_id o, en su defecto, extraer el ID de d.descripcion
       JOIN inventario inv ON (d.inventario_id = inv.id OR (d.inventario_id IS NULL AND SUBSTRING_INDEX(d.descripcion, ' - ', 1) = inv.id))
       WHERE s.estado = 'Despachado'
         AND (inv.fecha_regularizacion IS NULL OR DATE(s.created_at) >= DATE(inv.fecha_regularizacion))
@@ -1090,21 +1099,244 @@ router.get('/kardex/:inventario_id', (req, res) => {
             FROM detalle_entradas_inv d JOIN entradas_inv e ON e.id=d.entrada_id
             WHERE d.inventario_id=? AND (e.estado IS NULL OR e.estado != 'Anulado')
             UNION ALL
+            SELECT 'Recepción OC' AS tipo, DATE(r.fecha_recepcion) AS fecha, r.fecha_recepcion AS created_at, r.oc_id AS doc_id, CONCAT('Recepción OC / ', COALESCE(r.almacen,'ALM CENTRAL'), ' - ', COALESCE(r.usuario,'')) AS contraparte, dr.cantidad_recibida AS cantidad, dr.costo_unitario, dr.moneda, (dr.cantidad_recibida * dr.costo_unitario) AS importe
+            FROM detalle_recepciones_oc dr JOIN recepciones_oc r ON r.id=dr.recepcion_id
+            WHERE dr.inventario_id=?
+            UNION ALL
             SELECT 'Salida' AS tipo, s.fecha, s.created_at, s.id AS doc_id, CONCAT(s.tipo_destino,' / ',COALESCE(s.placa,s.responsable,'—')) AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
             FROM detalle_salidas_inv d JOIN salidas_inv s ON s.id=d.salida_id
             WHERE d.inventario_id=? AND (s.estado IS NULL OR s.estado = 'Despachado')
             ORDER BY fecha ASC, created_at ASC, doc_id ASC
-        `, [id, id], (err, rows) => {
+        `, [id, id, id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             let saldo = base;
             rows.forEach(r => {
-                if (r.tipo === 'Entrada') saldo += parseFloat(r.cantidad || 0);
+                if (r.tipo === 'Entrada' || r.tipo === 'Recepción OC') saldo += parseFloat(r.cantidad || 0);
                 else saldo -= parseFloat(r.cantidad || 0);
                 r.saldo = parseFloat(saldo.toFixed(4));
             });
             res.json({ stock_base: base, fecha_regularizacion: regDate, movimientos: rows });
         });
     });
+});
+
+// ============================================================
+// ALMACÉN — RECEPCIÓN DE ÓRDENES DE COMPRA
+// ============================================================
+router.get('/recepciones-oc', async (req, res) => {
+    try {
+        const targetDb = req.db || db;
+        // 1. Obtener todas las órdenes de compra (de entradas_inv o del flujo de OCs)
+        const sqlOCs = `
+            SELECT e.*, 
+                   COALESCE(SUM(de.cantidad), 0) AS total_items_oc,
+                   COUNT(DISTINCT de.id) AS total_renglones
+            FROM entradas_inv e
+            LEFT JOIN detalle_entradas_inv de ON de.entrada_id = e.id
+            WHERE (e.estado IS NULL OR e.estado != 'Anulado')
+            GROUP BY e.id
+            ORDER BY e.fecha DESC, e.id DESC
+        `;
+
+        targetDb.query(sqlOCs, async (errOC, ocs) => {
+            if (errOC) return res.status(500).json({ error: errOC.message });
+
+            // 2. Obtener todas las recepciones registradas agrupadas por OC
+            const sqlRecs = `
+                SELECT r.id AS recepcion_id, r.oc_id, r.fecha_recepcion, r.usuario, r.almacen, r.sustento_url, r.observacion, r.tipo_recepcion,
+                       dr.inventario_id, dr.descripcion, dr.cantidad_recibida, dr.costo_unitario, dr.moneda
+                FROM recepciones_oc r
+                JOIN detalle_recepciones_oc dr ON dr.recepcion_id = r.id
+                ORDER BY r.fecha_recepcion ASC
+            `;
+
+            targetDb.query(sqlRecs, async (errRec, recRows) => {
+                if (errRec) return res.status(500).json({ error: errRec.message });
+
+                // Mapear recepciones por oc_id
+                const recMap = {};
+                (recRows || []).forEach(row => {
+                    if (!recMap[row.oc_id]) recMap[row.oc_id] = { items_recibidos: 0, historial: [] };
+                    recMap[row.oc_id].items_recibidos += parseFloat(row.cantidad_recibida || 0);
+                    recMap[row.oc_id].historial.push(row);
+                });
+
+                // Traer detalle completo de ítems por cada OC
+                const sqlDetalle = `
+                    SELECT de.entrada_id AS oc_id, de.inventario_id, de.descripcion, de.cantidad, de.costo_unitario, de.moneda, de.importe,
+                           i.descripcion AS inv_nombre, i.unidad
+                    FROM detalle_entradas_inv de
+                    LEFT JOIN inventario i ON i.id = de.inventario_id
+                `;
+
+                targetDb.query(sqlDetalle, async (errDet, detRows) => {
+                    if (errDet) return res.status(500).json({ error: errDet.message });
+
+                    const itemsPorOC = {};
+                    (detRows || []).forEach(d => {
+                        if (!itemsPorOC[d.oc_id]) itemsPorOC[d.oc_id] = [];
+                        itemsPorOC[d.oc_id].push(d);
+                    });
+
+                    const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+
+                    // Armar lista enriquecida con estado de progreso de recepción
+                    const resultado = await Promise.all((ocs || []).map(async oc => {
+                        const recInfo = recMap[oc.id] || { items_recibidos: 0, historial: [] };
+                        const itemsOC = itemsPorOC[oc.id] || [];
+
+                        let totalPedido = 0;
+                        let totalRecibido = recInfo.items_recibidos;
+
+                        // Detalle de ítems con sus saldos de recepción
+                        const itemsCalculados = itemsOC.map(it => {
+                            const cantPedida = parseFloat(it.cantidad || 0);
+                            totalPedido += cantPedida;
+
+                            // Cuánto se ha recibido de este ítem
+                            const recibidosItem = recInfo.historial
+                                .filter(h => (h.inventario_id && h.inventario_id === it.inventario_id) || (h.descripcion === it.descripcion))
+                                .reduce((acc, h) => acc + parseFloat(h.cantidad_recibida || 0), 0);
+
+                            const pendiente = Math.max(0, cantPedida - recibidosItem);
+                            return {
+                                inventario_id: it.inventario_id || '',
+                                descripcion: it.descripcion || it.inv_nombre || 'Ítem sin descripción',
+                                unidad: it.unidad || 'UND',
+                                pedido: cantPedida,
+                                recepcionado: recibidosItem,
+                                pendiente: pendiente,
+                                costo_unitario: parseFloat(it.costo_unitario || 0),
+                                moneda: it.moneda || oc.moneda || 'PEN'
+                            };
+                        });
+
+                        // Firmar URLs de fotos de sustento en S3 para el historial
+                        const historialFirmado = await Promise.all((recInfo.historial || []).map(async h => {
+                            let urlFirmada = h.sustento_url;
+                            if (h.sustento_url) {
+                                const k = s3KeyFromUrl(h.sustento_url);
+                                if (k) {
+                                    urlFirmada = await getPresignedUrl(k, 3600).catch(() => h.sustento_url);
+                                }
+                            }
+                            return {
+                                ...h,
+                                sustento_url_presigned: urlFirmada
+                            };
+                        }));
+
+                        // Determinar estado de recepción
+                        let estadoRecepcion = 'PENDIENTE';
+                        if (totalRecibido > 0 && totalRecibido < totalPedido) {
+                            estadoRecepcion = 'PARCIAL';
+                        } else if (totalPedido > 0 && totalRecibido >= totalPedido) {
+                            estadoRecepcion = 'COMPLETO';
+                        }
+
+                        return {
+                            id: oc.id,
+                            fecha: oc.fecha,
+                            proveedor: oc.proveedor_nombre || 'PROVEEDOR GENERAL',
+                            solicitante: oc.creado_por || 'ALMACÉN / MANTENIMIENTO',
+                            almacen: oc.almacen || 'ALM CENTRAL',
+                            moneda: oc.moneda || 'PEN',
+                            importe: parseFloat(oc.total_pen || 0),
+                            estado_oc: oc.estado === 'aprobado' ? 'AUTORIZADO' : 'PROCESADO',
+                            total_pedido: totalPedido,
+                            total_recibido: totalRecibido,
+                            estado_recepcion: estadoRecepcion,
+                            progreso_label: `${estadoRecepcion} (${totalRecibido}/${totalPedido})`,
+                            items: itemsCalculados,
+                            historial_recepciones: historialFirmado
+                        };
+                    }));
+
+                    res.json(resultado);
+                });
+            });
+        });
+    } catch (e) {
+        console.error('Error en GET /api/almacen/recepciones-oc:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Registrar entrega / recepción (parcial o completa) de una OC
+router.post('/recepciones-oc/registrar', _multerInv.single('sustento'), async (req, res) => {
+    try {
+        const { oc_id, fecha_recepcion, usuario, almacen, observacion, items_json } = req.body;
+        if (!oc_id) return res.status(400).json({ error: 'N° de Orden de Compra requerido' });
+
+        let items = [];
+        try { items = JSON.parse(items_json || '[]'); } catch(e) { items = []; }
+        if (!items.length) return res.status(400).json({ error: 'No se recibieron productos a recepcionar' });
+
+        const targetDb = req.db || db;
+        let sustentoUrl = null;
+
+        // Subir sustento / foto a AWS S3 si fue adjuntado
+        if (req.file) {
+            const { uploadToS3 } = require('../utils/s3');
+            const ext = req.file.originalname.split('.').pop() || 'jpg';
+            const s3Key = `almacen/recepciones_oc/${oc_id}/${Date.now()}.${ext}`;
+            sustentoUrl = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
+        }
+
+        const fechaHora = fecha_recepcion ? new Date(fecha_recepcion) : new Date();
+        const fechaHoraSQL = fechaHora.toISOString().slice(0, 19).replace('T', ' ');
+
+        // Determinar si esta entrega completa la orden o es parcial
+        const totalRecepcionadoAhora = items.reduce((sum, it) => sum + (parseFloat(it.cantidad_recibida) || 0), 0);
+        const tipoRecepcion = req.body.tipo_recepcion || 'TOTAL';
+
+        // 1. Insertar Cabecera de Recepción
+        targetDb.query(
+            `INSERT INTO recepciones_oc (oc_id, fecha_recepcion, usuario, almacen, sustento_url, observacion, tipo_recepcion)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [oc_id, fechaHoraSQL, usuario || 'Almacén Central', almacen || 'ALM CENTRAL', sustentoUrl, observacion || null, tipoRecepcion],
+            (errRec, resRec) => {
+                if (errRec) return res.status(500).json({ error: errRec.message });
+                const recepcionId = resRec.insertId;
+
+                // 2. Insertar Detalle de Recepción
+                const detalleVals = items.map(it => [
+                    recepcionId,
+                    oc_id,
+                    it.inventario_id || null,
+                    it.descripcion || 'Ítem recepcionado',
+                    parseFloat(it.cantidad_recibida) || 0,
+                    parseFloat(it.costo_unitario) || 0,
+                    it.moneda || 'PEN',
+                    it.almacen || almacen || 'ALM CENTRAL'
+                ]);
+
+                targetDb.query(
+                    `INSERT INTO detalle_recepciones_oc (recepcion_id, oc_id, inventario_id, descripcion, cantidad_recibida, costo_unitario, moneda, almacen)
+                     VALUES ?`,
+                    [detalleVals],
+                    (errDet) => {
+                        if (errDet) return res.status(500).json({ error: errDet.message });
+
+                        // 3. Auditoría del sistema ERP
+                        if (typeof logAudit === 'function' && usuario) {
+                            logAudit(usuario, 'almacen/recepcion-compras', 'CREÓ', `/api/almacen/recepciones-oc/registrar (${oc_id})`);
+                        }
+
+                        res.json({
+                            ok: true,
+                            mensaje: 'Recepción registrada y stock actualizado con éxito',
+                            recepcion_id: recepcionId,
+                            sustento_url: sustentoUrl
+                        });
+                    }
+                );
+            }
+        );
+    } catch (err) {
+        console.error('Error al registrar recepción de OC:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ============================================================

@@ -329,42 +329,83 @@
 
 <div id="mod-inventario" class="modulo-wrapper d-flex flex-column h-100">
 
-    <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        <div class="d-flex align-items-center gap-3">
-            <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
-                <i class="bi bi-box-seam-fill"></i>
+    <!-- ═══ VISTA 1: PORTAL DE ALMACENES (Cards estilo Portal Multi-Empresa) ═══ -->
+    <div id="inv-portal-almacenes" class="inv-view-container">
+        <!-- Banner de Bienvenida -->
+        <div class="card border-0 shadow-2xs rounded-4 p-4 mb-4 bg-white d-flex flex-row align-items-center justify-content-between flex-wrap gap-3" style="border:1px solid #e2e8f0!important;">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width: 52px; height: 52px; background: #0284c7; color: #ffffff; border-radius: 14px; font-size: 1.6rem; display: flex; align-items: center; justify-content: center; font-weight: 800;">
+                    <i class="bi bi-buildings-fill"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge bg-primary px-2 py-1 rounded-pill" style="font-size:0.68rem;font-weight:800;letter-spacing:0.04em;">MÓDULO INVENTARIO</span>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">¡Hola, <span id="inv-portal-user-name">Encargado de Almacén</span>! 👋</h3>
+                    <p class="text-secondary mb-0" style="font-size:0.88rem;">¿A qué almacén deseas ingresar / consultar existencias hoy?</p>
+                </div>
             </div>
             <div>
-                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Inventario de Almacén</h4>
-                <span class="text-secondary small">Catálogo de repuestos, insumos y control de existencias en tiempo real</span>
+                <button class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-semibold" style="font-size:0.8rem;" onclick="window.cargarInventario()">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Actualizar Stock
+                </button>
             </div>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.cargarInventario()" title="Actualizar">
-                <i class="bi bi-arrow-clockwise fs-6"></i>
-            </button>
-            <div class="dropdown d-inline-block">
-                <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-file-earmark-excel text-success"></i> Excel
-                </button>
-                <ul class="dropdown-menu shadow border" style="border-radius:10px;">
-                    <li><a class="dropdown-item py-2 fw-semibold" onclick="window.exportarInventarioExcel()"><i class="bi bi-download me-2 text-success"></i>Exportar todo</a></li>
-                    <li><a class="dropdown-item py-2 fw-semibold" onclick="window.descargarPlantillaInventario()"><i class="bi bi-file-earmark-arrow-down me-2 text-primary"></i>Descargar plantilla</a></li>
-                    <li><hr class="dropdown-divider my-1"></li>
-                    <li>
-                        <label class="dropdown-item py-2 fw-semibold" style="cursor:pointer;">
-                            <i class="bi bi-upload me-2 text-warning"></i>Importar Excel
-                            <input type="file" id="inputFileInventario" accept=".xlsx,.xls" style="display:none" onchange="window.importarExcelInventario(event)">
-                        </label>
-                    </li>
-                </ul>
+
+        <!-- Bento Grid de Almacenes -->
+        <div class="row g-3 mb-4" id="inv-portal-grid-almacenes">
+            <!-- Renderizado dinámico desde logica.js -->
+            <div class="col-12 text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm me-2"></div> Cargando almacenes disponibles...
             </div>
-            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalInventario()" style="background: #0284c7; border-color: #0284c7;">
-                <i class="bi bi-plus-lg fs-6"></i> <span>Nuevo Artículo</span>
-            </button>
         </div>
     </div>
+
+    <!-- ═══ VISTA 2: LISTA DE ARTÍCULOS POR ALMACÉN (Oculta por defecto) ═══ -->
+    <div id="inv-vista-articulos" class="inv-view-container" style="display: none;">
+
+        <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-box-seam-fill"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Inventario de Almacén</h4>
+                        <span class="badge bg-primary text-white rounded-pill px-2.5 py-1" id="inv-almacen-badge-activo" style="font-size:0.75rem; font-weight:800;">TODOS LOS ALMACENES</span>
+                    </div>
+                    <span class="text-secondary small">Catálogo de repuestos, insumos y control de existencias en tiempo real</span>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-2" onclick="window._invVolverAPortalAlmacenes()" title="Cambiar de Almacén">
+                    <i class="bi bi-grid-fill text-primary"></i> <span class="d-none d-sm-inline">Almacenes</span>
+                </button>
+                <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.cargarInventario()" title="Actualizar">
+                    <i class="bi bi-arrow-clockwise fs-6"></i>
+                </button>
+                <div class="dropdown d-inline-block">
+                    <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-file-earmark-excel text-success"></i> Excel
+                    </button>
+                    <ul class="dropdown-menu shadow border" style="border-radius:10px;">
+                        <li><a class="dropdown-item py-2 fw-semibold" onclick="window.exportarInventarioExcel()"><i class="bi bi-download me-2 text-success"></i>Exportar todo</a></li>
+                        <li><a class="dropdown-item py-2 fw-semibold" onclick="window.descargarPlantillaInventario()"><i class="bi bi-file-earmark-arrow-down me-2 text-primary"></i>Descargar plantilla</a></li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <label class="dropdown-item py-2 fw-semibold" style="cursor:pointer;">
+                                <i class="bi bi-upload me-2 text-warning"></i>Importar Excel
+                                <input type="file" id="inputFileInventario" accept=".xlsx,.xls" style="display:none" onchange="window.importarExcelInventario(event)">
+                            </label>
+                        </li>
+                    </ul>
+                </div>
+                <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalInventario()" style="background: #0284c7; border-color: #0284c7;">
+                    <i class="bi bi-plus-lg fs-6"></i> <span>Nuevo Artículo</span>
+                </button>
+            </div>
+        </div>
 
     <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO) ─────────────── -->
     <div class="row g-2 mb-3">
@@ -450,8 +491,9 @@
         </div>
     </div>
 
-    <!-- Paginación -->
-    <div class="d-flex justify-content-between align-items-center mt-auto mb-2 px-1" id="inv-paginacion"></div>
+        <!-- Paginación -->
+        <div class="d-flex justify-content-between align-items-center mt-auto mb-2 px-1" id="inv-paginacion"></div>
+    </div>
 </div>
 
 <!-- ═══ DRAWER — Nuevo / Editar Artículo ════════════════════════ -->

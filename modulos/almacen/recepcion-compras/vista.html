@@ -1,0 +1,364 @@
+<!-- ═══════════════════════════════════════════════════════════════════
+     MÓDULO ALMACÉN: RECEPCIÓN DE COMPRAS (ERP AZKELL)
+     Vistas: Actual (Pendientes/Parciales) | Historial (Completadas)
+     Modal: Recepción con sustento AWS S3, Almacén y Timeline de Entregas
+═══════════════════════════════════════════════════════════════════ -->
+<style>
+#moduloRecepcionCompras {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    padding: 1rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+}
+@media (max-width: 768px) {
+    #moduloRecepcionCompras { padding: 0.5rem 0.5rem 120px 0.5rem !important; }
+}
+
+/* ── Estilos de Tabla y Badges ─────────────────────────────── */
+.table-rec-compras {
+    font-size: 0.85rem;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.table-rec-compras thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 14px;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+}
+.table-rec-compras tbody td {
+    padding: 12px 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+.table-rec-compras tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Botón Recepcionar */
+.btn-rec-action {
+    background: #f59e0b;
+    color: #ffffff !important;
+    border: 1px solid #d97706;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 6px 14px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+    transition: all 0.15s ease;
+}
+.btn-rec-action:hover {
+    background: #d97706;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(217, 119, 6, 0.4);
+}
+.btn-rec-action.btn-ver-historial {
+    background: #0284c7;
+    border-color: #0369a1;
+    box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3);
+}
+.btn-rec-action.btn-ver-historial:hover {
+    background: #0369a1;
+}
+
+/* Badges de Estado */
+.badge-oc-procesado {
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    text-transform: uppercase;
+}
+.badge-rec-pendiente {
+    background: #e11d48;
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    text-transform: uppercase;
+}
+.badge-rec-parcial {
+    background: #d97706;
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    text-transform: uppercase;
+}
+.badge-rec-completo {
+    background: #16a34a;
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    text-transform: uppercase;
+}
+
+/* Pestañas de Vista (Actual vs Historial) */
+.rec-nav-pill {
+    border: none;
+    background: transparent;
+    padding: 8px 18px;
+    border-radius: 10px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.rec-nav-pill:hover { color: #0f172a; }
+.rec-nav-pill.active {
+    background: #ffffff !important;
+    color: #0284c7 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+}
+
+/* Modal Styling */
+.modal-rec-header {
+    border-bottom: 2px solid #0284c7;
+    padding: 16px 24px;
+}
+.rec-summary-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+}
+</style>
+
+<div id="moduloRecepcionCompras" class="modulo-wrapper d-flex flex-column h-100">
+
+    <!-- ── 1. ENCABEZADO OFICIAL ERP ─────────────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; background: #fff7ed; color: #ea580c; border-radius: 12px; font-size: 1.35rem; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-box-arrow-in-down"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Recepción de Compras</h4>
+                    <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" style="font-size:0.72rem;font-weight:800;">ALMACÉN</span>
+                </div>
+                <span class="text-secondary small">Recepción física de artículos, control de entregas parciales y afectación de stock en tiempo real</span>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-warning text-white rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm" style="background:#ea580c;border-color:#ea580c;" onclick="window.cargarRecepcionesOC()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise fs-6"></i> <span>Actualizar</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ── 2. BARRA DE HERRAMIENTAS Y PESTAÑAS (ACTUAL vs HISTORIAL) ── -->
+    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border:1px solid #e2e8f0!important;">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <!-- Pestañas de Navegación Segmentada -->
+            <div class="d-inline-flex p-1 bg-light rounded-3 border" style="background:#f1f5f9!important;">
+                <button class="rec-nav-pill active" id="tab-rec-actual" onclick="window.cambiarTabRecepciones('actual')">
+                    <i class="bi bi-hourglass-split text-warning"></i> Actual <span class="badge bg-warning text-dark rounded-pill px-2" id="badge-rec-actual-count">0</span>
+                </button>
+                <button class="rec-nav-pill" id="tab-rec-historial" onclick="window.cambiarTabRecepciones('historial')">
+                    <i class="bi bi-clock-history text-primary"></i> Historial <span class="badge bg-secondary rounded-pill px-2" id="badge-rec-historial-count">0</span>
+                </button>
+            </div>
+
+            <!-- Acciones Rápidas (Imprimir, Excel, Filtro Buscar) -->
+            <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-end">
+                <button class="btn btn-light bg-white border text-secondary rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1" onclick="window.print()" style="font-size:0.82rem;">
+                    <i class="bi bi-printer"></i> Imprimir
+                </button>
+                <button class="btn btn-light bg-white border text-secondary rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1" onclick="window.exportarRecepcionesExcel()" style="font-size:0.82rem;">
+                    <i class="bi bi-file-earmark-excel text-success"></i> Excel
+                </button>
+                <div class="position-relative" style="min-width: 240px;">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
+                    <input type="text" id="filtro-buscar-rec" class="form-control ps-5 py-1.5 rounded-3 border bg-light" placeholder="Buscar en tabla..." style="font-size:0.83rem;" oninput="window.filtrarTablaRecepciones()">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 3. TABLA PRINCIPAL DE ÓRDENES DE COMPRA (Fiel a Imagen 1) ── -->
+    <div class="card border-0 shadow-2xs rounded-4 bg-white overflow-hidden" style="border:1px solid #e2e8f0!important;">
+        <div class="table-responsive">
+            <table class="table table-hover table-rec-compras m-0 align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 140px;">ACCIÓN</th>
+                        <th style="min-width: 130px;">ORDEN DE COMPRA</th>
+                        <th style="min-width: 100px;">FECHA</th>
+                        <th style="min-width: 220px;">PROVEEDOR</th>
+                        <th style="min-width: 150px;">SOLICITANTE</th>
+                        <th style="min-width: 120px;">IMPORTE</th>
+                        <th style="min-width: 110px;">ESTADO OC</th>
+                        <th style="min-width: 160px;">PROGRESO DE RECEPCIÓN</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-rec-compras">
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-secondary">
+                            <div class="spinner-border spinner-border-sm text-primary me-2"></div> Cargando órdenes de compra...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="p-3 border-top bg-light d-flex align-items-center justify-content-between" style="font-size:0.8rem; color:#64748b;">
+            <span id="txt-rec-contador">Mostrando 0 registros</span>
+        </div>
+    </div>
+
+    <!-- ── 4. MODAL EJECUTIVO DE RECEPCIÓN (Fiel a Imágenes 2 y 3) ── -->
+    <div class="modal fade" id="modalRecepcionOC" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+                <!-- Header Modal -->
+                <div class="modal-header modal-rec-header bg-white">
+                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size:1.15rem;">
+                        <i class="bi bi-box-seam text-primary"></i> Recepción de Orden de Compra
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Body Modal -->
+                <div class="modal-body p-4 bg-light">
+                    <!-- Resumen de la Orden de Compra -->
+                    <div class="rec-summary-box shadow-2xs">
+                        <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                            <i class="bi bi-card-text text-secondary"></i>
+                            <h6 class="fw-bold m-0 text-dark">Resumen de la Orden de Compra</h6>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-3">
+                                <span class="text-secondary small d-block fw-bold">Orden:</span>
+                                <strong class="text-dark" id="modal-rec-orden">-</strong>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <span class="text-secondary small d-block fw-bold">Proveedor:</span>
+                                <strong class="text-dark text-truncate d-block" id="modal-rec-proveedor">-</strong>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <span class="text-secondary small d-block fw-bold">Solicitante:</span>
+                                <strong class="text-dark" id="modal-rec-solicitante">-</strong>
+                            </div>
+                            <div class="col-12 col-md-2">
+                                <span class="text-secondary small d-block fw-bold">Importe:</span>
+                                <strong class="text-dark" id="modal-rec-importe">-</strong>
+                            </div>
+                        </div>
+
+                        <!-- Formulario de Entrada: Fecha, Observación y Sustento S3 -->
+                        <div class="row g-3 pt-2 border-top" id="modal-rec-inputs-box">
+                            <div class="col-12 col-md-3">
+                                <label class="form-label small fw-bold text-secondary mb-1">Fecha de Recepción (*)</label>
+                                <input type="datetime-local" id="modal-rec-fecha" class="form-control rounded-3 border bg-light py-1.5" style="font-size:0.83rem;">
+                            </div>
+                            <div class="col-12 col-md-5">
+                                <label class="form-label small fw-bold text-secondary mb-1">Observación</label>
+                                <input type="text" id="modal-rec-obs" class="form-control rounded-3 border bg-light py-1.5" placeholder="Comentarios de la entrega..." style="font-size:0.83rem;">
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold text-secondary mb-1">Sustento / Evidencia (Guía, Factura, Foto)</label>
+                                <input type="file" id="modal-rec-file" class="form-control rounded-3 border bg-light py-1" style="font-size:0.8rem;" accept="image/*,application/pdf">
+                                <small class="text-muted" style="font-size:0.7rem;">Opcional. Se almacenará en AWS S3 con la entrega.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Productos a Recepcionar -->
+                    <div class="rec-summary-box shadow-2xs">
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-boxes text-secondary"></i>
+                                <h6 class="fw-bold m-0 text-dark">Productos a Recepcionar</h6>
+                            </div>
+                            <span class="badge bg-light text-dark border" id="modal-rec-items-badge">0 Ítems</span>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" style="font-size:0.84rem;">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th style="min-width: 220px;">PRODUCTO</th>
+                                        <th class="text-center" style="width: 80px;">UNIDAD</th>
+                                        <th class="text-center" style="width: 80px;">PEDIDO</th>
+                                        <th class="text-center" style="width: 100px;">RECEPCIONADO</th>
+                                        <th class="text-center" style="width: 90px;">PENDIENTE</th>
+                                        <th class="text-center" style="width: 140px;">CANTIDAD A RECEPCIONAR</th>
+                                        <th style="min-width: 180px;">ALMACÉN</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modal-rec-items-body">
+                                    <!-- Inyectado dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Historial de Recepciones Anteriores -->
+                    <div class="rec-summary-box shadow-2xs mb-0">
+                        <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                            <i class="bi bi-clock-history text-secondary"></i>
+                            <h6 class="fw-bold m-0 text-dark">Historial de Entregas & Sustentos Registrados</h6>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.8rem;">
+                                <thead class="bg-light text-secondary">
+                                    <tr>
+                                        <th>FECHA / HORA</th>
+                                        <th>USUARIO</th>
+                                        <th>ARTÍCULO</th>
+                                        <th class="text-center">CANTIDAD</th>
+                                        <th>ALMACÉN DESTINO</th>
+                                        <th>OBSERVACIÓN</th>
+                                        <th class="text-center">SUSTENTO / FOTO</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modal-rec-historial-body">
+                                    <!-- Inyectado dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Modal -->
+                <div class="modal-footer bg-white p-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-light rounded-3 px-4 fw-semibold" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" id="btn-modal-ejecutar-recepcion" class="btn btn-primary rounded-3 px-4 fw-bold shadow-sm" onclick="window.ejecutarRegistroRecepcion()">
+                        <i class="bi bi-check2-circle me-1"></i> Registrar Recepción
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
