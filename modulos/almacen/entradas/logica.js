@@ -1043,11 +1043,13 @@ function _entFmtFechaHora(iso, createdAt) {
         var activeCls = isActive ? ' ent-row-active' : '';
         if (isAnulado) activeCls += ' text-muted opacity-75';
 
+        var codLimpio = String(d.id || '').replace(/^ENT-/i, '');
+
         if (!items.length) {
             var tr0 = document.createElement('tr');
             tr0.className = activeCls.trim();
             tr0.innerHTML =
-                '<td class="text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(d.id || '') + '</span></td>' +
+                '<td class="text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.abrirModalDetalleOC(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(codLimpio) + '</span></td>' +
                 '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
                 '<td class="text-center col-hide-mob">' + estadoHtml + '</td>' +
@@ -1104,7 +1106,7 @@ function _entFmtFechaHora(iso, createdAt) {
             var provHtml = d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>';
 
             tr.innerHTML =
-                 '<td class="text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(d.id || '') + '</span></td>' +
+                 '<td class="text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.abrirModalDetalleOC(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(codLimpio) + '</span></td>' +
                 '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
@@ -1608,6 +1610,142 @@ window.guardarArchivosOCModal = async function() {
             btn.disabled = false;
             btn.innerHTML = origHtml;
         }
+    }
+};
+
+window.abrirModalDetalleOC = function(id) {
+    var d = (window._entData || []).find(function(e) { return e.id === id; });
+    if (!d) return alert('No se encontró la orden de compra ' + id);
+
+    window._ocSeleccionadaDetalle = d.id;
+
+    var codLimpio = String(d.id || '').replace(/^ENT-/i, '');
+    var titEl = document.getElementById('det-oc-titulo-num');
+    if (titEl) titEl.innerText = codLimpio;
+
+    var solEl = document.getElementById('det-oc-solicitante');
+    if (solEl) solEl.innerText = (d.creador_nombre || d.creado_por || 'SISTEMA').toUpperCase();
+
+    var fecEl = document.getElementById('det-oc-fecha');
+    if (fecEl) fecEl.innerText = _entFmtFechaHora(d.fecha, d.created_at);
+
+    var tipEl = document.getElementById('det-oc-tipo');
+    if (tipEl) tipEl.innerText = (d.tipo_orden || 'ORDEN DE COMPRA').toUpperCase();
+
+    var motEl = document.getElementById('det-oc-motivo');
+    if (motEl) motEl.innerText = (d.motivo_entrada || 'Sin motivo').toUpperCase();
+
+    var monPagoEl = document.getElementById('det-oc-moneda-pago');
+    if (monPagoEl) {
+        var monText = (d.moneda === 'USD') ? 'DÓLARES (USD)' : 'SOLES (PEN)';
+        var pagoText = (d.condicion_pago || 'CONTADO').toUpperCase();
+        if (d.dias_credito) pagoText += ' (' + d.dias_credito + ' DÍAS)';
+        monPagoEl.innerText = monText + ' • ' + pagoText;
+    }
+
+    var desEl = document.getElementById('det-oc-destino');
+    if (desEl) {
+        var desText = '';
+        if (d.placa) desText += 'UNIDAD ' + d.placa;
+        if (d.ot_id) desText += (desText ? ' | ' : '') + 'OT: ' + d.ot_id;
+        if (!desText) desText = 'SEDE PRINCIPAL / ALMACÉN';
+        desEl.innerText = desText;
+    }
+
+    var provEl = document.getElementById('det-oc-proveedor');
+    if (provEl) {
+        var pText = d.proveedor_nombre || 'Sin Proveedor';
+        if (d.proveedor_ruc) pText += ' (RUC: ' + d.proveedor_ruc + ')';
+        provEl.innerText = pText;
+    }
+
+    var estEl = document.getElementById('det-oc-estado');
+    if (estEl) {
+        var estNorm = (d.estado || 'REGISTRADA').toUpperCase();
+        if (estNorm === 'ANULADO' || estNorm === 'ANULADA' || estNorm === 'RECHAZADO' || estNorm === 'RECHAZADA') {
+            estEl.innerHTML = '<span class="badge" style="background-color:#dc2626; color:#fff; font-size:0.75rem; font-weight:700;">' + estNorm + '</span>';
+        } else if (estNorm === 'APROBADO' || estNorm === 'APROBADA' || estNorm === 'AUTORIZADO' || estNorm === 'AUTORIZADA') {
+            estEl.innerHTML = '<span class="badge" style="background-color:#16a34a; color:#fff; font-size:0.75rem; font-weight:700;">APROBADA</span>';
+        } else if (estNorm === 'PROCESADO' || estNorm === 'PROCESADA' || estNorm === 'PAGADO' || estNorm === 'PAGADA') {
+            estEl.innerHTML = '<span class="badge" style="background-color:#0284c7; color:#fff; font-size:0.75rem; font-weight:700;">PROCESADA</span>';
+        } else if (estNorm === 'OBSERVADO' || estNorm === 'OBSERVADA') {
+            estEl.innerHTML = '<span class="badge" style="background-color:#f59e0b; color:#fff; font-size:0.75rem; font-weight:700;">OBSERVADA</span>';
+        } else {
+            estEl.innerHTML = '<span class="badge" style="background-color:#64748b; color:#fff; font-size:0.75rem; font-weight:700;">REGISTRADA</span>';
+        }
+    }
+
+    // Adjuntos
+    var cotAdjEl = document.getElementById('det-oc-adj-cotizacion');
+    if (cotAdjEl) {
+        var urlCot = d.url_cotizacion_presigned || d.url_cotizacion;
+        cotAdjEl.innerHTML = urlCot ? '<a href="' + urlCot + '" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-file-earmark-text"></i> Ver Cotización</a>' : '<span class="text-muted fst-italic">Sin archivo</span>';
+    }
+
+    var facAdjEl = document.getElementById('det-oc-adj-factura');
+    if (facAdjEl) {
+        var urlFac = d.url_factura_presigned || d.url_factura;
+        facAdjEl.innerHTML = urlFac ? '<a href="' + urlFac + '" target="_blank" class="text-success fw-bold text-decoration-none"><i class="bi bi-file-earmark-check"></i> Ver Factura</a>' : '<span class="text-muted fst-italic">Sin archivo</span>';
+    }
+
+    var vouAdjEl = document.getElementById('det-oc-adj-voucher');
+    if (vouAdjEl) {
+        var urlVou = d.url_voucher_presigned || d.url_voucher;
+        vouAdjEl.innerHTML = urlVou ? '<a href="' + urlVou + '" target="_blank" class="text-danger fw-bold text-decoration-none"><i class="bi bi-file-earmark-pdf"></i> Ver Voucher</a>' : '<span class="text-muted fst-italic">Sin archivo</span>';
+    }
+
+    // Artículos
+    var tbody = document.getElementById('det-oc-items-tbody');
+    var items = d.items || [];
+    var totalCalc = 0;
+    var sym = d.moneda === 'USD' ? '$ ' : 'S/ ';
+
+    if (tbody) {
+        if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3 fst-italic">No hay artículos registrados en esta orden.</td></tr>';
+        } else {
+            tbody.innerHTML = items.map(function(it, idx) {
+                var cant = parseFloat(it.cantidad || 0);
+                var cu = parseFloat(it.costo_unitario || 0);
+                var imp = cant * cu;
+                totalCalc += imp;
+                var nombre = _entDescLimpia(it.descripcion, it.inventario_id);
+                var invId = it.inventario_id || '—';
+
+                return '<tr>' +
+                    '<td class="text-center fw-bold text-secondary">' + (idx + 1) + '</td>' +
+                    '<td class="text-center fw-bold text-dark">' + cant.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + '</td>' +
+                    '<td class="text-center font-monospace fw-bold text-dark">' + invId + '</td>' +
+                    '<td class="fw-semibold text-dark">' + _entEsc(nombre) + '</td>' +
+                    '<td class="text-end fw-semibold text-dark">' + sym + cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+                    '<td class="text-end fw-bold text-dark">' + sym + imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+                '</tr>';
+            }).join('');
+        }
+    }
+
+    var totalReal = (d.total_pen != null && parseFloat(d.total_pen) > 0) ? parseFloat(d.total_pen) : totalCalc;
+    var totGenEl = document.getElementById('det-oc-total-general');
+    if (totGenEl) {
+        totGenEl.innerText = sym + totalReal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    var totLetEl = document.getElementById('det-oc-total-letras');
+    if (totLetEl) {
+        var monedaTxt = (d.moneda === 'USD') ? 'DÓLARES AMERICANOS' : 'SOLES';
+        totLetEl.innerText = numeroALetras(totalReal) + ' ' + monedaTxt;
+    }
+
+    var modalEl = document.getElementById('modalDetalleEntradaOC');
+    if (modalEl) {
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+};
+
+window.imprimirPDFDesdeDetalleOC = function() {
+    if (window._ocSeleccionadaDetalle) {
+        window.generarComprobanteEntrada(window._ocSeleccionadaDetalle);
     }
 };
 

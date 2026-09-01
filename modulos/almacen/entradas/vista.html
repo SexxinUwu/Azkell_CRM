@@ -882,3 +882,126 @@
         </div>
     </div>
 </div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: DETALLE COMPLETO DE LA ORDEN DE COMPRA (VISTA SEGMENTADA)          -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalDetalleEntradaOC" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content rounded-4 border-0 shadow-lg bg-white overflow-hidden">
+            <!-- Modal Header -->
+            <div class="modal-header border-0 pb-2 pt-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="modal-title fw-bold m-0" style="color: #0284c7; font-size: 1.25rem;">
+                    Órden de Compra: <span id="det-oc-titulo-num" class="text-dark"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body px-4 py-3" style="max-height: calc(85vh - 120px); overflow-y: auto;">
+                
+                <!-- Sección 1: Datos Generales Segmentados -->
+                <div class="p-3 mb-4 rounded-3 border bg-light">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Datos del Solicitante / Creador</div>
+                            <div id="det-oc-solicitante" class="text-dark fw-bold" style="font-size:0.85rem;">—</div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Fecha de Registro</div>
+                            <div id="det-oc-fecha" class="text-dark fw-bold" style="font-size:0.85rem;">—</div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Tipo de Orden</div>
+                            <div id="det-oc-tipo" class="text-dark fw-bold" style="font-size:0.85rem;">—</div>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Motivo / Justificación</div>
+                            <div id="det-oc-motivo" class="text-dark fw-bold" style="font-size:0.85rem;">—</div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Moneda & Condición de Pago</div>
+                            <div id="det-oc-moneda-pago" class="text-dark fw-bold" style="font-size:0.85rem;">—</div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Destino / Lugar de Entrega</div>
+                            <div id="det-oc-destino" class="text-dark fw-bold" style="font-size:0.85rem;">—</div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Proveedor</div>
+                            <div id="det-oc-proveedor" class="text-dark fw-bold" style="font-size:0.85rem;">—</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Estado Actual</div>
+                            <div id="det-oc-estado" class="mt-1"></div>
+                        </div>
+                    </div>
+
+                    <!-- Adjuntos resumen -->
+                    <div class="row g-2 mt-2 pt-2 border-top">
+                        <div class="col-12 col-md-4 d-flex align-items-center gap-1.5" style="font-size:0.78rem;">
+                            <span class="text-secondary fw-bold text-uppercase">Cotización:</span>
+                            <span id="det-oc-adj-cotizacion">—</span>
+                        </div>
+                        <div class="col-12 col-md-4 d-flex align-items-center gap-1.5" style="font-size:0.78rem;">
+                            <span class="text-secondary fw-bold text-uppercase">Factura:</span>
+                            <span id="det-oc-adj-factura">—</span>
+                        </div>
+                        <div class="col-12 col-md-4 d-flex align-items-center gap-1.5" style="font-size:0.78rem;">
+                            <span class="text-secondary fw-bold text-uppercase">Voucher:</span>
+                            <span id="det-oc-adj-voucher">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección 2: Tabla de Artículos -->
+                <div class="text-center mb-3">
+                    <h6 class="fw-bold text-dark text-uppercase m-0" style="letter-spacing:0.06em; font-size:0.95rem;">
+                        Detalle de Órden de Compra
+                    </h6>
+                </div>
+
+                <div class="table-responsive border rounded-3 overflow-hidden mb-3">
+                    <table class="table table-sm table-hover align-middle m-0" style="font-size:0.82rem;">
+                        <thead class="table-light text-secondary text-uppercase fw-bold" style="font-size:0.72rem; letter-spacing:0.04em;">
+                            <tr>
+                                <th class="text-center py-2" style="width:5%;">Item</th>
+                                <th class="text-center py-2" style="width:10%;">Cantidad</th>
+                                <th class="text-center py-2" style="width:15%;">Cód. Art.</th>
+                                <th class="py-2" style="width:45%;">Artículo / Descripción</th>
+                                <th class="text-end py-2" style="width:12%;">P. Unitario</th>
+                                <th class="text-end py-2" style="width:13%;">Importe</th>
+                            </tr>
+                        </thead>
+                        <tbody id="det-oc-items-tbody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Resumen de Totales y Letras -->
+                <div class="d-flex flex-column align-items-end mb-2">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="fw-bold text-secondary text-uppercase" style="font-size:0.85rem;">Total:</span>
+                        <span id="det-oc-total-general" class="fw-black text-success fs-5">S/ 0.00</span>
+                    </div>
+                </div>
+                <div class="text-center p-2 rounded-2 bg-light border text-muted small">
+                    <span class="fw-bold text-secondary text-uppercase">Importe en Letras:</span>
+                    <span id="det-oc-total-letras" class="text-dark fw-semibold ms-1"></span>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer border-0 pt-0 pb-3 px-4 d-flex justify-content-between align-items-center">
+                <button type="button" class="btn btn-light border rounded-3 px-4 py-2 fw-semibold text-secondary" data-bs-dismiss="modal" style="background:#f1f5f9;">
+                    Cerrar
+                </button>
+                <button type="button" class="btn btn-dark rounded-3 px-4 py-2 fw-bold text-white shadow-sm d-flex align-items-center gap-2" id="det-oc-btn-pdf" onclick="window.imprimirPDFDesdeDetalleOC()">
+                    <i class="bi bi-file-earmark-pdf"></i> Imprimir / Ver PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
