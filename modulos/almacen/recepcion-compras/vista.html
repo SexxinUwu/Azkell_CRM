@@ -177,31 +177,29 @@
         </div>
     </div>
 
-    <!-- ── 2. BARRA DE HERRAMIENTAS Y PESTAÑAS (ACTUAL vs HISTORIAL) ── -->
-    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border:1px solid #e2e8f0!important;">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-            <!-- Pestañas de Navegación Segmentada -->
-            <div class="d-inline-flex p-1 bg-light rounded-3 border" style="background:#f1f5f9!important;">
-                <button class="rec-nav-pill active" id="tab-rec-actual" onclick="window.cambiarTabRecepciones('actual')">
-                    <i class="bi bi-hourglass-split text-warning"></i> Actual <span class="badge bg-warning text-dark rounded-pill px-2" id="badge-rec-actual-count">0</span>
-                </button>
-                <button class="rec-nav-pill" id="tab-rec-historial" onclick="window.cambiarTabRecepciones('historial')">
-                    <i class="bi bi-clock-history text-primary"></i> Historial <span class="badge bg-secondary rounded-pill px-2" id="badge-rec-historial-count">0</span>
-                </button>
-            </div>
+    <!-- ── 2. BARRA COMPACTA DE PESTAÑAS Y BÚSQUEDA (1 SOLA FILA) ── -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <!-- Pestañas de Navegación Segmentada -->
+        <div class="d-inline-flex p-1 bg-white rounded-3 border shadow-2xs">
+            <button class="rec-nav-pill active" id="tab-rec-actual" onclick="window.cambiarTabRecepciones('actual')">
+                <i class="bi bi-hourglass-split text-warning"></i> Actual <span class="badge bg-warning text-dark rounded-pill px-2" id="badge-rec-actual-count">0</span>
+            </button>
+            <button class="rec-nav-pill" id="tab-rec-historial" onclick="window.cambiarTabRecepciones('historial')">
+                <i class="bi bi-clock-history text-primary"></i> Historial <span class="badge bg-secondary rounded-pill px-2" id="badge-rec-historial-count">0</span>
+            </button>
+        </div>
 
-            <!-- Acciones Rápidas (Imprimir, Excel, Filtro Buscar) -->
-            <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-end">
-                <button class="btn btn-light bg-white border text-secondary rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1" onclick="window.print()" style="font-size:0.82rem;">
-                    <i class="bi bi-printer"></i> Imprimir
-                </button>
-                <button class="btn btn-light bg-white border text-secondary rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1" onclick="window.exportarRecepcionesExcel()" style="font-size:0.82rem;">
-                    <i class="bi bi-file-earmark-excel text-success"></i> Excel
-                </button>
-                <div class="position-relative" style="min-width: 240px;">
-                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
-                    <input type="text" id="filtro-buscar-rec" class="form-control ps-5 py-1.5 rounded-3 border bg-light" placeholder="Buscar en tabla..." style="font-size:0.83rem;" oninput="window.filtrarTablaRecepciones()">
-                </div>
+        <!-- Acciones Rápidas (Imprimir, Excel, Filtro Buscar) -->
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            <button class="btn btn-sm btn-light bg-white border text-secondary rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1 shadow-2xs" onclick="window.print()" style="font-size:0.82rem; height:36px;">
+                <i class="bi bi-printer"></i> Imprimir
+            </button>
+            <button class="btn btn-sm btn-light bg-white border text-secondary rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1 shadow-2xs" onclick="window.exportarRecepcionesExcel()" style="font-size:0.82rem; height:36px;">
+                <i class="bi bi-file-earmark-excel text-success"></i> Excel
+            </button>
+            <div class="position-relative" style="min-width: 220px;">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.82rem;"></i>
+                <input type="text" id="filtro-buscar-rec" class="form-control form-control-sm ps-5 rounded-3 border bg-white shadow-2xs" placeholder="Buscar en tabla..." style="font-size:0.82rem; height:36px;" oninput="window.filtrarTablaRecepciones()">
             </div>
         </div>
     </div>
