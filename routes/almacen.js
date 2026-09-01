@@ -1376,7 +1376,7 @@ router.get('/recepciones-oc', async (req, res) => {
 
             // 2. Obtener todas las recepciones registradas agrupadas por OC
             const sqlRecs = `
-                SELECT r.id AS recepcion_id, r.oc_id, r.fecha_recepcion, r.usuario, r.almacen, r.sustento_url, r.observacion, r.tipo_recepcion,
+                SELECT r.id AS recepcion_id, dr.id AS detalle_id, r.oc_id, r.fecha_recepcion, r.usuario, r.almacen, r.sustento_url, r.observacion, r.tipo_recepcion,
                        dr.inventario_id, dr.descripcion, dr.cantidad_recibida, dr.costo_unitario, dr.moneda
                 FROM recepciones_oc r
                 JOIN detalle_recepciones_oc dr ON dr.recepcion_id = r.id
@@ -1596,6 +1596,52 @@ router.post('/recepciones-oc/registrar', _multerInv.single('sustento'), async (r
         );
     } catch (err) {
         console.error('Error al registrar recepción de OC:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Eliminar una entrega / recepción de OC ──────────────────────
+router.delete('/recepciones-oc/:id', async (req, res) => {
+    const { id } = req.params;
+    const { usuario } = req.body || {};
+    const targetDb = req.db || db;
+
+    try {
+        targetDb.query('SELECT * FROM recepciones_oc WHERE id = ?', [id], async (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows || rows.length === 0) return res.status(404).json({ error: 'Registro de recepción no encontrado' });
+
+            const rec = rows[0];
+            const oc_id = rec.oc_id;
+
+            // Borrar foto de S3 si existe
+            if (rec.sustento_url) {
+                try {
+                    const { deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
+                    const key = s3KeyFromUrl(rec.sustento_url);
+                    if (key) await deleteFromS3(key);
+                } catch(eS3) {
+                    console.warn('Error al borrar sustento de S3:', eS3.message);
+                }
+            }
+
+            // Borrar detalle y cabecera
+            targetDb.query('DELETE FROM detalle_recepciones_oc WHERE recepcion_id = ?', [id], (errDet) => {
+                if (errDet) return res.status(500).json({ error: errDet.message });
+
+                targetDb.query('DELETE FROM recepciones_oc WHERE id = ?', [id], (errCab) => {
+                    if (errCab) return res.status(500).json({ error: errCab.message });
+
+                    if (typeof logAudit === 'function' && usuario) {
+                        logAudit(usuario, 'almacen/recepcion-compras', 'ELIMINÓ', `/api/almacen/recepciones-oc/${id} (OC: ${oc_id})`);
+                    }
+
+                    res.json({ ok: true, mensaje: 'Entrega eliminada y stock actualizado correctamente' });
+                });
+            });
+        });
+    } catch(err) {
+        console.error('Error al eliminar recepción de OC:', err);
         res.status(500).json({ error: err.message });
     }
 });
