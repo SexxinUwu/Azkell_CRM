@@ -634,6 +634,7 @@ window.guardarEntrada = function() {
             var fFactura = document.getElementById('ent-f-factura') ? document.getElementById('ent-f-factura').files[0] : null;
 
             var uploadFile = async function(file, tipo) {
+                if (!file) return;
                 var fd = new FormData();
                 fd.append('archivo', file);
                 try {
@@ -641,22 +642,20 @@ window.guardarEntrada = function() {
                     if (!res.ok) {
                         var text = await res.text();
                         console.warn('Error subiendo ' + tipo + ': ' + text);
-                        throw new Error('Upload error: ' + text);
                     }
                 } catch (err) {
                     console.warn('Fallo de conexión o subida para ' + tipo + ': ' + err.message);
-                    throw err;
                 }
             };
 
-            var erroresArchivos = false;
-            try {
-                if (fVoucher) await uploadFile(fVoucher, 'voucher');
-                if (fCotizacion) await uploadFile(fCotizacion, 'cotizacion');
-                if (fFactura) await uploadFile(fFactura, 'factura');
-            } catch (e) {
-                console.error("Error subiendo archivos", e);
-                erroresArchivos = true;
+            // Subir archivos en paralelo simultáneamente
+            var promesas = [];
+            if (fVoucher) promesas.push(uploadFile(fVoucher, 'voucher'));
+            if (fCotizacion) promesas.push(uploadFile(fCotizacion, 'cotizacion'));
+            if (fFactura) promesas.push(uploadFile(fFactura, 'factura'));
+
+            if (promesas.length) {
+                await Promise.all(promesas);
             }
 
             window._entCerrarModal();
@@ -1030,7 +1029,7 @@ function _entFmtFechaHora(iso, createdAt) {
                         (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-trash"></i></button>') +
                     '</div>' +
                 '</td>';
-            tr0.onclick = (function(row) { return function() { window._entAbrirDetalle(row.id); }; })(d);
+            // Fila de entrada
             tbody.appendChild(tr0);
             return;
         }
@@ -1089,7 +1088,6 @@ function _entFmtFechaHora(iso, createdAt) {
                         '</div>'
                     : '') +
                 '</td>';
-            tr.onclick = (function(row) { return function() { window._entAbrirDetalle(row.id); }; })(d);
             tbody.appendChild(tr);
         });
     });

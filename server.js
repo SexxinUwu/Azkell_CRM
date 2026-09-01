@@ -2221,10 +2221,13 @@ cloudinary.config({
 });
 const _multerInv = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB máx para fotos de teléfono
+    limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB máx
     fileFilter: (req, file, cb) => {
-        if (/^image\/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(file.mimetype)) return cb(null, true);
-        if (file.mimetype === 'application/pdf' && req.url.includes('/archivo/')) return cb(null, true);
+        const mime = (file.mimetype || '').toLowerCase();
+        const orig = (file.originalname || '').toLowerCase();
+        if (/^image\/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(mime)) return cb(null, true);
+        if (mime === 'application/pdf' || orig.endsWith('.pdf')) return cb(null, true);
+        if (/image\//i.test(mime)) return cb(null, true);
         cb(new Error('Formato no permitido (se espera imagen o PDF)'));
     }
 });
