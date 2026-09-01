@@ -736,6 +736,12 @@ window.abrirModalEditarEntrada = function(id) {
     var entrada = (window._entData || []).find(function(e) { return e.id === id; });
     if (!entrada) return alert('No se encontró la entrada');
     
+    var st = String(entrada.estado || 'Registrado').toLowerCase().trim();
+    if (st === 'aprobado' || st === 'aprobada' || st === 'procesado' || st === 'procesada' || st === 'despachado' || st === 'anulado' || st === 'rechazado') {
+        alert('Esta Orden de Compra se encuentra en estado "' + (entrada.estado || 'Aprobado') + '" y ya no puede ser modificada.');
+        return;
+    }
+
     window.abrirModalEntrada(); // Resetea y abre el panel
     window._entEditId = id; // Sobrescribimos el reset
 
@@ -747,8 +753,6 @@ window.abrirModalEditarEntrada = function(id) {
 
     var fTipoOrden = document.getElementById('ent-f-tipo-orden');
     if (fTipoOrden) fTipoOrden.value = entrada.tipo_orden || 'Orden de compra';
-    window._cbSet('ent-f-ot', entrada.ot_id || '', entrada.ot_id || '');
-    setTimeout(window._entToggleTipoOrden, 50);
     window._cbSet('ent-f-ot', entrada.ot_id || '', entrada.ot_id || '');
     setTimeout(window._entToggleTipoOrden, 50);
 
@@ -781,12 +785,12 @@ window.abrirModalEditarEntrada = function(id) {
     }
 
     if (entrada.ot_id) {
-          window._cbSet('ent-f-ot', entrada.ot_id, entrada.ot_id + (entrada.placa ? ' — ' + entrada.placa : ''));
-          var placaInput = document.getElementById('ent-f-ot-placa');
-          if (placaInput) placaInput.value = entrada.placa || '';
-      }
+        window._cbSet('ent-f-ot', entrada.ot_id, entrada.ot_id + (entrada.placa ? ' — ' + entrada.placa : ''));
+        var placaInput = document.getElementById('ent-f-ot-placa');
+        if (placaInput) placaInput.value = entrada.placa || '';
+    }
       
-      if (entrada.proveedor_id) {
+    if (entrada.proveedor_id) {
         window._cbSet('ent-f-proveedor', entrada.proveedor_id, entrada.proveedor_nombre);
     } else if (entrada.proveedor_nombre) {
         var el = document.getElementById('ent-f-proveedor-txt');
@@ -798,6 +802,28 @@ window.abrirModalEditarEntrada = function(id) {
     window._entOnMonedaChange();
 
     window._entSetIgvMode(entrada.tipo_igv || 'sin_igv');
+
+    // Cargar visualmente los archivos adjuntos existentes
+    var setupFilePreview = function(inputId, url, urlPresigned, nombreTipo) {
+        var el = document.getElementById(inputId);
+        if (!el) return;
+        var fileUrl = urlPresigned || url;
+        if (fileUrl) {
+            var fileNameSpan = el.parentElement ? el.parentElement.querySelector('.file-name') : el.nextElementSibling;
+            if (fileNameSpan) {
+                fileNameSpan.innerHTML = '<a href="' + fileUrl + '" target="_blank" onclick="event.stopPropagation();" style="color:#0284c7;text-decoration:underline;font-weight:bold;"><i class="bi bi-file-earmark-check"></i> ' + nombreTipo + ' Guardado</a>';
+            }
+            if (el.parentElement) {
+                el.parentElement.style.borderColor = '#16a34a';
+                el.parentElement.style.background = 'rgba(22, 163, 74, 0.05)';
+                el.parentElement.style.borderStyle = 'solid';
+            }
+        }
+    };
+
+    setupFilePreview('ent-f-voucher', entrada.url_voucher, entrada.url_voucher_presigned, 'Voucher');
+    setupFilePreview('ent-f-cotizacion', entrada.url_cotizacion, entrada.url_cotizacion_presigned, 'Cotización');
+    setupFilePreview('ent-f-factura', entrada.url_factura, entrada.url_factura_presigned, 'Factura');
 
     var cards = document.getElementById('ent-items-cards');
     if (cards) cards.innerHTML = '';
@@ -981,7 +1007,9 @@ function _entFmtFechaHora(iso, createdAt) {
         var fecha = _entFmtFechaHora(d.fecha, d.created_at);
         var isAnulado = d.estado === 'Anulado';
         var dCreated = d.created_at ? String(d.created_at).split('T')[0] : fecha;
-        var canEditRow = canEdit && !isAnulado && (isAdmin || dCreated === todayStr);
+        var estadoLimpio = String(d.estado || 'Registrado').toLowerCase().trim();
+        var esModificable = (estadoLimpio === 'registrado' || estadoLimpio === 'registrada' || estadoLimpio === 'pendiente' || !d.estado);
+        var canEditRow = canEdit && !isAnulado && esModificable && (isAdmin || dCreated === todayStr);
 
         var tp = parseFloat(d.total_pen || 0);
         var totalFmt = '<strong style="color:#16a34a;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
@@ -1303,15 +1331,30 @@ window._entGenerarHtmlPDF = function(d) {
         '</div>';
     }
 
+    var empLogo = localStorage.getItem('fleet_empresa_logo') || localStorage.getItem('empresa_logo') || window._LOGO_BASE64 || '';
+    var empNombre = (localStorage.getItem('fleet_empresa_nombre') || localStorage.getItem('empresa_nombre') || window._EMPRESA_NOMBRE || 'ROSYMAR PERÚ S.A.C.').toUpperCase();
+
+    var headerBrandHtml = '';
+    if (empLogo) {
+        headerBrandHtml = '<div style="display:flex;align-items:center;gap:15px;">' +
+            '<img src="' + empLogo + '" style="max-height:65px;max-width:200px;object-fit:contain;" alt="Logo" />' +
+            '<div>' +
+                '<div style="font-size:20px;font-weight:900;color:#0f172a;letter-spacing:-0.5px;line-height:1.2;">' + empNombre + '</div>' +
+            '</div>' +
+        '</div>';
+    } else {
+        headerBrandHtml = '<div style="font-size:26px;font-weight:900;color:#0f172a;letter-spacing:-0.5px;">' +
+            empNombre +
+        '</div>';
+    }
+
     return '' +
     '<div style="font-family:\'Inter\', Arial, sans-serif;width:100%;margin:0 auto;padding:40px;color:#0f172a;box-sizing:border-box;">' +
 
         '<!-- HEADER -->' +
         '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1e293b;padding-bottom:20px;margin-bottom:30px;">' +
             '<div>' +
-                '<div style="font-size:36px;font-weight:900;color:#0f172a;letter-spacing:-1px;">' +
-                    'AZKELL <span style="color:#2563eb;">FLEET</span>' +
-                '</div>' +
+                headerBrandHtml +
             '</div>' +
             '<div style="text-align:right;">' +
                 '<div style="font-size:24px;font-weight:800;color:#1e293b;letter-spacing:-0.5px;text-transform:uppercase;">' + tipoDocTitle + '</div>' +
