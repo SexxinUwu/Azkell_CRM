@@ -119,20 +119,89 @@
 
 /* Table Style */
 .table-aprobaciones th {
-    font-size: 0.74rem;
+    font-size: 0.73rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: #64748b;
+    letter-spacing: 0.04em;
+    color: #475569;
     background: #f8fafc;
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border, #e2e8f0);
+    padding: 0.75rem 0.85rem;
+    border-bottom: 2px solid var(--border, #e2e8f0);
+    white-space: nowrap;
 }
 .table-aprobaciones td {
-    padding: 1rem;
+    padding: 0.75rem 0.85rem;
     vertical-align: middle;
-    font-size: 0.84rem;
+    font-size: 0.83rem;
     border-bottom: 1px solid var(--border, #f1f5f9);
+}
+.table-aprobaciones tbody tr:hover {
+    background-color: #f8fafc !important;
+}
+
+/* Botones de acción directa estilo ERP */
+.btn-oc-autorizar {
+    background: #059669;
+    color: #ffffff;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.35rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: all 0.15s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.btn-oc-autorizar:hover {
+    background: #047857;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.2);
+}
+
+.btn-oc-denegar {
+    background: #e11d48;
+    color: #ffffff;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.35rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: all 0.15s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.btn-oc-denegar:hover {
+    background: #be123c;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(225, 29, 72, 0.2);
+}
+
+.btn-oc-code {
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 0.25rem 0.55rem;
+    border-radius: 0.4rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.btn-oc-code:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #0284c7;
 }
 
 /* Quick Action Buttons */
@@ -192,11 +261,11 @@
                 <i class="bi bi-file-earmark-excel"></i> Exportar Acta
             </button>
             <div class="btn-group p-0.5 bg-light rounded-3 border" role="group">
-                <button type="button" class="btn btn-sm btn-white active fw-bold px-2.5 py-1.5 rounded-2" id="btn-view-cards" onclick="window.cambiarModoVista('cards')" title="Vista Tarjetas">
-                    <i class="bi bi-grid-fill"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-transparent text-secondary fw-semibold px-2.5 py-1.5 rounded-2" id="btn-view-table" onclick="window.cambiarModoVista('table')" title="Vista Tabla">
+                <button type="button" class="btn btn-sm btn-white active fw-bold px-2.5 py-1.5 rounded-2" id="btn-view-table" onclick="window.cambiarModoVista('table')" title="Vista Tabla (Por defecto en Web)">
                     <i class="bi bi-list-task"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-transparent text-secondary fw-semibold px-2.5 py-1.5 rounded-2" id="btn-view-cards" onclick="window.cambiarModoVista('cards')" title="Vista Tarjetas (Por defecto en Teléfono)">
+                    <i class="bi bi-grid-fill"></i>
                 </button>
             </div>
         </div>
@@ -335,19 +404,19 @@
         <!-- Renderizado dinámico desde logica.js -->
     </div>
 
-    <div id="contenedor-vista-table" class="card border-0 shadow-2xs rounded-4 bg-white overflow-hidden d-none" style="border:1px solid var(--border,#e2e8f0)!important;">
+    <div id="contenedor-vista-table" class="card border-0 shadow-2xs rounded-4 bg-white overflow-hidden" style="border:1px solid var(--border,#e2e8f0)!important;">
         <div class="table-responsive">
-            <table class="table table-hover table-aprobaciones m-0">
+            <table class="table table-hover table-aprobaciones m-0 align-middle">
                 <thead>
                     <tr>
-                        <th>N° Orden / Fecha</th>
-                        <th>Prioridad</th>
-                        <th>Proveedor / RUC</th>
-                        <th>Destino / Solicitante</th>
-                        <th>Ítems & Justificación</th>
-                        <th class="text-end">Importe Total</th>
-                        <th class="text-center">Estado</th>
-                        <th class="text-end">Acciones Gerenciales</th>
+                        <th style="min-width: 175px;">ACCIÓN</th>
+                        <th style="min-width: 105px;">FECHA</th>
+                        <th style="min-width: 125px;">USUARIO</th>
+                        <th style="min-width: 130px;">ORDEN COMPRA</th>
+                        <th style="min-width: 250px;">MOTIVO / JUSTIFICACIÓN</th>
+                        <th style="min-width: 140px;">SOLICITANTE</th>
+                        <th style="min-width: 200px;">PROVEEDOR</th>
+                        <th class="text-end" style="min-width: 120px;">IMPORTE</th>
                     </tr>
                 </thead>
                 <tbody id="cuerpo-tabla-aprobaciones">
