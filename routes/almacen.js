@@ -1319,9 +1319,25 @@ router.get('/recepciones-oc', async (req, res) => {
                             estadoRecepcion = 'COMPLETO';
                         }
 
+                        let fechaOCFinal = oc.created_at || oc.fecha;
+                        if (oc.created_at) {
+                            const raw = String(oc.created_at).replace('T', ' ').slice(0, 16);
+                            const parts = raw.split(' ');
+                            if (parts.length === 2) {
+                                const [yyyy, mm, dd] = parts[0].split('-');
+                                fechaOCFinal = `${dd}/${mm}/${yyyy} ${parts[1]}`;
+                            }
+                        } else if (oc.fecha) {
+                            const raw = String(oc.fecha).split('T')[0];
+                            const parts = raw.split('-');
+                            if (parts.length === 3) {
+                                fechaOCFinal = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                            }
+                        }
+
                         return {
                             id: oc.id,
-                            fecha: oc.fecha,
+                            fecha: fechaOCFinal,
                             proveedor: oc.proveedor_nombre || 'PROVEEDOR GENERAL',
                             solicitante: oc.creado_por || 'ALMACÉN / MANTENIMIENTO',
                             almacen: oc.almacen || 'ALM CENTRAL',
