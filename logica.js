@@ -289,7 +289,7 @@ window.verificarSesionGuardada = function() {
     var vStatusRampa = showMantHub && _cL('status_rampa');
     var vChecklist   = showMantHub && _cL('checklist');
     var vInsp        = showMantHub && _cL('insp');
-    var vFleetrun    = showMantHub && _cL('fleetrun');
+    var vFleetrun    = showMantHub && (_cL('fleetrun') || _cL('fleet'));
     var vReportesOT  = showMantHub && _cL('reportes_ot');
     var vTrabajosOT  = showMantHub && _cL('trabajos_ot');
     var vNeumaticos  = showMantHub && _cL('neumaticos');
@@ -1629,6 +1629,7 @@ window.checkPerm = function(modKey, action) {
             'insp': ['insp', 'inspecciones'],
             'inspecciones': ['inspecciones', 'insp'],
             'fleet': ['fleetrun', 'fleet'],
+            'fleetrun': ['fleet', 'fleetrun'],
             'combustible': ['combustible', 'combustible_vales', 'combustible_analisis', 'comb'],
             'combustible_vales': ['combustible_vales', 'combustible', 'comb'],
             'combustible_analisis': ['combustible_analisis', 'combustible', 'comb'],
