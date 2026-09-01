@@ -426,7 +426,7 @@
         return `
         <tr>
             <!-- Columna ACCIÓN -->
-            <td style="width: 175px; min-width: 175px;">
+            <td class="text-nowrap" style="width: 1%;">
                 ${oc.estado === 'pendiente' ? `
                     <div class="d-inline-flex align-items-center gap-1.5">
                         <button class="btn-oc-autorizar" onclick="window.abrirAccionRapida('${oc.id}', 'aprobar')" title="Autorizar Orden de Compra">
@@ -452,19 +452,19 @@
             </td>
 
             <!-- Columna FECHA -->
-            <td class="text-nowrap fw-semibold text-secondary" style="width: 150px; min-width: 150px; font-size:0.80rem;">
+            <td class="text-nowrap fw-semibold text-secondary" style="width: 1%; font-size:0.80rem;">
                 <i class="bi bi-calendar3 me-1 text-muted"></i>${oc.fecha || '—'}
             </td>
 
             <!-- Columna USUARIO -->
-            <td style="width: 150px; min-width: 150px;">
-                <div class="fw-bold text-dark text-truncate" style="max-width: 150px; font-size:0.82rem;" title="${oc.usuario || 'SISTEMA'}">
+            <td class="text-nowrap" style="width: 1%;">
+                <div class="fw-bold text-dark" style="font-size:0.82rem;" title="${oc.usuario || 'SISTEMA'}">
                     <i class="bi bi-person-fill text-primary me-1"></i>${oc.usuario || 'SISTEMA'}
                 </div>
             </td>
 
             <!-- Columna ORDEN COMPRA -->
-            <td style="width: 135px; min-width: 135px;">
+            <td class="text-nowrap" style="width: 1%;">
                 <span class="btn-oc-code" onclick="window.verDetalleOC('${oc.id}')" title="Ver Detalle de la Orden">
                     <i class="bi bi-eye"></i> ${oc.id}
                 </span>
@@ -472,27 +472,27 @@
 
             <!-- Columna MOTIVO / JUSTIFICACIÓN -->
             <td>
-                <div class="text-dark fw-medium text-truncate" style="max-width: 260px; font-size:0.82rem;" title="${oc.justificacion || ''}">
+                <div class="text-dark fw-medium" style="font-size:0.82rem;" title="${oc.justificacion || ''}">
                     ${oc.justificacion || 'Sin motivo'}
                 </div>
             </td>
 
             <!-- Columna SOLICITANTE -->
-            <td style="width: 150px; min-width: 150px;">
-                <div class="fw-semibold text-secondary text-truncate" style="max-width: 150px; font-size:0.82rem;" title="${oc.solicitante || ''}">
+            <td>
+                <div class="fw-semibold text-secondary" style="font-size:0.82rem;" title="${oc.solicitante || ''}">
                     ${oc.solicitante || 'No especificado'}
                 </div>
             </td>
 
             <!-- Columna PROVEEDOR -->
-            <td style="width: 220px; min-width: 220px;">
-                <div class="fw-bold text-dark text-truncate" style="max-width: 220px; font-size:0.82rem;" title="${oc.proveedor || ''}">
+            <td>
+                <div class="fw-bold text-dark" style="font-size:0.82rem;" title="${oc.proveedor || ''}">
                     ${oc.proveedor || 'Sin Proveedor'}
                 </div>
             </td>
 
             <!-- Columna IMPORTE -->
-            <td class="text-end text-nowrap" style="width: 120px; min-width: 120px;">
+            <td class="text-end text-nowrap" style="width: 1%;">
                 <span class="fw-black text-dark" style="font-size:0.92rem; letter-spacing:-0.01em;">
                     ${oc.moneda || 'S/'} ${(oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
