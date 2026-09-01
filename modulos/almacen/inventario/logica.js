@@ -628,32 +628,27 @@ window._invRenderKPIs = function(data) {
 
 // ── Filtrar ───────────────────────────────────────────────────────
 
-window._invActiveTab = 'fisicos';
-
 window._invSwitchTab = function(tab) {
     window._invActiveTab = tab;
     var btnFisicos = document.getElementById('inv-tab-fisicos');
     var btnServicios = document.getElementById('inv-tab-servicios');
     if (!btnFisicos || !btnServicios) return;
     
+    // Limpiar estilos inline antiguos si existieran
+    btnFisicos.removeAttribute('style');
+    btnServicios.removeAttribute('style');
+
     var elFam = document.getElementById('inv-fil-familia');
     var elSis = document.getElementById('inv-fil-sistema');
+
     if (tab === 'fisicos') {
-        btnFisicos.className = 'inv-tab-btn active';
-        btnFisicos.style.background = '#0ea5e9';
-        btnFisicos.style.color = '#fff';
-        btnServicios.className = 'inv-tab-btn';
-        btnServicios.style.background = 'transparent';
-        btnServicios.style.color = '#0ea5e9';
+        btnFisicos.className = 'ck-segment-item active';
+        btnServicios.className = 'ck-segment-item';
         if (elFam) elFam.style.display = 'inline-block';
         if (elSis) elSis.style.display = 'inline-block';
     } else {
-        btnServicios.className = 'inv-tab-btn active';
-        btnServicios.style.background = '#0ea5e9';
-        btnServicios.style.color = '#fff';
-        btnFisicos.className = 'inv-tab-btn';
-        btnFisicos.style.background = 'transparent';
-        btnFisicos.style.color = '#0ea5e9';
+        btnServicios.className = 'ck-segment-item active';
+        btnFisicos.className = 'ck-segment-item';
         if (elFam) elFam.style.display = 'none';
         if (elSis) elSis.style.display = 'none';
     }
