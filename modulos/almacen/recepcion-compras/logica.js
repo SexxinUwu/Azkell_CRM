@@ -140,15 +140,7 @@
             }
 
             // Formato limpio de fecha y hora
-            let fechaFmt = oc.fecha || '-';
-            if (oc.fecha && String(oc.fecha).includes('T')) {
-                const raw = String(oc.fecha).replace('T', ' ').slice(0, 16);
-                const parts = raw.split(' ');
-                if (parts.length === 2) {
-                    const [yyyy, mm, dd] = parts[0].split('-');
-                    fechaFmt = `${dd}/${mm}/${yyyy} ${parts[1]}`;
-                }
-            }
+            const fechaFmt = oc.fecha || '-';
 
             return `
             <tr>

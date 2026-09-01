@@ -827,9 +827,9 @@ router.post('/entradas', (req, res) => {
     _generarCodigoAlmacen('ENT', anio, (err, id) => {
         if (err) return res.status(500).json({ error: err.message });
         const total_pen = _calcularTotalPen(items || [], tc);
-        db.query('INSERT INTO entradas_inv (id,fecha,proveedor_id,proveedor_nombre,documento_referencia,moneda,tipo_cambio,total_pen,observaciones,tipo_igv,creado_por,motivo_entrada,placa,tipo_orden,condicion_pago,dias_credito,ot_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        db.query('INSERT INTO entradas_inv (id,fecha,proveedor_id,proveedor_nombre,documento_referencia,moneda,tipo_cambio,total_pen,observaciones,tipo_igv,creado_por,motivo_entrada,placa,tipo_orden,condicion_pago,dias_credito,ot_id,estado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [id, fecha||new Date().toISOString().split('T')[0], proveedor_id||null, proveedor_nombre||null,
-             documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', creado_por||null, motivo_entrada||null, placa||null, tipo_orden||'Orden de compra', condicion_pago||'Al contado', dias_credito||30, ot_id||null],
+             documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', creado_por||null, motivo_entrada||null, placa||null, tipo_orden||'Orden de compra', condicion_pago||'Al contado', dias_credito||30, ot_id||null, 'Registrado'],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 if (!items || !items.length) { if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
@@ -939,6 +939,22 @@ router.delete('/entradas/:id', (req, res) => {
             if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
     });
+});
+
+router.put('/entradas/:id/estado', (req, res) => {
+    const { id } = req.params;
+    const { estado, comentario, usuario } = req.body;
+    if (!estado) return res.status(400).json({ error: 'Estado requerido' });
+
+    db.query('UPDATE entradas_inv SET estado=?, observaciones_estado=? WHERE id=?',
+        [estado, comentario || null, id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (typeof logAudit === 'function' && usuario) {
+                logAudit(usuario, 'almacen/entradas', 'MODIFICÓ', `/api/almacen/entradas/${id}/estado (${estado})`);
+            }
+            res.json({ ok: true, estado });
+        }
+    );
 });
 
 router.put('/entradas/:id/anular', (req, res) => {
@@ -1211,14 +1227,14 @@ router.get('/kardex/:inventario_id', (req, res) => {
 router.get('/recepciones-oc', async (req, res) => {
     try {
         const targetDb = req.db || db;
-        // 1. Obtener todas las órdenes de compra (de entradas_inv o del flujo de OCs)
+        // 1. Obtener SOLO las órdenes de compra que ya fueron APROBADAS Y PAGADAS / PROCESADAS
         const sqlOCs = `
             SELECT e.*, 
                    COALESCE(SUM(de.cantidad), 0) AS total_items_oc,
                    COUNT(DISTINCT de.id) AS total_renglones
             FROM entradas_inv e
             LEFT JOIN detalle_entradas_inv de ON de.entrada_id = e.id
-            WHERE (e.estado IS NULL OR e.estado != 'Anulado')
+            WHERE LOWER(e.estado) IN ('pagado', 'procesado')
             GROUP BY e.id
             ORDER BY e.fecha DESC, e.id DESC
         `;
@@ -1319,19 +1335,18 @@ router.get('/recepciones-oc', async (req, res) => {
                             estadoRecepcion = 'COMPLETO';
                         }
 
-                        let fechaOCFinal = oc.created_at || oc.fecha;
-                        if (oc.created_at) {
-                            const raw = String(oc.created_at).replace('T', ' ').slice(0, 16);
-                            const parts = raw.split(' ');
-                            if (parts.length === 2) {
-                                const [yyyy, mm, dd] = parts[0].split('-');
-                                fechaOCFinal = `${dd}/${mm}/${yyyy} ${parts[1]}`;
-                            }
-                        } else if (oc.fecha) {
-                            const raw = String(oc.fecha).split('T')[0];
-                            const parts = raw.split('-');
-                            if (parts.length === 3) {
-                                fechaOCFinal = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                        let fechaOCFinal = oc.fecha;
+                        const raw = oc.created_at || oc.fecha;
+                        if (raw) {
+                            try {
+                                const d = new Date(String(raw).includes('T') ? raw : String(raw).replace(' ', 'T'));
+                                if (!isNaN(d.getTime())) {
+                                    const dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
+                                    const timeStr = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
+                                    fechaOCFinal = (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) ? dateStr : `${dateStr} ${timeStr}`;
+                                }
+                            } catch (e) {
+                                fechaOCFinal = String(raw);
                             }
                         }
 
@@ -1343,7 +1358,7 @@ router.get('/recepciones-oc', async (req, res) => {
                             almacen: oc.almacen || 'ALM CENTRAL',
                             moneda: oc.moneda || 'PEN',
                             importe: parseFloat(oc.total_pen || 0),
-                            estado_oc: oc.estado === 'aprobado' ? 'AUTORIZADO' : 'PROCESADO',
+                            estado_oc: (oc.estado || 'PAGADA').toUpperCase(),
                             total_pedido: totalPedido,
                             total_recibido: totalRecibido,
                             estado_recepcion: estadoRecepcion,

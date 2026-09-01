@@ -985,7 +985,19 @@ function _entFmtFechaHora(iso, createdAt) {
 
         var tp = parseFloat(d.total_pen || 0);
         var totalFmt = '<strong style="color:#16a34a;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
-        var estadoHtml = isAnulado ? '<span class="badge bg-danger">ANULADA</span>' : '<span class="badge" style="background-color:#16a34a;">REGISTRADA</span>';
+        var estadoNorm = (d.estado || 'REGISTRADA').toUpperCase();
+        var estadoHtml = '<span class="badge" style="background-color:#0284c7;">REGISTRADA</span>';
+        if (estadoNorm === 'ANULADO' || estadoNorm === 'ANULADA' || estadoNorm === 'RECHAZADO' || estadoNorm === 'RECHAZADA') {
+            estadoHtml = '<span class="badge bg-danger">' + estadoNorm + '</span>';
+        } else if (estadoNorm === 'APROBADO' || estadoNorm === 'APROBADA') {
+            estadoHtml = '<span class="badge bg-warning text-dark fw-bold">APROBADA</span>';
+        } else if (estadoNorm === 'PAGADO' || estadoNorm === 'PAGADA' || estadoNorm === 'PROCESADO' || estadoNorm === 'PROCESADA') {
+            estadoHtml = '<span class="badge bg-success fw-bold">PAGADA</span>';
+        } else if (estadoNorm === 'REGISTRADA' || estadoNorm === 'REGISTRADO') {
+            estadoHtml = '<span class="badge" style="background-color:#0284c7;">REGISTRADA</span>';
+        } else {
+            estadoHtml = '<span class="badge bg-secondary">' + estadoNorm + '</span>';
+        }
           var tipoOrdBadge = (d.tipo_orden && d.tipo_orden.toLowerCase() === 'orden de servicio') 
         ? '<span class="badge bg-warning text-dark" style="font-size:0.6rem; letter-spacing:0.04em;">ORDEN DE SERVICIO</span>' 
         : '<span class="badge bg-primary" style="font-size:0.6rem; letter-spacing:0.04em;">ORDEN DE COMPRA</span>';
