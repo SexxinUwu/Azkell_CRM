@@ -1014,23 +1014,25 @@ function _entFmtFechaHora(iso, createdAt) {
         var tp = parseFloat(d.total_pen || 0);
         var totalFmt = '<strong style="color:#16a34a;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
         var estadoNorm = (d.estado || 'REGISTRADA').toUpperCase();
-        var estadoHtml = '<span class="badge" style="background-color:#0284c7;">REGISTRADA</span>';
+        var estadoHtml = '<span class="badge" style="background-color:#64748b; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">REGISTRADA</span>';
         if (estadoNorm === 'ANULADO' || estadoNorm === 'ANULADA' || estadoNorm === 'RECHAZADO' || estadoNorm === 'RECHAZADA') {
-            estadoHtml = '<span class="badge bg-danger">' + estadoNorm + '</span>';
-        } else if (estadoNorm === 'APROBADO' || estadoNorm === 'APROBADA') {
-            estadoHtml = '<span class="badge bg-warning text-dark fw-bold">APROBADA</span>';
-        } else if (estadoNorm === 'PAGADO' || estadoNorm === 'PAGADA' || estadoNorm === 'PROCESADO' || estadoNorm === 'PROCESADA') {
-            estadoHtml = '<span class="badge bg-success fw-bold">PAGADA</span>';
-        } else if (estadoNorm === 'REGISTRADA' || estadoNorm === 'REGISTRADO') {
-            estadoHtml = '<span class="badge" style="background-color:#0284c7;">REGISTRADA</span>';
+            estadoHtml = '<span class="badge" style="background-color:#dc2626; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">' + estadoNorm + '</span>';
+        } else if (estadoNorm === 'APROBADO' || estadoNorm === 'APROBADA' || estadoNorm === 'AUTORIZADO' || estadoNorm === 'AUTORIZADA') {
+            estadoHtml = '<span class="badge" style="background-color:#16a34a; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">APROBADA</span>';
+        } else if (estadoNorm === 'PROCESADO' || estadoNorm === 'PROCESADA' || estadoNorm === 'PAGADO' || estadoNorm === 'PAGADA') {
+            estadoHtml = '<span class="badge" style="background-color:#0284c7; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">PROCESADA</span>';
+        } else if (estadoNorm === 'OBSERVADO' || estadoNorm === 'OBSERVADA') {
+            estadoHtml = '<span class="badge" style="background-color:#f59e0b; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">OBSERVADA</span>';
+        } else if (estadoNorm === 'REGISTRADA' || estadoNorm === 'REGISTRADO' || estadoNorm === 'PENDIENTE') {
+            estadoHtml = '<span class="badge" style="background-color:#64748b; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">REGISTRADA</span>';
         } else {
-            estadoHtml = '<span class="badge bg-secondary">' + estadoNorm + '</span>';
+            estadoHtml = '<span class="badge" style="background-color:#64748b; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">' + estadoNorm + '</span>';
         }
-          var tipoOrdBadge = (d.tipo_orden && d.tipo_orden.toLowerCase() === 'orden de servicio') 
-        ? '<span class="badge bg-warning text-dark" style="font-size:0.6rem; letter-spacing:0.04em;">ORDEN DE SERVICIO</span>' 
-        : '<span class="badge bg-primary" style="font-size:0.6rem; letter-spacing:0.04em;">ORDEN DE COMPRA</span>';
-        var placaHtml = d.placa ? '<span class="badge bg-secondary fw-normal">' + _entEsc(d.placa) + '</span>' : '<span class="text-muted small">—</span>';
-        var motivoHtml = d.motivo_entrada ? '<span style="font-size:0.75rem;">' + _entEsc(d.motivo_entrada) + '</span>' : '<span class="text-muted small">—</span>';
+
+        var tipoOrdText = (d.tipo_orden && d.tipo_orden.toLowerCase() === 'orden de servicio') ? 'ORDEN DE SERVICIO' : 'ORDEN DE COMPRA';
+        var tipoOrdBadge = '<span class="text-dark fw-bold text-nowrap" style="font-size:0.75rem; letter-spacing:0.02em;">' + tipoOrdText + '</span>';
+        var placaHtml = d.placa ? '<span class="text-dark fw-bold text-nowrap" style="font-size:0.78rem;">' + _entEsc(d.placa) + '</span>' : '<span class="text-dark fw-bold small">—</span>';
+        var motivoHtml = d.motivo_entrada ? '<span class="text-dark fw-semibold" style="font-size:0.78rem;">' + _entEsc(d.motivo_entrada) + '</span>' : '<span class="text-muted small">—</span>';
         
         var vHTML = d.url_voucher_presigned ? '<a href="'+_entEsc(d.url_voucher_presigned)+'" target="_blank" class="text-danger text-decoration-none fw-bold" style="font-size:0.75rem;"><i class="bi bi-file-earmark-pdf"></i> Ver Voucher</a>' : '<a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\');" class="text-secondary text-decoration-none small opacity-75" title="Subir Voucher"><i class="bi bi-upload"></i> Subir</a>';
         var cHTML = d.url_cotizacion_presigned ? '<a href="'+_entEsc(d.url_cotizacion_presigned)+'" target="_blank" class="text-primary text-decoration-none fw-bold" style="font-size:0.75rem;"><i class="bi bi-file-earmark-text"></i> Ver Cotización</a>' : '<a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\');" class="text-secondary text-decoration-none small opacity-75" title="Subir Cotización"><i class="bi bi-upload"></i> Subir</a>';
@@ -1047,13 +1049,13 @@ function _entFmtFechaHora(iso, createdAt) {
             tr0.innerHTML =
                 '<td class="text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(d.id || '') + '</span></td>' +
                 '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
-                '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
+                '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
                 '<td class="text-center col-hide-mob">' + estadoHtml + '</td>' +
                 '<td class="col-hide-mob">' + placaHtml + '</td>' +
                 '<td class="col-hide-mob">' + motivoHtml + '</td>' +
-                '<td class="col-hide-mob">' + (d.proveedor_nombre ? '<span style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
-                '<td class="col-hide-mob" style="color:var(--subtext);font-size:.78rem;"></td>' +
-                '<td class="col-articulo" style="color:var(--subtext);font-size:.78rem;">Sin artículos</td>' +
+                '<td class="col-hide-mob">' + (d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
+                '<td class="col-hide-mob text-dark font-monospace fw-bold" style="font-size:.75rem;white-space:nowrap;"></td>' +
+                '<td class="col-articulo text-muted fw-semibold" style="font-size:.78rem;">Sin artículos</td>' +
                 '<td class="text-end"></td>' +
                 '<td class="text-end col-hide-mob"></td>' +
                 '<td class="text-end col-hide-mob" style="white-space:nowrap;">' + totalFmt + '</td>' +
@@ -1099,20 +1101,20 @@ function _entFmtFechaHora(iso, createdAt) {
             var cu    = parseFloat(it.costo_unitario || 0);
             var nombre = _entEsc(_entDescLimpia(it.descripcion, it.inventario_id));
             var invId  = _entEsc(it.inventario_id || '—');
-            var provHtml = d.proveedor_nombre ? '<span style="font-size:.78rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>';
+            var provHtml = d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>';
 
             tr.innerHTML =
                  '<td class="text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(d.id || '') + '</span></td>' +
                 '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
-                '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
+                '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
                 '<td>' + placaHtml + '</td>' +
                 '<td>' + motivoHtml + '</td>' +
                 '<td>' + provHtml + '</td>' +
-                '<td class="col-hide-mob" style="font-size:.73rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + invId + '</td>' +
-                '<td class="col-articulo" style="font-size:.80rem;">' + nombre + '</td>' +
-                '<td class="text-end" style="font-size:.80rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
-                '<td class="text-end col-hide-mob" style="font-size:.80rem;">' + (d.moneda === 'USD' ? '$ ' : 'S/ ') + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
+                '<td class="col-hide-mob text-dark font-monospace fw-bold" style="font-size:.75rem;white-space:nowrap;">' + invId + '</td>' +
+                '<td class="col-articulo text-dark fw-semibold" style="font-size:.80rem;">' + nombre + '</td>' +
+                '<td class="text-end text-dark fw-bold" style="font-size:.80rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
+                '<td class="text-end col-hide-mob text-dark fw-semibold" style="font-size:.80rem;">' + (d.moneda === 'USD' ? '$ ' : 'S/ ') + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
                 '<td class="text-end col-hide-mob" style="white-space:nowrap;">' + (isFirst ? totalFmt : '') + '</td>' +
                 '<td class="text-center col-hide-mob">' + (isFirst ? vHTML : '') + '</td>' +
                 '<td class="text-center col-hide-mob">' + (isFirst ? cHTML : '') + '</td>' +

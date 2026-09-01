@@ -1014,15 +1014,20 @@ router.put('/entradas/:id/estado', (req, res) => {
     const { estado, comentario, usuario } = req.body;
     if (!estado) return res.status(400).json({ error: 'Estado requerido' });
 
-    db.query('UPDATE entradas_inv SET estado=?, observaciones_estado=? WHERE id=?',
-        [estado, comentario || null, id], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            if (typeof logAudit === 'function' && usuario) {
-                logAudit(usuario, 'almacen/entradas', 'MODIFICÓ', `/api/almacen/entradas/${id}/estado (${estado})`);
-            }
-            res.json({ ok: true, estado });
+    let sql = 'UPDATE entradas_inv SET estado=? WHERE id=?';
+    let params = [estado, id];
+    if (comentario && String(comentario).trim()) {
+        sql = 'UPDATE entradas_inv SET estado=?, observaciones=CONCAT(COALESCE(observaciones,""), " [Nota Gerencia: ", ?, "]") WHERE id=?';
+        params = [estado, String(comentario).trim(), id];
+    }
+
+    db.query(sql, params, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (typeof logAudit === 'function' && usuario) {
+            logAudit(usuario, 'almacen/entradas', 'MODIFICÓ', `/api/almacen/entradas/${id}/estado (${estado})`);
         }
-    );
+        res.json({ ok: true, estado });
+    });
 });
 
 router.put('/entradas/:id/anular', (req, res) => {
@@ -1045,7 +1050,7 @@ router.post('/entradas/:id/archivo/:tipo', _multerInv.single('archivo'), (req, r
     try {
         const { uploadToS3, deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
         const col = `url_${tipo}`;
-        db.query(`SELECT ${col} FROM entradas_inv WHERE id=?`, [req.params.id], async (err, rows) => {
+        db.query(`SELECT ${col}, estado FROM entradas_inv WHERE id=?`, [req.params.id], async (err, rows) => {
             if (err) return res.status(500).json({ error: 'DB Error: ' + err.message });
             try {
                 if (rows && rows.length > 0 && rows[0][col]) {
@@ -1055,9 +1060,17 @@ router.post('/entradas/:id/archivo/:tipo', _multerInv.single('archivo'), (req, r
                 const ext = req.file.originalname.split('.').pop() || 'pdf';
                 const s3Key = `almacen/entradas/${req.params.id}/${tipo}_${Date.now()}.${ext}`;
                 const url = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
-                db.query(`UPDATE entradas_inv SET ${col}=? WHERE id=?`, [url, req.params.id], (err2) => {
+
+                // Si se sube el voucher, actualizar estado a Procesado
+                let updateSql = `UPDATE entradas_inv SET ${col}=? WHERE id=?`;
+                let updateParams = [url, req.params.id];
+                if (tipo === 'voucher') {
+                    updateSql = `UPDATE entradas_inv SET ${col}=?, estado='Procesado' WHERE id=?`;
+                }
+
+                db.query(updateSql, updateParams, (err2) => {
                     if (err2) return res.status(500).json({ error: 'Update Error: ' + err2.message });
-                    res.json({ ok: true, url });
+                    res.json({ ok: true, url, estado: tipo === 'voucher' ? 'Procesado' : (rows[0] ? rows[0].estado : 'Registrado') });
                 });
             } catch (innerError) {
                 res.status(500).json({ error: 'S3 Error: ' + innerError.message });
