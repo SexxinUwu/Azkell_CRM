@@ -713,7 +713,7 @@
     };
 
     // Confirmación desde Modal Autorizar (Diseño Solicitado)
-    window.confirmarAutorizacionModal = function() {
+    window.confirmarAutorizacionModal = async function() {
         const chk = document.getElementById('modal-autorizar-check');
         if (chk && !chk.checked) {
             alert('Por favor marque la casilla "Confirmo realizar la autorización" para continuar.');
@@ -727,39 +727,51 @@
         const usuarioActual = localStorage.getItem('fleet_nombre_usuario') || localStorage.getItem('fleet_user') || window.usuarioActual || 'Dirección / Gerencia';
         const fechaHora = new Date().toLocaleString('es-PE');
 
-        oc.estado = 'aprobado';
-        oc.historial = `Aprobado por ${usuarioActual} el ${fechaHora}. ${comentario ? 'Nota: ' + comentario : ''}`;
+        try {
+            // Persistir en Base de Datos MySQL del ERP
+            const resp = await fetch(`/api/almacen/entradas/${encodeURIComponent(oc.id)}/estado`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    estado: 'Aprobado',
+                    comentario: comentario,
+                    usuario: usuarioActual
+                })
+            });
 
-        // Persistir en Base de Datos MySQL del ERP
-        fetch(`/api/almacen/entradas/${encodeURIComponent(oc.id)}/estado`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                estado: 'Aprobado',
-                comentario: comentario,
-                usuario: usuarioActual
-            })
-        }).catch(err => console.error('Error actualizando estado OC en BD:', err));
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({}));
+                throw new Error(errData.error || 'Error en el servidor al autorizar');
+            }
 
-        // Cerrar modales
-        const modalAutEl = document.getElementById('modalAutorizarOC');
-        if (modalAutEl) {
-            bootstrap.Modal.getInstance(modalAutEl)?.hide();
+            oc.estado = 'aprobado';
+            oc.historial = `Aprobado por ${usuarioActual} el ${fechaHora}. ${comentario ? 'Nota: ' + comentario : ''}`;
+
+            // Cerrar modales
+            const modalAutEl = document.getElementById('modalAutorizarOC');
+            if (modalAutEl) {
+                bootstrap.Modal.getInstance(modalAutEl)?.hide();
+            }
+            const modalDetalleEl = document.getElementById('modalDetalleOC');
+            if (modalDetalleEl) {
+                bootstrap.Modal.getInstance(modalDetalleEl)?.hide();
+            }
+
+            // Actualizar UI
+            actualizarKpisYBadges();
+            window.aplicarFiltrosOC();
+            if (typeof window.cargarDatasetDesdeAPI === 'function') {
+                window.cargarDatasetDesdeAPI();
+            }
+
+            mostrarToastGerencia('✅ Orden de Compra Autorizada', `Se autorizó la ${oc.id} correctamente.`);
+        } catch(err) {
+            alert('❌ Error al autorizar Orden de Compra: ' + err.message);
         }
-        const modalDetalleEl = document.getElementById('modalDetalleOC');
-        if (modalDetalleEl) {
-            bootstrap.Modal.getInstance(modalDetalleEl)?.hide();
-        }
-
-        // Actualizar UI
-        actualizarKpisYBadges();
-        window.aplicarFiltrosOC();
-
-        mostrarToastGerencia('✅ Orden de Compra Autorizada', `Se autorizó la ${oc.id} correctamente.`);
     };
 
     // Ejecutar Acción Confirmada (Observar / Rechazar)
-    window.ejecutarAccionGerencial = function() {
+    window.ejecutarAccionGerencial = async function() {
         const oc = window._gerenciaOC.ordenSeleccionada;
         const tipo = window._gerenciaOC.tipoAccionModal;
         const comentario = (document.getElementById('modal-accion-comentario-txt')?.value || '').trim();
@@ -774,50 +786,67 @@
 
         let nuevoEstadoBD = 'Registrado';
         if (tipo === 'aprobar') {
-            oc.estado = 'aprobado';
             nuevoEstadoBD = 'Aprobado';
-            oc.historial = `Aprobado por ${usuarioActual} el ${fechaHora}. ${comentario ? 'Nota: ' + comentario : ''}`;
         } else if (tipo === 'observar') {
-            oc.estado = 'observado';
             nuevoEstadoBD = 'Observado';
-            oc.historial = `Observado por ${usuarioActual} el ${fechaHora}. Observación: ${comentario}`;
         } else if (tipo === 'rechazar') {
-            oc.estado = 'rechazado';
             nuevoEstadoBD = 'Rechazado';
-            oc.historial = `Rechazado por ${usuarioActual} el ${fechaHora}. Motivo: ${comentario}`;
         }
 
-        // Persistir en Base de Datos MySQL del ERP
-        fetch(`/api/almacen/entradas/${encodeURIComponent(oc.id)}/estado`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                estado: nuevoEstadoBD,
-                comentario: comentario,
-                usuario: usuarioActual
-            })
-        }).catch(err => console.error('Error actualizando estado OC en BD:', err));
+        try {
+            // Persistir en Base de Datos MySQL del ERP
+            const resp = await fetch(`/api/almacen/entradas/${encodeURIComponent(oc.id)}/estado`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    estado: nuevoEstadoBD,
+                    comentario: comentario,
+                    usuario: usuarioActual
+                })
+            });
 
-        // Cerrar modales
-        const modalAccionEl = document.getElementById('modalConfirmarAccionOC');
-        if (modalAccionEl) {
-            bootstrap.Modal.getInstance(modalAccionEl)?.hide();
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({}));
+                throw new Error(errData.error || 'Error en el servidor al procesar la acción');
+            }
+
+            if (tipo === 'aprobar') {
+                oc.estado = 'aprobado';
+                oc.historial = `Aprobado por ${usuarioActual} el ${fechaHora}. ${comentario ? 'Nota: ' + comentario : ''}`;
+            } else if (tipo === 'observar') {
+                oc.estado = 'observado';
+                oc.historial = `Observado por ${usuarioActual} el ${fechaHora}. Observación: ${comentario}`;
+            } else if (tipo === 'rechazar') {
+                oc.estado = 'rechazado';
+                oc.historial = `Rechazado por ${usuarioActual} el ${fechaHora}. Motivo: ${comentario}`;
+            }
+
+            // Cerrar modales
+            const modalAccionEl = document.getElementById('modalConfirmarAccionOC');
+            if (modalAccionEl) {
+                bootstrap.Modal.getInstance(modalAccionEl)?.hide();
+            }
+            const modalDetalleEl = document.getElementById('modalDetalleOC');
+            if (modalDetalleEl) {
+                bootstrap.Modal.getInstance(modalDetalleEl)?.hide();
+            }
+
+            // Actualizar UI
+            actualizarKpisYBadges();
+            window.aplicarFiltrosOC();
+            if (typeof window.cargarDatasetDesdeAPI === 'function') {
+                window.cargarDatasetDesdeAPI();
+            }
+
+            // Mostrar notificación
+            mostrarToastGerencia(
+                tipo === 'aprobar' ? '✅ Orden de Compra Aprobada' : 
+                tipo === 'observar' ? '💬 Orden de Compra Observada' : '❌ Orden de Compra Rechazada',
+                `Se actualizó el estado de la ${oc.id} con éxito.`
+            );
+        } catch(err) {
+            alert('❌ Error al actualizar estado: ' + err.message);
         }
-        const modalDetalleEl = document.getElementById('modalDetalleOC');
-        if (modalDetalleEl) {
-            bootstrap.Modal.getInstance(modalDetalleEl)?.hide();
-        }
-
-        // Actualizar UI
-        actualizarKpisYBadges();
-        window.aplicarFiltrosOC();
-
-        // Mostrar notificación
-        mostrarToastGerencia(
-            tipo === 'aprobar' ? '✅ Orden de Compra Aprobada' : 
-            tipo === 'observar' ? '💬 Orden de Compra Observada' : '❌ Orden de Compra Rechazada',
-            `Se actualizó el estado de la ${oc.id} con éxito.`
-        );
     };
 
     function mostrarToastGerencia(titulo, mensaje) {
