@@ -466,7 +466,7 @@
             <!-- Columna ORDEN COMPRA -->
             <td class="text-nowrap" style="width: 1%;">
                 <span class="btn-oc-code" onclick="window.verDetalleOC('${oc.id}')" title="Ver Detalle de la Orden">
-                    <i class="bi bi-eye"></i> ${oc.id}
+                    <i class="bi bi-eye"></i> ${String(oc.id || '').replace(/^ENT-/i, '')}
                 </span>
             </td>
 
