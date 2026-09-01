@@ -657,6 +657,24 @@
         if (!oc) return;
         window._gerenciaOC.tipoAccionModal = tipo;
 
+        if (tipo === 'aprobar') {
+            const codEl = document.getElementById('modal-autorizar-codigo');
+            if (codEl) codEl.innerText = oc.id;
+            const montoEl = document.getElementById('modal-autorizar-monto');
+            if (montoEl) montoEl.innerText = (oc.moneda || 'S/') + ' ' + (oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const chk = document.getElementById('modal-autorizar-check');
+            if (chk) chk.checked = false;
+            const com = document.getElementById('modal-autorizar-comentario');
+            if (com) com.value = '';
+
+            const modalAutEl = document.getElementById('modalAutorizarOC');
+            if (modalAutEl) {
+                const modalAut = bootstrap.Modal.getOrCreateInstance(modalAutEl);
+                modalAut.show();
+            }
+            return;
+        }
+
         const iconWrap = document.getElementById('modal-accion-icon-wrap');
         const icon = document.getElementById('modal-accion-icon');
         const titulo = document.getElementById('modal-accion-titulo');
@@ -669,15 +687,7 @@
         if (txtComentario) txtComentario.value = '';
         subtitulo.innerText = `Orden de Compra: ${oc.id} • ${oc.proveedor} (${oc.moneda || 'S/'} ${(oc.total || 0).toFixed(2)})`;
 
-        if (tipo === 'aprobar') {
-            iconWrap.style.background = '#dcfce7';
-            icon.className = 'bi bi-check-circle-fill text-success';
-            titulo.innerText = 'Autorizar Orden de Compra';
-            mensaje.innerText = `¿Confirma la aprobación ejecutiva de la orden por un importe de ${oc.moneda || 'S/'} ${(oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}? El departamento de compras procederá con la emisión y despacho.`;
-            labelComentario.innerText = 'Instrucciones / Notas de Aprobación (Opcional):';
-            btnConfirmar.className = 'btn btn-success rounded-3 px-4 fw-bold';
-            btnConfirmar.innerText = 'Aprobar Orden';
-        } else if (tipo === 'observar') {
+        if (tipo === 'observar') {
             iconWrap.style.background = '#e0e7ff';
             icon.className = 'bi bi-chat-dots-fill text-primary';
             titulo.innerText = 'Observar y Solicitar Sustento';
@@ -702,7 +712,53 @@
         }
     };
 
-    // Ejecutar Acción Confirmada
+    // Confirmación desde Modal Autorizar (Diseño Solicitado)
+    window.confirmarAutorizacionModal = function() {
+        const chk = document.getElementById('modal-autorizar-check');
+        if (chk && !chk.checked) {
+            alert('Por favor marque la casilla "Confirmo realizar la autorización" para continuar.');
+            return;
+        }
+
+        const comentario = (document.getElementById('modal-autorizar-comentario')?.value || '').trim();
+        const oc = window._gerenciaOC.ordenSeleccionada;
+        if (!oc) return;
+
+        const usuarioActual = localStorage.getItem('fleet_nombre_usuario') || localStorage.getItem('fleet_user') || window.usuarioActual || 'Dirección / Gerencia';
+        const fechaHora = new Date().toLocaleString('es-PE');
+
+        oc.estado = 'aprobado';
+        oc.historial = `Aprobado por ${usuarioActual} el ${fechaHora}. ${comentario ? 'Nota: ' + comentario : ''}`;
+
+        // Persistir en Base de Datos MySQL del ERP
+        fetch(`/api/almacen/entradas/${encodeURIComponent(oc.id)}/estado`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                estado: 'Aprobado',
+                comentario: comentario,
+                usuario: usuarioActual
+            })
+        }).catch(err => console.error('Error actualizando estado OC en BD:', err));
+
+        // Cerrar modales
+        const modalAutEl = document.getElementById('modalAutorizarOC');
+        if (modalAutEl) {
+            bootstrap.Modal.getInstance(modalAutEl)?.hide();
+        }
+        const modalDetalleEl = document.getElementById('modalDetalleOC');
+        if (modalDetalleEl) {
+            bootstrap.Modal.getInstance(modalDetalleEl)?.hide();
+        }
+
+        // Actualizar UI
+        actualizarKpisYBadges();
+        window.aplicarFiltrosOC();
+
+        mostrarToastGerencia('✅ Orden de Compra Autorizada', `Se autorizó la ${oc.id} correctamente.`);
+    };
+
+    // Ejecutar Acción Confirmada (Observar / Rechazar)
     window.ejecutarAccionGerencial = function() {
         const oc = window._gerenciaOC.ordenSeleccionada;
         const tipo = window._gerenciaOC.tipoAccionModal;
