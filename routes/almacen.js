@@ -1068,6 +1068,34 @@ router.post('/entradas/:id/archivo/:tipo', _multerInv.single('archivo'), (req, r
     }
 });
 
+router.delete('/entradas/:id/archivo/:tipo', (req, res) => {
+    const { tipo } = req.params;
+    if (!['voucher', 'cotizacion', 'factura'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
+
+    try {
+        const { deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
+        const col = `url_${tipo}`;
+        db.query(`SELECT ${col} FROM entradas_inv WHERE id=?`, [req.params.id], async (err, rows) => {
+            if (err) return res.status(500).json({ error: 'DB Error: ' + err.message });
+            try {
+                if (rows && rows.length > 0 && rows[0][col]) {
+                    const oldKey = s3KeyFromUrl(rows[0][col]);
+                    if (oldKey) await deleteFromS3(oldKey).catch(() => {});
+                }
+                db.query(`UPDATE entradas_inv SET ${col}=NULL WHERE id=?`, [req.params.id], (err2) => {
+                    if (err2) return res.status(500).json({ error: 'Update Error: ' + err2.message });
+                    if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'ELIMINÓ', req.path); }
+                    res.json({ ok: true });
+                });
+            } catch (innerError) {
+                res.status(500).json({ error: 'S3 Error: ' + innerError.message });
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // ============================================================
 // ALMACÉN — Salidas
 // ============================================================
