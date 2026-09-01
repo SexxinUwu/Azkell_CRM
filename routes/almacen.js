@@ -908,7 +908,6 @@ router.get('/salidas', (req, res) => {
     const limit = q ? '' : 'LIMIT 2000';
 
     targetDb.query(`SELECT s.*,
-              COALESCE(MAX(NULLIF(TRIM(u.nombre),'')), MAX(s.creado_por)) AS solicitante_nombre,
               GROUP_CONCAT(CONCAT_WS('\x1F',
                 COALESCE(d.inventario_id,''),
                 COALESCE(i.descripcion, d.descripcion,''),
@@ -920,7 +919,6 @@ router.get('/salidas', (req, res) => {
               FROM salidas_inv s
               LEFT JOIN detalle_salidas_inv d ON d.salida_id=s.id
               LEFT JOIN inventario i ON d.inventario_id = i.id
-              LEFT JOIN usuarios u ON (TRIM(LOWER(s.creado_por)) = TRIM(LOWER(u.correo)) OR CAST(s.creado_por AS CHAR) = CAST(u.idUsuario AS CHAR))
               ${whereClause}
               GROUP BY s.id ORDER BY s.fecha DESC, s.id DESC ${limit}`, queryParams, (err, rows) => {
         if (err) {
