@@ -32,6 +32,29 @@ window._entDetalleId = window._entDetalleId || null;
 window._entIgvMode   = window._entIgvMode   || 'sin_igv';
 var _ENT_POR_PAG = 20;
 
+function _entFmtFechaHora(iso, createdAt) {
+    var raw = createdAt || iso;
+    if (!raw) return '—';
+    try {
+        var s = String(raw);
+        var d;
+        if (s.includes('T') || s.includes(' ')) {
+            d = new Date(s.replace(' ', 'T'));
+        } else {
+            d = new Date(s + 'T00:00:00');
+        }
+        if (isNaN(d.getTime())) return String(raw);
+        var dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
+        var timeStr = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
+        if (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) {
+            return dateStr;
+        }
+        return dateStr + ' ' + timeStr;
+    } catch(e) { return String(raw); }
+}
+
+window._entFmtFechaHora = _entFmtFechaHora;
+
 window.init_entradas = function() {
     if (!window.checkPerm('ent_inv', 'l')) {
         var wrap = document.getElementById('mod-entradas') || document.querySelector('.container-fluid');
@@ -980,27 +1003,6 @@ window._entRender = function() {
         if (paginEl2) paginEl2.innerHTML = '';
         return;
     }
-
-function _entFmtFechaHora(iso, createdAt) {
-    var raw = createdAt || iso;
-    if (!raw) return '—';
-    try {
-        var s = String(raw);
-        var d;
-        if (s.includes('T') || s.includes(' ')) {
-            d = new Date(s.replace(' ', 'T'));
-        } else {
-            d = new Date(s + 'T00:00:00');
-        }
-        if (isNaN(d.getTime())) return String(raw);
-        var dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
-        var timeStr = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
-        if (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) {
-            return dateStr;
-        }
-        return dateStr + ' ' + timeStr;
-    } catch(e) { return String(raw); }
-}
 
     tbody.innerHTML = '';
     pagina.forEach(function(d) {
