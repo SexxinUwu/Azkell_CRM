@@ -311,11 +311,11 @@ window.dispRenderTabla = function (lista) {
                 </td>
                 <td class="text-center">
                     <div class="d-flex align-items-center justify-content-center gap-1">
-                        <button class="btn btn-sm btn-light border p-1 rounded-2 text-primary" onclick="window.dispEditar(${item.id})" title="Editar registro">
+                        <button class="ck-action-btn ck-btn-edit" onclick="window.dispEditar(${item.id})" title="Editar registro">
                             <i class="bi bi-pencil-square"></i>
                         </button>
-                        <button class="btn btn-sm btn-light border p-1 rounded-2 text-danger" onclick="window.dispEliminar(${item.id})" title="Eliminar registro">
-                            <i class="bi bi-trash3"></i>
+                        <button class="ck-action-btn ck-btn-delete" onclick="window.dispAbrirModalEliminar(${item.id}, '${_dispEsc(item.placa_camion || item.placa_carreta || 'Unidad')}')" title="Eliminar registro">
+                            <i class="bi bi-trash3-fill"></i>
                         </button>
                     </div>
                 </td>
@@ -739,19 +739,155 @@ window.dispGuardarFormulario = async function (e) {
 };
 window.guardarFormularioDisponibilidad = window.dispGuardarFormulario;
 
-// ── Eliminar Registro ─────────────────────────────────────────────
-window.dispEliminar = async function (id) {
-    if (!confirm('¿Está seguro de eliminar esta unidad del módulo de disponibilidad?')) return;
+// ── Eliminar Registro (Modal Circular 1:1 Reporte de Fallas) ───────
+window._dispIdAEliminar = null;
+
+window.dispAbrirModalEliminar = function (id, placa) {
+    window._dispIdAEliminar = id;
+    const txt = document.getElementById('disp-del-placa-txt');
+    if (txt) txt.textContent = placa ? `"${placa}"` : '';
+
+    const modalEl = document.getElementById('modalEliminarDisponibilidadConfirm');
+    if (modalEl) {
+        const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        bsModal.show();
+    }
+};
+window.dispEliminar = window.dispAbrirModalEliminar;
+
+window._ejecutarEliminarDisponibilidadConfirmado = async function () {
+    const id = window._dispIdAEliminar;
+    if (!id) return;
+
+    const btn = document.getElementById('btnEjecutarEliminarDisponibilidad');
+    if (btn) btn.disabled = true;
 
     try {
         const res = await fetch(`/api/disponibilidad-flota/${id}`, { method: 'DELETE' });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al eliminar');
 
-        if (typeof window.mostrarToast === 'function') window.mostrarToast('Registro eliminado', 'info');
+        const modalEl = document.getElementById('modalEliminarDisponibilidadConfirm');
+        if (modalEl) {
+            const bsModal = bootstrap.Modal.getInstance(modalEl);
+            if (bsModal) bsModal.hide();
+        }
+
+        if (typeof window.mostrarToast === 'function') window.mostrarToast('Unidad eliminada correctamente', 'info');
         window.dispCargarDatos();
     } catch (err) {
         alert('Error: ' + err.message);
+    } finally {
+        if (btn) btn.disabled = false;
+        window._dispIdAEliminar = null;
+    }
+};
+
+// ── Modal Cuadro Resumen por Tipo de Unidad ───────────────────────
+window.dispAbrirModalCuadro = function () {
+    const datos = window.dispDatos || [];
+    const total = datos.length;
+
+    // Agrupar por tipo_unidad
+    const agrupado = {};
+    datos.forEach(d => {
+        let tipo = (d.tipo_unidad || '').trim();
+        if (!tipo) tipo = 'Sin Tipo / No especificado';
+        if (!agrupado[tipo]) {
+            agrupado[tipo] = {
+                tipo,
+                total: 0,
+                operativos: 0,
+                mantenimiento: 0,
+                otros: 0
+            };
+        }
+        agrupado[tipo].total++;
+        const estUni = (d.estado_unidad || '').toLowerCase();
+        if (estUni === 'disponible' || estUni === 'operativo') {
+            agrupado[tipo].operativos++;
+        } else if (estUni === 'mantenimiento') {
+            agrupado[tipo].mantenimiento++;
+        } else {
+            agrupado[tipo].otros++;
+        }
+    });
+
+    const listaTipos = Object.values(agrupado).sort((a, b) => b.total - a.total);
+
+    const totalTxt = document.getElementById('disp-cuadro-total-txt');
+    if (totalTxt) totalTxt.textContent = `${total} unidades`;
+
+    const tiposCountTxt = document.getElementById('disp-cuadro-tipos-count-txt');
+    if (tiposCountTxt) tiposCountTxt.textContent = `${listaTipos.length} Tipos de Unidad`;
+
+    const container = document.getElementById('disp-cuadro-tipos-container');
+    if (container) {
+        if (!listaTipos.length) {
+            container.innerHTML = '<div class="col-12 text-center py-4 text-muted">No hay registros de disponibilidad.</div>';
+        } else {
+            container.innerHTML = listaTipos.map(t => {
+                const pct = total > 0 ? Math.round((t.total / total) * 100) : 0;
+                
+                // Icono según nombre de tipo
+                let icon = 'bi-truck';
+                const lower = t.tipo.toLowerCase();
+                if (lower.includes('carreta') || lower.includes('remolque') || lower.includes('semirremolque')) icon = 'bi-link-45deg';
+                else if (lower.includes('tracto')) icon = 'bi-truck-front-fill';
+                else if (lower.includes('furgon') || lower.includes('furgón')) icon = 'bi-box-seam-fill';
+                else if (lower.includes('camioneta') || lower.includes('auto')) icon = 'bi-car-front-fill';
+
+                return `
+                <div class="col-12 col-md-6">
+                    <div class="card h-100 border-0 rounded-4 p-3 shadow-2xs bg-white" style="border:1px solid #e2e8f0 !important;">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="bg-primary-subtle text-primary p-2 rounded-3 d-flex align-items-center justify-content-center" style="width:34px; height:34px;">
+                                    <i class="bi ${icon} fs-6"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark" style="font-size:0.95rem;">${_dispEsc(t.tipo)}</div>
+                                    <div class="text-secondary small">${pct}% de la flota</div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span class="fs-4 fw-bolder text-primary">${t.total}</span>
+                                <div class="text-muted small" style="font-size:0.7rem;">unidades</div>
+                            </div>
+                        </div>
+
+                        <!-- Barra de porcentaje -->
+                        <div class="progress mb-2" style="height: 6px; border-radius: 10px; background:#e2e8f0;">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: ${pct}%; border-radius: 10px;"></div>
+                        </div>
+
+                        <!-- Mini desglose de estados -->
+                        <div class="d-flex flex-wrap align-items-center gap-1.5 pt-1" style="font-size:0.75rem;">
+                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2 py-1 rounded-pill">
+                                🟢 ${t.operativos} Disp.
+                            </span>
+                            ${t.mantenimiento > 0 ? `
+                                <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-2 py-1 rounded-pill">
+                                    🔴 ${t.mantenimiento} Mant.
+                                </span>
+                            ` : ''}
+                            ${t.otros > 0 ? `
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle px-2 py-1 rounded-pill">
+                                    ⚪ ${t.otros} Otros
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+    }
+
+    const modalEl = document.getElementById('modalCuadroTiposUnidad');
+    if (modalEl) {
+        const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        bsModal.show();
     }
 };
 
