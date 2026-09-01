@@ -548,11 +548,29 @@
 
         const bEst = document.getElementById('det-badge-estado');
         if (bEst) {
-            bEst.innerText = (oc.estado || 'PENDIENTE').toUpperCase();
-            bEst.className = oc.estado === 'pendiente' ? 'badge bg-warning text-dark rounded-pill fw-bold' : 
-                             oc.estado === 'aprobado' ? 'badge bg-success text-white rounded-pill fw-bold' : 
-                             oc.estado === 'observado' ? 'badge bg-primary text-white rounded-pill fw-bold' : 
-                             'badge bg-danger text-white rounded-pill fw-bold';
+            const estLimp = (oc.estado || 'pendiente').toLowerCase();
+            bEst.innerText = estLimp.toUpperCase();
+            if (estLimp === 'pendiente' || estLimp === 'registrado' || estLimp === 'registrada') {
+                bEst.className = 'badge rounded-pill fw-bold';
+                bEst.style.backgroundColor = '#64748b';
+                bEst.style.setProperty('color', '#ffffff', 'important');
+            } else if (estLimp === 'aprobado' || estLimp === 'aprobada') {
+                bEst.className = 'badge rounded-pill fw-bold';
+                bEst.style.backgroundColor = '#16a34a';
+                bEst.style.setProperty('color', '#ffffff', 'important');
+            } else if (estLimp === 'procesado' || estLimp === 'procesada') {
+                bEst.className = 'badge rounded-pill fw-bold';
+                bEst.style.backgroundColor = '#0284c7';
+                bEst.style.setProperty('color', '#ffffff', 'important');
+            } else if (estLimp === 'observado' || estLimp === 'observada') {
+                bEst.className = 'badge rounded-pill fw-bold';
+                bEst.style.backgroundColor = '#f59e0b';
+                bEst.style.setProperty('color', '#ffffff', 'important');
+            } else {
+                bEst.className = 'badge rounded-pill fw-bold';
+                bEst.style.backgroundColor = '#dc2626';
+                bEst.style.setProperty('color', '#ffffff', 'important');
+            }
         }
 
         // Historial
@@ -634,7 +652,13 @@
         // Mostrar / ocultar botones de acción en footer si ya no está pendiente
         const actBtns = document.getElementById('det-modal-action-buttons');
         if (actBtns) {
-            actBtns.style.display = (oc.estado === 'pendiente') ? 'flex' : 'none';
+            const estActual = (oc.estado || '').toLowerCase();
+            const esPendiente = (estActual === 'pendiente' || estActual === 'registrado' || estActual === 'registrada');
+            if (esPendiente) {
+                actBtns.style.setProperty('display', 'flex', 'important');
+            } else {
+                actBtns.style.setProperty('display', 'none', 'important');
+            }
         }
 
         const modalEl = document.getElementById('modalDetalleOC');
