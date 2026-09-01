@@ -1480,39 +1480,37 @@ window.abrirModalSubirArchivos = function(id) {
     var ocProvInput = document.getElementById('subir-archivos-oc-proveedor');
     if (ocProvInput) ocProvInput.value = entrada.proveedor_nombre || 'Sin Proveedor';
 
-    // Cotización
-    var cotEl = document.getElementById('subir-existente-cotizacion');
-    if (cotEl) {
-        if (entrada.url_cotizacion_presigned || entrada.url_cotizacion) {
-            cotEl.innerHTML = '<a href="' + (entrada.url_cotizacion_presigned || entrada.url_cotizacion) + '" target="_blank" class="text-primary fw-bold text-decoration-underline" style="font-size:0.75rem;"><i class="bi bi-file-earmark-check"></i> Ver Cotización Actual</a>';
+    // Helper para renderizar archivo existente con botón de eliminar X
+    var renderizarArchivoExistente = function(containerId, url, presignedUrl, label, tipo, colorClass, iconClass) {
+        var el = document.getElementById(containerId);
+        if (!el) return;
+        var fileUrl = presignedUrl || url;
+        if (fileUrl) {
+            el.innerHTML = '<div class="d-flex align-items-center justify-content-between p-1.5 px-2 rounded-2 bg-light border" style="font-size:0.75rem;">' +
+                '<a href="' + fileUrl + '" target="_blank" class="' + colorClass + ' fw-bold text-decoration-none text-truncate" title="Ver ' + label + '">' +
+                    '<i class="bi ' + iconClass + ' me-1"></i> Ver ' + label + ' Actual' +
+                '</a>' +
+                '<button type="button" class="btn btn-sm btn-outline-danger p-0 ms-1 d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style="width:20px;height:20px;font-size:0.65rem;" onclick="window.eliminarArchivoOCModal(\'' + _entEsc(entrada.id) + '\', \'' + tipo + '\')" title="Eliminar ' + label + '">' +
+                    '<i class="bi bi-x-lg"></i>' +
+                '</button>' +
+            '</div>';
         } else {
-            cotEl.innerHTML = '<span class="text-muted fst-italic" style="font-size:0.75rem;">Sin archivo adjunto</span>';
+            el.innerHTML = '<span class="text-muted fst-italic" style="font-size:0.75rem;">Sin archivo adjunto</span>';
         }
-    }
+    };
+
+    // Cotización
+    renderizarArchivoExistente('subir-existente-cotizacion', entrada.url_cotizacion, entrada.url_cotizacion_presigned, 'Cotización', 'cotizacion', 'text-primary', 'bi-file-earmark-text');
     var fCot = document.getElementById('subir-file-cotizacion');
     if (fCot) fCot.value = '';
 
     // Factura
-    var facEl = document.getElementById('subir-existente-factura');
-    if (facEl) {
-        if (entrada.url_factura_presigned || entrada.url_factura) {
-            facEl.innerHTML = '<a href="' + (entrada.url_factura_presigned || entrada.url_factura) + '" target="_blank" class="text-success fw-bold text-decoration-underline" style="font-size:0.75rem;"><i class="bi bi-file-earmark-check"></i> Ver Factura Actual</a>';
-        } else {
-            facEl.innerHTML = '<span class="text-muted fst-italic" style="font-size:0.75rem;">Sin archivo adjunto</span>';
-        }
-    }
+    renderizarArchivoExistente('subir-existente-factura', entrada.url_factura, entrada.url_factura_presigned, 'Factura', 'factura', 'text-success', 'bi-file-earmark-check');
     var fFac = document.getElementById('subir-file-factura');
     if (fFac) fFac.value = '';
 
     // Voucher
-    var vouEl = document.getElementById('subir-existente-voucher');
-    if (vouEl) {
-        if (entrada.url_voucher_presigned || entrada.url_voucher) {
-            vouEl.innerHTML = '<a href="' + (entrada.url_voucher_presigned || entrada.url_voucher) + '" target="_blank" class="text-danger fw-bold text-decoration-underline" style="font-size:0.75rem;"><i class="bi bi-file-earmark-check"></i> Ver Voucher Actual</a>';
-        } else {
-            vouEl.innerHTML = '<span class="text-muted fst-italic" style="font-size:0.75rem;">Sin archivo adjunto</span>';
-        }
-    }
+    renderizarArchivoExistente('subir-existente-voucher', entrada.url_voucher, entrada.url_voucher_presigned, 'Voucher', 'voucher', 'text-danger', 'bi-file-earmark-pdf');
     var fVou = document.getElementById('subir-file-voucher');
     if (fVou) fVou.value = '';
 
@@ -1520,6 +1518,35 @@ window.abrirModalSubirArchivos = function(id) {
     if (modalEl) {
         var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
+    }
+};
+
+window.eliminarArchivoOCModal = async function(id, tipo) {
+    var nombres = { voucher: 'el Voucher', cotizacion: 'la Cotización', factura: 'la Factura' };
+    var nom = nombres[tipo] || 'el archivo';
+    if (!confirm('¿Está seguro de eliminar ' + nom + ' de esta Orden de Compra?')) return;
+
+    try {
+        var r = await fetch('/api/almacen/entradas/' + encodeURIComponent(id) + '/archivo/' + tipo, {
+            method: 'DELETE'
+        });
+        if (!r.ok) {
+            var txt = await r.text();
+            throw new Error(txt);
+        }
+        
+        // Actualizar dataset local
+        var entrada = (window._entData || []).find(function(e) { return e.id === id; });
+        if (entrada) {
+            entrada['url_' + tipo] = null;
+            entrada['url_' + tipo + '_presigned'] = null;
+        }
+
+        alert('🗑️ Se eliminó ' + nom + ' correctamente.');
+        window.abrirModalSubirArchivos(id);
+        window.cargarEntradas();
+    } catch(e) {
+        alert('Error al eliminar archivo: ' + e.message);
     }
 };
 
