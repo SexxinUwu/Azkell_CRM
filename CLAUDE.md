@@ -280,12 +280,23 @@ if (el) { el.style.display = 'none'; }
 
 ## 13. Pendientes del ERP
 
-### 📌 Pendientes Operativos y de Desarrollo
-- [ ] **Almacén / Inventario**: Completar endpoints de transacciones y Kardex en tiempo real.
-- [ ] **Operaciones**: Flujo integral de asignación de viajes, tracto y carreta con verificación técnica.
-- [ ] **Auditoría Global**: Consolidar endpoint `obtenerDatosAuditoria` para tracking en vivo en `server.js`.
-- [ ] **Limpieza de Scripts Raíz**: Mover utilitarios temporales `fix_*.js`, `patch.js` y `alter_*.js` a la carpeta `scripts/`.
-- [ ] **Estandarización de Storage**: Asegurar uso exclusivo de claves `fleet_*` eliminando residuos `crm_*`.
+### 📌 Backlog / Próximas Tareas
+- [ ] **Persistencia en BD de Telemetría CAN Bus (GPS) por Viaje:**
+  - Guardar telemetría CAN (`recorrido_km_gps`, `combustible_consumido_gps`, `rendimiento_gps`, `velocidad_max_gps`, `consumo_ralenti_gps`, `horas_motor_gps`, `synced_at`) en MySQL en VPS.
+  - Cargar los datos telemétricos guardados al instante sin necesidad de llamar a la API de Wialon en cada visita.
+  - El botón `Consultar CAN (GPS)` se usará únicamente para re-sincronizar o para viajes nuevos.
+- [ ] **Reporte de Fallas por Conductor y Alertas a Almacén (Repuestos & Stock):**
+  - Formulario/interfaz para que el conductor reporte fallas (mecánica, eléctrica, neumáticos, carrocería, etc.).
+  - Si requiere repuestos/piezas, enviar alerta instantánea al Almacenero.
+  - El almacenero verifica stock disponible:
+    - **Con stock:** Reservar / generar vale de salida a taller.
+    - **Sin stock / Stock bajo:** Generar solicitud/requerimiento de compra a Proveedores.
+- [ ] **Checklist de Entrega de Unidades:**
+  - Formato digital de entrega/recepción de flota y actas de custodia.
+- [ ] **Status de Seguridad:**
+  - Panel de control y monitoreo patrimonial de incidentes.
+- [ ] **Mejorar Gráficos de Mantenimiento:**
+  - Optimización de analíticas e indicadores para Status Rampa.
 
 ---
 
@@ -297,6 +308,14 @@ if (el) { el.style.display = 'none'; }
 - [ ] **Desacople de CDNs Externas (Tailwind / Scripts)**: Empaquetar utilidades de reporte de OT e Inspecciones de forma local/offline sin invocar `cdn.tailwindcss.com`.
 - [ ] **Autenticación 2FA / WebAuthn**: Diseñar soporte para segundo factor de autenticación (TOTP / Google Authenticator / Biometría) para roles de Administrador y Gerencia.
 - [ ] **Registro de Auditoría Criptográfica (Audit Trail)**: Implementar tabla `log_auditoria` inmutable para registrar modificaciones críticas (quién, cuándo, IP, estado anterior y nuevo).
+
+---
+
+### ✅ Tareas Completadas Recientemente
+- [x] **Mantenimientos Preventivos Trahesa:** Configuración y calendarización.
+- [x] **UX / Seguridad: Control de Inactividad y Modal "¡Despertamos!":** Aviso a los 5 min, logout a los 10 min.
+- [x] **Módulo Operaciones: Análisis de Combustible (D2) y Análisis de Urea (Separados):** Módulos independientes y consulta CAN Bus en lote.
+- [x] **Multi-tenant / Rosymar Perú:** Corrección de sincronización remota en subdominios secundarios.
 
 ---
 
