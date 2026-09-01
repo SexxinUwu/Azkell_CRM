@@ -101,6 +101,45 @@
 .ck-btn-delete-circle:active {
     transform: scale(0.95);
 }
+/* ── Tarjetas Estilo Marsisa (1:1 Imagen 2) ────────────────────────── */
+.disp-subtipo-banner-card {
+    border-radius: 22px !important;
+    padding: 1.1rem 1.4rem !important;
+    color: #ffffff !important;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 115px;
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.14) !important;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none !important;
+}
+.disp-subtipo-banner-card:hover {
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 14px 32px -4px rgba(0, 0, 0, 0.22) !important;
+}
+.disp-subtipo-num {
+    font-size: 3.2rem !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    letter-spacing: -1.5px;
+    color: #ffffff !important;
+}
+.disp-subtipo-lbl {
+    font-size: 0.88rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.95);
+}
+.disp-subtipo-icon-wrap {
+    font-size: 3.4rem;
+    line-height: 1;
+    opacity: 0.95;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25));
+}
 .disp-kpi-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -724,41 +763,73 @@
   </div>
 </div>
 
-<!-- Modal: Cuadro Resumen por Tipo de Unidad -->
+<!-- Modal: Cuadro Resumen de Disponibilidad de Flota (Estilo Marsisa) -->
 <div class="modal fade" id="modalCuadroTiposUnidad" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content rounded-4 border-0 shadow-lg" style="background:#f8fafc;">
-            <div class="modal-header border-bottom px-4 py-3 bg-white rounded-top-4">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="bg-primary-subtle text-primary p-2 rounded-3 d-flex align-items-center justify-content-center" style="width:38px; height:38px;">
-                        <i class="bi bi-grid-3x3-gap-fill fs-5"></i>
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content rounded-4 border-0 shadow-2xl" style="background:#f8fafc;">
+            <div class="modal-header border-bottom px-4 py-3 bg-white rounded-top-4 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary-subtle text-primary p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width:44px; height:44px;">
+                        <i class="bi bi-grid-3x3-gap-fill fs-4"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title fw-bold text-dark mb-0">Cuadro Resumen de Flota por Tipo</h5>
-                        <div class="text-muted small">Conteo de unidades según el tipo de unidad registrado</div>
+                        <h4 class="modal-title fw-bolder text-dark mb-0" style="letter-spacing: -0.5px;">DISPONIBILIDAD DE FLOTA MARSISA</h4>
+                        <div class="text-secondary small fw-semibold">Resumen por Subtipo de Unidad y Distribución de Estados Operativos</div>
                     </div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-dark text-white px-3 py-2 rounded-pill fw-bold" id="disp-cuadro-total-badge">43 Unidades</span>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
             </div>
-            <div class="modal-body p-4">
-                <!-- Tarjeta Total -->
-                <div class="d-flex align-items-center justify-content-between p-3 rounded-4 bg-white border mb-4 shadow-2xs">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-primary-subtle text-primary p-3 d-flex align-items-center justify-content-center">
-                            <i class="bi bi-truck fs-2"></i>
-                        </div>
-                        <div>
-                            <div class="text-secondary fw-bold small text-uppercase" style="letter-spacing: 0.5px;">Total Unidades en Disponibilidad</div>
-                            <div class="fw-bolder fs-3 text-dark" id="disp-cuadro-total-txt">0</div>
-                        </div>
-                    </div>
-                    <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-3 py-2 rounded-pill fw-bold" id="disp-cuadro-tipos-count-txt">0 Tipos</span>
+            <div class="modal-body p-4" style="max-height: 82vh; overflow-y: auto;">
+                
+                <!-- 1. Tarjetas Superiores de Subtipos de Unidades (1:1 Imagen Marsisa) -->
+                <div class="row g-3 mb-4" id="disp-cuadro-subtipos-cards">
+                    <!-- Inyectado dinámicamente con estilo colorido y fotos/iconos 3D -->
                 </div>
 
-                <!-- Grid de Tipos de Unidad -->
-                <div class="row g-3" id="disp-cuadro-tipos-container">
-                    <!-- Inyectado dinámicamente -->
+                <!-- 2. Gráfico de Distribución por Estados y Subtipos -->
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-3 p-md-4 mb-4" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-bar-chart-fill text-primary fs-5"></i>
+                            <h6 class="fw-bold text-dark mb-0" style="font-size:0.95rem;">Distribución de Unidades por Estado Operativo</h6>
+                        </div>
+                        <span class="text-muted small">Conteo agrupado por Subtipo y Estado</span>
+                    </div>
+
+                    <div style="position: relative; height: 320px; width: 100%;">
+                        <canvas id="chartDispSubtipos"></canvas>
+                    </div>
                 </div>
+
+                <!-- 3. Matriz / Tabla Desglosada con Ubicaciones -->
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-3 p-md-4" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-geo-alt-fill text-danger fs-5"></i>
+                        <h6 class="fw-bold text-dark mb-0" style="font-size:0.95rem;">Resumen de Ubicación y Estado por Subtipo</h6>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.8rem;">
+                            <thead class="bg-light text-secondary">
+                                <tr>
+                                    <th>SUBTIPO</th>
+                                    <th class="text-center">TOTAL</th>
+                                    <th class="text-center">OPERATIVOS</th>
+                                    <th class="text-center">EN TRÁNSITO</th>
+                                    <th class="text-center">PROGRAMADOS</th>
+                                    <th class="text-center">EN MANTENIMIENTO</th>
+                                    <th class="text-center">ALQUILADOS / OTROS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="disp-cuadro-matriz-body">
+                                <!-- Inyectado dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
             <div class="modal-footer border-top px-4 py-3 bg-white rounded-bottom-4">
                 <button type="button" class="btn btn-secondary rounded-pill fw-bold px-4" data-bs-dismiss="modal">Cerrar</button>
