@@ -805,25 +805,23 @@ router.delete('/marcas/:id', (req, res) => {
 // ============================================================
 router.get('/entradas', (req, res) => {
     let q = `SELECT e.*, 
-             COALESCE(u.nombre, e.creado_por) AS creador_nombre,
-             COALESCE(p.numero_documento, '') AS proveedor_ruc,
-             COALESCE(p.telefono, '') AS proveedor_telefono,
-             COALESCE(p.email, '') AS proveedor_email,
+             (SELECT u.nombre FROM usuarios u WHERE u.correo = e.creado_por OR u.nombre = e.creado_por OR u.idUsuario = e.creado_por LIMIT 1) AS creador_nombre,
+             (SELECT p.numero_documento FROM proveedores_inv p WHERE p.id = e.proveedor_id OR (p.nombre IS NOT NULL AND p.nombre = e.proveedor_nombre) OR (p.razon_social IS NOT NULL AND p.razon_social = e.proveedor_nombre) LIMIT 1) AS proveedor_ruc,
+             (SELECT p.telefono FROM proveedores_inv p WHERE p.id = e.proveedor_id OR (p.nombre IS NOT NULL AND p.nombre = e.proveedor_nombre) OR (p.razon_social IS NOT NULL AND p.razon_social = e.proveedor_nombre) LIMIT 1) AS proveedor_telefono,
+             (SELECT p.email FROM proveedores_inv p WHERE p.id = e.proveedor_id OR (p.nombre IS NOT NULL AND p.nombre = e.proveedor_nombre) OR (p.razon_social IS NOT NULL AND p.razon_social = e.proveedor_nombre) LIMIT 1) AS proveedor_email,
              GROUP_CONCAT(CONCAT(
                  COALESCE(i.descripcion, d.descripcion, ''), '|',
                  COALESCE(d.cantidad, 0), '|',
                  COALESCE(d.costo_unitario, 0), '|',
                  COALESCE(d.moneda, e.moneda, 'PEN'), '|',
                  COALESCE(d.inventario_id, ''), '|',
-                 COALESCE(i.unidad_medida, 'UND'), '|',
+                 COALESCE(i.unidad, 'UND'), '|',
                  COALESCE(d.importe, 0), '|',
                  COALESCE(i.codigo_articulo, '')
              ) SEPARATOR ';;') AS items_raw
              FROM entradas_inv e
              LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
-             LEFT JOIN inventario i ON d.inventario_id = i.id
-             LEFT JOIN proveedores_inv p ON (e.proveedor_id = p.id OR (p.nombre IS NOT NULL AND e.proveedor_nombre = p.nombre) OR (p.razon_social IS NOT NULL AND e.proveedor_nombre = p.razon_social))
-             LEFT JOIN usuarios u ON (e.creado_por = u.correo OR e.creado_por = u.nombre OR e.creado_por = u.idUsuario)`;
+             LEFT JOIN inventario i ON d.inventario_id = i.id`;
     let params = [];
     if (req.query.ot_id) {
         q += ` WHERE e.ot_id = ?`;
