@@ -435,14 +435,14 @@
             <table class="table table-hover table-aprobaciones m-0 align-middle">
                 <thead>
                     <tr>
-                        <th style="min-width: 175px;">ACCIÓN</th>
-                        <th style="min-width: 105px;">FECHA</th>
-                        <th style="min-width: 125px;">USUARIO</th>
-                        <th style="min-width: 130px;">ORDEN COMPRA</th>
-                        <th style="min-width: 250px;">MOTIVO / JUSTIFICACIÓN</th>
-                        <th style="min-width: 140px;">SOLICITANTE</th>
-                        <th style="min-width: 200px;">PROVEEDOR</th>
-                        <th class="text-end" style="min-width: 120px;">IMPORTE</th>
+                        <th style="width: 175px; min-width: 175px;">ACCIÓN</th>
+                        <th style="width: 150px; min-width: 150px;">FECHA</th>
+                        <th style="width: 150px; min-width: 150px;">USUARIO</th>
+                        <th style="width: 135px; min-width: 135px;">ORDEN COMPRA</th>
+                        <th style="min-width: 200px;">MOTIVO / JUSTIFICACIÓN</th>
+                        <th style="width: 150px; min-width: 150px;">SOLICITANTE</th>
+                        <th style="width: 220px; min-width: 220px;">PROVEEDOR</th>
+                        <th class="text-end" style="width: 120px; min-width: 120px;">IMPORTE</th>
                     </tr>
                 </thead>
                 <tbody id="cuerpo-tabla-aprobaciones">
@@ -482,10 +482,10 @@
                     <div>
                         <div class="d-flex align-items-center gap-2">
                             <h5 class="modal-title fw-black text-dark m-0" id="det-codigo-oc">OC-2026-0142</h5>
-                            <span class="badge rounded-pill fw-bold" id="det-badge-prioridad">URGENTE</span>
+                            <span class="badge rounded-pill fw-bold" id="det-badge-prioridad">NORMAL</span>
                             <span class="badge rounded-pill fw-bold" id="det-badge-estado">PENDIENTE</span>
                         </div>
-                        <span class="text-secondary" style="font-size:0.8rem;" id="det-fecha-emision">Emitido el 28/08/2026 a las 10:30 AM</span>
+                        <span class="text-secondary" style="font-size:0.8rem;" id="det-fecha-emision">Emitido el —</span>
                     </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -501,15 +501,15 @@
                             <div class="row g-3">
                                 <div class="col-12 col-md-6">
                                     <div class="text-secondary fw-semibold mb-1" style="font-size:0.75rem; text-transform:uppercase;">Proveedor Seleccionado</div>
-                                    <div class="fw-bold text-dark" id="det-proveedor-nombre" style="font-size:0.95rem;">FERREYROS S.A.</div>
-                                    <div class="text-secondary" style="font-size:0.82rem;" id="det-proveedor-ruc">RUC: 20100035123</div>
-                                    <div class="text-secondary" style="font-size:0.8rem;" id="det-proveedor-contacto">Contacto: ventas@ferreyros.com.pe | 987-654-321</div>
+                                    <div class="fw-bold text-dark" id="det-proveedor-nombre" style="font-size:0.95rem;">-</div>
+                                    <div class="text-secondary" style="font-size:0.82rem;" id="det-proveedor-ruc">RUC: -</div>
+                                    <div class="text-secondary" style="font-size:0.8rem;" id="det-proveedor-contacto">Contacto: No especificado</div>
                                 </div>
                                 <div class="col-12 col-md-6 border-start-md">
                                     <div class="text-secondary fw-semibold mb-1" style="font-size:0.75rem; text-transform:uppercase;">Destino & Solicitante</div>
-                                    <div class="fw-bold text-dark" id="det-destino-almacen" style="font-size:0.95rem;">Almacén Central Lurín</div>
-                                    <div class="text-secondary" style="font-size:0.82rem;" id="det-solicitante">Solicitado por: Ing. Carlos Mendoza (Jefe de Taller)</div>
-                                    <div class="text-secondary" style="font-size:0.8rem;" id="det-unidad-destino">Para: Unidad Volvo FH540 (Placa: B9Z-841) | OT: #OT-8492</div>
+                                    <div class="fw-bold text-dark" id="det-destino-almacen" style="font-size:0.95rem;">Sede / Almacén: Principal</div>
+                                    <div class="text-secondary" style="font-size:0.82rem;" id="det-solicitante">Solicitado por: -</div>
+                                    <div class="text-secondary" style="font-size:0.8rem;" id="det-unidad-destino">Destino: -</div>
                                 </div>
                             </div>
                         </div>
@@ -520,7 +520,7 @@
                                 <i class="bi bi-info-circle-fill text-primary"></i> Justificación Técnica del Requerimiento
                             </h6>
                             <div class="p-3 rounded-3 bg-white border" style="font-size:0.86rem; line-height:1.5; color:#334155;" id="det-justificacion">
-                                Se requiere la compra inmediata del Kit de filtros originales CAT y baldes de aceite 15W40 para cumplir con el Mantenimiento Preventivo de 500 horas programado de la unidad tracto B9Z-841 que tiene salida prioritaria el fin de semana.
+                                -
                             </div>
                         </div>
 
@@ -528,7 +528,7 @@
                         <div>
                             <h6 class="fw-bold text-dark mb-2 d-flex align-items-center justify-content-between">
                                 <span><i class="bi bi-box-seam-fill text-primary me-1"></i> Desglose de Artículos / Servicios</span>
-                                <span class="badge bg-secondary-subtle text-secondary fw-bold rounded-pill" id="det-items-count">3 ítems</span>
+                                <span class="badge bg-secondary-subtle text-secondary fw-bold rounded-pill" id="det-items-count">0 ítems</span>
                             </h6>
                             <div class="border rounded-3 overflow-hidden">
                                 <table class="table table-sm table-striped m-0" style="font-size:0.82rem;">
@@ -557,50 +557,31 @@
                             <h6 class="fw-bold text-dark mb-3">Resumen Económico</h6>
                             <div class="d-flex justify-content-between text-secondary mb-2" style="font-size:0.84rem;">
                                 <span>Subtotal (Neto):</span>
-                                <span class="fw-semibold text-dark" id="det-monto-subtotal">S/ 12,584.75</span>
+                                <span class="fw-semibold text-dark" id="det-monto-subtotal">S/ 0.00</span>
                             </div>
                             <div class="d-flex justify-content-between text-secondary mb-2" style="font-size:0.84rem;">
                                 <span>I.G.V. (18%):</span>
-                                <span class="fw-semibold text-dark" id="det-monto-igv">S/ 2,265.25</span>
+                                <span class="fw-semibold text-dark" id="det-monto-igv">S/ 0.00</span>
                             </div>
                             <div class="d-flex justify-content-between text-secondary mb-3" style="font-size:0.84rem;">
                                 <span>Forma de Pago:</span>
-                                <span class="badge bg-white text-dark border fw-bold" id="det-condicion-pago">Crédito 30 Días</span>
+                                <span class="badge bg-white text-dark border fw-bold" id="det-condicion-pago">Al contado</span>
                             </div>
                             <hr class="my-2">
                             <div class="d-flex justify-content-between align-items-center mt-2">
                                 <span class="fw-bold text-dark" style="font-size:0.95rem;">TOTAL ORDEN:</span>
-                                <h4 class="fw-black text-primary m-0" id="det-monto-total">S/ 14,850.00</h4>
+                                <h4 class="fw-black text-primary m-0" id="det-monto-total">S/ 0.00</h4>
                             </div>
                         </div>
 
-                        <!-- Cotizaciones Adjuntas Mock -->
-                        <div class="card border rounded-4 p-3 bg-white mb-3">
+                        <!-- Documentos Adjuntos (Cotización, Factura, Voucher) -->
+                        <div class="card border rounded-4 p-3 bg-white mb-3 shadow-2xs">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="fw-bold text-dark m-0" style="font-size:0.85rem;"><i class="bi bi-paperclip"></i> Cotizaciones Adjuntas</h6>
-                                <span class="badge bg-success-subtle text-success fw-bold" style="font-size:0.68rem;">3 Cuadros</span>
+                                <h6 class="fw-bold text-dark m-0" style="font-size:0.85rem;"><i class="bi bi-paperclip text-primary"></i> Documentos Adjuntos</h6>
+                                <span class="badge bg-secondary-subtle text-secondary fw-bold" id="det-docs-count" style="font-size:0.68rem;">0 Adjuntos</span>
                             </div>
-                            <div class="list-group list-group-flush" style="font-size:0.8rem;">
-                                <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center border-0">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
-                                        <div>
-                                            <div class="fw-bold text-dark">Cotiz_Ferreyros_084.pdf</div>
-                                            <div class="text-muted" style="font-size:0.72rem;">S/ 14,850.00 (Elegida - Mejor Plazo)</div>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-secondary rounded-2 py-0 px-2" onclick="alert('Abriendo archivo de cotización...')"><i class="bi bi-eye"></i></button>
-                                </div>
-                                <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center border-0">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
-                                        <div>
-                                            <div class="fw-bold text-secondary">Cotiz_Komatsu_Alt.pdf</div>
-                                            <div class="text-muted" style="font-size:0.72rem;">S/ 15,920.00 (Alternativa 2)</div>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-secondary rounded-2 py-0 px-2" onclick="alert('Abriendo archivo de cotización alternativa...')"><i class="bi bi-eye"></i></button>
-                                </div>
+                            <div class="list-group list-group-flush" id="det-documentos-adjuntos" style="font-size:0.8rem;">
+                                <!-- Renderizado dinámico desde logica.js -->
                             </div>
                         </div>
 

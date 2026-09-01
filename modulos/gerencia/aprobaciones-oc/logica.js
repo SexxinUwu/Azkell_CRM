@@ -19,6 +19,28 @@
         tipoAccionModal: null
     };
 
+    // Formateador de fechas para presentación amigable en ERP
+    function formatearFechaHora(iso, createdAt) {
+        const raw = createdAt || iso;
+        if (!raw) return '—';
+        try {
+            const s = String(raw);
+            let d;
+            if (s.includes('T') || s.includes(' ')) {
+                d = new Date(s.replace(' ', 'T'));
+            } else {
+                d = new Date(s + 'T00:00:00');
+            }
+            if (isNaN(d.getTime())) return String(raw);
+            const dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
+            const timeStr = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
+            if (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) {
+                return dateStr;
+            }
+            return dateStr + ' ' + timeStr;
+        } catch(e) { return String(raw); }
+    }
+
     // Formateador de fechas a formato YYYY-MM-DD para los inputs
     function obtenerFechaHoyISO() {
         const hoy = new Date();
@@ -42,20 +64,69 @@
                     else if (st === 'observado' || st === 'observada') estadoMap = 'observado';
                     else if (st === 'pagado' || st === 'pagada' || st === 'procesado' || st === 'procesada') estadoMap = 'aprobado';
 
+                    // Extraer RUC de proveedor_ruc o de proveedor_nombre si viene entre paréntesis
+                    let ruc = d.proveedor_ruc || '';
+                    if (!ruc && d.proveedor_nombre) {
+                        const matchRuc = d.proveedor_nombre.match(/\b(10|20)\d{9}\b/);
+                        if (matchRuc) ruc = matchRuc[0];
+                    }
+
+                    // Extraer nombre de usuario limpio (no correo)
+                    let nombreUsuario = d.creador_nombre || d.creado_por || 'SISTEMA';
+                    if (nombreUsuario.includes('@')) {
+                        nombreUsuario = nombreUsuario.split('@')[0].replace(/[._]/g, ' ').toUpperCase();
+                    }
+
+                    // Contacto
+                    let contactoArr = [];
+                    if (d.proveedor_telefono) contactoArr.push(d.proveedor_telefono);
+                    if (d.proveedor_email) contactoArr.push(d.proveedor_email);
+
+                    // Destino
+                    let destinoStr = '';
+                    if (d.placa) destinoStr += 'Unidad ' + d.placa;
+                    if (d.ot_id) destinoStr += (destinoStr ? ' | ' : '') + 'OT: ' + d.ot_id;
+                    if (!destinoStr) destinoStr = 'Sede Principal / Almacén';
+
+                    const fechaFmt = formatearFechaHora(d.fecha, d.created_at);
+
+                    // Desglose de ítems con sus datos completos
+                    const itemsParsed = (d.items || []).map(it => {
+                        const cantVal = it.cantidad != null ? parseFloat(it.cantidad) : (it.cant != null ? parseFloat(it.cant) : 1);
+                        const puVal = it.costo_unitario != null ? parseFloat(it.costo_unitario) : (it.pu != null ? parseFloat(it.pu) : 0);
+                        const totalVal = it.importe != null ? parseFloat(it.importe) : (it.total != null ? parseFloat(it.total) : (cantVal * puVal));
+                        return {
+                            codigo: it.codigo_articulo || it.inventario_id || it.codigo || '—',
+                            descripcion: it.descripcion || 'Sin descripción',
+                            cant: cantVal,
+                            um: it.unidad_medida || it.um || 'UND',
+                            pu: puVal,
+                            total: totalVal
+                        };
+                    });
+
                     return {
                         id: d.id,
                         codigo: d.id,
-                        fecha: d.created_at || d.fecha,
-                        solicitante: d.creado_por || 'Almacén / Mantenimiento',
+                        fecha: fechaFmt,
+                        fecha_raw: d.created_at || d.fecha,
+                        usuario: nombreUsuario,
+                        solicitante: d.creador_nombre || d.creado_por || 'Almacén / Mantenimiento',
                         proveedor: d.proveedor_nombre || 'PROVEEDOR GENERAL',
+                        ruc: ruc || '-',
+                        contacto: contactoArr.join(' • ') || 'No especificado',
                         almacen: d.almacen || 'Principal',
+                        destino: destinoStr,
                         total: parseFloat(d.total_pen || 0),
                         moneda: d.moneda === 'USD' ? '$' : 'S/',
+                        tipo_igv: d.tipo_igv || 'incluido',
+                        condicionPago: d.condicion_pago ? (d.condicion_pago + (d.dias_credito && d.condicion_pago.toLowerCase().includes('crédito') ? ` (${d.dias_credito} días)` : '')) : 'Al contado',
                         estado: estadoMap,
                         estado_raw: d.estado || 'REGISTRADA',
                         motivo: d.motivo_entrada || d.observaciones || 'Adquisición de artículos / repuestos',
+                        justificacion: d.motivo_entrada || d.observaciones || 'Sin motivo especificado',
                         tipo_orden: d.tipo_orden || 'Orden de compra',
-                        items: d.items || [],
+                        items: itemsParsed,
                         url_voucher: d.url_voucher_presigned || d.url_voucher,
                         url_cotizacion: d.url_cotizacion_presigned || d.url_cotizacion,
                         url_factura: d.url_factura_presigned || d.url_factura
@@ -100,22 +171,22 @@
         const elPend = document.getElementById('kpi-count-pendientes');
         if (elPend) elPend.innerText = pend.length;
         const elPendMonto = document.getElementById('kpi-monto-pendientes');
-        if (elPendMonto) elPendMonto.innerText = 'S/ ' + sumMontoSoles(pend).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        if (elPendMonto) elPendMonto.innerText = 'S/ ' + sumMontoSoles(pend).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         const elAprob = document.getElementById('kpi-count-aprobadas');
         if (elAprob) elAprob.innerText = aprob.length;
         const elAprobMonto = document.getElementById('kpi-monto-aprobadas');
-        if (elAprobMonto) elAprobMonto.innerText = 'S/ ' + sumMontoSoles(aprob).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        if (elAprobMonto) elAprobMonto.innerText = 'S/ ' + sumMontoSoles(aprob).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         const elObs = document.getElementById('kpi-count-observadas');
         if (elObs) elObs.innerText = obs.length;
         const elObsMonto = document.getElementById('kpi-monto-observadas');
-        if (elObsMonto) elObsMonto.innerText = 'S/ ' + sumMontoSoles(obs).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        if (elObsMonto) elObsMonto.innerText = 'S/ ' + sumMontoSoles(obs).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         const elRech = document.getElementById('kpi-count-rechazadas');
         if (elRech) elRech.innerText = rech.length;
         const elRechMonto = document.getElementById('kpi-monto-rechazadas');
-        if (elRechMonto) elRechMonto.innerText = 'S/ ' + sumMontoSoles(rech).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        if (elRechMonto) elRechMonto.innerText = 'S/ ' + sumMontoSoles(rech).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         // Actualizar badges en las pestañas
         const bTodos = document.getElementById('tab-badge-todos');
@@ -170,16 +241,20 @@
         }
     };
 
-    // Función auxiliar para parsear fechas variadas a formato ISO (YYYY-MM-DD)
-    function normalizarFechaAISO(strFecha) {
-        if (!strFecha) return null;
-        if (strFecha.includes('/')) {
-            const partes = strFecha.split(' ')[0].split('/');
-            if (partes.length === 3) {
-                return `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+    // Función auxiliar para parsear fechas a formato ISO (YYYY-MM-DD)
+    function normalizarFechaAISO(item) {
+        if (!item) return null;
+        if (item.fecha_raw) {
+            const raw = String(item.fecha_raw);
+            if (raw.includes('T')) return raw.split('T')[0];
+            if (raw.includes(' ')) return raw.split(' ')[0];
+            if (raw.includes('/')) {
+                const p = raw.split('/');
+                if (p.length === 3) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
             }
+            return raw;
         }
-        return strFecha.split('T')[0];
+        return null;
     }
 
     // Aplicar filtros de búsqueda, fechas y renderizar lista
@@ -201,7 +276,7 @@
             if (tab === 'rechazado' && item.estado !== 'rechazado') return false;
 
             // Filtro por rango de fechas
-            const fechaItemISO = normalizarFechaAISO(item.fecha);
+            const fechaItemISO = normalizarFechaAISO(item);
             if (fechaItemISO) {
                 if (fDesde && fechaItemISO < fDesde) return false;
                 if (fHasta && fechaItemISO > fHasta) return false;
@@ -244,7 +319,7 @@
             wrapCards.innerHTML = filtradas.map(oc => generarCardHTML(oc)).join('');
         }
 
-        // Renderizar Tabla (Diseño Fiel a Imagen 1 con estilo moderno ERP)
+        // Renderizar Tabla con columnas cómodas y proporcionales
         if (cuerpoTabla) {
             cuerpoTabla.innerHTML = filtradas.map(oc => generarFilaTablaHTML(oc)).join('');
         }
@@ -287,22 +362,23 @@
                         <div class="text-end">
                             <div class="text-secondary fw-bold" style="font-size:0.68rem; text-transform:uppercase;">IMPORTE</div>
                             <div class="fw-black text-dark" style="font-size:1.15rem; letter-spacing:-0.02em;">
-                                ${oc.moneda || 'S/'} ${(oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                ${oc.moneda || 'S/'} ${(oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                         </div>
                     </div>
 
                     <!-- Meta datos: Fecha, Usuario y Almacén -->
-                    <div class="d-flex align-items-center justify-content-between text-muted mb-2 pb-2 border-bottom" style="font-size:0.75rem;">
-                        <span><i class="bi bi-calendar3"></i> ${oc.fecha}</span>
-                        <span><i class="bi bi-person-badge"></i> ${oc.usuario || 'SISTEMA'}</span>
-                        <span class="badge bg-light text-dark border">Sede ${oc.almacen || 'Central'}</span>
+                    <div class="d-flex align-items-center justify-content-between text-muted mb-2 pb-2 border-bottom flex-wrap gap-1" style="font-size:0.75rem;">
+                        <span><i class="bi bi-calendar3 text-primary"></i> ${oc.fecha}</span>
+                        <span class="fw-bold text-dark"><i class="bi bi-person-circle text-primary"></i> ${oc.usuario || 'SISTEMA'}</span>
+                        <span class="badge bg-light text-dark border">Sede ${oc.almacen || 'Principal'}</span>
                     </div>
 
                     <!-- Proveedor & Solicitante -->
                     <div class="mb-2">
                         <div class="text-secondary fw-bold" style="font-size:0.68rem; text-transform:uppercase;">Proveedor</div>
                         <div class="fw-bold text-dark text-truncate" style="font-size:0.86rem;" title="${oc.proveedor || ''}">${oc.proveedor || 'Sin Proveedor'}</div>
+                        ${oc.ruc && oc.ruc !== '-' ? `<div class="text-secondary" style="font-size:0.75rem;">RUC: ${oc.ruc}</div>` : ''}
                     </div>
 
                     <div class="mb-2">
@@ -329,11 +405,11 @@
                     </div>
                     <div class="d-flex align-items-center gap-1">
                         ${oc.estado === 'pendiente' ? `
-                            <button class="btn-oc-denegar" onclick="window.abrirAccionRapida('${oc.id}', 'rechazar')">
-                                <i class="bi bi-hand-thumbs-down-fill"></i> DENEGAR
-                            </button>
                             <button class="btn-oc-autorizar" onclick="window.abrirAccionRapida('${oc.id}', 'aprobar')">
-                                <i class="bi bi-hand-thumbs-up-fill"></i> AUTORIZAR
+                                <i class="bi bi-check-lg"></i> AUTORIZAR
+                            </button>
+                            <button class="btn-oc-denegar" onclick="window.abrirAccionRapida('${oc.id}', 'rechazar')">
+                                <i class="bi bi-x-lg"></i> DENEGAR
                             </button>
                         ` : `
                             ${badgeEstado}
@@ -345,19 +421,19 @@
         `;
     }
 
-    // Template para Fila de Tabla (Fiel a Imagen 1 con estética premium)
+    // Template para Fila de Tabla
     function generarFilaTablaHTML(oc) {
         return `
         <tr>
-            <!-- Columna ACCIÓN (Botones idénticos a Imagen 1) -->
-            <td>
+            <!-- Columna ACCIÓN -->
+            <td style="width: 175px; min-width: 175px;">
                 ${oc.estado === 'pendiente' ? `
-                    <div class="d-inline-flex align-items-center gap-1">
+                    <div class="d-inline-flex align-items-center gap-1.5">
                         <button class="btn-oc-autorizar" onclick="window.abrirAccionRapida('${oc.id}', 'aprobar')" title="Autorizar Orden de Compra">
-                            <i class="bi bi-hand-thumbs-up-fill"></i> AUTORIZAR
+                            <i class="bi bi-check-lg"></i> AUTORIZAR
                         </button>
                         <button class="btn-oc-denegar" onclick="window.abrirAccionRapida('${oc.id}', 'rechazar')" title="Denegar Orden de Compra">
-                            <i class="bi bi-hand-thumbs-down-fill"></i> DENEGAR
+                            <i class="bi bi-x-lg"></i> DENEGAR
                         </button>
                     </div>
                 ` : oc.estado === 'aprobado' ? `
@@ -376,43 +452,49 @@
             </td>
 
             <!-- Columna FECHA -->
-            <td class="text-nowrap fw-semibold text-secondary" style="font-size:0.82rem;">
-                ${oc.fecha || ''}
+            <td class="text-nowrap fw-semibold text-secondary" style="width: 150px; min-width: 150px; font-size:0.80rem;">
+                <i class="bi bi-calendar3 me-1 text-muted"></i>${oc.fecha || '—'}
             </td>
 
             <!-- Columna USUARIO -->
-            <td class="fw-bold text-dark text-truncate" style="max-width:130px; font-size:0.82rem;">
-                ${oc.usuario || 'SISTEMA'}
+            <td style="width: 150px; min-width: 150px;">
+                <div class="fw-bold text-dark text-truncate" style="max-width: 150px; font-size:0.82rem;" title="${oc.usuario || 'SISTEMA'}">
+                    <i class="bi bi-person-fill text-primary me-1"></i>${oc.usuario || 'SISTEMA'}
+                </div>
             </td>
 
-            <!-- Columna ORDEN COMPRA (Con icono de ojo/modal) -->
-            <td>
-                <span class="btn-oc-code" onclick="window.verDetalleOC('${oc.id}')" title="Ver PDF / Detalle">
+            <!-- Columna ORDEN COMPRA -->
+            <td style="width: 135px; min-width: 135px;">
+                <span class="btn-oc-code" onclick="window.verDetalleOC('${oc.id}')" title="Ver Detalle de la Orden">
                     <i class="bi bi-eye"></i> ${oc.id}
                 </span>
             </td>
 
             <!-- Columna MOTIVO / JUSTIFICACIÓN -->
             <td>
-                <div class="text-dark fw-medium text-truncate" style="max-width:320px; font-size:0.83rem;" title="${oc.justificacion || ''}">
+                <div class="text-dark fw-medium text-truncate" style="max-width: 260px; font-size:0.82rem;" title="${oc.justificacion || ''}">
                     ${oc.justificacion || 'Sin motivo'}
                 </div>
             </td>
 
             <!-- Columna SOLICITANTE -->
-            <td class="fw-semibold text-secondary text-truncate" style="max-width:160px; font-size:0.82rem;" title="${oc.solicitante || ''}">
-                ${oc.solicitante || 'No especificado'}
+            <td style="width: 150px; min-width: 150px;">
+                <div class="fw-semibold text-secondary text-truncate" style="max-width: 150px; font-size:0.82rem;" title="${oc.solicitante || ''}">
+                    ${oc.solicitante || 'No especificado'}
+                </div>
             </td>
 
             <!-- Columna PROVEEDOR -->
-            <td class="fw-bold text-dark text-truncate" style="max-width:220px; font-size:0.83rem;" title="${oc.proveedor || ''}">
-                ${oc.proveedor || 'Sin Proveedor'}
+            <td style="width: 220px; min-width: 220px;">
+                <div class="fw-bold text-dark text-truncate" style="max-width: 220px; font-size:0.82rem;" title="${oc.proveedor || ''}">
+                    ${oc.proveedor || 'Sin Proveedor'}
+                </div>
             </td>
 
             <!-- Columna IMPORTE -->
-            <td class="text-end text-nowrap">
+            <td class="text-end text-nowrap" style="width: 120px; min-width: 120px;">
                 <span class="fw-black text-dark" style="font-size:0.92rem; letter-spacing:-0.01em;">
-                    ${oc.moneda || 'S/'} ${(oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                    ${oc.moneda || 'S/'} ${(oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
             </td>
         </tr>
@@ -427,52 +509,126 @@
 
         // Inyectar datos en modal
         document.getElementById('det-codigo-oc').innerText = oc.id;
-        document.getElementById('det-fecha-emision').innerText = 'Emitido el ' + (oc.fecha || '');
+        document.getElementById('det-fecha-emision').innerText = 'Emitido el ' + (oc.fecha || '—');
         document.getElementById('det-proveedor-nombre').innerText = oc.proveedor || 'No especificado';
         document.getElementById('det-proveedor-ruc').innerText = 'RUC: ' + (oc.ruc || '-');
         document.getElementById('det-proveedor-contacto').innerText = 'Contacto: ' + (oc.contacto || 'No especificado');
-        document.getElementById('det-destino-almacen').innerText = 'Sede / Almacén: ' + (oc.almacen || '-');
+        document.getElementById('det-destino-almacen').innerText = 'Sede / Almacén: ' + (oc.almacen || 'Principal');
         document.getElementById('det-solicitante').innerText = 'Solicitado por: ' + (oc.solicitante || '-');
         document.getElementById('det-unidad-destino').innerText = 'Destino: ' + (oc.destino || '-');
         document.getElementById('det-justificacion').innerText = oc.justificacion || '-';
 
-        document.getElementById('det-monto-subtotal').innerText = (oc.moneda || 'S/') + ' ' + (oc.subtotal || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 });
-        document.getElementById('det-monto-igv').innerText = (oc.moneda || 'S/') + ' ' + (oc.igv || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 });
-        document.getElementById('det-condicion-pago').innerText = oc.condicionPago || 'Contado';
-        document.getElementById('det-monto-total').innerText = (oc.moneda || 'S/') + ' ' + (oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        // Cálculo Económico exacto
+        const total = oc.total || 0;
+        let subtotal = 0;
+        let igv = 0;
+        const tipoIgv = oc.tipo_igv || 'incluido';
+
+        if (tipoIgv === 'sin_igv') {
+            subtotal = total;
+            igv = 0;
+        } else {
+            subtotal = total / 1.18;
+            igv = total - subtotal;
+        }
+
+        document.getElementById('det-monto-subtotal').innerText = (oc.moneda || 'S/') + ' ' + subtotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('det-monto-igv').innerText = (oc.moneda || 'S/') + ' ' + igv.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('det-condicion-pago').innerText = oc.condicionPago || 'Al contado';
+        document.getElementById('det-monto-total').innerText = (oc.moneda || 'S/') + ' ' + total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         // Badges
         const bPrio = document.getElementById('det-badge-prioridad');
-        bPrio.innerText = oc.prioridad || 'NORMAL';
-        bPrio.className = oc.prioridad === 'URGENTE' ? 'badge bg-danger text-white rounded-pill fw-bold' : 
-                          oc.prioridad === 'ALTA' ? 'badge bg-warning text-dark rounded-pill fw-bold' : 
-                          'badge bg-secondary text-white rounded-pill fw-bold';
+        if (bPrio) {
+            bPrio.innerText = oc.prioridad || 'NORMAL';
+            bPrio.className = oc.prioridad === 'URGENTE' ? 'badge bg-danger text-white rounded-pill fw-bold' : 
+                              oc.prioridad === 'ALTA' ? 'badge bg-warning text-dark rounded-pill fw-bold' : 
+                              'badge bg-secondary text-white rounded-pill fw-bold';
+        }
 
         const bEst = document.getElementById('det-badge-estado');
-        bEst.innerText = (oc.estado || 'PENDIENTE').toUpperCase();
-        bEst.className = oc.estado === 'pendiente' ? 'badge bg-warning text-dark rounded-pill fw-bold' : 
-                         oc.estado === 'aprobado' ? 'badge bg-success text-white rounded-pill fw-bold' : 
-                         oc.estado === 'observado' ? 'badge bg-primary text-white rounded-pill fw-bold' : 
-                         'badge bg-danger text-white rounded-pill fw-bold';
+        if (bEst) {
+            bEst.innerText = (oc.estado || 'PENDIENTE').toUpperCase();
+            bEst.className = oc.estado === 'pendiente' ? 'badge bg-warning text-dark rounded-pill fw-bold' : 
+                             oc.estado === 'aprobado' ? 'badge bg-success text-white rounded-pill fw-bold' : 
+                             oc.estado === 'observado' ? 'badge bg-primary text-white rounded-pill fw-bold' : 
+                             'badge bg-danger text-white rounded-pill fw-bold';
+        }
 
         // Historial
-        document.getElementById('det-historial-content').innerText = oc.historial || 'Sin historial registrado.';
+        const histEl = document.getElementById('det-historial-content');
+        if (histEl) {
+            histEl.innerText = oc.historial || 'Sin historial registrado.';
+        }
 
         // Items tabla
         const items = oc.items || [];
-        document.getElementById('det-items-count').innerText = items.length + ' ítem' + (items.length > 1 ? 's' : '');
+        const itemsCountEl = document.getElementById('det-items-count');
+        if (itemsCountEl) {
+            itemsCountEl.innerText = items.length + ' ítem' + (items.length !== 1 ? 's' : '');
+        }
+
         const cuerpoItems = document.getElementById('det-tabla-items-body');
         if (cuerpoItems) {
-            cuerpoItems.innerHTML = items.map(it => `
-                <tr>
-                    <td class="fw-bold text-dark">${it.codigo}</td>
-                    <td>${it.descripcion}</td>
-                    <td class="text-center fw-bold">${it.cant}</td>
-                    <td class="text-center text-muted">${it.um}</td>
-                    <td class="text-end">${oc.moneda || 'S/'} ${(it.pu || 0).toFixed(2)}</td>
-                    <td class="text-end fw-bold text-dark">${oc.moneda || 'S/'} ${(it.total || 0).toFixed(2)}</td>
-                </tr>
-            `).join('');
+            if (items.length === 0) {
+                cuerpoItems.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">Sin artículos registrados</td></tr>`;
+            } else {
+                cuerpoItems.innerHTML = items.map(it => `
+                    <tr>
+                        <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${it.codigo}</td>
+                        <td class="text-dark">${it.descripcion}</td>
+                        <td class="text-center fw-bold">${it.cant}</td>
+                        <td class="text-center text-secondary fw-semibold">${it.um}</td>
+                        <td class="text-end">${oc.moneda || 'S/'} ${(it.pu || 0).toFixed(2)}</td>
+                        <td class="text-end fw-bold text-dark">${oc.moneda || 'S/'} ${(it.total || 0).toFixed(2)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // Renderizado dinámico de Documentos Adjuntos (Cotización, Factura, Voucher)
+        const docsContainer = document.getElementById('det-documentos-adjuntos');
+        const docsCountBadge = document.getElementById('det-docs-count');
+        const docs = [];
+        if (oc.url_cotizacion) {
+            docs.push({ tipo: 'Cotización', url: oc.url_cotizacion, icon: 'bi-file-earmark-text', color: 'text-primary' });
+        }
+        if (oc.url_factura) {
+            docs.push({ tipo: 'Factura / Comprobante', url: oc.url_factura, icon: 'bi-file-earmark-check', color: 'text-success' });
+        }
+        if (oc.url_voucher) {
+            docs.push({ tipo: 'Voucher / Sustento', url: oc.url_voucher, icon: 'bi-file-earmark-pdf', color: 'text-danger' });
+        }
+
+        if (docsCountBadge) {
+            docsCountBadge.innerText = docs.length + ' Adjunto' + (docs.length !== 1 ? 's' : '');
+            docsCountBadge.className = docs.length ? 'badge bg-success-subtle text-success fw-bold' : 'badge bg-secondary-subtle text-secondary fw-bold';
+        }
+
+        if (docsContainer) {
+            if (docs.length === 0) {
+                docsContainer.innerHTML = `
+                    <div class="text-center py-3 text-muted" style="font-size:0.82rem;">
+                        <i class="bi bi-paperclip fs-5 d-block mb-1 text-secondary opacity-50"></i>
+                        Sin documentos adjuntos
+                    </div>
+                `;
+            } else {
+                docsContainer.innerHTML = docs.map(d => `
+                    <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center border-bottom-0">
+                        <div class="d-flex align-items-center gap-2 text-truncate">
+                            <i class="bi ${d.icon} ${d.color} fs-5 flex-shrink-0"></i>
+                            <div class="text-truncate">
+                                <div class="fw-bold text-dark text-truncate" style="font-size:0.82rem;">${d.tipo}</div>
+                                <div class="text-muted text-truncate" style="font-size:0.72rem;">Documento adjunto a la OC</div>
+                            </div>
+                        </div>
+                        <a href="${d.url}" target="_blank" class="btn btn-sm btn-outline-primary rounded-2 py-1 px-2.5 d-flex align-items-center gap-1 flex-shrink-0" style="font-size:0.75rem;">
+                            <i class="bi bi-eye"></i> Ver
+                        </a>
+                    </div>
+                `).join('');
+            }
         }
 
         // Mostrar / ocultar botones de acción en footer si ya no está pendiente
@@ -517,7 +673,7 @@
             iconWrap.style.background = '#dcfce7';
             icon.className = 'bi bi-check-circle-fill text-success';
             titulo.innerText = 'Autorizar Orden de Compra';
-            mensaje.innerText = `¿Confirma la aprobación ejecutiva de la orden por un importe de ${oc.moneda || 'S/'} ${(oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}? El departamento de compras procederá con la emisión y despacho.`;
+            mensaje.innerText = `¿Confirma la aprobación ejecutiva de la orden por un importe de ${oc.moneda || 'S/'} ${(oc.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}? El departamento de compras procederá con la emisión y despacho.`;
             labelComentario.innerText = 'Instrucciones / Notas de Aprobación (Opcional):';
             btnConfirmar.className = 'btn btn-success rounded-3 px-4 fw-bold';
             btnConfirmar.innerText = 'Aprobar Orden';
@@ -556,6 +712,9 @@
             alert('Por favor ingrese un comentario u observación antes de continuar.');
             return;
         }
+
+        const usuarioActual = localStorage.getItem('fleet_nombre_usuario') || localStorage.getItem('fleet_user') || window.usuarioActual || 'Dirección / Gerencia';
+        const fechaHora = new Date().toLocaleString('es-PE');
 
         let nuevoEstadoBD = 'Registrado';
         if (tipo === 'aprobar') {
@@ -645,7 +804,6 @@
 
     // Recargar dataset
     window.recargarAprobacionesOC = function() {
-        sessionStorage.removeItem('erp_gerencia_oc_data');
         window.renderizarModuloGerenciaOC();
         mostrarToastGerencia('🔄 Bandeja Sincronizada', 'Se consultaron las órdenes del ERP.');
     };
