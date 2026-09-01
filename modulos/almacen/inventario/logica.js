@@ -1341,6 +1341,14 @@ window.abrirModalInventario = function(id) {
         // Default unidad = Unidades
         window._cbSet('inv-f-unidad', 'Unidades', 'Unidades');
         window.invMsInit('');
+
+        // Almacén por defecto según navegación activa
+        var almAct = window._invAlmacenActivo;
+        if (almAct && almAct !== 'TODOS') {
+            window._cbSet('inv-f-almacen', almAct, almAct);
+        } else {
+            window._cbReset('inv-f-almacen');
+        }
     }
 
     var modal = document.getElementById('inv-form-drawer');
