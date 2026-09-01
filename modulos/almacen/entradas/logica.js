@@ -1032,9 +1032,9 @@ function _entFmtFechaHora(iso, createdAt) {
         var placaHtml = d.placa ? '<span class="badge bg-secondary fw-normal">' + _entEsc(d.placa) + '</span>' : '<span class="text-muted small">—</span>';
         var motivoHtml = d.motivo_entrada ? '<span style="font-size:0.75rem;">' + _entEsc(d.motivo_entrada) + '</span>' : '<span class="text-muted small">—</span>';
         
-        var vHTML = d.url_voucher_presigned ? '<a href="'+_entEsc(d.url_voucher_presigned)+'" target="_blank" class="text-danger text-decoration-none" style="font-size:0.75rem;"><i class="bi bi-download"></i> Ver/Descargar</a>' : '<span class="text-muted" style="font-size:0.75rem;">—</span>';
-        var cHTML = d.url_cotizacion_presigned ? '<a href="'+_entEsc(d.url_cotizacion_presigned)+'" target="_blank" class="text-danger text-decoration-none" style="font-size:0.75rem;"><i class="bi bi-download"></i> Ver/Descargar</a>' : '<span class="text-muted" style="font-size:0.75rem;">—</span>';
-        var fHTML = d.url_factura_presigned ? '<a href="'+_entEsc(d.url_factura_presigned)+'" target="_blank" class="text-danger text-decoration-none" style="font-size:0.75rem;"><i class="bi bi-download"></i> Ver/Descargar</a>' : '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+        var vHTML = d.url_voucher_presigned ? '<a href="'+_entEsc(d.url_voucher_presigned)+'" target="_blank" class="text-danger text-decoration-none fw-bold" style="font-size:0.75rem;"><i class="bi bi-file-earmark-pdf"></i> Ver Voucher</a>' : '<a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\');" class="text-secondary text-decoration-none small opacity-75" title="Subir Voucher"><i class="bi bi-upload"></i> Subir</a>';
+        var cHTML = d.url_cotizacion_presigned ? '<a href="'+_entEsc(d.url_cotizacion_presigned)+'" target="_blank" class="text-primary text-decoration-none fw-bold" style="font-size:0.75rem;"><i class="bi bi-file-earmark-text"></i> Ver Cotización</a>' : '<a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\');" class="text-secondary text-decoration-none small opacity-75" title="Subir Cotización"><i class="bi bi-upload"></i> Subir</a>';
+        var fHTML = d.url_factura_presigned ? '<a href="'+_entEsc(d.url_factura_presigned)+'" target="_blank" class="text-success text-decoration-none fw-bold" style="font-size:0.75rem;"><i class="bi bi-file-earmark-check"></i> Ver Factura</a>' : '<a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\');" class="text-secondary text-decoration-none small opacity-75" title="Subir Factura"><i class="bi bi-upload"></i> Subir</a>';
 
         var items = d.items || [];
         var isActive = d.id === window._entDetalleId;
@@ -1062,7 +1062,7 @@ function _entFmtFechaHora(iso, createdAt) {
                 '<td class="text-center col-hide-mob">' + fHTML + '</td>' +
                 '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
                     '<div class="d-flex gap-1 justify-content-center">' +
-                        '<button class="btn btn-xs btn-outline-secondary" onclick="event.stopPropagation(); window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver" style="display:none;"><i class="bi bi-eye"></i></button>' +
+                        '<button class="btn btn-xs btn-outline-info" onclick="event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\')" title="Subir / Adjuntar Archivos"><i class="bi bi-paperclip"></i></button>' +
                         '<button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver PDF"><i class="bi bi-eye"></i></button>' +
                         (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-pencil"></i></button>') +
                         (canDelete && !isAnulado ? '<button class="btn btn-xs btn-outline-danger" onclick="window.anularEntrada(\'' + _entEsc(d.id) + '\')" title="Anular"><i class="bi bi-x-circle"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-x-circle"></i></button>') +
@@ -1120,7 +1120,7 @@ function _entFmtFechaHora(iso, createdAt) {
                 '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
                     (isFirst ?
                         '<div class="d-flex gap-1 justify-content-center">' +
-                            '<button class="btn btn-xs btn-outline-secondary" onclick="event.stopPropagation(); window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver" style="display:none;"><i class="bi bi-eye"></i></button>' +
+                            '<button class="btn btn-xs btn-outline-info" onclick="event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\')" title="Subir / Adjuntar Archivos"><i class="bi bi-paperclip"></i></button>' +
                             '<button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver PDF"><i class="bi bi-eye"></i></button>' +
                             (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-pencil"></i></button>') +
                             (canDelete && !isAnulado ? '<button class="btn btn-xs btn-outline-danger" onclick="window.anularEntrada(\'' + _entEsc(d.id) + '\')" title="Anular"><i class="bi bi-x-circle"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-x-circle"></i></button>') +
@@ -1464,6 +1464,121 @@ window.generarComprobanteEntrada = function(id) {
         win.document.close();
     } else {
         alert("Por favor habilite las ventanas emergentes (pop-ups) para ver el PDF.");
+    }
+};
+
+window.abrirModalSubirArchivos = function(id) {
+    var entrada = (window._entData || []).find(function(e) { return e.id === id; });
+    if (!entrada) return alert('No se encontró la entrada ' + id);
+
+    var ocIdInput = document.getElementById('subir-archivos-oc-id');
+    if (ocIdInput) ocIdInput.value = entrada.id;
+
+    var ocCodInput = document.getElementById('subir-archivos-oc-codigo');
+    if (ocCodInput) ocCodInput.value = entrada.id;
+
+    var ocProvInput = document.getElementById('subir-archivos-oc-proveedor');
+    if (ocProvInput) ocProvInput.value = entrada.proveedor_nombre || 'Sin Proveedor';
+
+    // Cotización
+    var cotEl = document.getElementById('subir-existente-cotizacion');
+    if (cotEl) {
+        if (entrada.url_cotizacion_presigned || entrada.url_cotizacion) {
+            cotEl.innerHTML = '<a href="' + (entrada.url_cotizacion_presigned || entrada.url_cotizacion) + '" target="_blank" class="text-primary fw-bold text-decoration-underline" style="font-size:0.75rem;"><i class="bi bi-file-earmark-check"></i> Ver Cotización Actual</a>';
+        } else {
+            cotEl.innerHTML = '<span class="text-muted fst-italic" style="font-size:0.75rem;">Sin archivo adjunto</span>';
+        }
+    }
+    var fCot = document.getElementById('subir-file-cotizacion');
+    if (fCot) fCot.value = '';
+
+    // Factura
+    var facEl = document.getElementById('subir-existente-factura');
+    if (facEl) {
+        if (entrada.url_factura_presigned || entrada.url_factura) {
+            facEl.innerHTML = '<a href="' + (entrada.url_factura_presigned || entrada.url_factura) + '" target="_blank" class="text-success fw-bold text-decoration-underline" style="font-size:0.75rem;"><i class="bi bi-file-earmark-check"></i> Ver Factura Actual</a>';
+        } else {
+            facEl.innerHTML = '<span class="text-muted fst-italic" style="font-size:0.75rem;">Sin archivo adjunto</span>';
+        }
+    }
+    var fFac = document.getElementById('subir-file-factura');
+    if (fFac) fFac.value = '';
+
+    // Voucher
+    var vouEl = document.getElementById('subir-existente-voucher');
+    if (vouEl) {
+        if (entrada.url_voucher_presigned || entrada.url_voucher) {
+            vouEl.innerHTML = '<a href="' + (entrada.url_voucher_presigned || entrada.url_voucher) + '" target="_blank" class="text-danger fw-bold text-decoration-underline" style="font-size:0.75rem;"><i class="bi bi-file-earmark-check"></i> Ver Voucher Actual</a>';
+        } else {
+            vouEl.innerHTML = '<span class="text-muted fst-italic" style="font-size:0.75rem;">Sin archivo adjunto</span>';
+        }
+    }
+    var fVou = document.getElementById('subir-file-voucher');
+    if (fVou) fVou.value = '';
+
+    var modalEl = document.getElementById('modalSubirArchivosOC');
+    if (modalEl) {
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+};
+
+window.guardarArchivosOCModal = async function() {
+    var id = (document.getElementById('subir-archivos-oc-id') || {}).value;
+    if (!id) return alert('No se ha seleccionado una Orden de Compra.');
+
+    var fCot = document.getElementById('subir-file-cotizacion') ? document.getElementById('subir-file-cotizacion').files[0] : null;
+    var fFac = document.getElementById('subir-file-factura') ? document.getElementById('subir-file-factura').files[0] : null;
+    var fVou = document.getElementById('subir-file-voucher') ? document.getElementById('subir-file-voucher').files[0] : null;
+
+    if (!fCot && !fFac && !fVou) {
+        alert('Por favor seleccione al menos un archivo (Cotización, Factura o Voucher) para subir.');
+        return;
+    }
+
+    var btn = document.getElementById('btn-guardar-archivos-modal');
+    var origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
+    }
+
+    var uploadTipo = async function(file, tipo) {
+        if (!file) return;
+        var fd = new FormData();
+        fd.append('archivo', file);
+        var r = await fetch('/api/almacen/entradas/' + encodeURIComponent(id) + '/archivo/' + tipo, {
+            method: 'POST',
+            body: fd
+        });
+        if (!r.ok) {
+            var txt = await r.text();
+            throw new Error('Error subiendo ' + tipo + ': ' + txt);
+        }
+    };
+
+    try {
+        var promesas = [];
+        if (fCot) promesas.push(uploadTipo(fCot, 'cotizacion'));
+        if (fFac) promesas.push(uploadTipo(fFac, 'factura'));
+        if (fVou) promesas.push(uploadTipo(fVou, 'voucher'));
+
+        await Promise.all(promesas);
+
+        var modalEl = document.getElementById('modalSubirArchivosOC');
+        if (modalEl) {
+            bootstrap.Modal.getInstance(modalEl)?.hide();
+        }
+
+        alert('✅ Archivos adjuntados exitosamente a la Orden ' + id);
+        window.cargarEntradas();
+    } catch(e) {
+        alert('Error al subir archivos: ' + e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
     }
 };
 

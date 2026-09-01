@@ -804,3 +804,81 @@
   </div>
 
 </div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: SUBIR / ACTUALIZAR ARCHIVOS ADJUNTOS (COTIZACIÓN, FACTURA, VOUCHER) -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalSubirArchivosOC" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow-lg p-2 bg-white">
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="modal-title fw-bold m-0" style="color: #0284c7; font-size: 1.25rem;">Subir Archivos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body px-4 py-3">
+                <input type="hidden" id="subir-archivos-oc-id" value="">
+                
+                <!-- Fila 1: Código de Orden y Proveedor -->
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small fw-bold text-secondary mb-1">Orden de Compra</label>
+                        <input type="text" id="subir-archivos-oc-codigo" class="form-control rounded-3 bg-light border fw-bold text-dark" readonly>
+                    </div>
+                    <div class="col-12 col-md-8">
+                        <label class="form-label small fw-bold text-secondary mb-1">Proveedor</label>
+                        <input type="text" id="subir-archivos-oc-proveedor" class="form-control rounded-3 bg-light border fw-bold text-dark" readonly>
+                    </div>
+                </div>
+
+                <!-- Fila 2: 3 Secciones de Carga de Archivo (Cotización, Factura, Voucher) -->
+                <div class="row g-3">
+                    <!-- Cotización -->
+                    <div class="col-12 col-md-4">
+                        <div class="border rounded-3 p-3 bg-white h-100 shadow-2xs">
+                            <label class="form-label small fw-bold text-dark text-uppercase d-block mb-1" style="font-size:0.75rem; letter-spacing:0.04em;">
+                                Subir Archivo de Cotización
+                            </label>
+                            <div id="subir-existente-cotizacion" class="mb-2 small text-muted"></div>
+                            <input type="file" id="subir-file-cotizacion" class="form-control form-control-sm rounded-3 border" accept="image/*,application/pdf">
+                        </div>
+                    </div>
+
+                    <!-- Factura -->
+                    <div class="col-12 col-md-4">
+                        <div class="border rounded-3 p-3 bg-white h-100 shadow-2xs">
+                            <label class="form-label small fw-bold text-dark text-uppercase d-block mb-1" style="font-size:0.75rem; letter-spacing:0.04em;">
+                                Subir Archivo de Factura
+                            </label>
+                            <div id="subir-existente-factura" class="mb-2 small text-muted"></div>
+                            <input type="file" id="subir-file-factura" class="form-control form-control-sm rounded-3 border" accept="image/*,application/pdf">
+                        </div>
+                    </div>
+
+                    <!-- Voucher -->
+                    <div class="col-12 col-md-4">
+                        <div class="border rounded-3 p-3 bg-white h-100 shadow-2xs">
+                            <label class="form-label small fw-bold text-dark text-uppercase d-block mb-1" style="font-size:0.75rem; letter-spacing:0.04em;">
+                                Subir Voucher
+                            </label>
+                            <div id="subir-existente-voucher" class="mb-2 small text-muted"></div>
+                            <input type="file" id="subir-file-voucher" class="form-control form-control-sm rounded-3 border" accept="image/*,application/pdf">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 pt-0 pb-3 px-4 d-flex justify-content-between align-items-center">
+                <button type="button" class="btn btn-light border rounded-3 px-4 py-2 fw-semibold text-secondary" data-bs-dismiss="modal" style="background:#f1f5f9;">
+                    Cerrar
+                </button>
+                <button type="button" class="btn btn-primary rounded-3 px-4 py-2 fw-bold text-white shadow-sm" id="btn-guardar-archivos-modal" onclick="window.guardarArchivosOCModal()" style="background:#0284c7; border-color:#0284c7; min-width:120px;">
+                    Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
