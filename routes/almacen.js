@@ -636,17 +636,39 @@ router.delete('/sistemas/:id', (req, res) => {
 // ============================================================
 // ALMACÉN — Almacenes / Sucursales
 // ============================================================
+const _asegurarAlmacenPrincipal = (cb) => {
+    db.query(`CREATE TABLE IF NOT EXISTS almacen_almacenes (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(100) NOT NULL UNIQUE,
+        descripcion VARCHAR(255) NULL,
+        es_sistema  TINYINT(1)   NOT NULL DEFAULT 0,
+        activo      TINYINT(1)   NOT NULL DEFAULT 1,
+        orden       INT          NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`, () => {
+        db.query(`INSERT IGNORE INTO almacen_almacenes (nombre, descripcion, es_sistema, activo, orden) 
+                  VALUES ('Principal', 'Almacén Principal Central del ERP', 1, 1, 1)`, () => {
+            if (typeof cb === 'function') cb();
+        });
+    });
+};
+
 router.get('/almacenes-lista', (req, res) => {
-    db.query(`SELECT * FROM almacen_almacenes WHERE activo=1 ORDER BY orden, id`, (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+    _asegurarAlmacenPrincipal(() => {
+        db.query(`SELECT * FROM almacen_almacenes WHERE activo=1 ORDER BY orden, id`, (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        });
     });
 });
 
 router.get('/almacenes', (req, res) => {
-    db.query(`SELECT * FROM almacen_almacenes ORDER BY orden, id`, (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+    _asegurarAlmacenPrincipal(() => {
+        db.query(`SELECT * FROM almacen_almacenes ORDER BY orden, id`, (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        });
     });
 });
 
