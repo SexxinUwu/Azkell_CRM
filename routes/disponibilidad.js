@@ -12,40 +12,33 @@ module.exports = function (db, logAudit) {
             logAudit(user, 'Disponibilidad Flota', accion, detalle, req.db);
         }
     }
-        // Middleware: asegurar que la tabla flota_disponibilidad existe en el tenant actual
-    router.use((req, res, next) => {
-        const tdb = getDb(req);
-        const sqlCreateTable = `
-            CREATE TABLE IF NOT EXISTS flota_disponibilidad (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                flota VARCHAR(100) NULL DEFAULT '',
-                conductor_eventual VARCHAR(150) NULL DEFAULT '',
-                conductor_asignado VARCHAR(150) NULL DEFAULT '',
-                placa_camion VARCHAR(50) NULL DEFAULT '',
-                placa_carreta VARCHAR(50) NULL DEFAULT '',
-                capacidad_tanque VARCHAR(50) NULL DEFAULT '',
-                marca VARCHAR(50) NULL DEFAULT '',
-                categoria_conductor VARCHAR(50) NULL DEFAULT '',
-                tipo_unidad VARCHAR(100) NULL DEFAULT '',
-                estado_conductor VARCHAR(50) NOT NULL DEFAULT 'Disponible',
-                estado_unidad VARCHAR(50) NOT NULL DEFAULT 'Disponible',
-                ubicacion_manual TEXT NULL,
-                observaciones TEXT NULL,
-                creado_por VARCHAR(100) NULL DEFAULT '',
-                actualizado_por VARCHAR(100) NULL DEFAULT '',
-                fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_estado_con (estado_conductor),
-                INDEX idx_estado_uni (estado_unidad)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        `;
-        tdb.query(sqlCreateTable, (err) => {
-            if (err) console.warn('[Disponibilidad] Error asegurando tabla:', err.message);
-            tdb.query("ALTER TABLE flota_disponibilidad MODIFY placa_camion VARCHAR(50) NULL DEFAULT ''", () => {});
-            tdb.query("ALTER TABLE flota_disponibilidad DROP INDEX uq_placa_camion", () => {});
-            tdb.query("ALTER TABLE flota_disponibilidad CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", () => {});
-            next();
-        });
+    // Asegurar tabla una sola vez al cargar el módulo
+    const sqlCreateTable = `
+        CREATE TABLE IF NOT EXISTS flota_disponibilidad (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            flota VARCHAR(100) NULL DEFAULT '',
+            conductor_eventual VARCHAR(150) NULL DEFAULT '',
+            conductor_asignado VARCHAR(150) NULL DEFAULT '',
+            placa_camion VARCHAR(50) NULL DEFAULT '',
+            placa_carreta VARCHAR(50) NULL DEFAULT '',
+            capacidad_tanque VARCHAR(50) NULL DEFAULT '',
+            marca VARCHAR(50) NULL DEFAULT '',
+            categoria_conductor VARCHAR(50) NULL DEFAULT '',
+            tipo_unidad VARCHAR(100) NULL DEFAULT '',
+            estado_conductor VARCHAR(50) NOT NULL DEFAULT 'Disponible',
+            estado_unidad VARCHAR(50) NOT NULL DEFAULT 'Disponible',
+            ubicacion_manual TEXT NULL,
+            observaciones TEXT NULL,
+            creado_por VARCHAR(100) NULL DEFAULT '',
+            actualizado_por VARCHAR(100) NULL DEFAULT '',
+            fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_estado_con (estado_conductor),
+            INDEX idx_estado_uni (estado_unidad)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+    db.query(sqlCreateTable, (err) => {
+        if (err) console.warn('[Disponibilidad] Error asegurando tabla:', err.message);
     });
 
     // ── GET /api/disponibilidad-flota (Listado general) ────────────────────────
