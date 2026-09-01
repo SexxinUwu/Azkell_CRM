@@ -186,6 +186,7 @@ window._invRenderPortalAlmacenes = function() {
 
                 html += '</div>';
                 html += '</div>';
+                html += '</div>';
             });
 
             // 2. Tarjeta Consolidada "TODOS LOS ALMACENES" (Idéntica a TODAS LAS EMPRESAS)
@@ -210,6 +211,7 @@ window._invRenderPortalAlmacenes = function() {
             html += '<i class="bi bi-eye me-1"></i> Ver Catálogo Global ➜';
             html += '</button>';
 
+            html += '</div>';
             html += '</div>';
             html += '</div>';
 
