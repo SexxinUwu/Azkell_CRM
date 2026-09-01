@@ -1014,19 +1014,19 @@ function _entFmtFechaHora(iso, createdAt) {
         var tp = parseFloat(d.total_pen || 0);
         var totalFmt = '<strong style="color:#16a34a;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
         var estadoNorm = (d.estado || 'REGISTRADA').toUpperCase();
-        var estadoHtml = '<span class="badge" style="background-color:#64748b; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">REGISTRADA</span>';
+        var estadoHtml = '<span class="badge" style="background-color:#64748b !important; color:#ffffff !important; font-size:0.68rem; font-weight:700; letter-spacing:0.03em; border-radius:4px; padding:3px 8px; display:inline-block;">REGISTRADA</span>';
         if (estadoNorm === 'ANULADO' || estadoNorm === 'ANULADA' || estadoNorm === 'RECHAZADO' || estadoNorm === 'RECHAZADA') {
-            estadoHtml = '<span class="badge" style="background-color:#dc2626; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">' + estadoNorm + '</span>';
+            estadoHtml = '<span class="badge" style="background-color:#dc2626 !important; color:#ffffff !important; font-size:0.68rem; font-weight:700; letter-spacing:0.03em; border-radius:4px; padding:3px 8px; display:inline-block;">' + estadoNorm + '</span>';
         } else if (estadoNorm === 'APROBADO' || estadoNorm === 'APROBADA' || estadoNorm === 'AUTORIZADO' || estadoNorm === 'AUTORIZADA') {
-            estadoHtml = '<span class="badge" style="background-color:#16a34a; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">APROBADA</span>';
+            estadoHtml = '<span class="badge" style="background-color:#16a34a !important; color:#ffffff !important; font-size:0.68rem; font-weight:700; letter-spacing:0.03em; border-radius:4px; padding:3px 8px; display:inline-block;">APROBADA</span>';
         } else if (estadoNorm === 'PROCESADO' || estadoNorm === 'PROCESADA' || estadoNorm === 'PAGADO' || estadoNorm === 'PAGADA') {
-            estadoHtml = '<span class="badge" style="background-color:#0284c7; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">PROCESADA</span>';
+            estadoHtml = '<span class="badge" style="background-color:#0284c7 !important; color:#ffffff !important; font-size:0.68rem; font-weight:700; letter-spacing:0.03em; border-radius:4px; padding:3px 8px; display:inline-block;">PROCESADA</span>';
         } else if (estadoNorm === 'OBSERVADO' || estadoNorm === 'OBSERVADA') {
-            estadoHtml = '<span class="badge" style="background-color:#f59e0b; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">OBSERVADA</span>';
+            estadoHtml = '<span class="badge" style="background-color:#f59e0b !important; color:#ffffff !important; font-size:0.68rem; font-weight:700; letter-spacing:0.03em; border-radius:4px; padding:3px 8px; display:inline-block;">OBSERVADA</span>';
         } else if (estadoNorm === 'REGISTRADA' || estadoNorm === 'REGISTRADO' || estadoNorm === 'PENDIENTE') {
-            estadoHtml = '<span class="badge" style="background-color:#64748b; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">REGISTRADA</span>';
+            estadoHtml = '<span class="badge" style="background-color:#64748b !important; color:#ffffff !important; font-size:0.68rem; font-weight:700; letter-spacing:0.03em; border-radius:4px; padding:3px 8px; display:inline-block;">REGISTRADA</span>';
         } else {
-            estadoHtml = '<span class="badge" style="background-color:#64748b; color:#ffffff; font-size:0.68rem; font-weight:700; letter-spacing:0.03em;">' + estadoNorm + '</span>';
+            estadoHtml = '<span class="badge" style="background-color:#64748b !important; color:#ffffff !important; font-size:0.68rem; font-weight:700; letter-spacing:0.03em; border-radius:4px; padding:3px 8px; display:inline-block;">' + estadoNorm + '</span>';
         }
 
         var tipoOrdText = (d.tipo_orden && d.tipo_orden.toLowerCase() === 'orden de servicio') ? 'ORDEN DE SERVICIO' : 'ORDEN DE COMPRA';
