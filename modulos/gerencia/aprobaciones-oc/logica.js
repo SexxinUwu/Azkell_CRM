@@ -137,7 +137,14 @@
             console.warn('Error cargando órdenes de compra en gerencia:', e);
         }
 
-        actualizarKpisYBadges();
+        // Establecer fecha de hoy por defecto en los inputs si están vacíos
+        const inputDesde = document.getElementById('filtro-fecha-desde');
+        const inputHasta = document.getElementById('filtro-fecha-hasta');
+        const fechaHoy = obtenerFechaHoyISO();
+
+        if (inputDesde && !inputDesde.value) inputDesde.value = fechaHoy;
+        if (inputHasta && !inputHasta.value) inputHasta.value = fechaHoy;
+
         window.aplicarFiltrosOC();
     }
 
@@ -147,15 +154,54 @@
         cargarDatasetDesdeAPI();
     };
 
-    // Actualizar números de KPIs
+    // Función auxiliar para parsear fechas a formato ISO (YYYY-MM-DD)
+    function normalizarFechaAISO(item) {
+        if (!item) return null;
+        if (item.fecha_raw) {
+            const raw = String(item.fecha_raw);
+            if (raw.includes('T')) return raw.split('T')[0];
+            if (raw.includes(' ')) return raw.split(' ')[0];
+            if (raw.includes('/')) {
+                const p = raw.split('/');
+                if (p.length === 3) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+            }
+            return raw;
+        }
+        return null;
+    }
+
+    // Actualizar números de KPIs y Badges en base a los filtros/fechas seleccionados
     function actualizarKpisYBadges() {
-        const ordenes = window._gerenciaOC.ordenes || [];
+        const todasOrdenes = window._gerenciaOC.ordenes || [];
+        const fDesde = document.getElementById('filtro-fecha-desde')?.value || '';
+        const fHasta = document.getElementById('filtro-fecha-hasta')?.value || '';
+        const selAlmacen = (document.getElementById('filtro-almacen-oc')?.value || '').toLowerCase();
+        const txtBuscar = (document.getElementById('filtro-buscar-oc')?.value || '').toLowerCase().trim();
+
+        // Filtrar órdenes por el rango de fechas y filtros activos (sin filtrar por pestaña de estado)
+        const ordenes = todasOrdenes.filter(item => {
+            const fechaItemISO = normalizarFechaAISO(item);
+            if (fechaItemISO) {
+                if (fDesde && fechaItemISO < fDesde) return false;
+                if (fHasta && fechaItemISO > fHasta) return false;
+            }
+            if (selAlmacen && item.almacen && !item.almacen.toLowerCase().includes(selAlmacen)) return false;
+            if (txtBuscar) {
+                const matchTexto = 
+                    (item.id && item.id.toLowerCase().includes(txtBuscar)) ||
+                    (item.proveedor && item.proveedor.toLowerCase().includes(txtBuscar)) ||
+                    (item.solicitante && item.solicitante.toLowerCase().includes(txtBuscar)) ||
+                    (item.destino && item.destino.toLowerCase().includes(txtBuscar)) ||
+                    (item.justificacion && item.justificacion.toLowerCase().includes(txtBuscar));
+                if (!matchTexto) return false;
+            }
+            return true;
+        });
         
         const pend = ordenes.filter(o => o.estado === 'pendiente');
         const aprob = ordenes.filter(o => o.estado === 'aprobado');
         const obs = ordenes.filter(o => o.estado === 'observado');
         const rech = ordenes.filter(o => o.estado === 'rechazado');
-        const urg = ordenes.filter(o => o.prioridad === 'URGENTE' && o.estado === 'pendiente');
 
         const sumMontoSoles = (arr) => arr.reduce((acc, cur) => acc + (cur.moneda === 'S/' ? (cur.total || 0) : (cur.total || 0) * 3.75), 0);
 
@@ -231,24 +277,10 @@
         }
     };
 
-    // Función auxiliar para parsear fechas a formato ISO (YYYY-MM-DD)
-    function normalizarFechaAISO(item) {
-        if (!item) return null;
-        if (item.fecha_raw) {
-            const raw = String(item.fecha_raw);
-            if (raw.includes('T')) return raw.split('T')[0];
-            if (raw.includes(' ')) return raw.split(' ')[0];
-            if (raw.includes('/')) {
-                const p = raw.split('/');
-                if (p.length === 3) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
-            }
-            return raw;
-        }
-        return null;
-    }
-
     // Aplicar filtros de búsqueda, fechas y renderizar lista
     window.aplicarFiltrosOC = function() {
+        actualizarKpisYBadges();
+
         const tab = window._gerenciaOC.tabActivo || 'pendiente';
         const txtBuscar = (document.getElementById('filtro-buscar-oc')?.value || '').toLowerCase().trim();
         const selAlmacen = (document.getElementById('filtro-almacen-oc')?.value || '').toLowerCase();
@@ -892,10 +924,11 @@
         if (inp) inp.value = '';
         const sel = document.getElementById('filtro-almacen-oc');
         if (sel) sel.value = '';
+        const fechaHoy = obtenerFechaHoyISO();
         const fDesde = document.getElementById('filtro-fecha-desde');
         const fHasta = document.getElementById('filtro-fecha-hasta');
-        if (fDesde) fDesde.value = '';
-        if (fHasta) fHasta.value = '';
+        if (fDesde) fDesde.value = fechaHoy;
+        if (fHasta) fHasta.value = fechaHoy;
         window.filtrarPorTab('pendiente');
     };
 
