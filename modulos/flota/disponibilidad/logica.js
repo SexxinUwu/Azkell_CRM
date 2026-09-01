@@ -239,9 +239,13 @@ window.dispRenderTabla = function (lista) {
         const estConBadge = window.dispObtenerBadgeEstadoConductor(item.estado_conductor);
         const estUniBadge = window.dispObtenerBadgeEstadoUnidad(item.estado_unidad);
 
-        // Capacidad Tanque Formateada (0 por defecto)
-        let capTxt = item.capacidad_tanque || '0';
-        if (capTxt === '0' || capTxt === 'Gln' || capTxt === 'm³' || !capTxt) capTxt = '0';
+        // Capacidad Tanque Formateada
+        let capTxt = item.capacidad_tanque || item.placa_capacidad_tanque || '0';
+        if (capTxt === '0' || capTxt === 'Gln' || capTxt === 'm³' || !capTxt) {
+            capTxt = '0';
+        } else if (!String(capTxt).toUpperCase().includes('GLN') && !String(capTxt).toUpperCase().includes('M³')) {
+            capTxt = capTxt + ' Gln';
+        }
 
         html += `
             <tr data-disp-id="${item.id}">
@@ -467,6 +471,10 @@ window.dispSeleccionarPlacaCamion = function (placa) {
 
         const marcaEl = document.getElementById('disp-f-marca');
         if (marcaEl) marcaEl.value = marca.toUpperCase();
+
+        const capTanque = pObj.capacidad_tanque || pObj.tanque_1 || (Array.isArray(pObj) ? pObj[28] : '') || '';
+        const capEl = document.getElementById('disp-f-capacidad-tanque');
+        if (capEl && capTanque && capTanque !== '0') capEl.value = capTanque;
 
         const combUpper = combustible.toUpperCase();
         const isGas = combUpper.includes('GAS') || combUpper.includes('GNV') || combUpper.includes('GLP');
@@ -783,107 +791,259 @@ window._ejecutarEliminarDisponibilidadConfirmado = async function () {
     }
 };
 
-// ── Modal Cuadro Resumen por Tipo de Unidad ───────────────────────
-window.dispAbrirModalCuadro = function () {
+// ── Helper para cargar Chart.js si no está presente ────────────────
+function _asegurarChartJS() {
+    return new Promise((resolve) => {
+        if (typeof Chart !== 'undefined') return resolve();
+        const script = document.createElement('script');
+        script.src = '/libs/chart.min.js';
+        script.onload = () => resolve();
+        script.onerror = () => {
+            console.warn('No se pudo cargar /libs/chart.min.js');
+            resolve();
+        };
+        document.head.appendChild(script);
+    });
+}
+
+// ── Modal Cuadro Resumen de Disponibilidad de Flota (Estilo Marsisa) ───────────────
+window.dispAbrirModalCuadro = async function () {
     const datos = window.dispDatos || [];
     const total = datos.length;
 
-    // Agrupar por tipo_unidad
-    const agrupado = {};
-    datos.forEach(d => {
-        let tipo = (d.tipo_unidad || '').trim();
-        if (!tipo) tipo = 'Sin Tipo / No especificado';
-        if (!agrupado[tipo]) {
-            agrupado[tipo] = {
-                tipo,
-                total: 0,
-                operativos: 0,
-                mantenimiento: 0,
-                otros: 0
-            };
-        }
-        agrupado[tipo].total++;
-        const estUni = (d.estado_unidad || '').toLowerCase();
-        if (estUni === 'disponible' || estUni === 'operativo') {
-            agrupado[tipo].operativos++;
-        } else if (estUni === 'mantenimiento') {
-            agrupado[tipo].mantenimiento++;
-        } else {
-            agrupado[tipo].otros++;
-        }
-    });
+    // Actualizar badge de total
+    const totalBadge = document.getElementById('disp-cuadro-total-badge');
+    if (totalBadge) totalBadge.textContent = `${total} Unidades Registradas`;
 
-    const listaTipos = Object.values(agrupado).sort((a, b) => b.total - a.total);
-
-    const totalTxt = document.getElementById('disp-cuadro-total-txt');
-    if (totalTxt) totalTxt.textContent = `${total} unidades`;
-
-    const tiposCountTxt = document.getElementById('disp-cuadro-tipos-count-txt');
-    if (tiposCountTxt) tiposCountTxt.textContent = `${listaTipos.length} Tipos de Unidad`;
-
-    const container = document.getElementById('disp-cuadro-tipos-container');
-    if (container) {
-        if (!listaTipos.length) {
-            container.innerHTML = '<div class="col-12 text-center py-4 text-muted">No hay registros de disponibilidad.</div>';
-        } else {
-            container.innerHTML = listaTipos.map(t => {
-                const pct = total > 0 ? Math.round((t.total / total) * 100) : 0;
-                
-                // Icono según nombre de tipo
-                let icon = 'bi-truck';
-                const lower = t.tipo.toLowerCase();
-                if (lower.includes('carreta') || lower.includes('remolque') || lower.includes('semirremolque')) icon = 'bi-link-45deg';
-                else if (lower.includes('tracto')) icon = 'bi-truck-front-fill';
-                else if (lower.includes('furgon') || lower.includes('furgón')) icon = 'bi-box-seam-fill';
-                else if (lower.includes('camioneta') || lower.includes('auto')) icon = 'bi-car-front-fill';
-
-                return `
-                <div class="col-12 col-md-6">
-                    <div class="card h-100 border-0 rounded-4 p-3 shadow-2xs bg-white" style="border:1px solid #e2e8f0 !important;">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="bg-primary-subtle text-primary p-2 rounded-3 d-flex align-items-center justify-content-center" style="width:34px; height:34px;">
-                                    <i class="bi ${icon} fs-6"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-bold text-dark" style="font-size:0.95rem;">${_dispEsc(t.tipo)}</div>
-                                    <div class="text-secondary small">${pct}% de la flota</div>
-                                </div>
-                            </div>
-                            <div class="text-end">
-                                <span class="fs-4 fw-bolder text-primary">${t.total}</span>
-                                <div class="text-muted small" style="font-size:0.7rem;">unidades</div>
-                            </div>
-                        </div>
-
-                        <!-- Barra de porcentaje -->
-                        <div class="progress mb-2" style="height: 6px; border-radius: 10px; background:#e2e8f0;">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: ${pct}%; border-radius: 10px;"></div>
-                        </div>
-
-                        <!-- Mini desglose de estados -->
-                        <div class="d-flex flex-wrap align-items-center gap-1.5 pt-1" style="font-size:0.75rem;">
-                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2 py-1 rounded-pill">
-                                🟢 ${t.operativos} Disp.
-                            </span>
-                            ${t.mantenimiento > 0 ? `
-                                <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-2 py-1 rounded-pill">
-                                    🔴 ${t.mantenimiento} Mant.
-                                </span>
-                            ` : ''}
-                            ${t.otros > 0 ? `
-                                <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle px-2 py-1 rounded-pill">
-                                    ⚪ ${t.otros} Otros
-                                </span>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-                `;
-            }).join('');
-        }
+    // Homologador de Subtipo
+    function normalizarSubtipo(sub, tipo, fallback) {
+        const raw = String(sub || tipo || fallback || '').trim();
+        if (/thermo\s*king/i.test(raw)) return 'Thermoking';
+        if (/semirremolque/i.test(raw)) return 'Remolque';
+        if (/camion|camión/i.test(raw)) return 'Camión';
+        if (/carreta/i.test(raw)) return 'Carreta';
+        if (/tracto/i.test(raw)) return 'Tracto';
+        if (/furgon|furgón/i.test(raw)) return 'Furgón';
+        if (/contenedor/i.test(raw)) return 'Contenedor';
+        return raw || 'Otros';
     }
 
+    // Configuración visual de los 6 Subtipos Principales (1:1 Imagen Marsisa)
+    const subtiposConfig = [
+        {
+            key: 'Camión',
+            label: 'Camión',
+            color: '#0284c7', // Cyan / Sky Blue
+            bgGrad: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+            iconSvg: `<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`
+        },
+        {
+            key: 'Carreta',
+            label: 'Carreta',
+            color: '#9333ea', // Purple
+            bgGrad: 'linear-gradient(135deg, #9333ea 0%, #7e22ce 100%)',
+            iconSvg: `<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M19 5H3c-1.1 0-2 .9-2 2v8h2c0 1.66 1.34 3 3 3s3-1.34 3-3h8c0 1.66 1.34 3 3 3s3-1.34 3-3h2V7c0-1.1-.9-2-2-2zm-13 13c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm14 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`
+        },
+        {
+            key: 'Remolque',
+            label: 'Remolque / Furgón',
+            color: '#15803d', // Dark Forest Green
+            bgGrad: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+            iconSvg: `<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v10h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-14 14c-.83 0-1.5-.67-1.5-1.5S5.17 15 6 15s1.5.67 1.5 1.5S6.83 18 6 18zm12 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`
+        },
+        {
+            key: 'Tracto',
+            label: 'Tracto',
+            color: '#ea580c', // Bright Orange
+            bgGrad: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+            iconSvg: `<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M19 7h-3V4H5c-1.1 0-2 .9-2 2v9h2c0 1.66 1.34 3 3 3s3-1.34 3-3h5c0 1.66 1.34 3 3 3s3-1.34 3-3h1V9l-2-2zm-12 9c-.83 0-1.5-.67-1.5-1.5S6.17 13 7 13s1.5.67 1.5 1.5S7.83 16 7 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`
+        },
+        {
+            key: 'Thermoking',
+            label: 'Thermoking',
+            color: '#1e40af', // Deep Blue / Refrigerated
+            bgGrad: 'linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)',
+            iconSvg: `<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v12h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3.5c1.38 0 2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5S9.5 10.38 9.5 9 10.62 6.5 12 6.5zm-6 11.5c-.83 0-1.5-.67-1.5-1.5S5.17 15 6 15s1.5.67 1.5 1.5S6.83 18 6 18zm12 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`
+        },
+        {
+            key: 'Contenedor',
+            label: 'Contenedor',
+            color: '#16a34a', // Bright Green / Container
+            bgGrad: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+            iconSvg: `<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M2 4h20v16H2V4zm2 2v12h3V6H4zm5 0v12h6V6H9zm8 0v12h3V6h-3z"/></svg>`
+        }
+    ];
+
+    // Conteo y Matriz
+    const conteos = {
+        'Camión': 0,
+        'Carreta': 0,
+        'Remolque': 0,
+        'Tracto': 0,
+        'Thermoking': 0,
+        'Contenedor': 0
+    };
+
+    const estadosList = ['Alquilado', 'Disponible', 'Mantenimiento', 'Operativo', 'Programado', 'Tránsito', 'En Proyecto'];
+    const matriz = {};
+    subtiposConfig.forEach(s => {
+        matriz[s.key] = {
+            total: 0,
+            operativos: 0,
+            transito: 0,
+            programados: 0,
+            mantenimiento: 0,
+            alquilados_otros: 0,
+            porEstado: {}
+        };
+        estadosList.forEach(est => matriz[s.key].porEstado[est] = 0);
+    });
+
+    datos.forEach(d => {
+        const subCam = d.placa_camion ? normalizarSubtipo(d.placa_sub_tipo_camion, d.placa_tipo_camion, d.tipo_unidad) : '';
+        const subCar = d.placa_carreta ? normalizarSubtipo(d.carreta_sub_tipo, d.carreta_tipo, 'Carreta') : '';
+        const est = (d.estado_unidad || 'Disponible').trim();
+
+        const subsEnFila = [];
+        if (subCam) subsEnFila.push(subCam);
+        if (subCar) subsEnFila.push(subCar);
+        if (!subsEnFila.length && d.tipo_unidad) subsEnFila.push(normalizarSubtipo(d.tipo_unidad, '', ''));
+
+        subsEnFila.forEach(sName => {
+            let keyTarget = sName;
+            if (keyTarget === 'Furgón') keyTarget = 'Remolque';
+            if (!conteos.hasOwnProperty(keyTarget)) keyTarget = 'Contenedor';
+
+            conteos[keyTarget]++;
+            if (matriz[keyTarget]) {
+                matriz[keyTarget].total++;
+                if (matriz[keyTarget].porEstado.hasOwnProperty(est)) {
+                    matriz[keyTarget].porEstado[est]++;
+                }
+                const estLower = est.toLowerCase();
+                if (estLower === 'operativo' || estLower === 'disponible') {
+                    matriz[keyTarget].operativos++;
+                } else if (estLower === 'tránsito') {
+                    matriz[keyTarget].transito++;
+                } else if (estLower === 'programado') {
+                    matriz[keyTarget].programados++;
+                } else if (estLower === 'mantenimiento') {
+                    matriz[keyTarget].mantenimiento++;
+                } else {
+                    matriz[keyTarget].alquilados_otros++;
+                }
+            }
+        });
+    });
+
+    // 1. Renderizar Tarjetas Superiores
+    const cardsContainer = document.getElementById('disp-cuadro-subtipos-cards');
+    if (cardsContainer) {
+        cardsContainer.innerHTML = subtiposConfig.map(cfg => {
+            const count = conteos[cfg.key] || 0;
+            return `
+            <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+                <div class="disp-subtipo-banner-card" style="background: ${cfg.bgGrad};">
+                    <div>
+                        <div class="disp-subtipo-num">${count}</div>
+                        <div class="disp-subtipo-lbl mt-1">${cfg.label}</div>
+                    </div>
+                    <div class="disp-subtipo-icon-wrap">
+                        ${cfg.iconSvg}
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    // 2. Renderizar Matriz / Tabla Desglosada
+    const matrizBody = document.getElementById('disp-cuadro-matriz-body');
+    if (matrizBody) {
+        matrizBody.innerHTML = subtiposConfig.map(cfg => {
+            const row = matriz[cfg.key];
+            return `
+            <tr>
+                <td class="fw-bold text-dark">
+                    <span class="d-inline-block rounded-circle me-2" style="width:10px;height:10px;background:${cfg.color};"></span>
+                    ${cfg.label}
+                </td>
+                <td class="text-center fw-bolder fs-6 text-primary">${row.total}</td>
+                <td class="text-center"><span class="badge bg-success-subtle text-success-emphasis px-2 py-1">${row.operativos}</span></td>
+                <td class="text-center"><span class="badge bg-warning-subtle text-warning-emphasis px-2 py-1">${row.transito}</span></td>
+                <td class="text-center"><span class="badge bg-info-subtle text-info-emphasis px-2 py-1">${row.programados}</span></td>
+                <td class="text-center"><span class="badge bg-danger-subtle text-danger-emphasis px-2 py-1">${row.mantenimiento}</span></td>
+                <td class="text-center"><span class="badge bg-secondary-subtle text-secondary-emphasis px-2 py-1">${row.alquilados_otros}</span></td>
+            </tr>
+            `;
+        }).join('');
+    }
+
+    // 3. Renderizar Gráfico de Barras Agrupadas con Chart.js
+    await _asegurarChartJS();
+
+    const canvas = document.getElementById('chartDispSubtipos');
+    if (canvas && typeof Chart !== 'undefined') {
+        if (window._chartDispSubtiposInstance) {
+            window._chartDispSubtiposInstance.destroy();
+        }
+
+        const datasets = subtiposConfig.map(cfg => {
+            return {
+                label: cfg.label,
+                data: estadosList.map(est => matriz[cfg.key].porEstado[est] || 0),
+                backgroundColor: cfg.color,
+                borderRadius: 6,
+                borderSkipped: false
+            };
+        });
+
+        window._chartDispSubtiposInstance = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: estadosList,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            font: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold', size: 12 },
+                            boxWidth: 14,
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleFont: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold' },
+                        bodyFont: { family: "'Plus Jakarta Sans', sans-serif" },
+                        padding: 12,
+                        cornerRadius: 10
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: '600' } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, font: { family: "'Plus Jakarta Sans', sans-serif" } },
+                        grid: { color: '#f1f5f9' }
+                    }
+                }
+            }
+        });
+    }
+
+    // Mostrar Modal
     const modalEl = document.getElementById('modalCuadroTiposUnidad');
     if (modalEl) {
         const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);

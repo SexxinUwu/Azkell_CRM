@@ -47,12 +47,18 @@ module.exports = function (db, logAudit) {
         const sql = `
             SELECT 
                 d.*,
+                COALESCE(NULLIF(d.capacidad_tanque, '0'), NULLIF(p.capacidad_tanque, ''), '0') AS capacidad_tanque,
+                p.capacidad_tanque AS placa_capacidad_tanque,
                 p.combustible AS placa_combustible,
                 p.modelo_uts AS placa_modelo_uts,
                 p.tipo AS placa_tipo_camion,
-                p.uts AS placa_uts
+                p.sub_tipo AS placa_sub_tipo_camion,
+                p.uts AS placa_uts,
+                p2.tipo AS carreta_tipo,
+                p2.sub_tipo AS carreta_sub_tipo
             FROM flota_disponibilidad d
             LEFT JOIN placas p ON p.placa = d.placa_camion
+            LEFT JOIN placas p2 ON p2.placa = d.placa_carreta
             ORDER BY COALESCE(NULLIF(d.placa_camion, ''), d.placa_carreta) ASC
         `;
         tdb.query(sql, (err, rows) => {
