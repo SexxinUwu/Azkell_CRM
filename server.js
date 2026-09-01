@@ -2980,14 +2980,6 @@ db.query(
         if (e) console.warn('CREATE detalle_recepciones_oc:', e.message); 
         else {
             console.log('✅ Tabla detalle_recepciones_oc verificada');
-            // Limpieza de recepciones de prueba iniciales a solicitud del usuario
-            db.query('DELETE FROM detalle_recepciones_oc', () => {
-                db.query('DELETE FROM recepciones_oc', () => {
-                    db.query("UPDATE entradas_inv SET estado = 'Registrado' WHERE estado IS NULL OR estado != 'Anulado'", () => {
-                        console.log('🧹 Recepciones de prueba eliminadas. OCs restablecidas a Registrado y Stock en 0.');
-                    });
-                });
-            });
         }
     }
 );
