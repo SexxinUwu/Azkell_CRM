@@ -634,6 +634,69 @@ router.delete('/sistemas/:id', (req, res) => {
 });
 
 // ============================================================
+// ALMACÉN — Almacenes / Sucursales
+// ============================================================
+router.get('/almacenes-lista', (req, res) => {
+    db.query(`SELECT * FROM almacen_almacenes WHERE activo=1 ORDER BY orden, id`, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+router.get('/almacenes', (req, res) => {
+    db.query(`SELECT * FROM almacen_almacenes ORDER BY orden, id`, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+router.post('/almacenes', (req, res) => {
+    const { nombre, descripcion, activo, orden } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+    const nomLimpio = nombre.trim();
+    db.query('INSERT INTO almacen_almacenes (nombre, descripcion, activo, orden, es_sistema) VALUES (?,?,?,?,0)',
+        [nomLimpio, descripcion || null, activo != null ? activo : 1, orden || 0],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+            res.json({ ok: true, id: result.insertId });
+        });
+});
+
+router.put('/almacenes/:id', (req, res) => {
+    const { id } = req.params;
+    const { nombre, descripcion, activo, orden } = req.body;
+    db.query('SELECT es_sistema, nombre FROM almacen_almacenes WHERE id=?', [id], (errC, rowsC) => {
+        if (errC) return res.status(500).json({ error: errC.message });
+        const esSistema = rowsC[0]?.es_sistema;
+        const nombreFinal = esSistema ? rowsC[0].nombre : (nombre ? nombre.trim() : rowsC[0].nombre);
+
+        db.query('UPDATE almacen_almacenes SET nombre=?, descripcion=?, activo=?, orden=? WHERE id=?',
+            [nombreFinal, descripcion || null, activo != null ? activo : 1, orden || 0, id],
+            (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                res.json({ ok: true });
+            });
+    });
+});
+
+router.delete('/almacenes/:id', (req, res) => {
+    const { id } = req.params;
+    db.query('SELECT es_sistema, nombre FROM almacen_almacenes WHERE id=?', [id], (errC, rowsC) => {
+        if (errC) return res.status(500).json({ error: errC.message });
+        if (rowsC[0]?.es_sistema) {
+            return res.status(400).json({ error: 'No se puede eliminar el almacén Principal del sistema' });
+        }
+        db.query('DELETE FROM almacen_almacenes WHERE id=?', [id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+            res.json({ ok: true });
+        });
+    });
+});
+
+// ============================================================
 // ALMACÉN — Familias
 // ============================================================
 router.get('/familias', (req, res) => {

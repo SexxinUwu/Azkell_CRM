@@ -9,16 +9,19 @@
         tabActivo: 'actual', // 'actual' | 'historial'
         ordenes: [],
         ordenSeleccionada: null,
-        almacenesDisponibles: [
-            'ALM CENTRAL',
-            'ALM NEUMATICOS',
-            'SISTEMAS',
-            'COMBUSTIBLE',
-            'ALM LUBRICANTES'
-        ]
+        almacenesDisponibles: ['Principal']
     };
 
     window.init_recepcion_compras = function() {
+        // Cargar almacenes dinámicos desde la BD
+        fetch('/api/almacen/almacenes-lista')
+            .then(r => r.ok ? r.json() : [])
+            .then(alms => {
+                if (Array.isArray(alms) && alms.length) {
+                    window._recCompras.almacenesDisponibles = alms.map(a => a.nombre);
+                }
+            }).catch(() => {});
+
         window.cargarRecepcionesOC();
     };
 
