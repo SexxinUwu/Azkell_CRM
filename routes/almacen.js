@@ -804,21 +804,7 @@ router.delete('/marcas/:id', (req, res) => {
 // ALMACÉN — Entradas
 // ============================================================
 router.get('/entradas', (req, res) => {
-    let q = `SELECT e.*, 
-             (SELECT u.nombre FROM usuarios u WHERE u.correo = e.creado_por OR u.nombre = e.creado_por OR u.idUsuario = e.creado_por LIMIT 1) AS creador_nombre,
-             (SELECT p.numero_documento FROM proveedores_inv p WHERE p.id = e.proveedor_id OR (p.nombre IS NOT NULL AND p.nombre = e.proveedor_nombre) OR (p.razon_social IS NOT NULL AND p.razon_social = e.proveedor_nombre) LIMIT 1) AS proveedor_ruc,
-             (SELECT p.telefono FROM proveedores_inv p WHERE p.id = e.proveedor_id OR (p.nombre IS NOT NULL AND p.nombre = e.proveedor_nombre) OR (p.razon_social IS NOT NULL AND p.razon_social = e.proveedor_nombre) LIMIT 1) AS proveedor_telefono,
-             (SELECT p.email FROM proveedores_inv p WHERE p.id = e.proveedor_id OR (p.nombre IS NOT NULL AND p.nombre = e.proveedor_nombre) OR (p.razon_social IS NOT NULL AND p.razon_social = e.proveedor_nombre) LIMIT 1) AS proveedor_email,
-             GROUP_CONCAT(CONCAT(
-                 COALESCE(i.descripcion, d.descripcion, ''), '|',
-                 COALESCE(d.cantidad, 0), '|',
-                 COALESCE(d.costo_unitario, 0), '|',
-                 COALESCE(d.moneda, e.moneda, 'PEN'), '|',
-                 COALESCE(d.inventario_id, ''), '|',
-                 COALESCE(i.unidad, 'UND'), '|',
-                 COALESCE(d.importe, 0), '|',
-                 COALESCE(i.codigo_articulo, '')
-             ) SEPARATOR ';;') AS items_raw
+    let q = `SELECT e.*, GROUP_CONCAT(CONCAT(COALESCE(i.descripcion, d.descripcion, ''),'|',COALESCE(d.cantidad,0),'|',COALESCE(d.costo_unitario,0),'|',COALESCE(d.moneda,'PEN'),'|',COALESCE(d.inventario_id,''),'|',COALESCE(d.importe,0)) SEPARATOR ';;') AS items_raw
              FROM entradas_inv e
              LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
              LEFT JOIN inventario i ON d.inventario_id = i.id`;
@@ -829,20 +815,68 @@ router.get('/entradas', (req, res) => {
     }
     q += ` GROUP BY e.id ORDER BY e.fecha DESC, e.id DESC LIMIT 300`;
     db.query(q, params, async (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            console.error('[GET /api/almacen/entradas error]', err);
+            return res.status(500).json({ error: err.message });
+        }
         const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+
+        // Mapear usuarios y proveedores para nombres completos y RUC
+        const [usuariosMap, provsMap] = await Promise.all([
+            new Promise(resU => {
+                db.query('SELECT nombre, correo, idUsuario FROM usuarios', (eU, rU) => {
+                    const uMap = {};
+                    if (!eU && rU) {
+                        rU.forEach(u => {
+                            if (u.correo) uMap[u.correo.toLowerCase()] = u.nombre;
+                            if (u.idUsuario) uMap[String(u.idUsuario)] = u.nombre;
+                            if (u.nombre) uMap[u.nombre.toLowerCase()] = u.nombre;
+                        });
+                    }
+                    resU(uMap);
+                });
+            }),
+            new Promise(resP => {
+                db.query('SELECT id, nombre, razon_social, numero_documento, telefono, email FROM proveedores_inv', (eP, rP) => {
+                    const pMap = {};
+                    if (!eP && rP) {
+                        rP.forEach(p => {
+                            if (p.id) pMap[p.id] = p;
+                            if (p.nombre) pMap[p.nombre.toLowerCase()] = p;
+                            if (p.razon_social) pMap[p.razon_social.toLowerCase()] = p;
+                        });
+                    }
+                    resP(pMap);
+                });
+            })
+        ]);
+
         const signedRows = await Promise.all(rows.map(async (r) => {
+            // Resolver creador_nombre
+            const creadorKey = (r.creado_por || '').toLowerCase().trim();
+            r.creador_nombre = usuariosMap[creadorKey] || usuariosMap[r.creado_por] || r.creado_por || 'SISTEMA';
+
+            // Resolver proveedor datos
+            const pInfo = (r.proveedor_id && provsMap[r.proveedor_id]) || 
+                          (r.proveedor_nombre && provsMap[r.proveedor_nombre.toLowerCase()]) || null;
+            r.proveedor_ruc = pInfo?.numero_documento || '';
+            r.proveedor_telefono = pInfo?.telefono || '';
+            r.proveedor_email = pInfo?.email || '';
+
             r.items = r.items_raw ? r.items_raw.split(';;').map(s => {
-                const [desc, cant, cu, mon, invId, um, imp, codArt] = s.split('|');
+                const [desc, cant, cu, mon, invId, imp] = s.split('|');
+                const cantNum = parseFloat(cant) || 0;
+                const cuNum = parseFloat(cu) || 0;
+                const impNum = parseFloat(imp) || (cantNum * cuNum);
                 return { 
                     descripcion: desc || '', 
-                    cantidad: parseFloat(cant) || 0, 
-                    costo_unitario: parseFloat(cu) || 0, 
-                    moneda: mon || 'PEN', 
+                    cantidad: cantNum, 
+                    costo_unitario: cuNum, 
+                    moneda: mon || r.moneda || 'PEN', 
                     inventario_id: invId || '',
-                    unidad_medida: um || 'UND',
-                    importe: parseFloat(imp) || ((parseFloat(cant) || 0) * (parseFloat(cu) || 0)),
-                    codigo_articulo: codArt || ''
+                    unidad_medida: 'UND',
+                    importe: impNum,
+                    codigo_articulo: invId || ''
                 };
             }) : [];
             delete r.items_raw;
