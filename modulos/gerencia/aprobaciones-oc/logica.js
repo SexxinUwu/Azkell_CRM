@@ -28,17 +28,42 @@
         return `${yyyy}-${mm}-${dd}`;
     }
 
-    // Inicialización del dataset (Inicia en lista vacía)
-    function inicializarDataset() {
+    // Cargar órdenes reales desde la base de datos ERP
+    async function cargarDatasetDesdeAPI() {
         try {
-            const guardado = sessionStorage.getItem('erp_gerencia_oc_data');
-            if (guardado) {
-                window._gerenciaOC.ordenes = JSON.parse(guardado);
-            } else {
-                window._gerenciaOC.ordenes = [];
+            const resp = await fetch('/api/almacen/entradas');
+            if (resp.ok) {
+                const data = await resp.json();
+                window._gerenciaOC.ordenes = (data || []).map(d => {
+                    const st = (d.estado || 'REGISTRADA').toLowerCase();
+                    let estadoMap = 'pendiente';
+                    if (st === 'aprobado' || st === 'aprobada') estadoMap = 'aprobado';
+                    else if (st === 'rechazado' || st === 'rechazada' || st === 'anulado' || st === 'anulada') estadoMap = 'rechazado';
+                    else if (st === 'observado' || st === 'observada') estadoMap = 'observado';
+                    else if (st === 'pagado' || st === 'pagada' || st === 'procesado' || st === 'procesada') estadoMap = 'aprobado';
+
+                    return {
+                        id: d.id,
+                        codigo: d.id,
+                        fecha: d.created_at || d.fecha,
+                        solicitante: d.creado_por || 'Almacén / Mantenimiento',
+                        proveedor: d.proveedor_nombre || 'PROVEEDOR GENERAL',
+                        almacen: d.almacen || 'Principal',
+                        total: parseFloat(d.total_pen || 0),
+                        moneda: d.moneda === 'USD' ? '$' : 'S/',
+                        estado: estadoMap,
+                        estado_raw: d.estado || 'REGISTRADA',
+                        motivo: d.motivo_entrada || d.observaciones || 'Adquisición de artículos / repuestos',
+                        tipo_orden: d.tipo_orden || 'Orden de compra',
+                        items: d.items || [],
+                        url_voucher: d.url_voucher_presigned || d.url_voucher,
+                        url_cotizacion: d.url_cotizacion_presigned || d.url_cotizacion,
+                        url_factura: d.url_factura_presigned || d.url_factura
+                    };
+                });
             }
         } catch (e) {
-            window._gerenciaOC.ordenes = [];
+            console.warn('Error cargando órdenes de compra en gerencia:', e);
         }
 
         // Establecer fecha de hoy por defecto en los inputs si están vacíos
@@ -46,26 +71,17 @@
         const inputHasta = document.getElementById('filtro-fecha-hasta');
         const fechaHoy = obtenerFechaHoyISO();
 
-        if (inputDesde && !inputDesde.value) {
-            inputDesde.value = fechaHoy;
-        }
-        if (inputHasta && !inputHasta.value) {
-            inputHasta.value = fechaHoy;
-        }
-    }
+        if (inputDesde && !inputDesde.value) inputDesde.value = fechaHoy;
+        if (inputHasta && !inputHasta.value) inputHasta.value = fechaHoy;
 
-    function guardarEstadoDataset() {
-        try {
-            sessionStorage.setItem('erp_gerencia_oc_data', JSON.stringify(window._gerenciaOC.ordenes));
-        } catch(e) {}
+        actualizarKpisYBadges();
+        window.aplicarFiltrosOC();
     }
 
     // Renderizar Dashboard y Lista
     window.renderizarModuloGerenciaOC = function() {
-        inicializarDataset();
-        actualizarKpisYBadges();
         window.cambiarModoVista(window._gerenciaOC.modoVista, false);
-        window.aplicarFiltrosOC();
+        cargarDatasetDesdeAPI();
     };
 
     // Actualizar números de KPIs
@@ -541,21 +557,31 @@
             return;
         }
 
-        const usuarioActual = localStorage.getItem('fleet_user') || 'Dirección General';
-        const fechaHora = new Date().toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
-
+        let nuevoEstadoBD = 'Registrado';
         if (tipo === 'aprobar') {
             oc.estado = 'aprobado';
+            nuevoEstadoBD = 'Aprobado';
             oc.historial = `Aprobado por ${usuarioActual} el ${fechaHora}. ${comentario ? 'Nota: ' + comentario : ''}`;
         } else if (tipo === 'observar') {
             oc.estado = 'observado';
+            nuevoEstadoBD = 'Observado';
             oc.historial = `Observado por ${usuarioActual} el ${fechaHora}. Observación: ${comentario}`;
         } else if (tipo === 'rechazar') {
             oc.estado = 'rechazado';
+            nuevoEstadoBD = 'Rechazado';
             oc.historial = `Rechazado por ${usuarioActual} el ${fechaHora}. Motivo: ${comentario}`;
         }
 
-        guardarEstadoDataset();
+        // Persistir en Base de Datos MySQL del ERP
+        fetch(`/api/almacen/entradas/${encodeURIComponent(oc.id)}/estado`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                estado: nuevoEstadoBD,
+                comentario: comentario,
+                usuario: usuarioActual
+            })
+        }).catch(err => console.error('Error actualizando estado OC en BD:', err));
 
         // Cerrar modales
         const modalAccionEl = document.getElementById('modalConfirmarAccionOC');
