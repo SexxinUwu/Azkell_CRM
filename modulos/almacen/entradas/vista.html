@@ -1,29 +1,76 @@
 <!-- Módulo Almacén / Entradas — Azkell Fleet v2 (Bento UI) -->
 <style>
-/* ─── Entradas: Panel fullscreen (slide desde abajo) ────────── */
+/* ─── Entradas: Panel fullscreen (slide desde abajo estilo Drawer Amplio) ────────── */
 .ent-panel-full {
     position: fixed;
     bottom: 0;
     left: 50%;
     transform: translateX(-50%) translateY(100%);
     width: 100%;
-    max-width: 700px;
-    height: 92vh;
-    background: #f4f7fe;
+    max-width: 780px;
+    height: 94vh;
+    background: #f8fafc;
     border-radius: 28px 28px 0 0;
     z-index: 1059;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     transition: transform .28s ease;
-    box-shadow: 0 -12px 48px rgba(0,0,0,.18);
+    box-shadow: 0 -12px 48px rgba(0,0,0,.25);
 }
 .ent-panel-full.open {
     transform: translateX(-50%) translateY(0);
 }
 @media (max-width: 767.98px) {
-    .ent-panel-full { max-width: 100%; left: 0; transform: translateY(100%); border-radius: 28px 28px 0 0; }
+    .ent-panel-full { width: 100%; max-width: 100%; left: 0; transform: translateY(100%); border-radius: 24px 24px 0 0; height: 95vh; }
     .ent-panel-full.open { transform: translateY(0); }
+}
+
+/* Modal Form Inputs: Enlarge & Beautify (Grosor y Legibilidad Premium tipo Reporte de Fallas) */
+#modal-entrada .form-control,
+#modal-entrada .form-select {
+    min-height: 42px !important;
+    border-radius: 12px !important;
+    font-size: 0.90rem !important;
+    font-weight: 600 !important;
+    border-color: #cbd5e1 !important;
+    padding: 0.5rem 0.85rem !important;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+#modal-entrada .form-control:focus,
+#modal-entrada .form-select:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+#modal-entrada .form-label {
+    font-size: 0.74rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    color: #475569 !important;
+    margin-bottom: 0.35rem !important;
+}
+#modal-entrada .card {
+    border-radius: 18px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+}
+#modal-entrada .cb-dropdown {
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    z-index: 999999 !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.25) !important;
+    max-height: 230px !important;
+    overflow-y: auto !important;
 }
 
 /* ─── Item cards ─────────────────────────────────────────────── */
@@ -632,8 +679,103 @@
         </div>
       </div>
 
-      <!-- ── SECCIÓN 2: CONDICIONES DE PAGO Y FACTURACIÓN ── -->
-      <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+      <!-- ── SECCIÓN 2: SOLICITANTE, MOTIVO Y DESTINO ── -->
+      <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 70; overflow: visible !important;">
+        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3 border-bottom pb-2" style="font-size:0.92rem;">
+          <i class="bi bi-person-badge text-warning"></i> Solicitante, Destino y Motivo
+        </h6>
+        <div class="row g-2">
+          <!-- Solicitante con Autocompletado Histórico -->
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold text-secondary small mb-1">Solicitante</label>
+            <input type="text" id="ent-f-solicitante" list="ent-solicitantes-list" class="form-control form-control-sm border-secondary-subtle" placeholder="Nombre de solicitante...">
+            <datalist id="ent-solicitantes-list">
+              <!-- Se puebla dinámicamente con los nombres históricos guardados -->
+            </datalist>
+          </div>
+
+          <!-- Placa / Vehículo (si es compra) -->
+          <div class="col-12 col-md-6" id="ent-placa-container">
+            <label class="form-label fw-semibold text-secondary small mb-1">Vehículo / Placa</label>
+            <div class="position-relative" style="z-index: 75;">
+              <input type="text" id="ent-f-placa-txt" class="form-control form-control-sm border-secondary-subtle fw-bold" placeholder="Seleccionar placa..." autocomplete="off" oninput="window._entCbFiltrar('ent-f-placa')" onfocus="window._entCbFiltrar('ent-f-placa')" onblur="window._cbHide('ent-f-placa')">
+              <input type="hidden" id="ent-f-placa">
+              <div id="ent-f-placa-dd" class="cb-dropdown"></div>
+            </div>
+          </div>
+
+          <!-- OT Asociada si es Servicio -->
+          <div class="col-12" id="ent-ot-container" style="display:none;">
+            <div class="row g-2 bg-light p-2 rounded-3 border">
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold text-secondary small mb-1">OT Asociada <span class="text-danger">*</span></label>
+                <div class="position-relative" style="z-index: 78;">
+                  <input type="text" id="ent-f-ot-txt" class="form-control form-control-sm border-secondary-subtle fw-bold" placeholder="Buscar OT..." autocomplete="off" oninput="window._entCbFiltrar('ent-f-ot')" onfocus="window._entCbFiltrar('ent-f-ot')" onblur="window._cbHide('ent-f-ot')">
+                  <input type="hidden" id="ent-f-ot">
+                  <div id="ent-f-ot-dd" class="cb-dropdown"></div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold text-secondary small mb-1">Placa de OT</label>
+                <div class="position-relative" style="z-index: 77;">
+                  <input type="text" id="ent-f-ot-placa-txt" class="form-control form-control-sm border-secondary-subtle" placeholder="Placa o vehículo..." autocomplete="off" oninput="window._entCbFiltrar('ent-f-ot-placa')" onfocus="window._entCbFiltrar('ent-f-ot-placa')" onblur="window._cbHide('ent-f-ot-placa')">
+                  <input type="hidden" id="ent-f-ot-placa">
+                  <div id="ent-f-ot-placa-dd" class="cb-dropdown"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Motivo de Ingreso -->
+          <div class="col-12">
+            <label class="form-label fw-semibold text-secondary small mb-1">Motivo de Compra / Ingreso</label>
+            <input type="text" id="ent-f-motivo" class="form-control form-control-sm border-secondary-subtle" placeholder="Describa el motivo o destino de la compra...">
+          </div>
+
+          <!-- Observaciones -->
+          <div class="col-12">
+            <label class="form-label fw-semibold text-secondary small mb-1">Observaciones y Condiciones</label>
+            <textarea id="ent-f-obs" class="form-control form-control-sm border-secondary-subtle" rows="2" placeholder="Notas adicionales, plazos de entrega, garantías, etc…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECCIÓN 3: PROVEEDOR Y CUENTAS BANCARIAS ── -->
+      <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 50; overflow: visible !important;">
+        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3 border-bottom pb-2" style="font-size:0.92rem;">
+          <i class="bi bi-bank2 text-info"></i> Información del Proveedor y Cuentas Bancarias
+        </h6>
+        <div class="row g-2">
+          <!-- Proveedor -->
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold text-secondary small mb-1">Proveedor <span class="text-danger">*</span></label>
+            <div class="position-relative" style="z-index: 60;">
+              <input type="text" id="ent-f-proveedor-txt" class="form-control form-control-sm border-secondary-subtle fw-bold" placeholder="Buscar proveedor por nombre o RUC…" autocomplete="off" oninput="window._entCbFiltrar('ent-f-proveedor')" onfocus="window._entCbFiltrar('ent-f-proveedor')" onblur="window._cbHide('ent-f-proveedor')">
+              <input type="hidden" id="ent-f-proveedor">
+              <div id="ent-f-proveedor-dd" class="cb-dropdown"></div>
+            </div>
+          </div>
+
+          <!-- Cuenta Bancaria Proveedor -->
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold text-secondary small mb-1">Cuenta Bancaria del Proveedor <span class="text-danger">*</span></label>
+            <select id="ent-f-cuenta-prov" class="form-select form-select-sm border-secondary-subtle fw-semibold">
+              <option value="">Seleccione cuenta de proveedor...</option>
+            </select>
+          </div>
+
+          <!-- Cuenta Bancaria Empresa -->
+          <div class="col-12">
+            <label class="form-label fw-semibold text-secondary small mb-1">Cuenta Bancaria de la Empresa</label>
+            <select id="ent-f-cuenta-empresa" class="form-select form-select-sm border-secondary-subtle">
+              <option value="">Seleccione cuenta de empresa...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECCIÓN 4: CONDICIONES DE PAGO Y FACTURACIÓN ── -->
+      <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 30; overflow: visible !important;">
         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3 border-bottom pb-2" style="font-size:0.92rem;">
           <i class="bi bi-cash-coin text-success"></i> Condiciones de Pago y Facturación
         </h6>
@@ -680,101 +822,6 @@
               <option value="Factura Pendiente" selected>FACTURA PENDIENTE</option>
               <option value="Factura Entregada">FACTURA ENTREGADA</option>
             </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── SECCIÓN 3: PROVEEDOR Y CUENTAS BANCARIAS ── -->
-      <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 50; overflow: visible !important;">
-        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3 border-bottom pb-2" style="font-size:0.92rem;">
-          <i class="bi bi-bank2 text-info"></i> Información del Proveedor y Cuentas Bancarias
-        </h6>
-        <div class="row g-2">
-          <!-- Proveedor -->
-          <div class="col-12 col-md-6">
-            <label class="form-label fw-semibold text-secondary small mb-1">Proveedor <span class="text-danger">*</span></label>
-            <div class="position-relative" style="z-index: 60;">
-              <input type="text" id="ent-f-proveedor-txt" class="form-control form-control-sm border-secondary-subtle fw-bold" placeholder="Buscar proveedor por nombre o RUC…" autocomplete="off" oninput="window._entCbFiltrar('ent-f-proveedor')" onfocus="window._entCbFiltrar('ent-f-proveedor')" onblur="window._cbHide('ent-f-proveedor')">
-              <input type="hidden" id="ent-f-proveedor">
-              <div id="ent-f-proveedor-dd" class="cb-dropdown"></div>
-            </div>
-          </div>
-
-          <!-- Cuenta Bancaria Proveedor -->
-          <div class="col-12 col-md-6">
-            <label class="form-label fw-semibold text-secondary small mb-1">Cuenta Bancaria del Proveedor <span class="text-danger">*</span></label>
-            <select id="ent-f-cuenta-prov" class="form-select form-select-sm border-secondary-subtle fw-semibold">
-              <option value="">Seleccione cuenta de proveedor...</option>
-            </select>
-          </div>
-
-          <!-- Cuenta Bancaria Empresa -->
-          <div class="col-12">
-            <label class="form-label fw-semibold text-secondary small mb-1">Cuenta Bancaria de la Empresa</label>
-            <select id="ent-f-cuenta-empresa" class="form-select form-select-sm border-secondary-subtle">
-              <option value="">Seleccione cuenta de empresa...</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── SECCIÓN 4: SOLICITANTE, MOTIVO Y DESTINO ── -->
-      <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 30; overflow: visible !important;">
-        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3 border-bottom pb-2" style="font-size:0.92rem;">
-          <i class="bi bi-truck-flatbed text-warning"></i> Solicitante, Destino y Motivo
-        </h6>
-        <div class="row g-2">
-          <!-- Solicitante con Autocompletado Histórico -->
-          <div class="col-12 col-md-6">
-            <label class="form-label fw-semibold text-secondary small mb-1">Solicitante / Área</label>
-            <input type="text" id="ent-f-solicitante" list="ent-solicitantes-list" class="form-control form-control-sm border-secondary-subtle" placeholder="Nombre de solicitante o departamento...">
-            <datalist id="ent-solicitantes-list">
-              <!-- Se puebla dinámicamente con los nombres históricos guardados -->
-            </datalist>
-          </div>
-
-          <!-- Placa / Vehículo (si es compra) -->
-          <div class="col-12 col-md-6" id="ent-placa-container">
-            <label class="form-label fw-semibold text-secondary small mb-1">Vehículo / Placa</label>
-            <div class="position-relative" style="z-index: 40;">
-              <input type="text" id="ent-f-placa-txt" class="form-control form-control-sm border-secondary-subtle fw-bold" placeholder="Seleccionar placa..." autocomplete="off" oninput="window._entCbFiltrar('ent-f-placa')" onfocus="window._entCbFiltrar('ent-f-placa')" onblur="window._cbHide('ent-f-placa')">
-              <input type="hidden" id="ent-f-placa">
-              <div id="ent-f-placa-dd" class="cb-dropdown"></div>
-            </div>
-          </div>
-
-          <!-- OT Asociada si es Servicio -->
-          <div class="col-12" id="ent-ot-container" style="display:none;">
-            <div class="row g-2 bg-light p-2 rounded-3 border">
-              <div class="col-12 col-md-6">
-                <label class="form-label fw-semibold text-secondary small mb-1">OT Asociada <span class="text-danger">*</span></label>
-                <div class="position-relative" style="z-index: 45;">
-                  <input type="text" id="ent-f-ot-txt" class="form-control form-control-sm border-secondary-subtle fw-bold" placeholder="Buscar OT..." autocomplete="off" oninput="window._entCbFiltrar('ent-f-ot')" onfocus="window._entCbFiltrar('ent-f-ot')" onblur="window._cbHide('ent-f-ot')">
-                  <input type="hidden" id="ent-f-ot">
-                  <div id="ent-f-ot-dd" class="cb-dropdown"></div>
-                </div>
-              </div>
-              <div class="col-12 col-md-6">
-                <label class="form-label fw-semibold text-secondary small mb-1">Placa de OT</label>
-                <div class="position-relative" style="z-index: 44;">
-                  <input type="text" id="ent-f-ot-placa-txt" class="form-control form-control-sm border-secondary-subtle" placeholder="Placa o vehículo..." autocomplete="off" oninput="window._entCbFiltrar('ent-f-ot-placa')" onfocus="window._entCbFiltrar('ent-f-ot-placa')" onblur="window._cbHide('ent-f-ot-placa')">
-                  <input type="hidden" id="ent-f-ot-placa">
-                  <div id="ent-f-ot-placa-dd" class="cb-dropdown"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Motivo de Ingreso -->
-          <div class="col-12">
-            <label class="form-label fw-semibold text-secondary small mb-1">Motivo de Compra / Ingreso</label>
-            <input type="text" id="ent-f-motivo" class="form-control form-control-sm border-secondary-subtle" placeholder="Describa el motivo o destino de la compra...">
-          </div>
-
-          <!-- Observaciones -->
-          <div class="col-12">
-            <label class="form-label fw-semibold text-secondary small mb-1">Observaciones y Condiciones</label>
-            <textarea id="ent-f-obs" class="form-control form-control-sm border-secondary-subtle" rows="2" placeholder="Notas adicionales, plazos de entrega, garantías, etc…"></textarea>
           </div>
         </div>
       </div>
