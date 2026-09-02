@@ -70,10 +70,14 @@
                 <div id="wrap-operaciones">
                     <button class="nav-section-toggle" data-section="operaciones" aria-expanded="false" onclick="window.toggleNavSection('operaciones')">
                         <span class="link-text">Operaciones</span>
-                        <span class="section-badge">3</span>
+                        <span class="section-badge">4</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-operaciones">
+                        <a id="nav-op-programacion" class="nav-item" onclick="cargarModuloAislado('operaciones/programacion')">
+                            <i class="bi bi-calendar-check-fill nav-icon"></i>
+                            <span class="link-text">Programación</span>
+                        </a>
                         <a id="nav-op-ordenes-viaje" class="nav-item" onclick="cargarModuloAislado('operaciones/ordenes-viaje')">
                             <i class="bi bi-diagram-3-fill nav-icon"></i>
                             <span class="link-text">Órdenes de Viaje</span>
@@ -1065,6 +1069,14 @@
         </div>
         <div class="offcanvas-body px-3 pb-4">
             <div class="bnav-group-box">
+                <div id="mbnav-op-programacion" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/programacion'); setBottomNavActive('bnav-operaciones');">
+                    <div class="bnav-row-icon" style="color: #16a34a;"><i class="bi bi-calendar-check"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Programación</p>
+                        <p class="bnav-row-desc">Planificación de vehículos y clientes</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
                 <div id="mbnav-op-guias-remision" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/guias-remision'); setBottomNavActive('bnav-operaciones');">
                     <div class="bnav-row-icon" style="color: #0284c7;"><i class="bi bi-file-earmark-text"></i></div>
                     <div class="bnav-row-content">

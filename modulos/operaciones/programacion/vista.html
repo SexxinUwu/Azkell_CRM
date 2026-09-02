@@ -1,0 +1,80 @@
+<!-- ============================================================ -->
+<!-- 📅 MÓDULO: PROGRAMACIÓN DE VEHÍCULOS (OPERACIONES)           -->
+<!-- ============================================================ -->
+
+<style>
+/* ── ESTILOS DEL MÓDULO PROGRAMACIÓN ────────────────────────────── */
+.prog-header-badge {
+    background: #f0fdf4;
+    color: #16a34a;
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid #bbf7d0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.prog-banner-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    min-height: 420px;
+}
+.prog-pill-feature {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 0.82rem;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+</style>
+
+<div class="container-fluid px-2 px-md-4 py-3">
+    <!-- Header principal -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h4 class="fw-bolder text-dark m-0" style="letter-spacing:-0.02em;">Programación de Vehículos</h4>
+                <span class="prog-header-badge">
+                    <i class="bi bi-calendar-check-fill"></i> Operaciones
+                </span>
+            </div>
+            <p class="text-secondary m-0" style="font-size:0.85rem;">
+                Planificación de despachos, asignación de unidades e itinerarios de transporte con clientes
+            </p>
+        </div>
+    </div>
+
+    <!-- PANE: EN PROCESO -->
+    <div class="prog-banner-card p-4 p-md-5 d-flex flex-column justify-content-center align-items-center text-center my-3">
+        <div style="font-size: 4.2rem; line-height: 1;" class="mb-3">
+            👷‍♂️🚧🔨
+        </div>
+        <h3 class="fw-bolder text-dark mb-2" style="letter-spacing: -0.02em;">En Proceso</h3>
+        <p class="text-secondary mx-auto mb-4" style="max-width: 540px; font-size: 0.95rem; line-height: 1.6;">
+            Estamos preparando el nuevo módulo de programación para la coordinación, asignación de itinerarios y despacho de vehículos según los requerimientos y ventanas de entrega acordadas con el cliente.
+        </p>
+        <div class="d-flex flex-wrap justify-content-center gap-2" style="max-width: 650px;">
+            <div class="prog-pill-feature">
+                <i class="bi bi-truck text-primary"></i> Asignación Tracto & Carreta
+            </div>
+            <div class="prog-pill-feature">
+                <i class="bi bi-person-badge text-success"></i> Rol de Conductor
+            </div>
+            <div class="prog-pill-feature">
+                <i class="bi bi-clock-history text-warning"></i> Ventanas de Carga / Descarga
+            </div>
+            <div class="prog-pill-feature">
+                <i class="bi bi-building-check text-info"></i> Compromisos por Cliente
+            </div>
+        </div>
+    </div>
+</div>

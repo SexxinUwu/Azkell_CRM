@@ -30,6 +30,7 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'ALMACÉN',       key:'prov_inv',      nombre:'Proveedores',      desc:'Directorio de proveedores',     lcad:true  },
     { grupo:'DIRECTORIO',    key:'cond',          nombre:'Personal',         desc:'Directorio de personal',        lcad:true  },
     { grupo:'DIRECTORIO',    key:'clientes',      nombre:'Clientes',         desc:'Directorio de clientes',        lcad:true  },
+    { grupo:'OPERACIONES',   key:'op_programacion',    nombre:'Programación',           desc:'Planificación de vehículos y clientes', lcad:true },
     { grupo:'OPERACIONES',   key:'op_guias_remision',  nombre:'Guías de Remisión',      desc:'Control de guías y carga SUNAT', lcad:true },
     { grupo:'OPERACIONES',   key:'combustible_vales',   nombre:'Vales de Combustible',    desc:'Control y sincronización de vales', lcad:true },
     { grupo:'OPERACIONES',   key:'combustible_analisis', nombre:'Análisis de Combustible (D2)', desc:'Tabla dinámica por viaje y rendimiento D2', lcad:true },
