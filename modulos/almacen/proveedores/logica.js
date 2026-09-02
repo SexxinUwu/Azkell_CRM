@@ -273,6 +273,161 @@ window._provQuitarMarca = function(marca) {
     window._provRenderTags();
 };
 
+window._provCuentas = window._provCuentas || [];
+
+// Lista estándar de Bancos y Cajas en el Perú
+window.BANCOS_PERU = [
+    'BCP (Banco de Crédito del Perú)',
+    'BBVA',
+    'Interbank',
+    'Scotiabank',
+    'Banco de la Nación',
+    'BanBif',
+    'Banco Pichincha',
+    'Banco GNB',
+    'Banco de Comercio',
+    'Banco Santander',
+    'Banco Ripley',
+    'Banco Falabella',
+    'Banco Alfin',
+    'MiBanco',
+    'Caja Arequipa',
+    'Caja Huancayo',
+    'Caja Piura',
+    'Caja Cusco',
+    'Caja Trujillo',
+    'Caja Sullana',
+    'Caja Ica',
+    'Caja Tacna',
+    'Otro'
+];
+
+window.TIPOS_CUENTA_PERU = [
+    'CUENTA CORRIENTE',
+    'CUENTA DE AHORROS',
+    'CUENTA REMUNERADA'
+];
+
+window._provCambiarTab = function(tab) {
+    var btnDatos = document.getElementById('tab-prov-btn-datos');
+    var btnCuentas = document.getElementById('tab-prov-btn-cuentas');
+    var tabDatos = document.getElementById('tab-prov-datos');
+    var tabCuentas = document.getElementById('tab-prov-cuentas');
+
+    if (tab === 'cuentas') {
+        if (tabDatos) tabDatos.style.display = 'none';
+        if (tabCuentas) tabCuentas.style.display = 'block';
+        if (btnDatos) {
+            btnDatos.classList.remove('active');
+            btnDatos.style.background = 'transparent';
+            btnDatos.style.borderBottomColor = 'transparent';
+            btnDatos.style.color = '#64748b';
+        }
+        if (btnCuentas) {
+            btnCuentas.classList.add('active');
+            btnCuentas.style.background = '#fff';
+            btnCuentas.style.borderBottomColor = '#0284c7';
+            btnCuentas.style.color = '#0284c7';
+        }
+        window._provRenderTablaCuentas();
+    } else {
+        if (tabDatos) tabDatos.style.display = 'block';
+        if (tabCuentas) tabCuentas.style.display = 'none';
+        if (btnDatos) {
+            btnDatos.classList.add('active');
+            btnDatos.style.background = '#fff';
+            btnDatos.style.borderBottomColor = '#0284c7';
+            btnDatos.style.color = '#0284c7';
+        }
+        if (btnCuentas) {
+            btnCuentas.classList.remove('active');
+            btnCuentas.style.background = 'transparent';
+            btnCuentas.style.borderBottomColor = 'transparent';
+            btnCuentas.style.color = '#64748b';
+        }
+    }
+};
+
+window._provRenderTablaCuentas = function() {
+    var tbody = document.getElementById('prov-tbody-cuentas');
+    var emptyBox = document.getElementById('prov-cuentas-vacio');
+    var badge = document.getElementById('prov-cuentas-count-badge');
+    if (badge) badge.textContent = (window._provCuentas || []).length;
+
+    if (!tbody) return;
+    if (!window._provCuentas || !window._provCuentas.length) {
+        tbody.innerHTML = '';
+        if (emptyBox) emptyBox.style.display = 'block';
+        return;
+    }
+    if (emptyBox) emptyBox.style.display = 'none';
+
+    tbody.innerHTML = window._provCuentas.map(function(c, idx) {
+        var optBancos = window.BANCOS_PERU.map(function(b) {
+            var sel = (c.banco === b) ? 'selected' : '';
+            return '<option value="' + _provEsc(b) + '" ' + sel + '>' + _provEsc(b) + '</option>';
+        }).join('');
+
+        var optTipos = window.TIPOS_CUENTA_PERU.map(function(t) {
+            var sel = (c.tipo_cuenta === t) ? 'selected' : '';
+            return '<option value="' + _provEsc(t) + '" ' + sel + '>' + _provEsc(t) + '</option>';
+        }).join('');
+
+        var chkDetraccion = (c.detraccion === 1 || c.detraccion === true || c.detraccion === '1') ? 'checked' : '';
+        var chkEstado = (c.estado === 1 || c.estado === true || c.estado === '1' || c.estado === undefined) ? 'checked' : '';
+
+        return '<tr>' +
+            '<td style="padding:6px 8px;">' +
+                '<select class="form-select form-select-sm fw-semibold" onchange="window._provActualizarCuenta(' + idx + ', \'banco\', this.value)" style="font-size:0.8rem;border-radius:8px;">' +
+                    '<option value="">Seleccione Banco...</option>' + optBancos +
+                '</select>' +
+            '</td>' +
+            '<td style="padding:6px 8px;">' +
+                '<select class="form-select form-select-sm fw-semibold" onchange="window._provActualizarCuenta(' + idx + ', \'tipo_cuenta\', this.value)" style="font-size:0.8rem;border-radius:8px;">' +
+                    optTipos +
+                '</select>' +
+            '</td>' +
+            '<td style="padding:6px 8px;">' +
+                '<input type="text" class="form-control form-control-sm fw-bold" placeholder="N° de cuenta o CCI" value="' + _provEsc(c.numero_cuenta || '') + '" oninput="window._provActualizarCuenta(' + idx + ', \'numero_cuenta\', this.value)" style="font-size:0.8rem;border-radius:8px;">' +
+            '</td>' +
+            '<td style="text-align:center;padding:6px 8px;">' +
+                '<input type="checkbox" class="form-check-input" ' + chkDetraccion + ' onchange="window._provActualizarCuenta(' + idx + ', \'detraccion\', this.checked ? 1 : 0)" style="cursor:pointer;width:1.2em;height:1.2em;">' +
+            '</td>' +
+            '<td style="text-align:center;padding:6px 8px;">' +
+                '<input type="checkbox" class="form-check-input" ' + chkEstado + ' onchange="window._provActualizarCuenta(' + idx + ', \'estado\', this.checked ? 1 : 0)" style="cursor:pointer;width:1.2em;height:1.2em;">' +
+            '</td>' +
+            '<td style="text-align:center;padding:6px 8px;">' +
+                '<button type="button" class="btn btn-sm btn-outline-danger border-0 p-1" onclick="window._provEliminarFilaCuenta(' + idx + ')" title="Eliminar cuenta">' +
+                    '<i class="bi bi-trash-fill"></i>' +
+                '</button>' +
+            '</td>' +
+        '</tr>';
+    }).join('');
+};
+
+window._provAgregarFilaCuenta = function() {
+    window._provCuentas = window._provCuentas || [];
+    window._provCuentas.push({
+        banco: 'BCP (Banco de Crédito del Perú)',
+        tipo_cuenta: 'CUENTA CORRIENTE',
+        numero_cuenta: '',
+        detraccion: 0,
+        estado: 1
+    });
+    window._provRenderTablaCuentas();
+};
+
+window._provEliminarFilaCuenta = function(idx) {
+    window._provCuentas.splice(idx, 1);
+    window._provRenderTablaCuentas();
+};
+
+window._provActualizarCuenta = function(idx, campo, valor) {
+    if (window._provCuentas && window._provCuentas[idx]) {
+        window._provCuentas[idx][campo] = valor;
+    }
+};
+
 // ── Modal ─────────────────────────────────────────────────────────
 window.abrirModalProveedor = function(id, soloDetalle) {
     var titulo = document.getElementById('modal-prov-titulo');
@@ -283,6 +438,8 @@ window.abrirModalProveedor = function(id, soloDetalle) {
     form.reset();
     if (editId) editId.value = '';
     window._provMarcas = [];
+    window._provCuentas = [];
+    window._provCambiarTab('datos');
 
     var inputs = form.querySelectorAll('input, select, textarea, button:not(#prov-modal-footer button)');
     inputs.forEach(function(el) { el.disabled = false; });
@@ -302,6 +459,10 @@ window.abrirModalProveedor = function(id, soloDetalle) {
         _pSet('prov-f-estado',   item.estado || 'Activo');
         _pSet('prov-f-obs',      item.observaciones);
         window._provMarcas = item.marcas ? item.marcas.split(', ').filter(Boolean) : [];
+        window._provCuentas = item.cuentas ? JSON.parse(JSON.stringify(item.cuentas)) : [];
+
+        var badge = document.getElementById('prov-cuentas-count-badge');
+        if (badge) badge.textContent = window._provCuentas.length;
         
         if (soloDetalle) {
             inputs.forEach(function(el) { el.disabled = true; });
@@ -312,14 +473,14 @@ window.abrirModalProveedor = function(id, soloDetalle) {
         } else {
             if (footer) {
                 footer.innerHTML = '<button type="button" class="btn btn-secondary rounded-3" onclick="window._provCerrarModal()">Cancelar</button>' +
-                                   '<button type="submit" class="btn btn-primary rounded-3"><i class="bi bi-save me-1"></i>Guardar</button>';
+                                   '<button type="submit" class="btn btn-primary rounded-3" style="background:#0284c7;border-color:#0284c7;"><i class="bi bi-save me-1"></i>Guardar</button>';
             }
         }
     } else {
         if (titulo) titulo.innerHTML = '<i class="bi bi-building-fill me-1"></i>Nuevo Proveedor';
         if (footer) {
             footer.innerHTML = '<button type="button" class="btn btn-secondary rounded-3" onclick="window._provCerrarModal()">Cancelar</button>' +
-                               '<button type="submit" class="btn btn-primary rounded-3"><i class="bi bi-save me-1"></i>Guardar</button>';
+                               '<button type="submit" class="btn btn-primary rounded-3" style="background:#0284c7;border-color:#0284c7;"><i class="bi bi-save me-1"></i>Guardar</button>';
         }
     }
     window._provRenderTags();
@@ -360,7 +521,8 @@ window.guardarProveedor = function(event) {
         direccion:       (document.getElementById('prov-f-dir')      ||{}).value || '',
         estado:          (document.getElementById('prov-f-estado')   ||{}).value || 'Activo',
         observaciones:   (document.getElementById('prov-f-obs')      ||{}).value || '',
-        marcas:          window._provMarcas || []
+        marcas:          window._provMarcas || [],
+        cuentas:         window._provCuentas || []
     };
     if (!payload.nombre) { alert('El nombre es obligatorio.'); return; }
     var url    = id ? '/api/almacen/proveedores/'+encodeURIComponent(id) : '/api/almacen/proveedores';
@@ -383,6 +545,7 @@ window.guardarProveedor = function(event) {
         })
         .catch(function(err) { alert('Error: '+err.message); });
 };
+
 
 // ── Eliminar ──────────────────────────────────────────────────────
 window.eliminarProveedor = function(id) {

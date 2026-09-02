@@ -3137,6 +3137,46 @@ app.listen(process.env.PORT || 3000, () => {
             }
         }
     );
+    // Migración: añadir nuevos campos de Orden de Compra a entradas_inv
+    const camposOC = [
+        { col: 'serie', def: 'VARCHAR(20) DEFAULT NULL' },
+        { col: 'numero_correlativo', def: 'VARCHAR(50) DEFAULT NULL' },
+        { col: 'dias_pagar', def: 'INT DEFAULT 0' },
+        { col: 'prioridad', def: 'VARCHAR(30) DEFAULT \'Normal\'' },
+        { col: 'cuenta_bancaria_proveedor', def: 'VARCHAR(150) DEFAULT NULL' },
+        { col: 'cuenta_bancaria_empresa', def: 'VARCHAR(150) DEFAULT NULL' },
+        { col: 'solicitante', def: 'VARCHAR(150) DEFAULT NULL' },
+        { col: 'estado_factura', def: 'VARCHAR(50) DEFAULT \'Pendiente\'' }
+    ];
+    camposOC.forEach(c => {
+        db.query(
+            `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='${c.col}'`,
+            (e, r) => {
+                if (!e && r && r[0] && r[0].cnt === 0) {
+                    db.query(`ALTER TABLE entradas_inv ADD COLUMN ${c.col} ${c.def}`, () => {});
+                }
+            }
+        );
+    });
+
+    // Migración: Crear tabla proveedor_cuentas_bancarias si no existe
+    db.query(`
+        CREATE TABLE IF NOT EXISTS proveedor_cuentas_bancarias (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            proveedor_id VARCHAR(20) NOT NULL,
+            banco VARCHAR(100) NOT NULL,
+            tipo_cuenta ENUM('CUENTA CORRIENTE', 'CUENTA DE AHORROS', 'CUENTA REMUNERADA') NOT NULL,
+            numero_cuenta VARCHAR(100) NOT NULL,
+            detraccion TINYINT(1) DEFAULT 0,
+            estado TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_prov_cuenta (proveedor_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `, (e) => {
+        if (e) console.warn('CREATE proveedor_cuentas_bancarias:', e.message);
+        else console.log('✅ Tabla proveedor_cuentas_bancarias verificada');
+    });
+
     // Migración: añadir url_firma a inspecciones si no existe
     db.query(
         "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='inspecciones' AND COLUMN_NAME='url_firma'",

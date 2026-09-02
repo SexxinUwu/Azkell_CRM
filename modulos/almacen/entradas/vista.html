@@ -574,7 +574,7 @@
 
     <!-- Doc card -->
     <div class="ent-doc-card">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px;">
 
         <!-- Fecha -->
         <div>
@@ -582,124 +582,181 @@
           <input type="date" id="ent-f-fecha" class="ent-input-sm">
         </div>
 
-        <!-- Moneda + T/C -->
+        <!-- Serie -->
         <div>
-          <div class="ent-field-label">Moneda</div>
-          <select id="ent-f-moneda" class="ent-input-sm"
-                  onchange="window._entOnMonedaChange()"
-                  style="appearance:auto;-webkit-appearance:auto;cursor:pointer;">
-            <option value="PEN">PEN (S/)</option>
-            <option value="USD">USD ($)</option>
-          </select>
-          <div id="ent-f-tc-box" style="display:none;">
-          <div class="ent-field-label">Tipo de Cambio</div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <div style="font-size:.7rem;font-weight:700;color:#94a3b8;">S/</div>
-            <input type="number" id="ent-f-tc" class="ent-input-sm"
-                   step="0.0001" min="0.01" placeholder="3.70"
-                   oninput="window._entActualizarTotal()">
-          </div>
+          <div class="ent-field-label">Serie <span style="color:#ef4444;">*</span></div>
+          <input type="text" id="ent-f-serie" class="ent-input-sm" placeholder="Ej: 2026">
         </div>
+
+        <!-- Número -->
+        <div>
+          <div class="ent-field-label">Número <span style="color:#ef4444;">*</span></div>
+          <input type="text" id="ent-f-numero" class="ent-input-sm" placeholder="Ej: 00001402">
         </div>
 
         <!-- Tipo Orden -->
         <div>
-          <div class="ent-field-label">Tipo de Orden <span style="color:#ef4444;">*</span></div>
+          <div class="ent-field-label">Tipo <span style="color:#ef4444;">*</span></div>
           <select id="ent-f-tipo-orden" class="ent-input-sm" onchange="window._entToggleTipoOrden()">
-            <option value="Orden de compra" selected>Orden de Compra</option>
-            <option value="Orden de servicio">Orden de Servicio</option>
+            <option value="Orden de compra" selected>ORDEN DE COMPRA</option>
+            <option value="Orden de servicio">ORDEN DE SERVICIO</option>
           </select>
+        </div>
+
+        <!-- Moneda -->
+        <div>
+          <div class="ent-field-label">Moneda <span style="color:#ef4444;">*</span></div>
+          <select id="ent-f-moneda" class="ent-input-sm" onchange="window._entOnMonedaChange()" style="appearance:auto;-webkit-appearance:auto;cursor:pointer;">
+            <option value="PEN">SOLES (PEN)</option>
+            <option value="USD">DÓLARES (USD)</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px;margin-top:10px;">
+
+        <!-- Tipo de Cambio -->
+        <div id="ent-f-tc-box">
+          <div class="ent-field-label">Tipo de Cambio <span style="color:#ef4444;">*</span></div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="font-size:.7rem;font-weight:700;color:#94a3b8;">S/</div>
+            <input type="number" id="ent-f-tc" class="ent-input-sm" step="0.0001" min="0.01" placeholder="3.70" oninput="window._entActualizarTotal()">
+          </div>
         </div>
 
         <!-- Condición Pago -->
         <div>
           <div class="ent-field-label">Condición de Pago <span style="color:#ef4444;">*</span></div>
           <select id="ent-f-condicion-pago" class="ent-input-sm" onchange="document.getElementById('ent-f-dias-credito-box').style.display = this.value === 'A crédito' ? 'block' : 'none'">
-            <option value="Al contado" selected>Al Contado</option>
-            <option value="A crédito">A Crédito</option>
+            <option value="Al contado" selected>CONTADO</option>
+            <option value="A crédito">CRÉDITO</option>
           </select>
         </div>
 
-        <!-- Días Crédito -->
-        <div id="ent-f-dias-credito-box" style="display:none;">
-          <div class="ent-field-label">Días de Crédito</div>
-          <input type="number" id="ent-f-dias-credito" class="ent-input-sm" value="30" min="0">
+        <!-- Días a Pagar / Crédito -->
+        <div id="ent-f-dias-credito-box">
+          <div class="ent-field-label">Días a Pagar <span style="color:#ef4444;">*</span></div>
+          <input type="number" id="ent-f-dias-credito" class="ent-input-sm" value="0" min="0" placeholder="0">
         </div>
 
-        <!-- Placa -->
-        <div id="ent-placa-container">
-          <div class="ent-field-label">Placa / Vehículo</div>
-          <div class="position-relative">
-            <input type="text" id="ent-f-placa-txt" class="ent-input-sm"
-                   placeholder="Buscar placa..." autocomplete="off"
-                   oninput="window._entCbFiltrar('ent-f-placa')"
-                   onfocus="window._entCbFiltrar('ent-f-placa')"
-                   onblur="window._cbHide('ent-f-placa')">
-            <input type="hidden" id="ent-f-placa">
-            <div id="ent-f-placa-dd" class="cb-dropdown"></div>
-          </div>
-        </div>
-
-        <!-- OT Asociada -->
-          <div id="ent-ot-container" style="display:none; grid-column:1/-1;">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <div>
-                    <div class="ent-field-label">OT Asociada <span style="color:#ef4444;">*</span></div>
-                    <div class="position-relative">
-                    <input type="text" id="ent-f-ot-txt" class="ent-input-sm w-100"
-                            placeholder="Buscar OT..." autocomplete="off"
-                            oninput="window._entCbFiltrar('ent-f-ot')"
-                            onfocus="window._entCbFiltrar('ent-f-ot')"
-                            onblur="window._cbHide('ent-f-ot')">
-                    <input type="hidden" id="ent-f-ot">
-                    <div id="ent-f-ot-dd" class="cb-dropdown"></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="ent-field-label">Placa / Vehículo</div>
-                    <div class="position-relative">
-                        <input type="text" id="ent-f-ot-placa-txt" class="ent-input-sm w-100" placeholder="Placa o vehículo..." autocomplete="off" oninput="window._entCbFiltrar('ent-f-ot-placa')" onfocus="window._entCbFiltrar('ent-f-ot-placa')" onblur="window._cbHide('ent-f-ot-placa')">
-                        <input type="hidden" id="ent-f-ot-placa">
-                        <div id="ent-f-ot-placa-dd" class="cb-dropdown"></div>
-                    </div>
-                </div>
-            </div>
-          </div>
-
-          <!-- Motivo -->
+        <!-- Prioridad -->
         <div>
-          <div class="ent-field-label">Motivo</div>
-          <input type="text" id="ent-f-motivo" class="ent-input-sm" placeholder="Motivo de ingreso...">
+          <div class="ent-field-label">Prioridad <span style="color:#ef4444;">*</span></div>
+          <select id="ent-f-prioridad" class="ent-input-sm">
+            <option value="Normal" selected>NORMAL</option>
+            <option value="Alta">ALTA</option>
+            <option value="Urgente">URGENTE</option>
+            <option value="Baja">BAJA</option>
+          </select>
         </div>
+
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:10px;margin-top:10px;">
 
         <!-- Proveedor -->
-        <div style="grid-column:1/-1;">
+        <div>
           <div class="ent-field-label">Proveedor <span style="color:#ef4444;">*</span></div>
           <div class="position-relative">
-            <input type="text" id="ent-f-proveedor-txt" class="ent-input-sm"
-                   placeholder="Buscar proveedor…" autocomplete="off"
-                   oninput="window._entCbFiltrar('ent-f-proveedor')"
-                   onfocus="window._entCbFiltrar('ent-f-proveedor')"
-                   onblur="window._cbHide('ent-f-proveedor')">
+            <input type="text" id="ent-f-proveedor-txt" class="ent-input-sm" placeholder="Buscar o seleccionar proveedor…" autocomplete="off" oninput="window._entCbFiltrar('ent-f-proveedor')" onfocus="window._entCbFiltrar('ent-f-proveedor')" onblur="window._cbHide('ent-f-proveedor')">
             <input type="hidden" id="ent-f-proveedor">
             <div id="ent-f-proveedor-dd" class="cb-dropdown"></div>
           </div>
         </div>
 
+        <!-- Cuenta Bancaria Proveedor -->
+        <div>
+          <div class="ent-field-label">Cuenta Bancaria Proveedor <span style="color:#ef4444;">*</span></div>
+          <select id="ent-f-cuenta-prov" class="ent-input-sm">
+            <option value="">Seleccione cuenta de proveedor...</option>
+          </select>
+        </div>
+
+        <!-- Cuenta Bancaria Empresa -->
+        <div>
+          <div class="ent-field-label">Cuenta Bancaria de Empresa</div>
+          <select id="ent-f-cuenta-empresa" class="ent-input-sm">
+            <option value="">Seleccione cuenta de empresa...</option>
+            <option value="BCP - CTA CTE SOLES - 191-2345678-0-12">BCP - CTA CTE SOLES (191-2345678-0-12)</option>
+            <option value="BBVA - CTA CTE SOLES - 0011-0123-0100045678">BBVA - CTA CTE SOLES (0011-0123-0100045678)</option>
+            <option value="INTERBANK - CTA CTE SOLES - 200-3001234567">INTERBANK - CTA CTE SOLES (200-3001234567)</option>
+            <option value="BANCO DE LA NACION - DETRACCIONES - 00-012-345678">BANCO DE LA NACIÓN - DETRACCIONES (00-012-345678)</option>
+            <option value="BCP - CTA CTE DOLARES - 191-8765432-1-34">BCP - CTA CTE DÓLARES (191-8765432-1-34)</option>
+          </select>
+        </div>
+
+        <!-- Solicitante -->
+        <div>
+          <div class="ent-field-label">Solicitante</div>
+          <input type="text" id="ent-f-solicitante" class="ent-input-sm" placeholder="Nombre de solicitante o área...">
+        </div>
+
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:10px;margin-top:10px;">
+
+        <!-- Motivo -->
+        <div>
+          <div class="ent-field-label">Motivo</div>
+          <input type="text" id="ent-f-motivo" class="ent-input-sm" placeholder="Motivo de la compra...">
+        </div>
+
         <!-- Factura -->
         <div>
-          <div class="ent-field-label">Nº Factura</div>
-          <input type="text" id="ent-f-doc-ref" class="ent-input-sm"
-                 placeholder="Ingrese el nº de factura...">
+          <div class="ent-field-label">Número de Factura</div>
+          <input type="text" id="ent-f-doc-ref" class="ent-input-sm" placeholder="Ingrese el nº de factura...">
         </div>
 
-        <!-- Observaciones -->
-        <div style="grid-column:1/-1;">
-          <div class="ent-field-label">Observaciones</div>
-          <input type="text" id="ent-f-obs" class="ent-input-sm"
-                 placeholder="Notas, condiciones de compra…">
+        <!-- Estado Factura -->
+        <div>
+          <div class="ent-field-label">Estado Factura</div>
+          <select id="ent-f-estado-factura" class="ent-input-sm">
+            <option value="Pendiente" selected>PENDIENTE</option>
+            <option value="Emitida">EMITIDA</option>
+            <option value="Pagada">PAGADA</option>
+            <option value="Anulada">ANULADA</option>
+          </select>
         </div>
 
+        <!-- Placa / Vehículo -->
+        <div id="ent-placa-container">
+          <div class="ent-field-label">Vehículo / Placa</div>
+          <div class="position-relative">
+            <input type="text" id="ent-f-placa-txt" class="ent-input-sm" placeholder="Seleccionar placa..." autocomplete="off" oninput="window._entCbFiltrar('ent-f-placa')" onfocus="window._entCbFiltrar('ent-f-placa')" onblur="window._cbHide('ent-f-placa')">
+            <input type="hidden" id="ent-f-placa">
+            <div id="ent-f-placa-dd" class="cb-dropdown"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- OT Asociada si es Servicio -->
+      <div id="ent-ot-container" style="display:none;margin-top:10px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div>
+            <div class="ent-field-label">OT Asociada <span style="color:#ef4444;">*</span></div>
+            <div class="position-relative">
+              <input type="text" id="ent-f-ot-txt" class="ent-input-sm w-100" placeholder="Buscar OT..." autocomplete="off" oninput="window._entCbFiltrar('ent-f-ot')" onfocus="window._entCbFiltrar('ent-f-ot')" onblur="window._cbHide('ent-f-ot')">
+              <input type="hidden" id="ent-f-ot">
+              <div id="ent-f-ot-dd" class="cb-dropdown"></div>
+            </div>
+          </div>
+          <div>
+            <div class="ent-field-label">Placa / Vehículo OT</div>
+            <div class="position-relative">
+              <input type="text" id="ent-f-ot-placa-txt" class="ent-input-sm w-100" placeholder="Placa o vehículo..." autocomplete="off" oninput="window._entCbFiltrar('ent-f-ot-placa')" onfocus="window._entCbFiltrar('ent-f-ot-placa')" onblur="window._cbHide('ent-f-ot-placa')">
+              <input type="hidden" id="ent-f-ot-placa">
+              <div id="ent-f-ot-placa-dd" class="cb-dropdown"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Observaciones -->
+      <div style="margin-top:10px;">
+        <div class="ent-field-label">Observaciones</div>
+        <input type="text" id="ent-f-obs" class="ent-input-sm" placeholder="Notas, condiciones de compra, términos de entrega…">
       </div>
 
       <!-- Archivos Adjuntos -->
@@ -729,6 +786,7 @@
         </div>
       </div>
     </div>
+
 
     <!-- Encabezado artículos -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin:.2rem 0 .65rem;">
