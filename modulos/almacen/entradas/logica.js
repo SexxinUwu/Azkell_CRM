@@ -211,13 +211,61 @@ window._entCargarProveedores = function() {
         fetch('/api/almacen/proveedores')
         .then(function(r) { return r.json(); })
         .then(function(data) {
+            window._entProveedoresRaw = data || [];
             window._entProvItems = data.map(function(p) {
                 var displayName = p.razon_social ? p.razon_social : p.nombre;
                 return { value: p.id, label: displayName + (p.numero_documento ? ' (' + p.numero_documento + ')' : '') };
             });
             window._cbInit('ent-f-proveedor', window._entProvItems, 'Buscar proveedor…');
+
+            // Al seleccionar un proveedor, actualizar automáticamente sus cuentas bancarias
+            window._cbOnSelect('ent-f-proveedor', function(provId) {
+                window._entCargarCuentasProveedor(provId);
+            });
         }).catch(function() {});
 };
+
+window._entCargarCuentasProveedor = function(provId, cuentaSeleccionada) {
+    var ctaSelect = document.getElementById('ent-f-cuenta-prov');
+    if (!ctaSelect) return;
+    ctaSelect.innerHTML = '<option value="">Seleccione cuenta de proveedor...</option>';
+
+    if (!provId) return;
+    var prov = (window._entProveedoresRaw || []).find(function(p) { return p.id === provId; });
+    var cuentas = (prov && prov.cuentas) ? prov.cuentas : [];
+
+    if (cuentas.length) {
+        cuentas.forEach(function(c) {
+            var detraccionTxt = c.detraccion ? ' [DETRACCIÓN]' : '';
+            var label = c.banco + ' - ' + c.tipo_cuenta + ' (' + c.numero_cuenta + ')' + detraccionTxt;
+            var opt = document.createElement('option');
+            opt.value = label;
+            opt.textContent = label;
+            if (cuentaSeleccionada && (cuentaSeleccionada === label || cuentaSeleccionada === c.numero_cuenta)) {
+                opt.selected = true;
+            }
+            ctaSelect.appendChild(opt);
+        });
+    } else {
+        // Consultar por API si no vienen en memoria
+        fetch('/api/almacen/proveedores/' + encodeURIComponent(provId) + '/cuentas')
+            .then(function(r) { return r.json(); })
+            .then(function(cuentasApi) {
+                (cuentasApi || []).forEach(function(c) {
+                    var detraccionTxt = c.detraccion ? ' [DETRACCIÓN]' : '';
+                    var label = c.banco + ' - ' + c.tipo_cuenta + ' (' + c.numero_cuenta + ')' + detraccionTxt;
+                    var opt = document.createElement('option');
+                    opt.value = label;
+                    opt.textContent = label;
+                    if (cuentaSeleccionada && (cuentaSeleccionada === label || cuentaSeleccionada === c.numero_cuenta)) {
+                        opt.selected = true;
+                    }
+                    ctaSelect.appendChild(opt);
+                });
+            }).catch(function() {});
+    }
+};
+
 
 // ── Grid items (card-based) ───────────────────────────────────────
 window._entAgregarItem = function() {
@@ -582,24 +630,31 @@ window._entSetIgvMode = function(mode) {
 window.guardarEntrada = function() {
     if (!window.guardAction('ent_inv', 'c')) return;
     var fecha      = (document.getElementById('ent-f-fecha')  || {}).value || '';
+    var serie      = (document.getElementById('ent-f-serie')  || {}).value || '';
+    var numero     = (document.getElementById('ent-f-numero') || {}).value || '';
     var provId     = window._cbGet('ent-f-proveedor');
     var provNombre = window._cbGetText('ent-f-proveedor');
-    var docRef = (document.getElementById('ent-f-doc-ref') || {}).value || '';
-    var moneda = (document.getElementById('ent-f-moneda')  || {}).value || 'PEN';
-    var obs    = (document.getElementById('ent-f-obs')     || {}).value || '';
+    var ctaProv    = (document.getElementById('ent-f-cuenta-prov') || {}).value || '';
+    var ctaEmpresa = (document.getElementById('ent-f-cuenta-empresa') || {}).value || '';
+    var solicitante= (document.getElementById('ent-f-solicitante') || {}).value || '';
+    var docRef     = (document.getElementById('ent-f-doc-ref') || {}).value || '';
+    var estadoFact = (document.getElementById('ent-f-estado-factura') || {}).value || 'Pendiente';
+    var moneda     = (document.getElementById('ent-f-moneda')  || {}).value || 'PEN';
+    var obs        = (document.getElementById('ent-f-obs')     || {}).value || '';
     var tipo_orden = (document.getElementById('ent-f-tipo-orden') || {}).value || 'Orden de compra';
     var condicion_pago = (document.getElementById('ent-f-condicion-pago') || {}).value || 'Al contado';
-    var dias_credito = parseInt((document.getElementById('ent-f-dias-credito') || {}).value, 10) || 30;
-    var motivo = (document.getElementById('ent-f-motivo')  || {}).value || '';
-    var placa = window._cbGet('ent-f-placa') || '';
-      var ot_id = window._cbGet('ent-f-ot') || '';
-      if (tipo_orden.toLowerCase() === 'orden de servicio') {
-          placa = (document.getElementById('ent-f-ot-placa') || {}).value || '';
-      } else {
-          ot_id = null;
-      }
+    var dias_credito = parseInt((document.getElementById('ent-f-dias-credito') || {}).value, 10) || 0;
+    var prioridad  = (document.getElementById('ent-f-prioridad') || {}).value || 'Normal';
+    var motivo     = (document.getElementById('ent-f-motivo')  || {}).value || '';
+    var placa      = window._cbGet('ent-f-placa') || '';
+    var ot_id      = window._cbGet('ent-f-ot') || '';
+    if (tipo_orden.toLowerCase() === 'orden de servicio') {
+        placa = (document.getElementById('ent-f-ot-placa') || {}).value || '';
+    } else {
+        ot_id = null;
+    }
       
-      if (!fecha)  { alert('Falta la fecha.'); return; }
+    if (!fecha)  { alert('Falta la fecha.'); return; }
     if (!provId || (window._entProvItems && !window._entProvItems.find(function(p) { return p.value === provId; }))) {
         var typedProv = provNombre || window._cbGetText('ent-f-proveedor');
         if (typedProv) {
@@ -637,20 +692,32 @@ window.guardarEntrada = function() {
     }
     if (!items.length) { alert('Agrega al menos un artículo.'); return; }
 
-    var payload = { fecha, proveedor_id: provId||null, proveedor_nombre: provNombre||null,
-          documento_referencia: docRef||null, moneda,
-          tipo_igv: window._entIgvMode || 'sin_igv',
-          tipo_cambio: moneda === 'USD'
-              ? (parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.40)
-              : 1,
-          observaciones: obs,
-          motivo_entrada: motivo,
-          placa: placa,
-          ot_id: ot_id,
-          tipo_orden: tipo_orden,
-          condicion_pago: condicion_pago,
-          dias_credito: dias_credito,
-          creado_por: localStorage.getItem('fleet_user')||'', items };
+    var payload = {
+        fecha: fecha,
+        serie: serie,
+        numero_correlativo: numero,
+        proveedor_id: provId || null,
+        proveedor_nombre: provNombre || null,
+        cuenta_bancaria_proveedor: ctaProv || null,
+        cuenta_bancaria_empresa: ctaEmpresa || null,
+        solicitante: solicitante || null,
+        documento_referencia: docRef || null,
+        estado_factura: estadoFact,
+        moneda: moneda,
+        tipo_igv: window._entIgvMode || 'sin_igv',
+        tipo_cambio: (parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.40),
+        prioridad: prioridad,
+        observaciones: obs,
+        motivo_entrada: motivo,
+        placa: placa,
+        ot_id: ot_id,
+        tipo_orden: tipo_orden,
+        condicion_pago: condicion_pago,
+        dias_credito: dias_credito,
+        dias_pagar: dias_credito,
+        creado_por: localStorage.getItem('fleet_user')||'',
+        items: items
+    };
 
     var method = window._entEditId ? 'PUT' : 'POST';
     var url = window._entEditId ? '/api/almacen/entradas/' + window._entEditId : '/api/almacen/entradas';
@@ -696,11 +763,7 @@ window.guardarEntrada = function() {
             }
 
             window._entCerrarModal();
-            if (erroresArchivos) {
-                alert('📦 Orden ' + entId + ' registrada exitosamente, PERO hubo problemas subiendo algunos archivos (pueden ser muy pesados o el servidor tardó demasiado).');
-            } else {
-                alert('📦 Orden de Compra ' + (window._entEditId ? 'actualizada' : 'registrada') + ': '+entId);
-            }
+            alert('📦 Orden ' + (window._entEditId ? 'actualizada' : 'registrada') + ': ' + entId);
             window._entEditId = null;
             window.cargarEntradas();
         })
@@ -722,18 +785,32 @@ window.abrirModalEntrada = function() {
     var totalEl = document.getElementById('ent-total-display');
     if (totalEl) totalEl.textContent = 'S/ 0.00';
 
-    ['ent-f-doc-ref','ent-f-obs', 'ent-f-placa-txt', 'ent-f-placa', 'ent-f-motivo'].forEach(function(id) {
+    var anioActual = new Date().getFullYear();
+    var serieEl = document.getElementById('ent-f-serie');
+    if (serieEl) serieEl.value = String(anioActual);
+    var numEl = document.getElementById('ent-f-numero');
+    if (numEl) numEl.value = '';
+
+    ['ent-f-doc-ref','ent-f-obs', 'ent-f-placa-txt', 'ent-f-placa', 'ent-f-motivo', 'ent-f-solicitante'].forEach(function(id) {
         var el = document.getElementById(id); if (el) el.value = '';
     });
+
+    var ctaProv = document.getElementById('ent-f-cuenta-prov');
+    if (ctaProv) ctaProv.innerHTML = '<option value="">Seleccione cuenta de proveedor...</option>';
+    var ctaEmpresa = document.getElementById('ent-f-cuenta-empresa');
+    if (ctaEmpresa) ctaEmpresa.value = '';
+    var prio = document.getElementById('ent-f-prioridad');
+    if (prio) prio.value = 'Normal';
+    var estFact = document.getElementById('ent-f-estado-factura');
+    if (estFact) estFact.value = 'Pendiente';
     
     var tipoOrden = document.getElementById('ent-f-tipo-orden');
     if (tipoOrden) tipoOrden.value = 'Orden de compra';
     var condPago = document.getElementById('ent-f-condicion-pago');
     setTimeout(window._entToggleTipoOrden, 50);
-    setTimeout(window._entToggleTipoOrden, 50);
-    if (condPago) { condPago.value = 'Al contado'; var dcb = document.getElementById('ent-f-dias-credito-box'); if(dcb) dcb.style.display = 'none'; }
+    if (condPago) { condPago.value = 'Al contado'; }
     var dias = document.getElementById('ent-f-dias-credito');
-    if (dias) dias.value = '30';
+    if (dias) dias.value = '0';
     
     ['ent-f-voucher', 'ent-f-cotizacion', 'ent-f-factura'].forEach(function(id) {
         var el = document.getElementById(id);
@@ -760,7 +837,6 @@ window.abrirModalEntrada = function() {
     window._entOnMonedaChange();
 
     window._entAgregarItem();
-
     window._entSetIgvMode('incluido');
 
     var panel = document.getElementById('modal-entrada');
@@ -785,6 +861,11 @@ window.abrirModalEditarEntrada = function(id) {
     var fFecha = document.getElementById('ent-f-fecha');
     if (fFecha && entrada.fecha) fFecha.value = String(entrada.fecha).split('T')[0];
 
+    var fSerie = document.getElementById('ent-f-serie');
+    if (fSerie) fSerie.value = entrada.serie || '';
+    var fNum = document.getElementById('ent-f-numero');
+    if (fNum) fNum.value = entrada.numero_correlativo || entrada.id || '';
+
     var docRef = document.getElementById('ent-f-doc-ref');
     if (docRef) docRef.value = entrada.documento_referencia || '';
 
@@ -796,11 +877,22 @@ window.abrirModalEditarEntrada = function(id) {
     var fCondPago = document.getElementById('ent-f-condicion-pago');
     if (fCondPago) {
         fCondPago.value = entrada.condicion_pago || 'Al contado';
-        document.getElementById('ent-f-dias-credito-box').style.display = fCondPago.value === 'A crédito' ? 'block' : 'none';
     }
 
     var fDiasCredito = document.getElementById('ent-f-dias-credito');
-    if (fDiasCredito) fDiasCredito.value = entrada.dias_credito || 30;
+    if (fDiasCredito) fDiasCredito.value = entrada.dias_pagar != null ? entrada.dias_pagar : (entrada.dias_credito || 0);
+
+    var fPrio = document.getElementById('ent-f-prioridad');
+    if (fPrio) fPrio.value = entrada.prioridad || 'Normal';
+
+    var fSoli = document.getElementById('ent-f-solicitante');
+    if (fSoli) fSoli.value = entrada.solicitante || '';
+
+    var fEstFact = document.getElementById('ent-f-estado-factura');
+    if (fEstFact) fEstFact.value = entrada.estado_factura || 'Pendiente';
+
+    var fCtaEmpresa = document.getElementById('ent-f-cuenta-empresa');
+    if (fCtaEmpresa) fCtaEmpresa.value = entrada.cuenta_bancaria_empresa || '';
 
     var fObs = document.getElementById('ent-f-obs');
     if (fObs) {
@@ -829,10 +921,12 @@ window.abrirModalEditarEntrada = function(id) {
       
     if (entrada.proveedor_id) {
         window._cbSet('ent-f-proveedor', entrada.proveedor_id, entrada.proveedor_nombre);
+        window._entCargarCuentasProveedor(entrada.proveedor_id, entrada.cuenta_bancaria_proveedor);
     } else if (entrada.proveedor_nombre) {
         var el = document.getElementById('ent-f-proveedor-txt');
         if (el) el.value = entrada.proveedor_nombre;
     }
+
 
     var mon = document.getElementById('ent-f-moneda');
     if (mon && entrada.moneda) mon.value = entrada.moneda;

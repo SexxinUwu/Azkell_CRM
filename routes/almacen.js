@@ -48,14 +48,52 @@ router.put('/configuracion', (req, res) => {
 // ALMACÉN — Proveedores
 // ============================================================
 router.get('/proveedores', (req, res) => {
-    db.query('SELECT p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at, GROUP_CONCAT(m.marca ORDER BY m.marca SEPARATOR \', \') AS marcas FROM proveedores_inv p LEFT JOIN proveedor_marcas_inv m ON m.proveedor_id=p.id GROUP BY p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at ORDER BY p.nombre', (err, rows) => {
+    const q = `
+        SELECT p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at,
+               GROUP_CONCAT(DISTINCT m.marca ORDER BY m.marca SEPARATOR ', ') AS marcas,
+               (
+                   SELECT JSON_ARRAYAGG(
+                       JSON_OBJECT(
+                           'id', c.id,
+                           'banco', c.banco,
+                           'tipo_cuenta', c.tipo_cuenta,
+                           'numero_cuenta', c.numero_cuenta,
+                           'detraccion', c.detraccion,
+                           'estado', c.estado
+                       )
+                   )
+                   FROM proveedor_cuentas_bancarias c
+                   WHERE c.proveedor_id = p.id
+               ) AS cuentas_json
+        FROM proveedores_inv p
+        LEFT JOIN proveedor_marcas_inv m ON m.proveedor_id = p.id
+        GROUP BY p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at
+        ORDER BY p.nombre
+    `;
+    db.query(q, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        const procesados = rows.map(r => {
+            let cuentas = [];
+            try {
+                cuentas = typeof r.cuentas_json === 'string' ? JSON.parse(r.cuentas_json) : (r.cuentas_json || []);
+            } catch(e) { cuentas = []; }
+            r.cuentas = cuentas;
+            delete r.cuentas_json;
+            return r;
+        });
+        res.json(procesados);
     });
 });
+
+router.get('/proveedores/:id/cuentas', (req, res) => {
+    db.query('SELECT * FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? ORDER BY id ASC', [req.params.id], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+    });
+});
+
 router.post('/proveedores', (req, res) => {
-    const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas } = req.body;
-    const anio = new Date().getFullYear();
+    const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas, cuentas } = req.body;
     _generarCodigoAlmacen('PROV', null, (err, id) => {
         if (err) return res.status(500).json({ error: err.message });
         db.query('INSERT INTO proveedores_inv (id,nombre,razon_social,tipo_documento,numero_documento,telefono,email,direccion,estado,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?)',
@@ -66,13 +104,28 @@ router.post('/proveedores', (req, res) => {
                     const mVals = marcas.map(m => [id, m]);
                     db.query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => {});
                 }
-                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
+                if (cuentas && cuentas.length) {
+                    const cVals = cuentas.map(c => [
+                        id,
+                        c.banco || '',
+                        c.tipo_cuenta || 'CUENTA CORRIENTE',
+                        c.numero_cuenta || '',
+                        c.detraccion ? 1 : 0,
+                        c.estado !== false && c.estado !== 0 ? 1 : 0
+                    ]).filter(c => c[1] && c[3]);
+                    if (cVals.length) {
+                        db.query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,tipo_cuenta,numero_cuenta,detraccion,estado) VALUES ?', [cVals], () => {});
+                    }
+                }
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                res.json({ ok: true, id });
             });
     });
 });
+
 router.put('/proveedores/:id', (req, res) => {
     const { id } = req.params;
-    const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas } = req.body;
+    const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas, cuentas } = req.body;
     db.query('UPDATE proveedores_inv SET nombre=?,razon_social=?,tipo_documento=?,numero_documento=?,telefono=?,email=?,direccion=?,estado=?,observaciones=? WHERE id=?',
         [nombre, razon_social||null, tipo_documento||'RUC', numero_documento||null, telefono||null, email||null, direccion||null, estado||'Activo', observaciones||null, id],
         (err) => {
@@ -82,16 +135,38 @@ router.put('/proveedores/:id', (req, res) => {
                     const mVals = marcas.map(m => [id, m]);
                     db.query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => {});
                 }
+            });
+            db.query('DELETE FROM proveedor_cuentas_bancarias WHERE proveedor_id=?', [id], () => {
+                if (cuentas && cuentas.length) {
+                    const cVals = cuentas.map(c => [
+                        id,
+                        c.banco || '',
+                        c.tipo_cuenta || 'CUENTA CORRIENTE',
+                        c.numero_cuenta || '',
+                        c.detraccion ? 1 : 0,
+                        c.estado !== false && c.estado !== 0 ? 1 : 0
+                    ]).filter(c => c[1] && c[3]);
+                    if (cVals.length) {
+                        db.query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,tipo_cuenta,numero_cuenta,detraccion,estado) VALUES ?', [cVals], () => {});
+                    }
+                }
+            });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+            res.json({ ok: true });
+        });
+});
+
+router.delete('/proveedores/:id', (req, res) => {
+    db.query('DELETE FROM proveedor_cuentas_bancarias WHERE proveedor_id=?', [req.params.id], () => {
+        db.query('DELETE FROM proveedor_marcas_inv WHERE proveedor_id=?', [req.params.id], () => {
+            db.query('DELETE FROM proveedores_inv WHERE id=?', [req.params.id], (err) => {
+                if (err) return res.status(500).json({ error: err.message });
                 if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
         });
-});
-router.delete('/proveedores/:id', (req, res) => {
-    db.query('DELETE FROM proveedores_inv WHERE id=?', [req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
     });
 });
+
 
 router.post('/importarProveedoresMasivo', async (req, res) => {
     const lista = req.body.proveedores || [];
@@ -893,15 +968,30 @@ router.get('/entradas', (req, res) => {
     });
 });
 router.post('/entradas', (req, res) => {
-    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv, observaciones, creado_por, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id } = req.body;
+    const {
+        fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv,
+        observaciones, creado_por, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id,
+        serie, numero_correlativo, dias_pagar, prioridad, cuenta_bancaria_proveedor, cuenta_bancaria_empresa, solicitante, estado_factura
+    } = req.body;
     const anio = new Date(fecha || Date.now()).getFullYear();
     const tc = parseFloat(tipo_cambio) || 1;
     _generarCodigoAlmacen('ENT', anio, (err, id) => {
         if (err) return res.status(500).json({ error: err.message });
         const total_pen = _calcularTotalPen(items || [], tc);
-        db.query('INSERT INTO entradas_inv (id,fecha,proveedor_id,proveedor_nombre,documento_referencia,moneda,tipo_cambio,total_pen,observaciones,tipo_igv,creado_por,motivo_entrada,placa,tipo_orden,condicion_pago,dias_credito,ot_id,estado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-            [id, fecha||new Date().toISOString().split('T')[0], proveedor_id||null, proveedor_nombre||null,
-             documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', creado_por||null, motivo_entrada||null, placa||null, tipo_orden||'Orden de compra', condicion_pago||'Al contado', dias_credito||30, ot_id||null, 'Registrado'],
+        db.query(
+            `INSERT INTO entradas_inv (
+                id, fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, total_pen,
+                observaciones, tipo_igv, creado_por, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id, estado,
+                serie, numero_correlativo, dias_pagar, prioridad, cuenta_bancaria_proveedor, cuenta_bancaria_empresa, solicitante, estado_factura
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [
+                id, fecha || new Date().toISOString().split('T')[0], proveedor_id || null, proveedor_nombre || null,
+                documento_referencia || null, moneda || 'PEN', tc || null, total_pen, observaciones || null, tipo_igv || 'sin_igv',
+                creado_por || null, motivo_entrada || null, placa || null, tipo_orden || 'Orden de compra', condicion_pago || 'Al contado',
+                dias_credito || 30, ot_id || null, 'Registrado',
+                serie || String(anio), numero_correlativo || id, parseInt(dias_pagar) || 0, prioridad || 'Normal',
+                cuenta_bancaria_proveedor || null, cuenta_bancaria_empresa || null, solicitante || null, estado_factura || 'Pendiente'
+            ],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 if (!items || !items.length) { if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
@@ -947,13 +1037,28 @@ router.post('/entradas', (req, res) => {
 });
 router.put('/entradas/:id', (req, res) => {
     const { id } = req.params;
-    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv, observaciones, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id } = req.body;
+    const {
+        fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv,
+        observaciones, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id,
+        serie, numero_correlativo, dias_pagar, prioridad, cuenta_bancaria_proveedor, cuenta_bancaria_empresa, solicitante, estado_factura
+    } = req.body;
     const tc = parseFloat(tipo_cambio) || 1;
     const total_pen = _calcularTotalPen(items || [], tc);
 
-    db.query('UPDATE entradas_inv SET fecha=?, proveedor_id=?, proveedor_nombre=?, documento_referencia=?, moneda=?, tipo_cambio=?, total_pen=?, observaciones=?, tipo_igv=?, motivo_entrada=?, placa=?, tipo_orden=?, condicion_pago=?, dias_credito=?, ot_id=? WHERE id=?',
-        [fecha||new Date().toISOString().split('T')[0], proveedor_id||null, proveedor_nombre||null,
-         documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', motivo_entrada||null, placa||null, tipo_orden||'Orden de compra', condicion_pago||'Al contado', dias_credito||30, ot_id||null, id],
+    db.query(
+        `UPDATE entradas_inv SET
+            fecha=?, proveedor_id=?, proveedor_nombre=?, documento_referencia=?, moneda=?, tipo_cambio=?, total_pen=?,
+            observaciones=?, tipo_igv=?, motivo_entrada=?, placa=?, tipo_orden=?, condicion_pago=?, dias_credito=?, ot_id=?,
+            serie=?, numero_correlativo=?, dias_pagar=?, prioridad=?, cuenta_bancaria_proveedor=?, cuenta_bancaria_empresa=?, solicitante=?, estado_factura=?
+         WHERE id=?`,
+        [
+            fecha||new Date().toISOString().split('T')[0], proveedor_id||null, proveedor_nombre||null,
+            documento_referencia||null, moneda||'PEN', tc||null, total_pen,
+            observaciones||null, tipo_igv||'sin_igv', motivo_entrada||null, placa||null, tipo_orden||'Orden de compra', condicion_pago||'Al contado', dias_credito||30, ot_id||null,
+            serie||null, numero_correlativo||null, parseInt(dias_pagar)||0, prioridad||'Normal',
+            cuenta_bancaria_proveedor||null, cuenta_bancaria_empresa||null, solicitante||null, estado_factura||'Pendiente',
+            id
+        ],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
             

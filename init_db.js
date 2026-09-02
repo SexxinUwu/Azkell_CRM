@@ -623,6 +623,10 @@ const TABLAS = [
         sql: "CREATE TABLE IF NOT EXISTS `proveedor_marcas_inv` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `proveedor_id` varchar(20) NOT NULL,\n  `marca` varchar(100) NOT NULL,\n  PRIMARY KEY (`id`),\n  KEY `idx_prov` (`proveedor_id`)\n) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
     },
     {
+        nombre: "proveedor_cuentas_bancarias",
+        sql: "CREATE TABLE IF NOT EXISTS `proveedor_cuentas_bancarias` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `proveedor_id` varchar(20) NOT NULL,\n  `banco` varchar(100) NOT NULL,\n  `tipo_cuenta` enum('CUENTA CORRIENTE','CUENTA DE AHORROS','CUENTA REMUNERADA') NOT NULL,\n  `numero_cuenta` varchar(100) NOT NULL,\n  `detraccion` tinyint(1) DEFAULT '0',\n  `estado` tinyint(1) DEFAULT '1',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `idx_prov_cuenta` (`proveedor_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
         nombre: "proveedores_inv",
         sql: "CREATE TABLE IF NOT EXISTS `proveedores_inv` (\n  `id` varchar(20) NOT NULL,\n  `nombre` varchar(200) NOT NULL,\n  `razon_social` varchar(200) DEFAULT NULL,\n  `tipo_documento` enum('RUC','DNI','CE','Otro') DEFAULT 'RUC',\n  `numero_documento` varchar(20) DEFAULT NULL,\n  `telefono` varchar(30) DEFAULT NULL,\n  `email` varchar(150) DEFAULT NULL,\n  `direccion` text,\n  `estado` enum('Activo','Inactivo') DEFAULT 'Activo',\n  `observaciones` text,\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
     },
