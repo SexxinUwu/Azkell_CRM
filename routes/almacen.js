@@ -878,6 +878,21 @@ router.delete('/marcas/:id', (req, res) => {
 // ============================================================
 // ALMACÉN — Entradas
 // ============================================================
+router.get('/entradas/proximo-codigo', (req, res) => {
+    const anio = parseInt(req.query.anio) || new Date().getFullYear();
+    _generarCodigoAlmacen('ENT', anio, (err, id) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ codigo: id });
+    });
+});
+
+router.get('/empresa-cuentas', (req, res) => {
+    db.query('SELECT * FROM empresa_cuentas_bancarias WHERE estado = 1 ORDER BY id ASC', (err, rows) => {
+        if (err) return res.json([]); // Si no existe la tabla o está vacía, devuelve array vacío
+        res.json(rows || []);
+    });
+});
+
 router.get('/entradas', (req, res) => {
     let q = `SELECT e.*, GROUP_CONCAT(CONCAT(COALESCE(i.descripcion, d.descripcion, ''),'|',COALESCE(d.cantidad,0),'|',COALESCE(d.costo_unitario,0),'|',COALESCE(d.moneda,'PEN'),'|',COALESCE(d.inventario_id,''),'|',COALESCE(d.importe,0)) SEPARATOR ';;') AS items_raw
              FROM entradas_inv e
