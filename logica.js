@@ -367,14 +367,17 @@ window.verificarSesionGuardada = function() {
 
     // OPERACIONES
     var showOperacionesHub = _cHub('hub_operaciones');
+    var vOpProg  = showOperacionesHub && (_cL('op_programacion') || _cL('op_guias_remision') || _cL('guias_remision'));
     var vOpGuias = showOperacionesHub && (_cL('op_guias_remision') || _cL('guias_remision'));
     var vCombVales = showOperacionesHub && (_cL('combustible_vales') || _cL('combustible'));
     var vCombAna   = showOperacionesHub && (_cL('combustible_analisis') || _cL('combustible'));
     var vCombUrea  = showOperacionesHub && (_cL('urea_analisis') || _cL('combustible_analisis') || _cL('combustible'));
     var vCombMatriz = showOperacionesHub && (_cL('combustible_matriz') || _cL('combustible_analisis') || _cL('combustible'));
     var vCombOp    = vCombVales || vCombAna || vCombUrea || vCombMatriz;
-    var showOp     = vOpGuias || vCombOp;
+    var showOp     = vOpProg || vOpGuias || vCombOp;
 
+    safe('nav-op-programacion',          vOpProg);
+    safe('mbnav-op-programacion',        vOpProg);
     safe('nav-op-guias-remision',        vOpGuias);
     safe('mbnav-op-guias-remision',      vOpGuias);
     safe('nav-combustible-toggle',        vCombOp);
@@ -579,6 +582,7 @@ window.verificarSesionGuardada = function() {
             'almacen/proveedores': 'prov_inv',
             'directorio/conductores': 'cond',
             'directorio/clientes': 'clientes',
+            'operaciones/programacion': 'op_programacion',
             'operaciones/ordenes-viaje': 'op_guias_remision',
             'operaciones/guias-remision': 'op_guias_remision',
             'operaciones/rutas': 'op_rutas',
@@ -603,7 +607,10 @@ window.verificarSesionGuardada = function() {
             'administracion': 'administracion'
         };
 
-        // Fallbacks inteligentes para submódulos de combustible
+        // Fallbacks inteligentes para submódulos
+        if (r === 'operaciones/programacion') {
+            return window.checkPerm('op_programacion', 'l') || window.checkPerm('op_guias_remision', 'l') || window.checkPerm('guias_remision', 'l');
+        }
         if (r === 'operaciones/urea-analisis' || r === 'operaciones/combustible-urea') {
             return window.checkPerm('urea_analisis', 'l') || window.checkPerm('combustible_analisis', 'l') || window.checkPerm('combustible', 'l');
         }
@@ -3694,10 +3701,12 @@ const TITULOS_MODULOS = {
     'operaciones/combustible-analisis': 'Análisis de Combustible (D2)',
     'operaciones/urea-analisis':        'Análisis de Urea',
     'operaciones/combustible-matriz':   'Matriz de Combustible (D2)',
+    'operaciones/programacion':         'Programación de Vehículos',
 };
 
 const MENU_IDS = {
     'dashboard':                   'nav-dashboard',
+    'operaciones/programacion':    'nav-op-programacion',
     'operaciones/ordenes-viaje':   'nav-op-ordenes-viaje',
     'operaciones/guias-remision':  'nav-op-guias-remision',
     'operaciones/combustible-vales': 'nav-combustible-vales',
@@ -3795,6 +3804,7 @@ const MENU_SECTION = {
     'gerencia/aprobaciones-oc':   'gerencia',
     'seguridad/unidades':         'seguridad',
     'seguridad/unidades-base':    'seguridad',
+    'operaciones/programacion':    'operaciones',
     'operaciones/ordenes-viaje':   'operaciones',
     'operaciones/guias-remision':  'operaciones',
     'operaciones/combustible-vales': 'operaciones',
@@ -3805,6 +3815,7 @@ const MENU_SECTION = {
 
 const BREADCRUMB_MAP = {
     'dashboard':                  [],
+    'operaciones/programacion':    ['Operaciones','Programación'],
     'operaciones/ordenes-viaje':   ['Operaciones','Órdenes de Viaje'],
     'operaciones/guias-remision':  ['Operaciones','Guías de Remisión'],
     'operaciones/combustible-vales': ['Operaciones','Combustible','Vales'],
