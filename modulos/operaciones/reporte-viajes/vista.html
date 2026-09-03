@@ -1,0 +1,393 @@
+<!-- ═══════════════════════════════════════════════════════════════════
+     MÓDULO OPERACIONES: REPORTE OPERACIONAL DE VIAJES Y COMBUSTIBLE
+     ERP Bento Moderno — Ida / Retorno & Estimación Matriz D2
+═══════════════════════════════════════════════════════════════════ -->
+<style>
+#root-dinamico { padding: 0 !important; }
+
+.rv-container {
+    padding: 1.25rem 1.5rem 100px 1.5rem;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--text, #0f172a);
+}
+
+@media (max-width: 768px) {
+    .rv-container { padding: 0.75rem 0.75rem 110px 0.75rem; }
+}
+
+/* ── Encabezado & Bento Hero ─────────────────────────────────── */
+.rv-header-badge {
+    background: #eff6ff;
+    color: #0284c7;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    letter-spacing: 0.02em;
+    border: 1px solid #bfdbfe;
+}
+
+.rv-kpi-card {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 16px;
+    padding: 1rem 1.2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.rv-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -4px rgba(15, 23, 42, 0.08);
+}
+.rv-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+}
+
+/* ── Barra de Controles y Filtros ─────────────────────────────── */
+.rv-filter-bar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    margin-bottom: 1.25rem;
+}
+
+/* ── Tabla Principal con Desglose ─────────────────────────────── */
+.rv-table-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+}
+
+.table-rv {
+    font-size: 0.85rem;
+    margin-bottom: 0;
+}
+.table-rv thead th {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.85rem 0.8rem;
+    vertical-align: middle;
+    border: none;
+}
+
+.table-rv tbody tr.rv-row-master {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    border-bottom: 1px solid #f1f5f9;
+}
+.table-rv tbody tr.rv-row-master:hover {
+    background-color: #f8fafc;
+}
+.table-rv tbody tr.rv-row-master.is-expanded {
+    background-color: #eff6ff !important;
+    border-bottom: 1px solid #bfdbfe !important;
+}
+
+.table-rv tbody td {
+    padding: 0.75rem 0.8rem;
+    vertical-align: middle;
+}
+
+/* ── Badges y Píldoras ────────────────────────────────────────── */
+.rv-badge-viaje {
+    font-family: 'Inter', monospace;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #0284c7;
+    background: #f0f9ff;
+    padding: 4px 9px;
+    border-radius: 8px;
+    border: 1px solid #bae6fd;
+    display: inline-flex;
+    align-items: gap;
+}
+
+.rv-badge-placa {
+    font-family: 'Inter', monospace;
+    font-weight: 800;
+    font-size: 0.78rem;
+    padding: 3px 7px;
+    border-radius: 6px;
+    letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: center;
+}
+.rv-badge-tracto {
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+}
+.rv-badge-carreta {
+    background: #fefce8;
+    color: #854d0e;
+    border: 1px solid #fef08a;
+}
+.rv-badge-motor {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #ffedd5;
+    font-weight: 700;
+    font-size: 0.74rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.rv-badge-galones {
+    font-family: 'Inter', monospace;
+    font-weight: 800;
+    font-size: 0.88rem;
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1.5px solid #86efac;
+    padding: 4px 10px;
+    border-radius: 8px;
+    display: inline-block;
+}
+
+/* ── Subfilas Acordeón (Ida & Retorno) ────────────────────────── */
+.rv-subrow-tramo {
+    background-color: #fafbfc;
+    border-bottom: 1px dashed #e2e8f0;
+    font-size: 0.82rem;
+}
+.rv-subrow-tramo td {
+    padding: 0.65rem 0.8rem !important;
+}
+.rv-badge-tramo {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.03em;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.rv-tramo-ida {
+    background: #eff6ff;
+    color: #0284c7;
+    border: 1px solid #bfdbfe;
+}
+.rv-tramo-retorno {
+    background: #fefce8;
+    color: #a16207;
+    border: 1px solid #fef08a;
+}
+
+.rv-exp-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    transition: all 0.18s ease;
+}
+.is-expanded .rv-exp-btn {
+    background: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
+    transform: rotate(90deg);
+}
+
+.btn-export-rv {
+    background: #10b981;
+    color: #ffffff;
+    border: 1px solid #059669;
+    font-weight: 700;
+    padding: 0.45rem 0.9rem;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.18s ease;
+}
+.btn-export-rv:hover {
+    background: #059669;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+</style>
+
+<div class="rv-container" id="moduloReporteViajesOperaciones">
+
+    <!-- ── CABECERA PRINCIPAL ───────────────────────────────────────── -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="rv-header-badge"><i class="bi bi-speedometer2"></i> Control Operacional & Combustible</span>
+                <span class="badge bg-secondary-subtle text-secondary" id="rv-lbl-total-badge">0 viajes</span>
+            </div>
+            <h3 class="fw-bold text-dark m-0" style="letter-spacing: -0.02em;">Reporte de Viajes y Estimación de Combustible</h3>
+            <p class="text-secondary m-0 small">Visualización consolidada: Orden de viaje, fecha, placas, motor, pesos Ida/Retorno y galones proyectados según la Matriz D2.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn-export-rv" onclick="window.rvExportarExcel()">
+                <i class="bi bi-file-earmark-excel-fill fs-6"></i>
+                <span>Exportar Excel</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-1" onclick="window.rvCargarDatos()">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
+                <span>Actualizar</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ── KPI METRICS (Bento Cards) ────────────────────────────────── -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="rv-kpi-card">
+                <div class="rv-kpi-icon" style="background:#eff6ff; color:#0284c7;">
+                    <i class="bi bi-truck"></i>
+                </div>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.7rem; letter-spacing:0.04em;">Total Viajes</span>
+                    <h4 class="fw-bolder text-dark m-0" id="rv-kpi-total-viajes">0</h4>
+                    <small class="text-muted" style="font-size:0.75rem;">Programados y activos</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="rv-kpi-card">
+                <div class="rv-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+                    <i class="bi bi-fuel-pump-fill"></i>
+                </div>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.7rem; letter-spacing:0.04em;">Galones Teóricos Totales</span>
+                    <h4 class="fw-bolder text-success m-0" id="rv-kpi-total-galones">0.00 <span class="fs-6 fw-normal text-muted">GL</span></h4>
+                    <small class="text-muted" style="font-size:0.75rem;">Según Matriz D2 (Ida + Retorno)</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="rv-kpi-card">
+                <div class="rv-kpi-icon" style="background:#faf5ff; color:#7c3aed;">
+                    <i class="bi bi-box-seam-fill"></i>
+                </div>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.7rem; letter-spacing:0.04em;">Carga Transportada</span>
+                    <h4 class="fw-bolder text-dark m-0" id="rv-kpi-total-toneladas">0.00 <span class="fs-6 fw-normal text-muted">TN</span></h4>
+                    <small class="text-muted" style="font-size:0.75rem;">Suma de pesos Ida + Retorno</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="rv-kpi-card">
+                <div class="rv-kpi-icon" style="background:#fff7ed; color:#ea580c;">
+                    <i class="bi bi-cpu-fill"></i>
+                </div>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.7rem; letter-spacing:0.04em;">Promedio por Viaje</span>
+                    <h4 class="fw-bolder text-dark m-0" id="rv-kpi-promedio-galones">0.00 <span class="fs-6 fw-normal text-muted">GL/Viaje</span></h4>
+                    <small class="text-muted" style="font-size:0.75rem;">Estimación media de viaje</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── BARRA DE FILTROS ─────────────────────────────────────────── -->
+    <div class="rv-filter-bar">
+        <div class="row g-2 align-items-center">
+            <div class="col-12 col-md-3">
+                <div class="position-relative">
+                    <i class="bi bi-truck position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
+                    <input type="text" id="rv-filtro-viaje" class="form-control form-control-sm ps-5 text-uppercase fw-semibold border-secondary-subtle" placeholder="N° VIAJE (EJ: 2026-00000968)" oninput="window.rvOnFiltrarDebounced()" style="border-radius:10px; min-height:38px;">
+                </div>
+            </div>
+            <div class="col-12 col-md-3">
+                <div class="position-relative">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
+                    <input type="text" id="rv-filtro-q" class="form-control form-control-sm ps-5 text-uppercase fw-semibold border-secondary-subtle" placeholder="BUSCAR PLACA, CONDUCTOR, RUTA..." oninput="window.rvOnFiltrarDebounced()" style="border-radius:10px; min-height:38px;">
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <select id="rv-filtro-motor" class="form-select form-select-sm border-secondary-subtle fw-semibold" onchange="window.rvOnFiltrar()" style="border-radius:10px; min-height:38px;">
+                    <option value="ALL">Todos los Motores</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <input type="date" id="rv-filtro-fecha" class="form-control form-control-sm border-secondary-subtle fw-semibold" onchange="window.rvOnFiltrar()" title="Filtrar por fecha específica" style="border-radius:10px; min-height:38px;">
+            </div>
+            <div class="col-12 col-md-2 d-flex justify-content-end align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary w-100 rounded-3 py-2 fw-semibold" onclick="window.rvLimpiarFiltros()" title="Limpiar filtros">
+                    <i class="bi bi-eraser me-1"></i> Limpiar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── TABLA PRINCIPAL DE REPORTE ───────────────────────────────── -->
+    <div class="rv-table-card">
+        <div class="table-responsive">
+            <table class="table table-rv align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 40px; text-align: center;"></th>
+                        <th style="width: 140px;">N° Orden Viaje</th>
+                        <th style="width: 110px;"><i class="bi bi-calendar-event me-1"></i>Fecha</th>
+                        <th style="width: 100px;">Tracto</th>
+                        <th style="width: 100px;">Carreta</th>
+                        <th style="width: 130px;">Modelo Motor</th>
+                        <th>Ruta Principal</th>
+                        <th style="width: 130px; text-align: right;">Peso Total (Ida+Ret)</th>
+                        <th style="width: 150px; text-align: right;"><i class="bi bi-fuel-pump-fill me-1 text-success"></i>Galones a Gastar</th>
+                        <th style="width: 80px; text-align: center;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="rv-tabla-body">
+                    <tr>
+                        <td colspan="10" class="text-center py-5 text-secondary">
+                            <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                            <div class="small fw-semibold">Consultando y calculando reporte de viajes con la Matriz D2...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación / Footer -->
+        <div class="p-3 border-top bg-light d-flex flex-column flex-md-row align-items-center justify-content-between gap-2">
+            <div class="small text-secondary fw-semibold" id="rv-info-paginacion">
+                Mostrando 0 registros
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-1 fw-bold" id="rv-btn-prev" onclick="window.rvCambiarPagina(-1)">
+                    <i class="bi bi-chevron-left me-1"></i> Anterior
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-1 fw-bold" id="rv-btn-next" onclick="window.rvCambiarPagina(1)">
+                    Siguiente <i class="bi bi-chevron-right ms-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

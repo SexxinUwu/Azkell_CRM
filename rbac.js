@@ -55,6 +55,7 @@ module.exports = function globalRBAC(req, res, next) {
         '/combustible/catalogos',
         '/combustible/rendimiento-teorico',
         '/combustible/matriz',
+        '/operaciones/reporte-viajes',
         '/seguridad/recursos',
         '/seguridad/template',
         '/vehiculos-flota'
