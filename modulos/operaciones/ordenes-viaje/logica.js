@@ -41,8 +41,8 @@ window.ovConfigurarThead = function() {
     if (_ovModoVistaActual === 'viajes') {
         thead.innerHTML = `
             <tr>
-                <th style="width: 140px;">N° Viaje</th>
-                <th style="width: 130px;">Fecha / Hora</th>
+                <th style="width: 135px;">N° Viaje</th>
+                <th style="width: 145px;" title="Fecha y Hora de programación / salida estimada"><i class="bi bi-calendar-event me-1"></i>F. / H. Programación</th>
                 <th style="width: 100px;">Tracto</th>
                 <th style="width: 100px;">Carreta</th>
                 <th>Conductor Asignado</th>
