@@ -228,6 +228,11 @@ function srPoblarPlacas() {
     if (typeof window._cbInit === 'function') {
         window._cbInit('sr-f-placa', lista, 'Buscar placa...');
     }
+    if (typeof window._cbOnSelect === 'function') {
+        window._cbOnSelect('sr-f-placa', function(val) {
+            window.srActualizarBadgeInspeccionDrawer(val);
+        });
+    }
 }
 
 // ── Personal / Supervisor ────────────────────────────────────────
@@ -490,6 +495,33 @@ window.srCalcularDiasInspeccion = function(placa) {
         valorNum: diasRestantes,
         fechaUltima: fIngreso
     };
+};
+
+// ── Actualizar Aviso de Inspección en Drawer Registro (Estilo OT Parabrisas) ──
+window.srActualizarBadgeInspeccionDrawer = function(placa) {
+    var box = document.getElementById('sr-drawer-insp-box');
+    var val = document.getElementById('sr-drawer-insp-val');
+    var lbl = document.getElementById('sr-drawer-insp-lbl');
+    if (!box || !val || !lbl) return;
+
+    var p = (placa || (document.getElementById('sr-f-placa') || {}).value || (document.getElementById('sr-f-placa-txt') || {}).value || '').trim();
+    if (!p) {
+        box.style.display = 'none';
+        return;
+    }
+
+    var inspInfo = window.srCalcularDiasInspeccion(p);
+    var bgColor = inspInfo.dias < 0 ? '#fef2f2' : (inspInfo.dias <= 7 ? '#fefce8' : '#f0fdf4');
+    var textoDias = inspInfo.dias !== null && inspInfo.dias !== -999 
+        ? (inspInfo.dias >= 0 ? '+' + inspInfo.dias : inspInfo.dias) + ' DÍAS' 
+        : 'SIN REGISTRO';
+
+    box.style.display = 'block';
+    box.style.borderColor = inspInfo.color;
+    box.style.background = bgColor;
+    lbl.style.color = inspInfo.color;
+    val.style.color = inspInfo.color;
+    val.textContent = textoDias;
 };
 
 // ── Ordenamiento de Columnas ─────────────────────────────────────
@@ -1263,6 +1295,9 @@ function srLimpiarFormRegistro() {
     if (typeof window.srAgregarFilaTrabajo === 'function') {
         window.srAgregarFilaTrabajo('');
     }
+    if (typeof window.srActualizarBadgeInspeccionDrawer === 'function') {
+        window.srActualizarBadgeInspeccionDrawer('');
+    }
 }
 
 // ── Registrar nueva unidad ───────────────────────────────────────
@@ -1356,6 +1391,9 @@ window.srEditarRampa = function(id) {
         } else {
             aEvid.style.display = 'none';
         }
+    }
+    if (typeof window.srActualizarBadgeInspeccionDrawer === 'function') {
+        window.srActualizarBadgeInspeccionDrawer(e.placa);
     }
     srAbrirDrawer('sr-drawer-registro');
 };
