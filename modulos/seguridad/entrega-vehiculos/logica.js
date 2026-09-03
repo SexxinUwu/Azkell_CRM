@@ -427,56 +427,6 @@
         window.evRenderizarTabla(filtrados);
     };
 
-    // ── COMPARTIR DIRECTAMENTE EL ARCHIVO PDF POR WHATSAPP ─────────
-    window.evCompartirWhatsApp = async function(id) {
-        try {
-            const token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token');
-            const res = await fetch(`/api/seguridad/entrega-vehiculos/${encodeURIComponent(id)}`, {
-                headers: { 'Authorization': token ? `Bearer ${token}` : '' }
-            });
-            const json = await res.json();
-            if (!json.ok || !json.data) {
-                alert('No se pudo obtener el registro para compartir.');
-                return;
-            }
-
-            const r = json.data;
-            const folio = r.numero_inventario || r.id;
-            const placa = r.placa || 'UNIDAD';
-            const filename = `Acta_Entrega_${folio}_${placa}.pdf`;
-
-            const htmlBody = _evConstruirHtmlPDF(r);
-            const pdfBlob = await _evRenderPdfBlob(htmlBody, filename);
-            const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
-
-            // 1. En móviles/tablets (Android / iOS) con soporte Web Share Files: envía el PDF directamente a WhatsApp
-            if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-                await navigator.share({
-                    files: [pdfFile],
-                    title: filename,
-                    text: `Acta de Entrega de Vehículo ${folio} (${placa})`
-                });
-                return;
-            }
-
-            // 2. En PC / Escritorio: Descarga directa automática del archivo PDF + apertura de WhatsApp para adjuntarlo
-            const fileUrl = URL.createObjectURL(pdfBlob);
-            const a = document.createElement('a');
-            a.href = fileUrl;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            window.open('https://api.whatsapp.com/send', '_blank');
-
-        } catch(e) {
-            if (e.name === 'AbortError') return;
-            console.error('Error al compartir PDF por WhatsApp:', e);
-            alert('Error al generar y compartir el PDF por WhatsApp.');
-        }
-    };
-
     // ── ELIMINAR REGISTRO (SOLO ADMINISTRADOR CON MODAL CIRCULAR) ─
     window._evIdEliminarPendiente = null;
 
@@ -1391,7 +1341,7 @@
         else pdfConfig = 'T3';
 
         let pdfSvgDiagram = `
-            <svg viewBox="0 0 920 340" style="width: 100%; max-width: 780px; height: 180px; display: block; margin: 0 auto;">
+            <svg viewBox="0 0 920 340" style="width: 100%; max-width: 740px; height: 145px; display: block; margin: 0 auto;">
                 <defs>
                     <linearGradient id="evChassisGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#475569"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
                     <linearGradient id="evCabGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff"/><stop offset="60%" stop-color="#f8fafc"/><stop offset="100%" stop-color="#e2e8f0"/></linearGradient>
@@ -1420,124 +1370,124 @@
         pdfSvgDiagram += `</svg>`;
 
         return `
-            <main class="w-full max-w-[840px] mx-auto bg-white p-1">
+            <main class="report-page w-full max-w-[840px] bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-3 sm:p-4 text-slate-900 mx-auto" style="box-sizing:border-box;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;">
 
-                <!-- 1. ENCABEZADO INSTITUCIONAL SGC -->
-                <header class="doc-box mb-2">
-                    <div class="doc-row" style="grid-template-columns: 24% 52% 24%;">
+                <!-- 1. ENCABEZADO INSTITUCIONAL OFICIAL SGC -->
+                <header class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2" style="border:1.5px solid #0F172A;">
+                    <div class="grid grid-cols-12 divide-x-[1.5px] divide-slate-900 border-b-[1.5px] border-slate-900" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));border-bottom:1.5px solid #0F172A;">
                         <!-- Logo Empresa -->
-                        <div class="p-2 flex flex-col items-center justify-center text-center bg-white" style="border-right: 1.5px solid #0f172a;">
-                            ${empLogoUrl ? `<img src="${empLogoUrl}" style="max-height: 32px; max-width: 110px; object-fit: contain;">` : `
-                                <div class="font-extrabold text-slate-900 text-xs tracking-tight uppercase">${r.empresa || 'MARSISA'}</div>
+                        <div class="col-span-3 p-1.5 flex flex-col items-center justify-center bg-white text-center" style="grid-column:span 3 / span 3;border-right:1.5px solid #0F172A;">
+                            ${empLogoUrl ? `<img src="${empLogoUrl}" style="max-height:30px;max-width:110px;object-fit:contain;" crossorigin="anonymous">` : `
+                                <div class="text-xs font-extrabold tracking-tight text-slate-900 leading-none">${r.empresa || 'MARSISA'}</div>
                             `}
-                            <span class="text-[7.5px] font-bold tracking-wider text-slate-500 uppercase mt-0.5">Transporte & Logística</span>
+                            <span class="text-[7.5px] font-semibold tracking-wider text-slate-500 uppercase mt-0.5">Transporte & Logística</span>
                         </div>
 
                         <!-- Título Oficial -->
-                        <div class="p-2 flex flex-col items-center justify-center text-center bg-slate-50/70" style="border-right: 1.5px solid #0f172a;">
-                            <h1 class="text-xs sm:text-sm font-extrabold text-slate-900 tracking-tight uppercase leading-tight">INVENTARIO FÍSICO ESTADO DE VEHÍCULO</h1>
-                            <p class="text-[8.5px] font-semibold text-slate-600 mt-0.5 uppercase">Acta de Entrega y Recepción Técnica de Unidades</p>
+                        <div class="col-span-6 p-1.5 flex flex-col items-center justify-center text-center bg-slate-50/50" style="grid-column:span 6 / span 6;border-right:1.5px solid #0F172A;">
+                            <h1 class="text-xs font-extrabold text-slate-900 tracking-tight uppercase leading-tight">INVENTARIO FÍSICO ESTADO DE VEHÍCULO</h1>
+                            <p class="text-[8.5px] font-semibold text-slate-600 tracking-normal mt-0.5 uppercase">Acta de Entrega y Recepción Técnica de Unidades</p>
                         </div>
 
                         <!-- Control Documentario SGC -->
-                        <div class="text-[9px] flex flex-col justify-between bg-white divide-y-[1.5px] divide-slate-900">
-                            <div class="px-2 py-0.5 flex justify-between items-center"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Código:</span><span class="font-mono font-bold text-slate-900">F-SEG-004</span></div>
-                            <div class="px-2 py-0.5 flex justify-between items-center"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Versión:</span><span class="font-mono font-bold text-slate-900">01</span></div>
-                            <div class="px-2 py-0.5 flex justify-between items-center"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Fecha:</span><span class="font-mono font-semibold text-slate-900">10/11/2025</span></div>
+                        <div class="col-span-3 text-[9px] flex flex-col divide-y-[1.5px] divide-slate-900 bg-white" style="grid-column:span 3 / span 3;">
+                            <div class="px-2 py-0.5 flex items-center justify-between" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-600 uppercase text-[8px]">Código:</span><span class="font-mono font-bold text-slate-900">F-SEG-004</span></div>
+                            <div class="px-2 py-0.5 flex items-center justify-between" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-600 uppercase text-[8px]">Versión:</span><span class="font-mono font-bold text-slate-900">01</span></div>
+                            <div class="px-2 py-0.5 flex items-center justify-between"><span class="font-bold text-slate-600 uppercase text-[8px]">Fecha:</span><span class="font-mono font-semibold text-slate-900">10/11/2025</span></div>
                         </div>
                     </div>
 
                     <!-- Metadata Matrix Bento -->
-                    <div class="doc-row" style="grid-template-columns: repeat(3, minmax(0, 1fr)); font-size: 8.5px;">
-                        <div class="divide-y-[1.5px] divide-slate-900" style="border-right: 1.5px solid #0f172a;">
-                            <div class="px-2 py-1 flex justify-between items-center bg-white"><span class="font-bold text-slate-600 uppercase text-[8px]">Nº Inventario:</span><span class="font-mono font-bold text-sky-700 text-[10px]">${r.numero_inventario || r.id}</span></div>
-                            <div class="px-2 py-1 flex justify-between items-center bg-white"><span class="font-bold text-slate-600 uppercase text-[8px]">Entregado Por:</span><span class="font-bold text-slate-900 truncate max-w-[130px]">${r.quien_entrega}</span></div>
+                    <div class="grid grid-cols-3 divide-x-[1.5px] divide-slate-900 text-[9.5px]" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));">
+                        <div class="divide-y-[1.5px] divide-slate-900" style="border-right:1.5px solid #0F172A;">
+                            <div class="px-2 py-0.5 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[8px] uppercase">Nº Inventario:</span><span class="font-mono font-bold text-[#0284C7] text-[10px]">${r.numero_inventario || r.id}</span></div>
+                            <div class="px-2 py-0.5 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[8px] uppercase">Entregado Por:</span><span class="font-bold text-slate-900 truncate max-w-[130px] text-[8.5px]">${r.quien_entrega}</span></div>
                         </div>
-                        <div class="divide-y-[1.5px] divide-slate-900" style="border-right: 1.5px solid #0f172a;">
-                            <div class="px-2 py-1 flex justify-between items-center bg-white"><span class="font-bold text-slate-600 uppercase text-[8px]">Motivo:</span><span class="font-bold text-slate-900 uppercase text-[8px]">${r.motivo || 'ENTREGA DE UNIDAD'}</span></div>
-                            <div class="px-2 py-1 flex justify-between items-center bg-white"><span class="font-bold text-slate-600 uppercase text-[8px]">Recibido Por:</span><span class="font-bold text-slate-900 truncate max-w-[130px]">${r.quien_recibe}</span></div>
+                        <div class="divide-y-[1.5px] divide-slate-900" style="border-right:1.5px solid #0F172A;">
+                            <div class="px-2 py-0.5 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[8px] uppercase">Motivo:</span><span class="font-bold text-slate-900 uppercase text-[8px]">${r.motivo || 'ENTREGA DE UNIDAD'}</span></div>
+                            <div class="px-2 py-0.5 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[8px] uppercase">Recibido Por:</span><span class="font-bold text-slate-900 truncate max-w-[130px] text-[8.5px]">${r.quien_recibe}</span></div>
                         </div>
                         <div class="divide-y-[1.5px] divide-slate-900">
-                            <div class="px-2 py-1 flex justify-between items-center bg-white"><span class="font-bold text-slate-600 uppercase text-[8px]">Fecha Emisión:</span><span class="font-mono font-semibold text-slate-900">${fechaStr}</span></div>
-                            <div class="px-2 py-1 flex justify-between items-center bg-emerald-50/60"><span class="font-bold text-slate-600 uppercase text-[8px]">Estado:</span><span class="badge-pastel-lemon font-extrabold px-2 py-0.2 rounded-full text-[8px] uppercase">CONFORME</span></div>
+                            <div class="px-2 py-0.5 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[8px] uppercase">Fecha Emisión:</span><span class="font-mono font-medium text-slate-900 text-[8.5px]">${fechaStr}</span></div>
+                            <div class="px-2 py-0.5 flex items-center justify-between bg-emerald-50/50"><span class="font-bold text-slate-700 text-[8px] uppercase">Estado:</span><span class="font-bold text-emerald-600 text-[8.5px] tracking-tight uppercase flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block"></span>Conforme</span></div>
                         </div>
                     </div>
                 </header>
 
                 <!-- 2. FICHA TÉCNICA DEL VEHÍCULO -->
-                <section class="doc-box mb-2">
-                    <div class="px-3 py-0.5 bg-slate-900 text-white flex items-center justify-between">
-                        <span class="text-[9px] font-extrabold uppercase tracking-wider text-white">Ficha Técnica y Datos del Vehículo</span>
+                <section class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2" style="border:1.5px solid #0F172A;">
+                    <div class="px-3 py-0.5 bg-slate-900 text-white flex items-center justify-between" style="background:#0F172A;">
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-white">Ficha Técnica y Datos del Vehículo</span>
                         <span class="text-[7.5px] font-mono text-sky-300">REGISTRO FLOTA</span>
                     </div>
 
-                    <div class="doc-row" style="grid-template-columns: 15% 18% 18% 18% 16% 15%; text-align:center; font-size: 8px;">
-                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">CLASE</div>
-                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">MARCA</div>
-                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">TIPO</div>
-                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">MODELO</div>
-                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">PLACA</div>
-                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70">COLOR</div>
+                    <div class="grid grid-cols-6 divide-x-[1.5px] divide-slate-900 text-center border-b-[1.5px] border-slate-900" style="display:grid; grid-template-columns: 15% 18% 18% 18% 16% 15%; border-bottom:1.5px solid #0F172A;">
+                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">CLASE</div>
+                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">MARCA</div>
+                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">TIPO</div>
+                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">MODELO</div>
+                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">PLACA</div>
+                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]">COLOR</div>
                     </div>
 
-                    <div class="doc-row" style="grid-template-columns: 15% 18% 18% 18% 16% 15%; text-align:center; font-size: 8.5px; font-weight: 700;">
-                        <div class="p-1 uppercase text-slate-800" style="border-right: 1.5px solid #0f172a;">${r.clase || 'TRACTO'}</div>
-                        <div class="p-1 uppercase text-slate-800" style="border-right: 1.5px solid #0f172a;">${r.marca || '---'}</div>
-                        <div class="p-1 uppercase text-slate-800" style="border-right: 1.5px solid #0f172a;">${r.tipo || r.clase || 'TRACTO'}</div>
-                        <div class="p-1 uppercase text-slate-800" style="border-right: 1.5px solid #0f172a;">${r.modelo || '---'}</div>
-                        <div class="p-1 font-mono text-sky-800 font-extrabold bg-sky-50/50" style="border-right: 1.5px solid #0f172a;">${r.placa}</div>
-                        <div class="p-1 uppercase text-slate-800">${r.color || '---'}</div>
+                    <div class="grid grid-cols-6 divide-x-[1.5px] divide-slate-900 text-center border-b-[1.5px] border-slate-900 font-bold text-[8px]" style="display:grid; grid-template-columns: 15% 18% 18% 18% 16% 15%; border-bottom:1.5px solid #0F172A;">
+                        <div class="p-0.5 uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.clase || 'TRACTO'}</div>
+                        <div class="p-0.5 uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.marca || '---'}</div>
+                        <div class="p-0.5 uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.tipo || r.clase || 'TRACTO'}</div>
+                        <div class="p-0.5 uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.modelo || '---'}</div>
+                        <div class="p-0.5 font-mono text-sky-800 font-extrabold bg-sky-50/50" style="border-right:1.5px solid #0F172A;">${r.placa}</div>
+                        <div class="p-0.5 uppercase text-slate-800">${r.color || '---'}</div>
                     </div>
 
-                    <div class="doc-row" style="grid-template-columns: 35% 35% 30%; text-align:center; font-size: 8px;">
-                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">NÚMERO DEL MOTOR</div>
-                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">NÚMERO DE SERIE / VIN</div>
-                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70">KILOMETRAJE ACTUAL</div>
+                    <div class="grid grid-cols-3 divide-x-[1.5px] divide-slate-900 text-center border-b-[1.5px] border-slate-900" style="display:grid; grid-template-columns: 35% 35% 30%; border-bottom:1.5px solid #0F172A;">
+                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">NÚMERO DEL MOTOR</div>
+                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">NÚMERO DE SERIE / VIN</div>
+                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]">KILOMETRAJE ACTUAL</div>
                     </div>
 
-                    <div class="doc-row" style="grid-template-columns: 35% 35% 30%; text-align:center; font-size: 8.5px; font-weight: 700;">
-                        <div class="p-1 font-mono uppercase text-slate-800" style="border-right: 1.5px solid #0f172a;">${r.numero_motor || '---'}</div>
-                        <div class="p-1 font-mono uppercase text-slate-800" style="border-right: 1.5px solid #0f172a;">${r.numero_serie || '---'}</div>
-                        <div class="p-1 font-mono text-emerald-800 font-extrabold bg-emerald-50/50">${kmFmt} KM</div>
+                    <div class="grid grid-cols-3 divide-x-[1.5px] divide-slate-900 text-center font-bold text-[8px]" style="display:grid; grid-template-columns: 35% 35% 30%;">
+                        <div class="p-0.5 font-mono uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.numero_motor || '---'}</div>
+                        <div class="p-0.5 font-mono uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.numero_serie || '---'}</div>
+                        <div class="p-0.5 font-mono text-emerald-800 font-extrabold bg-emerald-50/50">${kmFmt} KM</div>
                     </div>
                 </section>
 
                 <!-- 3. MATRIZ DE CALIFICACIÓN DE SISTEMAS Y ACCESORIOS -->
                 <section class="mb-2">
-                    <div class="grid grid-cols-3 gap-1" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px;">
+                    <div class="grid grid-cols-3 gap-1" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;">
                         ${[
                             GRUPOS_SISTEMAS.slice(0, 5),
                             GRUPOS_SISTEMAS.slice(5, 10),
                             GRUPOS_SISTEMAS.slice(10)
                         ].map(colGrupos => `
-                            <div class="doc-box mb-0">
-                                <table style="width:100%; border-collapse: collapse; font-size: 7.5px;">
+                            <div class="doc-grid-box rounded-lg overflow-hidden bg-white" style="border:1.5px solid #0F172A;">
+                                <table style="width:100%; border-collapse: collapse; font-size: 7.2px;">
                                     <thead>
-                                        <tr style="background:#0f172a; color:#ffffff;">
-                                            <th style="padding: 2px 4px; text-align:left; font-size:7.5px; font-weight:800; text-transform:uppercase;">PARTES Y ACCESORIOS</th>
-                                            <th style="padding: 2px 2px; text-align:center; width:20px; font-size:7px;">CANT</th>
-                                            <th style="padding: 2px 2px; text-align:center; width:30px; font-size:7px;">ESTADO</th>
+                                        <tr style="background:#0F172A; color:#ffffff;">
+                                            <th style="padding: 1.5px 3px; text-align:left; font-size:7.2px; font-weight:800; text-transform:uppercase;">PARTES Y ACCESORIOS</th>
+                                            <th style="padding: 1.5px 2px; text-align:center; width:20px; font-size:6.8px;">CANT</th>
+                                            <th style="padding: 1.5px 2px; text-align:center; width:28px; font-size:6.8px;">ESTADO</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         ${colGrupos.map(grp => `
-                                            <tr style="background:#f1f5f9; border-top:1px solid #0f172a; border-bottom:1px solid #0f172a;">
-                                                <td colspan="3" style="padding: 1.5px 3px; font-weight: 800; font-size: 7.5px; color: #1e293b; text-transform: uppercase;">
+                                            <tr style="background:#F1F5F9; border-top:1px solid #0F172A; border-bottom:1px solid #0F172A;">
+                                                <td colspan="3" style="padding: 1px 3px; font-weight: 800; font-size: 7.2px; color: #1E293B; text-transform: uppercase;">
                                                     • ${grp.titulo}
                                                 </td>
                                             </tr>
                                             ${grp.items.map(it => {
                                                 const k = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
                                                 const est = partes[k] || 'B';
-                                                let badgeHtml = '<span class="badge-pastel-lemon px-1 py-0.1 rounded font-extrabold text-[7px]">OK</span>';
-                                                if (est === 'R') badgeHtml = '<span class="badge-pastel-amber px-1 py-0.1 rounded font-extrabold text-[7px]">REG</span>';
-                                                if (est === 'M') badgeHtml = '<span class="badge-pastel-red px-1 py-0.1 rounded font-extrabold text-[7px]">MAL</span>';
+                                                let badgeHtml = '<span class="px-1 py-0.2 rounded font-extrabold text-[6.8px] bg-emerald-100 text-emerald-800 border border-emerald-300">OK</span>';
+                                                if (est === 'R') badgeHtml = '<span class="px-1 py-0.2 rounded font-extrabold text-[6.8px] bg-amber-100 text-amber-800 border border-amber-300">REG</span>';
+                                                if (est === 'M') badgeHtml = '<span class="px-1 py-0.2 rounded font-extrabold text-[6.8px] bg-rose-100 text-rose-800 border border-rose-300">MAL</span>';
 
                                                 return `
-                                                    <tr style="border-bottom: 1px solid #e2e8f0;">
-                                                        <td style="padding: 1px 3px; color: #334155; font-weight: 500;">${it}</td>
-                                                        <td style="padding: 1px 2px; text-align:center; font-family:monospace; font-weight:bold; color:#64748b;">1</td>
-                                                        <td style="padding: 1px 2px; text-align:center;">${badgeHtml}</td>
+                                                    <tr style="border-bottom: 1px solid #E2E8F0;">
+                                                        <td style="padding: 0.8px 3px; color: #334155; font-weight: 500; font-size: 7px;">${it}</td>
+                                                        <td style="padding: 0.8px 2px; text-align:center; font-family:monospace; font-weight:bold; color:#64748B; font-size: 7px;">1</td>
+                                                        <td style="padding: 0.8px 2px; text-align:center;">${badgeHtml}</td>
                                                     </tr>
                                                 `;
                                             }).join('')}
@@ -1550,10 +1500,10 @@
                 </section>
 
                 <!-- 4. DIAGRAMA VECTORIAL 2D DE LA UNIDAD SEGÚN CONFIGURACIÓN -->
-                <section class="doc-box p-1 text-center bg-slate-50/50 mb-2">
+                <section class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2 p-1 text-center" style="border:1.5px solid #0F172A; background: rgba(248, 250, 252, 0.5);">
                     <div class="flex justify-between items-center px-2 pb-0.5 border-b border-slate-300 mb-0.5">
                         <span class="font-extrabold text-slate-800 text-[8px] uppercase">Diagrama Técnico del Estado de la Unidad</span>
-                        <span class="badge-pastel-lemon font-mono font-extrabold text-[7.5px] px-2 py-0.2 rounded-full uppercase">CONFIGURACIÓN: ${pdfConfig}</span>
+                        <span class="font-mono font-extrabold text-[7.5px] px-2 py-0.2 rounded-full uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">CONFIGURACIÓN: ${pdfConfig}</span>
                     </div>
                     <div class="py-0.5">
                         ${pdfSvgDiagram}
@@ -1561,37 +1511,37 @@
                 </section>
 
                 <!-- 5. OBSERVACIONES DE LA ENTREGA -->
-                <section class="doc-box p-1.5 bg-slate-50/60 mb-2">
+                <section class="doc-grid-box rounded-lg p-1.5 bg-white mb-2" style="border:1.5px solid #0F172A;">
                     <span class="font-bold text-slate-700 text-[8px] uppercase block mb-0.5">Observaciones Técnicas Registradas:</span>
-                    <p class="text-[8px] text-slate-800 m-0 font-medium leading-snug">
+                    <p class="text-[7.5px] text-slate-800 m-0 font-medium leading-snug">
                         ${r.observaciones ? r.observaciones.toUpperCase() : 'LA UNIDAD VEHICULAR SE ENTREGA EN CONDICIONES OPERATIVAS Y CON SU EQUIPAMIENTO COMPLETO SEGÚN DETALLE SUPERIOR.'}
                     </p>
                 </section>
 
                 <!-- 6. FIRMAS DIGITALES DE CONFORMIDAD -->
-                <section class="doc-box mb-1">
-                    <div class="doc-row" style="grid-template-columns: 1fr 1fr;">
-                        <div class="p-2 flex flex-col items-center justify-between text-center bg-white min-h-[68px]" style="border-right: 1.5px solid #0f172a;">
-                            <div class="w-full flex items-center justify-center h-8">
-                                ${r.firma_entrega ? `<img src="${r.firma_entrega}" style="max-height: 32px; max-width: 150px;" crossorigin="anonymous">` : '<span class="text-slate-300 italic text-[7.5px]">Firma digitalizada</span>'}
+                <footer class="doc-grid-box rounded-lg p-2 bg-white" style="border:1.5px solid #0F172A;">
+                    <div class="grid grid-cols-2 gap-2" style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div class="p-1.5 rounded-lg border border-slate-200 bg-slate-50/50 flex flex-col items-center justify-between text-center min-h-[56px]" style="border:1px solid #E2E8F0; background:#F8FAFC;">
+                            <div class="h-7 flex items-center justify-center">
+                                ${r.firma_entrega ? `<img src="${r.firma_entrega}" style="max-height: 26px; max-width: 140px; object-fit: contain;" crossorigin="anonymous">` : '<span class="text-slate-300 italic text-[7px]">Firma digitalizada</span>'}
                             </div>
-                            <div class="w-full pt-1 border-t border-slate-400">
-                                <div class="font-bold text-slate-900 text-[8.5px] uppercase">${r.quien_entrega}</div>
-                                <div class="text-[7px] text-slate-500 font-semibold uppercase">ENTREGADO POR (CONTROL DE SEGURIDAD)</div>
+                            <div class="w-full pt-1 border-t border-slate-300" style="border-top:1px solid #CBD5E1;">
+                                <div class="font-bold text-slate-900 text-[8px] uppercase">${r.quien_entrega}</div>
+                                <div class="text-[6.8px] text-slate-500 font-semibold uppercase">ENTREGADO POR (CONTROL DE SEGURIDAD)</div>
                             </div>
                         </div>
 
-                        <div class="p-2 flex flex-col items-center justify-between text-center bg-white min-h-[68px]">
-                            <div class="w-full flex items-center justify-center h-8">
-                                ${r.firma_recibe ? `<img src="${r.firma_recibe}" style="max-height: 32px; max-width: 150px;" crossorigin="anonymous">` : '<span class="text-slate-300 italic text-[7.5px]">Firma digitalizada</span>'}
+                        <div class="p-1.5 rounded-lg border border-slate-200 bg-slate-50/50 flex flex-col items-center justify-between text-center min-h-[56px]" style="border:1px solid #E2E8F0; background:#F8FAFC;">
+                            <div class="h-7 flex items-center justify-center">
+                                ${r.firma_recibe ? `<img src="${r.firma_recibe}" style="max-height: 26px; max-width: 140px; object-fit: contain;" crossorigin="anonymous">` : '<span class="text-slate-300 italic text-[7px]">Firma digitalizada</span>'}
                             </div>
-                            <div class="w-full pt-1 border-t border-slate-400">
-                                <div class="font-bold text-slate-900 text-[8.5px] uppercase">${r.quien_recibe}</div>
-                                <div class="text-[7px] text-slate-500 font-semibold uppercase">RECIBIDO POR (CONDUCTOR ASIGNADO)</div>
+                            <div class="w-full pt-1 border-t border-slate-300" style="border-top:1px solid #CBD5E1;">
+                                <div class="font-bold text-slate-900 text-[8px] uppercase">${r.quien_recibe}</div>
+                                <div class="text-[6.8px] text-slate-500 font-semibold uppercase">RECIBIDO POR (CONDUCTOR ASIGNADO)</div>
                             </div>
                         </div>
                     </div>
-                </section>
+                </footer>
 
                 <!-- Pie de Página -->
                 <div class="flex justify-between items-center text-[6.5px] text-slate-400 mt-1 px-1 font-mono">
@@ -1603,66 +1553,46 @@
         `;
     }
 
-    // ── RENDERIZAR PDF EN BLOB (COMPILACIÓN BINARIA PARA COMPARTIR) ──
+    // ── MOTOR DE GENERACIÓN PDF ULTRA ALTA RESOLUCIÓN (IDÉNTICO A CHECKLIST DE UNIDADES) ──
     async function _evRenderPdfBlob(htmlBody, filename) {
         return new Promise(function(resolve, reject) {
-            const iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed; top:-10000px; left:-10000px; width:850px; height:1300px; border:none; z-index:-999;';
+            var iframe = document.createElement('iframe');
+            iframe.style.cssText = 'position:fixed; top:-10000px; left:-10000px; width:840px; height:1200px; border:none; z-index:-999;';
             document.body.appendChild(iframe);
 
-            const doc = iframe.contentWindow.document;
+            var doc = iframe.contentWindow.document;
             doc.open();
-            doc.write(`<!DOCTYPE html>
-            <html lang="es">
-            <head>
-                <meta charset="UTF-8">
-                <link rel="preconnect" href="https://fonts.googleapis.com">
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-                <style>
-                    @page { size: A4 portrait; margin: 3mm 4mm; }
-                    * { box-sizing: border-box; }
-                    body { background-color:#FFFFFF; color:#0F172A; margin:0; padding:4px; -webkit-font-smoothing:antialiased; font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif; }
-                    .doc-box { border: 1.5px solid #0f172a; border-radius: 6px; overflow: hidden; background: #ffffff; margin-bottom: 5px; }
-                    .doc-row { display: grid; border-bottom: 1.5px solid #0f172a; }
-                    .doc-row:last-child { border-bottom: none; }
-                    .badge-pastel-lemon { background-color: #f7fee7; color: #3f6212; border: 1px solid #bef264; }
-                    .badge-pastel-amber { background-color: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
-                    .badge-pastel-red { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-                    .w-full { width: 100%; }
-                    .flex { display: flex; }
-                    .items-center { align-items: center; }
-                    .justify-between { justify-content: space-between; }
-                    .justify-center { justify-content: center; }
-                    .text-center { text-align: center; }
-                    .font-bold { font-weight: 700; }
-                    .font-extrabold { font-weight: 800; }
-                    .uppercase { text-transform: uppercase; }
-                    .font-mono { font-family: 'JetBrains Mono', monospace; }
-                    svg { overflow: visible !important; display: block; }
-                </style>
-            </head>
-            <body>
-                <div id="ev-pdf-root" style="width:800px; margin:0 auto; background:#fff;">${htmlBody}</div>
-            </body>
-            </html>`);
+            doc.write('<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n'
+                + '<script src="https://cdn.tailwindcss.com"></script>\n'
+                + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+                + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+                + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
+                + '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></scr' + 'ipt>\n'
+                + '<style>\n'
+                + 'body { background-color:#FFFFFF; color:#0F172A; margin:0; padding:0; -webkit-font-smoothing:antialiased; font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif; }\n'
+                + '.doc-grid-box { border: 1.5px solid #0F172A; }\n'
+                + '.report-page { width:100%; max-width:820px; box-sizing:border-box; padding:8px 12px; background:#FFFFFF; margin:0 auto; }\n'
+                + '.report-page-break { page-break-before:always !important; }\n'
+                + 'svg { overflow: visible !important; display: block; }\n'
+                + '</style>\n</head>\n<body>\n'
+                + '<div id="ev-pdf-render-root" style="width:100%; max-width:820px; margin:0 auto;">' + htmlBody + '</div>\n'
+                + '</body>\n</html>');
             doc.close();
 
             iframe.onload = async function() {
                 try {
-                    await new Promise(r => setTimeout(r, 600));
-                    const targetEl = doc.getElementById('ev-pdf-root');
-                    const opt = {
+                    await new Promise(function(r) { setTimeout(r, 450); });
+                    var targetEl = doc.getElementById('ev-pdf-render-root');
+                    var opt = {
                         margin:       0,
                         filename:     filename,
                         image:        { type: 'jpeg', quality: 0.98 },
-                        html2canvas:  { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 850 },
+                        html2canvas:  { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 840 },
                         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
                         pagebreak:    { mode: ['css', 'legacy'] }
                     };
 
-                    const pdfBlob = await iframe.contentWindow.html2pdf().set(opt).from(targetEl).outputPdf('blob');
+                    var pdfBlob = await iframe.contentWindow.html2pdf().set(opt).from(targetEl).outputPdf('blob');
                     iframe.remove();
                     resolve(pdfBlob);
                 } catch(e) {
@@ -1673,7 +1603,89 @@
         });
     }
 
-    // ── COMPARTIR DIRECTAMENTE EL ARCHIVO PDF POR WHATSAPP ─────────
+    // ── VENTANA DE IMPRESIÓN Y DESCARGA DIRECTA (IDÉNTICA A CHECKLIST UNIDADES) ──
+    function _evAbrirVentanaImpresion(htmlBody, filename, titulo, autoPrint) {
+        var finalHtml = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n'
+            + '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+            + '<title>' + (titulo || 'Acta de Entrega de Vehículo • Marsisa SGC 2026') + '</title>\n'
+            + '<script src="https://cdn.tailwindcss.com"></script>\n'
+            + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+            + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+            + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
+            + '<style>\n'
+            + 'body {\n'
+            + '  background-color: #F1F5F9;\n'
+            + '  color: #0F172A;\n'
+            + '  -webkit-font-smoothing: antialiased;\n'
+            + '  -moz-osx-font-smoothing: grayscale;\n'
+            + '}\n'
+            + '.doc-grid-box { border: 1.5px solid #0F172A; }\n'
+            + '.btn-action { transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); }\n'
+            + '.btn-action:hover { transform: translateY(-1px); }\n'
+            + '.btn-action:active { transform: scale(0.98); }\n'
+            + '.report-page-break { page-break-before: always !important; }\n'
+            + '@media print {\n'
+            + '  @page {\n'
+            + '    size: A4 portrait;\n'
+            + '    margin: 4mm 5mm;\n'
+            + '  }\n'
+            + '  body {\n'
+            + '    background: #FFFFFF !important;\n'
+            + '    padding: 0 !important;\n'
+            + '    margin: 0 !important;\n'
+            + '    -webkit-print-color-adjust: exact !important;\n'
+            + '    print-color-adjust: exact !important;\n'
+            + '  }\n'
+            + '  .no-print {\n'
+            + '    display: none !important;\n'
+            + '  }\n'
+            + '  .report-page {\n'
+            + '    box-shadow: none !important;\n'
+            + '    border: none !important;\n'
+            + '    border-radius: 0 !important;\n'
+            + '    padding: 0 !important;\n'
+            + '    margin: 0 !important;\n'
+            + '    width: 100% !important;\n'
+            + '    max-width: 100% !important;\n'
+            + '  }\n'
+            + '}\n'
+            + '</style>\n</head>\n<body class="py-4 md:py-6 px-2 sm:px-4 flex flex-col items-center min-h-screen">\n'
+            + '  <!-- TOP APP TOOLBAR -->\n'
+            + '  <nav class="no-print w-full max-w-[840px] mb-4 flex flex-wrap items-center justify-between gap-3 bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-xs">\n'
+            + '    <div class="flex items-center gap-3">\n'
+            + '      <button onclick="window.close()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">\n'
+            + '        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>\n'
+            + '        <span>Cerrar Vista</span>\n'
+            + '      </button>\n'
+            + '      <div class="h-4 w-px bg-slate-200"></div>\n'
+            + '      <div class="flex items-center gap-2">\n'
+            + '        <span class="text-xs font-bold text-slate-900 font-mono">' + (titulo || 'ACTA DE ENTREGA') + '</span>\n'
+            + '        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase">F-SEG-004</span>\n'
+            + '      </div>\n'
+            + '    </div>\n'
+            + '    <div class="flex items-center gap-2">\n'
+            + '      <button onclick="window.print()" class="btn-action inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-medium rounded-xl shadow-xs transition">\n'
+            + '        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>\n'
+            + '        <span>Guardar / Descargar PDF (Vectorial HD)</span>\n'
+            + '      </button>\n'
+            + '    </div>\n'
+            + '  </nav>\n'
+            + '  <!-- MAIN CONTENT ROOT -->\n'
+            + '  <div id="ev-pdf-root" class="w-full flex flex-col items-center">\n'
+            + htmlBody
+            + '\n  </div>\n'
+            + '  <aside class="no-print mt-3 text-center text-[10px] text-slate-400">\n'
+            + '    Azkell Fleet • Documento digital de control vehicular 2026\n'
+            + '  </aside>\n'
+            + (autoPrint ? '<script>window.onload = function() { setTimeout(function(){ window.print(); }, 400); };</scr' + 'ipt>\n' : '')
+            + '</body>\n</html>';
+
+        var blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+    }
+
+    // ── COMPARTIR DIRECTAMENTE EL ARCHIVO PDF POR WHATSAPP (MÓVIL Y PC) ─────────
     window.evCompartirWhatsApp = async function(id) {
         try {
             const token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token');
@@ -1717,13 +1729,13 @@
             window.open('https://api.whatsapp.com/send', '_blank');
 
         } catch(e) {
-            if (e.name === 'AbortError') return; // Cancelado en el menú nativo
+            if (e.name === 'AbortError') return; // Cancelado en el selector nativo
             console.error('Error al compartir PDF por WhatsApp:', e);
             alert('Error al generar y compartir el PDF por WhatsApp.');
         }
     };
 
-    // ── GENERACIÓN E IMPRESIÓN DEL PDF OFICIAL CON DISEÑO BENTO PASTEL (A4 EJECUTIVO) ──────
+    // ── GENERACIÓN E IMPRESIÓN DEL PDF OFICIAL (IDÉNTICO A CHECKLIST UNIDADES) ──────
     window.evImprimirPDF = async function(id) {
         try {
             const token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token');
@@ -1737,78 +1749,12 @@
             }
 
             const r = json.data;
+            const folio = r.numero_inventario || r.id;
+            const placa = r.placa || 'UNIDAD';
+            const filename = `Acta_Entrega_${folio}_${placa}.pdf`;
             const htmlBody = _evConstruirHtmlPDF(r);
 
-            const printWin = window.open('', '_blank');
-            printWin.document.write(`
-                <!DOCTYPE html>
-                <html lang="es">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Acta de Entrega de Vehículo - ${r.numero_inventario || r.id}</title>
-                    <script src="https://cdn.tailwindcss.com"></script>
-                    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap">
-                    <style>
-                        @page { 
-                            size: A4 portrait; 
-                            margin: 3mm 4mm; 
-                        }
-                        * { box-sizing: border-box; }
-                        body { 
-                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
-                            font-size: 8px; 
-                            color: #0f172a; 
-                            background: #ffffff; 
-                            margin: 0; 
-                            padding: 0;
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
-                        }
-                        .font-mono { font-family: 'JetBrains Mono', monospace; }
-                        .doc-box {
-                            border: 1.5px solid #0f172a;
-                            border-radius: 6px;
-                            overflow: hidden;
-                            background: #ffffff;
-                            margin-bottom: 3px;
-                        }
-                        .doc-row {
-                            display: grid;
-                            border-bottom: 1.5px solid #0f172a;
-                        }
-                        .doc-row:last-child {
-                            border-bottom: none;
-                        }
-                        .badge-pastel-lemon {
-                            background-color: #f7fee7;
-                            color: #3f6212;
-                            border: 1px solid #bef264;
-                        }
-                        .badge-pastel-amber {
-                            background-color: #fffbeb;
-                            color: #b45309;
-                            border: 1px solid #fde68a;
-                        }
-                        .badge-pastel-red {
-                            background-color: #fef2f2;
-                            color: #b91c1c;
-                            border: 1px solid #fecaca;
-                        }
-                    </style>
-                </head>
-                <body class="p-1">
-                    ${htmlBody}
-                    <script>
-                        window.onload = function() {
-                            setTimeout(function() {
-                                window.print();
-                            }, 400);
-                        };
-                    </script>
-                </body>
-                </html>
-            `);
-            printWin.document.close();
+            _evAbrirVentanaImpresion(htmlBody, filename, `Acta Entrega ${folio} (${placa})`, true);
         } catch(e) {
             console.error('Error generando PDF:', e);
             alert('Error al generar PDF.');
