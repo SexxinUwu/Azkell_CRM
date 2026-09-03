@@ -1367,7 +1367,7 @@
                                 <div class="text-[9px] flex flex-col justify-between bg-white divide-y-[1.5px] divide-slate-900">
                                     <div class="px-2 py-0.5 flex justify-between items-center"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Código:</span><span class="font-mono font-bold text-slate-900">F-SEG-004</span></div>
                                     <div class="px-2 py-0.5 flex justify-between items-center"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Versión:</span><span class="font-mono font-bold text-slate-900">01</span></div>
-                                    <div class="px-2 py-0.5 flex justify-between items-center"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Fecha:</span><span class="font-mono font-semibold text-slate-900">${fechaStr}</span></div>
+                                    <div class="px-2 py-0.5 flex justify-between items-center"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Fecha:</span><span class="font-mono font-semibold text-slate-900">10/11/2025</span></div>
                                 </div>
                             </div>
 
