@@ -702,16 +702,34 @@
                     <textarea id="ev-f-obs" class="ev-form-input" rows="3" placeholder="Detalle observaciones sobre novedades, estado de espejos, faros, niveles, etc."></textarea>
                 </div>
 
-                <!-- Croquis Vectorial Adaptativo Según Configuración (T3, T2, C3, R2, etc.) -->
-                <div class="p-3 border rounded-4 bg-light text-center">
-                    <div class="d-flex align-items-center justify-content-between mb-2 px-2">
-                        <span class="ev-form-label m-0">DIAGRAMA DEL ESTADO DE LA UNIDAD</span>
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace fw-bold" id="ev-lbl-config-tag">CONFIG: TRACTO STANDARD</span>
+                <!-- Croquis Vectorial Adaptativo Según Configuración (T3, T2, C3, C2, S3, S2, R2) -->
+                <div class="p-3 border rounded-4 bg-light">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2 border-bottom">
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="ev-form-label m-0 fw-bold">DIAGRAMA TÉCNICO DE LA UNIDAD</span>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace fw-bold" id="ev-lbl-config-tag">CONFIGURACIÓN: T3</span>
+                            </div>
+                            <small class="text-secondary d-block mt-0.5" id="ev-lbl-config-sub">Tractocamión de 3 Ejes (1 Direccional + Tándem Trasero) con Quinta Rueda</small>
+                        </div>
+                        
+                        <!-- Controles Adaptativos según el tipo de unidad -->
+                        <div class="d-flex align-items-center gap-2">
+                            <div id="ev-ctrl-cabina" class="btn-group btn-group-sm bg-white p-1 rounded-3 border">
+                                <button type="button" id="ev-btn-cab-chata" class="btn btn-sm btn-light border fw-bold text-dark shadow-xs" onclick="window.evSetCabEstilo('chata')">Cabina Europea (Chata)</button>
+                                <button type="button" id="ev-btn-cab-trompa" class="btn btn-sm text-secondary fw-semibold" onclick="window.evSetCabEstilo('trompa')">Cabina Americana (Trompuda)</button>
+                            </div>
+                            <div id="ev-ctrl-body" class="btn-group btn-group-sm bg-white p-1 rounded-3 border" style="display:none;">
+                                <button type="button" id="ev-btn-body-furgon" class="btn btn-sm btn-light border fw-bold text-dark shadow-xs" onclick="window.evSetBodyEstilo('furgon')">Furgón Cerrado</button>
+                                <button type="button" id="ev-btn-body-plat" class="btn btn-sm text-secondary fw-semibold" onclick="window.evSetBodyEstilo('plataforma')">Plataforma Plana</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="p-2 border rounded-3 bg-white d-inline-block shadow-sm" id="ev-croquis-svg-container">
+
+                    <div class="p-3 border rounded-3 bg-white text-center shadow-xs" id="ev-croquis-svg-container" style="min-height: 180px; background-size: 20px 20px; background-image: linear-gradient(to right, rgba(226, 232, 240, 0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(226, 232, 240, 0.5) 1px, transparent 1px);">
                         <!-- Generado dinámicamente según configuración -->
                     </div>
-                    <small class="text-muted d-block mt-2"><i class="bi bi-info-circle me-1"></i> Diagrama adaptado a la configuración técnica de la unidad.</small>
+                    <small class="text-muted d-block mt-2"><i class="bi bi-info-circle me-1"></i> Diagrama vectorial 2D generado en tiempo real según la configuración técnica de la unidad (MTC).</small>
                 </div>
             </div>
 

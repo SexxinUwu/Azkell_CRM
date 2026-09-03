@@ -471,63 +471,410 @@
         }
     };
 
-    // ── RENDERIZAR DIAGRAMA SVG SEGÚN CONFIGURACIÓN (T2, T3, C2, C3, R2, Se3, etc.) ──
+    // ── MOTOR DE DIBUJO VECTORIAL 2D PARAMÉTRICO SEGÚN CONFIGURACIÓN (T3, T2, C3, C2, S3, S2, R2) ──
+    window._evCabinaEstilo = 'chata'; // 'chata' o 'trompa'
+    window._evCarroceriaEstilo = 'furgon'; // 'furgon' o 'plataforma'
+
+    window.evSetCabEstilo = function(estilo) {
+        window._evCabinaEstilo = estilo;
+        const btnC = document.getElementById('ev-btn-cab-chata');
+        const btnT = document.getElementById('ev-btn-cab-trompa');
+        if (btnC && btnT) {
+            if (estilo === 'chata') {
+                btnC.className = 'btn btn-sm btn-light border fw-bold text-dark shadow-xs';
+                btnT.className = 'btn btn-sm text-secondary fw-semibold';
+            } else {
+                btnT.className = 'btn btn-sm btn-light border fw-bold text-dark shadow-xs';
+                btnC.className = 'btn btn-sm text-secondary fw-semibold';
+            }
+        }
+        window.evRenderizarCroquis(window._evCurrentConfiguracion);
+    };
+
+    window.evSetBodyEstilo = function(estilo) {
+        window._evCarroceriaEstilo = estilo;
+        const btnF = document.getElementById('ev-btn-body-furgon');
+        const btnP = document.getElementById('ev-btn-body-plat');
+        if (btnF && btnP) {
+            if (estilo === 'furgon') {
+                btnF.className = 'btn btn-sm btn-light border fw-bold text-dark shadow-xs';
+                btnP.className = 'btn btn-sm text-secondary fw-semibold';
+            } else {
+                btnP.className = 'btn btn-sm btn-light border fw-bold text-dark shadow-xs';
+                btnF.className = 'btn btn-sm text-secondary fw-semibold';
+            }
+        }
+        window.evRenderizarCroquis(window._evCurrentConfiguracion);
+    };
+
     window.evRenderizarCroquis = function(configStr) {
         const cont = document.getElementById('ev-croquis-svg-container');
         const tag = document.getElementById('ev-lbl-config-tag');
+        const sub = document.getElementById('ev-lbl-config-sub');
+        const cabCtrl = document.getElementById('ev-ctrl-cabina');
+        const bodyCtrl = document.getElementById('ev-ctrl-body');
         if (!cont) return;
 
-        const conf = (configStr || 'T3').toUpperCase().trim();
-        if (tag) tag.textContent = `CONFIGURACIÓN: ${conf}`;
+        let code = (configStr || 'T3').toUpperCase().trim();
+        // Normalizaciones comunes
+        if (code === '6X4' || code === '6X2' || code.includes('T3')) code = 'T3';
+        else if (code === '4X2' || code.includes('T2')) code = 'T2';
+        else if (code.includes('C3') || code.includes('VOLQUETE')) code = 'C3';
+        else if (code.includes('C2')) code = 'C2';
+        else if (code.includes('S3') || code.includes('SE3') || code.includes('3 EJES')) code = 'S3';
+        else if (code.includes('S2') || code.includes('SE2') || code.includes('2 EJES')) code = 'S2';
+        else if (code.includes('R2') || code.includes('REMOLQUE') || code.includes('CARRETA')) code = 'R2';
+        else code = 'T3';
 
-        let svg = '';
-        if (conf.includes('R') || conf.includes('SE') || conf.includes('CARRETA') || conf.includes('FURGON')) {
-            // Remolque / Semirremolque / Carreta (R2, R3, Se3)
-            svg = `
-                <svg width="340" height="95" viewBox="0 0 400 120" style="max-width:100%; height:auto;">
-                    <!-- Carreta Chasis -->
-                    <rect x="30" y="25" width="330" height="60" rx="4" fill="#f8fafc" stroke="#0f172a" stroke-width="3"/>
-                    <rect x="35" y="30" width="100" height="50" rx="2" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
-                    <rect x="145" y="30" width="100" height="50" rx="2" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
-                    <rect x="255" y="30" width="100" height="50" rx="2" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
-                    <!-- Pines / Ejes -->
-                    <circle cx="50" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
-                    <circle cx="270" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
-                    <circle cx="310" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
-                    <circle cx="350" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
-                    <text x="195" y="60" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">REMOLQUE / CARRETA (${conf})</text>
-                </svg>
-            `;
-        } else if (conf === 'T2' || conf === 'C2') {
-            // Tracto 2 Ejes / Camión 2 Ejes
-            svg = `
-                <svg width="340" height="95" viewBox="0 0 400 120" style="max-width:100%; height:auto;">
-                    <rect x="20" y="28" width="90" height="62" rx="6" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
-                    <rect x="110" y="45" width="180" height="45" rx="3" fill="#f8fafc" stroke="#0f172a" stroke-width="3"/>
-                    <rect x="30" y="36" width="35" height="25" rx="3" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5"/>
-                    <circle cx="55" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
-                    <circle cx="250" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
-                    <text x="200" y="70" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">UNIDAD (${conf} - 2 EJES)</text>
-                </svg>
+        window._evCurrentConfiguracion = code;
+
+        const isChata = window._evCabinaEstilo === 'chata';
+        const isFurgon = window._evCarroceriaEstilo === 'furgon';
+
+        const specs = {
+            'T3': { nombre: 'Tractocamión T3 (6x4 / 6x2)', desc: 'Tractocamión de 3 Ejes (1 Direccional + Tándem Trasero) con Quinta Rueda', esMotor: true, tieneCarroceria: false },
+            'T2': { nombre: 'Tractocamión T2 (4x2)', desc: 'Tractocamión de 2 Ejes (1 Direccional + 1 Motriz Trasero) con Quinta Rueda', esMotor: true, tieneCarroceria: false },
+            'C3': { nombre: 'Camión Rígido C3 (6x4 / 6x2)', desc: 'Camión Rígido de 3 Ejes con Carrocería Integrada', esMotor: true, tieneCarroceria: true },
+            'C2': { nombre: 'Camión Rígido C2 (4x2)', desc: 'Camión Rígido de 2 Ejes para Distribución', esMotor: true, tieneCarroceria: true },
+            'S3': { nombre: 'Semirremolque S3 (3 Ejes Trídem)', desc: 'Semirremolque de 3 Ejes (Trídem) con Perno Rey y Patas de Apoyo', esMotor: false, tieneCarroceria: true },
+            'S2': { nombre: 'Semirremolque S2 (2 Ejes Tándem)', desc: 'Semirremolque de 2 Ejes (Tándem) con Perno Rey y Patas de Apoyo', esMotor: false, tieneCarroceria: true },
+            'R2': { nombre: 'Remolque R2 (2 Ejes con Lanza)', desc: 'Remolque Equilibrado de 2 Ejes con Barra de Tiro (Lanza) y Tornamesa', esMotor: false, tieneCarroceria: true }
+        };
+
+        const currentSpec = specs[code] || specs['T3'];
+        if (tag) tag.textContent = `CONFIGURACIÓN: ${code}`;
+        if (sub) sub.textContent = currentSpec.desc;
+
+        if (cabCtrl) cabCtrl.style.display = currentSpec.esMotor ? 'flex' : 'none';
+        if (bodyCtrl) bodyCtrl.style.display = currentSpec.tieneCarroceria ? 'flex' : 'none';
+
+        // Estructura Vectorial Completa
+        let svgHtml = `
+            <svg viewBox="0 0 920 340" style="width: 100%; max-width: 820px; height: auto; display: block; margin: 0 auto;" class="select-none">
+                <defs>
+                    <linearGradient id="evChassisGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#475569" />
+                        <stop offset="100%" stop-color="#1e293b" />
+                    </linearGradient>
+                    <linearGradient id="evCabGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ffffff" />
+                        <stop offset="60%" stop-color="#f8fafc" />
+                        <stop offset="100%" stop-color="#e2e8f0" />
+                    </linearGradient>
+                    <linearGradient id="evGlassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#bae6fd" />
+                        <stop offset="100%" stop-color="#38bdf8" />
+                    </linearGradient>
+                    <linearGradient id="evFuelGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#cbd5e1" />
+                        <stop offset="50%" stop-color="#94a3b8" />
+                        <stop offset="100%" stop-color="#64748b" />
+                    </linearGradient>
+                    <linearGradient id="evTireGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#334155" />
+                        <stop offset="100%" stop-color="#0f172a" />
+                    </linearGradient>
+                    <linearGradient id="evBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ffffff" />
+                        <stop offset="70%" stop-color="#f1f5f9" />
+                        <stop offset="100%" stop-color="#e2e8f0" />
+                    </linearGradient>
+                </defs>
+
+                <!-- LÍNEA DE SUELO / ASFALTO -->
+                <line x1="40" y1="295" x2="880" y2="295" stroke="#cbd5e1" stroke-width="2.5" stroke-dasharray="8 6" />
+        `;
+
+        if (code === 'T3') {
+            svgHtml += _evRenderTracto(3, isChata);
+        } else if (code === 'T2') {
+            svgHtml += _evRenderTracto(2, isChata);
+        } else if (code === 'C3') {
+            svgHtml += _evRenderCamionRigido(3, isChata, isFurgon);
+        } else if (code === 'C2') {
+            svgHtml += _evRenderCamionRigido(2, isChata, isFurgon);
+        } else if (code === 'S3') {
+            svgHtml += _evRenderSemirremolque(3, isFurgon);
+        } else if (code === 'S2') {
+            svgHtml += _evRenderSemirremolque(2, isFurgon);
+        } else if (code === 'R2') {
+            svgHtml += _evRenderRemolqueR2(isFurgon);
+        }
+
+        svgHtml += `</svg>`;
+        cont.innerHTML = svgHtml;
+    };
+
+    function _evRenderWheel(cx, cy, label) {
+        return `
+            <g>
+                <circle cx="${cx}" cy="${cy}" r="43" fill="url(#evTireGrad)" stroke="#020617" stroke-width="2.8" />
+                <circle cx="${cx}" cy="${cy}" r="37" fill="none" stroke="#475569" stroke-width="1.5" stroke-dasharray="4 3" />
+                <circle cx="${cx}" cy="${cy}" r="26" fill="#f1f5f9" stroke="#64748b" stroke-width="2" />
+                <circle cx="${cx}" cy="${cy}" r="20" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5" />
+                <circle cx="${cx}" cy="${cy}" r="9" fill="#1e293b" />
+                <circle cx="${cx - 13}" cy="${cy}" r="2.2" fill="#475569" />
+                <circle cx="${cx + 13}" cy="${cy}" r="2.2" fill="#475569" />
+                <circle cx="${cx}" cy="${cy - 13}" r="2.2" fill="#475569" />
+                <circle cx="${cx}" cy="${cy + 13}" r="2.2" fill="#475569" />
+                <circle cx="${cx - 9}" cy="${cy - 9}" r="2.2" fill="#475569" />
+                <circle cx="${cx + 9}" cy="${cy + 9}" r="2.2" fill="#475569" />
+                <circle cx="${cx - 9}" cy="${cy + 9}" r="2.2" fill="#475569" />
+                <circle cx="${cx + 9}" cy="${cy - 9}" r="2.2" fill="#475569" />
+                <circle cx="${cx}" cy="${cy}" r="3.5" fill="#94a3b8" stroke="#334155" stroke-width="1"/>
+                <text x="${cx}" y="${cy + 58}" font-size="9.5" font-weight="700" fill="#475569" text-anchor="middle" font-family="'Inter', sans-serif">${label}</text>
+            </g>
+        `;
+    }
+
+    function _evRenderCabinaChata(startX) {
+        return `
+            <g id="cabinaChata">
+                <path d="M ${startX} 245 L ${startX} 125 Q ${startX + 2} 80 ${startX + 40} 76 L ${startX + 165} 76 Q ${startX + 180} 80 ${startX + 185} 92 L ${startX + 185} 245 Z" fill="url(#evCabGrad)" stroke="#1e293b" stroke-width="2.5" />
+                <path d="M ${startX + 35} 76 Q ${startX + 95} 60 ${startX + 190} 62 L ${startX + 185} 78 Z" fill="#cbd5e1" stroke="#334155" stroke-width="1.5"/>
+                <path d="M ${startX + 8} 128 L ${startX + 8} 110 Q ${startX + 12} 90 ${startX + 40} 88 L ${startX + 78} 88 L ${startX + 78} 135 Z" fill="url(#evGlassGrad)" stroke="#0284c7" stroke-width="1.8" />
+                <path d="M ${startX + 85} 88 L ${startX + 152} 88 Q ${startX + 158} 88 ${startX + 158} 96 L ${startX + 158} 138 L ${startX + 85} 138 Z" fill="url(#evGlassGrad)" stroke="#0284c7" stroke-width="1.8" />
+                <rect x="${startX - 6}" y="105" width="7" height="38" rx="2.5" fill="#0f172a" />
+                <line x1="${startX + 1}" y1="112" x2="${startX + 10}" y2="112" stroke="#0f172a" stroke-width="2" />
+                <line x1="${startX + 1}" y1="130" x2="${startX + 10}" y2="130" stroke="#0f172a" stroke-width="2" />
+                <rect x="${startX + 88}" y="148" width="12" height="3.5" rx="1.5" fill="#0f172a" />
+                <rect x="${startX - 2}" y="165" width="8" height="42" fill="#334155" />
+                <polygon points="${startX - 1},210 ${startX + 8},210 ${startX + 8},228 ${startX - 1},228" fill="#fef08a" stroke="#ca8a04" stroke-width="1.5" />
+                <path d="M ${startX - 4} 225 L ${startX + 12} 225 L ${startX + 12} 248 L ${startX - 2} 248 Z" fill="#1e293b" stroke="#0f172a" stroke-width="2" />
+                <path d="M ${startX + 12} 238 A 52 52 0 0 1 ${startX + 120} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+            </g>
+        `;
+    }
+
+    function _evRenderCabinaTrompa(startX) {
+        return `
+            <g id="cabinaTrompa">
+                <path d="M ${startX} 235 L ${startX} 175 Q ${startX + 2} 158 ${startX + 22} 158 L ${startX + 110} 158 L ${startX + 110} 235 Z" fill="url(#evCabGrad)" stroke="#1e293b" stroke-width="2.5"/>
+                <path d="M ${startX + 110} 158 L ${startX + 110} 95 Q ${startX + 112} 80 ${startX + 130} 78 L ${startX + 220} 78 L ${startX + 220} 235 L ${startX + 110} 235 Z" fill="url(#evCabGrad)" stroke="#1e293b" stroke-width="2.5"/>
+                <rect x="${startX + 222}" y="52" width="7" height="145" rx="3" fill="#cbd5e1" stroke="#475569" stroke-width="1.5" />
+                <path d="M ${startX + 222} 52 Q ${startX + 225} 38 ${startX + 238} 40" fill="none" stroke="#cbd5e1" stroke-width="4.5" stroke-linecap="round"/>
+                <polygon points="${startX + 112},150 ${startX + 112},98 ${startX + 144},92 ${startX + 144},150" fill="url(#evGlassGrad)" stroke="#0284c7" stroke-width="1.8" />
+                <rect x="${startX + 150}" y="95" width="52" height="40" rx="3" fill="url(#evGlassGrad)" stroke="#0284c7" stroke-width="1.8" />
+                <rect x="${startX - 4}" y="162" width="7" height="58" rx="2" fill="#94a3b8" stroke="#1e293b" stroke-width="2"/>
+                <circle cx="${startX + 15}" cy="195" r="7.5" fill="#fef08a" stroke="#ca8a04" stroke-width="1.8" />
+                <path d="M ${startX + 70} 238 A 52 52 0 0 1 ${startX + 180} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+            </g>
+        `;
+    }
+
+    function _evRenderTracto(axlesCount, isChata) {
+        const frontAxleX = isChata ? 200 : 270;
+        const rearAxle1X = axlesCount === 3 ? 580 : 620;
+        const rearAxle2X = axlesCount === 3 ? 695 : null;
+        const chassisEndX = axlesCount === 3 ? rearAxle2X + 65 : rearAxle1X + 70;
+        const chassisStartX = isChata ? 140 : 155;
+        const fifthWheelX = axlesCount === 3 ? (rearAxle1X + rearAxle2X) / 2 : rearAxle1X;
+
+        let out = `
+            <rect x="${chassisStartX}" y="215" width="${chassisEndX - chassisStartX}" height="22" rx="3" fill="url(#evChassisGrad)" stroke="#0f172a" stroke-width="2.5" />
+            <rect x="${chassisStartX + 10}" y="222" width="${chassisEndX - chassisStartX - 20}" height="4" fill="#334155" />
+            <circle cx="${chassisEndX - 10}" cy="226" r="3" fill="#ef4444" />
+            ${isChata ? _evRenderCabinaChata(135) : _evRenderCabinaTrompa(145)}
+            <g>
+                <rect x="${frontAxleX + 60}" y="220" width="${rearAxle1X - frontAxleX - 95}" height="30" rx="6" fill="url(#evFuelGrad)" stroke="#334155" stroke-width="2" />
+                <circle cx="${frontAxleX + 80}" cy="230" r="3.5" fill="#1e293b" />
+                <rect x="${frontAxleX + 50}" y="238" width="${rearAxle1X - frontAxleX - 75}" height="5" rx="2" fill="#475569" />
+            </g>
+            <g id="quintaRueda">
+                <polygon points="${fifthWheelX - 32},215 ${fifthWheelX - 20},186 ${fifthWheelX + 20},186 ${fifthWheelX + 32},215" fill="#1e293b" stroke="#0f172a" stroke-width="2" />
+                <rect x="${fifthWheelX - 38}" y="178" width="76" height="9" rx="3" fill="#0f172a" stroke="#020617" stroke-width="2" />
+                <rect x="${fifthWheelX - 4}" y="178" width="8" height="5" fill="#64748b" />
+                <g transform="translate(${fifthWheelX}, 162)">
+                    <rect x="-42" y="-10" width="84" height="17" rx="3" fill="#1e293b" />
+                    <text x="0" y="2" font-size="8.5" font-weight="700" fill="#38bdf8" text-anchor="middle" font-family="'Inter', sans-serif">QUINTA RUEDA</text>
+                    <line x1="0" y1="7" x2="0" y2="16" stroke="#0284c7" stroke-width="1.5" />
+                </g>
+            </g>
+        `;
+
+        if (axlesCount === 3) {
+            out += `<path d="M ${rearAxle1X - 54} 238 A 52 52 0 0 1 ${rearAxle1X + 50} 214 L ${rearAxle2X - 50} 214 A 52 52 0 0 1 ${rearAxle2X + 54} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                    <line x1="${chassisEndX}" y1="220" x2="${chassisEndX}" y2="265" stroke="#1e293b" stroke-width="6" stroke-linecap="round" />`;
+        } else {
+            out += `<path d="M ${rearAxle1X - 54} 238 A 52 52 0 0 1 ${rearAxle1X + 54} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="${chassisEndX}" y1="220" x2="${chassisEndX}" y2="265" stroke="#1e293b" stroke-width="6" stroke-linecap="round" />`;
+        }
+
+        out += _evRenderWheel(frontAxleX, 252, 'E1: Direccional');
+        out += _evRenderWheel(rearAxle1X, 252, 'E2: Tracción 1');
+        if (rearAxle2X) out += _evRenderWheel(rearAxle2X, 252, 'E3: Tracción 2');
+        return out;
+    }
+
+    function _evRenderCamionRigido(axlesCount, isChata, isFurgon) {
+        const frontAxleX = isChata ? 180 : 250;
+        const rearAxle1X = axlesCount === 3 ? 610 : 660;
+        const rearAxle2X = axlesCount === 3 ? 725 : null;
+        const chassisStartX = isChata ? 120 : 135;
+        const chassisEndX = axlesCount === 3 ? rearAxle2X + 70 : rearAxle1X + 80;
+        const bodyStartX = isChata ? 305 : 360;
+        const bodyWidth = chassisEndX - bodyStartX + 10;
+
+        let out = `
+            <rect x="${chassisStartX}" y="215" width="${chassisEndX - chassisStartX}" height="22" rx="3" fill="url(#evChassisGrad)" stroke="#0f172a" stroke-width="2.5" />
+            <rect x="${chassisStartX + 10}" y="222" width="${chassisEndX - chassisStartX - 20}" height="4" fill="#334155" />
+            <circle cx="${chassisEndX - 10}" cy="226" r="3" fill="#ef4444" />
+            ${isChata ? _evRenderCabinaChata(115) : _evRenderCabinaTrompa(125)}
+        `;
+
+        if (isFurgon) {
+            out += `
+                <g>
+                    <rect x="${bodyStartX}" y="75" width="${bodyWidth}" height="140" rx="4" fill="url(#evBodyGrad)" stroke="#334155" stroke-width="2.5" />
+                    <line x1="${bodyStartX + bodyWidth * 0.25}" y1="85" x2="${bodyStartX + bodyWidth * 0.25}" y2="205" stroke="#cbd5e1" stroke-width="2" />
+                    <line x1="${bodyStartX + bodyWidth * 0.5}" y1="85" x2="${bodyStartX + bodyWidth * 0.5}" y2="205" stroke="#cbd5e1" stroke-width="2" />
+                    <line x1="${bodyStartX + bodyWidth * 0.75}" y1="85" x2="${bodyStartX + bodyWidth * 0.75}" y2="205" stroke="#cbd5e1" stroke-width="2" />
+                    <rect x="${bodyStartX + 10}" y="85" width="${bodyWidth - 20}" height="120" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6 3" />
+                    <text x="${bodyStartX + bodyWidth/2}" y="148" font-size="12" font-weight="700" fill="#64748b" text-anchor="middle" font-family="'Inter', sans-serif">CARROCERÍA FURGÓN</text>
+                </g>
             `;
         } else {
-            // Tracto 3 Ejes Standard (T3, C3, 6x4)
-            svg = `
-                <svg width="340" height="95" viewBox="0 0 400 120" style="max-width:100%; height:auto;">
-                    <rect x="20" y="25" width="90" height="65" rx="6" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
-                    <rect x="110" y="35" width="250" height="55" rx="4" fill="#f8fafc" stroke="#0f172a" stroke-width="3"/>
-                    <rect x="30" y="34" width="38" height="26" rx="3" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5"/>
-                    <circle cx="55" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
-                    <circle cx="270" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
-                    <circle cx="310" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
-                    <circle cx="350" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
-                    <text x="220" y="65" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">TRACTO / CAMIÓN (${conf})</text>
-                </svg>
+            out += `
+                <g>
+                    <rect x="${bodyStartX}" y="195" width="${bodyWidth}" height="20" rx="3" fill="#cbd5e1" stroke="#334155" stroke-width="2" />
+                    <rect x="${bodyStartX}" y="150" width="10" height="50" fill="#475569" />
+                    <rect x="${bodyStartX + bodyWidth - 8}" y="150" width="8" height="50" fill="#475569" />
+                    <line x1="${bodyStartX}" y1="170" x2="${bodyStartX + bodyWidth}" y2="170" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 4"/>
+                    <text x="${bodyStartX + bodyWidth/2}" y="185" font-size="11" font-weight="700" fill="#64748b" text-anchor="middle" font-family="'Inter', sans-serif">PLATAFORMA RÍGIDA</text>
+                </g>
             `;
         }
 
-        cont.innerHTML = svg;
-    };
+        out += `<rect x="${frontAxleX + 55}" y="222" width="${rearAxle1X - frontAxleX - 95}" height="26" rx="5" fill="url(#evFuelGrad)" stroke="#334155" stroke-width="2" />`;
+
+        if (axlesCount === 3) {
+            out += `<path d="M ${rearAxle1X - 52} 238 A 50 50 0 0 1 ${rearAxle1X + 48} 215 L ${rearAxle2X - 48} 215 A 50 50 0 0 1 ${rearAxle2X + 52} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />`;
+        } else {
+            out += `<path d="M ${rearAxle1X - 52} 238 A 50 50 0 0 1 ${rearAxle1X + 52} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />`;
+        }
+
+        out += _evRenderWheel(frontAxleX, 252, 'E1: Direccional');
+        out += _evRenderWheel(rearAxle1X, 252, 'E2: Posterior 1');
+        if (rearAxle2X) out += _evRenderWheel(rearAxle2X, 252, 'E3: Posterior 2');
+        return out;
+    }
+
+    function _evRenderSemirremolque(axlesCount, isFurgon) {
+        const semiStartX = 140;
+        const semiEndX = 810;
+        const width = semiEndX - semiStartX;
+        let r1, r2, r3;
+        if (axlesCount === 3) {
+            r1 = 570; r2 = 665; r3 = 760;
+        } else {
+            r1 = 640; r2 = 745; r3 = null;
+        }
+
+        let out = `
+            <rect x="${semiStartX}" y="205" width="${width}" height="18" rx="2" fill="url(#evChassisGrad)" stroke="#0f172a" stroke-width="2.5" />
+            <g id="kingpinAcople">
+                <rect x="${semiStartX + 35}" y="222" width="70" height="6" rx="2" fill="#0f172a" />
+                <polygon points="${semiStartX + 66},228 ${semiStartX + 74},228 ${semiStartX + 72},238 ${semiStartX + 68},238" fill="#eab308" stroke="#a16207" stroke-width="1.5" />
+                <g transform="translate(${semiStartX + 70}, 252)">
+                    <rect x="-38" y="-9" width="76" height="16" rx="3" fill="#ca8a04" />
+                    <text x="0" y="3" font-size="8" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="'Inter', sans-serif">PERNO REY</text>
+                </g>
+            </g>
+            <g id="patasApoyo">
+                <rect x="${semiStartX + 160}" y="215" width="16" height="65" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                <rect x="${semiStartX + 154}" y="278" width="28" height="7" rx="2" fill="#1e293b" />
+                <line x1="${semiStartX + 168}" y1="220" x2="${semiStartX + 205}" y2="250" stroke="#475569" stroke-width="3" />
+                <text x="${semiStartX + 168}" y="302" font-size="8" font-weight="700" fill="#475569" text-anchor="middle" font-family="'Inter', sans-serif">PATAS RETRÁCTILES</text>
+            </g>
+            <rect x="${semiStartX + 215}" y="226" width="${r1 - (semiStartX + 235)}" height="12" rx="2" fill="#94a3b8" stroke="#475569" stroke-width="1.5" />
+            <rect x="${semiEndX - 8}" y="215" width="8" height="65" fill="#1e293b" />
+            <rect x="${semiEndX - 18}" y="270" width="18" height="10" fill="#ef4444" stroke="#991b1b" stroke-width="1.5" />
+        `;
+
+        if (isFurgon) {
+            out += `
+                <g>
+                    <rect x="${semiStartX}" y="65" width="${width}" height="140" rx="3" fill="url(#evBodyGrad)" stroke="#334155" stroke-width="2.5" />
+                    <line x1="${semiStartX + width * 0.2}" y1="75" x2="${semiStartX + width * 0.2}" y2="195" stroke="#cbd5e1" stroke-width="2" />
+                    <line x1="${semiStartX + width * 0.4}" y1="75" x2="${semiStartX + width * 0.4}" y2="195" stroke="#cbd5e1" stroke-width="2" />
+                    <line x1="${semiStartX + width * 0.6}" y1="75" x2="${semiStartX + width * 0.6}" y2="195" stroke="#cbd5e1" stroke-width="2" />
+                    <line x1="${semiStartX + width * 0.8}" y1="75" x2="${semiStartX + width * 0.8}" y2="195" stroke="#cbd5e1" stroke-width="2" />
+                    <text x="${semiStartX + width/2}" y="140" font-size="14" font-weight="700" fill="#64748b" text-anchor="middle" font-family="'Inter', sans-serif">SEMIRREMOLQUE ${axlesCount === 3 ? 'S3 (3 EJES)' : 'S2 (2 EJES)'}</text>
+                </g>
+            `;
+        } else {
+            out += `
+                <g>
+                    <rect x="${semiStartX}" y="190" width="${width}" height="18" rx="2" fill="#94a3b8" stroke="#334155" stroke-width="2" />
+                    <rect x="${semiStartX}" y="145" width="10" height="50" fill="#1e293b" />
+                    <text x="${semiStartX + width/2}" y="180" font-size="12" font-weight="700" fill="#475569" text-anchor="middle" font-family="'Inter', sans-serif">PLATAFORMA PLANA</text>
+                </g>
+            `;
+        }
+
+        if (axlesCount === 3) {
+            out += `<path d="M ${r1 - 50} 235 A 48 48 0 0 1 ${r1 + 46} 210 L ${r3 - 46} 210 A 48 48 0 0 1 ${r3 + 50} 235" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />`;
+        } else {
+            out += `<path d="M ${r1 - 50} 235 A 48 48 0 0 1 ${r1 + 46} 210 L ${r2 - 46} 210 A 48 48 0 0 1 ${r2 + 50} 235" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />`;
+        }
+
+        out += _evRenderWheel(r1, 252, 'E1: Trídem');
+        out += _evRenderWheel(r2, 252, 'E2: Trídem');
+        if (r3) out += _evRenderWheel(r3, 252, 'E3: Trídem');
+        return out;
+    }
+
+    function _evRenderRemolqueR2(isFurgon) {
+        const trailerStartX = 230;
+        const trailerEndX = 810;
+        const width = trailerEndX - trailerStartX;
+        const frontAxleX = trailerStartX + 85;
+        const rearAxleX = trailerEndX - 95;
+
+        let out = `
+            <g id="lanzaRemolque">
+                <circle cx="115" cy="245" r="10" fill="none" stroke="#eab308" stroke-width="4" />
+                <line x1="125" y1="245" x2="${trailerStartX + 30}" y2="225" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/>
+                <line x1="125" y1="245" x2="${trailerStartX + 30}" y2="245" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/>
+                <rect x="155" y="235" width="22" height="12" fill="#ca8a04" rx="2" />
+                <text x="145" y="270" font-size="8.5" font-weight="700" fill="#a16207" text-anchor="middle" font-family="'Inter', sans-serif">LANZA CON ARGOLLA</text>
+            </g>
+            <g id="tornamesa">
+                <ellipse cx="${frontAxleX}" cy="216" rx="35" ry="5" fill="#475569" stroke="#0f172a" stroke-width="2"/>
+                <circle cx="${frontAxleX}" cy="216" r="6" fill="#1e293b" />
+            </g>
+            <rect x="${trailerStartX}" y="205" width="${width}" height="18" rx="2" fill="url(#evChassisGrad)" stroke="#0f172a" stroke-width="2.5" />
+        `;
+
+        if (isFurgon) {
+            out += `
+                <g>
+                    <rect x="${trailerStartX}" y="70" width="${width}" height="135" rx="3" fill="url(#evBodyGrad)" stroke="#334155" stroke-width="2.5" />
+                    <line x1="${trailerStartX + width * 0.33}" y1="80" x2="${trailerStartX + width * 0.33}" y2="195" stroke="#cbd5e1" stroke-width="2" />
+                    <line x1="${trailerStartX + width * 0.66}" y1="80" x2="${trailerStartX + width * 0.66}" y2="195" stroke="#cbd5e1" stroke-width="2" />
+                    <text x="${trailerStartX + width/2}" y="140" font-size="13" font-weight="700" fill="#64748b" text-anchor="middle" font-family="'Inter', sans-serif">REMOLQUE R2 (2 EJES DISTRIBUIDOS)</text>
+                </g>
+            `;
+        } else {
+            out += `
+                <g>
+                    <rect x="${trailerStartX}" y="190" width="${width}" height="18" rx="2" fill="#94a3b8" stroke="#334155" stroke-width="2" />
+                    <rect x="${trailerStartX}" y="150" width="8" height="45" fill="#1e293b" />
+                    <rect x="${trailerEndX - 8}" y="150" width="8" height="45" fill="#1e293b" />
+                    <text x="${trailerStartX + width/2}" y="180" font-size="12" font-weight="700" fill="#475569" text-anchor="middle" font-family="'Inter', sans-serif">PLATAFORMA REMOLQUE</text>
+                </g>
+            `;
+        }
+
+        out += `
+            <path d="M ${frontAxleX - 50} 236 A 48 48 0 0 1 ${frontAxleX + 50} 236" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+            <path d="M ${rearAxleX - 50} 236 A 48 48 0 0 1 ${rearAxleX + 50} 236" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+        `;
+
+        out += _evRenderWheel(frontAxleX, 252, 'E1: Dir. Tornamesa');
+        out += _evRenderWheel(rearAxleX, 252, 'E2: Posterior');
+        return out;
+    }
 
     // ── RENDERIZAR SISTEMAS Y COMPONENTES ─────────────────────────
     window.evRenderizarSistemas = function() {
