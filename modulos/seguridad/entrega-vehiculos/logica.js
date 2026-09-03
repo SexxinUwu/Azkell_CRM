@@ -339,6 +339,9 @@
             return;
         }
 
+        const esAdmin = (localStorage.getItem('fleet_role') || '').toLowerCase().includes('admin') ||
+                        (localStorage.getItem('fleet_rol') || '').toLowerCase().includes('admin');
+
         let html = '';
         data.forEach(r => {
             let fechaFmt = r.fecha || '---';
@@ -357,16 +360,21 @@
                     <td><span class="font-monospace fw-bold text-dark">${parseFloat(r.kilometraje || 0).toLocaleString('es-PE')} km</span></td>
                     <td><small class="text-muted text-truncate d-block" style="max-width:200px;">${r.observaciones || 'Sin observaciones'}</small></td>
                     <td style="text-align:center;">
-                        <div class="d-inline-flex align-items-center gap-1">
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-2 px-2 py-1 fw-bold" onclick="window.evVerDetalle('${r.id}')" title="Ver Detalle">
+                        <div class="ev-btn-action-group">
+                            <button type="button" class="ev-btn-action ev-btn-act-view" onclick="window.evVerDetalle('${r.id}')" title="Ver Detalle">
                                 <i class="bi bi-eye"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-primary rounded-2 px-2 py-1 fw-bold" onclick="window.evEditarRegistro('${r.id}')" title="Editar Acta">
+                            <button type="button" class="ev-btn-action ev-btn-act-edit" onclick="window.evEditarRegistro('${r.id}')" title="Editar Acta">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-primary rounded-2 px-2 py-1 fw-bold" onclick="window.evImprimirPDF('${r.id}')" title="Imprimir Acta PDF">
+                            <button type="button" class="ev-btn-action ev-btn-act-pdf" onclick="window.evImprimirPDF('${r.id}')" title="Imprimir Acta PDF">
                                 <i class="bi bi-file-earmark-pdf-fill me-1"></i> PDF
                             </button>
+                            ${esAdmin ? `
+                                <button type="button" class="ev-btn-action ev-btn-act-del" onclick="window.evEliminarRegistro('${r.id}', '${r.numero_inventario || r.id}')" title="Eliminar Registro (Solo Administrador)">
+                                    <i class="bi bi-trash3-fill"></i>
+                                </button>
+                            ` : ''}
                         </div>
                     </td>
                 </tr>
@@ -387,6 +395,40 @@
                 (r.observaciones || '').toLowerCase().includes(q);
         });
         window.evRenderizarTabla(filtrados);
+    };
+
+    // ── ELIMINAR REGISTRO (SOLO ADMINISTRADOR) ─────────────────────
+    window.evEliminarRegistro = async function(id, folio) {
+        const esAdmin = (localStorage.getItem('fleet_role') || '').toLowerCase().includes('admin') ||
+                        (localStorage.getItem('fleet_rol') || '').toLowerCase().includes('admin');
+        if (!esAdmin) {
+            alert('⛔ Acceso denegado: Solo los usuarios con rol de Administrador pueden eliminar actas de entrega.');
+            return;
+        }
+
+        if (!confirm(`¿Estás seguro de que deseas eliminar el acta ${folio}? Esta acción no se puede deshacer.`)) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token');
+            const res = await fetch(`/api/seguridad/entrega-vehiculos/${encodeURIComponent(id)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': token ? `Bearer ${token}` : ''
+                }
+            });
+            const json = await res.json();
+            if (json.ok) {
+                alert('🗑️ Registro eliminado exitosamente.');
+                window.evCargarDatos();
+            } else {
+                alert('Error al eliminar: ' + (json.error || 'Ocurrió un problema'));
+            }
+        } catch(e) {
+            console.error('Error al eliminar entrega:', e);
+            alert('Error de conexión al servidor.');
+        }
     };
 
     // ── VER DETALLE Y EDITAR REGISTRO ──────────────────────────────
@@ -1265,7 +1307,7 @@
             else pdfConfig = 'T3';
 
             let pdfSvgDiagram = `
-                <svg viewBox="0 0 920 340" style="width: 100%; max-width: 580px; height: 110px; display: block; margin: 0 auto;">
+                <svg viewBox="80 40 760 270" style="width: 100%; max-width: 760px; height: 165px; display: block; margin: 0 auto;">
                     <defs>
                         <linearGradient id="evChassisGradPdf" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#475569"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
                         <linearGradient id="evCabGradPdf" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff"/><stop offset="60%" stop-color="#f8fafc"/><stop offset="100%" stop-color="#e2e8f0"/></linearGradient>
