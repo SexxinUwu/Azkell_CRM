@@ -1391,7 +1391,7 @@
         else pdfConfig = 'T3';
 
         let pdfSvgDiagram = `
-            <svg viewBox="80 40 760 270" style="width: 100%; max-width: 760px; height: 135px; display: block; margin: 0 auto;">
+            <svg viewBox="0 0 920 340" style="width: 100%; max-width: 760px; height: 135px; display: block; margin: 0 auto;">
                 <defs>
                     <linearGradient id="evChassisGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#475569"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
                     <linearGradient id="evCabGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff"/><stop offset="60%" stop-color="#f8fafc"/><stop offset="100%" stop-color="#e2e8f0"/></linearGradient>
