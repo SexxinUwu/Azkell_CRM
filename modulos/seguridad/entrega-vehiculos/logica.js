@@ -327,6 +327,34 @@
         if (elVeh) elVeh.textContent = vehiculos;
     };
 
+    function _evEsAdmin() {
+        const ADMIN_ROLES = ['administrador', 'admin', 'sistema', 'master', 'fundador', 'superadmin'];
+        try {
+            if (typeof rolLogueado !== 'undefined' && rolLogueado) {
+                if (ADMIN_ROLES.includes(String(rolLogueado).toLowerCase().trim())) return true;
+            }
+            if (typeof userRole !== 'undefined' && userRole) {
+                if (ADMIN_ROLES.includes(String(userRole).toLowerCase().trim())) return true;
+            }
+        } catch(e) {}
+
+        const keys = ['fleet_role', 'fleet_rol', 'user_role', 'user_rol', 'role', 'rol', 'fleet_perfil', 'perfil'];
+        for (const k of keys) {
+            const v = (localStorage.getItem(k) || sessionStorage.getItem(k) || '').toLowerCase().trim();
+            if (v && ADMIN_ROLES.some(r => v.includes(r))) return true;
+        }
+
+        try {
+            const userObj = JSON.parse(localStorage.getItem('fleet_user_data') || localStorage.getItem('fleet_user_obj') || '{}');
+            if (userObj && (userObj.es_admin || (userObj.rol && ADMIN_ROLES.includes(String(userObj.rol).toLowerCase())))) return true;
+        } catch(e) {}
+
+        const adminBadge = document.querySelector('.badge.bg-warning, .badge-warning, #p-cargo-head, [class*="admin"]');
+        if (adminBadge && adminBadge.textContent.toLowerCase().includes('administrador')) return true;
+
+        return false;
+    }
+
     window.evRenderizarTabla = function(data) {
         const tbody = document.getElementById('ev-list-tbody');
         const count = document.getElementById('ev-lbl-tabla-count');
@@ -339,8 +367,7 @@
             return;
         }
 
-        const esAdmin = (localStorage.getItem('fleet_role') || '').toLowerCase().includes('admin') ||
-                        (localStorage.getItem('fleet_rol') || '').toLowerCase().includes('admin');
+        const esAdmin = _evEsAdmin();
 
         let html = '';
         data.forEach(r => {
@@ -399,9 +426,7 @@
 
     // ── ELIMINAR REGISTRO (SOLO ADMINISTRADOR) ─────────────────────
     window.evEliminarRegistro = async function(id, folio) {
-        const esAdmin = (localStorage.getItem('fleet_role') || '').toLowerCase().includes('admin') ||
-                        (localStorage.getItem('fleet_rol') || '').toLowerCase().includes('admin');
-        if (!esAdmin) {
+        if (!_evEsAdmin()) {
             alert('⛔ Acceso denegado: Solo los usuarios con rol de Administrador pueden eliminar actas de entrega.');
             return;
         }
