@@ -1,19 +1,20 @@
 // =========================================================================
 // MÓDULO SEGURIDAD: CHECKLIST "ENTREGA DE VEHÍCULOS"
 // Formato Oficial: Inventario Físico Estado de Vehículo
-// Lógica de Formulario Segmentado Moderno
+// Lógica de Negocio + Portal Bento Multi-Empresa + Dibujo por Configuración
 // =========================================================================
 
 (function() {
     'use strict';
 
     window.dataGlobalEntregaVehiculos = [];
-    window._evEmpresaActiva = 'TODAS';
+    window._evEmpresaActiva = localStorage.getItem('sgu_empresa_activa') || 'TODAS';
     window._evCatalogoPlacas = [];
     window._evCatalogoConductores = [];
     window._evCatalogoEmpresas = [];
     window._evItemsStates = {};
     window._evCantidades = {};
+    window._evCurrentConfiguracion = 'T3';
 
     // Estructura de Partes y Accesorios agrupada por sistemas
     const GRUPOS_SISTEMAS = [
@@ -97,19 +98,70 @@
         }
     ];
 
-    // Canvas de firmas
+    // Variables de canvas
     let _canvasEntrega, _ctxEntrega, _dibujandoEntrega = false;
     let _canvasRecibe, _ctxRecibe, _dibujandoRecibe = false;
 
     window.init_seguridad_entrega_vehiculos = window.init_entrega_vehiculos = window.inicializarModuloEntregaVehiculos = function() {
+        window.evActualizarUsuarioActual();
         window.evIrAPortal();
         window.evRenderizarSistemas();
         window.evCargarRecursos();
-        window.evCargarDatos();
+        window.evCargarPortalStats();
         window.evInitCanvasFirmas();
     };
 
-    // ── RECURSOS Y AUTOCOMPLETADOS ────────────────────────────────
+    window.evActualizarUsuarioActual = function() {
+        const lsUser = localStorage.getItem('fleet_user') || 'Oficial de Seguridad';
+        const elUserName = document.getElementById('ev-portal-user-name');
+        const elUserAvatar = document.getElementById('ev-portal-user-avatar');
+        if (elUserName) elUserName.textContent = lsUser;
+        if (elUserAvatar) {
+            const p = lsUser.trim().split(' ');
+            const ini = p.length > 1 ? (p[0][0] + p[1][0]) : lsUser.substring(0, 2);
+            elUserAvatar.textContent = ini.toUpperCase();
+        }
+
+        const elEnt = document.getElementById('ev-f-entrega');
+        if (elEnt) elEnt.value = lsUser.toUpperCase();
+
+        const elFirmaEntNom = document.getElementById('ev-lbl-firma-entrega-nom');
+        if (elFirmaEntNom) elFirmaEntNom.textContent = lsUser.toUpperCase();
+    };
+
+    // ── GESTIÓN DE VISTAS (Portal -> Lista -> Formulario) ───────────
+    window.evShowView = function(viewName) {
+        ['portal', 'list', 'form'].forEach(v => {
+            const el = document.getElementById(`ev-${v}`);
+            if (el) {
+                if (v === viewName) {
+                    el.classList.add('active');
+                    el.style.display = 'block';
+                } else {
+                    el.classList.remove('active');
+                    el.style.display = 'none';
+                }
+            }
+        });
+    };
+
+    window.evIrAPortal = function() {
+        window.evShowView('portal');
+        window.evCargarPortalStats();
+    };
+
+    window.evSeleccionarEmpresa = function(empresa) {
+        window._evEmpresaActiva = empresa;
+        localStorage.setItem('sgu_empresa_activa', empresa);
+        window.evShowView('list');
+
+        const badge = document.getElementById('ev-active-company-badge');
+        if (badge) badge.textContent = empresa;
+
+        window.evCargarDatos();
+    };
+
+    // ── CARGAR RECURSOS Y STATS DEL PORTAL ─────────────────────────
     window.evCargarRecursos = async function() {
         try {
             const res = await fetch('/api/seguridad/recursos');
@@ -124,17 +176,360 @@
 
                 if (dlP) dlP.innerHTML = (data.placas || []).map(p => `<option value="${p}">`).join('');
                 if (dlC) dlC.innerHTML = (data.conductores || []).map(c => `<option value="${c}">`).join('');
-
-                if (window.dataGlobalEntregaVehiculos) {
-                    window.evActualizarPortalCards(window.dataGlobalEntregaVehiculos);
-                }
             }
         } catch(e) {
-            console.warn('Error cargando recursos de entrega:', e);
+            console.warn('Error cargando recursos:', e);
         }
     };
 
-    // ── RENDERIZAR SISTEMAS Y COMPONENTES (FORMATO SEGMENTADO) ────
+    window.evCargarPortalStats = async function() {
+        const grid = document.getElementById('ev-portal-companies-grid');
+        if (!grid) return;
+
+        grid.innerHTML = '<div class="col-12 text-center py-4 text-muted"><i class="bi bi-arrow-repeat spin fs-4 d-block mb-2"></i> Actualizando empresas de flota...</div>';
+
+        try {
+            const res = await fetch('/api/seguridad/empresas-stats');
+            const data = await res.json();
+            const empresas = (data && data.empresas) || [];
+            const global = (data && data.global) || { total_flota: 0, en_ruta: 0, completados: 0, alertas: 0 };
+
+            if (!empresas.length) {
+                grid.innerHTML = '<div class="col-12 text-center py-4 text-muted">No se encontraron empresas registradas.</div>';
+                return;
+            }
+
+            let html = '';
+            const colorPalettes = [
+                { bg: '#eff6ff', color: '#0284c7', icon: 'bi-building-fill' },
+                { bg: '#f0fdf4', color: '#16a34a', icon: 'bi-truck-front-fill' },
+                { bg: '#fffbeb', color: '#d97706', icon: 'bi-geo-alt-fill' },
+                { bg: '#fdf2f8', color: '#db2777', icon: 'bi-box-seam-fill' }
+            ];
+
+            empresas.forEach((emp, idx) => {
+                const pal = colorPalettes[idx % colorPalettes.length];
+                html += `
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="ev-company-card" onclick="window.evSeleccionarEmpresa('${emp.empresa}')">
+                            <div>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="ev-company-icon" style="background:${pal.bg}; color:${pal.color};">
+                                        <i class="bi ${pal.icon}"></i>
+                                    </div>
+                                    <span class="badge bg-light text-secondary border rounded-pill px-2 py-1" style="font-size:0.72rem;">${emp.total_flota || 0} Unidades</span>
+                                </div>
+                                <h4 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">${emp.empresa}</h4>
+                                <p class="text-secondary small mb-3">Gestión de entrega de unidades ${emp.empresa}</p>
+                            </div>
+
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded-3 mb-3" style="background:#f8fafc; border:1px solid #f1f5f9;">
+                                <div class="text-center flex-fill border-end">
+                                    <div class="fw-bold text-primary" style="font-size:1.1rem;">${emp.en_ruta || 0}</div>
+                                    <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">En Ruta</span>
+                                </div>
+                                <div class="text-center flex-fill border-end">
+                                    <div class="fw-bold text-success" style="font-size:1.1rem;">${emp.completados || 0}</div>
+                                    <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">Entregados</span>
+                                </div>
+                                <div class="text-center flex-fill">
+                                    <div class="fw-bold text-secondary" style="font-size:1.1rem;">${emp.total_flota || 0}</div>
+                                    <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">Flota</span>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary w-100 rounded-3 fw-bold py-2 shadow-2xs" style="font-size:0.85rem; background:#0284c7; border-color:#0284c7;">
+                                <i class="bi bi-clipboard-check me-1"></i> Gestionar CheckList ➜
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Tarjeta Consolidada "Todas las Empresas"
+            html += `
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="ev-company-card" style="border: 2px dashed #cbd5e1; background: #fafafa;" onclick="window.evSeleccionarEmpresa('TODAS')">
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="ev-company-icon" style="background:#334155; color:#ffffff;">
+                                    <i class="bi bi-globe2"></i>
+                                </div>
+                                <span class="badge bg-dark text-white rounded-pill px-2 py-1" style="font-size:0.72rem;">Consolidado</span>
+                            </div>
+                            <h4 class="fw-bold mb-1 text-dark">TODAS LAS EMPRESAS</h4>
+                            <p class="text-secondary small mb-3">Vista general combinada de todas las empresas</p>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between p-2 rounded-3 mb-3" style="background:#ffffff; border:1px solid #e2e8f0;">
+                            <div class="text-center flex-fill border-end">
+                                <div class="fw-bold text-primary" style="font-size:1.1rem;">${global.en_ruta || 0}</div>
+                                <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">En Ruta</span>
+                            </div>
+                            <div class="text-center flex-fill border-end">
+                                <div class="fw-bold text-success" style="font-size:1.1rem;">${global.completados || 0}</div>
+                                <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">Entregados</span>
+                            </div>
+                            <div class="text-center flex-fill">
+                                <div class="fw-bold text-secondary" style="font-size:1.1rem;">${global.total_flota || 0}</div>
+                                <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">Total Flota</span>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-outline-dark w-100 rounded-3 fw-bold py-2" style="font-size:0.85rem;">
+                            <i class="bi bi-eye me-1"></i> Ver Flota Global ➜
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            grid.innerHTML = html;
+        } catch(e) {
+            console.error('Error stats:', e);
+            grid.innerHTML = '<div class="col-12 text-center py-4 text-danger">Error al cargar estadísticas de empresas.</div>';
+        }
+    };
+
+    // ── CARGAR Y RENDERIZAR TABLA DE REGISTROS ─────────────────────
+    window.evCargarDatos = async function() {
+        const tbody = document.getElementById('ev-list-tbody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><i class="bi bi-arrow-repeat spin me-2"></i> Cargando actas de entrega...</td></tr>';
+
+        try {
+            const token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token');
+            const empParam = (window._evEmpresaActiva && window._evEmpresaActiva !== 'TODAS') ? `?empresa=${encodeURIComponent(window._evEmpresaActiva)}` : '';
+            const res = await fetch(`/api/seguridad/entrega-vehiculos${empParam}`, {
+                headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+            });
+            const json = await res.json();
+            if (json.ok && Array.isArray(json.data)) {
+                window.dataGlobalEntregaVehiculos = json.data;
+                window.evRenderizarTabla(json.data);
+                window.evActualizarKPIs(json.data);
+            }
+        } catch(e) {
+            console.error('Error cargando datos:', e);
+            if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Error al cargar entregas.</td></tr>';
+        }
+    };
+
+    window.evActualizarKPIs = function(data) {
+        const total = data.length;
+        const hoyStr = new Date().toISOString().slice(0, 10);
+        const hoy = data.filter(r => (r.fecha || '').slice(0, 10) === hoyStr).length;
+        const vehiculos = new Set(data.map(r => r.placa)).size;
+
+        const elTot = document.getElementById('ev-kpi-total');
+        const elHoy = document.getElementById('ev-kpi-hoy');
+        const elVeh = document.getElementById('ev-kpi-vehiculos');
+        if (elTot) elTot.textContent = total;
+        if (elHoy) elHoy.textContent = hoy;
+        if (elVeh) elVeh.textContent = vehiculos;
+    };
+
+    window.evRenderizarTabla = function(data) {
+        const tbody = document.getElementById('ev-list-tbody');
+        const count = document.getElementById('ev-lbl-tabla-count');
+        if (!tbody) return;
+
+        if (count) count.textContent = `${data.length} actas registradas`;
+
+        if (!data.length) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No hay actas de entrega registradas para ${window._evEmpresaActiva}. Haz clic en "Registrar Entrega".</td></tr>`;
+            return;
+        }
+
+        let html = '';
+        data.forEach(r => {
+            let fechaFmt = r.fecha || '---';
+            if (r.fecha && r.fecha.includes('-')) {
+                const p = r.fecha.slice(0, 10).split('-');
+                if (p.length === 3) fechaFmt = `${p[2]}/${p[1]}/${p[0]}`;
+            }
+
+            html += `
+                <tr>
+                    <td><span class="badge bg-light text-dark border font-monospace fw-bold px-2 py-1">${r.numero_inventario || r.id}</span></td>
+                    <td><span class="font-monospace fw-semibold">${fechaFmt}</span></td>
+                    <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace fw-bold px-2 py-1">${r.placa}</span></td>
+                    <td><div class="fw-bold text-dark small"><i class="bi bi-person-fill text-secondary me-1"></i>${r.quien_entrega}</div></td>
+                    <td><div class="fw-bold text-dark small"><i class="bi bi-person-check-fill text-success me-1"></i>${r.quien_recibe}</div></td>
+                    <td><span class="font-monospace fw-bold text-dark">${parseFloat(r.kilometraje || 0).toLocaleString('es-PE')} km</span></td>
+                    <td><small class="text-muted text-truncate d-block" style="max-width:200px;">${r.observaciones || 'Sin observaciones'}</small></td>
+                    <td style="text-align:center;">
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-2 px-2 py-1 fw-bold" onclick="window.evImprimirPDF('${r.id}')" title="Imprimir Acta PDF">
+                            <i class="bi bi-file-earmark-pdf-fill me-1"></i> PDF
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    };
+
+    window.evFiltrarTabla = function(query) {
+        const q = (query || '').trim().toLowerCase();
+        const filtrados = (window.dataGlobalEntregaVehiculos || []).filter(r => {
+            return !q || 
+                (r.numero_inventario || '').toLowerCase().includes(q) ||
+                (r.placa || '').toLowerCase().includes(q) ||
+                (r.quien_entrega || '').toLowerCase().includes(q) ||
+                (r.quien_recibe || '').toLowerCase().includes(q) ||
+                (r.observaciones || '').toLowerCase().includes(q);
+        });
+        window.evRenderizarTabla(filtrados);
+    };
+
+    // ── FORMULARIO: APERTURA Y AUTOCOMPLETADOS ──────────────────────
+    window.evAbrirNuevoFormulario = async function() {
+        window.evShowView('form');
+        window.evActualizarUsuarioActual();
+
+        // 1. Obtener correlativo sucesivo exacto (0001, 0002, etc.)
+        const invEl = document.getElementById('ev-f-nro-inv');
+        if (invEl) invEl.value = 'Calculando...';
+
+        try {
+            const resFolio = await fetch('/api/seguridad/entrega-vehiculos/next-folio');
+            const dataFolio = await resFolio.json();
+            if (dataFolio && dataFolio.ok && invEl) {
+                invEl.value = dataFolio.folio;
+            } else if (invEl) {
+                invEl.value = `ENT-${new Date().getFullYear()}-0001`;
+            }
+        } catch(e) {
+            if (invEl) invEl.value = `ENT-${new Date().getFullYear()}-0001`;
+        }
+
+        const hoy = new Date().toISOString().slice(0, 10);
+        const fFecha = document.getElementById('ev-f-fecha');
+        if (fFecha) fFecha.value = hoy;
+
+        const fMotivo = document.getElementById('ev-f-motivo');
+        if (fMotivo) fMotivo.value = 'ENTREGA DE UNIDAD';
+
+        // Reset campos técnicos
+        ['ev-f-recibe', 'ev-f-clase', 'ev-f-marca', 'ev-f-modelo', 'ev-f-placa', 'ev-f-color', 'ev-f-motor', 'ev-f-serie', 'ev-f-km', 'ev-f-obs'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+
+        window._evItemsStates = {};
+        window._evCantidades = {};
+        window._evCurrentConfiguracion = 'T3';
+        window.evRenderizarSistemas();
+        window.evRenderizarCroquis('T3');
+        window.evSyncNombresFirmas();
+        window.evLimpiarFirma('entrega');
+        window.evLimpiarFirma('recibe');
+    };
+
+    window.evCancelarFormulario = function() {
+        window.evShowView('list');
+    };
+
+    window.evSyncNombresFirmas = function() {
+        const lsUser = localStorage.getItem('fleet_user') || 'Oficial de Seguridad';
+        const elFirmaEntNom = document.getElementById('ev-lbl-firma-entrega-nom');
+        if (elFirmaEntNom) elFirmaEntNom.textContent = lsUser.toUpperCase();
+
+        const recibeVal = document.getElementById('ev-f-recibe')?.value || 'CONDUCTOR / RECEPTOR';
+        const elFirmaRecNom = document.getElementById('ev-lbl-firma-recibe-nom');
+        if (elFirmaRecNom) elFirmaRecNom.textContent = recibeVal.trim().toUpperCase() || 'CONDUCTOR / RECEPTOR';
+    };
+
+    // ── AUTOCOMPLETADO EXACTO DESDE LA BASE DE DATOS DE PLACAS ────
+    window.evOnPlacaInput = async function(placa) {
+        const cleanP = String(placa || '').trim().toUpperCase();
+        if (cleanP.length < 3) return;
+
+        try {
+            const res = await fetch(`/api/seguridad/entrega-vehiculos/placa-detalle/${encodeURIComponent(cleanP)}`);
+            const json = await res.json();
+            if (json && json.ok && json.data) {
+                const d = json.data;
+                const setVal = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = (val !== null && val !== undefined) ? val : '';
+                };
+
+                setVal('ev-f-clase', d.tipo || 'TRACTO');
+                setVal('ev-f-marca', d.marca);
+                setVal('ev-f-modelo', d.modelo);
+                setVal('ev-f-color', d.color);
+                setVal('ev-f-motor', d.numero_motor);
+                setVal('ev-f-serie', d.numero_serie);
+                setVal('ev-f-km', d.kilometraje || 0);
+
+                const config = d.configuracion || (d.tipo && d.tipo.includes('CARRETA') ? 'R2' : 'T3');
+                window._evCurrentConfiguracion = config;
+                window.evRenderizarCroquis(config);
+            }
+        } catch(e) {
+            console.warn('Error al autocompletar placa:', e);
+        }
+    };
+
+    // ── RENDERIZAR DIAGRAMA SVG SEGÚN CONFIGURACIÓN (T2, T3, C2, C3, R2, Se3, etc.) ──
+    window.evRenderizarCroquis = function(configStr) {
+        const cont = document.getElementById('ev-croquis-svg-container');
+        const tag = document.getElementById('ev-lbl-config-tag');
+        if (!cont) return;
+
+        const conf = (configStr || 'T3').toUpperCase().trim();
+        if (tag) tag.textContent = `CONFIGURACIÓN: ${conf}`;
+
+        let svg = '';
+        if (conf.includes('R') || conf.includes('SE') || conf.includes('CARRETA') || conf.includes('FURGON')) {
+            // Remolque / Semirremolque / Carreta (R2, R3, Se3)
+            svg = `
+                <svg width="340" height="95" viewBox="0 0 400 120" style="max-width:100%; height:auto;">
+                    <!-- Carreta Chasis -->
+                    <rect x="30" y="25" width="330" height="60" rx="4" fill="#f8fafc" stroke="#0f172a" stroke-width="3"/>
+                    <rect x="35" y="30" width="100" height="50" rx="2" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
+                    <rect x="145" y="30" width="100" height="50" rx="2" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
+                    <rect x="255" y="30" width="100" height="50" rx="2" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
+                    <!-- Pines / Ejes -->
+                    <circle cx="50" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                    <circle cx="270" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                    <circle cx="310" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                    <circle cx="350" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                    <text x="195" y="60" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">REMOLQUE / CARRETA (${conf})</text>
+                </svg>
+            `;
+        } else if (conf === 'T2' || conf === 'C2') {
+            // Tracto 2 Ejes / Camión 2 Ejes
+            svg = `
+                <svg width="340" height="95" viewBox="0 0 400 120" style="max-width:100%; height:auto;">
+                    <rect x="20" y="28" width="90" height="62" rx="6" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
+                    <rect x="110" y="45" width="180" height="45" rx="3" fill="#f8fafc" stroke="#0f172a" stroke-width="3"/>
+                    <rect x="30" y="36" width="35" height="25" rx="3" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5"/>
+                    <circle cx="55" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                    <circle cx="250" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                    <text x="200" y="70" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">UNIDAD (${conf} - 2 EJES)</text>
+                </svg>
+            `;
+        } else {
+            // Tracto 3 Ejes Standard (T3, C3, 6x4)
+            svg = `
+                <svg width="340" height="95" viewBox="0 0 400 120" style="max-width:100%; height:auto;">
+                    <rect x="20" y="25" width="90" height="65" rx="6" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
+                    <rect x="110" y="35" width="250" height="55" rx="4" fill="#f8fafc" stroke="#0f172a" stroke-width="3"/>
+                    <rect x="30" y="34" width="38" height="26" rx="3" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5"/>
+                    <circle cx="55" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                    <circle cx="270" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                    <circle cx="310" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                    <circle cx="350" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                    <text x="220" y="65" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">TRACTO / CAMIÓN (${conf})</text>
+                </svg>
+            `;
+        }
+
+        cont.innerHTML = svg;
+    };
+
+    // ── RENDERIZAR SISTEMAS Y COMPONENTES ─────────────────────────
     window.evRenderizarSistemas = function() {
         const cont = document.getElementById('ev-sistemas-accordion-container');
         if (!cont) return;
@@ -165,7 +560,7 @@
             grp.items.forEach(it => {
                 const cleanKey = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
                 html += `
-                    <div class="ev-item-row" id="ev-row-${cleanKey}" data-search="${it.toLowerCase()}">
+                    <div class="ev-item-row" id="ev-row-${cleanKey}">
                         <div class="fw-semibold text-dark" style="font-size:0.86rem;">
                             ${it}
                         </div>
@@ -268,267 +663,6 @@
         });
     };
 
-    // ── VISTAS: PORTAL / LISTADO / FORMULARIO ─────────────────────
-    window.evIrAPortal = function() {
-        document.getElementById('ev-view-portal')?.classList.remove('d-none');
-        document.getElementById('ev-view-list')?.classList.add('d-none');
-        document.getElementById('ev-view-form')?.classList.add('d-none');
-        window.evCargarDatos();
-    };
-
-    window.evSeleccionarEmpresa = function(empresa) {
-        window._evEmpresaActiva = empresa;
-        document.getElementById('ev-view-portal')?.classList.add('d-none');
-        document.getElementById('ev-view-list')?.classList.remove('d-none');
-        document.getElementById('ev-view-form')?.classList.add('d-none');
-
-        const tit = document.getElementById('ev-list-empresa-titulo');
-        const sub = document.getElementById('ev-list-empresa-sub');
-        if (tit) tit.textContent = empresa === 'TODAS' ? 'TODAS LAS EMPRESAS' : empresa;
-        if (sub) sub.textContent = `Registros de entrega de unidades — ${empresa}`;
-
-        window.evRenderizarTablaLista();
-    };
-
-    window.evAbrirNuevoFormulario = function(empresa) {
-        if (empresa) window._evEmpresaActiva = empresa;
-        document.getElementById('ev-view-portal')?.classList.add('d-none');
-        document.getElementById('ev-view-list')?.classList.add('d-none');
-        document.getElementById('ev-view-form')?.classList.remove('d-none');
-
-        // Limpiar Formulario
-        const hoy = new Date().toISOString().slice(0, 10);
-        const fFecha = document.getElementById('ev-f-fecha');
-        if (fFecha) fFecha.value = hoy;
-
-        const year = new Date().getFullYear();
-        const rand = String(Math.floor(Math.random() * 9000) + 1000);
-        const invEl = document.getElementById('ev-f-nro-inv');
-        if (invEl) invEl.value = `ENT-${year}-${rand}`;
-
-        // Reset inputs
-        ['ev-f-entrega', 'ev-f-recibe', 'ev-f-clase', 'ev-f-marca', 'ev-f-modelo', 'ev-f-placa', 'ev-f-color', 'ev-f-cilindros', 'ev-f-motor', 'ev-f-serie', 'ev-f-km', 'ev-f-ll-del-der', 'ev-f-ll-del-izq', 'ev-f-ll-tra-der', 'ev-f-ll-tra-izq', 'ev-f-ll-rep', 'ev-f-obs', 'ev-f-doc-entrega', 'ev-f-doc-recibe'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = '';
-        });
-
-        window._evItemsStates = {};
-        window._evCantidades = {};
-        window.evRenderizarSistemas();
-        window.evLimpiarFirma('entrega');
-        window.evLimpiarFirma('recibe');
-    };
-
-    window.evCancelarFormulario = function() {
-        if (window._evEmpresaActiva && window._evEmpresaActiva !== 'TODAS') {
-            window.evSeleccionarEmpresa(window._evEmpresaActiva);
-        } else {
-            window.evIrAPortal();
-        }
-    };
-
-    // ── AUTOCOMPLETADO DE FICHA TÉCNICA AL INGRESAR PLACA ──────────
-    window.evOnPlacaInput = async function(placa) {
-        const cleanP = String(placa || '').trim().toUpperCase();
-        if (cleanP.length < 3) return;
-
-        try {
-            const res = await fetch(`/api/placas/${encodeURIComponent(cleanP)}`);
-            const json = await res.json();
-            if (json && json.ok && json.data) {
-                const d = json.data;
-                const setVal = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-                setVal('ev-f-clase', d.tipo || d.sub_tipo || 'TRACTO');
-                setVal('ev-f-marca', d.marca);
-                setVal('ev-f-modelo', d.modelo || d.modelo_uts);
-                setVal('ev-f-color', d.color);
-                setVal('ev-f-motor', d.nro_motor || d.modelo_motor);
-                setVal('ev-f-serie', d.nro_vin);
-                setVal('ev-f-km', d.odometro || d.km_inicial);
-            }
-        } catch(e) {}
-    };
-
-    // ── CARGAR DATOS DESDE LA API ─────────────────────────────────
-    window.evCargarDatos = async function() {
-        try {
-            const token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token');
-            const res = await fetch('/api/seguridad/entrega-vehiculos', {
-                headers: { 'Authorization': token ? `Bearer ${token}` : '' }
-            });
-            const json = await res.json();
-            if (json.ok && Array.isArray(json.data)) {
-                window.dataGlobalEntregaVehiculos = json.data;
-                window.evActualizarPortalCards(json.data);
-                window.evRenderizarHistorialPortal(json.data);
-            }
-        } catch(e) {
-            console.error('Error cargando entregas de vehiculos:', e);
-        }
-    };
-
-    window.evActualizarPortalCards = function(data) {
-        const grid = document.getElementById('ev-portal-companies-grid');
-        if (!grid) return;
-
-        let empresas = (window._evCatalogoEmpresas && window._evCatalogoEmpresas.length) 
-            ? [...window._evCatalogoEmpresas] 
-            : [];
-
-        if (!empresas.length) {
-            const empSet = new Set();
-            (data || []).forEach(r => {
-                const e = (r.empresa || '').trim().toUpperCase();
-                if (e && e !== 'NULL') empSet.add(e);
-            });
-            empresas = Array.from(empSet);
-        }
-
-        if (!empresas.length) {
-            empresas = ['MARSISA'];
-        }
-
-        const empStats = {};
-        empresas.forEach(e => empStats[e] = 0);
-
-        data.forEach(r => {
-            const emp = (r.empresa || 'MARSISA').toUpperCase().trim();
-            if (empStats[emp] !== undefined) {
-                empStats[emp] = (empStats[emp] || 0) + 1;
-            }
-        });
-
-        let html = '';
-
-        // Card "Todas las Empresas"
-        html += `
-            <div class="col-12 col-md-6 col-lg-3">
-                <div class="ev-company-card" onclick="window.evSeleccionarEmpresa('TODAS')">
-                    <div>
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <div class="ev-company-icon" style="background:#eff6ff; color:#0284c7;"><i class="bi bi-grid-fill"></i></div>
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1">${data.length} Entregas</span>
-                        </div>
-                        <h5 class="fw-bold text-dark m-0">TODAS LAS EMPRESAS</h5>
-                        <small class="text-muted">Panorama corporativo consolidado</small>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        const colors = [
-            { bg: '#f0fdf4', col: '#16a34a', icon: 'bi-truck-front-fill' },
-            { bg: '#fffbeb', col: '#d97706', icon: 'bi-building-fill' },
-            { bg: '#faf5ff', col: '#7c3aed', icon: 'bi-box-seam-fill' },
-            { bg: '#fdf2f8', col: '#db2777', icon: 'bi-geo-alt-fill' }
-        ];
-
-        empresas.forEach((emp, i) => {
-            const c = colors[i % colors.length];
-            const cnt = empStats[emp] || 0;
-            html += `
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="ev-company-card" onclick="window.evSeleccionarEmpresa('${emp}')">
-                        <div>
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <div class="ev-company-icon" style="background:${c.bg}; color:${c.col};"><i class="bi ${c.icon}"></i></div>
-                                <span class="badge bg-light text-secondary border rounded-pill px-2 py-1">${cnt} Registros</span>
-                            </div>
-                            <h5 class="fw-bold text-dark m-0">${emp}</h5>
-                            <small class="text-muted">Actas de entrega de flota</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        grid.innerHTML = html;
-    };
-
-    window.evRenderizarHistorialPortal = function(data) {
-        const tbody = document.getElementById('ev-portal-historial-tbody');
-        const count = document.getElementById('ev-lbl-historial-count');
-        if (!tbody) return;
-
-        if (count) count.textContent = `${data.length} entregas registradas`;
-
-        if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">No hay entregas registradas aún. Haz clic en "Nueva Entrega de Unidad".</td></tr>`;
-            return;
-        }
-
-        let html = '';
-        data.slice(0, 15).forEach(r => {
-            let fechaFmt = r.fecha || '---';
-            if (r.fecha && r.fecha.includes('-')) {
-                const p = r.fecha.slice(0, 10).split('-');
-                if (p.length === 3) fechaFmt = `${p[2]}/${p[1]}/${p[0]}`;
-            }
-
-            html += `
-                <tr>
-                    <td><span class="badge bg-light text-dark border font-monospace fw-bold px-2 py-1">${r.numero_inventario || r.id}</span></td>
-                    <td><span class="font-monospace fw-semibold">${fechaFmt}</span></td>
-                    <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace fw-bold px-2 py-1">${r.placa}</span></td>
-                    <td><div class="fw-bold text-dark small"><i class="bi bi-person-fill text-secondary me-1"></i>${r.quien_entrega}</div></td>
-                    <td><div class="fw-bold text-dark small"><i class="bi bi-person-check-fill text-success me-1"></i>${r.quien_recibe}</div></td>
-                    <td><span class="badge bg-secondary-subtle text-secondary small fw-bold">${r.empresa || 'MARSISA'}</span></td>
-                    <td><span class="font-monospace fw-bold text-dark">${parseFloat(r.kilometraje || 0).toLocaleString('es-PE')} km</span></td>
-                    <td style="text-align:center;">
-                        <button type="button" class="btn btn-sm btn-outline-primary rounded-2 px-2 py-1 fw-bold" onclick="window.evImprimirPDF('${r.id}')" title="Generar / Imprimir PDF">
-                            <i class="bi bi-file-earmark-pdf-fill me-1"></i> PDF
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
-
-        tbody.innerHTML = html;
-    };
-
-    window.evRenderizarTablaLista = function() {
-        const tbody = document.getElementById('ev-list-tbody');
-        if (!tbody) return;
-
-        const data = window.dataGlobalEntregaVehiculos.filter(r => {
-            if (window._evEmpresaActiva !== 'TODAS' && (r.empresa || 'MARSISA').toUpperCase() !== window._evEmpresaActiva) return false;
-            return true;
-        });
-
-        if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">No se encontraron actas para ${window._evEmpresaActiva}.</td></tr>`;
-            return;
-        }
-
-        let html = '';
-        data.forEach(r => {
-            let fechaFmt = r.fecha || '---';
-            if (r.fecha && r.fecha.includes('-')) {
-                const p = r.fecha.slice(0, 10).split('-');
-                if (p.length === 3) fechaFmt = `${p[2]}/${p[1]}/${p[0]}`;
-            }
-
-            html += `
-                <tr>
-                    <td><span class="badge bg-light text-dark border font-monospace fw-bold px-2 py-1">${r.numero_inventario || r.id}</span></td>
-                    <td><span class="font-monospace fw-semibold">${fechaFmt}</span></td>
-                    <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace fw-bold px-2 py-1">${r.placa}</span></td>
-                    <td><div class="fw-bold text-dark small">${r.quien_entrega}</div></td>
-                    <td><div class="fw-bold text-dark small">${r.quien_recibe}</div></td>
-                    <td><span class="font-monospace fw-bold text-dark">${parseFloat(r.kilometraje || 0).toLocaleString('es-PE')} km</span></td>
-                    <td><small class="text-muted text-truncate d-block" style="max-width:200px;">${r.observaciones || 'Sin observaciones'}</small></td>
-                    <td style="text-align:center;">
-                        <button type="button" class="btn btn-sm btn-outline-primary rounded-2 px-2 py-1 fw-bold" onclick="window.evImprimirPDF('${r.id}')" title="Generar / Imprimir PDF">
-                            <i class="bi bi-file-earmark-pdf-fill me-1"></i> PDF
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
-
-        tbody.innerHTML = html;
-    };
-
     // ── GESTIÓN DE FIRMAS EN CANVAS ───────────────────────────────
     window.evInitCanvasFirmas = function() {
         _canvasEntrega = document.getElementById('ev-canvas-entrega');
@@ -601,7 +735,7 @@
         const payload = {
             numero_inventario: getVal('ev-f-nro-inv'),
             fecha: getVal('ev-f-fecha') || new Date().toISOString().slice(0, 10),
-            motivo: getVal('ev-f-motivo'),
+            motivo: 'ENTREGA DE UNIDAD',
             quien_entrega: entrega,
             quien_recibe: recibe,
             clase: getVal('ev-f-clase'),
@@ -610,19 +744,14 @@
             modelo: getVal('ev-f-modelo'),
             placa: placa,
             color: getVal('ev-f-color'),
-            cilindros: getVal('ev-f-cilindros'),
+            cilindros: '6',
             numero_motor: getVal('ev-f-motor'),
             numero_serie: getVal('ev-f-serie'),
             kilometraje: parseFloat(getVal('ev-f-km')) || 0,
-            llantas_del_der_marca: getVal('ev-f-ll-del-der'),
-            llantas_del_izq_marca: getVal('ev-f-ll-del-izq'),
-            llantas_tra_der_marca: getVal('ev-f-ll-tra-der'),
-            llantas_tra_izq_marca: getVal('ev-f-ll-tra-izq'),
-            llantas_repuesto_marca: getVal('ev-f-ll-rep'),
             inventario_partes_json: window._evItemsStates,
             observaciones: getVal('ev-f-obs'),
-            doc_entrega: getVal('ev-f-doc-entrega'),
-            doc_recibe: getVal('ev-f-doc-recibe'),
+            doc_entrega: entrega,
+            doc_recibe: recibe,
             firma_entrega: _canvasEntrega ? _canvasEntrega.toDataURL() : null,
             firma_recibe: _canvasRecibe ? _canvasRecibe.toDataURL() : null,
             empresa: window._evEmpresaActiva === 'TODAS' ? 'MARSISA' : window._evEmpresaActiva
@@ -643,7 +772,8 @@
             if (json.ok) {
                 alert('✅ Acta de Entrega de Vehículo guardada exitosamente.');
                 window.evImprimirPDF(json.id);
-                window.evIrAPortal();
+                window.evShowView('list');
+                window.evCargarDatos();
             } else {
                 alert('Error al guardar: ' + (json.error || 'Ocurrió un problema'));
             }
@@ -747,40 +877,14 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>CILINDROS</th><th>NÚMERO DEL MOTOR</th><th>NÚMERO DE SERIE</th><th>KILOMETRAJE</th>
+                                <th>NÚMERO DEL MOTOR</th><th>NÚMERO DE SERIE / VIN</th><th>KILOMETRAJE</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr class="text-center">
-                                <td>${r.cilindros || '6'}</td>
                                 <td>${r.numero_motor || '---'}</td>
                                 <td>${r.numero_serie || '---'}</td>
                                 <td class="fw-bold">${parseFloat(r.kilometraje || 0).toLocaleString('es-PE')} km</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- Llantas -->
-                    <table>
-                        <thead>
-                            <tr>
-                                <th rowspan="2" style="width: 15%;">LLANTAS</th>
-                                <th colspan="2">DELANTERAS</th>
-                                <th colspan="2">TRASERAS</th>
-                                <th rowspan="2" style="width: 15%;">REPUESTO</th>
-                            </tr>
-                            <tr>
-                                <th>DERECHA</th><th>IZQUIERDA</th><th>DERECHA</th><th>IZQUIERDA</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="text-center">
-                                <td class="fw-bold">MARCA</td>
-                                <td>${r.llantas_del_der_marca || '---'}</td>
-                                <td>${r.llantas_del_izq_marca || '---'}</td>
-                                <td>${r.llantas_tra_der_marca || '---'}</td>
-                                <td>${r.llantas_tra_izq_marca || '---'}</td>
-                                <td>${r.llantas_repuesto_marca || '---'}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -833,14 +937,12 @@
                             <td style="width: 50%; height: 60px; vertical-align: bottom; text-align: center;">
                                 ${r.firma_entrega ? `<img src="${r.firma_entrega}" style="max-height: 45px;"><br>` : ''}
                                 ____________________________________<br>
-                                <strong>Entregado por:</strong> ${r.quien_entrega}<br>
-                                <small>Doc: ${r.doc_entrega || '---'}</small>
+                                <strong>Entregado por:</strong> ${r.quien_entrega}
                             </td>
                             <td style="width: 50%; height: 60px; vertical-align: bottom; text-align: center;">
                                 ${r.firma_recibe ? `<img src="${r.firma_recibe}" style="max-height: 45px;"><br>` : ''}
                                 ____________________________________<br>
-                                <strong>Recibido por:</strong> ${r.quien_recibe}<br>
-                                <small>Doc: ${r.doc_recibe || '---'}</small>
+                                <strong>Recibido por:</strong> ${r.quien_recibe}
                             </td>
                         </tr>
                     </table>
