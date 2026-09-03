@@ -268,43 +268,107 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             }
 
-            // Helper para calcular consumo teórico de galones contra la matriz D2
-            function calcularGalonesTeoricos(rutaStr, sentidoStr, pesoTn, motorStr) {
-                if (!matrizD2 || matrizD2.length === 0 || !rutaStr) return 0;
-                const cleanRuta = String(rutaStr).toUpperCase().trim();
-                const cleanSentido = (sentidoStr || 'IDA').toUpperCase().trim();
-                const cleanMotor = (motorStr || '').toUpperCase().trim();
+            // Normalizador de texto para emparejamiento flexible de rutas y motores
+            function normalizarTexto(txt) {
+                return (txt || '').toString().toUpperCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^A-Z0-9\s-]/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
 
-                // Buscar coincidencia en la matriz
-                let match = matrizD2.find(m => {
-                    const mRuta = (m.ruta || '').toUpperCase().trim();
-                    const mSentido = (m.sentido || '').toUpperCase().trim();
-                    const mMotor = (m.motor || '').toUpperCase().trim();
-                    const matchRuta = cleanRuta.includes(mRuta) || mRuta.includes(cleanRuta);
-                    const matchMotor = !cleanMotor || mMotor.includes(cleanMotor) || cleanMotor.includes(mMotor);
-                    return matchRuta && mSentido === cleanSentido && matchMotor;
+            // Búsqueda inteligente en la Matriz D2 con soporte bidireccional (Ida/Retorno) y validación de Motor
+            function buscarEnMatriz(rutaStr, sentidoStr, motorStr) {
+                if (!matrizD2 || matrizD2.length === 0 || !rutaStr) return null;
+
+                const rutaNorm = normalizarTexto(rutaStr);
+                const sentidoNorm = (sentidoStr || 'IDA').toUpperCase().trim();
+                const motorNorm = normalizarTexto(motorStr);
+
+                const partesRuta = rutaNorm.split('-').map(s => s.trim()).filter(Boolean);
+                const origen = partesRuta[0] || '';
+                const destino = partesRuta[partesRuta.length - 1] || partesRuta[0] || '';
+
+                // Filtrar candidatos en la matriz que correspondan al tramo
+                const candidatosRuta = matrizD2.filter(m => {
+                    const mRuta = normalizarTexto(m.ruta);
+                    const mPartes = mRuta.split('-').map(s => s.trim()).filter(Boolean);
+                    const mOrigen = mPartes[0] || '';
+                    const mDestino = mPartes[mPartes.length - 1] || '';
+
+                    // 1. Coincidencia completa
+                    if (rutaNorm.includes(mRuta) || mRuta.includes(rutaNorm)) return true;
+
+                    // 2. Coincidencia bidireccional de origen y destino (e.g. HUANCAYO - LIMA con LIMA - HUANCAYO)
+                    if (origen && destino && mOrigen && mDestino) {
+                        if ((origen.includes(mOrigen) || mOrigen.includes(origen)) && (destino.includes(mDestino) || mDestino.includes(destino))) return true;
+                        if ((origen.includes(mDestino) || mDestino.includes(origen)) && (destino.includes(mOrigen) || mOrigen.includes(destino))) return true;
+                    }
+
+                    // 3. Coincidencia por ciudad de destino
+                    if (destino && mDestino && (destino.includes(mDestino) || mDestino.includes(destino))) return true;
+                    if (origen && mDestino && (origen.includes(mDestino) || mDestino.includes(origen))) return true;
+
+                    return false;
                 });
 
-                // Si no coincide con motor específico, buscar con cualquier motor disponible en esa ruta
+                if (candidatosRuta.length === 0) return null;
+
+                // 1. Intentar coincidir sentido + motor específico
+                let match = candidatosRuta.find(m => {
+                    const mSentido = (m.sentido || 'IDA').toUpperCase().trim();
+                    const mMotor = normalizarTexto(m.motor);
+                    const matchSentido = mSentido === sentidoNorm;
+                    const matchMotor = motorNorm && (mMotor.includes(motorNorm) || motorNorm.includes(mMotor));
+                    return matchSentido && matchMotor;
+                });
+
+                // 2. Intentar coincidir sentido (cualquier motor de la matriz)
                 if (!match) {
-                    match = matrizD2.find(m => {
-                        const mRuta = (m.ruta || '').toUpperCase().trim();
-                        const mSentido = (m.sentido || '').toUpperCase().trim();
-                        return (cleanRuta.includes(mRuta) || mRuta.includes(cleanRuta)) && mSentido === cleanSentido;
+                    match = candidatosRuta.find(m => {
+                        const mSentido = (m.sentido || 'IDA').toUpperCase().trim();
+                        return mSentido === sentidoNorm;
                     });
                 }
 
+                // 3. Intentar coincidir motor (en cualquier sentido disponible de la ruta)
+                if (!match) {
+                    match = candidatosRuta.find(m => {
+                        const mMotor = normalizarTexto(m.motor);
+                        return motorNorm && (mMotor.includes(motorNorm) || motorNorm.includes(mMotor));
+                    });
+                }
+
+                // 4. Fallback al primer candidato de la ruta
+                if (!match) {
+                    match = candidatosRuta[0];
+                }
+
+                return match;
+            }
+
+            // Cálculo exacto de consumo según peso (0, 5, 10, 15, 20, 25, 30 TN con redondeo hacia el tramo superior)
+            function calcularGalonesTeoricos(rutaStr, sentidoStr, pesoTn, motorStr) {
+                const match = buscarEnMatriz(rutaStr, sentidoStr, motorStr);
                 if (!match) return 0;
 
-                // Interpolar según tonelaje
                 const p = Math.max(0, parseFloat(pesoTn) || 0);
-                if (p <= 0) return parseFloat(match.km_0) || 0;
-                if (p <= 5) return parseFloat(match.km_5) || 0;
-                if (p <= 10) return parseFloat(match.km_10) || 0;
-                if (p <= 15) return parseFloat(match.km_15) || 0;
-                if (p <= 20) return parseFloat(match.km_20) || 0;
-                if (p <= 25) return parseFloat(match.km_25) || 0;
-                return parseFloat(match.km_30) || 0;
+
+                if (p <= 0) {
+                    return parseFloat(match.km_0) || 0;
+                } else if (p <= 5 && parseFloat(match.km_5) > 0) {
+                    return parseFloat(match.km_5) || 0;
+                } else if (p <= 10) {
+                    return parseFloat(match.km_10) || 0;
+                } else if (p <= 15) {
+                    return parseFloat(match.km_15) || 0;
+                } else if (p <= 20) {
+                    return parseFloat(match.km_20) || 0;
+                } else if (p <= 25) {
+                    return parseFloat(match.km_25) || 0;
+                } else {
+                    return parseFloat(match.km_30) || 0;
+                }
             }
 
             // 4. Armar estructura enriquecida para cada viaje
@@ -313,10 +377,19 @@ module.exports = function (db, broadcast, logAudit) {
                 const rutasIda = rutas.filter(r => parseInt(r.es_retorno, 10) === 0);
                 const rutasRetorno = rutas.filter(r => parseInt(r.es_retorno, 10) === 1);
 
-                // Pesos
-                const pesoIda = rutasIda.reduce((sum, r) => sum + (parseFloat(r.peso_total) || 0), 0);
-                const pesoRetorno = rutasRetorno.reduce((sum, r) => sum + (parseFloat(r.peso_total) || 0), 0);
-                const pesoTotal = (pesoIda + pesoRetorno) > 0 ? (pesoIda + pesoRetorno) : (parseFloat(v.peso_cabecera) || 0);
+                // Pesos en KG
+                let pesoIdaKg = rutasIda.reduce((sum, r) => sum + (parseFloat(r.peso_total) || 0), 0);
+                const pesoRetornoKg = rutasRetorno.reduce((sum, r) => sum + (parseFloat(r.peso_total) || 0), 0);
+                
+                // Si pesoIda es 0 pero la cabecera tiene peso registrado y no hay retorno con peso, usar cabecera
+                if (pesoIdaKg === 0 && pesoRetornoKg === 0 && parseFloat(v.peso_cabecera) > 0) {
+                    pesoIdaKg = parseFloat(v.peso_cabecera);
+                }
+
+                const pesoTotalKg = pesoIdaKg + pesoRetornoKg;
+                const pesoIdaTn = +(pesoIdaKg / 1000).toFixed(2);
+                const pesoRetornoTn = +(pesoRetornoKg / 1000).toFixed(2);
+                const pesoTotalTn = +(pesoTotalKg / 1000).toFixed(2);
 
                 // Rutas textos
                 const rutaIdaTexto = rutasIda.length > 0 
@@ -333,16 +406,18 @@ module.exports = function (db, broadcast, logAudit) {
                     rutaRetornoTexto = partes.length === 2 ? `${partes[1]} - ${partes[0]}` : `RETORNO ${rutaIdaTexto}`;
                 }
 
-                // Cálculo de Galones Teóricos
-                const galonesIda = calcularGalonesTeoricos(rutaIdaTexto, 'IDA', pesoIda, v.modelo_motor);
-                const galonesRetorno = calcularGalonesTeoricos(rutaRetornoTexto, 'RETORNO', pesoRetorno, v.modelo_motor);
+                // Cálculo de Galones Teóricos pasando Toneladas (TN) exactas
+                let galonesIda = calcularGalonesTeoricos(rutaIdaTexto, 'IDA', pesoIdaTn, v.modelo_motor);
+                let galonesRetorno = calcularGalonesTeoricos(rutaRetornoTexto, 'RETORNO', pesoRetornoTn, v.modelo_motor);
 
                 // Descuento -10% si va sin carreta (solo tracto)
                 const esSinCarreta = !v.placa_remolque || v.placa_remolque.trim() === '' || v.placa_remolque === '—';
-                let galonesTotal = (galonesIda + galonesRetorno);
-                if (esSinCarreta && galonesTotal > 0) {
-                    galonesTotal = galonesTotal * 0.90;
+                if (esSinCarreta) {
+                    galonesIda = +(galonesIda * 0.90).toFixed(2);
+                    galonesRetorno = +(galonesRetorno * 0.90).toFixed(2);
                 }
+
+                const galonesTotal = +(galonesIda + galonesRetorno).toFixed(2);
 
                 return {
                     id: v.id,
@@ -359,8 +434,8 @@ module.exports = function (db, broadcast, logAudit) {
                     // Detalle IDA
                     ida: {
                         ruta: rutaIdaTexto,
-                        peso_tn: +(pesoIda / 1000).toFixed(2),
-                        peso_kg: pesoIda,
+                        peso_tn: pesoIdaTn,
+                        peso_kg: pesoIdaKg,
                         ordenes: rutasIda.map(r => r.orden).filter(Boolean),
                         galones_estimados: +galonesIda.toFixed(2)
                     },
@@ -368,16 +443,16 @@ module.exports = function (db, broadcast, logAudit) {
                     // Detalle RETORNO (si no tiene carga peso_tn es 0.00)
                     retorno: {
                         ruta: rutaRetornoTexto,
-                        peso_tn: +(pesoRetorno / 1000).toFixed(2),
-                        peso_kg: pesoRetorno,
+                        peso_tn: pesoRetornoTn,
+                        peso_kg: pesoRetornoKg,
                         ordenes: rutasRetorno.map(r => r.orden).filter(Boolean),
                         galones_estimados: +galonesRetorno.toFixed(2)
                     },
 
                     // Consolidado
-                    peso_total_tn: +(pesoTotal / 1000).toFixed(2),
-                    peso_total_kg: pesoTotal,
-                    galones_teoricos_total: +galonesTotal.toFixed(2),
+                    peso_total_tn: pesoTotalTn,
+                    peso_total_kg: pesoTotalKg,
+                    galones_teoricos_total: galonesTotal,
                     estado: v.estado || 'ACTIVO'
                 };
             });

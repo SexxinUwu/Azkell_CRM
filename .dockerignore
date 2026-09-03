@@ -1,0 +1,23 @@
+# Ignorar dependencias locales
+node_modules/
+npm-debug.log
+
+# Ignorar archivos y carpetas pesadas de compilación móvil
+android/
+ios/
+
+# Ignorar control de versiones e IDEs
+.git/
+.gitignore
+.vscode/
+.claude/
+.agents/
+.gemini/
+
+# Ignorar archivos temporales y logs
+*.log
+tmp*
+scratch/
+diff.txt
+test.txt
+*.sql
