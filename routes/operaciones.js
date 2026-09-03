@@ -201,31 +201,190 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
-    // ── GET /api/operaciones/ordenes-viaje/:viaje ──────────────────
-    router.get('/ordenes-viaje/:viaje', async (req, res) => {
+    // ── GET /api/operaciones/reporte-viajes ───────────────────────────
+    // Reporte consolidado: N° Viaje, Fecha (solo fecha), Placas, Motor, Ruta, Peso Ida/Retorno y Galones Teóricos Matriz D2
+    router.get('/reporte-viajes', async (req, res) => {
         try {
             await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
-            const [rows] = await tdb.query(
-                `SELECT * FROM operaciones_ordenes_viaje WHERE viaje = ? LIMIT 1`,
-                [req.params.viaje]
-            );
+            // 1. Obtener matriz de combustible D2 para cálculo dinámico
+            let matrizD2 = [];
+            try {
+                const [mRows] = await tdb.query("SELECT * FROM combustible_matriz_d2 WHERE estado = 'ACTIVO'");
+                matrizD2 = mRows || [];
+            } catch (mErr) {
+                console.warn('Advertencia: no se pudo cargar matriz D2 en reporte-viajes:', mErr.message);
+            }
 
-            if (!rows.length) return res.status(404).json({ error: 'Orden de viaje no encontrada' });
-            
-            // Adjuntar rutas de la orden de viaje
-            const [rutas] = await tdb.query(
-                `SELECT * FROM operaciones_ordenes_viaje_rutas WHERE viaje = ? ORDER BY es_retorno ASC, id ASC`,
-                [req.params.viaje]
-            );
+            // 2. Traer todos los viajes con sus detalles de rutas y motor de la placa
+            const sql = `
+                SELECT 
+                    ov.id,
+                    ov.viaje,
+                    DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d') AS fecha,
+                    DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d %H:%i:%s') AS fecha_viaje,
+                    ov.placa_tracto,
+                    ov.placa_remolque,
+                    ov.conductor,
+                    ov.peso AS peso_cabecera,
+                    ov.ruta AS ruta_cabecera,
+                    ov.estado,
+                    COALESCE(p.modelo_motor, p.sub_tipo, 'MC11.44') AS modelo_motor,
+                    COALESCE(p.configuracion, 'T3') AS configuracion_tracto
+                FROM operaciones_ordenes_viaje ov
+                LEFT JOIN placas p ON ov.placa_tracto = p.placa
+                ORDER BY ov.fecha_viaje DESC, ov.id DESC
+                LIMIT 2000
+            `;
 
-            const resultado = rows[0];
-            resultado.rutas_detalle = rutas;
+            const [viajes] = await tdb.query(sql);
+            if (!viajes || viajes.length === 0) {
+                return res.json({ ok: true, data: [] });
+            }
+
+            // 3. Traer detalle de rutas para los viajes obtenidos
+            const viajesCodigos = viajes.map(v => v.viaje).filter(Boolean);
+            let rutasMap = new Map(); // viaje -> array de rutas
+
+            if (viajesCodigos.length > 0) {
+                // Fragmentar en lotes si es necesario
+                const chunkSize = 500;
+                for (let i = 0; i < viajesCodigos.length; i += chunkSize) {
+                    const chunk = viajesCodigos.slice(i, i + chunkSize);
+                    const placeholders = chunk.map(() => '?').join(',');
+                    const [rutasRows] = await tdb.query(
+                        `SELECT viaje, orden, ruta, tipo_servicio, es_retorno, peso_total, cantidad_total, volumen_total 
+                         FROM operaciones_ordenes_viaje_rutas 
+                         WHERE viaje IN (${placeholders}) 
+                         ORDER BY es_retorno ASC, id ASC`,
+                        chunk
+                    );
+                    (rutasRows || []).forEach(r => {
+                        if (!rutasMap.has(r.viaje)) rutasMap.set(r.viaje, []);
+                        rutasMap.get(r.viaje).push(r);
+                    });
+                }
+            }
+
+            // Helper para calcular consumo teórico de galones contra la matriz D2
+            function calcularGalonesTeoricos(rutaStr, sentidoStr, pesoTn, motorStr) {
+                if (!matrizD2 || matrizD2.length === 0 || !rutaStr) return 0;
+                const cleanRuta = String(rutaStr).toUpperCase().trim();
+                const cleanSentido = (sentidoStr || 'IDA').toUpperCase().trim();
+                const cleanMotor = (motorStr || '').toUpperCase().trim();
+
+                // Buscar coincidencia en la matriz
+                let match = matrizD2.find(m => {
+                    const mRuta = (m.ruta || '').toUpperCase().trim();
+                    const mSentido = (m.sentido || '').toUpperCase().trim();
+                    const mMotor = (m.motor || '').toUpperCase().trim();
+                    const matchRuta = cleanRuta.includes(mRuta) || mRuta.includes(cleanRuta);
+                    const matchMotor = !cleanMotor || mMotor.includes(cleanMotor) || cleanMotor.includes(mMotor);
+                    return matchRuta && mSentido === cleanSentido && matchMotor;
+                });
+
+                // Si no coincide con motor específico, buscar con cualquier motor disponible en esa ruta
+                if (!match) {
+                    match = matrizD2.find(m => {
+                        const mRuta = (m.ruta || '').toUpperCase().trim();
+                        const mSentido = (m.sentido || '').toUpperCase().trim();
+                        return (cleanRuta.includes(mRuta) || mRuta.includes(cleanRuta)) && mSentido === cleanSentido;
+                    });
+                }
+
+                if (!match) return 0;
+
+                // Interpolar según tonelaje
+                const p = Math.max(0, parseFloat(pesoTn) || 0);
+                if (p <= 0) return parseFloat(match.km_0) || 0;
+                if (p <= 5) return parseFloat(match.km_5) || 0;
+                if (p <= 10) return parseFloat(match.km_10) || 0;
+                if (p <= 15) return parseFloat(match.km_15) || 0;
+                if (p <= 20) return parseFloat(match.km_20) || 0;
+                if (p <= 25) return parseFloat(match.km_25) || 0;
+                return parseFloat(match.km_30) || 0;
+            }
+
+            // 4. Armar estructura enriquecida para cada viaje
+            const resultado = viajes.map(v => {
+                const rutas = rutasMap.get(v.viaje) || [];
+                const rutasIda = rutas.filter(r => parseInt(r.es_retorno, 10) === 0);
+                const rutasRetorno = rutas.filter(r => parseInt(r.es_retorno, 10) === 1);
+
+                // Pesos
+                const pesoIda = rutasIda.reduce((sum, r) => sum + (parseFloat(r.peso_total) || 0), 0);
+                const pesoRetorno = rutasRetorno.reduce((sum, r) => sum + (parseFloat(r.peso_total) || 0), 0);
+                const pesoTotal = (pesoIda + pesoRetorno) > 0 ? (pesoIda + pesoRetorno) : (parseFloat(v.peso_cabecera) || 0);
+
+                // Rutas textos
+                const rutaIdaTexto = rutasIda.length > 0 
+                    ? rutasIda.map(r => r.ruta).join(' | ') 
+                    : (v.ruta_cabecera || 'LIMA - DESTINO');
+
+                let rutaRetornoTexto = rutasRetorno.length > 0 
+                    ? rutasRetorno.map(r => r.ruta).join(' | ') 
+                    : '';
+
+                // Si no tiene retorno registrado, generar el retorno de la ruta de ida
+                if (!rutaRetornoTexto && rutaIdaTexto) {
+                    const partes = rutaIdaTexto.split(' - ');
+                    rutaRetornoTexto = partes.length === 2 ? `${partes[1]} - ${partes[0]}` : `RETORNO ${rutaIdaTexto}`;
+                }
+
+                // Cálculo de Galones Teóricos
+                const galonesIda = calcularGalonesTeoricos(rutaIdaTexto, 'IDA', pesoIda, v.modelo_motor);
+                const galonesRetorno = calcularGalonesTeoricos(rutaRetornoTexto, 'RETORNO', pesoRetorno, v.modelo_motor);
+
+                // Descuento -10% si va sin carreta (solo tracto)
+                const esSinCarreta = !v.placa_remolque || v.placa_remolque.trim() === '' || v.placa_remolque === '—';
+                let galonesTotal = (galonesIda + galonesRetorno);
+                if (esSinCarreta && galonesTotal > 0) {
+                    galonesTotal = galonesTotal * 0.90;
+                }
+
+                return {
+                    id: v.id,
+                    viaje: v.viaje,
+                    fecha: v.fecha || '---',
+                    fecha_viaje: v.fecha_viaje,
+                    placa_tracto: v.placa_tracto || '---',
+                    placa_remolque: v.placa_remolque || '',
+                    es_sin_carreta: esSinCarreta,
+                    conductor: v.conductor || '---',
+                    modelo_motor: v.modelo_motor || 'MC11.44',
+                    ruta_principal: v.ruta_cabecera || rutaIdaTexto,
+                    
+                    // Detalle IDA
+                    ida: {
+                        ruta: rutaIdaTexto,
+                        peso_tn: +(pesoIda / 1000).toFixed(2),
+                        peso_kg: pesoIda,
+                        ordenes: rutasIda.map(r => r.orden).filter(Boolean),
+                        galones_estimados: +galonesIda.toFixed(2)
+                    },
+
+                    // Detalle RETORNO (si no tiene carga peso_tn es 0.00)
+                    retorno: {
+                        ruta: rutaRetornoTexto,
+                        peso_tn: +(pesoRetorno / 1000).toFixed(2),
+                        peso_kg: pesoRetorno,
+                        ordenes: rutasRetorno.map(r => r.orden).filter(Boolean),
+                        galones_estimados: +galonesRetorno.toFixed(2)
+                    },
+
+                    // Consolidado
+                    peso_total_tn: +(pesoTotal / 1000).toFixed(2),
+                    peso_total_kg: pesoTotal,
+                    galones_teoricos_total: +galonesTotal.toFixed(2),
+                    estado: v.estado || 'ACTIVO'
+                };
+            });
+
             res.json({ ok: true, data: resultado });
         } catch (err) {
-            console.error('Error al obtener orden de viaje:', err);
+            console.error('Error al generar reporte de viajes:', err);
             res.status(500).json({ error: err.message });
         }
     });
