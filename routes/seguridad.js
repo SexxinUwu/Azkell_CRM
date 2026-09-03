@@ -997,6 +997,64 @@ module.exports = (db, logAudit) => {
         );
     });
 
+    // ── PUT /seguridad/entrega-vehiculos/:id ─────────────────────
+    router.put('/seguridad/entrega-vehiculos/:id', (req, res) => {
+        const id = req.params.id;
+        const {
+            fecha, quien_recibe, clase, marca, tipo, modelo, color, numero_motor, numero_serie,
+            kilometraje, inventario_partes_json, observaciones, firma_entrega, firma_recibe, empresa
+        } = req.body;
+
+        const fInventarioPartes = typeof inventario_partes_json === 'string' ? inventario_partes_json : JSON.stringify(inventario_partes_json || {});
+        const usuarioEdicion = (req.user && req.user.nombre) || (req.user && req.user.email) || 'Seguridad';
+
+        const sqlUpdate = `
+            UPDATE seg_entrega_vehiculos SET
+                fecha = ?,
+                quien_recibe = ?,
+                clase = ?,
+                marca = ?,
+                tipo = ?,
+                modelo = ?,
+                color = ?,
+                numero_motor = ?,
+                numero_serie = ?,
+                kilometraje = ?,
+                inventario_partes_json = ?,
+                observaciones = ?,
+                firma_entrega = COALESCE(?, firma_entrega),
+                firma_recibe = COALESCE(?, firma_recibe),
+                empresa = COALESCE(?, empresa)
+            WHERE id = ?
+        `;
+
+        const values = [
+            fecha || new Date().toISOString().slice(0, 10),
+            String(quien_recibe || '').trim().toUpperCase(),
+            clase || null,
+            marca || null,
+            tipo || null,
+            modelo || null,
+            color || null,
+            numero_motor || null,
+            numero_serie || null,
+            parseFloat(kilometraje) || 0,
+            fInventarioPartes,
+            observaciones || null,
+            firma_entrega || null,
+            firma_recibe || null,
+            empresa || null,
+            id
+        ];
+
+        db.query(sqlUpdate, values, (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!result.affectedRows) return res.status(404).json({ error: 'Registro no encontrado' });
+            if (typeof logAudit === 'function') logAudit(usuarioEdicion, 'seguridad', 'MODIFICÓ', 'Checklist Entrega ' + id);
+            res.json({ ok: true, message: 'Acta de entrega actualizada exitosamente.' });
+        });
+    });
+
     // ── DELETE /seguridad/entrega-vehiculos/:id ───────────────────
     router.delete('/seguridad/entrega-vehiculos/:id', (req, res) => {
         const id = req.params.id;
