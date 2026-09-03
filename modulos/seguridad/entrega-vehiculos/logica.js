@@ -1607,7 +1607,7 @@
     async function _evRenderPdfBlob(htmlBody, filename) {
         return new Promise(function(resolve, reject) {
             const iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed; top:-10000px; left:-10000px; width:840px; height:1200px; border:none; z-index:-999;';
+            iframe.style.cssText = 'position:fixed; top:-10000px; left:-10000px; width:850px; height:1300px; border:none; z-index:-999;';
             document.body.appendChild(iframe);
 
             const doc = iframe.contentWindow.document;
@@ -1616,37 +1616,48 @@
             <html lang="es">
             <head>
                 <meta charset="UTF-8">
-                <script src="https://cdn.tailwindcss.com"></script>
                 <link rel="preconnect" href="https://fonts.googleapis.com">
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
                 <style>
                     @page { size: A4 portrait; margin: 3mm 4mm; }
-                    body { background-color:#FFFFFF; color:#0F172A; margin:0; padding:0; -webkit-font-smoothing:antialiased; font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif; }
-                    .doc-box { border: 1.5px solid #0f172a; border-radius: 6px; overflow: hidden; background: #ffffff; margin-bottom: 3px; }
+                    * { box-sizing: border-box; }
+                    body { background-color:#FFFFFF; color:#0F172A; margin:0; padding:4px; -webkit-font-smoothing:antialiased; font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif; }
+                    .doc-box { border: 1.5px solid #0f172a; border-radius: 6px; overflow: hidden; background: #ffffff; margin-bottom: 5px; }
                     .doc-row { display: grid; border-bottom: 1.5px solid #0f172a; }
                     .doc-row:last-child { border-bottom: none; }
                     .badge-pastel-lemon { background-color: #f7fee7; color: #3f6212; border: 1px solid #bef264; }
                     .badge-pastel-amber { background-color: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
                     .badge-pastel-red { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+                    .w-full { width: 100%; }
+                    .flex { display: flex; }
+                    .items-center { align-items: center; }
+                    .justify-between { justify-content: space-between; }
+                    .justify-center { justify-content: center; }
+                    .text-center { text-align: center; }
+                    .font-bold { font-weight: 700; }
+                    .font-extrabold { font-weight: 800; }
+                    .uppercase { text-transform: uppercase; }
+                    .font-mono { font-family: 'JetBrains Mono', monospace; }
+                    svg { overflow: visible !important; display: block; }
                 </style>
             </head>
             <body>
-                <div id="ev-pdf-root" style="width:100%; max-width:820px; margin:0 auto;">${htmlBody}</div>
+                <div id="ev-pdf-root" style="width:800px; margin:0 auto; background:#fff;">${htmlBody}</div>
             </body>
             </html>`);
             doc.close();
 
             iframe.onload = async function() {
                 try {
-                    await new Promise(r => setTimeout(r, 450));
+                    await new Promise(r => setTimeout(r, 600));
                     const targetEl = doc.getElementById('ev-pdf-root');
                     const opt = {
                         margin:       0,
                         filename:     filename,
                         image:        { type: 'jpeg', quality: 0.98 },
-                        html2canvas:  { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 840 },
+                        html2canvas:  { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 850 },
                         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
                         pagebreak:    { mode: ['css', 'legacy'] }
                     };
