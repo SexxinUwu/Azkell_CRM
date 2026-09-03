@@ -94,7 +94,8 @@
     let _canvasEntrega, _ctxEntrega, _dibujandoEntrega = false;
     let _canvasRecibe, _ctxRecibe, _dibujandoRecibe = false;
 
-    window.inicializarModuloEntregaVehiculos = function() {
+    window.init_seguridad_entrega_vehiculos = window.init_entrega_vehiculos = window.inicializarModuloEntregaVehiculos = function() {
+        window.evIrAPortal();
         window.evRenderizarPartesAccesorios();
         window.evCargarRecursos();
         window.evCargarDatos();

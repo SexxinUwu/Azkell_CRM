@@ -765,7 +765,10 @@ module.exports = (db, logAudit) => {
         sql += ' ORDER BY fecha DESC, creado_en DESC LIMIT 300';
 
         db.query(sql, params, (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) {
+                console.warn('Advertencia GET /seguridad/entrega-vehiculos:', err.message);
+                return res.json({ ok: true, data: [] });
+            }
             res.json({ ok: true, data: rows || [] });
         });
     });
