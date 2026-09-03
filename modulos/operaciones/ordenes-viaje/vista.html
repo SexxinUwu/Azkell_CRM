@@ -147,8 +147,8 @@
                 <span class="ov-header-badge"><i class="bi bi-diagram-3-fill"></i> Operaciones</span>
                 <span class="badge bg-secondary-subtle text-secondary" id="ov-lbl-total-badge">0 registros</span>
             </div>
-            <h3 class="fw-bold text-dark m-0" style="letter-spacing: -0.02em;">Órdenes de Viaje</h3>
-            <p class="text-secondary m-0 small">Histórico operacional, vinculación de unidades, conductores y rutas despachadas.</p>
+            <h3 class="fw-bold text-dark m-0" style="letter-spacing: -0.02em;">Órdenes de Viaje y Rutas</h3>
+            <p class="text-secondary m-0 small">Control operacional integral: N° de viaje, órdenes de servicio, ruta, peso de ida y retorno.</p>
         </div>
         <div class="d-flex flex-column align-items-start align-items-md-end gap-1">
             <button type="button" class="ov-btn-sync" id="btn-ov-sync" onclick="window.ovEjecutarSincronizacion()">
@@ -168,37 +168,37 @@
                     <div class="ov-kpi-icon bg-primary-subtle text-primary"><i class="bi bi-diagram-3-fill"></i></div>
                 </div>
                 <div class="h3 fw-bold text-dark mb-0" id="ov-kpi-total">--</div>
-                <small class="text-muted" style="font-size:0.75rem;">Sincronizados en VPS</small>
+                <small class="text-muted" style="font-size:0.75rem;">Viajes registrados</small>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ov-kpi-card">
                 <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-secondary fw-semibold small">Con Semirremolque</span>
-                    <div class="ov-kpi-icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-truck-flatbed"></i></div>
+                    <span class="text-secondary fw-semibold small">Órdenes de Servicio</span>
+                    <div class="ov-kpi-icon bg-info-subtle text-info"><i class="bi bi-receipt-cutoff"></i></div>
                 </div>
-                <div class="h3 fw-bold text-dark mb-0" id="ov-kpi-carretas">--</div>
-                <small class="text-muted" style="font-size:0.75rem;">Tracto + Carreta</small>
+                <div class="h3 fw-bold text-dark mb-0" id="ov-kpi-ordenes">--</div>
+                <small class="text-muted" style="font-size:0.75rem;">O/S vinculadas a viajes</small>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ov-kpi-card">
                 <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-secondary fw-semibold small">Conductores</span>
-                    <div class="ov-kpi-icon bg-success-subtle text-success"><i class="bi bi-person-badge-fill"></i></div>
+                    <span class="text-secondary fw-semibold small">Carga Ida</span>
+                    <div class="ov-kpi-icon bg-success-subtle text-success"><i class="bi bi-arrow-right-circle-fill"></i></div>
                 </div>
-                <div class="h3 fw-bold text-dark mb-0" id="ov-kpi-conductores">--</div>
-                <small class="text-muted" style="font-size:0.75rem;">Personal asignado</small>
+                <div class="h3 fw-bold text-dark mb-0" id="ov-kpi-peso-ida">--</div>
+                <small class="text-muted" style="font-size:0.75rem;">Peso despachado (TN)</small>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ov-kpi-card">
                 <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-secondary fw-semibold small">Con Rutas Detalladas</span>
-                    <div class="ov-kpi-icon bg-info-subtle text-info"><i class="bi bi-geo-alt-fill"></i></div>
+                    <span class="text-secondary fw-semibold small">Carga Retorno</span>
+                    <div class="ov-kpi-icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-arrow-left-circle-fill"></i></div>
                 </div>
-                <div class="h3 fw-bold text-dark mb-0" id="ov-kpi-rutas">--</div>
-                <small class="text-muted" style="font-size:0.75rem;">Trazabilidad de ruta</small>
+                <div class="h3 fw-bold text-dark mb-0" id="ov-kpi-peso-retorno">--</div>
+                <small class="text-muted" style="font-size:0.75rem;">Peso retorno (TN)</small>
             </div>
         </div>
     </div>
@@ -206,22 +206,32 @@
     <!-- ── BARRA DE BÚSQUEDA Y FILTROS ──────────────────────────────── -->
     <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
         <div class="row g-2 align-items-center">
-            <div class="col-12 col-md-5">
-                <div class="position-relative">
-                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
-                    <input type="text" id="ov-filtro-q" class="form-control form-control-sm ps-5 text-uppercase fw-semibold border-secondary-subtle" placeholder="BUSCAR POR VIAJE, PLACA, CONDUCTOR, RUTA..." oninput="window.ovOnFiltrarDebounced()" style="border-radius:10px; min-height:40px;">
+            <!-- Selector de Modo de Vista -->
+            <div class="col-12 col-md-3">
+                <div class="btn-group w-100 p-1 bg-light rounded-3 border" role="group">
+                    <button type="button" class="btn btn-sm fw-bold rounded-2 active" id="ov-tab-viajes" onclick="window.ovCambiarModoVista('viajes')">
+                        <i class="bi bi-truck me-1"></i> Por Viaje
+                    </button>
+                    <button type="button" class="btn btn-sm fw-bold rounded-2 text-secondary" id="ov-tab-rutas" onclick="window.ovCambiarModoVista('rutas')">
+                        <i class="bi bi-card-checklist me-1"></i> Por O/S y Ruta
+                    </button>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
-                <select id="ov-filtro-tipo" class="form-select form-select-sm border-secondary-subtle fw-semibold" onchange="window.ovOnFiltrar()" style="border-radius:10px; min-height:40px;">
-                    <option value="TODOS">Todas las Unidades</option>
-                    <option value="CON_CARRETA">Con Carreta / Semirremolque</option>
-                    <option value="SOLO_TRACTO">Solo Tracto (Sin Remolque)</option>
-                    <option value="CON_RUTA">Con Ruta / Procedencia</option>
+            <div class="col-12 col-md-4">
+                <div class="position-relative">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
+                    <input type="text" id="ov-filtro-q" class="form-control form-control-sm ps-5 text-uppercase fw-semibold border-secondary-subtle" placeholder="BUSCAR POR VIAJE, O/S, PLACA, CONDUCTOR, RUTA..." oninput="window.ovOnFiltrarDebounced()" style="border-radius:10px; min-height:40px;">
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <select id="ov-filtro-tramo" class="form-select form-select-sm border-secondary-subtle fw-semibold" onchange="window.ovOnFiltrar()" style="border-radius:10px; min-height:40px;">
+                    <option value="TODOS">Ida y Retorno</option>
+                    <option value="SOLO_IDA">Solo Ida</option>
+                    <option value="SOLO_RETORNO">Solo Retorno</option>
                 </select>
             </div>
-            <div class="col-6 col-md-4 d-flex justify-content-end align-items-center gap-2">
-                <span class="text-secondary small fw-semibold" id="ov-lbl-contador-tabla">Mostrando 0 viajes</span>
+            <div class="col-6 col-md-3 d-flex justify-content-end align-items-center gap-2">
+                <span class="text-secondary small fw-semibold" id="ov-lbl-contador-tabla">Mostrando 0 registros</span>
                 <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.ovLimpiarFiltros()" title="Limpiar filtros">
                     <i class="bi bi-eraser me-1"></i> Limpiar
                 </button>
@@ -233,28 +243,18 @@
     <div class="ov-table-card">
         <div class="table-responsive">
             <table class="table ov-table align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th style="width: 140px;">N° Orden Viaje</th>
-                        <th style="width: 130px;">Fecha / Hora</th>
-                        <th style="width: 110px;">Placa Tracto</th>
-                        <th style="width: 110px;">Placa Carreta</th>
-                        <th>Conductor Asignado</th>
-                        <th>Ruta / Procedencia</th>
-                        <th style="width: 110px; text-align: right;">Peso Total</th>
-                        <th style="width: 90px; text-align: center;">Estado</th>
-                    </tr>
+                <thead id="ov-tabla-thead">
+                    <!-- Dinámico según modo de vista -->
                 </thead>
                 <tbody id="ov-tabla-body">
                     <tr>
-                        <td colspan="8" class="text-center py-5 text-secondary">
+                        <td colspan="9" class="text-center py-5 text-secondary">
                             <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
-                            <div class="small fw-semibold">Cargando órdenes de viaje desde la base de datos...</div>
+                            <div class="small fw-semibold">Cargando órdenes de viaje y rutas desde la base de datos...</div>
                         </td>
                     </tr>
                 </tbody>
             </table>
-        </div>
     </div>
 
     <!-- ── PAGINACIÓN / FOOTER ─────────────────────────────────────── -->
