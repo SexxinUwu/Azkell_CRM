@@ -116,11 +116,16 @@
     font-size: 0.85rem;
     color: #0284c7;
     background: #f0f9ff;
-    padding: 4px 9px;
+    padding: 4px 10px;
     border-radius: 8px;
     border: 1px solid #bae6fd;
     display: inline-flex;
-    align-items: gap;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    cursor: text;
 }
 
 .rv-badge-placa {
@@ -353,20 +358,21 @@
                 <thead>
                     <tr>
                         <th style="width: 40px; text-align: center;"></th>
-                        <th style="width: 140px;">N° Orden Viaje</th>
-                        <th style="width: 110px;"><i class="bi bi-calendar-event me-1"></i>Fecha</th>
-                        <th style="width: 100px;">Tracto</th>
-                        <th style="width: 100px;">Carreta</th>
-                        <th style="width: 130px;">Modelo Motor</th>
-                        <th>Ruta Principal</th>
+                        <th style="width: 155px; white-space: nowrap;">N° Orden Viaje</th>
+                        <th style="width: 105px;"><i class="bi bi-calendar-event me-1"></i>Fecha</th>
+                        <th style="width: 95px;">Tracto</th>
+                        <th style="width: 95px;">Carreta</th>
+                        <th style="width: 115px;">Modelo Motor</th>
+                        <th style="min-width: 150px;">Ruta Principal</th>
+                        <th style="min-width: 170px;"><i class="bi bi-person-fill me-1"></i>Conductor</th>
                         <th style="width: 130px; text-align: right;">Peso Total (Ida+Ret)</th>
-                        <th style="width: 150px; text-align: right;"><i class="bi bi-fuel-pump-fill me-1 text-success"></i>Galones a Gastar</th>
+                        <th style="width: 145px; text-align: right;"><i class="bi bi-fuel-pump-fill me-1 text-success"></i>Galones a Gastar</th>
                         <th style="width: 80px; text-align: center;">Estado</th>
                     </tr>
                 </thead>
                 <tbody id="rv-tabla-body">
                     <tr>
-                        <td colspan="10" class="text-center py-5 text-secondary">
+                        <td colspan="11" class="text-center py-5 text-secondary">
                             <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
                             <div class="small fw-semibold">Consultando y calculando reporte de viajes con la Matriz D2...</div>
                         </td>

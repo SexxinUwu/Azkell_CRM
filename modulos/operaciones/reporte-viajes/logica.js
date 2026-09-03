@@ -21,7 +21,7 @@
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center py-5 text-secondary">
+                    <td colspan="11" class="text-center py-5 text-secondary">
                         <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
                         <div class="small fw-semibold">Consultando y calculando reporte de viajes con la Matriz D2...</div>
                     </td>
@@ -48,13 +48,13 @@
                 window.rvAplicarFiltros();
             } else {
                 if (tbody) {
-                    tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger">${json.error || 'No se pudieron obtener datos'}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-danger">${json.error || 'No se pudieron obtener datos'}</td></tr>`;
                 }
             }
         } catch (err) {
             console.error('Error cargando reporte de viajes:', err);
             if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger">Error de conexión al servidor.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-danger">Error de conexión al servidor.</td></tr>`;
             }
         }
     };
@@ -179,7 +179,7 @@
         if (pageItems.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center py-5 text-secondary">
+                    <td colspan="11" class="text-center py-5 text-secondary">
                         <i class="bi bi-inbox fs-3 d-block mb-2 text-muted"></i>
                         <div class="fw-bold">No se encontraron viajes registrados</div>
                         <small class="text-muted">Ajusta los filtros de búsqueda superior.</small>
@@ -210,19 +210,23 @@
                         <span class="rv-exp-btn"><i class="bi bi-chevron-right"></i></span>
                     </td>
                     <td>
-                        <span class="rv-badge-viaje"><i class="bi bi-ticket-detailed me-1"></i>${v.viaje}</span>
+                        <span class="rv-badge-viaje" onclick="event.stopPropagation()" title="Seleccionar para copiar">
+                            <i class="bi bi-ticket-detailed"></i><span>${v.viaje}</span>
+                        </span>
                     </td>
                     <td><div class="fw-bold text-dark font-monospace">${fechaFmt}</div></td>
                     <td><span class="rv-badge-placa rv-badge-tracto"><i class="bi bi-truck me-1"></i>${v.placa_tracto}</span></td>
                     <td>${carretaHtml}</td>
                     <td><span class="rv-badge-motor"><i class="bi bi-cpu me-1"></i>${v.modelo_motor}</span></td>
                     <td>
-                        <div class="fw-semibold text-dark text-truncate" style="max-width:240px;">
+                        <div class="fw-bold text-dark text-truncate" style="max-width:210px;" title="${v.ruta_principal}">
                             <i class="bi bi-geo-alt-fill text-danger me-1"></i>${v.ruta_principal}
                         </div>
-                        <small class="text-muted text-truncate d-block" style="max-width:240px; font-size:0.75rem;">
-                            <i class="bi bi-person-fill text-secondary me-1"></i>${v.conductor}
-                        </small>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-secondary text-truncate" style="max-width:200px; font-size:0.82rem;" title="${v.conductor}">
+                            <i class="bi bi-person-fill text-primary me-1"></i>${v.conductor}
+                        </div>
                     </td>
                     <td style="text-align:right;">
                         <span class="badge bg-light text-dark border border-secondary-subtle font-monospace fw-bold px-2 py-1" style="font-size:0.84rem;">
@@ -246,24 +250,35 @@
                 html += `
                     <tr class="rv-subrow-tramo">
                         <td></td>
-                        <td colspan="2" class="ps-3">
-                            <span class="rv-badge-tramo rv-tramo-ida"><i class="bi bi-arrow-right-circle-fill"></i> TRAMO IDA</span>
-                            ${v.ida.ordenes.length > 0 ? `<small class="text-muted ms-2">O/S: ${v.ida.ordenes.join(', ')}</small>` : ''}
+                        <td colspan="5" class="ps-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="rv-badge-tramo rv-tramo-ida"><i class="bi bi-arrow-right-circle-fill"></i> TRAMO IDA</span>
+                                ${v.ida.ordenes.length > 0 ? `<span class="badge bg-light text-secondary border font-monospace" style="font-size:0.72rem;">O/S: ${v.ida.ordenes.join(', ')}</span>` : '<small class="text-muted fst-italic">Tramo principal</small>'}
+                            </div>
                         </td>
-                        <td colspan="3">
-                            <span class="text-secondary fw-bold small"><i class="bi bi-signpost-2 me-1"></i>Ruta:</span> 
-                            <span class="text-dark fw-semibold">${v.ida.ruta || 'LIMA - DESTINO'}</span>
+                        <td>
+                            <div class="d-flex align-items-center gap-1.5">
+                                <span class="text-secondary fw-bold small"><i class="bi bi-signpost-2 me-1"></i>Ruta:</span> 
+                                <span class="text-dark fw-bold">${v.ida.ruta || 'LIMA - DESTINO'}</span>
+                            </div>
                         </td>
-                        <td class="text-end">
-                            <span class="text-muted small me-1">Peso Ida:</span>
-                            <span class="font-monospace fw-bold text-dark">${v.ida.peso_tn.toFixed(2)} TN</span>
+                        <td>
+                            <div class="text-muted small text-truncate" style="max-width:180px;" title="${v.conductor}">
+                                <i class="bi bi-person me-1"></i>${v.conductor}
+                            </div>
                         </td>
-                        <td class="text-end">
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-1 fw-bold" style="font-size:0.8rem;">
+                        <td style="text-align:right;">
+                            <div class="d-flex align-items-center justify-content-end gap-1">
+                                <span class="text-muted small">Peso Ida:</span>
+                                <span class="font-monospace fw-bold text-dark" style="font-size:0.82rem;">${v.ida.peso_tn.toFixed(2)} TN</span>
+                            </div>
+                        </td>
+                        <td style="text-align:right;">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-1 fw-bold" style="font-size:0.82rem;">
                                 ${v.ida.galones_estimados.toFixed(2)} GL
                             </span>
                         </td>
-                        <td class="text-center text-muted small">—</td>
+                        <td style="text-align:center; color:#94a3b8;">—</td>
                     </tr>
                 `;
 
@@ -271,24 +286,35 @@
                 html += `
                     <tr class="rv-subrow-tramo" style="border-bottom: 2px solid #e2e8f0;">
                         <td></td>
-                        <td colspan="2" class="ps-3">
-                            <span class="rv-badge-tramo rv-tramo-retorno"><i class="bi bi-arrow-left-circle-fill"></i> TRAMO RETORNO</span>
-                            ${v.retorno.ordenes.length > 0 ? `<small class="text-muted ms-2">O/S: ${v.retorno.ordenes.join(', ')}</small>` : '<small class="text-muted ms-2 fst-italic">Retorno estándar</small>'}
+                        <td colspan="5" class="ps-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="rv-badge-tramo rv-tramo-retorno"><i class="bi bi-arrow-left-circle-fill"></i> TRAMO RETORNO</span>
+                                ${v.retorno.ordenes.length > 0 ? `<span class="badge bg-light text-secondary border font-monospace" style="font-size:0.72rem;">O/S: ${v.retorno.ordenes.join(', ')}</span>` : '<small class="text-muted fst-italic">Retorno estándar</small>'}
+                            </div>
                         </td>
-                        <td colspan="3">
-                            <span class="text-secondary fw-bold small"><i class="bi bi-signpost-2 me-1"></i>Ruta:</span> 
-                            <span class="text-dark fw-semibold">${v.retorno.ruta || 'DESTINO - LIMA'}</span>
+                        <td>
+                            <div class="d-flex align-items-center gap-1.5">
+                                <span class="text-secondary fw-bold small"><i class="bi bi-signpost-2 me-1"></i>Ruta:</span> 
+                                <span class="text-dark fw-bold">${v.retorno.ruta || 'DESTINO - LIMA'}</span>
+                            </div>
                         </td>
-                        <td class="text-end">
-                            <span class="text-muted small me-1">Peso Ret:</span>
-                            <span class="font-monospace fw-bold ${v.retorno.peso_tn > 0 ? 'text-dark' : 'text-muted'}">${v.retorno.peso_tn.toFixed(2)} TN</span>
+                        <td>
+                            <div class="text-muted small text-truncate" style="max-width:180px;" title="${v.conductor}">
+                                <i class="bi bi-person me-1"></i>${v.conductor}
+                            </div>
                         </td>
-                        <td class="text-end">
-                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace px-2 py-1 fw-bold" style="font-size:0.8rem;">
+                        <td style="text-align:right;">
+                            <div class="d-flex align-items-center justify-content-end gap-1">
+                                <span class="text-muted small">Peso Ret:</span>
+                                <span class="font-monospace fw-bold ${v.retorno.peso_tn > 0 ? 'text-dark' : 'text-muted'}" style="font-size:0.82rem;">${v.retorno.peso_tn.toFixed(2)} TN</span>
+                            </div>
+                        </td>
+                        <td style="text-align:right;">
+                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace px-2 py-1 fw-bold" style="font-size:0.82rem;">
                                 ${v.retorno.galones_estimados.toFixed(2)} GL
                             </span>
                         </td>
-                        <td class="text-center text-muted small">—</td>
+                        <td style="text-align:center; color:#94a3b8;">—</td>
                     </tr>
                 `;
             }
