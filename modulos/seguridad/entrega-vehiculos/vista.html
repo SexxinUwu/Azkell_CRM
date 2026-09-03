@@ -571,6 +571,7 @@
         <div class="ev-form-container">
             
             <!-- Barra Superior del Formulario -->
+            <input type="hidden" id="ev-f-edit-id" value="">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                 <div class="d-flex align-items-center gap-2">
                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-2 fw-bold" onclick="window.evCancelarFormulario()">
@@ -584,7 +585,7 @@
                 <div class="d-flex align-items-center gap-2">
                     <button type="button" class="btn btn-success rounded-3 px-4 py-2 fw-bold shadow-sm d-inline-flex align-items-center gap-2" onclick="window.evGuardarFormulario()">
                         <i class="bi bi-check-lg fs-5"></i>
-                        <span>Guardar y Generar PDF</span>
+                        <span id="ev-btn-guardar-txt">Guardar y Generar PDF</span>
                     </button>
                 </div>
             </div>
