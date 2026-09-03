@@ -1635,11 +1635,12 @@
                     await new Promise(r => setTimeout(r, 450));
                     const targetEl = doc.getElementById('ev-pdf-root');
                     const opt = {
-                        margin:       [4, 4, 4, 4],
+                        margin:       0,
                         filename:     filename,
                         image:        { type: 'jpeg', quality: 0.98 },
                         html2canvas:  { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 840 },
-                        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                        pagebreak:    { mode: ['css', 'legacy'] }
                     };
 
                     const pdfBlob = await iframe.contentWindow.html2pdf().set(opt).from(targetEl).outputPdf('blob');
