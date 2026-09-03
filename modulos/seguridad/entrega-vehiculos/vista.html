@@ -523,7 +523,102 @@
     cursor: crosshair;
     touch-action: none;
 }
+/* ── Modal Confirmación Eliminación (Diseño Círculos Moderno) ─── */
+.ev-delete-dialog {
+    max-width: 350px !important;
+    width: 90% !important;
+    margin: 1.75rem auto !important;
+}
+.ev-delete-card {
+    background: #ffffff !important;
+    border-radius: 28px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12) !important;
+    padding: 2.2rem 1.6rem 1.8rem 1.6rem !important;
+    text-align: center;
+    transform: translateZ(0);
+}
+.ev-delete-badge-icon {
+    font-size: 3.2rem;
+    color: #e11d48;
+    line-height: 1;
+    margin-bottom: 0.85rem;
+    display: inline-block;
+}
+.ev-btn-circle {
+    width: 54px;
+    height: 54px;
+    border-radius: 50% !important;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    outline: none;
+    will-change: transform;
+}
+.ev-btn-cancel-circle {
+    background: #18181b !important;
+    color: #ffffff !important;
+}
+.ev-btn-cancel-circle:hover {
+    background: #09090b !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.ev-btn-cancel-circle:active {
+    transform: scale(0.95);
+}
+.ev-btn-delete-circle {
+    background: #e11d48 !important;
+    color: #ffffff !important;
+}
+.ev-btn-delete-circle:hover {
+    background: #be123c !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.ev-btn-delete-circle:active {
+    transform: scale(0.95);
+}
 </style>
+
+<!-- ═══ MODAL CONFIRMACIÓN ELIMINAR (DISEÑO CIRCULAR MODERNO) ═════ -->
+<div class="modal fade" id="ev-delete-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered ev-delete-dialog">
+        <div class="modal-content ev-delete-card border-0">
+            <!-- Icono Alerta Rojo -->
+            <div class="ev-delete-badge-icon">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+
+            <!-- Título -->
+            <h4 class="fw-bolder text-dark mb-2" style="font-size: 1.25rem; letter-spacing: -0.3px;">
+                ¿Eliminar este expediente?
+            </h4>
+
+            <!-- Descripción -->
+            <p class="text-secondary mb-4 px-2" style="font-size: 0.84rem; line-height: 1.45; font-weight: 500;">
+                Esta acción no se puede deshacer. Se borrará el registro y todas sus fotos en la nube.
+            </p>
+
+            <!-- Botones de Acción -->
+            <div class="d-flex align-items-center justify-content-center gap-4">
+                <!-- Cancelar (X negro) -->
+                <button type="button" class="ev-btn-circle ev-btn-cancel-circle" data-bs-dismiss="modal" title="Cancelar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+
+                <!-- Eliminar (Papelera rojo) -->
+                <button type="button" class="ev-btn-circle ev-btn-delete-circle" id="ev-btn-confirm-delete" onclick="window.evEjecutarEliminacionConfirmada()" title="Eliminar expediente">
+                    <i class="bi bi-trash3-fill"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div id="moduloEntregaVehiculos" class="modulo-wrapper d-flex flex-column h-100">
 
