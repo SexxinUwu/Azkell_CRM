@@ -143,7 +143,19 @@ module.exports = function (db, broadcast, logAudit) {
             // Vista agrupada por Viaje (con resumen de órdenes y pesos de ida/retorno)
             let sql = `
                 SELECT 
-                    ov.*,
+                    ov.id,
+                    ov.id_remoto,
+                    ov.viaje,
+                    DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d %H:%i:%s') AS fecha_viaje,
+                    ov.id_conductor,
+                    ov.conductor,
+                    ov.placa_tracto,
+                    ov.placa_remolque,
+                    ov.peso,
+                    ov.ruta,
+                    ov.origen,
+                    ov.destino,
+                    ov.estado,
                     COALESCE(r_agg.cant_ordenes, 0) AS cant_ordenes,
                     COALESCE(r_agg.peso_ida, 0) AS peso_ida,
                     COALESCE(r_agg.peso_retorno, 0) AS peso_retorno,
@@ -241,12 +253,12 @@ module.exports = function (db, broadcast, logAudit) {
 
             const remoteDb = getRemoteDb();
 
-            // 1. Extraer viajes principales convirtiendo la hora UTC del servidor a hora local de Perú (-5 horas)
+            // 1. Extraer viajes principales preservando la fecha y hora literal exacta de Marsisa
             const queryViajes = `
                 SELECT 
                     ov.id_viaje,
                     ov.viaje,
-                    DATE_SUB(ov.fecha_viaje, INTERVAL 5 HOUR) AS fecha_viaje,
+                    DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d %H:%i:%s') AS fecha_viaje,
                     ov.id_conductor,
                     ov.conductor,
                     ov.placa_vehiculo AS placa_tracto,
