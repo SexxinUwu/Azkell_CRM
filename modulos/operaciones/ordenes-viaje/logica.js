@@ -283,8 +283,19 @@ window.ovRenderizarTabla = function() {
         pageItems.forEach(function(v) {
             var fechaStr = '---';
             if (v.fecha_viaje) {
-                var d = new Date(v.fecha_viaje);
-                fechaStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+                // Si viene como string 'YYYY-MM-DD HH:mm:ss' o ISO
+                var fVal = String(v.fecha_viaje);
+                var match = fVal.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+                if (match) {
+                    var y = match[1], m = match[2], d = match[3], hh = parseInt(match[4], 10), mm = match[5];
+                    var ampm = hh >= 12 ? 'p. m.' : 'a. m.';
+                    var hh12 = hh % 12 || 12;
+                    var hhStr = hh12 < 10 ? '0' + hh12 : '' + hh12;
+                    fechaStr = `${d}/${m}/${y} ${hhStr}:${mm} ${ampm}`;
+                } else {
+                    var dt = new Date(v.fecha_viaje);
+                    fechaStr = dt.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+                }
             }
 
             var carretaHtml = v.placa_remolque && v.placa_remolque.trim()
