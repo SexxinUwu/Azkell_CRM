@@ -397,6 +397,9 @@
                             <button type="button" class="ev-btn-action ev-btn-act-pdf" onclick="window.evImprimirPDF('${r.id}')" title="Imprimir Acta PDF">
                                 <i class="bi bi-file-earmark-pdf-fill me-1"></i> PDF
                             </button>
+                            <button type="button" class="ev-btn-action ev-btn-act-wa" onclick="window.evCompartirWhatsApp('${r.id}')" title="Enviar directamente por WhatsApp">
+                                <i class="bi bi-whatsapp"></i>
+                            </button>
                             ${esAdmin ? `
                                 <button type="button" class="ev-btn-action ev-btn-act-del" onclick="window.evEliminarRegistro('${r.id}', '${r.numero_inventario || r.id}')" title="Eliminar Registro (Solo Administrador)">
                                     <i class="bi bi-trash3-fill"></i>
@@ -422,6 +425,63 @@
                 (r.observaciones || '').toLowerCase().includes(q);
         });
         window.evRenderizarTabla(filtrados);
+    };
+
+    // ── COMPARTIR DIRECTAMENTE POR WHATSAPP ─────────────────────────
+    window.evCompartirWhatsApp = async function(id) {
+        try {
+            const token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token');
+            const res = await fetch(`/api/seguridad/entrega-vehiculos/${encodeURIComponent(id)}`, {
+                headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+            });
+            const json = await res.json();
+            if (!json.ok || !json.data) {
+                alert('No se pudo obtener el registro para compartir.');
+                return;
+            }
+
+            const r = json.data;
+            const folio = r.numero_inventario || r.id;
+            const placa = r.placa || '---';
+            const conductor = r.quien_recibe || '---';
+            const entrega = r.quien_entrega || '---';
+            const km = parseFloat(r.kilometraje || 0).toLocaleString('es-PE');
+            const fecha = r.fecha ? r.fecha.slice(0, 10) : new Date().toISOString().slice(0, 10);
+            const empresa = r.empresa || 'MARSISA S.A.C.';
+
+            const mensaje = `📋 *ACTA DE ENTREGA DE VEHÍCULO - ${empresa}*\n` +
+                            `━━━━━━━━━━━━━━━━━━━━━\n` +
+                            `📄 *N° Inventario:* ${folio}\n` +
+                            `📅 *Fecha:* ${fecha}\n` +
+                            `🚛 *Placa:* ${placa}\n` +
+                            `👤 *Entregado por:* ${entrega}\n` +
+                            `👨‍✈️ *Recibido por:* ${conductor}\n` +
+                            `⚡ *Kilometraje:* ${km} km\n` +
+                            `📝 *Observaciones:* ${r.observaciones || 'Conforme sin observaciones'}\n` +
+                            `━━━━━━━━━━━━━━━━━━━━━\n` +
+                            `✅ *Estado:* Conforme y Validado por Control de Seguridad ERP.`;
+
+            // 1. Si el dispositivo soporta Web Share API (Móviles / Tablets Android e iOS)
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: `Acta de Entrega ${folio} - Placa ${placa}`,
+                        text: mensaje
+                    });
+                    return;
+                } catch(eShare) {
+                    if (eShare.name === 'AbortError') return;
+                }
+            }
+
+            // 2. En PC / Escritorio o si no está disponible navigator.share: Abrir WhatsApp Web con el texto preparado
+            const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
+            window.open(waUrl, '_blank');
+
+        } catch(e) {
+            console.error('Error al compartir WhatsApp:', e);
+            alert('Error al abrir WhatsApp.');
+        }
     };
 
     // ── ELIMINAR REGISTRO (SOLO ADMINISTRADOR) ─────────────────────
