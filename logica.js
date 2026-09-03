@@ -1535,64 +1535,12 @@ window.toggleModoRevisor = function() {
     }
 })();
 
-// ── PWA Notificaciones push ──────────────────────────────────────
+// ── PWA Notificaciones push (Desactivadas temporalmente hasta crear el módulo dedicado) ──
 window.verificarNotificacionesPWA = function() {
-    if (!('Notification' in window)) return;
-    if (Notification.permission === 'denied') return;
-    var insps = window.dataGlobalInspecciones || [];
-    if (!insps.length) return;
-    var hoy = new Date(); hoy.setHours(0,0,0,0);
-    var todayStr = hoy.toISOString().slice(0, 10);
-    if (localStorage.getItem('fleet_lastNotif') === todayStr) return;
-    var vencidas = new Set(), porVencer = new Set();
-    var numId = function(id) {
-        if (!id) return 0;
-        var parts = id.split('-');
-        if (parts.length > 2 && parts[1].length === 4) return parseInt(parts[1] + parts[2] + parts[3]) || 0;
-        return parseInt(parts[1]) || 0;
-    };
-    var inspsOrd = insps.slice().sort(function(a,b) { return numId(b.id) - numId(a.id); });
-    var procesadas = new Set();
-
-    inspsOrd.forEach(function(i) {
-        if (!i.fecha_ingreso || i.estado === 'Eliminada' || i.tipo_inspeccion === 'Solo Frenos') return;
-        var placa = (i.placa || '').trim().toUpperCase();
-        if (!placa || procesadas.has(placa)) return;
-        
-        if (window.dataGlobalPlacas) {
-            var pInfo = window.dataGlobalPlacas.find(function(p) { return (p[0]||'').toUpperCase() === placa; });
-            if (pInfo && (pInfo[18] || pInfo[8] || '').toUpperCase() !== 'ACTIVA') return;
-        }
-
-        procesadas.add(placa);
-        try {
-            var fIngreso;
-            if (i.fecha_ingreso.includes('/')) {
-                var px = i.fecha_ingreso.split('/');
-                fIngreso = new Date(px[2], px[1]-1, px[0]);
-            } else {
-                var ds = i.fecha_ingreso.split('T')[0].split('-');
-                fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1])-1, parseInt(ds[2])) : new Date(i.fecha_ingreso);
-            }
-            var fp = new Date(fIngreso.getTime()); fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30));
-            var dias = Math.ceil((fp-hoy)/864e5);
-            if (dias < 0) vencidas.add(placa);
-            else if (dias <= 7) porVencer.add(placa);
-        } catch(e) {}
-    });
-    if (!vencidas.size && !porVencer.size) return;
-    var body = '';
-    if (vencidas.size) body += vencidas.size + ' placa(s) con inspección vencida. ';
-    if (porVencer.size) body += porVencer.size + ' placa(s) por vencer en 7 días.';
-    function _enviar() {
-        new Notification('Azkell Fleet — Alertas', { body: body, icon: '/icons/icon-192.png' });
-        localStorage.setItem('fleet_lastNotif', todayStr);
-    }
-    if (Notification.permission === 'granted') { _enviar(); }
-    else { Notification.requestPermission().then(function(p){ if(p==='granted') _enviar(); }); }
+    // Desactivado: Las notificaciones se implementarán en un módulo dedicado más adelante
+    return;
 };
-// Programar chequeo a los 8 segundos de cargar (espera que cargue dataGlobalInspecciones)
-setTimeout(function(){ if(typeof window.verificarNotificacionesPWA==='function') window.verificarNotificacionesPWA(); }, 8000);
+// setTimeout(function(){ if(typeof window.verificarNotificacionesPWA==='function') window.verificarNotificacionesPWA(); }, 8000);
 
 // ================================================================
 // 🔒 RBAC — Helpers de permisos (usados por todos los módulos)
