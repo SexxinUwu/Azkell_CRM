@@ -716,12 +716,164 @@ module.exports = (db, logAudit) => {
         });
     });
 
-    // ── Eliminar Registro de Unidad en Base ───────────────────────
-    router.delete('/seguridad/unidades-base/:id', (req, res) => {
-        const id = req.params.id;
-        db.query('DELETE FROM seg_unidades_base WHERE id = ?', [id], (err) => {
+    // ════════════════════════════════════════════════════════════════
+    // ENTREGA DE VEHÍCULOS (FORMATO INVENTARIO FÍSICO ESTADO DE VEHÍCULO)
+    // ════════════════════════════════════════════════════════════════
+
+    // ── GET /seguridad/entrega-vehiculos/stats ────────────────────
+    router.get('/seguridad/entrega-vehiculos/stats', (req, res) => {
+        const sql = `
+            SELECT 
+                COUNT(*) as total,
+                COALESCE(SUM(CASE WHEN fecha = CURDATE() THEN 1 ELSE 0 END), 0) as hoy,
+                COALESCE(COUNT(DISTINCT placa), 0) as vehiculos
+            FROM seg_entrega_vehiculos
+        `;
+        db.query(sql, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true, message: 'Registro eliminado correctamente.' });
+            const s = (rows && rows[0]) || { total: 0, hoy: 0, vehiculos: 0 };
+            res.json({
+                total: Number(s.total) || 0,
+                hoy: Number(s.hoy) || 0,
+                vehiculos: Number(s.vehiculos) || 0
+            });
+        });
+    });
+
+    // ── GET /seguridad/entrega-vehiculos ──────────────────────────
+    router.get('/seguridad/entrega-vehiculos', (req, res) => {
+        let sql = `SELECT * FROM seg_entrega_vehiculos`;
+        const wheres = [];
+        const params = [];
+
+        if (req.query.empresa && req.query.empresa !== 'TODAS') {
+            wheres.push('empresa = ?');
+            params.push(req.query.empresa);
+        }
+        if (req.query.placa) {
+            wheres.push('placa LIKE ?');
+            params.push(`%${req.query.placa.trim()}%`);
+        }
+        if (req.query.fecha) {
+            wheres.push('fecha = ?');
+            params.push(req.query.fecha);
+        }
+
+        if (wheres.length) {
+            sql += ' WHERE ' + wheres.join(' AND ');
+        }
+        sql += ' ORDER BY fecha DESC, creado_en DESC LIMIT 300';
+
+        db.query(sql, params, (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, data: rows || [] });
+        });
+    });
+
+    // ── GET /seguridad/entrega-vehiculos/:id ──────────────────────
+    router.get('/seguridad/entrega-vehiculos/:id', (req, res) => {
+        db.query('SELECT * FROM seg_entrega_vehiculos WHERE id = ? LIMIT 1', [req.params.id], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
+            res.json({ ok: true, data: rows[0] });
+        });
+    });
+
+    // ── POST /seguridad/entrega-vehiculos ─────────────────────────
+    router.post('/seguridad/entrega-vehiculos', (req, res) => {
+        const {
+            numero_inventario, fecha, motivo, quien_entrega, quien_recibe,
+            clase, marca, tipo, modelo, placa, color, cilindros, numero_motor, numero_serie, kilometraje,
+            llantas_del_der_marca, llantas_del_izq_marca, llantas_tra_der_marca, llantas_tra_izq_marca, llantas_repuesto_marca, llantas_ref_json,
+            inventario_partes_json, observaciones, croquis_danos_json,
+            firma_entrega, firma_recibe, doc_entrega, doc_recibe,
+            empresa
+        } = req.body;
+
+        if (!placa || !quien_entrega || !quien_recibe) {
+            return res.status(400).json({ error: 'Placa, Quien Entrega y Quien Recibe son obligatorios.' });
+        }
+
+        const year = new Date().getFullYear();
+        const prefix = `ENT-${year}-`;
+        db.query(
+            `SELECT id FROM seg_entrega_vehiculos WHERE id LIKE ? ORDER BY id DESC LIMIT 1`,
+            [prefix + '%'],
+            (errSeq, seqRows) => {
+                let nextNum = 1;
+                if (!errSeq && seqRows && seqRows.length) {
+                    const lastId = seqRows[0].id;
+                    const parts = lastId.split('-');
+                    const lastNum = parseInt(parts[parts.length - 1], 10);
+                    if (!isNaN(lastNum)) nextNum = lastNum + 1;
+                }
+                const regId = prefix + String(nextNum).padStart(4, '0');
+
+                const usuarioCreacion = (req.user && req.user.nombre) || (req.user && req.user.email) || 'Seguridad';
+                const fInventarioPartes = typeof inventario_partes_json === 'string' ? inventario_partes_json : JSON.stringify(inventario_partes_json || {});
+                const fLlantasRef = typeof llantas_ref_json === 'string' ? llantas_ref_json : JSON.stringify(llantas_ref_json || {});
+                const fCroquis = typeof croquis_danos_json === 'string' ? croquis_danos_json : JSON.stringify(croquis_danos_json || []);
+
+                const sqlInsert = `
+                    INSERT INTO seg_entrega_vehiculos (
+                        id, numero_inventario, fecha, motivo, quien_entrega, quien_recibe,
+                        clase, marca, tipo, modelo, placa, color, cilindros, numero_motor, numero_serie, kilometraje,
+                        llantas_del_der_marca, llantas_del_izq_marca, llantas_tra_der_marca, llantas_tra_izq_marca, llantas_repuesto_marca, llantas_ref_json,
+                        inventario_partes_json, observaciones, croquis_danos_json,
+                        firma_entrega, firma_recibe, doc_entrega, doc_recibe,
+                        empresa, creado_por
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `;
+
+                const values = [
+                    regId,
+                    numero_inventario || regId,
+                    fecha || new Date().toISOString().slice(0, 10),
+                    motivo || 'ENTREGA DE UNIDAD',
+                    String(quien_entrega).trim().toUpperCase(),
+                    String(quien_recibe).trim().toUpperCase(),
+                    clase || null,
+                    marca || null,
+                    tipo || null,
+                    modelo || null,
+                    String(placa).trim().toUpperCase(),
+                    color || null,
+                    cilindros || null,
+                    numero_motor || null,
+                    numero_serie || null,
+                    parseFloat(kilometraje) || 0,
+                    llantas_del_der_marca || null,
+                    llantas_del_izq_marca || null,
+                    llantas_tra_der_marca || null,
+                    llantas_tra_izq_marca || null,
+                    llantas_repuesto_marca || null,
+                    fLlantasRef,
+                    fInventarioPartes,
+                    observaciones || null,
+                    fCroquis,
+                    firma_entrega || null,
+                    firma_recibe || null,
+                    doc_entrega || null,
+                    doc_recibe || null,
+                    (empresa || 'MARSISA').toUpperCase().trim(),
+                    usuarioCreacion
+                ];
+
+                db.query(sqlInsert, values, (errInsert) => {
+                    if (errInsert) return res.status(500).json({ error: errInsert.message });
+                    if (typeof logAudit === 'function') logAudit(usuarioCreacion, 'seguridad', 'CREÓ', 'Checklist Entrega de Vehículo ' + regId);
+                    res.json({ ok: true, id: regId, message: 'Checklist de Entrega guardado exitosamente.' });
+                });
+            }
+        );
+    });
+
+    // ── DELETE /seguridad/entrega-vehiculos/:id ───────────────────
+    router.delete('/seguridad/entrega-vehiculos/:id', (req, res) => {
+        const id = req.params.id;
+        db.query('DELETE FROM seg_entrega_vehiculos WHERE id = ?', [id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, message: 'Registro eliminado exitosamente.' });
         });
     });
 

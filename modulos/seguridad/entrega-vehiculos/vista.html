@@ -1,0 +1,483 @@
+<!-- ═══════════════════════════════════════════════════════════════════
+     MÓDULO SEGURIDAD: CHECKLIST "ENTREGA DE VEHÍCULOS"
+     Formato Oficial: Inventario Físico Estado de Vehículo
+═══════════════════════════════════════════════════════════════════ -->
+<style>
+#root-dinamico { padding: 0 !important; }
+
+.ev-wrap {
+    padding: 1.25rem 1.5rem 120px 1.5rem;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--text, #0f172a);
+}
+
+@media (max-width: 768px) {
+    .ev-wrap { padding: 0.75rem 0.75rem 130px 0.75rem; }
+}
+
+/* ── Encabezado Bento ─────────────────────────────────────────── */
+.ev-header-box {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.ev-badge-corp {
+    background: #ecfdf5;
+    color: #059669;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid #a7f3d0;
+}
+
+/* ── Bento Cards Multi-Empresa ────────────────────────────────── */
+.ev-company-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1.25rem 1.4rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.02);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+.ev-company-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(16, 185, 129, 0.12);
+    border-color: #10b981;
+}
+
+.ev-company-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    font-weight: 800;
+}
+
+/* ── Tabla de Registros ───────────────────────────────────────── */
+.ev-table-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    overflow: hidden;
+}
+
+.table-ev {
+    font-size: 0.85rem;
+    margin-bottom: 0;
+}
+.table-ev thead th {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.85rem 0.8rem;
+    border: none;
+}
+.table-ev tbody td {
+    padding: 0.8rem;
+    vertical-align: middle;
+}
+
+/* ── Formulario de Inventario Físico (Fiel a la Hoja Oficial) ─── */
+.ev-form-paper {
+    background: #ffffff;
+    border: 2px solid #0f172a;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+}
+
+.ev-sheet-header {
+    border: 2px solid #0f172a;
+    display: flex;
+    margin-bottom: 1rem;
+}
+.ev-sheet-logo {
+    width: 25%;
+    border-right: 2px solid #0f172a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    background: #fafafa;
+}
+.ev-sheet-title {
+    width: 55%;
+    border-right: 2px solid #0f172a;
+    text-align: center;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.ev-sheet-meta {
+    width: 20%;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+}
+
+.ev-grid-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+}
+.ev-grid-table th, .ev-grid-table td {
+    border: 1px solid #0f172a;
+    padding: 4px 6px;
+    vertical-align: middle;
+}
+.ev-grid-table th {
+    background: #e2e8f0;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    text-align: center;
+}
+
+/* Inputs limpios dentro de la hoja de formato */
+.ev-input-field {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-weight: 700;
+    color: #0f172a;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    outline: none;
+    padding: 2px 4px;
+}
+.ev-input-field:focus {
+    background: #eff6ff;
+}
+
+.ev-chk-state-btn {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+.ev-chk-state-btn.active-b { background: #16a34a; color: #fff; border-color: #16a34a; }
+.ev-chk-state-btn.active-r { background: #d97706; color: #fff; border-color: #d97706; }
+.ev-chk-state-btn.active-m { background: #dc2626; color: #fff; border-color: #dc2626; }
+
+/* Lienzo de Firmas */
+.ev-sig-canvas {
+    width: 100%;
+    height: 110px;
+    border: 1.5px dashed #94a3b8;
+    background: #f8fafc;
+    border-radius: 8px;
+    cursor: crosshair;
+    touch-action: none;
+}
+</style>
+
+<div class="ev-wrap" id="moduloEntregaVehiculos">
+
+    <!-- ═══════════════════════════════════════════════════════════
+         VISTA 1: PORTAL MULTI-EMPRESA (BENTO HERO)
+    ══════════════════════════════════════════════════════════════ -->
+    <div id="ev-view-portal">
+        <div class="ev-header-box">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="ev-badge-corp"><i class="bi bi-shield-check"></i> Seguridad Operacional</span>
+                    <span class="badge bg-secondary-subtle text-secondary" id="ev-lbl-portal-badge">Control de Entregas</span>
+                </div>
+                <h3 class="fw-bold text-dark m-0" style="letter-spacing: -0.02em;">CheckList: Entrega de Vehículos</h3>
+                <p class="text-secondary m-0 small">Inventario físico y acta de entrega y recepción del estado de unidades por empresa.</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-primary rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-2" onclick="window.evAbrirNuevoFormulario('TODAS')">
+                    <i class="bi bi-plus-lg fs-6"></i>
+                    <span>Nueva Entrega de Unidad</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Selector de Empresas Bento Grid -->
+        <div class="row g-3 mb-4" id="ev-portal-companies-grid">
+            <!-- Dinámico JS -->
+        </div>
+
+        <!-- Historial Rápido de Entregas Recientes -->
+        <div class="ev-table-card mt-4">
+            <div class="p-3 border-bottom d-flex align-items-center justify-content-between bg-light">
+                <h6 class="m-0 fw-bold text-dark"><i class="bi bi-clock-history me-1 text-primary"></i> Últimas Entregas Realizadas</h6>
+                <span class="text-muted small" id="ev-lbl-historial-count">0 registros</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-ev align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 140px;">N° Inventario</th>
+                            <th style="width: 100px;">Fecha</th>
+                            <th style="width: 110px;">Placa Tracto</th>
+                            <th>Quien Entrega</th>
+                            <th>Quien Recibe</th>
+                            <th style="width: 110px;">Empresa</th>
+                            <th style="width: 110px;">Kilometraje</th>
+                            <th style="width: 130px; text-align: center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ev-portal-historial-tbody">
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">Cargando historial de entregas...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         VISTA 2: LISTADO POR EMPRESA
+    ═══════════════════════════════════════════════════════════ -->
+    <div id="ev-view-list" class="d-none">
+        <div class="ev-header-box">
+            <div class="d-flex align-items-center gap-3">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-2 fw-bold" onclick="window.evIrAPortal()">
+                    <i class="bi bi-arrow-left me-1"></i> Volver a Empresas
+                </button>
+                <div>
+                    <h4 class="fw-bold text-dark m-0" id="ev-list-empresa-titulo">MARSISA</h4>
+                    <small class="text-muted" id="ev-list-empresa-sub">Checklists de Entrega de Vehículos</small>
+                </div>
+            </div>
+            <div>
+                <button type="button" class="btn btn-primary rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-2" onclick="window.evAbrirNuevoFormulario()">
+                    <i class="bi bi-file-earmark-plus-fill fs-6"></i>
+                    <span>Registrar Entrega de Unidad</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="ev-table-card">
+            <div class="table-responsive">
+                <table class="table table-ev align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 140px;">N° Inventario</th>
+                            <th style="width: 110px;">Fecha</th>
+                            <th style="width: 110px;">Placa</th>
+                            <th>Quien Entrega</th>
+                            <th>Quien Recibe</th>
+                            <th style="width: 120px;">Kilometraje</th>
+                            <th>Observaciones</th>
+                            <th style="width: 130px; text-align: center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ev-list-tbody">
+                        <!-- Dinámico JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         VISTA 3: FORMULARIO FORMATO OFICIAL INVENTARIO FÍSICO
+    ═══════════════════════════════════════════════════════════ -->
+    <div id="ev-view-form" class="d-none">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-2 fw-bold" onclick="window.evCancelarFormulario()">
+                <i class="bi bi-arrow-left me-1"></i> Cancelar y Volver
+            </button>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-success rounded-3 px-4 py-2 fw-bold shadow-sm d-inline-flex align-items-center gap-2" onclick="window.evGuardarFormulario()">
+                    <i class="bi bi-check-lg fs-5"></i>
+                    <span>Guardar y Generar PDF</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ── HOJA DEL FORMATO OFICIAL (A4 Style) ─────────────── -->
+        <div class="ev-form-paper">
+            
+            <!-- Cabecera Oficial con Logo -->
+            <div class="ev-sheet-header">
+                <div class="ev-sheet-logo">
+                    <img src="img/logo.png" onerror="this.src='img/app-logo.png'" alt="Logo" style="max-height: 48px; object-fit: contain;">
+                </div>
+                <div class="ev-sheet-title">
+                    <span class="text-uppercase fw-bold small text-muted">FORMATO</span>
+                    <h5 class="fw-bolder m-0 text-dark" style="letter-spacing: 0.02em;">INVENTARIO FÍSICO ESTADO DE VEHÍCULO</h5>
+                </div>
+                <div class="ev-sheet-meta">
+                    <div><strong>Versión:</strong> 0</div>
+                    <div><strong>Fecha:</strong> <span id="ev-f-meta-fecha">03/09/2026</span></div>
+                </div>
+            </div>
+
+            <!-- Fila Datos Generales -->
+            <table class="ev-grid-table">
+                <tr>
+                    <td style="width: 25%; background:#f8fafc;"><strong>Número de Inventario:</strong></td>
+                    <td style="width: 35%;"><input type="text" id="ev-f-nro-inv" class="ev-input-field" placeholder="AUTO (EJ: ENT-2026-0001)"></td>
+                    <td style="width: 15%; background:#f8fafc;"><strong>Fecha:</strong></td>
+                    <td style="width: 25%;"><input type="date" id="ev-f-fecha" class="ev-input-field"></td>
+                </tr>
+                <tr>
+                    <td style="background:#f8fafc;"><strong>Motivo:</strong></td>
+                    <td colspan="3"><input type="text" id="ev-f-motivo" class="ev-input-field" value="ENTREGA DE UNIDAD"></td>
+                </tr>
+                <tr>
+                    <td style="background:#f8fafc;"><strong>Nombre de quien entrega:</strong></td>
+                    <td><input type="text" id="ev-f-entrega" class="ev-input-field" placeholder="NOMBRE COMPLETO" list="ev-dl-conductores"></td>
+                    <td style="background:#f8fafc;"><strong>Nombre de quien recibe:</strong></td>
+                    <td><input type="text" id="ev-f-recibe" class="ev-input-field" placeholder="NOMBRE COMPLETO" list="ev-dl-conductores"></td>
+                </tr>
+            </table>
+
+            <!-- Fila Datos Técnicos del Vehículo -->
+            <table class="ev-grid-table">
+                <thead>
+                    <tr>
+                        <th>CLASE</th>
+                        <th>MARCA</th>
+                        <th>TIPO</th>
+                        <th>MODELO</th>
+                        <th>PLACA</th>
+                        <th>COLOR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="text" id="ev-f-clase" class="ev-input-field text-center" placeholder="TRACTO"></td>
+                        <td><input type="text" id="ev-f-marca" class="ev-input-field text-center" placeholder="VOLVO / SINOTRUK"></td>
+                        <td><input type="text" id="ev-f-tipo" class="ev-input-field text-center" placeholder="REMOLCADOR"></td>
+                        <td><input type="text" id="ev-f-modelo" class="ev-input-field text-center" placeholder="FH / SITRAK"></td>
+                        <td style="background:#eff6ff;"><input type="text" id="ev-f-placa" class="ev-input-field text-center fw-bolder text-primary" placeholder="ABC-123" oninput="window.evOnPlacaInput(this.value)" list="ev-dl-placas"></td>
+                        <td><input type="text" id="ev-f-color" class="ev-input-field text-center" placeholder="BLANCO"></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <table class="ev-grid-table">
+                <thead>
+                    <tr>
+                        <th>CILINDROS</th>
+                        <th>NÚMERO DEL MOTOR</th>
+                        <th>NÚMERO DE SERIE / VIN</th>
+                        <th>KILOMETRAJE</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="text" id="ev-f-cilindros" class="ev-input-field text-center" placeholder="6"></td>
+                        <td><input type="text" id="ev-f-motor" class="ev-input-field text-center" placeholder="D13 / MC11"></td>
+                        <td><input type="text" id="ev-f-serie" class="ev-input-field text-center" placeholder="VIN O SERIE"></td>
+                        <td style="background:#fefce8;"><input type="number" step="0.01" id="ev-f-km" class="ev-input-field text-center fw-bold" placeholder="0.00"></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Tabla de Llantas -->
+            <table class="ev-grid-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="width: 15%;">LLANTAS</th>
+                        <th colspan="2">DELANTERAS</th>
+                        <th colspan="2">TRASERAS</th>
+                        <th rowspan="2" style="width: 15%;">REPUESTO</th>
+                    </tr>
+                    <tr>
+                        <th>DERECHA</th>
+                        <th>IZQUIERDA</th>
+                        <th>DERECHA</th>
+                        <th>IZQUIERDA</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="background:#f8fafc; font-weight:700;">MARCA</td>
+                        <td><input type="text" id="ev-f-ll-del-der" class="ev-input-field text-center" placeholder="MARCA"></td>
+                        <td><input type="text" id="ev-f-ll-del-izq" class="ev-input-field text-center" placeholder="MARCA"></td>
+                        <td><input type="text" id="ev-f-ll-tra-der" class="ev-input-field text-center" placeholder="MARCA"></td>
+                        <td><input type="text" id="ev-f-ll-tra-izq" class="ev-input-field text-center" placeholder="MARCA"></td>
+                        <td><input type="text" id="ev-f-ll-rep" class="ev-input-field text-center" placeholder="MARCA"></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Matriz de Partes y Accesorios (3 Columnas Exactas al Formato Físico) -->
+            <div class="row g-2 mb-3" id="ev-partes-accesorios-container">
+                <!-- Generado dinámicamente con checkboxes B (Bueno), R (Regular), M (Malo) y Cantidad -->
+            </div>
+
+            <!-- Observaciones -->
+            <div class="mb-3">
+                <label class="form-label fw-bold text-dark small text-uppercase m-0 mb-1">OBSERVACIONES:</label>
+                <textarea id="ev-f-obs" class="form-control fw-semibold" rows="3" placeholder="Detalle observaciones sobre raspones, estado de espejos, faros, llaves de tanque, etc." style="border:1.5px solid #0f172a; border-radius:8px;"></textarea>
+            </div>
+
+            <!-- Diagrama Gráfico del Camión -->
+            <div class="mb-3 p-3 text-center" style="border: 1.5px solid #0f172a; border-radius:8px; background:#fafafa;">
+                <span class="text-uppercase fw-bold text-muted small d-block mb-2">CROQUIS DE ESTADO Y DAÑOS DEL VEHÍCULO</span>
+                <img src="img/croquis-camion.png" onerror="this.style.display='none'" alt="Croquis Camión" style="max-height: 180px; max-width: 100%;">
+                <div class="text-muted small mt-1"><i class="bi bi-info-circle me-1"></i> Puedes detallar raspones o abolladuras en el campo de observaciones superior.</div>
+            </div>
+
+            <!-- Firmas -->
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <div class="p-3" style="border: 1.5px solid #0f172a; border-radius: 8px;">
+                        <span class="fw-bold text-dark small text-uppercase d-block mb-1">ENTREGADO POR (FIRMA):</span>
+                        <canvas id="ev-canvas-entrega" class="ev-sig-canvas"></canvas>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <input type="text" id="ev-f-doc-entrega" class="form-control form-control-sm" placeholder="DNI / N° Documento" style="max-width: 180px;">
+                            <button type="button" class="btn btn-sm btn-light border" onclick="window.evLimpiarFirma('entrega')">Limpiar Firma</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="p-3" style="border: 1.5px solid #0f172a; border-radius: 8px;">
+                        <span class="fw-bold text-dark small text-uppercase d-block mb-1">RECIBIDO POR (FIRMA):</span>
+                        <canvas id="ev-canvas-recibe" class="ev-sig-canvas"></canvas>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <input type="text" id="ev-f-doc-recibe" class="form-control form-control-sm" placeholder="DNI / N° Documento" style="max-width: 180px;">
+                            <button type="button" class="btn btn-sm btn-light border" onclick="window.evLimpiarFirma('recibe')">Limpiar Firma</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Datalists para autocompletar -->
+    <datalist id="ev-dl-placas"></datalist>
+    <datalist id="ev-dl-conductores"></datalist>
+</div>
