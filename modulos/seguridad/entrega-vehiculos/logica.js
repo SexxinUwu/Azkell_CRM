@@ -1130,7 +1130,7 @@
         }
     };
 
-    // ── GENERACIÓN E IMPRESIÓN DEL PDF OFICIAL (FORMATO A4) ──────
+    // ── GENERACIÓN E IMPRESIÓN DEL PDF OFICIAL CON DISEÑO BENTO PASTEL (A4 EJECUTIVO) ──────
     window.evImprimirPDF = async function(id) {
         try {
             const token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token');
@@ -1147,156 +1147,259 @@
             let partes = {};
             try { partes = typeof r.inventario_partes_json === 'string' ? JSON.parse(r.inventario_partes_json) : (r.inventario_partes_json || {}); } catch(e) {}
 
+            const empLogoUrl = localStorage.getItem('fleet_empresa_logo') || '';
+            const fechaStr = r.fecha ? r.fecha.slice(0, 10) : new Date().toISOString().slice(0, 10);
+            const kmFmt = parseFloat(r.kilometraje || 0).toLocaleString('es-PE');
+
             const printWin = window.open('', '_blank');
             printWin.document.write(`
                 <!DOCTYPE html>
-                <html>
+                <html lang="es">
                 <head>
-                    <title>Inventario Físico Estado de Vehículo - ${r.numero_inventario || r.id}</title>
+                    <meta charset="UTF-8">
+                    <title>Acta de Entrega de Vehículo - ${r.numero_inventario || r.id}</title>
+                    <script src="https://cdn.tailwindcss.com"></script>
+                    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap">
                     <style>
-                        @page { size: A4; margin: 8mm; }
-                        body { font-family: Arial, sans-serif; font-size: 8.5px; color: #000; margin: 0; }
-                        table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-                        th, td { border: 1px solid #000; padding: 2px 4px; vertical-align: middle; }
-                        th { background: #e5e5e5; font-weight: bold; text-align: center; }
-                        .text-center { text-align: center; }
-                        .fw-bold { font-weight: bold; }
-                        .header-table td { border: 2px solid #000; }
+                        @page { 
+                            size: A4 portrait; 
+                            margin: 6mm 7mm; 
+                        }
+                        * { box-sizing: border-box; }
+                        body { 
+                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+                            font-size: 9px; 
+                            color: #0f172a; 
+                            background: #ffffff; 
+                            margin: 0; 
+                            padding: 0;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        .font-mono { font-family: 'JetBrains Mono', monospace; }
+                        .doc-box {
+                            border: 1.5px solid #0f172a;
+                            border-radius: 8px;
+                            overflow: hidden;
+                            background: #ffffff;
+                            margin-bottom: 7px;
+                        }
+                        .doc-row {
+                            display: grid;
+                            border-bottom: 1.5px solid #0f172a;
+                        }
+                        .doc-row:last-child {
+                            border-bottom: none;
+                        }
+                        .badge-pastel-green {
+                            background-color: #ecfdf5;
+                            color: #15803d;
+                            border: 1px solid #a7f3d0;
+                        }
+                        .badge-pastel-lemon {
+                            background-color: #f7fee7;
+                            color: #3f6212;
+                            border: 1px solid #bef264;
+                        }
+                        .badge-pastel-blue {
+                            background-color: #eff6ff;
+                            color: #0369a1;
+                            border: 1px solid #bae6fd;
+                        }
+                        .badge-pastel-amber {
+                            background-color: #fffbeb;
+                            color: #b45309;
+                            border: 1px solid #fde68a;
+                        }
+                        .badge-pastel-red {
+                            background-color: #fef2f2;
+                            color: #b91c1c;
+                            border: 1px solid #fecaca;
+                        }
                     </style>
                 </head>
-                <body>
-                    <!-- Header -->
-                    <table class="header-table" style="margin-bottom: 6px;">
-                        <tr>
-                            <td style="width: 25%; text-align: center; padding: 5px;">
-                                <strong style="font-size: 14px;">${r.empresa || 'MARSISA'}</strong><br><small>TRANSPORTES</small>
-                            </td>
-                            <td style="width: 55%; text-align: center;">
-                                <div style="font-size: 8px;">FORMATO</div>
-                                <div style="font-size: 11px; font-weight: bold;">INVENTARIO FÍSICO ESTADO DE VEHÍCULO</div>
-                            </td>
-                            <td style="width: 20%; font-size: 8px; line-height: 1.3;">
-                                <strong>Versión:</strong> 0<br>
-                                <strong>Fecha:</strong> ${r.fecha ? r.fecha.slice(0,10) : ''}
-                            </td>
-                        </tr>
-                    </table>
+                <body class="p-1">
+                    <main class="w-full max-w-[840px] mx-auto bg-white">
 
-                    <!-- General Info -->
-                    <table>
-                        <tr>
-                            <td style="width: 25%;"><strong>Número de Inventario:</strong></td>
-                            <td style="width: 35%;">${r.numero_inventario || r.id}</td>
-                            <td style="width: 15%;"><strong>Fecha:</strong></td>
-                            <td style="width: 25%;">${r.fecha ? r.fecha.slice(0,10) : ''}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Motivo:</strong></td>
-                            <td colspan="3">${r.motivo || 'ENTREGA DE UNIDAD'}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Nombre de quien entrega:</strong></td>
-                            <td>${r.quien_entrega}</td>
-                            <td><strong>Nombre de quien recibe:</strong></td>
-                            <td>${r.quien_recibe}</td>
-                        </tr>
-                    </table>
+                        <!-- 1. ENCABEZADO INSTITUCIONAL SGC -->
+                        <header class="doc-box">
+                            <div class="doc-row" style="grid-template-columns: 24% 52% 24%;">
+                                <!-- Logo Empresa -->
+                                <div class="p-2 flex flex-col items-center justify-center text-center bg-white" style="border-right: 1.5px solid #0f172a;">
+                                    ${empLogoUrl ? `<img src="${empLogoUrl}" style="max-height: 32px; max-width: 110px; object-fit: contain;">` : `
+                                        <div class="font-extrabold text-slate-900 text-xs tracking-tight uppercase">${r.empresa || 'MARSISA'}</div>
+                                    `}
+                                    <span class="text-[7.5px] font-bold tracking-wider text-slate-500 uppercase mt-0.5">Transporte & Logística</span>
+                                </div>
 
-                    <!-- Vehículo -->
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>CLASE</th><th>MARCA</th><th>TIPO</th><th>MODELO</th><th>PLACAS</th><th>COLOR</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="text-center">
-                                <td>${r.clase || 'TRACTO'}</td>
-                                <td>${r.marca || '---'}</td>
-                                <td>${r.tipo || '---'}</td>
-                                <td>${r.modelo || '---'}</td>
-                                <td class="fw-bold">${r.placa}</td>
-                                <td>${r.color || '---'}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                <!-- Título Oficial -->
+                                <div class="p-2 flex flex-col items-center justify-center text-center bg-slate-50/70" style="border-right: 1.5px solid #0f172a;">
+                                    <div class="text-[8.5px] font-bold text-slate-500 uppercase tracking-widest">FORMATO OFICIAL ERP</div>
+                                    <h1 class="text-xs sm:text-sm font-extrabold text-slate-900 tracking-tight uppercase leading-tight">INVENTARIO FÍSICO ESTADO DE VEHÍCULO</h1>
+                                    <p class="text-[8.5px] font-semibold text-slate-600 mt-0.5 uppercase">Acta de Entrega y Recepción Técnica de Unidades</p>
+                                </div>
 
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>NÚMERO DEL MOTOR</th><th>NÚMERO DE SERIE / VIN</th><th>KILOMETRAJE</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="text-center">
-                                <td>${r.numero_motor || '---'}</td>
-                                <td>${r.numero_serie || '---'}</td>
-                                <td class="fw-bold">${parseFloat(r.kilometraje || 0).toLocaleString('es-PE')} km</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- Matriz de Partes y Accesorios -->
-                    <div style="display: flex; gap: 4px; margin-bottom: 4px;">
-                        ${[
-                            GRUPOS_SISTEMAS.slice(0, 5),
-                            GRUPOS_SISTEMAS.slice(5, 10),
-                            GRUPOS_SISTEMAS.slice(10)
-                        ].map(colGrupos => `
-                            <div style="flex: 1;">
-                                <table style="font-size: 7.5px;">
-                                    <thead>
-                                        <tr>
-                                            <th>PARTES Y ACCESORIOS</th>
-                                            <th style="width: 20px;">Cant</th>
-                                            <th style="width: 35px;">Estado<br>B|R|M</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${colGrupos.map(grp => `
-                                            <tr><td colspan="3" style="background:#e5e5e5; font-weight:bold;">${grp.titulo}</td></tr>
-                                            ${grp.items.map(it => {
-                                                const k = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                                                const est = partes[k] || '';
-                                                return `
-                                                    <tr>
-                                                        <td>${it}</td>
-                                                        <td class="text-center">1</td>
-                                                        <td class="text-center fw-bold">${est === 'B' ? '✓' : (est === 'R' ? 'R' : (est === 'M' ? 'X' : ''))}</td>
-                                                    </tr>
-                                                `;
-                                            }).join('')}
-                                        `).join('')}
-                                    </tbody>
-                                </table>
+                                <!-- Control Documentario SGC -->
+                                <div class="text-[9px] flex flex-col justify-between bg-white divide-y-[1.5px] divide-slate-900">
+                                    <div class="px-2 py-0.5 flex justify-between items-center"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Código:</span><span class="font-mono font-bold text-slate-900">F-SEG-004</span></div>
+                                    <div class="px-2 py-0.5 flex justify-between items-center"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Versión:</span><span class="font-mono font-bold text-slate-900">01</span></div>
+                                    <div class="px-2 py-0.5 flex justify-between items-center"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Fecha:</span><span class="font-mono font-semibold text-slate-900">${fechaStr}</span></div>
+                                </div>
                             </div>
-                        `).join('')}
-                    </div>
 
-                    <!-- Observaciones -->
-                    <div style="border: 1px solid #000; padding: 4px; margin-bottom: 4px;">
-                        <strong>OBSERVACIONES:</strong> ${r.observaciones || 'Sin observaciones adicionales registradas al momento de la entrega.'}
-                    </div>
+                            <!-- Metadata Matrix Bento -->
+                            <div class="doc-row" style="grid-template-columns: repeat(3, minmax(0, 1fr)); font-size: 9.5px;">
+                                <!-- Columna 1 -->
+                                <div class="divide-y-[1.5px] divide-slate-900" style="border-right: 1.5px solid #0f172a;">
+                                    <div class="px-2 py-1 flex justify-between items-center bg-white"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Nº Inventario:</span><span class="font-mono font-bold text-sky-700 text-[10.5px]">${r.numero_inventario || r.id}</span></div>
+                                    <div class="px-2 py-1 flex justify-between items-center bg-white"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Entregado Por:</span><span class="font-bold text-slate-900 truncate max-w-[130px]">${r.quien_entrega}</span></div>
+                                </div>
+                                <!-- Columna 2 -->
+                                <div class="divide-y-[1.5px] divide-slate-900" style="border-right: 1.5px solid #0f172a;">
+                                    <div class="px-2 py-1 flex justify-between items-center bg-white"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Motivo:</span><span class="font-bold text-slate-900 uppercase">${r.motivo || 'ENTREGA DE UNIDAD'}</span></div>
+                                    <div class="px-2 py-1 flex justify-between items-center bg-white"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Recibido Por:</span><span class="font-bold text-slate-900 truncate max-w-[130px]">${r.quien_recibe}</span></div>
+                                </div>
+                                <!-- Columna 3 -->
+                                <div class="divide-y-[1.5px] divide-slate-900">
+                                    <div class="px-2 py-1 flex justify-between items-center bg-white"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Fecha Emisión:</span><span class="font-mono font-semibold text-slate-900">${fechaStr}</span></div>
+                                    <div class="px-2 py-1 flex justify-between items-center bg-emerald-50/60"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Estado Acta:</span><span class="badge-pastel-lemon font-extrabold px-2 py-0.2 rounded-full text-[8.5px] uppercase">CONFORME</span></div>
+                                </div>
+                            </div>
+                        </header>
 
-                    <!-- Firmas -->
-                    <table style="margin-top: 6px;">
-                        <tr>
-                            <td style="width: 50%; height: 60px; vertical-align: bottom; text-align: center;">
-                                ${r.firma_entrega ? `<img src="${r.firma_entrega}" style="max-height: 45px;"><br>` : ''}
-                                ____________________________________<br>
-                                <strong>Entregado por:</strong> ${r.quien_entrega}
-                            </td>
-                            <td style="width: 50%; height: 60px; vertical-align: bottom; text-align: center;">
-                                ${r.firma_recibe ? `<img src="${r.firma_recibe}" style="max-height: 45px;"><br>` : ''}
-                                ____________________________________<br>
-                                <strong>Recibido por:</strong> ${r.quien_recibe}
-                            </td>
-                        </tr>
-                    </table>
+                        <!-- 2. FICHA TÉCNICA DEL VEHÍCULO (BENTO PASTEL) -->
+                        <section class="doc-box">
+                            <div class="px-3 py-1 bg-slate-900 text-white flex items-center justify-between">
+                                <span class="text-[9.5px] font-extrabold uppercase tracking-wider text-white">Ficha Técnica y Datos de Identificación Vehicular</span>
+                                <span class="text-[8px] font-mono text-sky-300">REGISTRO MTC / FLOTA</span>
+                            </div>
+
+                            <div class="doc-row" style="grid-template-columns: 15% 18% 18% 18% 16% 15%; text-align:center; font-size: 8.5px;">
+                                <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">CLASE</div>
+                                <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">MARCA</div>
+                                <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">TIPO</div>
+                                <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">MODELO</div>
+                                <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">PLACA</div>
+                                <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70">COLOR</div>
+                            </div>
+
+                            <div class="doc-row" style="grid-template-columns: 15% 18% 18% 18% 16% 15%; text-align:center; font-size: 9px; font-weight: 700;">
+                                <div class="p-1.5 uppercase text-slate-800" style="border-right: 1.5px solid #0f172a;">${r.clase || 'TRACTO'}</div>
+                                <div class="p-1.5 uppercase text-slate-800" style="border-right: 1.5px solid #0f172a;">${r.marca || '---'}</div>
+                                <div class="p-1.5 uppercase text-slate-800" style="border-right: 1.5px solid #0f172a;">${r.tipo || r.clase || 'TRACTO'}</div>
+                                <div class="p-1.5 uppercase text-slate-800" style="border-right: 1.5px solid #0f172a;">${r.modelo || '---'}</div>
+                                <div class="p-1.5 font-mono text-sky-800 font-extrabold bg-sky-50/50" style="border-right: 1.5px solid #0f172a;">${r.placa}</div>
+                                <div class="p-1.5 uppercase text-slate-800">${r.color || '---'}</div>
+                            </div>
+
+                            <div class="doc-row" style="grid-template-columns: 35% 35% 30%; text-align:center; font-size: 8.5px;">
+                                <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">NÚMERO DEL MOTOR</div>
+                                <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70" style="border-right: 1.5px solid #0f172a;">NÚMERO DE SERIE / VIN</div>
+                                <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/70">KILOMETRAJE ACTUAL</div>
+                            </div>
+
+                            <div class="doc-row" style="grid-template-columns: 35% 35% 30%; text-align:center; font-size: 9px; font-weight: 700;">
+                                <div class="p-1.5 font-mono uppercase text-slate-800" style="border-right: 1.5px solid #0f172a;">${r.numero_motor || '---'}</div>
+                                <div class="p-1.5 font-mono uppercase text-slate-800" style="border-right: 1.5px solid #0f172a;">${r.numero_serie || '---'}</div>
+                                <div class="p-1.5 font-mono text-emerald-800 font-extrabold bg-emerald-50/50">${kmFmt} KM</div>
+                            </div>
+                        </section>
+
+                        <!-- 3. MATRIZ DE CALIFICACIÓN DE SISTEMAS Y ACCESORIOS (3 COLUMNAS BENTO PASTEL) -->
+                        <section class="mb-2">
+                            <div class="grid grid-cols-3 gap-1.5" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;">
+                                ${[
+                                    GRUPOS_SISTEMAS.slice(0, 5),
+                                    GRUPOS_SISTEMAS.slice(5, 10),
+                                    GRUPOS_SISTEMAS.slice(10)
+                                ].map(colGrupos => `
+                                    <div class="doc-box mb-0">
+                                        <table style="width:100%; border-collapse: collapse; font-size: 8px;">
+                                            <thead>
+                                                <tr style="background:#0f172a; color:#ffffff;">
+                                                    <th style="padding: 2.5px 4px; text-align:left; font-size:8px; font-weight:800; text-transform:uppercase;">PARTES Y ACCESORIOS</th>
+                                                    <th style="padding: 2.5px 2px; text-align:center; width:22px; font-size:7.5px;">CANT</th>
+                                                    <th style="padding: 2.5px 2px; text-align:center; width:34px; font-size:7.5px;">ESTADO</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${colGrupos.map(grp => `
+                                                    <tr style="background:#f1f5f9; border-top:1px solid #0f172a; border-bottom:1px solid #0f172a;">
+                                                        <td colspan="3" style="padding: 2px 4px; font-weight: 800; font-size: 8px; color: #1e293b; text-transform: uppercase;">
+                                                            • ${grp.titulo}
+                                                        </td>
+                                                    </tr>
+                                                    ${grp.items.map(it => {
+                                                        const k = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                                                        const est = partes[k] || 'B';
+                                                        let badgeHtml = '<span class="badge-pastel-lemon px-1.5 py-0.2 rounded font-extrabold text-[7.5px]">OK</span>';
+                                                        if (est === 'R') badgeHtml = '<span class="badge-pastel-amber px-1.5 py-0.2 rounded font-extrabold text-[7.5px]">REG</span>';
+                                                        if (est === 'M') badgeHtml = '<span class="badge-pastel-red px-1.5 py-0.2 rounded font-extrabold text-[7.5px]">MAL</span>';
+
+                                                        return `
+                                                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                                                <td style="padding: 1.5px 4px; color: #334155; font-weight: 500;">${it}</td>
+                                                                <td style="padding: 1.5px 2px; text-align:center; font-family:monospace; font-weight:bold; color:#64748b;">1</td>
+                                                                <td style="padding: 1.5px 2px; text-align:center;">${badgeHtml}</td>
+                                                            </tr>
+                                                        `;
+                                                    }).join('')}
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </section>
+
+                        <!-- 4. OBSERVACIONES DE LA ENTREGA -->
+                        <section class="doc-box p-2 bg-slate-50/60 mb-2">
+                            <span class="font-bold text-slate-700 text-[8.5px] uppercase block mb-0.5">Observaciones Técnicas Registradas:</span>
+                            <p class="text-[8.5px] text-slate-800 m-0 font-medium leading-snug">
+                                ${r.observaciones ? r.observaciones.toUpperCase() : 'LA UNIDAD VEHICULAR SE ENTREGA EN CONDICIONES OPERATIVAS Y CON SU EQUIPAMIENTO COMPLETO SEGÚN DETALLE SUPERIOR.'}
+                            </p>
+                        </section>
+
+                        <!-- 5. FIRMAS DIGITALES DE CONFORMIDAD -->
+                        <section class="doc-box mb-0">
+                            <div class="doc-row" style="grid-template-columns: 1fr 1fr;">
+                                <!-- Entrega -->
+                                <div class="p-2 flex flex-col items-center justify-between text-center bg-white min-h-[72px]" style="border-right: 1.5px solid #0f172a;">
+                                    <div class="w-full flex items-center justify-center h-10">
+                                        ${r.firma_entrega ? `<img src="${r.firma_entrega}" style="max-height: 38px; max-width: 170px;" crossorigin="anonymous">` : '<span class="text-slate-300 italic text-[8px]">Firma digitalizada</span>'}
+                                    </div>
+                                    <div class="w-full pt-1 border-t border-slate-400">
+                                        <div class="font-bold text-slate-900 text-[9px] uppercase">${r.quien_entrega}</div>
+                                        <div class="text-[7.5px] text-slate-500 font-semibold uppercase">ENTREGADO POR (CONTROL DE SEGURIDAD)</div>
+                                    </div>
+                                </div>
+
+                                <!-- Recibe -->
+                                <div class="p-2 flex flex-col items-center justify-between text-center bg-white min-h-[72px]">
+                                    <div class="w-full flex items-center justify-center h-10">
+                                        ${r.firma_recibe ? `<img src="${r.firma_recibe}" style="max-height: 38px; max-width: 170px;" crossorigin="anonymous">` : '<span class="text-slate-300 italic text-[8px]">Firma digitalizada</span>'}
+                                    </div>
+                                    <div class="w-full pt-1 border-t border-slate-400">
+                                        <div class="font-bold text-slate-900 text-[9px] uppercase">${r.quien_recibe}</div>
+                                        <div class="text-[7.5px] text-slate-500 font-semibold uppercase">RECIBIDO POR (CONDUCTOR ASIGNADO)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Pie de Página -->
+                        <div class="flex justify-between items-center text-[7px] text-slate-400 mt-1 px-1 font-mono">
+                            <span>ERP AZKELL FLEET • SISTEMA DE GESTIÓN INTEGRAL DE TRANSPORTE</span>
+                            <span>FECHA DE IMPRESIÓN: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}</span>
+                        </div>
+
+                    </main>
 
                     <script>
                         window.onload = function() {
-                            window.print();
+                            setTimeout(function() {
+                                window.print();
+                            }, 400);
                         };
                     </script>
                 </body>
