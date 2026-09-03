@@ -70,6 +70,17 @@
             });
             selMotor.innerHTML = opts;
         }
+
+        const selConfig = document.getElementById('rv-filtro-config');
+        if (selConfig) {
+            const currentVal = selConfig.value || 'ALL';
+            const configs = [...new Set(data.map(v => (v.configuracion || '').trim().toUpperCase()).filter(Boolean))].sort();
+            let opts = `<option value="ALL">Config.</option>`;
+            configs.forEach(c => {
+                opts += `<option value="${c}" ${currentVal === c ? 'selected' : ''}>${c}</option>`;
+            });
+            selConfig.innerHTML = opts;
+        }
     };
 
     window.rvActualizarKPIs = function(data) {
@@ -108,11 +119,13 @@
         const viajeEl = document.getElementById('rv-filtro-viaje');
         const qEl = document.getElementById('rv-filtro-q');
         const motorEl = document.getElementById('rv-filtro-motor');
+        const configEl = document.getElementById('rv-filtro-config');
         const fechaEl = document.getElementById('rv-filtro-fecha');
 
         if (viajeEl) viajeEl.value = '';
         if (qEl) qEl.value = '';
         if (motorEl) motorEl.value = 'ALL';
+        if (configEl) configEl.value = 'ALL';
         if (fechaEl) fechaEl.value = '';
 
         window.rvOnFiltrar();
@@ -122,6 +135,7 @@
         const fViaje = (document.getElementById('rv-filtro-viaje')?.value || '').trim().toUpperCase();
         const q = (document.getElementById('rv-filtro-q')?.value || '').trim().toUpperCase();
         const fMotor = document.getElementById('rv-filtro-motor')?.value || 'ALL';
+        const fConfig = document.getElementById('rv-filtro-config')?.value || 'ALL';
         const fFecha = document.getElementById('rv-filtro-fecha')?.value || '';
 
         const lista = window.dataGlobalReporteViajes || [];
@@ -129,7 +143,7 @@
             // Filtro exclusivo por N° de Viaje
             if (fViaje && !(v.viaje || '').toUpperCase().includes(fViaje)) return false;
 
-            // Filtro general de texto (Placas, Conductor, Ruta)
+            // Filtro general de texto (Placas, Conductor, Ruta, Config)
             if (q) {
                 const tracto = (v.placa_tracto || '').toUpperCase();
                 const carreta = (v.placa_remolque || '').toUpperCase();
@@ -137,12 +151,16 @@
                 const ruta = (v.ruta_principal || '').toUpperCase();
                 const rIda = (v.ida?.ruta || '').toUpperCase();
                 const rRet = (v.retorno?.ruta || '').toUpperCase();
-                const match = tracto.includes(q) || carreta.includes(q) || cond.includes(q) || ruta.includes(q) || rIda.includes(q) || rRet.includes(q);
+                const confg = (v.configuracion || '').toUpperCase();
+                const match = tracto.includes(q) || carreta.includes(q) || cond.includes(q) || ruta.includes(q) || rIda.includes(q) || rRet.includes(q) || confg.includes(q);
                 if (!match) return false;
             }
 
             // Filtro por Modelo de Motor
             if (fMotor !== 'ALL' && (v.modelo_motor || '').toUpperCase() !== fMotor) return false;
+
+            // Filtro por Configuración
+            if (fConfig !== 'ALL' && (v.configuracion || '').toUpperCase() !== fConfig) return false;
 
             // Filtro por Fecha
             if (fFecha && v.fecha !== fFecha) return false;
@@ -179,7 +197,7 @@
         if (pageItems.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="11" class="text-center py-5 text-secondary">
+                    <td colspan="12" class="text-center py-5 text-secondary">
                         <i class="bi bi-inbox fs-3 d-block mb-2 text-muted"></i>
                         <div class="fw-bold">No se encontraron viajes registrados</div>
                         <small class="text-muted">Ajusta los filtros de búsqueda superior.</small>
@@ -217,6 +235,7 @@
                     <td><div class="fw-bold text-dark font-monospace">${fechaFmt}</div></td>
                     <td><span class="rv-badge-placa rv-badge-tracto"><i class="bi bi-truck me-1"></i>${v.placa_tracto}</span></td>
                     <td>${carretaHtml}</td>
+                    <td style="text-align:center;"><span class="rv-badge-confg">${v.configuracion || 'T3'}</span></td>
                     <td><span class="rv-badge-motor"><i class="bi bi-cpu me-1"></i>${v.modelo_motor}</span></td>
                     <td>
                         <div class="fw-bold text-dark text-truncate" style="max-width:210px;" title="${v.ruta_principal}">
@@ -250,7 +269,7 @@
                 html += `
                     <tr class="rv-subrow-tramo">
                         <td></td>
-                        <td colspan="5" class="ps-3">
+                        <td colspan="6" class="ps-3">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="rv-badge-tramo rv-tramo-ida"><i class="bi bi-arrow-right-circle-fill"></i> TRAMO IDA</span>
                                 ${v.ida.ordenes.length > 0 ? `<span class="badge bg-light text-secondary border font-monospace" style="font-size:0.72rem;">O/S: ${v.ida.ordenes.join(', ')}</span>` : '<small class="text-muted fst-italic">Tramo principal</small>'}
@@ -286,7 +305,7 @@
                 html += `
                     <tr class="rv-subrow-tramo" style="border-bottom: 2px solid #e2e8f0;">
                         <td></td>
-                        <td colspan="5" class="ps-3">
+                        <td colspan="6" class="ps-3">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="rv-badge-tramo rv-tramo-retorno"><i class="bi bi-arrow-left-circle-fill"></i> TRAMO RETORNO</span>
                                 ${v.retorno.ordenes.length > 0 ? `<span class="badge bg-light text-secondary border font-monospace" style="font-size:0.72rem;">O/S: ${v.retorno.ordenes.join(', ')}</span>` : '<small class="text-muted fst-italic">Retorno estándar</small>'}
@@ -344,7 +363,7 @@
             return;
         }
 
-        let csv = 'Nro Viaje,Fecha,Tracto,Carreta,Motor,Conductor,Ruta Principal,Peso Ida (TN),Galones Ida (GL),Ruta Retorno,Peso Retorno (TN),Galones Retorno (GL),Peso Total (TN),Galones Totales Programados (GL),Estado\n';
+        let csv = 'Nro Viaje,Fecha,Tracto,Carreta,Config,Motor,Conductor,Ruta Principal,Peso Ida (TN),Galones Ida (GL),Ruta Retorno,Peso Retorno (TN),Galones Retorno (GL),Peso Total (TN),Galones Totales Programados (GL),Estado\n';
 
         items.forEach(v => {
             const row = [
@@ -352,6 +371,7 @@
                 `"${v.fecha}"`,
                 `"${v.placa_tracto}"`,
                 `"${v.placa_remolque || ''}"`,
+                `"${v.configuracion || 'T3'}"`,
                 `"${v.modelo_motor}"`,
                 `"${(v.conductor || '').replace(/"/g, '""')}"`,
                 `"${(v.ruta_principal || '').replace(/"/g, '""')}"`,

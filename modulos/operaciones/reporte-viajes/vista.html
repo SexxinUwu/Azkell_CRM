@@ -157,6 +157,18 @@
     padding: 3px 8px;
     border-radius: 6px;
 }
+.rv-badge-confg {
+    background: #f5f3ff;
+    color: #7c3aed;
+    border: 1px solid #ddd6fe;
+    font-weight: 800;
+    font-size: 0.74rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-family: 'Inter', monospace;
+    display: inline-flex;
+    align-items: center;
+}
 
 .rv-badge-galones {
     font-family: 'Inter', monospace;
@@ -340,12 +352,17 @@
                     <option value="ALL">Todos los Motores</option>
                 </select>
             </div>
+            <div class="col-6 col-md-1">
+                <select id="rv-filtro-config" class="form-select form-select-sm border-secondary-subtle fw-semibold" onchange="window.rvOnFiltrar()" style="border-radius:10px; min-height:38px;" title="Filtrar por configuración">
+                    <option value="ALL">Config.</option>
+                </select>
+            </div>
             <div class="col-6 col-md-2">
                 <input type="date" id="rv-filtro-fecha" class="form-control form-control-sm border-secondary-subtle fw-semibold" onchange="window.rvOnFiltrar()" title="Filtrar por fecha específica" style="border-radius:10px; min-height:38px;">
             </div>
-            <div class="col-12 col-md-2 d-flex justify-content-end align-items-center gap-2">
+            <div class="col-6 col-md-1 d-flex justify-content-end align-items-center gap-2">
                 <button type="button" class="btn btn-sm btn-outline-secondary w-100 rounded-3 py-2 fw-semibold" onclick="window.rvLimpiarFiltros()" title="Limpiar filtros">
-                    <i class="bi bi-eraser me-1"></i> Limpiar
+                    <i class="bi bi-eraser"></i>
                 </button>
             </div>
         </div>
@@ -362,6 +379,7 @@
                         <th style="width: 105px;"><i class="bi bi-calendar-event me-1"></i>Fecha</th>
                         <th style="width: 95px;">Tracto</th>
                         <th style="width: 95px;">Carreta</th>
+                        <th style="width: 75px; text-align: center;">Config</th>
                         <th style="width: 115px;">Modelo Motor</th>
                         <th style="min-width: 150px;">Ruta Principal</th>
                         <th style="min-width: 170px;"><i class="bi bi-person-fill me-1"></i>Conductor</th>
@@ -372,7 +390,7 @@
                 </thead>
                 <tbody id="rv-tabla-body">
                     <tr>
-                        <td colspan="11" class="text-center py-5 text-secondary">
+                        <td colspan="12" class="text-center py-5 text-secondary">
                             <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
                             <div class="small fw-semibold">Consultando y calculando reporte de viajes con la Matriz D2...</div>
                         </td>
