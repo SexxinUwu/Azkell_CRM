@@ -217,10 +217,16 @@
                     </button>
                 </div>
             </div>
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-3">
+                <div class="position-relative">
+                    <i class="bi bi-truck position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
+                    <input type="text" id="ov-filtro-viaje" class="form-control form-control-sm ps-5 text-uppercase fw-semibold border-secondary-subtle" placeholder="N° VIAJE (EJ: 2026-00000967)" oninput="window.ovOnFiltrarDebounced()" style="border-radius:10px; min-height:40px;">
+                </div>
+            </div>
+            <div class="col-12 col-md-3">
                 <div class="position-relative">
                     <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
-                    <input type="text" id="ov-filtro-q" class="form-control form-control-sm ps-5 text-uppercase fw-semibold border-secondary-subtle" placeholder="BUSCAR POR VIAJE, O/S, PLACA, CONDUCTOR, RUTA..." oninput="window.ovOnFiltrarDebounced()" style="border-radius:10px; min-height:40px;">
+                    <input type="text" id="ov-filtro-q" class="form-control form-control-sm ps-5 text-uppercase fw-semibold border-secondary-subtle" placeholder="BUSCAR O/S, PLACA, CONDUCTOR, RUTA..." oninput="window.ovOnFiltrarDebounced()" style="border-radius:10px; min-height:40px;">
                 </div>
             </div>
             <div class="col-6 col-md-2">
@@ -230,9 +236,8 @@
                     <option value="SOLO_RETORNO">Solo Retorno</option>
                 </select>
             </div>
-            <div class="col-6 col-md-3 d-flex justify-content-end align-items-center gap-2">
-                <span class="text-secondary small fw-semibold" id="ov-lbl-contador-tabla">Mostrando 0 registros</span>
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.ovLimpiarFiltros()" title="Limpiar filtros">
+            <div class="col-6 col-md-1 d-flex justify-content-end align-items-center">
+                <button type="button" class="btn btn-sm btn-outline-secondary w-100 rounded-3 py-2 fw-semibold" onclick="window.ovLimpiarFiltros()" title="Limpiar filtros">
                     <i class="bi bi-eraser me-1"></i> Limpiar
                 </button>
             </div>

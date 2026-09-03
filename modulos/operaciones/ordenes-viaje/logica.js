@@ -159,25 +159,43 @@ window.ovOnFiltrar = function() {
     window.ovAplicarFiltros();
 };
 
+window.ovLimpiarFiltros = function() {
+    var viajeEl = document.getElementById('ov-filtro-viaje');
+    var qEl = document.getElementById('ov-filtro-q');
+    var tramoEl = document.getElementById('ov-filtro-tramo');
+    if (viajeEl) viajeEl.value = '';
+    if (qEl) qEl.value = '';
+    if (tramoEl) tramoEl.value = 'TODOS';
+    window.ovOnFiltrar();
+};
+
 window.ovAplicarFiltros = function() {
+    var viajeEl = document.getElementById('ov-filtro-viaje');
     var qEl = document.getElementById('ov-filtro-q');
     var tramoEl = document.getElementById('ov-filtro-tramo');
 
+    var fViaje = viajeEl ? (viajeEl.value || '').trim().toUpperCase() : '';
     var q = qEl ? (qEl.value || '').trim().toUpperCase() : '';
     var tramo = tramoEl ? tramoEl.value : 'TODOS';
 
     if (_ovModoVistaActual === 'viajes') {
         var listaV = window.dataGlobalOrdenesViajeModulo || [];
         var filtradosV = listaV.filter(function(v) {
+            // Filtro exclusivo por N° de Viaje
+            if (fViaje) {
+                var numViaje = (v.viaje || '').toUpperCase();
+                if (!numViaje.includes(fViaje)) return false;
+            }
+
+            // Filtro general (O/S, Placa, Conductor, Rutas)
             if (q) {
-                var num = (v.viaje || '').toUpperCase();
                 var tracto = (v.placa_tracto || '').toUpperCase();
                 var carreta = (v.placa_remolque || '').toUpperCase();
                 var cond = (v.conductor || '').toUpperCase();
                 var ruta = (v.ruta || '').toUpperCase();
                 var ords = (v.ordenes_list || '').toUpperCase();
                 var ruts = (v.rutas_list || '').toUpperCase();
-                var match = num.includes(q) || tracto.includes(q) || carreta.includes(q) || cond.includes(q) || ruta.includes(q) || ords.includes(q) || ruts.includes(q);
+                var match = tracto.includes(q) || carreta.includes(q) || cond.includes(q) || ruta.includes(q) || ords.includes(q) || ruts.includes(q);
                 if (!match) return false;
             }
 
@@ -193,15 +211,21 @@ window.ovAplicarFiltros = function() {
     } else {
         var listaR = window.dataGlobalRutasModulo || [];
         var filtradosR = listaR.filter(function(r) {
+            // Filtro exclusivo por N° de Viaje
+            if (fViaje) {
+                var numViaje = (r.viaje || '').toUpperCase();
+                if (!numViaje.includes(fViaje)) return false;
+            }
+
+            // Filtro general (O/S, Placa, Conductor, Ruta, Tipo Servicio)
             if (q) {
-                var num = (r.viaje || '').toUpperCase();
                 var orden = (r.orden || '').toUpperCase();
                 var ruta = (r.ruta || '').toUpperCase();
                 var tipoServ = (r.tipo_servicio || '').toUpperCase();
                 var cond = (r.conductor || '').toUpperCase();
                 var tracto = (r.placa_tracto || '').toUpperCase();
                 var carreta = (r.placa_remolque || '').toUpperCase();
-                var match = num.includes(q) || orden.includes(q) || ruta.includes(q) || tipoServ.includes(q) || cond.includes(q) || tracto.includes(q) || carreta.includes(q);
+                var match = orden.includes(q) || ruta.includes(q) || tipoServ.includes(q) || cond.includes(q) || tracto.includes(q) || carreta.includes(q);
                 if (!match) return false;
             }
 
@@ -353,14 +377,6 @@ window.ovRenderizarTabla = function() {
 window.ovCambiarPagina = function(delta) {
     _ovPaginaActual += delta;
     window.ovRenderizarTabla();
-};
-
-window.ovLimpiarFiltros = function() {
-    var qEl = document.getElementById('ov-filtro-q');
-    var tramoEl = document.getElementById('ov-filtro-tramo');
-    if (qEl) qEl.value = '';
-    if (tramoEl) tramoEl.value = 'TODOS';
-    window.ovOnFiltrar();
 };
 
 window.ovEjecutarSincronizacion = async function(isSilent) {

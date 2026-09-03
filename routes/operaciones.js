@@ -241,12 +241,12 @@ module.exports = function (db, broadcast, logAudit) {
 
             const remoteDb = getRemoteDb();
 
-            // 1. Extraer viajes principales
+            // 1. Extraer viajes principales convirtiendo la hora UTC del servidor a hora local de Perú (-5 horas)
             const queryViajes = `
                 SELECT 
                     ov.id_viaje,
                     ov.viaje,
-                    ov.fecha_viaje,
+                    DATE_SUB(ov.fecha_viaje, INTERVAL 5 HOUR) AS fecha_viaje,
                     ov.id_conductor,
                     ov.conductor,
                     ov.placa_vehiculo AS placa_tracto,
