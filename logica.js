@@ -368,6 +368,7 @@ window.verificarSesionGuardada = function() {
     // OPERACIONES
     var showOperacionesHub = _cHub('hub_operaciones');
     var vOpProg  = showOperacionesHub && (_cL('op_programacion') || _cL('op_guias_remision') || _cL('guias_remision'));
+    var vOpOV    = showOperacionesHub && (_cL('op_ordenes_viaje') || _cL('op_programacion') || _cL('guias_remision') || _cL('op_guias_remision'));
     var vOpGuias = showOperacionesHub && (_cL('op_guias_remision') || _cL('guias_remision'));
     var vOpReporteViajes = showOperacionesHub && (_cL('op_guias_remision') || _cL('guias_remision') || _cL('op_programacion'));
     var vCombVales = showOperacionesHub && (_cL('combustible_vales') || _cL('combustible'));
@@ -375,13 +376,16 @@ window.verificarSesionGuardada = function() {
     var vCombUrea  = showOperacionesHub && (_cL('urea_analisis') || _cL('combustible_analisis') || _cL('combustible'));
     var vCombMatriz = showOperacionesHub && (_cL('combustible_matriz') || _cL('combustible_analisis') || _cL('combustible'));
     var vCombOp    = vCombVales || vCombAna || vCombUrea || vCombMatriz;
-    var showOp     = vOpProg || vOpGuias || vOpReporteViajes || vCombOp;
+    var showOp     = vOpProg || vOpOV || vOpGuias || vOpReporteViajes || vCombOp;
 
     safe('nav-op-programacion',          vOpProg);
     safe('mbnav-op-programacion',        vOpProg);
+    safe('nav-op-ordenes-viaje',         vOpOV);
+    safe('mbnav-op-ordenes-viaje',       vOpOV);
+    safe('nav-op-reporte-viajes',        vOpReporteViajes);
+    safe('mbnav-op-reporte-viajes',      vOpReporteViajes);
     safe('nav-op-guias-remision',        vOpGuias);
     safe('mbnav-op-guias-remision',      vOpGuias);
-    safe('nav-op-reporte-viajes',        vOpReporteViajes);
     safe('nav-combustible-toggle',        vCombOp);
     safe('mbnav-op-combustible-toggle',  vCombOp);
     safe('nav-combustible-vales',         vCombVales);
@@ -438,6 +442,7 @@ window.verificarSesionGuardada = function() {
     safe('nav-seg-unidades',          vChecklistSeg);
     safe('mbnav-seg-unidades',        vChecklistSeg);
     safe('nav-seg-entrega-vehiculos', vChecklistSeg);
+    safe('mbnav-seg-entrega-vehiculos', vChecklistSeg);
     safe('nav-seg-unidades-base',     vUnidadesBase);
     safe('mbnav-seg-unidades-base',   vUnidadesBase);
 
