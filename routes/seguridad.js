@@ -722,20 +722,75 @@ module.exports = (db, logAudit) => {
 
     // ── GET /seguridad/entrega-vehiculos/stats ────────────────────
     router.get('/seguridad/entrega-vehiculos/stats', (req, res) => {
-        const sql = `
+        const sqlEmpresas = `
             SELECT 
-                COUNT(*) as total,
-                COALESCE(SUM(CASE WHEN fecha = CURDATE() THEN 1 ELSE 0 END), 0) as hoy,
-                COALESCE(COUNT(DISTINCT placa), 0) as vehiculos
-            FROM seg_entrega_vehiculos
+                COALESCE(cliente, 'MARSISA') as empresa,
+                COUNT(*) as total_flota
+            FROM placas
+            WHERE cliente IS NOT NULL AND TRIM(cliente) <> '' AND TRIM(cliente) <> 'NULL'
+            GROUP BY COALESCE(cliente, 'MARSISA')
+            ORDER BY total_flota DESC
         `;
-        db.query(sql, (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
-            const s = (rows && rows[0]) || { total: 0, hoy: 0, vehiculos: 0 };
-            res.json({
-                total: Number(s.total) || 0,
-                hoy: Number(s.hoy) || 0,
-                vehiculos: Number(s.vehiculos) || 0
+
+        db.query(sqlEmpresas, (errEmp, empRows) => {
+            if (errEmp) {
+                console.warn('Advertencia stats empresas:', errEmp.message);
+                return res.json({ global: { total_flota: 0, total_actas: 0, hoy: 0 }, empresas: [] });
+            }
+
+            const sqlEntregas = `
+                SELECT 
+                    COALESCE(empresa, 'MARSISA') as empresa,
+                    COUNT(*) as total_actas,
+                    SUM(CASE WHEN fecha = CURDATE() THEN 1 ELSE 0 END) as hoy,
+                    COUNT(DISTINCT placa) as vehiculos_evaluados
+                FROM seg_entrega_vehiculos
+                GROUP BY COALESCE(empresa, 'MARSISA')
+            `;
+
+            db.query(sqlEntregas, (errEnt, entRows) => {
+                const entMap = {};
+                if (!errEnt && entRows) {
+                    entRows.forEach(r => {
+                        const emp = (r.empresa || 'MARSISA').trim().toUpperCase();
+                        entMap[emp] = {
+                            total_actas: Number(r.total_actas) || 0,
+                            hoy: Number(r.hoy) || 0,
+                            vehiculos: Number(r.vehiculos_evaluados) || 0
+                        };
+                    });
+                }
+
+                let globalTotalFlota = 0;
+                let globalTotalActas = 0;
+                let globalHoy = 0;
+
+                const empresasList = (empRows || []).map(e => {
+                    const empName = (e.empresa || 'MARSISA').trim().toUpperCase();
+                    const eStat = entMap[empName] || { total_actas: 0, hoy: 0, vehiculos: 0 };
+                    globalTotalFlota += Number(e.total_flota) || 0;
+                    globalTotalActas += eStat.total_actas;
+                    globalHoy += eStat.hoy;
+
+                    return {
+                        empresa: empName,
+                        total_flota: Number(e.total_flota) || 0,
+                        total_actas: eStat.total_actas,
+                        hoy: eStat.hoy,
+                        vehiculos: eStat.vehiculos
+                    };
+                });
+
+                res.json({
+                    ok: true,
+                    global: {
+                        empresa: 'TODAS',
+                        total_flota: globalTotalFlota,
+                        total_actas: globalTotalActas,
+                        hoy: globalHoy
+                    },
+                    empresas: empresasList
+                });
             });
         });
     });

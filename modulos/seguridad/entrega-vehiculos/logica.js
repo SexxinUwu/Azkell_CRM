@@ -189,10 +189,10 @@
         grid.innerHTML = '<div class="col-12 text-center py-4 text-muted"><i class="bi bi-arrow-repeat spin fs-4 d-block mb-2"></i> Actualizando empresas de flota...</div>';
 
         try {
-            const res = await fetch('/api/seguridad/empresas-stats');
+            const res = await fetch('/api/seguridad/entrega-vehiculos/stats');
             const data = await res.json();
             const empresas = (data && data.empresas) || [];
-            const global = (data && data.global) || { total_flota: 0, en_ruta: 0, completados: 0, alertas: 0 };
+            const global = (data && data.global) || { total_flota: 0, total_actas: 0, hoy: 0 };
 
             if (!empresas.length) {
                 grid.innerHTML = '<div class="col-12 text-center py-4 text-muted">No se encontraron empresas registradas.</div>';
@@ -225,12 +225,12 @@
 
                             <div class="d-flex align-items-center justify-content-between p-2 rounded-3 mb-3" style="background:#f8fafc; border:1px solid #f1f5f9;">
                                 <div class="text-center flex-fill border-end">
-                                    <div class="fw-bold text-primary" style="font-size:1.1rem;">${emp.en_ruta || 0}</div>
-                                    <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">En Ruta</span>
+                                    <div class="fw-bold text-primary" style="font-size:1.1rem;">${emp.total_actas || 0}</div>
+                                    <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">Actas</span>
                                 </div>
                                 <div class="text-center flex-fill border-end">
-                                    <div class="fw-bold text-success" style="font-size:1.1rem;">${emp.completados || 0}</div>
-                                    <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">Entregados</span>
+                                    <div class="fw-bold text-success" style="font-size:1.1rem;">${emp.hoy || 0}</div>
+                                    <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">Hoy</span>
                                 </div>
                                 <div class="text-center flex-fill">
                                     <div class="fw-bold text-secondary" style="font-size:1.1rem;">${emp.total_flota || 0}</div>
@@ -263,12 +263,12 @@
 
                         <div class="d-flex align-items-center justify-content-between p-2 rounded-3 mb-3" style="background:#ffffff; border:1px solid #e2e8f0;">
                             <div class="text-center flex-fill border-end">
-                                <div class="fw-bold text-primary" style="font-size:1.1rem;">${global.en_ruta || 0}</div>
-                                <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">En Ruta</span>
+                                <div class="fw-bold text-primary" style="font-size:1.1rem;">${global.total_actas || 0}</div>
+                                <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">Actas</span>
                             </div>
                             <div class="text-center flex-fill border-end">
-                                <div class="fw-bold text-success" style="font-size:1.1rem;">${global.completados || 0}</div>
-                                <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">Entregados</span>
+                                <div class="fw-bold text-success" style="font-size:1.1rem;">${global.hoy || 0}</div>
+                                <span class="text-muted" style="font-size:0.65rem; font-weight:700; text-transform:uppercase;">Hoy</span>
                             </div>
                             <div class="text-center flex-fill">
                                 <div class="fw-bold text-secondary" style="font-size:1.1rem;">${global.total_flota || 0}</div>
