@@ -1,6 +1,7 @@
 // =========================================================================
 // MÓDULO SEGURIDAD: CHECKLIST "ENTREGA DE VEHÍCULOS"
 // Formato Oficial: Inventario Físico Estado de Vehículo
+// Lógica de Formulario Segmentado Moderno
 // =========================================================================
 
 (function() {
@@ -10,99 +11,105 @@
     window._evEmpresaActiva = 'TODAS';
     window._evCatalogoPlacas = [];
     window._evCatalogoConductores = [];
+    window._evCatalogoEmpresas = [];
+    window._evItemsStates = {};
+    window._evCantidades = {};
 
-    // Estructura de Partes y Accesorios fiel al formato impreso
-    const PARTES_SECCIONES = [
+    // Estructura de Partes y Accesorios agrupada por sistemas
+    const GRUPOS_SISTEMAS = [
         {
-            columna: 1,
-            grupos: [
-                {
-                    titulo: 'Frente Exterior',
-                    items: ['Emblemas', 'Persianas', 'Defensa Delantera', 'Luz Chica', 'Unidades', 'Direccionales']
-                },
-                {
-                    titulo: 'Interior del Motor',
-                    items: ['Batería Marca', 'Tapa Radiador', 'Tapa Aceite', 'Varilla Medidora de Aceite', 'Correas de Ventilador', 'Corneta', 'Sirenas']
-                },
-                {
-                    titulo: 'Frente Superior',
-                    items: ['Vidrio Panorámico', 'Brazos Limpia Brisas', 'Cuchillas Limpia Brisas', 'Antena Radio']
-                },
-                {
-                    titulo: 'Costado Izquierdo',
-                    items: ['Vidrios Laterales', 'Manija', 'Cerraduras', 'Copas Ruedas']
-                },
-                {
-                    titulo: 'Estribos',
-                    items: ['Derecho', 'Izquierdo']
-                },
-                {
-                    titulo: 'Costado Trasero',
-                    items: ['Emblemas', 'Defensa Trasera', 'Steps Frenos', 'Luces de Parqueo', 'Freno Auxiliar']
-                }
-            ]
+            id: 'frente_exterior',
+            titulo: 'Frente Exterior',
+            icon: 'bi-truck',
+            items: ['Emblemas', 'Persianas', 'Defensa Delantera', 'Luz Chica', 'Unidades', 'Direccionales']
         },
         {
-            columna: 2,
-            grupos: [
-                {
-                    titulo: 'Direccionales y Luces',
-                    items: ['Direccionales', 'Reversos', 'Vidrios Traseros', 'Tapa Tanque Combustible']
-                },
-                {
-                    titulo: 'Costado Derecho',
-                    items: ['Vidrios Laterales', 'Manijas', 'Cerraduras', 'Copas Ruedas']
-                },
-                {
-                    titulo: 'Llaves',
-                    items: ['Puertas', 'Ignición', 'Baúl']
-                },
-                {
-                    titulo: 'Interior del Vehículo',
-                    items: ['Consola', 'Autoradio', 'Guantera', 'Seguro Puerta', 'Manija Puerta', 'Manija Vidrio', 'Luz Interior', 'Cojinería', 'Forros', 'Tapetes', 'Cenicero', 'Descansabrazos', 'Descansacabezas', 'Radio Teléfono', 'Intercomunicador', 'Espejo Retrovisor']
-                },
-                {
-                    titulo: 'Tablero de Controles',
-                    items: ['Switch Ignición', 'Interruptor Luces Delanteras', 'Interruptor Luces Parqueo', 'Direccionales', 'Claxon']
-                }
-            ]
+            id: 'interior_motor',
+            titulo: 'Interior del Motor',
+            icon: 'bi-gear-wide-connected',
+            items: ['Batería Marca', 'Tapa Radiador', 'Tapa Aceite', 'Varilla Medidora de Aceite', 'Correas de Ventilador', 'Corneta', 'Sirenas']
         },
         {
-            columna: 3,
-            grupos: [
-                {
-                    titulo: 'Instrumentos y Cabina',
-                    items: ['Sirena', 'Calefacción', 'Tacómetro', 'Encendedor Cigarrillos', 'Velocímetro', 'Medidor de Combustible', 'Medidor de Temperatura', 'Medidor de Aceite']
-                },
-                {
-                    titulo: 'Herramientas',
-                    items: ['Gata', 'Llave de Ruedas', 'Cable de Corriente', 'Palancas', 'Destornillador', 'Desarmador Mixto', 'Llaves Fijas', 'Alicate', 'Linterna (Pilas o Conexión)', 'Kit de Herramientas', 'Llave Allen para Semirremolque', 'Llave Allen para Doble Nivel', 'Pernos de Seguridad']
-                },
-                {
-                    titulo: 'Señales de Advertencia de Peligro',
-                    items: ['Triángulos', 'Lámparas de Luz Intermitente', 'Tacos para Bloquear Vehículo', 'Extintor (Expira)', 'Conos']
-                },
-                {
-                    titulo: 'Otros',
-                    items: ['Bonificación Vehicular', 'Mando']
-                }
-            ]
+            id: 'frente_superior',
+            titulo: 'Frente Superior',
+            icon: 'bi-window-fullscreen',
+            items: ['Vidrio Panorámico', 'Brazos Limpia Brisas', 'Cuchillas Limpia Brisas', 'Antena Radio']
+        },
+        {
+            id: 'costado_izquierdo',
+            titulo: 'Costado Izquierdo',
+            icon: 'bi-arrow-left-square',
+            items: ['Vidrios Laterales', 'Manija', 'Cerraduras', 'Copas Ruedas']
+        },
+        {
+            id: 'estribos',
+            titulo: 'Estribos',
+            icon: 'bi-signpost-2',
+            items: ['Estribo Derecho', 'Estribo Izquierdo']
+        },
+        {
+            id: 'costado_trasero',
+            titulo: 'Costado Trasero',
+            icon: 'bi-arrow-down-square',
+            items: ['Emblemas', 'Defensa Trasera', 'Steps Frenos', 'Luces de Parqueo', 'Freno Auxiliar']
+        },
+        {
+            id: 'direccionales_luces',
+            titulo: 'Direccionales y Luces',
+            icon: 'bi-lightbulb',
+            items: ['Direccionales', 'Reversos', 'Vidrios Traseros', 'Tapa Tanque Combustible']
+        },
+        {
+            id: 'costado_derecho',
+            titulo: 'Costado Derecho',
+            icon: 'bi-arrow-right-square',
+            items: ['Vidrios Laterales', 'Manijas', 'Cerraduras', 'Copas Ruedas']
+        },
+        {
+            id: 'llaves',
+            titulo: 'Llaves',
+            icon: 'bi-key',
+            items: ['Puertas', 'Ignición', 'Baúl']
+        },
+        {
+            id: 'interior_vehiculo',
+            titulo: 'Interior del Vehículo (Cabina)',
+            icon: 'bi-car-front',
+            items: ['Consola', 'Autoradio', 'Guantera', 'Seguro Puerta', 'Manija Puerta', 'Manija Vidrio', 'Luz Interior', 'Cojinería', 'Forros', 'Tapetes', 'Cenicero', 'Descansabrazos', 'Descansacabezas', 'Radio Teléfono', 'Intercomunicador', 'Espejo Retrovisor']
+        },
+        {
+            id: 'tablero_controles',
+            titulo: 'Tablero de Controles e Instrumentos',
+            icon: 'bi-speedometer2',
+            items: ['Switch Ignición', 'Interruptor Luces Delanteras', 'Interruptor Luces Parqueo', 'Direccionales', 'Claxon', 'Sirena', 'Calefacción', 'Tacómetro', 'Encendedor Cigarrillos', 'Velocímetro', 'Medidor de Combustible', 'Medidor de Temperatura', 'Medidor de Aceite']
+        },
+        {
+            id: 'herramientas',
+            titulo: 'Herramientas',
+            icon: 'bi-tools',
+            items: ['Gata', 'Llave de Ruedas', 'Cable de Corriente', 'Palancas', 'Destornillador', 'Desarmador Mixto', 'Llaves Fijas', 'Alicate', 'Linterna (Pilas o Conexión)', 'Kit de Herramientas', 'Llave Allen para Semirremolque', 'Llave Allen para Doble Nivel', 'Pernos de Seguridad']
+        },
+        {
+            id: 'seguridad_emergencia',
+            titulo: 'Señales de Advertencia y Seguridad',
+            icon: 'bi-exclamation-triangle',
+            items: ['Triángulos', 'Lámparas de Luz Intermitente', 'Tacos para Bloquear Vehículo', 'Extintor (Expira)', 'Conos', 'Bonificación Vehicular', 'Mando']
         }
     ];
 
-    // Variables de canvas para firmas
+    // Canvas de firmas
     let _canvasEntrega, _ctxEntrega, _dibujandoEntrega = false;
     let _canvasRecibe, _ctxRecibe, _dibujandoRecibe = false;
 
     window.init_seguridad_entrega_vehiculos = window.init_entrega_vehiculos = window.inicializarModuloEntregaVehiculos = function() {
         window.evIrAPortal();
-        window.evRenderizarPartesAccesorios();
+        window.evRenderizarSistemas();
         window.evCargarRecursos();
         window.evCargarDatos();
         window.evInitCanvasFirmas();
     };
 
-    // ── CARGAR RECURSOS PARA AUTOCOMPLETADO ────────────────────────
+    // ── RECURSOS Y AUTOCOMPLETADOS ────────────────────────────────
     window.evCargarRecursos = async function() {
         try {
             const res = await fetch('/api/seguridad/recursos');
@@ -127,67 +134,138 @@
         }
     };
 
-    // ── RENDERIZAR PARTES Y ACCESORIOS FIEL AL FORMATO IMPRESO ────
-    window.evRenderizarPartesAccesorios = function() {
-        const cont = document.getElementById('ev-partes-accesorios-container');
+    // ── RENDERIZAR SISTEMAS Y COMPONENTES (FORMATO SEGMENTADO) ────
+    window.evRenderizarSistemas = function() {
+        const cont = document.getElementById('ev-sistemas-accordion-container');
         if (!cont) return;
 
         let html = '';
-        PARTES_SECCIONES.forEach(col => {
-            html += `<div class="col-12 col-md-4">`;
-            html += `<table class="ev-grid-table" style="font-size:0.75rem;">`;
+        GRUPOS_SISTEMAS.forEach((grp, idx) => {
+            const collapseId = `ev-collapse-sys-${grp.id}`;
+            const isFirst = idx < 2;
+
             html += `
-                <thead>
-                    <tr>
-                        <th>PARTES Y ACCESORIOS</th>
-                        <th style="width:36px;">CANT</th>
-                        <th style="width:75px;">ESTADO<br><span style="font-size:0.65rem;">B \| R \| M</span></th>
-                    </tr>
-                </thead>
-                <tbody>
+                <div class="ev-system-card" id="ev-card-${grp.id}">
+                    <div class="ev-system-header" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="${isFirst}">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi ${grp.icon} text-primary fs-5"></i>
+                            <strong class="text-dark" style="font-size:0.92rem;">${grp.titulo}</strong>
+                            <span class="badge bg-light text-secondary border rounded-pill px-2 py-1" style="font-size:0.7rem;">${grp.items.length} ítems</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle d-none" id="ev-badge-count-${grp.id}" style="font-size:0.7rem;"></span>
+                            <i class="bi bi-chevron-down text-secondary" style="transition: transform 0.2s ease;"></i>
+                        </div>
+                    </div>
+
+                    <div class="collapse ${isFirst ? 'show' : ''}" id="${collapseId}">
+                        <div class="p-2 bg-white">
             `;
 
-            col.grupos.forEach(grp => {
-                html += `<tr><td colspan="3" style="background:#f1f5f9; font-weight:800; text-transform:uppercase; color:#0f172a; padding:3px 6px;">${grp.titulo}</td></tr>`;
-                grp.items.forEach(it => {
-                    const cleanKey = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                    html += `
-                        <tr>
-                            <td class="fw-semibold text-dark">${it}</td>
-                            <td style="padding:1px;"><input type="text" id="ev-cant-${cleanKey}" class="ev-input-field text-center p-0" placeholder="1" style="font-size:0.75rem;"></td>
-                            <td class="text-center" style="padding:1px; white-space:nowrap;">
-                                <div class="d-inline-flex gap-1 justify-content-center">
-                                    <button type="button" class="ev-chk-state-btn" id="ev-btn-${cleanKey}-b" onclick="window.evSetItemState('${cleanKey}', 'B')" title="Bueno">B</button>
-                                    <button type="button" class="ev-chk-state-btn" id="ev-btn-${cleanKey}-r" onclick="window.evSetItemState('${cleanKey}', 'R')" title="Regular">R</button>
-                                    <button type="button" class="ev-chk-state-btn" id="ev-btn-${cleanKey}-m" onclick="window.evSetItemState('${cleanKey}', 'M')" title="Malo">M</button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                });
+            grp.items.forEach(it => {
+                const cleanKey = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                html += `
+                    <div class="ev-item-row" id="ev-row-${cleanKey}" data-search="${it.toLowerCase()}">
+                        <div class="fw-semibold text-dark" style="font-size:0.86rem;">
+                            ${it}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-1">
+                                <small class="text-muted" style="font-size:0.72rem;">Cant:</small>
+                                <input type="number" id="ev-cant-${cleanKey}" class="ev-form-input text-center p-1 font-monospace" value="1" min="1" max="99" style="width: 48px; height: 30px; font-size:0.82rem;" onchange="window._evCantidades['${cleanKey}'] = this.value">
+                            </div>
+                            <div class="ev-pill-states">
+                                <button type="button" class="ev-state-pill" id="ev-pill-${cleanKey}-b" onclick="window.evSetItemState('${cleanKey}', 'B', '${grp.id}')" title="Bueno">B</button>
+                                <button type="button" class="ev-state-pill" id="ev-pill-${cleanKey}-r" onclick="window.evSetItemState('${cleanKey}', 'R', '${grp.id}')" title="Regular">R</button>
+                                <button type="button" class="ev-state-pill" id="ev-pill-${cleanKey}-m" onclick="window.evSetItemState('${cleanKey}', 'M', '${grp.id}')" title="Malo">M</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
             });
 
-            html += `</tbody></table></div>`;
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
         });
 
         cont.innerHTML = html;
     };
 
-    window._evItemsStates = {};
-    window.evSetItemState = function(key, state) {
+    window.evSetItemState = function(key, state, grpId) {
         const cur = window._evItemsStates[key];
         ['b', 'r', 'm'].forEach(s => {
-            const btn = document.getElementById(`ev-btn-${key}-${s}`);
-            if (btn) btn.className = 'ev-chk-state-btn';
+            const pill = document.getElementById(`ev-pill-${key}-${s}`);
+            if (pill) pill.className = 'ev-state-pill';
         });
 
         if (cur === state) {
             delete window._evItemsStates[key];
         } else {
             window._evItemsStates[key] = state;
-            const btn = document.getElementById(`ev-btn-${key}-${state.toLowerCase()}`);
-            if (btn) btn.classList.add(`active-${state.toLowerCase()}`);
+            const pill = document.getElementById(`ev-pill-${key}-${state.toLowerCase()}`);
+            if (pill) pill.classList.add(`active-${state.toLowerCase()}`);
         }
+
+        window.evActualizarBadgeGrupo(grpId);
+    };
+
+    window.evActualizarBadgeGrupo = function(grpId) {
+        if (!grpId) return;
+        const grp = GRUPOS_SISTEMAS.find(g => g.id === grpId);
+        if (!grp) return;
+
+        let marcados = 0;
+        grp.items.forEach(it => {
+            const k = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            if (window._evItemsStates[k]) marcados++;
+        });
+
+        const badge = document.getElementById(`ev-badge-count-${grpId}`);
+        if (badge) {
+            if (marcados > 0) {
+                badge.textContent = `${marcados}/${grp.items.length} calificados`;
+                badge.classList.remove('d-none');
+            } else {
+                badge.classList.add('d-none');
+            }
+        }
+    };
+
+    window.evMarcarTodosBueno = function() {
+        GRUPOS_SISTEMAS.forEach(grp => {
+            grp.items.forEach(it => {
+                const k = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                window.evSetItemState(k, 'B', grp.id);
+            });
+        });
+    };
+
+    window.evFiltrarItems = function(query) {
+        const q = (query || '').trim().toLowerCase();
+        GRUPOS_SISTEMAS.forEach(grp => {
+            let matches = 0;
+            grp.items.forEach(it => {
+                const k = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                const row = document.getElementById(`ev-row-${k}`);
+                if (row) {
+                    const match = !q || it.toLowerCase().includes(q);
+                    row.style.display = match ? 'flex' : 'none';
+                    if (match) matches++;
+                }
+            });
+
+            const card = document.getElementById(`ev-card-${grp.id}`);
+            const collapse = document.getElementById(`ev-collapse-sys-${grp.id}`);
+            if (card) {
+                card.style.display = matches > 0 ? 'block' : 'none';
+            }
+            if (q && collapse && matches > 0) {
+                collapse.classList.add('show');
+            }
+        });
     };
 
     // ── VISTAS: PORTAL / LISTADO / FORMULARIO ─────────────────────
@@ -222,8 +300,6 @@
         const hoy = new Date().toISOString().slice(0, 10);
         const fFecha = document.getElementById('ev-f-fecha');
         if (fFecha) fFecha.value = hoy;
-        const metaF = document.getElementById('ev-f-meta-fecha');
-        if (metaF) metaF.textContent = new Date().toLocaleDateString('es-PE');
 
         const year = new Date().getFullYear();
         const rand = String(Math.floor(Math.random() * 9000) + 1000);
@@ -231,13 +307,14 @@
         if (invEl) invEl.value = `ENT-${year}-${rand}`;
 
         // Reset inputs
-        ['ev-f-entrega', 'ev-f-recibe', 'ev-f-clase', 'ev-f-marca', 'ev-f-tipo', 'ev-f-modelo', 'ev-f-placa', 'ev-f-color', 'ev-f-cilindros', 'ev-f-motor', 'ev-f-serie', 'ev-f-km', 'ev-f-ll-del-der', 'ev-f-ll-del-izq', 'ev-f-ll-tra-der', 'ev-f-ll-tra-izq', 'ev-f-ll-rep', 'ev-f-obs', 'ev-f-doc-entrega', 'ev-f-doc-recibe'].forEach(id => {
+        ['ev-f-entrega', 'ev-f-recibe', 'ev-f-clase', 'ev-f-marca', 'ev-f-modelo', 'ev-f-placa', 'ev-f-color', 'ev-f-cilindros', 'ev-f-motor', 'ev-f-serie', 'ev-f-km', 'ev-f-ll-del-der', 'ev-f-ll-del-izq', 'ev-f-ll-tra-der', 'ev-f-ll-tra-izq', 'ev-f-ll-rep', 'ev-f-obs', 'ev-f-doc-entrega', 'ev-f-doc-recibe'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
 
         window._evItemsStates = {};
-        window.evRenderizarPartesAccesorios();
+        window._evCantidades = {};
+        window.evRenderizarSistemas();
         window.evLimpiarFirma('entrega');
         window.evLimpiarFirma('recibe');
     };
@@ -268,7 +345,6 @@
                 setVal('ev-f-motor', d.nro_motor || d.modelo_motor);
                 setVal('ev-f-serie', d.nro_vin);
                 setVal('ev-f-km', d.odometro || d.km_inicial);
-                setVal('ev-f-tipo', d.sub_tipo || d.tipo);
             }
         } catch(e) {}
     };
@@ -295,7 +371,6 @@
         const grid = document.getElementById('ev-portal-companies-grid');
         if (!grid) return;
 
-        // Extraer empresas dinámicamente de los recursos de placas cargados o de los registros
         let empresas = (window._evCatalogoEmpresas && window._evCatalogoEmpresas.length) 
             ? [...window._evCatalogoEmpresas] 
             : [];
@@ -462,8 +537,8 @@
         const setupCanvas = (canvas, type) => {
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
-            canvas.width = canvas.offsetWidth || 300;
-            canvas.height = canvas.offsetHeight || 110;
+            canvas.width = canvas.offsetWidth || 340;
+            canvas.height = canvas.offsetHeight || 120;
             ctx.lineWidth = 2;
             ctx.lineCap = 'round';
             ctx.strokeStyle = '#0f172a';
@@ -519,7 +594,7 @@
         const recibe = getVal('ev-f-recibe').trim().toUpperCase();
 
         if (!placa || !entrega || !recibe) {
-            alert('Por favor completa la Placa, Quien Entrega y Quien Recibe.');
+            alert('Por favor completa la Placa Principal, Quien Entrega y Quien Recibe.');
             return;
         }
 
@@ -531,7 +606,7 @@
             quien_recibe: recibe,
             clase: getVal('ev-f-clase'),
             marca: getVal('ev-f-marca'),
-            tipo: getVal('ev-f-tipo'),
+            tipo: getVal('ev-f-clase'),
             modelo: getVal('ev-f-modelo'),
             placa: placa,
             color: getVal('ev-f-color'),
@@ -578,7 +653,7 @@
         }
     };
 
-    // ── GENERACIÓN E IMPRESIÓN DEL PDF OFICIAL ────────────────────
+    // ── GENERACIÓN E IMPRESIÓN DEL PDF OFICIAL (FORMATO A4) ──────
     window.evImprimirPDF = async function(id) {
         try {
             const token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token');
@@ -595,7 +670,6 @@
             let partes = {};
             try { partes = typeof r.inventario_partes_json === 'string' ? JSON.parse(r.inventario_partes_json) : (r.inventario_partes_json || {}); } catch(e) {}
 
-            // Ventana de impresión con el diseño idéntico al documento físico A4
             const printWin = window.open('', '_blank');
             printWin.document.write(`
                 <!DOCTYPE html>
@@ -609,10 +683,8 @@
                         th, td { border: 1px solid #000; padding: 2px 4px; vertical-align: middle; }
                         th { background: #e5e5e5; font-weight: bold; text-align: center; }
                         .text-center { text-align: center; }
-                        .text-end { text-align: right; }
                         .fw-bold { font-weight: bold; }
                         .header-table td { border: 2px solid #000; }
-                        .col-3-table td { border: 1px solid #000; }
                     </style>
                 </head>
                 <body>
@@ -620,7 +692,7 @@
                     <table class="header-table" style="margin-bottom: 6px;">
                         <tr>
                             <td style="width: 25%; text-align: center; padding: 5px;">
-                                <strong style="font-size: 14px;">MARSISA</strong><br><small>TRANSPORTES</small>
+                                <strong style="font-size: 14px;">${r.empresa || 'MARSISA'}</strong><br><small>TRANSPORTES</small>
                             </td>
                             <td style="width: 55%; text-align: center;">
                                 <div style="font-size: 8px;">FORMATO</div>
@@ -713,9 +785,13 @@
                         </tbody>
                     </table>
 
-                    <!-- Partes y Accesorios Matriz 3 Columnas -->
+                    <!-- Matriz de Partes y Accesorios -->
                     <div style="display: flex; gap: 4px; margin-bottom: 4px;">
-                        ${PARTES_SECCIONES.map(col => `
+                        ${[
+                            GRUPOS_SISTEMAS.slice(0, 5),
+                            GRUPOS_SISTEMAS.slice(5, 10),
+                            GRUPOS_SISTEMAS.slice(10)
+                        ].map(colGrupos => `
                             <div style="flex: 1;">
                                 <table style="font-size: 7.5px;">
                                     <thead>
@@ -726,7 +802,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        ${col.grupos.map(grp => `
+                                        ${colGrupos.map(grp => `
                                             <tr><td colspan="3" style="background:#e5e5e5; font-weight:bold;">${grp.titulo}</td></tr>
                                             ${grp.items.map(it => {
                                                 const k = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -784,7 +860,6 @@
         }
     };
 
-    // Auto inicializar si está cargado en el DOM
     if (document.getElementById('moduloEntregaVehiculos')) {
         window.inicializarModuloEntregaVehiculos();
     }
