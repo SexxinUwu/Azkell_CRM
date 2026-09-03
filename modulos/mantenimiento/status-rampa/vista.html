@@ -914,9 +914,16 @@
             </span>
             <small class="text-muted d-block" style="font-size: 0.75rem;">Ingreso a patio, rampa asignada y trabajos iniciales</small>
         </div>
-        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.srCerrarDrawers()" style="color:var(--subtext)">
-            <i class="bi bi-x-lg"></i>
-        </button>
+        <div class="d-flex align-items-center gap-2">
+            <!-- Badge Días para Inspección tipo OT Parabrisas -->
+            <div id="sr-drawer-insp-box" style="display:none; border:2px solid #cbd5e1; background:#f8fafc; padding:3px 12px; border-radius:8px; text-align:center; min-width:130px; box-shadow:0 1px 3px rgba(0,0,0,0.05); transition:all 0.2s ease;">
+                <div id="sr-drawer-insp-lbl" style="font-size:7.5px; font-weight:900; text-transform:uppercase; letter-spacing:0.06em; color:#64748b; line-height:1;">DÍAS PARA INSPECCIÓN</div>
+                <div id="sr-drawer-insp-val" style="font-family:'Oswald', sans-serif; font-size:18px; font-weight:900; color:#64748b; line-height:1.1; margin-top:1px;">—</div>
+            </div>
+            <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.srCerrarDrawers()" style="color:var(--subtext)">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
     </div>
     
     <div class="sr-drawer-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc;">
@@ -942,9 +949,9 @@
                         <input type="text" id="sr-f-placa-txt" class="form-control form-control-sm text-uppercase fw-bold bg-white" 
                                placeholder="BUSCAR PLACA..." autocomplete="off"
                                style="min-height: 40px; border-radius: 8px;"
-                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sr-f-placa')"
+                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sr-f-placa');window.srActualizarBadgeInspeccionDrawer(this.value);"
                                onfocus="window._cbFiltrar('sr-f-placa')"
-                               onblur="window._cbHide('sr-f-placa')">
+                               onblur="window._cbHide('sr-f-placa');setTimeout(function(){window.srActualizarBadgeInspeccionDrawer();},220);">
                         <input type="hidden" id="sr-f-placa" name="sr-f-placa">
                         <div id="sr-f-placa-dd" class="cb-dropdown"></div>
                     </div>
