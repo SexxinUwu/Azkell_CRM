@@ -369,17 +369,19 @@ window.verificarSesionGuardada = function() {
     var showOperacionesHub = _cHub('hub_operaciones');
     var vOpProg  = showOperacionesHub && (_cL('op_programacion') || _cL('op_guias_remision') || _cL('guias_remision'));
     var vOpGuias = showOperacionesHub && (_cL('op_guias_remision') || _cL('guias_remision'));
+    var vOpReporteViajes = showOperacionesHub && (_cL('op_guias_remision') || _cL('guias_remision') || _cL('op_programacion'));
     var vCombVales = showOperacionesHub && (_cL('combustible_vales') || _cL('combustible'));
     var vCombAna   = showOperacionesHub && (_cL('combustible_analisis') || _cL('combustible'));
     var vCombUrea  = showOperacionesHub && (_cL('urea_analisis') || _cL('combustible_analisis') || _cL('combustible'));
     var vCombMatriz = showOperacionesHub && (_cL('combustible_matriz') || _cL('combustible_analisis') || _cL('combustible'));
     var vCombOp    = vCombVales || vCombAna || vCombUrea || vCombMatriz;
-    var showOp     = vOpProg || vOpGuias || vCombOp;
+    var showOp     = vOpProg || vOpGuias || vOpReporteViajes || vCombOp;
 
     safe('nav-op-programacion',          vOpProg);
     safe('mbnav-op-programacion',        vOpProg);
     safe('nav-op-guias-remision',        vOpGuias);
     safe('mbnav-op-guias-remision',      vOpGuias);
+    safe('nav-op-reporte-viajes',        vOpReporteViajes);
     safe('nav-combustible-toggle',        vCombOp);
     safe('mbnav-op-combustible-toggle',  vCombOp);
     safe('nav-combustible-vales',         vCombVales);
@@ -433,10 +435,11 @@ window.verificarSesionGuardada = function() {
     var vChecklistSeg = showSeguridadHub && (_cL('seguridad_unidades') || _cL('seg_unidades') || _cL('seg_checklist'));
     var vUnidadesBase = showSeguridadHub && (_cL('unidades_base') || _cL('seguridad_unidades'));
     
-    safe('nav-seg-unidades',       vChecklistSeg);
-    safe('mbnav-seg-unidades',     vChecklistSeg);
-    safe('nav-seg-unidades-base',  vUnidadesBase);
-    safe('mbnav-seg-unidades-base',vUnidadesBase);
+    safe('nav-seg-unidades',          vChecklistSeg);
+    safe('mbnav-seg-unidades',        vChecklistSeg);
+    safe('nav-seg-entrega-vehiculos', vChecklistSeg);
+    safe('nav-seg-unidades-base',     vUnidadesBase);
+    safe('mbnav-seg-unidades-base',   vUnidadesBase);
 
     var showSeg = vChecklistSeg || vUnidadesBase;
     safe('wrap-seguridad', showSeg);
@@ -601,7 +604,9 @@ window.verificarSesionGuardada = function() {
             'tesoreria/flujo-caja': 'tesoreria_flujo',
             'tesoreria/cuentas': 'tesoreria_cuentas',
             'seguridad/unidades': 'seguridad_unidades',
+            'seguridad/entrega-vehiculos': 'seguridad_unidades',
             'seguridad/unidades-base': 'unidades_base',
+            'operaciones/reporte-viajes': 'op_guias_remision',
             'sistema/usuarios': 'usuarios',
             'sistema/auditoria': 'mod_auditoria',
             'administracion': 'administracion'

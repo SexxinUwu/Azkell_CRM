@@ -329,7 +329,13 @@
             <!-- Cabecera Oficial con Logo -->
             <div class="ev-sheet-header">
                 <div class="ev-sheet-logo">
-                    <img src="img/logo.png" onerror="this.src='img/app-logo.png'" alt="Logo" style="max-height: 48px; object-fit: contain;">
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-shield-check text-primary fs-3"></i>
+                        <div class="text-start">
+                            <strong class="d-block text-dark" style="font-size: 0.95rem; line-height: 1.1;">MARSISA</strong>
+                            <small class="text-muted" style="font-size: 0.68rem; letter-spacing: 0.05em;">TRANSPORTES</small>
+                        </div>
+                    </div>
                 </div>
                 <div class="ev-sheet-title">
                     <span class="text-uppercase fw-bold small text-muted">FORMATO</span>
@@ -446,8 +452,18 @@
             <!-- Diagrama Gráfico del Camión -->
             <div class="mb-3 p-3 text-center" style="border: 1.5px solid #0f172a; border-radius:8px; background:#fafafa;">
                 <span class="text-uppercase fw-bold text-muted small d-block mb-2">CROQUIS DE ESTADO Y DAÑOS DEL VEHÍCULO</span>
-                <img src="img/croquis-camion.png" onerror="this.style.display='none'" alt="Croquis Camión" style="max-height: 180px; max-width: 100%;">
-                <div class="text-muted small mt-1"><i class="bi bi-info-circle me-1"></i> Puedes detallar raspones o abolladuras en el campo de observaciones superior.</div>
+                <div class="p-2 border rounded bg-white d-inline-block shadow-sm">
+                    <svg width="280" height="90" viewBox="0 0 400 120" style="max-width:100%; height:auto;">
+                        <rect x="20" y="30" width="80" height="60" rx="6" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
+                        <rect x="110" y="20" width="260" height="70" rx="4" fill="#f8fafc" stroke="#0f172a" stroke-width="3"/>
+                        <circle cx="50" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                        <circle cx="280" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                        <circle cx="320" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                        <circle cx="360" cy="95" r="14" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+                        <rect x="30" y="38" width="35" height="25" rx="3" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5"/>
+                    </svg>
+                </div>
+                <div class="text-muted small mt-2"><i class="bi bi-info-circle me-1"></i> Detalla raspones, abolladuras o estado de faros en el campo de observaciones superior.</div>
             </div>
 
             <!-- Firmas -->
