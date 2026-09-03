@@ -1321,53 +1321,99 @@
         }
     };
 
+    // ── OBTENCIÓN Y NORMALIZACIÓN DE CONFIGURACIÓN VEHICULAR ───────
+    function _evObtenerConfiguracion(r) {
+        let pdfConfig = (r.configuracion || (r.tipo && r.tipo.includes('CARRETA') ? 'R2' : 'T3')).toUpperCase().trim();
+        if (pdfConfig === '6X4' || pdfConfig === '6X2' || pdfConfig.includes('T3')) return 'T3';
+        if (pdfConfig === '4X2' || pdfConfig.includes('T2')) return 'T2';
+        if (pdfConfig.includes('C3') || pdfConfig.includes('VOLQUETE')) return 'C3';
+        if (pdfConfig.includes('C2')) return 'C2';
+        if (pdfConfig.includes('S3') || pdfConfig.includes('SE3')) return 'S3';
+        if (pdfConfig.includes('S2') || pdfConfig.includes('SE2')) return 'S2';
+        if (pdfConfig.includes('R2') || pdfConfig.includes('REMOLQUE')) return 'R2';
+        return 'T3';
+    }
+
+    // ── GENERADOR DE STRING SVG OFICIAL PARA LA UNIDAD ──────────────
+    function _evGenerarSvgDiagrama(pdfConfig) {
+        let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 340" width="920" height="340" style="background:#ffffff;display:block;margin:0 auto;">
+            <defs>
+                <linearGradient id="evChassisGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#475569"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
+                <linearGradient id="evCabGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff"/><stop offset="60%" stop-color="#f8fafc"/><stop offset="100%" stop-color="#e2e8f0"/></linearGradient>
+                <linearGradient id="evGlassGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#bae6fd"/><stop offset="100%" stop-color="#38bdf8"/></linearGradient>
+                <linearGradient id="evFuelGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#cbd5e1"/><stop offset="50%" stop-color="#94a3b8"/><stop offset="100%" stop-color="#64748b"/></linearGradient>
+                <linearGradient id="evTireGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#334155"/><stop offset="100%" stop-color="#0f172a"/></linearGradient>
+                <linearGradient id="evBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff"/><stop offset="70%" stop-color="#f1f5f9"/><stop offset="100%" stop-color="#e2e8f0"/></linearGradient>
+            </defs>
+            <line x1="40" y1="295" x2="880" y2="295" stroke="#cbd5e1" stroke-width="2.5" stroke-dasharray="8 6" />`;
+
+        if (pdfConfig === 'T3') svg += _evRenderTracto(3, true);
+        else if (pdfConfig === 'T2') svg += _evRenderTracto(2, true);
+        else if (pdfConfig === 'C3') svg += _evRenderCamionRigido(3, true, true);
+        else if (pdfConfig === 'C2') svg += _evRenderCamionRigido(2, true, true);
+        else if (pdfConfig === 'S3') svg += _evRenderSemirremolque(3, true);
+        else if (pdfConfig === 'S2') svg += _evRenderSemirremolque(2, true);
+        else if (pdfConfig === 'R2') svg += _evRenderRemolqueR2(true);
+        else svg += _evRenderTracto(3, true);
+
+        svg += `</svg>`;
+        return svg;
+    }
+
+    // ── RASTERIZADOR DE SVG A PNG ULTRA ALTA DEFINICIÓN (COMPATIBLE CON HTML2PDF/CANVAS) ──
+    async function _evRasterizarSvgAPng(svgString) {
+        return new Promise(function(resolve) {
+            try {
+                var width = 1840;
+                var height = 680;
+                var blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                var url = URL.createObjectURL(blob);
+                var img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function() {
+                    try {
+                        var canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        var ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, width, height);
+                        ctx.drawImage(img, 0, 0, width, height);
+                        URL.revokeObjectURL(url);
+                        var pngDataUrl = canvas.toDataURL('image/png');
+                        resolve(pngDataUrl);
+                    } catch(err) {
+                        console.error('Error dibujando canvas SVG:', err);
+                        URL.revokeObjectURL(url);
+                        resolve('');
+                    }
+                };
+                img.onerror = function(err) {
+                    console.error('Error cargando Image SVG:', err);
+                    URL.revokeObjectURL(url);
+                    resolve('');
+                };
+                img.src = url;
+            } catch(e) {
+                console.error('Error en _evRasterizarSvgAPng:', e);
+                resolve('');
+            }
+        });
+    }
+
     // ── GENERADOR DE PLANTILLA HTML PARA PDF OFICIAL ───────────────
-    function _evConstruirHtmlPDF(r) {
+    function _evConstruirHtmlPDF(r, diagramaDataUrl) {
         let partes = {};
         try { partes = typeof r.inventario_partes_json === 'string' ? JSON.parse(r.inventario_partes_json) : (r.inventario_partes_json || {}); } catch(e) {}
 
         const empLogoUrl = localStorage.getItem('fleet_empresa_logo') || '';
         const fechaStr = r.fecha ? r.fecha.slice(0, 10) : new Date().toISOString().slice(0, 10);
         const kmFmt = parseFloat(r.kilometraje || 0).toLocaleString('es-PE');
+        const pdfConfig = _evObtenerConfiguracion(r);
 
-        let pdfConfig = (r.configuracion || (r.tipo && r.tipo.includes('CARRETA') ? 'R2' : 'T3')).toUpperCase().trim();
-        if (pdfConfig === '6X4' || pdfConfig === '6X2' || pdfConfig.includes('T3')) pdfConfig = 'T3';
-        else if (pdfConfig === '4X2' || pdfConfig.includes('T2')) pdfConfig = 'T2';
-        else if (pdfConfig.includes('C3') || pdfConfig.includes('VOLQUETE')) pdfConfig = 'C3';
-        else if (pdfConfig.includes('C2')) pdfConfig = 'C2';
-        else if (pdfConfig.includes('S3') || pdfConfig.includes('SE3')) pdfConfig = 'S3';
-        else if (pdfConfig.includes('S2') || pdfConfig.includes('SE2')) pdfConfig = 'S2';
-        else if (pdfConfig.includes('R2') || pdfConfig.includes('REMOLQUE')) pdfConfig = 'R2';
-        else pdfConfig = 'T3';
-
-        let pdfSvgDiagram = `
-            <svg viewBox="0 0 920 340" style="width: 100%; max-width: 740px; height: 145px; display: block; margin: 0 auto;">
-                <defs>
-                    <linearGradient id="evChassisGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#475569"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
-                    <linearGradient id="evCabGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff"/><stop offset="60%" stop-color="#f8fafc"/><stop offset="100%" stop-color="#e2e8f0"/></linearGradient>
-                    <linearGradient id="evGlassGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#bae6fd"/><stop offset="100%" stop-color="#38bdf8"/></linearGradient>
-                    <linearGradient id="evFuelGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#cbd5e1"/><stop offset="50%" stop-color="#94a3b8"/><stop offset="100%" stop-color="#64748b"/></linearGradient>
-                    <linearGradient id="evTireGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#334155"/><stop offset="100%" stop-color="#0f172a"/></linearGradient>
-                    <linearGradient id="evBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff"/><stop offset="70%" stop-color="#f1f5f9"/><stop offset="100%" stop-color="#e2e8f0"/></linearGradient>
-
-                    <linearGradient id="evChassisGradPdf" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#475569"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
-                    <linearGradient id="evCabGradPdf" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff"/><stop offset="60%" stop-color="#f8fafc"/><stop offset="100%" stop-color="#e2e8f0"/></linearGradient>
-                    <linearGradient id="evGlassGradPdf" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#bae6fd"/><stop offset="100%" stop-color="#38bdf8"/></linearGradient>
-                    <linearGradient id="evFuelGradPdf" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#cbd5e1"/><stop offset="50%" stop-color="#94a3b8"/><stop offset="100%" stop-color="#64748b"/></linearGradient>
-                    <linearGradient id="evTireGradPdf" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#334155"/><stop offset="100%" stop-color="#0f172a"/></linearGradient>
-                    <linearGradient id="evBodyGradPdf" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff"/><stop offset="70%" stop-color="#f1f5f9"/><stop offset="100%" stop-color="#e2e8f0"/></linearGradient>
-                </defs>
-                <line x1="40" y1="295" x2="880" y2="295" stroke="#cbd5e1" stroke-width="2.5" stroke-dasharray="8 6" />
-        `;
-
-        if (pdfConfig === 'T3') pdfSvgDiagram += _evRenderTracto(3, true);
-        else if (pdfConfig === 'T2') pdfSvgDiagram += _evRenderTracto(2, true);
-        else if (pdfConfig === 'C3') pdfSvgDiagram += _evRenderCamionRigido(3, true, true);
-        else if (pdfConfig === 'C2') pdfSvgDiagram += _evRenderCamionRigido(2, true, true);
-        else if (pdfConfig === 'S3') pdfSvgDiagram += _evRenderSemirremolque(3, true);
-        else if (pdfConfig === 'S2') pdfSvgDiagram += _evRenderSemirremolque(2, true);
-        else if (pdfConfig === 'R2') pdfSvgDiagram += _evRenderRemolqueR2(true);
-        pdfSvgDiagram += `</svg>`;
+        const diagramaHtml = diagramaDataUrl
+            ? `<img src="${diagramaDataUrl}" style="width: 100%; max-width: 740px; height: 135px; object-fit: contain; display: block; margin: 0 auto;" alt="Diagrama Unidad">`
+            : _evGenerarSvgDiagrama(pdfConfig);
 
         return `
             <main class="report-page w-full max-w-[840px] bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-3 sm:p-4 text-slate-900 mx-auto" style="box-sizing:border-box;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;">
@@ -1499,14 +1545,14 @@
                     </div>
                 </section>
 
-                <!-- 4. DIAGRAMA VECTORIAL 2D DE LA UNIDAD SEGÚN CONFIGURACIÓN -->
+                <!-- 4. DIAGRAMA TÉCNICO DEL ESTADO DE LA UNIDAD SEGÚN CONFIGURACIÓN -->
                 <section class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2 p-1 text-center" style="border:1.5px solid #0F172A; background: rgba(248, 250, 252, 0.5);">
                     <div class="flex justify-between items-center px-2 pb-0.5 border-b border-slate-300 mb-0.5">
                         <span class="font-extrabold text-slate-800 text-[8px] uppercase">Diagrama Técnico del Estado de la Unidad</span>
                         <span class="font-mono font-extrabold text-[7.5px] px-2 py-0.2 rounded-full uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">CONFIGURACIÓN: ${pdfConfig}</span>
                     </div>
                     <div class="py-0.5">
-                        ${pdfSvgDiagram}
+                        ${diagramaHtml}
                     </div>
                 </section>
 
@@ -1573,7 +1619,7 @@
                 + '.doc-grid-box { border: 1.5px solid #0F172A; }\n'
                 + '.report-page { width:100%; max-width:820px; box-sizing:border-box; padding:8px 12px; background:#FFFFFF; margin:0 auto; }\n'
                 + '.report-page-break { page-break-before:always !important; }\n'
-                + 'svg { overflow: visible !important; display: block; }\n'
+                + 'img { display: block; max-width: 100%; }\n'
                 + '</style>\n</head>\n<body>\n'
                 + '<div id="ev-pdf-render-root" style="width:100%; max-width:820px; margin:0 auto;">' + htmlBody + '</div>\n'
                 + '</body>\n</html>');
@@ -1581,7 +1627,7 @@
 
             iframe.onload = async function() {
                 try {
-                    await new Promise(function(r) { setTimeout(r, 450); });
+                    await new Promise(function(r) { setTimeout(r, 600); });
                     var targetEl = doc.getElementById('ev-pdf-render-root');
                     var opt = {
                         margin:       0,
@@ -1703,7 +1749,11 @@
             const placa = r.placa || 'UNIDAD';
             const filename = `Acta_Entrega_${folio}_${placa}.pdf`;
 
-            const htmlBody = _evConstruirHtmlPDF(r);
+            const pdfConfig = _evObtenerConfiguracion(r);
+            const svgStr = _evGenerarSvgDiagrama(pdfConfig);
+            const diagramaDataUrl = await _evRasterizarSvgAPng(svgStr);
+
+            const htmlBody = _evConstruirHtmlPDF(r, diagramaDataUrl);
             const pdfBlob = await _evRenderPdfBlob(htmlBody, filename);
             const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
@@ -1752,7 +1802,12 @@
             const folio = r.numero_inventario || r.id;
             const placa = r.placa || 'UNIDAD';
             const filename = `Acta_Entrega_${folio}_${placa}.pdf`;
-            const htmlBody = _evConstruirHtmlPDF(r);
+
+            const pdfConfig = _evObtenerConfiguracion(r);
+            const svgStr = _evGenerarSvgDiagrama(pdfConfig);
+            const diagramaDataUrl = await _evRasterizarSvgAPng(svgStr);
+
+            const htmlBody = _evConstruirHtmlPDF(r, diagramaDataUrl);
 
             _evAbrirVentanaImpresion(htmlBody, filename, `Acta Entrega ${folio} (${placa})`, true);
         } catch(e) {
