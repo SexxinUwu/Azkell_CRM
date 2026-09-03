@@ -1731,6 +1731,28 @@
         window.open(url, '_blank');
     }
 
+    // ── OBTENCIÓN DEL NOMBRE DE ARCHIVO PDF ESTANDARIZADO ──────────
+    function _evGetPdfFilename(r) {
+        const placa = (r.placa || 'UNIDAD').toUpperCase().trim();
+        let fechaStr = '';
+        if (r.fecha) {
+            const rawFecha = r.fecha.slice(0, 10);
+            const parts = rawFecha.split('-');
+            if (parts.length === 3) {
+                fechaStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            } else {
+                fechaStr = rawFecha.replace(/\//g, '-');
+            }
+        } else {
+            const d = new Date();
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            fechaStr = `${day}-${month}-${year}`;
+        }
+        return `Entrega de Vehiculo - ${placa} - ${fechaStr}.pdf`;
+    }
+
     // ── COMPARTIR DIRECTAMENTE EL ARCHIVO PDF POR WHATSAPP (MÓVIL Y PC) ─────────
     window.evCompartirWhatsApp = async function(id) {
         try {
@@ -1745,9 +1767,7 @@
             }
 
             const r = json.data;
-            const folio = r.numero_inventario || r.id;
-            const placa = r.placa || 'UNIDAD';
-            const filename = `Acta_Entrega_${folio}_${placa}.pdf`;
+            const filename = _evGetPdfFilename(r);
 
             const pdfConfig = _evObtenerConfiguracion(r);
             const svgStr = _evGenerarSvgDiagrama(pdfConfig);
@@ -1758,11 +1778,11 @@
             const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
             // 1. Si el dispositivo soporta compartir archivos nativamente (Android, iOS y Navegadores compatibles)
+            // Se envía únicamente el archivo PDF sin texto adicional para que llegue en un solo mensaje
             if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
                 await navigator.share({
                     files: [pdfFile],
-                    title: filename,
-                    text: `Acta de Entrega de Vehículo ${folio} (${placa})`
+                    title: filename
                 });
                 return;
             }
@@ -1799,9 +1819,7 @@
             }
 
             const r = json.data;
-            const folio = r.numero_inventario || r.id;
-            const placa = r.placa || 'UNIDAD';
-            const filename = `Acta_Entrega_${folio}_${placa}.pdf`;
+            const filename = _evGetPdfFilename(r);
 
             const pdfConfig = _evObtenerConfiguracion(r);
             const svgStr = _evGenerarSvgDiagrama(pdfConfig);
@@ -1809,7 +1827,7 @@
 
             const htmlBody = _evConstruirHtmlPDF(r, diagramaDataUrl);
 
-            _evAbrirVentanaImpresion(htmlBody, filename, `Acta Entrega ${folio} (${placa})`, true);
+            _evAbrirVentanaImpresion(htmlBody, filename, filename.replace('.pdf', ''), true);
         } catch(e) {
             console.error('Error generando PDF:', e);
             alert('Error al generar PDF.');
