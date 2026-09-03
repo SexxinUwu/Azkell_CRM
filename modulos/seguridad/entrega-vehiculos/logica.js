@@ -110,12 +110,17 @@
             if (data) {
                 window._evCatalogoPlacas = data.placas || [];
                 window._evCatalogoConductores = data.conductores || [];
+                window._evCatalogoEmpresas = data.empresas || [];
 
                 const dlP = document.getElementById('ev-dl-placas');
                 const dlC = document.getElementById('ev-dl-conductores');
 
                 if (dlP) dlP.innerHTML = (data.placas || []).map(p => `<option value="${p}">`).join('');
                 if (dlC) dlC.innerHTML = (data.conductores || []).map(c => `<option value="${c}">`).join('');
+
+                if (window.dataGlobalEntregaVehiculos) {
+                    window.evActualizarPortalCards(window.dataGlobalEntregaVehiculos);
+                }
             }
         } catch(e) {
             console.warn('Error cargando recursos de entrega:', e);
@@ -290,13 +295,32 @@
         const grid = document.getElementById('ev-portal-companies-grid');
         if (!grid) return;
 
-        const empresas = ['MARSISA', 'TRAHESA', 'SEÑOR DE LUREN'];
+        // Extraer empresas dinámicamente de los recursos de placas cargados o de los registros
+        let empresas = (window._evCatalogoEmpresas && window._evCatalogoEmpresas.length) 
+            ? [...window._evCatalogoEmpresas] 
+            : [];
+
+        if (!empresas.length) {
+            const empSet = new Set();
+            (data || []).forEach(r => {
+                const e = (r.empresa || '').trim().toUpperCase();
+                if (e && e !== 'NULL') empSet.add(e);
+            });
+            empresas = Array.from(empSet);
+        }
+
+        if (!empresas.length) {
+            empresas = ['MARSISA'];
+        }
+
         const empStats = {};
         empresas.forEach(e => empStats[e] = 0);
 
         data.forEach(r => {
             const emp = (r.empresa || 'MARSISA').toUpperCase().trim();
-            empStats[emp] = (empStats[emp] || 0) + 1;
+            if (empStats[emp] !== undefined) {
+                empStats[emp] = (empStats[emp] || 0) + 1;
+            }
         });
 
         let html = '';
@@ -320,7 +344,8 @@
         const colors = [
             { bg: '#f0fdf4', col: '#16a34a', icon: 'bi-truck-front-fill' },
             { bg: '#fffbeb', col: '#d97706', icon: 'bi-building-fill' },
-            { bg: '#faf5ff', col: '#7c3aed', icon: 'bi-box-seam-fill' }
+            { bg: '#faf5ff', col: '#7c3aed', icon: 'bi-box-seam-fill' },
+            { bg: '#fdf2f8', col: '#db2777', icon: 'bi-geo-alt-fill' }
         ];
 
         empresas.forEach((emp, i) => {
