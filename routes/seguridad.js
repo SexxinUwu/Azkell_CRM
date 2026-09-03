@@ -740,6 +740,62 @@ module.exports = (db, logAudit) => {
         });
     });
 
+    // ── GET /seguridad/entrega-vehiculos/next-folio ───────────────
+    router.get('/seguridad/entrega-vehiculos/next-folio', (req, res) => {
+        const year = new Date().getFullYear();
+        const prefix = `ENT-${year}-`;
+        db.query(
+            `SELECT id, numero_inventario FROM seg_entrega_vehiculos WHERE id LIKE ? OR numero_inventario LIKE ? ORDER BY id DESC LIMIT 1`,
+            [prefix + '%', prefix + '%'],
+            (err, rows) => {
+                let nextNum = 1;
+                if (!err && rows && rows.length) {
+                    const lastId = rows[0].numero_inventario || rows[0].id || '';
+                    const parts = lastId.split('-');
+                    const lastNum = parseInt(parts[parts.length - 1], 10);
+                    if (!isNaN(lastNum)) nextNum = lastNum + 1;
+                }
+                const folio = prefix + String(nextNum).padStart(4, '0');
+                res.json({ ok: true, folio: folio, nextNum: nextNum });
+            }
+        );
+    });
+
+    // ── GET /seguridad/entrega-vehiculos/placa-detalle/:placa ────
+    router.get('/seguridad/entrega-vehiculos/placa-detalle/:placa', (req, res) => {
+        const p = (req.params.placa || '').trim().toUpperCase();
+        const sql = `
+            SELECT 
+                p.placa, p.cliente, p.marca, p.modelo_uts, p.tipo, p.sub_tipo, p.color, 
+                p.nro_motor, p.nro_vin, p.configuracion, p.combustible,
+                (SELECT odometro FROM lectura_odometro WHERE placa = p.placa ORDER BY fecha_hora DESC LIMIT 1) as odometro_lectura,
+                (SELECT km_inicial FROM seg_unidades_registros WHERE placa_camion = p.placa ORDER BY id DESC LIMIT 1) as km_seguridad
+            FROM placas p 
+            WHERE p.placa = ? LIMIT 1
+        `;
+        db.query(sql, [p], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows.length) return res.json({ ok: false, msg: 'Placa no encontrada' });
+            const d = rows[0];
+            const km = d.odometro_lectura || d.km_seguridad || 0;
+            res.json({
+                ok: true,
+                data: {
+                    placa: d.placa,
+                    cliente: d.cliente,
+                    marca: d.marca,
+                    modelo: d.modelo_uts,
+                    tipo: d.sub_tipo || d.tipo || 'TRACTO',
+                    color: d.color,
+                    numero_motor: d.nro_motor,
+                    numero_serie: d.nro_vin,
+                    configuracion: (d.configuracion || '').toUpperCase().trim(),
+                    kilometraje: km
+                }
+            });
+        });
+    });
+
     // ── GET /seguridad/entrega-vehiculos ──────────────────────────
     router.get('/seguridad/entrega-vehiculos', (req, res) => {
         let sql = `SELECT * FROM seg_entrega_vehiculos`;
