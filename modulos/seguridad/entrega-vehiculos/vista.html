@@ -305,6 +305,90 @@
     vertical-align: middle;
 }
 
+/* ── Botones de Acción Pasteles Modernos ──────────────────────── */
+.ev-btn-action-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.ev-btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 9px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1;
+}
+.ev-btn-action:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+}
+.ev-btn-action:active {
+    transform: translateY(0);
+}
+
+/* 1. Botón Ver (Gris / Pizarra Pastel) */
+.ev-btn-act-view {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    width: 32px;
+    padding: 0;
+}
+.ev-btn-act-view:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #cbd5e1;
+}
+
+/* 2. Botón Editar (Ámbar / Naranja Pastel Suave) */
+.ev-btn-act-edit {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+    width: 32px;
+    padding: 0;
+}
+.ev-btn-act-edit:hover {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fcd34d;
+}
+
+/* 3. Botón PDF (Verde Limón / Menta Pastel) */
+.ev-btn-act-pdf {
+    background: #f7fee7;
+    color: #3f6212;
+    border: 1px solid #bef264;
+    padding: 0 12px;
+}
+.ev-btn-act-pdf:hover {
+    background: #ecfccb;
+    color: #365314;
+    border-color: #a3e635;
+}
+
+/* 4. Botón Eliminar (Rojo / Coral Pastel - Solo Admin) */
+.ev-btn-act-del {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    width: 32px;
+    padding: 0;
+}
+.ev-btn-act-del:hover {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fca5a5;
+}
+
 /* ── Formulario Segmentado Moderno ────────────────────────────── */
 .ev-form-container {
     max-width: 960px;
