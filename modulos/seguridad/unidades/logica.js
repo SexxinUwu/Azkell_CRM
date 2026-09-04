@@ -295,7 +295,10 @@ window._sguCargarPortalStats = function() {
         var global = (data && data.global) || { empresa: 'TODAS', total_flota: 0, en_ruta: 0, completados: 0, alertas: 0 };
 
         if (!empresas.length) {
-            empresas = [{ empresa: 'MARSISA', total_flota: 18, en_ruta: 0, completados: 0, alertas: 0 }];
+            var lsNomEmpresa = (localStorage.getItem('fleet_empresa_nombre') || '').trim().toUpperCase();
+            if (lsNomEmpresa && lsNomEmpresa !== 'AZKELL FLEET') {
+                empresas = [{ empresa: lsNomEmpresa, total_flota: 0, en_ruta: 0, completados: 0, alertas: 0 }];
+            }
         }
 
         var html = '';
