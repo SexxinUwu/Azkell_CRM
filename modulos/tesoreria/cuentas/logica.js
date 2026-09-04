@@ -58,6 +58,7 @@ window.filtrarCuentas = function() {
     window._cuentasFiltradas = (window._cuentasData || []).filter(function(item) {
         var matchB = !buscar ||
             (item.codigo_liquidacion || '').toLowerCase().includes(buscar) ||
+            (item.numero_viaje || '').toLowerCase().includes(buscar) ||
             (item.razon_social || '').toLowerCase().includes(buscar) ||
             (item.placa_camion || '').toLowerCase().includes(buscar) ||
             (item.placa_carreta || '').toLowerCase().includes(buscar) ||
@@ -124,7 +125,7 @@ window._cuentasRenderTabla = function(data) {
     if (!tbody) return;
 
     if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="29" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No se encontraron registros de cuentas con los filtros seleccionados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="30" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No se encontraron registros de cuentas con los filtros seleccionados.</td></tr>';
         return;
     }
 
@@ -150,6 +151,7 @@ window._cuentasRenderTabla = function(data) {
             '</td>' +
             '<td class="fw-bold text-primary">' + (item.codigo_liquidacion || '—') + '</td>' +
             '<td>' + _fmtDate(item.fecha_liquidacion) + '</td>' +
+            '<td><span class="badge bg-light text-dark border fw-bold">' + (item.numero_viaje || '—') + '</span></td>' +
             '<td>' + _fmtDate(item.fecha_servicio) + '</td>' +
             '<td class="fw-bold text-dark">' + (item.razon_social || '—') + '</td>' +
             '<td><span class="badge bg-light text-dark border fw-bold">' + (item.placa_camion || '—') + '</span></td>' +
@@ -184,20 +186,51 @@ window._cuentasRenderTabla = function(data) {
 
 // ── BLOQUEO DE TECLAS NO NUMÉRICAS EN MÓVILES Y DESKTOP ───────────
 window.bloquearNoNumerico = function(e) {
-    // Permitir: teclas de control (Backspace, Tab, Enter, Escape, Delete, flechas, etc.)
     var permittedKeys = ['Backspace', 'Tab', 'Enter', 'Escape', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
     if (permittedKeys.indexOf(e.key) !== -1 ||
-        // Permitir: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
         (e.ctrlKey === true || e.metaKey === true) ||
-        // Permitir punto o coma decimal si aún no existe
         (e.key === '.' || e.key === ',')
     ) {
         return;
     }
-    // Bloquear si no es un número del 0 al 9
     if (e.key < '0' || e.key > '9') {
         e.preventDefault();
     }
+};
+
+// ── ACTUALIZAR MES SEGÚN FECHA FACTURA ─────────────────────────────
+window.actualizarFechaFacturaYMes = function() {
+    var fFactura = (document.getElementById('fc-fecha-factura') || {}).value;
+    var elMes = document.getElementById('fc-mes-facturacion');
+    if (fFactura) {
+        var meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SETIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+        var parts = fFactura.split('-');
+        if (parts.length === 3) {
+            var mIndex = parseInt(parts[1], 10) - 1;
+            if (mIndex >= 0 && mIndex < 12 && elMes) {
+                elMes.value = meses[mIndex];
+            }
+        }
+    } else if (elMes) {
+        elMes.value = '';
+    }
+    window.autoCalcularFechaCobro();
+};
+
+window.autoCalcularFechaCobro = function() {
+    var fFactura = (document.getElementById('fc-fecha-factura') || {}).value;
+    var diasStr = (document.getElementById('fc-credito-dias') || {}).value;
+    var dias = diasStr !== '' ? (parseInt(diasStr, 10) || 0) : 15;
+    var elCobrar = document.getElementById('fc-fecha-cobrar');
+    if (fFactura && dias >= 0 && elCobrar) {
+        var d = new Date(fFactura + 'T00:00:00');
+        if (!isNaN(d.getTime())) {
+            d.setDate(d.getDate() + dias);
+            elCobrar.value = d.toISOString().split('T')[0];
+            return;
+        }
+    }
+    if (elCobrar) elCobrar.value = '';
 };
 
 // ── CRUD MODAL / FORM ──────────────────────────────────────────────
@@ -220,6 +253,8 @@ window.abrirModalNuevoRegistro = function() {
         var el = document.getElementById(id);
         if (el) el.value = val;
     };
+    setV('fc-codigo-liquidacion', '');
+    setV('fc-numero-viaje', '');
     setV('fc-flete', '');
     setV('fc-comision', '10');
     setV('fc-gastos-operativos', '');
@@ -230,11 +265,9 @@ window.abrirModalNuevoRegistro = function() {
     setV('fc-total', '0.00');
     setV('fc-detraccion', '0.00');
     setV('fc-neto-cobrar', '0.00');
-
-    var meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SETIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-    var mesAct = meses[new Date().getMonth()];
-    var selMes = document.getElementById('fc-mes-facturacion');
-    if (selMes) selMes.value = mesAct;
+    setV('fc-credito-dias', '15');
+    setV('fc-mes-facturacion', '');
+    setV('fc-fecha-cobrar', '');
 
     var modal = new bootstrap.Modal(document.getElementById('modalCuentaForm'));
     modal.show();
@@ -252,6 +285,7 @@ window.abrirEditarRegistro = function(id) {
     setV('form-cuenta-id', item.id);
     setV('fc-codigo-liquidacion', item.codigo_liquidacion);
     setV('fc-fecha-liquidacion', item.fecha_liquidacion ? item.fecha_liquidacion.split('T')[0] : '');
+    setV('fc-numero-viaje', item.numero_viaje);
     setV('fc-fecha-servicio', item.fecha_servicio ? item.fecha_servicio.split('T')[0] : '');
     setV('fc-razon-social', item.razon_social);
     setV('fc-placa-camion', item.placa_camion);
@@ -266,7 +300,6 @@ window.abrirEditarRegistro = function(id) {
 
     var fleteVal = item.flete;
     if ((fleteVal == null || parseFloat(fleteVal) === 0) && item.tarifa && parseFloat(item.tarifa) > 0) {
-        // Estimar flete a partir de la tarifa si no estaba guardado
         var factor = (1 - (parseFloat(comisionVal) || 10) / 100);
         fleteVal = factor > 0 ? (parseFloat(item.tarifa) / factor).toFixed(2) : item.tarifa;
     }
@@ -278,16 +311,23 @@ window.abrirEditarRegistro = function(id) {
     // Calcular valores económicos
     window.autoCalcularTotalesForm();
 
-    setV('fc-mes-facturacion', item.mes_facturacion || 'ENERO');
     setV('fc-fecha-factura', item.fecha_factura ? item.fecha_factura.split('T')[0] : '');
     setV('fc-serie', item.serie);
     setV('fc-factura', item.factura);
-    setV('fc-credito-dias', item.credito_dias);
-    setV('fc-fecha-cobrar', item.fecha_cobrar ? item.fecha_cobrar.split('T')[0] : '');
+    setV('fc-credito-dias', item.credito_dias != null ? item.credito_dias : 15);
     setV('fc-fecha-deposito', item.fecha_deposito ? item.fecha_deposito.split('T')[0] : '');
     setV('fc-estado-servicio', item.estado_servicio || 'PENDIENTE');
     setV('fc-diferencia', item.diferencia);
     setV('fc-observacion', item.observacion);
+
+    // Actualizar mes y fecha de cobro según fecha factura
+    window.actualizarFechaFacturaYMes();
+    if (item.mes_facturacion) {
+        setV('fc-mes-facturacion', item.mes_facturacion);
+    }
+    if (item.fecha_cobrar) {
+        setV('fc-fecha-cobrar', item.fecha_cobrar.split('T')[0]);
+    }
 
     var fileInput = document.getElementById('fc-archivo');
     if (fileInput) fileInput.value = '';
@@ -355,18 +395,6 @@ window.autoCalcularTotalesForm = function() {
     if (elNeto) elNeto.value = neto.toFixed(2);
 };
 
-window.autoCalcularFechaCobro = function() {
-    var fFactura = document.getElementById('fc-fecha-factura').value;
-    var dias = parseInt(document.getElementById('fc-credito-dias').value, 10) || 0;
-    if (fFactura && dias > 0) {
-        var d = new Date(fFactura + 'T00:00:00');
-        if (!isNaN(d.getTime())) {
-            d.setDate(d.getDate() + dias);
-            document.getElementById('fc-fecha-cobrar').value = d.toISOString().split('T')[0];
-        }
-    }
-};
-
 window.guardarCuentaForm = function(e) {
     if (e) e.preventDefault();
     var id = document.getElementById('form-cuenta-id').value;
@@ -375,6 +403,7 @@ window.guardarCuentaForm = function(e) {
     var formData = new FormData();
     formData.append('codigo_liquidacion', getV('fc-codigo-liquidacion').trim());
     formData.append('fecha_liquidacion', getV('fc-fecha-liquidacion') || '');
+    formData.append('numero_viaje', getV('fc-numero-viaje').trim());
     formData.append('fecha_servicio', getV('fc-fecha-servicio') || '');
     formData.append('razon_social', getV('fc-razon-social').trim());
     formData.append('placa_camion', getV('fc-placa-camion').trim().toUpperCase());
@@ -396,7 +425,7 @@ window.guardarCuentaForm = function(e) {
     formData.append('fecha_factura', getV('fc-fecha-factura') || '');
     formData.append('serie', getV('fc-serie').trim());
     formData.append('factura', getV('fc-factura').trim());
-    formData.append('credito_dias', parseInt(getV('fc-credito-dias'), 10) || 0);
+    formData.append('credito_dias', parseInt(getV('fc-credito-dias'), 10) || 15);
     formData.append('fecha_cobrar', getV('fc-fecha-cobrar') || '');
     formData.append('fecha_deposito', getV('fc-fecha-deposito') || '');
     formData.append('estado_servicio', getV('fc-estado-servicio') || 'PENDIENTE');
@@ -465,6 +494,7 @@ window.descargarPlantillaExcel = function() {
     var cabeceras = [
         'COD DE LIQUIDACION',
         'FECHA DE LIQUIDACION',
+        'N° DE VIAJE',
         'FECHA SERVICIO',
         'RAZON SOCIAL',
         'PLACA (CAMION)',
@@ -493,13 +523,13 @@ window.descargarPlantillaExcel = function() {
     ];
 
     var ejemplo1 = [
-        'LIQ-2026-0001', '05/01/2026', '12/12/2025', 'TRAHESA SAC', 'T8S942', 'AWB973', 'KENNY ALEXANDER ARTEAGA MARQUEZ',
+        'LIQ-2026-0001', '05/01/2026', 'VIAJE-101', '12/12/2025', 'TRAHESA SAC', 'T8S942', 'AWB973', 'KENNY ALEXANDER ARTEAGA MARQUEZ',
         'AJINOMOTO DEL PERU', 'CALLAO - TARAPOTO', 8357.63, 237.29, 8120.34, 1461.66, 9582.00,
         0.00, 383.28, 9198.72, 'ENERO', '05/01/2026', 'E001', '0160', 45, '20/02/2026', '20/02/2026', 'PAGADO', -0.28, 'LIQ.01'
     ];
 
     var ejemplo2 = [
-        'LIQ-2026-0002', '05/01/2026', '05/01/2026', 'JHOSTIL PERU', 'AMV803', 'AZO983', 'JOSE UZURIAGA GALARZA',
+        'LIQ-2026-0002', '05/01/2026', 'VIAJE-102', '05/01/2026', 'JHOSTIL PERU', 'AMV803', 'AZO983', 'JOSE UZURIAGA GALARZA',
         '', 'ATE', 0.00, 0.00, 15254.24, 2745.76, 18000.00,
         0.00, 720.00, 17280.00, 'ENERO', '05/01/2026', 'E001', '0161', 15, '05/01/2026', '', 'PENDIENTE', 0.00, 'LLANTAS'
     ];
@@ -508,7 +538,7 @@ window.descargarPlantillaExcel = function() {
     var ws = XLSX.utils.aoa_to_sheet(wsData);
 
     ws['!cols'] = [
-        { wch: 20 }, { wch: 18 }, { wch: 16 }, { wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 30 },
+        { wch: 20 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 30 },
         { wch: 25 }, { wch: 22 }, { wch: 22 }, { wch: 18 }, { wch: 14 },
         { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 16 },
         { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 14 },
@@ -572,6 +602,7 @@ window.importarExcelMasivo = function(event) {
                 var item = {
                     codigo_liquidacion: getVal(['COD DE LIQUIDACION', 'CODLIQUIDACION', 'CODIGO LIQUIDACION', 'CODIGO']),
                     fecha_liquidacion: getVal(['FECHA DE LIQUIDACION', 'FECHALIQUIDACION', 'LIQUIDACION']),
+                    numero_viaje: getVal(['N DE VIAJE', 'NUMERO DE VIAJE', 'NRO VIAJE', 'VIAJE', 'ORDEN VIAJE', 'N VIAJE', 'NUMERO VIAJE']),
                     fecha_servicio: getVal(['FECHA SERVICIO', 'FECHASERVICIO']),
                     razon_social: getVal(['RAZON SOCIAL', 'RAZONSOCIAL', 'PROVEEDOR', 'EMPRESA']),
                     placa: getVal(['PLACA', 'PLACAS', 'UNIDAD']),
@@ -654,7 +685,7 @@ window.exportarCuentasExcel = function() {
     }
 
     var cabeceras = [
-        'COD DE LIQUIDACION', 'FECHA DE LIQUIDACION', 'FECHA SERVICIO', 'RAZON SOCIAL',
+        'COD DE LIQUIDACION', 'FECHA DE LIQUIDACION', 'N° DE VIAJE', 'FECHA SERVICIO', 'RAZON SOCIAL',
         'PLACA (CAMION)', 'PLACA (CARRETA)', 'CONDUCTOR', 'CLIENTE', 'LUGAR',
         'TARIFA -10% Y/O 20% POR TIPO DE CAMION', '(-) GASTOS OPERATIVOS', 'B.I', 'IGV',
         'TOTAL', 'ADELANTO', 'DETRACCION', 'NETO POR COBRAR', 'MES FACTURACION', 'FECHA',
@@ -666,6 +697,7 @@ window.exportarCuentasExcel = function() {
         return [
             d.codigo_liquidacion || '',
             _fmtDate(d.fecha_liquidacion),
+            d.numero_viaje || '',
             _fmtDate(d.fecha_servicio),
             d.razon_social || '',
             d.placa_camion || '',
