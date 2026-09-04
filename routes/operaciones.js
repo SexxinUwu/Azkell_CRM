@@ -232,9 +232,11 @@ module.exports = function (db, broadcast, logAudit) {
                     ov.ruta AS ruta_cabecera,
                     ov.estado,
                     COALESCE(p.modelo_motor, p.sub_tipo, 'MC11.44') AS modelo_motor,
-                    COALESCE(p.configuracion, 'T3') AS configuracion_tracto
+                    COALESCE(NULLIF(TRIM(p.configuracion), ''), 'T3') AS configuracion_tracto,
+                    COALESCE(NULLIF(TRIM(pr.configuracion), ''), '') AS configuracion_remolque
                 FROM operaciones_ordenes_viaje ov
                 LEFT JOIN placas p ON ov.placa_tracto = p.placa
+                LEFT JOIN placas pr ON ov.placa_remolque = pr.placa
                 ORDER BY ov.fecha_viaje DESC, ov.id DESC
                 LIMIT 2000
             `;
@@ -449,7 +451,23 @@ module.exports = function (db, broadcast, logAudit) {
                     rutaRetornoTexto = partes.length === 2 ? `${partes[1]} - ${partes[0]}` : `RETORNO ${rutaIdaTexto}`;
                 }
 
-                // Cálculo de Galones Teóricos pasando Toneladas (TN) exactas, Modelo de Motor y Configuración
+                // Helper para concatenar configuraciones (Tracto/Camión + Carreta/Remolque)
+                function formatearConfiguracion(confTracto, confRemolque) {
+                    const t = (confTracto || 'T3').trim().toUpperCase();
+                    let r = (confRemolque || '').trim().toUpperCase();
+                    if (!r || r === '—' || r === 'NULL') return t;
+                    if (r.startsWith('SE')) {
+                        r = 'S' + r.substring(2);
+                    }
+                    if (r.startsWith('R') || t.startsWith('C')) {
+                        return `${t} - ${r}`;
+                    }
+                    return `${t} ${r}`;
+                }
+
+                const configConcatenada = formatearConfiguracion(v.configuracion_tracto, v.configuracion_remolque);
+
+                // Cálculo de Galones Teóricos pasando Toneladas (TN) exactas, Modelo de Motor y estrictamente Configuración del Tracto/Camión
                 let galonesIda = calcularGalonesTeoricos(rutaIdaTexto, 'IDA', pesoIdaTn, v.modelo_motor, v.configuracion_tracto);
                 let galonesRetorno = calcularGalonesTeoricos(rutaRetornoTexto, 'RETORNO', pesoRetornoTn, v.modelo_motor, v.configuracion_tracto);
 
@@ -472,7 +490,9 @@ module.exports = function (db, broadcast, logAudit) {
                     es_sin_carreta: esSinCarreta,
                     conductor: v.conductor || '---',
                     modelo_motor: v.modelo_motor || 'MC11.44',
-                    configuracion: v.configuracion_tracto || 'T3',
+                    configuracion_tracto: v.configuracion_tracto || 'T3',
+                    configuracion_remolque: v.configuracion_remolque || '',
+                    configuracion: configConcatenada,
                     ruta_principal: v.ruta_cabecera || rutaIdaTexto,
                     
                     // Detalle IDA
