@@ -349,8 +349,8 @@ window.autoCalcularTotalesForm = function() {
     var elDetraccion = document.getElementById('fc-detraccion');
     if (elDetraccion) elDetraccion.value = detraccion.toFixed(2);
 
-    // 10. Neto por Cobrar = Total + Adelanto + Detracción
-    var neto = total + adelanto + detraccion;
+    // 10. Neto por Cobrar = Total - Adelanto - Detracción
+    var neto = total - adelanto - detraccion;
     var elNeto = document.getElementById('fc-neto-cobrar');
     if (elNeto) elNeto.value = neto.toFixed(2);
 };
