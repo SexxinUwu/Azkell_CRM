@@ -1,12 +1,21 @@
 <!-- ── MÓDULO SUPERADMIN: GESTIÓN DE EMPRESAS SAAS ── -->
 <style>
 #moduloSuperadmin .saas-hero {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
     border-radius: 20px;
-    color: #fff;
+    color: #ffffff !important;
     padding: 24px 28px;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
     margin-bottom: 24px;
+}
+#moduloSuperadmin .saas-hero h4 {
+    color: #ffffff !important;
+}
+#moduloSuperadmin .saas-hero p {
+    color: #e2e8f0 !important;
+}
+#moduloSuperadmin .saas-hero span {
+    color: inherit;
 }
 #moduloSuperadmin .saas-kpi-card {
     background: var(--surface, #fff);
@@ -102,16 +111,16 @@
 <div id="moduloSuperadmin" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1 p-3">
 
     <!-- Hero Banner -->
-    <div class="saas-hero d-flex align-items-center justify-content-between flex-wrap gap-3">
+    <div class="saas-hero d-flex align-items-center justify-content-between flex-wrap gap-3" style="color: #ffffff !important;">
         <div>
             <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="badge bg-primary px-2.5 py-1 text-white fw-bold">AZKELL SAAS MASTER</span>
-                <span class="text-white-50 small"><i class="bi bi-hdd-network me-1"></i>VPS Azkell (82.39.109.226)</span>
+                <span class="badge bg-primary px-2.5 py-1 text-white fw-bold" style="color: #ffffff !important; font-size: 0.78rem; letter-spacing: 0.05em;">AZKELL SAAS MASTER</span>
+                <span class="small" style="color: #cbd5e1 !important;"><i class="bi bi-hdd-network me-1"></i>VPS Azkell (82.39.109.226)</span>
             </div>
-            <h4 class="fw-bold m-0">Panel SuperAdmin & Gestión Multi-Tenant</h4>
-            <p class="m-0 text-white-50 small mt-1">Crea y autoprovisiona bases de datos aisladas por empresa en 1 solo clic</p>
+            <h4 class="fw-bold m-0" style="color: #ffffff !important; font-size: 1.35rem; letter-spacing: -0.01em;">Panel SuperAdmin &amp; Gestión Multi-Tenant</h4>
+            <p class="m-0 small mt-1" style="color: #e2e8f0 !important; opacity: 0.95;">Crea y autoprovisiona bases de datos aisladas por empresa en 1 solo clic</p>
         </div>
-        <button class="btn btn-primary btn-lg fw-bold shadow-lg" onclick="window.saasAbrirModalNueva()">
+        <button class="btn btn-primary btn-lg fw-bold shadow-lg" onclick="window.saasAbrirModalNueva()" style="color: #ffffff !important;">
             <i class="bi bi-plus-circle-fill me-2"></i>Nueva Empresa SaaS
         </button>
     </div>
