@@ -86,7 +86,7 @@
 
 .table-cuentas {
     width: 100%;
-    min-width: 2500px;
+    min-width: 2700px;
     border-collapse: separate;
     border-spacing: 0;
     font-size: 0.82rem;
@@ -147,6 +147,100 @@
 }
 .table-cuentas tr:hover .col-sticky-action {
     background: #f8fafc !important;
+}
+
+/* ── Floating Drawer Modal (Emerge de abajo hacia arriba centrado) ──── */
+.ck-floating-drawer-dialog {
+    max-width: 860px !important;
+    width: 100% !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+    margin: 0 auto !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translate(-50%, 100%) !important;
+    top: auto !important;
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modal.show .ck-floating-drawer-dialog {
+    transform: translate(-50%, 0) !important;
+}
+
+.ck-floating-drawer-content {
+    height: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 26px 26px 0 0 !important;
+    border: none !important;
+    box-shadow: 0 -14px 48px rgba(15, 23, 42, 0.18) !important;
+    overflow: hidden !important;
+    background: #f8fafc !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* ── Form Inputs & Segmented Cards Styling (Estilo Reporte de Fallas) ── */
+#modalCuentaForm .modal-body {
+    background-color: #f8fafc;
+}
+
+#modalCuentaForm .card-segment {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    margin-bottom: 1rem;
+}
+
+#modalCuentaForm .card-segment-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+#modalCuentaForm .card-segment-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+#modalCuentaForm .form-control,
+#modalCuentaForm .form-select {
+    min-height: 42px !important;
+    border-radius: 12px !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 0.5rem 0.85rem !important;
+    background-color: #ffffff;
+    color: #1e293b;
+    transition: all 0.2s ease;
+}
+
+#modalCuentaForm .form-control:focus,
+#modalCuentaForm .form-select:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+    outline: none !important;
+}
+
+#modalCuentaForm .form-label {
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    color: #475569 !important;
+    margin-bottom: 0.35rem !important;
 }
 
 .num-cell {
@@ -247,10 +341,10 @@
 
     <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS RÁPIDOS ────────────────────── -->
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 450px;">
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 480px;">
             <div class="position-relative flex-grow-1">
                 <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
-                <input type="text" id="cuentas-buscar" class="ck-apple-search" placeholder="Buscar por cliente, razón social, factura, placa..." oninput="window.filtrarCuentas()">
+                <input type="text" id="cuentas-buscar" class="ck-apple-search" placeholder="Buscar por código, cliente, placa, razón social, factura..." oninput="window.filtrarCuentas()">
             </div>
             <select id="cuentas-filtro-estado" class="form-select form-select-sm rounded-3 bg-white border" style="max-width: 150px; height: 38px; font-weight: 600; font-size: 0.82rem;" onchange="window.filtrarCuentas()">
                 <option value="TODOS">Todos los Estados</option>
@@ -280,16 +374,18 @@
         </div>
     </div>
 
-    <!-- ── 4. TABLA PRINCIPAL (25 COLUMNAS) ────────────────────────── -->
+    <!-- ── 4. TABLA PRINCIPAL ──────────────────────────────────────── -->
     <div class="table-cuentas-container flex-grow-1">
         <table class="table table-hover table-cuentas align-middle">
             <thead>
                 <tr>
                     <th class="col-sticky-action text-center" style="width:70px;">ACCIONES</th>
+                    <th>COD. LIQUIDACIÓN</th>
                     <th>FECHA LIQUIDACIÓN</th>
                     <th>FECHA SERVICIO</th>
                     <th>RAZÓN SOCIAL</th>
-                    <th>PLACA</th>
+                    <th>PLACA (CAMIÓN)</th>
+                    <th>PLACA (CARRETA)</th>
                     <th>CONDUCTOR</th>
                     <th>CLIENTE</th>
                     <th>LUGAR</th>
@@ -309,13 +405,14 @@
                     <th>FECHA A COBRAR</th>
                     <th>FECHA DEPÓSITO / TRANSF.</th>
                     <th class="text-center">ESTADO SERVICIO</th>
+                    <th class="text-center" style="width:80px;">ADJUNTO</th>
                     <th class="text-end">DIFERENCIA</th>
                     <th>OBSERVACIÓN</th>
                 </tr>
             </thead>
             <tbody id="cuentas-tbody">
                 <tr>
-                    <td colspan="26" class="text-center py-5 text-muted">
+                    <td colspan="29" class="text-center py-5 text-muted">
                         <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando información de Tesorería...
                     </td>
                 </tr>
@@ -325,164 +422,241 @@
 
 </div>
 
-<!-- ═══ MODAL REGISTRO / EDICIÓN MANUAL ═══════════════════════════ -->
-<div class="modal fade" id="modalCuentaForm" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header bg-light border-bottom px-4 py-3">
-                <div class="d-flex align-items-center gap-2">
-                    <div style="width: 32px; height: 32px; background: #eff6ff; color: #0284c7; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+<!-- ═══ MODAL REGISTRO / EDICIÓN MANUAL (FLOTANTE DESDE ABAJO HACIA ARRIBA CENTRADO) ════ -->
+<div class="modal fade" id="modalCuentaForm" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable ck-floating-drawer-dialog">
+        <div class="modal-content ck-floating-drawer-content">
+            
+            <!-- Modal Header -->
+            <div class="modal-header bg-white border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 38px; height: 38px; background: #eff6ff; color: #0284c7; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem;">
                         <i class="bi bi-pencil-square"></i>
                     </div>
-                    <h5 class="modal-title fw-bold text-dark m-0" id="modalCuentaFormTitulo">Nuevo Registro de Cuenta</h5>
+                    <div>
+                        <h5 class="modal-title fw-bolder text-dark m-0 d-flex align-items-center gap-2" style="font-size: 1.15rem;">
+                            <span id="modalCuentaFormTitulo">Nuevo Registro de Cuenta</span>
+                        </h5>
+                        <small class="text-secondary" style="font-size: 0.76rem;">Complete o edite los datos de la liquidación y comprobante</small>
+                    </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <form id="form-cuenta" onsubmit="window.guardarCuentaForm(event)">
+            <!-- Form Body -->
+            <form id="form-cuenta" onsubmit="window.guardarCuentaForm(event)" class="d-flex flex-column flex-grow-1" style="min-height:0;">
                 <input type="hidden" id="form-cuenta-id">
 
-                <div class="modal-body px-4 py-3">
-                    <div class="row g-3">
-                        <!-- Sección 1: Datos Generales y Servicio -->
-                        <div class="col-12"><h6 class="fw-bold text-primary mb-1 border-bottom pb-1"><i class="bi bi-truck me-1"></i>1. Datos de Operación y Servicio</h6></div>
-
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Fecha de Liquidación</label>
-                            <input type="date" id="fc-fecha-liquidacion" class="form-control form-control-sm rounded-3">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Fecha de Servicio</label>
-                            <input type="date" id="fc-fecha-servicio" class="form-control form-control-sm rounded-3">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Razón Social</label>
-                            <input type="text" id="fc-razon-social" class="form-control form-control-sm rounded-3" placeholder="Ej: TRAHESA SAC">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Placa</label>
-                            <input type="text" id="fc-placa" class="form-control form-control-sm rounded-3 text-uppercase" placeholder="Ej: T8S942-AWB973">
+                <div class="modal-body px-3 px-md-4 py-3 custom-scrollbar flex-grow-1" style="overflow-y: auto;">
+                    
+                    <!-- ── SECCIÓN 1: DATOS DE OPERACIÓN Y SERVICIO ──────────────── -->
+                    <div class="card-segment">
+                        <div class="card-segment-header">
+                            <div class="card-segment-icon" style="background:#eff6ff; color:#0284c7;">
+                                <i class="bi bi-truck"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">1. Datos de Operación y Servicio</h6>
+                                <small class="text-muted" style="font-size:0.75rem;">Identificación del flete, unidades y personal asignado</small>
+                            </div>
                         </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Conductor</label>
-                            <input type="text" id="fc-conductor" class="form-control form-control-sm rounded-3" placeholder="Nombre del conductor">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Cliente</label>
-                            <input type="text" id="fc-cliente" class="form-control form-control-sm rounded-3" placeholder="Ej: AJINOMOTO DEL PERU">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Lugar / Ruta</label>
-                            <input type="text" id="fc-lugar" class="form-control form-control-sm rounded-3" placeholder="Ej: CALLAO - TARAPOTO">
-                        </div>
+                        <div class="row g-2 g-md-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Cod. de Liquidación</label>
+                                <input type="text" id="fc-codigo-liquidacion" class="form-control" placeholder="EJ: LIQ-2026-001">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha de Liquidación</label>
+                                <input type="date" id="fc-fecha-liquidacion" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha de Servicio</label>
+                                <input type="date" id="fc-fecha-servicio" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Razón Social</label>
+                                <input type="text" id="fc-razon-social" class="form-control" placeholder="EJ: TRAHESA SAC">
+                            </div>
 
-                        <!-- Sección 2: Liquidación Económica -->
-                        <div class="col-12 mt-3"><h6 class="fw-bold text-primary mb-1 border-bottom pb-1"><i class="bi bi-cash-coin me-1"></i>2. Liquidación Económica e Importes (S/)</h6></div>
+                            <div class="col-md-3">
+                                <label class="form-label">Placa (Camión) (*)</label>
+                                <input type="text" id="fc-placa-camion" class="form-control text-uppercase" placeholder="EJ: T8S942">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Placa (Carreta)</label>
+                                <input type="text" id="fc-placa-carreta" class="form-control text-uppercase" placeholder="EJ: AWB973">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Conductor</label>
+                                <input type="text" id="fc-conductor" class="form-control" placeholder="NOMBRE DEL CONDUCTOR">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Cliente</label>
+                                <input type="text" id="fc-cliente" class="form-control" placeholder="EJ: AJINOMOTO DEL PERU">
+                            </div>
 
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Tarifa (-10% y/o 20%)</label>
-                            <input type="number" step="0.01" id="fc-tarifa" class="form-control form-control-sm rounded-3" placeholder="0.00" oninput="window.autoCalcularTotalesForm()">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">(-) Gastos Operativos</label>
-                            <input type="number" step="0.01" id="fc-gastos-operativos" class="form-control form-control-sm rounded-3" placeholder="0.00" oninput="window.autoCalcularTotalesForm()">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Base Imponible (B.I)</label>
-                            <input type="number" step="0.01" id="fc-base-imponible" class="form-control form-control-sm rounded-3" placeholder="0.00" oninput="window.autoCalcularDesdeBI()">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">IGV (18%)</label>
-                            <input type="number" step="0.01" id="fc-igv" class="form-control form-control-sm rounded-3" placeholder="0.00">
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Total Factura</label>
-                            <input type="number" step="0.01" id="fc-total" class="form-control form-control-sm rounded-3 fw-bold text-primary" placeholder="0.00" oninput="window.autoCalcularDesdeTotal()">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Adelanto</label>
-                            <input type="number" step="0.01" id="fc-adelanto" class="form-control form-control-sm rounded-3" placeholder="0.00" oninput="window.autoCalcularNeto()">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Detracción</label>
-                            <input type="number" step="0.01" id="fc-detraccion" class="form-control form-control-sm rounded-3" placeholder="0.00" oninput="window.autoCalcularNeto()">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Neto por Cobrar</label>
-                            <input type="number" step="0.01" id="fc-neto-cobrar" class="form-control form-control-sm rounded-3 fw-bold text-success" placeholder="0.00">
-                        </div>
-
-                        <!-- Sección 3: Facturación y Cobranza -->
-                        <div class="col-12 mt-3"><h6 class="fw-bold text-primary mb-1 border-bottom pb-1"><i class="bi bi-receipt me-1"></i>3. Facturación, Cobranza y Depósito</h6></div>
-
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Mes de Facturación</label>
-                            <select id="fc-mes-facturacion" class="form-select form-select-sm rounded-3">
-                                <option value="ENERO">ENERO</option>
-                                <option value="FEBRERO">FEBRERO</option>
-                                <option value="MARZO">MARZO</option>
-                                <option value="ABRIL">ABRIL</option>
-                                <option value="MAYO">MAYO</option>
-                                <option value="JUNIO">JUNIO</option>
-                                <option value="JULIO">JULIO</option>
-                                <option value="AGOSTO">AGOSTO</option>
-                                <option value="SETIEMBRE">SETIEMBRE</option>
-                                <option value="OCTUBRE">OCTUBRE</option>
-                                <option value="NOVIEMBRE">NOVIEMBRE</option>
-                                <option value="DICIEMBRE">DICIEMBRE</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Fecha Factura</label>
-                            <input type="date" id="fc-fecha-factura" class="form-control form-control-sm rounded-3">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-bold">Serie</label>
-                            <input type="text" id="fc-serie" class="form-control form-control-sm rounded-3 text-uppercase" placeholder="E001">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-bold">N° Factura</label>
-                            <input type="text" id="fc-factura" class="form-control form-control-sm rounded-3" placeholder="0160">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-bold">Crédito Días</label>
-                            <input type="number" id="fc-credito-dias" class="form-control form-control-sm rounded-3" placeholder="15" oninput="window.autoCalcularFechaCobro()">
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Fecha a Cobrar</label>
-                            <input type="date" id="fc-fecha-cobrar" class="form-control form-control-sm rounded-3">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Fecha Depósito / Transf.</label>
-                            <input type="date" id="fc-fecha-deposito" class="form-control form-control-sm rounded-3">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Estado Servicio</label>
-                            <select id="fc-estado-servicio" class="form-select form-select-sm rounded-3 fw-bold">
-                                <option value="PENDIENTE">PENDIENTE</option>
-                                <option value="PAGADO">PAGADO</option>
-                                <option value="ANULADO">ANULADO</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Diferencia</label>
-                            <input type="number" step="0.01" id="fc-diferencia" class="form-control form-control-sm rounded-3" placeholder="0.00">
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">Observaciones</label>
-                            <input type="text" id="fc-observacion" class="form-control form-control-sm rounded-3" placeholder="Ej: LIQ.01, LLANTAS, LIQ SERV2026-0001...">
+                            <div class="col-12">
+                                <label class="form-label">Lugar / Ruta</label>
+                                <input type="text" id="fc-lugar" class="form-control" placeholder="EJ: CALLAO - TARAPOTO">
+                            </div>
                         </div>
                     </div>
+
+                    <!-- ── SECCIÓN 2: LIQUIDACIÓN ECONÓMICA E IMPORTES (S/) ──────── -->
+                    <div class="card-segment">
+                        <div class="card-segment-header">
+                            <div class="card-segment-icon" style="background:#ecfdf5; color:#10b981;">
+                                <i class="bi bi-cash-coin"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">2. Liquidación Económica e Importes (S/)</h6>
+                                <small class="text-muted" style="font-size:0.75rem;">Cálculo automático de bases imponibles, IGV, detracción y neto</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 g-md-3">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Tarifa (-10% / 20%)</label>
+                                <input type="number" step="0.01" id="fc-tarifa" class="form-control text-end" placeholder="0.00" oninput="window.autoCalcularTotalesForm()">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">(-) Gastos Operativos</label>
+                                <input type="number" step="0.01" id="fc-gastos-operativos" class="form-control text-end text-danger" placeholder="0.00" oninput="window.autoCalcularTotalesForm()">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Base Imponible (B.I)</label>
+                                <input type="number" step="0.01" id="fc-base-imponible" class="form-control text-end" placeholder="0.00" oninput="window.autoCalcularDesdeBI()">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">IGV (18%)</label>
+                                <input type="number" step="0.01" id="fc-igv" class="form-control text-end" placeholder="0.00">
+                            </div>
+
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-primary">Total Factura</label>
+                                <input type="number" step="0.01" id="fc-total" class="form-control text-end fw-bold text-primary" placeholder="0.00" oninput="window.autoCalcularDesdeTotal()">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Adelanto</label>
+                                <input type="number" step="0.01" id="fc-adelanto" class="form-control text-end" placeholder="0.00" oninput="window.autoCalcularNeto()">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Detracción (4%)</label>
+                                <input type="number" step="0.01" id="fc-detraccion" class="form-control text-end" placeholder="0.00" oninput="window.autoCalcularNeto()">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-success">Neto por Cobrar</label>
+                                <input type="number" step="0.01" id="fc-neto-cobrar" class="form-control text-end fw-bold text-success" style="background:#f0fdf4;" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── SECCIÓN 3: FACTURACIÓN, COBRANZA Y SUSTENTO ───────────── -->
+                    <div class="card-segment">
+                        <div class="card-segment-header">
+                            <div class="card-segment-icon" style="background:#f5f3ff; color:#7c3aed;">
+                                <i class="bi bi-receipt"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">3. Facturación, Cobranza y Sustento</h6>
+                                <small class="text-muted" style="font-size:0.75rem;">Comprobante de pago, crédito en días, fechas de banco y archivo adjunto</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 g-md-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Mes de Facturación</label>
+                                <select id="fc-mes-facturacion" class="form-select">
+                                    <option value="ENERO">ENERO</option>
+                                    <option value="FEBRERO">FEBRERO</option>
+                                    <option value="MARZO">MARZO</option>
+                                    <option value="ABRIL">ABRIL</option>
+                                    <option value="MAYO">MAYO</option>
+                                    <option value="JUNIO">JUNIO</option>
+                                    <option value="JULIO">JULIO</option>
+                                    <option value="AGOSTO">AGOSTO</option>
+                                    <option value="SETIEMBRE">SETIEMBRE</option>
+                                    <option value="OCTUBRE">OCTUBRE</option>
+                                    <option value="NOVIEMBRE">NOVIEMBRE</option>
+                                    <option value="DICIEMBRE">DICIEMBRE</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha Factura</label>
+                                <input type="date" id="fc-fecha-factura" class="form-control">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label">Serie</label>
+                                <input type="text" id="fc-serie" class="form-control text-uppercase" placeholder="E001">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label">N° Factura</label>
+                                <input type="text" id="fc-factura" class="form-control" placeholder="0160">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Crédito Días</label>
+                                <input type="number" id="fc-credito-dias" class="form-control" placeholder="15" oninput="window.autoCalcularFechaCobro()">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha a Cobrar</label>
+                                <input type="date" id="fc-fecha-cobrar" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha Depósito / Transf.</label>
+                                <input type="date" id="fc-fecha-deposito" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Estado Servicio</label>
+                                <select id="fc-estado-servicio" class="form-select fw-bold">
+                                    <option value="PENDIENTE">PENDIENTE</option>
+                                    <option value="PAGADO">PAGADO</option>
+                                    <option value="ANULADO">ANULADO</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Diferencia</label>
+                                <input type="number" step="0.01" id="fc-diferencia" class="form-control text-end" placeholder="0.00">
+                            </div>
+
+                            <!-- Casilla para adjuntar PDF o Imagen -->
+                            <div class="col-12 mt-2">
+                                <div class="p-3 rounded-3 bg-light border border-dashed">
+                                    <label class="form-label d-flex align-items-center justify-content-between mb-2">
+                                        <span class="d-flex align-items-center gap-1 text-primary">
+                                            <i class="bi bi-paperclip fs-5"></i>
+                                            <strong style="font-size:0.8rem;">Orden de Liquidación / Sustento (PDF o Imagen)</strong>
+                                        </span>
+                                        <span id="fc-doc-link-wrap" style="display:none;">
+                                            <a id="fc-doc-link" href="#" target="_blank" class="btn btn-sm btn-outline-danger py-1 px-3 fw-bold rounded-pill text-decoration-none">
+                                                <i class="bi bi-eye-fill me-1"></i> Ver adjunto actual
+                                            </a>
+                                        </span>
+                                    </label>
+                                    <input type="file" id="fc-archivo" class="form-control" accept=".pdf, image/*">
+                                    <div class="text-muted mt-1" style="font-size:0.75rem;">
+                                        <i class="bi bi-info-circle me-1"></i> Formatos admitidos: PDF, JPG, PNG, WEBP (hasta 25MB).
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 mt-2">
+                                <label class="form-label">Observaciones</label>
+                                <input type="text" id="fc-observacion" class="form-control" placeholder="EJ: LIQ.01, LLANTAS, LIQ SERV2026-0001...">
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
-                <div class="modal-footer bg-light border-top px-4 py-3">
-                    <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 fw-bold" style="background:#0284c7; border:none;">
-                        <i class="bi bi-check-lg me-1"></i> Guardar Registro
+                <!-- Modal Footer -->
+                <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-light border rounded-3 px-4 py-2 fw-semibold text-secondary" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 fw-bold d-flex align-items-center gap-2" style="background:#0284c7; border:none; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);">
+                        <i class="bi bi-check-lg fs-5"></i> Guardar Registro
                     </button>
                 </div>
             </form>

@@ -13,7 +13,7 @@ window.init_tesoreria_cuentas = function() {
 window.cargarCuentas = function() {
     var tbody = document.getElementById('cuentas-tbody');
     if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="26" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando datos de Tesorería...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="28" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando datos de Tesorería...</td></tr>';
     }
 
     fetch('/api/tesoreria/cuentas')
@@ -28,7 +28,7 @@ window.cargarCuentas = function() {
         .catch(function(err) {
             console.error('Error al cargar cuentas:', err);
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="26" class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle me-2"></i> Error al cargar datos: ' + err.message + '</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="28" class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle me-2"></i> Error al cargar datos: ' + err.message + '</td></tr>';
             }
         });
 };
@@ -57,8 +57,10 @@ window.filtrarCuentas = function() {
 
     window._cuentasFiltradas = (window._cuentasData || []).filter(function(item) {
         var matchB = !buscar ||
+            (item.codigo_liquidacion || '').toLowerCase().includes(buscar) ||
             (item.razon_social || '').toLowerCase().includes(buscar) ||
-            (item.placa || '').toLowerCase().includes(buscar) ||
+            (item.placa_camion || '').toLowerCase().includes(buscar) ||
+            (item.placa_carreta || '').toLowerCase().includes(buscar) ||
             (item.conductor || '').toLowerCase().includes(buscar) ||
             (item.cliente || '').toLowerCase().includes(buscar) ||
             (item.lugar || '').toLowerCase().includes(buscar) ||
@@ -122,13 +124,22 @@ window._cuentasRenderTabla = function(data) {
     if (!tbody) return;
 
     if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="26" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No se encontraron registros de cuentas con los filtros seleccionados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="29" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No se encontraron registros de cuentas con los filtros seleccionados.</td></tr>';
         return;
     }
 
     var html = data.map(function(item) {
         var est = (item.estado_servicio || 'PENDIENTE').toUpperCase();
         var badgeClass = est === 'PAGADO' ? 'pagado' : (est === 'ANULADO' ? 'anulado' : 'pendiente');
+
+        var docHtml = '<span class="text-muted small">—</span>';
+        if (item.documento_view_url) {
+            var esPdf = (item.documento_url || '').toLowerCase().includes('.pdf');
+            var iconClass = esPdf ? 'bi-file-earmark-pdf-fill text-danger' : 'bi-file-earmark-image-fill text-primary';
+            docHtml = '<a href="' + item.documento_view_url + '" target="_blank" class="btn btn-sm btn-light border py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm" style="font-size:0.75rem;" title="Ver Orden / Documento Adjunto">' +
+                '<i class="bi ' + iconClass + '"></i> Ver' +
+            '</a>';
+        }
 
         return '<tr>' +
             '<td class="col-sticky-action text-center">' +
@@ -137,10 +148,12 @@ window._cuentasRenderTabla = function(data) {
                     '<button class="btn btn-light border py-1 px-2 text-danger" title="Eliminar" onclick="window.eliminarCuenta(' + item.id + ')"><i class="bi bi-trash-fill" style="font-size:0.75rem;"></i></button>' +
                 '</div>' +
             '</td>' +
+            '<td class="fw-bold text-primary">' + (item.codigo_liquidacion || '—') + '</td>' +
             '<td>' + _fmtDate(item.fecha_liquidacion) + '</td>' +
             '<td>' + _fmtDate(item.fecha_servicio) + '</td>' +
             '<td class="fw-bold text-dark">' + (item.razon_social || '—') + '</td>' +
-            '<td><span class="badge bg-light text-dark border fw-bold">' + (item.placa || '—') + '</span></td>' +
+            '<td><span class="badge bg-light text-dark border fw-bold">' + (item.placa_camion || '—') + '</span></td>' +
+            '<td><span class="badge bg-light text-secondary border fw-bold">' + (item.placa_carreta || '—') + '</span></td>' +
             '<td>' + (item.conductor || '—') + '</td>' +
             '<td class="fw-semibold">' + (item.cliente || '—') + '</td>' +
             '<td>' + (item.lugar || '—') + '</td>' +
@@ -160,6 +173,7 @@ window._cuentasRenderTabla = function(data) {
             '<td>' + _fmtDate(item.fecha_cobrar) + '</td>' +
             '<td>' + _fmtDate(item.fecha_deposito) + '</td>' +
             '<td class="text-center"><span class="badge-estado ' + badgeClass + '">' + est + '</span></td>' +
+            '<td class="text-center">' + docHtml + '</td>' +
             '<td class="num-cell ' + ((parseFloat(item.diferencia) || 0) < 0 ? 'text-danger' : '') + '">' + _fmtMoney(item.diferencia) + '</td>' +
             '<td>' + (item.observacion || '') + '</td>' +
         '</tr>';
@@ -175,7 +189,14 @@ window.abrirModalNuevoRegistro = function() {
     document.getElementById('form-cuenta-id').value = '';
     document.getElementById('modalCuentaFormTitulo').textContent = 'Nuevo Registro de Cuenta';
     
-    // Mes actual por defecto
+    var docWrap = document.getElementById('fc-doc-link-wrap');
+    if (docWrap) docWrap.style.display = 'none';
+    var docLink = document.getElementById('fc-doc-link');
+    if (docLink) docLink.href = '#';
+
+    var fileInput = document.getElementById('fc-archivo');
+    if (fileInput) fileInput.value = '';
+
     var meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SETIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
     var mesAct = meses[new Date().getMonth()];
     var selMes = document.getElementById('fc-mes-facturacion');
@@ -195,10 +216,12 @@ window.abrirEditarRegistro = function(id) {
     };
 
     setV('form-cuenta-id', item.id);
-    setV('fc-fecha-liquidacion', item.fecha_liquidacion);
-    setV('fc-fecha-servicio', item.fecha_servicio);
+    setV('fc-codigo-liquidacion', item.codigo_liquidacion);
+    setV('fc-fecha-liquidacion', item.fecha_liquidacion ? item.fecha_liquidacion.split('T')[0] : '');
+    setV('fc-fecha-servicio', item.fecha_servicio ? item.fecha_servicio.split('T')[0] : '');
     setV('fc-razon-social', item.razon_social);
-    setV('fc-placa', item.placa);
+    setV('fc-placa-camion', item.placa_camion);
+    setV('fc-placa-carreta', item.placa_carreta);
     setV('fc-conductor', item.conductor);
     setV('fc-cliente', item.cliente);
     setV('fc-lugar', item.lugar);
@@ -211,15 +234,27 @@ window.abrirEditarRegistro = function(id) {
     setV('fc-detraccion', item.detraccion);
     setV('fc-neto-cobrar', item.neto_cobrar);
     setV('fc-mes-facturacion', item.mes_facturacion || 'ENERO');
-    setV('fc-fecha-factura', item.fecha_factura);
+    setV('fc-fecha-factura', item.fecha_factura ? item.fecha_factura.split('T')[0] : '');
     setV('fc-serie', item.serie);
     setV('fc-factura', item.factura);
     setV('fc-credito-dias', item.credito_dias);
-    setV('fc-fecha-cobrar', item.fecha_cobrar);
-    setV('fc-fecha-deposito', item.fecha_deposito);
+    setV('fc-fecha-cobrar', item.fecha_cobrar ? item.fecha_cobrar.split('T')[0] : '');
+    setV('fc-fecha-deposito', item.fecha_deposito ? item.fecha_deposito.split('T')[0] : '');
     setV('fc-estado-servicio', item.estado_servicio || 'PENDIENTE');
     setV('fc-diferencia', item.diferencia);
     setV('fc-observacion', item.observacion);
+
+    var fileInput = document.getElementById('fc-archivo');
+    if (fileInput) fileInput.value = '';
+
+    var docWrap = document.getElementById('fc-doc-link-wrap');
+    var docLink = document.getElementById('fc-doc-link');
+    if (item.documento_view_url && docWrap && docLink) {
+        docLink.href = item.documento_view_url;
+        docWrap.style.display = 'inline-block';
+    } else if (docWrap) {
+        docWrap.style.display = 'none';
+    }
 
     document.getElementById('modalCuentaFormTitulo').textContent = 'Editar Registro (ID ' + item.id + ')';
     var modal = new bootstrap.Modal(document.getElementById('modalCuentaForm'));
@@ -242,7 +277,6 @@ window.autoCalcularDesdeBI = function() {
     document.getElementById('fc-igv').value = igv.toFixed(2);
     document.getElementById('fc-total').value = total.toFixed(2);
     
-    // Detracción aprox 4% por transporte de carga
     var detraccion = (total > 400) ? (total * 0.04) : 0;
     document.getElementById('fc-detraccion').value = detraccion.toFixed(2);
     window.autoCalcularNeto();
@@ -284,44 +318,59 @@ window.guardarCuentaForm = function(e) {
     var id = document.getElementById('form-cuenta-id').value;
     var getV = function(elId) { return (document.getElementById(elId) || {}).value || ''; };
 
-    var payload = {
-        fecha_liquidacion: getV('fc-fecha-liquidacion') || null,
-        fecha_servicio: getV('fc-fecha-servicio') || null,
-        razon_social: getV('fc-razon-social').trim(),
-        placa: getV('fc-placa').trim().toUpperCase(),
-        conductor: getV('fc-conductor').trim(),
-        cliente: getV('fc-cliente').trim(),
-        lugar: getV('fc-lugar').trim(),
-        tarifa: parseFloat(getV('fc-tarifa')) || 0,
-        gastos_operativos: parseFloat(getV('fc-gastos-operativos')) || 0,
-        base_imponible: parseFloat(getV('fc-base-imponible')) || 0,
-        igv: parseFloat(getV('fc-igv')) || 0,
-        total: parseFloat(getV('fc-total')) || 0,
-        adelanto: parseFloat(getV('fc-adelanto')) || 0,
-        detraccion: parseFloat(getV('fc-detraccion')) || 0,
-        neto_cobrar: parseFloat(getV('fc-neto-cobrar')) || 0,
-        mes_facturacion: getV('fc-mes-facturacion'),
-        fecha_factura: getV('fc-fecha-factura') || null,
-        serie: getV('fc-serie').trim(),
-        factura: getV('fc-factura').trim(),
-        credito_dias: parseInt(getV('fc-credito-dias'), 10) || 0,
-        fecha_cobrar: getV('fc-fecha-cobrar') || null,
-        fecha_deposito: getV('fc-fecha-deposito') || null,
-        estado_servicio: getV('fc-estado-servicio') || 'PENDIENTE',
-        diferencia: parseFloat(getV('fc-diferencia')) || 0,
-        observacion: getV('fc-observacion').trim()
-    };
+    var formData = new FormData();
+    formData.append('codigo_liquidacion', getV('fc-codigo-liquidacion').trim());
+    formData.append('fecha_liquidacion', getV('fc-fecha-liquidacion') || '');
+    formData.append('fecha_servicio', getV('fc-fecha-servicio') || '');
+    formData.append('razon_social', getV('fc-razon-social').trim());
+    formData.append('placa_camion', getV('fc-placa-camion').trim().toUpperCase());
+    formData.append('placa_carreta', getV('fc-placa-carreta').trim().toUpperCase());
+    formData.append('conductor', getV('fc-conductor').trim());
+    formData.append('cliente', getV('fc-cliente').trim());
+    formData.append('lugar', getV('fc-lugar').trim());
+    formData.append('tarifa', parseFloat(getV('fc-tarifa')) || 0);
+    formData.append('gastos_operativos', parseFloat(getV('fc-gastos-operativos')) || 0);
+    formData.append('base_imponible', parseFloat(getV('fc-base-imponible')) || 0);
+    formData.append('igv', parseFloat(getV('fc-igv')) || 0);
+    formData.append('total', parseFloat(getV('fc-total')) || 0);
+    formData.append('adelanto', parseFloat(getV('fc-adelanto')) || 0);
+    formData.append('detraccion', parseFloat(getV('fc-detraccion')) || 0);
+    formData.append('neto_cobrar', parseFloat(getV('fc-neto-cobrar')) || 0);
+    formData.append('mes_facturacion', getV('fc-mes-facturacion'));
+    formData.append('fecha_factura', getV('fc-fecha-factura') || '');
+    formData.append('serie', getV('fc-serie').trim());
+    formData.append('factura', getV('fc-factura').trim());
+    formData.append('credito_dias', parseInt(getV('fc-credito-dias'), 10) || 0);
+    formData.append('fecha_cobrar', getV('fc-fecha-cobrar') || '');
+    formData.append('fecha_deposito', getV('fc-fecha-deposito') || '');
+    formData.append('estado_servicio', getV('fc-estado-servicio') || 'PENDIENTE');
+    formData.append('diferencia', parseFloat(getV('fc-diferencia')) || 0);
+    formData.append('observacion', getV('fc-observacion').trim());
+
+    var fileInput = document.getElementById('fc-archivo');
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+        formData.append('archivo_adjunto', fileInput.files[0]);
+    }
 
     var url = id ? ('/api/tesoreria/cuentas/' + id) : '/api/tesoreria/cuentas';
     var method = id ? 'PUT' : 'POST';
 
+    var submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
+    }
+
     fetch(url, {
         method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: formData
     })
     .then(function(r) { return r.json(); })
     .then(function(res) {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Guardar Registro';
+        }
         if (res.error) throw new Error(res.error);
         var modalEl = document.getElementById('modalCuentaForm');
         var modal = bootstrap.Modal.getInstance(modalEl);
@@ -329,6 +378,10 @@ window.guardarCuentaForm = function(e) {
         window.cargarCuentas();
     })
     .catch(function(err) {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Guardar Registro';
+        }
         alert('Error al guardar registro: ' + err.message);
     });
 };
@@ -354,10 +407,12 @@ window.descargarPlantillaExcel = function() {
     }
 
     var cabeceras = [
+        'COD DE LIQUIDACION',
         'FECHA DE LIQUIDACION',
         'FECHA SERVICIO',
         'RAZON SOCIAL',
-        'PLACA',
+        'PLACA (CAMION)',
+        'PLACA (CARRETA)',
         'CONDUCTOR',
         'CLIENTE',
         'LUGAR',
@@ -382,13 +437,13 @@ window.descargarPlantillaExcel = function() {
     ];
 
     var ejemplo1 = [
-        '05/01/2026', '12/12/2025', 'TRAHESA SAC', 'T8S942-AWB973', 'KENNY ALEXANDER ARTEAGA MARQUEZ',
+        'LIQ-2026-0001', '05/01/2026', '12/12/2025', 'TRAHESA SAC', 'T8S942', 'AWB973', 'KENNY ALEXANDER ARTEAGA MARQUEZ',
         'AJINOMOTO DEL PERU', 'CALLAO - TARAPOTO', 8357.63, 237.29, 8120.34, 1461.66, 9582.00,
         0.00, 383.28, 9198.72, 'ENERO', '05/01/2026', 'E001', '0160', 45, '20/02/2026', '20/02/2026', 'PAGADO', -0.28, 'LIQ.01'
     ];
 
     var ejemplo2 = [
-        '05/01/2026', '05/01/2026', 'JHOSTIL PERU', 'AMV803-AZO983', 'JOSE UZURIAGA GALARZA',
+        'LIQ-2026-0002', '05/01/2026', '05/01/2026', 'JHOSTIL PERU', 'AMV803', 'AZO983', 'JOSE UZURIAGA GALARZA',
         '', 'ATE', 0.00, 0.00, 15254.24, 2745.76, 18000.00,
         0.00, 720.00, 17280.00, 'ENERO', '05/01/2026', 'E001', '0161', 15, '05/01/2026', '', 'PENDIENTE', 0.00, 'LLANTAS'
     ];
@@ -396,9 +451,8 @@ window.descargarPlantillaExcel = function() {
     var wsData = [cabeceras, ejemplo1, ejemplo2];
     var ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // Ajustar anchos de columnas
     ws['!cols'] = [
-        { wch: 18 }, { wch: 16 }, { wch: 22 }, { wch: 18 }, { wch: 30 },
+        { wch: 20 }, { wch: 18 }, { wch: 16 }, { wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 30 },
         { wch: 25 }, { wch: 22 }, { wch: 22 }, { wch: 18 }, { wch: 14 },
         { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 16 },
         { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 14 },
@@ -437,7 +491,7 @@ window.importarExcelMasivo = function(event) {
 
             var normalizarClave = function(k) {
                 return k.toString().toUpperCase()
-                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // sin tildes
+                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                     .replace(/[^A-Z0-9]/g, '');
             };
 
@@ -460,10 +514,13 @@ window.importarExcelMasivo = function(event) {
                 };
 
                 var item = {
+                    codigo_liquidacion: getVal(['COD DE LIQUIDACION', 'CODLIQUIDACION', 'CODIGO LIQUIDACION', 'CODIGO']),
                     fecha_liquidacion: getVal(['FECHA DE LIQUIDACION', 'FECHALIQUIDACION', 'LIQUIDACION']),
                     fecha_servicio: getVal(['FECHA SERVICIO', 'FECHASERVICIO']),
                     razon_social: getVal(['RAZON SOCIAL', 'RAZONSOCIAL', 'PROVEEDOR', 'EMPRESA']),
-                    placa: getVal(['PLACA', 'UNIDAD', 'VEHICULO']),
+                    placa: getVal(['PLACA', 'PLACAS', 'UNIDAD']),
+                    placa_camion: getVal(['PLACA CAMION', 'PLACACAMION', 'CAMION', 'TRACTO', 'PLACA TRACTO']),
+                    placa_carreta: getVal(['PLACA CARRETA', 'PLACACARRETA', 'CARRETA', 'REMOLQUE', 'PLACA REMOLQUE']),
                     conductor: getVal(['CONDUCTOR', 'CHOFER']),
                     cliente: getVal(['CLIENTE']),
                     lugar: getVal(['LUGAR', 'ORIGEN DESTINO', 'RUTA']),
@@ -487,8 +544,7 @@ window.importarExcelMasivo = function(event) {
                     observacion: getVal(['OBSERVACION', 'OBSERVACIONES', 'DETALLE'])
                 };
 
-                // Si al menos tiene fecha, razón social, factura, placa o total
-                if (item.razon_social || item.factura || item.placa || item.total || item.fecha_liquidacion) {
+                if (item.codigo_liquidacion || item.razon_social || item.factura || item.placa || item.placa_camion || item.total || item.fecha_liquidacion) {
                     procesadas.push(item);
                 }
             });
@@ -542,19 +598,22 @@ window.exportarCuentasExcel = function() {
     }
 
     var cabeceras = [
-        'FECHA DE LIQUIDACION', 'FECHA SERVICIO', 'RAZON SOCIAL', 'PLACA', 'CONDUCTOR',
-        'CLIENTE', 'LUGAR', 'TARIFA -10% Y/O 20% POR TIPO DE CAMION', '(-) GASTOS OPERATIVOS',
-        'B.I', 'IGV', 'TOTAL', 'ADELANTO', 'DETRACCION', 'NETO POR COBRAR', 'MES FACTURACION',
-        'FECHA', 'SERIE', 'FACTURA', 'CREDITO DIAS', 'FECHA A COBRAR', 'FECHA DE DEPOSITO O TRANSF.',
+        'COD DE LIQUIDACION', 'FECHA DE LIQUIDACION', 'FECHA SERVICIO', 'RAZON SOCIAL',
+        'PLACA (CAMION)', 'PLACA (CARRETA)', 'CONDUCTOR', 'CLIENTE', 'LUGAR',
+        'TARIFA -10% Y/O 20% POR TIPO DE CAMION', '(-) GASTOS OPERATIVOS', 'B.I', 'IGV',
+        'TOTAL', 'ADELANTO', 'DETRACCION', 'NETO POR COBRAR', 'MES FACTURACION', 'FECHA',
+        'SERIE', 'FACTURA', 'CREDITO DIAS', 'FECHA A COBRAR', 'FECHA DE DEPOSITO O TRANSF.',
         'ESTADO SERVICIO', 'DIFERENCIA', 'OBSERVACION'
     ];
 
     var filas = datos.map(function(d) {
         return [
+            d.codigo_liquidacion || '',
             _fmtDate(d.fecha_liquidacion),
             _fmtDate(d.fecha_servicio),
             d.razon_social || '',
-            d.placa || '',
+            d.placa_camion || '',
+            d.placa_carreta || '',
             d.conductor || '',
             d.cliente || '',
             d.lugar || '',
@@ -585,7 +644,6 @@ window.exportarCuentasExcel = function() {
     XLSX.writeFile(wb, 'Cuentas_Cobrar_Pagar_' + new Date().toISOString().split('T')[0] + '.xlsx');
 };
 
-// Autocarga si el script se monta de forma dinámica
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
     window.init_tesoreria_cuentas();
 } else {
