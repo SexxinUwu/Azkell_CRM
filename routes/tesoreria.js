@@ -33,6 +33,8 @@ module.exports = function (db, broadcast, logAudit) {
                 conductor VARCHAR(150) NOT NULL DEFAULT '',
                 cliente VARCHAR(150) NOT NULL DEFAULT '',
                 lugar VARCHAR(150) NOT NULL DEFAULT '',
+                flete DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+                comision_porcentaje DECIMAL(5,2) NOT NULL DEFAULT 10.00,
                 tarifa DECIMAL(12,2) NOT NULL DEFAULT 0.00,
                 gastos_operativos DECIMAL(12,2) NOT NULL DEFAULT 0.00,
                 base_imponible DECIMAL(12,2) NOT NULL DEFAULT 0.00,
@@ -71,6 +73,8 @@ module.exports = function (db, broadcast, logAudit) {
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN codigo_liquidacion VARCHAR(60) NOT NULL DEFAULT '' AFTER id",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN placa_camion VARCHAR(50) NOT NULL DEFAULT '' AFTER razon_social",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN placa_carreta VARCHAR(50) NOT NULL DEFAULT '' AFTER placa_camion",
+                "ALTER TABLE tesoreria_cuentas ADD COLUMN flete DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER lugar",
+                "ALTER TABLE tesoreria_cuentas ADD COLUMN comision_porcentaje DECIMAL(5,2) NOT NULL DEFAULT 10.00 AFTER flete",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN documento_url TEXT NULL AFTER observacion"
             ];
             for (const mig of migraciones) {
@@ -173,6 +177,8 @@ module.exports = function (db, broadcast, logAudit) {
                     conductor,
                     cliente,
                     lugar,
+                    flete,
+                    comision_porcentaje,
                     tarifa,
                     gastos_operativos,
                     base_imponible,
@@ -276,10 +282,11 @@ module.exports = function (db, broadcast, logAudit) {
                 INSERT INTO tesoreria_cuentas (
                     codigo_liquidacion, fecha_liquidacion, fecha_servicio, razon_social,
                     placa_camion, placa_carreta, conductor, cliente, lugar,
+                    flete, comision_porcentaje,
                     tarifa, gastos_operativos, base_imponible, igv, total, adelanto, detraccion, neto_cobrar,
                     mes_facturacion, fecha_factura, serie, factura, credito_dias, fecha_cobrar, fecha_deposito,
                     estado_servicio, diferencia, observacion, documento_url
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
 
             const values = [
@@ -292,6 +299,8 @@ module.exports = function (db, broadcast, logAudit) {
                 (b.conductor || '').trim(),
                 (b.cliente || '').trim(),
                 (b.lugar || '').trim(),
+                safeNum(b.flete),
+                b.comision_porcentaje !== undefined && b.comision_porcentaje !== '' ? safeNum(b.comision_porcentaje) : 10.0,
                 safeNum(b.tarifa),
                 safeNum(b.gastos_operativos),
                 safeNum(b.base_imponible),
@@ -356,6 +365,8 @@ module.exports = function (db, broadcast, logAudit) {
                     conductor = ?,
                     cliente = ?,
                     lugar = ?,
+                    flete = ?,
+                    comision_porcentaje = ?,
                     tarifa = ?,
                     gastos_operativos = ?,
                     base_imponible = ?,
@@ -388,6 +399,8 @@ module.exports = function (db, broadcast, logAudit) {
                 (b.conductor || '').trim(),
                 (b.cliente || '').trim(),
                 (b.lugar || '').trim(),
+                safeNum(b.flete),
+                b.comision_porcentaje !== undefined && b.comision_porcentaje !== '' ? safeNum(b.comision_porcentaje) : 10.0,
                 safeNum(b.tarifa),
                 safeNum(b.gastos_operativos),
                 safeNum(b.base_imponible),
