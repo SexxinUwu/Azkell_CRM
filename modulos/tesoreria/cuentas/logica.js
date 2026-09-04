@@ -88,18 +88,13 @@ window.filtrarPorEstado = function(est) {
 };
 
 window._cuentasRenderKPIs = function(dataFiltrada) {
-    // Calculamos los KPIs sobre la totalidad de los datos (o filtrados por mes si hay un mes seleccionado)
-    // para que el usuario siempre vea el total de la cartera (Facturado, Pendiente, Pagado y Conteo)
-    var mes = ((document.getElementById('cuentas-filtro-mes') || {}).value || 'TODOS').toUpperCase();
-    var baseData = (window._cuentasData || []).filter(function(item) {
-        return (mes === 'TODOS') || ((item.mes_facturacion || '').toUpperCase() === mes);
-    });
+    var list = dataFiltrada || [];
 
     var totalFacturado = 0;
     var netoPendiente = 0;
     var totalPagado = 0;
 
-    baseData.forEach(function(item) {
+    list.forEach(function(item) {
         var total = parseFloat(item.total) || 0;
         var neto = parseFloat(item.neto_cobrar) || 0;
         var est = (item.estado_servicio || '').toUpperCase();
@@ -122,12 +117,10 @@ window._cuentasRenderKPIs = function(dataFiltrada) {
     setEl('kpi-total-facturado', 'S/ ' + _fmtMoney(totalFacturado));
     setEl('kpi-neto-pendiente', 'S/ ' + _fmtMoney(netoPendiente));
     setEl('kpi-total-pagado', 'S/ ' + _fmtMoney(totalPagado));
-    setEl('kpi-conteo-registros', baseData.length + ' Registros');
+    setEl('kpi-conteo-registros', list.length + ' Registros');
 
-    // El contador de filas visible en la tabla sí muestra cuántas filas coincidieron con la búsqueda
-    var listFiltrada = dataFiltrada || [];
     var contFilas = document.getElementById('cuentas-contador-filas');
-    if (contFilas) contFilas.textContent = listFiltrada.length + ' fila' + (listFiltrada.length !== 1 ? 's' : '');
+    if (contFilas) contFilas.textContent = list.length + ' fila' + (list.length !== 1 ? 's' : '');
 };
 
 window._cuentasRenderTabla = function(data) {
