@@ -17,13 +17,19 @@ const TABLAS = [
         nombre: 'tesoreria_cuentas',
         sql: `CREATE TABLE IF NOT EXISTS tesoreria_cuentas (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            codigo_liquidacion VARCHAR(60) NOT NULL DEFAULT '',
             fecha_liquidacion DATE NULL,
+            numero_viaje VARCHAR(60) NOT NULL DEFAULT '',
             fecha_servicio DATE NULL,
             razon_social VARCHAR(150) NOT NULL DEFAULT '',
             placa VARCHAR(50) NOT NULL DEFAULT '',
+            placa_camion VARCHAR(50) NOT NULL DEFAULT '',
+            placa_carreta VARCHAR(50) NOT NULL DEFAULT '',
             conductor VARCHAR(150) NOT NULL DEFAULT '',
             cliente VARCHAR(150) NOT NULL DEFAULT '',
             lugar VARCHAR(150) NOT NULL DEFAULT '',
+            flete DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+            comision_porcentaje DECIMAL(5,2) NOT NULL DEFAULT 10.00,
             tarifa DECIMAL(12,2) NOT NULL DEFAULT 0.00,
             gastos_operativos DECIMAL(12,2) NOT NULL DEFAULT 0.00,
             base_imponible DECIMAL(12,2) NOT NULL DEFAULT 0.00,
@@ -36,17 +42,22 @@ const TABLAS = [
             fecha_factura DATE NULL,
             serie VARCHAR(30) NOT NULL DEFAULT '',
             factura VARCHAR(50) NOT NULL DEFAULT '',
-            credito_dias INT NOT NULL DEFAULT 0,
+            credito_dias INT NOT NULL DEFAULT 15,
             fecha_cobrar DATE NULL,
             fecha_deposito DATE NULL,
             estado_servicio VARCHAR(50) NOT NULL DEFAULT 'PENDIENTE',
             diferencia DECIMAL(12,2) NOT NULL DEFAULT 0.00,
             observacion TEXT NULL,
+            documento_url TEXT NULL,
             creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_cod_liq (codigo_liquidacion),
             INDEX idx_fecha_liq (fecha_liquidacion),
+            INDEX idx_num_viaje (numero_viaje),
             INDEX idx_factura (serie, factura),
             INDEX idx_placa (placa),
+            INDEX idx_placa_cam (placa_camion),
+            INDEX idx_placa_car (placa_carreta),
             INDEX idx_cliente (cliente),
             INDEX idx_estado (estado_servicio)
         )`
@@ -1027,57 +1038,60 @@ async function initDB(defaultDb) {
         // Limpieza de tablas obsoletas no utilizadas
         try { await promisePool.query("DROP TABLE IF EXISTS combustible_abastecimientos"); } catch(e) {}
 
-        // Tablas de Guías de Remisión
-        try {
-            await promisePool.query(`
-                CREATE TABLE IF NOT EXISTS guias_remision (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    numero_guia VARCHAR(30) NOT NULL UNIQUE,
-                    tipo_documento VARCHAR(10) DEFAULT '31',
-                    fecha_emision DATE DEFAULT NULL,
-                    fecha_traslado DATE DEFAULT NULL,
-                    remitente_ruc VARCHAR(20) DEFAULT NULL,
-                    remitente_razon_social VARCHAR(255) DEFAULT NULL,
-                    destinatario_ruc VARCHAR(20) DEFAULT NULL,
-                    destinatario_razon_social VARCHAR(255) DEFAULT NULL,
-                    punto_partida_direccion TEXT DEFAULT NULL,
-                    punto_partida_ubigeo VARCHAR(10) DEFAULT NULL,
-                    punto_llegada_direccion TEXT DEFAULT NULL,
-                    punto_llegada_ubigeo VARCHAR(10) DEFAULT NULL,
-                    placa_tracto VARCHAR(20) DEFAULT NULL,
-                    placa_carreta VARCHAR(20) DEFAULT NULL,
-                    conductor_tipo_doc VARCHAR(10) DEFAULT 'DNI',
-                    conductor_num_doc VARCHAR(20) DEFAULT NULL,
-                    conductor_nombre VARCHAR(200) DEFAULT NULL,
-                    conductor_licencia VARCHAR(30) DEFAULT NULL,
-                    peso_bruto_total DECIMAL(12,2) DEFAULT 0,
-                    unidad_medida VARCHAR(10) DEFAULT 'KGM',
-                    estado_sunat VARCHAR(50) DEFAULT 'ACEPTADO',
-                    codigo_respuesta_sunat VARCHAR(20) DEFAULT '0',
-                    observaciones_sunat TEXT DEFAULT NULL,
-                    datos_json LONGTEXT DEFAULT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    INDEX idx_numero_guia (numero_guia),
-                    INDEX idx_placa_tracto (placa_tracto),
-                    INDEX idx_fecha_emision (fecha_emision)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-            `);
-            await promisePool.query(`
-                CREATE TABLE IF NOT EXISTS guias_remision_items (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    guia_id INT NOT NULL,
-                    codigo VARCHAR(50) DEFAULT NULL,
-                    descripcion TEXT NOT NULL,
-                    cantidad DECIMAL(12,2) DEFAULT 1,
-                    unidad_medida VARCHAR(20) DEFAULT 'NIU',
-                    peso_unitario DECIMAL(12,2) DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_guia_id (guia_id),
-                    FOREIGN KEY (guia_id) REFERENCES guias_remision(id) ON DELETE CASCADE
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-            `);
-        } catch(e) {}
+        // Tablas de Guías de Remisión garantizadas en todos los tenants
+        for (const dbName of databasesToInit) {
+            try {
+                await promisePool.query(`USE \`${dbName}\``);
+                await promisePool.query(`
+                    CREATE TABLE IF NOT EXISTS guias_remision (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        numero_guia VARCHAR(30) NOT NULL UNIQUE,
+                        tipo_documento VARCHAR(10) DEFAULT '31',
+                        fecha_emision DATE DEFAULT NULL,
+                        fecha_traslado DATE DEFAULT NULL,
+                        remitente_ruc VARCHAR(20) DEFAULT NULL,
+                        remitente_razon_social VARCHAR(255) DEFAULT NULL,
+                        destinatario_ruc VARCHAR(20) DEFAULT NULL,
+                        destinatario_razon_social VARCHAR(255) DEFAULT NULL,
+                        punto_partida_direccion TEXT DEFAULT NULL,
+                        punto_partida_ubigeo VARCHAR(10) DEFAULT NULL,
+                        punto_llegada_direccion TEXT DEFAULT NULL,
+                        punto_llegada_ubigeo VARCHAR(10) DEFAULT NULL,
+                        placa_tracto VARCHAR(20) DEFAULT NULL,
+                        placa_carreta VARCHAR(20) DEFAULT NULL,
+                        conductor_tipo_doc VARCHAR(10) DEFAULT 'DNI',
+                        conductor_num_doc VARCHAR(20) DEFAULT NULL,
+                        conductor_nombre VARCHAR(200) DEFAULT NULL,
+                        conductor_licencia VARCHAR(30) DEFAULT NULL,
+                        peso_bruto_total DECIMAL(12,2) DEFAULT 0,
+                        unidad_medida VARCHAR(10) DEFAULT 'KGM',
+                        estado_sunat VARCHAR(50) DEFAULT 'ACEPTADO',
+                        codigo_respuesta_sunat VARCHAR(20) DEFAULT '0',
+                        observaciones_sunat TEXT DEFAULT NULL,
+                        datos_json LONGTEXT DEFAULT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_numero_guia (numero_guia),
+                        INDEX idx_placa_tracto (placa_tracto),
+                        INDEX idx_fecha_emision (fecha_emision)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                `);
+                await promisePool.query(`
+                    CREATE TABLE IF NOT EXISTS guias_remision_items (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        guia_id INT NOT NULL,
+                        codigo VARCHAR(50) DEFAULT NULL,
+                        descripcion TEXT NOT NULL,
+                        cantidad DECIMAL(12,2) DEFAULT 1,
+                        unidad_medida VARCHAR(20) DEFAULT 'NIU',
+                        peso_unitario DECIMAL(12,2) DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_guia_id (guia_id),
+                        FOREIGN KEY (guia_id) REFERENCES guias_remision(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                `);
+            } catch(e) {}
+        }
 
         console.log(`✅ Default configurations, catalogs and roles seeded`);
     } catch (err) {
