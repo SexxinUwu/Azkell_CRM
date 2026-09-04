@@ -344,8 +344,8 @@ window.autoCalcularTotalesForm = function() {
     // 8. Adelanto
     var adelanto = parseFloat(document.getElementById('fc-adelanto').value) || 0;
 
-    // 9. Detracción (4%) = Total * 4%
-    var detraccion = (total > 0) ? (total * 0.04) : 0;
+    // 9. Detracción (4% redondeado al entero según normativa SUNAT SPOT)
+    var detraccion = (total > 0) ? Math.round(total * 0.04) : 0;
     var elDetraccion = document.getElementById('fc-detraccion');
     if (elDetraccion) elDetraccion.value = detraccion.toFixed(2);
 
