@@ -414,6 +414,7 @@
                     <th class="col-sticky-action text-center" style="width:70px;">ACCIONES</th>
                     <th>COD. LIQUIDACIÓN</th>
                     <th>FECHA LIQUIDACIÓN</th>
+                    <th>N° VIAJE</th>
                     <th>FECHA SERVICIO</th>
                     <th>RAZÓN SOCIAL</th>
                     <th>PLACA (CAMIÓN)</th>
@@ -444,7 +445,7 @@
             </thead>
             <tbody id="cuentas-tbody">
                 <tr>
-                    <td colspan="29" class="text-center py-5 text-muted">
+                    <td colspan="30" class="text-center py-5 text-muted">
                         <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando información de Tesorería...
                     </td>
                 </tr>
@@ -469,7 +470,7 @@
                         <h5 class="modal-title fw-bolder text-dark m-0 d-flex align-items-center gap-2" style="font-size: 1.15rem;">
                             <span id="modalCuentaFormTitulo">Nuevo Registro de Cuenta</span>
                         </h5>
-                        <small class="text-secondary" style="font-size: 0.76rem;">Complete o edite los datos de la liquidación y comprobante</small>
+                        <small class="text-secondary" style="font-size: 0.76rem;">Complete o edite los datos organizados en las 4 secciones</small>
                     </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -481,26 +482,57 @@
 
                 <div class="modal-body px-3 px-md-4 py-3 custom-scrollbar flex-grow-1" style="overflow-y: auto;">
                     
-                    <!-- ── SECCIÓN 1: DATOS DE OPERACIÓN Y SERVICIO ──────────────── -->
+                    <!-- ── MÓDULO 1: DATOS DE LIQUIDACIÓN (3 CASILLAS) ────────────── -->
                     <div class="card-segment">
                         <div class="card-segment-header">
                             <div class="card-segment-icon" style="background:#eff6ff; color:#0284c7;">
+                                <i class="bi bi-receipt-cutoff"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">1. Datos de Liquidación</h6>
+                                <small class="text-muted" style="font-size:0.75rem;">Código identificador, fecha y documento de sustento</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 g-md-3 align-items-center">
+                            <div class="col-md-3">
+                                <label class="form-label text-primary">Cod. de Liquidación (*)</label>
+                                <input type="text" id="fc-codigo-liquidacion" class="form-control fw-bold" placeholder="EJ: LIQ-2026-001" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha de Liquidación</label>
+                                <input type="date" id="fc-fecha-liquidacion" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label d-flex align-items-center justify-content-between mb-1">
+                                    <span><i class="bi bi-paperclip me-1 text-primary"></i>Orden de Liquidación / Sustento (PDF o Imagen)</span>
+                                    <span id="fc-doc-link-wrap" style="display:none;">
+                                        <a id="fc-doc-link" href="#" target="_blank" class="badge bg-primary text-decoration-none py-1 px-2">
+                                            <i class="bi bi-eye me-1"></i>Ver adjunto actual
+                                        </a>
+                                    </span>
+                                </label>
+                                <input type="file" id="fc-archivo" class="form-control" accept=".pdf, image/*">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── MÓDULO 2: DATOS DE CLIENTE Y OPERACIÓN ────────────────── -->
+                    <div class="card-segment">
+                        <div class="card-segment-header">
+                            <div class="card-segment-icon" style="background:#f0f9ff; color:#0369a1;">
                                 <i class="bi bi-truck"></i>
                             </div>
                             <div>
-                                <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">1. Datos de Operación y Servicio</h6>
-                                <small class="text-muted" style="font-size:0.75rem;">Identificación del flete, unidades y personal asignado</small>
+                                <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">2. Datos de Cliente y Operación</h6>
+                                <small class="text-muted" style="font-size:0.75rem;">Información del viaje, cliente, unidad de transporte y ruta</small>
                             </div>
                         </div>
 
                         <div class="row g-2 g-md-3">
                             <div class="col-md-3">
-                                <label class="form-label">Cod. de Liquidación</label>
-                                <input type="text" id="fc-codigo-liquidacion" class="form-control" placeholder="EJ: LIQ-2026-001">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Fecha de Liquidación</label>
-                                <input type="date" id="fc-fecha-liquidacion" class="form-control">
+                                <label class="form-label text-primary"><i class="bi bi-hash me-1"></i># de Viaje</label>
+                                <input type="text" id="fc-numero-viaje" class="form-control fw-bold" placeholder="EJ: 2025-00006088">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Fecha de Servicio</label>
@@ -510,11 +542,11 @@
                                 <label class="form-label">Razón Social</label>
                                 <input type="text" id="fc-razon-social" class="form-control" placeholder="EJ: TRAHESA SAC">
                             </div>
-
                             <div class="col-md-3">
-                                <label class="form-label">Placa (Camión) (*)</label>
-                                <input type="text" id="fc-placa-camion" class="form-control text-uppercase" placeholder="EJ: T8S942">
+                                <label class="form-label text-primary">Placa (Camión) (*)</label>
+                                <input type="text" id="fc-placa-camion" class="form-control text-uppercase fw-bold" placeholder="EJ: T8S942">
                             </div>
+
                             <div class="col-md-3">
                                 <label class="form-label">Placa (Carreta)</label>
                                 <input type="text" id="fc-placa-carreta" class="form-control text-uppercase" placeholder="EJ: AWB973">
@@ -527,15 +559,14 @@
                                 <label class="form-label">Cliente</label>
                                 <input type="text" id="fc-cliente" class="form-control" placeholder="EJ: AJINOMOTO DEL PERU">
                             </div>
-
-                            <div class="col-12">
+                            <div class="col-md-3">
                                 <label class="form-label">Lugar / Ruta</label>
                                 <input type="text" id="fc-lugar" class="form-control" placeholder="EJ: CALLAO - TARAPOTO">
                             </div>
                         </div>
                     </div>
 
-                    <!-- ── SECCIÓN 2: LIQUIDACIÓN ECONÓMICA E IMPORTES (S/) ──────── -->
+                    <!-- ── MÓDULO 3: LIQUIDACIÓN ECONÓMICA E IMPORTES (S/) ──────── -->
                     <div class="card-segment">
                         <div class="card-segment-header d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-2">
@@ -543,7 +574,7 @@
                                     <i class="bi bi-cash-coin"></i>
                                 </div>
                                 <div>
-                                    <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">2. Liquidación Económica e Importes (S/)</h6>
+                                    <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">3. Liquidación Económica e Importes (S/)</h6>
                                     <small class="text-muted" style="font-size:0.75rem;">Ingrese Flete, Comisión, Gastos y Adelanto; los demás campos se calculan automáticamente.</small>
                                 </div>
                             </div>
@@ -604,9 +635,9 @@
                                 <input type="number" step="0.01" inputmode="decimal" id="fc-adelanto" class="form-control text-end input-solo-num fw-bold" placeholder="0.00" oninput="window.autoCalcularTotalesForm()" onkeydown="window.bloquearNoNumerico(event)">
                             </div>
 
-                            <!-- 9. Detracción 4% (Bloqueada: Total * 4%) -->
+                            <!-- 9. Detracción 4% (Bloqueada: Redondeada al entero SUNAT) -->
                             <div class="col-6 col-md-4">
-                                <label class="form-label text-secondary"><i class="bi bi-lock-fill me-1"></i>Detracción (4%)</label>
+                                <label class="form-label text-secondary"><i class="bi bi-lock-fill me-1"></i>Detracción (4% SUNAT)</label>
                                 <input type="number" step="0.01" id="fc-detraccion" class="form-control text-end bg-light-lock" placeholder="0.00" readonly tabindex="-1">
                             </div>
 
@@ -623,39 +654,26 @@
                         </div>
                     </div>
 
-                    <!-- ── SECCIÓN 3: FACTURACIÓN, COBRANZA Y SUSTENTO ───────────── -->
+                    <!-- ── MÓDULO 4: FACTURACIÓN Y COBRANZA ──────────────────────── -->
                     <div class="card-segment">
                         <div class="card-segment-header">
                             <div class="card-segment-icon" style="background:#f5f3ff; color:#7c3aed;">
                                 <i class="bi bi-receipt"></i>
                             </div>
                             <div>
-                                <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">3. Facturación, Cobranza y Sustento</h6>
-                                <small class="text-muted" style="font-size:0.75rem;">Comprobante de pago, crédito en días, fechas de banco y archivo adjunto</small>
+                                <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">4. Facturación y Cobranza</h6>
+                                <small class="text-muted" style="font-size:0.75rem;">Comprobante de pago, crédito en días y seguimiento de depósito bancario</small>
                             </div>
                         </div>
 
                         <div class="row g-2 g-md-3">
                             <div class="col-md-3">
-                                <label class="form-label">Mes de Facturación</label>
-                                <select id="fc-mes-facturacion" class="form-select">
-                                    <option value="ENERO">ENERO</option>
-                                    <option value="FEBRERO">FEBRERO</option>
-                                    <option value="MARZO">MARZO</option>
-                                    <option value="ABRIL">ABRIL</option>
-                                    <option value="MAYO">MAYO</option>
-                                    <option value="JUNIO">JUNIO</option>
-                                    <option value="JULIO">JULIO</option>
-                                    <option value="AGOSTO">AGOSTO</option>
-                                    <option value="SETIEMBRE">SETIEMBRE</option>
-                                    <option value="OCTUBRE">OCTUBRE</option>
-                                    <option value="NOVIEMBRE">NOVIEMBRE</option>
-                                    <option value="DICIEMBRE">DICIEMBRE</option>
-                                </select>
+                                <label class="form-label text-primary"><i class="bi bi-calendar-event me-1"></i>Fecha Factura</label>
+                                <input type="date" id="fc-fecha-factura" class="form-control fw-bold" onchange="window.actualizarFechaFacturaYMes()">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Fecha Factura</label>
-                                <input type="date" id="fc-fecha-factura" class="form-control">
+                                <label class="form-label text-secondary"><i class="bi bi-lock-fill me-1"></i>Mes de Facturación</label>
+                                <input type="text" id="fc-mes-facturacion" class="form-control bg-light-lock fw-bold" placeholder="AUTO (SEGÚN FECHA)" readonly tabindex="-1">
                             </div>
                             <div class="col-6 col-md-2">
                                 <label class="form-label">Serie</label>
@@ -666,17 +684,17 @@
                                 <input type="text" id="fc-factura" class="form-control" placeholder="0160">
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">Crédito Días</label>
-                                <input type="number" id="fc-credito-dias" class="form-control" placeholder="15" oninput="window.autoCalcularFechaCobro()">
+                                <label class="form-label text-primary"><i class="bi bi-pencil-fill me-1" style="font-size:0.65rem;"></i>Crédito Días</label>
+                                <input type="number" id="fc-credito-dias" class="form-control input-solo-num fw-bold" value="15" placeholder="15" oninput="window.autoCalcularFechaCobro()" onkeydown="window.bloquearNoNumerico(event)">
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Fecha a Cobrar</label>
-                                <input type="date" id="fc-fecha-cobrar" class="form-control">
+                                <label class="form-label text-secondary"><i class="bi bi-lock-fill me-1"></i>Fecha a Cobrar</label>
+                                <input type="date" id="fc-fecha-cobrar" class="form-control bg-light-lock fw-bold" readonly tabindex="-1">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Fecha Depósito / Transf.</label>
-                                <input type="date" id="fc-fecha-deposito" class="form-control">
+                                <label class="form-label" style="color:#7e22ce;"><i class="bi bi-bank me-1"></i>Fecha Depósito / Transf.</label>
+                                <input type="date" id="fc-fecha-deposito" class="form-control bg-pastel-total fw-bold">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Estado Servicio</label>
@@ -688,28 +706,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Diferencia</label>
-                                <input type="number" step="0.01" id="fc-diferencia" class="form-control text-end" placeholder="0.00">
-                            </div>
-
-                            <!-- Casilla para adjuntar PDF o Imagen -->
-                            <div class="col-12 mt-2">
-                                <div class="p-3 rounded-3 bg-light border border-dashed">
-                                    <label class="form-label d-flex align-items-center justify-content-between mb-2">
-                                        <span class="d-flex align-items-center gap-1 text-primary">
-                                            <i class="bi bi-paperclip fs-5"></i>
-                                            <strong style="font-size:0.8rem;">Orden de Liquidación / Sustento (PDF o Imagen)</strong>
-                                        </span>
-                                        <span id="fc-doc-link-wrap" style="display:none;">
-                                            <a id="fc-doc-link" href="#" target="_blank" class="btn btn-sm btn-outline-danger py-1 px-3 fw-bold rounded-pill text-decoration-none">
-                                                <i class="bi bi-eye-fill me-1"></i> Ver adjunto actual
-                                            </a>
-                                        </span>
-                                    </label>
-                                    <input type="file" id="fc-archivo" class="form-control" accept=".pdf, image/*">
-                                    <div class="text-muted mt-1" style="font-size:0.75rem;">
-                                        <i class="bi bi-info-circle me-1"></i> Formatos admitidos: PDF, JPG, PNG, WEBP (hasta 25MB).
-                                    </div>
-                                </div>
+                                <input type="number" step="0.01" inputmode="decimal" id="fc-diferencia" class="form-control text-end input-solo-num" placeholder="0.00" onkeydown="window.bloquearNoNumerico(event)">
                             </div>
 
                             <div class="col-12 mt-2">

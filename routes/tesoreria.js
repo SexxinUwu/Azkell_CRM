@@ -26,6 +26,7 @@ module.exports = function (db, broadcast, logAudit) {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 codigo_liquidacion VARCHAR(60) NOT NULL DEFAULT '',
                 fecha_liquidacion DATE NULL,
+                numero_viaje VARCHAR(60) NOT NULL DEFAULT '',
                 fecha_servicio DATE NULL,
                 razon_social VARCHAR(150) NOT NULL DEFAULT '',
                 placa_camion VARCHAR(50) NOT NULL DEFAULT '',
@@ -58,6 +59,7 @@ module.exports = function (db, broadcast, logAudit) {
                 actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_cod_liq (codigo_liquidacion),
                 INDEX idx_fecha_liq (fecha_liquidacion),
+                INDEX idx_num_viaje (numero_viaje),
                 INDEX idx_factura (serie, factura),
                 INDEX idx_placa_cam (placa_camion),
                 INDEX idx_placa_car (placa_carreta),
@@ -71,6 +73,7 @@ module.exports = function (db, broadcast, logAudit) {
             // Migraciones de columnas en tablas existentes si faltan
             const migraciones = [
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN codigo_liquidacion VARCHAR(60) NOT NULL DEFAULT '' AFTER id",
+                "ALTER TABLE tesoreria_cuentas ADD COLUMN numero_viaje VARCHAR(60) NOT NULL DEFAULT '' AFTER fecha_liquidacion",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN placa_camion VARCHAR(50) NOT NULL DEFAULT '' AFTER razon_social",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN placa_carreta VARCHAR(50) NOT NULL DEFAULT '' AFTER placa_camion",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN flete DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER lugar",
@@ -170,6 +173,7 @@ module.exports = function (db, broadcast, logAudit) {
                     id,
                     codigo_liquidacion,
                     DATE_FORMAT(fecha_liquidacion, '%Y-%m-%d') AS fecha_liquidacion,
+                    numero_viaje,
                     DATE_FORMAT(fecha_servicio, '%Y-%m-%d') AS fecha_servicio,
                     razon_social,
                     placa_camion,
@@ -219,6 +223,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const term = `%${buscar.trim()}%`;
                 sql += ` AND (
                     codigo_liquidacion LIKE ? OR
+                    numero_viaje LIKE ? OR
                     razon_social LIKE ? OR 
                     placa_camion LIKE ? OR 
                     placa_carreta LIKE ? OR 
@@ -229,7 +234,7 @@ module.exports = function (db, broadcast, logAudit) {
                     lugar LIKE ? OR
                     observacion LIKE ?
                 )`;
-                params.push(term, term, term, term, term, term, term, term, term, term);
+                params.push(term, term, term, term, term, term, term, term, term, term, term);
             }
 
             sql += ` ORDER BY fecha_liquidacion DESC, id DESC LIMIT 5000`;
@@ -280,18 +285,19 @@ module.exports = function (db, broadcast, logAudit) {
 
             const insertSql = `
                 INSERT INTO tesoreria_cuentas (
-                    codigo_liquidacion, fecha_liquidacion, fecha_servicio, razon_social,
+                    codigo_liquidacion, fecha_liquidacion, numero_viaje, fecha_servicio, razon_social,
                     placa_camion, placa_carreta, conductor, cliente, lugar,
                     flete, comision_porcentaje,
                     tarifa, gastos_operativos, base_imponible, igv, total, adelanto, detraccion, neto_cobrar,
                     mes_facturacion, fecha_factura, serie, factura, credito_dias, fecha_cobrar, fecha_deposito,
                     estado_servicio, diferencia, observacion, documento_url
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
 
             const values = [
                 (b.codigo_liquidacion || '').trim(),
                 safeDate(b.fecha_liquidacion),
+                (b.numero_viaje || '').trim(),
                 safeDate(b.fecha_servicio),
                 (b.razon_social || '').trim(),
                 cam,
@@ -313,7 +319,7 @@ module.exports = function (db, broadcast, logAudit) {
                 safeDate(b.fecha_factura),
                 (b.serie || '').trim(),
                 (b.factura || '').trim(),
-                parseInt(b.credito_dias, 10) || 0,
+                parseInt(b.credito_dias, 10) || 15,
                 safeDate(b.fecha_cobrar),
                 safeDate(b.fecha_deposito),
                 (b.estado_servicio || 'PENDIENTE').toUpperCase().trim(),
@@ -358,6 +364,7 @@ module.exports = function (db, broadcast, logAudit) {
                 UPDATE tesoreria_cuentas SET
                     codigo_liquidacion = ?,
                     fecha_liquidacion = ?,
+                    numero_viaje = ?,
                     fecha_servicio = ?,
                     razon_social = ?,
                     placa_camion = ?,
@@ -392,6 +399,7 @@ module.exports = function (db, broadcast, logAudit) {
             const values = [
                 (b.codigo_liquidacion || '').trim(),
                 safeDate(b.fecha_liquidacion),
+                (b.numero_viaje || '').trim(),
                 safeDate(b.fecha_servicio),
                 (b.razon_social || '').trim(),
                 cam,
@@ -413,7 +421,7 @@ module.exports = function (db, broadcast, logAudit) {
                 safeDate(b.fecha_factura),
                 (b.serie || '').trim(),
                 (b.factura || '').trim(),
-                parseInt(b.credito_dias, 10) || 0,
+                parseInt(b.credito_dias, 10) || 15,
                 safeDate(b.fecha_cobrar),
                 safeDate(b.fecha_deposito),
                 (b.estado_servicio || 'PENDIENTE').toUpperCase().trim(),
@@ -431,7 +439,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             res.json({ ok: true, documento_url: docUrl, message: 'Registro actualizado exitosamente' });
         } catch (err) {
-            console.error('Error al actualizar registro de tesoreria:', err);
+            console.error('Error al editar registro tesoreria:', err);
             res.status(500).json({ error: err.message });
         }
     });
