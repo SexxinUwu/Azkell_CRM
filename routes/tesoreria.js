@@ -94,25 +94,47 @@ module.exports = function (db, broadcast, logAudit) {
         if (typeof val === 'string') {
             val = val.trim();
             if (!val || val === '-' || val === '—') return null;
+
+            // Si viene un rango de fechas como '6/04/2026-23/04/26' o '23/04/26 - 07/05/26', tomar la primera fecha
+            if (val.includes(' - ') || (val.includes('/') && val.indexOf('/') !== val.lastIndexOf('/') && val.match(/\d+[\/\-]\d+[\/\-]\d+.*[\/\-]\d+/))) {
+                const firstMatch = val.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
+                if (firstMatch) val = firstMatch[1];
+            }
+
+            // Formato DD/MM/YYYY o DD/MM/YY
             if (val.includes('/')) {
                 const parts = val.split('/');
                 if (parts.length === 3) {
-                    const day = parts[0].padStart(2, '0');
-                    const month = parts[1].padStart(2, '0');
-                    let year = parts[2];
+                    const p0 = parseInt(parts[0], 10);
+                    const p1 = parseInt(parts[1], 10);
+                    let year = parts[2].trim();
                     if (year.length === 2) year = '20' + year;
+                    const day = String(p0).padStart(2, '0');
+                    const month = String(p1).padStart(2, '0');
                     return `${year}-${month}-${day}`;
                 }
             }
+
+            // Formato YYYY-MM-DD o YYYY-DD-MM o DD-MM-YYYY
             if (val.includes('-')) {
-                const parts = val.split('-');
+                const parts = val.split('-').map(p => p.trim());
                 if (parts.length === 3) {
-                    if (parts[0].length === 4) return val.slice(0, 10);
-                    const day = parts[0].padStart(2, '0');
-                    const month = parts[1].padStart(2, '0');
-                    let year = parts[2];
-                    if (year.length === 2) year = '20' + year;
-                    return `${year}-${month}-${day}`;
+                    if (parts[0].length === 4) {
+                        const year = parts[0];
+                        const p1 = parseInt(parts[1], 10);
+                        const p2 = parseInt(parts[2], 10);
+                        // Si p1 > 12, vino como YYYY-DD-MM (ej: 2026-20-02) -> invertir a YYYY-MM-DD
+                        if (p1 > 12) {
+                            return `${year}-${String(p2).padStart(2, '0')}-${String(p1).padStart(2, '0')}`;
+                        }
+                        return `${year}-${String(p1).padStart(2, '0')}-${String(p2).padStart(2, '0')}`;
+                    } else {
+                        const day = parts[0].padStart(2, '0');
+                        const month = parts[1].padStart(2, '0');
+                        let year = parts[2];
+                        if (year.length === 2) year = '20' + year;
+                        return `${year}-${month}-${day}`;
+                    }
                 }
             }
         }

@@ -565,7 +565,7 @@ window.importarExcelMasivo = function(event) {
     reader.onload = function(e) {
         try {
             var data = new Uint8Array(e.target.result);
-            var workbook = XLSX.read(data, { type: 'array', cellDates: true });
+            var workbook = XLSX.read(data, { type: 'array', cellDates: false });
             var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             var rawJson = XLSX.utils.sheet_to_json(firstSheet, { defval: '', raw: false });
 
