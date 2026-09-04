@@ -74,7 +74,7 @@
         const selConfig = document.getElementById('rv-filtro-config');
         if (selConfig) {
             const currentVal = selConfig.value || 'ALL';
-            const configs = [...new Set(data.map(v => (v.configuracion || '').trim().toUpperCase()).filter(Boolean))].sort();
+            const configs = [...new Set(data.map(v => (v.configuracion || v.configuracion_tracto || '').trim().toUpperCase()).filter(Boolean))].sort();
             let opts = `<option value="ALL">Config.</option>`;
             configs.forEach(c => {
                 opts += `<option value="${c}" ${currentVal === c ? 'selected' : ''}>${c}</option>`;
@@ -143,7 +143,7 @@
             // Filtro exclusivo por N° de Viaje
             if (fViaje && !(v.viaje || '').toUpperCase().includes(fViaje)) return false;
 
-            // Filtro general de texto (Placas, Conductor, Ruta, Config)
+            // Filtro general de texto (Placas, Conductor, Ruta, Configs)
             if (q) {
                 const tracto = (v.placa_tracto || '').toUpperCase();
                 const carreta = (v.placa_remolque || '').toUpperCase();
@@ -152,7 +152,9 @@
                 const rIda = (v.ida?.ruta || '').toUpperCase();
                 const rRet = (v.retorno?.ruta || '').toUpperCase();
                 const confg = (v.configuracion || '').toUpperCase();
-                const match = tracto.includes(q) || carreta.includes(q) || cond.includes(q) || ruta.includes(q) || rIda.includes(q) || rRet.includes(q) || confg.includes(q);
+                const confgT = (v.configuracion_tracto || '').toUpperCase();
+                const confgR = (v.configuracion_remolque || '').toUpperCase();
+                const match = tracto.includes(q) || carreta.includes(q) || cond.includes(q) || ruta.includes(q) || rIda.includes(q) || rRet.includes(q) || confg.includes(q) || confgT.includes(q) || confgR.includes(q);
                 if (!match) return false;
             }
 
@@ -160,7 +162,11 @@
             if (fMotor !== 'ALL' && (v.modelo_motor || '').toUpperCase() !== fMotor) return false;
 
             // Filtro por Configuración
-            if (fConfig !== 'ALL' && (v.configuracion || '').toUpperCase() !== fConfig) return false;
+            if (fConfig !== 'ALL') {
+                const confg = (v.configuracion || '').toUpperCase();
+                const confgT = (v.configuracion_tracto || '').toUpperCase();
+                if (confg !== fConfig && confgT !== fConfig) return false;
+            }
 
             // Filtro por Fecha
             if (fFecha && v.fecha !== fFecha) return false;
@@ -363,7 +369,7 @@
             return;
         }
 
-        let csv = 'Nro Viaje,Fecha,Tracto,Carreta,Config,Motor,Conductor,Ruta Principal,Peso Ida (TN),Galones Ida (GL),Ruta Retorno,Peso Retorno (TN),Galones Retorno (GL),Peso Total (TN),Galones Totales Programados (GL),Estado\n';
+        let csv = 'Nro Viaje,Fecha,Tracto,Carreta,Configuracion Combinada,Config Tracto,Config Carreta,Motor,Conductor,Ruta Principal,Peso Ida (TN),Galones Ida (GL),Ruta Retorno,Peso Retorno (TN),Galones Retorno (GL),Peso Total (TN),Galones Totales Programados (GL),Estado\n';
 
         items.forEach(v => {
             const row = [
@@ -371,7 +377,9 @@
                 `"${v.fecha}"`,
                 `"${v.placa_tracto}"`,
                 `"${v.placa_remolque || ''}"`,
-                `"${v.configuracion || 'T3'}"`,
+                `"${v.configuracion || v.configuracion_tracto || 'T3'}"`,
+                `"${v.configuracion_tracto || 'T3'}"`,
+                `"${v.configuracion_remolque || ''}"`,
                 `"${v.modelo_motor}"`,
                 `"${(v.conductor || '').replace(/"/g, '""')}"`,
                 `"${(v.ruta_principal || '').replace(/"/g, '""')}"`,
