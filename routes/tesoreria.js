@@ -140,17 +140,22 @@ module.exports = function (db, broadcast, logAudit) {
         let car = (placaCarretaRaw || '').toUpperCase().trim();
 
         if (!cam && !car && placaRaw) {
-            const raw = String(placaRaw).toUpperCase().trim();
-            if (raw.includes('-') && raw.length >= 13) {
-                const parts = raw.split(/[\/\s-]+/).filter(Boolean);
+            let raw = String(placaRaw).toUpperCase().trim();
+            // Casos como "ANULADO", "PLACA TRAHESA", "MOTORIZADO" o placas simples
+            if (raw.includes('-')) {
+                const parts = raw.split('-').map(p => p.trim()).filter(Boolean);
                 if (parts.length >= 2) {
                     cam = parts[0];
                     car = parts[1];
-                } else {
-                    cam = raw;
+                } else if (parts.length === 1) {
+                    cam = parts[0];
                 }
             } else if (raw.includes('/')) {
-                const parts = raw.split('/').map(p => p.trim());
+                const parts = raw.split('/').map(p => p.trim()).filter(Boolean);
+                cam = parts[0] || '';
+                car = parts[1] || '';
+            } else if (raw.includes(' ') && raw.length >= 12) {
+                const parts = raw.split(/\s+/).map(p => p.trim()).filter(Boolean);
                 cam = parts[0] || '';
                 car = parts[1] || '';
             } else {
@@ -485,7 +490,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             const insertSql = `
                 INSERT INTO tesoreria_cuentas (
-                    codigo_liquidacion, fecha_liquidacion, fecha_servicio, razon_social,
+                    codigo_liquidacion, fecha_liquidacion, numero_viaje, fecha_servicio, razon_social,
                     placa_camion, placa_carreta, conductor, cliente, lugar,
                     tarifa, gastos_operativos, base_imponible, igv, total, adelanto, detraccion, neto_cobrar,
                     mes_facturacion, fecha_factura, serie, factura, credito_dias, fecha_cobrar, fecha_deposito,
@@ -503,6 +508,7 @@ module.exports = function (db, broadcast, logAudit) {
                     return [
                         (r.codigo_liquidacion || '').trim(),
                         safeDate(r.fecha_liquidacion),
+                        (r.numero_viaje || '').trim(),
                         safeDate(r.fecha_servicio),
                         (r.razon_social || '').trim(),
                         cam,
