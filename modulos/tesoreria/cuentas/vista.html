@@ -243,6 +243,27 @@
     margin-bottom: 0.35rem !important;
 }
 
+/* Casillas calculadas bloqueadas */
+#modalCuentaForm .bg-light-lock {
+    background-color: #f1f5f9 !important;
+    color: #334155 !important;
+    font-weight: 700 !important;
+    cursor: not-allowed !important;
+    border-color: #cbd5e1 !important;
+    user-select: none;
+}
+
+/* Casilla de Neto por Cobrar destacada en tono pastel */
+#modalCuentaForm .bg-pastel-neto {
+    background-color: #dcfce7 !important;
+    border: 2px solid #86efac !important;
+    color: #15803d !important;
+    font-weight: 800 !important;
+    font-size: 1.05rem !important;
+    cursor: not-allowed !important;
+    box-shadow: 0 2px 8px rgba(21, 128, 61, 0.12) !important;
+}
+
 .num-cell {
     font-variant-numeric: tabular-nums;
     text-align: right;
@@ -505,49 +526,88 @@
 
                     <!-- ── SECCIÓN 2: LIQUIDACIÓN ECONÓMICA E IMPORTES (S/) ──────── -->
                     <div class="card-segment">
-                        <div class="card-segment-header">
-                            <div class="card-segment-icon" style="background:#ecfdf5; color:#10b981;">
-                                <i class="bi bi-cash-coin"></i>
+                        <div class="card-segment-header d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="card-segment-icon" style="background:#ecfdf5; color:#10b981;">
+                                    <i class="bi bi-cash-coin"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">2. Liquidación Económica e Importes (S/)</h6>
+                                    <small class="text-muted" style="font-size:0.75rem;">Ingrese Flete, Comisión, Gastos y Adelanto; los demás campos se calculan automáticamente.</small>
+                                </div>
                             </div>
-                            <div>
-                                <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">2. Liquidación Económica e Importes (S/)</h6>
-                                <small class="text-muted" style="font-size:0.75rem;">Cálculo automático de bases imponibles, IGV, detracción y neto</small>
-                            </div>
+                            <span class="badge bg-light text-secondary border fw-semibold" style="font-size:0.72rem;">
+                                <i class="bi bi-magic me-1 text-primary"></i>Cálculo Automático
+                            </span>
                         </div>
 
                         <div class="row g-2 g-md-3">
+                            <!-- 1. Flete (Editable) -->
                             <div class="col-6 col-md-3">
-                                <label class="form-label">Tarifa (-10% / 20%)</label>
-                                <input type="number" step="0.01" id="fc-tarifa" class="form-control text-end" placeholder="0.00" oninput="window.autoCalcularTotalesForm()">
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label">(-) Gastos Operativos</label>
-                                <input type="number" step="0.01" id="fc-gastos-operativos" class="form-control text-end text-danger" placeholder="0.00" oninput="window.autoCalcularTotalesForm()">
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label">Base Imponible (B.I)</label>
-                                <input type="number" step="0.01" id="fc-base-imponible" class="form-control text-end" placeholder="0.00" oninput="window.autoCalcularDesdeBI()">
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label">IGV (18%)</label>
-                                <input type="number" step="0.01" id="fc-igv" class="form-control text-end" placeholder="0.00">
+                                <label class="form-label text-primary"><i class="bi bi-pencil-fill me-1" style="font-size:0.65rem;"></i>Flete (S/) (*)</label>
+                                <input type="number" step="0.01" inputmode="decimal" id="fc-flete" class="form-control text-end input-solo-num fw-bold" placeholder="0.00" oninput="window.autoCalcularTotalesForm()" onkeydown="window.bloquearNoNumerico(event)">
                             </div>
 
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-primary">Total Factura</label>
-                                <input type="number" step="0.01" id="fc-total" class="form-control text-end fw-bold text-primary" placeholder="0.00" oninput="window.autoCalcularDesdeTotal()">
+                            <!-- 2. Comisión % (Editable, default 10%) -->
+                            <div class="col-6 col-md-2">
+                                <label class="form-label text-primary"><i class="bi bi-pencil-fill me-1" style="font-size:0.65rem;"></i>Comisión (%)</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" inputmode="decimal" id="fc-comision" class="form-control text-end input-solo-num fw-bold" value="10" placeholder="10" oninput="window.autoCalcularTotalesForm()" onkeydown="window.bloquearNoNumerico(event)">
+                                    <span class="input-group-text bg-light text-muted px-2 fw-bold">%</span>
+                                </div>
                             </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label">Adelanto</label>
-                                <input type="number" step="0.01" id="fc-adelanto" class="form-control text-end" placeholder="0.00" oninput="window.autoCalcularNeto()">
+
+                            <!-- 3. Tarifa (-10% / 20%) (Bloqueada: Flete - Comisión) -->
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-secondary"><i class="bi bi-lock-fill me-1"></i>Tarifa (-10% y/o 20%)</label>
+                                <input type="number" step="0.01" id="fc-tarifa" class="form-control text-end bg-light-lock" placeholder="0.00" readonly tabindex="-1">
                             </div>
+
+                            <!-- 4. (-) Gastos Operativos (Editable) -->
                             <div class="col-6 col-md-3">
-                                <label class="form-label">Detracción (4%)</label>
-                                <input type="number" step="0.01" id="fc-detraccion" class="form-control text-end" placeholder="0.00" oninput="window.autoCalcularNeto()">
+                                <label class="form-label text-danger"><i class="bi bi-pencil-fill me-1" style="font-size:0.65rem;"></i>(-) Gastos Operativos</label>
+                                <input type="number" step="0.01" inputmode="decimal" id="fc-gastos-operativos" class="form-control text-end text-danger input-solo-num fw-bold" placeholder="0.00" oninput="window.autoCalcularTotalesForm()" onkeydown="window.bloquearNoNumerico(event)">
                             </div>
+
+                            <!-- 5. Base Imponible (Bloqueada: Tarifa - Gastos) -->
                             <div class="col-6 col-md-3">
-                                <label class="form-label text-success">Neto por Cobrar</label>
-                                <input type="number" step="0.01" id="fc-neto-cobrar" class="form-control text-end fw-bold text-success" style="background:#f0fdf4;" placeholder="0.00">
+                                <label class="form-label text-secondary"><i class="bi bi-lock-fill me-1"></i>Base Imponible (B.I)</label>
+                                <input type="number" step="0.01" id="fc-base-imponible" class="form-control text-end bg-light-lock" placeholder="0.00" readonly tabindex="-1">
+                            </div>
+
+                            <!-- 6. IGV 18% (Bloqueada: B.I * 18%) -->
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-secondary"><i class="bi bi-lock-fill me-1"></i>IGV (18%)</label>
+                                <input type="number" step="0.01" id="fc-igv" class="form-control text-end bg-light-lock" placeholder="0.00" readonly tabindex="-1">
+                            </div>
+
+                            <!-- 7. Total Factura (Bloqueada: B.I + IGV) -->
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-primary"><i class="bi bi-lock-fill me-1"></i>Total Factura</label>
+                                <input type="number" step="0.01" id="fc-total" class="form-control text-end bg-light-lock fw-bold text-primary" placeholder="0.00" readonly tabindex="-1">
+                            </div>
+
+                            <!-- 8. Adelanto (Editable) -->
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-primary"><i class="bi bi-pencil-fill me-1" style="font-size:0.65rem;"></i>Adelanto (S/)</label>
+                                <input type="number" step="0.01" inputmode="decimal" id="fc-adelanto" class="form-control text-end input-solo-num fw-bold" placeholder="0.00" oninput="window.autoCalcularTotalesForm()" onkeydown="window.bloquearNoNumerico(event)">
+                            </div>
+
+                            <!-- 9. Detracción 4% (Bloqueada: Total * 4%) -->
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-secondary"><i class="bi bi-lock-fill me-1"></i>Detracción (4%)</label>
+                                <input type="number" step="0.01" id="fc-detraccion" class="form-control text-end bg-light-lock" placeholder="0.00" readonly tabindex="-1">
+                            </div>
+
+                            <!-- 10. Neto por Cobrar (Bloqueada, resaltada en pastel: Total + Adelanto + Detracción) -->
+                            <div class="col-12 col-md-8">
+                                <label class="form-label text-success d-flex align-items-center justify-content-between">
+                                    <span><i class="bi bi-cash-stack me-1"></i>Neto por Cobrar (Costo Final)</span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold" style="font-size:0.68rem;">
+                                        Total + Adelanto + Detracción
+                                    </span>
+                                </label>
+                                <input type="number" step="0.01" id="fc-neto-cobrar" class="form-control text-end bg-pastel-neto" placeholder="0.00" readonly tabindex="-1">
                             </div>
                         </div>
                     </div>

@@ -182,6 +182,24 @@ window._cuentasRenderTabla = function(data) {
     tbody.innerHTML = html;
 };
 
+// ── BLOQUEO DE TECLAS NO NUMÉRICAS EN MÓVILES Y DESKTOP ───────────
+window.bloquearNoNumerico = function(e) {
+    // Permitir: teclas de control (Backspace, Tab, Enter, Escape, Delete, flechas, etc.)
+    var permittedKeys = ['Backspace', 'Tab', 'Enter', 'Escape', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+    if (permittedKeys.indexOf(e.key) !== -1 ||
+        // Permitir: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+        (e.ctrlKey === true || e.metaKey === true) ||
+        // Permitir punto o coma decimal si aún no existe
+        (e.key === '.' || e.key === ',')
+    ) {
+        return;
+    }
+    // Bloquear si no es un número del 0 al 9
+    if (e.key < '0' || e.key > '9') {
+        e.preventDefault();
+    }
+};
+
 // ── CRUD MODAL / FORM ──────────────────────────────────────────────
 window.abrirModalNuevoRegistro = function() {
     var form = document.getElementById('form-cuenta');
@@ -196,6 +214,22 @@ window.abrirModalNuevoRegistro = function() {
 
     var fileInput = document.getElementById('fc-archivo');
     if (fileInput) fileInput.value = '';
+
+    // Valores por defecto
+    var setV = function(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.value = val;
+    };
+    setV('fc-flete', '');
+    setV('fc-comision', '10');
+    setV('fc-gastos-operativos', '');
+    setV('fc-adelanto', '');
+    setV('fc-tarifa', '0.00');
+    setV('fc-base-imponible', '0.00');
+    setV('fc-igv', '0.00');
+    setV('fc-total', '0.00');
+    setV('fc-detraccion', '0.00');
+    setV('fc-neto-cobrar', '0.00');
 
     var meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SETIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
     var mesAct = meses[new Date().getMonth()];
@@ -225,14 +259,25 @@ window.abrirEditarRegistro = function(id) {
     setV('fc-conductor', item.conductor);
     setV('fc-cliente', item.cliente);
     setV('fc-lugar', item.lugar);
-    setV('fc-tarifa', item.tarifa);
+
+    // Flete y Comisión
+    var comisionVal = (item.comision_porcentaje != null && item.comision_porcentaje !== '') ? item.comision_porcentaje : 10;
+    setV('fc-comision', comisionVal);
+
+    var fleteVal = item.flete;
+    if ((fleteVal == null || parseFloat(fleteVal) === 0) && item.tarifa && parseFloat(item.tarifa) > 0) {
+        // Estimar flete a partir de la tarifa si no estaba guardado
+        var factor = (1 - (parseFloat(comisionVal) || 10) / 100);
+        fleteVal = factor > 0 ? (parseFloat(item.tarifa) / factor).toFixed(2) : item.tarifa;
+    }
+    setV('fc-flete', fleteVal != null ? fleteVal : '');
+
     setV('fc-gastos-operativos', item.gastos_operativos);
-    setV('fc-base-imponible', item.base_imponible);
-    setV('fc-igv', item.igv);
-    setV('fc-total', item.total);
     setV('fc-adelanto', item.adelanto);
-    setV('fc-detraccion', item.detraccion);
-    setV('fc-neto-cobrar', item.neto_cobrar);
+
+    // Calcular valores económicos
+    window.autoCalcularTotalesForm();
+
     setV('fc-mes-facturacion', item.mes_facturacion || 'ENERO');
     setV('fc-fecha-factura', item.fecha_factura ? item.fecha_factura.split('T')[0] : '');
     setV('fc-serie', item.serie);
@@ -261,44 +306,53 @@ window.abrirEditarRegistro = function(id) {
     modal.show();
 };
 
+// ── CÁLCULO AUTOMÁTICO DE LIQUIDACIÓN ECONÓMICA ─────────────────────
 window.autoCalcularTotalesForm = function() {
-    var tarifa = parseFloat(document.getElementById('fc-tarifa').value) || 0;
+    // 1. Flete
+    var flete = parseFloat(document.getElementById('fc-flete').value) || 0;
+
+    // 2. Comisión % (por defecto 10%)
+    var comisionStr = (document.getElementById('fc-comision').value || '').trim();
+    var comision = comisionStr !== '' ? (parseFloat(comisionStr) || 0) : 10;
+
+    // 3. Tarifa (-10% / 20%) = Flete - (Flete * Comision / 100)
+    var montoComision = flete * (comision / 100);
+    var tarifa = flete - montoComision;
+    if (tarifa < 0) tarifa = 0;
+    var elTarifa = document.getElementById('fc-tarifa');
+    if (elTarifa) elTarifa.value = tarifa.toFixed(2);
+
+    // 4. (-) Gastos Operativos
     var gastos = parseFloat(document.getElementById('fc-gastos-operativos').value) || 0;
+
+    // 5. Base Imponible (B.I) = Tarifa - Gastos Operativos
     var bi = tarifa - gastos;
     if (bi < 0) bi = 0;
-    document.getElementById('fc-base-imponible').value = bi.toFixed(2);
-    window.autoCalcularDesdeBI();
-};
+    var elBI = document.getElementById('fc-base-imponible');
+    if (elBI) elBI.value = bi.toFixed(2);
 
-window.autoCalcularDesdeBI = function() {
-    var bi = parseFloat(document.getElementById('fc-base-imponible').value) || 0;
+    // 6. IGV (18%) = B.I * 18%
     var igv = bi * 0.18;
+    var elIGV = document.getElementById('fc-igv');
+    if (elIGV) elIGV.value = igv.toFixed(2);
+
+    // 7. Total Factura = B.I + IGV
     var total = bi + igv;
-    document.getElementById('fc-igv').value = igv.toFixed(2);
-    document.getElementById('fc-total').value = total.toFixed(2);
-    
-    var detraccion = (total > 400) ? (total * 0.04) : 0;
-    document.getElementById('fc-detraccion').value = detraccion.toFixed(2);
-    window.autoCalcularNeto();
-};
+    var elTotal = document.getElementById('fc-total');
+    if (elTotal) elTotal.value = total.toFixed(2);
 
-window.autoCalcularDesdeTotal = function() {
-    var total = parseFloat(document.getElementById('fc-total').value) || 0;
-    var bi = total / 1.18;
-    var igv = total - bi;
-    document.getElementById('fc-base-imponible').value = bi.toFixed(2);
-    document.getElementById('fc-igv').value = igv.toFixed(2);
-    var detraccion = (total > 400) ? (total * 0.04) : 0;
-    document.getElementById('fc-detraccion').value = detraccion.toFixed(2);
-    window.autoCalcularNeto();
-};
-
-window.autoCalcularNeto = function() {
-    var total = parseFloat(document.getElementById('fc-total').value) || 0;
+    // 8. Adelanto
     var adelanto = parseFloat(document.getElementById('fc-adelanto').value) || 0;
-    var detraccion = parseFloat(document.getElementById('fc-detraccion').value) || 0;
-    var neto = total - adelanto - detraccion;
-    document.getElementById('fc-neto-cobrar').value = neto.toFixed(2);
+
+    // 9. Detracción (4%) = Total * 4%
+    var detraccion = (total > 0) ? (total * 0.04) : 0;
+    var elDetraccion = document.getElementById('fc-detraccion');
+    if (elDetraccion) elDetraccion.value = detraccion.toFixed(2);
+
+    // 10. Neto por Cobrar = Total + Adelanto + Detracción
+    var neto = total + adelanto + detraccion;
+    var elNeto = document.getElementById('fc-neto-cobrar');
+    if (elNeto) elNeto.value = neto.toFixed(2);
 };
 
 window.autoCalcularFechaCobro = function() {
@@ -328,6 +382,8 @@ window.guardarCuentaForm = function(e) {
     formData.append('conductor', getV('fc-conductor').trim());
     formData.append('cliente', getV('fc-cliente').trim());
     formData.append('lugar', getV('fc-lugar').trim());
+    formData.append('flete', parseFloat(getV('fc-flete')) || 0);
+    formData.append('comision_porcentaje', parseFloat(getV('fc-comision')) || 10);
     formData.append('tarifa', parseFloat(getV('fc-tarifa')) || 0);
     formData.append('gastos_operativos', parseFloat(getV('fc-gastos-operativos')) || 0);
     formData.append('base_imponible', parseFloat(getV('fc-base-imponible')) || 0);
