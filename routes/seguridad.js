@@ -9,6 +9,10 @@ const upload  = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15
 
 module.exports = (db, logAudit) => {
 
+    function getDb(req) {
+        return (req && req.db) ? req.db : db;
+    }
+
     // ── Cargar helper S3 ──────────────────────────────────────────
     const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl } = require('../utils/s3');
 
@@ -18,6 +22,7 @@ module.exports = (db, logAudit) => {
 
     // ── GET /seguridad/unidades/stats — Estadísticas resumidas (1ms) ──
     router.get('/seguridad/unidades/stats', (req, res) => {
+        const tdb = getDb(req);
         const sql = `
             SELECT 
                 COUNT(*) as total,
@@ -508,7 +513,8 @@ module.exports = (db, logAudit) => {
 
     // ── GET /seguridad/empresas-stats — Métricas en vivo por empresa ──
     router.get('/seguridad/empresas-stats', (req, res) => {
-        db.query('SELECT placa, cliente FROM placas WHERE cliente IS NOT NULL AND TRIM(cliente) <> "" AND TRIM(cliente) <> "NULL"', (errP, placasRows) => {
+        const tdb = getDb(req);
+        tdb.query('SELECT placa, cliente FROM placas WHERE cliente IS NOT NULL AND TRIM(cliente) <> "" AND TRIM(cliente) <> "NULL"', (errP, placasRows) => {
             if (errP) return res.status(500).json({ error: errP.message });
 
             const placaToEmpresa = {};
@@ -523,7 +529,7 @@ module.exports = (db, logAudit) => {
                 }
             });
 
-            db.query('SELECT id, estado, salida_has_alert, retorno_has_alert, placa_tracto FROM seg_unidades_registros', (errR, regRows) => {
+            tdb.query('SELECT id, estado, salida_has_alert, retorno_has_alert, placa_tracto FROM seg_unidades_registros', (errR, regRows) => {
                 if (errR) return res.status(500).json({ error: errR.message });
 
                 const statsMap = {};
@@ -541,7 +547,7 @@ module.exports = (db, logAudit) => {
 
                 (regRows || []).forEach(r => {
                     const cleanP = (r.placa_tracto || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                    const emp = placaToEmpresa[cleanP] || 'MARSISA';
+                    const emp = placaToEmpresa[cleanP] || (Object.keys(empCountMap)[0] || '');
 
                     if (r.estado === 'en_ruta') {
                         globalStats.en_ruta++;
@@ -555,6 +561,27 @@ module.exports = (db, logAudit) => {
                         if (statsMap[emp]) statsMap[emp].alertas++;
                     }
                 });
+
+                // Si no hay placas aún en la base de datos de esta empresa, obtener el nombre de la empresa configurada
+                if (Object.keys(statsMap).length === 0) {
+                    tdb.query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_nombre' LIMIT 1", (errConf, confRows) => {
+                        const nomEmpresa = (confRows && confRows[0] && confRows[0].valor) ? confRows[0].valor.trim().toUpperCase() : '';
+                        if (nomEmpresa) {
+                            statsMap[nomEmpresa] = {
+                                empresa: nomEmpresa,
+                                total_flota: 0,
+                                en_ruta: 0,
+                                completados: 0,
+                                alertas: 0
+                            };
+                        }
+                        return res.json({
+                            global: globalStats,
+                            empresas: Object.values(statsMap)
+                        });
+                    });
+                    return;
+                }
 
                 res.json({
                     global: globalStats,
