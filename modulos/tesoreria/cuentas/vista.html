@@ -245,42 +245,38 @@
         </div>
     </div>
 
-    <!-- ── 3. CONTROLES Y FILTROS ───────────────────────────────────── -->
-    <div class="card border-0 rounded-4 p-2 mb-3 bg-white shadow-sm" style="border:1px solid #e2e8f0 !important;">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <div class="position-relative flex-grow-1" style="max-width: 380px;">
+    <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS RÁPIDOS ────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 450px;">
+            <div class="position-relative flex-grow-1">
                 <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
                 <input type="text" id="cuentas-buscar" class="ck-apple-search" placeholder="Buscar por cliente, razón social, factura, placa..." oninput="window.filtrarCuentas()">
             </div>
+            <select id="cuentas-filtro-estado" class="form-select form-select-sm rounded-3 bg-white border" style="max-width: 150px; height: 38px; font-weight: 600; font-size: 0.82rem;" onchange="window.filtrarCuentas()">
+                <option value="TODOS">Todos los Estados</option>
+                <option value="PENDIENTE">PENDIENTE</option>
+                <option value="PAGADO">PAGADO</option>
+                <option value="ANULADO">ANULADO</option>
+            </select>
+        </div>
 
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <select id="cuentas-filtro-estado" class="form-select form-select-sm rounded-3 border-light-subtle fw-semibold" style="width: 160px; font-size: 0.82rem;" onchange="window.filtrarCuentas()">
-                    <option value="TODOS">Todos los Estados</option>
-                    <option value="PENDIENTE">PENDIENTE</option>
-                    <option value="PAGADO">PAGADO</option>
-                    <option value="ANULADO">ANULADO</option>
-                </select>
-
-                <select id="cuentas-filtro-mes" class="form-select form-select-sm rounded-3 border-light-subtle fw-semibold" style="width: 160px; font-size: 0.82rem;" onchange="window.filtrarCuentas()">
-                    <option value="TODOS">Todos los Meses</option>
-                    <option value="ENERO">ENERO</option>
-                    <option value="FEBRERO">FEBRERO</option>
-                    <option value="MARZO">MARZO</option>
-                    <option value="ABRIL">ABRIL</option>
-                    <option value="MAYO">MAYO</option>
-                    <option value="JUNIO">JUNIO</option>
-                    <option value="JULIO">JULIO</option>
-                    <option value="AGOSTO">AGOSTO</option>
-                    <option value="SETIEMBRE">SETIEMBRE</option>
-                    <option value="OCTUBRE">OCTUBRE</option>
-                    <option value="NOVIEMBRE">NOVIEMBRE</option>
-                    <option value="DICIEMBRE">DICIEMBRE</option>
-                </select>
-
-                <span id="cuentas-contador-filas" class="badge bg-light text-secondary border px-3 py-2 rounded-3 fw-bold" style="font-size:0.75rem;">
-                    0 filas
-                </span>
-            </div>
+        <div class="d-flex align-items-center gap-2">
+            <select id="cuentas-filtro-mes" class="form-select form-select-sm rounded-3 bg-white border" style="max-width: 140px; height: 38px; font-weight: 600; font-size: 0.82rem;" onchange="window.filtrarCuentas()">
+                <option value="TODOS">Todos los Meses</option>
+                <option value="ENERO">ENERO</option>
+                <option value="FEBRERO">FEBRERO</option>
+                <option value="MARZO">MARZO</option>
+                <option value="ABRIL">ABRIL</option>
+                <option value="MAYO">MAYO</option>
+                <option value="JUNIO">JUNIO</option>
+                <option value="JULIO">JULIO</option>
+                <option value="AGOSTO">AGOSTO</option>
+                <option value="SETIEMBRE">SETIEMBRE</option>
+                <option value="OCTUBRE">OCTUBRE</option>
+                <option value="NOVIEMBRE">NOVIEMBRE</option>
+                <option value="DICIEMBRE">DICIEMBRE</option>
+            </select>
+            <span id="cuentas-contador-filas" class="text-secondary small fw-bold ms-auto">0 filas</span>
         </div>
     </div>
 
