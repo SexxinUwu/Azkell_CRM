@@ -142,6 +142,19 @@ window._cuentasRenderTabla = function(data) {
             '</a>';
         }
 
+        var iconEstado = est === 'PAGADO' ? '<i class="bi bi-check-circle-fill"></i> ' : (est === 'ANULADO' ? '<i class="bi bi-x-circle-fill"></i> ' : '<i class="bi bi-clock-fill"></i> ');
+
+        var btnEstadoHtml = '';
+        if (est === 'ANULADO') {
+            btnEstadoHtml = '<span class="badge-estado anulado" title="Registro Anulado (modificar desde Editar)">' +
+                iconEstado + est +
+            '</span>';
+        } else {
+            btnEstadoHtml = '<button type="button" class="badge-estado ' + badgeClass + '" title="Clic para alternar entre Pendiente y Pagado" onclick="window.toggleEstadoCuenta(' + item.id + ', \'' + est + '\')">' +
+                iconEstado + est +
+            '</button>';
+        }
+
         return '<tr>' +
             '<td class="col-sticky-action text-center">' +
                 '<div class="btn-group btn-group-sm">' +
@@ -174,7 +187,7 @@ window._cuentasRenderTabla = function(data) {
             '<td class="text-center">' + (item.credito_dias != null ? item.credito_dias : '—') + '</td>' +
             '<td>' + _fmtDate(item.fecha_cobrar) + '</td>' +
             '<td>' + _fmtDate(item.fecha_deposito) + '</td>' +
-            '<td class="text-center"><span class="badge-estado ' + badgeClass + '">' + est + '</span></td>' +
+            '<td class="text-center">' + btnEstadoHtml + '</td>' +
             '<td class="text-center">' + docHtml + '</td>' +
             '<td class="num-cell ' + ((parseFloat(item.diferencia) || 0) < 0 ? 'text-danger' : '') + '">' + _fmtMoney(item.diferencia) + '</td>' +
             '<td>' + (item.observacion || '') + '</td>' +
@@ -182,6 +195,42 @@ window._cuentasRenderTabla = function(data) {
     }).join('');
 
     tbody.innerHTML = html;
+};
+
+// ── ALTERNAR ESTADO RÁPIDO (PENDIENTE <-> PAGADO) ─────────────────
+window.toggleEstadoCuenta = function(id, estadoActual) {
+    if (estadoActual === 'ANULADO') return; // Bloqueado para anulados
+
+    var nuevoEstado = estadoActual === 'PENDIENTE' ? 'PAGADO' : 'PENDIENTE';
+
+    // 1. Actualización optimista inmediata en memoria para que los KPIs y UI respondan al instante
+    var item = (window._cuentasData || []).find(function(c) { return c.id === id; });
+    if (item) {
+        item.estado_servicio = nuevoEstado;
+    }
+    window._cuentasRenderTabla(window._cuentasDataFiltrada || window._cuentasData || []);
+    window._cuentasActualizarKPIs(window._cuentasDataFiltrada || window._cuentasData || []);
+
+    // 2. Persistir en la base de datos
+    fetch('/api/tesoreria/cuentas/' + id + '/toggle-estado', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado_servicio: nuevoEstado })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (res.error) throw new Error(res.error);
+    })
+    .catch(function(err) {
+        console.error('Error al cambiar estado:', err);
+        // Revertir si falló
+        if (item) {
+            item.estado_servicio = estadoActual;
+            window._cuentasRenderTabla(window._cuentasDataFiltrada || window._cuentasData || []);
+            window._cuentasActualizarKPIs(window._cuentasDataFiltrada || window._cuentasData || []);
+        }
+        alert('No se pudo actualizar el estado: ' + err.message);
+    });
 };
 
 // ── BLOQUEO DE TECLAS NO NUMÉRICAS EN MÓVILES Y DESKTOP ───────────
@@ -666,15 +715,40 @@ window.importarExcelMasivo = function(event) {
                 return isNaN(num) ? 0 : num;
             };
 
+            var placaRaw = getVal(['PLACA', 'PLACAS', 'UNIDAD']);
+            var camRaw = getVal(['PLACA CAMION', 'PLACACAMION', 'CAMION', 'TRACTO', 'PLACA TRACTO']);
+            var carRaw = getVal(['PLACA CARRETA', 'PLACACARRETA', 'CARRETA', 'REMOLQUE', 'PLACA REMOLQUE']);
+
+            // Si la placa del camión o la placa global trae guion o barra (ej: T8S942-AWB973), separar camión y carreta
+            var camFinal = camRaw || '';
+            var carFinal = carRaw || '';
+
+            if (!carFinal) {
+                var fuentePlaca = camFinal || placaRaw || '';
+                if (fuentePlaca.includes('-')) {
+                    var partesPlaca = fuentePlaca.split('-').map(function(p) { return p.trim(); }).filter(Boolean);
+                    if (partesPlaca.length >= 2) {
+                        camFinal = partesPlaca[0];
+                        carFinal = partesPlaca[1];
+                    } else if (partesPlaca.length === 1) {
+                        camFinal = partesPlaca[0];
+                    }
+                } else if (fuentePlaca.includes('/')) {
+                    var partesSlash = fuentePlaca.split('/').map(function(p) { return p.trim(); }).filter(Boolean);
+                    camFinal = partesSlash[0] || '';
+                    carFinal = partesSlash[1] || '';
+                }
+            }
+
             var item = {
                 codigo_liquidacion: getVal(['COD DE LIQUIDACION', 'CODLIQUIDACION', 'CODIGO LIQUIDACION', 'CODIGO']),
                 fecha_liquidacion: parseFechaExcel(getVal(['FECHA DE LIQUIDACION', 'FECHALIQUIDACION', 'LIQUIDACION'])),
                 numero_viaje: getVal(['N DE VIAJE', 'NUMERO DE VIAJE', 'NRO VIAJE', 'VIAJE', 'ORDEN VIAJE', 'N VIAJE', 'NUMERO VIAJE']),
                 fecha_servicio: parseFechaExcel(getVal(['FECHA SERVICIO', 'FECHASERVICIO'])),
                 razon_social: getVal(['RAZON SOCIAL', 'RAZONSOCIAL', 'PROVEEDOR', 'EMPRESA']),
-                placa: getVal(['PLACA', 'PLACAS', 'UNIDAD']),
-                placa_camion: getVal(['PLACA CAMION', 'PLACACAMION', 'CAMION', 'TRACTO', 'PLACA TRACTO']),
-                placa_carreta: getVal(['PLACA CARRETA', 'PLACACARRETA', 'CARRETA', 'REMOLQUE', 'PLACA REMOLQUE']),
+                placa: placaRaw,
+                placa_camion: camFinal,
+                placa_carreta: carFinal,
                 conductor: getVal(['CONDUCTOR', 'CHOFER']),
                 cliente: getVal(['CLIENTE']),
                 lugar: getVal(['LUGAR', 'ORIGEN DESTINO', 'RUTA']),

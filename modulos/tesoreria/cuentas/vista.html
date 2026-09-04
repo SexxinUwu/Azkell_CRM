@@ -121,17 +121,43 @@
 }
 
 .badge-estado {
-    padding: 4px 8px;
-    border-radius: 6px;
+    padding: 5px 12px;
+    border-radius: 8px;
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
-    display: inline-block;
+    letter-spacing: 0.03em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    user-select: none;
 }
-.badge-estado.pagado { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-.badge-estado.pendiente { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
-.badge-estado.anulado { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.badge-estado:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+.badge-estado:active {
+    transform: scale(0.96);
+}
+.badge-estado.pagado { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.badge-estado.pagado:hover { background: #bbf7d0; color: #166534; }
+.badge-estado.pendiente { background: #fef3c7; color: #b45309; border: 1px solid #fde047; }
+.badge-estado.pendiente:hover { background: #fde68a; color: #92400e; }
+.badge-estado.anulado { 
+    background: #fee2e2 !important; 
+    color: #b91c1c !important; 
+    border: 1px solid #fca5a5 !important; 
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+    opacity: 0.9;
+}
 
 /* Sticky first column for actions */
 .col-sticky-action {

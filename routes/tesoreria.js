@@ -471,6 +471,29 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ── PATCH /api/tesoreria/cuentas/:id/toggle-estado (Cambio rápido de estado) ──
+    router.patch('/cuentas/:id/toggle-estado', async (req, res) => {
+        try {
+            await ensureTable(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const id = req.params.id;
+            const nuevoEstado = (req.body.estado_servicio || 'PENDIENTE').toUpperCase().trim();
+
+            await tdb.query('UPDATE tesoreria_cuentas SET estado_servicio = ? WHERE id = ?', [nuevoEstado, id]);
+
+            if (typeof logAudit === 'function') {
+                logAudit(req, 'TESORERIA', 'CUENTAS', 'CAMBIO_ESTADO', `Cambió estado a ${nuevoEstado} en registro ID ${id}`);
+            }
+
+            res.json({ ok: true, nuevoEstado, message: 'Estado actualizado correctamente' });
+        } catch (err) {
+            console.error('Error al cambiar estado de cuenta:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // ── DELETE /api/tesoreria/cuentas/:id (Eliminar registro) ───────────
     router.delete('/cuentas/:id', async (req, res) => {
         try {
