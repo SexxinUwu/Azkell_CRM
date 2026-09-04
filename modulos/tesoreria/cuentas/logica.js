@@ -599,37 +599,104 @@ window.importarExcelMasivo = function(event) {
                     return '';
                 };
 
-                var item = {
-                    codigo_liquidacion: getVal(['COD DE LIQUIDACION', 'CODLIQUIDACION', 'CODIGO LIQUIDACION', 'CODIGO']),
-                    fecha_liquidacion: getVal(['FECHA DE LIQUIDACION', 'FECHALIQUIDACION', 'LIQUIDACION']),
-                    numero_viaje: getVal(['N DE VIAJE', 'NUMERO DE VIAJE', 'NRO VIAJE', 'VIAJE', 'ORDEN VIAJE', 'N VIAJE', 'NUMERO VIAJE']),
-                    fecha_servicio: getVal(['FECHA SERVICIO', 'FECHASERVICIO']),
-                    razon_social: getVal(['RAZON SOCIAL', 'RAZONSOCIAL', 'PROVEEDOR', 'EMPRESA']),
-                    placa: getVal(['PLACA', 'PLACAS', 'UNIDAD']),
-                    placa_camion: getVal(['PLACA CAMION', 'PLACACAMION', 'CAMION', 'TRACTO', 'PLACA TRACTO']),
-                    placa_carreta: getVal(['PLACA CARRETA', 'PLACACARRETA', 'CARRETA', 'REMOLQUE', 'PLACA REMOLQUE']),
-                    conductor: getVal(['CONDUCTOR', 'CHOFER']),
-                    cliente: getVal(['CLIENTE']),
-                    lugar: getVal(['LUGAR', 'ORIGEN DESTINO', 'RUTA']),
-                    tarifa: getVal(['TARIFA 10 YO 20 POR TIPO DE CAMION', 'TARIFA', 'FLETE']),
-                    gastos_operativos: getVal(['GASTOS OPERATIVOS', 'GASTOS']),
-                    base_imponible: getVal(['BI', 'BASE IMPONIBLE', 'SUBTOTAL']),
-                    igv: getVal(['IGV']),
-                    total: getVal(['TOTAL']),
-                    adelanto: getVal(['ADELANTO']),
-                    detraccion: getVal(['DETRACCION']),
-                    neto_cobrar: getVal(['NETO POR COBRAR', 'NETO COBRAR', 'SALDO']),
-                    mes_facturacion: getVal(['MES FACTURACION', 'MES']),
-                    fecha_factura: getVal(['FECHA', 'FECHA FACTURA']),
-                    serie: getVal(['SERIE']),
-                    factura: getVal(['FACTURA', 'NUMERO FACTURA', 'NRO FACTURA']),
-                    credito_dias: getVal(['CREDITO DIAS', 'DIAS CREDITO', 'CREDITO']),
-                    fecha_cobrar: getVal(['FECHA A COBRAR', 'FECHA COBRAR', 'VENCIMIENTO']),
-                    fecha_deposito: getVal(['FECHA DE DEPOSITO O TRANSF', 'FECHA DEPOSITO', 'FECHA PAGO']),
-                    estado_servicio: getVal(['ESTADO SERVICIO', 'ESTADO', 'ESTADO PAGO']) || 'PENDIENTE',
-                    diferencia: getVal(['DIFERENCIA']),
-                    observacion: getVal(['OBSERVACION', 'OBSERVACIONES', 'DETALLE'])
-                };
+            var parseFechaExcel = function(val) {
+                if (!val) return '';
+                if (typeof val === 'number') {
+                    if (typeof XLSX !== 'undefined' && XLSX.SSF && XLSX.SSF.parse_date_code) {
+                        var d = XLSX.SSF.parse_date_code(val);
+                        if (d) {
+                            var y = d.y;
+                            var m = String(d.m).padStart(2, '0');
+                            var day = String(d.d).padStart(2, '0');
+                            return y + '-' + m + '-' + day;
+                        }
+                    }
+                }
+                var s = String(val).trim();
+                if (!s || s === '-' || s === '—') return '';
+
+                var matchRange = s.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
+                if (matchRange && (s.includes(' - ') || s.includes('-2') || s.includes('-0') || s.includes('-1'))) {
+                    s = matchRange[1];
+                }
+
+                if (s.includes('/')) {
+                    var p = s.split('/');
+                    if (p.length === 3) {
+                        var dia = p[0].trim().padStart(2, '0');
+                        var mes = p[1].trim().padStart(2, '0');
+                        var anio = p[2].trim();
+                        if (anio.length === 2) anio = '20' + anio;
+                        return anio + '-' + mes + '-' + dia;
+                    }
+                }
+                if (s.includes('-')) {
+                    var p2 = s.split('-').map(function(x) { return x.trim(); });
+                    if (p2.length === 3) {
+                        if (p2[0].length === 4) {
+                            var anio2 = p2[0];
+                            var mVal = parseInt(p2[1], 10);
+                            var dVal = parseInt(p2[2], 10);
+                            if (mVal > 12) {
+                                return anio2 + '-' + String(dVal).padStart(2, '0') + '-' + String(mVal).padStart(2, '0');
+                            }
+                            return anio2 + '-' + String(mVal).padStart(2, '0') + '-' + String(dVal).padStart(2, '0');
+                        } else {
+                            var dia2 = p2[0].padStart(2, '0');
+                            var mes2 = p2[1].padStart(2, '0');
+                            var anio2b = p2[2];
+                            if (anio2b.length === 2) anio2b = '20' + anio2b;
+                            return anio2b + '-' + mes2 + '-' + dia2;
+                        }
+                    }
+                }
+                return s;
+            };
+
+            var parseNumExcel = function(val) {
+                if (val == null || val === '') return 0;
+                if (typeof val === 'number') return isNaN(val) ? 0 : val;
+                var str = String(val).trim();
+                if (str.includes('.') && str.includes(',')) {
+                    str = str.replace(/\./g, '').replace(',', '.');
+                } else if (str.includes(',')) {
+                    str = str.replace(',', '.');
+                }
+                var num = parseFloat(str);
+                return isNaN(num) ? 0 : num;
+            };
+
+            var item = {
+                codigo_liquidacion: getVal(['COD DE LIQUIDACION', 'CODLIQUIDACION', 'CODIGO LIQUIDACION', 'CODIGO']),
+                fecha_liquidacion: parseFechaExcel(getVal(['FECHA DE LIQUIDACION', 'FECHALIQUIDACION', 'LIQUIDACION'])),
+                numero_viaje: getVal(['N DE VIAJE', 'NUMERO DE VIAJE', 'NRO VIAJE', 'VIAJE', 'ORDEN VIAJE', 'N VIAJE', 'NUMERO VIAJE']),
+                fecha_servicio: parseFechaExcel(getVal(['FECHA SERVICIO', 'FECHASERVICIO'])),
+                razon_social: getVal(['RAZON SOCIAL', 'RAZONSOCIAL', 'PROVEEDOR', 'EMPRESA']),
+                placa: getVal(['PLACA', 'PLACAS', 'UNIDAD']),
+                placa_camion: getVal(['PLACA CAMION', 'PLACACAMION', 'CAMION', 'TRACTO', 'PLACA TRACTO']),
+                placa_carreta: getVal(['PLACA CARRETA', 'PLACACARRETA', 'CARRETA', 'REMOLQUE', 'PLACA REMOLQUE']),
+                conductor: getVal(['CONDUCTOR', 'CHOFER']),
+                cliente: getVal(['CLIENTE']),
+                lugar: getVal(['LUGAR', 'ORIGEN DESTINO', 'RUTA']),
+                tarifa: parseNumExcel(getVal(['TARIFA 10 YO 20 POR TIPO DE CAMION', 'TARIFA', 'FLETE'])),
+                gastos_operativos: parseNumExcel(getVal(['GASTOS OPERATIVOS', 'GASTOS'])),
+                base_imponible: parseNumExcel(getVal(['BI', 'BASE IMPONIBLE', 'SUBTOTAL'])),
+                igv: parseNumExcel(getVal(['IGV'])),
+                total: parseNumExcel(getVal(['TOTAL'])),
+                adelanto: parseNumExcel(getVal(['ADELANTO'])),
+                detraccion: parseNumExcel(getVal(['DETRACCION'])),
+                neto_cobrar: parseNumExcel(getVal(['NETO POR COBRAR', 'NETO COBRAR', 'SALDO'])),
+                mes_facturacion: getVal(['MES FACTURACION', 'MES']),
+                fecha_factura: parseFechaExcel(getVal(['FECHA', 'FECHA FACTURA'])),
+                serie: getVal(['SERIE']),
+                factura: getVal(['FACTURA', 'NUMERO FACTURA', 'NRO FACTURA']),
+                credito_dias: parseInt(getVal(['CREDITO DIAS', 'DIAS CREDITO', 'CREDITO']), 10) || 0,
+                fecha_cobrar: parseFechaExcel(getVal(['FECHA A COBRAR', 'FECHA COBRAR', 'VENCIMIENTO'])),
+                fecha_deposito: parseFechaExcel(getVal(['FECHA DE DEPOSITO O TRANSF', 'FECHA DEPOSITO', 'FECHA PAGO'])),
+                estado_servicio: getVal(['ESTADO SERVICIO', 'ESTADO', 'ESTADO PAGO']) || 'PENDIENTE',
+                diferencia: parseNumExcel(getVal(['DIFERENCIA'])),
+                observacion: getVal(['OBSERVACION', 'OBSERVACIONES', 'DETALLE'])
+            };
 
                 if (item.codigo_liquidacion || item.razon_social || item.factura || item.placa || item.placa_camion || item.total || item.fecha_liquidacion) {
                     procesadas.push(item);
