@@ -12,16 +12,34 @@
     const _rvItemsPorPagina = 30;
     const _rvExpandedRows = new Set(); // Set de viajes expandidos
 
+    function rvGetFechaHoy() {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    window.rvInicializarFechas = function() {
+        const elDesde = document.getElementById('rv-filtro-fecha-desde');
+        const elHasta = document.getElementById('rv-filtro-fecha-hasta');
+        const hoy = rvGetFechaHoy();
+        if (elDesde && !elDesde.value) elDesde.value = hoy;
+        if (elHasta && !elHasta.value) elHasta.value = hoy;
+    };
+
     window.inicializarModuloReporteViajes = function() {
+        window.rvInicializarFechas();
         window.rvCargarDatos();
     };
 
     window.rvCargarDatos = async function() {
+        window.rvInicializarFechas();
         const tbody = document.getElementById('rv-tabla-body');
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="11" class="text-center py-5 text-secondary">
+                    <td colspan="12" class="text-center py-5 text-secondary">
                         <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
                         <div class="small fw-semibold">Consultando y calculando reporte de viajes con la Matriz D2...</div>
                     </td>
@@ -48,13 +66,13 @@
                 window.rvAplicarFiltros();
             } else {
                 if (tbody) {
-                    tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-danger">${json.error || 'No se pudieron obtener datos'}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-danger">${json.error || 'No se pudieron obtener datos'}</td></tr>`;
                 }
             }
         } catch (err) {
             console.error('Error cargando reporte de viajes:', err);
             if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-danger">Error de conexión al servidor.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-danger">Error de conexión al servidor.</td></tr>`;
             }
         }
     };
@@ -120,13 +138,16 @@
         const qEl = document.getElementById('rv-filtro-q');
         const motorEl = document.getElementById('rv-filtro-motor');
         const configEl = document.getElementById('rv-filtro-config');
-        const fechaEl = document.getElementById('rv-filtro-fecha');
+        const elDesde = document.getElementById('rv-filtro-fecha-desde');
+        const elHasta = document.getElementById('rv-filtro-fecha-hasta');
+        const hoy = rvGetFechaHoy();
 
         if (viajeEl) viajeEl.value = '';
         if (qEl) qEl.value = '';
         if (motorEl) motorEl.value = 'ALL';
         if (configEl) configEl.value = 'ALL';
-        if (fechaEl) fechaEl.value = '';
+        if (elDesde) elDesde.value = hoy;
+        if (elHasta) elHasta.value = hoy;
 
         window.rvOnFiltrar();
     };
@@ -136,7 +157,8 @@
         const q = (document.getElementById('rv-filtro-q')?.value || '').trim().toUpperCase();
         const fMotor = document.getElementById('rv-filtro-motor')?.value || 'ALL';
         const fConfig = document.getElementById('rv-filtro-config')?.value || 'ALL';
-        const fFecha = document.getElementById('rv-filtro-fecha')?.value || '';
+        const fDesde = (document.getElementById('rv-filtro-fecha-desde')?.value || '').trim();
+        const fHasta = (document.getElementById('rv-filtro-fecha-hasta')?.value || '').trim();
 
         const lista = window.dataGlobalReporteViajes || [];
         const filtrados = lista.filter(v => {
@@ -168,8 +190,9 @@
                 if (confg !== fConfig && confgT !== fConfig) return false;
             }
 
-            // Filtro por Fecha
-            if (fFecha && v.fecha !== fFecha) return false;
+            // Filtro por Rango de Fechas (Desde - Hasta)
+            if (fDesde && v.fecha && v.fecha < fDesde) return false;
+            if (fHasta && v.fecha && v.fecha > fHasta) return false;
 
             return true;
         });
