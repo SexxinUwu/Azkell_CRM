@@ -414,7 +414,7 @@ window.verificarSesionGuardada = function() {
     safe('bnav-rrhh', showRrhh);
 
     // GERENCIA — EXCLUSIVO ADMINISTRADORES
-    var showGerencia = isAdm;
+    var showGerencia = isAdm && !vSuperAdmin;
     safe('wrap-gerencia', showGerencia);
     safe('bnav-gerencia', showGerencia);
     safe('nav-gerencia-aprobaciones-oc', showGerencia);
@@ -494,8 +494,13 @@ window.verificarSesionGuardada = function() {
     safe('wrap-configuracion', showConfiguracion);
     safe('mbnav-configuracion', showConfiguracion);
 
-    // ── AISLAMIENTO TOTAL DEL PORTAL SUPERADMIN (admin.azkell.com) ──────
-    if (isSuperAdminDomain) {
+    // ── AISLAMIENTO TOTAL DEL PORTAL SUPERADMIN (admin.azkell.com o rol SuperAdmin) ──────
+    if (isSuperAdminDomain || (vSuperAdmin && sessionStorage.getItem('fleet_rutaActual') === 'sistema/superadmin')) {
+        safe('sidebarMenu', false);
+        safe('sidebarBackdrop', false);
+        safe('btn-install-sidebar', false);
+        safe('contenedor-instalar', false);
+        safe('wrap-gerencia', false);
         safe('wrap-dashboard', false);
         safe('wrap-flota', false);
         safe('wrap-mantenimiento', false);
@@ -510,6 +515,8 @@ window.verificarSesionGuardada = function() {
         safe('wrap-auditoria', false);
         safe('wrap-administracion', false);
         safe('nav-cfg-empresa', false);
+    } else {
+        safe('sidebarMenu', true);
     }
     // ── ACTUALIZACIÓN DINÁMICA DE BADGES Y SECCIONES DEL SIDEBAR ──
     ['operaciones', 'flota', 'mantenimiento', 'almacen', 'directorio', 'seguridad', 'rrhh', 'tesoreria', 'administracion', 'configuracion'].forEach(function(sec) {
@@ -3652,6 +3659,7 @@ const TITULOS_MODULOS = {
     'sistema/usuarios':            'Gestión de Usuarios',
     'sistema/auditoria':           'Bitácora de Auditoría',
     'administracion':              'Administración',
+    'sistema/superadmin':          'SuperAdmin SaaS Master',
     'seguridad/unidades':          'Control de Unidades',
     'seguridad/unidades-base':     'Status "Unidades en Base"',
     'gerencia/aprobaciones-oc':    'Aprobación de Órdenes de Compra',
@@ -3951,7 +3959,19 @@ window.cargarModuloAislado = async function(rutaModulo) {
         const main = document.querySelector('.main-area');
         if (main) main.style.padding = '0';
         if (root) root.style.padding = '0';
+    } else if (rutaModulo === 'sistema/superadmin') {
+        const sb = document.getElementById('sidebarMenu');
+        if (sb) sb.style.setProperty('display', 'none', 'important');
+        const btnMob = document.querySelector('.btn-hamburger-mobile');
+        if (btnMob) btnMob.style.setProperty('display', 'none', 'important');
+        const main = document.querySelector('.main-area');
+        if (main) main.style.padding = '';
+        if (root) root.style.padding = '15px 25px';
     } else {
+        const sb = document.getElementById('sidebarMenu');
+        if (sb) sb.style.removeProperty('display');
+        const btnMob = document.querySelector('.btn-hamburger-mobile');
+        if (btnMob) btnMob.style.removeProperty('display');
         const main = document.querySelector('.main-area');
         if (main) main.style.padding = '';
         if (root) root.style.padding = '15px 25px';
