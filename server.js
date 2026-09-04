@@ -3062,6 +3062,7 @@ app.use('/api/neumaticos', require('./routes/neumaticos')(db, broadcast, logAudi
 app.use('/api/combustible', require('./routes/combustible')(db, broadcast, logAudit));
 app.use('/api/operaciones', require('./routes/operaciones')(db, broadcast, logAudit));
 app.use('/api/guias-remision', require('./routes/guias_remision')(db, broadcast, logAudit));
+app.use('/api/tesoreria', require('./routes/tesoreria')(db, broadcast, logAudit));
 
 const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
 app.use('/api/script', legacyRoutes);
