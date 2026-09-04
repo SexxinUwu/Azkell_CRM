@@ -87,18 +87,26 @@ window.filtrarPorEstado = function(est) {
     }
 };
 
-window._cuentasRenderKPIs = function(data) {
-    var list = data || [];
+window._cuentasRenderKPIs = function(dataFiltrada) {
+    // Calculamos los KPIs sobre la totalidad de los datos (o filtrados por mes si hay un mes seleccionado)
+    // para que el usuario siempre vea el total de la cartera (Facturado, Pendiente, Pagado y Conteo)
+    var mes = ((document.getElementById('cuentas-filtro-mes') || {}).value || 'TODOS').toUpperCase();
+    var baseData = (window._cuentasData || []).filter(function(item) {
+        return (mes === 'TODOS') || ((item.mes_facturacion || '').toUpperCase() === mes);
+    });
+
     var totalFacturado = 0;
     var netoPendiente = 0;
     var totalPagado = 0;
 
-    list.forEach(function(item) {
+    baseData.forEach(function(item) {
         var total = parseFloat(item.total) || 0;
         var neto = parseFloat(item.neto_cobrar) || 0;
         var est = (item.estado_servicio || '').toUpperCase();
 
-        totalFacturado += total;
+        if (est !== 'ANULADO') {
+            totalFacturado += total;
+        }
         if (est === 'PAGADO') {
             totalPagado += (neto > 0 ? neto : total);
         } else if (est === 'PENDIENTE') {
@@ -114,10 +122,12 @@ window._cuentasRenderKPIs = function(data) {
     setEl('kpi-total-facturado', 'S/ ' + _fmtMoney(totalFacturado));
     setEl('kpi-neto-pendiente', 'S/ ' + _fmtMoney(netoPendiente));
     setEl('kpi-total-pagado', 'S/ ' + _fmtMoney(totalPagado));
-    setEl('kpi-conteo-registros', list.length + ' Registros');
+    setEl('kpi-conteo-registros', baseData.length + ' Registros');
 
+    // El contador de filas visible en la tabla sí muestra cuántas filas coincidieron con la búsqueda
+    var listFiltrada = dataFiltrada || [];
     var contFilas = document.getElementById('cuentas-contador-filas');
-    if (contFilas) contFilas.textContent = list.length + ' fila' + (list.length !== 1 ? 's' : '');
+    if (contFilas) contFilas.textContent = listFiltrada.length + ' fila' + (listFiltrada.length !== 1 ? 's' : '');
 };
 
 window._cuentasRenderTabla = function(data) {
@@ -203,13 +213,12 @@ window.toggleEstadoCuenta = function(id, estadoActual) {
 
     var nuevoEstado = estadoActual === 'PENDIENTE' ? 'PAGADO' : 'PENDIENTE';
 
-    // 1. Actualización optimista inmediata en memoria para que los KPIs y UI respondan al instante
+    // 1. Actualización optimista inmediata en memoria respetando el filtro y buscador activo
     var item = (window._cuentasData || []).find(function(c) { return c.id === id; });
     if (item) {
         item.estado_servicio = nuevoEstado;
     }
-    window._cuentasRenderTabla(window._cuentasDataFiltrada || window._cuentasData || []);
-    window._cuentasActualizarKPIs(window._cuentasDataFiltrada || window._cuentasData || []);
+    window.filtrarCuentas();
 
     // 2. Persistir en la base de datos
     fetch('/api/tesoreria/cuentas/' + id + '/toggle-estado', {
@@ -226,8 +235,7 @@ window.toggleEstadoCuenta = function(id, estadoActual) {
         // Revertir si falló
         if (item) {
             item.estado_servicio = estadoActual;
-            window._cuentasRenderTabla(window._cuentasDataFiltrada || window._cuentasData || []);
-            window._cuentasActualizarKPIs(window._cuentasDataFiltrada || window._cuentasData || []);
+            window.filtrarCuentas();
         }
         alert('No se pudo actualizar el estado: ' + err.message);
     });
