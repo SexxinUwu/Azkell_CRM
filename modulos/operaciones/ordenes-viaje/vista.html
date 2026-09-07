@@ -560,50 +560,42 @@
     top: 0;
     right: 0;
     bottom: 0;
-    left: var(--sidebar-width, 240px);
-    background: rgba(15, 23, 42, 0.45);
-    z-index: 1045;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.5);
+    z-index: 1060; /* Por encima del sidebar (1050) para oscurecer toda la aplicación */
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.16s ease, visibility 0.16s, left 0.2s ease;
-}
-body.sidebar-compact .ov-mon-drawer-backdrop,
-body.sidebar-collapsed .ov-mon-drawer-backdrop,
-body:has(#sidebarMenu.collapsed) .ov-mon-drawer-backdrop {
-    left: var(--sidebar-collapsed-width, 70px) !important;
+    transition: opacity 0.16s ease, visibility 0.16s;
 }
 .ov-mon-drawer-backdrop.active {
     opacity: 1;
     visibility: visible;
 }
 
-/* Ventana Flotante Spatial: Centrada con márgenes equilibrados a la derecha del sidebar */
+/* Ventana Flotante Spatial: Centrada en pantalla, flotando sobre el fondo oscurecido */
 .ov-mon-drawer {
     position: fixed;
-    top: 2.5vh;
-    bottom: 2.5vh;
-    left: calc(var(--sidebar-width, 240px) + 2vw);
-    right: 2vw;
-    max-width: 1180px;
+    top: 3vh;
+    bottom: 3vh;
+    left: 4vw;
+    right: 4vw;
+    max-width: 1160px;
     margin: 0 auto;
     background: #ffffff;
     border: 1px solid rgba(226, 232, 240, 0.9);
     border-radius: 24px;
-    box-shadow: 0 20px 60px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.7);
+    box-shadow: 0 25px 70px -10px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.7);
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    z-index: 1046;
+    z-index: 1061; /* Por encima del backdrop (1060) */
     transform: scale(0.985) translateY(8px);
     opacity: 0;
     visibility: hidden;
     will-change: transform, opacity;
-    transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.14s ease, visibility 0.16s, left 0.2s ease;
-}
-body.sidebar-compact .ov-mon-drawer,
-body.sidebar-collapsed .ov-mon-drawer,
-body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
-    left: calc(var(--sidebar-collapsed-width, 70px) + 2vw) !important;
+    transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.14s ease, visibility 0.16s;
 }
 .ov-mon-drawer.active {
     transform: scale(1) translateY(0);
