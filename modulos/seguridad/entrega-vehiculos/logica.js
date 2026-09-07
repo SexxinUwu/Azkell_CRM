@@ -1780,11 +1780,16 @@
             // 1. Si el dispositivo soporta compartir archivos nativamente (Android, iOS y Navegadores compatibles)
             // Se envía únicamente el archivo PDF sin texto adicional para que llegue en un solo mensaje
             if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-                await navigator.share({
-                    files: [pdfFile],
-                    title: filename
-                });
-                return;
+                try {
+                    await navigator.share({
+                        files: [pdfFile],
+                        title: filename
+                    });
+                    return;
+                } catch (shareErr) {
+                    if (shareErr.name === 'AbortError') return;
+                    console.warn('Fallo navigator.share en entrega, ejecutando fallback:', shareErr);
+                }
             }
 
             // 2. En PC / Escritorio: Descarga directa automática del PDF + Apertura de WhatsApp para adjuntarlo
