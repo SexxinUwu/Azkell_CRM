@@ -990,9 +990,12 @@ window.ovEjecutarIniciarViajeConfirmado = async function(e) {
     }
 };
 
-// ── MONITOREO DE VIAJE (MODAL ESTILO APPLE iOS) ───────────────────────
+// ── MONITOREO DE VIAJE (DRAWER LATERAL INTEGRADO — ESTILO PASTEL ERP) ───
+window._ovViajeMonitoreoActivo = null;
+
 window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     if (!viajeCode) return;
+    window._ovViajeMonitoreoActivo = viajeCode;
 
     var item = (_ovViajesGlobal || []).find(x => x.viaje === viajeCode);
     if (!item) {
@@ -1004,7 +1007,7 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     var hFolio = document.getElementById('ov-mon-header-folio');
     if (hFolio) hFolio.textContent = viajeCode;
 
-    // Resumen Top KPIs
+    // Resumen Top KPIs Inset
     var tractoEl = document.getElementById('ov-mon-kpi-tracto');
     var remolqueEl = document.getElementById('ov-mon-kpi-remolque');
     var condEl = document.getElementById('ov-mon-kpi-conductor');
@@ -1019,20 +1022,20 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     if (rutaEl) rutaEl.textContent = item.ruta || '---';
     if (coordEl) coordEl.textContent = (item.usuario_creacion || item.usuario || 'ADMINISTRADOR DEL SISTEMA').toUpperCase();
 
-    // Panel Resumen -> Datos del Viaje
+    // Panel Resumen -> Ficha Operacional Técnica
     var resServicio = document.getElementById('ov-mon-res-servicio');
     var resGuia = document.getElementById('ov-mon-res-guia');
     var resPeso = document.getElementById('ov-mon-res-peso');
     var resCant = document.getElementById('ov-mon-res-cant');
     var resVol = document.getElementById('ov-mon-res-vol');
 
-    if (resServicio) resServicio.textContent = 'LOCAL - DIURNO';
+    if (resServicio) resServicio.textContent = item.tipo_servicio || 'LOCAL - DIURNO';
     if (resGuia) resGuia.textContent = item.numero_guia || '—';
     if (resPeso) resPeso.textContent = parseFloat(item.peso || 0).toFixed(2);
     if (resCant) resCant.textContent = item.cantidad || '0';
     if (resVol) resVol.textContent = parseFloat(item.volumen || 0).toFixed(2);
 
-    // Buscar rutas asociadas a este viaje
+    // Rutas asociadas a este viaje
     var rutasAsoc = (_ovRutasGlobal || []).filter(r => r.viaje === viajeCode);
     var badgeRutas = document.getElementById('ov-mon-badge-rutas');
     if (badgeRutas) badgeRutas.textContent = rutasAsoc.length;
@@ -1045,11 +1048,11 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
         } else {
             tbodyRutas.innerHTML = rutasAsoc.map(r => `
                 <tr>
-                    <td class="fw-bold text-dark">${r.orden || '---'}</td>
+                    <td class="fw-bold text-dark font-monospace">${r.orden || '---'}</td>
                     <td>${parseInt(r.es_retorno, 10) === 1 ? '<span class="badge bg-warning-subtle text-warning-emphasis">RETORNO</span>' : '<span class="badge bg-primary-subtle text-primary">IDA</span>'}</td>
-                    <td>${r.ruta || '---'}</td>
-                    <td>${r.tipo_servicio || 'CARGA GENERAL'}</td>
-                    <td class="font-monospace fw-bold">${parseFloat(r.peso_total || 0).toFixed(2)}</td>
+                    <td><span class="fw-semibold text-dark">${r.ruta || '---'}</span></td>
+                    <td><span class="badge bg-light text-secondary border">${r.tipo_servicio || 'CARGA GENERAL'}</span></td>
+                    <td class="font-monospace fw-bold text-success">${parseFloat(r.peso_total || 0).toFixed(2)}</td>
                     <td class="font-monospace">${r.cantidad_total || 0}</td>
                     <td class="font-monospace">${parseFloat(r.volumen_total || 0).toFixed(2)}</td>
                 </tr>
@@ -1075,7 +1078,7 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
                         <td class="font-monospace fw-bold">${parseFloat(c.galones || 0).toFixed(2)} GL</td>
                         <td class="font-monospace">${c.kilometraje || '---'}</td>
                         <td class="font-monospace fw-bold text-success">S/ ${parseFloat(c.importe || 0).toFixed(2)}</td>
-                        <td><span class="badge bg-success-subtle text-success">${c.estado || 'VÁLIDO'}</span></td>
+                        <td><span class="badge bg-success-subtle text-success border border-success-subtle">${c.estado || 'VÁLIDO'}</span></td>
                     </tr>
                 `).join('');
             } else {
@@ -1090,11 +1093,24 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     var btnPrimeraTab = document.querySelector('.ov-mon-tab-pill');
     if (btnPrimeraTab) window.ovMonCambiarTab('resumen', btnPrimeraTab);
 
-    // Abrir Modal
-    var modalEl = document.getElementById('ovModalMonitoreoViaje');
-    if (modalEl && typeof bootstrap !== 'undefined') {
-        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-        modal.show();
+    // Abrir Drawer y Backdrop (sin tapar la barra lateral)
+    var drawer = document.getElementById('ovMonDrawer');
+    var backdrop = document.getElementById('ovMonDrawerBackdrop');
+    if (drawer) drawer.classList.add('active');
+    if (backdrop) backdrop.classList.add('active');
+};
+
+window.ovCerrarMonitoreoViaje = function() {
+    var drawer = document.getElementById('ovMonDrawer');
+    var backdrop = document.getElementById('ovMonDrawerBackdrop');
+    if (drawer) drawer.classList.remove('active');
+    if (backdrop) backdrop.classList.remove('active');
+    window._ovViajeMonitoreoActivo = null;
+};
+
+window.ovRecargarMonitoreoActual = function() {
+    if (window._ovViajeMonitoreoActivo) {
+        window.ovAbrirModalMonitoreoViaje(window._ovViajeMonitoreoActivo);
     }
 };
 
@@ -1120,4 +1136,18 @@ window.ovMonCambiarTab = function(tabId, btnElement) {
         if (generico) generico.classList.remove('d-none');
     }
 };
+
+// Escuchar tecla ESC para cerrar el detalle
+if (!window._ovEscMonitoreoConfigurado) {
+    window._ovEscMonitoreoConfigurado = true;
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            var drawer = document.getElementById('ovMonDrawer');
+            if (drawer && drawer.classList.contains('active')) {
+                window.ovCerrarMonitoreoViaje();
+            }
+        }
+    });
+}
+
 

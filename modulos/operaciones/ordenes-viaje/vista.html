@@ -554,87 +554,195 @@
     transform: scale(0.95);
 }
 
-/* ── MODAL MONITOREO DE VIAJE (MINIMALISTA ESTILO APPLE iOS) ───── */
-.ov-monitoreo-dialog {
-    max-width: 96vw !important;
-    width: 96vw !important;
-    margin: 1.25rem auto !important;
+/* ── DRAWER / PANEL DE DETALLE Y MONITOREO DE VIAJE (ESTILO PASTEL ERP AZKELL) ── */
+/* El panel se posiciona estrictamente dentro del área de contenido a la derecha de la barra lateral */
+.ov-mon-drawer-backdrop {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: var(--sidebar-width, 240px);
+    background: rgba(15, 23, 42, 0.35);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 1045;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s, left 0.3s ease;
 }
-.ov-monitoreo-content {
-    background: #f8fafc !important;
-    border-radius: 20px !important;
-    border: 1px solid rgba(226, 232, 240, 0.8) !important;
-    box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.22) !important;
+body.sidebar-compact .ov-mon-drawer-backdrop,
+body.sidebar-collapsed .ov-mon-drawer-backdrop,
+body:has(#sidebarMenu.collapsed) .ov-mon-drawer-backdrop {
+    left: var(--sidebar-collapsed-width, 70px) !important;
+}
+.ov-mon-drawer-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Contenedor del Drawer */
+.ov-mon-drawer {
+    position: fixed;
+    top: 12px;
+    right: 14px;
+    bottom: 12px;
+    left: calc(var(--sidebar-width, 240px) + 14px);
+    max-width: calc(100vw - var(--sidebar-width, 240px) - 28px);
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
+    z-index: 1046;
+    transform: translateX(20px) scale(0.99);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease, visibility 0.26s, left 0.3s ease, max-width 0.3s ease;
 }
-.ov-monitoreo-header {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
-    padding: 1rem 1.4rem !important;
-    border-bottom: none !important;
-    position: relative;
+body.sidebar-compact .ov-mon-drawer,
+body.sidebar-collapsed .ov-mon-drawer,
+body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
+    left: calc(var(--sidebar-collapsed-width, 70px) + 14px) !important;
+    max-width: calc(100vw - var(--sidebar-collapsed-width, 70px) - 28px) !important;
 }
-.ov-monitoreo-brand-icon {
-    width: 44px;
-    height: 44px;
-    background: rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+.ov-mon-drawer.active {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Cabecera Suave Pastel */
+.ov-mon-header {
+    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 60%, #e2e8f0 100%);
+    padding: 0.9rem 1.4rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+.ov-mon-brand-icon {
+    width: 42px;
+    height: 42px;
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ffffff;
-    font-size: 1.35rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    color: #0284c7;
+    font-size: 1.25rem;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.08);
 }
-.ov-monitoreo-summary-bar {
+.ov-mon-folio-pill {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-family: monospace;
+}
+.ov-mon-close-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
     background: #ffffff;
-    padding: 0.85rem 1.4rem;
-    border-bottom: 1px solid #e2e8f0;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.ov-mon-close-btn:hover {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #b91c1c;
+    transform: scale(1.05);
+}
+
+/* Fila Superior de Métricas Inset Pastel */
+.ov-mon-kpi-bar {
+    background: #ffffff;
+    padding: 0.75rem 1.4rem;
+    border-bottom: 1px solid #f1f5f9;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 1.5rem;
+    gap: 0.75rem 1.25rem;
+    flex-shrink: 0;
 }
-.ov-mon-kpi-item {
-    display: flex;
-    flex-direction: column;
-}
-.ov-mon-kpi-label {
-    font-size: 0.68rem;
-    text-transform: uppercase;
-    font-weight: 700;
-    color: #64748b;
-    letter-spacing: 0.4px;
-    margin-bottom: 2px;
-}
-.ov-mon-kpi-val {
-    font-size: 0.88rem;
-    font-weight: 800;
-    color: #0f172a;
-}
-.ov-mon-kpi-val.highlight {
-    color: #0284c7;
-}
-
-/* Tabs Pasteles iOS */
-.ov-mon-tabs-scroller {
+.ov-mon-kpi-chip {
     display: flex;
     align-items: center;
     gap: 8px;
-    overflow-x: auto;
-    padding: 0.85rem 1.4rem 0.65rem 1.4rem;
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 5px 10px;
+    border-radius: 10px;
 }
-.ov-mon-tab-pill {
-    border: none;
-    outline: none;
-    font-size: 0.72rem;
-    font-weight: 800;
+.ov-mon-kpi-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+.ov-kpi-av-sky { background: #e0f2fe; color: #0284c7; }
+.ov-kpi-av-emerald { background: #dcfce7; color: #16a34a; }
+.ov-kpi-av-amber { background: #fef3c7; color: #d97706; }
+.ov-kpi-av-purple { background: #f3e8ff; color: #9333ea; }
+.ov-kpi-av-rose { background: #ffe4e6; color: #e11d48; }
+.ov-kpi-av-indigo { background: #e0e7ff; color: #4f46e5; }
+
+.ov-mon-kpi-chip-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.3px;
-    padding: 6px 14px;
+    line-height: 1;
+}
+.ov-mon-kpi-chip-val {
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+    margin-top: 1px;
+}
+
+/* Tabs Pasteles ERP Azkell */
+.ov-mon-tabs-scroller {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 0.65rem 1.4rem;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+    scrollbar-width: none;
+}
+.ov-mon-tabs-scroller::-webkit-scrollbar { display: none; }
+
+.ov-mon-tab-pill {
+    border: 1px solid transparent;
+    outline: none;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 6px 13px;
     border-radius: 9999px;
     cursor: pointer;
     display: inline-flex;
@@ -642,67 +750,147 @@
     gap: 6px;
     white-space: nowrap;
     transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 .ov-mon-tab-pill:hover {
     transform: translateY(-1px);
     filter: brightness(0.96);
 }
 .ov-mon-tab-pill.active {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.1);
     transform: scale(1.02);
+    border-color: currentColor;
+    font-weight: 800;
 }
 
-/* Paleta de colores pasteles iOS de las tabs */
-.ov-mon-tab-blue { background: #3b82f6 !important; color: #ffffff !important; }
-.ov-mon-tab-amber { background: #fef3c7; color: #b45309; }
+/* Paleta de Colores Pasteles Suaves */
 .ov-mon-tab-sky { background: #e0f2fe; color: #0369a1; }
-.ov-mon-tab-purple { background: #f3e8ff; color: #7e22ce; }
-.ov-mon-tab-emerald { background: #d1fae5; color: #047857; }
-.ov-mon-tab-slate { background: #f1f5f9; color: #334155; }
-.ov-mon-tab-green { background: #dcfce7; color: #15803d; }
-.ov-mon-tab-red { background: #fee2e2; color: #b91c1c; }
-.ov-mon-tab-orange { background: #ffedd5; color: #c2410c; }
-.ov-mon-tab-cyan { background: #cffafe; color: #0e7490; }
+.ov-mon-tab-sky.active { background: #0284c7; color: #ffffff !important; }
 
-/* Contenedores de contenido minimalista iOS */
+.ov-mon-tab-amber { background: #fef3c7; color: #b45309; }
+.ov-mon-tab-amber.active { background: #f59e0b; color: #ffffff !important; }
+
+.ov-mon-tab-emerald { background: #dcfce7; color: #15803d; }
+.ov-mon-tab-emerald.active { background: #10b981; color: #ffffff !important; }
+
+.ov-mon-tab-purple { background: #f3e8ff; color: #7e22ce; }
+.ov-mon-tab-purple.active { background: #8b5cf6; color: #ffffff !important; }
+
+.ov-mon-tab-rose { background: #ffe4e6; color: #be123c; }
+.ov-mon-tab-rose.active { background: #f43f5e; color: #ffffff !important; }
+
+.ov-mon-tab-slate { background: #f1f5f9; color: #334155; }
+.ov-mon-tab-slate.active { background: #475569; color: #ffffff !important; }
+
+.ov-mon-tab-teal { background: #ccfbf1; color: #0f766e; }
+.ov-mon-tab-teal.active { background: #14b8a6; color: #ffffff !important; }
+
+.ov-mon-tab-indigo { background: #e0e7ff; color: #3730a3; }
+.ov-mon-tab-indigo.active { background: #6366f1; color: #ffffff !important; }
+
+.ov-mon-tab-orange { background: #ffedd5; color: #c2410c; }
+.ov-mon-tab-orange.active { background: #f97316; color: #ffffff !important; }
+
+/* Cuerpo Scrollable del Drawer */
+.ov-mon-body {
+    flex: 1 1 0;
+    overflow-y: auto;
+    padding: 1.25rem 1.4rem;
+    background: #f8fafc;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+.ov-mon-body::-webkit-scrollbar { width: 6px; }
+.ov-mon-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+/* Tarjetas Inset del ERP */
 .ov-mon-card-section {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
-    padding: 1.15rem 1.4rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-    margin-bottom: 1rem;
+    padding: 1.15rem 1.35rem;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
+    margin-bottom: 1.1rem;
 }
 .ov-mon-section-title {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
     color: #1e293b;
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 0.85rem;
+    margin-bottom: 0.9rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #f1f5f9;
 }
+.ov-mon-section-title i {
+    font-size: 0.95rem;
+}
+
+/* Grilla Inset de Métricas Técnicas */
 .ov-mon-data-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 1rem;
+    gap: 0.85rem;
 }
-.ov-mon-data-cell-label {
-    font-size: 0.68rem;
+.ov-mon-stat-tile {
+    background: #f8fafc;
+    border: 1px solid #edf2f7;
+    border-radius: 12px;
+    padding: 0.75rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+}
+.ov-mon-stat-tile.tile-sky { background: #f0f9ff; border-color: #e0f2fe; }
+.ov-mon-stat-tile.tile-emerald { background: #f0fdf4; border-color: #dcfce7; }
+.ov-mon-stat-tile.tile-amber { background: #fffbeb; border-color: #fef3c7; }
+
+.ov-mon-stat-label {
+    font-size: 0.65rem;
     font-weight: 700;
     color: #64748b;
     text-transform: uppercase;
-    margin-bottom: 2px;
+    letter-spacing: 0.3px;
+    margin-bottom: 3px;
 }
-.ov-mon-data-cell-value {
-    font-size: 0.86rem;
-    font-weight: 700;
+.ov-mon-stat-value {
+    font-size: 0.95rem;
+    font-weight: 800;
     color: #0f172a;
+}
+
+/* Footer del Drawer */
+.ov-mon-footer {
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    padding: 0.65rem 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+/* Responsivo Móvil (<768px): ocupa el ancho disponible */
+@media (max-width: 768px) {
+    .ov-mon-drawer-backdrop {
+        left: 0 !important;
+    }
+    .ov-mon-drawer {
+        left: 8px !important;
+        right: 8px !important;
+        top: 8px !important;
+        bottom: 8px !important;
+        max-width: calc(100vw - 16px) !important;
+        border-radius: 16px;
+    }
+    .ov-mon-kpi-bar {
+        padding: 0.6rem 0.8rem;
+        gap: 0.5rem;
+    }
+    .ov-mon-body {
+        padding: 0.85rem;
+    }
 }
 </style>
 
@@ -1078,243 +1266,301 @@
 </div>
 
 <!-- ================================================================= -->
-<!-- 📱 MODAL: MONITOREO DE VIAJE (ESTILO APPLE iOS MINIMALISTA)       -->
+<!-- 📱 PANEL LATERAL / DRAWER: DETALLE Y MONITOREO DE VIAJE          -->
+<!--    (UBICADO A LA DERECHA DEL SIDEBAR — ESTÉTICA PASTEL ERP)      -->
 <!-- ================================================================= -->
-<div class="modal fade" id="ovModalMonitoreoViaje" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable ov-monitoreo-dialog">
-        <div class="modal-content ov-monitoreo-content border-0">
+<div class="ov-mon-drawer-backdrop" id="ovMonDrawerBackdrop" onclick="window.ovCerrarMonitoreoViaje()"></div>
+
+<div class="ov-mon-drawer" id="ovMonDrawer">
+    
+    <!-- ── 1. CABECERA PASTEL SUAVE ────────────────────────────────────── -->
+    <div class="ov-mon-header">
+        <div class="d-flex align-items-center gap-3">
+            <div class="ov-mon-brand-icon">
+                <i class="bi bi-diagram-3-fill"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bolder text-dark m-0" style="font-size: 1.08rem; letter-spacing: -0.2px;">Detalle de Viaje</span>
+                    <span class="ov-mon-folio-pill" id="ov-mon-header-folio">2026-00000001</span>
+                </div>
+                <small class="text-secondary" style="font-size: 0.74rem;">Control integral de bitácora, itinerario, combustible y finanzas operativas</small>
+            </div>
+        </div>
+        
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-none d-md-inline-flex align-items-center gap-1" style="font-size:0.75rem;" onclick="window.ovRecargarMonitoreoActual()" title="Refrescar">
+                <i class="bi bi-arrow-clockwise"></i> Refrescar
+            </button>
+            <button type="button" class="ov-mon-close-btn" onclick="window.ovCerrarMonitoreoViaje()" title="Cerrar detalle">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ── 2. BARRA RESUMEN KPI INSET (PASTELES SUAVES) ────────────────── -->
+    <div class="ov-mon-kpi-bar">
+        <!-- Tracto -->
+        <div class="ov-mon-kpi-chip">
+            <div class="ov-mon-kpi-avatar ov-kpi-av-sky">
+                <i class="bi bi-truck"></i>
+            </div>
+            <div>
+                <div class="ov-mon-kpi-chip-label">Vehículo</div>
+                <div class="ov-mon-kpi-chip-val" id="ov-mon-kpi-tracto">---</div>
+            </div>
+        </div>
+
+        <!-- Semirremolque -->
+        <div class="ov-mon-kpi-chip">
+            <div class="ov-mon-kpi-avatar ov-kpi-av-teal">
+                <i class="bi bi-truck-flatbed"></i>
+            </div>
+            <div>
+                <div class="ov-mon-kpi-chip-label">Semirremolque</div>
+                <div class="ov-mon-kpi-chip-val" id="ov-mon-kpi-remolque">---</div>
+            </div>
+        </div>
+
+        <!-- Conductor -->
+        <div class="ov-mon-kpi-chip" style="max-width: 240px;">
+            <div class="ov-mon-kpi-avatar ov-kpi-av-purple">
+                <i class="bi bi-person-badge"></i>
+            </div>
+            <div class="text-truncate">
+                <div class="ov-mon-kpi-chip-label">Conductor</div>
+                <div class="ov-mon-kpi-chip-val text-truncate" id="ov-mon-kpi-conductor">---</div>
+            </div>
+        </div>
+
+        <!-- Cliente -->
+        <div class="ov-mon-kpi-chip" style="max-width: 220px;">
+            <div class="ov-mon-kpi-avatar ov-kpi-av-emerald">
+                <i class="bi bi-building"></i>
+            </div>
+            <div class="text-truncate">
+                <div class="ov-mon-kpi-chip-label">Cliente</div>
+                <div class="ov-mon-kpi-chip-val text-truncate" id="ov-mon-kpi-cliente">---</div>
+            </div>
+        </div>
+
+        <!-- Ruta -->
+        <div class="ov-mon-kpi-chip">
+            <div class="ov-mon-kpi-avatar ov-kpi-av-rose">
+                <i class="bi bi-signpost-2"></i>
+            </div>
+            <div>
+                <div class="ov-mon-kpi-chip-label">Ruta</div>
+                <div class="ov-mon-kpi-chip-val" id="ov-mon-kpi-ruta">---</div>
+            </div>
+        </div>
+
+        <!-- Coordinador -->
+        <div class="ov-mon-kpi-chip">
+            <div class="ov-mon-kpi-avatar ov-kpi-av-amber">
+                <i class="bi bi-shield-check"></i>
+            </div>
+            <div>
+                <div class="ov-mon-kpi-chip-label">Coordinador</div>
+                <div class="ov-mon-kpi-chip-val text-truncate" id="ov-mon-kpi-coordinador">---</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 3. TABS PASTELES ERP AZKELL ─────────────────────────────────── -->
+    <div class="ov-mon-tabs-scroller">
+        <button type="button" class="ov-mon-tab-pill ov-mon-tab-sky active" onclick="window.ovMonCambiarTab('resumen', this)">
+            <i class="bi bi-grid-fill"></i> Resumen
+        </button>
+        <button type="button" class="ov-mon-tab-pill ov-mon-tab-amber" onclick="window.ovMonCambiarTab('combustible', this)">
+            <i class="bi bi-fuel-pump-fill"></i> Combustible
+        </button>
+        <button type="button" class="ov-mon-tab-pill ov-mon-tab-emerald" onclick="window.ovMonCambiarTab('ordenes', this)">
+            <i class="bi bi-card-checklist"></i> Órdenes <span class="badge bg-white text-dark rounded-pill px-1 ms-1 shadow-xs" id="ov-mon-badge-rutas">0</span>
+        </button>
+        <button type="button" class="ov-mon-tab-pill ov-mon-tab-purple" onclick="window.ovMonCambiarTab('documentos', this)">
+            <i class="bi bi-folder2-open"></i> Documentos
+        </button>
+        <button type="button" class="ov-mon-tab-pill ov-mon-tab-rose" onclick="window.ovMonCambiarTab('gps', this)">
+            <i class="bi bi-geo-alt-fill"></i> Seguimiento GPS
+        </button>
+        <button type="button" class="ov-mon-tab-pill ov-mon-tab-slate" onclick="window.ovMonCambiarTab('adjuntos', this)">
+            <i class="bi bi-paperclip"></i> Adjuntos
+        </button>
+        <button type="button" class="ov-mon-tab-pill ov-mon-tab-teal" onclick="window.ovMonCambiarTab('liquidaciones', this)">
+            <i class="bi bi-wallet2"></i> Liquidaciones
+        </button>
+        <button type="button" class="ov-mon-tab-pill ov-mon-tab-indigo" onclick="window.ovMonCambiarTab('eventos', this)">
+            <i class="bi bi-bell-fill"></i> Eventos
+        </button>
+        <button type="button" class="ov-mon-tab-pill ov-mon-tab-orange" onclick="window.ovMonCambiarTab('cambios', this)">
+            <i class="bi bi-arrow-left-right"></i> Cambios
+        </button>
+        <button type="button" class="ov-mon-tab-pill ov-mon-tab-slate" onclick="window.ovMonCambiarTab('peajes', this)">
+            <i class="bi bi-ticket-perforated-fill"></i> Peajes
+        </button>
+    </div>
+
+    <!-- ── 4. CUERPO SCROLLABLE DEL DETALLE (TARJETAS INSET) ───────────── -->
+    <div class="ov-mon-body">
+        
+        <!-- 1. TAB: RESUMEN (Datos del viaje + Depósitos y viáticos) -->
+        <div id="ov-mon-panel-resumen" class="ov-mon-panel">
             
-            <!-- ── HEADER AZUL APPLE ───────────────────────────────── -->
-            <div class="modal-header ov-monitoreo-header d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="ov-monitoreo-brand-icon">
-                        <i class="bi bi-activity"></i>
+            <!-- Tarjeta 1: Ficha Operacional Técnica -->
+            <div class="ov-mon-card-section">
+                <div class="ov-mon-section-title">
+                    <i class="bi bi-truck text-primary"></i> Ficha Operacional y Medidas de Carga
+                </div>
+                <div class="ov-mon-data-grid">
+                    <div class="ov-mon-stat-tile tile-sky">
+                        <span class="ov-mon-stat-label">Tipo de Servicio</span>
+                        <span class="ov-mon-stat-value text-primary" id="ov-mon-res-servicio">LOCAL - DIURNO</span>
                     </div>
-                    <div>
-                        <h5 class="fw-bold text-white m-0 d-flex align-items-center gap-2" style="font-size: 1.15rem; letter-spacing: -0.2px;">
-                            <span>Monitoreo Viaje:</span>
-                            <span class="text-white font-monospace" id="ov-mon-header-folio">2026-00000001</span>
-                        </h5>
-                        <small class="text-white-50" style="font-size: 0.76rem;">Todo lo que ocurrió en el viaje, agrupado por tema</small>
+                    <div class="ov-mon-stat-tile">
+                        <span class="ov-mon-stat-label">Guía de Transportista</span>
+                        <span class="ov-mon-stat-value text-secondary" id="ov-mon-res-guia">—</span>
                     </div>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-
-            <!-- ── BARRA RESUMEN KPI (VEHÍCULO, CONDUCTOR, CLIENTE, RUTA) ── -->
-            <div class="ov-monitoreo-summary-bar">
-                <div class="ov-mon-kpi-item">
-                    <span class="ov-mon-kpi-label">Vehículo</span>
-                    <span class="ov-mon-kpi-val highlight" id="ov-mon-kpi-tracto">---</span>
-                </div>
-                <div class="ov-mon-kpi-item">
-                    <span class="ov-mon-kpi-label">Semirremolque</span>
-                    <span class="ov-mon-kpi-val" id="ov-mon-kpi-remolque">---</span>
-                </div>
-                <div class="ov-mon-kpi-item" style="max-width: 260px;">
-                    <span class="ov-mon-kpi-label">Conductor</span>
-                    <span class="ov-mon-kpi-val text-truncate" id="ov-mon-kpi-conductor">---</span>
-                </div>
-                <div class="ov-mon-kpi-item">
-                    <span class="ov-mon-kpi-label">Cliente</span>
-                    <span class="ov-mon-kpi-val" id="ov-mon-kpi-cliente">---</span>
-                </div>
-                <div class="ov-mon-kpi-item">
-                    <span class="ov-mon-kpi-label">Ruta</span>
-                    <span class="ov-mon-kpi-val" id="ov-mon-kpi-ruta">---</span>
-                </div>
-                <div class="ov-mon-kpi-item">
-                    <span class="ov-mon-kpi-label">Coordinador</span>
-                    <span class="ov-mon-kpi-val" id="ov-mon-kpi-coordinador">---</span>
+                    <div class="ov-mon-stat-tile tile-emerald">
+                        <span class="ov-mon-stat-label">Peso Total (TN)</span>
+                        <span class="ov-mon-stat-value text-success font-monospace" id="ov-mon-res-peso">0.00</span>
+                    </div>
+                    <div class="ov-mon-stat-tile">
+                        <span class="ov-mon-stat-label">Cantidad / Bultos</span>
+                        <span class="ov-mon-stat-value font-monospace" id="ov-mon-res-cant">0</span>
+                    </div>
+                    <div class="ov-mon-stat-tile tile-amber">
+                        <span class="ov-mon-stat-label">Volumen (M3)</span>
+                        <span class="ov-mon-stat-value text-warning-emphasis font-monospace" id="ov-mon-res-vol">0.00</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- ── TABS PASTELES ESTILO APPLE iOS ───────────────────── -->
-            <div class="ov-mon-tabs-scroller">
-                <button type="button" class="ov-mon-tab-pill ov-mon-tab-blue active" onclick="window.ovMonCambiarTab('resumen', this)">
-                    <i class="bi bi-file-earmark-text-fill"></i> Resumen
-                </button>
-                <button type="button" class="ov-mon-tab-pill ov-mon-tab-amber" onclick="window.ovMonCambiarTab('combustible', this)">
-                    <i class="bi bi-fuel-pump-fill"></i> Combustible
-                </button>
-                <button type="button" class="ov-mon-tab-pill ov-mon-tab-sky" onclick="window.ovMonCambiarTab('ordenes', this)">
-                    <i class="bi bi-card-checklist"></i> Órdenes <span class="badge bg-white text-dark rounded-pill px-1" id="ov-mon-badge-rutas">0</span>
-                </button>
-                <button type="button" class="ov-mon-tab-pill ov-mon-tab-purple" onclick="window.ovMonCambiarTab('documentos', this)">
-                    <i class="bi bi-folder-fill"></i> Documentos
-                </button>
-                <button type="button" class="ov-mon-tab-pill ov-mon-tab-emerald" onclick="window.ovMonCambiarTab('gps', this)">
-                    <i class="bi bi-geo-alt-fill"></i> Seguimiento GPS
-                </button>
-                <button type="button" class="ov-mon-tab-pill ov-mon-tab-slate" onclick="window.ovMonCambiarTab('adjuntos', this)">
-                    <i class="bi bi-paperclip"></i> Adjuntos
-                </button>
-                <button type="button" class="ov-mon-tab-pill ov-mon-tab-green" onclick="window.ovMonCambiarTab('liquidaciones', this)">
-                    <i class="bi bi-cash-stack"></i> Liquidaciones
-                </button>
-                <button type="button" class="ov-mon-tab-pill ov-mon-tab-red" onclick="window.ovMonCambiarTab('eventos', this)">
-                    <i class="bi bi-bell-fill"></i> Eventos
-                </button>
-                <button type="button" class="ov-mon-tab-pill ov-mon-tab-orange" onclick="window.ovMonCambiarTab('cambios', this)">
-                    <i class="bi bi-arrow-left-right"></i> Cambios
-                </button>
-                <button type="button" class="ov-mon-tab-pill ov-mon-tab-cyan" onclick="window.ovMonCambiarTab('peajes', this)">
-                    <i class="bi bi-ticket-perforated-fill"></i> Peajes
-                </button>
-            </div>
-
-            <!-- ── CUERPO DEL MODAL (PANELES MINIMALISTAS) ───────────── -->
-            <div class="modal-body p-3 p-md-4">
-                
-                <!-- 1. TAB: RESUMEN (Datos del viaje + Depósitos) -->
-                <div id="ov-mon-panel-resumen" class="ov-mon-panel">
-                    <!-- Card 1: Datos del Viaje -->
-                    <div class="ov-mon-card-section">
-                        <div class="ov-mon-section-title">
-                            <i class="bi bi-truck text-primary"></i> Datos del Viaje
-                        </div>
-                        <div class="ov-mon-data-grid">
-                            <div>
-                                <div class="ov-mon-data-cell-label">Tipo de Servicio</div>
-                                <div class="ov-mon-data-cell-value" id="ov-mon-res-servicio">LOCAL - DIURNO</div>
-                            </div>
-                            <div>
-                                <div class="ov-mon-data-cell-label">Guía de Transportista</div>
-                                <div class="ov-mon-data-cell-value text-muted" id="ov-mon-res-guia">—</div>
-                            </div>
-                            <div>
-                                <div class="ov-mon-data-cell-label">Peso (TN)</div>
-                                <div class="ov-mon-data-cell-value font-monospace" id="ov-mon-res-peso">0.00</div>
-                            </div>
-                            <div>
-                                <div class="ov-mon-data-cell-label">Cantidad</div>
-                                <div class="ov-mon-data-cell-value font-monospace" id="ov-mon-res-cant">0</div>
-                            </div>
-                            <div>
-                                <div class="ov-mon-data-cell-label">Volumen (M3)</div>
-                                <div class="ov-mon-data-cell-value font-monospace" id="ov-mon-res-vol">0.00</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Card 2: Detalle del Depósito / Anticipos -->
-                    <div class="ov-mon-card-section">
-                        <div class="ov-mon-section-title" style="color:#059669; border-bottom-color:#ecfdf5;">
-                            <i class="bi bi-wallet2 text-success"></i> Detalle del Depósito y Viáticos
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
-                                <thead class="table-light">
-                                    <tr class="text-uppercase text-secondary" style="font-size:0.68rem; letter-spacing:0.3px;">
-                                        <th>Número</th>
-                                        <th>Fecha y Hora</th>
-                                        <th>Fecha Aprobación</th>
-                                        <th>Beneficiario</th>
-                                        <th>Motivo</th>
-                                        <th>Submotivo</th>
-                                        <th>Importe</th>
-                                        <th>Voucher</th>
-                                        <th>Estado</th>
-                                        <th>Validación</th>
-                                        <th>Descripción</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="ov-mon-tbody-depositos">
-                                    <tr>
-                                        <td colspan="11" class="text-center py-4 text-muted">
-                                            <i class="bi bi-info-circle me-1"></i> No se registran depósitos ni viáticos asignados a este viaje.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+            <!-- Tarjeta 2: Detalle de Depósito y Viáticos -->
+            <div class="ov-mon-card-section">
+                <div class="ov-mon-section-title" style="color:#0f766e; border-bottom-color:#f0fdf4;">
+                    <i class="bi bi-cash-coin text-success"></i> Detalle de Depósitos y Asignación de Viáticos
                 </div>
-
-                <!-- 2. TAB: COMBUSTIBLE -->
-                <div id="ov-mon-panel-combustible" class="ov-mon-panel d-none">
-                    <div class="ov-mon-card-section">
-                        <div class="ov-mon-section-title">
-                            <i class="bi bi-fuel-pump-fill text-warning"></i> Vales y Abastecimientos Registrados
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
-                                <thead class="table-light">
-                                    <tr class="text-uppercase text-secondary" style="font-size:0.68rem;">
-                                        <th>Correlativo</th>
-                                        <th>Fecha</th>
-                                        <th>Estación</th>
-                                        <th>Proveedor</th>
-                                        <th>Galones</th>
-                                        <th>Km</th>
-                                        <th>Importe</th>
-                                        <th>Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="ov-mon-tbody-combustible">
-                                    <tr>
-                                        <td colspan="8" class="text-center py-4 text-muted">
-                                            Sin registros de combustible vinculados.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
+                        <thead class="table-light">
+                            <tr class="text-uppercase text-secondary" style="font-size:0.67rem; letter-spacing:0.3px;">
+                                <th>Número</th>
+                                <th>Fecha y Hora</th>
+                                <th>Fecha Aprobación</th>
+                                <th>Beneficiario</th>
+                                <th>Motivo</th>
+                                <th>Submotivo</th>
+                                <th>Importe</th>
+                                <th>Voucher</th>
+                                <th>Estado</th>
+                                <th>Validación</th>
+                                <th>Descripción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ov-mon-tbody-depositos">
+                            <tr>
+                                <td colspan="11" class="text-center py-4 text-muted">
+                                    <i class="bi bi-info-circle me-1"></i> No se registran depósitos ni viáticos asignados a este viaje.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-
-                <!-- 3. TAB: ÓRDENES DE SERVICIO / RUTAS -->
-                <div id="ov-mon-panel-ordenes" class="ov-mon-panel d-none">
-                    <div class="ov-mon-card-section">
-                        <div class="ov-mon-section-title">
-                            <i class="bi bi-card-checklist text-primary"></i> Órdenes de Servicio e Itinerario
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
-                                <thead class="table-light">
-                                    <tr class="text-uppercase text-secondary" style="font-size:0.68rem;">
-                                        <th># Orden</th>
-                                        <th>Tramo</th>
-                                        <th>Ruta</th>
-                                        <th>Tipo Servicio</th>
-                                        <th>Peso (TN)</th>
-                                        <th>Cantidad</th>
-                                        <th>Volumen</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="ov-mon-tbody-rutas">
-                                    <tr>
-                                        <td colspan="7" class="text-center py-4 text-muted">
-                                            Sin órdenes de servicio registradas para este viaje.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 4. TAB GENÉRICO PARA EL RESTO DE SECCIONES -->
-                <div id="ov-mon-panel-generico" class="ov-mon-panel d-none">
-                    <div class="ov-mon-card-section text-center py-5">
-                        <i class="bi bi-clock-history display-6 d-block mb-2 text-secondary opacity-50"></i>
-                        <h6 class="fw-bold text-dark mb-1" id="ov-mon-generico-titulo">Sección</h6>
-                        <p class="text-muted small mb-0">Esta sección se encuentra en sincronización activa con el sistema de rastreo y eventos.</p>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- ── FOOTER MINIMALISTA ───────────────────────────────── -->
-            <div class="modal-footer bg-white border-top d-flex justify-content-between align-items-center py-2 px-4">
-                <small class="text-muted" style="font-size: 0.74rem;">Vista de consulta: no modifica el viaje.</small>
-                <button type="button" class="btn btn-secondary btn-sm px-4 fw-bold rounded-pill" data-bs-dismiss="modal" style="font-size:0.78rem;">
-                    Cerrar
-                </button>
             </div>
 
         </div>
+
+        <!-- 2. TAB: COMBUSTIBLE -->
+        <div id="ov-mon-panel-combustible" class="ov-mon-panel d-none">
+            <div class="ov-mon-card-section">
+                <div class="ov-mon-section-title" style="color:#b45309;">
+                    <i class="bi bi-fuel-pump-fill text-warning"></i> Vales y Abastecimientos Registrados para este Viaje
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
+                        <thead class="table-light">
+                            <tr class="text-uppercase text-secondary" style="font-size:0.67rem;">
+                                <th>Correlativo</th>
+                                <th>Fecha</th>
+                                <th>Estación</th>
+                                <th>Proveedor</th>
+                                <th>Galones</th>
+                                <th>Km</th>
+                                <th>Importe</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ov-mon-tbody-combustible">
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    Sin registros de combustible vinculados.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. TAB: ÓRDENES DE SERVICIO / RUTAS -->
+        <div id="ov-mon-panel-ordenes" class="ov-mon-panel d-none">
+            <div class="ov-mon-card-section">
+                <div class="ov-mon-section-title" style="color:#15803d;">
+                    <i class="bi bi-card-checklist text-success"></i> Órdenes de Servicio e Itinerario del Viaje
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
+                        <thead class="table-light">
+                            <tr class="text-uppercase text-secondary" style="font-size:0.67rem;">
+                                <th># Orden</th>
+                                <th>Tramo</th>
+                                <th>Ruta</th>
+                                <th>Tipo Servicio</th>
+                                <th>Peso (TN)</th>
+                                <th>Cantidad</th>
+                                <th>Volumen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ov-mon-tbody-rutas">
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    Sin órdenes de servicio registradas para este viaje.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. TAB GENÉRICO PARA EL RESTO DE SECCIONES -->
+        <div id="ov-mon-panel-generico" class="ov-mon-panel d-none">
+            <div class="ov-mon-card-section text-center py-5">
+                <div class="d-inline-flex p-3 rounded-circle bg-light text-primary mb-3">
+                    <i class="bi bi-clock-history fs-2"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1" id="ov-mon-generico-titulo">Sección</h6>
+                <p class="text-muted small mb-0">Esta sección se encuentra en sincronización activa con el sistema de rastreo y eventos.</p>
+            </div>
+        </div>
+
     </div>
+
+    <!-- ── 5. FOOTER PASTEL LIMPIO ────────────────────────────────────── -->
+    <div class="ov-mon-footer">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-light text-secondary border px-2 py-1" style="font-size:0.7rem;">
+                <i class="bi bi-lock-fill text-muted me-1"></i> Modo Consulta
+            </span>
+            <small class="text-muted" style="font-size: 0.73rem;">Este panel refleja la bitácora operativa en tiempo real.</small>
+        </div>
+        <button type="button" class="btn btn-light btn-sm px-4 fw-bold rounded-pill border" onclick="window.ovCerrarMonitoreoViaje()" style="font-size:0.78rem;">
+            Cerrar Detalle
+        </button>
+    </div>
+
 </div>
+
 
 
