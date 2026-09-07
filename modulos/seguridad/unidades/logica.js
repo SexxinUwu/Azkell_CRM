@@ -2948,16 +2948,23 @@ window._sguCompartirWhatsApp = async function(tipo) {
         var pdfBlob = await _sguRenderPdfFromTemplate(htmlFinal, filename);
         var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-        // Si el dispositivo soporta compartir archivos directamente (Móviles / Tablets Android e iOS)
+        // 1. Si el dispositivo soporta compartir archivos directamente (Móviles / Tablets Android e iOS)
         if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-            await navigator.share({
-                files: [pdfFile],
-                title: filename
-            });
-            return;
+            try {
+                await navigator.share({
+                    files: [pdfFile],
+                    title: filename
+                });
+                return;
+            } catch (shareErr) {
+                if (shareErr.name === 'AbortError') return; // Cancelado voluntariamente por el usuario
+                console.warn('Fallo navigator.share, ejecutando fallback de descarga y WhatsApp:', shareErr);
+                // Si el navegador perdió el gesto de usuario (user gesture) por demora en renderizar el PDF:
+                // continúa abajo para descargar el archivo y abrir WhatsApp limpiamente sin error.
+            }
         }
 
-        // Si es PC / Escritorio (donde los navegadores no permiten Web Share con archivos binarios):
+        // 2. Fallback garantizado (PC o cuando el móvil bloquea Web Share por tiempo de espera):
         var fileUrl = URL.createObjectURL(pdfBlob);
         var a = document.createElement('a');
         a.href = fileUrl;
@@ -2969,7 +2976,7 @@ window._sguCompartirWhatsApp = async function(tipo) {
         window.open('https://api.whatsapp.com/send', '_blank');
         _sguToast('PDF descargado: ' + filename + ' y WhatsApp abierto.');
     } catch(err) {
-        if (err.name === 'AbortError') return; // Cancelado por el usuario en el selector nativo
+        if (err.name === 'AbortError') return;
         console.error('Error al compartir WhatsApp:', err);
         _sguToast('Error al procesar PDF: ' + err.message, 'bi-exclamation-circle');
     }
