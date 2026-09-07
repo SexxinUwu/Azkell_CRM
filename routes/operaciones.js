@@ -224,6 +224,7 @@ module.exports = function (db, broadcast, logAudit) {
                     ov.escolta,
                     ov.observaciones,
                     ov.estado,
+                    DATE_FORMAT(ov.creado_en, '%Y-%m-%d %H:%i:%s') AS fecha_registro,
                     COALESCE(r_agg.cant_ordenes, 0) AS cant_ordenes,
                     COALESCE(r_agg.peso_ida, 0) AS peso_ida,
                     COALESCE(r_agg.peso_retorno, 0) AS peso_retorno,
