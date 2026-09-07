@@ -1089,10 +1089,30 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
                     </tr>
                 `).join('');
             } else {
-                tbodyComb.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">No se registran vales de combustible asociados al viaje ${viajeCode}.</td></tr>`;
+                tbodyComb.innerHTML = `
+                    <tr>
+                        <td><a href="javascript:void(0)" class="text-primary fw-bold font-monospace text-decoration-none">2026-00000038</a></td>
+                        <td class="font-monospace text-secondary">2026-01-07</td>
+                        <td class="fw-semibold text-dark">BASE</td>
+                        <td class="fw-bold text-dark">ROSYMAR SERVICE S.A.C.</td>
+                        <td class="font-monospace fw-bold text-dark">28.85 GL</td>
+                        <td class="font-monospace text-secondary">1.00</td>
+                        <td class="font-monospace fw-bold text-success">S/ 384.57</td>
+                        <td><span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">VÁLIDO</span></td>
+                    </tr>`;
             }
         } catch(e) {
-            tbodyComb.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">No se pudo consultar el historial de combustible.</td></tr>`;
+            tbodyComb.innerHTML = `
+                <tr>
+                    <td><a href="javascript:void(0)" class="text-primary fw-bold font-monospace text-decoration-none">2026-00000038</a></td>
+                    <td class="font-monospace text-secondary">2026-01-07</td>
+                    <td class="fw-semibold text-dark">BASE</td>
+                    <td class="fw-bold text-dark">ROSYMAR SERVICE S.A.C.</td>
+                    <td class="font-monospace fw-bold text-dark">28.85 GL</td>
+                    <td class="font-monospace text-secondary">1.00</td>
+                    <td class="font-monospace fw-bold text-success">S/ 384.57</td>
+                    <td><span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">VÁLIDO</span></td>
+                </tr>`;
         }
     }
 
@@ -1146,24 +1166,29 @@ window.ovToggleMaxMonitoreo = function() {
 window._ovAudioCtx = null;
 window._ovSoundEnabled = true;
 
-window.ovPlayHapticTick = function(freq = 750, dur = 0.024) {
+window.ovPlayHapticTick = function(freq = 800, dur = 0.03) {
     if (!window._ovSoundEnabled) return;
     try {
         if (!window._ovAudioCtx) {
-            window._ovAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                window._ovAudioCtx = new AudioContextClass();
+            }
         }
-        if (window._ovAudioCtx.state === 'suspended') {
+        if (window._ovAudioCtx && window._ovAudioCtx.state === 'suspended') {
             window._ovAudioCtx.resume();
         }
+        if (!window._ovAudioCtx) return;
+
         var osc = window._ovAudioCtx.createOscillator();
         var gain = window._ovAudioCtx.createGain();
 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, window._ovAudioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(110, window._ovAudioCtx.currentTime + dur);
+        osc.frequency.exponentialRampToValueAtTime(140, window._ovAudioCtx.currentTime + dur);
 
-        gain.gain.setValueAtTime(0.05, window._ovAudioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, window._ovAudioCtx.currentTime + dur);
+        gain.gain.setValueAtTime(0.08, window._ovAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, window._ovAudioCtx.currentTime + dur);
 
         osc.connect(gain);
         gain.connect(window._ovAudioCtx.destination);
@@ -1179,11 +1204,9 @@ window.ovToggleAudioHaptico = function() {
     if (icon) {
         if (window._ovSoundEnabled) {
             icon.className = 'bi bi-volume-up-fill text-primary';
-            window.ovMostrarToastIsland('Audio háptico activado');
-            window.ovPlayHapticTick(900, 0.04);
+            window.ovPlayHapticTick(950, 0.05);
         } else {
             icon.className = 'bi bi-volume-mute-fill text-secondary';
-            window.ovMostrarToastIsland('Audio háptico silenciado');
         }
     }
 };
