@@ -203,6 +203,22 @@ module.exports = (db, logAudit) => {
         });
     });
 
+    // ── GET /seguridad/unidades/:id/fotos-presigned — URLs firmadas de un registro para PDF ──
+    router.get('/seguridad/unidades/:id/fotos-presigned', (req, res) => {
+        db.query('SELECT * FROM seg_unidades_fotos WHERE registro_id = ? ORDER BY orden ASC', [req.params.id], async (err, fotos) => {
+            if (err) return res.status(500).json({ error: err.message });
+            const signed = await Promise.all((fotos || []).map(async (f) => {
+                const key = s3KeyFromUrl(f.url);
+                let signedUrl = f.url;
+                if (key) {
+                    try { signedUrl = await getPresignedUrl(key, 7200); } catch(e) {}
+                }
+                return { id: f.id, registro_id: f.registro_id, tipo: f.tipo, url: signedUrl, orden: f.orden };
+            }));
+            res.json(signed);
+        });
+    });
+
     // ── DELETE /seguridad/unidades/:id — Eliminar registro + fotos S3 ──
     router.delete('/seguridad/unidades/:id', (req, res) => {
         const regId = req.params.id;
@@ -287,6 +303,28 @@ module.exports = (db, logAudit) => {
                 );
             }
         );
+    });
+
+    // ── POST /seguridad/unidades/presign-fotos — Firmar URLs para PDF/WhatsApp bajo demanda ──
+    router.post('/seguridad/unidades/presign-fotos', async (req, res) => {
+        try {
+            const urls = req.body.urls || [];
+            if (!urls.length) return res.json({});
+            const signed = {};
+            await Promise.all(urls.map(async (url) => {
+                if (!url) return;
+                const key = s3KeyFromUrl(url);
+                if (key) {
+                    try { signed[url] = await getPresignedUrl(key, 7200); } catch(e) { signed[url] = url; }
+                } else {
+                    signed[url] = url;
+                }
+            }));
+            res.json(signed);
+        } catch(e) {
+            console.error('Error presign-fotos:', e);
+            res.status(500).json({ error: e.message });
+        }
     });
 
     // ── DELETE /seguridad/unidades/:id/fotos/:fotoId — Eliminar foto ──

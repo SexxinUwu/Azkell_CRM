@@ -2593,21 +2593,50 @@ var _sguB64Cache = {};
 async function _sguConvertirFotosABase64(fotosArray) {
     if (!fotosArray || !fotosArray.length) return [];
 
+    // 1. Detectar fotos remotas que requieren URL firmada
+    var urlsAFirmar = [];
+    fotosArray.forEach(function(item) {
+        var u = item.url || item.b64;
+        if (u && !u.startsWith('data:') && !_sguB64Cache[u] && u.indexOf('amazonaws.com') >= 0 && u.indexOf('X-Amz-Signature') < 0) {
+            urlsAFirmar.push(u);
+        }
+    });
+
+    var signedMap = {};
+    if (urlsAFirmar.length > 0) {
+        try {
+            var presignRes = await fetch('/api/seguridad/unidades/presign-fotos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + (localStorage.getItem('fleet_token') || '')
+                },
+                body: JSON.stringify({ urls: urlsAFirmar })
+            });
+            if (presignRes.ok) signedMap = await presignRes.json();
+        } catch(e) {
+            console.warn('Error obteniendo firmas de fotos:', e);
+        }
+    }
+
+    // 2. Convertir cada imagen a Base64 usando la URL firmada
     return Promise.all(fotosArray.map(async function(item, i) {
         if (item.b64 && item.b64.startsWith('data:')) {
             return { b64: item.b64, num: i + 1, tipo: item.tipo };
         }
-        var imgUrl = item.url || item.b64;
-        if (!imgUrl) return { b64: '', num: i + 1, tipo: item.tipo };
+        var rawUrl = item.url || item.b64;
+        if (!rawUrl) return { b64: '', num: i + 1, tipo: item.tipo };
 
-        if (_sguB64Cache[imgUrl]) {
-            return { b64: _sguB64Cache[imgUrl], num: i + 1, tipo: item.tipo };
+        if (_sguB64Cache[rawUrl]) {
+            return { b64: _sguB64Cache[rawUrl], num: i + 1, tipo: item.tipo };
         }
+
+        var fetchUrl = signedMap[rawUrl] || rawUrl;
 
         try {
             var ctrl = new AbortController();
-            var timer = setTimeout(function() { ctrl.abort(); }, 3000);
-            var r = await fetch(imgUrl, { signal: ctrl.signal, cache: 'force-cache' });
+            var timer = setTimeout(function() { ctrl.abort(); }, 4000);
+            var r = await fetch(fetchUrl, { signal: ctrl.signal, cache: 'force-cache' });
             clearTimeout(timer);
 
             if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -2619,10 +2648,11 @@ async function _sguConvertirFotosABase64(fotosArray) {
                 reader.readAsDataURL(blob);
             });
 
-            _sguB64Cache[imgUrl] = b64;
+            _sguB64Cache[rawUrl] = b64;
             return { b64: b64, num: i + 1, tipo: item.tipo };
         } catch(err) {
-            return { b64: imgUrl, num: i + 1, tipo: item.tipo };
+            // Si falla la conversión a b64, pasar la URL firmada para que no dé 403
+            return { b64: fetchUrl, num: i + 1, tipo: item.tipo };
         }
     }));
 }
@@ -2940,9 +2970,21 @@ window._sguCompartirWhatsApp = async function(tipo) {
         var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
         var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
 
+        // Traer fotos con URLs firmadas vigentes para evitar cualquier 403 Forbidden
+        var fotosFirmadas = [];
+        try {
+            var fRes = await fetch('/api/seguridad/unidades/' + encodeURIComponent(rec.id) + '/fotos-presigned', {
+                headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('fleet_token') || '') }
+            });
+            if (fRes.ok) fotosFirmadas = await fRes.json();
+        } catch(eFotos) {
+            console.warn('Fallback fotos locales:', eFotos);
+        }
+
+        var todasFotos = (fotosFirmadas && fotosFirmadas.length) ? fotosFirmadas : (rec.fotos || []);
+
         var htmlFinal = '';
         if (tipo === 'completo') {
-            var todasFotos = rec.fotos || [];
             var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
             var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
             var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
@@ -2955,7 +2997,7 @@ window._sguCompartirWhatsApp = async function(tipo) {
             if (fotosSalidaB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosSalidaB64, 'salida');
             if (fotosRetornoB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
         } else {
-            var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+            var fotos = todasFotos.filter(function(f) { return f.tipo === tipo; });
             var fotosBase64 = await _sguConvertirFotosABase64(fotos);
             htmlFinal = _sguBuildPageHtml(rec, tipo, 'Página 1 de 1 (Acta Oficial)', docT, docC);
             if (fotosBase64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosBase64, tipo);
@@ -2964,7 +3006,7 @@ window._sguCompartirWhatsApp = async function(tipo) {
         var pdfBlob = await _sguRenderPdfFromTemplate(htmlFinal, filename);
         var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-        // Compartir nativo (Abre el diálogo de compartir del sistema para elegir WhatsApp y el chat)
+        // 1. Compartir nativo (Móviles / Tablets donde el usuario elige WhatsApp)
         if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
             try {
                 await navigator.share({
@@ -2973,12 +3015,12 @@ window._sguCompartirWhatsApp = async function(tipo) {
                 });
                 return;
             } catch (shareErr) {
-                if (shareErr.name === 'AbortError') return; // Cancelado por el usuario
-                console.warn('Error en navigator.share:', shareErr);
+                if (shareErr.name === 'AbortError') return;
+                console.warn('Error al compartir con gesto expirado:', shareErr);
             }
         }
 
-        // Si el navegador de escritorio no soporta compartir archivos por API nativa:
+        // 2. Si el navegador en PC expiró el token de gesto o no soporta Web Share con archivos:
         // Abre WhatsApp Web directo
         window.open('https://web.whatsapp.com/', '_blank');
         _sguToast('Abriendo WhatsApp...');
