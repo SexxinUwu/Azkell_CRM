@@ -441,16 +441,10 @@ window.ovCambiarPagina = function(delta) {
 // ── GESTIÓN DEL MODAL NUEVO VIAJE ───────────────────────────────────
 window.ovAbrirModalNuevoViaje = async function() {
     _ovListaRutasSubFormulario = [];
-    window.ovRenderizarSubRutas();
-
+    // Resetear formulario
     var form = document.getElementById('ovFormNuevoViaje');
     if (form) form.reset();
-
-    // Resetear a la primera pestaña
-    var firstTab = document.getElementById('ov-tab-orden-viaje-btn');
-    if (firstTab && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
-        new bootstrap.Tab(firstTab).show();
-    }
+    _ovListaRutasSubFormulario = [];
 
     // Establecer fecha y hora actual en el input
     var inputFecha = document.getElementById('ov-form-fecha');
@@ -469,6 +463,8 @@ window.ovAbrirModalNuevoViaje = async function() {
             var numeroEl = document.getElementById('ov-form-numero');
             if (serieEl) serieEl.value = jsonCorrelativo.serie;
             if (numeroEl) numeroEl.value = jsonCorrelativo.numero;
+            var badgeEl = document.getElementById('ov-header-folio-badge');
+            if (badgeEl) badgeEl.textContent = `N° ${jsonCorrelativo.serie}-${jsonCorrelativo.numero}`;
         }
     } catch(err) {
         console.warn('No se pudo cargar correlativo automático:', err);
