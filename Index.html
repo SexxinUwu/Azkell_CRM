@@ -121,7 +121,7 @@
                 <div id="wrap-operaciones-marsisa">
                     <button class="nav-section-toggle" data-section="operaciones-marsisa" aria-expanded="false" onclick="window.toggleNavSection('operaciones-marsisa')">
                         <span class="link-text">Operaciones Marsisa</span>
-                        <span class="section-badge">3</span>
+                        <span class="section-badge">6</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-operaciones-marsisa">
@@ -133,10 +133,34 @@
                             <i class="bi bi-file-earmark-text-fill nav-icon text-info"></i>
                             <span class="link-text">Guías de Remisión</span>
                         </a>
-                        <a id="nav-marsisa-combustible-vales" class="nav-item" onclick="cargarModuloAislado('operaciones/marsisa-combustible-vales')">
-                            <i class="bi bi-cloud-arrow-down-fill nav-icon text-warning"></i>
-                            <span class="link-text">Vales Combustible (Marsisa)</span>
-                        </a>
+                        <!-- Submenú desplegable Combustible Marsisa -->
+                        <div class="nav-submenu-group">
+                            <a id="nav-marsisa-combustible-toggle" class="nav-item d-flex align-items-center justify-content-between" onclick="var el=document.getElementById('submenu-marsisa-combustible'); var chev=document.getElementById('chev-marsisa-combustible'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-fuel-pump-fill nav-icon text-warning"></i>
+                                    <span class="link-text">Combustible</span>
+                                </div>
+                                <i class="bi bi-chevron-down nav-sub-chevron" id="chev-marsisa-combustible" style="font-size:0.75rem; transition: transform 0.2s ease;"></i>
+                            </a>
+                            <div class="nav-submenu-items d-none ps-3" id="submenu-marsisa-combustible">
+                                <a id="nav-marsisa-combustible-vales" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/marsisa-combustible-vales')">
+                                    <i class="bi bi-cloud-arrow-down-fill nav-icon me-1 text-warning" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Vales de Combustible</span>
+                                </a>
+                                <a id="nav-marsisa-combustible-matriz" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/combustible-matriz')">
+                                    <i class="bi bi-speedometer2 nav-icon me-1 text-warning" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Matriz de Combustible (D2)</span>
+                                </a>
+                                <a id="nav-marsisa-combustible-analisis" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/combustible-analisis')">
+                                    <i class="bi bi-graph-up-arrow nav-icon me-1" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Análisis de Combustible (D2)</span>
+                                </a>
+                                <a id="nav-marsisa-urea-analisis" class="nav-item py-1 text-sm" onclick="cargarModuloAislado('operaciones/urea-analisis')">
+                                    <i class="bi bi-droplet-half nav-icon me-1 text-info" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Análisis de Urea</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1185,13 +1209,49 @@
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
-                <div id="mbnav-marsisa-combustible-vales" class="bnav-row-item" style="border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/marsisa-combustible-vales'); setBottomNavActive('bnav-operaciones');">
-                    <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-cloud-arrow-down-fill"></i></div>
+
+                <!-- Acordeón Combustible Marsisa -->
+                <div class="bnav-row-item" id="mbnav-marsisa-combustible-toggle" onclick="var el=document.getElementById('mbnav-submenu-marsisa-combustible'); var chev=document.getElementById('mbchev-marsisa-combustible'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
+                    <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-fuel-pump"></i></div>
                     <div class="bnav-row-content">
-                        <p class="bnav-row-title">Vales Combustible (Marsisa)</p>
-                        <p class="bnav-row-desc">Sincronización remota MarsisaSoft</p>
+                        <p class="bnav-row-title">Combustible (Marsisa)</p>
+                        <p class="bnav-row-desc">Vales remotos y análisis con APIs</p>
                     </div>
-                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                    <i class="bi bi-chevron-down bnav-row-chevron" id="mbchev-marsisa-combustible"></i>
+                </div>
+                <div class="d-none ps-3 d-flex flex-column gap-2" id="mbnav-submenu-marsisa-combustible">
+                    <div id="mbnav-marsisa-combustible-vales" class="bnav-row-item" style="border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/marsisa-combustible-vales'); setBottomNavActive('bnav-operaciones');">
+                        <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-cloud-arrow-down-fill"></i></div>
+                        <div class="bnav-row-content">
+                            <p class="bnav-row-title">Vales Combustible (Marsisa)</p>
+                            <p class="bnav-row-desc">Sincronización remota MarsisaSoft</p>
+                        </div>
+                        <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                    </div>
+                    <div id="mbnav-marsisa-combustible-matriz" class="bnav-row-item" style="border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/combustible-matriz'); setBottomNavActive('bnav-operaciones');">
+                        <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-speedometer2"></i></div>
+                        <div class="bnav-row-content">
+                            <p class="bnav-row-title">Matriz de Combustible (D2)</p>
+                            <p class="bnav-row-desc">Consumo teórico por ruta y peso</p>
+                        </div>
+                        <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                    </div>
+                    <div id="mbnav-marsisa-combustible-analisis" class="bnav-row-item" style="border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/combustible-analisis'); setBottomNavActive('bnav-operaciones');">
+                        <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-graph-up"></i></div>
+                        <div class="bnav-row-content">
+                            <p class="bnav-row-title">Análisis de Combustible (D2)</p>
+                            <p class="bnav-row-desc">Rendimiento y consumos D2</p>
+                        </div>
+                        <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                    </div>
+                    <div id="mbnav-marsisa-urea-analisis" class="bnav-row-item" style="border-left: 3px solid #06b6d4;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/urea-analisis'); setBottomNavActive('bnav-operaciones');">
+                        <div class="bnav-row-icon" style="color: #06b6d4;"><i class="bi bi-droplet-half"></i></div>
+                        <div class="bnav-row-content">
+                            <p class="bnav-row-title">Análisis de Urea</p>
+                            <p class="bnav-row-desc">Consumo y control de Urea</p>
+                        </div>
+                        <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                    </div>
                 </div>
             </div>
         </div>
