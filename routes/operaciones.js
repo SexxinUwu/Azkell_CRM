@@ -451,6 +451,45 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ── PUT /api/operaciones/ordenes-viaje/:viaje/iniciar ───────────
+    router.put('/ordenes-viaje/:viaje/iniciar', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const codeViaje = req.params.viaje;
+            const { fecha_inicio, kilometraje_inicial } = req.body;
+
+            await tdb.query(`
+                UPDATE operaciones_ordenes_viaje 
+                SET estado = 'INICIADO',
+                    fecha_viaje = COALESCE(?, fecha_viaje),
+                    observaciones = CONCAT(COALESCE(observaciones, ''), IF(? IS NOT NULL, CONCAT(' [KM Inicial: ', ?, ']'), ''))
+                WHERE viaje = ?
+            `, [
+                fecha_inicio ? fecha_inicio + ' 00:00:00' : null,
+                kilometraje_inicial,
+                kilometraje_inicial,
+                codeViaje
+            ]);
+
+            if (logAudit) {
+                logAudit({
+                    req,
+                    accion: 'INICIAR_ORDEN_VIAJE',
+                    modulo: 'OPERACIONES',
+                    detalle: `Iniciada Orden de Viaje ${codeViaje} con KM: ${kilometraje_inicial}`
+                });
+            }
+
+            res.json({ ok: true, message: `El viaje ${codeViaje} ha sido iniciado exitosamente.` });
+        } catch (err) {
+            console.error('Error al iniciar viaje:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // ── GET /api/operaciones/reporte-viajes ───────────────────────────
     // Reporte consolidado: N° Viaje, Fecha (solo fecha), Placas, Motor, Ruta, Peso Ida/Retorno y Galones Teóricos Matriz D2
     router.get('/reporte-viajes', async (req, res) => {
