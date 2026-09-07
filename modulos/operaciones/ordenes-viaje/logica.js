@@ -5,8 +5,10 @@
 window.dataGlobalOrdenesViajeModulo = [];
 window.dataGlobalRutasModulo = [];
 window.datosFiltradosOrdenesViajeModulo = [];
-var _ovViajesGlobal = [];
-var _ovRutasGlobal = [];
+window._ovViajesGlobal = window._ovViajesGlobal || [];
+window._ovRutasGlobal = window._ovRutasGlobal || [];
+var _ovViajesGlobal = window._ovViajesGlobal;
+var _ovRutasGlobal = window._ovRutasGlobal;
 var _ovModoVistaActual = 'viajes'; // 'viajes' | 'rutas'
 var _ovPaginaActual = 1;
 var _ovItemsPorPagina = 25;
@@ -146,8 +148,10 @@ window.ovCargarDatos = async function() {
 
         window.dataGlobalOrdenesViajeModulo = (jsonViajes && jsonViajes.ok && Array.isArray(jsonViajes.data)) ? jsonViajes.data : [];
         window.dataGlobalRutasModulo = (jsonRutas && jsonRutas.ok && Array.isArray(jsonRutas.data)) ? jsonRutas.data : [];
-        _ovViajesGlobal = window.dataGlobalOrdenesViajeModulo;
-        _ovRutasGlobal = window.dataGlobalRutasModulo;
+        window._ovViajesGlobal = window.dataGlobalOrdenesViajeModulo;
+        window._ovRutasGlobal = window.dataGlobalRutasModulo;
+        _ovViajesGlobal = window._ovViajesGlobal;
+        _ovRutasGlobal = window._ovRutasGlobal;
 
         window.ovActualizarKPIs();
         window.ovAplicarFiltros();
@@ -624,7 +628,8 @@ window.ovAbrirModalNuevoViaje = async function() {
 window.ovAbrirModalEditarViaje = async function(viajeCode) {
     if (!viajeCode) return;
 
-    var item = (_ovViajesGlobal || []).find(x => x.viaje === viajeCode);
+    var listaViajes = window._ovViajesGlobal || (typeof _ovViajesGlobal !== 'undefined' ? _ovViajesGlobal : []) || window.dataGlobalOrdenesViajeModulo || [];
+    var item = listaViajes.find(x => x.viaje === viajeCode);
     if (!item) {
         alert('No se encontraron los datos del viaje seleccionado.');
         return;
@@ -997,7 +1002,8 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     if (!viajeCode) return;
     window._ovViajeMonitoreoActivo = viajeCode;
 
-    var item = (_ovViajesGlobal || []).find(x => x.viaje === viajeCode);
+    var listaViajes = window._ovViajesGlobal || (typeof _ovViajesGlobal !== 'undefined' ? _ovViajesGlobal : []) || window.dataGlobalOrdenesViajeModulo || [];
+    var item = listaViajes.find(x => x.viaje === viajeCode);
     if (!item) {
         alert('No se encontraron los datos del viaje para monitoreo.');
         return;
@@ -1036,7 +1042,8 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     if (resVol) resVol.textContent = parseFloat(item.volumen || 0).toFixed(2);
 
     // Rutas asociadas a este viaje
-    var rutasAsoc = (_ovRutasGlobal || []).filter(r => r.viaje === viajeCode);
+    var listaRutas = window._ovRutasGlobal || (typeof _ovRutasGlobal !== 'undefined' ? _ovRutasGlobal : []) || window.dataGlobalRutasModulo || [];
+    var rutasAsoc = listaRutas.filter(r => r.viaje === viajeCode);
     var badgeRutas = document.getElementById('ov-mon-badge-rutas');
     if (badgeRutas) badgeRutas.textContent = rutasAsoc.length;
 
