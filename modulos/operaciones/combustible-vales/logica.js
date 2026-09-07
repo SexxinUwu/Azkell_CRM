@@ -93,7 +93,7 @@
     // Cargar opciones para filtros
     window._cvCargarCatalogos = async function() {
         try {
-            const res = await fetch('/api/combustible/catalogos');
+            const res = await fetch('/api/combustible/catalogos?modulo=operaciones');
             const data = await res.json();
             if (data.ok) {
                 const selP = document.getElementById('cv-filter-placa');
@@ -128,6 +128,7 @@
         }
 
         const params = new URLSearchParams({
+            modulo: 'operaciones',
             page: window._cvPaginaActual,
             limit: window._cvLimitePorPagina,
             sort_by: window._cvSortBy || 'correlativo',
@@ -417,10 +418,10 @@
         }
 
         try {
-            const res = await fetch('/api/combustible/vales/eliminar-masivo?hard=true', {
+            const res = await fetch('/api/combustible/vales/eliminar-masivo?hard=true&modulo=operaciones', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ids: Array.from(window._cvSeleccionados) })
+                body: JSON.stringify({ ids: Array.from(window._cvSeleccionados), modulo: 'operaciones' })
             });
             const data = await res.json();
             if (data.ok) {
@@ -440,7 +441,7 @@
         if (!confirm(`¿Deseas eliminar este vale (#${id})? Presiona Aceptar para confirmar.`)) return;
 
         try {
-            const res = await fetch(`/api/combustible/vales/${id}?hard=true`, { method: 'DELETE' });
+            const res = await fetch(`/api/combustible/vales/${id}?hard=true&modulo=operaciones`, { method: 'DELETE' });
             const data = await res.json();
             if (data.ok) {
                 window._cvSeleccionados.delete(id);
@@ -552,7 +553,7 @@
             const res = await fetch('/api/combustible/vales/importar-masivo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ vales: window._cvParsedImportData })
+                body: JSON.stringify({ vales: window._cvParsedImportData, modulo: 'operaciones' })
             });
             const data = await res.json();
 
@@ -585,7 +586,7 @@
             return;
         }
 
-        const params = new URLSearchParams({ limit: 5000 });
+        const params = new URLSearchParams({ limit: 5000, modulo: 'operaciones' });
         const s = document.getElementById('cv-filter-search')?.value;
         const p = document.getElementById('cv-filter-placa')?.value;
         const c = document.getElementById('cv-filter-combustible')?.value;
@@ -735,11 +736,12 @@
             numero_comprobante: document.getElementById('cv-f-comprobante').value.trim(),
             tipo_pago: document.getElementById('cv-f-tipo-pago').value,
             estado_pago: document.getElementById('cv-f-estado-pago').value,
-            observacion: document.getElementById('cv-f-obs').value.trim()
+            observacion: document.getElementById('cv-f-obs').value.trim(),
+            modulo: 'operaciones'
         };
 
         try {
-            const url = isEdit ? `/api/combustible/vales/${id}` : '/api/combustible/vales';
+            const url = isEdit ? `/api/combustible/vales/${id}?modulo=operaciones` : '/api/combustible/vales';
             const method = isEdit ? 'PUT' : 'POST';
 
             const res = await fetch(url, {
