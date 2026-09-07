@@ -9,8 +9,26 @@ var _ovModoVistaActual = 'viajes'; // 'viajes' | 'rutas'
 var _ovPaginaActual = 1;
 var _ovItemsPorPagina = 25;
 var _ovDebounceTimer = null;
+var _ovListaRutasSubFormulario = []; // Para el modal de nuevo viaje
+
+// Formatear fecha local en formato YYYY-MM-DD
+function _ovObtenerFechaHoyString() {
+    var d = new Date();
+    var yyyy = d.getFullYear();
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
 
 window.init_ordenes_viaje = function() {
+    // Inicializar inputs de fechas pastel con la fecha de hoy si están vacíos
+    var inputDesde = document.getElementById('ov-filtro-fecha-desde');
+    var inputHasta = document.getElementById('ov-filtro-fecha-hasta');
+    var hoyStr = _ovObtenerFechaHoyString();
+
+    if (inputDesde && !inputDesde.value) inputDesde.value = hoyStr;
+    if (inputHasta && !inputHasta.value) inputHasta.value = hoyStr;
+
     window.ovCargarDatos();
 };
 
@@ -22,11 +40,11 @@ window.ovCambiarModoVista = function(modo) {
     var btnRutas = document.getElementById('ov-tab-rutas');
 
     if (modo === 'viajes') {
-        if (btnViajes) { btnViajes.classList.add('active', 'bg-white', 'shadow-sm'); btnViajes.classList.remove('text-secondary'); }
-        if (btnRutas) { btnRutas.classList.remove('active', 'bg-white', 'shadow-sm'); btnRutas.classList.add('text-secondary'); }
+        if (btnViajes) { btnViajes.classList.add('active', 'bg-white', 'shadow-2xs'); btnViajes.classList.remove('text-secondary'); }
+        if (btnRutas) { btnRutas.classList.remove('active', 'bg-white', 'shadow-2xs'); btnRutas.classList.add('text-secondary'); }
     } else {
-        if (btnRutas) { btnRutas.classList.add('active', 'bg-white', 'shadow-sm'); btnRutas.classList.remove('text-secondary'); }
-        if (btnViajes) { btnViajes.classList.remove('active', 'bg-white', 'shadow-sm'); btnViajes.classList.add('text-secondary'); }
+        if (btnRutas) { btnRutas.classList.add('active', 'bg-white', 'shadow-2xs'); btnRutas.classList.remove('text-secondary'); }
+        if (btnViajes) { btnViajes.classList.remove('active', 'bg-white', 'shadow-2xs'); btnViajes.classList.add('text-secondary'); }
     }
 
     _ovPaginaActual = 1;
@@ -41,31 +59,31 @@ window.ovConfigurarThead = function() {
     if (_ovModoVistaActual === 'viajes') {
         thead.innerHTML = `
             <tr>
-                <th style="width: 135px;">N° Viaje</th>
-                <th style="width: 145px;" title="Fecha y Hora de programación / salida estimada"><i class="bi bi-calendar-event me-1"></i>F. / H. Programación</th>
-                <th style="width: 100px;">Tracto</th>
-                <th style="width: 100px;">Carreta</th>
+                <th style="width: 130px;">N° Viaje</th>
+                <th style="width: 135px;" title="Fecha y Hora de programación / salida estimada"><i class="bi bi-calendar-event me-1"></i>F. / H. Salida</th>
+                <th style="width: 95px;">Tracto</th>
+                <th style="width: 95px;">Carreta</th>
                 <th>Conductor Asignado</th>
                 <th>Órdenes y Rutas Asignadas</th>
-                <th style="width: 120px; text-align: right;">Carga Ida</th>
-                <th style="width: 120px; text-align: right;">Carga Retorno</th>
-                <th style="width: 120px; text-align: right;">Peso Total</th>
-                <th style="width: 80px; text-align: center;">Estado</th>
+                <th style="width: 110px; text-align: right;">Carga Ida</th>
+                <th style="width: 110px; text-align: right;">Carga Retorno</th>
+                <th style="width: 110px; text-align: right;">Peso Total</th>
+                <th style="width: 75px; text-align: center;">Estado</th>
             </tr>
         `;
     } else {
         thead.innerHTML = `
             <tr>
-                <th style="width: 130px;">N° Viaje</th>
-                <th style="width: 130px;">N° Orden Serv.</th>
-                <th style="width: 110px; text-align: center;">Tramo</th>
-                <th style="width: 100px;">Tracto</th>
-                <th style="width: 100px;">Carreta</th>
+                <th style="width: 125px;">N° Viaje</th>
+                <th style="width: 125px;">N° Orden Serv.</th>
+                <th style="width: 100px; text-align: center;">Tramo</th>
+                <th style="width: 95px;">Tracto</th>
+                <th style="width: 95px;">Carreta</th>
                 <th>Conductor</th>
                 <th>Ruta Despachada</th>
-                <th style="width: 140px;">Tipo de Servicio</th>
-                <th style="width: 110px; text-align: right;">Peso Carga</th>
-                <th style="width: 80px; text-align: center;">Estado</th>
+                <th style="width: 130px;">Tipo de Servicio</th>
+                <th style="width: 105px; text-align: right;">Peso Carga</th>
+                <th style="width: 75px; text-align: center;">Estado</th>
             </tr>
         `;
     }
@@ -77,19 +95,35 @@ window.ovCargarDatos = async function() {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center py-5 text-secondary">
+                <td colspan="10" class="text-center py-4 text-secondary">
                     <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
-                    <div class="small fw-semibold">Consultando base de datos local del ERP...</div>
+                    <div class="small fw-semibold">Consultando base de datos del ERP...</div>
                 </td>
             </tr>
         `;
     }
 
     try {
-        // Cargar vista de viajes y vista de rutas en paralelo
+        var inputDesde = document.getElementById('ov-filtro-fecha-desde');
+        var inputHasta = document.getElementById('ov-filtro-fecha-hasta');
+        var fDesde = inputDesde ? inputDesde.value : '';
+        var fHasta = inputHasta ? inputHasta.value : '';
+
+        var qViajes = '/api/operaciones/ordenes-viaje?limit=2500';
+        var qRutas = '/api/operaciones/ordenes-viaje?vista=rutas&limit=4000';
+
+        if (fDesde) {
+            qViajes += '&fecha_desde=' + encodeURIComponent(fDesde);
+            qRutas += '&fecha_desde=' + encodeURIComponent(fDesde);
+        }
+        if (fHasta) {
+            qViajes += '&fecha_hasta=' + encodeURIComponent(fHasta);
+            qRutas += '&fecha_hasta=' + encodeURIComponent(fHasta);
+        }
+
         var [resViajes, resRutas] = await Promise.all([
-            fetch('/api/operaciones/ordenes-viaje?limit=2500'),
-            fetch('/api/operaciones/ordenes-viaje?vista=rutas&limit=4000')
+            fetch(qViajes),
+            fetch(qRutas)
         ]);
 
         var jsonViajes = await resViajes.json();
@@ -105,7 +139,7 @@ window.ovCargarDatos = async function() {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center py-5 text-danger">
+                    <td colspan="10" class="text-center py-4 text-danger">
                         <i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>
                         <div class="fw-bold">Error al conectar con la base de datos</div>
                         <small class="text-muted">${err.message}</small>
@@ -134,6 +168,14 @@ window.ovActualizarKPIs = function() {
         }
     });
 
+    // Si hay viajes registrados pero sin detalle en rutas (ej. nuevo viaje creado con peso principal)
+    if (pesoIdaKg === 0 && pesoRetornoKg === 0) {
+        viajes.forEach(function(v) {
+            var p = parseFloat(v.peso) || 0;
+            pesoIdaKg += (p * 1000);
+        });
+    }
+
     var kTotal = document.getElementById('ov-kpi-total');
     var kOrdenes = document.getElementById('ov-kpi-ordenes');
     var kPesoIda = document.getElementById('ov-kpi-peso-ida');
@@ -145,6 +187,10 @@ window.ovActualizarKPIs = function() {
     if (kPesoIda) kPesoIda.textContent = (pesoIdaKg / 1000).toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' TN';
     if (kPesoRetorno) kPesoRetorno.textContent = (pesoRetornoKg / 1000).toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' TN';
     if (badgeTotal) badgeTotal.textContent = `${totalViajes} viajes · ${totalOrdenes} O/S`;
+};
+
+window.ovOnCambiarFecha = function() {
+    window.ovCargarDatos();
 };
 
 window.ovOnFiltrarDebounced = function() {
@@ -163,10 +209,16 @@ window.ovLimpiarFiltros = function() {
     var viajeEl = document.getElementById('ov-filtro-viaje');
     var qEl = document.getElementById('ov-filtro-q');
     var tramoEl = document.getElementById('ov-filtro-tramo');
+    var inputDesde = document.getElementById('ov-filtro-fecha-desde');
+    var inputHasta = document.getElementById('ov-filtro-fecha-hasta');
+
     if (viajeEl) viajeEl.value = '';
     if (qEl) qEl.value = '';
     if (tramoEl) tramoEl.value = 'TODOS';
-    window.ovOnFiltrar();
+    if (inputDesde) inputDesde.value = '';
+    if (inputHasta) inputHasta.value = '';
+
+    window.ovCargarDatos();
 };
 
 window.ovAplicarFiltros = function() {
@@ -242,7 +294,6 @@ window.ovAplicarFiltros = function() {
 
 window.ovRenderizarTabla = function() {
     var tbody = document.getElementById('ov-tabla-body');
-    var lblContador = document.getElementById('ov-lbl-contador-tabla');
     var infoPaginacion = document.getElementById('ov-info-paginacion');
     var btnPrev = document.getElementById('ov-btn-prev');
     var btnNext = document.getElementById('ov-btn-next');
@@ -258,19 +309,17 @@ window.ovRenderizarTabla = function() {
     var fin = inicio + _ovItemsPorPagina;
     var pageItems = window.datosFiltradosOrdenesViajeModulo.slice(inicio, fin);
 
-    var itemLabel = _ovModoVistaActual === 'viajes' ? 'viaje' : 'orden/ruta';
-    if (lblContador) lblContador.textContent = `Mostrando ${total} ${itemLabel}${total === 1 ? '' : 's'}`;
-    if (infoPaginacion) infoPaginacion.textContent = `Página ${_ovPaginaActual} de ${totalPaginas} (${total} total)`;
+    if (infoPaginacion) infoPaginacion.textContent = `Página ${_ovPaginaActual} de ${totalPaginas} (${total} registros)`;
     if (btnPrev) btnPrev.disabled = _ovPaginaActual <= 1;
     if (btnNext) btnNext.disabled = _ovPaginaActual >= totalPaginas;
 
     if (pageItems.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center py-5 text-secondary">
-                    <i class="bi bi-search fs-3 d-block mb-2 text-muted"></i>
-                    <div class="fw-bold">No se encontraron registros</div>
-                    <small class="text-muted">Ajusta los filtros o sincroniza la información desde el botón superior.</small>
+                <td colspan="10" class="text-center py-4 text-secondary">
+                    <i class="bi bi-inbox fs-3 d-block mb-1 text-muted"></i>
+                    <div class="fw-bold" style="font-size:0.85rem;">No se encontraron viajes para los filtros seleccionados</div>
+                    <small class="text-muted" style="font-size:0.75rem;">Modifica el rango de fechas o haz clic en "Registrar Nuevo Viaje".</small>
                 </td>
             </tr>
         `;
@@ -283,7 +332,6 @@ window.ovRenderizarTabla = function() {
         pageItems.forEach(function(v) {
             var fechaStr = '---';
             if (v.fecha_viaje) {
-                // Si viene como string 'YYYY-MM-DD HH:mm:ss' o ISO
                 var fVal = String(v.fecha_viaje);
                 var match = fVal.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
                 if (match) {
@@ -302,45 +350,45 @@ window.ovRenderizarTabla = function() {
                 ? `<span class="ov-badge-placa ov-badge-carreta"><i class="bi bi-truck-flatbed me-1"></i>${v.placa_remolque}</span>`
                 : `<span class="text-muted small fst-italic">—</span>`;
 
-            var rutaTexto = v.rutas_list || v.ruta || 'Sin rutas registradas';
+            var rutaTexto = v.rutas_list || v.ruta || 'Sin ruta especificada';
             var cantOrdenes = parseInt(v.cant_ordenes, 10) || 0;
             var ordenesBadge = cantOrdenes > 0 
-                ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1" style="font-size:0.75rem;">${cantOrdenes} O/S</span>`
+                ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1" style="font-size:0.7rem;">${cantOrdenes} O/S</span>`
                 : '';
 
             var pesoIdaVal = parseFloat(v.peso_ida) || 0;
             var pesoRetornoVal = parseFloat(v.peso_retorno) || 0;
-            var pesoTotalVal = parseFloat(v.peso_total_rutas) || parseFloat(v.peso) || 0;
+            var pesoTotalVal = parseFloat(v.peso_total_rutas) || (parseFloat(v.peso) ? parseFloat(v.peso) * 1000 : 0);
 
             html += `
                 <tr>
                     <td><span class="ov-badge-viaje">${v.viaje || '---'}</span></td>
-                    <td><div class="fw-semibold text-secondary" style="font-size:0.83rem;"><i class="bi bi-clock-history me-1 text-muted"></i>${fechaStr}</div></td>
+                    <td><div class="fw-semibold text-secondary" style="font-size:0.78rem;"><i class="bi bi-clock-history me-1 text-muted"></i>${fechaStr}</div></td>
                     <td><span class="ov-badge-placa ov-badge-tracto"><i class="bi bi-truck me-1"></i>${v.placa_tracto || '---'}</span></td>
                     <td>${carretaHtml}</td>
-                    <td><div class="fw-bold text-dark" style="font-size:0.85rem;"><i class="bi bi-person-fill text-secondary me-1"></i>${v.conductor || 'SIN CONDUCTOR'}</div></td>
+                    <td><div class="fw-bold text-dark" style="font-size:0.8rem;"><i class="bi bi-person-fill text-secondary me-1"></i>${v.conductor || 'SIN CONDUCTOR'}</div></td>
                     <td>
                         <div class="d-flex align-items-center gap-1 flex-wrap">
                             ${ordenesBadge}
-                            <span class="small text-secondary text-truncate" style="max-width: 280px;" title="${rutaTexto}">${rutaTexto}</span>
+                            <span class="small text-secondary text-truncate" style="max-width: 250px;" title="${rutaTexto}">${rutaTexto}</span>
                         </div>
                     </td>
                     <td style="text-align: right;">
-                        <span class="badge ${pesoIdaVal > 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-light text-muted'} font-monospace px-2 py-1" style="font-size:0.8rem;">
+                        <span class="badge ${pesoIdaVal > 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-light text-muted'} font-monospace px-2 py-1" style="font-size:0.76rem;">
                             ${pesoIdaVal > 0 ? (pesoIdaVal / 1000).toFixed(2) + ' TN' : '0.00 TN'}
                         </span>
                     </td>
                     <td style="text-align: right;">
-                        <span class="badge ${pesoRetornoVal > 0 ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-light text-muted'} font-monospace px-2 py-1" style="font-size:0.8rem;">
+                        <span class="badge ${pesoRetornoVal > 0 ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-light text-muted'} font-monospace px-2 py-1" style="font-size:0.76rem;">
                             ${pesoRetornoVal > 0 ? (pesoRetornoVal / 1000).toFixed(2) + ' TN' : '0.00 TN'}
                         </span>
                     </td>
                     <td style="text-align: right;">
-                        <span class="badge bg-light text-dark border border-secondary-subtle font-monospace px-2 py-1 fw-bold" style="font-size:0.82rem;">
+                        <span class="badge bg-light text-dark border border-secondary-subtle font-monospace px-2 py-1 fw-bold" style="font-size:0.78rem;">
                             ${(pesoTotalVal / 1000).toFixed(2)} TN
                         </span>
                     </td>
-                    <td style="text-align: center;"><span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size:0.72rem; font-weight:700;">ACTIVO</span></td>
+                    <td style="text-align: center;"><span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size:0.7rem; font-weight:700;">${v.estado || 'ACTIVO'}</span></td>
                 </tr>
             `;
         });
@@ -349,8 +397,8 @@ window.ovRenderizarTabla = function() {
         pageItems.forEach(function(r) {
             var esRetorno = parseInt(r.es_retorno, 10) === 1;
             var tramoBadge = esRetorno
-                ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 fw-bold" style="font-size:0.75rem;"><i class="bi bi-arrow-left me-1"></i>RETORNO</span>`
-                : `<span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold" style="font-size:0.75rem;"><i class="bi bi-arrow-right me-1"></i>IDA</span>`;
+                ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 fw-bold" style="font-size:0.7rem;"><i class="bi bi-arrow-left me-1"></i>RETORNO</span>`
+                : `<span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold" style="font-size:0.7rem;"><i class="bi bi-arrow-right me-1"></i>IDA</span>`;
 
             var pesoR = parseFloat(r.peso_total) || 0;
             var carretaHtml = r.placa_remolque && r.placa_remolque.trim()
@@ -361,7 +409,7 @@ window.ovRenderizarTabla = function() {
                 <tr>
                     <td><span class="ov-badge-viaje">${r.viaje || '---'}</span></td>
                     <td>
-                        <span class="badge bg-light text-dark border border-secondary-subtle px-2 py-1 font-monospace fw-bold" style="font-size:0.82rem;">
+                        <span class="badge bg-light text-dark border border-secondary-subtle px-2 py-1 font-monospace fw-bold" style="font-size:0.78rem;">
                             <i class="bi bi-receipt me-1 text-primary"></i>${r.orden || '---'}
                         </span>
                     </td>
@@ -370,13 +418,13 @@ window.ovRenderizarTabla = function() {
                     <td>${carretaHtml}</td>
                     <td><div class="fw-bold text-dark small"><i class="bi bi-person-fill text-secondary me-1"></i>${r.conductor || '---'}</div></td>
                     <td><span class="fw-semibold text-dark small"><i class="bi bi-geo-alt-fill text-danger me-1"></i>${r.ruta || '---'}</span></td>
-                    <td><span class="badge bg-secondary-subtle text-secondary small text-truncate" style="max-width: 140px;">${r.tipo_servicio || 'ESTÁNDAR'}</span></td>
+                    <td><span class="badge bg-secondary-subtle text-secondary small text-truncate" style="max-width: 140px;">${r.tipo_servicio || 'CARGA GENERAL'}</span></td>
                     <td style="text-align: right;">
-                        <span class="badge ${pesoR > 0 ? 'bg-light text-dark border border-secondary-subtle' : 'bg-light text-muted'} font-monospace px-2 py-1 fw-bold" style="font-size:0.82rem;">
+                        <span class="badge ${pesoR > 0 ? 'bg-light text-dark border border-secondary-subtle' : 'bg-light text-muted'} font-monospace px-2 py-1 fw-bold" style="font-size:0.78rem;">
                             ${pesoR > 0 ? (pesoR / 1000).toFixed(2) + ' TN' : '0.00 TN'}
                         </span>
                     </td>
-                    <td style="text-align: center;"><span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size:0.72rem; font-weight:700;">ACTIVO</span></td>
+                    <td style="text-align: center;"><span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size:0.7rem; font-weight:700;">${r.estado || 'ACTIVO'}</span></td>
                 </tr>
             `;
         });
@@ -390,61 +438,237 @@ window.ovCambiarPagina = function(delta) {
     window.ovRenderizarTabla();
 };
 
-window.ovEjecutarSincronizacion = async function(isSilent) {
-    var btn = document.getElementById('btn-ov-sync');
-    var msgEl = document.getElementById('ov-sync-status-msg');
-    if (btn) {
-        btn.classList.add('loading');
-        btn.disabled = true;
-    }
-    if (msgEl) {
-        msgEl.innerHTML = `<span class="text-primary d-inline-flex align-items-center gap-1"><i class="bi bi-arrow-repeat spin" style="animation: ov-spin 0.8s linear infinite;"></i> Sincronizando viajes y órdenes de servicio desde Marsisa...</span>`;
+// ── GESTIÓN DEL MODAL NUEVO VIAJE ───────────────────────────────────
+window.ovAbrirModalNuevoViaje = async function() {
+    _ovListaRutasSubFormulario = [];
+    window.ovRenderizarSubRutas();
+
+    var form = document.getElementById('ovFormNuevoViaje');
+    if (form) form.reset();
+
+    // Resetear a la primera pestaña
+    var firstTab = document.getElementById('ov-tab-orden-viaje-btn');
+    if (firstTab && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+        new bootstrap.Tab(firstTab).show();
     }
 
+    // Establecer fecha y hora actual en el input
+    var inputFecha = document.getElementById('ov-form-fecha');
+    if (inputFecha) {
+        var now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        inputFecha.value = now.toISOString().slice(0, 16);
+    }
+
+    // Cargar correlativo desde el backend
     try {
-        if (!isSilent && typeof window.showToastNotification === 'function') {
-            window.showToastNotification('Sincronizando viajes y órdenes de servicio con el servidor...', 'info');
+        var resCorrelativo = await fetch('/api/operaciones/ordenes-viaje/correlativo');
+        var jsonCorrelativo = await resCorrelativo.json();
+        if (jsonCorrelativo && jsonCorrelativo.ok) {
+            var serieEl = document.getElementById('ov-form-serie');
+            var numeroEl = document.getElementById('ov-form-numero');
+            if (serieEl) serieEl.value = jsonCorrelativo.serie;
+            if (numeroEl) numeroEl.value = jsonCorrelativo.numero;
+        }
+    } catch(err) {
+        console.warn('No se pudo cargar correlativo automático:', err);
+    }
+
+    // Cargar listas de conductores y vehículos
+    window.ovCargarCombosFormulario();
+
+    // Mostrar modal
+    var modalEl = document.getElementById('ovModalNuevoViaje');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
+window.ovCargarCombosFormulario = async function() {
+    try {
+        var [resPlacas, resConductores] = await Promise.all([
+            fetch('/api/placas-lista').then(r => r.ok ? r.json() : []).catch(() => []),
+            fetch('/api/conductores-lista').then(r => r.ok ? r.json() : []).catch(() => [])
+        ]);
+
+        var selTracto = document.getElementById('ov-form-tracto');
+        var selRemolque = document.getElementById('ov-form-remolque');
+        var selCond = document.getElementById('ov-form-conductor');
+
+        if (selTracto) {
+            selTracto.innerHTML = '<option value="">Seleccione...</option>';
+            var tractos = (resPlacas || []).filter(p => !p.tipo || p.tipo.toUpperCase().includes('TRACTO') || p.tipo.toUpperCase().includes('REMOLCADOR') || !p.tipo.toUpperCase().includes('SEMI'));
+            (tractos.length ? tractos : resPlacas).forEach(function(p) {
+                var opt = document.createElement('option');
+                opt.value = p.placa;
+                opt.textContent = `${p.placa} ${p.marca ? '· ' + p.marca : ''} ${p.modelo ? '· ' + p.modelo : ''}`;
+                selTracto.appendChild(opt);
+            });
         }
 
-        var res = await fetch('/api/operaciones/ordenes-viaje/sincronizar', { method: 'POST' });
+        if (selRemolque) {
+            selRemolque.innerHTML = '<option value="">Seleccione...</option>';
+            var remolques = (resPlacas || []).filter(p => p.tipo && (p.tipo.toUpperCase().includes('SEMI') || p.tipo.toUpperCase().includes('REMOLQUE') || p.tipo.toUpperCase().includes('CARRETA')));
+            (remolques.length ? remolques : resPlacas).forEach(function(p) {
+                var opt = document.createElement('option');
+                opt.value = p.placa;
+                opt.textContent = `${p.placa} ${p.marca ? '· ' + p.marca : ''}`;
+                selRemolque.appendChild(opt);
+            });
+        }
+
+        if (selCond) {
+            selCond.innerHTML = '<option value="">Seleccione...</option>';
+            (resConductores || []).forEach(function(c) {
+                var opt = document.createElement('option');
+                var nombreCompleto = c.nombre_completo || c.nombres || c.conductor || (c.apellidos ? `${c.apellidos}, ${c.nombres}` : 'Conductor');
+                opt.value = nombreCompleto;
+                opt.dataset.idConductor = c.id || '';
+                opt.textContent = `${nombreCompleto} ${c.dni ? '· ' + c.dni : ''}`;
+                selCond.appendChild(opt);
+            });
+        }
+    } catch(err) {
+        console.warn('Error cargando combos para el formulario de viaje:', err);
+    }
+};
+
+window.ovAgregarFilaRuta = function() {
+    var osEl = document.getElementById('ov-form-nueva-os');
+    var rutaEl = document.getElementById('ov-form-nueva-ruta-sub');
+    var pesoEl = document.getElementById('ov-form-nuevo-peso-sub');
+
+    var os = osEl ? (osEl.value || '').trim().toUpperCase() : '';
+    var r = rutaEl ? (rutaEl.value || '').trim().toUpperCase() : '';
+    var p = pesoEl ? parseFloat(pesoEl.value) || 0 : 0;
+
+    if (!os) {
+        alert('Por favor ingrese el número de Orden de Servicio o Guía.');
+        return;
+    }
+
+    _ovListaRutasSubFormulario.push({
+        orden: os,
+        ruta: r,
+        peso_total: p * 1000, // guardar en kg para coherencia
+        peso_tn: p,
+        tipo_servicio: 'CARGA GENERAL',
+        es_retorno: 0
+    });
+
+    if (osEl) osEl.value = '';
+    if (rutaEl) rutaEl.value = '';
+    if (pesoEl) pesoEl.value = '';
+
+    window.ovRenderizarSubRutas();
+};
+
+window.ovEliminarFilaRuta = function(idx) {
+    _ovListaRutasSubFormulario.splice(idx, 1);
+    window.ovRenderizarSubRutas();
+};
+
+window.ovRenderizarSubRutas = function() {
+    var tbody = document.getElementById('ov-form-rutas-tbody');
+    if (!tbody) return;
+
+    if (_ovListaRutasSubFormulario.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No hay órdenes secundarias vinculadas aún.</td></tr>`;
+        return;
+    }
+
+    var html = '';
+    _ovListaRutasSubFormulario.forEach(function(item, idx) {
+        html += `
+            <tr>
+                <td class="fw-bold text-dark font-monospace">${item.orden}</td>
+                <td>${item.ruta || '<span class="text-muted fst-italic">—</span>'}</td>
+                <td class="text-end fw-bold">${(item.peso_tn || (item.peso_total / 1000)).toFixed(2)} TN</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-2" onclick="window.ovEliminarFilaRuta(${idx})" title="Quitar">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+};
+
+window.ovGuardarNuevoViaje = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    var serie = (document.getElementById('ov-form-serie') || {}).value || new Date().getFullYear();
+    var numero = (document.getElementById('ov-form-numero') || {}).value || '00000001';
+    var fechaVal = (document.getElementById('ov-form-fecha') || {}).value || '';
+    var tracto = (document.getElementById('ov-form-tracto') || {}).value || '';
+    var remolque = (document.getElementById('ov-form-remolque') || {}).value || '';
+    var selCond = document.getElementById('ov-form-conductor');
+    var conductor = selCond ? selCond.value : '';
+    var idConductor = selCond && selCond.selectedOptions[0] ? selCond.selectedOptions[0].dataset.idConductor : null;
+    var ruta = (document.getElementById('ov-form-ruta') || {}).value || '';
+    var cantidad = parseFloat((document.getElementById('ov-form-cantidad') || {}).value) || 0;
+    var ubigeoPartida = (document.getElementById('ov-form-ubigeo-partida') || {}).value || '';
+    var dirPartida = (document.getElementById('ov-form-dir-partida') || {}).value || '';
+    var ubigeoLlegada = (document.getElementById('ov-form-ubigeo-llegada') || {}).value || '';
+    var dirLlegada = (document.getElementById('ov-form-dir-llegada') || {}).value || '';
+    var observaciones = (document.getElementById('ov-form-observaciones') || {}).value || '';
+    var escolta = (document.getElementById('ov-form-escolta') || {}).value || '';
+
+    if (!tracto || !conductor || !ruta) {
+        alert('Por favor complete los campos obligatorios: Conductor, Vehículo (Tracto) y Ruta.');
+        return;
+    }
+
+    var payload = {
+        serie,
+        numero,
+        viaje: `${serie}-${numero}`,
+        fecha_viaje: fechaVal ? fechaVal.replace('T', ' ') + ':00' : null,
+        id_conductor: idConductor,
+        conductor,
+        placa_tracto: tracto,
+        placa_remolque: remolque,
+        ruta,
+        peso: cantidad,
+        ubigeo_partida: ubigeoPartida,
+        direccion_partida: dirPartida,
+        ubigeo_llegada: ubigeoLlegada,
+        direccion_llegada: dirLlegada,
+        observaciones,
+        escolta,
+        rutas: _ovListaRutasSubFormulario
+    };
+
+    try {
+        var res = await fetch('/api/operaciones/ordenes-viaje', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
         var data = await res.json();
 
         if (data && data.ok) {
-            if (data.syncSkipped) {
-                if (msgEl) {
-                    msgEl.innerHTML = `<span class="text-muted d-inline-flex align-items-center gap-1"><i class="bi bi-info-circle"></i> Sincronización remota externa solo aplica para Marsisa.</span>`;
-                }
-                return;
-            }
-
-            await window.ovCargarDatos();
-
-            var horaActual = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            var viajesProc = data.total_viajes_remoto || 0;
-            var rutasProc = data.total_rutas_remoto || 0;
-
-            if (msgEl) {
-                msgEl.innerHTML = `<span class="text-success d-inline-flex align-items-center gap-1"><i class="bi bi-check-circle-fill"></i> Panorama completo sincronizado (${viajesProc} viajes / ${rutasProc} órdenes de ruta) · ${horaActual}</span>`;
-            }
-
             if (typeof window.showToastNotification === 'function') {
-                window.showToastNotification(`Sincronización exitosa: ${viajesProc} viajes y ${rutasProc} órdenes de ruta procesadas.`, 'success');
+                window.showToastNotification(data.message || 'Orden de viaje registrada con éxito.', 'success');
+            } else {
+                alert(data.message || 'Orden de viaje registrada correctamente.');
             }
+
+            var modalEl = document.getElementById('ovModalNuevoViaje');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+
+            // Recargar datos y mantener en la vista
+            await window.ovCargarDatos();
         } else {
-            throw new Error((data && data.error) || 'Error durante la sincronización');
+            throw new Error((data && data.error) || 'Error al guardar la orden de viaje.');
         }
     } catch(err) {
-        console.error('Error al sincronizar:', err);
-        if (msgEl) {
-            msgEl.innerHTML = `<span class="text-danger d-inline-flex align-items-center gap-1"><i class="bi bi-exclamation-triangle-fill"></i> Error de sincronización: ${err.message}</span>`;
-        }
-        if (typeof window.showToastNotification === 'function') {
-            window.showToastNotification('Error al sincronizar: ' + err.message, 'error');
-        }
-    } finally {
-        if (btn) {
-            btn.classList.remove('loading');
-            btn.disabled = false;
-        }
+        console.error('Error guardando orden de viaje:', err);
+        alert('Error: ' + err.message);
     }
 };
