@@ -40,11 +40,11 @@ window.ovCambiarModoVista = function(modo) {
     var btnRutas = document.getElementById('ov-tab-rutas');
 
     if (modo === 'viajes') {
-        if (btnViajes) { btnViajes.classList.add('active', 'bg-white', 'shadow-2xs'); btnViajes.classList.remove('text-secondary'); }
-        if (btnRutas) { btnRutas.classList.remove('active', 'bg-white', 'shadow-2xs'); btnRutas.classList.add('text-secondary'); }
+        if (btnViajes) btnViajes.classList.add('active');
+        if (btnRutas) btnRutas.classList.remove('active');
     } else {
-        if (btnRutas) { btnRutas.classList.add('active', 'bg-white', 'shadow-2xs'); btnRutas.classList.remove('text-secondary'); }
-        if (btnViajes) { btnViajes.classList.remove('active', 'bg-white', 'shadow-2xs'); btnViajes.classList.add('text-secondary'); }
+        if (btnRutas) btnRutas.classList.add('active');
+        if (btnViajes) btnViajes.classList.remove('active');
     }
 
     _ovPaginaActual = 1;
@@ -377,21 +377,33 @@ window.ovRenderizarTabla = function() {
                 }
             }
 
-            var estadoUpper = (v.estado || 'INICIADO').toUpperCase();
+            var estadoUpper = (v.estado || 'REGISTRADO').toUpperCase();
             var esFinalizado = estadoUpper === 'FINALIZADO';
+            var esIniciado = estadoUpper === 'INICIADO';
+            var esRegistrado = !esFinalizado && !esIniciado;
+
             if (esFinalizado && fechaInicioStr) {
                 fechaFinStr = fechaInicioStr;
             }
 
             // 2. Estado Badge
-            var estadoBadge = esFinalizado
-                ? `<span class="ov-badge-status-finalizado">FINALIZADO</span>`
-                : `<span class="ov-badge-status-iniciado">INICIADO</span>`;
+            var estadoBadge = '';
+            if (esFinalizado) {
+                estadoBadge = `<span class="ov-badge-status-finalizado">FINALIZADO</span>`;
+            } else if (esIniciado) {
+                estadoBadge = `<span class="ov-badge-status-iniciado">INICIADO</span>`;
+            } else {
+                estadoBadge = `<span class="ov-badge-status-registrado">Registrado</span>`;
+            }
 
             // 3. Operación
-            var operacionHtml = !esFinalizado
-                ? `<button type="button" class="ov-btn-finalizar"><i class="bi bi-flag-fill"></i> FINALIZAR</button>`
-                : '';
+            var operacionHtml = '';
+            var viajeEsc = (v.viaje || '').replace(/"/g, '&quot;');
+            if (esRegistrado) {
+                operacionHtml = `<button type="button" class="ov-btn-iniciar" onclick="window.ovAbrirModalIniciarViaje('${viajeEsc}')"><i class="bi bi-play-fill fs-6"></i> INICIAR</button>`;
+            } else if (esIniciado) {
+                operacionHtml = `<button type="button" class="ov-btn-finalizar"><i class="bi bi-flag-fill"></i> FINALIZAR</button>`;
+            }
 
             // 4. Servicios y Gret
             var cantServicios = parseInt(v.cant_ordenes, 10) || 1;
@@ -756,3 +768,87 @@ window.ovGuardarNuevoViaje = async function(e) {
         alert('Error: ' + err.message);
     }
 };
+
+// ── GESTIÓN DEL MODAL INICIAR VIAJE (DISEÑO B) ──────────────────────
+window.ovAbrirModalIniciarViaje = function(viajeCode) {
+    var lblViaje = document.getElementById('ov-iniciar-modal-viaje-num');
+    var inputId = document.getElementById('ov-iniciar-viaje-id');
+    var inputFecha = document.getElementById('ov-iniciar-fecha');
+    var inputKm = document.getElementById('ov-iniciar-km');
+    var checkConfirm = document.getElementById('ov-iniciar-check-confirm');
+
+    if (lblViaje) lblViaje.textContent = viajeCode || '---';
+    if (inputId) inputId.value = viajeCode || '';
+    if (inputKm) inputKm.value = '';
+    if (checkConfirm) checkConfirm.checked = false;
+
+    if (inputFecha) {
+        var today = new Date();
+        var y = today.getFullYear();
+        var m = String(today.getMonth() + 1).padStart(2, '0');
+        var d = String(today.getDate()).padStart(2, '0');
+        inputFecha.value = `${y}-${m}-${d}`;
+    }
+
+    var modalEl = document.getElementById('modalIniciarViajeConfirm');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
+window.ovEjecutarIniciarViajeConfirmado = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    var viajeCode = (document.getElementById('ov-iniciar-viaje-id') || {}).value;
+    var fechaInicio = (document.getElementById('ov-iniciar-fecha') || {}).value;
+    var kmActual = (document.getElementById('ov-iniciar-km') || {}).value;
+    var checkConfirm = document.getElementById('ov-iniciar-check-confirm');
+
+    if (!viajeCode) return;
+
+    if (!checkConfirm || !checkConfirm.checked) {
+        alert('Debe confirmar que desea realizar esta operación.');
+        return;
+    }
+
+    if (!kmActual) {
+        alert('Por favor ingrese el kilometraje actual del vehículo.');
+        return;
+    }
+
+    try {
+        var res = await fetch(`/api/operaciones/ordenes-viaje/${encodeURIComponent(viajeCode)}/iniciar`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fecha_inicio: fechaInicio,
+                kilometraje_inicial: kmActual
+            })
+        });
+        var data = await res.json();
+
+        if (data && data.ok) {
+            if (typeof window.showToastNotification === 'function') {
+                window.showToastNotification(data.message || `Viaje ${viajeCode} iniciado con éxito.`, 'success');
+            } else {
+                alert(data.message || `Viaje ${viajeCode} iniciado con éxito.`);
+            }
+
+            var modalEl = document.getElementById('modalIniciarViajeConfirm');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+
+            // Recargar datos
+            await window.ovCargarDatos();
+        } else {
+            throw new Error((data && data.error) || 'Error al iniciar el viaje.');
+        }
+    } catch(err) {
+        console.error('Error al iniciar viaje:', err);
+        alert('Error: ' + err.message);
+    }
+};
+
