@@ -10,6 +10,10 @@ var _ovPaginaActual = 1;
 var _ovItemsPorPagina = 25;
 var _ovDebounceTimer = null;
 
+window.init_marsisa_ordenes_viaje = function() {
+    window.ovCargarDatos();
+};
+
 window.init_ordenes_viaje = function() {
     window.ovCargarDatos();
 };
@@ -448,3 +452,8 @@ window.ovEjecutarSincronizacion = async function(isSilent) {
         }
     }
 };
+
+// Auto-inicialización inmediata si el módulo ya está montado en el DOM
+if (document.getElementById('modulo-ordenes-viaje') || document.getElementById('ov-tabla-body')) {
+    window.ovCargarDatos();
+}
