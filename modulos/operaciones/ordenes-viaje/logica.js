@@ -1090,54 +1090,358 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     }
 
     // Resetear a la primera tab (Resumen)
-    var btnPrimeraTab = document.querySelector('.ov-mon-tab-pill');
-    if (btnPrimeraTab) window.ovMonCambiarTab('resumen', btnPrimeraTab);
+    var btnPrimeraTab = document.querySelector('.ov-mon-tab-item');
+    if (btnPrimeraTab) window.ovMonCambiarTabSpatial(0, 'resumen', btnPrimeraTab);
 
-    // Abrir Drawer y Backdrop (sin tapar la barra lateral)
+    // Abrir Ventana Spatial y Backdrop (sin tapar la barra lateral)
     var drawer = document.getElementById('ovMonDrawer');
     var backdrop = document.getElementById('ovMonDrawerBackdrop');
     if (drawer) drawer.classList.add('active');
     if (backdrop) backdrop.classList.add('active');
+
+    // Inicializar posición de píldora elástica
+    setTimeout(() => {
+        var firstBtn = document.querySelector('.ov-mon-tab-item[data-index="0"]');
+        if (firstBtn) window.ovMoverPildoraElastica(firstBtn, 0);
+    }, 100);
 };
 
 window.ovCerrarMonitoreoViaje = function() {
+    window.ovPlayHapticTick(380);
     var drawer = document.getElementById('ovMonDrawer');
     var backdrop = document.getElementById('ovMonDrawerBackdrop');
     if (drawer) drawer.classList.remove('active');
     if (backdrop) backdrop.classList.remove('active');
     window._ovViajeMonitoreoActivo = null;
+    if (window._ovWaveAnimationId) {
+        cancelAnimationFrame(window._ovWaveAnimationId);
+        window._ovWaveAnimationId = null;
+    }
 };
 
 window.ovRecargarMonitoreoActual = function() {
+    window.ovPlayHapticTick(650);
     if (window._ovViajeMonitoreoActivo) {
         window.ovAbrirModalMonitoreoViaje(window._ovViajeMonitoreoActivo);
+        window.ovMostrarToastIsland('Telemetría y bitácora actualizadas');
     }
 };
 
-window.ovMonCambiarTab = function(tabId, btnElement) {
-    // Desactivar todas las tabs
-    document.querySelectorAll('.ov-mon-tab-pill').forEach(b => b.classList.remove('active'));
-    if (btnElement) btnElement.classList.add('active');
+window.ovToggleMaxMonitoreo = function() {
+    window.ovPlayHapticTick(500);
+    var drawer = document.getElementById('ovMonDrawer');
+    if (drawer) {
+        drawer.classList.toggle('ov-maximized');
+    }
+};
 
-    // Ocultar todos los paneles
-    document.querySelectorAll('.ov-mon-panel').forEach(p => p.classList.add('d-none'));
+// ── SÍNTESIS DE AUDIO HÁPTICO PROCEDURAL (Web Audio API nativa) ───────
+window._ovAudioCtx = null;
+window._ovSoundEnabled = true;
 
-    // Mostrar panel activo
-    var panel = document.getElementById('ov-mon-panel-' + tabId);
-    if (panel) {
-        panel.classList.remove('d-none');
-    } else {
-        // Usar panel genérico con título de la tab seleccionada
-        var generico = document.getElementById('ov-mon-panel-generico');
-        var tituloGen = document.getElementById('ov-mon-generico-titulo');
-        if (tituloGen && btnElement) {
-            tituloGen.textContent = btnElement.innerText.trim();
+window.ovPlayHapticTick = function(freq = 750, dur = 0.024) {
+    if (!window._ovSoundEnabled) return;
+    try {
+        if (!window._ovAudioCtx) {
+            window._ovAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        if (generico) generico.classList.remove('d-none');
+        if (window._ovAudioCtx.state === 'suspended') {
+            window._ovAudioCtx.resume();
+        }
+        var osc = window._ovAudioCtx.createOscillator();
+        var gain = window._ovAudioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, window._ovAudioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(110, window._ovAudioCtx.currentTime + dur);
+
+        gain.gain.setValueAtTime(0.05, window._ovAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, window._ovAudioCtx.currentTime + dur);
+
+        osc.connect(gain);
+        gain.connect(window._ovAudioCtx.destination);
+
+        osc.start();
+        osc.stop(window._ovAudioCtx.currentTime + dur);
+    } catch(e) {}
+};
+
+window.ovToggleAudioHaptico = function() {
+    window._ovSoundEnabled = !window._ovSoundEnabled;
+    var icon = document.getElementById('ovSoundIcon');
+    if (icon) {
+        if (window._ovSoundEnabled) {
+            icon.className = 'bi bi-volume-up-fill text-primary';
+            window.ovMostrarToastIsland('Audio háptico activado');
+            window.ovPlayHapticTick(900, 0.04);
+        } else {
+            icon.className = 'bi bi-volume-mute-fill text-secondary';
+            window.ovMostrarToastIsland('Audio háptico silenciado');
+        }
     }
 };
 
-// Escuchar tecla ESC para cerrar el detalle
+// ── TOAST FLOTANTE DYNAMIC ISLAND ─────────────────────────────────────
+window._ovToastTimeout = null;
+window.ovMostrarToastIsland = function(msg) {
+    var toast = document.getElementById('ovToastIsland');
+    var txt = document.getElementById('ovToastIslandText');
+    if (!toast || !txt) return;
+
+    txt.textContent = msg;
+    toast.classList.add('show');
+
+    clearTimeout(window._ovToastTimeout);
+    window._ovToastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 2400);
+};
+
+// ── FÍSICA ELÁSTICA SQUASH & STRETCH DEL SELECTOR DE PESTAÑAS ─────────
+window._ovCurrentTabIndex = 0;
+
+window.ovMoverPildoraElastica = function(targetBtn, prevIndex = window._ovCurrentTabIndex) {
+    var pill = document.getElementById('ovElasticPill');
+    var track = document.getElementById('ovTabsTrack');
+    if (!pill || !track || !targetBtn) return;
+
+    var trackRect = track.getBoundingClientRect();
+    var btnRect = targetBtn.getBoundingClientRect();
+    var newIdx = parseInt(targetBtn.getAttribute('data-index') || '0', 10);
+
+    var leftPos = btnRect.left - trackRect.left;
+    var w = btnRect.width;
+
+    var direction = newIdx > prevIndex ? 'right' : newIdx < prevIndex ? 'left' : 'none';
+    if (direction === 'right') {
+        pill.classList.add('stretch-right');
+    } else if (direction === 'left') {
+        pill.classList.add('stretch-left');
+    }
+
+    pill.style.left = leftPos + 'px';
+    pill.style.width = w + 'px';
+
+    setTimeout(() => {
+        pill.classList.remove('stretch-right', 'stretch-left');
+    }, 220);
+};
+
+window.ovMonCambiarTabSpatial = function(newIdx, tabKey, targetBtn) {
+    var oldIdx = window._ovCurrentTabIndex;
+    if (newIdx === oldIdx && targetBtn && targetBtn.classList.contains('active')) return;
+
+    window.ovPlayHapticTick(600 + newIdx * 45);
+
+    var isForward = newIdx >= oldIdx;
+    window._ovCurrentTabIndex = newIdx;
+
+    // Actualizar botones
+    document.querySelectorAll('.ov-mon-tab-item').forEach(b => b.classList.remove('active'));
+    if (targetBtn) {
+        targetBtn.classList.add('active');
+        // Micro-animación icónica
+        var icon = targetBtn.querySelector('.tab-icon');
+        if (icon) {
+            icon.classList.remove('animate-wiggle', 'animate-pulsespin');
+            void icon.offsetWidth;
+            icon.classList.add(newIdx % 2 === 0 ? 'animate-wiggle' : 'animate-pulsespin');
+        }
+        window.ovMoverPildoraElastica(targetBtn, oldIdx);
+    }
+
+    // Transición cinética y escalonada de paneles
+    var paneles = document.querySelectorAll('.ov-mon-panel');
+    paneles.forEach(p => {
+        p.classList.add('d-none');
+        p.classList.remove('enter-from-right', 'enter-from-left');
+    });
+
+    var targetPanel = document.getElementById('ov-mon-panel-' + tabKey);
+    if (targetPanel) {
+        targetPanel.classList.remove('d-none');
+        void targetPanel.offsetWidth; // Reflow
+        targetPanel.classList.add(isForward ? 'enter-from-right' : 'enter-from-left');
+
+        // Reiniciar animaciones de hijos escalonados
+        var children = targetPanel.querySelectorAll('.stagger-child');
+        children.forEach((c, idx) => {
+            c.style.animation = 'none';
+            void c.offsetWidth;
+            c.style.animation = `staggerIn 360ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 40}ms forwards`;
+        });
+    }
+
+    // Si es combustible, iniciar el canvas de fluid wave
+    if (tabKey === 'combustible') {
+        setTimeout(window.ovInitLiquidWave, 50);
+    }
+};
+
+// Compatibilidad para llamadas existentes
+window.ovMonCambiarTab = function(tabId, btnElement) {
+    var btn = btnElement || document.querySelector(`.ov-mon-tab-item[data-tab="${tabId}"]`);
+    var idx = btn ? parseInt(btn.getAttribute('data-index') || '0', 10) : 0;
+    window.ovMonCambiarTabSpatial(idx, tabId, btn);
+};
+
+// ── SIMULADOR DE FLUIDO DINÁMICO EN EL TANQUE DE COMBUSTIBLE (CANVAS) ──
+window._ovWaveAnimationId = null;
+window.ovInitLiquidWave = function() {
+    var canvas = document.getElementById('ovLiquidWaveCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var step = 0;
+
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    function renderWave() {
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        step += 0.045;
+
+        // Capa 1: Oleaje posterior translúcido
+        ctx.beginPath();
+        ctx.moveTo(0, rect.height);
+        for (var x = 0; x <= rect.width; x += 10) {
+            var y = Math.sin(x * 0.025 + step) * 4 + 34;
+            ctx.lineTo(x, y);
+        }
+        ctx.lineTo(rect.width, rect.height);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.22)';
+        ctx.fill();
+
+        // Capa 2: Frente de la ola vibrante
+        ctx.beginPath();
+        ctx.moveTo(0, rect.height);
+        for (var x2 = 0; x2 <= rect.width; x2 += 10) {
+            var y2 = Math.cos(x2 * 0.028 - step) * 5 + 38;
+            ctx.lineTo(x2, y2);
+        }
+        ctx.lineTo(rect.width, rect.height);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.38)';
+        ctx.fill();
+
+        window._ovWaveAnimationId = requestAnimationFrame(renderWave);
+    }
+
+    if (window._ovWaveAnimationId) cancelAnimationFrame(window._ovWaveAnimationId);
+    renderWave();
+};
+
+// ── ILUMINACIÓN ESPECULAR VOLUMÉTRICA QUE SIGUE AL CURSOR ─────────────
+if (!window._ovSpecularConfigured) {
+    window._ovSpecularConfigured = true;
+    window.addEventListener('mousemove', function(e) {
+        var drawer = document.getElementById('ovMonDrawer');
+        if (!drawer || !drawer.classList.contains('active')) return;
+
+        var rect = drawer.getBoundingClientRect();
+        var x = e.clientX - rect.left;
+        var y = e.clientY - rect.top;
+
+        drawer.style.setProperty('--mouse-x', x + 'px');
+        drawer.style.setProperty('--mouse-y', y + 'px');
+    });
+}
+
+// ── UTILIDADES DE MOCK / COPIAR ───────────────────────────────────────
+window.ovCopiarCodigoViaje = function() {
+    window.ovPlayHapticTick(820);
+    var codigo = document.getElementById('ov-mon-header-folio');
+    var val = (codigo && codigo.textContent) || '2026-00000001';
+
+    navigator.clipboard.writeText(val).then(() => {
+        window.ovMostrarToastIsland('Código ' + val + ' copiado al portapapeles');
+    }).catch(() => {
+        window.ovMostrarToastIsland('Código copiado: ' + val);
+    });
+};
+
+window.ovDescargarManifiestoMock = function() {
+    window.ovPlayHapticTick(750);
+    window.ovMostrarToastIsland('Generando manifiesto criptográfico PDF...');
+};
+
+window.ovSimularEventoNuevo = function() {
+    window.ovPlayHapticTick(950);
+    var container = document.getElementById('ovTimelineContainer');
+    if (!container) return;
+
+    var now = new Date();
+    var timeStr = now.toTimeString().slice(0, 8);
+
+    var item = document.createElement('div');
+    item.className = 'mb-3 position-relative stagger-child';
+    item.innerHTML = `
+        <div class="position-absolute rounded-circle bg-info" style="width:12px; height:12px; left:-23px; top:3px; border:2px solid #ffffff;"></div>
+        <div class="d-flex justify-content-between align-items-baseline">
+            <span class="fw-bold text-dark small">Punto de Control Faucett Alcanzado</span>
+            <span class="font-monospace text-muted" style="font-size:0.7rem;">${timeStr}</span>
+        </div>
+        <small class="text-muted d-block">Ingreso a la zona de aproximación portuaria reportado por geocerca GNSS.</small>
+    `;
+    container.prepend(item);
+    window.ovMostrarToastIsland('Nuevo hito registrado en bitácora');
+};
+
+window._ovViaticosDemoActivo = false;
+window.ovAlternarDemoViaticos = function() {
+    window.ovPlayHapticTick(800);
+    var tbody = document.getElementById('ov-mon-tbody-depositos');
+    if (!tbody) return;
+
+    window._ovViaticosDemoActivo = !window._ovViaticosDemoActivo;
+    if (window._ovViaticosDemoActivo) {
+        tbody.innerHTML = `
+            <tr class="stagger-child">
+                <td class="font-monospace fw-bold text-primary">#DEP-2026-91</td>
+                <td class="font-monospace text-muted">07/09/2026 10:15</td>
+                <td class="font-monospace text-muted">07/09/2026 10:30</td>
+                <td class="fw-bold text-dark">Aaron Torre Palomino</td>
+                <td>Alimentación</td>
+                <td>Diurna Local</td>
+                <td class="font-monospace fw-bold text-dark">S/ 45.00</td>
+                <td><a href="javascript:void(0)" class="text-primary font-monospace small" onclick="window.ovMostrarToastIsland('Abriendo voucher VOU-941.pdf')">VOU-941.pdf</a></td>
+                <td><span class="badge bg-success-subtle text-success border border-success-subtle">Aprobado</span></td>
+                <td><span class="badge bg-light text-secondary border">Validado</span></td>
+                <td class="text-muted small">Asignación diaria regular</td>
+            </tr>
+            <tr class="stagger-child" style="animation-delay: 60ms;">
+                <td class="font-monospace fw-bold text-primary">#DEP-2026-92</td>
+                <td class="font-monospace text-muted">07/09/2026 12:40</td>
+                <td class="font-monospace text-muted">—</td>
+                <td class="fw-bold text-dark">Aaron Torre Palomino</td>
+                <td>Imprevisto</td>
+                <td>Peaje / Garita Portuaria</td>
+                <td class="font-monospace fw-bold text-dark">S/ 120.00</td>
+                <td class="text-muted">—</td>
+                <td><span class="badge bg-warning-subtle text-warning-emphasis border">En Validación</span></td>
+                <td><span class="badge bg-light text-muted border">Pendiente</span></td>
+                <td class="text-muted small">Fondo para sobrestadía de puerto</td>
+            </tr>
+        `;
+        window.ovMostrarToastIsland('Registros de viáticos cargados');
+    } else {
+        tbody.innerHTML = `
+            <tr id="ov-mon-empty-depositos">
+                <td colspan="11" class="text-center py-4 text-muted">
+                    <i class="bi bi-info-circle me-1"></i> No se registran depósitos ni viáticos asignados a este viaje.
+                </td>
+            </tr>
+        `;
+        window.ovMostrarToastIsland('Registros limpiados');
+    }
+};
+
+// Escuchar tecla ESC para cerrar la ventana
 if (!window._ovEscMonitoreoConfigurado) {
     window._ovEscMonitoreoConfigurado = true;
     document.addEventListener('keydown', function(e) {
@@ -1149,5 +1453,6 @@ if (!window._ovEscMonitoreoConfigurado) {
         }
     });
 }
+
 
 
