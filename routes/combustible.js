@@ -1699,6 +1699,191 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // =========================================================================
+    // 🏢 GESTIÓN DE ESTACIONES DE PROVEEDORES DE COMBUSTIBLE
+    // =========================================================================
+
+    // GET /api/combustible/estaciones-proveedores
+    router.get('/estaciones-proveedores', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const q = (req.query.q || '').trim();
+            const page = Math.max(1, parseInt(req.query.page || 1, 10));
+            const limit = Math.max(1, parseInt(req.query.limit || 50, 10));
+            const offset = (page - 1) * limit;
+
+            let where = '';
+            const params = [];
+
+            if (q) {
+                where = 'WHERE proveedor_razon_social LIKE ? OR proveedor_ruc LIKE ? OR estaciones_nombres LIKE ?';
+                const like = `%${q}%`;
+                params.push(like, like, like);
+            }
+
+            const [countRes] = await tdb.query(
+                `SELECT COUNT(*) as total FROM combustible_estaciones_proveedores ${where}`,
+                params
+            );
+            const total = countRes[0]?.total || 0;
+
+            const [rows] = await tdb.query(
+                `SELECT * FROM combustible_estaciones_proveedores ${where} ORDER BY proveedor_razon_social ASC LIMIT ? OFFSET ?`,
+                [...params, limit, offset]
+            );
+
+            res.json({
+                ok: true,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit) || 1,
+                data: rows
+            });
+        } catch (err) {
+            console.error('Error al listar estaciones de proveedores:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // POST /api/combustible/estaciones-proveedores (Crear)
+    router.post('/estaciones-proveedores', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const { proveedor_razon_social, proveedor_ruc, estaciones_nombres } = req.body || {};
+
+            if (!proveedor_razon_social || !proveedor_razon_social.trim()) {
+                return res.status(400).json({ ok: false, error: 'La razón social del proveedor es requerida.' });
+            }
+
+            const [ins] = await tdb.query(
+                `INSERT INTO combustible_estaciones_proveedores (proveedor_razon_social, proveedor_ruc, estaciones_nombres)
+                 VALUES (?, ?, ?)`,
+                [
+                    proveedor_razon_social.trim().toUpperCase(),
+                    (proveedor_ruc || '').trim() || null,
+                    (estaciones_nombres || '').trim()
+                ]
+            );
+
+            if (logAudit) {
+                logAudit(req, 'COMBUSTIBLE_ESTACION_CREAR', `Proveedor ${proveedor_razon_social} creado`);
+            }
+
+            res.json({ ok: true, id: ins.insertId, mensaje: 'Estación de proveedor creada exitosamente.' });
+        } catch (err) {
+            console.error('Error al crear estación de proveedor:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // PUT /api/combustible/estaciones-proveedores/:id (Editar)
+    router.put('/estaciones-proveedores/:id', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const id = parseInt(req.params.id, 10);
+            const { proveedor_razon_social, proveedor_ruc, estaciones_nombres } = req.body || {};
+
+            if (!id || !proveedor_razon_social || !proveedor_razon_social.trim()) {
+                return res.status(400).json({ ok: false, error: 'Datos incompletos para actualizar.' });
+            }
+
+            await tdb.query(
+                `UPDATE combustible_estaciones_proveedores
+                 SET proveedor_razon_social = ?, proveedor_ruc = ?, estaciones_nombres = ?
+                 WHERE id = ?`,
+                [
+                    proveedor_razon_social.trim().toUpperCase(),
+                    (proveedor_ruc || '').trim() || null,
+                    (estaciones_nombres || '').trim(),
+                    id
+                ]
+            );
+
+            if (logAudit) {
+                logAudit(req, 'COMBUSTIBLE_ESTACION_EDITAR', `Proveedor ID ${id} actualizado`);
+            }
+
+            res.json({ ok: true, mensaje: 'Estación de proveedor actualizada exitosamente.' });
+        } catch (err) {
+            console.error('Error al actualizar estación de proveedor:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // DELETE /api/combustible/estaciones-proveedores/:id (Eliminar)
+    router.delete('/estaciones-proveedores/:id', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const id = parseInt(req.params.id, 10);
+            if (!id) return res.status(400).json({ ok: false, error: 'ID inválido.' });
+
+            await tdb.query('DELETE FROM combustible_estaciones_proveedores WHERE id = ?', [id]);
+
+            if (logAudit) {
+                logAudit(req, 'COMBUSTIBLE_ESTACION_ELIMINAR', `Proveedor ID ${id} eliminado`);
+            }
+
+            res.json({ ok: true, mensaje: 'Registro eliminado exitosamente.' });
+        } catch (err) {
+            console.error('Error al eliminar estación de proveedor:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // POST /api/combustible/estaciones-proveedores/sincronizar-remoto
+    router.post('/estaciones-proveedores/sincronizar-remoto', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const rdb = getRemoteDb();
+
+            const queryRemoto = `
+                SELECT proveedor_razon_social,
+                       MAX(proveedor_ruc) as ruc,
+                       GROUP_CONCAT(DISTINCT TRIM(estacion_nombre) ORDER BY estacion_nombre ASC SEPARATOR ', ') as estaciones
+                FROM vw_combustible_estacion
+                WHERE proveedor_razon_social IS NOT NULL AND TRIM(proveedor_razon_social) != ''
+                GROUP BY proveedor_razon_social
+                ORDER BY proveedor_razon_social ASC
+            `;
+
+            const [rows] = await rdb.query(queryRemoto);
+            if (!rows || rows.length === 0) {
+                return res.json({ ok: true, sincronizados: 0, mensaje: 'No se encontraron estaciones en el servidor remoto.' });
+            }
+
+            let sincronizados = 0;
+            for (const r of rows) {
+                const rs = r.proveedor_razon_social.trim().toUpperCase();
+                const ruc = r.ruc ? r.ruc.trim() : null;
+                const est = r.estaciones || '';
+
+                const [exist] = await tdb.query(
+                    'SELECT id FROM combustible_estaciones_proveedores WHERE proveedor_razon_social = ? LIMIT 1',
+                    [rs]
+                );
+
+                if (exist && exist.length > 0) {
+                    await tdb.query(
+                        'UPDATE combustible_estaciones_proveedores SET proveedor_ruc = COALESCE(?, proveedor_ruc), estaciones_nombres = ? WHERE id = ?',
+                        [ruc, est, exist[0].id]
+                    );
+                } else {
+                    await tdb.query(
+                        'INSERT INTO combustible_estaciones_proveedores (proveedor_razon_social, proveedor_ruc, estaciones_nombres) VALUES (?, ?, ?)',
+                        [rs, ruc, est]
+                    );
+                }
+                sincronizados++;
+            }
+
+            res.json({ ok: true, sincronizados, total: rows.length, mensaje: `Se sincronizaron ${sincronizados} proveedores y sus estaciones exitosamente.` });
+        } catch (err) {
+            console.error('Error sincronizando estaciones de proveedores:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     return router;
 };
 

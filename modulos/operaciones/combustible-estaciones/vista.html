@@ -1,0 +1,438 @@
+<!-- ============================================================ -->
+<!-- ⛽ MÓDULO: ESTACIONES DE PROVEEDORES — ERP AZKELL FLEET      -->
+<!-- ============================================================ -->
+
+<style>
+/* ── Reset root-dinamico y main-area para pantalla completa 100% full-bleed ── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
+.ep-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0.85rem 1.25rem 2rem 1.25rem !important;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    box-sizing: border-box;
+}
+
+/* ── Encabezado superior idéntico a la referencia ───────────── */
+.ep-header-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.ep-header-sub {
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: #94a3b8;
+}
+.ep-btn-nuevo {
+    background: #f59e0b !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
+    padding: 6px 16px !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.35) !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+.ep-btn-nuevo:hover {
+    background: #d97706 !important;
+    transform: translateY(-1px);
+}
+.ep-btn-nuevo:active {
+    transform: translateY(0);
+}
+
+/* ── Barra de herramientas naranja ──────────────────────────── */
+.ep-toolbar-card {
+    background: #ffffff;
+    border-top: 2.5px solid #f59e0b;
+    border-left: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+    margin-top: 0.85rem;
+}
+
+.ep-btn-tool {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+}
+.ep-btn-tool:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.ep-search-input {
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    color: #1e293b;
+    outline: none;
+    width: 180px;
+    transition: border-color 0.15s ease;
+}
+.ep-search-input:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+}
+
+/* ── Tabla de Estaciones de Proveedores ─────────────────────── */
+.ep-table-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 0.65rem;
+}
+.ep-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+}
+.ep-table thead th {
+    background: #ffffff;
+    color: #1e293b;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 10px 14px;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+}
+.ep-table tbody td {
+    padding: 10px 14px;
+    font-size: 0.78rem;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+.ep-table tbody tr:nth-child(even) {
+    background: #fafafa;
+}
+.ep-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Botón dropdown Editar */
+.ep-btn-group-action {
+    display: inline-flex;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #ffffff;
+}
+.ep-btn-edit {
+    background: #ffffff;
+    border: none;
+    padding: 3px 9px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.ep-btn-edit:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+.ep-btn-edit-caret {
+    background: #ffffff;
+    border: none;
+    border-left: 1px solid #cbd5e1;
+    padding: 3px 6px;
+    font-size: 0.7rem;
+    color: #475569;
+    cursor: pointer;
+}
+.ep-btn-edit-caret:hover {
+    background: #f1f5f9;
+}
+
+/* Paginación */
+.ep-footer-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0.25rem;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+/* ── Modal Nueva Estación (Diseño idéntico a la 2da imagen) ─── */
+.ep-modal-dialog {
+    max-width: 480px;
+    margin: 3rem auto;
+}
+.ep-modal-content {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    background: #ffffff;
+    overflow: hidden;
+}
+.ep-modal-header {
+    padding: 1rem 1.25rem 0.75rem 1.25rem;
+    border-bottom: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.ep-modal-title {
+    color: #0284c7;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0;
+}
+.ep-modal-body {
+    padding: 0.5rem 1.25rem 1.25rem 1.25rem;
+}
+.ep-modal-footer {
+    padding: 0.75rem 1.25rem 1rem 1.25rem;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+}
+
+.ep-form-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 4px;
+    display: block;
+}
+.ep-form-control, .ep-form-select {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 0.82rem;
+    color: #1e293b;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+.ep-form-control:focus, .ep-form-select:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.12);
+}
+
+.ep-btn-add-station {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+.ep-btn-add-station:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.ep-btn-cerrar {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 7px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.ep-btn-cerrar:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.ep-btn-guardar {
+    background: #0284c7;
+    border: 1px solid #0284c7;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 7px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+}
+.ep-btn-guardar:hover {
+    background: #0369a1;
+    border-color: #0369a1;
+}
+</style>
+
+<div class="ep-container" id="modulo-estaciones-proveedores">
+
+    <!-- ── CABECERA ─────────────────────────────────────────────── -->
+    <div class="d-flex justify-content-between align-items-center mb-1">
+        <div>
+            <h4 class="ep-header-title">
+                Estaciones de proveedores
+                <span class="ep-header-sub">Configuración</span>
+            </h4>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" style="font-size:0.78rem; height:32px; border-radius:6px;" onclick="window.epSincronizarRemoto()" title="Sincronizar proveedores y estaciones con la base de datos">
+                <i class="bi bi-arrow-repeat"></i> Sincronizar
+            </button>
+            <button type="button" class="ep-btn-nuevo" onclick="window.epAbrirModalNuevo()">
+                <i class="bi bi-plus-lg"></i> + Nuevo
+            </button>
+        </div>
+    </div>
+
+    <!-- ── TOOLBAR BARRA NARANJA ────────────────────────────────── -->
+    <div class="ep-toolbar-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <!-- Botones de Acción Izquierda -->
+            <div class="d-flex align-items-center gap-1">
+                <button type="button" class="ep-btn-tool" onclick="window.epImprimir()">
+                    <i class="bi bi-printer"></i> Imprimir
+                </button>
+                <button type="button" class="ep-btn-tool" onclick="window.epExportarExcel()">
+                    <i class="bi bi-file-earmark-excel"></i> Excel
+                </button>
+                <button type="button" class="ep-btn-tool" onclick="window.epAlternarColumnas()">
+                    Mostrar Columnas
+                </button>
+            </div>
+
+            <!-- Buscador Derecha -->
+            <div class="d-flex align-items-center gap-2">
+                <label for="ep-txt-buscar" style="font-size:0.75rem; color:#475569; font-weight:600; margin:0;">Buscar en tabla:</label>
+                <input type="text" id="ep-txt-buscar" class="ep-search-input" placeholder="" oninput="window.epOnBuscarDebounced()">
+            </div>
+        </div>
+    </div>
+
+    <!-- ── TABLA PRINCIPAL ──────────────────────────────────────── -->
+    <div class="ep-table-wrap">
+        <table class="ep-table" id="ep-tabla-principal">
+            <thead>
+                <tr>
+                    <th style="width: 110px;">Acción</th>
+                    <th style="width: 350px;">
+                        <i class="bi bi-building me-1 text-secondary"></i> PROVEEDOR
+                    </th>
+                    <th>
+                        <i class="bi bi-geo-alt me-1 text-secondary"></i> NOMBRE
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="ep-tbody">
+                <tr>
+                    <td colspan="3" class="text-center py-5 text-muted">
+                        <div class="spinner-border spinner-border-sm text-warning me-2"></div>
+                        Cargando estaciones de proveedores...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ── PIE DE TABLA / PAGINACIÓN ────────────────────────────── -->
+    <div class="ep-footer-bar">
+        <div id="ep-lbl-contador">Mostrando 0 a 0 de 0 registros</div>
+        <div class="d-flex align-items-center gap-1">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="ep-btn-prev" onclick="window.epCambiarPagina(-1)" style="font-size:0.75rem; padding:2px 8px;">
+                <i class="bi bi-chevron-left"></i> Anterior
+            </button>
+            <span id="ep-lbl-pagina" class="mx-2 fw-semibold" style="font-size:0.78rem;">Página 1</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="ep-btn-next" onclick="window.epCambiarPagina(1)" style="font-size:0.75rem; padding:2px 8px;">
+                Siguiente <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<!-- ============================================================ -->
+<!-- Modal Nueva / Editar Estación                                -->
+<!-- ============================================================ -->
+<div class="modal fade" id="epModalEstacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog ep-modal-dialog">
+        <div class="modal-content ep-modal-content">
+            <div class="ep-modal-header">
+                <h5 class="ep-modal-title" id="ep-modal-titulo">Nueva estación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size:0.75rem;"></button>
+            </div>
+            <div class="ep-modal-body">
+                <form id="ep-form-estacion" onsubmit="window.epGuardarEstacion(event)">
+                    <input type="hidden" id="ep-form-id" value="">
+
+                    <!-- Proveedor -->
+                    <div class="mb-3">
+                        <label class="ep-form-label" for="ep-form-proveedor">Proveedor</label>
+                        <input type="text" id="ep-form-proveedor" class="ep-form-control text-uppercase" placeholder="Seleccione o escriba proveedor..." list="ep-datalist-proveedores" required>
+                        <datalist id="ep-datalist-proveedores"></datalist>
+                    </div>
+
+                    <!-- RUC (Opcional) -->
+                    <div class="mb-3">
+                        <label class="ep-form-label" for="ep-form-ruc">RUC del Proveedor (Opcional)</label>
+                        <input type="text" id="ep-form-ruc" class="ep-form-control" placeholder="Ej: 20600066651" maxlength="20">
+                    </div>
+
+                    <!-- Nombre de la Estación / Estaciones -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="ep-form-label mb-0">Nombre</label>
+                        </div>
+                        
+                        <div id="ep-estaciones-inputs-container">
+                            <div class="d-flex gap-2 mb-2 ep-station-row">
+                                <input type="text" class="ep-form-control text-uppercase ep-station-input" placeholder="Nombre de estación (ej: BASE, NAZCA, CHALHUANCA)" required>
+                            </div>
+                        </div>
+
+                        <!-- Botón Agregar Estación (Idéntico a la imagen) -->
+                        <button type="button" class="ep-btn-add-station mt-2" onclick="window.epAgregarFilaEstacion()">
+                            <i class="bi bi-plus-circle-fill"></i> Agregar estación
+                        </button>
+                    </div>
+
+                    <!-- Botones de Acción en el pie del modal -->
+                    <div class="ep-modal-footer px-0 pb-0 pt-3">
+                        <button type="button" class="ep-btn-cerrar" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="ep-btn-guardar" id="ep-btn-submit">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
