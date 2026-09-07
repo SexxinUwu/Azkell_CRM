@@ -1181,20 +1181,9 @@ window.ovToggleAudioHaptico = function() {
     }
 };
 
-// ── TOAST FLOTANTE DYNAMIC ISLAND ─────────────────────────────────────
-window._ovToastTimeout = null;
+// ── NOTIFICACIONES (SILENCIADAS POR PREFERENCIA DE USUARIO) ──────────
 window.ovMostrarToastIsland = function(msg) {
-    var toast = document.getElementById('ovToastIsland');
-    var txt = document.getElementById('ovToastIslandText');
-    if (!toast || !txt) return;
-
-    txt.textContent = msg;
-    toast.classList.add('show');
-
-    clearTimeout(window._ovToastTimeout);
-    window._ovToastTimeout = setTimeout(() => {
-        toast.classList.remove('show');
-    }, 2400);
+    // Silenciado para evitar mensajes emergentes innecesarios en la parte superior
 };
 
 // ── FÍSICA ELÁSTICA SQUASH & STRETCH DEL SELECTOR DE PESTAÑAS ─────────
@@ -1224,14 +1213,14 @@ window.ovMoverPildoraElastica = function(targetBtn, prevIndex = window._ovCurren
 
     setTimeout(() => {
         pill.classList.remove('stretch-right', 'stretch-left');
-    }, 220);
+    }, 110);
 };
 
 window.ovMonCambiarTabSpatial = function(newIdx, tabKey, targetBtn) {
     var oldIdx = window._ovCurrentTabIndex;
     if (newIdx === oldIdx && targetBtn && targetBtn.classList.contains('active')) return;
 
-    window.ovPlayHapticTick(600 + newIdx * 45);
+    window.ovPlayHapticTick(620 + newIdx * 35);
 
     var isForward = newIdx >= oldIdx;
     window._ovCurrentTabIndex = newIdx;
@@ -1240,7 +1229,7 @@ window.ovMonCambiarTabSpatial = function(newIdx, tabKey, targetBtn) {
     document.querySelectorAll('.ov-mon-tab-item').forEach(b => b.classList.remove('active'));
     if (targetBtn) {
         targetBtn.classList.add('active');
-        // Micro-animación icónica
+        // Micro-animación icónica rápida
         var icon = targetBtn.querySelector('.tab-icon');
         if (icon) {
             icon.classList.remove('animate-wiggle', 'animate-pulsespin');
@@ -1250,7 +1239,7 @@ window.ovMonCambiarTabSpatial = function(newIdx, tabKey, targetBtn) {
         window.ovMoverPildoraElastica(targetBtn, oldIdx);
     }
 
-    // Transición cinética y escalonada de paneles
+    // Transición cinética y escalonada de paneles rápida (130ms)
     var paneles = document.querySelectorAll('.ov-mon-panel');
     paneles.forEach(p => {
         p.classList.add('d-none');
@@ -1260,21 +1249,18 @@ window.ovMonCambiarTabSpatial = function(newIdx, tabKey, targetBtn) {
     var targetPanel = document.getElementById('ov-mon-panel-' + tabKey);
     if (targetPanel) {
         targetPanel.classList.remove('d-none');
-        void targetPanel.offsetWidth; // Reflow
         targetPanel.classList.add(isForward ? 'enter-from-right' : 'enter-from-left');
 
-        // Reiniciar animaciones de hijos escalonados
+        // Hijos con entrada casi instantánea
         var children = targetPanel.querySelectorAll('.stagger-child');
         children.forEach((c, idx) => {
-            c.style.animation = 'none';
-            void c.offsetWidth;
-            c.style.animation = `staggerIn 360ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 40}ms forwards`;
+            c.style.animation = `staggerIn 130ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 20}ms forwards`;
         });
     }
 
-    // Si es combustible, iniciar el canvas de fluid wave
+    // Si es combustible, iniciar el canvas de fluid wave de inmediato
     if (tabKey === 'combustible') {
-        setTimeout(window.ovInitLiquidWave, 50);
+        requestAnimationFrame(window.ovInitLiquidWave);
     }
 };
 
