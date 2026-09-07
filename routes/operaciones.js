@@ -490,6 +490,83 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ── PUT /api/operaciones/ordenes-viaje/:viaje (Editar Orden de Viaje) ───
+    router.put('/ordenes-viaje/:viaje', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const codeViaje = req.params.viaje;
+            const {
+                fecha_viaje,
+                id_conductor,
+                conductor,
+                placa_tracto,
+                placa_remolque,
+                ruta,
+                peso,
+                ubigeo_partida,
+                direccion_partida,
+                ubigeo_llegada,
+                direccion_llegada,
+                escolta,
+                observaciones
+            } = req.body;
+
+            if (!placa_tracto || !conductor) {
+                return res.status(400).json({ ok: false, error: 'Conductor y Vehículo (Tracto) son obligatorios.' });
+            }
+
+            await tdb.query(`
+                UPDATE operaciones_ordenes_viaje
+                SET fecha_viaje = COALESCE(?, fecha_viaje),
+                    id_conductor = ?,
+                    conductor = ?,
+                    placa_tracto = ?,
+                    placa_remolque = ?,
+                    ruta = ?,
+                    peso = ?,
+                    ubigeo_partida = ?,
+                    direccion_partida = ?,
+                    ubigeo_llegada = ?,
+                    direccion_llegada = ?,
+                    escolta = ?,
+                    observaciones = ?
+                WHERE viaje = ?
+            `, [
+                fecha_viaje || null,
+                id_conductor || null,
+                String(conductor).trim().toUpperCase(),
+                String(placa_tracto).trim().toUpperCase(),
+                placa_remolque ? String(placa_remolque).trim().toUpperCase() : null,
+                ruta ? String(ruta).trim() : null,
+                parseFloat(peso) || 0.00,
+                ubigeo_partida || null,
+                direccion_partida || null,
+                ubigeo_llegada || null,
+                direccion_llegada || null,
+                escolta || null,
+                observaciones || null,
+                codeViaje
+            ]);
+
+            if (logAudit) {
+                logAudit({
+                    req,
+                    accion: 'EDITAR_ORDEN_VIAJE',
+                    modulo: 'OPERACIONES',
+                    detalle: `Actualizada Orden de Viaje ${codeViaje} (Tracto: ${placa_tracto}, Conductor: ${conductor})`
+                });
+            }
+
+            res.json({ ok: true, message: `Orden de Viaje ${codeViaje} actualizada correctamente.` });
+        } catch (err) {
+            console.error('Error al editar orden de viaje:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     // ── GET /api/operaciones/reporte-viajes ───────────────────────────
     // Reporte consolidado: N° Viaje, Fecha (solo fecha), Placas, Motor, Ruta, Peso Ida/Retorno y Galones Teóricos Matriz D2
     router.get('/reporte-viajes', async (req, res) => {

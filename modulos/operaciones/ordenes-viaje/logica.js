@@ -428,7 +428,7 @@ window.ovRenderizarTabla = function() {
                 <tr>
                     <!-- 1. ACCIÓN -->
                     <td>
-                        <button type="button" class="ov-btn-action-edit">
+                        <button type="button" class="ov-btn-action-edit" onclick="window.ovAbrirModalEditarViaje('${v.viaje}')">
                             EDITAR <i class="bi bi-chevron-down" style="font-size:0.65rem;"></i>
                         </button>
                     </td>
@@ -559,6 +559,13 @@ window.ovAbrirModalNuevoViaje = async function() {
     if (form) form.reset();
     _ovListaRutasSubFormulario = [];
 
+    var editIdEl = document.getElementById('ov-form-edit-id');
+    if (editIdEl) editIdEl.value = '';
+    var modalTitleEl = document.getElementById('ovModalNuevoViajeLabel');
+    if (modalTitleEl) {
+        modalTitleEl.innerHTML = `<i class="bi bi-truck text-primary"></i> <span>Nueva Orden de Viaje</span> <span class="text-muted fw-normal fs-6" id="ov-header-folio-badge">N° Operacional</span>`;
+    }
+
     // Establecer fecha y hora actual en el input
     var inputFecha = document.getElementById('ov-form-fecha');
     if (inputFecha) {
@@ -598,6 +605,121 @@ window.ovAbrirModalNuevoViaje = async function() {
     await window.ovCargarCombosFormulario();
 
     // Mostrar modal
+    var modalEl = document.getElementById('ovModalNuevoViaje');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
+// ── EDITAR ORDEN DE VIAJE EXISTENTE ──────────────────────────────────
+window.ovAbrirModalEditarViaje = async function(viajeCode) {
+    if (!viajeCode) return;
+
+    var item = (_ovViajesGlobal || []).find(x => x.viaje === viajeCode);
+    if (!item) {
+        alert('No se encontraron los datos del viaje seleccionado.');
+        return;
+    }
+
+    // Resetear formulario
+    var form = document.getElementById('ovFormNuevoViaje');
+    if (form) form.reset();
+    _ovListaRutasSubFormulario = [];
+
+    // Marcar que estamos editando
+    var editIdEl = document.getElementById('ov-form-edit-id');
+    if (editIdEl) editIdEl.value = viajeCode;
+
+    var modalTitleEl = document.getElementById('ovModalNuevoViajeLabel');
+    if (modalTitleEl) {
+        modalTitleEl.innerHTML = `<i class="bi bi-pencil-square text-primary"></i> <span>Editar Orden de Viaje</span> <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="ov-header-folio-badge">${viajeCode}</span>`;
+    }
+
+    // Serie y Número a partir del viajeCode (EJ: 2026-00000967)
+    var partes = viajeCode.split('-');
+    var serie = partes[0] || '';
+    var numero = partes[1] || '';
+
+    var serieEl = document.getElementById('ov-form-serie');
+    var numeroEl = document.getElementById('ov-form-numero');
+    if (serieEl) serieEl.value = serie;
+    if (numeroEl) numeroEl.value = numero;
+
+    // Fecha del viaje
+    var inputFecha = document.getElementById('ov-form-fecha');
+    if (inputFecha) {
+        if (item.fecha_viaje) {
+            try {
+                var d = new Date(item.fecha_viaje);
+                if (!isNaN(d.getTime())) {
+                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                    inputFecha.value = d.toISOString().slice(0, 16);
+                } else {
+                    inputFecha.value = item.fecha_viaje.slice(0, 16);
+                }
+            } catch(e) {
+                inputFecha.value = '';
+            }
+        } else {
+            var now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            inputFecha.value = now.toISOString().slice(0, 16);
+        }
+    }
+
+    // Cargar combos antes de setear valores
+    await window.ovCargarCombosFormulario();
+
+    // Setear Conductor
+    var condVal = item.conductor || '';
+    var condTxt = document.getElementById('ov-form-conductor-txt');
+    var condHid = document.getElementById('ov-form-conductor');
+    if (condTxt) condTxt.value = condVal;
+    if (condHid) {
+        condHid.value = condVal;
+        condHid.dataset.idConductor = item.id_conductor || '';
+    }
+
+    // Setear Tracto
+    var tractoVal = item.placa_tracto || '';
+    var tractoTxt = document.getElementById('ov-form-tracto-txt');
+    var tractoHid = document.getElementById('ov-form-tracto');
+    if (tractoTxt) tractoTxt.value = tractoVal;
+    if (tractoHid) tractoHid.value = tractoVal;
+
+    // Setear Remolque / Carreta
+    var remolqueVal = item.placa_remolque || '';
+    var remolqueTxt = document.getElementById('ov-form-remolque-txt');
+    var remolqueHid = document.getElementById('ov-form-remolque');
+    if (remolqueTxt) remolqueTxt.value = remolqueVal;
+    if (remolqueHid) remolqueHid.value = remolqueVal;
+
+    // Ruta
+    var rutaEl = document.getElementById('ov-form-ruta');
+    if (rutaEl) rutaEl.value = item.ruta || '';
+
+    // Cantidad / Peso
+    var cantEl = document.getElementById('ov-form-cantidad');
+    if (cantEl) cantEl.value = parseFloat(item.peso || 0).toFixed(2);
+
+    // Ubigeo y Direcciones
+    var uPart = document.getElementById('ov-form-ubigeo-partida');
+    if (uPart) uPart.value = item.ubigeo_partida || '';
+    var dPart = document.getElementById('ov-form-dir-partida');
+    if (dPart) dPart.value = item.direccion_partida || '';
+    var uLleg = document.getElementById('ov-form-ubigeo-llegada');
+    if (uLleg) uLleg.value = item.ubigeo_llegada || '';
+    var dLleg = document.getElementById('ov-form-dir-llegada');
+    if (dLleg) dLleg.value = item.direccion_llegada || '';
+
+    // Observaciones y Escolta
+    var obsEl = document.getElementById('ov-form-observaciones');
+    if (obsEl) obsEl.value = item.observaciones || '';
+    var escEl = document.getElementById('ov-form-escolta');
+    if (escEl) escEl.value = item.escolta || '';
+
+    // Abrir modal flotante
     var modalEl = document.getElementById('ovModalNuevoViaje');
     if (modalEl && typeof bootstrap !== 'undefined') {
         var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
@@ -717,10 +839,13 @@ window.ovGuardarNuevoViaje = async function(e) {
         return;
     }
 
+    var editId = (document.getElementById('ov-form-edit-id') || {}).value || '';
+    var esEdicion = Boolean(editId);
+
     var payload = {
         serie,
         numero,
-        viaje: `${serie}-${numero}`,
+        viaje: esEdicion ? editId : `${serie}-${numero}`,
         fecha_viaje: fechaVal ? fechaVal.replace('T', ' ') + ':00' : null,
         id_conductor: idConductor,
         conductor,
@@ -738,8 +863,13 @@ window.ovGuardarNuevoViaje = async function(e) {
     };
 
     try {
-        var res = await fetch('/api/operaciones/ordenes-viaje', {
-            method: 'POST',
+        var url = esEdicion 
+            ? `/api/operaciones/ordenes-viaje/${encodeURIComponent(editId)}` 
+            : '/api/operaciones/ordenes-viaje';
+        var method = esEdicion ? 'PUT' : 'POST';
+
+        var res = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
@@ -747,9 +877,9 @@ window.ovGuardarNuevoViaje = async function(e) {
 
         if (data && data.ok) {
             if (typeof window.showToastNotification === 'function') {
-                window.showToastNotification(data.message || 'Orden de viaje registrada con éxito.', 'success');
+                window.showToastNotification(data.message || (esEdicion ? 'Orden de viaje actualizada con éxito.' : 'Orden de viaje registrada con éxito.'), 'success');
             } else {
-                alert(data.message || 'Orden de viaje registrada correctamente.');
+                alert(data.message || (esEdicion ? 'Orden de viaje actualizada correctamente.' : 'Orden de viaje registrada correctamente.'));
             }
 
             var modalEl = document.getElementById('ovModalNuevoViaje');
