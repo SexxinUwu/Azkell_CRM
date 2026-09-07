@@ -574,15 +574,15 @@
     visibility: visible;
 }
 
-/* Ventana Flotante Spatial: Centrada en pantalla, más ancha y panorámica */
+/* Ventana Flotante Spatial: Centrada en el área de trabajo (a la derecha del sidebar) */
 .ov-mon-drawer {
     position: fixed;
     top: 2.5vh;
     bottom: 2.5vh;
-    left: 2vw;
-    right: 2vw;
-    max-width: 1420px;
-    margin: 0 auto;
+    left: calc(var(--sidebar-width, 240px) + max(16px, (100vw - var(--sidebar-width, 240px) - min(1380px, calc(100vw - var(--sidebar-width, 240px) - 32px))) / 2));
+    width: min(1380px, calc(100vw - var(--sidebar-width, 240px) - 32px));
+    max-width: calc(100vw - var(--sidebar-width, 240px) - 32px);
+    margin: 0;
     background: #ffffff;
     border: 1px solid rgba(226, 232, 240, 0.9);
     border-radius: 24px;
@@ -596,6 +596,14 @@
     visibility: hidden;
     will-change: transform, opacity;
     transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.14s ease, visibility 0.16s;
+}
+/* Cuando el sidebar está colapsado */
+body:has(#sidebarMenu.collapsed) .ov-mon-drawer,
+#sidebarMenu.collapsed ~ .content .ov-mon-drawer,
+.sidebar-collapsed-active .ov-mon-drawer {
+    left: calc(var(--sidebar-collapsed-width, 70px) + max(16px, (100vw - var(--sidebar-collapsed-width, 70px) - min(1420px, calc(100vw - var(--sidebar-collapsed-width, 70px) - 32px))) / 2));
+    width: min(1420px, calc(100vw - var(--sidebar-collapsed-width, 70px) - 32px));
+    max-width: calc(100vw - var(--sidebar-collapsed-width, 70px) - 32px);
 }
 .ov-mon-drawer.active {
     transform: scale(1) translateY(0);

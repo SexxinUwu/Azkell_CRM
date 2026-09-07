@@ -1120,10 +1120,28 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     var btnPrimeraTab = document.querySelector('.ov-mon-tab-item');
     if (btnPrimeraTab) window.ovMonCambiarTabSpatial(0, 'resumen', btnPrimeraTab);
 
-    // Abrir Ventana Spatial y Backdrop (sin tapar la barra lateral)
+    // Abrir Ventana Spatial y Backdrop
     var drawer = document.getElementById('ovMonDrawer');
     var backdrop = document.getElementById('ovMonDrawerBackdrop');
-    if (drawer) drawer.classList.add('active');
+    if (drawer) {
+        // Calcular ancho real exacto de la barra lateral para centrar el cuadro en el área visible restante
+        var sb = document.getElementById('sidebarMenu');
+        var sbW = (sb && window.innerWidth > 768) ? sb.getBoundingClientRect().width : 0;
+        var availableW = window.innerWidth - sbW;
+        var drawerW = Math.min(1380, availableW - 32);
+        var leftOffset = sbW + Math.max(16, (availableW - drawerW) / 2);
+        
+        if (window.innerWidth > 768) {
+            drawer.style.left = `${Math.round(leftOffset)}px`;
+            drawer.style.width = `${Math.round(drawerW)}px`;
+            drawer.style.right = 'auto';
+        } else {
+            drawer.style.left = '8px';
+            drawer.style.right = '8px';
+            drawer.style.width = 'auto';
+        }
+        drawer.classList.add('active');
+    }
     if (backdrop) backdrop.classList.add('active');
 
     // Inicializar posición de píldora elástica
