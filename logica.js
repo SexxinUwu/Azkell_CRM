@@ -365,18 +365,17 @@ window.verificarSesionGuardada = function() {
     safe('wrap-directorio', showDirectorio);
     safe('bnav-directorio', showDirectorio);
 
-    // OPERACIONES
+    // OPERACIONES (PROPIO)
     var showOperacionesHub = _cHub('hub_operaciones');
     var vOpProg  = showOperacionesHub && (_cL('op_programacion') || _cL('op_guias_remision') || _cL('guias_remision'));
     var vOpOV    = showOperacionesHub && (_cL('op_ordenes_viaje') || _cL('op_programacion') || _cL('guias_remision') || _cL('op_guias_remision'));
-    var vOpGuias = showOperacionesHub && (_cL('op_guias_remision') || _cL('guias_remision'));
     var vOpReporteViajes = showOperacionesHub && (_cL('op_guias_remision') || _cL('guias_remision') || _cL('op_programacion'));
     var vCombVales = showOperacionesHub && (_cL('combustible_vales') || _cL('combustible'));
     var vCombAna   = showOperacionesHub && (_cL('combustible_analisis') || _cL('combustible'));
     var vCombUrea  = showOperacionesHub && (_cL('urea_analisis') || _cL('combustible_analisis') || _cL('combustible'));
     var vCombMatriz = showOperacionesHub && (_cL('combustible_matriz') || _cL('combustible_analisis') || _cL('combustible'));
     var vCombOp    = vCombVales || vCombAna || vCombUrea || vCombMatriz;
-    var showOp     = vOpProg || vOpOV || vOpGuias || vOpReporteViajes || vCombOp;
+    var showOp     = vOpProg || vOpOV || vOpReporteViajes || vCombOp;
 
     safe('nav-op-programacion',          vOpProg);
     safe('mbnav-op-programacion',        vOpProg);
@@ -384,8 +383,6 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-op-ordenes-viaje',       vOpOV);
     safe('nav-op-reporte-viajes',        vOpReporteViajes);
     safe('mbnav-op-reporte-viajes',      vOpReporteViajes);
-    safe('nav-op-guias-remision',        vOpGuias);
-    safe('mbnav-op-guias-remision',      vOpGuias);
     safe('nav-combustible-toggle',        vCombOp);
     safe('mbnav-op-combustible-toggle',  vCombOp);
     safe('nav-combustible-vales',         vCombVales);
@@ -398,6 +395,17 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-op-combustible-matriz',   vCombMatriz);
     safe('wrap-operaciones', showOp);
     safe('bnav-operaciones', showOp);
+
+    // OPERACIONES MARSISA
+    var vOpGuias = showOperacionesHub && (_cL('op_guias_remision') || _cL('guias_remision'));
+    var showMarsisa = showOperacionesHub && (vOpOV || vOpGuias || vCombVales);
+    safe('nav-marsisa-ordenes-viaje',    vOpOV);
+    safe('mbnav-marsisa-ordenes-viaje',  vOpOV);
+    safe('nav-op-guias-remision',        vOpGuias);
+    safe('mbnav-op-guias-remision',      vOpGuias);
+    safe('nav-marsisa-combustible-vales', vCombVales);
+    safe('mbnav-marsisa-combustible-vales', vCombVales);
+    safe('wrap-operaciones-marsisa',     showMarsisa);
 
     // RRHH
     var vRrhhPers = _cL('rrhh_personal');
@@ -597,6 +605,8 @@ window.verificarSesionGuardada = function() {
             'almacen/proveedores': 'prov_inv',
             'directorio/conductores': 'cond',
             'directorio/clientes': 'clientes',
+            'operaciones/marsisa-ordenes-viaje': 'op_guias_remision',
+            'operaciones/marsisa-combustible-vales': 'combustible_vales',
             'operaciones/programacion': 'op_programacion',
             'operaciones/ordenes-viaje': 'op_guias_remision',
             'operaciones/guias-remision': 'op_guias_remision',
@@ -3668,17 +3678,24 @@ const TITULOS_MODULOS = {
     'operaciones/urea-analisis':        'Análisis de Urea',
     'operaciones/combustible-matriz':   'Matriz de Combustible (D2)',
     'operaciones/programacion':         'Programación de Vehículos',
+    'operaciones/ordenes-viaje':        'Órdenes de Viaje',
+    'operaciones/reporte-viajes':       'Reporte de Viajes',
+    'operaciones/marsisa-ordenes-viaje': 'Órdenes de Viaje (Marsisa)',
+    'operaciones/marsisa-combustible-vales': 'Vales de Combustible (Marsisa)',
 };
 
 const MENU_IDS = {
     'dashboard':                   'nav-dashboard',
     'operaciones/programacion':    'nav-op-programacion',
     'operaciones/ordenes-viaje':   'nav-op-ordenes-viaje',
+    'operaciones/reporte-viajes':  'nav-op-reporte-viajes',
     'operaciones/guias-remision':  'nav-op-guias-remision',
     'operaciones/combustible-vales': 'nav-combustible-vales',
     'operaciones/combustible-analisis': 'nav-combustible-analisis',
     'operaciones/urea-analisis':        'nav-urea-analisis',
     'operaciones/combustible-matriz':   'nav-combustible-matriz',
+    'operaciones/marsisa-ordenes-viaje': 'nav-marsisa-ordenes-viaje',
+    'operaciones/marsisa-combustible-vales': 'nav-marsisa-combustible-vales',
     'mantenimiento/inspecciones':  'nav-inspecciones',
     'flota/placas':       'nav-placas',
     'mantenimiento/fleetrun':      'nav-fleetrun',
@@ -3772,22 +3789,28 @@ const MENU_SECTION = {
     'seguridad/unidades-base':    'seguridad',
     'operaciones/programacion':    'operaciones',
     'operaciones/ordenes-viaje':   'operaciones',
-    'operaciones/guias-remision':  'operaciones',
+    'operaciones/reporte-viajes':  'operaciones',
     'operaciones/combustible-vales': 'operaciones',
     'operaciones/combustible-analisis': 'operaciones',
     'operaciones/urea-analisis':        'operaciones',
     'operaciones/combustible-matriz':   'operaciones',
+    'operaciones/marsisa-ordenes-viaje': 'operaciones-marsisa',
+    'operaciones/guias-remision':  'operaciones-marsisa',
+    'operaciones/marsisa-combustible-vales': 'operaciones-marsisa',
 };
 
 const BREADCRUMB_MAP = {
     'dashboard':                  [],
     'operaciones/programacion':    ['Operaciones','Programación'],
     'operaciones/ordenes-viaje':   ['Operaciones','Órdenes de Viaje'],
-    'operaciones/guias-remision':  ['Operaciones','Guías de Remisión'],
+    'operaciones/reporte-viajes':  ['Operaciones','Reporte de Viajes'],
     'operaciones/combustible-vales': ['Operaciones','Combustible','Vales'],
     'operaciones/combustible-analisis': ['Operaciones','Combustible','Análisis D2'],
     'operaciones/urea-analisis':        ['Operaciones','Combustible','Análisis Urea'],
     'operaciones/combustible-matriz':   ['Operaciones','Combustible','Matriz (D2)'],
+    'operaciones/marsisa-ordenes-viaje': ['Operaciones Marsisa','Órdenes de Viaje'],
+    'operaciones/guias-remision':  ['Operaciones Marsisa','Guías de Remisión'],
+    'operaciones/marsisa-combustible-vales': ['Operaciones Marsisa','Vales Combustible'],
     'mantenimiento/inspecciones': ['Mantenimiento','Inspecciones'],
     'flota/placas':       ['Flota','Placas'],
     'mantenimiento/fleetrun':     ['Mantenimiento','Fleetrun'],
