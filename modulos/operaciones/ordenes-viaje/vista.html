@@ -755,14 +755,14 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer,
 }
 .ov-mon-tabs-track {
     position: relative;
-    display: inline-flex;
+    display: flex;
+    width: 100%;
     align-items: center;
     background: #e2e8f0;
     padding: 3px;
     border-radius: 9999px;
     gap: 2px;
     overflow-x: auto;
-    max-width: 100%;
     scrollbar-width: none;
 }
 .ov-mon-tabs-track::-webkit-scrollbar { display: none; }
@@ -798,11 +798,14 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer,
     font-size: 0.72rem;
     font-weight: 600;
     color: #64748b;
-    padding: 5px 13px;
+    padding: 6px 10px;
     border-radius: 9999px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    flex: 1 1 0;
+    min-width: 0;
     gap: 6px;
     white-space: nowrap;
     outline: none;
@@ -1408,10 +1411,6 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer,
                 <i class="bi bi-volume-up-fill text-primary" id="ovSoundIcon"></i>
             </button>
             
-            <!-- Copiar Guía / Código -->
-            <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 py-1 d-none d-md-inline-flex align-items-center gap-1 text-secondary" style="font-size:0.75rem;" onclick="window.ovCopiarCodigoViaje()" title="Copiar código de viaje">
-                <i class="bi bi-clipboard"></i> <span>Copiar Guía</span>
-            </button>
 
             <!-- Refrescar -->
             <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1 text-secondary" style="font-size:0.75rem;" onclick="window.ovRecargarMonitoreoActual()" title="Refrescar telemetría">
