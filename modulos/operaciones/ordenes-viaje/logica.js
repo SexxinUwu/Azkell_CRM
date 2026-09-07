@@ -457,6 +457,14 @@ window.ovAbrirModalNuevoViaje = async function() {
     var inputCantidad = document.getElementById('ov-form-cantidad');
     if (inputCantidad) inputCantidad.value = '0.00';
 
+    // Limpiar inputs de texto y hidden de los buscadores
+    ['ov-form-conductor', 'ov-form-tracto', 'ov-form-remolque'].forEach(function(id) {
+        var txt = document.getElementById(id + '-txt');
+        var hid = document.getElementById(id);
+        if (txt) txt.value = '';
+        if (hid) hid.value = '';
+    });
+
     // Cargar correlativo desde el backend
     try {
         var resCorrelativo = await fetch('/api/operaciones/ordenes-viaje/correlativo');
@@ -491,108 +499,66 @@ window.ovCargarCombosFormulario = async function() {
             fetch('/api/conductores-lista').then(r => r.ok ? r.json() : []).catch(() => [])
         ]);
 
-        var selTracto = document.getElementById('ov-form-tracto');
-        var selRemolque = document.getElementById('ov-form-remolque');
-        var selCond = document.getElementById('ov-form-conductor');
+        var tractos = [];
+        var carretas = [];
 
-        if (selTracto) {
-            selTracto.innerHTML = '<option value="">Seleccione...</option>';
-            var tractos = (resPlacas || []).filter(p => !p.tipo || p.tipo.toUpperCase().includes('TRACTO') || p.tipo.toUpperCase().includes('REMOLCADOR') || !p.tipo.toUpperCase().includes('SEMI'));
-            (tractos.length ? tractos : resPlacas).forEach(function(p) {
-                var opt = document.createElement('option');
-                opt.value = p.placa;
-                opt.textContent = `${p.placa} ${p.marca ? '· ' + p.marca : ''} ${p.modelo ? '· ' + p.modelo : ''}`;
-                selTracto.appendChild(opt);
-            });
+        (resPlacas || []).forEach(function(p) {
+            var placa = (p.placa || p[0] || '').toString().trim();
+            if (!placa) return;
+            var tipo = (p.tipo || p[5] || '').toString().trim().toUpperCase();
+            var desc = `${placa}${p.marca ? ' · ' + p.marca : ''}`;
+
+            if (tipo.includes('CARRETA') || tipo.includes('SEMI') || tipo.includes('REMOLQUE')) {
+                carretas.push({ value: placa, label: desc });
+            } else {
+                tractos.push({ value: placa, label: desc });
+            }
+        });
+
+        if (!tractos.length && resPlacas.length) {
+            tractos = resPlacas.map(p => ({ value: p.placa || p[0], label: p.placa || p[0] }));
         }
 
-        if (selRemolque) {
-            selRemolque.innerHTML = '<option value="">Seleccione...</option>';
-            var remolques = (resPlacas || []).filter(p => p.tipo && (p.tipo.toUpperCase().includes('SEMI') || p.tipo.toUpperCase().includes('REMOLQUE') || p.tipo.toUpperCase().includes('CARRETA')));
-            (remolques.length ? remolques : resPlacas).forEach(function(p) {
-                var opt = document.createElement('option');
-                opt.value = p.placa;
-                opt.textContent = `${p.placa} ${p.marca ? '· ' + p.marca : ''}`;
-                selRemolque.appendChild(opt);
-            });
-        }
+        var conductores = [];
+        var condMap = new Set();
+        (resConductores || []).forEach(function(c) {
+            var nombreCompleto = c.nombre_completo || c.nombres || c.conductor || (c.apellidos ? `${c.apellidos}, ${c.nombres}` : '');
+            nombreCompleto = String(nombreCompleto).trim();
+            if (!nombreCompleto || condMap.has(nombreCompleto.toUpperCase())) return;
+            condMap.add(nombreCompleto.toUpperCase());
+            var label = `${nombreCompleto}${c.dni ? ' · ' + c.dni : ''}`;
+            conductores.push({ value: nombreCompleto, label: label, idConductor: c.id || '' });
+        });
 
-        if (selCond) {
-            selCond.innerHTML = '<option value="">Seleccione...</option>';
-            (resConductores || []).forEach(function(c) {
-                var opt = document.createElement('option');
-                var nombreCompleto = c.nombre_completo || c.nombres || c.conductor || (c.apellidos ? `${c.apellidos}, ${c.nombres}` : 'Conductor');
-                opt.value = nombreCompleto;
-                opt.dataset.idConductor = c.id || '';
-                opt.textContent = `${nombreCompleto} ${c.dni ? '· ' + c.dni : ''}`;
-                selCond.appendChild(opt);
-            });
+        conductores.sort((a, b) => a.value.localeCompare(b.value));
+
+        if (typeof window._cbInit === 'function') {
+            window._cbInit('ov-form-conductor', conductores, 'SELECCIONE CONDUCTOR...');
+            window._cbInit('ov-form-tracto', tractos, 'SELECCIONE TRACTO...');
+            window._cbInit('ov-form-remolque', carretas, 'SELECCIONE CARRETA...');
+
+            if (typeof window._cbOnSelect === 'function') {
+                window._cbOnSelect('ov-form-conductor', function(val, lbl) {
+                    var hid = document.getElementById('ov-form-conductor');
+                    if (hid) {
+                        hid.value = val;
+                        var matched = conductores.find(c => c.value === val);
+                        hid.dataset.idConductor = (matched && matched.idConductor) || '';
+                    }
+                });
+                window._cbOnSelect('ov-form-tracto', function(val, lbl) {
+                    var hid = document.getElementById('ov-form-tracto');
+                    if (hid) hid.value = val;
+                });
+                window._cbOnSelect('ov-form-remolque', function(val, lbl) {
+                    var hid = document.getElementById('ov-form-remolque');
+                    if (hid) hid.value = val;
+                });
+            }
         }
     } catch(err) {
         console.warn('Error cargando combos para el formulario de viaje:', err);
     }
-};
-
-window.ovAgregarFilaRuta = function() {
-    var osEl = document.getElementById('ov-form-nueva-os');
-    var rutaEl = document.getElementById('ov-form-nueva-ruta-sub');
-    var pesoEl = document.getElementById('ov-form-nuevo-peso-sub');
-
-    var os = osEl ? (osEl.value || '').trim().toUpperCase() : '';
-    var r = rutaEl ? (rutaEl.value || '').trim().toUpperCase() : '';
-    var p = pesoEl ? parseFloat(pesoEl.value) || 0 : 0;
-
-    if (!os) {
-        alert('Por favor ingrese el número de Orden de Servicio o Guía.');
-        return;
-    }
-
-    _ovListaRutasSubFormulario.push({
-        orden: os,
-        ruta: r,
-        peso_total: p * 1000, // guardar en kg para coherencia
-        peso_tn: p,
-        tipo_servicio: 'CARGA GENERAL',
-        es_retorno: 0
-    });
-
-    if (osEl) osEl.value = '';
-    if (rutaEl) rutaEl.value = '';
-    if (pesoEl) pesoEl.value = '';
-
-    window.ovRenderizarSubRutas();
-};
-
-window.ovEliminarFilaRuta = function(idx) {
-    _ovListaRutasSubFormulario.splice(idx, 1);
-    window.ovRenderizarSubRutas();
-};
-
-window.ovRenderizarSubRutas = function() {
-    var tbody = document.getElementById('ov-form-rutas-tbody');
-    if (!tbody) return;
-
-    if (_ovListaRutasSubFormulario.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No hay órdenes secundarias vinculadas aún.</td></tr>`;
-        return;
-    }
-
-    var html = '';
-    _ovListaRutasSubFormulario.forEach(function(item, idx) {
-        html += `
-            <tr>
-                <td class="fw-bold text-dark font-monospace">${item.orden}</td>
-                <td>${item.ruta || '<span class="text-muted fst-italic">—</span>'}</td>
-                <td class="text-end fw-bold">${(item.peso_tn || (item.peso_total / 1000)).toFixed(2)} TN</td>
-                <td class="text-center">
-                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-2" onclick="window.ovEliminarFilaRuta(${idx})" title="Quitar">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-    tbody.innerHTML = html;
 };
 
 window.ovGuardarNuevoViaje = async function(e) {
@@ -601,11 +567,13 @@ window.ovGuardarNuevoViaje = async function(e) {
     var serie = (document.getElementById('ov-form-serie') || {}).value || new Date().getFullYear();
     var numero = (document.getElementById('ov-form-numero') || {}).value || '00000001';
     var fechaVal = (document.getElementById('ov-form-fecha') || {}).value || '';
-    var tracto = (document.getElementById('ov-form-tracto') || {}).value || '';
-    var remolque = (document.getElementById('ov-form-remolque') || {}).value || '';
+    
+    // Obtener valores desde hidden o directamente desde el texto si el usuario tipeó
+    var tracto = (document.getElementById('ov-form-tracto') || {}).value || (document.getElementById('ov-form-tracto-txt') || {}).value || '';
+    var remolque = (document.getElementById('ov-form-remolque') || {}).value || (document.getElementById('ov-form-remolque-txt') || {}).value || '';
     var selCond = document.getElementById('ov-form-conductor');
-    var conductor = selCond ? selCond.value : '';
-    var idConductor = selCond && selCond.selectedOptions[0] ? selCond.selectedOptions[0].dataset.idConductor : null;
+    var conductor = (selCond ? selCond.value : '') || (document.getElementById('ov-form-conductor-txt') || {}).value || '';
+    var idConductor = selCond ? selCond.dataset.idConductor : null;
     var ruta = (document.getElementById('ov-form-ruta') || {}).value || '';
     var cantidad = parseFloat((document.getElementById('ov-form-cantidad') || {}).value) || 0;
     var ubigeoPartida = (document.getElementById('ov-form-ubigeo-partida') || {}).value || '';

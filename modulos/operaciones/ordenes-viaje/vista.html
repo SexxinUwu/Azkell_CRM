@@ -238,6 +238,41 @@
     border-radius: 18px !important;
     border: 1px solid #e2e8f0 !important;
     background: #ffffff !important;
+    overflow: visible !important;
+}
+#ovModalNuevoViaje .modal-body {
+    overflow-y: auto !important;
+    overflow-x: visible !important;
+}
+#ovModalNuevoViaje .cb-dropdown {
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 999999 !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.25) !important;
+    max-height: 240px !important;
+    overflow-y: auto !important;
+    display: none;
+}
+#ovModalNuevoViaje .cb-opt {
+    padding: 10px 14px !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+    cursor: pointer !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    transition: background 0.15s ease !important;
+}
+#ovModalNuevoViaje .cb-opt:hover {
+    background: #eff6ff !important;
+    color: #0284c7 !important;
+}
+#ovModalNuevoViaje .cb-opt:last-child {
+    border-bottom: none !important;
 }
 
 @media (max-width: 768px) {
@@ -486,9 +521,11 @@
                             </div>
                             <div class="col-12">
                                 <label class="ov-label-req">Conductor <span>(*)</span></label>
-                                <select id="ov-form-conductor" class="form-select form-select-sm border-secondary-subtle" required>
-                                    <option value="">SELECCIONE CONDUCTOR...</option>
-                                </select>
+                                <div class="position-relative" style="z-index: 95;">
+                                    <input type="text" id="ov-form-conductor-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE CONDUCTOR..." autocomplete="off" oninput="window._cbFiltrar('ov-form-conductor')" onfocus="window._cbFiltrar('ov-form-conductor')" onblur="window._cbHide('ov-form-conductor')">
+                                    <input type="hidden" id="ov-form-conductor" name="conductor" required>
+                                    <div id="ov-form-conductor-dd" class="cb-dropdown"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -501,15 +538,19 @@
                         <div class="row g-2 g-md-3">
                             <div class="col-12 col-md-6">
                                 <label class="ov-label-req">Vehículo (Tracto) <span>(*)</span></label>
-                                <select id="ov-form-tracto" class="form-select form-select-sm border-secondary-subtle" required>
-                                    <option value="">SELECCIONE TRACTO...</option>
-                                </select>
+                                <div class="position-relative" style="z-index: 90;">
+                                    <input type="text" id="ov-form-tracto-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE TRACTO..." autocomplete="off" oninput="window._cbFiltrar('ov-form-tracto')" onfocus="window._cbFiltrar('ov-form-tracto')" onblur="window._cbHide('ov-form-tracto')">
+                                    <input type="hidden" id="ov-form-tracto" name="tracto" required>
+                                    <div id="ov-form-tracto-dd" class="cb-dropdown"></div>
+                                </div>
                             </div>
                             <div class="col-12 col-md-6">
                                 <label class="ov-label-req">Semirremolque / Remolque</label>
-                                <select id="ov-form-remolque" class="form-select form-select-sm border-secondary-subtle">
-                                    <option value="">SELECCIONE CARRETA...</option>
-                                </select>
+                                <div class="position-relative" style="z-index: 85;">
+                                    <input type="text" id="ov-form-remolque-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE CARRETA..." autocomplete="off" oninput="window._cbFiltrar('ov-form-remolque')" onfocus="window._cbFiltrar('ov-form-remolque')" onblur="window._cbHide('ov-form-remolque')">
+                                    <input type="hidden" id="ov-form-remolque" name="remolque">
+                                    <div id="ov-form-remolque-dd" class="cb-dropdown"></div>
+                                </div>
                                 <div class="form-text text-muted" style="font-size:0.72rem;">Opcional: asigne la carreta o semirremolque vinculado al viaje.</div>
                             </div>
                         </div>
