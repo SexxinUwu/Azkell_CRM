@@ -554,21 +554,20 @@
     transform: scale(0.95);
 }
 
-/* ── DRAWER / PANEL DE DETALLE Y MONITOREO DE VIAJE (ESTILO PASTEL ERP AZKELL) ── */
-/* El panel se posiciona estrictamente dentro del área de contenido a la derecha de la barra lateral */
+/* ── VENTANA FLOTANTE SPATIAL EDITION: MONITOREO DE VIAJE (APPLE VISION + ERP) ── */
 .ov-mon-drawer-backdrop {
     position: fixed;
     top: 0;
     right: 0;
     bottom: 0;
     left: var(--sidebar-width, 240px);
-    background: rgba(15, 23, 42, 0.35);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 1045;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s, left 0.3s ease;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s, left 0.3s ease;
 }
 body.sidebar-compact .ov-mon-drawer-backdrop,
 body.sidebar-collapsed .ov-mon-drawer-backdrop,
@@ -580,133 +579,180 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer-backdrop {
     visibility: visible;
 }
 
-/* Contenedor del Drawer */
+/* Ventana Flotante Spatial: Centrada con márgenes equilibrados a la derecha del sidebar */
 .ov-mon-drawer {
     position: fixed;
-    top: 12px;
-    right: 14px;
-    bottom: 12px;
-    left: calc(var(--sidebar-width, 240px) + 14px);
-    max-width: calc(100vw - var(--sidebar-width, 240px) - 28px);
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 20px;
-    box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+    top: 2.5vh;
+    bottom: 2.5vh;
+    left: calc(var(--sidebar-width, 240px) + 2vw);
+    right: 2vw;
+    max-width: 1180px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(40px) saturate(190%);
+    -webkit-backdrop-filter: blur(40px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 28px;
+    box-shadow: 0 35px 80px -15px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(226, 232, 240, 0.7);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     z-index: 1046;
-    transform: translateX(20px) scale(0.99);
+    transform: scale(0.96) translateY(14px);
     opacity: 0;
     visibility: hidden;
-    transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease, visibility 0.26s, left 0.3s ease, max-width 0.3s ease;
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, visibility 0.32s, left 0.3s ease;
 }
 body.sidebar-compact .ov-mon-drawer,
 body.sidebar-collapsed .ov-mon-drawer,
 body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
-    left: calc(var(--sidebar-collapsed-width, 70px) + 14px) !important;
-    max-width: calc(100vw - var(--sidebar-collapsed-width, 70px) - 28px) !important;
+    left: calc(var(--sidebar-collapsed-width, 70px) + 2vw) !important;
 }
 .ov-mon-drawer.active {
-    transform: translateX(0) scale(1);
+    transform: scale(1) translateY(0);
     opacity: 1;
     visibility: visible;
 }
 
-/* Cabecera Suave Pastel */
+/* Capa de Brillo Especular Dinámico que sigue el cursor */
+.ov-ambient-specular {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+        750px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(59, 130, 246, 0.08),
+        rgba(255, 255, 255, 0.03) 40%,
+        transparent 80%
+    );
+    z-index: 1;
+}
+
+/* Cabecera macOS Sequoia Flotante */
 .ov-mon-header {
-    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 60%, #e2e8f0 100%);
-    padding: 0.9rem 1.4rem;
-    border-bottom: 1px solid #e2e8f0;
+    position: relative;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+    padding: 0.85rem 1.35rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-shrink: 0;
 }
+.ov-mac-lights {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 4px;
+}
+.ov-mac-light {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+.ov-mac-light:hover { transform: scale(1.15); }
+.ov-mac-red { background: #ff5f56; border: 1px solid #e0443e; }
+.ov-mac-yellow { background: #ffbd2e; border: 1px solid #dea123; }
+.ov-mac-green { background: #27c93f; border: 1px solid #1aab29; }
+
 .ov-mon-brand-icon {
-    width: 42px;
-    height: 42px;
-    background: #e0f2fe;
-    border: 1px solid #bae6fd;
+    width: 38px;
+    height: 38px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.15));
+    border: 1px solid rgba(59, 130, 246, 0.25);
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #0284c7;
-    font-size: 1.25rem;
-    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.08);
+    color: #2563eb;
+    font-size: 1.15rem;
 }
 .ov-mon-folio-pill {
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    color: #166534;
-    font-size: 0.85rem;
-    font-weight: 800;
-    letter-spacing: 0.3px;
-    padding: 3px 10px;
-    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.05);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    color: #1e293b;
+    font-size: 0.8rem;
+    font-weight: 700;
     font-family: monospace;
+    padding: 2px 8px;
+    border-radius: 9999px;
 }
-.ov-mon-close-btn {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    background: #ffffff;
-    color: #64748b;
-    display: flex;
+.ov-live-beacon {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: all 0.15s ease;
+    gap: 5px;
+    padding: 2px 9px;
+    border-radius: 9999px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    font-size: 0.72rem;
+    font-weight: 700;
 }
-.ov-mon-close-btn:hover {
-    background: #fee2e2;
-    border-color: #fecaca;
-    color: #b91c1c;
-    transform: scale(1.05);
+.ov-beacon-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+    animation: beaconPulse 2s infinite;
+}
+@keyframes beaconPulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* Fila Superior de Métricas Inset Pastel */
+/* Fila de Micro-Widgets de Metadatos */
 .ov-mon-kpi-bar {
-    background: #ffffff;
-    padding: 0.75rem 1.4rem;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem 1.25rem;
+    position: relative;
+    z-index: 2;
+    background: rgba(248, 250, 252, 0.7);
+    padding: 0.65rem 1.35rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.65rem;
     flex-shrink: 0;
 }
 .ov-mon-kpi-chip {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 14px;
+    padding: 0.5rem 0.65rem;
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    padding: 5px 10px;
-    border-radius: 10px;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.ov-mon-kpi-chip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    border-color: #cbd5e1;
 }
 .ov-mon-kpi-avatar {
     width: 28px;
     height: 28px;
-    border-radius: 8px;
+    border-radius: 9px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 0.82rem;
-    font-weight: 700;
+    flex-shrink: 0;
 }
 .ov-kpi-av-sky { background: #e0f2fe; color: #0284c7; }
+.ov-kpi-av-teal { background: #ccfbf1; color: #0f766e; }
+.ov-kpi-av-purple { background: #f3e8ff; color: #7e22ce; }
 .ov-kpi-av-emerald { background: #dcfce7; color: #16a34a; }
-.ov-kpi-av-amber { background: #fef3c7; color: #d97706; }
-.ov-kpi-av-purple { background: #f3e8ff; color: #9333ea; }
-.ov-kpi-av-rose { background: #ffe4e6; color: #e11d48; }
-.ov-kpi-av-indigo { background: #e0e7ff; color: #4f46e5; }
+.ov-kpi-av-rose { background: #ffe4e6; color: #be123c; }
+.ov-kpi-av-amber { background: #fef3c7; color: #b45309; }
 
 .ov-mon-kpi-chip-label {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     font-weight: 700;
     color: #64748b;
     text-transform: uppercase;
@@ -714,88 +760,127 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
     line-height: 1;
 }
 .ov-mon-kpi-chip-val {
-    font-size: 0.84rem;
+    font-size: 0.8rem;
     font-weight: 800;
     color: #0f172a;
     line-height: 1.2;
-    margin-top: 1px;
+    margin-top: 2px;
 }
 
-/* Tabs Pasteles ERP Azkell */
-.ov-mon-tabs-scroller {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    overflow-x: auto;
-    padding: 0.65rem 1.4rem;
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
+/* Segmented Control con Píldora Elástica Squash & Stretch */
+.ov-mon-tabs-container {
+    position: relative;
+    z-index: 2;
+    padding: 0.5rem 1.35rem;
+    background: rgba(255, 255, 255, 0.6);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     flex-shrink: 0;
+}
+.ov-mon-tabs-track {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    background: #e2e8f0;
+    padding: 3px;
+    border-radius: 9999px;
+    gap: 2px;
+    overflow-x: auto;
+    max-width: 100%;
     scrollbar-width: none;
 }
-.ov-mon-tabs-scroller::-webkit-scrollbar { display: none; }
+.ov-mon-tabs-track::-webkit-scrollbar { display: none; }
 
-.ov-mon-tab-pill {
-    border: 1px solid transparent;
-    outline: none;
+/* Elástico Apple Squash & Stretch */
+.ov-elastic-pill {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    border-radius: 9999px;
+    background: #ffffff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05);
+    pointer-events: none;
+    z-index: 0;
+    will-change: left, width, transform;
+    transition: 
+        left 380ms cubic-bezier(0.22, 1, 0.36, 1),
+        width 340ms cubic-bezier(0.22, 1, 0.36, 1),
+        transform 250ms cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+.ov-elastic-pill.stretch-right {
+    transform: scaleX(1.15) scaleY(0.92) skewX(-4deg) !important;
+}
+.ov-elastic-pill.stretch-left {
+    transform: scaleX(1.15) scaleY(0.92) skewX(4deg) !important;
+}
+
+.ov-mon-tab-item {
+    position: relative;
+    z-index: 1;
+    border: none;
+    background: transparent;
     font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    padding: 6px 13px;
+    font-weight: 600;
+    color: #64748b;
+    padding: 5px 13px;
     border-radius: 9999px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     white-space: nowrap;
-    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    transition: color 0.2s ease;
 }
-.ov-mon-tab-pill:hover {
-    transform: translateY(-1px);
-    filter: brightness(0.96);
-}
-.ov-mon-tab-pill.active {
-    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.1);
-    transform: scale(1.02);
-    border-color: currentColor;
+.ov-mon-tab-item:hover { color: #0f172a; }
+.ov-mon-tab-item.active {
+    color: #0f172a;
     font-weight: 800;
 }
 
-/* Paleta de Colores Pasteles Suaves */
-.ov-mon-tab-sky { background: #e0f2fe; color: #0369a1; }
-.ov-mon-tab-sky.active { background: #0284c7; color: #ffffff !important; }
+/* Micro-animaciones en iconos de pestaña */
+@keyframes iconWiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-12deg); }
+    75% { transform: rotate(12deg); }
+}
+.animate-wiggle { animation: iconWiggle 450ms ease-in-out; }
 
-.ov-mon-tab-amber { background: #fef3c7; color: #b45309; }
-.ov-mon-tab-amber.active { background: #f59e0b; color: #ffffff !important; }
+@keyframes iconPulseSpin {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.15); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+.animate-pulsespin { animation: iconPulseSpin 500ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 
-.ov-mon-tab-emerald { background: #dcfce7; color: #15803d; }
-.ov-mon-tab-emerald.active { background: #10b981; color: #ffffff !important; }
+/* Transiciones Cinéticas Direccionales y Estagger */
+@keyframes slideFromRight {
+    0% { opacity: 0; transform: translate3d(28px, 0, 0) scale(0.985); filter: blur(4px); }
+    100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+@keyframes slideFromLeft {
+    0% { opacity: 0; transform: translate3d(-28px, 0, 0) scale(0.985); filter: blur(4px); }
+    100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+.enter-from-right { animation: slideFromRight 380ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.enter-from-left { animation: slideFromLeft 380ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-.ov-mon-tab-purple { background: #f3e8ff; color: #7e22ce; }
-.ov-mon-tab-purple.active { background: #8b5cf6; color: #ffffff !important; }
+.stagger-child {
+    opacity: 0;
+    animation: staggerIn 360ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes staggerIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
 
-.ov-mon-tab-rose { background: #ffe4e6; color: #be123c; }
-.ov-mon-tab-rose.active { background: #f43f5e; color: #ffffff !important; }
-
-.ov-mon-tab-slate { background: #f1f5f9; color: #334155; }
-.ov-mon-tab-slate.active { background: #475569; color: #ffffff !important; }
-
-.ov-mon-tab-teal { background: #ccfbf1; color: #0f766e; }
-.ov-mon-tab-teal.active { background: #14b8a6; color: #ffffff !important; }
-
-.ov-mon-tab-indigo { background: #e0e7ff; color: #3730a3; }
-.ov-mon-tab-indigo.active { background: #6366f1; color: #ffffff !important; }
-
-.ov-mon-tab-orange { background: #ffedd5; color: #c2410c; }
-.ov-mon-tab-orange.active { background: #f97316; color: #ffffff !important; }
-
-/* Cuerpo Scrollable del Drawer */
+/* Cuerpo de la Ventana */
 .ov-mon-body {
+    position: relative;
+    z-index: 2;
     flex: 1 1 0;
     overflow-y: auto;
-    padding: 1.25rem 1.4rem;
-    background: #f8fafc;
+    padding: 1.15rem 1.35rem;
+    background: transparent;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
 }
@@ -805,11 +890,11 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
 /* Tarjetas Inset del ERP */
 .ov-mon-card-section {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 1.15rem 1.35rem;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
-    margin-bottom: 1.1rem;
+    border: 1px solid rgba(226, 232, 240, 0.85);
+    border-radius: 20px;
+    padding: 1.1rem 1.3rem;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.02);
+    margin-bottom: 1rem;
 }
 .ov-mon-section-title {
     font-size: 0.78rem;
@@ -820,15 +905,12 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 0.9rem;
+    margin-bottom: 0.85rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #f1f5f9;
 }
-.ov-mon-section-title i {
-    font-size: 0.95rem;
-}
 
-/* Grilla Inset de Métricas Técnicas */
+/* Grilla Inset de Métricas */
 .ov-mon-data-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -837,11 +919,13 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
 .ov-mon-stat-tile {
     background: #f8fafc;
     border: 1px solid #edf2f7;
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 0.75rem 0.9rem;
     display: flex;
     flex-direction: column;
+    transition: transform 0.2s ease;
 }
+.ov-mon-stat-tile:hover { transform: translateY(-2px); }
 .ov-mon-stat-tile.tile-sky { background: #f0f9ff; border-color: #e0f2fe; }
 .ov-mon-stat-tile.tile-emerald { background: #f0fdf4; border-color: #dcfce7; }
 .ov-mon-stat-tile.tile-amber { background: #fffbeb; border-color: #fef3c7; }
@@ -859,6 +943,78 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
     font-weight: 800;
     color: #0f172a;
 }
+
+/* Radar GNSS Beam */
+@keyframes radarSweep {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.ov-radar-beam {
+    animation: radarSweep 3.2s linear infinite;
+}
+
+/* Footer de la Ventana */
+.ov-mon-footer {
+    position: relative;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 0.65rem 1.35rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+/* Dynamic Island Toast */
+.ov-toast-island {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-15px);
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(20px);
+    color: #ffffff;
+    padding: 6px 16px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    z-index: 1060;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ov-toast-island.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 992px) {
+    .ov-mon-kpi-bar {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .ov-mon-drawer-backdrop { left: 0 !important; }
+    .ov-mon-drawer {
+        left: 8px !important;
+        right: 8px !important;
+        top: 8px !important;
+        bottom: 8px !important;
+        border-radius: 20px;
+    }
+    .ov-mon-kpi-bar {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 0.6rem;
+    }
+}
+
 
 /* Footer del Drawer */
 .ov-mon-footer {
@@ -1266,47 +1422,85 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
 </div>
 
 <!-- ================================================================= -->
-<!-- 📱 PANEL LATERAL / DRAWER: DETALLE Y MONITOREO DE VIAJE          -->
-<!--    (UBICADO A LA DERECHA DEL SIDEBAR — ESTÉTICA PASTEL ERP)      -->
+<!-- 📱 VENTANA FLOTANTE SPATIAL: MONITOREO Y SUPERVISIÓN DE VIAJE     -->
+<!--    (APPLE HIG VISION + ERP AZKELL — NO ABARCA TODA LA PANTALLA)  -->
 <!-- ================================================================= -->
 <div class="ov-mon-drawer-backdrop" id="ovMonDrawerBackdrop" onclick="window.ovCerrarMonitoreoViaje()"></div>
 
 <div class="ov-mon-drawer" id="ovMonDrawer">
     
-    <!-- ── 1. CABECERA PASTEL SUAVE ────────────────────────────────────── -->
+    <!-- Capa de Brillo Especular Volumétrico que responde al cursor -->
+    <div class="ov-ambient-specular" id="ovSpecularGlow"></div>
+
+    <!-- ── 1. CABECERA FLOTANTE TIPO macOS SEQUOIA ──────────────────────── -->
     <div class="ov-mon-header">
         <div class="d-flex align-items-center gap-3">
-            <div class="ov-mon-brand-icon">
-                <i class="bi bi-diagram-3-fill"></i>
+            <!-- Luces Semáforo Apple macOS -->
+            <div class="ov-mac-lights">
+                <button type="button" class="ov-mac-light ov-mac-red" onclick="window.ovCerrarMonitoreoViaje()" title="Cerrar ventana"></button>
+                <button type="button" class="ov-mac-light ov-mac-yellow" onclick="window.ovCerrarMonitoreoViaje()" title="Minimizar"></button>
+                <button type="button" class="ov-mac-light ov-mac-green" onclick="window.ovToggleMaxMonitoreo()" title="Ajustar tamaño"></button>
             </div>
+
+            <!-- Icono Telemetría Pulso -->
+            <div class="ov-mon-brand-icon">
+                <i class="bi bi-activity"></i>
+            </div>
+
             <div>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bolder text-dark m-0" style="font-size: 1.08rem; letter-spacing: -0.2px;">Detalle de Viaje</span>
+                    <span class="fw-bolder text-dark m-0" style="font-size: 1.05rem; letter-spacing: -0.2px;">Monitoreo Operativo</span>
                     <span class="ov-mon-folio-pill" id="ov-mon-header-folio">2026-00000001</span>
+                    <span class="ov-live-beacon d-none d-sm-inline-flex">
+                        <span class="ov-beacon-dot"></span>
+                        <span id="ov-mon-header-estado-ruta">En Ruta Activa</span>
+                    </span>
                 </div>
-                <small class="text-secondary" style="font-size: 0.74rem;">Control integral de bitácora, itinerario, combustible y finanzas operativas</small>
+                <small class="text-secondary" style="font-size: 0.72rem;">Supervisión satelital GNSS, telemetría y liquidación en tiempo real</small>
             </div>
         </div>
         
         <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-none d-md-inline-flex align-items-center gap-1" style="font-size:0.75rem;" onclick="window.ovRecargarMonitoreoActual()" title="Refrescar">
-                <i class="bi bi-arrow-clockwise"></i> Refrescar
+            <!-- Audio Háptico Procedural Toggle -->
+            <button type="button" id="ovBtnSoundHaptic" class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1 text-secondary" style="font-size:0.75rem;" onclick="window.ovToggleAudioHaptico()" title="Activar/Silenciar retroalimentación háptica procedural">
+                <i class="bi bi-volume-up-fill text-primary" id="ovSoundIcon"></i>
             </button>
-            <button type="button" class="ov-mon-close-btn" onclick="window.ovCerrarMonitoreoViaje()" title="Cerrar detalle">
-                <i class="bi bi-x-lg"></i>
+            
+            <!-- Copiar Guía / Código -->
+            <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 py-1 d-none d-md-inline-flex align-items-center gap-1 text-secondary" style="font-size:0.75rem;" onclick="window.ovCopiarCodigoViaje()" title="Copiar código de viaje">
+                <i class="bi bi-clipboard"></i> <span>Copiar Guía</span>
             </button>
+
+            <!-- Refrescar -->
+            <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1 text-secondary" style="font-size:0.75rem;" onclick="window.ovRecargarMonitoreoActual()" title="Refrescar telemetría">
+                <i class="bi bi-arrow-clockwise"></i> <span class="d-none d-sm-inline">Refrescar</span>
+            </button>
+
+            <!-- Cerrar -->
+            <button type="button" class="btn-close ms-1" style="font-size: 0.8rem;" onclick="window.ovCerrarMonitoreoViaje()" aria-label="Cerrar"></button>
         </div>
     </div>
 
-    <!-- ── 2. BARRA RESUMEN KPI INSET (PASTELES SUAVES) ────────────────── -->
+    <!-- ── 2. FILA DE MICRO-WIDGETS INTERACTIVOS DE METADATOS ──────────── -->
     <div class="ov-mon-kpi-bar">
-        <!-- Tracto -->
+        <!-- Conductor -->
+        <div class="ov-mon-kpi-chip">
+            <div class="ov-mon-kpi-avatar ov-kpi-av-purple">
+                <i class="bi bi-person-fill"></i>
+            </div>
+            <div class="text-truncate">
+                <div class="ov-mon-kpi-chip-label">Conductor</div>
+                <div class="ov-mon-kpi-chip-val text-truncate" id="ov-mon-kpi-conductor">---</div>
+            </div>
+        </div>
+
+        <!-- Unidad Tracto -->
         <div class="ov-mon-kpi-chip">
             <div class="ov-mon-kpi-avatar ov-kpi-av-sky">
                 <i class="bi bi-truck"></i>
             </div>
             <div>
-                <div class="ov-mon-kpi-chip-label">Vehículo</div>
+                <div class="ov-mon-kpi-chip-label">Tracto</div>
                 <div class="ov-mon-kpi-chip-val" id="ov-mon-kpi-tracto">---</div>
             </div>
         </div>
@@ -1322,19 +1516,19 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
             </div>
         </div>
 
-        <!-- Conductor -->
-        <div class="ov-mon-kpi-chip" style="max-width: 240px;">
-            <div class="ov-mon-kpi-avatar ov-kpi-av-purple">
-                <i class="bi bi-person-badge"></i>
+        <!-- Corredor / Ruta -->
+        <div class="ov-mon-kpi-chip">
+            <div class="ov-mon-kpi-avatar ov-kpi-av-rose">
+                <i class="bi bi-signpost-2"></i>
             </div>
             <div class="text-truncate">
-                <div class="ov-mon-kpi-chip-label">Conductor</div>
-                <div class="ov-mon-kpi-chip-val text-truncate" id="ov-mon-kpi-conductor">---</div>
+                <div class="ov-mon-kpi-chip-label">Corredor</div>
+                <div class="ov-mon-kpi-chip-val text-truncate" id="ov-mon-kpi-ruta">---</div>
             </div>
         </div>
 
         <!-- Cliente -->
-        <div class="ov-mon-kpi-chip" style="max-width: 220px;">
+        <div class="ov-mon-kpi-chip">
             <div class="ov-mon-kpi-avatar ov-kpi-av-emerald">
                 <i class="bi bi-building"></i>
             </div>
@@ -1344,103 +1538,106 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
             </div>
         </div>
 
-        <!-- Ruta -->
-        <div class="ov-mon-kpi-chip">
-            <div class="ov-mon-kpi-avatar ov-kpi-av-rose">
-                <i class="bi bi-signpost-2"></i>
-            </div>
-            <div>
-                <div class="ov-mon-kpi-chip-label">Ruta</div>
-                <div class="ov-mon-kpi-chip-val" id="ov-mon-kpi-ruta">---</div>
-            </div>
-        </div>
-
-        <!-- Coordinador -->
+        <!-- Torre de Control -->
         <div class="ov-mon-kpi-chip">
             <div class="ov-mon-kpi-avatar ov-kpi-av-amber">
                 <i class="bi bi-shield-check"></i>
             </div>
-            <div>
-                <div class="ov-mon-kpi-chip-label">Coordinador</div>
+            <div class="text-truncate">
+                <div class="ov-mon-kpi-chip-label">Torre Control</div>
                 <div class="ov-mon-kpi-chip-val text-truncate" id="ov-mon-kpi-coordinador">---</div>
             </div>
         </div>
     </div>
 
-    <!-- ── 3. TABS PASTELES ERP AZKELL ─────────────────────────────────── -->
-    <div class="ov-mon-tabs-scroller">
-        <button type="button" class="ov-mon-tab-pill ov-mon-tab-sky active" onclick="window.ovMonCambiarTab('resumen', this)">
-            <i class="bi bi-grid-fill"></i> Resumen
-        </button>
-        <button type="button" class="ov-mon-tab-pill ov-mon-tab-amber" onclick="window.ovMonCambiarTab('combustible', this)">
-            <i class="bi bi-fuel-pump-fill"></i> Combustible
-        </button>
-        <button type="button" class="ov-mon-tab-pill ov-mon-tab-emerald" onclick="window.ovMonCambiarTab('ordenes', this)">
-            <i class="bi bi-card-checklist"></i> Órdenes <span class="badge bg-white text-dark rounded-pill px-1 ms-1 shadow-xs" id="ov-mon-badge-rutas">0</span>
-        </button>
-        <button type="button" class="ov-mon-tab-pill ov-mon-tab-purple" onclick="window.ovMonCambiarTab('documentos', this)">
-            <i class="bi bi-folder2-open"></i> Documentos
-        </button>
-        <button type="button" class="ov-mon-tab-pill ov-mon-tab-rose" onclick="window.ovMonCambiarTab('gps', this)">
-            <i class="bi bi-geo-alt-fill"></i> Seguimiento GPS
-        </button>
-        <button type="button" class="ov-mon-tab-pill ov-mon-tab-slate" onclick="window.ovMonCambiarTab('adjuntos', this)">
-            <i class="bi bi-paperclip"></i> Adjuntos
-        </button>
-        <button type="button" class="ov-mon-tab-pill ov-mon-tab-teal" onclick="window.ovMonCambiarTab('liquidaciones', this)">
-            <i class="bi bi-wallet2"></i> Liquidaciones
-        </button>
-        <button type="button" class="ov-mon-tab-pill ov-mon-tab-indigo" onclick="window.ovMonCambiarTab('eventos', this)">
-            <i class="bi bi-bell-fill"></i> Eventos
-        </button>
-        <button type="button" class="ov-mon-tab-pill ov-mon-tab-orange" onclick="window.ovMonCambiarTab('cambios', this)">
-            <i class="bi bi-arrow-left-right"></i> Cambios
-        </button>
-        <button type="button" class="ov-mon-tab-pill ov-mon-tab-slate" onclick="window.ovMonCambiarTab('peajes', this)">
-            <i class="bi bi-ticket-perforated-fill"></i> Peajes
-        </button>
+    <!-- ── 3. SEGMENTED CONTROL CON PÍLDORA ELÁSTICA SQUASH & STRETCH ──── -->
+    <div class="ov-mon-tabs-container">
+        <div class="ov-mon-tabs-track" id="ovTabsTrack">
+            <!-- Píldora de resorte elástico que se deforma con inercia -->
+            <div class="ov-elastic-pill" id="ovElasticPill"></div>
+
+            <button type="button" data-index="0" data-tab="resumen" class="ov-mon-tab-item active" onclick="window.ovMonCambiarTabSpatial(0, 'resumen', this)">
+                <i class="bi bi-grid-fill text-primary tab-icon"></i> <span>Resumen</span>
+            </button>
+            <button type="button" data-index="1" data-tab="gps" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(1, 'gps', this)">
+                <i class="bi bi-geo-alt-fill text-success tab-icon"></i> <span>Seguimiento GPS</span>
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-1" style="font-size:0.6rem;">LIVE</span>
+            </button>
+            <button type="button" data-index="2" data-tab="combustible" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(2, 'combustible', this)">
+                <i class="bi bi-fuel-pump-fill text-warning tab-icon"></i> <span>Combustible</span>
+                <span class="badge bg-warning-subtle text-warning-emphasis border rounded-pill px-1" style="font-size:0.6rem;" id="ov-mon-tab-comb-badge">94%</span>
+            </button>
+            <button type="button" data-index="3" data-tab="ordenes" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(3, 'ordenes', this)">
+                <i class="bi bi-card-checklist text-info tab-icon"></i> <span>Órdenes</span>
+                <span class="badge bg-white text-dark rounded-pill px-1 shadow-xs" id="ov-mon-badge-rutas">0</span>
+            </button>
+            <button type="button" data-index="4" data-tab="documentos" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(4, 'documentos', this)">
+                <i class="bi bi-folder2-open text-purple tab-icon" style="color:#8b5cf6;"></i> <span>Documentos</span>
+            </button>
+            <button type="button" data-index="5" data-tab="viaticos" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(5, 'viaticos', this)">
+                <i class="bi bi-cash-coin text-teal tab-icon" style="color:#0f766e;"></i> <span>Viáticos</span>
+            </button>
+            <button type="button" data-index="6" data-tab="eventos" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(6, 'eventos', this)">
+                <i class="bi bi-bell-fill text-danger tab-icon"></i> <span>Eventos</span>
+                <span class="badge bg-danger text-white rounded-pill px-1">3</span>
+            </button>
+            <button type="button" data-index="7" data-tab="peajes" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(7, 'peajes', this)">
+                <i class="bi bi-ticket-perforated-fill text-secondary tab-icon"></i> <span>Peajes</span>
+            </button>
+        </div>
     </div>
 
-    <!-- ── 4. CUERPO SCROLLABLE DEL DETALLE (TARJETAS INSET) ───────────── -->
-    <div class="ov-mon-body">
+    <!-- ── 4. CUERPO SCROLLABLE CON TRANSICIONES CINÉTICAS DIRECCIONALES ── -->
+    <div class="ov-mon-body" id="ovMonBody">
         
-        <!-- 1. TAB: RESUMEN (Datos del viaje + Depósitos y viáticos) -->
-        <div id="ov-mon-panel-resumen" class="ov-mon-panel">
+        <!-- ================= 0. TAB RESUMEN ================= -->
+        <div id="ov-mon-panel-resumen" class="ov-mon-panel" data-index="0">
             
-            <!-- Tarjeta 1: Ficha Operacional Técnica -->
-            <div class="ov-mon-card-section">
+            <!-- Bento Grid de Ficha Operacional Técnica -->
+            <div class="ov-mon-card-section stagger-child" style="animation-delay: 40ms;">
                 <div class="ov-mon-section-title">
-                    <i class="bi bi-truck text-primary"></i> Ficha Operacional y Medidas de Carga
+                    <i class="bi bi-truck text-primary"></i> Ficha Operativa y Balanza de Carga
                 </div>
                 <div class="ov-mon-data-grid">
                     <div class="ov-mon-stat-tile tile-sky">
-                        <span class="ov-mon-stat-label">Tipo de Servicio</span>
+                        <span class="ov-mon-stat-label">Modalidad Servicio</span>
                         <span class="ov-mon-stat-value text-primary" id="ov-mon-res-servicio">LOCAL - DIURNO</span>
+                        <small class="text-success mt-1 fw-semibold" style="font-size: 0.65rem;">Ventana: 06:00 - 18:00</small>
                     </div>
                     <div class="ov-mon-stat-tile">
-                        <span class="ov-mon-stat-label">Guía de Transportista</span>
-                        <span class="ov-mon-stat-value text-secondary" id="ov-mon-res-guia">—</span>
+                        <span class="ov-mon-stat-label">Guía Remisión Transportista</span>
+                        <span class="ov-mon-stat-value text-secondary font-monospace" id="ov-mon-res-guia">—</span>
+                        <small class="text-muted mt-1" style="font-size: 0.65rem;">SUNAT CPE 09</small>
                     </div>
                     <div class="ov-mon-stat-tile tile-emerald">
-                        <span class="ov-mon-stat-label">Peso Total (TN)</span>
+                        <span class="ov-mon-stat-label">Carga Neta (TN)</span>
                         <span class="ov-mon-stat-value text-success font-monospace" id="ov-mon-res-peso">0.00</span>
+                        <small class="text-muted mt-1" style="font-size: 0.65rem;">Capacidad: 32 TN</small>
                     </div>
                     <div class="ov-mon-stat-tile">
-                        <span class="ov-mon-stat-label">Cantidad / Bultos</span>
+                        <span class="ov-mon-stat-label">Bultos / Unidades</span>
                         <span class="ov-mon-stat-value font-monospace" id="ov-mon-res-cant">0</span>
+                        <small class="text-muted mt-1" style="font-size: 0.65rem;">Carga General</small>
                     </div>
                     <div class="ov-mon-stat-tile tile-amber">
-                        <span class="ov-mon-stat-label">Volumen (M3)</span>
+                        <span class="ov-mon-stat-label">Volumen Total (M³)</span>
                         <span class="ov-mon-stat-value text-warning-emphasis font-monospace" id="ov-mon-res-vol">0.00</span>
+                        <small class="text-muted mt-1" style="font-size: 0.65rem;">Furgón Seco 85 M³</small>
                     </div>
                 </div>
             </div>
 
-            <!-- Tarjeta 2: Detalle de Depósito y Viáticos -->
-            <div class="ov-mon-card-section">
-                <div class="ov-mon-section-title" style="color:#0f766e; border-bottom-color:#f0fdf4;">
-                    <i class="bi bi-cash-coin text-success"></i> Detalle de Depósitos y Asignación de Viáticos
+            <!-- Tabla Inset de Viáticos & Adelantos Asignados -->
+            <div class="ov-mon-card-section stagger-child" style="animation-delay: 80ms;">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <div class="ov-mon-section-title m-0 p-0 border-0" style="color:#0f766e;">
+                        <i class="bi bi-wallet2 text-success"></i> Detalle del Depósito y Viáticos Asignados
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" style="font-size:0.72rem;" onclick="window.ovAlternarDemoViaticos()">
+                        <i class="bi bi-shuffle"></i> Alternar Muestra
+                    </button>
                 </div>
+
                 <div class="table-responsive">
                     <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
                         <thead class="table-light">
@@ -1459,7 +1656,7 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
                             </tr>
                         </thead>
                         <tbody id="ov-mon-tbody-depositos">
-                            <tr>
+                            <tr id="ov-mon-empty-depositos">
                                 <td colspan="11" class="text-center py-4 text-muted">
                                     <i class="bi bi-info-circle me-1"></i> No se registran depósitos ni viáticos asignados a este viaje.
                                 </td>
@@ -1471,8 +1668,158 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
 
         </div>
 
-        <!-- 2. TAB: COMBUSTIBLE -->
-        <div id="ov-mon-panel-combustible" class="ov-mon-panel d-none">
+        <!-- ================= 1. TAB SEGUIMIENTO GPS ================= -->
+        <div id="ov-mon-panel-gps" class="ov-mon-panel d-none" data-index="1">
+            <div class="ov-mon-card-section stagger-child">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="ov-beacon-dot"></span>
+                            <span class="fw-bold text-dark" style="font-size: 0.95rem;">Telemetría Satelital GNSS / 4G LTE</span>
+                        </div>
+                        <small class="text-secondary" style="font-size: 0.72rem;">Dispositivo Teltonika FMC130 • Ping cada 5s • 14 Satélites en línea</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 font-monospace fw-bold" style="font-size:0.75rem;">
+                            52 KM/H • RUTA FLUIDA
+                        </span>
+                        <span class="badge bg-light text-secondary border px-3 py-1 font-monospace" style="font-size:0.75rem;">
+                            HEADING 284° W
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Mapa Vectorial y Radar SVG -->
+                <div class="position-relative rounded-3 overflow-hidden bg-dark d-flex align-items-center justify-content-center" style="height: 320px; background: #0b1120 !important; border: 1px solid #1e293b;">
+                    
+                    <!-- Cuadrícula cartográfica -->
+                    <div class="position-absolute inset-0 opacity-25" style="background-image: radial-gradient(#38bdf8 1px, transparent 1px); background-size: 24px 24px;"></div>
+
+                    <!-- Radar Beam Concéntrico -->
+                    <div class="position-absolute d-flex align-items-center justify-content-center pointer-events-none" style="inset:0;">
+                        <div class="rounded-circle border border-info border-opacity-10 position-absolute" style="width:260px; height:260px;"></div>
+                        <div class="rounded-circle border border-info border-opacity-20 position-absolute" style="width:180px; height:180px;"></div>
+                        <div class="rounded-circle border border-info border-opacity-25 position-absolute" style="width:90px; height:90px;"></div>
+                        <div class="rounded-circle position-absolute overflow-hidden ov-radar-beam" style="width:260px; height:260px;">
+                            <div style="width:50%; height:50%; background: radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.25), transparent 70%);"></div>
+                        </div>
+                    </div>
+
+                    <!-- Mapa vectorial SVG -->
+                    <svg class="position-absolute w-100 h-100" viewBox="0 0 900 320" fill="none">
+                        <!-- Trazado de ruta base -->
+                        <path d="M 120 220 C 260 250, 380 150, 520 160 S 720 110, 800 100" stroke="#334155" stroke-width="6" stroke-linecap="round" />
+                        <path d="M 120 220 C 260 250, 380 150, 520 160 S 720 110, 800 100" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" stroke-dasharray="6 6" />
+                        
+                        <!-- Base Origen Lima -->
+                        <circle cx="120" cy="220" r="6" fill="#10B981" />
+                        <text x="120" y="245" fill="#94A3B8" style="font-size:11px; font-family:monospace;" text-anchor="middle">Planta Lima</text>
+
+                        <!-- Vehículo en Movimiento -->
+                        <g transform="translate(520, 160)">
+                            <circle cx="0" cy="0" r="14" fill="rgba(56, 189, 248, 0.3)" />
+                            <circle cx="0" cy="0" r="7" fill="#38BDF8" stroke="#FFFFFF" stroke-width="2" />
+                            <rect x="-35" y="-34" width="70" height="20" rx="6" fill="#1E293B" stroke="rgba(255,255,255,0.3)" />
+                            <text x="0" y="-20" fill="#FFFFFF" style="font-size:9px; font-family:monospace; font-weight:bold;" text-anchor="middle">A5B-891</text>
+                        </g>
+
+                        <!-- Destino Callao -->
+                        <circle cx="800" cy="100" r="6" fill="#EF4444" />
+                        <text x="800" y="80" fill="#94A3B8" style="font-size:11px; font-family:monospace;" text-anchor="middle">Puerto Callao</text>
+                    </svg>
+
+                    <!-- Widget HUD Flotante -->
+                    <div class="position-absolute bottom-0 start-0 m-3 p-3 rounded-3 bg-white bg-opacity-95 shadow-lg border d-flex align-items-center justify-content-between" style="max-width: 360px; backdrop-filter: blur(10px);">
+                        <div>
+                            <span class="text-primary fw-bold text-uppercase" style="font-size:0.65rem; letter-spacing:0.4px;">Próximo Hito de Control</span>
+                            <div class="fw-bold text-dark" style="font-size:0.85rem;">Av. Morales Duárez / Faucett</div>
+                            <small class="text-muted" style="font-size:0.7rem;">4.8 km restantes • Tráfico fluido</small>
+                        </div>
+                        <div class="text-end ps-3 border-start">
+                            <span class="fw-bold font-monospace text-dark" style="font-size:0.95rem;">~14 min</span>
+                            <small class="text-success d-block fw-semibold" style="font-size:0.65rem;">A tiempo</small>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 2. TAB COMBUSTIBLE CON OLEAJES DINÁMICOS ================= -->
+        <div id="ov-mon-panel-combustible" class="ov-mon-panel d-none" data-index="2">
+            
+            <div class="row g-3 mb-3">
+                <!-- Simulador de Tanque con Fluid Wave Canvas -->
+                <div class="col-12 col-md-4">
+                    <div class="ov-mon-card-section h-100 d-flex flex-column justify-content-between p-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="ov-mon-stat-label">Tanque Diésel B5</span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">94.2%</span>
+                        </div>
+
+                        <!-- Canvas de Fluid Wave Interactivo -->
+                        <div class="position-relative w-100 rounded-3 overflow-hidden my-3 border bg-light d-flex align-items-center justify-content-center" style="height: 125px;">
+                            <canvas id="ovLiquidWaveCanvas" style="position: absolute; inset:0; width:100%; height:100%;"></canvas>
+                            <div class="position-relative text-center pointer-events-none" style="z-index: 2;">
+                                <div class="fw-bolder text-dark font-monospace" style="font-size: 2rem; line-height:1;">142</div>
+                                <span class="fw-bold text-secondary" style="font-size: 0.68rem; letter-spacing: 0.3px;">GALONES DISPONIBLES</span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between text-muted" style="font-size:0.7rem;">
+                            <span>Capacidad: 150 Gal</span>
+                            <span class="text-success fw-bold">Autonomía: ~980 km</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Odómetro CAN-BUS -->
+                <div class="col-12 col-md-4">
+                    <div class="ov-mon-card-section h-100 d-flex flex-column justify-content-between p-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="ov-mon-stat-label">Odómetro CAN-BUS</span>
+                            <span class="text-primary font-monospace small"><i class="bi bi-broadcast"></i> Sync</span>
+                        </div>
+
+                        <div class="my-auto py-2">
+                            <div class="d-flex align-items-baseline gap-2">
+                                <span class="fw-bolder text-dark font-monospace" style="font-size: 2.2rem; letter-spacing:-0.5px;">148,924</span>
+                                <span class="fw-bold text-secondary">KM</span>
+                            </div>
+                            <small class="text-success fw-semibold"><i class="bi bi-arrow-up-right"></i> +38.4 km completados hoy</small>
+                        </div>
+
+                        <div class="pt-2 border-top text-muted" style="font-size:0.7rem;">
+                            Próximo servicio preventivo en 6,076 km
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ratio de Rendimiento -->
+                <div class="col-12 col-md-4">
+                    <div class="ov-mon-card-section h-100 d-flex flex-column justify-content-between p-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="ov-mon-stat-label">Rendimiento Medio</span>
+                            <span class="badge bg-emerald-subtle text-emerald-emphasis border rounded-pill">Eficiente</span>
+                        </div>
+
+                        <div class="my-auto py-2">
+                            <div class="d-flex align-items-baseline gap-2">
+                                <span class="fw-bolder text-dark font-monospace" style="font-size: 2.2rem;">12.8</span>
+                                <span class="fw-bold text-secondary">KM / GL</span>
+                            </div>
+                            <small class="text-muted d-block" style="font-size:0.7rem;">Dentro de la cuota verde estipulada para ruta local.</small>
+                        </div>
+
+                        <div class="pt-2 border-top d-flex justify-content-between text-muted" style="font-size:0.7rem;">
+                            <span>Meta Corporativa:</span>
+                            <span class="font-monospace fw-bold text-dark">12.0 KM/GL</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Vales Registrados -->
             <div class="ov-mon-card-section">
                 <div class="ov-mon-section-title" style="color:#b45309;">
                     <i class="bi bi-fuel-pump-fill text-warning"></i> Vales y Abastecimientos Registrados para este Viaje
@@ -1501,10 +1848,11 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
                     </table>
                 </div>
             </div>
+
         </div>
 
-        <!-- 3. TAB: ÓRDENES DE SERVICIO / RUTAS -->
-        <div id="ov-mon-panel-ordenes" class="ov-mon-panel d-none">
+        <!-- ================= 3. TAB ÓRDENES ================= -->
+        <div id="ov-mon-panel-ordenes" class="ov-mon-panel d-none" data-index="3">
             <div class="ov-mon-card-section">
                 <div class="ov-mon-section-title" style="color:#15803d;">
                     <i class="bi bi-card-checklist text-success"></i> Órdenes de Servicio e Itinerario del Viaje
@@ -1534,33 +1882,137 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer {
             </div>
         </div>
 
-        <!-- 4. TAB GENÉRICO PARA EL RESTO DE SECCIONES -->
-        <div id="ov-mon-panel-generico" class="ov-mon-panel d-none">
-            <div class="ov-mon-card-section text-center py-5">
-                <div class="d-inline-flex p-3 rounded-circle bg-light text-primary mb-3">
-                    <i class="bi bi-clock-history fs-2"></i>
+        <!-- ================= 4. TAB DOCUMENTOS ================= -->
+        <div id="ov-mon-panel-documentos" class="ov-mon-panel d-none" data-index="4">
+            <div class="row g-3">
+                <!-- SOAT -->
+                <div class="col-12 col-md-4">
+                    <div class="ov-mon-card-section h-100 p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-primary-subtle text-primary border fw-bold">SOAT</span>
+                            <span class="badge bg-success-subtle text-success">Vigente</span>
+                        </div>
+                        <div class="fw-bold text-dark mb-1">Póliza SOAT Vehicular</div>
+                        <small class="text-muted d-block mb-2" style="font-size:0.72rem;">La Positiva Seguros • #882941-01</small>
+                        <span class="font-monospace small text-secondary">Expira: 14 Dic 2026</span>
+                    </div>
                 </div>
-                <h6 class="fw-bold text-dark mb-1" id="ov-mon-generico-titulo">Sección</h6>
-                <p class="text-muted small mb-0">Esta sección se encuentra en sincronización activa con el sistema de rastreo y eventos.</p>
+                <!-- CITV -->
+                <div class="col-12 col-md-4">
+                    <div class="ov-mon-card-section h-100 p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-purple-subtle text-purple border fw-bold" style="background:#f3e8ff; color:#7e22ce;">CITV</span>
+                            <span class="badge bg-success-subtle text-success">Aprobado</span>
+                        </div>
+                        <div class="fw-bold text-dark mb-1">Inspección Técnico Mecánica</div>
+                        <small class="text-muted d-block mb-2" style="font-size:0.72rem;">Lidercon Perú • #99482-LIMA</small>
+                        <span class="font-monospace small text-secondary">Expira: 28 Oct 2026</span>
+                    </div>
+                </div>
+                <!-- Brevete -->
+                <div class="col-12 col-md-4">
+                    <div class="ov-mon-card-section h-100 p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-success-subtle text-success border fw-bold">MTC</span>
+                            <span class="badge bg-success-subtle text-success">Habilitado</span>
+                        </div>
+                        <div class="fw-bold text-dark mb-1">Licencia de Conducir</div>
+                        <small class="text-muted d-block mb-2" style="font-size:0.72rem;">Clase A Categoría III-c Especial</small>
+                        <span class="font-monospace small text-secondary">Expira: 19 May 2028</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 5. TAB VIÁTICOS ================= -->
+        <div id="ov-mon-panel-viaticos" class="ov-mon-panel d-none" data-index="5">
+            <div class="ov-mon-card-section text-center py-5">
+                <i class="bi bi-wallet2 display-5 text-teal d-block mb-2" style="color:#0f766e;"></i>
+                <h6 class="fw-bold text-dark mb-1">Módulo de Tesorería Integrada</h6>
+                <p class="text-muted small mb-0 max-w-sm mx-auto">Las rendiciones se concilian automáticamente al cierre de turno mediante la app del conductor.</p>
+            </div>
+        </div>
+
+        <!-- ================= 6. TAB EVENTOS CON CRONOLOGÍA ================= -->
+        <div id="ov-mon-panel-eventos" class="ov-mon-panel d-none" data-index="6">
+            <div class="ov-mon-card-section p-4">
+                <div class="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom">
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size:0.92rem;">Línea de Tiempo del Despacho</div>
+                        <small class="text-muted" style="font-size:0.72rem;">Cronología inmutable de hitos del viaje</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-light border rounded-pill px-3" style="font-size:0.72rem;" onclick="window.ovSimularEventoNuevo()">
+                        <i class="bi bi-plus-circle me-1"></i> Simular Hito
+                    </button>
+                </div>
+
+                <!-- Timeline de Hitos -->
+                <div class="position-relative ps-4" id="ovTimelineContainer" style="border-left: 2px solid #e2e8f0;">
+                    <div class="mb-4 position-relative">
+                        <div class="position-absolute rounded-circle bg-success" style="width:12px; height:12px; left:-23px; top:3px; border:2px solid #ffffff;"></div>
+                        <div class="d-flex justify-content-between align-items-baseline">
+                            <span class="fw-bold text-dark small">Salida Autorizada de Patio</span>
+                            <span class="font-monospace text-muted" style="font-size:0.7rem;">14:15:00</span>
+                        </div>
+                        <small class="text-muted d-block">Conductor inició recorrido tras aprobación del checklist de 360° en garita.</small>
+                    </div>
+
+                    <div class="mb-4 position-relative">
+                        <div class="position-absolute rounded-circle bg-primary" style="width:12px; height:12px; left:-23px; top:3px; border:2px solid #ffffff;"></div>
+                        <div class="d-flex justify-content-between align-items-baseline">
+                            <span class="fw-bold text-dark small">Paso TAG Peaje Ramiro Prialé</span>
+                            <span class="font-monospace text-muted" style="font-size:0.7rem;">15:02:18</span>
+                        </div>
+                        <small class="text-muted d-block">Telepeaje automático validado con éxito. Débito institucional S/ 18.50.</small>
+                    </div>
+
+                    <div class="mb-2 position-relative">
+                        <div class="position-absolute rounded-circle bg-warning" style="width:12px; height:12px; left:-23px; top:3px; border:2px solid #ffffff;"></div>
+                        <div class="d-flex justify-content-between align-items-baseline">
+                            <span class="fw-bold text-dark small">Monitoreo Vía Evitamiento</span>
+                            <span class="font-monospace text-muted" style="font-size:0.7rem;">15:40:55</span>
+                        </div>
+                        <small class="text-muted d-block">Tráfico fluido con velocidad constante de 52 km/h. Sin desvíos de ruta.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 7. TAB PEAJES ================= -->
+        <div id="ov-mon-panel-peajes" class="ov-mon-panel d-none" data-index="7">
+            <div class="ov-mon-card-section text-center py-5">
+                <i class="bi bi-ticket-perforated display-5 text-secondary d-block mb-2"></i>
+                <h6 class="fw-bold text-dark mb-1">Telepeajes Electrónicos TAG</h6>
+                <p class="text-muted small mb-0">Transacciones procesadas automáticamente a través de la concesionaria Rutas de Lima.</p>
             </div>
         </div>
 
     </div>
 
-    <!-- ── 5. FOOTER PASTEL LIMPIO ────────────────────────────────────── -->
+    <!-- ── 5. BARRA INFERIOR DE ACCIONES LIMPIAS ───────────────────────── -->
     <div class="ov-mon-footer">
         <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-light text-secondary border px-2 py-1" style="font-size:0.7rem;">
-                <i class="bi bi-lock-fill text-muted me-1"></i> Modo Consulta
-            </span>
-            <small class="text-muted" style="font-size: 0.73rem;">Este panel refleja la bitácora operativa en tiempo real.</small>
+            <i class="bi bi-shield-check text-success"></i>
+            <small class="text-muted" style="font-size: 0.73rem;">Modo supervisión activa • Vista de consulta no destructiva</small>
         </div>
-        <button type="button" class="btn btn-light btn-sm px-4 fw-bold rounded-pill border" onclick="window.ovCerrarMonitoreoViaje()" style="font-size:0.78rem;">
-            Cerrar Detalle
-        </button>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-light border rounded-pill px-3" style="font-size:0.76rem;" onclick="window.ovDescargarManifiestoMock()">
+                Exportar Manifiesto
+            </button>
+            <button type="button" class="btn btn-sm btn-dark rounded-pill px-4 fw-bold" style="font-size:0.78rem;" onclick="window.ovCerrarMonitoreoViaje()">
+                Cerrar
+            </button>
+        </div>
     </div>
 
 </div>
+
+<!-- NOTIFICACIÓN FLOTANTE ESTILO DYNAMIC ISLAND -->
+<div id="ovToastIsland" class="ov-toast-island">
+    <span class="ov-beacon-dot"></span>
+    <span id="ovToastIslandText">Operación exitosa</span>
+</div>
+
 
 
 
