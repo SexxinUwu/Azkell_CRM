@@ -574,14 +574,14 @@
     visibility: visible;
 }
 
-/* Ventana Flotante Spatial: Centrada en pantalla, flotando sobre el fondo oscurecido */
+/* Ventana Flotante Spatial: Centrada en pantalla, más ancha y panorámica */
 .ov-mon-drawer {
     position: fixed;
-    top: 3vh;
-    bottom: 3vh;
-    left: 4vw;
-    right: 4vw;
-    max-width: 1160px;
+    top: 2.5vh;
+    bottom: 2.5vh;
+    left: 2vw;
+    right: 2vw;
+    max-width: 1420px;
     margin: 0 auto;
     background: #ffffff;
     border: 1px solid rgba(226, 232, 240, 0.9);
@@ -1493,30 +1493,41 @@
             <button type="button" data-index="0" data-tab="resumen" class="ov-mon-tab-item active" onclick="window.ovMonCambiarTabSpatial(0, 'resumen', this)">
                 <i class="bi bi-grid-fill text-primary tab-icon"></i> <span>Resumen</span>
             </button>
-            <button type="button" data-index="1" data-tab="gps" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(1, 'gps', this)">
+            <button type="button" data-index="1" data-tab="combustible" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(1, 'combustible', this)">
+                <i class="bi bi-fuel-pump-fill text-warning tab-icon"></i> <span>Combustible</span>
+                <span class="badge bg-warning-subtle text-warning-emphasis border rounded-pill px-1" style="font-size:0.6rem;" id="ov-mon-tab-comb-badge">1</span>
+            </button>
+            <button type="button" data-index="2" data-tab="ordenes" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(2, 'ordenes', this)">
+                <i class="bi bi-card-checklist text-info tab-icon"></i> <span>Órdenes</span>
+                <span class="badge bg-info-subtle text-info border rounded-pill px-1" style="font-size:0.6rem;" id="ov-mon-badge-rutas">1</span>
+            </button>
+            <button type="button" data-index="3" data-tab="documentos" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(3, 'documentos', this)">
+                <i class="bi bi-folder2-open text-purple tab-icon" style="color:#8b5cf6;"></i> <span>Documentos</span>
+                <span class="badge bg-purple-subtle text-purple border rounded-pill px-1" style="font-size:0.6rem; background:#f3e8ff; color:#7e22ce;">1</span>
+            </button>
+            <button type="button" data-index="4" data-tab="gps" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(4, 'gps', this)">
                 <i class="bi bi-geo-alt-fill text-success tab-icon"></i> <span>Seguimiento GPS</span>
                 <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-1" style="font-size:0.6rem;">LIVE</span>
             </button>
-            <button type="button" data-index="2" data-tab="combustible" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(2, 'combustible', this)">
-                <i class="bi bi-fuel-pump-fill text-warning tab-icon"></i> <span>Combustible</span>
-                <span class="badge bg-warning-subtle text-warning-emphasis border rounded-pill px-1" style="font-size:0.6rem;" id="ov-mon-tab-comb-badge">94%</span>
+            <button type="button" data-index="5" data-tab="adjuntos" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(5, 'adjuntos', this)">
+                <i class="bi bi-paperclip text-secondary tab-icon"></i> <span>Adjuntos</span>
+                <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-1" style="font-size:0.6rem;">3</span>
             </button>
-            <button type="button" data-index="3" data-tab="ordenes" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(3, 'ordenes', this)">
-                <i class="bi bi-card-checklist text-info tab-icon"></i> <span>Órdenes</span>
-                <span class="badge bg-white text-dark rounded-pill px-1 shadow-xs" id="ov-mon-badge-rutas">0</span>
+            <button type="button" data-index="6" data-tab="liquidaciones" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(6, 'liquidaciones', this)">
+                <i class="bi bi-cash-stack text-success tab-icon"></i> <span>Liquidaciones</span>
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-1" style="font-size:0.6rem;">11</span>
             </button>
-            <button type="button" data-index="4" data-tab="documentos" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(4, 'documentos', this)">
-                <i class="bi bi-folder2-open text-purple tab-icon" style="color:#8b5cf6;"></i> <span>Documentos</span>
-            </button>
-            <button type="button" data-index="5" data-tab="viaticos" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(5, 'viaticos', this)">
-                <i class="bi bi-cash-coin text-teal tab-icon" style="color:#0f766e;"></i> <span>Viáticos</span>
-            </button>
-            <button type="button" data-index="6" data-tab="eventos" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(6, 'eventos', this)">
+            <button type="button" data-index="7" data-tab="eventos" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(7, 'eventos', this)">
                 <i class="bi bi-bell-fill text-danger tab-icon"></i> <span>Eventos</span>
-                <span class="badge bg-danger text-white rounded-pill px-1">3</span>
+                <span class="badge bg-danger-subtle text-danger border rounded-pill px-1" style="font-size:0.6rem;">3</span>
             </button>
-            <button type="button" data-index="7" data-tab="peajes" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(7, 'peajes', this)">
-                <i class="bi bi-ticket-perforated-fill text-secondary tab-icon"></i> <span>Peajes</span>
+            <button type="button" data-index="8" data-tab="cambios" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(8, 'cambios', this)">
+                <i class="bi bi-arrow-left-right text-warning tab-icon" style="color:#d97706;"></i> <span>Cambios</span>
+                <span class="badge bg-warning-subtle text-warning-emphasis border rounded-pill px-1" style="font-size:0.6rem;">0</span>
+            </button>
+            <button type="button" data-index="9" data-tab="peajes" class="ov-mon-tab-item" onclick="window.ovMonCambiarTabSpatial(9, 'peajes', this)">
+                <i class="bi bi-ticket-perforated-fill text-primary tab-icon"></i> <span>Peajes</span>
+                <span class="badge bg-primary-subtle text-primary border rounded-pill px-1" style="font-size:0.6rem;">12</span>
             </button>
         </div>
     </div>
@@ -1602,85 +1613,125 @@
 
         </div>
 
-        <!-- ================= 1. TAB SEGUIMIENTO GPS ================= -->
-        <div id="ov-mon-panel-gps" class="ov-mon-panel d-none" data-index="1">
+        <!-- ================= 4. TAB SEGUIMIENTO GPS (TABLA + RADAR TELEMETRÍA) ================= -->
+        <div id="ov-mon-panel-gps" class="ov-mon-panel d-none" data-index="4">
             <div class="ov-mon-card-section stagger-child">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <!-- Cabecera de Telemetría GNSS / 4G LTE -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
                     <div>
                         <div class="d-flex align-items-center gap-2">
                             <span class="ov-beacon-dot"></span>
-                            <span class="fw-bold text-dark" style="font-size: 0.95rem;">Telemetría Satelital GNSS / 4G LTE</span>
+                            <span class="fw-bolder text-dark" style="font-size: 1rem; letter-spacing: -0.2px;">Telemetría Satelital GNSS / 4G LTE</span>
                         </div>
-                        <small class="text-secondary" style="font-size: 0.72rem;">Dispositivo Teltonika FMC130 • Ping cada 5s • 14 Satélites en línea</small>
+                        <small class="text-secondary" style="font-size: 0.73rem;">Dispositivo Teltonika FMC130 • Ping cada 5s • 14 Satélites en línea</small>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 font-monospace fw-bold" style="font-size:0.75rem;">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 font-monospace fw-bold" style="font-size:0.75rem; letter-spacing:0.3px;">
                             52 KM/H • RUTA FLUIDA
                         </span>
-                        <span class="badge bg-light text-secondary border px-3 py-1 font-monospace" style="font-size:0.75rem;">
+                        <span class="badge bg-light text-secondary border px-3 py-1 font-monospace fw-semibold" style="font-size:0.75rem; letter-spacing:0.3px;">
                             HEADING 284° W
                         </span>
                     </div>
                 </div>
 
-                <!-- Mapa Vectorial y Radar SVG -->
-                <div class="position-relative rounded-3 overflow-hidden bg-dark d-flex align-items-center justify-content-center" style="height: 320px; background: #0b1120 !important; border: 1px solid #1e293b;">
-                    
-                    <!-- Cuadrícula cartográfica -->
-                    <div class="position-absolute inset-0 opacity-25" style="background-image: radial-gradient(#38bdf8 1px, transparent 1px); background-size: 24px 24px;"></div>
-
-                    <!-- Radar Beam Concéntrico -->
-                    <div class="position-absolute d-flex align-items-center justify-content-center pointer-events-none" style="inset:0;">
-                        <div class="rounded-circle border border-info border-opacity-10 position-absolute" style="width:260px; height:260px;"></div>
-                        <div class="rounded-circle border border-info border-opacity-20 position-absolute" style="width:180px; height:180px;"></div>
-                        <div class="rounded-circle border border-info border-opacity-25 position-absolute" style="width:90px; height:90px;"></div>
-                        <div class="rounded-circle position-absolute overflow-hidden ov-radar-beam" style="width:260px; height:260px;">
-                            <div style="width:50%; height:50%; background: radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.25), transparent 70%);"></div>
+                <!-- Contenedor Dividido: Tabla de Reportes a la izquierda + Gráfico/Radar a la derecha -->
+                <div class="row g-3 align-items-stretch">
+                    <!-- Tabla de Reportes de Puntos GPS -->
+                    <div class="col-12 col-lg-5">
+                        <div class="border rounded-3 h-100 bg-white d-flex flex-column overflow-hidden">
+                            <div class="table-responsive flex-grow-1">
+                                <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
+                                    <thead class="table-light">
+                                        <tr class="text-uppercase text-secondary" style="font-size:0.67rem;">
+                                            <th style="width: 40px;">N°</th>
+                                            <th>FECHA</th>
+                                            <th>DESCRIPCIÓN</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ov-mon-tbody-gps">
+                                        <tr>
+                                            <td class="font-monospace fw-bold text-secondary">2</td>
+                                            <td class="font-monospace text-dark">2026-09-06 22:22:33</td>
+                                            <td><span class="badge bg-danger-subtle text-danger border">FIN DE VIAJE</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-monospace fw-bold text-secondary">1</td>
+                                            <td class="font-monospace text-dark">2026-09-02 23:20:20</td>
+                                            <td><span class="badge bg-success-subtle text-success border">INICIO DE VIAJE</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="p-2 bg-light border-top text-muted d-flex justify-content-between" style="font-size:0.7rem;">
+                                <span>Total Reportes: <strong>2</strong></span>
+                                <span class="text-success"><i class="bi bi-broadcast"></i> Señal Óptima</span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Mapa vectorial SVG -->
-                    <svg class="position-absolute w-100 h-100" viewBox="0 0 900 320" fill="none">
-                        <!-- Trazado de ruta base -->
-                        <path d="M 120 220 C 260 250, 380 150, 520 160 S 720 110, 800 100" stroke="#334155" stroke-width="6" stroke-linecap="round" />
-                        <path d="M 120 220 C 260 250, 380 150, 520 160 S 720 110, 800 100" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" stroke-dasharray="6 6" />
-                        
-                        <!-- Base Origen Lima -->
-                        <circle cx="120" cy="220" r="6" fill="#10B981" />
-                        <text x="120" y="245" fill="#94A3B8" style="font-size:11px; font-family:monospace;" text-anchor="middle">Planta Lima</text>
+                    <!-- Gráfico Vectorial Interactivo con Radar Beam y Marcadores -->
+                    <div class="col-12 col-lg-7">
+                        <div class="position-relative rounded-3 overflow-hidden d-flex align-items-center justify-content-center h-100" style="min-height: 340px; background: #070d18 !important; border: 1px solid #1e293b;">
+                            
+                            <!-- Cuadrícula cartográfica sutil -->
+                            <div class="position-absolute inset-0 opacity-20" style="background-image: radial-gradient(#38bdf8 1px, transparent 1px); background-size: 24px 24px;"></div>
 
-                        <!-- Vehículo en Movimiento -->
-                        <g transform="translate(520, 160)">
-                            <circle cx="0" cy="0" r="14" fill="rgba(56, 189, 248, 0.3)" />
-                            <circle cx="0" cy="0" r="7" fill="#38BDF8" stroke="#FFFFFF" stroke-width="2" />
-                            <rect x="-35" y="-34" width="70" height="20" rx="6" fill="#1E293B" stroke="rgba(255,255,255,0.3)" />
-                            <text x="0" y="-20" fill="#FFFFFF" style="font-size:9px; font-family:monospace; font-weight:bold;" text-anchor="middle">A5B-891</text>
-                        </g>
+                            <!-- Radar Concéntrico Centrado en la Ubicación Actual del Vehículo -->
+                            <div class="position-absolute d-flex align-items-center justify-content-center pointer-events-none" style="top: 50%; left: 56%; transform: translate(-50%, -50%); width: 280px; height: 280px; z-index: 2;">
+                                <div class="rounded-circle border border-info border-opacity-10 position-absolute" style="width:260px; height:260px;"></div>
+                                <div class="rounded-circle border border-info border-opacity-20 position-absolute" style="width:170px; height:170px;"></div>
+                                <div class="rounded-circle border border-info border-opacity-30 position-absolute" style="width:90px; height:90px;"></div>
+                                <div class="rounded-circle position-absolute overflow-hidden ov-radar-beam" style="width:260px; height:260px;">
+                                    <div style="width:50%; height:50%; background: radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.35), transparent 70%);"></div>
+                                </div>
+                            </div>
 
-                        <!-- Destino Callao -->
-                        <circle cx="800" cy="100" r="6" fill="#EF4444" />
-                        <text x="800" y="80" fill="#94A3B8" style="font-size:11px; font-family:monospace;" text-anchor="middle">Puerto Callao</text>
-                    </svg>
+                            <!-- Mapa vectorial SVG de la Ruta y Balizas -->
+                            <svg class="position-absolute w-100 h-100" viewBox="0 0 900 320" fill="none" style="z-index: 3;">
+                                <!-- Trazo base de la calzada -->
+                                <path d="M 190 230 C 310 250, 410 160, 504 160 S 680 115, 715 130" stroke="#0ea5e9" stroke-width="5" stroke-linecap="round" stroke-opacity="0.3" />
+                                <path d="M 190 230 C 310 250, 410 160, 504 160 S 680 115, 715 130" stroke="#38BDF8" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="6 6" />
+                                
+                                <!-- Punto de Partida (Verde) -->
+                                <circle cx="190" cy="230" r="5.5" fill="#10B981" />
 
-                    <!-- Widget HUD Flotante -->
-                    <div class="position-absolute bottom-0 start-0 m-3 p-3 rounded-3 bg-white bg-opacity-95 shadow-lg border d-flex align-items-center justify-content-between" style="max-width: 360px; backdrop-filter: blur(10px);">
-                        <div>
-                            <span class="text-primary fw-bold text-uppercase" style="font-size:0.65rem; letter-spacing:0.4px;">Próximo Hito de Control</span>
-                            <div class="fw-bold text-dark" style="font-size:0.85rem;">Av. Morales Duárez / Faucett</div>
-                            <small class="text-muted" style="font-size:0.7rem;">4.8 km restantes • Tráfico fluido</small>
-                        </div>
-                        <div class="text-end ps-3 border-start">
-                            <span class="fw-bold font-monospace text-dark" style="font-size:0.95rem;">~14 min</span>
-                            <small class="text-success d-block fw-semibold" style="font-size:0.65rem;">A tiempo</small>
+                                <!-- Destino Callao (Rojo) -->
+                                <circle cx="715" cy="130" r="6" fill="#EF4444" />
+                                <text x="715" y="105" fill="#94A3B8" style="font-size:12px; font-family:inherit; font-weight:600;" text-anchor="middle">Puerto Callao</text>
+
+                                <!-- Vehículo en Posición Satelital Actual (Centrado en el Radar) -->
+                                <g transform="translate(504, 160)">
+                                    <circle cx="0" cy="0" r="13" fill="rgba(56, 189, 248, 0.25)" />
+                                    <circle cx="0" cy="0" r="6.5" fill="#38BDF8" stroke="#FFFFFF" stroke-width="2" />
+                                    <!-- Placa del Tracto -->
+                                    <rect x="-30" y="-30" width="60" height="18" rx="5" fill="#0f172a" stroke="rgba(255,255,255,0.25)" />
+                                    <text x="0" y="-17" fill="#FFFFFF" style="font-size:8.5px; font-family:monospace; font-weight:bold;" text-anchor="middle">A5B-891</text>
+                                </g>
+                            </svg>
+
+                            <!-- Widget HUD Flotante: Próximo Hito de Control -->
+                            <div class="position-absolute bottom-0 start-0 m-3 p-2.5 px-3 rounded-3 bg-white bg-opacity-95 shadow-lg border d-flex align-items-center justify-content-between" style="max-width: 320px; z-index: 5;">
+                                <div>
+                                    <span class="text-primary fw-bold text-uppercase" style="font-size:0.62rem; letter-spacing:0.5px;">Próximo Hito de Control</span>
+                                    <div class="fw-bold text-dark" style="font-size:0.82rem;">Av. Morales Duárez / Faucett</div>
+                                    <small class="text-muted" style="font-size:0.68rem;">4.8 km restantes • Tráfico fluido</small>
+                                </div>
+                                <div class="text-end ps-3 border-start">
+                                    <span class="fw-bold font-monospace text-dark" style="font-size:0.9rem;">~14 min</span>
+                                    <small class="text-success d-block fw-semibold" style="font-size:0.62rem;">A tiempo</small>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
-
                 </div>
+
             </div>
         </div>
 
-        <!-- ================= 2. TAB COMBUSTIBLE CON OLEAJES DINÁMICOS ================= -->
-        <div id="ov-mon-panel-combustible" class="ov-mon-panel d-none" data-index="2">
+        <!-- ================= 1. TAB COMBUSTIBLE CON OLEAJES DINÁMICOS ================= -->
+        <div id="ov-mon-panel-combustible" class="ov-mon-panel d-none" data-index="1">
             
             <div class="row g-3 mb-3">
                 <!-- Simulador de Tanque con Fluid Wave Canvas -->
@@ -1774,9 +1825,14 @@
                         </thead>
                         <tbody id="ov-mon-tbody-combustible">
                             <tr>
-                                <td colspan="8" class="text-center py-4 text-muted">
-                                    Sin registros de combustible vinculados.
-                                </td>
+                                <td><a href="javascript:void(0)" class="text-primary fw-bold font-monospace text-decoration-none">2026-00000038</a></td>
+                                <td class="font-monospace text-secondary">2026-01-07</td>
+                                <td class="fw-semibold text-dark">BASE</td>
+                                <td class="fw-bold text-dark">ROSYMAR SERVICE S.A.C.</td>
+                                <td class="font-monospace fw-bold text-dark">28.85 GL</td>
+                                <td class="font-monospace text-secondary">1.00</td>
+                                <td class="font-monospace fw-bold text-success">S/ 384.57</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">VÁLIDO</span></td>
                             </tr>
                         </tbody>
                     </table>
@@ -1785,29 +1841,422 @@
 
         </div>
 
-        <!-- ================= 3. TAB ÓRDENES ================= -->
-        <div id="ov-mon-panel-ordenes" class="ov-mon-panel d-none" data-index="3">
+        <!-- ================= 2. TAB ÓRDENES DE SERVICIO ================= -->
+        <div id="ov-mon-panel-ordenes" class="ov-mon-panel d-none" data-index="2">
             <div class="ov-mon-card-section">
-                <div class="ov-mon-section-title" style="color:#15803d;">
-                    <i class="bi bi-card-checklist text-success"></i> Órdenes de Servicio e Itinerario del Viaje
+                <div class="ov-mon-section-title" style="color:#0284c7;">
+                    <i class="bi bi-card-checklist text-primary"></i> ÓRDENES DE SERVICIO
                 </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
                         <thead class="table-light">
                             <tr class="text-uppercase text-secondary" style="font-size:0.67rem;">
-                                <th># Orden</th>
-                                <th>Tramo</th>
-                                <th>Ruta</th>
-                                <th>Tipo Servicio</th>
-                                <th>Peso (TN)</th>
-                                <th>Cantidad</th>
-                                <th>Volumen</th>
+                                <th>ORDEN</th>
+                                <th>ESTADO SERVICIO</th>
+                                <th>LIQUIDACIÓN</th>
+                                <th>FECHA</th>
+                                <th>TIPO CONTRATACIÓN</th>
+                                <th>CLIENTE</th>
+                                <th>REMITENTE</th>
+                                <th>TIPO SERVICIO</th>
+                                <th>RUTA DEL SISTEMA</th>
+                                <th>M3</th>
+                                <th>CANTIDAD</th>
+                                <th>PESO</th>
                             </tr>
                         </thead>
                         <tbody id="ov-mon-tbody-rutas">
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
-                                    Sin órdenes de servicio registradas para este viaje.
+                                <td class="font-monospace fw-bold text-dark">2026-00001434</td>
+                                <td><span class="badge bg-success-subtle text-success border">FINALIZADO</span></td>
+                                <td><span class="badge bg-light text-secondary border rounded-pill px-2">PENDIENTE</span></td>
+                                <td class="font-monospace">03/09/2026</td>
+                                <td>CLIENTE DIRECTO</td>
+                                <td class="fw-semibold">PANIFICADORA BIMBO DEL PERÚ S.A</td>
+                                <td>PANIFICADORA BIMBO DEL PERÚ S.A</td>
+                                <td><span class="badge bg-light text-secondary border">NACIONAL - 22 PLT | CONF | LIMA - AREQUIPA</span></td>
+                                <td class="text-muted">null</td>
+                                <td class="font-monospace">215.000</td>
+                                <td class="font-monospace">6</td>
+                                <td class="font-monospace fw-bold text-success">21768.340</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Barra de Totales -->
+                <div class="p-2 bg-light border-top rounded-bottom d-flex justify-content-end gap-4 text-muted" style="font-size:0.75rem;">
+                    <span>DOCUMENTOS: <strong class="text-dark">1</strong></span>
+                    <span>METROS CÚBICOS: <strong class="text-dark font-monospace">215.000</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 3. TAB DOCUMENTOS DE TRANSPORTE ================= -->
+        <div id="ov-mon-panel-documentos" class="ov-mon-panel d-none" data-index="3">
+            <div class="ov-mon-card-section">
+                <div class="ov-mon-section-title" style="color:#7e22ce;">
+                    <i class="bi bi-file-earmark-text text-purple" style="color:#8b5cf6;"></i> DOCUMENTOS DE TRANSPORTE
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.74rem;">
+                        <thead class="table-light">
+                            <tr class="text-uppercase text-secondary" style="font-size:0.67rem;">
+                                <th>ORDEN SERVICIO</th>
+                                <th>DOCUMENTO</th>
+                                <th>LIQUIDACIÓN</th>
+                                <th>FECHA CARGA</th>
+                                <th>G.R. REMITENTE</th>
+                                <th>NRO TRANSPORTE</th>
+                                <th>REMITENTE</th>
+                                <th>DESTINATARIO</th>
+                                <th>DIRECCIÓN DESTINO</th>
+                                <th>VEHÍCULO</th>
+                                <th>M3</th>
+                                <th>CANTIDAD</th>
+                                <th>PESO</th>
+                                <th>FECHA ENTREGA</th>
+                                <th class="text-end">ARCHIVO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ov-mon-tbody-documentos">
+                            <tr>
+                                <td class="font-monospace text-dark">2026-00001434</td>
+                                <td class="font-monospace fw-bold">2026-00003930</td>
+                                <td><span class="badge bg-light text-secondary border rounded-pill px-2">PENDIENTE</span></td>
+                                <td class="font-monospace">03/09/2026</td>
+                                <td class="font-monospace">T001-1159706</td>
+                                <td class="font-monospace">1159706</td>
+                                <td>PANIFICADORA BIMBO DEL PERU S.A</td>
+                                <td>DISTRIBUIDORA JORDAN & LUCERO E.I.R.L.</td>
+                                <td class="small text-muted">040101 - Arequipa - Arequipa - Arequipa AH. HORACIO ZEVALLOS GAMEZ MZ. 4 LOTE 6 S/N</td>
+                                <td class="text-muted font-monospace">null</td>
+                                <td class="font-monospace">25.000</td>
+                                <td class="font-monospace">1</td>
+                                <td class="font-monospace fw-bold text-success">560.550</td>
+                                <td class="font-monospace">05/09/2026</td>
+                                <td class="text-end text-nowrap">
+                                    <a href="javascript:void(0)" class="text-danger text-decoration-none me-2"><i class="bi bi-eye"></i> Ver</a>
+                                    <a href="javascript:void(0)" class="text-danger text-decoration-none"><i class="bi bi-download"></i> Descargar</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-dark">2026-00001434</td>
+                                <td class="font-monospace fw-bold">2026-00003931</td>
+                                <td><span class="badge bg-light text-secondary border rounded-pill px-2">PENDIENTE</span></td>
+                                <td class="font-monospace">03/09/2026</td>
+                                <td class="font-monospace">T201-41690</td>
+                                <td class="font-monospace">41690</td>
+                                <td>PANIFICADORA BIMBO DEL PERU S.A</td>
+                                <td>PANIFICADORA BIMBO DEL PERU S.A</td>
+                                <td class="small text-muted">040101 - Arequipa - Arequipa - Arequipa AV. VENEZUELA 2311 URB. FERROVIARIOS</td>
+                                <td class="text-muted font-monospace">null</td>
+                                <td class="font-monospace">25.000</td>
+                                <td class="font-monospace">1</td>
+                                <td class="font-monospace fw-bold text-success">6510.000</td>
+                                <td class="font-monospace">05/09/2026</td>
+                                <td class="text-end text-nowrap">
+                                    <a href="javascript:void(0)" class="text-danger text-decoration-none me-2"><i class="bi bi-eye"></i> Ver</a>
+                                    <a href="javascript:void(0)" class="text-danger text-decoration-none"><i class="bi bi-download"></i> Descargar</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-dark">2026-00001434</td>
+                                <td class="font-monospace fw-bold">2026-00003932</td>
+                                <td><span class="badge bg-light text-secondary border rounded-pill px-2">PENDIENTE</span></td>
+                                <td class="font-monospace">03/09/2026</td>
+                                <td class="font-monospace">T201-41689</td>
+                                <td class="font-monospace">41689</td>
+                                <td>PANIFICADORA BIMBO DEL PERU S.A</td>
+                                <td>PANIFICADORA BIMBO DEL PERU S.A</td>
+                                <td class="small text-muted">040101 - Arequipa - Arequipa - Arequipa AV. VENEZUELA 2311 URB. FERROVIARIOS</td>
+                                <td class="text-muted font-monospace">null</td>
+                                <td class="font-monospace">25.000</td>
+                                <td class="font-monospace">1</td>
+                                <td class="font-monospace fw-bold text-success">4758.000</td>
+                                <td class="font-monospace">05/09/2026</td>
+                                <td class="text-end text-nowrap">
+                                    <a href="javascript:void(0)" class="text-danger text-decoration-none me-2"><i class="bi bi-eye"></i> Ver</a>
+                                    <a href="javascript:void(0)" class="text-danger text-decoration-none"><i class="bi bi-download"></i> Descargar</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-dark">2026-00001434</td>
+                                <td class="font-monospace fw-bold">2026-00003933</td>
+                                <td><span class="badge bg-light text-secondary border rounded-pill px-2">PENDIENTE</span></td>
+                                <td class="font-monospace">03/09/2026</td>
+                                <td class="font-monospace">T201-41688</td>
+                                <td class="font-monospace">41688</td>
+                                <td>PANIFICADORA BIMBO DEL PERU S.A</td>
+                                <td>PANIFICADORA BIMBO DEL PERU S.A</td>
+                                <td class="small text-muted">040101 - Arequipa - Arequipa - Arequipa AV. VENEZUELA 2311 URB. FERROVIARIOS</td>
+                                <td class="text-muted font-monospace">null</td>
+                                <td class="font-monospace">25.000</td>
+                                <td class="font-monospace">1</td>
+                                <td class="font-monospace fw-bold text-success">8383.000</td>
+                                <td class="font-monospace">05/09/2026</td>
+                                <td class="text-end text-nowrap">
+                                    <a href="javascript:void(0)" class="text-danger text-decoration-none me-2"><i class="bi bi-eye"></i> Ver</a>
+                                    <a href="javascript:void(0)" class="text-danger text-decoration-none"><i class="bi bi-download"></i> Descargar</a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Barra de Totales Documentos -->
+                <div class="p-2 bg-light border-top rounded-bottom d-flex justify-content-end gap-4 text-muted" style="font-size:0.75rem;">
+                    <span>DOCUMENTOS: <strong class="text-dark">1</strong></span>
+                    <span>METROS CÚBICOS: <strong class="text-dark font-monospace">215.000</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 5. TAB ARCHIVOS ADJUNTOS ================= -->
+        <div id="ov-mon-panel-adjuntos" class="ov-mon-panel d-none" data-index="5">
+            <div class="ov-mon-card-section">
+                <div class="ov-mon-section-title" style="color:#475569;">
+                    <i class="bi bi-paperclip text-secondary"></i> ARCHIVOS ADJUNTOS DEL VIAJE
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
+                        <thead class="table-light">
+                            <tr class="text-uppercase text-secondary" style="font-size:0.67rem;">
+                                <th>FECHA</th>
+                                <th>TÍTULO</th>
+                                <th>DESCRIPCIÓN</th>
+                                <th>USUARIO</th>
+                                <th class="text-end">SUSTENTO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ov-mon-tbody-adjuntos">
+                            <tr>
+                                <td class="font-monospace text-muted">—</td>
+                                <td class="fw-bold text-dark">CONFIRMACION DE CARGA</td>
+                                <td class="text-secondary small">VN01-00005248 | JR. JORGE CHAVEZ NRO. 860-AV. VENEZUELA 2311 URB. FERROVIARIOS</td>
+                                <td class="font-monospace text-muted">undefined</td>
+                                <td class="text-end"><span class="badge bg-light text-muted border">Sin archivo</span></td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">—</td>
+                                <td class="fw-bold text-dark">CONFIRMACION DE CARGA</td>
+                                <td class="text-secondary small">VN01-00005249 | JR. JORGE CHAVEZ NRO. 860-AH. HORACIO ZEVALLOS GAMEZ MZ. 4 LOTE 6 S/N</td>
+                                <td class="font-monospace text-muted">undefined</td>
+                                <td class="text-end"><span class="badge bg-light text-muted border">Sin archivo</span></td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">—</td>
+                                <td class="fw-bold text-dark">CONFIRMACION DE CARGA</td>
+                                <td class="text-secondary small">VN01-00005252 | AV. VENEZUELA NRO. 2311 URB. FERROVIARIOS-JR JORGE CHAVEZ NRO 860</td>
+                                <td class="font-monospace text-muted">undefined</td>
+                                <td class="text-end"><span class="badge bg-light text-muted border">Sin archivo</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 6. TAB LIQUIDACIÓN DE GASTOS OPERATIVOS ================= -->
+        <div id="ov-mon-panel-liquidaciones" class="ov-mon-panel d-none" data-index="6">
+            <div class="ov-mon-card-section">
+                <div class="ov-mon-section-title" style="color:#16a34a;">
+                    <i class="bi bi-cash-stack text-success"></i> LIQUIDACIÓN DE GASTOS OPERATIVOS
+                </div>
+                
+                <!-- Barra KPI de Resumen de Liquidación -->
+                <div class="p-2.5 px-3 bg-light rounded-3 border d-flex flex-wrap align-items-center gap-4 mb-3" style="font-size:0.8rem;">
+                    <div>DEPÓSITO: <strong class="text-dark font-monospace ms-1">S/. 384.72</strong></div>
+                    <div>GASTOS: <strong class="text-danger font-monospace ms-1">S/. 345.30</strong></div>
+                    <div>SALDO: <strong class="text-primary font-monospace ms-1">S/. 39.42</strong></div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
+                        <thead class="table-light">
+                            <tr class="text-uppercase text-secondary" style="font-size:0.67rem;">
+                                <th style="width: 40px;">ITEM</th>
+                                <th>FECHA</th>
+                                <th>USUARIO RENDIDO</th>
+                                <th>TIPO GASTO</th>
+                                <th>DETALLES</th>
+                                <th>ARCHIVO</th>
+                                <th>C. FISCAL</th>
+                                <th class="text-end">IMPORTE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ov-mon-tbody-liquidaciones">
+                            <tr>
+                                <td class="font-monospace text-muted">1</td>
+                                <td class="font-monospace">2026-09-03</td>
+                                <td>ABEL DAVID DURAND ESCOLARI</td>
+                                <td>PEAJE AL CONTADO</td>
+                                <td>PRIALE</td>
+                                <td><a href="javascript:void(0)" class="text-danger text-decoration-none font-monospace"><i class="bi bi-file-earmark-pdf"></i> Ver</a></td>
+                                <td></td>
+                                <td class="font-monospace text-end fw-bold text-dark">12.60</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">2</td>
+                                <td class="font-monospace">2026-09-03</td>
+                                <td>ABEL DAVID DURAND ESCOLARI</td>
+                                <td>PEAJE AL CONTADO</td>
+                                <td>AMARILLA LINEA</td>
+                                <td><a href="javascript:void(0)" class="text-danger text-decoration-none font-monospace"><i class="bi bi-file-earmark-pdf"></i> Ver</a></td>
+                                <td></td>
+                                <td class="font-monospace text-end fw-bold text-dark">12.60</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">3</td>
+                                <td class="font-monospace">2026-09-03</td>
+                                <td>ABEL DAVID DURAND ESCOLARI</td>
+                                <td>PEAJE AL CONTADO</td>
+                                <td>ESTADIO</td>
+                                <td><a href="javascript:void(0)" class="text-danger text-decoration-none font-monospace"><i class="bi bi-file-earmark-pdf"></i> Ver</a></td>
+                                <td></td>
+                                <td class="font-monospace text-end fw-bold text-dark">12.60</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">4</td>
+                                <td class="font-monospace">2026-09-03</td>
+                                <td>ABEL DAVID DURAND ESCOLARI</td>
+                                <td>PEAJE AL CONTADO</td>
+                                <td>MONTERRICO</td>
+                                <td><a href="javascript:void(0)" class="text-danger text-decoration-none font-monospace"><i class="bi bi-file-earmark-pdf"></i> Ver</a></td>
+                                <td></td>
+                                <td class="font-monospace text-end fw-bold text-dark">12.60</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">5</td>
+                                <td class="font-monospace">2026-09-03</td>
+                                <td>ABEL DAVID DURAND ESCOLARI</td>
+                                <td>RETORNO BALANZA</td>
+                                <td>LURIN</td>
+                                <td></td>
+                                <td></td>
+                                <td class="font-monospace text-end fw-bold text-dark">15.00</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">6</td>
+                                <td class="font-monospace">2026-09-03</td>
+                                <td>ABEL DAVID DURAND ESCOLARI</td>
+                                <td>PEAJE AL CONTADO</td>
+                                <td>CHILCA</td>
+                                <td><a href="javascript:void(0)" class="text-danger text-decoration-none font-monospace"><i class="bi bi-file-earmark-pdf"></i> Ver</a></td>
+                                <td></td>
+                                <td class="font-monospace text-end fw-bold text-dark">38.80</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">7</td>
+                                <td class="font-monospace">2026-09-03</td>
+                                <td>ABEL DAVID DURAND ESCOLARI</td>
+                                <td>PEAJE AL CONTADO</td>
+                                <td>ICA</td>
+                                <td><a href="javascript:void(0)" class="text-danger text-decoration-none font-monospace"><i class="bi bi-file-earmark-pdf"></i> Ver</a></td>
+                                <td></td>
+                                <td class="font-monospace text-end fw-bold text-dark">38.80</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">8</td>
+                                <td class="font-monospace">2026-09-03</td>
+                                <td>ABEL DAVID DURAND ESCOLARI</td>
+                                <td>COCHERA</td>
+                                <td>ICA</td>
+                                <td><a href="javascript:void(0)" class="text-danger text-decoration-none font-monospace"><i class="bi bi-file-earmark-pdf"></i> Ver</a></td>
+                                <td></td>
+                                <td class="font-monospace text-end fw-bold text-dark">15.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 7. TAB REGISTRO DE EVENTOS ================= -->
+        <div id="ov-mon-panel-eventos" class="ov-mon-panel d-none" data-index="7">
+            <div class="ov-mon-card-section">
+                <div class="ov-mon-section-title" style="color:#dc2626;">
+                    <i class="bi bi-bell-fill text-danger"></i> REGISTRO DE EVENTOS
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
+                        <thead class="table-light">
+                            <tr class="text-uppercase text-secondary" style="font-size:0.67rem;">
+                                <th style="width: 40px;">ITEM</th>
+                                <th>FECHA</th>
+                                <th>EVENTO</th>
+                                <th>MONTO CORREO</th>
+                                <th>ARCHIVO</th>
+                                <th>DESCRIPCIÓN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ov-mon-tbody-eventos">
+                            <tr>
+                                <td class="font-monospace text-muted">1</td>
+                                <td class="font-monospace">2026-09-07 15:40:35</td>
+                                <td><span class="badge bg-danger-subtle text-danger border">ESTIBA</span></td>
+                                <td class="font-monospace fw-bold text-dark">200.00</td>
+                                <td></td>
+                                <td>ESTIBA EN ORIGEN</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">2</td>
+                                <td class="font-monospace">2026-09-07 15:41:01</td>
+                                <td><span class="badge bg-warning-subtle text-warning-emphasis border">DESESTIBA</span></td>
+                                <td class="font-monospace fw-bold text-dark">300.00</td>
+                                <td></td>
+                                <td>DESESTIBA EN AREQUIPA</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">3</td>
+                                <td class="font-monospace">2026-09-07 15:41:17</td>
+                                <td><span class="badge bg-primary-subtle text-primary border">PUNTO ADICIONAL</span></td>
+                                <td class="font-monospace fw-bold text-dark">500.00</td>
+                                <td></td>
+                                <td>ENTREGA EN CAMANA CLIENTE JORDAN</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 8. TAB CAMBIOS DE CONDUCTOR Y REMOLQUES ================= -->
+        <div id="ov-mon-panel-cambios" class="ov-mon-panel d-none" data-index="8">
+            <div class="ov-mon-card-section">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="ov-mon-section-title m-0 border-0" style="color:#d97706;">
+                        <i class="bi bi-arrow-left-right text-warning"></i> CAMBIOS DE CONDUCTOR Y REMOLQUES
+                    </div>
+                    <select class="form-select form-select-sm w-auto" style="font-size:0.75rem;">
+                        <option>Todos los cambios</option>
+                        <option>Cambio de Conductor</option>
+                        <option>Cambio de Remolque</option>
+                    </select>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.73rem;">
+                        <thead class="table-light">
+                            <tr class="text-uppercase text-secondary" style="font-size:0.65rem;">
+                                <th>ITEM</th>
+                                <th>FECHA</th>
+                                <th>CAMBIO</th>
+                                <th>VEHÍCULO</th>
+                                <th>PRIMER CONDUCTOR</th>
+                                <th>CONFIRMACIÓN</th>
+                                <th>LIQ. GASTOS</th>
+                                <th>NUEVO CONDUCTOR</th>
+                                <th>PRIMERA PLACA</th>
+                                <th>NUEVA PLACA</th>
+                                <th>PRIMER REMOLQUE</th>
+                                <th>NUEVO REMOLQUE</th>
+                                <th>DESCRIPCIÓN</th>
+                                <th>USUARIO</th>
+                                <th>SUSTENTO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ov-mon-tbody-cambios">
+                            <tr>
+                                <td colspan="15" class="text-center py-4 text-muted">
+                                    No se registran cambios de conductor ni de remolque para este viaje.
                                 </td>
                             </tr>
                         </tbody>
@@ -1816,108 +2265,157 @@
             </div>
         </div>
 
-        <!-- ================= 4. TAB DOCUMENTOS ================= -->
-        <div id="ov-mon-panel-documentos" class="ov-mon-panel d-none" data-index="4">
-            <div class="row g-3">
-                <!-- SOAT -->
-                <div class="col-12 col-md-4">
-                    <div class="ov-mon-card-section h-100 p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="badge bg-primary-subtle text-primary border fw-bold">SOAT</span>
-                            <span class="badge bg-success-subtle text-success">Vigente</span>
-                        </div>
-                        <div class="fw-bold text-dark mb-1">Póliza SOAT Vehicular</div>
-                        <small class="text-muted d-block mb-2" style="font-size:0.72rem;">La Positiva Seguros • #882941-01</small>
-                        <span class="font-monospace small text-secondary">Expira: 14 Dic 2026</span>
-                    </div>
+        <!-- ================= 9. TAB PEAJES DEL VIAJE ================= -->
+        <div id="ov-mon-panel-peajes" class="ov-mon-panel d-none" data-index="9">
+            <div class="ov-mon-card-section">
+                <div class="ov-mon-section-title" style="color:#2563eb;">
+                    <i class="bi bi-ticket-perforated text-primary"></i> PEAJES DEL VIAJE
                 </div>
-                <!-- CITV -->
-                <div class="col-12 col-md-4">
-                    <div class="ov-mon-card-section h-100 p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="badge bg-purple-subtle text-purple border fw-bold" style="background:#f3e8ff; color:#7e22ce;">CITV</span>
-                            <span class="badge bg-success-subtle text-success">Aprobado</span>
-                        </div>
-                        <div class="fw-bold text-dark mb-1">Inspección Técnico Mecánica</div>
-                        <small class="text-muted d-block mb-2" style="font-size:0.72rem;">Lidercon Perú • #99482-LIMA</small>
-                        <span class="font-monospace small text-secondary">Expira: 28 Oct 2026</span>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.74rem;">
+                        <thead class="table-light">
+                            <tr class="text-uppercase text-secondary" style="font-size:0.67rem;">
+                                <th>FECHA REGISTRO</th>
+                                <th>ORDEN SERVICIO</th>
+                                <th>CAJA ASIGNADA</th>
+                                <th>ESTADO CAJA</th>
+                                <th>PEAJE</th>
+                                <th>VEHÍCULO (EJES)</th>
+                                <th>REMOLQUE (EJES)</th>
+                                <th>COSTO X EJE IDA</th>
+                                <th>COSTO X EJE REG.</th>
+                                <th class="text-end">SUBTOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ov-mon-tbody-peajes">
+                            <tr>
+                                <td class="font-monospace text-muted">2026-09-02 18:38:44</td>
+                                <td class="font-monospace">2026-00001434</td>
+                                <td class="font-monospace text-primary">2026-00008298</td>
+                                <td><span class="badge bg-success-subtle text-success border">PROCESADO</span></td>
+                                <td class="fw-semibold">ATICO</td>
+                                <td class="font-monospace">CFR727 (2)</td>
+                                <td class="font-monospace">—</td>
+                                <td class="font-monospace">S/ 6.50</td>
+                                <td class="font-monospace">S/ 0.00</td>
+                                <td class="font-monospace text-end fw-bold text-dark">S/ 13.00</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">2026-09-02 18:38:44</td>
+                                <td class="font-monospace">2026-00001434</td>
+                                <td class="font-monospace text-primary">2026-00008298</td>
+                                <td><span class="badge bg-success-subtle text-success border">PROCESADO</span></td>
+                                <td class="fw-semibold">CAMANA</td>
+                                <td class="font-monospace">CFR727 (2)</td>
+                                <td class="font-monospace">—</td>
+                                <td class="font-monospace">S/ 7.58</td>
+                                <td class="font-monospace">S/ 7.58</td>
+                                <td class="font-monospace text-end fw-bold text-dark">S/ 30.32</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">2026-09-02 18:38:44</td>
+                                <td class="font-monospace">2026-00001434</td>
+                                <td class="font-monospace text-primary">2026-00008298</td>
+                                <td><span class="badge bg-success-subtle text-success border">PROCESADO</span></td>
+                                <td class="fw-semibold">CHILCA</td>
+                                <td class="font-monospace">CFR727 (2)</td>
+                                <td class="font-monospace">—</td>
+                                <td class="font-monospace">S/ 19.40</td>
+                                <td class="font-monospace">S/ 0.00</td>
+                                <td class="font-monospace text-end fw-bold text-dark">S/ 38.80</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">2026-09-02 18:38:44</td>
+                                <td class="font-monospace">2026-00001434</td>
+                                <td class="font-monospace text-primary">2026-00008298</td>
+                                <td><span class="badge bg-success-subtle text-success border">PROCESADO</span></td>
+                                <td class="fw-semibold">ICA</td>
+                                <td class="font-monospace">CFR727 (2)</td>
+                                <td class="font-monospace">—</td>
+                                <td class="font-monospace">S/ 19.40</td>
+                                <td class="font-monospace">S/ 0.00</td>
+                                <td class="font-monospace text-end fw-bold text-dark">S/ 38.80</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">2026-09-02 18:38:44</td>
+                                <td class="font-monospace">2026-00001434</td>
+                                <td class="font-monospace text-primary">2026-00008298</td>
+                                <td><span class="badge bg-success-subtle text-success border">PROCESADO</span></td>
+                                <td class="fw-semibold">JAHUAY</td>
+                                <td class="font-monospace">CFR727 (2)</td>
+                                <td class="font-monospace">—</td>
+                                <td class="font-monospace">S/ 0.00</td>
+                                <td class="font-monospace">S/ 19.40</td>
+                                <td class="font-monospace text-end fw-bold text-dark">S/ 38.80</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">2026-09-02 18:38:44</td>
+                                <td class="font-monospace">2026-00001434</td>
+                                <td class="font-monospace text-primary">2026-00008298</td>
+                                <td><span class="badge bg-success-subtle text-success border">PROCESADO</span></td>
+                                <td class="fw-semibold">NAZCA</td>
+                                <td class="font-monospace">CFR727 (2)</td>
+                                <td class="font-monospace">—</td>
+                                <td class="font-monospace">S/ 6.50</td>
+                                <td class="font-monospace">S/ 0.00</td>
+                                <td class="font-monospace text-end fw-bold text-dark">S/ 13.00</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">2026-09-02 18:38:44</td>
+                                <td class="font-monospace">2026-00001434</td>
+                                <td class="font-monospace text-primary">2026-00008298</td>
+                                <td><span class="badge bg-success-subtle text-success border">PROCESADO</span></td>
+                                <td class="fw-semibold">UCHUMAYO</td>
+                                <td class="font-monospace">CFR727 (2)</td>
+                                <td class="font-monospace">—</td>
+                                <td class="font-monospace">S/ 4.00</td>
+                                <td class="font-monospace">S/ 4.00</td>
+                                <td class="font-monospace text-end fw-bold text-dark">S/ 16.00</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">2026-09-02 18:38:44</td>
+                                <td class="font-monospace">2026-00001434</td>
+                                <td class="font-monospace text-primary">2026-00008298</td>
+                                <td><span class="badge bg-success-subtle text-success border">PROCESADO</span></td>
+                                <td class="fw-semibold">YAUCA</td>
+                                <td class="font-monospace">CFR727 (2)</td>
+                                <td class="font-monospace">—</td>
+                                <td class="font-monospace">S/ 6.50</td>
+                                <td class="font-monospace">S/ 0.00</td>
+                                <td class="font-monospace text-end fw-bold text-dark">S/ 13.00</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">2026-09-02 18:38:44</td>
+                                <td class="font-monospace">2026-00001434</td>
+                                <td class="font-monospace text-primary">2026-00008298</td>
+                                <td><span class="badge bg-success-subtle text-success border">PROCESADO</span></td>
+                                <td class="fw-semibold">LINEA AMARILLA - IDA</td>
+                                <td class="font-monospace">CFR727 (2)</td>
+                                <td class="font-monospace">—</td>
+                                <td class="font-monospace">S/ 6.30</td>
+                                <td class="font-monospace">S/ 0.00</td>
+                                <td class="font-monospace text-end fw-bold text-dark">S/ 12.60</td>
+                            </tr>
+                            <tr>
+                                <td class="font-monospace text-muted">2026-09-02 18:38:44</td>
+                                <td class="font-monospace">2026-00001434</td>
+                                <td class="font-monospace text-primary">2026-00008298</td>
+                                <td><span class="badge bg-success-subtle text-success border">PROCESADO</span></td>
+                                <td class="fw-semibold">LINEA AMARILLA - REGRESO</td>
+                                <td class="font-monospace">CFR727 (2)</td>
+                                <td class="font-monospace">—</td>
+                                <td class="font-monospace">S/ 0.00</td>
+                                <td class="font-monospace">S/ 6.30</td>
+                                <td class="font-monospace text-end fw-bold text-dark">S/ 12.60</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <!-- Brevete -->
-                <div class="col-12 col-md-4">
-                    <div class="ov-mon-card-section h-100 p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="badge bg-success-subtle text-success border fw-bold">MTC</span>
-                            <span class="badge bg-success-subtle text-success">Habilitado</span>
-                        </div>
-                        <div class="fw-bold text-dark mb-1">Licencia de Conducir</div>
-                        <small class="text-muted d-block mb-2" style="font-size:0.72rem;">Clase A Categoría III-c Especial</small>
-                        <span class="font-monospace small text-secondary">Expira: 19 May 2028</span>
-                    </div>
+                <!-- Barra de Totales Peajes -->
+                <div class="p-2.5 px-3 bg-light border-top rounded-bottom d-flex justify-content-end align-items-baseline gap-2" style="font-size:0.8rem;">
+                    <span class="text-secondary fw-semibold">TOTAL PEAJES:</span>
+                    <span class="text-success fw-bolder font-monospace" style="font-size:0.95rem;">S/ 264.72</span>
                 </div>
-            </div>
-        </div>
-
-        <!-- ================= 5. TAB VIÁTICOS ================= -->
-        <div id="ov-mon-panel-viaticos" class="ov-mon-panel d-none" data-index="5">
-            <div class="ov-mon-card-section text-center py-5">
-                <i class="bi bi-wallet2 display-5 text-teal d-block mb-2" style="color:#0f766e;"></i>
-                <h6 class="fw-bold text-dark mb-1">Módulo de Tesorería Integrada</h6>
-                <p class="text-muted small mb-0 max-w-sm mx-auto">Las rendiciones se concilian automáticamente al cierre de turno mediante la app del conductor.</p>
-            </div>
-        </div>
-
-        <!-- ================= 6. TAB EVENTOS CON CRONOLOGÍA ================= -->
-        <div id="ov-mon-panel-eventos" class="ov-mon-panel d-none" data-index="6">
-            <div class="ov-mon-card-section p-4">
-                <div class="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom">
-                    <div>
-                        <div class="fw-bold text-dark" style="font-size:0.92rem;">Línea de Tiempo del Despacho</div>
-                        <small class="text-muted" style="font-size:0.72rem;">Cronología inmutable de hitos del viaje</small>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-light border rounded-pill px-3" style="font-size:0.72rem;" onclick="window.ovSimularEventoNuevo()">
-                        <i class="bi bi-plus-circle me-1"></i> Simular Hito
-                    </button>
-                </div>
-
-                <!-- Timeline de Hitos -->
-                <div class="position-relative ps-4" id="ovTimelineContainer" style="border-left: 2px solid #e2e8f0;">
-                    <div class="mb-4 position-relative">
-                        <div class="position-absolute rounded-circle bg-success" style="width:12px; height:12px; left:-23px; top:3px; border:2px solid #ffffff;"></div>
-                        <div class="d-flex justify-content-between align-items-baseline">
-                            <span class="fw-bold text-dark small">Salida Autorizada de Patio</span>
-                            <span class="font-monospace text-muted" style="font-size:0.7rem;">14:15:00</span>
-                        </div>
-                        <small class="text-muted d-block">Conductor inició recorrido tras aprobación del checklist de 360° en garita.</small>
-                    </div>
-
-                    <div class="mb-4 position-relative">
-                        <div class="position-absolute rounded-circle bg-primary" style="width:12px; height:12px; left:-23px; top:3px; border:2px solid #ffffff;"></div>
-                        <div class="d-flex justify-content-between align-items-baseline">
-                            <span class="fw-bold text-dark small">Paso TAG Peaje Ramiro Prialé</span>
-                            <span class="font-monospace text-muted" style="font-size:0.7rem;">15:02:18</span>
-                        </div>
-                        <small class="text-muted d-block">Telepeaje automático validado con éxito. Débito institucional S/ 18.50.</small>
-                    </div>
-
-                    <div class="mb-2 position-relative">
-                        <div class="position-absolute rounded-circle bg-warning" style="width:12px; height:12px; left:-23px; top:3px; border:2px solid #ffffff;"></div>
-                        <div class="d-flex justify-content-between align-items-baseline">
-                            <span class="fw-bold text-dark small">Monitoreo Vía Evitamiento</span>
-                            <span class="font-monospace text-muted" style="font-size:0.7rem;">15:40:55</span>
-                        </div>
-                        <small class="text-muted d-block">Tráfico fluido con velocidad constante de 52 km/h. Sin desvíos de ruta.</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= 7. TAB PEAJES ================= -->
-        <div id="ov-mon-panel-peajes" class="ov-mon-panel d-none" data-index="7">
-            <div class="ov-mon-card-section text-center py-5">
-                <i class="bi bi-ticket-perforated display-5 text-secondary d-block mb-2"></i>
-                <h6 class="fw-bold text-dark mb-1">Telepeajes Electrónicos TAG</h6>
-                <p class="text-muted small mb-0">Transacciones procesadas automáticamente a través de la concesionaria Rutas de Lima.</p>
             </div>
         </div>
 
