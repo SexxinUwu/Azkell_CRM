@@ -86,10 +86,10 @@ window.ovCargarDatos = async function() {
     }
 
     try {
-        // Cargar vista de viajes y vista de rutas en paralelo
+        // Cargar vista de viajes y vista de rutas en paralelo desde tablas exclusivas de Marsisa
         var [resViajes, resRutas] = await Promise.all([
-            fetch('/api/operaciones/ordenes-viaje?limit=2500'),
-            fetch('/api/operaciones/ordenes-viaje?vista=rutas&limit=4000')
+            fetch('/api/operaciones/marsisa-ordenes-viaje?limit=2500'),
+            fetch('/api/operaciones/marsisa-ordenes-viaje?vista=rutas&limit=4000')
         ]);
 
         var jsonViajes = await resViajes.json();

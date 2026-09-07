@@ -44,6 +44,12 @@ module.exports = function (db, broadcast, logAudit) {
         ruta VARCHAR(255) NULL,
         origen VARCHAR(100) NULL,
         destino VARCHAR(100) NULL,
+        ubigeo_partida VARCHAR(10) NULL,
+        direccion_partida VARCHAR(255) NULL,
+        ubigeo_llegada VARCHAR(10) NULL,
+        direccion_llegada VARCHAR(255) NULL,
+        escolta VARCHAR(150) NULL,
+        observaciones TEXT NULL,
         estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
         creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -72,6 +78,48 @@ module.exports = function (db, broadcast, logAudit) {
         INDEX idx_es_retorno (es_retorno)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
+    // Tablas exclusivas para Operaciones Marsisa (Sincronización remota externa)
+    const TABLE_MARSISA_SQL = `CREATE TABLE IF NOT EXISTS marsisa_ordenes_viaje (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        id_remoto BIGINT NULL,
+        viaje VARCHAR(60) NOT NULL,
+        fecha_viaje DATETIME NULL,
+        id_conductor INT NULL,
+        conductor VARCHAR(150) NOT NULL DEFAULT '',
+        placa_tracto VARCHAR(20) NOT NULL DEFAULT '',
+        placa_remolque VARCHAR(20) NULL,
+        peso DECIMAL(12,2) NULL DEFAULT 0.00,
+        ruta VARCHAR(255) NULL,
+        origen VARCHAR(100) NULL,
+        destino VARCHAR(100) NULL,
+        estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_viaje (viaje),
+        INDEX idx_placa_tracto (placa_tracto),
+        INDEX idx_placa_remolque (placa_remolque),
+        INDEX idx_fecha_viaje (fecha_viaje),
+        INDEX idx_id_remoto (id_remoto)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+
+    const TABLE_MARSISA_RUTAS_SQL = `CREATE TABLE IF NOT EXISTS marsisa_ordenes_viaje_rutas (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        viaje VARCHAR(60) NOT NULL,
+        orden VARCHAR(60) NOT NULL,
+        ruta VARCHAR(255) NULL,
+        tipo_servicio VARCHAR(100) NULL,
+        es_retorno TINYINT(1) NOT NULL DEFAULT 0,
+        peso_total DECIMAL(12,2) NULL DEFAULT 0.00,
+        cantidad_total DECIMAL(12,2) NULL DEFAULT 0.00,
+        volumen_total DECIMAL(12,3) NULL DEFAULT 0.000,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_viaje_orden (viaje, orden),
+        INDEX idx_viaje (viaje),
+        INDEX idx_orden (orden),
+        INDEX idx_es_retorno (es_retorno)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+
     async function ensureTables(req) {
         const tenantId = (req && req.tenantId) ? req.tenantId : 'default';
         if (_tenantsInitSet.has(tenantId)) return;
@@ -80,6 +128,8 @@ module.exports = function (db, broadcast, logAudit) {
             if (!tdb) return;
             await tdb.query(TABLE_SQL);
             await tdb.query(TABLE_RUTAS_SQL);
+            await tdb.query(TABLE_MARSISA_SQL);
+            await tdb.query(TABLE_MARSISA_RUTAS_SQL);
             try {
                 await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN peso DECIMAL(12,2) NULL DEFAULT 0.00 AFTER placa_remolque");
             } catch (ignore) {}
@@ -88,7 +138,7 @@ module.exports = function (db, broadcast, logAudit) {
             } catch (ignore) {}
             _tenantsInitSet.add(tenantId);
         } catch (err) {
-            console.error('Error asegurando tabla operaciones_ordenes_viaje:', err);
+            console.error('Error asegurando tablas de operaciones:', err);
         }
     }
 
@@ -727,7 +777,120 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ── GET /api/operaciones/marsisa-ordenes-viaje ───────────────────
+    // Vista exclusiva para Operaciones Marsisa (datos sincronizados)
+    router.get('/marsisa-ordenes-viaje', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const { q, placa, limit, vista } = req.query;
+
+            if (vista === 'rutas' || vista === 'detalle') {
+                let sql = `
+                    SELECT 
+                        r.id,
+                        r.viaje,
+                        r.orden,
+                        r.ruta,
+                        r.tipo_servicio,
+                        r.es_retorno,
+                        r.peso_total,
+                        r.cantidad_total,
+                        r.volumen_total,
+                        ov.fecha_viaje,
+                        ov.conductor,
+                        ov.placa_tracto,
+                        ov.placa_remolque,
+                        ov.estado
+                    FROM marsisa_ordenes_viaje_rutas r
+                    LEFT JOIN marsisa_ordenes_viaje ov ON r.viaje = ov.viaje
+                    WHERE 1=1
+                `;
+                const params = [];
+
+                if (q && String(q).trim()) {
+                    const search = `%${String(q).trim()}%`;
+                    sql += ` AND (r.viaje LIKE ? OR r.orden LIKE ? OR r.ruta LIKE ? OR r.tipo_servicio LIKE ? OR ov.conductor LIKE ? OR ov.placa_tracto LIKE ? OR ov.placa_remolque LIKE ?)`;
+                    params.push(search, search, search, search, search, search, search);
+                }
+
+                if (placa && String(placa).trim()) {
+                    sql += ` AND (ov.placa_tracto = ? OR ov.placa_remolque = ?)`;
+                    params.push(String(placa).trim(), String(placa).trim());
+                }
+
+                sql += ` ORDER BY ov.fecha_viaje DESC, r.viaje DESC, r.es_retorno ASC, r.id ASC LIMIT ?`;
+                params.push(parseInt(limit, 10) || 2000);
+
+                const [rows] = await tdb.query(sql, params);
+                return res.json({ ok: true, data: rows });
+            }
+
+            // Vista agrupada por Viaje para Marsisa
+            let sql = `
+                SELECT 
+                    ov.id,
+                    ov.id_remoto,
+                    ov.viaje,
+                    DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d %H:%i:%s') AS fecha_viaje,
+                    ov.id_conductor,
+                    ov.conductor,
+                    ov.placa_tracto,
+                    ov.placa_remolque,
+                    ov.peso,
+                    ov.ruta,
+                    ov.origen,
+                    ov.destino,
+                    ov.estado,
+                    COALESCE(r_agg.cant_ordenes, 0) AS cant_ordenes,
+                    COALESCE(r_agg.peso_ida, 0) AS peso_ida,
+                    COALESCE(r_agg.peso_retorno, 0) AS peso_retorno,
+                    COALESCE(r_agg.peso_total_calc, ov.peso, 0) AS peso_total_rutas,
+                    r_agg.ordenes_list,
+                    r_agg.rutas_list
+                FROM marsisa_ordenes_viaje ov
+                LEFT JOIN (
+                    SELECT 
+                        viaje,
+                        COUNT(DISTINCT orden) AS cant_ordenes,
+                        SUM(CASE WHEN es_retorno = 0 THEN peso_total ELSE 0 END) AS peso_ida,
+                        SUM(CASE WHEN es_retorno = 1 THEN peso_total ELSE 0 END) AS peso_retorno,
+                        SUM(peso_total) AS peso_total_calc,
+                        GROUP_CONCAT(DISTINCT orden ORDER BY orden SEPARATOR ', ') AS ordenes_list,
+                        GROUP_CONCAT(DISTINCT CONCAT(CASE WHEN es_retorno=1 THEN '[RETORNO] ' ELSE '[IDA] ' END, ruta) ORDER BY es_retorno ASC SEPARATOR ' | ') AS rutas_list
+                    FROM marsisa_ordenes_viaje_rutas
+                    GROUP BY viaje
+                ) r_agg ON ov.viaje = r_agg.viaje
+                WHERE 1=1
+            `;
+            const params = [];
+
+            if (q && String(q).trim()) {
+                const search = `%${String(q).trim()}%`;
+                sql += ` AND (ov.viaje LIKE ? OR ov.conductor LIKE ? OR ov.placa_tracto LIKE ? OR ov.placa_remolque LIKE ? OR ov.ruta LIKE ? OR r_agg.ordenes_list LIKE ? OR r_agg.rutas_list LIKE ?)`;
+                params.push(search, search, search, search, search, search, search);
+            }
+
+            if (placa && String(placa).trim()) {
+                sql += ` AND (ov.placa_tracto = ? OR ov.placa_remolque = ?)`;
+                params.push(String(placa).trim(), String(placa).trim());
+            }
+
+            sql += ` ORDER BY ov.fecha_viaje DESC, ov.id DESC LIMIT ?`;
+            params.push(parseInt(limit, 10) || 2500);
+
+            const [rows] = await tdb.query(sql, params);
+            res.json({ ok: true, data: rows });
+        } catch (err) {
+            console.error('Error al listar ordenes de viaje Marsisa:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // ── POST /api/operaciones/ordenes-viaje/sincronizar ───────────
+    // Sincronización remota exclusiva para Marsisa que almacena en marsisa_ordenes_viaje
     router.post('/ordenes-viaje/sincronizar', async (req, res) => {
         try {
             const tenantId = req.tenantSlug || req.headers['x-tenant-id'] || 'default';
@@ -788,9 +951,8 @@ module.exports = function (db, broadcast, logAudit) {
             const [rutasRemotas] = await remoteDb.query(queryRutas);
 
             let insertados = 0;
-            let actualizados = 0;
 
-            // Guardar Viajes Principales
+            // Guardar Viajes Principales en marsisa_ordenes_viaje (tabla exclusiva de Marsisa)
             if (viajesRemotos && viajesRemotos.length) {
                 const chunkSize = 100;
                 for (let i = 0; i < viajesRemotos.length; i += chunkSize) {
@@ -824,7 +986,7 @@ module.exports = function (db, broadcast, logAudit) {
                     if (!placeholders.length) continue;
 
                     const batchSql = `
-                        INSERT INTO operaciones_ordenes_viaje 
+                        INSERT INTO marsisa_ordenes_viaje 
                             (id_remoto, viaje, fecha_viaje, id_conductor, conductor, placa_tracto, placa_remolque, peso, ruta)
                         VALUES ${placeholders.join(', ')}
                         ON DUPLICATE KEY UPDATE
@@ -843,7 +1005,7 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             }
 
-            // Guardar Detalle de Órdenes de Servicio / Rutas
+            // Guardar Detalle de Órdenes de Servicio / Rutas en marsisa_ordenes_viaje_rutas
             let rutasInsertadas = 0;
             if (rutasRemotas && rutasRemotas.length) {
                 const chunkSizeR = 100;
@@ -870,7 +1032,7 @@ module.exports = function (db, broadcast, logAudit) {
                     if (!phR.length) continue;
 
                     const batchRutasSql = `
-                        INSERT INTO operaciones_ordenes_viaje_rutas
+                        INSERT INTO marsisa_ordenes_viaje_rutas
                             (viaje, orden, ruta, tipo_servicio, es_retorno, peso_total, cantidad_total, volumen_total)
                         VALUES ${phR.join(', ')}
                         ON DUPLICATE KEY UPDATE
@@ -890,9 +1052,9 @@ module.exports = function (db, broadcast, logAudit) {
             if (logAudit) {
                 logAudit({
                     req,
-                    accion: 'SINCRONIZAR_ORDENES_VIAJE',
-                    modulo: 'OPERACIONES',
-                    detalle: `Sincronizados ${viajesRemotos.length} viajes y ${rutasRemotas.length} órdenes/rutas.`
+                    accion: 'SINCRONIZAR_ORDENES_VIAJE_MARSISA',
+                    modulo: 'OPERACIONES_MARSISA',
+                    detalle: `Sincronizados ${viajesRemotos.length} viajes y ${rutasRemotas.length} órdenes/rutas a tablas marsisa.`
                 });
             }
 
@@ -902,7 +1064,7 @@ module.exports = function (db, broadcast, logAudit) {
                 total_rutas_remoto: rutasRemotas.length,
                 insertados,
                 rutas_procesadas: rutasInsertadas,
-                message: `Sincronización exitosa: ${viajesRemotos.length} viajes y ${rutasRemotas.length} órdenes de servicio/rutas procesadas.`
+                message: `Sincronización exitosa en Marsisa: ${viajesRemotos.length} viajes y ${rutasRemotas.length} órdenes de servicio/rutas procesadas.`
             });
         } catch (err) {
             console.error('Error al sincronizar ordenes de viaje:', err);
