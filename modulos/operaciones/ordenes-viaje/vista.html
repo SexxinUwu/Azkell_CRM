@@ -502,7 +502,7 @@
                 <form id="ovFormNuevoViaje" onsubmit="window.ovGuardarNuevoViaje(event)">
                     
                     <!-- ── SECCIÓN 1: DATOS DE LA ORDEN ──────────────────────── -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white position-relative" style="border: 1px solid #e2e8f0 !important; z-index: 100;">
                         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.98rem;">
                             <i class="bi bi-file-earmark-text-fill text-primary"></i> Datos de la Orden
                         </h6>
@@ -521,7 +521,7 @@
                             </div>
                             <div class="col-12">
                                 <label class="ov-label-req">Conductor <span>(*)</span></label>
-                                <div class="position-relative" style="z-index: 95;">
+                                <div class="position-relative" style="z-index: 105;">
                                     <input type="text" id="ov-form-conductor-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE CONDUCTOR..." autocomplete="off" oninput="window._cbFiltrar('ov-form-conductor')" onfocus="window._cbFiltrar('ov-form-conductor')" onblur="window._cbHide('ov-form-conductor')">
                                     <input type="hidden" id="ov-form-conductor" name="conductor" required>
                                     <div id="ov-form-conductor-dd" class="cb-dropdown"></div>
@@ -531,14 +531,14 @@
                     </div>
 
                     <!-- ── SECCIÓN 2: UNIDADES ASIGNADAS ─────────────────────── -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white position-relative" style="border: 1px solid #e2e8f0 !important; z-index: 80;">
                         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.98rem;">
                             <i class="bi bi-truck text-primary"></i> Unidades Asignadas
                         </h6>
                         <div class="row g-2 g-md-3">
                             <div class="col-12 col-md-6">
                                 <label class="ov-label-req">Vehículo (Tracto) <span>(*)</span></label>
-                                <div class="position-relative" style="z-index: 90;">
+                                <div class="position-relative" style="z-index: 88;">
                                     <input type="text" id="ov-form-tracto-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE TRACTO..." autocomplete="off" oninput="window._cbFiltrar('ov-form-tracto')" onfocus="window._cbFiltrar('ov-form-tracto')" onblur="window._cbHide('ov-form-tracto')">
                                     <input type="hidden" id="ov-form-tracto" name="tracto" required>
                                     <div id="ov-form-tracto-dd" class="cb-dropdown"></div>
@@ -546,7 +546,7 @@
                             </div>
                             <div class="col-12 col-md-6">
                                 <label class="ov-label-req">Semirremolque / Remolque</label>
-                                <div class="position-relative" style="z-index: 85;">
+                                <div class="position-relative" style="z-index: 86;">
                                     <input type="text" id="ov-form-remolque-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE CARRETA..." autocomplete="off" oninput="window._cbFiltrar('ov-form-remolque')" onfocus="window._cbFiltrar('ov-form-remolque')" onblur="window._cbHide('ov-form-remolque')">
                                     <input type="hidden" id="ov-form-remolque" name="remolque">
                                     <div id="ov-form-remolque-dd" class="cb-dropdown"></div>
@@ -557,7 +557,7 @@
                     </div>
 
                     <!-- ── SECCIÓN 3: ITINERARIO Y CARGA ─────────────────────── -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white position-relative" style="border: 1px solid #e2e8f0 !important; z-index: 50;">
                         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.98rem;">
                             <i class="bi bi-geo-alt-fill text-primary"></i> Itinerario y Carga
                         </h6>
@@ -578,7 +578,7 @@
                     </div>
 
                     <!-- ── SECCIÓN 4: PUNTOS DE PARTIDA Y LLEGADA ────────────── -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white position-relative" style="border: 1px solid #e2e8f0 !important; z-index: 20;">
                         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.98rem;">
                             <i class="bi bi-signpost-2-fill text-primary"></i> Puntos de Partida y Llegada
                         </h6>
