@@ -447,7 +447,7 @@ window.ovRenderizarTabla = function() {
 
                     <!-- 6. VIAJE -->
                     <td>
-                        <a href="javascript:void(0)" class="ov-btn-viaje-eye" title="Ver detalles del viaje">
+                        <a href="javascript:void(0)" class="ov-btn-viaje-eye" title="Ver monitoreo detallado del viaje" onclick="window.ovAbrirModalMonitoreoViaje('${v.viaje}')">
                             <i class="bi bi-eye"></i> ${v.viaje || '---'}
                         </a>
                     </td>
@@ -520,7 +520,11 @@ window.ovRenderizarTabla = function() {
 
             html += `
                 <tr>
-                    <td><span class="ov-badge-viaje">${r.viaje || '---'}</span></td>
+                    <td>
+                        <a href="javascript:void(0)" class="ov-btn-viaje-eye" onclick="window.ovAbrirModalMonitoreoViaje('${r.viaje}')" title="Ver monitoreo del viaje">
+                            <i class="bi bi-eye"></i> ${r.viaje || '---'}
+                        </a>
+                    </td>
                     <td>
                         <span class="badge bg-light text-dark border border-secondary-subtle px-2 py-1 font-monospace fw-bold" style="font-size:0.78rem;">
                             <i class="bi bi-receipt me-1 text-primary"></i>${r.orden || '---'}
@@ -979,6 +983,137 @@ window.ovEjecutarIniciarViajeConfirmado = async function(e) {
     } catch(err) {
         console.error('Error al iniciar viaje:', err);
         alert('Error: ' + err.message);
+    }
+};
+
+// ── MONITOREO DE VIAJE (MODAL ESTILO APPLE iOS) ───────────────────────
+window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
+    if (!viajeCode) return;
+
+    var item = (_ovViajesGlobal || []).find(x => x.viaje === viajeCode);
+    if (!item) {
+        alert('No se encontraron los datos del viaje para monitoreo.');
+        return;
+    }
+
+    // Cabecera Folio
+    var hFolio = document.getElementById('ov-mon-header-folio');
+    if (hFolio) hFolio.textContent = viajeCode;
+
+    // Resumen Top KPIs
+    var tractoEl = document.getElementById('ov-mon-kpi-tracto');
+    var remolqueEl = document.getElementById('ov-mon-kpi-remolque');
+    var condEl = document.getElementById('ov-mon-kpi-conductor');
+    var clienteEl = document.getElementById('ov-mon-kpi-cliente');
+    var rutaEl = document.getElementById('ov-mon-kpi-ruta');
+    var coordEl = document.getElementById('ov-mon-kpi-coordinador');
+
+    if (tractoEl) tractoEl.textContent = item.placa_tracto || '---';
+    if (remolqueEl) remolqueEl.textContent = item.placa_remolque || '---';
+    if (condEl) condEl.textContent = item.conductor || '---';
+    if (clienteEl) clienteEl.textContent = item.cliente || 'CLIENTE OPERACIONES';
+    if (rutaEl) rutaEl.textContent = item.ruta || '---';
+    if (coordEl) coordEl.textContent = (item.usuario_creacion || item.usuario || 'ADMINISTRADOR DEL SISTEMA').toUpperCase();
+
+    // Panel Resumen -> Datos del Viaje
+    var resServicio = document.getElementById('ov-mon-res-servicio');
+    var resGuia = document.getElementById('ov-mon-res-guia');
+    var resPeso = document.getElementById('ov-mon-res-peso');
+    var resCant = document.getElementById('ov-mon-res-cant');
+    var resVol = document.getElementById('ov-mon-res-vol');
+
+    if (resServicio) resServicio.textContent = 'LOCAL - DIURNO';
+    if (resGuia) resGuia.textContent = item.numero_guia || '—';
+    if (resPeso) resPeso.textContent = parseFloat(item.peso || 0).toFixed(2);
+    if (resCant) resCant.textContent = item.cantidad || '0';
+    if (resVol) resVol.textContent = parseFloat(item.volumen || 0).toFixed(2);
+
+    // Buscar rutas asociadas a este viaje
+    var rutasAsoc = (_ovRutasGlobal || []).filter(r => r.viaje === viajeCode);
+    var badgeRutas = document.getElementById('ov-mon-badge-rutas');
+    if (badgeRutas) badgeRutas.textContent = rutasAsoc.length;
+
+    // Llenar tabla de rutas
+    var tbodyRutas = document.getElementById('ov-mon-tbody-rutas');
+    if (tbodyRutas) {
+        if (rutasAsoc.length === 0) {
+            tbodyRutas.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Sin órdenes de servicio registradas para este viaje.</td></tr>`;
+        } else {
+            tbodyRutas.innerHTML = rutasAsoc.map(r => `
+                <tr>
+                    <td class="fw-bold text-dark">${r.orden || '---'}</td>
+                    <td>${parseInt(r.es_retorno, 10) === 1 ? '<span class="badge bg-warning-subtle text-warning-emphasis">RETORNO</span>' : '<span class="badge bg-primary-subtle text-primary">IDA</span>'}</td>
+                    <td>${r.ruta || '---'}</td>
+                    <td>${r.tipo_servicio || 'CARGA GENERAL'}</td>
+                    <td class="font-monospace fw-bold">${parseFloat(r.peso_total || 0).toFixed(2)}</td>
+                    <td class="font-monospace">${r.cantidad_total || 0}</td>
+                    <td class="font-monospace">${parseFloat(r.volumen_total || 0).toFixed(2)}</td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    // Buscar combustible asociado por viaje o placa
+    var tbodyComb = document.getElementById('ov-mon-tbody-combustible');
+    if (tbodyComb) {
+        tbodyComb.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-warning me-2"></div>Buscando abastecimientos...</td></tr>`;
+        try {
+            var paramsComb = new URLSearchParams({ viaje: viajeCode, limit: 10 });
+            var rComb = await fetch(`/api/combustible/vales?${paramsComb.toString()}`);
+            var jComb = await rComb.json();
+            if (jComb && jComb.ok && Array.isArray(jComb.data) && jComb.data.length > 0) {
+                tbodyComb.innerHTML = jComb.data.map(c => `
+                    <tr>
+                        <td class="fw-bold text-primary font-monospace">${c.correlativo || '---'}</td>
+                        <td class="font-monospace">${(c.fecha || '').slice(0, 10)}</td>
+                        <td>${c.estacion || '---'}</td>
+                        <td>${c.proveedor || '---'}</td>
+                        <td class="font-monospace fw-bold">${parseFloat(c.galones || 0).toFixed(2)} GL</td>
+                        <td class="font-monospace">${c.kilometraje || '---'}</td>
+                        <td class="font-monospace fw-bold text-success">S/ ${parseFloat(c.importe || 0).toFixed(2)}</td>
+                        <td><span class="badge bg-success-subtle text-success">${c.estado || 'VÁLIDO'}</span></td>
+                    </tr>
+                `).join('');
+            } else {
+                tbodyComb.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">No se registran vales de combustible asociados al viaje ${viajeCode}.</td></tr>`;
+            }
+        } catch(e) {
+            tbodyComb.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">No se pudo consultar el historial de combustible.</td></tr>`;
+        }
+    }
+
+    // Resetear a la primera tab (Resumen)
+    var btnPrimeraTab = document.querySelector('.ov-mon-tab-pill');
+    if (btnPrimeraTab) window.ovMonCambiarTab('resumen', btnPrimeraTab);
+
+    // Abrir Modal
+    var modalEl = document.getElementById('ovModalMonitoreoViaje');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
+window.ovMonCambiarTab = function(tabId, btnElement) {
+    // Desactivar todas las tabs
+    document.querySelectorAll('.ov-mon-tab-pill').forEach(b => b.classList.remove('active'));
+    if (btnElement) btnElement.classList.add('active');
+
+    // Ocultar todos los paneles
+    document.querySelectorAll('.ov-mon-panel').forEach(p => p.classList.add('d-none'));
+
+    // Mostrar panel activo
+    var panel = document.getElementById('ov-mon-panel-' + tabId);
+    if (panel) {
+        panel.classList.remove('d-none');
+    } else {
+        // Usar panel genérico con título de la tab seleccionada
+        var generico = document.getElementById('ov-mon-panel-generico');
+        var tituloGen = document.getElementById('ov-mon-generico-titulo');
+        if (tituloGen && btnElement) {
+            tituloGen.textContent = btnElement.innerText.trim();
+        }
+        if (generico) generico.classList.remove('d-none');
     }
 };
 
