@@ -10,6 +10,18 @@ module.exports = function (db, broadcast, logAudit) {
         return (typeof d.promise === 'function') ? d.promise() : d;
     }
 
+    function getValesTable(req) {
+        const tenantId = (req && (req.tenantSlug || (req.headers && req.headers['x-tenant-id']))) || 'default';
+        const host = ((req && req.headers && req.headers.host) || '').toLowerCase();
+        const isMarsisa = (tenantId && tenantId.toLowerCase().includes('marsisa')) || host.includes('marsisa');
+        const modulo = (req && req.query && req.query.modulo) || (req && req.body && req.body.modulo) || '';
+
+        if (modulo === 'marsisa') return 'marsisa_combustible_vales';
+        if (modulo === 'operaciones') return 'operaciones_combustible_vales';
+        if (isMarsisa) return 'marsisa_combustible_vales';
+        return 'operaciones_combustible_vales';
+    }
+
     // Configuración de conexión al host remoto de combustible
     const REMOTE_CONFIG = {
         host: process.env.REMOTE_FUEL_HOST || '168.231.98.23',
@@ -107,11 +119,21 @@ module.exports = function (db, broadcast, logAudit) {
             await tdb.query(TABLE_SQL);
             await tdb.query(TABLE_MATRIZ_SQL);
             
-            // Migrar columnas adicionales si la tabla ya existía
+            // Tablas independientes para Operaciones Marsisa y Operaciones Propio
+            await tdb.query("CREATE TABLE IF NOT EXISTS marsisa_combustible_vales LIKE combustible_vales");
+            await tdb.query("CREATE TABLE IF NOT EXISTS operaciones_combustible_vales LIKE combustible_vales");
+
+            // Migrar columnas adicionales si las tablas ya existían
             const migCols = [
                 "ALTER TABLE combustible_vales ADD COLUMN id_remoto INT NULL",
                 "ALTER TABLE combustible_vales ADD COLUMN vehiculo_marca VARCHAR(100) NULL",
-                "ALTER TABLE combustible_vales ADD COLUMN vehiculo_modelo VARCHAR(100) NULL"
+                "ALTER TABLE combustible_vales ADD COLUMN vehiculo_modelo VARCHAR(100) NULL",
+                "ALTER TABLE marsisa_combustible_vales ADD COLUMN id_remoto INT NULL",
+                "ALTER TABLE marsisa_combustible_vales ADD COLUMN vehiculo_marca VARCHAR(100) NULL",
+                "ALTER TABLE marsisa_combustible_vales ADD COLUMN vehiculo_modelo VARCHAR(100) NULL",
+                "ALTER TABLE operaciones_combustible_vales ADD COLUMN id_remoto INT NULL",
+                "ALTER TABLE operaciones_combustible_vales ADD COLUMN vehiculo_marca VARCHAR(100) NULL",
+                "ALTER TABLE operaciones_combustible_vales ADD COLUMN vehiculo_modelo VARCHAR(100) NULL"
             ];
             for (const q of migCols) {
                 try { await tdb.query(q); } catch(e) {}
@@ -152,7 +174,7 @@ module.exports = function (db, broadcast, logAudit) {
         try {
             const tenantId = req.tenantSlug || req.headers['x-tenant-id'] || 'default';
             const host = (req.headers.host || '').toLowerCase();
-            const isMarsisa = tenantId.toLowerCase().includes('marsisa') || host.includes('marsisa') || tenantId === 'master';
+            const isMarsisa = tenantId.toLowerCase().includes('marsisa') || host.includes('marsisa') || tenantId === 'master' || tenantId === 'default';
 
             if (!isMarsisa) {
                 return res.status(400).json({
@@ -167,10 +189,10 @@ module.exports = function (db, broadcast, logAudit) {
             const query = req.query || {};
             const reimportAll = query.reset === 'true' || body.reset === true || query.forzar === 'true' || body.forzar === true;
 
-            console.log('🔄 Iniciando sincronización remota de combustible desde 168.231.98.23 para Marsisa...');
+            console.log('🔄 Iniciando sincronización remota de combustible desde 168.231.98.23 para Marsisa (marsisa_combustible_vales)...');
 
             if (reimportAll) {
-                await tdb.query("DELETE FROM combustible_vales");
+                await tdb.query("DELETE FROM marsisa_combustible_vales");
             }
 
             // Consultar catálogo de estaciones para mapear RUC de proveedores
@@ -194,8 +216,8 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             });
 
-            // Consultar correlativos e IDs existentes para no duplicar (a menos que se fuerce reimportAll)
-            const [existentesRows] = reimportAll ? [[]] : await tdb.query("SELECT DISTINCT id_remoto, correlativo FROM combustible_vales WHERE correlativo != '' OR id_remoto IS NOT NULL");
+            // Consultar correlativos e IDs existentes en marsisa_combustible_vales para no duplicar
+            const [existentesRows] = reimportAll ? [[]] : await tdb.query("SELECT DISTINCT id_remoto, correlativo FROM marsisa_combustible_vales WHERE correlativo != '' OR id_remoto IS NOT NULL");
             const existentesCorrelativos = new Set(existentesRows.map(r => r.correlativo).filter(Boolean));
             const existentesRemotoIds = new Set(existentesRows.map(r => r.id_remoto).filter(Boolean));
 
@@ -283,7 +305,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                 if (values.length > 0) {
                     await tdb.query(
-                        `INSERT INTO combustible_vales (
+                        `INSERT INTO marsisa_combustible_vales (
                             id_remoto, fecha, estado, correlativo, estado_pago, viaje, caja, estado_caja, clase_vehiculo,
                             vehiculo, vehiculo_marca, vehiculo_modelo, conductor, ruta, departamento, provincia, distrito, estacion, tipo_combustible,
                             proveedor, ruc, kilometraje, peso_tn, galones, costo_gl, tipo_pago, dias_credito,
@@ -513,6 +535,7 @@ module.exports = function (db, broadcast, logAudit) {
     router.get('/vales', async (req, res) => {
         try {
             const tdb = getDb(req);
+            const valesTable = getValesTable(req);
             const page = Math.max(1, parseInt(req.query.page, 10) || 1);
             const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
             const offset = (page - 1) * limit;
@@ -566,7 +589,7 @@ module.exports = function (db, broadcast, logAudit) {
                     COUNT(*) AS totalRegistros,
                     IFNULL(SUM(galones), 0) AS totalGalones,
                     IFNULL(SUM(importe), 0) AS totalGasto
-                 FROM combustible_vales ${whereSQL}`,
+                 FROM ${valesTable} ${whereSQL}`,
                 params
             );
 
@@ -613,7 +636,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             // Registros paginados con orden dinámico
             const [rows] = await tdb.query(
-                `SELECT * FROM combustible_vales 
+                `SELECT * FROM ${valesTable} 
                  ${whereSQL} 
                  ORDER BY ${sortCol} ${sortDir}, id_remoto DESC 
                  LIMIT ? OFFSET ?`,
@@ -646,6 +669,7 @@ module.exports = function (db, broadcast, logAudit) {
     router.post('/vales', async (req, res) => {
         try {
             const tdb = getDb(req);
+            const valesTable = getValesTable(req);
             const body = req.body || {};
 
             const fecha = body.fecha ? new Date(body.fecha).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -685,7 +709,7 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             const [result] = await tdb.query(
-                `INSERT INTO combustible_vales (
+                `INSERT INTO ${valesTable} (
                     fecha, estado, correlativo, estado_pago, viaje, caja, estado_caja, clase_vehiculo,
                     vehiculo, conductor, ruta, departamento, provincia, distrito, estacion, tipo_combustible,
                     proveedor, ruc, kilometraje, peso_tn, galones, costo_gl, tipo_pago, dias_credito,
@@ -715,6 +739,7 @@ module.exports = function (db, broadcast, logAudit) {
     router.post('/vales/importar-masivo', async (req, res) => {
         try {
             const tdb = getDb(req);
+            const valesTable = getValesTable(req);
             const vales = Array.isArray(req.body.vales) ? req.body.vales : [];
 
             if (vales.length === 0) {
@@ -799,7 +824,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                 if (values.length > 0) {
                     await tdb.query(
-                        `INSERT INTO combustible_vales (
+                        `INSERT INTO ${valesTable} (
                             fecha, estado, correlativo, estado_pago, viaje, caja, estado_caja, clase_vehiculo,
                             vehiculo, conductor, ruta, departamento, provincia, distrito, estacion, tipo_combustible,
                             proveedor, ruc, kilometraje, peso_tn, galones, costo_gl, tipo_pago, dias_credito,
@@ -831,6 +856,7 @@ module.exports = function (db, broadcast, logAudit) {
     router.put('/vales/:id', async (req, res) => {
         try {
             const tdb = getDb(req);
+            const valesTable = getValesTable(req);
             const id = req.params.id;
             const body = req.body || {};
 
@@ -856,7 +882,7 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             values.push(id);
-            await tdb.query(`UPDATE combustible_vales SET ${updates.join(', ')} WHERE id = ?`, values);
+            await tdb.query(`UPDATE ${valesTable} SET ${updates.join(', ')} WHERE id = ?`, values);
 
             if (logAudit) logAudit(req, 'COMBUSTIBLE', 'EDITAR_VALE', `Actualizado vale ID ${id}`);
 
@@ -873,13 +899,14 @@ module.exports = function (db, broadcast, logAudit) {
     router.delete('/vales/:id', async (req, res) => {
         try {
             const tdb = getDb(req);
+            const valesTable = getValesTable(req);
             const id = req.params.id;
             const hardDelete = req.query.hard === 'true';
 
             if (hardDelete) {
-                await tdb.query("DELETE FROM combustible_vales WHERE id = ?", [id]);
+                await tdb.query(`DELETE FROM ${valesTable} WHERE id = ?`, [id]);
             } else {
-                await tdb.query("UPDATE combustible_vales SET estado = 'ANULADO' WHERE id = ?", [id]);
+                await tdb.query(`UPDATE ${valesTable} SET estado = 'ANULADO' WHERE id = ?`, [id]);
             }
 
             if (logAudit) logAudit(req, 'COMBUSTIBLE', 'ELIMINAR_VALE', `Eliminado/Anulado vale ID ${id}`);
@@ -898,6 +925,7 @@ module.exports = function (db, broadcast, logAudit) {
     router.post('/vales/eliminar-masivo', async (req, res) => {
         try {
             const tdb = getDb(req);
+            const valesTable = getValesTable(req);
             const ids = Array.isArray(req.body.ids) ? req.body.ids.filter(Boolean) : [];
             const hardDelete = req.body.hard === true || req.query.hard === 'true';
 
@@ -906,9 +934,9 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             if (hardDelete) {
-                await tdb.query("DELETE FROM combustible_vales WHERE id IN (?)", [ids]);
+                await tdb.query(`DELETE FROM ${valesTable} WHERE id IN (?)`, [ids]);
             } else {
-                await tdb.query("UPDATE combustible_vales SET estado = 'ANULADO' WHERE id IN (?)", [ids]);
+                await tdb.query(`UPDATE ${valesTable} SET estado = 'ANULADO' WHERE id IN (?)`, [ids]);
             }
 
             if (logAudit) logAudit(req, 'COMBUSTIBLE', 'ELIMINAR_MASIVO', `Eliminados/Anulados ${ids.length} vales`);
@@ -963,6 +991,7 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+            const valesTable = getValesTable(req);
 
             // 1. Consultar vales filtrados a máxima velocidad (índice directo)
             const [rows] = await tdb.query(
@@ -970,14 +999,22 @@ module.exports = function (db, broadcast, logAudit) {
                     id, fecha, estado, correlativo, viaje, vehiculo, conductor, ruta,
                     estacion, proveedor, tipo_combustible, kilometraje, peso_tn, galones,
                     importe, numero_comprobante, tipo
-                FROM combustible_vales 
+                FROM ${valesTable} 
                 ${whereSQL} 
                 ORDER BY fecha ASC, id ASC`,
                 params
             );
 
-            // 2. Consultar órdenes de viaje en paralelo y mapear en memoria O(1)
-            const [ovRows] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque FROM operaciones_ordenes_viaje`);
+            // 2. Consultar órdenes de viaje correspondientes en paralelo
+            const ovTable = valesTable === 'marsisa_combustible_vales' ? 'marsisa_ordenes_viaje' : 'operaciones_ordenes_viaje';
+            let ovRows = [];
+            try {
+                const [r] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque FROM ${ovTable}`);
+                ovRows = r;
+            } catch (e) {
+                const [r] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque FROM operaciones_ordenes_viaje`);
+                ovRows = r;
+            }
             const ovMap = new Map();
             ovRows.forEach(o => {
                 if (o.viaje) {
@@ -1263,9 +1300,10 @@ module.exports = function (db, broadcast, logAudit) {
     router.get('/catalogos', async (req, res) => {
         try {
             const tdb = getDb(req);
-            const [combustibles] = await tdb.query("SELECT DISTINCT tipo_combustible FROM combustible_vales WHERE tipo_combustible != '' ORDER BY tipo_combustible ASC");
-            const [placas] = await tdb.query("SELECT DISTINCT vehiculo FROM combustible_vales WHERE vehiculo != '' AND vehiculo != 'SIN-PLACA' ORDER BY vehiculo ASC");
-            const [proveedores] = await tdb.query("SELECT DISTINCT proveedor FROM combustible_vales WHERE proveedor != '' ORDER BY proveedor ASC");
+            const valesTable = getValesTable(req);
+            const [combustibles] = await tdb.query(`SELECT DISTINCT tipo_combustible FROM ${valesTable} WHERE tipo_combustible != '' ORDER BY tipo_combustible ASC`);
+            const [placas] = await tdb.query(`SELECT DISTINCT vehiculo FROM ${valesTable} WHERE vehiculo != '' AND vehiculo != 'SIN-PLACA' ORDER BY vehiculo ASC`);
+            const [proveedores] = await tdb.query(`SELECT DISTINCT proveedor FROM ${valesTable} WHERE proveedor != '' ORDER BY proveedor ASC`);
 
             res.json({
                 ok: true,
