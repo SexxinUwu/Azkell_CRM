@@ -2197,13 +2197,35 @@ window._sguSaveSettings = function() {
 // =========================================================
 // 📸 GALERÍA DE FOTOS (Bottom Drawer)
 // =========================================================
-window._sguVerFotos = function(tipo) {
+window._sguVerFotos = async function(tipo) {
     if (!window._sguCurrentRecord) return;
     var rec = window._sguCurrentRecord;
-    var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
 
     var container = document.getElementById('sgu-gallery-container');
     if (!container) return;
+
+    var titleEl = document.getElementById('sgu-gallery-title');
+    if (titleEl) titleEl.textContent = 'Evidencias Fotográficas — ' + (tipo === 'salida' ? 'Ida' : 'Vuelta');
+    _sguOpenDrawer('sgu-gallery-overlay');
+
+    container.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando evidencias...</div>';
+
+    // Obtener URLs con firma activa para evitar AccessDenied de S3
+    var fotosFirmadas = [];
+    try {
+        var fRes = await fetch('/api/seguridad/unidades/' + encodeURIComponent(rec.id) + '/fotos-presigned', {
+            headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('fleet_token') || '') }
+        });
+        if (fRes.ok) fotosFirmadas = await fRes.json();
+    } catch(e) {
+        console.warn('Error cargando fotos firmadas:', e);
+    }
+
+    var todasFotos = (fotosFirmadas && fotosFirmadas.length) ? fotosFirmadas : (rec.fotos || []);
+    // Actualizar rec.fotos con las firmas
+    if (fotosFirmadas && fotosFirmadas.length) rec.fotos = fotosFirmadas;
+
+    var fotos = todasFotos.filter(function(f) { return f.tipo === tipo; });
 
     if (fotos.length === 0) {
         container.innerHTML = '<div class="text-center py-5 text-secondary"><i class="bi bi-images fs-2 d-block mb-2"></i>No hay evidencias fotográficas registradas en la fase de ' + tipo + '.</div>';
@@ -2212,7 +2234,7 @@ window._sguVerFotos = function(tipo) {
         fotos.forEach(function(f, idx) {
             html += '<div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#f8fafc;box-shadow:0 2px 8px rgba(0,0,0,0.04);position:relative;">';
             html += '<a href="' + f.url + '" target="_blank" style="display:block;background:#f1f5f9;min-height:140px;">';
-            html += '<img src="' + f.url + '" style="width:100%;height:140px;object-fit:cover;display:block;" alt="Evidencia ' + (idx + 1) + '" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML=\'<div class=\\\'d-flex flex-column align-items-center justify-content-center h-100 p-2 text-muted text-center\\\' style=\\\'height:140px;font-size:0.75rem;cursor:pointer;\\\' onclick=\\\'window.open(\\\\\\\'' + f.url + '\\\\\\\', \\\\\\\'_blank\\\\\\\')\\\'><i class=\\\'bi bi-image fs-3 text-secondary mb-1\\\'></i><span>Foto ' + (idx + 1) + '</span><span class=\\\'badge bg-light text-primary border mt-1\\\'>Ver directa</span></div>\';">';
+            html += '<img src="' + f.url + '" style="width:100%;height:140px;object-fit:cover;display:block;" alt="Evidencia ' + (idx + 1) + '" loading="lazy">';
             html += '</a>';
             html += '<div style="padding:6px 8px;font-size:0.75rem;font-weight:700;color:#475569;text-align:center;background:#fff;border-top:1px solid #f1f5f9;">Foto ' + (idx + 1) + '</div>';
             html += '</div>';
@@ -2220,10 +2242,6 @@ window._sguVerFotos = function(tipo) {
         html += '</div>';
         container.innerHTML = html;
     }
-
-    var titleEl = document.getElementById('sgu-gallery-title');
-    if (titleEl) titleEl.textContent = 'Evidencias Fotográficas — ' + (tipo === 'salida' ? 'Ida' : 'Vuelta');
-    _sguOpenDrawer('sgu-gallery-overlay');
 };
 
 // =========================================================
