@@ -5,6 +5,8 @@
 window.dataGlobalOrdenesViajeModulo = [];
 window.dataGlobalRutasModulo = [];
 window.datosFiltradosOrdenesViajeModulo = [];
+var _ovViajesGlobal = [];
+var _ovRutasGlobal = [];
 var _ovModoVistaActual = 'viajes'; // 'viajes' | 'rutas'
 var _ovPaginaActual = 1;
 var _ovItemsPorPagina = 25;
@@ -144,6 +146,8 @@ window.ovCargarDatos = async function() {
 
         window.dataGlobalOrdenesViajeModulo = (jsonViajes && jsonViajes.ok && Array.isArray(jsonViajes.data)) ? jsonViajes.data : [];
         window.dataGlobalRutasModulo = (jsonRutas && jsonRutas.ok && Array.isArray(jsonRutas.data)) ? jsonRutas.data : [];
+        _ovViajesGlobal = window.dataGlobalOrdenesViajeModulo;
+        _ovRutasGlobal = window.dataGlobalRutasModulo;
 
         window.ovActualizarKPIs();
         window.ovAplicarFiltros();
