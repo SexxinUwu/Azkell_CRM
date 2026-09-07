@@ -72,20 +72,11 @@ module.exports = (db, logAudit) => {
             if (!rows.length) return res.json([]);
             
             const ids = rows.map(r => r.id);
-            db.query('SELECT * FROM seg_unidades_fotos WHERE registro_id IN (?) ORDER BY orden ASC', [ids], async (err2, fotosRows) => {
+            db.query('SELECT id, registro_id, tipo, url, orden FROM seg_unidades_fotos WHERE registro_id IN (?) ORDER BY orden ASC', [ids], (err2, fotosRows) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 
-                const fotosWithPresign = await Promise.all((fotosRows || []).map(async (f) => {
-                    const key = s3KeyFromUrl(f.url);
-                    let finalUrl = f.url;
-                    if (key) {
-                        try { finalUrl = await getPresignedUrl(key, 86400); } catch(e) {}
-                    }
-                    return { id: f.id, registro_id: f.registro_id, tipo: f.tipo, url: finalUrl, orden: f.orden, key: key };
-                }));
-
                 const fotosByRecord = {};
-                for (const f of fotosWithPresign) {
+                for (const f of (fotosRows || [])) {
                     if (!fotosByRecord[f.registro_id]) fotosByRecord[f.registro_id] = [];
                     fotosByRecord[f.registro_id].push(f);
                 }
