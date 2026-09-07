@@ -1035,7 +1035,7 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     var resCant = document.getElementById('ov-mon-res-cant');
     var resVol = document.getElementById('ov-mon-res-vol');
 
-    if (resServicio) resServicio.textContent = item.tipo_servicio || 'LOCAL - DIURNO';
+    if (resServicio) resServicio.textContent = item.tipo_servicio || '—';
     if (resGuia) resGuia.textContent = item.numero_guia || '—';
     if (resPeso) resPeso.textContent = parseFloat(item.peso || 0).toFixed(2);
     if (resCant) resCant.textContent = item.cantidad || '0';
