@@ -482,7 +482,7 @@ window.ovAbrirModalNuevoViaje = async function() {
     }
 
     // Cargar listas de conductores y vehículos
-    window.ovCargarCombosFormulario();
+    await window.ovCargarCombosFormulario();
 
     // Mostrar modal
     var modalEl = document.getElementById('ovModalNuevoViaje');
@@ -498,6 +498,17 @@ window.ovCargarCombosFormulario = async function() {
             fetch('/api/placas-lista').then(r => r.ok ? r.json() : []).catch(() => []),
             fetch('/api/conductores-lista').then(r => r.ok ? r.json() : []).catch(() => [])
         ]);
+
+        // Si conductores-lista viene vacío, intentar con /api/conductores
+        if (!resConductores || !resConductores.length) {
+            try {
+                var rCondAlt = await fetch('/api/conductores');
+                if (rCondAlt.ok) {
+                    var jCondAlt = await rCondAlt.json();
+                    resConductores = Array.isArray(jCondAlt) ? jCondAlt : (jCondAlt.data || []);
+                }
+            } catch(e) {}
+        }
 
         var tractos = [];
         var carretas = [];
@@ -522,12 +533,17 @@ window.ovCargarCombosFormulario = async function() {
         var conductores = [];
         var condMap = new Set();
         (resConductores || []).forEach(function(c) {
-            var nombreCompleto = c.nombre_completo || c.nombres || c.conductor || (c.apellidos ? `${c.apellidos}, ${c.nombres}` : '');
+            var nombreCompleto = '';
+            if (typeof c === 'string') {
+                nombreCompleto = c;
+            } else if (c) {
+                nombreCompleto = c.nombre || c.nombres_apellidos || c.nombre_completo || c.conductor || c.nombre_conductor || (c.apellidos ? `${c.apellidos}, ${c.nombres}` : '');
+            }
             nombreCompleto = String(nombreCompleto).trim();
             if (!nombreCompleto || condMap.has(nombreCompleto.toUpperCase())) return;
             condMap.add(nombreCompleto.toUpperCase());
-            var label = `${nombreCompleto}${c.dni ? ' · ' + c.dni : ''}`;
-            conductores.push({ value: nombreCompleto, label: label, idConductor: c.id || '' });
+            var label = `${nombreCompleto}${c && c.dni ? ' · ' + c.dni : ''}`;
+            conductores.push({ value: nombreCompleto, label: label, idConductor: (c && c.id) || (c && c.idConductor) || '' });
         });
 
         conductores.sort((a, b) => a.value.localeCompare(b.value));
