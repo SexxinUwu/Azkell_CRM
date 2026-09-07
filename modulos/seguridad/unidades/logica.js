@@ -3024,7 +3024,7 @@ window._sguCompartirWhatsApp = async function(tipo) {
         var pdfBlob = await _sguRenderPdfFromTemplate(htmlFinal, filename);
         var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-        // 1. Compartir nativo (Móviles / Tablets donde el usuario elige WhatsApp)
+        // 1. Compartir nativo (Abre el diálogo del sistema para elegir la app de WhatsApp con el PDF adjunto)
         if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
             try {
                 await navigator.share({
@@ -3033,21 +3033,70 @@ window._sguCompartirWhatsApp = async function(tipo) {
                 });
                 return;
             } catch (shareErr) {
-                if (shareErr.name === 'AbortError') return;
-                console.warn('Error al compartir con gesto expirado:', shareErr);
+                if (shareErr.name === 'AbortError') return; // Cancelado por el usuario
+                console.warn('Error en navigator.share:', shareErr);
+
+                // Si el navegador perdió el gesto de usuario debido al renderizado del PDF,
+                // creamos un botón flotante instantáneo para que al tocarlo abra la app de inmediato con gesto activo
+                if (shareErr.name === 'NotAllowedError') {
+                    window._sguPendingPdfFile = pdfFile;
+                    window._sguPendingPdfFilename = filename;
+                    _sguMostrarBotonReintentarShare();
+                    return;
+                }
             }
         }
 
-        // 2. Si el navegador en PC expiró el token de gesto o no soporta Web Share con archivos:
-        // Abre WhatsApp Web directo
-        window.open('https://web.whatsapp.com/', '_blank');
-        _sguToast('Abriendo WhatsApp...');
+        // 2. Si el dispositivo no soporta navigator.share o falló:
+        // Abre directamente la aplicación de WhatsApp (whatsapp://) y NUNCA la web
+        window.location.href = 'whatsapp://';
+        _sguToast('Abriendo aplicación WhatsApp...');
     } catch(err) {
         if (err.name === 'AbortError') return;
         console.error('Error al compartir WhatsApp:', err);
         _sguToast('Error al generar PDF: ' + err.message, 'bi-exclamation-circle');
     }
 };
+
+// Helper para reintentar compartir con gesto directo de usuario si el navegador lo bloqueó por tiempo
+function _sguMostrarBotonReintentarShare() {
+    var existing = document.getElementById('sgu-reintentar-share-overlay');
+    if (existing) existing.remove();
+
+    var div = document.createElement('div');
+    div.id = 'sgu-reintentar-share-overlay';
+    div.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);animation:fadeIn 0.2s ease;';
+    div.innerHTML = '<div style="background:#fff;border-radius:24px;padding:26px 20px;text-align:center;max-width:320px;width:88%;box-shadow:0 20px 40px rgba(0,0,0,0.25);">' +
+        '<div style="width:58px;height:58px;background:#25D366;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px;">' +
+        '<i class="bi bi-whatsapp"></i>' +
+        '</div>' +
+        '<h5 style="font-weight:800;color:#0f172a;margin-bottom:8px;font-size:1.1rem;">PDF Listo</h5>' +
+        '<p style="color:#64748b;font-size:0.83rem;margin-bottom:20px;">Toca el botón para abrir WhatsApp y seleccionar el chat.</p>' +
+        '<button id="sgu-btn-touch-share" style="background:#25D366;color:#fff;font-weight:700;border:none;padding:12px 24px;border-radius:14px;width:100%;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(37,211,102,0.35);">' +
+        '<i class="bi bi-share-fill"></i> Enviar por WhatsApp' +
+        '</button>' +
+        '<button onclick="document.getElementById(\'sgu-reintentar-share-overlay\').remove()" style="background:transparent;color:#94a3b8;font-weight:600;border:none;margin-top:12px;font-size:0.8rem;cursor:pointer;">Cancelar</button>' +
+        '</div>';
+    document.body.appendChild(div);
+
+    document.getElementById('sgu-btn-touch-share').onclick = async function() {
+        div.remove();
+        if (window._sguPendingPdfFile && navigator.canShare && navigator.canShare({ files: [window._sguPendingPdfFile] })) {
+            try {
+                await navigator.share({
+                    files: [window._sguPendingPdfFile],
+                    title: window._sguPendingPdfFilename || 'Checklist.pdf'
+                });
+            } catch(e) {
+                if (e.name !== 'AbortError') {
+                    window.location.href = 'whatsapp://';
+                }
+            }
+        } else {
+            window.location.href = 'whatsapp://';
+        }
+    };
+}
 
 // =========================================================
 // 🗑️ ELIMINAR REGISTRO (DISEÑO B)
