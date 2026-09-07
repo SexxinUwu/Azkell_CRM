@@ -137,7 +137,7 @@
         choferes: new Set(),
         motores: new Set(),
         pesos: new Set(),
-        combustible: 'ALL',
+        combustible: 'D2',
         anio: 'ALL',
         orden: 'date_desc'
     };
@@ -667,7 +667,7 @@
             choferes: new Set(),
             motores: new Set(),
             pesos: new Set(),
-            combustible: 'ALL',
+            combustible: 'D2',
             anio: 'ALL',
             orden: 'date_desc'
         };
@@ -684,7 +684,7 @@
             choferes: new Set(),
             motores: new Set(),
             pesos: new Set(),
-            combustible: 'ALL',
+            combustible: 'D2',
             anio: 'ALL',
             orden: 'date_desc'
         };
@@ -701,7 +701,7 @@
         else if (tipo === 'chofer') window._caFiltrosState.choferes.delete(valor);
         else if (tipo === 'motor') window._caFiltrosState.motores.delete(valor);
         else if (tipo === 'peso') window._caFiltrosState.pesos.delete(valor);
-        else if (tipo === 'combustible') window._caFiltrosState.combustible = 'ALL';
+        else if (tipo === 'combustible') window._caFiltrosState.combustible = 'D2';
         else if (tipo === 'anio') window._caFiltrosState.anio = 'ALL';
 
         window.caAplicarFiltros(true);
@@ -867,7 +867,7 @@
 
     // Calcular y Renderizar Métricas Bento (KPIs)
     window.caRenderKPIs = function() {
-        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
+        const fuelFilter = window._caFiltrosState?.combustible || document.getElementById('ca-filter-fuel')?.value || 'D2';
         const trips = window._caFilteredTrips;
         const totalViajes = trips.length;
 
@@ -1030,7 +1030,7 @@
 
         const esc = (s) => String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
+        const fuelFilter = window._caFiltrosState?.combustible || document.getElementById('ca-filter-fuel')?.value || 'D2';
 
         let html = '';
         pagedTrips.forEach((t, i) => {
@@ -1644,7 +1644,7 @@
         const trip = window._caFilteredTrips[idx];
         if (!trip) return;
 
-        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
+        const fuelFilter = window._caFiltrosState?.combustible || document.getElementById('ca-filter-fuel')?.value || 'D2';
         const fs = (fuelFilter !== 'ALL' && trip.fuelStats && trip.fuelStats[fuelFilter]) ? trip.fuelStats[fuelFilter] : null;
 
         const kInicio = fs ? fs.kmInicio : trip.kmInicio;
@@ -1778,7 +1778,7 @@
             return;
         }
 
-        const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'ALL';
+        const fuelFilter = window._caFiltrosState?.combustible || document.getElementById('ca-filter-fuel')?.value || 'D2';
 
         const exportData = window._caFilteredTrips.map(t => {
             const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
