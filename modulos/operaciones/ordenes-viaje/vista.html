@@ -3,62 +3,122 @@
 <!-- ============================================================ -->
 
 <style>
-/* ── ESTILOS DEL MÓDULO ÓRDENES DE VIAJE ───────────────────────── */
+/* ── ESTILOS COMPACTOS DEL MÓDULO ÓRDENES DE VIAJE ─────────────── */
+.ov-container {
+    padding: 0.5rem 0.85rem 1.5rem 0.85rem;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
 .ov-header-badge {
     background: #eff6ff;
     color: #0284c7;
     font-weight: 700;
-    font-size: 0.75rem;
-    padding: 4px 10px;
-    border-radius: 20px;
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 12px;
     border: 1px solid #bfdbfe;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
 }
 .ov-kpi-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 1.1rem 1.25rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 12px;
+    padding: 0.65rem 0.85rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
     height: 100%;
 }
 .ov-kpi-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 .ov-kpi-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.35rem;
+    font-size: 1.05rem;
+}
+.ov-kpi-val {
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1.15;
+    color: #0f172a;
+}
+.ov-filters-bar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.5rem 0.65rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.02);
+}
+.ov-date-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 0.15rem 0.45rem;
+    min-height: 33px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.ov-date-input {
+    border: none;
+    background: transparent;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #166534;
+    padding: 0;
+    width: 105px;
+    outline: none;
+}
+.ov-date-input:focus {
+    background: #ffffff;
+    border-radius: 4px;
+}
+.ov-btn-clear {
+    width: 33px;
+    height: 33px;
+    min-width: 33px;
+    padding: 0;
+    border-radius: 8px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.ov-btn-clear:hover {
+    background: #fee2e2;
+    color: #b91c1c;
 }
 .ov-table-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 18px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
     overflow: hidden;
 }
 .ov-table thead th {
     background: #f8fafc;
     color: #475569;
-    font-size: 0.76rem;
+    font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 12px 16px;
+    letter-spacing: 0.4px;
+    padding: 9px 12px;
     border-bottom: 1px solid #e2e8f0;
     white-space: nowrap;
 }
 .ov-table tbody td {
-    padding: 14px 16px;
-    font-size: 0.86rem;
+    padding: 8px 12px;
+    font-size: 0.82rem;
     vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
     color: #1e293b;
@@ -69,19 +129,19 @@
 .ov-badge-viaje {
     font-family: 'Plus Jakarta Sans', monospace;
     font-weight: 800;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #0284c7;
     background: #eff6ff;
     border: 1px solid #bae6fd;
-    padding: 4px 8px;
-    border-radius: 8px;
+    padding: 2px 7px;
+    border-radius: 6px;
     display: inline-block;
 }
 .ov-badge-placa {
     font-weight: 800;
-    font-size: 0.82rem;
-    padding: 3px 8px;
-    border-radius: 6px;
+    font-size: 0.78rem;
+    padding: 2px 6px;
+    border-radius: 5px;
     letter-spacing: 0.5px;
 }
 .ov-badge-tracto {
@@ -98,146 +158,162 @@
     background: #f8fafc;
     color: #334155;
     border: 1px solid #e2e8f0;
-    font-size: 0.78rem;
-    padding: 4px 8px;
-    border-radius: 6px;
-    max-width: 260px;
+    font-size: 0.76rem;
+    padding: 3px 6px;
+    border-radius: 5px;
+    max-width: 250px;
     display: inline-block;
     white-space: normal;
     word-break: break-word;
 }
-.ov-btn-sync {
-    background: #0284c7;
-    color: #ffffff;
-    border: none;
-    border-radius: 12px;
-    padding: 0.55rem 1.25rem;
+/* Modal Tabs & Forms */
+.ov-modal-nav .nav-link {
+    font-size: 0.78rem;
     font-weight: 700;
-    font-size: 0.88rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.28);
-    transition: all 0.18s ease;
+    color: #64748b;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 8px 16px;
 }
-.ov-btn-sync:hover {
-    background: #0369a1;
-    color: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.38);
+.ov-modal-nav .nav-link.active {
+    color: #0284c7;
+    border-bottom: 2px solid #0284c7;
+    background: transparent;
 }
-.ov-btn-sync:active {
-    transform: translateY(0);
+.ov-label-req {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 3px;
 }
-.ov-btn-sync.loading i {
-    animation: ov-spin 0.8s linear infinite;
-}
-@keyframes ov-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+.ov-label-req span {
+    color: #dc2626;
 }
 </style>
 
-<div class="container-fluid p-3 p-md-4" id="modulo-ordenes-viaje">
+<div class="ov-container" id="modulo-ordenes-viaje">
 
-    <!-- ── CABECERA PRINCIPAL ───────────────────────────────────────── -->
-    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+    <!-- ── CABECERA PRINCIPAL COMPACTA (ESPACIO REDUCIDO) ─────────────── -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-2 pt-1">
         <div>
             <div class="d-flex align-items-center gap-2 mb-1">
                 <span class="ov-header-badge"><i class="bi bi-diagram-3-fill"></i> Operaciones</span>
-                <span class="badge bg-secondary-subtle text-secondary" id="ov-lbl-total-badge">0 registros</span>
+                <span class="badge bg-secondary-subtle text-secondary py-1" id="ov-lbl-total-badge" style="font-size:0.7rem;">0 viajes</span>
             </div>
-            <h3 class="fw-bold text-dark m-0" style="letter-spacing: -0.02em;">Órdenes de Viaje y Rutas</h3>
-            <p class="text-secondary m-0 small">Control operacional integral: N° de viaje, órdenes de servicio, ruta, peso de ida y retorno.</p>
+            <h4 class="fw-bold text-dark m-0" style="letter-spacing: -0.02em; line-height: 1.2;">Órdenes de Viaje y Rutas</h4>
+            <p class="text-secondary m-0" style="font-size:0.78rem;">Control operacional: registro de O.V., tracto, carreta, conductor, itinerario y pesos.</p>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold" onclick="window.ovCargarOrdenesViaje(true)">
-                <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" style="font-size:0.8rem; height:32px;" onclick="window.ovCargarDatos()">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
             </button>
-            <div id="ov-sync-status-msg" class="small fw-semibold mt-1 d-none" style="font-size:0.78rem; min-height: 20px;"></div>
+            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold d-flex align-items-center gap-1 shadow-sm" style="font-size:0.82rem; height:32px; background:#0284c7; border:none;" onclick="window.ovAbrirModalNuevoViaje()">
+                <i class="bi bi-plus-lg"></i> Registrar Nuevo Viaje
+            </button>
         </div>
     </div>
 
-    <!-- ── TARJETAS DE MÉTRICAS OPERATIVAS (KPIS) ───────────────────── -->
-    <div class="row g-3 mb-4">
+    <!-- ── TARJETAS DE MÉTRICAS OPERATIVAS (KPIS) COMPACTAS ───────────── -->
+    <div class="row g-2 mb-2">
         <div class="col-6 col-md-3">
             <div class="ov-kpi-card">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-secondary fw-semibold small">Total de Viajes</span>
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-secondary fw-semibold" style="font-size:0.72rem;">Total de Viajes</span>
                     <div class="ov-kpi-icon bg-primary-subtle text-primary"><i class="bi bi-diagram-3-fill"></i></div>
                 </div>
-                <div class="h3 fw-bold text-dark mb-0" id="ov-kpi-total">--</div>
-                <small class="text-muted" style="font-size:0.75rem;">Viajes registrados</small>
+                <div class="ov-kpi-val" id="ov-kpi-total">0</div>
+                <small class="text-muted" style="font-size:0.7rem;">Viajes registrados</small>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ov-kpi-card">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-secondary fw-semibold small">Órdenes de Servicio</span>
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-secondary fw-semibold" style="font-size:0.72rem;">Órdenes de Servicio</span>
                     <div class="ov-kpi-icon bg-info-subtle text-info"><i class="bi bi-receipt-cutoff"></i></div>
                 </div>
-                <div class="h3 fw-bold text-dark mb-0" id="ov-kpi-ordenes">--</div>
-                <small class="text-muted" style="font-size:0.75rem;">O/S vinculadas a viajes</small>
+                <div class="ov-kpi-val" id="ov-kpi-ordenes">0</div>
+                <small class="text-muted" style="font-size:0.7rem;">O/S vinculadas a viajes</small>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ov-kpi-card">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-secondary fw-semibold small">Carga Ida</span>
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-secondary fw-semibold" style="font-size:0.72rem;">Carga Ida</span>
                     <div class="ov-kpi-icon bg-success-subtle text-success"><i class="bi bi-arrow-right-circle-fill"></i></div>
                 </div>
-                <div class="h3 fw-bold text-dark mb-0" id="ov-kpi-peso-ida">--</div>
-                <small class="text-muted" style="font-size:0.75rem;">Peso despachado (TN)</small>
+                <div class="ov-kpi-val" id="ov-kpi-peso-ida">0.0 TN</div>
+                <small class="text-muted" style="font-size:0.7rem;">Peso despachado (TN)</small>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ov-kpi-card">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-secondary fw-semibold small">Carga Retorno</span>
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-secondary fw-semibold" style="font-size:0.72rem;">Carga Retorno</span>
                     <div class="ov-kpi-icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-arrow-left-circle-fill"></i></div>
                 </div>
-                <div class="h3 fw-bold text-dark mb-0" id="ov-kpi-peso-retorno">--</div>
-                <small class="text-muted" style="font-size:0.75rem;">Peso retorno (TN)</small>
+                <div class="ov-kpi-val" id="ov-kpi-peso-retorno">0.0 TN</div>
+                <small class="text-muted" style="font-size:0.7rem;">Peso retorno (TN)</small>
             </div>
         </div>
     </div>
 
-    <!-- ── BARRA DE BÚSQUEDA Y FILTROS ──────────────────────────────── -->
-    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+    <!-- ── BARRA DE BÚSQUEDA Y FILTROS COMPACTA CON RANGO DE FECHAS HOY ── -->
+    <div class="ov-filters-bar mb-2">
         <div class="row g-2 align-items-center">
             <!-- Selector de Modo de Vista -->
-            <div class="col-12 col-md-3">
-                <div class="btn-group w-100 p-1 bg-light rounded-3 border" role="group">
-                    <button type="button" class="btn btn-sm fw-bold rounded-2 active" id="ov-tab-viajes" onclick="window.ovCambiarModoVista('viajes')">
+            <div class="col-12 col-md-auto">
+                <div class="btn-group p-0 bg-light rounded-3 border" role="group" style="height:33px;">
+                    <button type="button" class="btn btn-sm fw-bold rounded-2 px-2 active bg-white shadow-2xs" id="ov-tab-viajes" onclick="window.ovCambiarModoVista('viajes')" style="font-size:0.76rem;">
                         <i class="bi bi-truck me-1"></i> Por Viaje
                     </button>
-                    <button type="button" class="btn btn-sm fw-bold rounded-2 text-secondary" id="ov-tab-rutas" onclick="window.ovCambiarModoVista('rutas')">
+                    <button type="button" class="btn btn-sm fw-bold rounded-2 px-2 text-secondary" id="ov-tab-rutas" onclick="window.ovCambiarModoVista('rutas')" style="font-size:0.76rem;">
                         <i class="bi bi-card-checklist me-1"></i> Por O/S y Ruta
                     </button>
                 </div>
             </div>
-            <div class="col-12 col-md-3">
+
+            <!-- Filtro N° Viaje -->
+            <div class="col-12 col-md-2">
                 <div class="position-relative">
-                    <i class="bi bi-truck position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
-                    <input type="text" id="ov-filtro-viaje" class="form-control form-control-sm ps-5 text-uppercase fw-semibold border-secondary-subtle" placeholder="N° VIAJE (EJ: 2026-00000967)" oninput="window.ovOnFiltrarDebounced()" style="border-radius:10px; min-height:40px;">
+                    <i class="bi bi-truck position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" style="font-size:0.78rem;"></i>
+                    <input type="text" id="ov-filtro-viaje" class="form-control form-control-sm ps-4 text-uppercase fw-semibold border-secondary-subtle" placeholder="N° VIAJE (EJ: 2026-00000967)" oninput="window.ovOnFiltrarDebounced()" style="border-radius:8px; height:33px; font-size:0.76rem;">
                 </div>
             </div>
-            <div class="col-12 col-md-3">
+
+            <!-- Buscador General -->
+            <div class="col-12 col-md">
                 <div class="position-relative">
-                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
-                    <input type="text" id="ov-filtro-q" class="form-control form-control-sm ps-5 text-uppercase fw-semibold border-secondary-subtle" placeholder="BUSCAR O/S, PLACA, CONDUCTOR, RUTA..." oninput="window.ovOnFiltrarDebounced()" style="border-radius:10px; min-height:40px;">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" style="font-size:0.78rem;"></i>
+                    <input type="text" id="ov-filtro-q" class="form-control form-control-sm ps-4 text-uppercase fw-semibold border-secondary-subtle" placeholder="BUSCAR O/S, PLACA, CONDUCTOR, RUTA..." oninput="window.ovOnFiltrarDebounced()" style="border-radius:8px; height:33px; font-size:0.76rem;">
                 </div>
             </div>
-            <div class="col-6 col-md-2">
-                <select id="ov-filtro-tramo" class="form-select form-select-sm border-secondary-subtle fw-semibold" onchange="window.ovOnFiltrar()" style="border-radius:10px; min-height:40px;">
+
+            <!-- Tramo -->
+            <div class="col-6 col-md-auto" style="min-width: 125px;">
+                <select id="ov-filtro-tramo" class="form-select form-select-sm border-secondary-subtle fw-semibold" onchange="window.ovOnFiltrar()" style="border-radius:8px; height:33px; font-size:0.76rem;">
                     <option value="TODOS">Ida y Retorno</option>
                     <option value="SOLO_IDA">Solo Ida</option>
                     <option value="SOLO_RETORNO">Solo Retorno</option>
                 </select>
             </div>
-            <div class="col-6 col-md-1 d-flex justify-content-end align-items-center">
-                <button type="button" class="btn btn-sm btn-outline-secondary w-100 rounded-3 py-2 fw-semibold" onclick="window.ovLimpiarFiltros()" title="Limpiar filtros">
-                    <i class="bi bi-eraser me-1"></i> Limpiar
+
+            <!-- Rango Pastel de Fechas (Desde - Hasta) con valores de hoy por defecto -->
+            <div class="col-12 col-md-auto">
+                <div class="ov-date-box">
+                    <span class="text-success fw-bold d-inline-flex align-items-center gap-1" style="font-size:0.72rem;">
+                        <i class="bi bi-calendar3"></i> Desde:
+                    </span>
+                    <input type="date" id="ov-filtro-fecha-desde" class="ov-date-input" onchange="window.ovOnCambiarFecha()" title="Fecha desde">
+                    <span class="text-muted fw-bold" style="font-size:0.72rem;">— Hasta:</span>
+                    <input type="date" id="ov-filtro-fecha-hasta" class="ov-date-input" onchange="window.ovOnCambiarFecha()" title="Fecha hasta">
+                </div>
+            </div>
+
+            <!-- Botón Limpiar Pastel Rojo Compacto -->
+            <div class="col-auto">
+                <button type="button" class="ov-btn-clear" onclick="window.ovLimpiarFiltros()" title="Limpiar todos los filtros">
+                    <i class="bi bi-eraser-fill"></i>
                 </button>
             </div>
         </div>
@@ -245,35 +321,222 @@
 
     <!-- ── TABLA PRINCIPAL DE ÓRDENES DE VIAJE ──────────────────────── -->
     <div class="ov-table-card">
-        <div class="table-responsive">
+        <div class="table-responsive" style="min-height: 280px;">
             <table class="table ov-table align-middle mb-0">
                 <thead id="ov-tabla-thead">
-                    <!-- Dinámico según modo de vista -->
+                    <!-- Configurado dinámicamente por ovConfigurarThead() -->
                 </thead>
                 <tbody id="ov-tabla-body">
                     <tr>
-                        <td colspan="9" class="text-center py-5 text-secondary">
+                        <td colspan="10" class="text-center py-5 text-secondary">
                             <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
-                            <div class="small fw-semibold">Cargando órdenes de viaje y rutas desde la base de datos...</div>
+                            <div class="small fw-semibold">Consultando base de datos del ERP...</div>
                         </td>
                     </tr>
                 </tbody>
             </table>
+        </div>
     </div>
 
-    <!-- ── PAGINACIÓN / FOOTER ─────────────────────────────────────── -->
-    <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2 mt-3 px-1">
-        <div class="text-muted small" id="ov-info-paginacion">
+    <!-- ── PAGINACIÓN / FOOTER COMPACTO ─────────────────────────────── -->
+    <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2 mt-2 px-1">
+        <div class="text-muted" id="ov-info-paginacion" style="font-size:0.75rem;">
             Página 1
         </div>
         <div class="btn-group btn-group-sm" id="ov-btn-group-paginacion">
-            <button type="button" class="btn btn-outline-secondary fw-semibold rounded-start-3" id="ov-btn-prev" onclick="window.ovCambiarPagina(-1)" disabled>
+            <button type="button" class="btn btn-outline-secondary fw-semibold rounded-start-3" id="ov-btn-prev" onclick="window.ovCambiarPagina(-1)" disabled style="font-size:0.76rem; height:28px;">
                 <i class="bi bi-chevron-left me-1"></i> Anterior
             </button>
-            <button type="button" class="btn btn-outline-secondary fw-semibold rounded-end-3" id="ov-btn-next" onclick="window.ovCambiarPagina(1)">
+            <button type="button" class="btn btn-outline-secondary fw-semibold rounded-end-3" id="ov-btn-next" onclick="window.ovCambiarPagina(1)" style="font-size:0.76rem; height:28px;">
                 Siguiente <i class="bi bi-chevron-right ms-1"></i>
             </button>
         </div>
     </div>
 
+</div>
+
+<!-- ============================================================ -->
+<!-- 📝 MODAL: GESTIONAR / REGISTRAR NUEVA ORDEN DE VIAJE (O.V)  -->
+<!-- ============================================================ -->
+<div class="modal fade" id="ovModalNuevoViaje" tabindex="-1" aria-labelledby="ovModalNuevoViajeLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            
+            <!-- Modal Header -->
+            <div class="modal-header border-bottom px-4 py-3 bg-white">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-3 p-2 bg-primary bg-opacity-10 text-primary">
+                        <i class="bi bi-truck fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold text-dark m-0" id="ovModalNuevoViajeLabel">Nuevo Viaje</h5>
+                        <small class="text-muted">Registro y despacho de Orden de Viaje operacional</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <!-- Pestañas del Formulario -->
+            <div class="border-bottom bg-light px-4 pt-2">
+                <ul class="nav nav-tabs border-0 ov-modal-nav" id="ovModalTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="ov-tab-orden-viaje-btn" data-bs-toggle="tab" data-bs-target="#ov-tab-pane-orden" type="button" role="tab">ORDEN DE VIAJE</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="ov-tab-guias-btn" data-bs-toggle="tab" data-bs-target="#ov-tab-pane-guias" type="button" role="tab">GUÍAS DE TRANSPORTISTA</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="ov-tab-otros-btn" data-bs-toggle="tab" data-bs-target="#ov-tab-pane-otros" type="button" role="tab">OTROS</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="ov-tab-escolta-btn" data-bs-toggle="tab" data-bs-target="#ov-tab-pane-escolta" type="button" role="tab">ESCOLTA</button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Modal Body con Formulario -->
+            <div class="modal-body p-4 bg-white">
+                <form id="ovFormNuevoViaje" onsubmit="window.ovGuardarNuevoViaje(event)">
+                    <div class="tab-content" id="ovModalTabsContent">
+                        
+                        <!-- PESTAÑA 1: ORDEN DE VIAJE -->
+                        <div class="tab-pane fade show active" id="ov-tab-pane-orden" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-6 col-md-2">
+                                    <label class="ov-label-req">Serie <span>(*)</span></label>
+                                    <input type="text" id="ov-form-serie" class="form-control form-control-sm fw-bold bg-light" readonly>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="ov-label-req">Número <span>(*)</span></label>
+                                    <input type="text" id="ov-form-numero" class="form-control form-control-sm fw-bold bg-light" readonly>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="ov-label-req">Fecha <span>(*)</span></label>
+                                    <input type="datetime-local" id="ov-form-fecha" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="col-12 col-md-5">
+                                    <label class="ov-label-req">Conductor <span>(*)</span></label>
+                                    <select id="ov-form-conductor" class="form-select form-select-sm" required>
+                                        <option value="">Seleccione...</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label class="ov-label-req">Vehículo (Tracto) <span>(*)</span></label>
+                                    <select id="ov-form-tracto" class="form-select form-select-sm" required>
+                                        <option value="">Seleccione...</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="ov-label-req">Semirremolque</label>
+                                    <select id="ov-form-remolque" class="form-select form-select-sm">
+                                        <option value="">Seleccione...</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="ov-label-req">Ruta <span>(*)</span></label>
+                                    <input type="text" id="ov-form-ruta" class="form-control form-control-sm text-uppercase" placeholder="EJ: LIMA - CALLAO - PISCO" required>
+                                </div>
+
+                                <div class="col-12 col-md-3">
+                                    <label class="ov-label-req">Cantidad / Peso (TN)</label>
+                                    <input type="number" step="0.01" id="ov-form-cantidad" class="form-control form-control-sm" placeholder="0.00">
+                                </div>
+
+                                <div class="col-12 col-md-4">
+                                    <label class="ov-label-req">UBIGEO Partida</label>
+                                    <input type="text" id="ov-form-ubigeo-partida" class="form-control form-control-sm text-uppercase" placeholder="Código o Departamento - Provincia - Distrito">
+                                </div>
+                                <div class="col-12 col-md-5">
+                                    <label class="ov-label-req">Dirección Partida</label>
+                                    <input type="text" id="ov-form-dir-partida" class="form-control form-control-sm text-uppercase" placeholder="Dirección punto de partida">
+                                </div>
+
+                                <div class="col-12 col-md-4">
+                                    <label class="ov-label-req">UBIGEO Llegada</label>
+                                    <input type="text" id="ov-form-ubigeo-llegada" class="form-control form-control-sm text-uppercase" placeholder="Código o Departamento - Provincia - Distrito">
+                                </div>
+                                <div class="col-12 col-md-8">
+                                    <label class="ov-label-req">Dirección Llegada</label>
+                                    <input type="text" id="ov-form-dir-llegada" class="form-control form-control-sm text-uppercase" placeholder="Dirección punto de llegada">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PESTAÑA 2: GUÍAS DE TRANSPORTISTA -->
+                        <div class="tab-pane fade" id="ov-tab-pane-guias" role="tabpanel">
+                            <div class="p-3 bg-light rounded-3 border mb-3">
+                                <h6 class="fw-bold text-dark mb-1">Guías de Remisión y Órdenes de Servicio</h6>
+                                <p class="text-secondary small mb-3">Asocie las órdenes de servicio o guías electrónicas que integran esta orden de viaje.</p>
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-12 col-md-4">
+                                        <input type="text" id="ov-form-nueva-os" class="form-control form-control-sm text-uppercase" placeholder="N° Orden Servicio / Guía (Ej: OS-2026-001)">
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <input type="text" id="ov-form-nueva-ruta-sub" class="form-control form-control-sm text-uppercase" placeholder="Sub-ruta o tramo">
+                                    </div>
+                                    <div class="col-6 col-md-2">
+                                        <input type="number" step="0.01" id="ov-form-nuevo-peso-sub" class="form-control form-control-sm" placeholder="Peso (TN)">
+                                    </div>
+                                    <div class="col-6 col-md-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm w-100 fw-bold" onclick="window.ovAgregarFilaRuta()">
+                                            <i class="bi bi-plus"></i> Agregar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive border rounded-3">
+                                <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.8rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>N° Orden / Guía</th>
+                                            <th>Tramo / Ruta</th>
+                                            <th class="text-end" style="width:120px;">Peso (TN)</th>
+                                            <th class="text-center" style="width:70px;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ov-form-rutas-tbody">
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">No hay órdenes secundarias vinculadas aún.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- PESTAÑA 3: OTROS -->
+                        <div class="tab-pane fade" id="ov-tab-pane-otros" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="ov-label-req">Observaciones Adicionales</label>
+                                    <textarea id="ov-form-observaciones" class="form-control form-control-sm" rows="4" placeholder="Detalles de la carga, requerimientos del cliente o precintos..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PESTAÑA 4: ESCOLTA -->
+                        <div class="tab-pane fade" id="ov-tab-pane-escolta" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="ov-label-req">Datos de la Escolta / Custodia</label>
+                                    <input type="text" id="ov-form-escolta" class="form-control form-control-sm text-uppercase" placeholder="Nombre de la empresa o personal escolta">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </form>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer border-top px-4 py-2 bg-light d-flex justify-content-between">
+                <button type="button" class="btn btn-sm btn-outline-secondary px-3 fw-semibold" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-sm btn-primary px-4 fw-bold shadow-sm" style="background:#0284c7; border:none;" onclick="document.getElementById('ovFormNuevoViaje').requestSubmit()">
+                    <i class="bi bi-check2-circle me-1"></i> Guardar
+                </button>
+            </div>
+
+        </div>
+    </div>
 </div>

@@ -83,6 +83,9 @@ module.exports = function (db, broadcast, logAudit) {
             try {
                 await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN peso DECIMAL(12,2) NULL DEFAULT 0.00 AFTER placa_remolque");
             } catch (ignore) {}
+            try {
+                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN ubigeo_partida VARCHAR(10) NULL AFTER destino, ADD COLUMN direccion_partida VARCHAR(255) NULL AFTER ubigeo_partida, ADD COLUMN ubigeo_llegada VARCHAR(10) NULL AFTER direccion_partida, ADD COLUMN direccion_llegada VARCHAR(255) NULL AFTER ubigeo_llegada, ADD COLUMN escolta VARCHAR(150) NULL AFTER direccion_llegada, ADD COLUMN observaciones TEXT NULL AFTER escolta");
+            } catch (ignore) {}
             _tenantsInitSet.add(tenantId);
         } catch (err) {
             console.error('Error asegurando tabla operaciones_ordenes_viaje:', err);
@@ -96,7 +99,7 @@ module.exports = function (db, broadcast, logAudit) {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
-            const { q, placa, limit, vista } = req.query;
+            const { q, placa, limit, vista, fecha_desde, fecha_hasta } = req.query;
 
             // Si se solicita la vista detallada por orden de servicio / ruta:
             if (vista === 'rutas' || vista === 'detalle') {
@@ -121,6 +124,15 @@ module.exports = function (db, broadcast, logAudit) {
                     WHERE 1=1
                 `;
                 const params = [];
+
+                if (fecha_desde) {
+                    sql += ` AND DATE(ov.fecha_viaje) >= ?`;
+                    params.push(fecha_desde);
+                }
+                if (fecha_hasta) {
+                    sql += ` AND DATE(ov.fecha_viaje) <= ?`;
+                    params.push(fecha_hasta);
+                }
 
                 if (q && String(q).trim()) {
                     const search = `%${String(q).trim()}%`;
@@ -155,6 +167,12 @@ module.exports = function (db, broadcast, logAudit) {
                     ov.ruta,
                     ov.origen,
                     ov.destino,
+                    ov.ubigeo_partida,
+                    ov.direccion_partida,
+                    ov.ubigeo_llegada,
+                    ov.direccion_llegada,
+                    ov.escolta,
+                    ov.observaciones,
                     ov.estado,
                     COALESCE(r_agg.cant_ordenes, 0) AS cant_ordenes,
                     COALESCE(r_agg.peso_ida, 0) AS peso_ida,
@@ -179,6 +197,15 @@ module.exports = function (db, broadcast, logAudit) {
             `;
             const params = [];
 
+            if (fecha_desde) {
+                sql += ` AND DATE(ov.fecha_viaje) >= ?`;
+                params.push(fecha_desde);
+            }
+            if (fecha_hasta) {
+                sql += ` AND DATE(ov.fecha_viaje) <= ?`;
+                params.push(fecha_hasta);
+            }
+
             if (q && String(q).trim()) {
                 const search = `%${String(q).trim()}%`;
                 sql += ` AND (ov.viaje LIKE ? OR ov.conductor LIKE ? OR ov.placa_tracto LIKE ? OR ov.placa_remolque LIKE ? OR ov.ruta LIKE ? OR r_agg.ordenes_list LIKE ? OR r_agg.rutas_list LIKE ?)`;
@@ -197,6 +224,178 @@ module.exports = function (db, broadcast, logAudit) {
             res.json({ ok: true, data: rows });
         } catch (err) {
             console.error('Error al listar ordenes de viaje:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── GET /api/operaciones/ordenes-viaje/correlativo ────────────
+    // Devuelve el año serie actual y el siguiente número correlativo formateado (ej. 00000992)
+    router.get('/ordenes-viaje/correlativo', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const year = new Date().getFullYear();
+            const prefix = `${year}-`;
+
+            const [rows] = await tdb.query(
+                `SELECT viaje FROM operaciones_ordenes_viaje WHERE viaje LIKE ? ORDER BY viaje DESC LIMIT 1`,
+                [`${prefix}%`]
+            );
+
+            let nextNum = 1;
+            if (rows && rows.length > 0) {
+                const numStr = rows[0].viaje.replace(prefix, '');
+                const parsed = parseInt(numStr, 10);
+                if (!isNaN(parsed)) {
+                    nextNum = parsed + 1;
+                }
+            }
+
+            const formattedNum = String(nextNum).padStart(8, '0');
+            res.json({
+                ok: true,
+                serie: String(year),
+                numero: formattedNum,
+                viaje: `${year}-${formattedNum}`
+            });
+        } catch (err) {
+            console.error('Error al obtener correlativo de viaje:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── POST /api/operaciones/ordenes-viaje ────────────────────────
+    // Registra una nueva Orden de Viaje generada desde el módulo de Operaciones propio
+    router.post('/ordenes-viaje', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const {
+                serie,
+                numero,
+                viaje,
+                fecha_viaje,
+                id_conductor,
+                conductor,
+                placa_tracto,
+                placa_remolque,
+                ruta,
+                peso,
+                ubigeo_partida,
+                direccion_partida,
+                ubigeo_llegada,
+                direccion_llegada,
+                escolta,
+                observaciones,
+                rutas // array opcional con órdenes de servicio / rutas
+            } = req.body;
+
+            const codeViaje = (viaje && String(viaje).trim()) 
+                ? String(viaje).trim().toUpperCase() 
+                : `${serie || new Date().getFullYear()}-${String(numero || '1').padStart(8, '0')}`;
+
+            if (!placa_tracto || !conductor) {
+                return res.status(400).json({ ok: false, error: 'Conductor y Vehículo (Tracto) son obligatorios.' });
+            }
+
+            const fechaFinal = fecha_viaje || new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+            const [insertRes] = await tdb.query(`
+                INSERT INTO operaciones_ordenes_viaje (
+                    viaje, fecha_viaje, id_conductor, conductor,
+                    placa_tracto, placa_remolque, peso, ruta,
+                    ubigeo_partida, direccion_partida, ubigeo_llegada, direccion_llegada,
+                    escolta, observaciones, estado
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO')
+                ON DUPLICATE KEY UPDATE
+                    fecha_viaje = VALUES(fecha_viaje),
+                    id_conductor = VALUES(id_conductor),
+                    conductor = VALUES(conductor),
+                    placa_tracto = VALUES(placa_tracto),
+                    placa_remolque = VALUES(placa_remolque),
+                    peso = VALUES(peso),
+                    ruta = VALUES(ruta),
+                    ubigeo_partida = VALUES(ubigeo_partida),
+                    direccion_partida = VALUES(direccion_partida),
+                    ubigeo_llegada = VALUES(ubigeo_llegada),
+                    direccion_llegada = VALUES(direccion_llegada),
+                    escolta = VALUES(escolta),
+                    observaciones = VALUES(observaciones)
+            `, [
+                codeViaje,
+                fechaFinal,
+                id_conductor || null,
+                String(conductor).trim().toUpperCase(),
+                String(placa_tracto).trim().toUpperCase(),
+                placa_remolque ? String(placa_remolque).trim().toUpperCase() : null,
+                parseFloat(peso) || 0.00,
+                ruta ? String(ruta).trim() : null,
+                ubigeo_partida || null,
+                direccion_partida || null,
+                ubigeo_llegada || null,
+                direccion_llegada || null,
+                escolta || null,
+                observaciones || null
+            ]);
+
+            // Si se envió detalle de rutas / órdenes
+            if (Array.isArray(rutas) && rutas.length > 0) {
+                for (const r of rutas) {
+                    if (!r.orden) continue;
+                    await tdb.query(`
+                        INSERT INTO operaciones_ordenes_viaje_rutas (
+                            viaje, orden, ruta, tipo_servicio, es_retorno, peso_total, cantidad_total, volumen_total
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE
+                            ruta = VALUES(ruta),
+                            tipo_servicio = VALUES(tipo_servicio),
+                            es_retorno = VALUES(es_retorno),
+                            peso_total = VALUES(peso_total),
+                            cantidad_total = VALUES(cantidad_total),
+                            volumen_total = VALUES(volumen_total)
+                    `, [
+                        codeViaje,
+                        String(r.orden).trim(),
+                        String(r.ruta || ruta || '').trim(),
+                        String(r.tipo_servicio || 'CARGA GENERAL').trim(),
+                        parseInt(r.es_retorno, 10) || 0,
+                        parseFloat(r.peso_total || peso) || 0.00,
+                        parseFloat(r.cantidad_total) || 0.00,
+                        parseFloat(r.volumen_total) || 0.000
+                    ]);
+                }
+            }
+
+            if (logAudit) {
+                logAudit({
+                    req,
+                    accion: 'REGISTRAR_ORDEN_VIAJE',
+                    modulo: 'OPERACIONES',
+                    detalle: `Registrada Orden de Viaje ${codeViaje} para el vehículo ${placa_tracto} y conductor ${conductor}`
+                });
+            }
+
+            if (broadcast) {
+                broadcast({
+                    tipo: 'ORDEN_VIAJE_CREADA',
+                    viaje: codeViaje,
+                    placa_tracto,
+                    conductor
+                });
+            }
+
+            res.json({
+                ok: true,
+                message: `Orden de Viaje ${codeViaje} guardada correctamente.`,
+                viaje: codeViaje,
+                id: insertRes.insertId
+            });
+        } catch (err) {
+            console.error('Error al registrar orden de viaje:', err);
             res.status(500).json({ error: err.message });
         }
     });
