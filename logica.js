@@ -403,8 +403,16 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-marsisa-ordenes-viaje',  vOpOV);
     safe('nav-op-guias-remision',        vOpGuias);
     safe('mbnav-op-guias-remision',      vOpGuias);
+    safe('nav-marsisa-combustible-toggle', vCombOp);
+    safe('mbnav-marsisa-combustible-toggle', vCombOp);
     safe('nav-marsisa-combustible-vales', vCombVales);
     safe('mbnav-marsisa-combustible-vales', vCombVales);
+    safe('nav-marsisa-combustible-matriz', vCombMatriz);
+    safe('mbnav-marsisa-combustible-matriz', vCombMatriz);
+    safe('nav-marsisa-combustible-analisis', vCombAna);
+    safe('mbnav-marsisa-combustible-analisis', vCombAna);
+    safe('nav-marsisa-urea-analisis', vCombUrea);
+    safe('mbnav-marsisa-urea-analisis', vCombUrea);
     safe('wrap-operaciones-marsisa',     showMarsisa);
 
     // RRHH
