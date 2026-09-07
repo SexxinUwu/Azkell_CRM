@@ -365,24 +365,20 @@ window.verificarSesionGuardada = function() {
     safe('wrap-directorio', showDirectorio);
     safe('bnav-directorio', showDirectorio);
 
-    // OPERACIONES (PROPIO)
     var showOperacionesHub = _cHub('hub_operaciones');
     var vOpProg  = showOperacionesHub && (_cL('op_programacion') || _cL('op_guias_remision') || _cL('guias_remision'));
     var vOpOV    = showOperacionesHub && (_cL('op_ordenes_viaje') || _cL('op_programacion') || _cL('guias_remision') || _cL('op_guias_remision'));
-    var vOpReporteViajes = showOperacionesHub && (_cL('op_guias_remision') || _cL('guias_remision') || _cL('op_programacion'));
     var vCombVales = showOperacionesHub && (_cL('combustible_vales') || _cL('combustible'));
     var vCombAna   = showOperacionesHub && (_cL('combustible_analisis') || _cL('combustible'));
     var vCombUrea  = showOperacionesHub && (_cL('urea_analisis') || _cL('combustible_analisis') || _cL('combustible'));
     var vCombMatriz = showOperacionesHub && (_cL('combustible_matriz') || _cL('combustible_analisis') || _cL('combustible'));
     var vCombOp    = vCombVales || vCombAna || vCombUrea || vCombMatriz;
-    var showOp     = vOpProg || vOpOV || vOpReporteViajes || vCombOp;
+    var showOp     = vOpProg || vOpOV || vCombOp;
 
     safe('nav-op-programacion',          vOpProg);
     safe('mbnav-op-programacion',        vOpProg);
     safe('nav-op-ordenes-viaje',         vOpOV);
     safe('mbnav-op-ordenes-viaje',       vOpOV);
-    safe('nav-op-reporte-viajes',        vOpReporteViajes);
-    safe('mbnav-op-reporte-viajes',      vOpReporteViajes);
     safe('nav-combustible-toggle',        vCombOp);
     safe('mbnav-op-combustible-toggle',  vCombOp);
     safe('nav-combustible-vales',         vCombVales);
