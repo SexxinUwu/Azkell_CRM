@@ -12,6 +12,13 @@
     let _cvSearchTimeout = null;
 
     // Inicializador del módulo
+    window.init_combustible_vales = function() {
+        window.inicializarModuloCombustibleVales();
+    };
+    window.init_operaciones_combustible_vales = function() {
+        window.inicializarModuloCombustibleVales();
+    };
+
     window.inicializarModuloCombustibleVales = function() {
         const isMarsisa = (window.location.hostname || '').toLowerCase().includes('marsisa') ||
                           (localStorage.getItem('tenant_slug') || '').toLowerCase().includes('marsisa') ||

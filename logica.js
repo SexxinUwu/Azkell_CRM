@@ -103,8 +103,8 @@ const google = {
 // ============================================================
 
 let usuarioLogueado   = ''; let rolLogueado       = ''; let permisosUsuario = {}; 
-const TIEMPO_ALERTA_INACTIVIDAD = 5 * 60 * 1000; // 5 minutos de inactividad para mostrar alerta
-const TIEMPO_MAX_INACTIVIDAD    = 10 * 60 * 1000; // 10 minutos de inactividad total para cerrar sesión
+const TIEMPO_ALERTA_INACTIVIDAD = 10 * 60 * 1000; // 10 minutos de inactividad para mostrar alerta
+const TIEMPO_MAX_INACTIVIDAD    = 12 * 60 * 1000; // 12 minutos de inactividad total para cerrar sesión (2 minutos de gracia)
 const TIEMPO_INACTIVIDAD        = TIEMPO_MAX_INACTIVIDAD; // Compatibilidad retroactiva
 let itemAEliminarID   = ''; let itemAEliminarCol  = ''; let tooltipList       = []; 
 
@@ -2275,7 +2275,7 @@ function verificarInactividad() {
 
     const tiempoPasado = Date.now() - parseInt(ultimo);
 
-    // Si pasaron 10 minutos o más -> Cierre de sesión inmediato
+    // Si pasaron 12 minutos o más -> Cierre de sesión inmediato
     if (tiempoPasado >= TIEMPO_MAX_INACTIVIDAD) {
         detenerCuentaRegresivaSesion();
         const modalEl = document.getElementById('modal-sesion-expirada');
@@ -2287,7 +2287,7 @@ function verificarInactividad() {
         return;
     }
 
-    // Si pasaron 5 minutos o más -> Mostrar alerta de inactividad
+    // Si pasaron 10 minutos o más -> Mostrar alerta de inactividad
     if (tiempoPasado >= TIEMPO_ALERTA_INACTIVIDAD) {
         const modalEl = document.getElementById('modal-sesion-expirada');
         if (modalEl) {
