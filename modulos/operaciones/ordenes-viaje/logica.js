@@ -454,6 +454,9 @@ window.ovAbrirModalNuevoViaje = async function() {
         inputFecha.value = now.toISOString().slice(0, 16);
     }
 
+    var inputCantidad = document.getElementById('ov-form-cantidad');
+    if (inputCantidad) inputCantidad.value = '0.00';
+
     // Cargar correlativo desde el backend
     try {
         var resCorrelativo = await fetch('/api/operaciones/ordenes-viaje/correlativo');
