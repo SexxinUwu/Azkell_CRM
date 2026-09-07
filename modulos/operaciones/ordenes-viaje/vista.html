@@ -526,8 +526,12 @@
                                 <input type="text" id="ov-form-ruta" class="form-control form-control-sm text-uppercase border-secondary-subtle" placeholder="EJ: LIMA - CALLAO - PISCO" required>
                             </div>
                             <div class="col-12 col-md-4">
-                                <label class="ov-label-req">Cantidad / Peso (TN)</label>
-                                <input type="number" step="0.01" id="ov-form-cantidad" class="form-control form-control-sm border-secondary-subtle" placeholder="0.00">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <label class="ov-label-req mb-0">Cantidad / Peso (TN)</label>
+                                    <span class="badge bg-secondary-subtle text-secondary" style="font-size:0.65rem;"><i class="bi bi-lock-fill me-1"></i>Automático</span>
+                                </div>
+                                <input type="number" step="0.01" id="ov-form-cantidad" class="form-control form-control-sm border-secondary-subtle bg-light text-muted fw-bold" placeholder="0.00" value="0.00" readonly tabindex="-1" style="cursor: not-allowed;">
+                                <div class="form-text text-muted" style="font-size:0.7rem;">Se calculará automáticamente desde las Órdenes de Servicio (Ida / Retorno).</div>
                             </div>
                         </div>
                     </div>
