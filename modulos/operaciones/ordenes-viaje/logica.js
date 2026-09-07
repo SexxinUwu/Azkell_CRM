@@ -1116,6 +1116,54 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
         }
     }
 
+    // ── Obtener Capacidad Real de Tanque desde la tabla de Placas ──
+    var capEl = document.getElementById('ov-mon-comb-capacidad');
+    var autoEl = document.getElementById('ov-mon-comb-autonomia');
+    var tractoPlaca = (item.placa_tracto || '').trim().toUpperCase();
+
+    if (capEl) {
+        // Valor por defecto mientras resuelve
+        capEl.textContent = 'Consultando...';
+        try {
+            // Reutilizar o consultar la lista de placas
+            if (!window._ovPlacasCache || !window._ovPlacasCache.length) {
+                var rPlacas = await fetch('/api/placas-lista').then(r => r.ok ? r.json() : []).catch(() => []);
+                if (Array.isArray(rPlacas)) window._ovPlacasCache = rPlacas;
+            }
+            
+            var pObj = (window._ovPlacasCache || []).find(p => {
+                var pl = (p.placa || p[0] || '').toString().trim().toUpperCase();
+                return pl === tractoPlaca;
+            });
+
+            var capTanqueNum = 0;
+            if (pObj) {
+                // capacidad_tanque puede ser numérico o string con los galones totales
+                var rawCap = pObj.capacidad_tanque || pObj['CAPACIDAD DE TANQUE TOTAL'] || pObj['Capacidad Tanque Total'] || '';
+                if (!rawCap && (pObj.tanque_1 || pObj.tanque_2 || pObj.tanque_3)) {
+                    var t1 = parseFloat(pObj.tanque_1) || 0;
+                    var t2 = parseFloat(pObj.tanque_2) || 0;
+                    var t3 = parseFloat(pObj.tanque_3) || 0;
+                    rawCap = t1 + t2 + t3;
+                }
+                capTanqueNum = parseFloat(rawCap) || 0;
+            }
+
+            if (capTanqueNum > 0) {
+                capEl.textContent = `${capTanqueNum % 1 === 0 ? capTanqueNum : capTanqueNum.toFixed(1)} Gal`;
+                if (autoEl) {
+                    var autEst = Math.round(capTanqueNum * 6.5); // Autonomía estimada (~6.5 km/gal estándar ruta)
+                    autoEl.textContent = `Autonomía: ~${autEst} km`;
+                }
+            } else {
+                capEl.textContent = '150 Gal'; // Valor referencial si la placa no tiene tanque registrado
+                if (autoEl) autoEl.textContent = 'Autonomía: ~980 km';
+            }
+        } catch(e) {
+            capEl.textContent = '150 Gal';
+        }
+    }
+
     // Resetear a la primera tab (Resumen)
     var btnPrimeraTab = document.querySelector('.ov-mon-tab-item');
     if (btnPrimeraTab) window.ovMonCambiarTabSpatial(0, 'resumen', btnPrimeraTab);
