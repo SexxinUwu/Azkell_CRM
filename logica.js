@@ -392,24 +392,26 @@ window.verificarSesionGuardada = function() {
     safe('wrap-operaciones', showOp);
     safe('bnav-operaciones', showOp);
 
-    // OPERACIONES MARSISA
+    // OPERACIONES MARSISA (Exclusivo para subdominio / BD Marsisa)
+    var isMarsisaTenant = (window.location.hostname || '').toLowerCase().includes('marsisa');
     var vOpGuias = showOperacionesHub && (_cL('op_guias_remision') || _cL('guias_remision'));
-    var showMarsisa = showOperacionesHub && (vOpOV || vOpGuias || vCombVales);
-    safe('nav-marsisa-ordenes-viaje',    vOpOV);
-    safe('mbnav-marsisa-ordenes-viaje',  vOpOV);
+    var showMarsisa = isMarsisaTenant && showOperacionesHub && (vOpOV || vOpGuias || vCombVales);
+    safe('nav-marsisa-ordenes-viaje',    isMarsisaTenant && vOpOV);
+    safe('mbnav-marsisa-ordenes-viaje',  isMarsisaTenant && vOpOV);
     safe('nav-op-guias-remision',        vOpGuias);
     safe('mbnav-op-guias-remision',      vOpGuias);
-    safe('nav-marsisa-combustible-toggle', vCombOp);
-    safe('mbnav-marsisa-combustible-toggle', vCombOp);
-    safe('nav-marsisa-combustible-vales', vCombVales);
-    safe('mbnav-marsisa-combustible-vales', vCombVales);
-    safe('nav-marsisa-combustible-matriz', vCombMatriz);
-    safe('mbnav-marsisa-combustible-matriz', vCombMatriz);
-    safe('nav-marsisa-combustible-analisis', vCombAna);
-    safe('mbnav-marsisa-combustible-analisis', vCombAna);
-    safe('nav-marsisa-urea-analisis', vCombUrea);
-    safe('mbnav-marsisa-urea-analisis', vCombUrea);
+    safe('nav-marsisa-combustible-toggle', isMarsisaTenant && vCombOp);
+    safe('mbnav-marsisa-combustible-toggle', isMarsisaTenant && vCombOp);
+    safe('nav-marsisa-combustible-vales', isMarsisaTenant && vCombVales);
+    safe('mbnav-marsisa-combustible-vales', isMarsisaTenant && vCombVales);
+    safe('nav-marsisa-combustible-matriz', isMarsisaTenant && vCombMatriz);
+    safe('mbnav-marsisa-combustible-matriz', isMarsisaTenant && vCombMatriz);
+    safe('nav-marsisa-combustible-analisis', isMarsisaTenant && vCombAna);
+    safe('mbnav-marsisa-combustible-analisis', isMarsisaTenant && vCombAna);
+    safe('nav-marsisa-urea-analisis', isMarsisaTenant && vCombUrea);
+    safe('mbnav-marsisa-urea-analisis', isMarsisaTenant && vCombUrea);
     safe('wrap-operaciones-marsisa',     showMarsisa);
+    safe('mbnav-operaciones-marsisa-sep', isMarsisaTenant);
 
     // RRHH
     var vRrhhPers = _cL('rrhh_personal');
