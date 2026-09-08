@@ -48,9 +48,6 @@ function intgCargar() {
                 } else if (row.clave === 'sunat_client_secret') {
                     var elCsc = document.getElementById('intg-sunat-client-secret');
                     if (elCsc) elCsc.value = val;
-                } else if (row.clave === 'sunat_modo_entorno') {
-                    var elEnt = document.getElementById('intg-sunat-entorno');
-                    if (elEnt) elEnt.value = val || 'produccion';
                 }
             });
         })
@@ -75,7 +72,6 @@ window.intgGuardar = function(cual, callback) {
         var claveSol     = (document.getElementById('intg-sunat-clave')         || {}).value || '';
         var clientId     = (document.getElementById('intg-sunat-client-id')     || {}).value || '';
         var clientSecret = (document.getElementById('intg-sunat-client-secret') || {}).value || '';
-        var entorno      = (document.getElementById('intg-sunat-entorno')       || {}).value || 'produccion';
 
         pares = [
             { clave: 'sunat_ruc_emisor',     valor: ruc.trim() },
@@ -83,7 +79,7 @@ window.intgGuardar = function(cual, callback) {
             { clave: 'sunat_clave_sol',      valor: claveSol.trim() },
             { clave: 'sunat_client_id',      valor: clientId.trim() },
             { clave: 'sunat_client_secret',  valor: clientSecret.trim() },
-            { clave: 'sunat_modo_entorno',   valor: entorno.trim() }
+            { clave: 'sunat_modo_entorno',   valor: 'produccion' }
         ];
     }
 
