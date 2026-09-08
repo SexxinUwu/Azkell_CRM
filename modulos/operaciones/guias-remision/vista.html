@@ -120,6 +120,94 @@
     background: #cbd5e1;
     border-radius: 4px;
 }
+/* ── Modern Filtros Bar (Estilo Órdenes de Viaje) ── */
+.gre-filters-bar {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.gre-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 3px !important;
+    border-radius: 10px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+    height: 33px !important;
+    align-items: center;
+}
+.gre-segment-item {
+    border: none;
+    background: transparent;
+    padding: 3px 12px;
+    border-radius: 7px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 27px;
+    line-height: 1;
+}
+.gre-segment-item:hover {
+    color: #0f172a;
+}
+.gre-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+}
+.gre-date-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 0.15rem 0.5rem;
+    height: 33px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.gre-date-input {
+    border: none;
+    background: transparent;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #166534;
+    padding: 0;
+    width: 105px;
+    outline: none;
+}
+.gre-date-input:focus {
+    background: #ffffff;
+    border-radius: 4px;
+}
+.gre-btn-clear {
+    width: 33px;
+    height: 33px;
+    min-width: 33px;
+    padding: 0;
+    border-radius: 8px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.gre-btn-clear:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+}
 </style>
 
 <div class="gre-container" id="moduloGuiasRemisionContenedor">
@@ -146,9 +234,6 @@
             </button>
             <button class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.greAbrirModalCargaLote()">
                 <i class="bi bi-layers-fill"></i> Carga Masiva (Lote)
-            </button>
-            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.greAbrirModalConfigSunat()">
-                <i class="bi bi-key-fill"></i> Configurar SUNAT
             </button>
             <button onclick="window.greExportarExcel()" class="btn btn-success btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-white">
                 <i class="bi bi-file-earmark-excel-fill"></i> Exportar Excel
@@ -203,32 +288,57 @@
         </div>
     </div>
 
-    <!-- Panel de Filtros -->
-    <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
-        <div class="row g-2 align-items-end">
-            <div class="col-6 col-sm-3 col-md-2">
-                <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-calendar-event text-primary me-1"></i> Fecha Desde
-                </label>
-                <input type="date" id="gre-filter-desde" onchange="window.greCargarGuias()" class="form-control form-control-sm fw-semibold">
+    <!-- Panel de Filtros Moderno (Estilo Órdenes de Viaje con Rango Pastel) -->
+    <div class="gre-filters-bar">
+        <div class="row g-2 align-items-center">
+            <!-- Selector Segmented Tipo Guía -->
+            <div class="col-12 col-md-auto">
+                <div class="gre-apple-segmented">
+                    <button type="button" class="gre-segment-item active" id="gre-tab-todas" onclick="window.greFiltrarTipo('TODAS')">
+                        <i class="bi bi-collection"></i> Todas
+                    </button>
+                    <button type="button" class="gre-segment-item" id="gre-tab-remitente" onclick="window.greFiltrarTipo('09')">
+                        <i class="bi bi-box-seam"></i> Remitente (09)
+                    </button>
+                    <button type="button" class="gre-segment-item" id="gre-tab-transportista" onclick="window.greFiltrarTipo('31')">
+                        <i class="bi bi-truck"></i> Transportista (31)
+                    </button>
+                </div>
             </div>
-            <div class="col-6 col-sm-3 col-md-2">
-                <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-calendar-check text-primary me-1"></i> Fecha Hasta
-                </label>
-                <input type="date" id="gre-filter-hasta" onchange="window.greCargarGuias()" class="form-control form-control-sm fw-semibold">
+
+            <!-- Placa Tracto Input -->
+            <div class="col-6 col-md-2">
+                <div class="position-relative">
+                    <i class="bi bi-truck position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" style="font-size:0.78rem;"></i>
+                    <input type="text" id="gre-filter-placa" class="form-control form-control-sm ps-4 text-uppercase fw-semibold border-secondary-subtle" placeholder="PLACA (EJ: BEQ886)" oninput="window.greCargarGuias()" style="border-radius:8px; height:33px; font-size:0.76rem;">
+                </div>
             </div>
-            <div class="col-6 col-sm-3 col-md-2">
-                <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-truck text-primary me-1"></i> Placa Tracto
-                </label>
-                <input type="text" id="gre-filter-placa" oninput="window.greCargarGuias()" class="form-control form-control-sm text-uppercase" placeholder="Ej. BEQ886">
+
+            <!-- Buscador General -->
+            <div class="col-12 col-md">
+                <div class="position-relative">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" style="font-size:0.78rem;"></i>
+                    <input type="text" id="gre-filter-search" class="form-control form-control-sm ps-4 fw-semibold border-secondary-subtle" placeholder="BUSCAR CLIENTE, DESTINO, CONDUCTOR, N° GUÍA..." oninput="window.greCargarGuias()" style="border-radius:8px; height:33px; font-size:0.76rem;">
+                </div>
             </div>
-            <div class="col-6 col-sm-3 col-md-6">
-                <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.7rem; text-transform:uppercase;">
-                    <i class="bi bi-search text-primary me-1"></i> Buscar Remitente, Destinatario o Destino
-                </label>
-                <input type="text" id="gre-filter-search" oninput="window.greCargarGuias()" class="form-control form-control-sm" placeholder="Buscar por cliente, destino, chofer o N° de guía...">
+
+            <!-- Rango Pastel Verde de Fechas (Desde - Hasta) -->
+            <div class="col-12 col-md-auto">
+                <div class="gre-date-box">
+                    <span class="text-success fw-bold d-inline-flex align-items-center gap-1" style="font-size:0.72rem;">
+                        <i class="bi bi-calendar3"></i> Desde:
+                    </span>
+                    <input type="date" id="gre-filter-desde" class="gre-date-input" onchange="window.greCargarGuias()" title="Fecha desde">
+                    <span class="text-muted fw-bold" style="font-size:0.72rem;">— Hasta:</span>
+                    <input type="date" id="gre-filter-hasta" class="gre-date-input" onchange="window.greCargarGuias()" title="Fecha hasta">
+                </div>
+            </div>
+
+            <!-- Botón Limpiar Pastel Rojo Compacto -->
+            <div class="col-auto">
+                <button type="button" class="gre-btn-clear" onclick="window.greLimpiarFiltros()" title="Limpiar todos los filtros">
+                    <i class="bi bi-eraser-fill"></i>
+                </button>
             </div>
         </div>
     </div>

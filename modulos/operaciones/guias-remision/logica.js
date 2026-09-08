@@ -4,6 +4,7 @@
  */
 (function() {
     window._greGuiasData = [];
+    window._greTipoFiltro = 'TODAS';
 
     // Inicializador del Módulo
     window.inicializarModuloGuiasRemision = async function() {
@@ -21,6 +22,36 @@
         await window.greCargarGuias();
     };
 
+    // Filtrar por Segmento (Todas, Remitente 09, Transportista 31)
+    window.greFiltrarTipo = function(tipo) {
+        window._greTipoFiltro = tipo || 'TODAS';
+
+        document.getElementById('gre-tab-todas')?.classList.toggle('active', window._greTipoFiltro === 'TODAS');
+        document.getElementById('gre-tab-remitente')?.classList.toggle('active', window._greTipoFiltro === '09');
+        document.getElementById('gre-tab-transportista')?.classList.toggle('active', window._greTipoFiltro === '31');
+
+        window.greCargarGuias();
+    };
+
+    // Limpiar todos los filtros
+    window.greLimpiarFiltros = function() {
+        const fPlaca = document.getElementById('gre-filter-placa');
+        const fSearch = document.getElementById('gre-filter-search');
+        const fDesde = document.getElementById('gre-filter-desde');
+        const fHasta = document.getElementById('gre-filter-hasta');
+
+        if (fPlaca) fPlaca.value = '';
+        if (fSearch) fSearch.value = '';
+
+        const hoy = new Date();
+        const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        const formatYMD = (d) => d.toISOString().slice(0, 10);
+        if (fDesde) fDesde.value = formatYMD(primerDia);
+        if (fHasta) fHasta.value = formatYMD(hoy);
+
+        window.greFiltrarTipo('TODAS');
+    };
+
     // 1. Cargar Guías desde el Backend
     window.greCargarGuias = async function() {
         const tbody = document.getElementById('gre-tbody');
@@ -36,6 +67,9 @@
         if (fHasta) params.append('hasta', fHasta);
         if (fPlaca) params.append('placa', fPlaca);
         if (fSearch) params.append('search', fSearch);
+        if (window._greTipoFiltro && window._greTipoFiltro !== 'TODAS') {
+            params.append('tipoDoc', window._greTipoFiltro);
+        }
 
         try {
             const resp = await fetch(`/api/guias-remision?${params.toString()}`);
