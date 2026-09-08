@@ -428,38 +428,50 @@ module.exports = function(db, tenantStorage) {
 
             // Si SUNAT devuelve datos válidos
             const sData = sunatJson || {};
+            const t = sData.traslado || {};
+            const emi = sData.emision || {};
+            const emisor = sData.emisor || {};
+            const receptor = sData.receptor || {};
+            const partida = (t.partida && t.partida.direccion) || {};
+            const llegada = (t.llegada && t.llegada.direccion) || {};
+            const vehiculos = Array.isArray(t.vehiculo) ? t.vehiculo : [];
+            const tracto = vehiculos.find(v => v.desTipoVehiculo === 'Principal' || v.indTipoVehiculo === '1') || vehiculos[0] || {};
+            const carreta = vehiculos.find(v => v.desTipoVehiculo !== 'Principal' && v.indTipoVehiculo !== '1') || vehiculos[1] || {};
+            const conductores = Array.isArray(t.conductor) ? t.conductor : [];
+            const cond = conductores[0] || {};
+            const bienes = Array.isArray(t.bien) ? t.bien : (Array.isArray(sData.detalles || sData.items) ? (sData.detalles || sData.items) : []);
             
             guiaData = {
                 numero_guia: cleanNumero,
-                tipo_documento: tipoDocumento,
-                fecha_emision: sData.fecEmision || sData.fechaEmision || new Date().toISOString().slice(0, 10),
-                fecha_traslado: sData.fecInicioTraslado || sData.fechaTraslado || new Date().toISOString().slice(0, 10),
-                remitente_ruc: sData.numRucRemitente || rucConsulta,
-                remitente_razon_social: sData.desRazonSocialRemitente || sData.remitenteRazonSocial || '—',
-                destinatario_ruc: sData.numRucDestinatario || sData.destinatarioRuc || '—',
-                destinatario_razon_social: sData.desRazonSocialDestinatario || sData.destinatarioRazonSocial || '—',
-                punto_partida_direccion: sData.desDireccionPartida || sData.puntoPartida || '—',
-                punto_partida_ubigeo: sData.codUbigeoPartida || sData.ubigeoPartida || '—',
-                punto_llegada_direccion: sData.desDireccionLlegada || sData.puntoLlegada || '—',
-                punto_llegada_ubigeo: sData.codUbigeoLlegada || sData.ubigeoLlegada || '—',
-                placa_tracto: sData.numPlacaVehiculo || sData.placaTracto || '—',
-                placa_carreta: sData.numPlacaSemirremolque || sData.placaCarreta || '—',
-                conductor_tipo_doc: sData.tipDocIdentidadConductor || 'DNI',
-                conductor_num_doc: sData.numDocIdentidadConductor || sData.conductorDni || '—',
-                conductor_nombre: sData.desNombresConductor || sData.conductorNombre || '—',
-                conductor_licencia: sData.numLicenciaConductor || sData.conductorLicencia || '—',
-                peso_bruto_total: Number(sData.canPesoBrutoTotal || sData.pesoTotal || 0),
-                unidad_medida: sData.codUnidadMedida || 'KGM',
-                estado_sunat: 'ACEPTADO',
-                codigo_respuesta_sunat: '0',
+                tipo_documento: sData.codCpe || tipoDocumento,
+                fecha_emision: (emi.fecEmision || sData.fecEmision || sData.fechaEmision || new Date().toISOString()).slice(0, 10),
+                fecha_traslado: (t.fecInicioTraslado || sData.fecInicioTraslado || sData.fechaTraslado || new Date().toISOString()).slice(0, 10),
+                remitente_ruc: sData.numRuc || sData.numRucRemitente || rucConsulta,
+                remitente_razon_social: emisor.desNombre || sData.desRazonSocialRemitente || sData.remitenteRazonSocial || '—',
+                destinatario_ruc: receptor.numDocIdentidad || sData.numRucDestinatario || sData.destinatarioRuc || '—',
+                destinatario_razon_social: receptor.desNombre || sData.desRazonSocialDestinatario || sData.destinatarioRazonSocial || '—',
+                punto_partida_direccion: partida.desDireccion || sData.desDireccionPartida || sData.puntoPartida || '—',
+                punto_partida_ubigeo: partida.codUbigeo || sData.codUbigeoPartida || sData.ubigeoPartida || '—',
+                punto_llegada_direccion: llegada.desDireccion || sData.desDireccionLlegada || sData.puntoLlegada || '—',
+                punto_llegada_ubigeo: llegada.codUbigeo || sData.codUbigeoLlegada || sData.ubigeoLlegada || '—',
+                placa_tracto: tracto.numPlaca || sData.numPlacaVehiculo || sData.placaTracto || '—',
+                placa_carreta: carreta.numPlaca || sData.numPlacaSemirremolque || sData.placaCarreta || '—',
+                conductor_tipo_doc: (cond.codTipoDocIdentidad === '1' ? 'DNI' : (cond.desTipoDocIdentidad || sData.tipDocIdentidadConductor || 'DNI')),
+                conductor_num_doc: cond.numDocIdentidad || sData.numDocIdentidadConductor || sData.conductorDni || '—',
+                conductor_nombre: cond.desNombre || sData.desNombresConductor || sData.conductorNombre || '—',
+                conductor_licencia: cond.numLicencia || sData.numLicenciaConductor || sData.conductorLicencia || '—',
+                peso_bruto_total: Number(t.numPesoBruto !== undefined ? t.numPesoBruto : (sData.canPesoBrutoTotal || sData.pesoTotal || 0)),
+                unidad_medida: t.codUnidadMedidaPb || sData.codUnidadMedida || 'KGM',
+                estado_sunat: sData.desEstado ? sData.desEstado.toUpperCase() : 'ACEPTADO',
+                codigo_respuesta_sunat: sData.codEstado || '0',
                 observaciones_sunat: sData.observacion || "Guía validada directamente en el servicio oficial de SUNAT.",
-                items: Array.isArray(sData.detalles || sData.items) ? (sData.detalles || sData.items).map(it => ({
-                    codigo: it.codItem || it.codigo || '—',
-                    descripcion: it.desItem || it.descripcion || '—',
-                    cantidad: Number(it.canItem || it.cantidad || 1),
-                    unidad_medida: it.codUnidadMedida || it.unidadMedida || 'NIU',
+                items: bienes.map(it => ({
+                    codigo: it.codBien || it.codItem || it.codigo || '—',
+                    descripcion: it.desBien || it.desItem || it.descripcion || '—',
+                    cantidad: Number(it.numCantidad !== undefined ? it.numCantidad : (it.canItem || it.cantidad || 1)),
+                    unidad_medida: it.codUniMedida || it.codUnidadMedida || it.unidadMedida || 'NIU',
                     peso_unitario: Number(it.canPesoItem || it.pesoUnitario || 0)
-                })) : []
+                }))
             };
 
             // Si se solicita guardar en BD
