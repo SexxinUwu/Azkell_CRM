@@ -175,7 +175,7 @@
 
     <!-- Wialon -->
     <div class="intg-card" id="intg-card-wialon">
-        <div class="intg-card-header" onclick="intgToggleCard('intg-card-wialon')">
+        <div class="intg-card-header" onclick="window.intgToggleCard('intg-card-wialon')">
             <div class="intg-card-icon wialon"><i class="bi bi-geo-alt-fill"></i></div>
             <div>
                 <p class="intg-card-title">Wialon — GPS / Flota</p>
@@ -186,7 +186,7 @@
         </div>
 
         <div class="intg-card-body">
-            <form onsubmit="return false;" autocomplete="off" style="padding-top: 18px;">
+            <div style="padding-top: 18px;">
                 <div class="intg-field">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
                         <label style="margin-bottom:0;">Token de autenticación</label>
@@ -221,13 +221,13 @@
                     </button>
                     <span class="intg-test-result" id="intg-wialon-testresult"></span>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
     <!-- SUNAT — GRE y Comprobantes -->
     <div class="intg-card" id="intg-card-sunat">
-        <div class="intg-card-header" onclick="intgToggleCard('intg-card-sunat')">
+        <div class="intg-card-header" onclick="window.intgToggleCard('intg-card-sunat')">
             <div class="intg-card-icon" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">
                 <i class="bi bi-file-earmark-lock-fill"></i>
             </div>
@@ -240,7 +240,7 @@
         </div>
 
         <div class="intg-card-body">
-            <form onsubmit="return false;" autocomplete="off" style="padding-top: 18px;">
+            <div style="padding-top: 18px;">
                 <div class="row g-2 mb-2">
                     <div class="col-md-6">
                         <div class="intg-field">
@@ -304,15 +304,7 @@
                     </button>
                     <span class="intg-test-result" id="intg-sunat-testresult"></span>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
-
-<script>
-window.intgToggleCard = function(cardId) {
-    var card = document.getElementById(cardId);
-    if (!card) return;
-    card.classList.toggle('open');
-};
-</script>
