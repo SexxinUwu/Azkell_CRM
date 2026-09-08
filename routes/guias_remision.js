@@ -234,12 +234,12 @@ module.exports = function(db, tenantStorage) {
 
             if (creds.sunat_usuario_sol && creds.sunat_clave_sol && creds.sunat_ruc_emisor) {
                 bodyParams.grant_type = 'password';
-                bodyParams.scope = 'https://api.sunat.gob.pe/v1/contribuyente/contribuyentes';
+                bodyParams.scope = 'https://api.sunat.gob.pe/v1/contribuyente/gem';
                 bodyParams.username = `${creds.sunat_ruc_emisor}${creds.sunat_usuario_sol}`;
                 bodyParams.password = creds.sunat_clave_sol;
             } else {
                 bodyParams.grant_type = 'client_credentials';
-                bodyParams.scope = 'https://api-cpe.sunat.gob.pe';
+                bodyParams.scope = 'https://api.sunat.gob.pe/v1/contribuyente/gem';
             }
 
             const searchParams = new URLSearchParams(bodyParams);
@@ -328,12 +328,12 @@ module.exports = function(db, tenantStorage) {
 
                     if (creds.sunat_usuario_sol && creds.sunat_clave_sol && creds.sunat_ruc_emisor) {
                         bodyParams.grant_type = 'password';
-                        bodyParams.scope = 'https://api.sunat.gob.pe/v1/contribuyente/contribuyentes';
+                        bodyParams.scope = 'https://api.sunat.gob.pe/v1/contribuyente/gem';
                         bodyParams.username = `${creds.sunat_ruc_emisor}${creds.sunat_usuario_sol}`;
                         bodyParams.password = creds.sunat_clave_sol;
                     } else {
                         bodyParams.grant_type = 'client_credentials';
-                        bodyParams.scope = 'https://api-cpe.sunat.gob.pe';
+                        bodyParams.scope = 'https://api.sunat.gob.pe/v1/contribuyente/gem';
                     }
 
                     const authRes = await fetch(tokenUrl, {
