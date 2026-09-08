@@ -182,7 +182,6 @@
                 if (document.getElementById('greCfgRuc')) document.getElementById('greCfgRuc').value = c.sunat_ruc_emisor || '';
                 if (document.getElementById('greCfgClientId')) document.getElementById('greCfgClientId').value = c.sunat_client_id || '';
                 if (document.getElementById('greCfgUsuarioSol')) document.getElementById('greCfgUsuarioSol').value = c.sunat_usuario_sol || '';
-                if (document.getElementById('greCfgEntorno')) document.getElementById('greCfgEntorno').value = c.sunat_modo_entorno || 'produccion';
             }
         } catch (e) {
             console.error("Error cargando config SUNAT:", e);

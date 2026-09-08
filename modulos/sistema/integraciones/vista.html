@@ -23,16 +23,47 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;
-    padding: 22px 24px;
-    margin-bottom: 20px;
+    padding: 0;
+    margin-bottom: 18px;
+    overflow: hidden;
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+#moduloIntegraciones .intg-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
 }
 #moduloIntegraciones .intg-card-header {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 18px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--border);
+    padding: 18px 22px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+}
+#moduloIntegraciones .intg-card-header:hover {
+    background: rgba(0,0,0,0.015);
+}
+#moduloIntegraciones .intg-card-body {
+    padding: 0 22px 22px 22px;
+    border-top: 1px solid var(--border);
+    display: none;
+    animation: fadeInBody 0.2s ease-in-out;
+}
+#moduloIntegraciones .intg-card.open .intg-card-body {
+    display: block;
+}
+#moduloIntegraciones .intg-card-chevron {
+    color: var(--subtext);
+    font-size: 0.95rem;
+    margin-left: 10px;
+    transition: transform 0.25s ease;
+}
+#moduloIntegraciones .intg-card.open .intg-card-chevron {
+    transform: rotate(180deg);
+}
+@keyframes fadeInBody {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 #moduloIntegraciones .intg-card-icon {
     width: 40px;
@@ -139,61 +170,64 @@
 <div id="moduloIntegraciones">
     <div class="intg-header">
         <h2><i class="bi bi-plug-fill me-2" style="color:var(--primary,#5865F2);"></i>Integraciones</h2>
-        <p>Configura los tokens y credenciales de servicios externos. Los valores se guardan en la base de datos de forma segura.</p>
+        <p>Configura los tokens y credenciales de servicios externos. Haz clic en cada tarjeta para expandir o contraer sus opciones.</p>
     </div>
 
     <!-- Wialon -->
     <div class="intg-card" id="intg-card-wialon">
-        <div class="intg-card-header">
+        <div class="intg-card-header" onclick="intgToggleCard('intg-card-wialon')">
             <div class="intg-card-icon wialon"><i class="bi bi-geo-alt-fill"></i></div>
             <div>
                 <p class="intg-card-title">Wialon — GPS / Flota</p>
                 <p class="intg-card-subtitle">Plataforma de rastreo vehicular. Se usa en el módulo GPS Flota.</p>
             </div>
             <span class="intg-status pending" id="intg-wialon-status">Sin probar</span>
+            <i class="bi bi-chevron-down intg-card-chevron"></i>
         </div>
 
-        <form onsubmit="return false;" autocomplete="off">
-            <div class="intg-field">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-                    <label style="margin-bottom:0;">Token de autenticación</label>
-                    <button type="button" class="btn btn-sm btn-warning text-dark fw-bold" style="font-size: 0.74rem; padding: 2px 10px; border-radius: 6px;" onclick="window.intgConectarWialon()">
-                        <i class="bi bi-box-arrow-up-right me-1"></i> Iniciar Sesión en Wialon y Conectar
-                    </button>
+        <div class="intg-card-body">
+            <form onsubmit="return false;" autocomplete="off" style="padding-top: 18px;">
+                <div class="intg-field">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                        <label style="margin-bottom:0;">Token de autenticación</label>
+                        <button type="button" class="btn btn-sm btn-warning text-dark fw-bold" style="font-size: 0.74rem; padding: 2px 10px; border-radius: 6px;" onclick="window.intgConectarWialon()">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> Iniciar Sesión en Wialon y Conectar
+                        </button>
+                    </div>
+                    <div class="input-wrap">
+                        <input type="password" id="intg-wialon-token" placeholder="Se completará automáticamente al iniciar sesión en Wialon…" autocomplete="off" />
+                        <button type="button" class="btn-toggle-pwd" onclick="intgTogglePwd('intg-wialon-token', this)" title="Mostrar/Ocultar">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    <div class="intg-hint">Haz clic en <strong>"Iniciar Sesión en Wialon y Conectar"</strong> para ingresar tus credenciales y vincular el token automáticamente.</div>
+                    <div class="intg-meta" id="intg-wialon-meta"></div>
                 </div>
-                <div class="input-wrap">
-                    <input type="password" id="intg-wialon-token" placeholder="Se completará automáticamente al iniciar sesión en Wialon…" autocomplete="off" />
-                    <button type="button" class="btn-toggle-pwd" onclick="intgTogglePwd('intg-wialon-token', this)" title="Mostrar/Ocultar">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                </div>
-                <div class="intg-hint">Haz clic en <strong>"Iniciar Sesión en Wialon y Conectar"</strong> para ingresar tus credenciales y vincular el token automáticamente.</div>
-                <div class="intg-meta" id="intg-wialon-meta"></div>
-            </div>
 
-            <div class="intg-field">
-                <label>URL base API <span style="font-weight:400;text-transform:none;">(opcional)</span></label>
-                <div class="input-wrap">
-                    <input type="text" id="intg-wialon-url" placeholder="https://hst-api.wialon.us/wialon/ajax.html" autocomplete="off" />
+                <div class="intg-field">
+                    <label>URL base API <span style="font-weight:400;text-transform:none;">(opcional)</span></label>
+                    <div class="input-wrap">
+                        <input type="text" id="intg-wialon-url" placeholder="https://hst-api.wialon.us/wialon/ajax.html" autocomplete="off" />
+                    </div>
+                    <div class="intg-hint">Dejar vacío para usar el servidor por defecto (hst-api.wialon.us).</div>
                 </div>
-                <div class="intg-hint">Dejar vacío para usar el servidor por defecto (hst-api.wialon.us).</div>
-            </div>
 
-            <div class="intg-actions">
-                <button type="button" class="btn btn-sm btn-primary" onclick="intgGuardar('wialon')">
-                    <i class="bi bi-floppy me-1"></i>Guardar
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="intgProbarWialon()">
-                    <i class="bi bi-lightning me-1"></i>Probar conexión
-                </button>
-                <span class="intg-test-result" id="intg-wialon-testresult"></span>
-            </div>
-        </form>
+                <div class="intg-actions">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="intgGuardar('wialon')">
+                        <i class="bi bi-floppy me-1"></i>Guardar
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="intgProbarWialon()">
+                        <i class="bi bi-lightning me-1"></i>Probar conexión
+                    </button>
+                    <span class="intg-test-result" id="intg-wialon-testresult"></span>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- SUNAT — GRE y Comprobantes -->
     <div class="intg-card" id="intg-card-sunat">
-        <div class="intg-card-header">
+        <div class="intg-card-header" onclick="intgToggleCard('intg-card-sunat')">
             <div class="intg-card-icon" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">
                 <i class="bi bi-file-earmark-lock-fill"></i>
             </div>
@@ -202,79 +236,83 @@
                 <p class="intg-card-subtitle">Lectura y consulta directa de GRE vía API Oficial y Clave SOL.</p>
             </div>
             <span class="intg-status pending" id="intg-sunat-status">Sin probar</span>
+            <i class="bi bi-chevron-down intg-card-chevron"></i>
         </div>
 
-        <form onsubmit="return false;" autocomplete="off">
-            <div class="row g-2 mb-2">
-                <div class="col-md-6">
-                    <div class="intg-field">
-                        <label>RUC Emisor</label>
-                        <div class="input-wrap">
-                            <input type="text" id="intg-sunat-ruc" placeholder="Ej. 20609532484" autocomplete="off" />
+        <div class="intg-card-body">
+            <form onsubmit="return false;" autocomplete="off" style="padding-top: 18px;">
+                <div class="row g-2 mb-2">
+                    <div class="col-md-6">
+                        <div class="intg-field">
+                            <label>RUC Emisor</label>
+                            <div class="input-wrap">
+                                <input type="text" id="intg-sunat-ruc" placeholder="Ej. 20609532484" autocomplete="off" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="intg-field">
+                            <label>Usuario Clave SOL</label>
+                            <div class="input-wrap">
+                                <input type="text" id="intg-sunat-usuario" placeholder="Ej. OPERMAR1" autocomplete="off" />
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="intg-field">
-                        <label>Usuario Clave SOL</label>
-                        <div class="input-wrap">
-                            <input type="text" id="intg-sunat-usuario" placeholder="Ej. OPERMAR1" autocomplete="off" />
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <div class="intg-field">
-                <label>Contraseña Clave SOL</label>
-                <div class="input-wrap">
-                    <input type="password" id="intg-sunat-clave" placeholder="••••••••••••" autocomplete="off" />
-                    <button type="button" class="btn-toggle-pwd" onclick="intgTogglePwd('intg-sunat-clave', this)" title="Mostrar/Ocultar">
-                        <i class="bi bi-eye"></i>
+                <div class="intg-field">
+                    <label>Contraseña Clave SOL</label>
+                    <div class="input-wrap">
+                        <input type="password" id="intg-sunat-clave" placeholder="••••••••••••" autocomplete="off" />
+                        <button type="button" class="btn-toggle-pwd" onclick="intgTogglePwd('intg-sunat-clave', this)" title="Mostrar/Ocultar">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-md-6">
+                        <div class="intg-field">
+                            <label>Client ID (API SUNAT)</label>
+                            <div class="input-wrap">
+                                <input type="text" id="intg-sunat-client-id" placeholder="ID generado en Clave SOL…" autocomplete="off" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="intg-field">
+                            <label>Client Secret</label>
+                            <div class="input-wrap">
+                                <input type="password" id="intg-sunat-client-secret" placeholder="Secret de la aplicación…" autocomplete="off" />
+                                <button type="button" class="btn-toggle-pwd" onclick="intgTogglePwd('intg-sunat-client-secret', this)" title="Mostrar/Ocultar">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="intg-hint mb-3">Las credenciales Client ID y Secret se obtienen en SUNAT Operaciones en Línea &gt; Gestión de desarrollo de aplicaciones.</div>
+                <div class="intg-meta mb-3" id="intg-sunat-meta"></div>
+
+                <div class="intg-actions">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="intgGuardar('sunat')">
+                        <i class="bi bi-floppy me-1"></i>Guardar Credenciales
                     </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="intgProbarSunat()">
+                        <i class="bi bi-shield-check me-1"></i>Probar Conexión (OAuth 2.0)
+                    </button>
+                    <span class="intg-test-result" id="intg-sunat-testresult"></span>
                 </div>
-            </div>
-
-            <div class="row g-2 mb-2">
-                <div class="col-md-6">
-                    <div class="intg-field">
-                        <label>Client ID (API SUNAT)</label>
-                        <div class="input-wrap">
-                            <input type="text" id="intg-sunat-client-id" placeholder="ID generado en Clave SOL…" autocomplete="off" />
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="intg-field">
-                        <label>Client Secret</label>
-                        <div class="input-wrap">
-                            <input type="password" id="intg-sunat-client-secret" placeholder="Secret de la aplicación…" autocomplete="off" />
-                            <button type="button" class="btn-toggle-pwd" onclick="intgTogglePwd('intg-sunat-client-secret', this)" title="Mostrar/Ocultar">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="intg-field">
-                <label>Entorno SUNAT</label>
-                <select id="intg-sunat-entorno" class="form-select form-select-sm" style="border:1px solid var(--border); border-radius:8px; background:var(--bg,#f8f8f8); font-size:0.85rem; color:var(--text); padding:8px 12px;">
-                    <option value="produccion">Producción (Oficial SUNAT)</option>
-                    <option value="beta">Beta / Pruebas SUNAT</option>
-                </select>
-                <div class="intg-hint">Para obtener el Client ID y Client Secret, ingresa a SUNAT Operaciones en Línea &gt; Gestión de desarrollo de aplicaciones.</div>
-                <div class="intg-meta" id="intg-sunat-meta"></div>
-            </div>
-
-            <div class="intg-actions">
-                <button type="button" class="btn btn-sm btn-primary" onclick="intgGuardar('sunat')">
-                    <i class="bi bi-floppy me-1"></i>Guardar Credenciales
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="intgProbarSunat()">
-                    <i class="bi bi-shield-check me-1"></i>Probar Conexión (OAuth 2.0)
-                </button>
-                <span class="intg-test-result" id="intg-sunat-testresult"></span>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
+
+<script>
+window.intgToggleCard = function(cardId) {
+    var card = document.getElementById(cardId);
+    if (!card) return;
+    card.classList.toggle('open');
+};
+</script>
