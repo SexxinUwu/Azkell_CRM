@@ -365,39 +365,104 @@ module.exports = function(db, tenantStorage) {
                 return res.json({ ok: true, estado: 'ENCONTRADA', data: guiaData, origen: 'bd' });
             }
 
-            // Simulación o parsing de consulta si no existe en BD
-            // Si el número coincide con los casos de prueba o se consulta
+            // Si no tiene credenciales configuradas
+            if (!tokenSunat) {
+                return res.status(400).json({
+                    ok: false,
+                    error: "No se pudo autenticar con SUNAT. Verifique sus credenciales (Client ID, Usuario SOL, Clave SOL) en Sistema > Integraciones."
+                });
+            }
+
+            // Llamar al endpoint oficial GRE de SUNAT
+            // Formato de clave comprobante: {numRucEmisor}-{codCpe}-{numSerie}-{numCpe}
+            const numCpe8 = numLimpio.padStart(8, '0');
+            const cpeId = `${rucConsulta}-${tipoDocumento}-${serieLimpia}-${numCpe8}`;
+            const sunatEndpoint = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gre/comprobantes/${cpeId}`;
+
+            console.log(`[SUNAT GRE] Consultando endpoint oficial: ${sunatEndpoint}`);
+
+            let sunatResp;
+            try {
+                sunatResp = await fetch(sunatEndpoint, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${tokenSunat}`,
+                        'Accept': 'application/json'
+                    }
+                });
+            } catch (netErr) {
+                console.error("[SUNAT GRE] Error de red:", netErr);
+                return res.status(502).json({
+                    ok: false,
+                    error: `Error de comunicación con el servidor de SUNAT: ${netErr.message}`
+                });
+            }
+
+            const sunatStatus = sunatResp.status;
+            let sunatJson = null;
+            try {
+                sunatJson = await sunatResp.json();
+            } catch (e) {
+                sunatJson = null;
+            }
+
+            console.log(`[SUNAT GRE] Respuesta HTTP ${sunatStatus}:`, sunatJson);
+
+            // Manejo de errores devueltos por SUNAT
+            if (!sunatResp.ok || (sunatJson && sunatJson.errors)) {
+                let mensajeError = "No se encontraron resultados en SUNAT para la serie y número ingresados.";
+                if (sunatJson && Array.isArray(sunatJson.errors) && sunatJson.errors.length > 0) {
+                    mensajeError = sunatJson.errors.map(err => err.msg || err.desError || err.cod).join('. ');
+                } else if (sunatJson && sunatJson.msg) {
+                    mensajeError = sunatJson.msg;
+                } else if (sunatStatus === 404) {
+                    mensajeError = "No se encontró el comprobante en SUNAT (404 Not Found).";
+                }
+
+                return res.status(404).json({
+                    ok: false,
+                    error: mensajeError,
+                    detalleSunat: sunatJson
+                });
+            }
+
+            // Si SUNAT devuelve datos válidos
+            const sData = sunatJson || {};
+            
             guiaData = {
                 numero_guia: cleanNumero,
                 tipo_documento: tipoDocumento,
-                fecha_emision: new Date().toISOString().slice(0, 10),
-                fecha_traslado: new Date().toISOString().slice(0, 10),
-                remitente_ruc: rucConsulta,
-                remitente_razon_social: rucConsulta === '20616172248' ? "D'ONOFRIO ALIMENTOS S.A.C." : "DISTRIBUIDORA Y LOGISTICA PERU S.A.C.",
-                destinatario_ruc: "20100047218",
-                destinatario_razon_social: "COMPAÑIA MINERA ANTAMINA S.A.",
-                punto_partida_direccion: "AV. ARGENTINA NRO. 2060 - CALLAO",
-                punto_partida_ubigeo: "070101",
-                punto_llegada_direccion: "AV. LOS CHANCAS KM 14 - CHICLAYO",
-                punto_llegada_ubigeo: "140101",
-                placa_tracto: "CLX861",
-                placa_carreta: "BTV993",
-                conductor_tipo_doc: "DNI",
-                conductor_num_doc: "42169928",
-                conductor_nombre: "ROLY CARLOS CALDERON ISLA",
-                conductor_licencia: "Q42169928",
-                peso_bruto_total: 13148.85,
-                unidad_medida: "KGM",
-                estado_sunat: "ACEPTADO",
-                codigo_respuesta_sunat: "0",
-                observaciones_sunat: "La Guía de Remisión ha sido consultada y validada en el padrón oficial de SUNAT.",
-                items: [
-                    { codigo: "HEL-01", descripcion: "HELADOS Y PRODUCTOS CONGELADOS D'ONOFRIO", cantidad: 450.00, unidad_medida: "BX", peso_unitario: 25.00 },
-                    { codigo: "LAC-02", descripcion: "PRODUCTOS LACTEOS Y DERIVADOS ENVASADOS", cantidad: 120.00, unidad_medida: "BX", peso_unitario: 15.82 }
-                ]
+                fecha_emision: sData.fecEmision || sData.fechaEmision || new Date().toISOString().slice(0, 10),
+                fecha_traslado: sData.fecInicioTraslado || sData.fechaTraslado || new Date().toISOString().slice(0, 10),
+                remitente_ruc: sData.numRucRemitente || rucConsulta,
+                remitente_razon_social: sData.desRazonSocialRemitente || sData.remitenteRazonSocial || '—',
+                destinatario_ruc: sData.numRucDestinatario || sData.destinatarioRuc || '—',
+                destinatario_razon_social: sData.desRazonSocialDestinatario || sData.destinatarioRazonSocial || '—',
+                punto_partida_direccion: sData.desDireccionPartida || sData.puntoPartida || '—',
+                punto_partida_ubigeo: sData.codUbigeoPartida || sData.ubigeoPartida || '—',
+                punto_llegada_direccion: sData.desDireccionLlegada || sData.puntoLlegada || '—',
+                punto_llegada_ubigeo: sData.codUbigeoLlegada || sData.ubigeoLlegada || '—',
+                placa_tracto: sData.numPlacaVehiculo || sData.placaTracto || '—',
+                placa_carreta: sData.numPlacaSemirremolque || sData.placaCarreta || '—',
+                conductor_tipo_doc: sData.tipDocIdentidadConductor || 'DNI',
+                conductor_num_doc: sData.numDocIdentidadConductor || sData.conductorDni || '—',
+                conductor_nombre: sData.desNombresConductor || sData.conductorNombre || '—',
+                conductor_licencia: sData.numLicenciaConductor || sData.conductorLicencia || '—',
+                peso_bruto_total: Number(sData.canPesoBrutoTotal || sData.pesoTotal || 0),
+                unidad_medida: sData.codUnidadMedida || 'KGM',
+                estado_sunat: 'ACEPTADO',
+                codigo_respuesta_sunat: '0',
+                observaciones_sunat: sData.observacion || "Guía validada directamente en el servicio oficial de SUNAT.",
+                items: Array.isArray(sData.detalles || sData.items) ? (sData.detalles || sData.items).map(it => ({
+                    codigo: it.codItem || it.codigo || '—',
+                    descripcion: it.desItem || it.descripcion || '—',
+                    cantidad: Number(it.canItem || it.cantidad || 1),
+                    unidad_medida: it.codUnidadMedida || it.unidadMedida || 'NIU',
+                    peso_unitario: Number(it.canPesoItem || it.pesoUnitario || 0)
+                })) : []
             };
 
-            // Si se solicita guardar en BD automáticamente
+            // Si se solicita guardar en BD
             if (guardar === 'true' || guardar === true) {
                 const [insertRes] = await dbConn.query(`
                     INSERT INTO guias_remision (
@@ -413,7 +478,7 @@ module.exports = function(db, tenantStorage) {
                     guiaData.punto_partida_direccion, guiaData.punto_partida_ubigeo, guiaData.punto_llegada_direccion, guiaData.punto_llegada_ubigeo,
                     guiaData.placa_tracto, guiaData.placa_carreta, guiaData.conductor_tipo_doc, guiaData.conductor_num_doc, guiaData.conductor_nombre, guiaData.conductor_licencia,
                     guiaData.peso_bruto_total, guiaData.unidad_medida, guiaData.estado_sunat, guiaData.codigo_respuesta_sunat, guiaData.observaciones_sunat,
-                    JSON.stringify(guiaData)
+                    JSON.stringify(sData)
                 ]);
 
                 const newId = insertRes.insertId;
@@ -431,7 +496,7 @@ module.exports = function(db, tenantStorage) {
 
             res.json({ ok: true, estado: 'ENCONTRADA', data: guiaData, origen: 'sunat' });
         } catch (err) {
-            console.error("Error consultando SUNAT:", err);
+            console.error("[SUNAT GRE] Error en /consultar-sunat:", err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });
