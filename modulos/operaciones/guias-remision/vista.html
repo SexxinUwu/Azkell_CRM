@@ -278,40 +278,159 @@
     </div>
 </div>
 
-<!-- MODAL: Consultar Guía SUNAT -->
+<!-- MODAL: Consultar Guía SUNAT (Estilo Oficial GRE) -->
 <div class="modal fade" id="greModalConsultar" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow-lg">
-            <div class="modal-header border-bottom px-4 py-3 bg-light">
+            <div class="modal-header border-bottom px-4 py-3" style="background:#0f172a; color:#fff;">
                 <div class="d-flex align-items-center gap-2">
-                    <div class="rounded-3 p-2 bg-primary bg-opacity-10 text-primary">
-                        <i class="bi bi-search fs-5"></i>
+                    <div class="rounded-3 p-2 bg-primary bg-opacity-25 text-info">
+                        <i class="bi bi-shield-check fs-5"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold text-dark m-0">Consultar Guía en SUNAT</h6>
-                        <small class="text-muted">Carga automática de datos de traslado y bienes</small>
+                        <h6 class="fw-bold text-white m-0">Consulta Individual de GRE en SUNAT</h6>
+                        <small class="text-secondary" style="font-size:0.75rem;">Extracción automática de datos de carga, rutas e ítems</small>
                     </div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
-                <form id="greFormConsulta" onsubmit="window.greEjecutarConsultaSunat(event)">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-dark">N° de Guía de Remisión (Serie y Correlativo)</label>
-                        <input type="text" id="greInputNumero" class="form-control text-uppercase font-monospace fw-bold" placeholder="Ej. T001-0004582 o V001-0001234" required autofocus>
-                        <div class="form-text small">Ingrese la serie y número correlativo tal como figura en el documento.</div>
+            <div class="modal-body p-4 bg-light">
+                <div class="card border-0 rounded-3 shadow-xs p-3.5 bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
+                    <form id="greFormConsulta" onsubmit="window.greEjecutarConsultaSunat(event)">
+                        <!-- Tipo de GRE -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-dark mb-1">Seleccione el tipo de GRE:</label>
+                            <div class="d-flex gap-4 mt-1">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="greTipoConsultaRadio" id="greTipoRemitente" value="09" checked>
+                                    <label class="form-check-label fw-semibold small" for="greTipoRemitente">
+                                        GRE - Remitente (09)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="greTipoConsultaRadio" id="greTipoTransportista" value="31">
+                                    <label class="form-check-label fw-semibold small" for="greTipoTransportista">
+                                        GRE - Transportista (31)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RUC Emisor -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-dark mb-1">Ingrese el RUC del emisor:</label>
+                            <input type="text" id="greInputRucEmisor" class="form-control font-monospace fw-semibold" placeholder="Ej. 20616172248 (D'Onofrio) o RUC remitente" maxlength="11" required>
+                        </div>
+
+                        <!-- Serie y Número -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-dark mb-1">Ingrese numeración de la GRE:</label>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <div class="input-group">
+                                        <span class="input-group-text small fw-bold bg-light">Serie</span>
+                                        <input type="text" id="greInputSerie" class="form-control text-uppercase font-monospace fw-bold" placeholder="T072" maxlength="4" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="input-group">
+                                        <span class="input-group-text small fw-bold bg-light">Número</span>
+                                        <input type="text" id="greInputCorrelativo" class="form-control font-monospace fw-bold" placeholder="366620" maxlength="8" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold" onclick="window.greLimpiarConsultaForm()">
+                                Limpiar
+                            </button>
+                            <button type="submit" id="greBtnSubmitConsulta" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-white">
+                                <i class="bi bi-search"></i> Consultar en SUNAT
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Resultado de la Consulta -->
+                <div id="greResultadoConsulta" class="d-none">
+                    <!-- Badge de Estado Dinámico -->
+                    <div id="greEstadoBanner" class="alert d-flex align-items-center justify-content-between p-3 rounded-3 mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="greEstadoIcon" class="fs-4"></span>
+                            <div>
+                                <h6 class="fw-bold m-0" id="greEstadoTitulo">Guía Recibida</h6>
+                                <small class="text-muted" id="greEstadoSub">Documento autorizado y válido ante la SUNAT</small>
+                            </div>
+                        </div>
+                        <span id="greEstadoBadge" class="badge px-3 py-1.5 rounded-pill fw-bold"></span>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-dark">Tipo de Guía</label>
-                        <select id="greSelectTipoDoc" class="form-select">
-                            <option value="31" selected>31 - Guía de Remisión Transportista (GRE-T)</option>
-                            <option value="09">09 - Guía de Remisión Remitente (GRE-R)</option>
-                        </select>
+
+                    <!-- Datos Extraídos de la Guía -->
+                    <div id="greCardDetalleExtraido" class="card border-0 rounded-3 shadow-xs p-3 bg-white mb-3" style="border:1px solid #e2e8f0 !important;">
+                        <div class="d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom">
+                            <div class="fw-bold text-dark small text-uppercase">
+                                <i class="bi bi-card-text text-primary me-1"></i> Información Extraída de SUNAT
+                            </div>
+                            <span id="greDetalleNumeroGuia" class="badge bg-primary bg-opacity-10 text-primary border font-monospace fw-bold"></span>
+                        </div>
+
+                        <div class="row g-2 small mb-3">
+                            <div class="col-md-6">
+                                <span class="text-muted d-block">Remitente:</span>
+                                <strong id="greResRemitente" class="text-dark"></strong>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="text-muted d-block">Destinatario:</span>
+                                <strong id="greResDestinatario" class="text-dark"></strong>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="text-muted d-block"><i class="bi bi-geo-alt text-success me-1"></i>Punto de Partida:</span>
+                                <span id="greResPartida" class="text-dark fw-semibold"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="text-muted d-block"><i class="bi bi-geo-alt-fill text-danger me-1"></i>Punto de Llegada:</span>
+                                <span id="greResLlegada" class="text-dark fw-semibold"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="text-muted d-block">Peso Bruto Total:</span>
+                                <strong id="greResPeso" class="text-primary font-monospace"></strong>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="text-muted d-block">Vehículo Asignado:</span>
+                                <span id="greResPlacas" class="text-dark font-monospace fw-bold"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="text-muted d-block">Conductor:</span>
+                                <span id="greResConductor" class="text-dark fw-semibold"></span>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Bienes Extraídos -->
+                        <div class="table-responsive border rounded-3 mb-3">
+                            <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.78rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Descripción del Bien / Mercadería</th>
+                                        <th class="text-end">Cantidad</th>
+                                        <th class="text-center">U.M.</th>
+                                        <th class="text-end">Peso Unit.</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="greResTbodyItems">
+                                    <!-- Inyectado dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" id="greBtnGuardarErp" class="btn btn-success btn-sm rounded-pill px-3.5 fw-bold text-white shadow-sm" onclick="window.greGuardarGuiaConsultada()">
+                                <i class="bi bi-check-circle-fill me-1"></i> Registrar en Historial del ERP
+                            </button>
+                        </div>
                     </div>
-                    <button type="submit" id="greBtnSubmitConsulta" class="btn btn-primary w-100 rounded-pill py-2 fw-bold d-flex align-items-center justify-content-center gap-2">
-                        <i class="bi bi-cloud-arrow-down-fill"></i> Consultar y Cargar al Sistema
-                    </button>
-                </form>
+                </div>
             </div>
         </div>
     </div>

@@ -29,6 +29,28 @@ function intgCargar() {
                 } else if (row.clave === 'wialon_url') {
                     var el2 = document.getElementById('intg-wialon-url');
                     if (el2) el2.value = val;
+                } else if (row.clave === 'sunat_ruc_emisor') {
+                    var elRuc = document.getElementById('intg-sunat-ruc');
+                    if (elRuc) elRuc.value = val;
+                } else if (row.clave === 'sunat_usuario_sol') {
+                    var elUsr = document.getElementById('intg-sunat-usuario');
+                    if (elUsr) elUsr.value = val;
+                } else if (row.clave === 'sunat_clave_sol') {
+                    var elPwd = document.getElementById('intg-sunat-clave');
+                    if (elPwd) elPwd.value = val;
+                } else if (row.clave === 'sunat_client_id') {
+                    var elCid = document.getElementById('intg-sunat-client-id');
+                    if (elCid) elCid.value = val;
+                    var stSunat = document.getElementById('intg-sunat-status');
+                    if (stSunat) { stSunat.textContent = val ? 'Configurado' : 'Sin configurar'; stSunat.className = 'intg-status ' + (val ? 'ok' : 'pending'); }
+                    var mSunat = document.getElementById('intg-sunat-meta');
+                    if (mSunat) mSunat.textContent = meta;
+                } else if (row.clave === 'sunat_client_secret') {
+                    var elCsc = document.getElementById('intg-sunat-client-secret');
+                    if (elCsc) elCsc.value = val;
+                } else if (row.clave === 'sunat_modo_entorno') {
+                    var elEnt = document.getElementById('intg-sunat-entorno');
+                    if (elEnt) elEnt.value = val || 'produccion';
                 }
             });
         })
@@ -46,6 +68,22 @@ window.intgGuardar = function(cual, callback) {
         pares = [
             { clave: 'wialon_token', valor: token.trim() },
             { clave: 'wialon_url',   valor: url.trim()   }
+        ];
+    } else if (cual === 'sunat') {
+        var ruc          = (document.getElementById('intg-sunat-ruc')           || {}).value || '';
+        var usuarioSol   = (document.getElementById('intg-sunat-usuario')       || {}).value || '';
+        var claveSol     = (document.getElementById('intg-sunat-clave')         || {}).value || '';
+        var clientId     = (document.getElementById('intg-sunat-client-id')     || {}).value || '';
+        var clientSecret = (document.getElementById('intg-sunat-client-secret') || {}).value || '';
+        var entorno      = (document.getElementById('intg-sunat-entorno')       || {}).value || 'produccion';
+
+        pares = [
+            { clave: 'sunat_ruc_emisor',     valor: ruc.trim() },
+            { clave: 'sunat_usuario_sol',    valor: usuarioSol.trim() },
+            { clave: 'sunat_clave_sol',      valor: claveSol.trim() },
+            { clave: 'sunat_client_id',      valor: clientId.trim() },
+            { clave: 'sunat_client_secret',  valor: clientSecret.trim() },
+            { clave: 'sunat_modo_entorno',   valor: entorno.trim() }
         ];
     }
 
@@ -135,6 +173,56 @@ window.intgProbarWialon = function() {
     })
     .finally(function() {
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-lightning me-1"></i>Probar conexión'; }
+    });
+};
+
+// ── Probar conexión SUNAT (OAuth 2.0 Token) ──────────────────────
+window.intgProbarSunat = function() {
+    var btn = document.querySelector('#intg-card-sunat .btn-outline-secondary');
+    var result = document.getElementById('intg-sunat-testresult');
+    var status = document.getElementById('intg-sunat-status');
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Autenticando…'; }
+    if (result) { result.className = 'intg-test-result'; result.textContent = ''; }
+
+    // Primero guardamos los valores ingresados
+    window.intgGuardar('sunat', function() {
+        fetch('/api/guias-remision/test-token-sunat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.ok) {
+                if (result) {
+                    result.className = 'intg-test-result ok';
+                    result.textContent = '✓ Conectado con SUNAT — Token OAuth 2.0 generado con éxito';
+                }
+                if (status) {
+                    status.textContent = 'Activo';
+                    status.className = 'intg-status ok';
+                }
+            } else {
+                throw new Error(res.error || 'Credenciales inválidas');
+            }
+        })
+        .catch(function(err) {
+            if (result) {
+                result.className = 'intg-test-result error';
+                result.textContent = '✗ ' + err.message;
+            }
+            if (status) {
+                status.textContent = 'Error';
+                status.className = 'intg-status error';
+            }
+        })
+        .finally(function() {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-shield-check me-1"></i>Probar Conexión (OAuth 2.0)';
+            }
+        });
     });
 };
 
