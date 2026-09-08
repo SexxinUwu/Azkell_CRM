@@ -7,6 +7,13 @@ window.init_integraciones = function() {
     intgCargar();
 };
 
+// ── Acordeón / Colapso de Tarjetas ──────────────────────────────
+window.intgToggleCard = function(cardId) {
+    var card = document.getElementById(cardId);
+    if (!card) return;
+    card.classList.toggle('open');
+};
+
 // ── Carga valores actuales desde la DB ───────────────────────────
 function intgCargar() {
     fetch('/api/integraciones')
