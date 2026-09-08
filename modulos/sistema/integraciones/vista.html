@@ -190,4 +190,91 @@
             </div>
         </form>
     </div>
+
+    <!-- SUNAT — GRE y Comprobantes -->
+    <div class="intg-card" id="intg-card-sunat">
+        <div class="intg-card-header">
+            <div class="intg-card-icon" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">
+                <i class="bi bi-file-earmark-lock-fill"></i>
+            </div>
+            <div>
+                <p class="intg-card-title">SUNAT — Guías de Remisión Electrónica (GRE)</p>
+                <p class="intg-card-subtitle">Lectura y consulta directa de GRE vía API Oficial y Clave SOL.</p>
+            </div>
+            <span class="intg-status pending" id="intg-sunat-status">Sin probar</span>
+        </div>
+
+        <form onsubmit="return false;" autocomplete="off">
+            <div class="row g-2 mb-2">
+                <div class="col-md-6">
+                    <div class="intg-field">
+                        <label>RUC Emisor</label>
+                        <div class="input-wrap">
+                            <input type="text" id="intg-sunat-ruc" placeholder="Ej. 20609532484" autocomplete="off" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="intg-field">
+                        <label>Usuario Clave SOL</label>
+                        <div class="input-wrap">
+                            <input type="text" id="intg-sunat-usuario" placeholder="Ej. OPERMAR1" autocomplete="off" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="intg-field">
+                <label>Contraseña Clave SOL</label>
+                <div class="input-wrap">
+                    <input type="password" id="intg-sunat-clave" placeholder="••••••••••••" autocomplete="off" />
+                    <button type="button" class="btn-toggle-pwd" onclick="intgTogglePwd('intg-sunat-clave', this)" title="Mostrar/Ocultar">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="row g-2 mb-2">
+                <div class="col-md-6">
+                    <div class="intg-field">
+                        <label>Client ID (API SUNAT)</label>
+                        <div class="input-wrap">
+                            <input type="text" id="intg-sunat-client-id" placeholder="ID generado en Clave SOL…" autocomplete="off" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="intg-field">
+                        <label>Client Secret</label>
+                        <div class="input-wrap">
+                            <input type="password" id="intg-sunat-client-secret" placeholder="Secret de la aplicación…" autocomplete="off" />
+                            <button type="button" class="btn-toggle-pwd" onclick="intgTogglePwd('intg-sunat-client-secret', this)" title="Mostrar/Ocultar">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="intg-field">
+                <label>Entorno SUNAT</label>
+                <select id="intg-sunat-entorno" class="form-select form-select-sm" style="border:1px solid var(--border); border-radius:8px; background:var(--bg,#f8f8f8); font-size:0.85rem; color:var(--text); padding:8px 12px;">
+                    <option value="produccion">Producción (Oficial SUNAT)</option>
+                    <option value="beta">Beta / Pruebas SUNAT</option>
+                </select>
+                <div class="intg-hint">Para obtener el Client ID y Client Secret, ingresa a SUNAT Operaciones en Línea &gt; Gestión de desarrollo de aplicaciones.</div>
+                <div class="intg-meta" id="intg-sunat-meta"></div>
+            </div>
+
+            <div class="intg-actions">
+                <button type="button" class="btn btn-sm btn-primary" onclick="intgGuardar('sunat')">
+                    <i class="bi bi-floppy me-1"></i>Guardar Credenciales
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="intgProbarSunat()">
+                    <i class="bi bi-shield-check me-1"></i>Probar Conexión (OAuth 2.0)
+                </button>
+                <span class="intg-test-result" id="intg-sunat-testresult"></span>
+            </div>
+        </form>
+    </div>
 </div>

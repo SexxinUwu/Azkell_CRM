@@ -192,17 +192,36 @@
     };
 
     // 5. Ejecutar Consulta Individual a SUNAT
+    window._greUltimaConsultaData = null;
+
+    window.greLimpiarConsultaForm = function() {
+        if (document.getElementById('greInputRucEmisor')) document.getElementById('greInputRucEmisor').value = '';
+        if (document.getElementById('greInputSerie')) document.getElementById('greInputSerie').value = '';
+        if (document.getElementById('greInputCorrelativo')) document.getElementById('greInputCorrelativo').value = '';
+        const resEl = document.getElementById('greResultadoConsulta');
+        if (resEl) resEl.classList.add('d-none');
+        window._greUltimaConsultaData = null;
+    };
+
     window.greEjecutarConsultaSunat = async function(e) {
         if (e) e.preventDefault();
 
-        const inputNumero = document.getElementById('greInputNumero');
-        const selectTipoDoc = document.getElementById('greSelectTipoDoc');
+        const inputRuc = document.getElementById('greInputRucEmisor');
+        const inputSerie = document.getElementById('greInputSerie');
+        const inputCorrelativo = document.getElementById('greInputCorrelativo');
         const btn = document.getElementById('greBtnSubmitConsulta');
+        const resContenedor = document.getElementById('greResultadoConsulta');
 
-        if (!inputNumero || !inputNumero.value.trim()) return;
+        const rucEmisor = (inputRuc?.value || '').trim();
+        const serie = (inputSerie?.value || '').trim().toUpperCase();
+        const correlativo = (inputCorrelativo?.value || '').trim();
+        const tipoRadio = document.querySelector('input[name="greTipoConsultaRadio"]:checked');
+        const tipoDoc = tipoRadio ? tipoRadio.value : '09';
 
-        const numero = inputNumero.value.trim().toUpperCase();
-        const tipoDoc = selectTipoDoc?.value || '31';
+        if (!rucEmisor || !serie || !correlativo) {
+            alert('Por favor complete todos los campos: RUC del emisor, Serie y Número.');
+            return;
+        }
 
         if (btn) {
             btn.disabled = true;
@@ -210,21 +229,102 @@
         }
 
         try {
-            const params = new URLSearchParams({ numero, tipoDoc });
+            const params = new URLSearchParams({
+                rucEmisor,
+                serie,
+                correlativo,
+                tipoDoc,
+                guardar: 'false'
+            });
+
             const resp = await fetch(`/api/guias-remision/consultar-sunat?${params.toString()}`);
             const result = await resp.json();
 
-            if (result.ok) {
-                const modalEl = document.getElementById('greModalConsultar');
-                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
-                inputNumero.value = '';
+            if (resContenedor) resContenedor.classList.remove('d-none');
 
-                if (typeof window.mostrarAlerta === 'function') {
-                    window.mostrarAlerta(`✓ Guía ${numero} sincronizada con SUNAT exitosamente.`, 'success');
+            const banner = document.getElementById('greEstadoBanner');
+            const icon = document.getElementById('greEstadoIcon');
+            const titulo = document.getElementById('greEstadoTitulo');
+            const sub = document.getElementById('greEstadoSub');
+            const badge = document.getElementById('greEstadoBadge');
+            const cardDetalle = document.getElementById('greCardDetalleExtraido');
+
+            if (result.ok && result.data) {
+                const guia = result.data;
+                window._greUltimaConsultaData = guia;
+
+                // Estado: GUÍA RECIBIDA / AUTORIZADA
+                if (banner) {
+                    banner.className = 'alert alert-success d-flex align-items-center justify-content-between p-3 rounded-3 mb-3 border-success-subtle';
                 }
-                await window.greCargarGuias();
+                if (icon) icon.innerHTML = '<i class="bi bi-patch-check-fill text-success fs-3"></i>';
+                if (titulo) {
+                    titulo.textContent = 'Guía Recibida (Autorizada en SUNAT)';
+                    titulo.className = 'fw-bold m-0 text-success';
+                }
+                if (sub) sub.textContent = `Emisión: ${guia.fecha_emision || 'Hoy'} | Traslado: ${guia.fecha_traslado || 'Hoy'}`;
+                if (badge) {
+                    badge.className = 'badge bg-success text-white px-3 py-2 rounded-pill fw-bold';
+                    badge.innerHTML = '<i class="bi bi-check2-all me-1"></i>Válida en SUNAT';
+                }
+
+                if (cardDetalle) cardDetalle.classList.remove('d-none');
+
+                // Rellenar Ficha Técnica
+                const elNum = document.getElementById('greDetalleNumeroGuia');
+                const elRem = document.getElementById('greResRemitente');
+                const elDes = document.getElementById('greResDestinatario');
+                const elPart = document.getElementById('greResPartida');
+                const elLleg = document.getElementById('greResLlegada');
+                const elPeso = document.getElementById('greResPeso');
+                const elPlac = document.getElementById('greResPlacas');
+                const elCond = document.getElementById('greResConductor');
+                const tbody = document.getElementById('greResTbodyItems');
+
+                if (elNum) elNum.textContent = `${guia.numero_guia || (serie + '-' + correlativo)}`;
+                if (elRem) elRem.textContent = `${guia.remitente_razon_social || '—'} (RUC: ${guia.remitente_ruc || rucEmisor})`;
+                if (elDes) elDes.textContent = `${guia.destinatario_razon_social || '—'} (RUC: ${guia.destinatario_ruc || '—'})`;
+                if (elPart) elPart.textContent = `${guia.punto_partida_direccion || '—'} [Ubigeo: ${guia.punto_partida_ubigeo || '—'}]`;
+                if (elLleg) elLleg.textContent = `${guia.punto_llegada_direccion || '—'} [Ubigeo: ${guia.punto_llegada_ubigeo || '—'}]`;
+                
+                const pesoNum = Number(guia.peso_bruto_total || 0);
+                if (elPeso) elPeso.textContent = `${pesoNum.toLocaleString('es-PE', { minimumFractionDigits: 2 })} ${guia.unidad_medida || 'KGM'}`;
+                if (elPlac) elPlac.textContent = `Tracto: ${guia.placa_tracto || '—'} | Carreta: ${guia.placa_carreta || '—'}`;
+                if (elCond) elCond.textContent = `${guia.conductor_nombre || '—'} (${guia.conductor_tipo_doc || 'DNI'}: ${guia.conductor_num_doc || '—'})`;
+
+                // Renderizar Ítems
+                if (tbody) {
+                    if (guia.items && guia.items.length > 0) {
+                        tbody.innerHTML = guia.items.map(it => `
+                            <tr>
+                                <td class="font-monospace fw-bold text-primary">${it.codigo || '—'}</td>
+                                <td class="fw-semibold text-dark">${it.descripcion || '—'}</td>
+                                <td class="text-end font-monospace">${Number(it.cantidad || 1).toLocaleString()}</td>
+                                <td class="text-center font-monospace">${it.unidad_medida || 'NIU'}</td>
+                                <td class="text-end font-monospace">${Number(it.peso_unitario || 0).toFixed(2)}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-2 text-muted">Sin desglose de ítems</td></tr>';
+                    }
+                }
             } else {
-                alert(`Error al consultar SUNAT: ${result.error || 'No se pudo obtener información de la guía'}`);
+                // Estado: GUÍA NO EXISTE / NO ENCONTRADA
+                window._greUltimaConsultaData = null;
+                if (banner) {
+                    banner.className = 'alert alert-danger d-flex align-items-center justify-content-between p-3 rounded-3 mb-3 border-danger-subtle';
+                }
+                if (icon) icon.innerHTML = '<i class="bi bi-x-circle-fill text-danger fs-3"></i>';
+                if (titulo) {
+                    titulo.textContent = 'Guía No Existe en SUNAT';
+                    titulo.className = 'fw-bold m-0 text-danger';
+                }
+                if (sub) sub.textContent = result.error || 'El comprobante no fue encontrado en los padrones de SUNAT para este emisor.';
+                if (badge) {
+                    badge.className = 'badge bg-danger text-white px-3 py-2 rounded-pill fw-bold';
+                    badge.innerHTML = '<i class="bi bi-exclamation-octagon me-1"></i>No Encontrada';
+                }
+                if (cardDetalle) cardDetalle.classList.add('d-none');
             }
         } catch (err) {
             console.error("Error consultando SUNAT:", err);
@@ -232,7 +332,50 @@
         } finally {
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-cloud-arrow-down-fill"></i> Consultar y Cargar al Sistema';
+                btn.innerHTML = '<i class="bi bi-search"></i> Consultar en SUNAT';
+            }
+        }
+    };
+
+    // Guardar Guía Consultada en el ERP
+    window.greGuardarGuiaConsultada = async function() {
+        if (!window._greUltimaConsultaData) return;
+        const btn = document.getElementById('greBtnGuardarErp');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando…';
+        }
+
+        try {
+            const guia = window._greUltimaConsultaData;
+            const params = new URLSearchParams({
+                numero: guia.numero_guia,
+                rucEmisor: guia.remitente_ruc,
+                tipoDoc: guia.tipo_documento,
+                guardar: 'true'
+            });
+
+            const resp = await fetch(`/api/guias-remision/consultar-sunat?${params.toString()}`);
+            const result = await resp.json();
+
+            if (result.ok) {
+                if (typeof window.mostrarAlerta === 'function') {
+                    window.mostrarAlerta(`✓ Guía ${guia.numero_guia} guardada exitosamente en el historial del ERP.`, 'success');
+                }
+                const modalEl = document.getElementById('greModalConsultar');
+                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+                window.greLimpiarConsultaForm();
+                await window.greCargarGuias();
+            } else {
+                alert(`Error al guardar: ${result.error || 'No se pudo guardar la guía'}`);
+            }
+        } catch (e) {
+            console.error("Error al guardar guía:", e);
+            alert("Error de conexión al registrar la guía.");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Registrar en Historial del ERP';
             }
         }
     };
