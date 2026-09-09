@@ -72,7 +72,61 @@
             }, false);
         }
 
+        // Aplicar modo activo (GRE o GRT)
+        const modoGuardado = window._greModoActivo || sessionStorage.getItem('gre_modo_activo') || 'GRE';
+        window.greCambiarModoVista(modoGuardado, false);
+
         await window.greCargarGuias();
+    };
+
+    // Cambiar dinámicamente entre modo GRE (Remitente 09) y GRT (Transportista 31)
+    window.greCambiarModoVista = function(modo, recargar = true) {
+        window._greModoActivo = (modo === 'GRT') ? 'GRT' : 'GRE';
+        try { sessionStorage.setItem('gre_modo_activo', window._greModoActivo); } catch(e) {}
+
+        const isGRT = window._greModoActivo === 'GRT';
+        const tituloEl = document.getElementById('greTituloModulo');
+        const subtituloEl = document.getElementById('greSubtituloModulo');
+        const badgeEl = document.getElementById('greBadgeSubtipo');
+        const iconEl = document.getElementById('greHeaderIcon');
+        const iconWrap = document.getElementById('greHeaderIconWrap');
+
+        if (isGRT) {
+            if (tituloEl) tituloEl.textContent = 'Guía de Remisión de Transportista (GRT)';
+            if (subtituloEl) subtituloEl.textContent = 'Emisión propia de GRT, asignación de tracto, carreta, conductor y despacho SUNAT';
+            if (badgeEl) {
+                badgeEl.className = 'badge bg-warning bg-opacity-10 text-warning border px-2.5 py-1 rounded-pill small fw-bold';
+                badgeEl.innerHTML = '<i class="bi bi-truck-flatbed me-1"></i>SUNAT GRT (Transportista)';
+            }
+            if (iconEl) iconEl.className = 'bi bi-truck-flatbed fs-4';
+            if (iconWrap) {
+                iconWrap.style.background = 'rgba(245, 158, 11, 0.15)';
+                iconWrap.style.color = '#d97706';
+            }
+            window._greTipoFiltro = '31';
+        } else {
+            if (tituloEl) tituloEl.textContent = 'Guía de Remisión Electrónica (GRE)';
+            if (subtituloEl) subtituloEl.textContent = 'Recepción, consulta de XML SUNAT y validación de carga del cliente';
+            if (badgeEl) {
+                badgeEl.className = 'badge bg-info bg-opacity-10 text-info border px-2.5 py-1 rounded-pill small fw-bold';
+                badgeEl.innerHTML = '<i class="bi bi-shield-check me-1"></i>SUNAT GRE (Remitente)';
+            }
+            if (iconEl) iconEl.className = 'bi bi-file-earmark-arrow-up-fill fs-4';
+            if (iconWrap) {
+                iconWrap.style.background = 'rgba(14, 165, 233, 0.12)';
+                iconWrap.style.color = '#0284c7';
+            }
+            window._greTipoFiltro = '09';
+        }
+
+        // Sincronizar segmented tabs de la barra de filtros
+        document.getElementById('gre-tab-todas')?.classList.remove('active');
+        document.getElementById('gre-tab-remitente')?.classList.toggle('active', !isGRT);
+        document.getElementById('gre-tab-transportista')?.classList.toggle('active', isGRT);
+
+        if (recargar) {
+            window.greCargarGuias();
+        }
     };
 
     // Filtrar por Segmento (Todas, Remitente 09, Transportista 31)
@@ -82,6 +136,15 @@
         document.getElementById('gre-tab-todas')?.classList.toggle('active', window._greTipoFiltro === 'TODAS');
         document.getElementById('gre-tab-remitente')?.classList.toggle('active', window._greTipoFiltro === '09');
         document.getElementById('gre-tab-transportista')?.classList.toggle('active', window._greTipoFiltro === '31');
+
+        // Si el usuario cambia manualmente el filtro de segmento, actualizamos el modo visual
+        if (tipo === '09') {
+            window._greModoActivo = 'GRE';
+            window.greCambiarModoVista('GRE', false);
+        } else if (tipo === '31') {
+            window._greModoActivo = 'GRT';
+            window.greCambiarModoVista('GRT', false);
+        }
 
         window.greCargarGuias();
     };
@@ -174,65 +237,74 @@
 
             const fEmi = (window._formatFechaPeru || formatFechaPeru)(g.fecha_emision);
             const hEmi = (g.hora_emision && String(g.hora_emision).trim()) 
-                ? `<div class="text-muted" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>${esc(g.hora_emision)}</div>` 
+                ? ` <span class="text-muted opacity-75" style="font-size:0.7rem;"><i class="bi bi-clock me-0.5"></i>${esc(g.hora_emision)}</span>` 
                 : '';
             const fTras = (window._formatFechaPeru || formatFechaPeru)(g.fecha_traslado || g.fecha_emision);
 
             html += `
                 <tr>
-                    <td class="font-monospace fw-bold" style="color:#0052cc; cursor:pointer;" onclick="window.greVerDetalleSunatPorIndice(${idx})" title="Ver Detalle Oficial de GRE SUNAT">
+                    <td class="font-monospace fw-bold text-nowrap" style="color:#0052cc; cursor:pointer;" onclick="window.greVerDetalleSunatPorIndice(${idx})" title="Ver Detalle Oficial de GRE SUNAT">
                         <i class="bi bi-file-earmark-text me-1"></i>${esc(g.numero_guia)}
                     </td>
-                    <td>${badgeEstado}</td>
-                    <td>
-                        <div class="font-monospace fw-semibold text-dark small">${fEmi}</div>
-                        ${hEmi}
+                    <td class="text-nowrap">${badgeEstado}</td>
+                    <td class="text-nowrap font-monospace fw-semibold text-dark">
+                        ${fEmi}${hEmi}
+                    </td>
+                    <td class="text-nowrap font-monospace text-secondary">
+                        ${fTras}
                     </td>
                     <td>
-                        <div class="font-monospace text-secondary small">${fTras}</div>
+                        <span class="gre-cell-clip fw-semibold text-dark" style="max-width: 170px;" title="${esc(g.remitente_razon_social)}">
+                            ${esc(g.remitente_razon_social)}
+                        </span>
                     </td>
-                    <td class="fw-semibold text-dark text-truncate" style="max-width: 180px;" title="${esc(g.remitente_razon_social)}">
-                        ${esc(g.remitente_razon_social)}
+                    <td>
+                        <span class="gre-cell-clip text-dark" style="max-width: 170px;" title="${esc(g.destinatario_razon_social)}">
+                            ${esc(g.destinatario_razon_social)}
+                        </span>
                     </td>
-                    <td class="text-truncate" style="max-width: 180px;" title="${esc(g.destinatario_razon_social)}">
-                        ${esc(g.destinatario_razon_social)}
+                    <td>
+                        <span class="gre-cell-clip text-muted" style="max-width: 160px;" title="${esc(g.punto_partida_direccion)}">
+                            <i class="bi bi-geo-alt text-success me-1"></i>${esc(g.punto_partida_direccion)}
+                        </span>
                     </td>
-                    <td class="text-truncate text-muted small" style="max-width: 160px;" title="${esc(g.punto_partida_direccion)}">
-                        <i class="bi bi-geo-alt text-success me-1"></i>${esc(g.punto_partida_direccion)}
+                    <td>
+                        <span class="gre-cell-clip text-muted" style="max-width: 160px;" title="${esc(g.punto_llegada_direccion)}">
+                            <i class="bi bi-geo-alt-fill text-danger me-1"></i>${esc(g.punto_llegada_direccion)}
+                        </span>
                     </td>
-                    <td class="text-truncate text-muted small" style="max-width: 160px;" title="${esc(g.punto_llegada_direccion)}">
-                        <i class="bi bi-geo-alt-fill text-danger me-1"></i>${esc(g.punto_llegada_direccion)}
-                    </td>
-                    <td class="text-center font-monospace fw-bold text-dark" style="font-size:0.82rem;">
+                    <td class="text-center font-monospace fw-bold text-dark text-nowrap">
                         ${esc(g.placa_tracto || '—')}
                     </td>
-                    <td class="text-center font-monospace fw-semibold text-secondary" style="font-size:0.82rem;">
+                    <td class="text-center font-monospace fw-semibold text-secondary text-nowrap">
                         ${esc(g.placa_carreta || '—')}
                     </td>
-                    <td class="text-truncate small fw-semibold" style="max-width: 160px;" title="${esc(g.conductor_nombre)}">
-                        <i class="bi bi-person-fill text-primary me-1"></i>${esc(g.conductor_nombre || '—')}
+                    <td>
+                        <span class="gre-cell-clip fw-semibold text-dark" style="max-width: 150px;" title="${esc(g.conductor_nombre)}">
+                            <i class="bi bi-person-fill text-primary me-1"></i>${esc(g.conductor_nombre || '—')}
+                        </span>
                     </td>
-                    <td class="text-end font-monospace fw-bold text-dark">
+                    <td class="text-end font-monospace fw-bold text-dark text-nowrap">
                         ${pesoKg.toLocaleString('es-PE', { minimumFractionDigits: 2 })} ${esc(g.unidad_medida || 'KGM')}
                     </td>
-                    <td class="text-center">
-                        <button class="btn btn-outline-info btn-sm rounded-pill py-0 px-2 fw-semibold" style="font-size:0.75rem;" onclick="window.greVerDetalleItems(${idx})">
+                    <td class="text-center text-nowrap">
+                        <button class="btn btn-outline-info btn-sm rounded-pill py-0 px-2 fw-semibold" style="font-size:0.72rem; line-height: 1.5;" onclick="window.greVerDetalleItems(${idx})">
                             <i class="bi bi-box-seam me-1"></i>${g.items ? g.items.length : 0} ítems
                         </button>
                     </td>
-                    <td class="text-center">
+                    <td class="text-center text-nowrap">
                         <div class="d-inline-flex align-items-center gap-1">
                             ${(g.tipo_documento === '09' || (g.numero_guia && (g.numero_guia.startsWith('T') || g.numero_guia.startsWith('09')))) ? `
-                                <button class="btn btn-warning btn-sm rounded-pill py-0 px-2 fw-bold text-dark d-flex align-items-center gap-1 shadow-2xs" style="font-size:0.72rem;" onclick="window.grtEmitirDesdeGre(${g.id})" title="Emitir GRT Transportista a partir de esta GRE">
+                                <button class="btn btn-warning btn-sm rounded-pill py-0 px-2 fw-bold text-dark d-flex align-items-center gap-1 shadow-2xs" style="font-size:0.7rem; line-height: 1.5;" onclick="window.grtEmitirDesdeGre(${g.id})" title="Emitir GRT Transportista a partir de esta GRE">
                                     <i class="bi bi-truck-flatbed"></i> Emitir GRT
                                 </button>
                             ` : (g.num_ticket ? `
-                                <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2 fw-semibold" style="font-size:0.72rem;" onclick="window.grtConsultarTicket(${g.id})" title="Consultar Ticket SUNAT">
+                                <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2 fw-semibold" style="font-size:0.7rem; line-height: 1.5;" onclick="window.grtConsultarTicket(${g.id})" title="Consultar Ticket SUNAT">
                                     <i class="bi bi-arrow-repeat"></i> Ticket
                                 </button>
                             ` : '')}
-                            <button class="btn btn-outline-danger btn-sm rounded-circle p-1" onclick="window.greEliminarGuia(${g.id})" title="Eliminar guía">
-                                <i class="bi bi-trash"></i>
+                            <button class="btn btn-outline-danger btn-sm rounded-circle p-1" style="line-height: 1;" onclick="window.greEliminarGuia(${g.id})" title="Eliminar guía">
+                                <i class="bi bi-trash" style="font-size:0.75rem;"></i>
                             </button>
                         </div>
                     </td>
