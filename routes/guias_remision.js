@@ -395,40 +395,62 @@ module.exports = function(db, tenantStorage) {
                 });
             }
 
-            // Llamar al endpoint oficial GRE de SUNAT
-            // Formato de clave comprobante: {numRucEmisor}-{codCpe}-{numSerie}-{numCpe}
+            // Llamar al endpoint oficial GRE/GEM de SUNAT
+            // Tu permiso en Clave SOL es exactamente: "GRE Emision de Comprobantes /v1/contribuyente/gem"
             const numCpe8 = numLimpio.padStart(8, '0');
             const cpeId = `${rucConsulta}-${tipoDocumento}-${serieLimpia}-${numCpe8}`;
-            const sunatEndpoint = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gre/comprobantes/${cpeId}`;
+            const sunatEndpointGem = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${cpeId}`;
+            const sunatEndpointGre = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gre/comprobantes/${cpeId}`;
 
-            console.log(`[SUNAT GRE] Consultando endpoint oficial: ${sunatEndpoint}`);
+            console.log(`[SUNAT GRE] Consultando endpoint GEM: ${sunatEndpointGem}`);
 
-            let sunatResp;
+            let sunatResp = null;
+            let sunatJson = null;
+
+            // Intento 1: GEM (Ruta de tu permiso SOL /v1/contribuyente/gem)
             try {
-                sunatResp = await fetch(sunatEndpoint, {
+                sunatResp = await fetch(sunatEndpointGem, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${tokenSunat}`,
                         'Accept': 'application/json'
                     }
                 });
+                sunatJson = await sunatResp.json().catch(() => null);
             } catch (netErr) {
-                console.error("[SUNAT GRE] Error de red:", netErr);
+                console.error("[SUNAT GRE] Error de red en GEM:", netErr);
+            }
+
+            // Intento 2: Si GEM da 401 o 404, intentar con GRE
+            if (!sunatResp || sunatResp.status === 401 || sunatResp.status === 404) {
+                try {
+                    console.log(`[SUNAT GRE] Probando fallback endpoint GRE: ${sunatEndpointGre}`);
+                    const altResp = await fetch(sunatEndpointGre, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${tokenSunat}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const altJson = await altResp.json().catch(() => null);
+                    if (altResp.ok || (sunatResp && sunatResp.status === 401 && altResp.status !== 401)) {
+                        sunatResp = altResp;
+                        sunatJson = altJson;
+                    }
+                } catch (e2) {
+                    console.error("[SUNAT GRE] Error en fallback GRE:", e2);
+                }
+            }
+
+            if (!sunatResp) {
                 return res.status(502).json({
                     ok: false,
-                    error: `Error de comunicación con el servidor de SUNAT: ${netErr.message}`
+                    error: "No se pudo establecer conexión con los servidores de SUNAT."
                 });
             }
 
             const sunatStatus = sunatResp.status;
-            let sunatJson = null;
-            try {
-                sunatJson = await sunatResp.json();
-            } catch (e) {
-                sunatJson = null;
-            }
-
-            console.log(`[SUNAT GRE] Respuesta HTTP ${sunatStatus}:`, sunatJson);
+            console.log(`[SUNAT GRE] Respuesta final HTTP ${sunatStatus}:`, sunatJson);
 
             // Manejo de errores devueltos por SUNAT
             if (!sunatResp.ok || (sunatJson && sunatJson.errors)) {
