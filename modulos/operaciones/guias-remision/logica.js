@@ -157,9 +157,20 @@
                         </button>
                     </td>
                     <td class="text-center">
-                        <button class="btn btn-outline-danger btn-sm rounded-circle p-1" onclick="window.greEliminarGuia(${g.id})" title="Eliminar guía">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                        <div class="d-inline-flex align-items-center gap-1">
+                            ${(g.tipo_documento === '09' || (g.numero_guia && (g.numero_guia.startsWith('T') || g.numero_guia.startsWith('09')))) ? `
+                                <button class="btn btn-warning btn-sm rounded-pill py-0 px-2 fw-bold text-dark d-flex align-items-center gap-1 shadow-2xs" style="font-size:0.72rem;" onclick="window.grtEmitirDesdeGre(${g.id})" title="Emitir GRT Transportista a partir de esta GRE">
+                                    <i class="bi bi-truck-flatbed"></i> Emitir GRT
+                                </button>
+                            ` : (g.num_ticket ? `
+                                <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2 fw-semibold" style="font-size:0.72rem;" onclick="window.grtConsultarTicket(${g.id})" title="Consultar Ticket SUNAT">
+                                    <i class="bi bi-arrow-repeat"></i> Ticket
+                                </button>
+                            ` : '')}
+                            <button class="btn btn-outline-danger btn-sm rounded-circle p-1" onclick="window.greEliminarGuia(${g.id})" title="Eliminar guía">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -583,6 +594,337 @@
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Guias_Remision_SUNAT");
         XLSX.writeFile(wb, `Guias_Remision_SUNAT_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
+
+    // =========================================================================
+    // SECCIÓN GRT: EMISIÓN Y CONTROL DE GUÍA DE REMISIÓN TRANSPORTISTA (31)
+    // =========================================================================
+    window._grtListaGresDisponibles = [];
+
+    // Abrir Modal de Emisión de GRT
+    window.grtAbrirModalEmitir = async function(preselectGreId = null) {
+        const modalEl = document.getElementById('grtModalEmitir');
+        if (!modalEl) return;
+
+        // Limpiar o resetear formulario
+        const fEmision = document.getElementById('grtInputFechaEmision');
+        const fTraslado = document.getElementById('grtInputFechaTraslado');
+        const hoy = new Date().toISOString().slice(0, 10);
+        if (fEmision) fEmision.value = hoy;
+        if (fTraslado) fTraslado.value = hoy;
+
+        // Listener para Switch de Modo Real vs Simulación
+        const switchModo = document.getElementById('grtSwitchModoReal');
+        const switchLbl = document.getElementById('grtSwitchModoLbl');
+        if (switchModo && switchLbl) {
+            switchModo.onchange = function() {
+                if (switchModo.checked) {
+                    switchLbl.textContent = "Modo SUNAT Oficial (Real)";
+                    switchLbl.className = "form-check-label small fw-bold text-danger user-select-none";
+                } else {
+                    switchLbl.textContent = "Modo Simulación (Pruebas)";
+                    switchLbl.className = "form-check-label small fw-bold text-dark user-select-none";
+                }
+            };
+        }
+
+        // Obtener siguiente correlativo sugerido
+        try {
+            const resp = await fetch('/api/guias-remision/siguiente-correlativo?serie=V001');
+            const res = await resp.json();
+            if (res.ok && res.correlativo) {
+                const corrInput = document.getElementById('grtInputCorrelativo');
+                if (corrInput) corrInput.value = res.correlativo;
+            }
+        } catch (e) {
+            console.warn("No se pudo obtener correlativo sugerido:", e);
+        }
+
+        // Cargar GREs para buscador
+        await window.grtCargarGresDisponibles();
+
+        if (preselectGreId) {
+            await window.grtSeleccionarGre(preselectGreId);
+        }
+
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    };
+
+    // Emitir GRT directamente desde la fila de una GRE en la tabla
+    window.grtEmitirDesdeGre = function(greId) {
+        window.grtAbrirModalEmitir(greId);
+    };
+
+    // Cargar catálogo de GREs registradas para el buscador
+    window.grtCargarGresDisponibles = async function() {
+        try {
+            const resp = await fetch('/api/guias-remision/buscar-gre');
+            const res = await resp.json();
+            if (res.ok) {
+                window._grtListaGresDisponibles = res.data || [];
+            }
+        } catch (e) {
+            console.warn("Error cargando GREs disponibles:", e);
+        }
+    };
+
+    // Filtrar sugerencias de GRE al escribir
+    window.grtFiltrarGreSugerencias = function() {
+        const input = document.getElementById('grtInputBuscarGre');
+        const listEl = document.getElementById('grtContenedorSugerenciasGre');
+        if (!input || !listEl) return;
+
+        const term = input.value.trim().toLowerCase();
+        if (!term) {
+            listEl.classList.add('d-none');
+            return;
+        }
+
+        const matches = window._grtListaGresDisponibles.filter(g => 
+            (g.numero_guia && g.numero_guia.toLowerCase().includes(term)) ||
+            (g.remitente_razon_social && g.remitente_razon_social.toLowerCase().includes(term)) ||
+            (g.remitente_ruc && g.remitente_ruc.includes(term))
+        );
+
+        if (matches.length === 0) {
+            listEl.innerHTML = `<div class="list-group-item small text-muted">No se encontraron GRE registradas con ese término.</div>`;
+            listEl.classList.remove('d-none');
+            return;
+        }
+
+        let html = '';
+        matches.slice(0, 8).forEach(g => {
+            html += `
+                <button type="button" class="list-group-item list-group-item-action py-2 px-3 text-start" onclick="window.grtSeleccionarGre(${g.id})">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <strong class="font-monospace text-primary">${g.numero_guia}</strong>
+                        <span class="badge bg-light text-dark border font-monospace">${Number(g.peso_bruto_total || 0).toFixed(2)} ${g.unidad_medida || 'KGM'}</span>
+                    </div>
+                    <div class="small text-truncate text-dark fw-semibold">${g.remitente_razon_social || '—'}</div>
+                    <div class="small text-truncate text-muted" style="font-size:0.72rem;">
+                        <i class="bi bi-geo-alt text-success me-1"></i>${g.punto_partida_direccion || 'Origen'} &rarr; ${g.punto_llegada_direccion || 'Destino'}
+                    </div>
+                </button>
+            `;
+        });
+
+        listEl.innerHTML = html;
+        listEl.classList.remove('d-none');
+    };
+
+    // Seleccionar una GRE y precargar campos en la GRT
+    window.grtSeleccionarGre = async function(greId) {
+        const listEl = document.getElementById('grtContenedorSugerenciasGre');
+        if (listEl) listEl.classList.add('d-none');
+
+        const g = window._grtListaGresDisponibles.find(x => Number(x.id) === Number(greId)) ||
+                  window._greGuiasData.find(x => Number(x.id) === Number(greId));
+
+        if (!g) return;
+
+        // 1. Vincular IDs
+        const idVinculada = document.getElementById('grtGreIdVinculada');
+        const numVinculada = document.getElementById('grtGreNumVinculada');
+        const inputBuscar = document.getElementById('grtInputBuscarGre');
+        if (idVinculada) idVinculada.value = g.id;
+        if (numVinculada) numVinculada.value = `Vinculada: ${g.numero_guia}`;
+        if (inputBuscar) inputBuscar.value = g.numero_guia;
+
+        // 2. Precargar Remitente y Destinatario
+        if (document.getElementById('grtInputRemitenteRuc')) document.getElementById('grtInputRemitenteRuc').value = g.remitente_ruc || '';
+        if (document.getElementById('grtInputRemitenteRazon')) document.getElementById('grtInputRemitenteRazon').value = g.remitente_razon_social || '';
+        if (document.getElementById('grtInputDestinatarioRuc')) document.getElementById('grtInputDestinatarioRuc').value = g.destinatario_ruc || '';
+        if (document.getElementById('grtInputDestinatarioRazon')) document.getElementById('grtInputDestinatarioRazon').value = g.destinatario_razon_social || '';
+
+        // 3. Precargar Ruta y Ubigeos
+        if (document.getElementById('grtInputPartidaUbigeo')) document.getElementById('grtInputPartidaUbigeo').value = g.punto_partida_ubigeo || '150101';
+        if (document.getElementById('grtInputPartidaDir')) document.getElementById('grtInputPartidaDir').value = g.punto_partida_direccion || '';
+        if (document.getElementById('grtInputLlegadaUbigeo')) document.getElementById('grtInputLlegadaUbigeo').value = g.punto_llegada_ubigeo || '150101';
+        if (document.getElementById('grtInputLlegadaDir')) document.getElementById('grtInputLlegadaDir').value = g.punto_llegada_direccion || '';
+
+        // 4. Precargar Vehículo y Conductor si ya venían asignados
+        if (g.placa_tracto && document.getElementById('grtInputPlacaTracto')) document.getElementById('grtInputPlacaTracto').value = g.placa_tracto;
+        if (g.placa_carreta && document.getElementById('grtInputPlacaCarreta')) document.getElementById('grtInputPlacaCarreta').value = g.placa_carreta;
+        if (g.conductor_num_doc && document.getElementById('grtInputCondDoc')) document.getElementById('grtInputCondDoc').value = g.conductor_num_doc;
+        if (g.conductor_nombre && document.getElementById('grtInputCondNombre')) document.getElementById('grtInputCondNombre').value = g.conductor_nombre;
+        if (g.conductor_licencia && document.getElementById('grtInputCondLicencia')) document.getElementById('grtInputCondLicencia').value = g.conductor_licencia;
+
+        // 5. Precargar Carga y Peso
+        if (document.getElementById('grtInputPesoTotal')) document.getElementById('grtInputPesoTotal').value = Number(g.peso_bruto_total || 0).toFixed(2);
+        if (document.getElementById('grtSelectUnidadMedida')) document.getElementById('grtSelectUnidadMedida').value = g.unidad_medida || 'KGM';
+
+        // 6. Precargar Ítems si existen en la GRE
+        const tbodyItems = document.getElementById('grtTbodyItems');
+        if (tbodyItems && g.items && g.items.length > 0) {
+            tbodyItems.innerHTML = '';
+            g.items.forEach(it => {
+                tbodyItems.innerHTML += `
+                    <tr>
+                        <td><input type="text" class="form-control form-control-sm grt-it-codigo font-monospace" value="${it.codigo || '001'}"></td>
+                        <td><input type="text" class="form-control form-control-sm grt-it-desc" value="${it.descripcion || 'MERCADERIA'}" required></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm grt-it-cant text-end font-monospace" value="${Number(it.cantidad || 1)}" required></td>
+                        <td>
+                            <select class="form-select form-select-sm grt-it-um text-center">
+                                <option value="NIU" ${it.unidad_medida === 'NIU' ? 'selected' : ''}>NIU</option>
+                                <option value="KGM" ${it.unidad_medida === 'KGM' ? 'selected' : ''}>KGM</option>
+                                <option value="BX" ${it.unidad_medida === 'BX' ? 'selected' : ''}>CAJAS</option>
+                            </select>
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1" onclick="this.closest('tr').remove()">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta(`✓ Datos precargados desde la GRE ${g.numero_guia}`, "success");
+        }
+    };
+
+    // Desvincular GRE
+    window.grtDesvincularGre = function() {
+        const idVinculada = document.getElementById('grtGreIdVinculada');
+        const numVinculada = document.getElementById('grtGreNumVinculada');
+        const inputBuscar = document.getElementById('grtInputBuscarGre');
+        if (idVinculada) idVinculada.value = '';
+        if (numVinculada) numVinculada.value = 'Ninguna vinculada';
+        if (inputBuscar) inputBuscar.value = '';
+    };
+
+    // Agregar Fila de Ítem en Formulario GRT
+    window.grtAgregarFilaItem = function() {
+        const tbody = document.getElementById('grtTbodyItems');
+        if (!tbody) return;
+        const count = tbody.querySelectorAll('tr').length + 1;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="text" class="form-control form-control-sm grt-it-codigo font-monospace" value="${String(count).padStart(3, '0')}"></td>
+            <td><input type="text" class="form-control form-control-sm grt-it-desc" placeholder="Descripción del bien transportado" required></td>
+            <td><input type="number" step="0.01" class="form-control form-control-sm grt-it-cant text-end font-monospace" value="1" required></td>
+            <td>
+                <select class="form-select form-select-sm grt-it-um text-center">
+                    <option value="NIU" selected>NIU</option>
+                    <option value="KGM">KGM</option>
+                    <option value="BX">CAJAS</option>
+                </select>
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1" onclick="this.closest('tr').remove()">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    };
+
+    // Ejecutar Emisión y Envío de GRT (Simulación o SUNAT Real)
+    window.grtEjecutarEmision = async function(e) {
+        if (e) e.preventDefault();
+
+        const btn = document.getElementById('grtBtnSubmitEmision');
+        const switchModo = document.getElementById('grtSwitchModoReal');
+        const modo = (switchModo && switchModo.checked) ? 'PRODUCCION' : 'SIMULACION';
+
+        // Recolectar ítems
+        const items = [];
+        document.querySelectorAll('#grtTbodyItems tr').forEach(tr => {
+            const cod = tr.querySelector('.grt-it-codigo')?.value || '';
+            const desc = tr.querySelector('.grt-it-desc')?.value || '';
+            const cant = tr.querySelector('.grt-it-cant')?.value || 1;
+            const um = tr.querySelector('.grt-it-um')?.value || 'NIU';
+            if (desc.trim()) {
+                items.push({ codigo: cod, descripcion: desc, cantidad: Number(cant), unidad_medida: um });
+            }
+        });
+
+        const grtPayload = {
+            serie: document.getElementById('grtInputSerie')?.value || 'V001',
+            correlativo: document.getElementById('grtInputCorrelativo')?.value || null,
+            fecha_emision: document.getElementById('grtInputFechaEmision')?.value,
+            fecha_traslado: document.getElementById('grtInputFechaTraslado')?.value,
+            motivo_traslado: document.getElementById('grtSelectMotivo')?.value || '01',
+            gre_relacionada_id: document.getElementById('grtGreIdVinculada')?.value || null,
+            gre_relacionada_numero: document.getElementById('grtGreNumVinculada')?.value.replace('Vinculada: ', '') || null,
+            remitente_ruc: document.getElementById('grtInputRemitenteRuc')?.value,
+            remitente_razon_social: document.getElementById('grtInputRemitenteRazon')?.value,
+            destinatario_ruc: document.getElementById('grtInputDestinatarioRuc')?.value,
+            destinatario_razon_social: document.getElementById('grtInputDestinatarioRazon')?.value,
+            punto_partida_ubigeo: document.getElementById('grtInputPartidaUbigeo')?.value,
+            punto_partida_direccion: document.getElementById('grtInputPartidaDir')?.value,
+            punto_llegada_ubigeo: document.getElementById('grtInputLlegadaUbigeo')?.value,
+            punto_llegada_direccion: document.getElementById('grtInputLlegadaDir')?.value,
+            placa_tracto: document.getElementById('grtInputPlacaTracto')?.value,
+            placa_carreta: document.getElementById('grtInputPlacaCarreta')?.value,
+            conductor_tipo_doc: 'DNI',
+            conductor_num_doc: document.getElementById('grtInputCondDoc')?.value,
+            conductor_nombre: document.getElementById('grtInputCondNombre')?.value,
+            conductor_licencia: document.getElementById('grtInputCondLicencia')?.value,
+            peso_bruto_total: Number(document.getElementById('grtInputPesoTotal')?.value || 0),
+            unidad_medida: document.getElementById('grtSelectUnidadMedida')?.value || 'KGM',
+            modo_emision: modo,
+            items
+        };
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${modo === 'SIMULACION' ? 'Simulando Emisión...' : 'Enviando a SUNAT...'}`;
+        }
+
+        try {
+            const resp = await fetch('/api/guias-remision/emitir-grt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(grtPayload)
+            });
+
+            const res = await resp.json();
+
+            if (res.ok) {
+                const modalEl = document.getElementById('grtModalEmitir');
+                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+
+                if (typeof window.mostrarAlerta === 'function') {
+                    window.mostrarAlerta(`✓ ${res.message} Ticket: ${res.num_ticket || 'OK'}`, "success");
+                } else {
+                    alert(`${res.message}\nTicket SUNAT: ${res.num_ticket || 'OK'}`);
+                }
+
+                // Recargar tabla de guías
+                await window.greCargarGuias();
+            } else {
+                alert(`Error al emitir GRT: ${res.error || 'Fallo desconocido'}`);
+            }
+        } catch (err) {
+            console.error("Error en emisión GRT:", err);
+            alert(`Error de conexión: ${err.message}`);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-send-fill"></i> Emitir y Despachar a SUNAT`;
+            }
+        }
+    };
+
+    // Consultar Ticket de GRT en SUNAT
+    window.grtConsultarTicket = async function(guiaId) {
+        try {
+            const resp = await fetch(`/api/guias-remision/consultar-ticket/${guiaId}`);
+            const res = await resp.json();
+            if (res.ok) {
+                if (typeof window.mostrarAlerta === 'function') {
+                    window.mostrarAlerta("✓ Estado de ticket actualizado.", "info");
+                }
+                await window.greCargarGuias();
+            } else {
+                alert(`Error consultando ticket: ${res.error}`);
+            }
+        } catch (e) {
+            alert(`Error: ${e.message}`);
+        }
     };
 
     // Auto-inicializar

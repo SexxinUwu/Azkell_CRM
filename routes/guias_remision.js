@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const SunatGrService = require('../services/sunatGrService');
 
 module.exports = function(db, tenantStorage) {
 
@@ -42,14 +43,34 @@ module.exports = function(db, tenantStorage) {
                     estado_sunat VARCHAR(50) DEFAULT 'ACEPTADO',
                     codigo_respuesta_sunat VARCHAR(20) DEFAULT '0',
                     observaciones_sunat TEXT DEFAULT NULL,
+                    gre_relacionada_id INT DEFAULT NULL,
+                    gre_relacionada_numero VARCHAR(30) DEFAULT NULL,
+                    num_ticket VARCHAR(50) DEFAULT NULL,
+                    xml_hash VARCHAR(100) DEFAULT NULL,
+                    modo_emision VARCHAR(20) DEFAULT 'SIMULACION',
+                    motivo_traslado VARCHAR(10) DEFAULT '01',
                     datos_json LONGTEXT DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     INDEX idx_numero_guia (numero_guia),
                     INDEX idx_placa_tracto (placa_tracto),
-                    INDEX idx_fecha_emision (fecha_emision)
+                    INDEX idx_fecha_emision (fecha_emision),
+                    INDEX idx_gre_relacionada (gre_relacionada_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             `);
+
+            // Migración defensiva en caso de que la tabla ya exista sin las nuevas columnas
+            const addCols = [
+                "ALTER TABLE guias_remision ADD COLUMN gre_relacionada_id INT DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN gre_relacionada_numero VARCHAR(30) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN num_ticket VARCHAR(50) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN xml_hash VARCHAR(100) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN modo_emision VARCHAR(20) DEFAULT 'SIMULACION'",
+                "ALTER TABLE guias_remision ADD COLUMN motivo_traslado VARCHAR(10) DEFAULT '01'"
+            ];
+            for (const sql of addCols) {
+                try { await dbConn.query(sql); } catch(_) {}
+            }
 
             await dbConn.query(`
                 CREATE TABLE IF NOT EXISTS guias_remision_items (
@@ -518,7 +539,245 @@ module.exports = function(db, tenantStorage) {
         }
     });
 
-    // 5. Eliminar Guía
+    // 5. Buscar GREs disponibles en base de datos local para precargar al emitir GRT
+    router.get('/buscar-gre', async (req, res) => {
+        try {
+            const dbConn = getDb(req);
+            await initTables(dbConn);
+
+            const term = (req.query.q || '').trim();
+            let query = `
+                SELECT id, numero_guia, tipo_documento, fecha_emision, remitente_razon_social, remitente_ruc,
+                       destinatario_razon_social, destinatario_ruc, punto_partida_direccion, punto_partida_ubigeo,
+                       punto_llegada_direccion, punto_llegada_ubigeo, peso_bruto_total, unidad_medida,
+                       placa_tracto, placa_carreta, conductor_nombre, conductor_num_doc
+                FROM guias_remision
+                WHERE (tipo_documento = '09' OR numero_guia LIKE 'T%' OR numero_guia LIKE '09%')
+            `;
+            const params = [];
+
+            if (term) {
+                query += ` AND (numero_guia LIKE ? OR remitente_razon_social LIKE ? OR remitente_ruc LIKE ?)`;
+                params.push(`%${term}%`, `%${term}%`, `%${term}%`);
+            }
+
+            query += ` ORDER BY id DESC LIMIT 50`;
+
+            const [rows] = await dbConn.query(query, params);
+            res.json({ ok: true, data: rows });
+        } catch (err) {
+            console.error("Error buscando GREs para emitir GRT:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 6. Obtener Siguiente Correlativo GRT (Transportista Serie V001)
+    router.get('/siguiente-correlativo', async (req, res) => {
+        try {
+            const dbConn = getDb(req);
+            await initTables(dbConn);
+
+            const serie = (req.query.serie || 'V001').trim().toUpperCase();
+            const [rows] = await dbConn.query(
+                "SELECT numero_guia FROM guias_remision WHERE tipo_documento = '31' AND numero_guia LIKE ? ORDER BY id DESC LIMIT 1",
+                [`${serie}-%`]
+            );
+
+            let correlativo = 1;
+            if (rows.length > 0) {
+                const parts = rows[0].numero_guia.split('-');
+                if (parts.length === 2) {
+                    const num = parseInt(parts[1], 10);
+                    if (!isNaN(num)) correlativo = num + 1;
+                }
+            }
+
+            res.json({
+                ok: true,
+                serie,
+                correlativo,
+                numero_sugerido: `${serie}-${String(correlativo).padStart(8, '0')}`
+            });
+        } catch (err) {
+            console.error("Error obteniendo correlativo GRT:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 7. Emitir GRT (Transportista) con opción Simulación o Envío Real a SUNAT
+    router.post('/emitir-grt', async (req, res) => {
+        try {
+            const dbConn = getDb(req);
+            await initTables(dbConn);
+
+            const grtData = req.body || {};
+            const modo = grtData.modo_emision || 'SIMULACION'; // SIMULACION o PRODUCCION
+
+            // Obtener credenciales SUNAT
+            const [rowsCreds] = await dbConn.query(
+                "SELECT clave, valor FROM integraciones_api WHERE clave IN ('sunat_client_id', 'sunat_client_secret', 'sunat_ruc_emisor', 'sunat_usuario_sol', 'sunat_clave_sol', 'sunat_modo_entorno')"
+            );
+            const creds = {};
+            rowsCreds.forEach(r => creds[r.clave] = r.valor || '');
+
+            // Determinar serie y correlativo si no vienen dados
+            const serie = (grtData.serie || 'V001').trim().toUpperCase();
+            let correlativo = grtData.correlativo;
+
+            if (!correlativo) {
+                const [lastGrt] = await dbConn.query(
+                    "SELECT numero_guia FROM guias_remision WHERE tipo_documento = '31' AND numero_guia LIKE ? ORDER BY id DESC LIMIT 1",
+                    [`${serie}-%`]
+                );
+                correlativo = 1;
+                if (lastGrt.length > 0) {
+                    const parts = lastGrt[0].numero_guia.split('-');
+                    if (parts.length === 2) {
+                        const num = parseInt(parts[1], 10);
+                        if (!isNaN(num)) correlativo = num + 1;
+                    }
+                }
+            }
+
+            grtData.serie = serie;
+            grtData.correlativo = correlativo;
+
+            // Procesar emisión a través de SunatGrService
+            const emisionRes = await SunatGrService.emitirGrt(grtData, creds, modo);
+
+            if (!emisionRes.ok) {
+                return res.status(400).json({
+                    ok: false,
+                    error: emisionRes.error || "No se pudo emitir la Guía ante SUNAT.",
+                    detalle: emisionRes.detalle
+                });
+            }
+
+            const numeroGuiaCompleto = emisionRes.numero_guia;
+
+            // Guardar en la base de datos de guías de remisión
+            const [insertRes] = await dbConn.query(`
+                INSERT INTO guias_remision (
+                    numero_guia, tipo_documento, fecha_emision, fecha_traslado,
+                    remitente_ruc, remitente_razon_social, destinatario_ruc, destinatario_razon_social,
+                    punto_partida_direccion, punto_partida_ubigeo, punto_llegada_direccion, punto_llegada_ubigeo,
+                    placa_tracto, placa_carreta, conductor_tipo_doc, conductor_num_doc, conductor_nombre, conductor_licencia,
+                    peso_bruto_total, unidad_medida, estado_sunat, codigo_respuesta_sunat, observaciones_sunat,
+                    gre_relacionada_id, gre_relacionada_numero, num_ticket, xml_hash, modo_emision, motivo_traslado,
+                    datos_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                numeroGuiaCompleto,
+                '31', // Transportista
+                grtData.fecha_emision || new Date().toISOString().slice(0, 10),
+                grtData.fecha_traslado || new Date().toISOString().slice(0, 10),
+                grtData.remitente_ruc || null,
+                grtData.remitente_razon_social || null,
+                grtData.destinatario_ruc || null,
+                grtData.destinatario_razon_social || null,
+                grtData.punto_partida_direccion || null,
+                grtData.punto_partida_ubigeo || null,
+                grtData.punto_llegada_direccion || null,
+                grtData.punto_llegada_ubigeo || null,
+                (grtData.placa_tracto || '').trim().toUpperCase() || null,
+                (grtData.placa_carreta || '').trim().toUpperCase() || null,
+                grtData.conductor_tipo_doc || 'DNI',
+                grtData.conductor_num_doc || null,
+                grtData.conductor_nombre || null,
+                grtData.conductor_licencia || null,
+                Number(grtData.peso_bruto_total || 0),
+                grtData.unidad_medida || 'KGM',
+                emisionRes.estado_sunat || 'ACEPTADO',
+                emisionRes.codigo_respuesta || '0',
+                emisionRes.observaciones || 'Guía Transportista emitida exitosamente',
+                grtData.gre_relacionada_id || null,
+                grtData.gre_relacionada_numero || null,
+                emisionRes.num_ticket || null,
+                emisionRes.xml_hash || null,
+                modo,
+                grtData.motivo_traslado || '01',
+                JSON.stringify(emisionRes.payload_enviado || {})
+            ]);
+
+            const nuevaGrtId = insertRes.insertId;
+
+            // Guardar ítems si existen
+            const items = grtData.items || [];
+            if (items.length > 0) {
+                for (const item of items) {
+                    await dbConn.query(`
+                        INSERT INTO guias_remision_items (guia_id, codigo, descripcion, cantidad, unidad_medida, peso_unitario)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    `, [
+                        nuevaGrtId,
+                        item.codigo || '001',
+                        item.descripcion || 'MERCADERIA GENERAL',
+                        Number(item.cantidad || 1),
+                        item.unidad_medida || 'NIU',
+                        Number(item.peso_unitario || 0)
+                    ]);
+                }
+            }
+
+            res.json({
+                ok: true,
+                message: modo === 'SIMULACION'
+                    ? `[SIMULACIÓN] Guía Transportista ${numeroGuiaCompleto} emitida con éxito.`
+                    : `Guía Transportista ${numeroGuiaCompleto} despachada a SUNAT.`,
+                id: nuevaGrtId,
+                numero_guia: numeroGuiaCompleto,
+                num_ticket: emisionRes.num_ticket,
+                estado_sunat: emisionRes.estado_sunat,
+                xml_hash: emisionRes.xml_hash,
+                modo
+            });
+
+        } catch (err) {
+            console.error("Error en /emitir-grt:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 8. Consultar Estado de Ticket GRT en SUNAT
+    router.get('/consultar-ticket/:id', async (req, res) => {
+        try {
+            const dbConn = getDb(req);
+            await initTables(dbConn);
+            const { id } = req.params;
+
+            const [rows] = await dbConn.query("SELECT * FROM guias_remision WHERE id = ?", [id]);
+            if (rows.length === 0) {
+                return res.status(404).json({ ok: false, error: "Guía no encontrada." });
+            }
+
+            const guia = rows[0];
+            if (!guia.num_ticket) {
+                return res.json({ ok: true, estado_sunat: guia.estado_sunat, mensaje: "Esta guía no tiene ticket pendiente." });
+            }
+
+            const [rowsCreds] = await dbConn.query(
+                "SELECT clave, valor FROM integraciones_api WHERE clave IN ('sunat_client_id', 'sunat_client_secret', 'sunat_ruc_emisor', 'sunat_usuario_sol', 'sunat_clave_sol')"
+            );
+            const creds = {};
+            rowsCreds.forEach(r => creds[r.clave] = r.valor || '');
+
+            const ticketRes = await SunatGrService.consultarTicket(guia.num_ticket, creds, guia.modo_emision);
+
+            if (ticketRes.ok && ticketRes.estado_sunat) {
+                await dbConn.query(
+                    "UPDATE guias_remision SET estado_sunat = ?, observaciones_sunat = ? WHERE id = ?",
+                    [ticketRes.estado_sunat, ticketRes.mensaje || 'Respuesta de ticket procesada', id]
+                );
+            }
+
+            res.json({ ok: true, resultado: ticketRes });
+        } catch (err) {
+            console.error("Error consultando ticket:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 9. Eliminar Guía
     router.delete('/:id', async (req, res) => {
         try {
             const dbConn = getDb(req);
