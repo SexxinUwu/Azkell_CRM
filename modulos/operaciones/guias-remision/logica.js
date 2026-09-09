@@ -242,6 +242,7 @@
         if (document.getElementById('greInputRucEmisor')) document.getElementById('greInputRucEmisor').value = '';
         if (document.getElementById('greInputSerie')) document.getElementById('greInputSerie').value = '';
         if (document.getElementById('greInputCorrelativo')) document.getElementById('greInputCorrelativo').value = '';
+        if (document.getElementById('greInputFechaEmision')) document.getElementById('greInputFechaEmision').value = '';
         const resEl = document.getElementById('greResultadoConsulta');
         if (resEl) resEl.classList.add('d-none');
         window._greUltimaConsultaData = null;
@@ -280,6 +281,12 @@
                 tipoDoc,
                 guardar: 'false'
             });
+
+            // Agregar fecha de emisión si está disponible
+            const fechaEmision = (document.getElementById('greInputFechaEmision')?.value || '').trim();
+            if (fechaEmision) {
+                params.append('fechaEmision', fechaEmision);
+            }
 
             const resp = await fetch(`/api/guias-remision/consultar-sunat?${params.toString()}`);
             const result = await resp.json();
@@ -369,6 +376,15 @@
                     badge.innerHTML = '<i class="bi bi-exclamation-octagon me-1"></i>No Encontrada';
                 }
                 if (cardDetalle) cardDetalle.classList.add('d-none');
+
+                // Si SUNAT sugiere registro manual, mostrar botón directo
+                if (result.sugerencia === 'REGISTRO_MANUAL') {
+                    if (sub) {
+                        sub.innerHTML = (result.error || '') + 
+                            '<br><a href="#" class="fw-bold text-primary mt-1 d-inline-block" onclick="window.greAbrirRegistroManual(); return false;">' +
+                            '<i class="bi bi-pencil-square me-1"></i>Abrir Registro Manual de GRE</a>';
+                    }
+                }
             }
         } catch (err) {
             console.error("Error consultando SUNAT:", err);
@@ -924,6 +940,99 @@
             }
         } catch (e) {
             alert(`Error: ${e.message}`);
+        }
+    };
+
+    // ── Registro Manual de GRE ──
+    window.greAbrirRegistroManual = function() {
+        // Pre-llenar con datos de la última consulta si existen
+        const modalConsultar = document.getElementById('greModalConsultar');
+        if (modalConsultar) {
+            const instance = bootstrap.Modal.getInstance(modalConsultar);
+            if (instance) instance.hide();
+        }
+
+        const serie = (document.getElementById('greInputSerie')?.value || '').trim().toUpperCase();
+        const correlativo = (document.getElementById('greInputCorrelativo')?.value || '').trim();
+        const ruc = (document.getElementById('greInputRucEmisor')?.value || '').trim();
+        const fechaEmi = (document.getElementById('greInputFechaEmision')?.value || '').trim();
+
+        setTimeout(() => {
+            const numGuia = (serie && correlativo) ? `${serie}-${correlativo.padStart(8, '0')}` : '';
+            if (document.getElementById('greManualNumGuia')) document.getElementById('greManualNumGuia').value = numGuia;
+            if (document.getElementById('greManualRucRemitente')) document.getElementById('greManualRucRemitente').value = ruc;
+            if (document.getElementById('greManualFechaEmision')) document.getElementById('greManualFechaEmision').value = fechaEmi || new Date().toISOString().slice(0, 10);
+
+            const modalManual = document.getElementById('greModalRegistroManual');
+            if (modalManual) bootstrap.Modal.getOrCreateInstance(modalManual).show();
+        }, 350);
+    };
+
+    window.greSubmitRegistroManual = async function(e) {
+        if (e) e.preventDefault();
+        const btn = document.getElementById('greBtnSubmitManual');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Registrando…';
+        }
+
+        try {
+            const payload = {
+                numero_guia: (document.getElementById('greManualNumGuia')?.value || '').trim().toUpperCase(),
+                tipo_documento: document.getElementById('greManualTipoDoc')?.value || '09',
+                fecha_emision: document.getElementById('greManualFechaEmision')?.value || '',
+                fecha_traslado: document.getElementById('greManualFechaTraslado')?.value || '',
+                remitente_ruc: (document.getElementById('greManualRucRemitente')?.value || '').trim(),
+                remitente_razon_social: (document.getElementById('greManualRazonRemitente')?.value || '').trim(),
+                destinatario_ruc: (document.getElementById('greManualRucDest')?.value || '').trim(),
+                destinatario_razon_social: (document.getElementById('greManualRazonDest')?.value || '').trim(),
+                peso_bruto_total: parseFloat(document.getElementById('greManualPeso')?.value || '0'),
+                punto_partida_direccion: (document.getElementById('greManualPartida')?.value || '').trim(),
+                punto_llegada_direccion: (document.getElementById('greManualLlegada')?.value || '').trim(),
+                placa_tracto: (document.getElementById('greManualPlacaTracto')?.value || '').trim().toUpperCase(),
+                placa_carreta: (document.getElementById('greManualPlacaCarreta')?.value || '').trim().toUpperCase(),
+                conductor_num_doc: (document.getElementById('greManualDniConductor')?.value || '').trim(),
+                conductor_nombre: (document.getElementById('greManualNombreConductor')?.value || '').trim(),
+                observaciones: (document.getElementById('greManualObservaciones')?.value || '').trim()
+            };
+
+            if (!payload.numero_guia || !payload.remitente_ruc) {
+                alert('Número de guía y RUC del remitente son obligatorios.');
+                return;
+            }
+
+            const resp = await fetch('/api/guias-remision/registrar-gre-manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await resp.json();
+
+            if (result.ok) {
+                if (typeof window.mostrarAlerta === 'function') {
+                    window.mostrarAlerta(`✓ ${result.message}`, 'success');
+                } else {
+                    alert(result.message);
+                }
+                const modalManual = document.getElementById('greModalRegistroManual');
+                if (modalManual) bootstrap.Modal.getInstance(modalManual)?.hide();
+
+                // Limpiar formulario
+                document.getElementById('greFormRegistroManual')?.reset();
+
+                await window.greCargarGuias();
+            } else {
+                alert(`Error: ${result.error}`);
+            }
+        } catch (err) {
+            console.error("Error en registro manual GRE:", err);
+            alert(`Error de conexión: ${err.message}`);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Registrar GRE en el ERP';
+            }
         }
     };
 

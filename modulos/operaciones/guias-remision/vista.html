@@ -454,6 +454,20 @@
                             </div>
                         </div>
 
+                        <!-- Fecha de Emisión (requerida por SUNAT) -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-dark mb-1">Fecha de Emisión de la GRE:</label>
+                            <input type="date" id="greInputFechaEmision" class="form-control font-monospace fw-semibold" style="max-width:220px;">
+                            <small class="text-muted" style="font-size:0.7rem;">Opcional — mejora la precisión de la consulta SUNAT</small>
+                        </div>
+
+                        <!-- Aviso informativo -->
+                        <div class="alert alert-info py-2 px-3 mb-3 small" style="font-size:0.75rem; border-radius:10px;">
+                            <i class="bi bi-info-circle-fill me-1"></i>
+                            <strong>Nota:</strong> SUNAT no permite consultar datos detallados (ítems, peso, rutas) de GRE de terceros por API — solo verifica existencia y estado.
+                            Si necesita ingresar datos completos, use <a href="#" onclick="window.greAbrirRegistroManual(); return false;" class="fw-bold">Registro Manual</a>.
+                        </div>
+
                         <div class="d-flex justify-content-end gap-2 pt-2 border-top">
                             <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold" onclick="window.greLimpiarConsultaForm()">
                                 Limpiar
@@ -538,6 +552,9 @@
                         </div>
 
                         <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold" onclick="window.greAbrirRegistroManual()">
+                                <i class="bi bi-pencil-square me-1"></i> Completar Datos Manualmente
+                            </button>
                             <button type="button" id="greBtnGuardarErp" class="btn btn-success btn-sm rounded-pill px-3.5 fw-bold text-white shadow-sm" onclick="window.greGuardarGuiaConsultada()">
                                 <i class="bi bi-check-circle-fill me-1"></i> Registrar en Historial del ERP
                             </button>
@@ -852,6 +869,127 @@
                         </button>
                         <button type="submit" id="grtBtnSubmitEmision" class="btn btn-warning btn-sm rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-dark">
                             <i class="bi bi-send-fill"></i> Emitir y Despachar a SUNAT
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Registro Manual de GRE (cuando SUNAT no devuelve datos detallados) -->
+<div class="modal fade" id="greModalRegistroManual" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom px-4 py-3 bg-light">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-3 p-2 bg-success bg-opacity-10 text-success">
+                        <i class="bi bi-pencil-square fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold text-dark m-0">Registrar GRE Manualmente</h6>
+                        <small class="text-muted" style="font-size:0.75rem;">Ingrese los datos de la guía del remitente directamente</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="greFormRegistroManual" onsubmit="window.greSubmitRegistroManual(event)">
+                    <!-- Datos Básicos -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Número Guía *</label>
+                            <input type="text" id="greManualNumGuia" class="form-control font-monospace fw-bold text-uppercase" placeholder="EG07-00000625" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Tipo Documento</label>
+                            <select id="greManualTipoDoc" class="form-select">
+                                <option value="09" selected>09 - GRE Remitente</option>
+                                <option value="31">31 - GRE Transportista</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Fecha Emisión *</label>
+                            <input type="date" id="greManualFechaEmision" class="form-control font-monospace" required>
+                        </div>
+                    </div>
+
+                    <!-- Remitente / Destinatario -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small">RUC Remitente *</label>
+                            <input type="text" id="greManualRucRemitente" class="form-control font-monospace" maxlength="11" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold small">Razón Social Remitente</label>
+                            <input type="text" id="greManualRazonRemitente" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Fecha Traslado</label>
+                            <input type="date" id="greManualFechaTraslado" class="form-control font-monospace">
+                        </div>
+                    </div>
+
+                    <!-- Destinatario -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small">RUC Destinatario</label>
+                            <input type="text" id="greManualRucDest" class="form-control font-monospace" maxlength="11">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold small">Razón Social Destinatario</label>
+                            <input type="text" id="greManualRazonDest" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Peso Bruto Total (Kg)</label>
+                            <input type="number" step="0.01" id="greManualPeso" class="form-control font-monospace" value="0">
+                        </div>
+                    </div>
+
+                    <!-- Puntos -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small"><i class="bi bi-geo-alt text-success me-1"></i>Punto de Partida</label>
+                            <input type="text" id="greManualPartida" class="form-control" placeholder="Dirección de partida">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small"><i class="bi bi-geo-alt-fill text-danger me-1"></i>Punto de Llegada</label>
+                            <input type="text" id="greManualLlegada" class="form-control" placeholder="Dirección de llegada">
+                        </div>
+                    </div>
+
+                    <!-- Vehículo y Conductor -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small">Placa Tracto</label>
+                            <input type="text" id="greManualPlacaTracto" class="form-control font-monospace text-uppercase" maxlength="7">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small">Placa Carreta</label>
+                            <input type="text" id="greManualPlacaCarreta" class="form-control font-monospace text-uppercase" maxlength="7">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small">DNI Conductor</label>
+                            <input type="text" id="greManualDniConductor" class="form-control font-monospace" maxlength="8">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small">Nombre Conductor</label>
+                            <input type="text" id="greManualNombreConductor" class="form-control">
+                        </div>
+                    </div>
+
+                    <!-- Observaciones -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Observaciones</label>
+                        <textarea id="greManualObservaciones" class="form-control" rows="2" placeholder="Notas adicionales sobre la guía..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                        <button type="submit" id="greBtnSubmitManual" class="btn btn-success btn-sm rounded-pill px-4 fw-bold shadow-sm text-white d-flex align-items-center gap-1.5">
+                            <i class="bi bi-check-circle-fill"></i> Registrar GRE en el ERP
                         </button>
                     </div>
                 </form>
