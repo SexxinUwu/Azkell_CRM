@@ -282,11 +282,6 @@
                 guardar: 'false'
             });
 
-            // Agregar fecha de emisión si está disponible
-            const fechaEmision = (document.getElementById('greInputFechaEmision')?.value || '').trim();
-            if (fechaEmision) {
-                params.append('fechaEmision', fechaEmision);
-            }
 
             const resp = await fetch(`/api/guias-remision/consultar-sunat?${params.toString()}`);
             const result = await resp.json();
