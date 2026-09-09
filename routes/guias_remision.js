@@ -724,6 +724,10 @@ module.exports = function(db, tenantStorage) {
             });
         }
 
+        // Hash digital (DigestValue) para QR oficial SUNAT
+        const mDigest = xmlStr.match(/<(?:\w+:)?DigestValue[^>]*>([\s\S]*?)<\/(?:\w+:)?DigestValue>/i);
+        const xml_hash = mDigest ? mDigest[1].trim() : '';
+
         return {
             numero_guia,
             tipo_documento,
@@ -751,6 +755,7 @@ module.exports = function(db, tenantStorage) {
             conductor_nombre,
             conductor_num_doc,
             conductor_licencia,
+            xml_hash,
             observaciones_sunat: observaciones || 'Esta es una representación impresa sin valor tributario de la Guía de Remisión Electrónica, generada en el sistema de la SUNAT. Puede verificarla utilizando su clave SOL.',
             items
         };
@@ -808,7 +813,7 @@ module.exports = function(db, tenantStorage) {
                         conductor_nombre = ?, conductor_licencia = ?, peso_bruto_total = ?, unidad_medida = ?,
                         volumen_m3 = ?, motivo_traslado = ?, descripcion_motivo = ?, modalidad_traslado = ?,
                         transportista_ruc = ?, transportista_razon_social = ?, registro_mtc = ?,
-                        observaciones_sunat = ?, xml_contenido = ?, modo_emision = 'XML_SUNAT'
+                        xml_hash = ?, observaciones_sunat = ?, xml_contenido = ?, modo_emision = 'XML_SUNAT'
                     WHERE id = ?
                 `, [
                     d.tipo_documento || '09', d.fecha_emision || null, d.hora_emision || null, d.fecha_cdr || null, d.hora_cdr || null,
@@ -820,7 +825,7 @@ module.exports = function(db, tenantStorage) {
                     d.conductor_nombre || '—', d.conductor_licencia || '—', Number(d.peso_bruto_total || 0), d.unidad_medida || 'KGM',
                     d.volumen_m3 ? Number(d.volumen_m3) : null, d.motivo_traslado || '01', d.descripcion_motivo || 'VENTA', d.modalidad_traslado || 'Público',
                     d.transportista_ruc || null, d.transportista_razon_social || null, d.registro_mtc || null,
-                    d.observaciones_sunat || 'Guía importada desde XML oficial de SUNAT', d.xml_contenido || null,
+                    d.xml_hash || null, d.observaciones_sunat || 'Guía importada desde XML oficial de SUNAT', d.xml_contenido || null,
                     guiaId
                 ]);
 
@@ -839,8 +844,8 @@ module.exports = function(db, tenantStorage) {
                         conductor_nombre, conductor_licencia, peso_bruto_total, unidad_medida,
                         volumen_m3, motivo_traslado, descripcion_motivo, modalidad_traslado,
                         transportista_ruc, transportista_razon_social, registro_mtc,
-                        observaciones_sunat, xml_contenido, modo_emision, estado_sunat
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'XML_SUNAT', 'ACEPTADO')
+                        xml_hash, observaciones_sunat, xml_contenido, modo_emision, estado_sunat
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'XML_SUNAT', 'ACEPTADO')
                 `, [
                     numGuia, d.tipo_documento || '09', d.fecha_emision || null, d.hora_emision || null, d.fecha_cdr || null, d.hora_cdr || null,
                     d.fecha_traslado || d.fecha_emision || null, d.remitente_ruc, d.remitente_razon_social || '—',
@@ -851,7 +856,7 @@ module.exports = function(db, tenantStorage) {
                     d.conductor_nombre || '—', d.conductor_licencia || '—', Number(d.peso_bruto_total || 0), d.unidad_medida || 'KGM',
                     d.volumen_m3 ? Number(d.volumen_m3) : null, d.motivo_traslado || '01', d.descripcion_motivo || 'VENTA', d.modalidad_traslado || 'Público',
                     d.transportista_ruc || null, d.transportista_razon_social || null, d.registro_mtc || null,
-                    d.observaciones_sunat || 'Guía importada desde XML oficial de SUNAT', d.xml_contenido || null
+                    d.xml_hash || null, d.observaciones_sunat || 'Guía importada desde XML oficial de SUNAT', d.xml_contenido || null
                 ]);
                 guiaId = ins.insertId;
             }
