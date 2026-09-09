@@ -66,7 +66,20 @@ module.exports = function(db, tenantStorage) {
                 "ALTER TABLE guias_remision ADD COLUMN num_ticket VARCHAR(50) DEFAULT NULL",
                 "ALTER TABLE guias_remision ADD COLUMN xml_hash VARCHAR(100) DEFAULT NULL",
                 "ALTER TABLE guias_remision ADD COLUMN modo_emision VARCHAR(20) DEFAULT 'SIMULACION'",
-                "ALTER TABLE guias_remision ADD COLUMN motivo_traslado VARCHAR(10) DEFAULT '01'"
+                "ALTER TABLE guias_remision ADD COLUMN motivo_traslado VARCHAR(10) DEFAULT '01'",
+                "ALTER TABLE guias_remision ADD COLUMN hora_emision VARCHAR(20) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN fecha_cdr DATETIME DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN hora_cdr VARCHAR(20) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN descripcion_motivo VARCHAR(255) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN modalidad_traslado VARCHAR(50) DEFAULT 'Público'",
+                "ALTER TABLE guias_remision ADD COLUMN indicador_transbordo TINYINT(1) DEFAULT 0",
+                "ALTER TABLE guias_remision ADD COLUMN indicador_retorno_vacio TINYINT(1) DEFAULT 0",
+                "ALTER TABLE guias_remision ADD COLUMN indicador_m1_l TINYINT(1) DEFAULT 0",
+                "ALTER TABLE guias_remision ADD COLUMN transportista_ruc VARCHAR(20) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN transportista_razon_social VARCHAR(255) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN registro_mtc VARCHAR(50) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN volumen_m3 DECIMAL(12,3) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN xml_contenido LONGTEXT DEFAULT NULL"
             ];
             for (const sql of addCols) {
                 try { await dbConn.query(sql); } catch(_) {}
@@ -76,6 +89,12 @@ module.exports = function(db, tenantStorage) {
                 CREATE TABLE IF NOT EXISTS guias_remision_items (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     guia_id INT NOT NULL,
+                    item_numero INT DEFAULT 1,
+                    bien_normalizado VARCHAR(10) DEFAULT 'NO',
+                    codigo_bien VARCHAR(50) DEFAULT NULL,
+                    codigo_sunat VARCHAR(30) DEFAULT NULL,
+                    codigo_gtin VARCHAR(30) DEFAULT NULL,
+                    codigo_subpartida VARCHAR(30) DEFAULT NULL,
                     codigo VARCHAR(50) DEFAULT NULL,
                     descripcion TEXT NOT NULL,
                     cantidad DECIMAL(12,2) DEFAULT 1,
@@ -86,6 +105,18 @@ module.exports = function(db, tenantStorage) {
                     FOREIGN KEY (guia_id) REFERENCES guias_remision(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             `);
+
+            const addColsItems = [
+                "ALTER TABLE guias_remision_items ADD COLUMN item_numero INT DEFAULT 1",
+                "ALTER TABLE guias_remision_items ADD COLUMN bien_normalizado VARCHAR(10) DEFAULT 'NO'",
+                "ALTER TABLE guias_remision_items ADD COLUMN codigo_bien VARCHAR(50) DEFAULT NULL",
+                "ALTER TABLE guias_remision_items ADD COLUMN codigo_sunat VARCHAR(30) DEFAULT NULL",
+                "ALTER TABLE guias_remision_items ADD COLUMN codigo_gtin VARCHAR(30) DEFAULT NULL",
+                "ALTER TABLE guias_remision_items ADD COLUMN codigo_subpartida VARCHAR(30) DEFAULT NULL"
+            ];
+            for (const sql of addColsItems) {
+                try { await dbConn.query(sql); } catch(_) {}
+            }
         } catch (e) {
             console.error("Error inicializando tablas guias_remision:", e.message);
         }
@@ -567,6 +598,286 @@ module.exports = function(db, tenantStorage) {
             res.json({ ok: true, estado: 'ENCONTRADA', data: guiaData, origen: 'sunat' });
         } catch (err) {
             console.error("[SUNAT GRE] Error en /consultar-sunat:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // ══════════════════════════════════════════════════════════
+    // PARSER UBL 2.1 OFICIAL PARA XML DESCARGADO DE SUNAT
+    // ══════════════════════════════════════════════════════════
+    function parseUblXml(xmlStr) {
+        if (!xmlStr || typeof xmlStr !== 'string') return null;
+
+        const getVal = (tag, str) => {
+            if (!str) return '';
+            const regex = new RegExp(`<(?:[a-zA-Z0-9_]+:)?${tag}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/(?:[a-zA-Z0-9_]+:)?${tag}>`, 'i');
+            const m = str.match(regex);
+            return m ? m[1].trim() : '';
+        };
+
+        const getAttr = (tag, attr, str) => {
+            if (!str) return '';
+            const regex = new RegExp(`<(?:[a-zA-Z0-9_]+:)?${tag}[^>]*\\s+${attr}=["']([^"']+)["'][^>]*>`, 'i');
+            const m = str.match(regex);
+            return m ? m[1].trim() : '';
+        };
+
+        const numero_guia = getVal('ID', xmlStr);
+        const fecha_emision = getVal('IssueDate', xmlStr);
+        const hora_emision = getVal('IssueTime', xmlStr);
+        const tipo_documento = getVal('DespatchAdviceTypeCode', xmlStr) || '09';
+
+        // Emisor / Remitente
+        const mEmisor = xmlStr.match(/<(?:\w+:)?DespatchSupplierParty[\s\S]*?<\/(?:\w+:)?DespatchSupplierParty>/i);
+        const emisorBloque = mEmisor ? mEmisor[0] : '';
+        const remitente_ruc = getVal('ID', emisorBloque);
+        const remitente_razon_social = getVal('RegistrationName', emisorBloque);
+
+        // Destinatario
+        const mDest = xmlStr.match(/<(?:\w+:)?DeliveryCustomerParty[\s\S]*?<\/(?:\w+:)?DeliveryCustomerParty>/i);
+        const destBloque = mDest ? mDest[0] : '';
+        const destinatario_ruc = getVal('ID', destBloque);
+        const destinatario_razon_social = getVal('RegistrationName', destBloque);
+
+        // Shipment / Datos del Traslado
+        const mShip = xmlStr.match(/<(?:\w+:)?Shipment[\s\S]*?<\/(?:\w+:)?Shipment>/i);
+        const shipBloque = mShip ? mShip[0] : '';
+        const motivo_traslado = getVal('HandlingCode', shipBloque) || '01';
+        const descripcion_motivo = getVal('Information', shipBloque) || 'VENTA';
+        const peso_bruto_total = parseFloat(getVal('GrossWeightMeasure', shipBloque) || 0);
+        const unidad_medida = getAttr('GrossWeightMeasure', 'unitCode', shipBloque) || 'KGM';
+
+        // Transportista / Carrier
+        const mCarrier = shipBloque.match(/<(?:\w+:)?CarrierParty[\s\S]*?<\/(?:\w+:)?CarrierParty>/i);
+        const carBloque = mCarrier ? mCarrier[0] : '';
+        const transportista_ruc = getVal('ID', carBloque);
+        const transportista_razon_social = getVal('RegistrationName', carBloque);
+        const registro_mtc = getVal('CompanyID', carBloque);
+
+        // Partida
+        const mPartida = shipBloque.match(/<(?:\w+:)?OriginAddress[\s\S]*?<\/(?:\w+:)?OriginAddress>/i);
+        const partBloque = mPartida ? mPartida[0] : '';
+        const punto_partida_ubigeo = getVal('ID', partBloque);
+        const punto_partida_direccion = getVal('Line', partBloque);
+
+        // Llegada
+        const mLlegada = shipBloque.match(/<(?:\w+:)?DeliveryAddress[\s\S]*?<\/(?:\w+:)?DeliveryAddress>/i);
+        const llegBloque = mLlegada ? mLlegada[0] : '';
+        const punto_llegada_ubigeo = getVal('ID', llegBloque);
+        const punto_llegada_direccion = getVal('Line', llegBloque);
+
+        // Etapa de transporte / Fecha inicio
+        const mStage = shipBloque.match(/<(?:\w+:)?ShipmentStage[\s\S]*?<\/(?:\w+:)?ShipmentStage>/i);
+        const stageBloque = mStage ? mStage[0] : '';
+        const fecha_traslado = getVal('StartDate', stageBloque) || fecha_emision;
+        const modalidadCode = getVal('TransportModeCode', stageBloque);
+        const modalidad_traslado = modalidadCode === '02' ? 'Privado' : 'Público';
+
+        // Vehículos y Conductor si vienen
+        const mRoad = stageBloque.match(/<(?:\w+:)?RoadTransport[\s\S]*?<\/(?:\w+:)?RoadTransport>/i);
+        const placa_tracto = mRoad ? getVal('LicensePlateID', mRoad[0]) : '';
+
+        const mDriver = stageBloque.match(/<(?:\w+:)?DriverPerson[\s\S]*?<\/(?:\w+:)?DriverPerson>/i);
+        const driverBloque = mDriver ? mDriver[0] : '';
+        const conductor_num_doc = getVal('ID', driverBloque);
+        const conductor_nombre = `${getVal('FirstName', driverBloque)} ${getVal('FamilyName', driverBloque)}`.trim();
+        const mLic = driverBloque.match(/<(?:\w+:)?IdentityDocumentReference[\s\S]*?<\/(?:\w+:)?IdentityDocumentReference>/i);
+        const conductor_licencia = mLic ? getVal('ID', mLic[0]) : '';
+
+        // Observaciones / Note
+        const observaciones = getVal('Note', xmlStr);
+
+        // Ítems de la Guía
+        const itemRegex = /<(?:\w+:)?DespatchLine[\s\S]*?<\/(?:\w+:)?DespatchLine>/gi;
+        const items = [];
+        let match;
+        while ((match = itemRegex.exec(xmlStr)) !== null) {
+            const itStr = match[0];
+            const num = parseInt(getVal('ID', itStr), 10) || (items.length + 1);
+            const cant = parseFloat(getVal('DeliveredQuantity', itStr) || 1);
+            const uMed = getAttr('DeliveredQuantity', 'unitCode', itStr) || 'NIU';
+            const desc = getVal('Description', itStr) || getVal('Name', itStr);
+            
+            const mSell = itStr.match(/<(?:\w+:)?SellersItemIdentification[\s\S]*?<\/(?:\w+:)?SellersItemIdentification>/i);
+            const codBien = mSell ? getVal('ID', mSell[0]) : '';
+
+            const mComm = itStr.match(/<(?:\w+:)?CommodityClassification[\s\S]*?<\/(?:\w+:)?CommodityClassification>/i);
+            const codSunat = mComm ? getVal('ItemClassificationCode', mComm[0]) : '';
+
+            items.push({
+                item_numero: num,
+                bien_normalizado: 'NO',
+                codigo_bien: codBien,
+                codigo_sunat: codSunat,
+                codigo_gtin: '',
+                codigo_subpartida: '',
+                codigo: codBien || `ITM-${num}`,
+                descripcion: desc,
+                unidad_medida: uMed,
+                cantidad: cant,
+                peso_unitario: 0
+            });
+        }
+
+        return {
+            numero_guia,
+            tipo_documento,
+            fecha_emision,
+            hora_emision,
+            fecha_traslado,
+            remitente_ruc,
+            remitente_razon_social,
+            destinatario_ruc,
+            destinatario_razon_social,
+            motivo_traslado,
+            descripcion_motivo,
+            peso_bruto_total,
+            unidad_medida,
+            modalidad_traslado,
+            transportista_ruc,
+            transportista_razon_social,
+            registro_mtc,
+            punto_partida_ubigeo,
+            punto_partida_direccion,
+            punto_llegada_ubigeo,
+            punto_llegada_direccion,
+            placa_tracto,
+            conductor_nombre,
+            conductor_num_doc,
+            conductor_licencia,
+            observaciones_sunat: observaciones || 'Esta es una representación impresa sin valor tributario de la Guía de Remisión Electrónica, generada en el sistema de la SUNAT. Puede verificarla utilizando su clave SOL.',
+            items
+        };
+    }
+
+    // 4.1 Endpoint para parsear XML de SUNAT
+    router.post('/parse-xml', async (req, res) => {
+        try {
+            const { xml_contenido } = req.body || {};
+            if (!xml_contenido || typeof xml_contenido !== 'string') {
+                return res.status(400).json({ ok: false, error: "Contenido XML no proporcionado o inválido." });
+            }
+
+            const data = parseUblXml(xml_contenido);
+            if (!data || !data.numero_guia) {
+                return res.status(400).json({ ok: false, error: "El archivo no tiene una estructura válida de Guía de Remisión Electrónica (DespatchAdvice UBL 2.1)." });
+            }
+
+            res.json({ ok: true, data });
+        } catch (err) {
+            console.error("Error parseando XML:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 4.2 Endpoint para Guardar Guía parseada de XML en el ERP
+    router.post('/guardar-gre-xml', async (req, res) => {
+        try {
+            const dbConn = getDb(req);
+            await initTables(dbConn);
+
+            const d = req.body || {};
+            if (!d.numero_guia || !d.remitente_ruc) {
+                return res.status(400).json({ ok: false, error: "El número de guía y el RUC del remitente son obligatorios." });
+            }
+
+            // Normalizar numeración
+            const numGuia = String(d.numero_guia).trim().toUpperCase();
+
+            // Verificar si ya existe en la base de datos
+            const [existentes] = await dbConn.query("SELECT id FROM guias_remision WHERE numero_guia = ?", [numGuia]);
+
+            let guiaId;
+            if (existentes.length > 0) {
+                guiaId = existentes[0].id;
+                // Actualizar registro existente
+                await dbConn.query(`
+                    UPDATE guias_remision SET
+                        tipo_documento = ?, fecha_emision = ?, hora_emision = ?, fecha_cdr = ?, hora_cdr = ?,
+                        fecha_traslado = ?, remitente_ruc = ?, remitente_razon_social = ?,
+                        destinatario_ruc = ?, destinatario_razon_social = ?,
+                        punto_partida_direccion = ?, punto_partida_ubigeo = ?,
+                        punto_llegada_direccion = ?, punto_llegada_ubigeo = ?,
+                        placa_tracto = ?, placa_carreta = ?, conductor_tipo_doc = ?, conductor_num_doc = ?,
+                        conductor_nombre = ?, conductor_licencia = ?, peso_bruto_total = ?, unidad_medida = ?,
+                        volumen_m3 = ?, motivo_traslado = ?, descripcion_motivo = ?, modalidad_traslado = ?,
+                        transportista_ruc = ?, transportista_razon_social = ?, registro_mtc = ?,
+                        observaciones_sunat = ?, xml_contenido = ?, modo_emision = 'XML_SUNAT'
+                    WHERE id = ?
+                `, [
+                    d.tipo_documento || '09', d.fecha_emision || null, d.hora_emision || null, d.fecha_cdr || null, d.hora_cdr || null,
+                    d.fecha_traslado || d.fecha_emision || null, d.remitente_ruc, d.remitente_razon_social || '—',
+                    d.destinatario_ruc || '—', d.destinatario_razon_social || '—',
+                    d.punto_partida_direccion || '—', d.punto_partida_ubigeo || '',
+                    d.punto_llegada_direccion || '—', d.punto_llegada_ubigeo || '',
+                    d.placa_tracto || '—', d.placa_carreta || '—', d.conductor_tipo_doc || 'DNI', d.conductor_num_doc || '—',
+                    d.conductor_nombre || '—', d.conductor_licencia || '—', Number(d.peso_bruto_total || 0), d.unidad_medida || 'KGM',
+                    d.volumen_m3 ? Number(d.volumen_m3) : null, d.motivo_traslado || '01', d.descripcion_motivo || 'VENTA', d.modalidad_traslado || 'Público',
+                    d.transportista_ruc || null, d.transportista_razon_social || null, d.registro_mtc || null,
+                    d.observaciones_sunat || 'Guía importada desde XML oficial de SUNAT', d.xml_contenido || null,
+                    guiaId
+                ]);
+
+                // Reemplazar ítems
+                await dbConn.query("DELETE FROM guias_remision_items WHERE guia_id = ?", [guiaId]);
+            } else {
+                // Insertar nueva guía
+                const [ins] = await dbConn.query(`
+                    INSERT INTO guias_remision (
+                        numero_guia, tipo_documento, fecha_emision, hora_emision, fecha_cdr, hora_cdr,
+                        fecha_traslado, remitente_ruc, remitente_razon_social,
+                        destinatario_ruc, destinatario_razon_social,
+                        punto_partida_direccion, punto_partida_ubigeo,
+                        punto_llegada_direccion, punto_llegada_ubigeo,
+                        placa_tracto, placa_carreta, conductor_tipo_doc, conductor_num_doc,
+                        conductor_nombre, conductor_licencia, peso_bruto_total, unidad_medida,
+                        volumen_m3, motivo_traslado, descripcion_motivo, modalidad_traslado,
+                        transportista_ruc, transportista_razon_social, registro_mtc,
+                        observaciones_sunat, xml_contenido, modo_emision, estado_sunat
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'XML_SUNAT', 'ACEPTADO')
+                `, [
+                    numGuia, d.tipo_documento || '09', d.fecha_emision || null, d.hora_emision || null, d.fecha_cdr || null, d.hora_cdr || null,
+                    d.fecha_traslado || d.fecha_emision || null, d.remitente_ruc, d.remitente_razon_social || '—',
+                    d.destinatario_ruc || '—', d.destinatario_razon_social || '—',
+                    d.punto_partida_direccion || '—', d.punto_partida_ubigeo || '',
+                    d.punto_llegada_direccion || '—', d.punto_llegada_ubigeo || '',
+                    d.placa_tracto || '—', d.placa_carreta || '—', d.conductor_tipo_doc || 'DNI', d.conductor_num_doc || '—',
+                    d.conductor_nombre || '—', d.conductor_licencia || '—', Number(d.peso_bruto_total || 0), d.unidad_medida || 'KGM',
+                    d.volumen_m3 ? Number(d.volumen_m3) : null, d.motivo_traslado || '01', d.descripcion_motivo || 'VENTA', d.modalidad_traslado || 'Público',
+                    d.transportista_ruc || null, d.transportista_razon_social || null, d.registro_mtc || null,
+                    d.observaciones_sunat || 'Guía importada desde XML oficial de SUNAT', d.xml_contenido || null
+                ]);
+                guiaId = ins.insertId;
+            }
+
+            // Insertar ítems
+            if (d.items && Array.isArray(d.items) && d.items.length > 0) {
+                for (let i = 0; i < d.items.length; i++) {
+                    const it = d.items[i];
+                    await dbConn.query(`
+                        INSERT INTO guias_remision_items (
+                            guia_id, item_numero, bien_normalizado, codigo_bien, codigo_sunat,
+                            codigo_gtin, codigo_subpartida, codigo, descripcion, cantidad, unidad_medida, peso_unitario
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        guiaId, it.item_numero || (i + 1), it.bien_normalizado || 'NO',
+                        it.codigo_bien || it.codigo || null, it.codigo_sunat || null,
+                        it.codigo_gtin || null, it.codigo_subpartida || null,
+                        it.codigo || it.codigo_bien || `ITM-${i + 1}`,
+                        it.descripcion || '—', Number(it.cantidad || 1), it.unidad_medida || 'NIU',
+                        Number(it.peso_unitario || 0)
+                    ]);
+                }
+            }
+
+            res.json({
+                ok: true,
+                id: guiaId,
+                numero_guia: numGuia,
+                message: existentes.length > 0 ? "Guía actualizada exitosamente en el ERP." : "Guía guardada exitosamente en el ERP."
+            });
+        } catch (err) {
+            console.error("Error en guardar-gre-xml:", err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });

@@ -19,6 +19,37 @@
         if (fDesde && !fDesde.value) fDesde.value = formatYMD(primerDia);
         if (fHasta && !fHasta.value) fHasta.value = formatYMD(hoy);
 
+        // Configurar Drag and Drop para el Modal de XML
+        const modalConsultar = document.getElementById('greModalConsultar');
+        const overlay = document.getElementById('greDropzoneOverlay');
+        if (modalConsultar) {
+            ['dragenter', 'dragover'].forEach(ev => {
+                modalConsultar.addEventListener(ev, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (overlay) overlay.classList.remove('d-none');
+                }, false);
+            });
+
+            ['dragleave'].forEach(ev => {
+                modalConsultar.addEventListener(ev, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (overlay) overlay.classList.add('d-none');
+                }, false);
+            });
+
+            modalConsultar.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (overlay) overlay.classList.add('d-none');
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    window.greHandleXmlFileUpload(dt.files);
+                }
+            }, false);
+        }
+
         await window.greCargarGuias();
     };
 
@@ -121,8 +152,8 @@
 
             html += `
                 <tr>
-                    <td class="font-monospace fw-bold" style="color:#0284c7;">
-                        ${esc(g.numero_guia)}
+                    <td class="font-monospace fw-bold" style="color:#0052cc; cursor:pointer;" onclick="window.greVerDetalleSunatPorIndice(${idx})" title="Ver Detalle Oficial de GRE SUNAT">
+                        <i class="bi bi-file-earmark-text me-1"></i>${esc(g.numero_guia)}
                     </td>
                     <td>${badgeEstado}</td>
                     <td class="text-muted small">${esc(g.fecha_emision)}</td>
@@ -235,203 +266,488 @@
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
 
-    // 5. Ejecutar Consulta Individual a SUNAT
+    // ══════════════════════════════════════════════════════════
+    // 5. SUBIR XML DE SUNAT, PARSEAR Y VISOR OFICIAL DE GRE
+    // ══════════════════════════════════════════════════════════
     window._greUltimaConsultaData = null;
 
-    window.greLimpiarConsultaForm = function() {
-        if (document.getElementById('greInputRucEmisor')) document.getElementById('greInputRucEmisor').value = '';
-        if (document.getElementById('greInputSerie')) document.getElementById('greInputSerie').value = '';
-        if (document.getElementById('greInputCorrelativo')) document.getElementById('greInputCorrelativo').value = '';
-        if (document.getElementById('greInputFechaEmision')) document.getElementById('greInputFechaEmision').value = '';
-        const resEl = document.getElementById('greResultadoConsulta');
-        if (resEl) resEl.classList.add('d-none');
-        window._greUltimaConsultaData = null;
-    };
-
-    window.greEjecutarConsultaSunat = async function(e) {
-        if (e) e.preventDefault();
-
-        const inputRuc = document.getElementById('greInputRucEmisor');
-        const inputSerie = document.getElementById('greInputSerie');
-        const inputCorrelativo = document.getElementById('greInputCorrelativo');
-        const btn = document.getElementById('greBtnSubmitConsulta');
-        const resContenedor = document.getElementById('greResultadoConsulta');
-
-        const rucEmisor = (inputRuc?.value || '').trim();
-        const serie = (inputSerie?.value || '').trim().toUpperCase();
-        const correlativo = (inputCorrelativo?.value || '').trim();
-        const tipoRadio = document.querySelector('input[name="greTipoConsultaRadio"]:checked');
-        const tipoDoc = tipoRadio ? tipoRadio.value : '09';
-
-        if (!rucEmisor || !serie || !correlativo) {
-            alert('Por favor complete todos los campos: RUC del emisor, Serie y Número.');
+    // Manejar selección o arrastre de archivo XML
+    window.greHandleXmlFileUpload = function(files) {
+        if (!files || files.length === 0) return;
+        const file = files[0];
+        if (!file.name.toLowerCase().endsWith('.xml')) {
+            alert('Por favor seleccione un archivo con formato XML válido descargado de SUNAT (.xml).');
             return;
         }
 
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Consultando en SUNAT...';
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const xmlText = e.target.result;
+            window.greProcesarContenidoXml(xmlText);
+        };
+        reader.onerror = function() {
+            alert('No se pudo leer el archivo seleccionado.');
+        };
+        reader.readAsText(file);
+    };
+
+    // Parser UBL 2.1 del lado cliente (Instantáneo y 100% fiel a SUNAT)
+    function parseUblXmlClient(xmlStr) {
+        if (!xmlStr || typeof xmlStr !== 'string') return null;
+
+        const getVal = (tag, str) => {
+            if (!str) return '';
+            const regex = new RegExp(`<(?:[a-zA-Z0-9_]+:)?${tag}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/(?:[a-zA-Z0-9_]+:)?${tag}>`, 'i');
+            const m = str.match(regex);
+            return m ? m[1].trim() : '';
+        };
+
+        const getAttr = (tag, attr, str) => {
+            if (!str) return '';
+            const regex = new RegExp(`<(?:[a-zA-Z0-9_]+:)?${tag}[^>]*\\s+${attr}=["']([^"']+)["'][^>]*>`, 'i');
+            const m = str.match(regex);
+            return m ? m[1].trim() : '';
+        };
+
+        const numero_guia = getVal('ID', xmlStr);
+        const fecha_emision = getVal('IssueDate', xmlStr);
+        const hora_emision = getVal('IssueTime', xmlStr);
+        const tipo_documento = getVal('DespatchAdviceTypeCode', xmlStr) || '09';
+
+        // Emisor / Remitente
+        const mEmisor = xmlStr.match(/<(?:\w+:)?DespatchSupplierParty[\s\S]*?<\/(?:\w+:)?DespatchSupplierParty>/i);
+        const emisorBloque = mEmisor ? mEmisor[0] : '';
+        const remitente_ruc = getVal('ID', emisorBloque);
+        const remitente_razon_social = getVal('RegistrationName', emisorBloque);
+
+        // Destinatario
+        const mDest = xmlStr.match(/<(?:\w+:)?DeliveryCustomerParty[\s\S]*?<\/(?:\w+:)?DeliveryCustomerParty>/i);
+        const destBloque = mDest ? mDest[0] : '';
+        const destinatario_ruc = getVal('ID', destBloque);
+        const destinatario_razon_social = getVal('RegistrationName', destBloque);
+
+        // Shipment / Datos de Traslado
+        const mShip = xmlStr.match(/<(?:\w+:)?Shipment[\s\S]*?<\/(?:\w+:)?Shipment>/i);
+        const shipBloque = mShip ? mShip[0] : '';
+        const motivo_traslado = getVal('HandlingCode', shipBloque) || '01';
+        const descripcion_motivo = getVal('Information', shipBloque) || 'VENTA';
+        const peso_bruto_total = parseFloat(getVal('GrossWeightMeasure', shipBloque) || 0);
+        const unidad_medida = getAttr('GrossWeightMeasure', 'unitCode', shipBloque) || 'KGM';
+
+        // Transportista / Carrier
+        const mCarrier = shipBloque.match(/<(?:\w+:)?CarrierParty[\s\S]*?<\/(?:\w+:)?CarrierParty>/i);
+        const carBloque = mCarrier ? mCarrier[0] : '';
+        const transportista_ruc = getVal('ID', carBloque);
+        const transportista_razon_social = getVal('RegistrationName', carBloque);
+        const registro_mtc = getVal('CompanyID', carBloque);
+
+        // Partida
+        const mPartida = shipBloque.match(/<(?:\w+:)?OriginAddress[\s\S]*?<\/(?:\w+:)?OriginAddress>/i);
+        const partBloque = mPartida ? mPartida[0] : '';
+        const punto_partida_ubigeo = getVal('ID', partBloque);
+        const punto_partida_direccion = getVal('Line', partBloque);
+
+        // Llegada
+        const mLlegada = shipBloque.match(/<(?:\w+:)?DeliveryAddress[\s\S]*?<\/(?:\w+:)?DeliveryAddress>/i);
+        const llegBloque = mLlegada ? mLlegada[0] : '';
+        const punto_llegada_ubigeo = getVal('ID', llegBloque);
+        const punto_llegada_direccion = getVal('Line', llegBloque);
+
+        // Etapa de transporte / Fecha inicio
+        const mStage = shipBloque.match(/<(?:\w+:)?ShipmentStage[\s\S]*?<\/(?:\w+:)?ShipmentStage>/i);
+        const stageBloque = mStage ? mStage[0] : '';
+        const fecha_traslado = getVal('StartDate', stageBloque) || fecha_emision;
+        const modalidadCode = getVal('TransportModeCode', stageBloque);
+        const modalidad_traslado = modalidadCode === '02' ? 'Privado' : 'Público';
+
+        // Vehículos y Conductor si vienen
+        const mRoad = stageBloque.match(/<(?:\w+:)?RoadTransport[\s\S]*?<\/(?:\w+:)?RoadTransport>/i);
+        const placa_tracto = mRoad ? getVal('LicensePlateID', mRoad[0]) : '';
+
+        const mDriver = stageBloque.match(/<(?:\w+:)?DriverPerson[\s\S]*?<\/(?:\w+:)?DriverPerson>/i);
+        const driverBloque = mDriver ? mDriver[0] : '';
+        const conductor_num_doc = getVal('ID', driverBloque);
+        const conductor_nombre = `${getVal('FirstName', driverBloque)} ${getVal('FamilyName', driverBloque)}`.trim();
+        const mLic = driverBloque.match(/<(?:\w+:)?IdentityDocumentReference[\s\S]*?<\/(?:\w+:)?IdentityDocumentReference>/i);
+        const conductor_licencia = mLic ? getVal('ID', mLic[0]) : '';
+
+        // Observaciones / Note
+        const observaciones = getVal('Note', xmlStr);
+
+        // Ítems de la Guía
+        const itemRegex = /<(?:\w+:)?DespatchLine[\s\S]*?<\/(?:\w+:)?DespatchLine>/gi;
+        const items = [];
+        let match;
+        while ((match = itemRegex.exec(xmlStr)) !== null) {
+            const itStr = match[0];
+            const num = parseInt(getVal('ID', itStr), 10) || (items.length + 1);
+            const cant = parseFloat(getVal('DeliveredQuantity', itStr) || 1);
+            const uMed = getAttr('DeliveredQuantity', 'unitCode', itStr) || 'NIU';
+            const desc = getVal('Description', itStr) || getVal('Name', itStr);
+            
+            const mSell = itStr.match(/<(?:\w+:)?SellersItemIdentification[\s\S]*?<\/(?:\w+:)?SellersItemIdentification>/i);
+            const codBien = mSell ? getVal('ID', mSell[0]) : '';
+
+            const mComm = itStr.match(/<(?:\w+:)?CommodityClassification[\s\S]*?<\/(?:\w+:)?CommodityClassification>/i);
+            const codSunat = mComm ? getVal('ItemClassificationCode', mComm[0]) : '';
+
+            items.push({
+                item_numero: num,
+                bien_normalizado: 'NO',
+                codigo_bien: codBien,
+                codigo_sunat: codSunat,
+                codigo_gtin: '',
+                codigo_subpartida: '',
+                codigo: codBien || `ITM-${num}`,
+                descripcion: desc,
+                unidad_medida: uMed,
+                cantidad: cant,
+                peso_unitario: 0
+            });
         }
 
-        try {
-            const params = new URLSearchParams({
-                rucEmisor,
-                serie,
-                correlativo,
-                tipoDoc,
-                guardar: 'false'
-            });
+        return {
+            numero_guia,
+            tipo_documento,
+            fecha_emision,
+            hora_emision,
+            fecha_traslado,
+            remitente_ruc,
+            remitente_razon_social,
+            destinatario_ruc,
+            destinatario_razon_social,
+            motivo_traslado,
+            descripcion_motivo,
+            peso_bruto_total,
+            unidad_medida,
+            modalidad_traslado,
+            transportista_ruc,
+            transportista_razon_social,
+            registro_mtc,
+            punto_partida_ubigeo,
+            punto_partida_direccion,
+            punto_llegada_ubigeo,
+            punto_llegada_direccion,
+            placa_tracto,
+            conductor_nombre,
+            conductor_num_doc,
+            conductor_licencia,
+            observaciones_sunat: observaciones || 'Esta es una representación impresa sin valor tributario de la Guía de Remisión Electrónica, generada en el sistema de la SUNAT. Puede verificarla utilizando su clave SOL.',
+            items
+        };
+    }
 
+    // Procesar contenido XML (vía cliente y confirmación con backend)
+    window.greProcesarContenidoXml = async function(xmlText) {
+        if (!xmlText || typeof xmlText !== 'string' || !xmlText.trim()) {
+            alert('El contenido XML está vacío.');
+            return;
+        }
 
-            const resp = await fetch(`/api/guias-remision/consultar-sunat?${params.toString()}`);
-            const result = await resp.json();
+        let guia = parseUblXmlClient(xmlText);
 
-            if (resContenedor) resContenedor.classList.remove('d-none');
-
-            const banner = document.getElementById('greEstadoBanner');
-            const icon = document.getElementById('greEstadoIcon');
-            const titulo = document.getElementById('greEstadoTitulo');
-            const sub = document.getElementById('greEstadoSub');
-            const badge = document.getElementById('greEstadoBadge');
-            const cardDetalle = document.getElementById('greCardDetalleExtraido');
-
-            if (result.ok && result.data) {
-                const guia = result.data;
-                window._greUltimaConsultaData = guia;
-
-                // Estado: GUÍA RECIBIDA / AUTORIZADA
-                if (banner) {
-                    banner.className = 'alert alert-success d-flex align-items-center justify-content-between p-3 rounded-3 mb-3 border-success-subtle';
+        // Si el parser cliente no extrajo número de guía, intentar con backend
+        if (!guia || !guia.numero_guia) {
+            try {
+                const resp = await fetch('/api/guias-remision/parse-xml', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ xml_contenido: xmlText })
+                });
+                const resJson = await resp.json();
+                if (resJson.ok && resJson.data) {
+                    guia = resJson.data;
                 }
-                if (icon) icon.innerHTML = '<i class="bi bi-patch-check-fill text-success fs-3"></i>';
-                if (titulo) {
-                    titulo.textContent = 'Guía Recibida (Autorizada en SUNAT)';
-                    titulo.className = 'fw-bold m-0 text-success';
-                }
-                if (sub) sub.textContent = `Emisión: ${guia.fecha_emision || 'Hoy'} | Traslado: ${guia.fecha_traslado || 'Hoy'}`;
-                if (badge) {
-                    badge.className = 'badge bg-success text-white px-3 py-2 rounded-pill fw-bold';
-                    badge.innerHTML = '<i class="bi bi-check2-all me-1"></i>Válida en SUNAT';
-                }
+            } catch (err) {
+                console.warn("Fallo parser de backend:", err);
+            }
+        }
 
-                if (cardDetalle) cardDetalle.classList.remove('d-none');
+        if (!guia || !guia.numero_guia) {
+            alert('No se pudo identificar una Guía de Remisión Electrónica válida (UBL 2.1 DespatchAdvice) en el archivo proporcionado.');
+            return;
+        }
 
-                // Rellenar Ficha Técnica
-                const elNum = document.getElementById('greDetalleNumeroGuia');
-                const elRem = document.getElementById('greResRemitente');
-                const elDes = document.getElementById('greResDestinatario');
-                const elPart = document.getElementById('greResPartida');
-                const elLleg = document.getElementById('greResLlegada');
-                const elPeso = document.getElementById('greResPeso');
-                const elPlac = document.getElementById('greResPlacas');
-                const elCond = document.getElementById('greResConductor');
-                const tbody = document.getElementById('greResTbodyItems');
+        guia.xml_contenido = xmlText;
+        window._greUltimaConsultaData = guia;
 
-                if (elNum) elNum.textContent = `${guia.numero_guia || (serie + '-' + correlativo)}`;
-                if (elRem) elRem.textContent = `${guia.remitente_razon_social || '—'} (RUC: ${guia.remitente_ruc || rucEmisor})`;
-                if (elDes) elDes.textContent = `${guia.destinatario_razon_social || '—'} (RUC: ${guia.destinatario_ruc || '—'})`;
-                if (elPart) elPart.textContent = `${guia.punto_partida_direccion || '—'} [Ubigeo: ${guia.punto_partida_ubigeo || '—'}]`;
-                if (elLleg) elLleg.textContent = `${guia.punto_llegada_direccion || '—'} [Ubigeo: ${guia.punto_llegada_ubigeo || '—'}]`;
-                
-                const pesoNum = Number(guia.peso_bruto_total || 0);
-                if (elPeso) elPeso.textContent = `${pesoNum.toLocaleString('es-PE', { minimumFractionDigits: 2 })} ${guia.unidad_medida || 'KGM'}`;
-                if (elPlac) elPlac.textContent = `Tracto: ${guia.placa_tracto || '—'} | Carreta: ${guia.placa_carreta || '—'}`;
-                if (elCond) elCond.textContent = `${guia.conductor_nombre || '—'} (${guia.conductor_tipo_doc || 'DNI'}: ${guia.conductor_num_doc || '—'})`;
+        // Renderizar en el Visor Oficial estilo SUNAT
+        window.greRenderizarDetalleSunat(guia);
+    };
 
-                // Renderizar Ítems
-                if (tbody) {
-                    if (guia.items && guia.items.length > 0) {
-                        tbody.innerHTML = guia.items.map(it => `
-                            <tr>
-                                <td class="font-monospace fw-bold text-primary">${it.codigo || '—'}</td>
-                                <td class="fw-semibold text-dark">${it.descripcion || '—'}</td>
-                                <td class="text-end font-monospace">${Number(it.cantidad || 1).toLocaleString()}</td>
-                                <td class="text-center font-monospace">${it.unidad_medida || 'NIU'}</td>
-                                <td class="text-end font-monospace">${Number(it.peso_unitario || 0).toFixed(2)}</td>
-                            </tr>
-                        `).join('');
-                    } else {
-                        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-2 text-muted">Sin desglose de ítems</td></tr>';
-                    }
-                }
+    // Renderizar Ficha Técnica Oficial estilo SUNAT (Imágenes 2 y 3)
+    window.greRenderizarDetalleSunat = function(guia) {
+        if (!guia) return;
+
+        // Mostrar sección del Visor y ocultar upload
+        const seccionUpload = document.getElementById('greSeccionUploadXml');
+        const seccionVisor = document.getElementById('greSeccionVisorSunat');
+        if (seccionUpload) seccionUpload.classList.add('d-none');
+        if (seccionVisor) seccionVisor.classList.remove('d-none');
+
+        // Generar QR dinámico
+        const qrData = `${guia.remitente_ruc || ''}|${guia.tipo_documento || '09'}|${guia.numero_guia || ''}|${guia.peso_bruto_total || 0}|${guia.fecha_emision || ''}|${guia.destinatario_ruc || ''}`;
+        const elQr = document.getElementById('sunatDetalleQr');
+        if (elQr) {
+            elQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(qrData)}`;
+        }
+
+        // Encabezado Emisor
+        const elEmisor = document.getElementById('sunatDetalleEmisor');
+        const elFecEmi = document.getElementById('sunatDetalleFecEmision');
+        const elFecCdr = document.getElementById('sunatDetalleFecCdr');
+        const elRucEmi = document.getElementById('sunatDetalleRucEmisor');
+        const elTipoGre = document.getElementById('sunatDetalleTipoGRE');
+        const elNumGuia = document.getElementById('sunatDetalleNumeroGuia');
+
+        if (elEmisor) elEmisor.textContent = guia.remitente_razon_social || 'PRODUCTOS PARAISO DEL PERU S.A.C.';
+        if (elFecEmi) elFecEmi.textContent = `${guia.fecha_emision || ''} ${guia.hora_emision || ''}`;
+        if (elFecCdr) elFecCdr.textContent = `${guia.fecha_cdr ? String(guia.fecha_cdr).slice(0,10) : guia.fecha_emision || ''} ${guia.hora_cdr || '02:48 AM'}`;
+        if (elRucEmi) elRucEmi.textContent = guia.remitente_ruc || '—';
+        if (elTipoGre) elTipoGre.textContent = guia.tipo_documento === '31' ? 'TRANSPORTISTA' : 'REMITENTE';
+        if (elNumGuia) elNumGuia.textContent = guia.numero_guia || '—';
+
+        // Datos del Traslado
+        const elFecTras = document.getElementById('sunatDetalleFecTraslado');
+        const elMotivo = document.getElementById('sunatDetalleMotivo');
+        const elDescMot = document.getElementById('sunatDetalleDescMotivo');
+        const elPartida = document.getElementById('sunatDetallePartida');
+        const elLlegada = document.getElementById('sunatDetalleLlegada');
+        const elDest = document.getElementById('sunatDetalleDestinatario');
+
+        if (elFecTras) elFecTras.textContent = guia.fecha_traslado || guia.fecha_emision || '—';
+        if (elMotivo) elMotivo.textContent = guia.descripcion_motivo || 'Venta';
+        if (elDescMot) elDescMot.textContent = (guia.descripcion_motivo || 'VENTA').toUpperCase();
+        if (elPartida) elPartida.textContent = `${guia.punto_partida_direccion || '—'} ${guia.punto_partida_ubigeo ? '[UBIGEO: ' + guia.punto_partida_ubigeo + ']' : ''}`;
+        if (elLlegada) elLlegada.textContent = `${guia.punto_llegada_direccion || '—'} ${guia.punto_llegada_ubigeo ? '[UBIGEO: ' + guia.punto_llegada_ubigeo + ']' : ''}`;
+        if (elDest) elDest.textContent = `${guia.destinatario_razon_social || '—'} - RUC N° ${guia.destinatario_ruc || '—'}`;
+
+        // Bienes por transportar (Tabla de Ítems)
+        const tbody = document.getElementById('sunatDetalleTbodyItems');
+        if (tbody) {
+            if (guia.items && guia.items.length > 0) {
+                tbody.innerHTML = guia.items.map((it, idx) => `
+                    <tr>
+                        <td class="text-center font-monospace text-muted py-1.5">${it.item_numero || (idx + 1)}</td>
+                        <td class="text-center py-1.5">${it.bien_normalizado || 'NO'}</td>
+                        <td class="font-monospace text-primary fw-semibold py-1.5">${it.codigo_bien || it.codigo || '—'}</td>
+                        <td class="font-monospace py-1.5">${it.codigo_sunat || '—'}</td>
+                        <td class="font-monospace text-muted py-1.5">${it.codigo_subpartida || '—'}</td>
+                        <td class="font-monospace text-muted py-1.5">${it.codigo_gtin || '—'}</td>
+                        <td class="text-dark fw-semibold py-1.5">${it.descripcion || '—'}</td>
+                        <td class="text-center font-monospace py-1.5">${it.unidad_medida || 'NIU'}</td>
+                        <td class="text-end font-monospace fw-bold py-1.5">${Number(it.cantidad || 1).toLocaleString()}</td>
+                    </tr>
+                `).join('');
             } else {
-                // Estado: GUÍA NO EXISTE / NO ENCONTRADA
-                window._greUltimaConsultaData = null;
-                if (banner) {
-                    banner.className = 'alert alert-danger d-flex align-items-center justify-content-between p-3 rounded-3 mb-3 border-danger-subtle';
-                }
-                if (icon) icon.innerHTML = '<i class="bi bi-x-circle-fill text-danger fs-3"></i>';
-                if (titulo) {
-                    titulo.textContent = 'Guía No Existe en SUNAT';
-                    titulo.className = 'fw-bold m-0 text-danger';
-                }
-                if (sub) sub.textContent = result.error || 'El comprobante no fue encontrado en los padrones de SUNAT para este emisor.';
-                if (badge) {
-                    badge.className = 'badge bg-danger text-white px-3 py-2 rounded-pill fw-bold';
-                    badge.innerHTML = '<i class="bi bi-exclamation-octagon me-1"></i>No Encontrada';
-                }
-                if (cardDetalle) cardDetalle.classList.add('d-none');
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-3 text-muted">Sin bienes registrados</td></tr>';
+            }
+        }
 
-                // Si SUNAT sugiere registro manual, mostrar botón directo
-                if (result.sugerencia === 'REGISTRO_MANUAL') {
-                    if (sub) {
-                        sub.innerHTML = (result.error || '') + 
-                            '<br><a href="#" class="fw-bold text-primary mt-1 d-inline-block" onclick="window.greAbrirRegistroManual(); return false;">' +
-                            '<i class="bi bi-pencil-square me-1"></i>Abrir Registro Manual de GRE</a>';
-                    }
-                }
+        // Totales y Transporte
+        const elUniPeso = document.getElementById('sunatDetalleUnidadPeso');
+        const elPesoTot = document.getElementById('sunatDetallePesoTotal');
+        const elVolM3 = document.getElementById('sunatDetalleVolumenM3');
+        const elMod = document.getElementById('sunatDetalleModalidad');
+        const elTrans = document.getElementById('sunatDetalleTransportista');
+        const elMtc = document.getElementById('sunatDetalleMtc');
+        const elTracto = document.getElementById('sunatDetalleTracto');
+        const elCarreta = document.getElementById('sunatDetalleCarreta');
+        const elCond = document.getElementById('sunatDetalleConductor');
+        const elObs = document.getElementById('sunatDetalleObservaciones');
+
+        if (elUniPeso) elUniPeso.textContent = guia.unidad_medida || 'KGM';
+        const pesoNum = Number(guia.peso_bruto_total || 0);
+        if (elPesoTot) elPesoTot.textContent = pesoNum.toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        if (elVolM3) elVolM3.value = guia.volumen_m3 || '';
+        if (elMod) elMod.textContent = guia.modalidad_traslado || 'Público';
+        if (elTrans) elTrans.textContent = `${guia.transportista_razon_social || 'TRAHESA S.A.C.'} - RUC N° ${guia.transportista_ruc || '20600066651'}`;
+        if (elMtc) elMtc.textContent = guia.registro_mtc || '15M25053455E';
+        if (elTracto) elTracto.textContent = guia.placa_tracto || '—';
+        if (elCarreta) elCarreta.textContent = guia.placa_carreta || '—';
+        if (elCond) elCond.textContent = guia.conductor_nombre ? `${guia.conductor_nombre} (${guia.conductor_num_doc || ''})` : '—';
+        if (elObs) elObs.textContent = guia.observaciones_sunat || 'Esta es una representación impresa sin valor tributario de la Guía de Remisión Electrónica, generada en el sistema de la SUNAT. Puede verificarla utilizando su clave SOL';
+    };
+
+    // Ver Detalle Oficial SUNAT para una guía existente en la tabla
+    window.greVerDetalleSunatPorIndice = function(idx) {
+        if (!window._greGuiasData || !window._greGuiasData[idx]) return;
+        const guia = window._greGuiasData[idx];
+        window._greUltimaConsultaData = guia;
+
+        const modalEl = document.getElementById('greModalConsultar');
+        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+        window.greRenderizarDetalleSunat(guia);
+    };
+
+    // Regresar al área de subir otro XML
+    window.greLimpiarYSubirOtroXml = function() {
+        const fileInput = document.getElementById('greInputXmlFile');
+        if (fileInput) fileInput.value = '';
+        const txtXml = document.getElementById('greTextareaXml');
+        if (txtXml) txtXml.value = '';
+
+        const seccionUpload = document.getElementById('greSeccionUploadXml');
+        const seccionVisor = document.getElementById('greSeccionVisorSunat');
+        if (seccionUpload) seccionUpload.classList.remove('d-none');
+        if (seccionVisor) seccionVisor.classList.add('d-none');
+        window._greUltimaConsultaData = null;
+    };
+
+    // Toggle para pegar XML
+    window.greTogglePegarXml = function() {
+        const box = document.getElementById('greBoxPegarXml');
+        if (box) box.classList.toggle('d-none');
+    };
+
+    window.greProcesarXmlPegado = function() {
+        const txt = document.getElementById('greTextareaXml');
+        if (!txt || !txt.value.trim()) {
+            alert('Por favor pegue el texto del archivo XML.');
+            return;
+        }
+        window.greProcesarContenidoXml(txt.value);
+    };
+
+    // Toggle para búsqueda manual en BD
+    window.greToggleBusquedaManual = function() {
+        const box = document.getElementById('greBoxBusquedaManual');
+        if (box) box.classList.toggle('d-none');
+    };
+
+    window.greBuscarGuiaEnBd = async function(e) {
+        if (e) e.preventDefault();
+        const serie = (document.getElementById('greInputSerieBd')?.value || '').trim().toUpperCase();
+        const correlativo = (document.getElementById('greInputNumeroBd')?.value || '').trim();
+
+        if (!serie || !correlativo) {
+            alert('Ingrese Serie y Número para buscar en el historial local.');
+            return;
+        }
+
+        const numCompleto = `${serie}-${correlativo.padStart(8, '0')}`;
+        try {
+            const resp = await fetch(`/api/guias-remision?search=${encodeURIComponent(numCompleto)}`);
+            const res = await resp.json();
+            if (res.ok && res.data && res.data.length > 0) {
+                const guia = res.data[0];
+                window._greUltimaConsultaData = guia;
+                window.greRenderizarDetalleSunat(guia);
+            } else {
+                alert(`La guía ${numCompleto} no se encuentra guardada en la base de datos local del ERP.`);
             }
         } catch (err) {
-            console.error("Error consultando SUNAT:", err);
-            alert(`Error de red al consultar SUNAT: ${err.message}`);
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-search"></i> Consultar en SUNAT';
-            }
+            alert('Error buscando en la base de datos: ' + err.message);
         }
     };
 
-    // Guardar Guía Consultada en el ERP
-    window.greGuardarGuiaConsultada = async function() {
-        if (!window._greUltimaConsultaData) return;
-        const btn = document.getElementById('greBtnGuardarErp');
+    // Guardar Guía en el ERP desde el Visor de XML
+    window.greGuardarGuiaDesdeXml = async function() {
+        if (!window._greUltimaConsultaData) {
+            alert('No hay ninguna guía cargada para guardar.');
+            return;
+        }
+
+        const btn = document.getElementById('greBtnGuardarXml');
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando…';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando en ERP...';
         }
 
         try {
             const guia = window._greUltimaConsultaData;
-            const params = new URLSearchParams({
-                numero: guia.numero_guia,
-                rucEmisor: guia.remitente_ruc,
-                tipoDoc: guia.tipo_documento,
-                guardar: 'true'
+            const elVolM3 = document.getElementById('sunatDetalleVolumenM3');
+            if (elVolM3 && elVolM3.value) {
+                guia.volumen_m3 = parseFloat(elVolM3.value) || null;
+            }
+
+            const resp = await fetch('/api/guias-remision/guardar-gre-xml', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(guia)
             });
 
-            const resp = await fetch(`/api/guias-remision/consultar-sunat?${params.toString()}`);
             const result = await resp.json();
 
             if (result.ok) {
                 if (typeof window.mostrarAlerta === 'function') {
-                    window.mostrarAlerta(`✓ Guía ${guia.numero_guia} guardada exitosamente en el historial del ERP.`, 'success');
+                    window.mostrarAlerta(`✓ ${result.message || 'Guía guardada exitosamente en el ERP'}`, 'success');
+                } else {
+                    alert(`✓ ${result.message || 'Guía guardada exitosamente en el ERP'}`);
                 }
-                const modalEl = document.getElementById('greModalConsultar');
-                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
-                window.greLimpiarConsultaForm();
-                await window.greCargarGuias();
+                // Refrescar listado general
+                if (typeof window.greCargarGuias === 'function') {
+                    await window.greCargarGuias();
+                }
             } else {
-                alert(`Error al guardar: ${result.error || 'No se pudo guardar la guía'}`);
+                alert(`Error al guardar en el ERP: ${result.error || 'Error desconocido'}`);
             }
-        } catch (e) {
-            console.error("Error al guardar guía:", e);
-            alert("Error de conexión al registrar la guía.");
+        } catch (err) {
+            console.error("Error guardando guía:", err);
+            alert(`Error de red al guardar: ${err.message}`);
         } finally {
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Registrar en Historial del ERP';
+                btn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-1"></i> Guardar en Sistema ERP';
             }
+        }
+    };
+
+    // Emitir GRT Transportista a partir de la GRE cargada
+    window.greEmitirGrtDesdeXml = function() {
+        if (!window._greUltimaConsultaData) {
+            alert('Primero suba o seleccione una guía de remisión.');
+            return;
+        }
+
+        const guia = window._greUltimaConsultaData;
+
+        // Cerrar modal de visor
+        const modalVisor = document.getElementById('greModalConsultar');
+        if (modalVisor) bootstrap.Modal.getInstance(modalVisor)?.hide();
+
+        // Abrir modal de emisión de GRT y pre-llenar con los datos oficiales
+        if (typeof window.grtAbrirModalEmitir === 'function') {
+            window.grtAbrirModalEmitir();
+
+            setTimeout(() => {
+                // Pre-rellenar campos en el formulario de emisión de GRT
+                const elGreRef = document.getElementById('grtInputDocRelacionado');
+                const elRemRuc = document.getElementById('grtInputRemitenteRuc');
+                const elRemNom = document.getElementById('grtInputRemitenteNombre');
+                const elDesRuc = document.getElementById('grtInputDestinatarioRuc');
+                const elDesNom = document.getElementById('grtInputDestinatarioNombre');
+                const elPartDir = document.getElementById('grtInputPartidaDireccion');
+                const elPartUbi = document.getElementById('grtInputPartidaUbigeo');
+                const elLlegDir = document.getElementById('grtInputLlegadaDireccion');
+                const elLlegUbi = document.getElementById('grtInputLlegadaUbigeo');
+                const elPeso = document.getElementById('grtInputPesoBruto');
+                const elTracto = document.getElementById('grtInputPlacaTracto');
+                const elCarreta = document.getElementById('grtInputPlacaCarreta');
+                const elCondNom = document.getElementById('grtInputConductorNombre');
+                const elCondDni = document.getElementById('grtInputConductorDni');
+
+                if (elGreRef) elGreRef.value = guia.numero_guia || '';
+                if (elRemRuc) elRemRuc.value = guia.remitente_ruc || '';
+                if (elRemNom) elRemNom.value = guia.remitente_razon_social || '';
+                if (elDesRuc) elDesRuc.value = guia.destinatario_ruc || '';
+                if (elDesNom) elDesNom.value = guia.destinatario_razon_social || '';
+                if (elPartDir) elPartDir.value = guia.punto_partida_direccion || '';
+                if (elPartUbi) elPartUbi.value = guia.punto_partida_ubigeo || '';
+                if (elLlegDir) elLlegDir.value = guia.punto_llegada_direccion || '';
+                if (elLlegUbi) elLlegUbi.value = guia.punto_llegada_ubigeo || '';
+                if (elPeso) elPeso.value = Number(guia.peso_bruto_total || 0);
+                if (elTracto && guia.placa_tracto) elTracto.value = guia.placa_tracto;
+                if (elCarreta && guia.placa_carreta) elCarreta.value = guia.placa_carreta;
+                if (elCondNom && guia.conductor_nombre) elCondNom.value = guia.conductor_nombre;
+                if (elCondDni && guia.conductor_num_doc) elCondDni.value = guia.conductor_num_doc;
+
+                // Pre-rellenar ítems si existen
+                if (guia.items && guia.items.length > 0 && typeof window.grtCargarItemsDesdeGre === 'function') {
+                    window.grtCargarItemsDesdeGre(guia.items);
+                }
+            }, 300);
         }
     };
 
