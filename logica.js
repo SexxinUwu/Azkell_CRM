@@ -440,13 +440,10 @@ window.verificarSesionGuardada = function() {
 
     // TESORERÍA
     var vTesoCaja = _cL('tesoreria_caja');
-    var vTesoFlujo = _cL('tesoreria_flujo');
     var vTesoCuentas = _cL('tesoreria_cuentas');
-    var showTeso = vTesoCaja || vTesoFlujo || vTesoCuentas;
+    var showTeso = vTesoCaja || vTesoCuentas;
     safe('nav-tesoreria-caja', vTesoCaja);
     safe('mbnav-tesoreria-caja', vTesoCaja);
-    safe('nav-tesoreria-flujo', vTesoFlujo);
-    safe('mbnav-tesoreria-flujo', vTesoFlujo);
     safe('nav-tesoreria-cuentas', vTesoCuentas);
     safe('mbnav-tesoreria-cuentas', vTesoCuentas);
     safe('wrap-tesoreria', showTeso);
@@ -633,8 +630,8 @@ window.verificarSesionGuardada = function() {
             'rrhh/personal': 'rrhh_personal',
             'rrhh/asistencia': 'rrhh_asistencia',
             'rrhh/nomina': 'rrhh_nomina',
+            'tesoreria/caja': 'tesoreria_caja',
             'tesoreria/caja-chica': 'tesoreria_caja',
-            'tesoreria/flujo-caja': 'tesoreria_flujo',
             'tesoreria/cuentas': 'tesoreria_cuentas',
             'seguridad/unidades': 'seguridad_unidades',
             'seguridad/entrega-vehiculos': 'seguridad_unidades',
@@ -699,7 +696,8 @@ window.verificarSesionGuardada = function() {
             'directorio/conductores',
             'operaciones/rutas',
             'rrhh/personal',
-            'tesoreria/caja-chica'
+            'tesoreria/caja',
+            'tesoreria/cuentas'
         ];
         for (var i = 0; i < posibles.length; i++) {
             if (window.esRutaValidaYPermitida(posibles[i])) return posibles[i];
@@ -3694,6 +3692,9 @@ const TITULOS_MODULOS = {
     'operaciones/reporte-viajes':       'Reporte de Viajes',
     'operaciones/marsisa-ordenes-viaje': 'Órdenes de Viaje (Marsisa)',
     'operaciones/marsisa-combustible-vales': 'Vales de Combustible (Marsisa)',
+    'tesoreria/caja':                   'Caja',
+    'tesoreria/caja-chica':             'Caja',
+    'tesoreria/cuentas':                'Cuentas por Cobrar y Pagar',
 };
 
 const MENU_IDS = {
@@ -3755,6 +3756,9 @@ const MENU_IDS = {
     'gerencia/aprobaciones-oc':    'nav-gerencia-aprobaciones-oc',
     'seguridad/unidades':          'nav-seg-unidades',
     'seguridad/unidades-base':     'nav-seg-unidades-base',
+    'tesoreria/caja':              'nav-tesoreria-caja',
+    'tesoreria/caja-chica':        'nav-tesoreria-caja',
+    'tesoreria/cuentas':           'nav-tesoreria-cuentas',
 };
 
 const MENU_SECTION = {
@@ -3811,10 +3815,16 @@ const MENU_SECTION = {
     'operaciones/marsisa-ordenes-viaje': 'operaciones-marsisa',
     'operaciones/guias-remision':  'operaciones-marsisa',
     'operaciones/marsisa-combustible-vales': 'operaciones-marsisa',
+    'tesoreria/caja':              'tesoreria',
+    'tesoreria/caja-chica':        'tesoreria',
+    'tesoreria/cuentas':           'tesoreria',
 };
 
 const BREADCRUMB_MAP = {
     'dashboard':                  [],
+    'tesoreria/caja':             ['Tesorería','Caja'],
+    'tesoreria/caja-chica':       ['Tesorería','Caja'],
+    'tesoreria/cuentas':          ['Tesorería','Cuentas por Cobrar/Pagar'],
     'operaciones/programacion':    ['Operaciones','Programación'],
     'operaciones/ordenes-viaje':   ['Operaciones','Órdenes de Viaje'],
     'operaciones/reporte-viajes':  ['Operaciones','Reporte de Viajes'],
@@ -3912,6 +3922,14 @@ function marcarMenuActivo(ruta) {
     if (ruta === 'operaciones/guias-remision') {
         const modo = window._greModoActivo || sessionStorage.getItem('gre_modo_activo') || 'GRE';
         idActivo = (modo === 'GRT') ? 'nav-op-guias-transportista' : 'nav-op-guias-remitente';
+        
+        // Auto-expandir submenú de Guías de Remisión en el sidebar
+        const subGuias = document.getElementById('submenu-guias-remision');
+        const chevGuias = document.getElementById('chev-guias-remision');
+        if (subGuias) {
+            subGuias.classList.remove('d-none');
+            if (chevGuias) chevGuias.style.transform = 'rotate(180deg)';
+        }
     }
 
     if (idActivo) {

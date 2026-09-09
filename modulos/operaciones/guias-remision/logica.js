@@ -90,6 +90,12 @@
         const badgeEl = document.getElementById('greBadgeSubtipo');
         const iconEl = document.getElementById('greHeaderIcon');
         const iconWrap = document.getElementById('greHeaderIconWrap');
+        const tituloTablaCard = document.getElementById('greTituloTablaCard');
+
+        // Botones de acción contextuales en el header
+        const btnEmitirGrt = document.getElementById('greBtnEmitirGrt');
+        const btnSubirXml = document.getElementById('greBtnSubirXmlSunat');
+        const btnCargaLote = document.getElementById('greBtnCargaLote');
 
         if (isGRT) {
             if (tituloEl) tituloEl.textContent = 'Guía de Remisión de Transportista (GRT)';
@@ -103,6 +109,13 @@
                 iconWrap.style.background = 'rgba(245, 158, 11, 0.15)';
                 iconWrap.style.color = '#d97706';
             }
+            if (tituloTablaCard) tituloTablaCard.textContent = 'Historial de Guías de Remisión de Transportista (GRT)';
+
+            // En GRT NO deben salir las opciones de XML ni Carga masiva de GRE
+            if (btnEmitirGrt) btnEmitirGrt.style.display = 'inline-flex';
+            if (btnSubirXml) btnSubirXml.style.display = 'none';
+            if (btnCargaLote) btnCargaLote.style.display = 'none';
+
             window._greTipoFiltro = '31';
         } else {
             if (tituloEl) tituloEl.textContent = 'Guía de Remisión Electrónica (GRE)';
@@ -116,37 +129,19 @@
                 iconWrap.style.background = 'rgba(14, 165, 233, 0.12)';
                 iconWrap.style.color = '#0284c7';
             }
+            if (tituloTablaCard) tituloTablaCard.textContent = 'Historial de Guías de Remisión Electrónica (GRE)';
+
+            // En GRE mostramos Subir XML y Carga Masiva; ocultamos Emitir GRT del encabezado
+            if (btnEmitirGrt) btnEmitirGrt.style.display = 'none';
+            if (btnSubirXml) btnSubirXml.style.display = 'inline-flex';
+            if (btnCargaLote) btnCargaLote.style.display = 'inline-flex';
+
             window._greTipoFiltro = '09';
         }
-
-        // Sincronizar segmented tabs de la barra de filtros
-        document.getElementById('gre-tab-todas')?.classList.remove('active');
-        document.getElementById('gre-tab-remitente')?.classList.toggle('active', !isGRT);
-        document.getElementById('gre-tab-transportista')?.classList.toggle('active', isGRT);
 
         if (recargar) {
             window.greCargarGuias();
         }
-    };
-
-    // Filtrar por Segmento (Todas, Remitente 09, Transportista 31)
-    window.greFiltrarTipo = function(tipo) {
-        window._greTipoFiltro = tipo || 'TODAS';
-
-        document.getElementById('gre-tab-todas')?.classList.toggle('active', window._greTipoFiltro === 'TODAS');
-        document.getElementById('gre-tab-remitente')?.classList.toggle('active', window._greTipoFiltro === '09');
-        document.getElementById('gre-tab-transportista')?.classList.toggle('active', window._greTipoFiltro === '31');
-
-        // Si el usuario cambia manualmente el filtro de segmento, actualizamos el modo visual
-        if (tipo === '09') {
-            window._greModoActivo = 'GRE';
-            window.greCambiarModoVista('GRE', false);
-        } else if (tipo === '31') {
-            window._greModoActivo = 'GRT';
-            window.greCambiarModoVista('GRT', false);
-        }
-
-        window.greCargarGuias();
     };
 
     // Limpiar todos los filtros
@@ -165,7 +160,8 @@
         if (fDesde) fDesde.value = formatYMD(primerDia);
         if (fHasta) fHasta.value = formatYMD(hoy);
 
-        window.greFiltrarTipo('TODAS');
+        window._greTipoFiltro = (window._greModoActivo === 'GRT') ? '31' : '09';
+        window.greCargarGuias();
     };
 
     // 1. Cargar Guías desde el Backend
@@ -478,71 +474,125 @@
         const modalidadCode = getVal('TransportModeCode', stageBloque);
         const modalidad_traslado = modalidadCode === '02' ? 'Privado' : 'Público';
 
-        // Vehículos si vienen en cualquier parte del XML
+        // Limpiar comentarios XML y CDATA redundantes para análisis seguro
+        const cleanXml = xmlStr.replace(/<!--[\s\S]*?-->/g, '');
+
+        // 🚗 VEHÍCULOS (RoadTransport, TransportMeans, AttachedTransportMeans, TransportEquipment)
         let placa_tracto = '';
         let placa_carreta = '';
+        let tuce = '';
+        let autorizacion_mtc = '';
 
-        const plateMatches = [...xmlStr.matchAll(/<(?:\w+:)?LicensePlateID[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:\w+:)?LicensePlateID>/gi)]
-            .map(m => m[1].trim())
-            .filter(p => p.length >= 4 && p.length <= 12);
-
-        if (plateMatches.length > 0) {
-            placa_tracto = plateMatches[0];
-            if (plateMatches.length > 1) {
-                placa_carreta = plateMatches[1];
-            }
+        // Buscar bloques explícitos RoadTransport o TransportMeans (Vehículo Principal)
+        const mRoad = cleanXml.match(/<(?:\w+:)?RoadTransport[\s\S]*?<\/(?:\w+:)?RoadTransport>/i)
+            || cleanXml.match(/<(?:\w+:)?TransportMeans[\s\S]*?<\/(?:\w+:)?TransportMeans>/i);
+        if (mRoad) {
+            placa_tracto = getVal('LicensePlateID', mRoad[0]) || getVal('ID', mRoad[0]);
         }
 
+        // Buscar bloques AttachedTransportMeans o TransportEquipment (Vehículo Secundario / Carreta)
+        const mEquip = cleanXml.match(/<(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)[\s\S]*?<\/(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)>/i);
+        if (mEquip) {
+            const val = getVal('LicensePlateID', mEquip[0]) || getVal('ID', mEquip[0]);
+            if (val) placa_carreta = val;
+        }
+
+        // Si no se asignó placa principal pero hay LicensePlateID en el XML
         if (!placa_tracto) {
-            const mRoad = xmlStr.match(/<(?:\w+:)?RoadTransport[\s\S]*?<\/(?:\w+:)?RoadTransport>/i)
-                || xmlStr.match(/<(?:\w+:)?TransportMeans[\s\S]*?<\/(?:\w+:)?TransportMeans>/i);
-            if (mRoad) {
-                placa_tracto = getVal('LicensePlateID', mRoad[0]) || getVal('ID', mRoad[0]);
-            }
-        }
+            const plateMatches = [...cleanXml.matchAll(/<(?:\w+:)?LicensePlateID[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:\w+:)?LicensePlateID>/gi)]
+                .map(m => m[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim().toUpperCase())
+                .filter(p => p.length >= 4 && p.length <= 12 && !p.includes('<'));
 
-        if (!placa_carreta) {
-            const mEquip = xmlStr.match(/<(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)[\s\S]*?<\/(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)>/i);
-            if (mEquip) {
-                const val = getVal('LicensePlateID', mEquip[0]) || getVal('ID', mEquip[0]);
-                if (val && val !== placa_tracto) {
-                    placa_carreta = val;
+            if (plateMatches.length > 0) {
+                placa_tracto = plateMatches[0];
+                if (plateMatches.length > 1 && !placa_carreta) {
+                    placa_carreta = plateMatches[1];
                 }
             }
         }
 
-        const mDriver = xmlStr.match(/<(?:\w+:)?DriverPerson[\s\S]*?<\/(?:\w+:)?DriverPerson>/i);
-        const driverBloque = mDriver ? mDriver[0] : '';
-        const conductor_num_doc = getVal('ID', driverBloque);
-        
-        let firstName = getVal('FirstName', driverBloque) || '';
-        let familyName = getVal('FamilyName', driverBloque) || '';
-        let conductor_nombre = '';
-        if (firstName && familyName) {
-            const fNorm = firstName.trim().toLowerCase();
-            const famNorm = familyName.trim().toLowerCase();
-            if (fNorm === famNorm || fNorm.includes(famNorm)) {
-                conductor_nombre = firstName.trim();
-            } else if (famNorm.includes(fNorm)) {
-                conductor_nombre = familyName.trim();
-            } else {
-                conductor_nombre = `${firstName.trim()} ${familyName.trim()}`;
-            }
-        } else {
-            conductor_nombre = (firstName || familyName || getVal('Name', driverBloque) || '').trim();
+        // Si la placa secundaria quedó igual a la principal, se limpia
+        if (placa_carreta === placa_tracto) {
+            placa_carreta = '';
         }
 
-        const mLic = driverBloque.match(/<(?:\w+:)?IdentityDocumentReference[\s\S]*?<\/(?:\w+:)?IdentityDocumentReference>/i);
-        const conductor_licencia = mLic ? getVal('ID', mLic[0]) : '';
+        // TUCE o Certificado de Habilitación Vehicular
+        const mTuce = cleanXml.match(/<(?:\w+:)?(?:ApplicableTransportMeans|RoadTransport|ShipmentStage)[\s\S]*?<(?:\w+:)?(?:CertificateID|RegistrationID|LicenseNumberID)[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:\w+:)?(?:CertificateID|RegistrationID|LicenseNumberID)>/i)
+            || cleanXml.match(/15M\w+/i);
+        if (mTuce) {
+            tuce = (mTuce[1] || mTuce[0]).replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        }
+
+        // Autorización Especial MTC
+        const mMtcAut = cleanXml.match(/<(?:\w+:)?(?:SpecialAuthorizationID|AuthorizationID)[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:\w+:)?(?:SpecialAuthorizationID|AuthorizationID)>/i)
+            || cleanXml.match(/1520\d+/i);
+        if (mMtcAut) {
+            autorizacion_mtc = (mMtcAut[1] || mMtcAut[0]).replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        }
+
+        // 👤 CONDUCTORES (DriverPerson)
+        const mDriver = cleanXml.match(/<(?:\w+:)?DriverPerson[\s\S]*?<\/(?:\w+:)?DriverPerson>/i);
+        const driverBloque = mDriver ? mDriver[0] : '';
+        
+        let conductor_num_doc = getVal('ID', driverBloque).replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        // Si no viene en DriverPerson buscar por DNI de 8 dígitos
+        if (!conductor_num_doc || conductor_num_doc.length < 8) {
+            const mDni = cleanXml.match(/<(?:\w+:)?ID[^>]*schemeID=["']1["'][^>]*>(?:<!\[CDATA\[)?(\d{8})(?:\]\]>)?<\//i)
+                || cleanXml.match(/\b(7\d{7}|4\d{7}|0\d{7}|1\d{7}|2\d{7})\b/);
+            if (mDni) conductor_num_doc = (mDni[1] || mDni[0]).trim();
+        }
+        
+        let firstName = getVal('FirstName', driverBloque).replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        let familyName = getVal('FamilyName', driverBloque).replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        let conductor_nombre = '';
+        if (firstName && familyName) {
+            const fNorm = firstName.toLowerCase();
+            const famNorm = familyName.toLowerCase();
+            if (fNorm === famNorm || fNorm.includes(famNorm)) {
+                conductor_nombre = firstName;
+            } else if (famNorm.includes(fNorm)) {
+                conductor_nombre = familyName;
+            } else {
+                conductor_nombre = `${firstName} ${familyName}`;
+            }
+        } else {
+            conductor_nombre = (firstName || familyName || getVal('Name', driverBloque) || '').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        }
+
+        // Limpiar duplicaciones de palabras idénticas en el nombre completo (ej: "HUAMANI QUISPE ORLANDO HUAMANI QUISPE ORLANDO")
+        if (conductor_nombre) {
+            const words = conductor_nombre.split(/\s+/).filter(Boolean);
+            const half = Math.floor(words.length / 2);
+            if (half >= 2 && words.slice(0, half).join(' ') === words.slice(half).join(' ')) {
+                conductor_nombre = words.slice(0, half).join(' ');
+            }
+        }
+
+        // Licencia de Conducir (IdentityDocumentReference o ID dentro de DriverPerson)
+        let conductor_licencia = '';
+        const mLicBlock = driverBloque.match(/<(?:\w+:)?IdentityDocumentReference[\s\S]*?<\/(?:\w+:)?IdentityDocumentReference>/i);
+        if (mLicBlock) {
+            conductor_licencia = getVal('ID', mLicBlock[0]).replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        }
+        if (!conductor_licencia) {
+            // Regex directo para capturar licencias peruanas estándar (ej: Q73815086, Z73815086)
+            const mLicMatch = cleanXml.match(/<(?:\w+:)?ID[^>]*>(?:<!\[CDATA\[)?([A-Z]\d{8})(?:\]\]>)?<\/(?:\w+:)?ID>/i)
+                || cleanXml.match(/\b([A-Z]\d{8})\b/i);
+            if (mLicMatch) {
+                conductor_licencia = mLicMatch[1].trim().toUpperCase();
+            }
+        }
+        // Limpiar cualquier residuo de etiqueta o CDATA
+        conductor_licencia = conductor_licencia.replace(/<[^>]*>|<!\[CDATA\[|\]\]>/g, '').trim();
 
         // Observaciones / Note
-        const observaciones = getVal('Note', xmlStr);
+        const observaciones = getVal('Note', cleanXml);
 
         // Ítems de la Guía
         const itemRegex = /<(?:\w+:)?DespatchLine[\s\S]*?<\/(?:\w+:)?DespatchLine>/gi;
         const items = [];
         let match;
-        while ((match = itemRegex.exec(xmlStr)) !== null) {
+        while ((match = itemRegex.exec(cleanXml)) !== null) {
             const itStr = match[0];
             const num = parseInt(getVal('ID', itStr), 10) || (items.length + 1);
             const cant = parseFloat(getVal('DeliveredQuantity', itStr) || 1);
@@ -598,6 +648,8 @@
             punto_llegada_direccion,
             placa_tracto,
             placa_carreta,
+            tuce,
+            autorizacion_mtc,
             conductor_nombre,
             conductor_num_doc,
             conductor_licencia,
@@ -793,6 +845,7 @@
         }
         if (elMtc) elMtc.textContent = guia.registro_mtc || '—';
 
+        // Renderizar Vehículo Principal (Tracto)
         if (elTracto) {
             if (tieneVehiculo) {
                 elTracto.textContent = guia.placa_tracto;
@@ -805,22 +858,48 @@
             }
         }
 
+        // TUCE / Certificado de Habilitación Vehicular
+        const elTuce = document.getElementById('sunatDetalleTuce');
+        const elTuceWrap = document.getElementById('sunatDetalleTuceWrap');
+        if (elTuce && elTuceWrap) {
+            if (guia.tuce) {
+                elTuce.textContent = guia.tuce;
+                elTuceWrap.classList.remove('d-none');
+            } else {
+                elTuceWrap.classList.add('d-none');
+            }
+        }
+
+        // Autorización Especial MTC
+        const elMtcAut = document.getElementById('sunatDetalleMtcAut');
+        const elMtcAutWrap = document.getElementById('sunatDetalleMtcAutWrap');
+        if (elMtcAut && elMtcAutWrap) {
+            if (guia.autorizacion_mtc) {
+                elMtcAut.textContent = guia.autorizacion_mtc;
+                elMtcAutWrap.classList.remove('d-none');
+            } else {
+                elMtcAutWrap.classList.add('d-none');
+            }
+        }
+
+        // Vehículo Secundario (Carreta / Semirremolque)
+        const elCarretaRow = document.getElementById('sunatDetalleCarretaRow');
         if (elCarreta) {
             if (tieneCarreta) {
                 elCarreta.textContent = guia.placa_carreta;
                 elCarreta.className = "font-monospace fw-bold text-dark";
-            } else if (esPublico) {
-                elCarreta.textContent = "— (Se asigna en GRT)";
-                elCarreta.className = "font-monospace text-muted";
+                if (elCarretaRow) elCarretaRow.classList.remove('d-none');
             } else {
-                elCarreta.textContent = "—";
+                if (elCarretaRow) elCarretaRow.classList.add('d-none');
             }
         }
 
+        // Conductor Principal
         if (elCond) {
             if (tieneConductor) {
                 const docPart = guia.conductor_num_doc ? ` - DNI N° ${guia.conductor_num_doc}` : '';
-                const licPart = guia.conductor_licencia ? ` | Licencia: ${guia.conductor_licencia}` : '';
+                const licLimpia = (guia.conductor_licencia || '').replace(/<[^>]*>|<!\[CDATA\[|\]\]>/g, '').trim();
+                const licPart = licLimpia ? ` | Número de licencia de conducir: ${licLimpia}` : '';
                 elCond.textContent = `${guia.conductor_nombre}${docPart}${licPart}`;
                 elCond.className = "fw-semibold text-dark";
             } else if (esPublico) {

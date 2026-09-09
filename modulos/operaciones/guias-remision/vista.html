@@ -238,13 +238,13 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button class="btn btn-warning btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-dark" onclick="window.grtAbrirModalEmitir()">
+            <button id="greBtnEmitirGrt" class="btn btn-warning btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-dark" onclick="window.grtAbrirModalEmitir()">
                 <i class="bi bi-send-plus-fill"></i> Emitir GRT Transportista
             </button>
-            <button class="btn btn-primary btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-white" onclick="window.greAbrirModalConsultarSunat()">
+            <button id="greBtnSubirXmlSunat" class="btn btn-primary btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-white" onclick="window.greAbrirModalConsultarSunat()">
                 <i class="bi bi-file-earmark-arrow-up-fill"></i> Subir XML de SUNAT (GRE)
             </button>
-            <button class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.greAbrirModalCargaLote()">
+            <button id="greBtnCargaLote" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.greAbrirModalCargaLote()">
                 <i class="bi bi-layers-fill"></i> Carga Masiva (Lote)
             </button>
             <button onclick="window.greExportarExcel()" class="btn btn-success btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-white">
@@ -258,19 +258,19 @@
         <div class="gre-kpi-card">
             <div>
                 <div class="gre-kpi-lbl">Total Guías</div>
-                <div class="gre-kpi-val" id="gre-kpi-total-guias">0</div>
+                <div class="gre-kpi-val text-primary" id="gre-kpi-total-guias">0</div>
                 <div class="gre-kpi-sub" id="gre-kpi-guias-sub">Registradas en el sistema</div>
             </div>
-            <div class="gre-kpi-icon" style="background:#eff6ff; color:#2563eb;">
-                <i class="bi bi-receipt-cutoff"></i>
+            <div class="gre-kpi-icon" style="background:#f0f9ff; color:#0284c7;">
+                <i class="bi bi-journal-text"></i>
             </div>
         </div>
 
         <div class="gre-kpi-card">
             <div>
                 <div class="gre-kpi-lbl">Peso Total Carga</div>
-                <div class="gre-kpi-val text-primary" id="gre-kpi-peso-total">0.00 TN</div>
-                <div class="gre-kpi-sub" id="gre-kpi-peso-sub">0.00 KGM acumulados</div>
+                <div class="gre-kpi-val text-primary" id="gre-kpi-peso-total">0 TN</div>
+                <div class="gre-kpi-sub" id="gre-kpi-peso-sub">0 KGM acumulados</div>
             </div>
             <div class="gre-kpi-icon" style="background:#eff6ff; color:#2563eb;">
                 <i class="bi bi-box-seam-fill"></i>
@@ -303,23 +303,8 @@
     <!-- Panel de Filtros Moderno (Estilo Órdenes de Viaje con Rango Pastel) -->
     <div class="gre-filters-bar">
         <div class="row g-2 align-items-center">
-            <!-- Selector Segmented Tipo Guía -->
-            <div class="col-12 col-md-auto">
-                <div class="gre-apple-segmented">
-                    <button type="button" class="gre-segment-item active" id="gre-tab-todas" onclick="window.greFiltrarTipo('TODAS')">
-                        <i class="bi bi-collection"></i> Todas
-                    </button>
-                    <button type="button" class="gre-segment-item" id="gre-tab-remitente" onclick="window.greFiltrarTipo('09')">
-                        <i class="bi bi-box-seam"></i> Remitente (09)
-                    </button>
-                    <button type="button" class="gre-segment-item" id="gre-tab-transportista" onclick="window.greFiltrarTipo('31')">
-                        <i class="bi bi-truck"></i> Transportista (31)
-                    </button>
-                </div>
-            </div>
-
             <!-- Placa Tracto Input -->
-            <div class="col-6 col-md-2">
+            <div class="col-6 col-md-3">
                 <div class="position-relative">
                     <i class="bi bi-truck position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" style="font-size:0.78rem;"></i>
                     <input type="text" id="gre-filter-placa" class="form-control form-control-sm ps-4 text-uppercase fw-semibold border-secondary-subtle" placeholder="PLACA (EJ: BEQ886)" oninput="window.greCargarGuias()" style="border-radius:8px; height:33px; font-size:0.76rem;">
@@ -360,7 +345,7 @@
         <div class="gre-table-header p-2.5 px-3 bg-white border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-table text-primary fs-5"></i>
-                <h6 class="fw-bold text-dark m-0">Historial de Guías de Remisión SUNAT</h6>
+                <h6 id="greTituloTablaCard" class="fw-bold text-dark m-0">Historial de Guías de Remisión SUNAT</h6>
             </div>
             <span id="gre-counter-badge" class="badge bg-secondary bg-opacity-10 text-dark border px-3 py-1.5 rounded-pill fw-bold" style="font-size:0.75rem;">
                 Mostrando 0 guías
@@ -606,16 +591,27 @@
                                 </div>
 
                                 <div class="p-2.5 rounded-2 mt-2" style="background: #f8fafc; border: 1px solid #e2e8f0;">
-                                    <div class="d-flex align-items-center justify-content-between mb-1">
-                                        <span class="small text-muted fw-bold">Unidades y Conductor asignados:</span>
+                                    <div class="d-flex align-items-center justify-content-between mb-1.5 pb-1 border-bottom">
+                                        <span class="small text-dark fw-bold text-uppercase" style="font-size: 0.72rem;">Datos de los vehículos</span>
                                         <span id="sunatDetalleBadgeAsignacion" class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-0.5" style="font-size: 0.68rem;">Asignación</span>
                                     </div>
-                                    <div class="small text-dark">
-                                        <i class="bi bi-truck me-1 text-secondary"></i>Tracto: <span id="sunatDetalleTracto" class="font-monospace fw-bold">—</span> |
-                                        Carreta: <span id="sunatDetalleCarreta" class="font-monospace fw-bold">—</span>
+                                    <div class="small text-dark mb-1">
+                                        <span class="text-muted fw-bold">Principal:</span> 
+                                        Placa <span id="sunatDetalleTracto" class="font-monospace fw-bold text-dark">—</span>
+                                        <span id="sunatDetalleTuceWrap" class="ms-2 d-none"><span class="text-muted">| TUCE:</span> <span id="sunatDetalleTuce" class="font-monospace text-dark">—</span></span>
+                                        <span id="sunatDetalleMtcAutWrap" class="ms-2 d-none"><span class="text-muted">| Aut. Especial MTC:</span> <span id="sunatDetalleMtcAut" class="font-monospace text-dark">—</span></span>
                                     </div>
-                                    <div class="small text-dark mt-1">
-                                        <i class="bi bi-person-badge me-1 text-secondary"></i>Conductor: <span id="sunatDetalleConductor" class="fw-semibold">—</span>
+                                    <div class="small text-dark mb-2" id="sunatDetalleCarretaRow">
+                                        <span class="text-muted fw-bold">Secundario (Carreta / Semirremolque):</span> 
+                                        Placa <span id="sunatDetalleCarreta" class="font-monospace fw-bold text-dark">—</span>
+                                    </div>
+
+                                    <div class="d-flex align-items-center justify-content-between mt-2 pt-1.5 border-top mb-1">
+                                        <span class="small text-dark fw-bold text-uppercase" style="font-size: 0.72rem;">Datos de los conductores</span>
+                                    </div>
+                                    <div class="small text-dark">
+                                        <span class="text-muted fw-bold">Principal:</span> 
+                                        <span id="sunatDetalleConductor" class="fw-semibold text-dark">—</span>
                                     </div>
                                 </div>
 

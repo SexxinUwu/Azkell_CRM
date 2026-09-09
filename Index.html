@@ -82,14 +82,30 @@
                             <i class="bi bi-diagram-3-fill nav-icon"></i>
                             <span class="link-text">Órdenes de Viaje</span>
                         </a>
-                        <a id="nav-op-guias-remitente" class="nav-item" onclick="window.navegarGuiasModo('GRE')">
-                            <i class="bi bi-file-earmark-arrow-up-fill nav-icon text-info"></i>
-                            <span class="link-text">Guía de Remisión Electrónica</span>
+                        <a id="nav-op-ordenes-servicio" class="nav-item" onclick="cargarModuloAislado('operaciones/ordenes-viaje')">
+                            <i class="bi bi-briefcase-fill nav-icon text-primary"></i>
+                            <span class="link-text">Órdenes de Servicio</span>
                         </a>
-                        <a id="nav-op-guias-transportista" class="nav-item" onclick="window.navegarGuiasModo('GRT')">
-                            <i class="bi bi-truck-flatbed nav-icon text-warning"></i>
-                            <span class="link-text">Guía de Remisión de Transportista</span>
-                        </a>
+                        <!-- Submenú desplegable Guías de Remisión -->
+                        <div class="nav-submenu-group">
+                            <a id="nav-guias-remision-toggle" class="nav-item d-flex align-items-center justify-content-between" onclick="var el=document.getElementById('submenu-guias-remision'); var chev=document.getElementById('chev-guias-remision'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-file-earmark-text-fill nav-icon text-info"></i>
+                                    <span class="link-text">Guías de Remisión</span>
+                                </div>
+                                <i class="bi bi-chevron-down nav-sub-chevron" id="chev-guias-remision" style="font-size:0.75rem; transition: transform 0.2s ease;"></i>
+                            </a>
+                            <div class="nav-submenu-items d-none ps-3" id="submenu-guias-remision">
+                                <a id="nav-op-guias-remitente" class="nav-item py-1 text-sm" onclick="window.navegarGuiasModo('GRE')">
+                                    <i class="bi bi-file-earmark-arrow-up-fill nav-icon me-1 text-info" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Guía de Remisión Electrónica</span>
+                                </a>
+                                <a id="nav-op-guias-transportista" class="nav-item py-1 text-sm" onclick="window.navegarGuiasModo('GRT')">
+                                    <i class="bi bi-truck-flatbed nav-icon me-1 text-warning" style="font-size: 0.82rem;"></i>
+                                    <span class="link-text" style="font-size: 0.82rem;">Guía de Remisión de Transportista</span>
+                                </a>
+                            </div>
+                        </div>
                         <!-- Submenú desplegable Combustible Propio -->
                         <div class="nav-submenu-group">
                             <a id="nav-combustible-toggle" class="nav-item d-flex align-items-center justify-content-between" onclick="var el=document.getElementById('submenu-combustible'); var chev=document.getElementById('chev-combustible'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
@@ -353,17 +369,13 @@
                 <div id="wrap-tesoreria">
                     <button class="nav-section-toggle" data-section="tesoreria" aria-expanded="false" onclick="window.toggleNavSection('tesoreria')">
                         <span class="link-text">Tesorería</span>
-                        <span class="section-badge">3</span>
+                        <span class="section-badge">2</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-tesoreria">
-                        <a id="nav-tesoreria-caja" class="nav-item" onclick="cargarModuloAislado('tesoreria/caja-chica')">
-                            <i class="bi bi-wallet2 nav-icon"></i>
-                            <span class="link-text">Caja Chica y Gastos</span>
-                        </a>
-                        <a id="nav-tesoreria-flujo" class="nav-item" onclick="cargarModuloAislado('tesoreria/flujo-caja')">
-                            <i class="bi bi-graph-up-arrow nav-icon"></i>
-                            <span class="link-text">Flujo de Caja</span>
+                        <a id="nav-tesoreria-caja" class="nav-item" onclick="cargarModuloAislado('tesoreria/caja')">
+                            <i class="bi bi-cash-stack nav-icon"></i>
+                            <span class="link-text">Caja</span>
                         </a>
                         <a id="nav-tesoreria-cuentas" class="nav-item" onclick="cargarModuloAislado('tesoreria/cuentas')">
                             <i class="bi bi-receipt-cutoff nav-icon"></i>
@@ -1197,21 +1209,41 @@
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
-                <div id="mbnav-op-guias-remitente" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); window.navegarGuiasModo('GRE'); setBottomNavActive('bnav-operaciones');">
-                    <div class="bnav-row-icon" style="color: #0284c7;"><i class="bi bi-file-earmark-arrow-up-fill"></i></div>
+                <div id="mbnav-op-ordenes-servicio" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/ordenes-viaje'); setBottomNavActive('bnav-operaciones');">
+                    <div class="bnav-row-icon" style="color: #2563eb;"><i class="bi bi-briefcase-fill"></i></div>
                     <div class="bnav-row-content">
-                        <p class="bnav-row-title">Guía de Remisión Electrónica</p>
-                        <p class="bnav-row-desc">Consulta XML SUNAT y validación de carga</p>
+                        <p class="bnav-row-title">Órdenes de Servicio</p>
+                        <p class="bnav-row-desc">Gestión y control de servicios operativos</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
-                <div id="mbnav-op-guias-transportista" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); window.navegarGuiasModo('GRT'); setBottomNavActive('bnav-operaciones');">
-                    <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-truck-flatbed"></i></div>
+
+                <!-- Acordeón Guías de Remisión -->
+                <div class="bnav-row-item" id="mbnav-guias-remision-toggle" onclick="var el=document.getElementById('mbnav-submenu-guias-remision'); var chev=document.getElementById('mbchev-guias-remision'); if(el){ el.classList.toggle('d-none'); if(chev) chev.style.transform = el.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)'; }">
+                    <div class="bnav-row-icon" style="color: #0284c7;"><i class="bi bi-file-earmark-text-fill"></i></div>
                     <div class="bnav-row-content">
-                        <p class="bnav-row-title">Guía de Remisión de Transportista</p>
-                        <p class="bnav-row-desc">Emisión propia GRT y despacho</p>
+                        <p class="bnav-row-title">Guías de Remisión</p>
+                        <p class="bnav-row-desc">Guías Electrónicas GRE y Transportista GRT</p>
                     </div>
-                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                    <i class="bi bi-chevron-down bnav-row-chevron" id="mbchev-guias-remision"></i>
+                </div>
+                <div class="d-none ps-3 d-flex flex-column gap-2" id="mbnav-submenu-guias-remision">
+                    <div id="mbnav-op-guias-remitente" class="bnav-row-item" style="border-left: 3px solid #0284c7;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); window.navegarGuiasModo('GRE'); setBottomNavActive('bnav-operaciones');">
+                        <div class="bnav-row-icon" style="color: #0284c7;"><i class="bi bi-file-earmark-arrow-up-fill"></i></div>
+                        <div class="bnav-row-content">
+                            <p class="bnav-row-title">Guía de Remisión Electrónica</p>
+                            <p class="bnav-row-desc">Consulta XML SUNAT y validación de carga</p>
+                        </div>
+                        <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                    </div>
+                    <div id="mbnav-op-guias-transportista" class="bnav-row-item" style="border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); window.navegarGuiasModo('GRT'); setBottomNavActive('bnav-operaciones');">
+                        <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-truck-flatbed"></i></div>
+                        <div class="bnav-row-content">
+                            <p class="bnav-row-title">Guía de Remisión de Transportista</p>
+                            <p class="bnav-row-desc">Emisión propia GRT y despacho</p>
+                        </div>
+                        <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                    </div>
                 </div>
 
                 <!-- Acordeón Combustible Marsisa -->
@@ -1325,19 +1357,11 @@
         </div>
         <div class="offcanvas-body px-3 pb-4">
             <div class="bnav-group-box">
-                <div id="mbnav-tesoreria-caja" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetTesoreria')).hide(); cargarModuloAislado('tesoreria/caja-chica'); setBottomNavActive('bnav-tesoreria');">
-                    <div class="bnav-row-icon" style="color: #22c55e;"><i class="bi bi-wallet2"></i></div>
+                <div id="mbnav-tesoreria-caja" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetTesoreria')).hide(); cargarModuloAislado('tesoreria/caja'); setBottomNavActive('bnav-tesoreria');">
+                    <div class="bnav-row-icon" style="color: #22c55e;"><i class="bi bi-cash-stack"></i></div>
                     <div class="bnav-row-content">
-                        <p class="bnav-row-title">Caja Chica y Gastos</p>
-                        <p class="bnav-row-desc">Rendiciones y liquidaciones</p>
-                    </div>
-                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
-                </div>
-                <div id="mbnav-tesoreria-flujo" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetTesoreria')).hide(); cargarModuloAislado('tesoreria/flujo-caja'); setBottomNavActive('bnav-tesoreria');">
-                    <div class="bnav-row-icon" style="color: #3b82f6;"><i class="bi bi-graph-up-arrow"></i></div>
-                    <div class="bnav-row-content">
-                        <p class="bnav-row-title">Flujo de Caja</p>
-                        <p class="bnav-row-desc">Ingresos vs Egresos proyectados</p>
+                        <p class="bnav-row-title">Caja</p>
+                        <p class="bnav-row-desc">Movimientos de ingresos, egresos y comprobantes</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
