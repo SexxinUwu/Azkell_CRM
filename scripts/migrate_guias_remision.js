@@ -40,14 +40,33 @@ async function createTables() {
                     estado_sunat VARCHAR(50) DEFAULT 'ACEPTADO',
                     codigo_respuesta_sunat VARCHAR(20) DEFAULT '0',
                     observaciones_sunat TEXT DEFAULT NULL,
+                    gre_relacionada_id INT DEFAULT NULL,
+                    gre_relacionada_numero VARCHAR(30) DEFAULT NULL,
+                    num_ticket VARCHAR(50) DEFAULT NULL,
+                    xml_hash VARCHAR(100) DEFAULT NULL,
+                    modo_emision VARCHAR(20) DEFAULT 'SIMULACION',
+                    motivo_traslado VARCHAR(10) DEFAULT '01',
                     datos_json LONGTEXT DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     INDEX idx_numero_guia (numero_guia),
                     INDEX idx_placa_tracto (placa_tracto),
-                    INDEX idx_fecha_emision (fecha_emision)
+                    INDEX idx_fecha_emision (fecha_emision),
+                    INDEX idx_gre_relacionada (gre_relacionada_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             `);
+
+            const addCols = [
+                "ALTER TABLE guias_remision ADD COLUMN gre_relacionada_id INT DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN gre_relacionada_numero VARCHAR(30) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN num_ticket VARCHAR(50) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN xml_hash VARCHAR(100) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN modo_emision VARCHAR(20) DEFAULT 'SIMULACION'",
+                "ALTER TABLE guias_remision ADD COLUMN motivo_traslado VARCHAR(10) DEFAULT '01'"
+            ];
+            for (const sql of addCols) {
+                try { await conn.query(sql); } catch(_) {}
+            }
 
             await conn.query(`
                 CREATE TABLE IF NOT EXISTS guias_remision_items (

@@ -229,8 +229,11 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-warning btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-dark" onclick="window.grtAbrirModalEmitir()">
+                <i class="bi bi-send-plus-fill"></i> Emitir GRT Transportista
+            </button>
             <button class="btn btn-primary btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-white" onclick="window.greAbrirModalConsultarSunat()">
-                <i class="bi bi-search"></i> Consultar Guía SUNAT
+                <i class="bi bi-search"></i> Consultar GRE en SUNAT
             </button>
             <button class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold shadow-2xs d-flex align-items-center gap-1" onclick="window.greAbrirModalCargaLote()">
                 <i class="bi bi-layers-fill"></i> Carga Masiva (Lote)
@@ -613,43 +616,244 @@
     </div>
 </div>
 
-<!-- MODAL: Configuración SUNAT Clave SOL / API -->
-<div class="modal fade" id="greModalConfigSunat" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+<!-- MODAL: Emitir Guía de Remisión Transportista (GRT - Tipo 31) -->
+<div class="modal fade" id="grtModalEmitir" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content rounded-4 border-0 shadow-lg">
-            <div class="modal-header border-bottom px-4 py-3 bg-light">
+            <div class="modal-header border-bottom px-4 py-3 bg-white">
                 <div class="d-flex align-items-center gap-2">
-                    <div class="rounded-3 p-2 bg-secondary bg-opacity-10 text-dark">
-                        <i class="bi bi-key-fill fs-5"></i>
+                    <div class="rounded-3 p-2 bg-warning bg-opacity-10 text-dark">
+                        <i class="bi bi-truck-flatbed fs-5"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold text-dark m-0">Credenciales SUNAT (OAuth 2.0 / SOL)</h6>
-                        <small class="text-muted">Configuración para consulta automática de GRE</small>
+                        <h6 class="fw-bold text-dark m-0">Emisión de Guía de Remisión de Transportista (GRT - 31)</h6>
+                        <small class="text-muted" style="font-size:0.75rem;">Genere el documento oficial SUNAT vinculando las GRE Remitente o carga directa</small>
                     </div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="form-check form-switch m-0 d-flex align-items-center gap-2 bg-light px-3 py-1 rounded-pill border">
+                        <input class="form-check-input mt-0" type="checkbox" id="grtSwitchModoReal">
+                        <label class="form-check-label small fw-bold text-dark user-select-none" for="grtSwitchModoReal" id="grtSwitchModoLbl">
+                            Modo Simulación (Pruebas)
+                        </label>
+                    </div>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="modal"></button>
+                </div>
             </div>
-            <div class="modal-body p-4">
-                <form id="greFormConfig" onsubmit="window.greGuardarConfigSunat(event)">
-                    <div class="mb-2">
-                        <label class="form-label fw-bold small text-dark mb-1">RUC Emisor (Empresa)</label>
-                        <input type="text" id="greCfgRuc" class="form-control form-control-sm font-monospace" placeholder="Ej. 20600000000" required>
+            <div class="modal-body p-4 bg-light">
+                <!-- SECCIÓN 1: VINCULACIÓN CON GRE PREVIA -->
+                <div class="card border-0 rounded-3 shadow-xs p-3 bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-2 border-bottom">
+                        <div class="fw-bold text-dark small text-uppercase d-flex align-items-center gap-1.5">
+                            <i class="bi bi-link-45deg text-primary fs-5"></i> 1. Vincular con Guía Remitente (GRE 09) Registrada
+                        </div>
+                        <span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill px-2.5 py-1 small">
+                            Opcional: Precarga los datos al instante
+                        </span>
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label fw-bold small text-dark mb-1">Client ID (API SUNAT)</label>
-                        <input type="text" id="greCfgClientId" class="form-control form-control-sm font-monospace" placeholder="Generado en Clave SOL">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold text-muted mb-1">Buscar GRE por N° de Guía o Razón Social</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                                <input type="text" id="grtInputBuscarGre" class="form-control" placeholder="Escriba ej: T072-00366620 o nombre del remitente..." oninput="window.grtFiltrarGreSugerencias()">
+                            </div>
+                            <div id="grtContenedorSugerenciasGre" class="list-group position-absolute shadow-lg d-none" style="z-index: 1050; max-height: 220px; overflow-y: auto; width: 60%;"></div>
+                        </div>
+                        <div class="col-md-4 d-flex gap-2">
+                            <input type="hidden" id="grtGreIdVinculada">
+                            <input type="text" id="grtGreNumVinculada" class="form-control form-control-sm font-monospace fw-bold bg-light" placeholder="Ninguna vinculada" readonly>
+                            <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-2" onclick="window.grtDesvincularGre()" title="Desvincular">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label fw-bold small text-dark mb-1">Client Secret</label>
-                        <input type="password" id="greCfgClientSecret" class="form-control form-control-sm font-monospace" placeholder="••••••••••••••••" autocomplete="current-password">
+                </div>
+
+                <form id="grtFormEmision" onsubmit="window.grtEjecutarEmision(event)">
+                    <!-- SECCIÓN 2: DATOS DEL COMPROBANTE Y TRASLADO -->
+                    <div class="card border-0 rounded-3 shadow-xs p-3 bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="fw-bold text-dark small text-uppercase pb-2 mb-2 border-bottom">
+                            <i class="bi bi-receipt text-success me-1"></i> 2. Datos de Emisión y Traslado
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-dark mb-1">Serie GRT</label>
+                                <input type="text" id="grtInputSerie" class="form-control form-control-sm font-monospace fw-bold text-uppercase" value="V001" maxlength="4" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-dark mb-1">Correlativo</label>
+                                <input type="number" id="grtInputCorrelativo" class="form-control form-control-sm font-monospace fw-bold" placeholder="Auto" min="1">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-dark mb-1">Fecha Emisión</label>
+                                <input type="date" id="grtInputFechaEmision" class="form-control form-control-sm" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-dark mb-1">Fecha Inicio Traslado</label>
+                                <input type="date" id="grtInputFechaTraslado" class="form-control form-control-sm" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-dark mb-1">Motivo Traslado</label>
+                                <select id="grtSelectMotivo" class="form-select form-select-sm fw-semibold">
+                                    <option value="01" selected>01 - Venta</option>
+                                    <option value="04">04 - Traslado entre establecimientos</option>
+                                    <option value="13">13 - Otros</option>
+                                    <option value="14">14 - Venta sujeta a confirmación</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-dark mb-1">Usuario SOL (Opcional)</label>
-                        <input type="text" id="greCfgUsuarioSol" class="form-control form-control-sm font-monospace" placeholder="MODDATOS">
+
+                    <!-- SECCIÓN 3: REMITENTE Y DESTINATARIO -->
+                    <div class="card border-0 rounded-3 shadow-xs p-3 bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="fw-bold text-dark small text-uppercase pb-2 mb-2 border-bottom">
+                            <i class="bi bi-people text-info me-1"></i> 3. Generador de Carga (Remitente) y Destinatario
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-dark mb-1">RUC Remitente (Cliente)</label>
+                                <input type="text" id="grtInputRemitenteRuc" class="form-control form-control-sm font-monospace" placeholder="20XXXXXXXXX" maxlength="11" required>
+                            </div>
+                            <div class="col-md-9">
+                                <label class="form-label small fw-bold text-dark mb-1">Razón Social Remitente</label>
+                                <input type="text" id="grtInputRemitenteRazon" class="form-control form-control-sm fw-semibold" placeholder="Nombre de la empresa remitente" required>
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-dark mb-1">RUC/DNI Destinatario</label>
+                                <input type="text" id="grtInputDestinatarioRuc" class="form-control form-control-sm font-monospace" placeholder="20XXXXXXXXX" maxlength="11" required>
+                            </div>
+                            <div class="col-md-9">
+                                <label class="form-label small fw-bold text-dark mb-1">Razón Social Destinatario</label>
+                                <input type="text" id="grtInputDestinatarioRazon" class="form-control form-control-sm fw-semibold" placeholder="Nombre de la empresa destinataria" required>
+                            </div>
+                        </div>
                     </div>
-                    <button type="submit" id="greBtnSaveConfig" class="btn btn-dark w-100 rounded-pill py-2 fw-bold">
-                        <i class="bi bi-check-circle-fill me-1"></i> Guardar Credenciales
-                    </button>
+
+                    <!-- SECCIÓN 4: PUNTOS DE PARTIDA Y LLEGADA -->
+                    <div class="card border-0 rounded-3 shadow-xs p-3 bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="fw-bold text-dark small text-uppercase pb-2 mb-2 border-bottom">
+                            <i class="bi bi-geo-alt text-danger me-1"></i> 4. Ruta (Puntos de Partida y Llegada)
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-dark mb-1">Ubigeo Partida (6 dígitos)</label>
+                                <input type="text" id="grtInputPartidaUbigeo" class="form-control form-control-sm font-monospace" placeholder="150101" maxlength="6" required>
+                            </div>
+                            <div class="col-md-9">
+                                <label class="form-label small fw-bold text-dark mb-1">Dirección Detallada de Partida</label>
+                                <input type="text" id="grtInputPartidaDir" class="form-control form-control-sm" placeholder="Av. Industrial 123, Almacén 4..." required>
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-dark mb-1">Ubigeo Llegada (6 dígitos)</label>
+                                <input type="text" id="grtInputLlegadaUbigeo" class="form-control form-control-sm font-monospace" placeholder="150101" maxlength="6" required>
+                            </div>
+                            <div class="col-md-9">
+                                <label class="form-label small fw-bold text-dark mb-1">Dirección Detallada de Llegada</label>
+                                <input type="text" id="grtInputLlegadaDir" class="form-control form-control-sm" placeholder="Av. Los Laureles 456, Depósito..." required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN 5: UNIDAD VEHICULAR Y CONDUCTOR -->
+                    <div class="card border-0 rounded-3 shadow-xs p-3 bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="fw-bold text-dark small text-uppercase pb-2 mb-2 border-bottom">
+                            <i class="bi bi-truck text-primary me-1"></i> 5. Transporte (Vehículo y Conductor)
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-dark mb-1">Placa Tracto</label>
+                                <input type="text" id="grtInputPlacaTracto" class="form-control form-control-sm font-monospace fw-bold text-uppercase" placeholder="BEQ886" maxlength="10" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-dark mb-1">Placa Carreta</label>
+                                <input type="text" id="grtInputPlacaCarreta" class="form-control form-control-sm font-monospace text-uppercase" placeholder="T6Y980" maxlength="10">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-dark mb-1">DNI Conductor</label>
+                                <input type="text" id="grtInputCondDoc" class="form-control form-control-sm font-monospace" placeholder="47890123" maxlength="15" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-dark mb-1">Nombres del Conductor</label>
+                                <input type="text" id="grtInputCondNombre" class="form-control form-control-sm fw-semibold" placeholder="Juan Pérez Quispe" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-dark mb-1">Licencia MTC</label>
+                                <input type="text" id="grtInputCondLicencia" class="form-control form-control-sm font-monospace text-uppercase" placeholder="Q47890123" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN 6: CARGA Y PRODUCTOS -->
+                    <div class="card border-0 rounded-3 shadow-xs p-3 bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom">
+                            <div class="fw-bold text-dark small text-uppercase">
+                                <i class="bi bi-box-seam text-warning me-1"></i> 6. Carga y Mercadería Transportada
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-2.5 py-0.5 fw-semibold" onclick="window.grtAgregarFilaItem()">
+                                <i class="bi bi-plus-circle me-1"></i> Agregar Ítem
+                            </button>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-dark mb-1">Peso Bruto Total (KGM)</label>
+                                <input type="number" step="0.01" id="grtInputPesoTotal" class="form-control form-control-sm font-monospace fw-bold text-primary" placeholder="0.00" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-dark mb-1">Unidad de Medida</label>
+                                <select id="grtSelectUnidadMedida" class="form-select form-select-sm fw-semibold">
+                                    <option value="KGM" selected>KGM - Kilogramos</option>
+                                    <option value="TNE">TNE - Toneladas</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive border rounded-3">
+                            <table class="table table-sm align-middle mb-0" style="font-size:0.78rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 15%;">Código</th>
+                                        <th style="width: 50%;">Descripción de la Mercadería</th>
+                                        <th style="width: 15%;" class="text-end">Cantidad</th>
+                                        <th style="width: 12%;" class="text-center">U.M.</th>
+                                        <th style="width: 8%;" class="text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="grtTbodyItems">
+                                    <tr>
+                                        <td><input type="text" class="form-control form-control-sm grt-it-codigo font-monospace" value="001"></td>
+                                        <td><input type="text" class="form-control form-control-sm grt-it-desc" value="CARGA GENERAL TRANSPORTADA" required></td>
+                                        <td><input type="number" step="0.01" class="form-control form-control-sm grt-it-cant text-end font-monospace" value="1" required></td>
+                                        <td>
+                                            <select class="form-select form-select-sm grt-it-um text-center">
+                                                <option value="NIU" selected>NIU</option>
+                                                <option value="KGM">KGM</option>
+                                                <option value="BX">CAJAS</option>
+                                            </select>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1" onclick="this.closest('tr').remove()">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-4 fw-bold" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                        <button type="submit" id="grtBtnSubmitEmision" class="btn btn-warning btn-sm rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-dark">
+                            <i class="bi bi-send-fill"></i> Emitir y Despachar a SUNAT
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
