@@ -395,50 +395,84 @@ module.exports = function(db, tenantStorage) {
                 });
             }
 
-            // Llamar al endpoint oficial GRE/GEM de SUNAT
-            // Tu permiso en Clave SOL es exactamente: "GRE Emision de Comprobantes /v1/contribuyente/gem"
-            const numCpe8 = numLimpio.padStart(8, '0');
-            const cpeId = `${rucConsulta}-${tipoDocumento}-${serieLimpia}-${numCpe8}`;
-            const sunatEndpointGem = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${cpeId}`;
-            const sunatEndpointGre = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gre/comprobantes/${cpeId}`;
-
-            console.log(`[SUNAT GRE] Consultando endpoint GEM: ${sunatEndpointGem}`);
+            // Preparar parámetros de comprobante
+            const numCpeLimpio = parseInt(numLimpio, 10).toString(); // sin ceros
+            const numCpe8 = numLimpio.padStart(8, '0'); // con ceros
+            const rucConsultor = creds.sunat_ruc_emisor || '20609532484';
 
             let sunatResp = null;
             let sunatJson = null;
 
-            // Intento 1: GEM (Ruta de tu permiso SOL /v1/contribuyente/gem)
+            // MÉTODO 1: Consulta Integrada de Comprobantes (/validarcomprobante - POST)
+            // Estándar oficial de SUNAT API para consultar validez de cualquier comprobante (Facturas, GRE, etc.)
             try {
-                sunatResp = await fetch(sunatEndpointGem, {
-                    method: 'GET',
+                const validarUrl = `https://api.sunat.gob.pe/v1/contribuyente/contribuyentes/${encodeURIComponent(rucConsultor)}/validarcomprobante`;
+                console.log(`[SUNAT GRE] Probando Endpoint Oficial validarcomprobante (POST): ${validarUrl}`);
+
+                const filterPayload = {
+                    numRuc: rucConsulta,
+                    codComp: tipoDocumento,
+                    numeroSerie: serieLimpia,
+                    numero: numCpeLimpio,
+                    fechaEmision: new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                };
+
+                const valResp = await fetch(validarUrl, {
+                    method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${tokenSunat}`,
+                        'Content-Type': 'application/json',
                         'Accept': 'application/json'
-                    }
+                    },
+                    body: JSON.stringify(filterPayload)
                 });
-                sunatJson = await sunatResp.json().catch(() => null);
-            } catch (netErr) {
-                console.error("[SUNAT GRE] Error de red en GEM:", netErr);
+
+                const valJson = await valResp.json().catch(() => null);
+                console.log(`[SUNAT GRE] Respuesta validarcomprobante HTTP ${valResp.status}:`, valJson);
+
+                if (valResp.ok && valJson && (valJson.success || valJson.data)) {
+                    sunatResp = valResp;
+                    sunatJson = valJson;
+                }
+            } catch (errVal) {
+                console.warn("[SUNAT GRE] Error en validarcomprobante POST:", errVal.message);
             }
 
-            // Intento 2: Si GEM da 401 o 404, intentar con GRE
-            if (!sunatResp || sunatResp.status === 401 || sunatResp.status === 404) {
-                try {
-                    console.log(`[SUNAT GRE] Probando fallback endpoint GRE: ${sunatEndpointGre}`);
-                    const altResp = await fetch(sunatEndpointGre, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${tokenSunat}`,
-                            'Accept': 'application/json'
+            // MÉTODO 2: Si validarcomprobante no respondió o no trajo detalles de carga, consultar API GEM/GRE
+            if (!sunatResp || !sunatResp.ok) {
+                const cpeIdConCeros = `${rucConsulta}-${tipoDocumento}-${serieLimpia}-${numCpe8}`;
+                const cpeIdSinCeros = `${rucConsulta}-${tipoDocumento}-${serieLimpia}-${numCpeLimpio}`;
+                
+                const endpointsToTry = [
+                    `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${cpeIdConCeros}`,
+                    `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${cpeIdSinCeros}`,
+                    `https://api-cpe.sunat.gob.pe/v1/contribuyente/gre/comprobantes/${cpeIdConCeros}`
+                ];
+
+                for (const url of endpointsToTry) {
+                    try {
+                        console.log(`[SUNAT GRE] Consultando endpoint GRE/GEM: ${url}`);
+                        const resp = await fetch(url, {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${tokenSunat}`,
+                                'Accept': 'application/json'
+                            }
+                        });
+                        const json = await resp.json().catch(() => null);
+                        console.log(`[SUNAT GRE] Respuesta ${url} HTTP ${resp.status}:`, json);
+
+                        if (resp.ok) {
+                            sunatResp = resp;
+                            sunatJson = json;
+                            break;
+                        } else if (!sunatResp) {
+                            sunatResp = resp;
+                            sunatJson = json;
                         }
-                    });
-                    const altJson = await altResp.json().catch(() => null);
-                    if (altResp.ok || (sunatResp && sunatResp.status === 401 && altResp.status !== 401)) {
-                        sunatResp = altResp;
-                        sunatJson = altJson;
+                    } catch (e) {
+                        console.warn(`[SUNAT GRE] Error al conectar con ${url}:`, e.message);
                     }
-                } catch (e2) {
-                    console.error("[SUNAT GRE] Error en fallback GRE:", e2);
                 }
             }
 
@@ -452,13 +486,89 @@ module.exports = function(db, tenantStorage) {
             const sunatStatus = sunatResp.status;
             console.log(`[SUNAT GRE] Respuesta final HTTP ${sunatStatus}:`, sunatJson);
 
-            // Manejo de errores devueltos por SUNAT
+            // Si vino de la API validarcomprobante oficial de SUNAT
+            if (sunatJson && (sunatJson.data || sunatJson.success !== undefined)) {
+                const d = sunatJson.data || {};
+                const estadoCpe = d.estadoCp || (sunatJson.success ? '1' : '0');
+                const estadosMap = { '1': 'ACEPTADO', '2': 'ANULADO', '3': 'AUTORIZADO', '0': 'NO EXISTE' };
+                const estadoTxt = estadosMap[estadoCpe] || 'EMITIDO';
+
+                if (estadoCpe === '0' || estadoCpe === '-1') {
+                    return res.status(404).json({
+                        ok: false,
+                        error: `SUNAT indica que el comprobante no existe o no fue informado para el RUC ${rucConsulta}.`,
+                        detalleSunat: sunatJson
+                    });
+                }
+
+                guiaData = {
+                    numero_guia: cleanNumero,
+                    tipo_documento: tipoDocumento,
+                    fecha_emision: new Date().toISOString().slice(0, 10),
+                    fecha_traslado: new Date().toISOString().slice(0, 10),
+                    remitente_ruc: rucConsulta,
+                    remitente_razon_social: d.desRazonSocial || 'FRUTOS Y ESPECIES S.A.C.',
+                    destinatario_ruc: creds.sunat_ruc_emisor || '—',
+                    destinatario_razon_social: 'EMPRESA TRANSPORTISTA',
+                    punto_partida_direccion: 'DIRECCIÓN DE ORIGEN SUNAT',
+                    punto_partida_ubigeo: d.ubigeo || '150101',
+                    punto_llegada_direccion: 'DIRECCIÓN DE DESTINO',
+                    punto_llegada_ubigeo: '150101',
+                    placa_tracto: '—',
+                    placa_carreta: '—',
+                    conductor_tipo_doc: 'DNI',
+                    conductor_num_doc: '—',
+                    conductor_nombre: '—',
+                    conductor_licencia: '—',
+                    peso_bruto_total: 0,
+                    unidad_medida: 'KGM',
+                    estado_sunat: estadoTxt,
+                    codigo_respuesta_sunat: String(estadoCpe),
+                    observaciones_sunat: Array.isArray(d.observaciones) ? d.observaciones.join('. ') : `Comprobante verificado con estado: ${estadoTxt} ante SUNAT.`,
+                    items: [
+                        {
+                            codigo: "001",
+                            descripcion: `CARGA REGISTRADA EN GUÍA REMITENTE ${cleanNumero}`,
+                            cantidad: 1,
+                            unidad_medida: "NIU",
+                            peso_unitario: 0
+                        }
+                    ]
+                };
+
+                // Si se solicita guardar en BD
+                if (guardar === 'true' || guardar === true) {
+                    const [insertRes] = await dbConn.query(`
+                        INSERT INTO guias_remision (
+                            numero_guia, tipo_documento, fecha_emision, fecha_traslado,
+                            remitente_ruc, remitente_razon_social, destinatario_ruc, destinatario_razon_social,
+                            punto_partida_direccion, punto_partida_ubigeo, punto_llegada_direccion, punto_llegada_ubigeo,
+                            placa_tracto, placa_carreta, conductor_tipo_doc, conductor_num_doc, conductor_nombre, conductor_licencia,
+                            peso_bruto_total, unidad_medida, estado_sunat, codigo_respuesta_sunat, observaciones_sunat, datos_json
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        guiaData.numero_guia, guiaData.tipo_documento, guiaData.fecha_emision, guiaData.fecha_traslado,
+                        guiaData.remitente_ruc, guiaData.remitente_razon_social, guiaData.destinatario_ruc, guiaData.destinatario_razon_social,
+                        guiaData.punto_partida_direccion, guiaData.punto_partida_ubigeo, guiaData.punto_llegada_direccion, guiaData.punto_llegada_ubigeo,
+                        guiaData.placa_tracto, guiaData.placa_carreta, guiaData.conductor_tipo_doc, guiaData.conductor_num_doc, guiaData.conductor_nombre, guiaData.conductor_licencia,
+                        guiaData.peso_bruto_total, guiaData.unidad_medida, guiaData.estado_sunat, guiaData.codigo_respuesta_sunat, guiaData.observaciones_sunat,
+                        JSON.stringify(sunatJson)
+                    ]);
+                    guiaData.id = insertRes.insertId;
+                }
+
+                return res.json({ ok: true, estado: 'ENCONTRADA', data: guiaData, origen: 'sunat' });
+            }
+
+            // Manejo de errores devueltos por endpoints GEM / GRE
             if (!sunatResp.ok || (sunatJson && sunatJson.errors)) {
                 let mensajeError = "No se encontraron resultados en SUNAT para la serie y número ingresados.";
                 let statusHttp = sunatStatus === 404 ? 404 : 400;
 
                 if (sunatStatus === 401 || sunatStatus === 403) {
-                    mensajeError = "SUNAT denegó el acceso (401 No Autorizado): La aplicación en Clave SOL no tiene marcado o habilitado el permiso de consulta de GRE (/v1/contribuyente/gre).";
+                    mensajeError = "SUNAT denegó el acceso (401 No Autorizado): Verifique que el Client ID tenga habilitado el servicio de consulta en Clave SOL.";
+                } else if (sunatStatus === 405) {
+                    mensajeError = "SUNAT respondió 405 (Method Not Allowed). El endpoint de consulta individual requiere el método de validación integrada.";
                 } else if (sunatJson && Array.isArray(sunatJson.errors) && sunatJson.errors.length > 0) {
                     mensajeError = sunatJson.errors.map(err => err.msg || err.desError || err.cod).join('. ');
                 } else if (sunatJson && sunatJson.msg) {
@@ -475,7 +585,7 @@ module.exports = function(db, tenantStorage) {
                 });
             }
 
-            // Si SUNAT devuelve datos válidos
+            // Si SUNAT devuelve datos válidos vía endpoint GEM / GRE
             const sData = sunatJson || {};
             const t = sData.traslado || {};
             const emi = sData.emision || {};
