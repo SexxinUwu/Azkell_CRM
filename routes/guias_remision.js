@@ -50,12 +50,14 @@ module.exports = function(db, tenantStorage) {
                     modo_emision VARCHAR(20) DEFAULT 'SIMULACION',
                     motivo_traslado VARCHAR(10) DEFAULT '01',
                     datos_json LONGTEXT DEFAULT NULL,
+                    orden_servicio VARCHAR(60) DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     INDEX idx_numero_guia (numero_guia),
                     INDEX idx_placa_tracto (placa_tracto),
                     INDEX idx_fecha_emision (fecha_emision),
-                    INDEX idx_gre_relacionada (gre_relacionada_id)
+                    INDEX idx_gre_relacionada (gre_relacionada_id),
+                    INDEX idx_orden_servicio (orden_servicio)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             `);
 
@@ -79,7 +81,8 @@ module.exports = function(db, tenantStorage) {
                 "ALTER TABLE guias_remision ADD COLUMN transportista_razon_social VARCHAR(255) DEFAULT NULL",
                 "ALTER TABLE guias_remision ADD COLUMN registro_mtc VARCHAR(50) DEFAULT NULL",
                 "ALTER TABLE guias_remision ADD COLUMN volumen_m3 DECIMAL(12,3) DEFAULT NULL",
-                "ALTER TABLE guias_remision ADD COLUMN xml_contenido LONGTEXT DEFAULT NULL"
+                "ALTER TABLE guias_remision ADD COLUMN xml_contenido LONGTEXT DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN orden_servicio VARCHAR(60) DEFAULT NULL"
             ];
             for (const sql of addCols) {
                 try { await dbConn.query(sql); } catch(_) {}
@@ -255,6 +258,66 @@ module.exports = function(db, tenantStorage) {
             res.json({ ok: true, data: guias });
         } catch (err) {
             console.error("Error listando guias de remision:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 3.1 Listar GREs disponibles sin Orden de Servicio ni Viaje asignado (para anexar en O/S)
+    router.get('/disponibles-sin-servicio', async (req, res) => {
+        try {
+            const dbConn = getDb(req);
+            await initTables(dbConn);
+
+            const { search, cliente } = req.query;
+
+            let query = `
+                SELECT 
+                    g.id,
+                    g.numero_guia,
+                    g.tipo_documento,
+                    DATE_FORMAT(g.fecha_emision, '%Y-%m-%d') AS fecha_emision,
+                    DATE_FORMAT(g.fecha_traslado, '%Y-%m-%d') AS fecha_traslado,
+                    g.remitente_ruc,
+                    g.remitente_razon_social,
+                    g.destinatario_ruc,
+                    g.destinatario_razon_social,
+                    g.placa_tracto,
+                    g.placa_carreta,
+                    g.conductor_nombre,
+                    g.conductor_licencia,
+                    COALESCE(g.peso_bruto_total, 0) AS peso_bruto_total,
+                    g.unidad_medida,
+                    COALESCE(g.volumen_m3, 0) AS volumen_m3,
+                    g.orden_servicio,
+                    (SELECT COUNT(*) FROM guias_remision_items i WHERE i.guia_id = g.id) AS total_items
+                FROM guias_remision g
+                WHERE (g.orden_servicio IS NULL OR g.orden_servicio = '' OR g.orden_servicio = '—')
+            `;
+            const params = [];
+
+            if (cliente && String(cliente).trim() !== '' && cliente !== 'TODOS') {
+                query += ` AND (g.remitente_razon_social LIKE ? OR g.remitente_ruc LIKE ?)`;
+                params.push(`%${cliente}%`, `%${cliente}%`);
+            }
+
+            if (search && String(search).trim() !== '') {
+                const term = `%${String(search).trim()}%`;
+                query += ` AND (
+                    g.numero_guia LIKE ? OR
+                    g.remitente_razon_social LIKE ? OR
+                    g.destinatario_razon_social LIKE ? OR
+                    g.placa_tracto LIKE ? OR
+                    g.conductor_nombre LIKE ?
+                )`;
+                params.push(term, term, term, term, term);
+            }
+
+            query += ` ORDER BY g.fecha_emision DESC, g.id DESC LIMIT 300`;
+
+            const [rows] = await dbConn.query(query, params);
+            res.json({ ok: true, data: rows });
+        } catch (err) {
+            console.error("Error al listar guías sin servicio:", err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });

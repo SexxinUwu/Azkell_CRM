@@ -192,11 +192,11 @@
                 window.greRenderTabla(window._greGuiasData);
                 window.greCalcularKPIs(window._greGuiasData);
             } else {
-                tbody.innerHTML = `<tr><td colspan="14" class="text-center py-4 text-danger">Error: ${result.error || 'No se pudo cargar las guías'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="15" class="text-center py-4 text-danger">Error: ${result.error || 'No se pudo cargar las guías'}</td></tr>`;
             }
         } catch (err) {
             console.error("Error al cargar guías:", err);
-            tbody.innerHTML = `<tr><td colspan="14" class="text-center py-4 text-danger">Error de conexión: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="15" class="text-center py-4 text-danger">Error de conexión: ${err.message}</td></tr>`;
         }
     };
 
@@ -211,7 +211,7 @@
         if (!guias || guias.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="14" class="text-center py-5 text-muted">
+                    <td colspan="15" class="text-center py-5 text-muted">
                         <i class="bi bi-inbox fs-3 d-block mb-2 text-secondary opacity-50"></i>
                         No se encontraron guías de remisión para los filtros seleccionados.
                     </td>
@@ -237,12 +237,17 @@
                 : '';
             const fTras = (window._formatFechaPeru || formatFechaPeru)(g.fecha_traslado || g.fecha_emision);
 
+            const badgeOS = (g.orden_servicio && String(g.orden_servicio).trim() !== '' && g.orden_servicio !== '—')
+                ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-2 py-1 font-monospace fw-bold" style="cursor:pointer;" onclick="if(typeof cargarModuloAislado==='function') cargarModuloAislado('operaciones/ordenes-servicio');" title="Ver Orden de Servicio vinculada"><i class="bi bi-briefcase-fill me-1"></i>${esc(g.orden_servicio)}</span>`
+                : `<span class="text-muted opacity-50 font-monospace">—</span>`;
+
             html += `
                 <tr>
                     <td class="font-monospace fw-bold text-nowrap" style="color:#0052cc; cursor:pointer;" onclick="window.greVerDetalleSunatPorIndice(${idx})" title="Ver Detalle Oficial de GRE SUNAT">
                         <i class="bi bi-file-earmark-text me-1"></i>${esc(g.numero_guia)}
                     </td>
                     <td class="text-nowrap">${badgeEstado}</td>
+                    <td class="text-center text-nowrap">${badgeOS}</td>
                     <td class="text-nowrap font-monospace fw-semibold text-dark">
                         ${fEmi}${hEmi}
                     </td>

@@ -1,0 +1,716 @@
+<!-- ============================================================ -->
+<!-- 💼 MÓDULO: ÓRDENES DE SERVICIO — ERP AZKELL FLEET (OPERACIONES) -->
+<!-- ============================================================ -->
+
+<style>
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
+#mod-operaciones-ordenes-servicio {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    padding: 0.85rem 1.15rem 3rem 1.15rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+@media (max-width: 768px) {
+    #mod-operaciones-ordenes-servicio {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+    }
+}
+
+/* ── Encabezado y Botón Nuevo ── */
+.os-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #0f172a;
+    margin: 0;
+}
+.os-title small {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #64748b;
+    margin-left: 6px;
+}
+
+.os-btn-nuevo {
+    background-color: #f59e0b !important;
+    border-color: #d97706 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 0.82rem;
+    border-radius: 6px;
+    padding: 0.45rem 1.1rem;
+    box-shadow: 0 1px 3px rgba(217, 119, 6, 0.2);
+    transition: all 0.2s ease;
+}
+.os-btn-nuevo:hover {
+    background-color: #d97706 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+
+/* ── Tarjeta de Filtros Superiores (Imagen 1) ── */
+.os-filter-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.85rem 1.15rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    margin-bottom: 0.85rem;
+}
+
+.os-filter-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.os-btn-buscar {
+    background-color: #f59e0b !important;
+    border-color: #d97706 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 0.82rem;
+    border-radius: 6px;
+    padding: 0.45rem 1.25rem;
+    transition: all 0.2s ease;
+}
+.os-btn-buscar:hover {
+    background-color: #d97706 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25);
+}
+
+/* ── Barra Toolbar de Tabla ── */
+.os-table-toolbar {
+    border-top: 2px solid #f59e0b;
+    padding-top: 0.75rem;
+    margin-bottom: 0.65rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.os-toolbar-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+.os-toolbar-btn:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+/* ── Tabla Operacional de Órdenes de Servicio ── */
+.os-table-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    overflow: hidden;
+}
+
+.os-scroll-table {
+    width: 100%;
+    overflow-x: auto;
+    max-height: calc(100vh - 290px);
+}
+
+.os-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.74rem;
+    white-space: nowrap;
+}
+
+.os-table thead th {
+    background-color: #ffffff;
+    color: #1e293b;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.69rem;
+    letter-spacing: 0.3px;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 2px solid #cbd5e1;
+    vertical-align: middle;
+}
+
+.os-table tbody td {
+    padding: 0.55rem 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #334155;
+    font-weight: 500;
+}
+
+.os-table tbody tr:hover {
+    background-color: #fffaf5;
+}
+
+/* ── Botones de Fila de Tabla ── */
+.os-btn-editar-drop {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+.os-btn-editar-drop:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.os-btn-finalizar {
+    background-color: #0284c7 !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+/* ── Modal Formulario Principal (Imagen 2 y 3) ── */
+#modalOsForm .modal-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.85rem 1.25rem;
+}
+
+#modalOsForm .modal-title {
+    color: #0284c7;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+#modalOsForm .nav-tabs {
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 1rem;
+}
+
+#modalOsForm .nav-tabs .nav-link {
+    border: none;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #64748b;
+    padding: 0.45rem 1rem;
+    text-transform: uppercase;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+#modalOsForm .nav-tabs .nav-link.active {
+    color: #0284c7;
+    border-bottom-color: #0284c7;
+    background: transparent;
+}
+
+#modalOsForm .form-label {
+    font-size: 0.73rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+#modalOsForm .form-label span.req {
+    color: #ef4444;
+    font-weight: bold;
+}
+
+#modalOsForm .form-control,
+#modalOsForm .form-select {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.42rem 0.65rem;
+    color: #1e293b;
+}
+
+#modalOsForm .form-control:focus,
+#modalOsForm .form-select:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+
+#modalOsForm .form-control[readonly],
+#modalOsForm .form-control:disabled {
+    background-color: #eceff1 !important;
+    color: #475569 !important;
+    cursor: not-allowed !important;
+    border-color: #cfd8dc !important;
+    user-select: none;
+}
+
+.os-btn-doc-agregar {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+.os-btn-doc-agregar:hover {
+    background: #f8fafc;
+    border-color: #0284c7;
+    color: #0284c7;
+}
+
+.os-btn-guardar {
+    background-color: #0284c7 !important;
+    border-color: #0284c7 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 0.84rem;
+    border-radius: 6px;
+    padding: 0.45rem 1.4rem;
+}
+.os-btn-guardar:hover {
+    background-color: #0369a1 !important;
+    border-color: #0369a1 !important;
+}
+
+/* ── Modal Secundario Documentos sin Servicios (Imagen 4) ── */
+#modalOsSelectorGre .modal-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.85rem 1.25rem;
+}
+#modalOsSelectorGre .modal-title {
+    color: #0284c7;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+</style>
+
+<div id="mod-operaciones-ordenes-servicio" class="modulo-wrapper">
+
+    <!-- ── 1. ENCABEZADO OFICIAL DE ÓRDENES DE SERVICIO (Imagen 1) ── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2">
+        <div>
+            <h4 class="os-title">
+                Órdenes de Servicio <small>Operaciones</small>
+            </h4>
+        </div>
+        <div>
+            <button type="button" class="btn btn-sm os-btn-nuevo d-flex align-items-center gap-1.5" onclick="window.osAbrirModalNuevo()">
+                <i class="bi bi-plus-lg"></i> + Nuevo
+            </button>
+        </div>
+    </div>
+
+    <!-- ── 2. FILTROS SUPERIORES ── -->
+    <div class="os-filter-card">
+        <div class="row g-2 align-items-end">
+            <!-- Fecha Desde -->
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="os-filter-label">Fecha Desde</label>
+                <input type="date" id="os-filtro-desde" class="form-control form-control-sm" title="Fecha Desde">
+            </div>
+            <!-- Fecha Hasta -->
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="os-filter-label">Fecha Hasta</label>
+                <input type="date" id="os-filtro-hasta" class="form-control form-control-sm" title="Fecha Hasta">
+            </div>
+            <!-- Tipo Resultado -->
+            <div class="col-12 col-sm-6 col-md-3">
+                <label class="os-filter-label">Tipo Resultado de Búsqueda</label>
+                <select id="os-filtro-tipo-res" class="form-select form-select-sm">
+                    <option value="SEGÚN FECHA">SEGÚN FECHA</option>
+                    <option value="TODOS">TODOS LOS REGISTROS</option>
+                </select>
+            </div>
+            <!-- Cliente (*) -->
+            <div class="col-12 col-sm-6 col-md-3">
+                <label class="os-filter-label">Cliente (*)</label>
+                <select id="os-filtro-cliente" class="form-select form-select-sm">
+                    <option value="TODOS">Seleccione...</option>
+                </select>
+            </div>
+            <!-- Botón Buscar -->
+            <div class="col-12 col-md-2">
+                <button type="button" class="btn btn-sm os-btn-buscar w-100 d-flex align-items-center justify-content-center gap-1.5" onclick="window.osCargarTabla()">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 3. TOOLBAR DE TABLA (Imprimir, Excel, Mostrar Columnas, Buscar en tabla) ── -->
+    <div class="os-table-toolbar">
+        <div class="d-flex align-items-center gap-1.5">
+            <button type="button" class="btn btn-sm os-toolbar-btn d-flex align-items-center gap-1" onclick="window.osImprimirTabla()">
+                <i class="bi bi-printer"></i> Imprimir
+            </button>
+            <button type="button" class="btn btn-sm os-toolbar-btn d-flex align-items-center gap-1" onclick="window.osExportarExcel()">
+                <i class="bi bi-file-earmark-excel text-success"></i> Excel
+            </button>
+            <button type="button" class="btn btn-sm os-toolbar-btn d-flex align-items-center gap-1" onclick="window.osToggleColumnas()">
+                <i class="bi bi-layout-three-columns"></i> Mostrar Columnas
+            </button>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <label class="small text-muted fw-bold text-nowrap m-0" for="os-buscador-tabla">Buscar en tabla:</label>
+            <input type="text" id="os-buscador-tabla" class="form-control form-control-sm" placeholder="" oninput="window.osFiltrarLocalmente(this.value)" style="width: 180px; border-radius: 4px;">
+        </div>
+    </div>
+
+    <!-- ── 4. TABLA OPERACIONAL HORIZONTAL ── -->
+    <div class="os-table-card">
+        <div class="os-scroll-table">
+            <table class="os-table" id="tablaOrdenesServicio">
+                <thead>
+                    <tr>
+                        <th>ACCIÓN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>OPERACIÓN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>FECHA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>FECHA FIN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>ORDEN DE SERVICIO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>SERVICIO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>VIAJE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>ESTADO VIAJE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>DESCARGA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th class="text-center">CARGA DOC <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>CONDUCTOR <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>TIPO CONTRATACION <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>CLIENTE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                    </tr>
+                </thead>
+                <tbody id="os-tbody">
+                    <tr>
+                        <td colspan="13" class="text-center py-5 text-muted">
+                            <div class="spinner-border spinner-border-sm text-warning me-2"></div>
+                            Cargando órdenes de servicio...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ============================================================ -->
+<!-- 📝 MODAL: NUEVA / EDITAR ORDEN DE SERVICIO (Imagenes 2 y 3)  -->
+<!-- ============================================================ -->
+<div class="modal fade" id="modalOsForm" tabindex="-1" aria-labelledby="modalOsFormLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-3 border-0 shadow-lg">
+            
+            <!-- Modal Header -->
+            <div class="modal-header d-flex align-items-center justify-content-between">
+                <h5 class="modal-title" id="modalOsFormLabel">Nueva Orden</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body p-3 p-md-4">
+                
+                <!-- Pestañas (Tabs) estilo Imagen 2 y 3 -->
+                <ul class="nav nav-tabs" id="osModalTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-os-documentos-link" data-bs-toggle="tab" data-bs-target="#tab-os-documentos" type="button" role="tab">
+                            DOCUMENTOS
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-os-orden-link" data-bs-toggle="tab" data-bs-target="#tab-os-orden" type="button" role="tab">
+                            ORDEN DE SERVICIO
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-muted" id="tab-os-rutas-link" type="button" disabled title="Módulo en desarrollo">
+                            RUTAS
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-muted" id="tab-os-guias-tercero-link" type="button" disabled title="Módulo en desarrollo">
+                            GUÍAS DE TERCERO
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="osModalTabContent">
+                    
+                    <!-- ── TAB 1: ORDEN DE SERVICIO (Imagen 2) ── -->
+                    <div class="tab-pane fade show active" id="tab-os-orden" role="tabpanel">
+                        <form id="formOrdenServicio" autocomplete="off" onsubmit="window.osGuardarOrden(event)">
+                            <input type="hidden" id="os-input-id" value="">
+
+                            <!-- Fila 1: Serie(*), Número(*), Fecha(*), Moneda(*), Tipo Cambio(*) -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label">Serie <span class="req">(*)</span></label>
+                                    <input type="text" id="os-input-serie" class="form-control" readonly tabindex="-1" value="2026" required>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label">Número <span class="req">(*)</span></label>
+                                    <input type="text" id="os-input-numero" class="form-control" readonly tabindex="-1" placeholder="00001483" required>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label">Fecha <span class="req">(*)</span></label>
+                                    <input type="date" id="os-input-fecha" class="form-control" required>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label">Moneda <span class="req">(*)</span></label>
+                                    <select id="os-input-moneda" class="form-select" required>
+                                        <option value="SOLES" selected>SOLES</option>
+                                        <option value="DÓLARES">DÓLARES</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label">Tipo Cambio <span class="req">(*)</span></label>
+                                    <input type="text" id="os-input-tipo-cambio" class="form-control" readonly tabindex="-1" value="3.750" required>
+                                </div>
+                            </div>
+
+                            <!-- Fila 2: Tipo Contratación(*), Modalidad Ejecución(*), Cliente/Remitente(*), Tipo Servicio(*) -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label">Tipo Contratación <span class="req">(*)</span></label>
+                                    <select id="os-input-tipo-contratacion" class="form-select" required>
+                                        <option value="CLIENTE DIRECTO" selected>CLIENTE DIRECTO</option>
+                                        <option value="TERCERO">TERCERO</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label">Modalidad Ejecución <span class="req">(*)</span></label>
+                                    <select id="os-input-modalidad-ejecucion" class="form-select" required>
+                                        <option value="PROPIO" selected>PROPIO</option>
+                                        <option value="TERCERIZADO">TERCERIZADO</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label">Cliente/Remitente <span class="req">(*)</span></label>
+                                    <select id="os-input-cliente" class="form-select" required>
+                                        <option value="">Seleccione...</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label">Tipo Servicio <span class="req">(*)</span></label>
+                                    <select id="os-input-tipo-servicio" class="form-select" required>
+                                        <option value="CARGA GENERAL" selected>CARGA GENERAL</option>
+                                        <option value="TRANSPORTE LOCAL">TRANSPORTE LOCAL</option>
+                                        <option value="TRANSPORTE NACIONAL">TRANSPORTE NACIONAL</option>
+                                        <option value="DISTRIBUCION">DISTRIBUCIÓN</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Fila 3: Tipo Costo(*), Impuesto(*), Costo Flete(*), # Puntos de carga(*), SUBIR SUSTENTO -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label">Tipo Costo <span class="req">(*)</span></label>
+                                    <select id="os-input-tipo-costo" class="form-select" required>
+                                        <option value="POR VIAJE" selected>POR VIAJE</option>
+                                        <option value="POR TONELADA">POR TONELADA</option>
+                                        <option value="POR PALLET">POR PALLET</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label">Impuesto <span class="req">(*)</span></label>
+                                    <select id="os-input-impuesto" class="form-select" required>
+                                        <option value="IGV 18%" selected>IGV 18%</option>
+                                        <option value="EXONERADO">EXONERADO</option>
+                                        <option value="INAFECTO">INAFECTO</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label">Costo Flete <span class="req">(*)</span></label>
+                                    <input type="number" step="0.01" id="os-input-costo-flete" class="form-control" value="0.00" required>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label"># Puntos de carga <span class="req">(*)</span></label>
+                                    <select id="os-input-puntos-carga" class="form-select" required>
+                                        <option value="1" selected>1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label">SUBIR SUSTENTO</label>
+                                    <input type="file" id="os-input-sustento" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <!-- Fila 4: Destinatario, # Puntos de destino(*) -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-12 col-md-9">
+                                    <label class="form-label">Destinatario</label>
+                                    <input type="text" id="os-input-destinatario" class="form-control text-uppercase" placeholder="Seleccione o ingrese destinatario...">
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label"># Puntos de destino <span class="req">(*)</span></label>
+                                    <select id="os-input-puntos-destino" class="form-select" required>
+                                        <option value="1" selected>1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Fila 5: Observaciones -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">Observaciones</label>
+                                    <textarea id="os-input-observaciones" class="form-control" rows="2" placeholder=""></textarea>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ── TAB 2: DOCUMENTOS (Imagen 3) ── -->
+                    <div class="tab-pane fade" id="tab-os-documentos" role="tabpanel">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <button type="button" class="btn btn-sm os-btn-doc-agregar d-flex align-items-center gap-1.5" onclick="window.osAbrirSelectorGre()">
+                                <i class="bi bi-plus-lg"></i> + Agregar
+                            </button>
+                            <span class="text-muted small">Anexe Guías de Remisión (GRE) para este servicio</span>
+                        </div>
+
+                        <div class="table-responsive border rounded-3 bg-white mb-3" style="max-height: 320px; overflow-y: auto;">
+                            <table class="table table-sm os-table align-middle mb-0" id="tablaOsDocumentosAdjuntos">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>FECHA CARGA</th>
+                                        <th>DOCUMENTO</th>
+                                        <th>GR. REMITENTE</th>
+                                        <th>NUMERO TRANSPORTE</th>
+                                        <th>PLACA REFERENCIA</th>
+                                        <th>VOLUMEN</th>
+                                        <th>CANTIDAD</th>
+                                        <th>PESO</th>
+                                        <th>REMITENTE</th>
+                                        <th>DESTINATARIO</th>
+                                        <th>FECHA ENTREGA</th>
+                                        <th class="text-center">ACCIÓN</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="os-docs-tbody">
+                                    <tr>
+                                        <td colspan="12" class="text-center py-4 text-muted">
+                                            No hay documentos anexados aún. Haga clic en <b>+ Agregar</b> para vincular una GRE.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Totales al pie de la tabla de documentos (Imagen 3) -->
+                        <div class="d-flex flex-wrap align-items-center justify-content-between px-2 text-danger fw-bold" style="font-size: 0.8rem;">
+                            <div>Total de números de documentos: <span id="os-doc-total-count">0</span></div>
+                            <div>Total de metros cúbicos(M3): <span id="os-doc-total-volumen">0.000</span></div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer d-flex align-items-center justify-content-between px-4 py-2 border-top bg-light">
+                <button type="button" class="btn btn-sm btn-light border px-3" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-sm os-btn-guardar" onclick="window.osGuardarOrdenDirecto()">Guardar</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 🔍 MODAL SECUNDARIO: ÓRDENES DE DOCUMENTO SIN SERVICIOS ASIGNADOS (Imagen 4) -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalOsSelectorGre" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-3 border-0 shadow-lg">
+            
+            <!-- Modal Header -->
+            <div class="modal-header d-flex align-items-center justify-content-between">
+                <h5 class="modal-title">Órdenes de Documento sin Servicios Asignados</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body p-3">
+                
+                <!-- Toolbar de Búsqueda -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm os-toolbar-btn d-flex align-items-center gap-1" onclick="window.osRecargarGresDisponibles()">
+                            <i class="bi bi-arrow-clockwise"></i> Refrescar
+                        </button>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="small text-muted fw-bold text-nowrap m-0">Buscar en tabla:</label>
+                        <input type="text" id="os-gre-selector-search" class="form-control form-control-sm" placeholder="Guía, RUC, Cliente..." oninput="window.osFiltrarGresDisponibles(this.value)" style="width: 220px;">
+                    </div>
+                </div>
+
+                <!-- Tabla de GREs Disponibles -->
+                <div class="table-responsive border rounded-3 bg-white" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-sm os-table align-middle mb-0" id="tablaGresDisponibles">
+                        <thead class="table-light">
+                            <tr>
+                                <th>FECHA CARGA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                                <th>DOCUMENTO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                                <th>GR.REMITENTE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                                <th>NUMERO DE TRANSPORTE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                                <th>VEHICULO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                                <th>REMITENTE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                                <th>DESTINATARIO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                                <th>VOLUMEN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                                <th>CANTIDAD <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                                <th>PESO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                                <th>FECHA DE ENTREGA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                                <th class="text-center">ACCIÓN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="os-gre-selector-tbody">
+                            <tr>
+                                <td colspan="12" class="text-center py-5 text-muted">
+                                    No hay datos disponibles en la tabla
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer px-4 py-2 border-top bg-light">
+                <button type="button" class="btn btn-sm btn-light border px-3" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+
+        </div>
+    </div>
+</div>
