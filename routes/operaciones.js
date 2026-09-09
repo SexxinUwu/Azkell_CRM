@@ -120,6 +120,68 @@ module.exports = function (db, broadcast, logAudit) {
         INDEX idx_es_retorno (es_retorno)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
+    // Tabla principal de Órdenes de Servicio
+    const TABLE_ORDENES_SERVICIO_SQL = `CREATE TABLE IF NOT EXISTS operaciones_ordenes_servicio (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        serie VARCHAR(10) NOT NULL DEFAULT '2026',
+        numero VARCHAR(20) NOT NULL,
+        codigo_orden VARCHAR(40) NOT NULL,
+        fecha DATE NOT NULL,
+        fecha_fin DATE NULL,
+        moneda VARCHAR(20) DEFAULT 'SOLES',
+        tipo_cambio DECIMAL(8,3) DEFAULT 3.750,
+        tipo_contratacion VARCHAR(50) DEFAULT 'CLIENTE DIRECTO',
+        modalidad_ejecucion VARCHAR(50) DEFAULT 'PROPIO',
+        cliente_id INT NULL,
+        cliente_nombre VARCHAR(255) NOT NULL,
+        tipo_servicio VARCHAR(100) DEFAULT 'CARGA GENERAL',
+        tipo_costo VARCHAR(50) DEFAULT 'POR VIAJE',
+        impuesto VARCHAR(50) DEFAULT 'IGV 18%',
+        costo_flete DECIMAL(12,2) DEFAULT 0.00,
+        puntos_carga INT DEFAULT 1,
+        puntos_destino INT DEFAULT 1,
+        destinatario VARCHAR(255) NULL,
+        sustento_url VARCHAR(255) NULL,
+        observaciones TEXT NULL,
+        viaje_asignado VARCHAR(60) NULL,
+        estado_viaje VARCHAR(30) DEFAULT 'Sin asignar',
+        estado_servicio VARCHAR(30) DEFAULT 'INICIADO',
+        estado_descarga VARCHAR(30) DEFAULT 'PENDIENTE',
+        conductor VARCHAR(150) NULL,
+        placa_tracto VARCHAR(20) NULL,
+        placa_carreta VARCHAR(20) NULL,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_codigo_orden (codigo_orden),
+        INDEX idx_fecha (fecha),
+        INDEX idx_cliente (cliente_nombre),
+        INDEX idx_viaje (viaje_asignado)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+
+    // Tabla de Documentos / Guías asociadas a la Orden de Servicio
+    const TABLE_ORDENES_SERVICIO_DOCS_SQL = `CREATE TABLE IF NOT EXISTS operaciones_ordenes_servicio_docs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        orden_servicio_id INT NOT NULL,
+        codigo_orden VARCHAR(40) NOT NULL,
+        guia_remision_id INT NULL,
+        numero_documento VARCHAR(50) NOT NULL,
+        tipo_documento VARCHAR(50) DEFAULT 'GRE',
+        gr_remitente VARCHAR(50) NULL,
+        numero_transporte VARCHAR(50) NULL,
+        placa_referencia VARCHAR(20) NULL,
+        volumen DECIMAL(12,3) DEFAULT 0.000,
+        cantidad DECIMAL(12,2) DEFAULT 0.00,
+        peso DECIMAL(12,2) DEFAULT 0.00,
+        remitente VARCHAR(255) NULL,
+        destinatario VARCHAR(255) NULL,
+        fecha_carga DATE NULL,
+        fecha_entrega DATE NULL,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_os_id (orden_servicio_id),
+        INDEX idx_os_codigo (codigo_orden),
+        INDEX idx_guia_id (guia_remision_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+
     async function ensureTables(req) {
         const tenantId = (req && req.tenantId) ? req.tenantId : 'default';
         if (_tenantsInitSet.has(tenantId)) return;
@@ -130,6 +192,8 @@ module.exports = function (db, broadcast, logAudit) {
             await tdb.query(TABLE_RUTAS_SQL);
             await tdb.query(TABLE_MARSISA_SQL);
             await tdb.query(TABLE_MARSISA_RUTAS_SQL);
+            await tdb.query(TABLE_ORDENES_SERVICIO_SQL);
+            await tdb.query(TABLE_ORDENES_SERVICIO_DOCS_SQL);
             try {
                 await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN peso DECIMAL(12,2) NULL DEFAULT 0.00 AFTER placa_remolque");
             } catch (ignore) {}
@@ -1186,6 +1250,443 @@ module.exports = function (db, broadcast, logAudit) {
         } catch (err) {
             console.error('Error al sincronizar ordenes de viaje:', err);
             res.status(500).json({ error: err.message });
+        }
+    });
+
+    // =========================================================================
+    // 💼 ENDPOINTS: ÓRDENES DE SERVICIO (ERP AZKELL FLEET)
+    // =========================================================================
+
+    // 1. Correlativo para nueva Orden de Servicio
+    router.get('/ordenes-servicio/correlativo', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const year = new Date().getFullYear().toString();
+            const [rows] = await tdb.query(
+                `SELECT numero FROM operaciones_ordenes_servicio WHERE serie = ? ORDER BY id DESC LIMIT 1`,
+                [year]
+            );
+
+            let nextNum = 1450;
+            if (rows && rows.length > 0) {
+                const parsed = parseInt(rows[0].numero, 10);
+                if (!isNaN(parsed)) nextNum = parsed + 1;
+            }
+
+            const formattedNum = String(nextNum).padStart(8, '0');
+            res.json({
+                ok: true,
+                serie: year,
+                numero: formattedNum,
+                codigo_orden: `${year}-${formattedNum}`
+            });
+        } catch (err) {
+            console.error('Error al obtener correlativo de orden de servicio:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 2. Listar Órdenes de Servicio
+    router.get('/ordenes-servicio', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const { fecha_desde, fecha_hasta, cliente, q } = req.query;
+
+            let sql = `
+                SELECT 
+                    os.*,
+                    DATE_FORMAT(os.fecha, '%Y-%m-%d') AS fecha_fmt,
+                    DATE_FORMAT(os.fecha_fin, '%Y-%m-%d') AS fecha_fin_fmt,
+                    COALESCE(doc_cnt.total_docs, 0) AS carga_doc,
+                    COALESCE(doc_cnt.total_peso, 0) AS peso_documentos,
+                    COALESCE(doc_cnt.total_volumen, 0) AS volumen_documentos
+                FROM operaciones_ordenes_servicio os
+                LEFT JOIN (
+                    SELECT 
+                        orden_servicio_id, 
+                        COUNT(*) AS total_docs,
+                        SUM(peso) AS total_peso,
+                        SUM(volumen) AS total_volumen
+                    FROM operaciones_ordenes_servicio_docs
+                    GROUP BY orden_servicio_id
+                ) doc_cnt ON os.id = doc_cnt.orden_servicio_id
+                WHERE 1=1
+            `;
+            const params = [];
+
+            if (fecha_desde) {
+                sql += ` AND os.fecha >= ?`;
+                params.push(fecha_desde);
+            }
+            if (fecha_hasta) {
+                sql += ` AND os.fecha <= ?`;
+                params.push(fecha_hasta);
+            }
+            if (cliente && String(cliente).trim() !== '' && cliente !== 'TODOS') {
+                sql += ` AND (os.cliente_nombre = ? OR os.cliente_id = ?)`;
+                params.push(cliente, cliente);
+            }
+            if (q && String(q).trim() !== '') {
+                const term = `%${String(q).trim()}%`;
+                sql += ` AND (
+                    os.codigo_orden LIKE ? OR 
+                    os.cliente_nombre LIKE ? OR 
+                    os.conductor LIKE ? OR 
+                    os.viaje_asignado LIKE ? OR
+                    os.tipo_servicio LIKE ?
+                )`;
+                params.push(term, term, term, term, term);
+            }
+
+            sql += ` ORDER BY os.fecha DESC, os.id DESC LIMIT 1500`;
+
+            const [rows] = await tdb.query(sql, params);
+            res.json({ ok: true, data: rows });
+        } catch (err) {
+            console.error('Error al listar ordenes de servicio:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 3. Obtener detalle de una Orden de Servicio (con sus documentos adjuntos)
+    router.get('/ordenes-servicio/:id', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const [rows] = await tdb.query(
+                `SELECT *, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha_fmt, DATE_FORMAT(fecha_fin, '%Y-%m-%d') AS fecha_fin_fmt FROM operaciones_ordenes_servicio WHERE id = ?`,
+                [req.params.id]
+            );
+            if (!rows || rows.length === 0) {
+                return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
+            }
+
+            const orden = rows[0];
+            const [docs] = await tdb.query(
+                `SELECT *, DATE_FORMAT(fecha_carga, '%Y-%m-%d') AS fecha_carga_fmt, DATE_FORMAT(fecha_entrega, '%Y-%m-%d') AS fecha_entrega_fmt 
+                 FROM operaciones_ordenes_servicio_docs 
+                 WHERE orden_servicio_id = ? 
+                 ORDER BY id ASC`,
+                [orden.id]
+            );
+
+            orden.documentos = docs || [];
+            res.json({ ok: true, data: orden });
+        } catch (err) {
+            console.error('Error al obtener orden de servicio:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 4. Crear nueva Orden de Servicio
+    router.post('/ordenes-servicio', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const {
+                serie,
+                numero,
+                fecha,
+                fecha_fin,
+                moneda,
+                tipo_cambio,
+                tipo_contratacion,
+                modalidad_ejecucion,
+                cliente_id,
+                cliente_nombre,
+                tipo_servicio,
+                tipo_costo,
+                impuesto,
+                costo_flete,
+                puntos_carga,
+                puntos_destino,
+                destinatario,
+                observaciones,
+                documentos
+            } = req.body;
+
+            const yearSerie = serie || new Date().getFullYear().toString();
+            let numFinal = numero;
+            if (!numFinal) {
+                const [r] = await tdb.query(`SELECT numero FROM operaciones_ordenes_servicio WHERE serie = ? ORDER BY id DESC LIMIT 1`, [yearSerie]);
+                let next = 1450;
+                if (r && r.length > 0) {
+                    const p = parseInt(r[0].numero, 10);
+                    if (!isNaN(p)) next = p + 1;
+                }
+                numFinal = String(next).padStart(8, '0');
+            }
+
+            const codigo_orden = `${yearSerie}-${numFinal}`;
+
+            const [ins] = await tdb.query(`
+                INSERT INTO operaciones_ordenes_servicio (
+                    serie, numero, codigo_orden, fecha, fecha_fin, moneda, tipo_cambio,
+                    tipo_contratacion, modalidad_ejecucion, cliente_id, cliente_nombre,
+                    tipo_servicio, tipo_costo, impuesto, costo_flete, puntos_carga,
+                    puntos_destino, destinatario, observaciones, estado_servicio
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'INICIADO')
+            `, [
+                yearSerie,
+                numFinal,
+                codigo_orden,
+                fecha || new Date().toISOString().split('T')[0],
+                fecha_fin || null,
+                moneda || 'SOLES',
+                parseFloat(tipo_cambio) || 3.750,
+                tipo_contratacion || 'CLIENTE DIRECTO',
+                modalidad_ejecucion || 'PROPIO',
+                cliente_id || null,
+                cliente_nombre || 'CLIENTE GENERAL',
+                tipo_servicio || 'CARGA GENERAL',
+                tipo_costo || 'POR VIAJE',
+                impuesto || 'IGV 18%',
+                parseFloat(costo_flete) || 0.00,
+                parseInt(puntos_carga, 10) || 1,
+                parseInt(puntos_destino, 10) || 1,
+                destinatario || null,
+                observaciones || null
+            ]);
+
+            const osId = ins.insertId;
+
+            // Anexar documentos (GREs) si vienen en el payload
+            if (Array.isArray(documentos) && documentos.length > 0) {
+                for (const doc of documentos) {
+                    await tdb.query(`
+                        INSERT INTO operaciones_ordenes_servicio_docs (
+                            orden_servicio_id, codigo_orden, guia_remision_id, numero_documento,
+                            tipo_documento, gr_remitente, numero_transporte, placa_referencia,
+                            volumen, cantidad, peso, remitente, destinatario, fecha_carga, fecha_entrega
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        osId,
+                        codigo_orden,
+                        doc.guia_remision_id || null,
+                        doc.numero_documento || doc.numero_guia || 'GRE',
+                        doc.tipo_documento || 'GRE',
+                        doc.gr_remitente || null,
+                        doc.numero_transporte || null,
+                        doc.placa_referencia || doc.placa_tracto || null,
+                        parseFloat(doc.volumen || doc.volumen_m3) || 0.000,
+                        parseFloat(doc.cantidad) || 1.00,
+                        parseFloat(doc.peso || doc.peso_bruto_total) || 0.00,
+                        doc.remitente || doc.remitente_razon_social || null,
+                        doc.destinatario || doc.destinatario_razon_social || null,
+                        doc.fecha_carga || doc.fecha_traslado || null,
+                        doc.fecha_entrega || null
+                    ]);
+
+                    // Actualizar trazabilidad en la tabla guias_remision
+                    if (doc.guia_remision_id) {
+                        try {
+                            await tdb.query(
+                                `UPDATE guias_remision SET orden_servicio = ? WHERE id = ?`,
+                                [codigo_orden, doc.guia_remision_id]
+                            );
+                        } catch (ignore) {}
+                    } else if (doc.numero_documento) {
+                        try {
+                            await tdb.query(
+                                `UPDATE guias_remision SET orden_servicio = ? WHERE numero_guia = ?`,
+                                [codigo_orden, doc.numero_documento]
+                            );
+                        } catch (ignore) {}
+                    }
+                }
+            }
+
+            if (logAudit) {
+                logAudit({
+                    req,
+                    accion: 'CREAR_ORDEN_SERVICIO',
+                    modulo: 'OPERACIONES',
+                    detalle: `Creada Orden de Servicio ${codigo_orden} para cliente ${cliente_nombre}`
+                });
+            }
+
+            res.json({
+                ok: true,
+                message: `Orden de Servicio ${codigo_orden} guardada exitosamente.`,
+                id: osId,
+                codigo_orden
+            });
+        } catch (err) {
+            console.error('Error al crear orden de servicio:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 5. Editar Orden de Servicio existente
+    router.put('/ordenes-servicio/:id', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const osId = req.params.id;
+            const {
+                fecha,
+                fecha_fin,
+                moneda,
+                tipo_cambio,
+                tipo_contratacion,
+                modalidad_ejecucion,
+                cliente_id,
+                cliente_nombre,
+                tipo_servicio,
+                tipo_costo,
+                impuesto,
+                costo_flete,
+                puntos_carga,
+                puntos_destino,
+                destinatario,
+                observaciones,
+                estado_servicio,
+                documentos
+            } = req.body;
+
+            const [prev] = await tdb.query(`SELECT codigo_orden FROM operaciones_ordenes_servicio WHERE id = ?`, [osId]);
+            if (!prev || prev.length === 0) {
+                return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
+            }
+            const codigo_orden = prev[0].codigo_orden;
+
+            await tdb.query(`
+                UPDATE operaciones_ordenes_servicio SET
+                    fecha = COALESCE(?, fecha),
+                    fecha_fin = ?,
+                    moneda = COALESCE(?, moneda),
+                    tipo_cambio = COALESCE(?, tipo_cambio),
+                    tipo_contratacion = COALESCE(?, tipo_contratacion),
+                    modalidad_ejecucion = COALESCE(?, modalidad_ejecucion),
+                    cliente_id = ?,
+                    cliente_nombre = COALESCE(?, cliente_nombre),
+                    tipo_servicio = COALESCE(?, tipo_servicio),
+                    tipo_costo = COALESCE(?, tipo_costo),
+                    impuesto = COALESCE(?, impuesto),
+                    costo_flete = COALESCE(?, costo_flete),
+                    puntos_carga = COALESCE(?, puntos_carga),
+                    puntos_destino = COALESCE(?, puntos_destino),
+                    destinatario = ?,
+                    observaciones = ?,
+                    estado_servicio = COALESCE(?, estado_servicio)
+                WHERE id = ?
+            `, [
+                fecha || null,
+                fecha_fin || null,
+                moneda || null,
+                parseFloat(tipo_cambio) || 3.750,
+                tipo_contratacion || null,
+                modalidad_ejecucion || null,
+                cliente_id || null,
+                cliente_nombre || null,
+                tipo_servicio || null,
+                tipo_costo || null,
+                impuesto || null,
+                parseFloat(costo_flete) || 0.00,
+                parseInt(puntos_carga, 10) || 1,
+                parseInt(puntos_destino, 10) || 1,
+                destinatario || null,
+                observaciones || null,
+                estado_servicio || null,
+                osId
+            ]);
+
+            // Si se envían documentos, actualizar sincronizando guias_remision
+            if (Array.isArray(documentos)) {
+                // Liberar documentos anteriores vinculados a esta OS en guias_remision
+                try {
+                    await tdb.query(`UPDATE guias_remision SET orden_servicio = NULL WHERE orden_servicio = ?`, [codigo_orden]);
+                } catch (ignore) {}
+
+                // Limpiar tabla de docs para reemplazo limpio
+                await tdb.query(`DELETE FROM operaciones_ordenes_servicio_docs WHERE orden_servicio_id = ?`, [osId]);
+
+                for (const doc of documentos) {
+                    await tdb.query(`
+                        INSERT INTO operaciones_ordenes_servicio_docs (
+                            orden_servicio_id, codigo_orden, guia_remision_id, numero_documento,
+                            tipo_documento, gr_remitente, numero_transporte, placa_referencia,
+                            volumen, cantidad, peso, remitente, destinatario, fecha_carga, fecha_entrega
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        osId,
+                        codigo_orden,
+                        doc.guia_remision_id || null,
+                        doc.numero_documento || doc.numero_guia || 'GRE',
+                        doc.tipo_documento || 'GRE',
+                        doc.gr_remitente || null,
+                        doc.numero_transporte || null,
+                        doc.placa_referencia || doc.placa_tracto || null,
+                        parseFloat(doc.volumen || doc.volumen_m3) || 0.000,
+                        parseFloat(doc.cantidad) || 1.00,
+                        parseFloat(doc.peso || doc.peso_bruto_total) || 0.00,
+                        doc.remitente || doc.remitente_razon_social || null,
+                        doc.destinatario || doc.destinatario_razon_social || null,
+                        doc.fecha_carga || doc.fecha_traslado || null,
+                        doc.fecha_entrega || null
+                    ]);
+
+                    // Actualizar trazabilidad en guias_remision
+                    if (doc.guia_remision_id) {
+                        try {
+                            await tdb.query(`UPDATE guias_remision SET orden_servicio = ? WHERE id = ?`, [codigo_orden, doc.guia_remision_id]);
+                        } catch (ignore) {}
+                    } else if (doc.numero_documento) {
+                        try {
+                            await tdb.query(`UPDATE guias_remision SET orden_servicio = ? WHERE numero_guia = ?`, [codigo_orden, doc.numero_documento]);
+                        } catch (ignore) {}
+                    }
+                }
+            }
+
+            if (logAudit) {
+                logAudit({
+                    req,
+                    accion: 'EDITAR_ORDEN_SERVICIO',
+                    modulo: 'OPERACIONES',
+                    detalle: `Actualizada Orden de Servicio ${codigo_orden}`
+                });
+            }
+
+            res.json({
+                ok: true,
+                message: `Orden de Servicio ${codigo_orden} actualizada correctamente.`
+            });
+        } catch (err) {
+            console.error('Error al actualizar orden de servicio:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 6. Cambiar estado de servicio (ej: FINALIZAR / ANULAR)
+    router.put('/ordenes-servicio/:id/estado', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const { estado_servicio } = req.body;
+            await tdb.query(
+                `UPDATE operaciones_ordenes_servicio SET estado_servicio = ? WHERE id = ?`,
+                [estado_servicio, req.params.id]
+            );
+
+            res.json({ ok: true, message: `Estado actualizado a ${estado_servicio}.` });
+        } catch (err) {
+            console.error('Error al cambiar estado de orden de servicio:', err);
+            res.status(500).json({ ok: false, error: err.message });
         }
     });
 
