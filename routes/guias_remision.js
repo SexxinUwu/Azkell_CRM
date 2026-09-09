@@ -622,7 +622,17 @@ module.exports = function(db, tenantStorage) {
             return m ? m[1].trim() : '';
         };
 
-        const numero_guia = getVal('ID', xmlStr);
+        const rawNumeroGuia = getVal('ID', xmlStr);
+        let numero_guia = rawNumeroGuia;
+        if (rawNumeroGuia && rawNumeroGuia.includes('-')) {
+            const parts = rawNumeroGuia.split('-');
+            const serie = parts[0].trim().toUpperCase();
+            let correlativo = parts[1].trim();
+            if (/^\d+$/.test(correlativo)) {
+                correlativo = correlativo.padStart(8, '0');
+            }
+            numero_guia = `${serie}-${correlativo}`;
+        }
         const fecha_emision = getVal('IssueDate', xmlStr);
         const hora_emision = getVal('IssueTime', xmlStr);
         const tipo_documento = getVal('DespatchAdviceTypeCode', xmlStr) || '09';
@@ -674,18 +684,59 @@ module.exports = function(db, tenantStorage) {
         const modalidad_traslado = modalidadCode === '02' ? 'Privado' : 'Público';
 
         // Vehículos y Conductor si vienen (Modalidad Privada o cuando el remitente los especifica)
-        const mRoad = (stageBloque || xmlStr).match(/<(?:\w+:)?RoadTransport[\s\S]*?<\/(?:\w+:)?RoadTransport>/i)
-            || (stageBloque || xmlStr).match(/<(?:\w+:)?TransportMeans[\s\S]*?<\/(?:\w+:)?TransportMeans>/i);
-        const roadBloque = mRoad ? mRoad[0] : '';
-        const placa_tracto = getVal('LicensePlateID', roadBloque);
+        let placa_tracto = '';
+        let placa_carreta = '';
 
-        const mCarreta = (stageBloque || xmlStr).match(/<(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)[\s\S]*?<\/(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)>/i);
-        const placa_carreta = mCarreta ? (getVal('LicensePlateID', mCarreta[0]) || getVal('ID', mCarreta[0])) : '';
+        const plateMatches = [...xmlStr.matchAll(/<(?:\w+:)?LicensePlateID[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:\w+:)?LicensePlateID>/gi)]
+            .map(m => m[1].trim())
+            .filter(p => p.length >= 4 && p.length <= 12);
 
-        const mDriver = (stageBloque || xmlStr).match(/<(?:\w+:)?DriverPerson[\s\S]*?<\/(?:\w+:)?DriverPerson>/i);
+        if (plateMatches.length > 0) {
+            placa_tracto = plateMatches[0];
+            if (plateMatches.length > 1) {
+                placa_carreta = plateMatches[1];
+            }
+        }
+
+        if (!placa_tracto) {
+            const mRoad = xmlStr.match(/<(?:\w+:)?RoadTransport[\s\S]*?<\/(?:\w+:)?RoadTransport>/i)
+                || xmlStr.match(/<(?:\w+:)?TransportMeans[\s\S]*?<\/(?:\w+:)?TransportMeans>/i);
+            if (mRoad) {
+                placa_tracto = getVal('LicensePlateID', mRoad[0]) || getVal('ID', mRoad[0]);
+            }
+        }
+
+        if (!placa_carreta) {
+            const mEquip = xmlStr.match(/<(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)[\s\S]*?<\/(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)>/i);
+            if (mEquip) {
+                const val = getVal('LicensePlateID', mEquip[0]) || getVal('ID', mEquip[0]);
+                if (val && val !== placa_tracto) {
+                    placa_carreta = val;
+                }
+            }
+        }
+
+        const mDriver = xmlStr.match(/<(?:\w+:)?DriverPerson[\s\S]*?<\/(?:\w+:)?DriverPerson>/i);
         const driverBloque = mDriver ? mDriver[0] : '';
         const conductor_num_doc = getVal('ID', driverBloque);
-        const conductor_nombre = `${getVal('FirstName', driverBloque)} ${getVal('FamilyName', driverBloque)}`.trim();
+        
+        let firstName = getVal('FirstName', driverBloque) || '';
+        let familyName = getVal('FamilyName', driverBloque) || '';
+        let conductor_nombre = '';
+        if (firstName && familyName) {
+            const fNorm = firstName.trim().toLowerCase();
+            const famNorm = familyName.trim().toLowerCase();
+            if (fNorm === famNorm || fNorm.includes(famNorm)) {
+                conductor_nombre = firstName.trim();
+            } else if (famNorm.includes(fNorm)) {
+                conductor_nombre = familyName.trim();
+            } else {
+                conductor_nombre = `${firstName.trim()} ${familyName.trim()}`;
+            }
+        } else {
+            conductor_nombre = (firstName || familyName || getVal('Name', driverBloque) || '').trim();
+        }
+
         const mLic = driverBloque.match(/<(?:\w+:)?IdentityDocumentReference[\s\S]*?<\/(?:\w+:)?IdentityDocumentReference>/i);
         const conductor_licencia = mLic ? getVal('ID', mLic[0]) : '';
 
@@ -792,8 +843,15 @@ module.exports = function(db, tenantStorage) {
                 return res.status(400).json({ ok: false, error: "El número de guía y el RUC del remitente son obligatorios." });
             }
 
-            // Normalizar numeración
-            const numGuia = String(d.numero_guia).trim().toUpperCase();
+            // Normalizar numeración con 8 dígitos como exige SUNAT
+            let numGuia = String(d.numero_guia).trim().toUpperCase();
+            if (numGuia.includes('-')) {
+                const parts = numGuia.split('-');
+                const serie = parts[0].trim();
+                let correlativo = parts[1].trim();
+                if (/^\d+$/.test(correlativo)) correlativo = correlativo.padStart(8, '0');
+                numGuia = `${serie}-${correlativo}`;
+            }
 
             // Verificar si ya existe en la base de datos
             const [existentes] = await dbConn.query("SELECT id FROM guias_remision WHERE numero_guia = ?", [numGuia]);
