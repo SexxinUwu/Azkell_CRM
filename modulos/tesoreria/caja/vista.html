@@ -199,9 +199,11 @@
 
 #modalCajaForm .form-control[readonly],
 #modalCajaForm .form-control:disabled {
-    background-color: #f1f5f9;
-    color: #475569;
-    cursor: not-allowed;
+    background-color: #eceff1 !important;
+    color: #475569 !important;
+    cursor: not-allowed !important;
+    border-color: #cfd8dc !important;
+    user-select: none;
 }
 
 .caja-callout-info {
@@ -356,19 +358,19 @@
                     <div class="row g-2 mb-3">
                         <div class="col-6 col-md">
                             <label class="form-label">Fecha<span class="req">(*)</span></label>
-                            <input type="date" id="caja-input-fecha" class="form-control" required>
+                            <input type="date" id="caja-input-fecha" class="form-control" readonly tabindex="-1" required>
                         </div>
                         <div class="col-6 col-md">
                             <label class="form-label">Hora<span class="req">(*)</span></label>
-                            <input type="text" id="caja-input-hora" class="form-control" placeholder="17:06:00" required>
+                            <input type="text" id="caja-input-hora" class="form-control" readonly tabindex="-1" placeholder="17:06:00" required>
                         </div>
                         <div class="col-6 col-md">
                             <label class="form-label">Fecha Valuta<span class="req">(*)</span></label>
-                            <input type="date" id="caja-input-fecha-valuta" class="form-control" required>
+                            <input type="date" id="caja-input-fecha-valuta" class="form-control" readonly tabindex="-1" required>
                         </div>
                         <div class="col-6 col-md">
                             <label class="form-label">Hora<span class="req">(*)</span></label>
-                            <input type="text" id="caja-input-hora-valuta" class="form-control" placeholder="17:06:00" required>
+                            <input type="text" id="caja-input-hora-valuta" class="form-control" readonly tabindex="-1" placeholder="17:06:00" required>
                         </div>
                         <div class="col-12 col-md">
                             <label class="form-label">Número Constancia Deposito</label>
@@ -384,11 +386,11 @@
                         </div>
                         <div class="col-6 col-md-4">
                             <label class="form-label">Serie <span class="req">(*)</span></label>
-                            <input type="text" id="caja-input-serie" class="form-control" value="2026" required onchange="window.cajaActualizarCorrelativo()">
+                            <input type="text" id="caja-input-serie" class="form-control" readonly tabindex="-1" value="2026" required>
                         </div>
                         <div class="col-6 col-md-4">
                             <label class="form-label">Número <span class="req">(*)</span></label>
-                            <input type="text" id="caja-input-numero" class="form-control" placeholder="00008567" required>
+                            <input type="text" id="caja-input-numero" class="form-control" readonly tabindex="-1" placeholder="00008567" required>
                         </div>
                     </div>
 
@@ -403,11 +405,11 @@
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label">Conductor</label>
-                            <input type="text" id="caja-input-conductor" class="form-control" readonly placeholder="">
+                            <input type="text" id="caja-input-conductor" class="form-control" readonly tabindex="-1" placeholder="">
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label">Ruta de viaje</label>
-                            <input type="text" id="caja-input-ruta" class="form-control" readonly placeholder="">
+                            <input type="text" id="caja-input-ruta" class="form-control" readonly tabindex="-1" placeholder="">
                             <input type="hidden" id="caja-input-placa" value="">
                         </div>
                     </div>
