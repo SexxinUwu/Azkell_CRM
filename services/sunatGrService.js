@@ -26,6 +26,7 @@ class SunatGrService {
         try {
             const tokenUrl = `https://api-seguridad.sunat.gob.pe/v1/clientessol/${encodeURIComponent(creds.sunat_client_id)}/oauth2/token/`;
             
+            const scopeGre = 'https://api-cpe.sunat.gob.pe';
             const bodyParams = {
                 client_id: creds.sunat_client_id,
                 client_secret: creds.sunat_client_secret
@@ -33,12 +34,12 @@ class SunatGrService {
 
             if (creds.sunat_usuario_sol && creds.sunat_clave_sol && creds.sunat_ruc_emisor) {
                 bodyParams.grant_type = 'password';
-                bodyParams.scope = 'https://api.sunat.gob.pe/v1/contribuyente/gem';
+                bodyParams.scope = scopeGre;
                 bodyParams.username = `${creds.sunat_ruc_emisor}${creds.sunat_usuario_sol}`;
                 bodyParams.password = creds.sunat_clave_sol;
             } else {
                 bodyParams.grant_type = 'client_credentials';
-                bodyParams.scope = 'https://api.sunat.gob.pe/v1/contribuyente/gem';
+                bodyParams.scope = scopeGre;
             }
 
             const searchParams = new URLSearchParams(bodyParams);
