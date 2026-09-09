@@ -411,17 +411,22 @@ module.exports = function(db, tenantStorage) {
             // Manejo de errores devueltos por SUNAT
             if (!sunatResp.ok || (sunatJson && sunatJson.errors)) {
                 let mensajeError = "No se encontraron resultados en SUNAT para la serie y número ingresados.";
-                if (sunatJson && Array.isArray(sunatJson.errors) && sunatJson.errors.length > 0) {
+                let statusHttp = sunatStatus === 404 ? 404 : 400;
+
+                if (sunatStatus === 401 || sunatStatus === 403) {
+                    mensajeError = "SUNAT denegó el acceso (401 No Autorizado): La aplicación en Clave SOL no tiene marcado o habilitado el permiso de consulta de GRE (/v1/contribuyente/gre).";
+                } else if (sunatJson && Array.isArray(sunatJson.errors) && sunatJson.errors.length > 0) {
                     mensajeError = sunatJson.errors.map(err => err.msg || err.desError || err.cod).join('. ');
                 } else if (sunatJson && sunatJson.msg) {
                     mensajeError = sunatJson.msg;
                 } else if (sunatStatus === 404) {
-                    mensajeError = "No se encontró el comprobante en SUNAT (404 Not Found).";
+                    mensajeError = "No se encontró el comprobante en SUNAT (404 Not Found). Verifique el RUC del emisor, la serie y el número.";
                 }
 
-                return res.status(404).json({
+                return res.status(statusHttp).json({
                     ok: false,
                     error: mensajeError,
+                    sunatStatus,
                     detalleSunat: sunatJson
                 });
             }
