@@ -683,65 +683,97 @@ module.exports = function(db, tenantStorage) {
         const modalidadCode = getVal('TransportModeCode', stageBloque);
         const modalidad_traslado = modalidadCode === '02' ? 'Privado' : 'Público';
 
-        // Vehículos y Conductor si vienen (Modalidad Privada o cuando el remitente los especifica)
+        // Limpiar comentarios XML y CDATA redundantes para análisis seguro
+        const cleanXml = xmlStr.replace(/<!--[\s\S]*?-->/g, '');
+
+        // 🚗 VEHÍCULOS (RoadTransport, TransportMeans, AttachedTransportMeans, TransportEquipment)
         let placa_tracto = '';
         let placa_carreta = '';
 
-        const plateMatches = [...xmlStr.matchAll(/<(?:\w+:)?LicensePlateID[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:\w+:)?LicensePlateID>/gi)]
-            .map(m => m[1].trim())
-            .filter(p => p.length >= 4 && p.length <= 12);
-
-        if (plateMatches.length > 0) {
-            placa_tracto = plateMatches[0];
-            if (plateMatches.length > 1) {
-                placa_carreta = plateMatches[1];
-            }
+        // Buscar bloques explícitos RoadTransport o TransportMeans (Vehículo Principal)
+        const mRoad = cleanXml.match(/<(?:\w+:)?RoadTransport[\s\S]*?<\/(?:\w+:)?RoadTransport>/i)
+            || cleanXml.match(/<(?:\w+:)?TransportMeans[\s\S]*?<\/(?:\w+:)?TransportMeans>/i);
+        if (mRoad) {
+            placa_tracto = getVal('LicensePlateID', mRoad[0]) || getVal('ID', mRoad[0]);
         }
 
+        // Buscar bloques AttachedTransportMeans o TransportEquipment (Vehículo Secundario / Carreta)
+        const mEquip = cleanXml.match(/<(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)[\s\S]*?<\/(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)>/i);
+        if (mEquip) {
+            const val = getVal('LicensePlateID', mEquip[0]) || getVal('ID', mEquip[0]);
+            if (val) placa_carreta = val;
+        }
+
+        // Si no se asignó placa principal pero hay LicensePlateID en el XML
         if (!placa_tracto) {
-            const mRoad = xmlStr.match(/<(?:\w+:)?RoadTransport[\s\S]*?<\/(?:\w+:)?RoadTransport>/i)
-                || xmlStr.match(/<(?:\w+:)?TransportMeans[\s\S]*?<\/(?:\w+:)?TransportMeans>/i);
-            if (mRoad) {
-                placa_tracto = getVal('LicensePlateID', mRoad[0]) || getVal('ID', mRoad[0]);
-            }
-        }
+            const plateMatches = [...cleanXml.matchAll(/<(?:\w+:)?LicensePlateID[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:\w+:)?LicensePlateID>/gi)]
+                .map(m => m[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim().toUpperCase())
+                .filter(p => p.length >= 4 && p.length <= 12 && !p.includes('<'));
 
-        if (!placa_carreta) {
-            const mEquip = xmlStr.match(/<(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)[\s\S]*?<\/(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)>/i);
-            if (mEquip) {
-                const val = getVal('LicensePlateID', mEquip[0]) || getVal('ID', mEquip[0]);
-                if (val && val !== placa_tracto) {
-                    placa_carreta = val;
+            if (plateMatches.length > 0) {
+                placa_tracto = plateMatches[0];
+                if (plateMatches.length > 1 && !placa_carreta) {
+                    placa_carreta = plateMatches[1];
                 }
             }
         }
 
-        const mDriver = xmlStr.match(/<(?:\w+:)?DriverPerson[\s\S]*?<\/(?:\w+:)?DriverPerson>/i);
-        const driverBloque = mDriver ? mDriver[0] : '';
-        const conductor_num_doc = getVal('ID', driverBloque);
-        
-        let firstName = getVal('FirstName', driverBloque) || '';
-        let familyName = getVal('FamilyName', driverBloque) || '';
-        let conductor_nombre = '';
-        if (firstName && familyName) {
-            const fNorm = firstName.trim().toLowerCase();
-            const famNorm = familyName.trim().toLowerCase();
-            if (fNorm === famNorm || fNorm.includes(famNorm)) {
-                conductor_nombre = firstName.trim();
-            } else if (famNorm.includes(fNorm)) {
-                conductor_nombre = familyName.trim();
-            } else {
-                conductor_nombre = `${firstName.trim()} ${familyName.trim()}`;
-            }
-        } else {
-            conductor_nombre = (firstName || familyName || getVal('Name', driverBloque) || '').trim();
+        if (placa_carreta === placa_tracto) {
+            placa_carreta = '';
         }
 
-        const mLic = driverBloque.match(/<(?:\w+:)?IdentityDocumentReference[\s\S]*?<\/(?:\w+:)?IdentityDocumentReference>/i);
-        const conductor_licencia = mLic ? getVal('ID', mLic[0]) : '';
+        // 👤 CONDUCTORES (DriverPerson)
+        const mDriver = cleanXml.match(/<(?:\w+:)?DriverPerson[\s\S]*?<\/(?:\w+:)?DriverPerson>/i);
+        const driverBloque = mDriver ? mDriver[0] : '';
+        
+        let conductor_num_doc = getVal('ID', driverBloque).replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        if (!conductor_num_doc || conductor_num_doc.length < 8) {
+            const mDni = cleanXml.match(/<(?:\w+:)?ID[^>]*schemeID=["']1["'][^>]*>(?:<!\[CDATA\[)?(\d{8})(?:\]\]>)?<\//i)
+                || cleanXml.match(/\b(7\d{7}|4\d{7}|0\d{7}|1\d{7}|2\d{7})\b/);
+            if (mDni) conductor_num_doc = (mDni[1] || mDni[0]).trim();
+        }
+        
+        let firstName = getVal('FirstName', driverBloque).replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        let familyName = getVal('FamilyName', driverBloque).replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        let conductor_nombre = '';
+        if (firstName && familyName) {
+            const fNorm = firstName.toLowerCase();
+            const famNorm = familyName.toLowerCase();
+            if (fNorm === famNorm || fNorm.includes(famNorm)) {
+                conductor_nombre = firstName;
+            } else if (famNorm.includes(fNorm)) {
+                conductor_nombre = familyName;
+            } else {
+                conductor_nombre = `${firstName} ${familyName}`;
+            }
+        } else {
+            conductor_nombre = (firstName || familyName || getVal('Name', driverBloque) || '').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        }
+
+        if (conductor_nombre) {
+            const words = conductor_nombre.split(/\s+/).filter(Boolean);
+            const half = Math.floor(words.length / 2);
+            if (half >= 2 && words.slice(0, half).join(' ') === words.slice(half).join(' ')) {
+                conductor_nombre = words.slice(0, half).join(' ');
+            }
+        }
+
+        let conductor_licencia = '';
+        const mLicBlock = driverBloque.match(/<(?:\w+:)?IdentityDocumentReference[\s\S]*?<\/(?:\w+:)?IdentityDocumentReference>/i);
+        if (mLicBlock) {
+            conductor_licencia = getVal('ID', mLicBlock[0]).replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+        }
+        if (!conductor_licencia) {
+            const mLicMatch = cleanXml.match(/<(?:\w+:)?ID[^>]*>(?:<!\[CDATA\[)?([A-Z]\d{8})(?:\]\]>)?<\/(?:\w+:)?ID>/i)
+                || cleanXml.match(/\b([A-Z]\d{8})\b/i);
+            if (mLicMatch) {
+                conductor_licencia = mLicMatch[1].trim().toUpperCase();
+            }
+        }
+        conductor_licencia = conductor_licencia.replace(/<[^>]*>|<!\[CDATA\[|\]\]>/g, '').trim();
 
         // Observaciones / Note
-        const observaciones = getVal('Note', xmlStr);
+        const observaciones = getVal('Note', cleanXml);
 
         // Ítems de la Guía
         const itemRegex = /<(?:\w+:)?DespatchLine[\s\S]*?<\/(?:\w+:)?DespatchLine>/gi;

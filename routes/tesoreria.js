@@ -598,5 +598,334 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ── GESTIÓN DE CAJA (TESORERÍA) ──────────────────────────────────
+    async function ensureTableCaja(req) {
+        const tenantSlug = req.tenantSlug || 'default';
+        const tdb = getDb(req);
+        if (!tdb) return;
+
+        const createSql = `
+            CREATE TABLE IF NOT EXISTS tesoreria_caja (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                fecha DATE NOT NULL,
+                hora VARCHAR(10) NOT NULL DEFAULT '00:00:00',
+                fecha_valuta DATE NULL,
+                hora_valuta VARCHAR(10) NULL,
+                numero_constancia_deposito VARCHAR(100) NULL,
+                numero_factura VARCHAR(100) NULL,
+                serie VARCHAR(50) NOT NULL DEFAULT '2026',
+                numero VARCHAR(50) NOT NULL DEFAULT '',
+                orden_viaje VARCHAR(100) NULL,
+                conductor VARCHAR(150) NULL,
+                ruta_viaje VARCHAR(255) NULL,
+                placa VARCHAR(50) NULL,
+                autoriza VARCHAR(150) NOT NULL,
+                motivo VARCHAR(150) NOT NULL,
+                sub_motivo VARCHAR(150) NULL,
+                modalidad_pago VARCHAR(100) NOT NULL,
+                moneda VARCHAR(20) NOT NULL DEFAULT 'SOLES',
+                tipo_persona VARCHAR(50) NOT NULL,
+                persona VARCHAR(200) NOT NULL,
+                tipo_movimiento VARCHAR(20) NOT NULL DEFAULT 'EGRESO',
+                subtotal DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+                retencion_detraccion DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+                importe_total DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+                tipo_cambio DECIMAL(8,4) NOT NULL DEFAULT 1.0000,
+                descripcion TEXT NOT NULL,
+                tipo_comprobante VARCHAR(100) NULL,
+                cuenta_bancaria_persona VARCHAR(200) NULL,
+                cuenta_bancaria_empresa VARCHAR(200) NULL,
+                voucher_url TEXT NULL,
+                sustento_url TEXT NULL,
+                observacion TEXT NULL,
+                no_aplica_liquidacion TINYINT(1) NOT NULL DEFAULT 0,
+                estado VARCHAR(50) NOT NULL DEFAULT 'PENDIENTE',
+                comentario TEXT NULL,
+                usuario_creacion VARCHAR(150) NULL,
+                usuario_aprobacion VARCHAR(150) NULL,
+                fecha_aprobacion DATETIME NULL,
+                motivo_anulacion TEXT NULL,
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_caja_fecha (fecha),
+                INDEX idx_caja_estado (estado),
+                INDEX idx_caja_numero (serie, numero),
+                INDEX idx_caja_orden (orden_viaje),
+                INDEX idx_caja_placa (placa)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `;
+
+        try {
+            await tdb.query(createSql);
+        } catch (e) {
+            console.warn(`[Tesorería Caja] Error verificando tabla tesoreria_caja (${tenantSlug}):`, e.message);
+        }
+    }
+
+    // Correlativo automático para Caja
+    router.get('/caja/siguiente-numero', async (req, res) => {
+        try {
+            await ensureTableCaja(req);
+            const tdb = getDb(req);
+            const serie = req.query.serie || String(new Date().getFullYear());
+            const [rows] = await tdb.query(
+                "SELECT numero FROM tesoreria_caja WHERE serie = ? ORDER BY id DESC LIMIT 1",
+                [serie]
+            );
+            let nextNum = 1;
+            if (rows.length && rows[0].numero) {
+                const match = rows[0].numero.match(/\d+$/);
+                if (match) nextNum = parseInt(match[0], 10) + 1;
+            }
+            const formatted = String(nextNum).padStart(8, '0');
+            res.json({ ok: true, serie, numero: formatted });
+        } catch (err) {
+            console.error('Error al generar correlativo de caja:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Auxiliar: Listado de Órdenes de Viaje para autocompletar en Caja
+    router.get('/caja/buscar-ordenes-viaje', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const q = (req.query.q || '').trim();
+            let sql = `
+                SELECT viaje, conductor, placa_tracto, placa_remolque, ruta, fecha_viaje
+                FROM (
+                    SELECT viaje, conductor, placa_tracto, placa_remolque, ruta, fecha_viaje FROM marsisa_ordenes_viaje
+                    UNION
+                    SELECT viaje, conductor, placa_tracto, placa_remolque, ruta, fecha_viaje FROM operaciones_ordenes_viaje
+                ) AS u
+                WHERE 1=1
+            `;
+            const params = [];
+            if (q) {
+                sql += ` AND (viaje LIKE ? OR conductor LIKE ? OR placa_tracto LIKE ? OR ruta LIKE ?)`;
+                const term = `%${q}%`;
+                params.push(term, term, term, term);
+            }
+            sql += ` ORDER BY fecha_viaje DESC LIMIT 50`;
+            const [rows] = await tdb.query(sql, params);
+            res.json({ ok: true, data: rows });
+        } catch (err) {
+            console.error('Error al buscar órdenes de viaje para caja:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Listar movimientos de Caja con presigned URLs
+    router.get('/caja', async (req, res) => {
+        try {
+            await ensureTableCaja(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const { fecha_desde, fecha_hasta, estado, buscar } = req.query;
+            let sql = `
+                SELECT 
+                    id,
+                    DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha,
+                    hora,
+                    DATE_FORMAT(fecha_valuta, '%Y-%m-%d') AS fecha_valuta,
+                    hora_valuta,
+                    numero_constancia_deposito,
+                    numero_factura,
+                    serie,
+                    numero,
+                    orden_viaje,
+                    conductor,
+                    ruta_viaje,
+                    placa,
+                    autoriza,
+                    motivo,
+                    sub_motivo,
+                    modalidad_pago,
+                    moneda,
+                    tipo_persona,
+                    persona,
+                    tipo_movimiento,
+                    subtotal,
+                    retencion_detraccion,
+                    importe_total,
+                    tipo_cambio,
+                    descripcion,
+                    tipo_comprobante,
+                    cuenta_bancaria_persona,
+                    cuenta_bancaria_empresa,
+                    voucher_url,
+                    sustento_url,
+                    observacion,
+                    no_aplica_liquidacion,
+                    estado,
+                    comentario,
+                    usuario_creacion,
+                    usuario_aprobacion,
+                    DATE_FORMAT(fecha_aprobacion, '%Y-%m-%d %H:%i') AS fecha_aprobacion,
+                    motivo_anulacion,
+                    creado_en
+                FROM tesoreria_caja
+                WHERE 1=1
+            `;
+            const params = [];
+
+            if (fecha_desde) {
+                sql += ` AND fecha >= ?`;
+                params.push(safeDate(fecha_desde));
+            }
+            if (fecha_hasta) {
+                sql += ` AND fecha <= ?`;
+                params.push(safeDate(fecha_hasta));
+            }
+            if (estado && estado !== 'TODOS') {
+                sql += ` AND UPPER(estado) = UPPER(?)`;
+                params.push(estado);
+            }
+            if (buscar && buscar.trim()) {
+                const term = `%${buscar.trim()}%`;
+                sql += ` AND (
+                    numero LIKE ? OR
+                    orden_viaje LIKE ? OR
+                    placa LIKE ? OR
+                    motivo LIKE ? OR
+                    sub_motivo LIKE ? OR
+                    descripcion LIKE ? OR
+                    persona LIKE ? OR
+                    autoriza LIKE ? OR
+                    numero_factura LIKE ?
+                )`;
+                params.push(term, term, term, term, term, term, term, term, term);
+            }
+
+            sql += ` ORDER BY fecha DESC, id DESC LIMIT 500`;
+
+            const [rows] = await tdb.query(sql, params);
+
+            // Generar presigned URLs para voucher y sustento
+            for (const r of rows) {
+                if (r.voucher_url && typeof getPresignedUrl === 'function') {
+                    r.voucher_signed = await getPresignedUrl(r.voucher_url).catch(() => r.voucher_url);
+                }
+                if (r.sustento_url && typeof getPresignedUrl === 'function') {
+                    r.sustento_signed = await getPresignedUrl(r.sustento_url).catch(() => r.sustento_url);
+                }
+            }
+
+            res.json({ ok: true, data: rows });
+        } catch (err) {
+            console.error('Error al listar movimientos de caja:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Guardar nuevo registro de Caja con archivos adjuntos
+    router.post('/caja', upload.fields([{ name: 'voucher', maxCount: 1 }, { name: 'sustento', maxCount: 1 }]), async (req, res) => {
+        try {
+            await ensureTableCaja(req);
+            const tdb = getDb(req);
+            const b = req.body;
+
+            let voucherUrl = null;
+            if (req.files && req.files.voucher && req.files.voucher[0]) {
+                const f = req.files.voucher[0];
+                const ext = (f.originalname.split('.').pop() || 'png').toLowerCase();
+                const key = `tesoreria/caja/voucher_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+                voucherUrl = await uploadToS3(key, f.buffer, f.mimetype);
+            }
+
+            let sustentoUrl = null;
+            if (req.files && req.files.sustento && req.files.sustento[0]) {
+                const f = req.files.sustento[0];
+                const ext = (f.originalname.split('.').pop() || 'pdf').toLowerCase();
+                const key = `tesoreria/caja/sustento_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+                sustentoUrl = await uploadToS3(key, f.buffer, f.mimetype);
+            }
+
+            // Calcular importe total y subtotal
+            const impTotal = safeNum(b.importe_total);
+            const retDet = safeNum(b.retencion_detraccion);
+            const subTot = safeNum(b.subtotal) || Math.max(0, impTotal - retDet);
+
+            const userCreator = (req.user && req.user.nombre) ? req.user.nombre : (b.usuario_creacion || 'Sistema');
+
+            const insertSql = `
+                INSERT INTO tesoreria_caja (
+                    fecha, hora, fecha_valuta, hora_valuta,
+                    numero_constancia_deposito, numero_factura, serie, numero,
+                    orden_viaje, conductor, ruta_viaje, placa,
+                    autoriza, motivo, sub_motivo, modalidad_pago, moneda,
+                    tipo_persona, persona, tipo_movimiento, subtotal,
+                    retencion_detraccion, importe_total, tipo_cambio, descripcion,
+                    tipo_comprobante, cuenta_bancaria_persona, cuenta_bancaria_empresa,
+                    voucher_url, sustento_url, observacion, no_aplica_liquidacion,
+                    estado, usuario_creacion
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?)
+            `;
+
+            const [result] = await tdb.query(insertSql, [
+                safeDate(b.fecha) || new Date().toISOString().slice(0, 10),
+                (b.hora || '').trim() || new Date().toTimeString().slice(0, 8),
+                safeDate(b.fecha_valuta) || safeDate(b.fecha) || new Date().toISOString().slice(0, 10),
+                (b.hora_valuta || b.hora || '').trim() || new Date().toTimeString().slice(0, 8),
+                (b.numero_constancia_deposito || '').trim(),
+                (b.numero_factura || '').trim(),
+                (b.serie || '2026').trim(),
+                (b.numero || '').trim(),
+                (b.orden_viaje || '').trim(),
+                (b.conductor || '').trim(),
+                (b.ruta_viaje || '').trim(),
+                (b.placa || '').toUpperCase().trim(),
+                (b.autoriza || '').trim(),
+                (b.motivo || '').trim(),
+                (b.sub_motivo || '').trim(),
+                (b.modalidad_pago || '').trim(),
+                (b.moneda || 'SOLES').trim(),
+                (b.tipo_persona || '').trim(),
+                (b.persona || '').trim(),
+                (b.tipo_movimiento || 'EGRESO').trim(),
+                subTot,
+                retDet,
+                impTotal,
+                safeNum(b.tipo_cambio) || 1.0000,
+                (b.descripcion || '').trim(),
+                (b.tipo_comprobante || '').trim(),
+                (b.cuenta_bancaria_persona || '').trim(),
+                (b.cuenta_bancaria_empresa || '').trim(),
+                voucherUrl,
+                sustentoUrl,
+                (b.observacion || '').trim(),
+                b.no_aplica_liquidacion === '1' || b.no_aplica_liquidacion === 1 || b.no_aplica_liquidacion === true ? 1 : 0,
+                userCreator
+            ]);
+
+            if (typeof logAudit === 'function') {
+                logAudit(req, 'TESORERIA', 'CAJA', 'CREO', `Creó registro de caja Nº ${b.serie}-${b.numero} por S/ ${impTotal}`);
+            }
+
+            res.json({ ok: true, id: result.insertId, message: 'Registro de caja guardado con éxito' });
+        } catch (err) {
+            console.error('Error al guardar registro de caja:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Eliminar registro de caja
+    router.delete('/caja/:id', async (req, res) => {
+        try {
+            await ensureTableCaja(req);
+            const tdb = getDb(req);
+            const { id } = req.params;
+            const [rows] = await tdb.query('SELECT voucher_url, sustento_url FROM tesoreria_caja WHERE id = ?', [id]);
+            await tdb.query('DELETE FROM tesoreria_caja WHERE id = ?', [id]);
+            if (rows.length) {
+                if (rows[0].voucher_url) deleteFromS3(s3KeyFromUrl(rows[0].voucher_url)).catch(() => {});
+                if (rows[0].sustento_url) deleteFromS3(s3KeyFromUrl(rows[0].sustento_url)).catch(() => {});
+            }
+            res.json({ ok: true, message: 'Registro eliminado' });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     return router;
 };
