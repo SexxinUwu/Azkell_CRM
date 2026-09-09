@@ -398,8 +398,12 @@ window.verificarSesionGuardada = function() {
     var showMarsisa = isMarsisaTenant && showOperacionesHub && (vOpOV || vOpGuias || vCombVales);
     safe('nav-marsisa-ordenes-viaje',    isMarsisaTenant && vOpOV);
     safe('mbnav-marsisa-ordenes-viaje',  isMarsisaTenant && vOpOV);
-    safe('nav-op-guias-remision',        vOpGuias);
-    safe('mbnav-op-guias-remision',      vOpGuias);
+    safe('nav-op-guias-remitente',       vOpGuias);
+    safe('nav-op-guias-transportista',   vOpGuias);
+    safe('mbnav-op-guias-remitente',     vOpGuias);
+    safe('mbnav-op-guias-transportista', vOpGuias);
+    safe('nav-op-guias-remision',        vOpGuias); // compat
+    safe('mbnav-op-guias-remision',      vOpGuias); // compat
     safe('nav-marsisa-combustible-toggle', isMarsisaTenant && vCombOp);
     safe('mbnav-marsisa-combustible-toggle', isMarsisaTenant && vCombOp);
     safe('nav-marsisa-combustible-vales', isMarsisaTenant && vCombVales);
@@ -3862,11 +3866,22 @@ const BREADCRUMB_MAP = {
 
 function actualizarTituloHeader(ruta) {
     const titulo = document.getElementById('tituloTopBar');
-    if (titulo) titulo.innerText = TITULOS_MODULOS[ruta] || 'Azkell Fleet';
+    if (titulo) {
+        if (ruta === 'operaciones/guias-remision') {
+            const modo = window._greModoActivo || 'GRE';
+            titulo.innerText = modo === 'GRT' ? 'Guías de Remisión de Transportista' : 'Guías de Remisión Electrónica';
+        } else {
+            titulo.innerText = TITULOS_MODULOS[ruta] || 'Azkell Fleet';
+        }
+    }
     // Breadcrumb
     const bc   = document.getElementById('breadcrumb-nav');
     if (!bc) return;
-    const crumbs = BREADCRUMB_MAP[ruta];
+    let crumbs = BREADCRUMB_MAP[ruta];
+    if (ruta === 'operaciones/guias-remision') {
+        const modo = window._greModoActivo || 'GRE';
+        crumbs = ['Operaciones', modo === 'GRT' ? 'Guía de Remisión de Transportista' : 'Guía de Remisión Electrónica'];
+    }
     if (!crumbs || crumbs.length === 0) { bc.innerHTML = ''; return; }
     bc.innerHTML = '<i class="bi bi-house-fill topbar-bc-home"></i>' +
         crumbs.map(function(c, i) {
@@ -3874,10 +3889,31 @@ function actualizarTituloHeader(ruta) {
         }).join('');
 }
 
+// Navegador auxiliar para Guías según modo (GRE o GRT)
+window.navegarGuiasModo = function(modo) {
+    window._greModoActivo = (modo === 'GRT') ? 'GRT' : 'GRE';
+    try { sessionStorage.setItem('gre_modo_activo', window._greModoActivo); } catch(e) {}
+    
+    // Si ya estamos dentro del módulo de guías de remisión, solo cambiamos el modo en vivo
+    if (document.getElementById('moduloGuiasRemisionContenedor') && typeof window.greCambiarModoVista === 'function') {
+        marcarMenuActivo('operaciones/guias-remision');
+        actualizarTituloHeader('operaciones/guias-remision');
+        window.greCambiarModoVista(window._greModoActivo);
+        return;
+    }
+    cargarModuloAislado('operaciones/guias-remision');
+};
+
 function marcarMenuActivo(ruta) {
     document.querySelectorAll('#sidebarMenu .nav-item').forEach(a => a.classList.remove('active'));
     document.querySelectorAll('.nav-section-toggle').forEach(b => b.classList.remove('section-has-active'));
-    const idActivo = MENU_IDS[ruta];
+    
+    let idActivo = MENU_IDS[ruta];
+    if (ruta === 'operaciones/guias-remision') {
+        const modo = window._greModoActivo || sessionStorage.getItem('gre_modo_activo') || 'GRE';
+        idActivo = (modo === 'GRT') ? 'nav-op-guias-transportista' : 'nav-op-guias-remitente';
+    }
+
     if (idActivo) {
         const el = document.getElementById(idActivo);
         if (el) el.classList.add('active');
