@@ -411,6 +411,10 @@
             });
         }
 
+        // Hash digital (DigestValue) para QR oficial SUNAT
+        const mDigest = xmlStr.match(/<(?:\w+:)?DigestValue[^>]*>([\s\S]*?)<\/(?:\w+:)?DigestValue>/i);
+        const xml_hash = mDigest ? mDigest[1].trim() : '';
+
         return {
             numero_guia,
             tipo_documento,
@@ -438,6 +442,7 @@
             conductor_nombre,
             conductor_num_doc,
             conductor_licencia,
+            xml_hash,
             observaciones_sunat: observaciones || 'Esta es una representación impresa sin valor tributario de la Guía de Remisión Electrónica, generada en el sistema de la SUNAT. Puede verificarla utilizando su clave SOL.',
             items
         };
@@ -491,11 +496,25 @@
         if (seccionUpload) seccionUpload.classList.add('d-none');
         if (seccionVisor) seccionVisor.classList.remove('d-none');
 
-        // Generar QR dinámico
-        const qrData = `${guia.remitente_ruc || ''}|${guia.tipo_documento || '09'}|${guia.numero_guia || ''}|${guia.peso_bruto_total || 0}|${guia.fecha_emision || ''}|${guia.destinatario_ruc || ''}`;
+        // Generar QR dinámico fiel al formato técnico oficial de SUNAT (Anexo VII)
+        // Formato SUNAT: [RUC Emisor]|[Tipo Doc]|[Serie]|[Correlativo]|[Peso Bruto]|[Fecha Emisión]|[Tipo Doc Adq]|[Num Doc Adq]|[Hash DigestValue]|
+        let serie = 'T001', correlativo = '00000001';
+        if (guia.numero_guia && String(guia.numero_guia).includes('-')) {
+            const parts = String(guia.numero_guia).split('-');
+            serie = parts[0].trim();
+            correlativo = parts[1].trim();
+        } else if (guia.numero_guia) {
+            correlativo = String(guia.numero_guia).trim();
+        }
+
+        const tipoDocDest = (guia.destinatario_ruc && String(guia.destinatario_ruc).length === 8) ? '1' : '6';
+        const hashVal = guia.xml_hash || '';
+        const qrData = `${guia.remitente_ruc || ''}|${guia.tipo_documento || '09'}|${serie}|${correlativo}|${Number(guia.peso_bruto_total || 0).toFixed(2)}|${guia.fecha_emision || ''}|${tipoDocDest}|${guia.destinatario_ruc || ''}|${hashVal}|`;
+
         const elQr = document.getElementById('sunatDetalleQr');
         if (elQr) {
-            elQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(qrData)}`;
+            elQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=115x115&ecc=M&data=${encodeURIComponent(qrData)}`;
+            elQr.title = `QR Oficial SUNAT:\n${qrData}`;
         }
 
         // Encabezado Emisor
@@ -750,6 +769,18 @@
                 if (typeof window.greCargarGuias === 'function') {
                     await window.greCargarGuias();
                 }
+
+                // Cerrar modal automáticamente tras guardar para volver a la tabla del ERP
+                setTimeout(() => {
+                    const modalEl = document.getElementById('greModalConsultar');
+                    if (modalEl) {
+                        const mInst = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+                        mInst.hide();
+                    }
+                    if (typeof window.greLimpiarYSubirOtroXml === 'function') {
+                        window.greLimpiarYSubirOtroXml();
+                    }
+                }, 700);
             } else {
                 alert(`Error al guardar en el ERP: ${result.error || 'Error desconocido'}`);
             }
