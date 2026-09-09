@@ -14,6 +14,22 @@
         
         const formatYMD = (d) => d.toISOString().slice(0, 10);
         
+        const formatFechaPeru = (fechaStr) => {
+            if (!fechaStr) return '—';
+            const s = String(fechaStr).trim();
+            if (!s || s === '—' || s === 'null' || s === 'undefined') return '—';
+            const datePart = s.split('T')[0];
+            if (datePart.includes('-')) {
+                const parts = datePart.split('-');
+                if (parts.length === 3) {
+                    const [y, m, d] = parts;
+                    return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+                }
+            }
+            return datePart;
+        };
+        window._formatFechaPeru = formatFechaPeru;
+        
         const fDesde = document.getElementById('gre-filter-desde');
         const fHasta = document.getElementById('gre-filter-hasta');
         if (fDesde && !fDesde.value) fDesde.value = formatYMD(primerDia);
@@ -150,14 +166,25 @@
                 ? `<span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Aceptado (CDR)</span>`
                 : `<span class="badge bg-warning bg-opacity-10 text-warning border px-2 py-1">${esc(g.estado_sunat)}</span>`;
 
+            const fEmi = (window._formatFechaPeru || formatFechaPeru)(g.fecha_emision);
+            const hEmi = (g.hora_emision && String(g.hora_emision).trim()) 
+                ? `<div class="text-muted" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>${esc(g.hora_emision)}</div>` 
+                : '';
+            const fTras = (window._formatFechaPeru || formatFechaPeru)(g.fecha_traslado || g.fecha_emision);
+
             html += `
                 <tr>
                     <td class="font-monospace fw-bold" style="color:#0052cc; cursor:pointer;" onclick="window.greVerDetalleSunatPorIndice(${idx})" title="Ver Detalle Oficial de GRE SUNAT">
                         <i class="bi bi-file-earmark-text me-1"></i>${esc(g.numero_guia)}
                     </td>
                     <td>${badgeEstado}</td>
-                    <td class="text-muted small">${esc(g.fecha_emision)}</td>
-                    <td class="text-muted small">${esc(g.fecha_traslado)}</td>
+                    <td>
+                        <div class="font-monospace fw-semibold text-dark small">${fEmi}</div>
+                        ${hEmi}
+                    </td>
+                    <td>
+                        <div class="font-monospace text-secondary small">${fTras}</div>
+                    </td>
                     <td class="fw-semibold text-dark text-truncate" style="max-width: 180px;" title="${esc(g.remitente_razon_social)}">
                         ${esc(g.remitente_razon_social)}
                     </td>
@@ -525,9 +552,14 @@
         const elTipoGre = document.getElementById('sunatDetalleTipoGRE');
         const elNumGuia = document.getElementById('sunatDetalleNumeroGuia');
 
+        const fmtF = window._formatFechaPeru || ((s) => (s ? String(s).split('T')[0] : '—'));
+        const fEmiFormat = fmtF(guia.fecha_emision);
+        const fCdrFormat = fmtF(guia.fecha_cdr || guia.fecha_emision);
+        const fTrasFormat = fmtF(guia.fecha_traslado || guia.fecha_emision);
+
         if (elEmisor) elEmisor.textContent = guia.remitente_razon_social || '—';
-        if (elFecEmi) elFecEmi.textContent = `${guia.fecha_emision || ''} ${guia.hora_emision || ''}`.trim();
-        if (elFecCdr) elFecCdr.textContent = `${guia.fecha_cdr ? String(guia.fecha_cdr).slice(0,10) : guia.fecha_emision || ''} ${guia.hora_cdr || ''}`.trim();
+        if (elFecEmi) elFecEmi.textContent = `${fEmiFormat} ${guia.hora_emision || ''}`.trim();
+        if (elFecCdr) elFecCdr.textContent = `${fCdrFormat} ${guia.hora_cdr || ''}`.trim();
         if (elRucEmi) elRucEmi.textContent = guia.remitente_ruc || '—';
         if (elTipoGre) elTipoGre.textContent = guia.tipo_documento === '31' ? 'TRANSPORTISTA' : 'REMITENTE';
         if (elNumGuia) elNumGuia.textContent = guia.numero_guia || '—';
@@ -540,7 +572,7 @@
         const elLlegada = document.getElementById('sunatDetalleLlegada');
         const elDest = document.getElementById('sunatDetalleDestinatario');
 
-        if (elFecTras) elFecTras.textContent = guia.fecha_traslado || guia.fecha_emision || '—';
+        if (elFecTras) elFecTras.textContent = fTrasFormat;
         if (elMotivo) elMotivo.textContent = guia.descripcion_motivo || 'Venta';
         if (elDescMot) elDescMot.textContent = (guia.descripcion_motivo || 'VENTA').toUpperCase();
         if (elPartida) elPartida.textContent = `${guia.punto_partida_direccion || '—'} ${guia.punto_partida_ubigeo ? '[UBIGEO: ' + guia.punto_partida_ubigeo + ']' : ''}`;
@@ -999,24 +1031,27 @@
             return;
         }
 
-        const exportData = window._greGuiasData.map(g => ({
-            "N° GUÍA": g.numero_guia,
-            "ESTADO SUNAT": g.estado_sunat,
-            "FECHA EMISIÓN": g.fecha_emision,
-            "FECHA TRASLADO": g.fecha_traslado,
-            "RUC REMITENTE": g.remitente_ruc,
-            "REMITENTE": g.remitente_razon_social,
-            "RUC DESTINATARIO": g.destinatario_ruc,
-            "DESTINATARIO": g.destinatario_razon_social,
-            "PUNTO PARTIDA": g.punto_partida_direccion,
-            "PUNTO LLEGADA": g.punto_llegada_direccion,
-            "PLACA TRACTO": g.placa_tracto,
-            "PLACA CARRETA": g.placa_carreta,
-            "CONDUCTOR": g.conductor_nombre,
-            "LICENCIA": g.conductor_licencia,
-            "PESO BRUTO (KGM)": Number(g.peso_bruto_total || 0),
-            "TOTAL ÍTEMS": g.items ? g.items.length : 0
-        }));
+        const exportData = window._greGuiasData.map(g => {
+            const fmtF = window._formatFechaPeru || ((s) => s);
+            return {
+                "N° GUÍA": g.numero_guia,
+                "ESTADO SUNAT": g.estado_sunat,
+                "FECHA EMISIÓN": fmtF(g.fecha_emision) + (g.hora_emision ? ` ${g.hora_emision}` : ''),
+                "FECHA TRASLADO": fmtF(g.fecha_traslado || g.fecha_emision),
+                "RUC REMITENTE": g.remitente_ruc,
+                "REMITENTE": g.remitente_razon_social,
+                "RUC DESTINATARIO": g.destinatario_ruc,
+                "DESTINATARIO": g.destinatario_razon_social,
+                "PUNTO PARTIDA": g.punto_partida_direccion,
+                "PUNTO LLEGADA": g.punto_llegada_direccion,
+                "PLACA TRACTO": g.placa_tracto,
+                "PLACA CARRETA": g.placa_carreta,
+                "CONDUCTOR": g.conductor_nombre,
+                "LICENCIA": g.conductor_licencia,
+                "PESO BRUTO (KGM)": Number(g.peso_bruto_total || 0),
+                "TOTAL ÍTEMS": g.items ? g.items.length : 0
+            };
+        });
 
         const ws = XLSX.utils.json_to_sheet(exportData);
         const wb = XLSX.utils.book_new();
