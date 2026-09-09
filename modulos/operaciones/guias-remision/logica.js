@@ -341,30 +341,35 @@
         const transportista_razon_social = getVal('RegistrationName', carBloque);
         const registro_mtc = getVal('CompanyID', carBloque);
 
-        // Partida
-        const mPartida = shipBloque.match(/<(?:\w+:)?OriginAddress[\s\S]*?<\/(?:\w+:)?OriginAddress>/i);
+        // Partida (OriginAddress o DespatchAddress)
+        const mPartida = (shipBloque || xmlStr).match(/<(?:\w+:)?(?:OriginAddress|DespatchAddress)[\s\S]*?<\/(?:\w+:)?(?:OriginAddress|DespatchAddress)>/i);
         const partBloque = mPartida ? mPartida[0] : '';
         const punto_partida_ubigeo = getVal('ID', partBloque);
-        const punto_partida_direccion = getVal('Line', partBloque);
+        const punto_partida_direccion = getVal('Line', partBloque) || getVal('StreetName', partBloque) || '';
 
-        // Llegada
-        const mLlegada = shipBloque.match(/<(?:\w+:)?DeliveryAddress[\s\S]*?<\/(?:\w+:)?DeliveryAddress>/i);
+        // Llegada (DeliveryAddress)
+        const mLlegada = (shipBloque || xmlStr).match(/<(?:\w+:)?DeliveryAddress[\s\S]*?<\/(?:\w+:)?DeliveryAddress>/i);
         const llegBloque = mLlegada ? mLlegada[0] : '';
         const punto_llegada_ubigeo = getVal('ID', llegBloque);
-        const punto_llegada_direccion = getVal('Line', llegBloque);
+        const punto_llegada_direccion = getVal('Line', llegBloque) || getVal('StreetName', llegBloque) || '';
 
         // Etapa de transporte / Fecha inicio
-        const mStage = shipBloque.match(/<(?:\w+:)?ShipmentStage[\s\S]*?<\/(?:\w+:)?ShipmentStage>/i);
+        const mStage = (shipBloque || xmlStr).match(/<(?:\w+:)?ShipmentStage[\s\S]*?<\/(?:\w+:)?ShipmentStage>/i);
         const stageBloque = mStage ? mStage[0] : '';
         const fecha_traslado = getVal('StartDate', stageBloque) || fecha_emision;
         const modalidadCode = getVal('TransportModeCode', stageBloque);
         const modalidad_traslado = modalidadCode === '02' ? 'Privado' : 'Público';
 
-        // Vehículos y Conductor si vienen
-        const mRoad = stageBloque.match(/<(?:\w+:)?RoadTransport[\s\S]*?<\/(?:\w+:)?RoadTransport>/i);
-        const placa_tracto = mRoad ? getVal('LicensePlateID', mRoad[0]) : '';
+        // Vehículos y Conductor si vienen (Modalidad Privada o si el remitente los declaró)
+        const mRoad = (stageBloque || xmlStr).match(/<(?:\w+:)?RoadTransport[\s\S]*?<\/(?:\w+:)?RoadTransport>/i)
+            || (stageBloque || xmlStr).match(/<(?:\w+:)?TransportMeans[\s\S]*?<\/(?:\w+:)?TransportMeans>/i);
+        const roadBloque = mRoad ? mRoad[0] : '';
+        const placa_tracto = getVal('LicensePlateID', roadBloque);
 
-        const mDriver = stageBloque.match(/<(?:\w+:)?DriverPerson[\s\S]*?<\/(?:\w+:)?DriverPerson>/i);
+        const mCarreta = (stageBloque || xmlStr).match(/<(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)[\s\S]*?<\/(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)>/i);
+        const placa_carreta = mCarreta ? (getVal('LicensePlateID', mCarreta[0]) || getVal('ID', mCarreta[0])) : '';
+
+        const mDriver = (stageBloque || xmlStr).match(/<(?:\w+:)?DriverPerson[\s\S]*?<\/(?:\w+:)?DriverPerson>/i);
         const driverBloque = mDriver ? mDriver[0] : '';
         const conductor_num_doc = getVal('ID', driverBloque);
         const conductor_nombre = `${getVal('FirstName', driverBloque)} ${getVal('FamilyName', driverBloque)}`.trim();
@@ -429,6 +434,7 @@
             punto_llegada_ubigeo,
             punto_llegada_direccion,
             placa_tracto,
+            placa_carreta,
             conductor_nombre,
             conductor_num_doc,
             conductor_licencia,
@@ -500,9 +506,9 @@
         const elTipoGre = document.getElementById('sunatDetalleTipoGRE');
         const elNumGuia = document.getElementById('sunatDetalleNumeroGuia');
 
-        if (elEmisor) elEmisor.textContent = guia.remitente_razon_social || 'PRODUCTOS PARAISO DEL PERU S.A.C.';
-        if (elFecEmi) elFecEmi.textContent = `${guia.fecha_emision || ''} ${guia.hora_emision || ''}`;
-        if (elFecCdr) elFecCdr.textContent = `${guia.fecha_cdr ? String(guia.fecha_cdr).slice(0,10) : guia.fecha_emision || ''} ${guia.hora_cdr || '02:48 AM'}`;
+        if (elEmisor) elEmisor.textContent = guia.remitente_razon_social || '—';
+        if (elFecEmi) elFecEmi.textContent = `${guia.fecha_emision || ''} ${guia.hora_emision || ''}`.trim();
+        if (elFecCdr) elFecCdr.textContent = `${guia.fecha_cdr ? String(guia.fecha_cdr).slice(0,10) : guia.fecha_emision || ''} ${guia.hora_cdr || ''}`.trim();
         if (elRucEmi) elRucEmi.textContent = guia.remitente_ruc || '—';
         if (elTipoGre) elTipoGre.textContent = guia.tipo_documento === '31' ? 'TRANSPORTISTA' : 'REMITENTE';
         if (elNumGuia) elNumGuia.textContent = guia.numero_guia || '—';
@@ -556,16 +562,80 @@
         const elCond = document.getElementById('sunatDetalleConductor');
         const elObs = document.getElementById('sunatDetalleObservaciones');
 
+        const esPublico = (guia.modalidad_traslado || '').toLowerCase().includes('públ') || (guia.modalidad_traslado || '').toLowerCase().includes('publ');
+        const tieneVehiculo = Boolean(guia.placa_tracto && guia.placa_tracto !== '—' && String(guia.placa_tracto).trim() !== '');
+        const tieneCarreta = Boolean(guia.placa_carreta && guia.placa_carreta !== '—' && String(guia.placa_carreta).trim() !== '');
+        const tieneConductor = Boolean(guia.conductor_nombre && guia.conductor_nombre !== '—' && String(guia.conductor_nombre).trim() !== '');
+
         if (elUniPeso) elUniPeso.textContent = guia.unidad_medida || 'KGM';
         const pesoNum = Number(guia.peso_bruto_total || 0);
         if (elPesoTot) elPesoTot.textContent = pesoNum.toLocaleString('es-PE', { minimumFractionDigits: 2 });
         if (elVolM3) elVolM3.value = guia.volumen_m3 || '';
         if (elMod) elMod.textContent = guia.modalidad_traslado || 'Público';
-        if (elTrans) elTrans.textContent = `${guia.transportista_razon_social || 'TRAHESA S.A.C.'} - RUC N° ${guia.transportista_ruc || '20600066651'}`;
-        if (elMtc) elMtc.textContent = guia.registro_mtc || '15M25053455E';
-        if (elTracto) elTracto.textContent = guia.placa_tracto || '—';
-        if (elCarreta) elCarreta.textContent = guia.placa_carreta || '—';
-        if (elCond) elCond.textContent = guia.conductor_nombre ? `${guia.conductor_nombre} (${guia.conductor_num_doc || ''})` : '—';
+
+        // Indicador oficial de registro de vehículos SUNAT
+        const elIndVeh = document.getElementById('sunatDetalleIndVehiculos');
+        if (elIndVeh) elIndVeh.textContent = (tieneVehiculo || tieneConductor) ? 'Sí' : 'No';
+
+        const elBadgeAsig = document.getElementById('sunatDetalleBadgeAsignacion');
+        if (elBadgeAsig) {
+            if (tieneVehiculo || tieneConductor) {
+                elBadgeAsig.textContent = 'Registrados por Remitente';
+                elBadgeAsig.className = 'badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-0.5';
+            } else if (esPublico) {
+                elBadgeAsig.textContent = 'Asignación en GRT';
+                elBadgeAsig.className = 'badge bg-warning bg-opacity-15 text-dark border border-warning border-opacity-50 px-2 py-0.5';
+            } else {
+                elBadgeAsig.textContent = 'Sin asignar';
+                elBadgeAsig.className = 'badge bg-secondary bg-opacity-10 text-secondary border px-2 py-0.5';
+            }
+        }
+
+        if (elTrans) {
+            if (guia.transportista_razon_social || guia.transportista_ruc) {
+                elTrans.textContent = `${guia.transportista_razon_social || '—'} - RUC N° ${guia.transportista_ruc || '—'}`;
+            } else {
+                elTrans.textContent = '— (No especificado)';
+            }
+        }
+        if (elMtc) elMtc.textContent = guia.registro_mtc || '—';
+
+        if (elTracto) {
+            if (tieneVehiculo) {
+                elTracto.textContent = guia.placa_tracto;
+                elTracto.className = "font-monospace fw-bold text-dark";
+            } else if (esPublico) {
+                elTracto.textContent = "— (Se asigna en GRT Transportista)";
+                elTracto.className = "font-monospace text-muted";
+            } else {
+                elTracto.textContent = "—";
+            }
+        }
+
+        if (elCarreta) {
+            if (tieneCarreta) {
+                elCarreta.textContent = guia.placa_carreta;
+                elCarreta.className = "font-monospace fw-bold text-dark";
+            } else if (esPublico) {
+                elCarreta.textContent = "— (Se asigna en GRT)";
+                elCarreta.className = "font-monospace text-muted";
+            } else {
+                elCarreta.textContent = "—";
+            }
+        }
+
+        if (elCond) {
+            if (tieneConductor) {
+                elCond.textContent = `${guia.conductor_nombre} (${guia.conductor_num_doc || ''})`;
+                elCond.className = "fw-semibold text-dark";
+            } else if (esPublico) {
+                elCond.textContent = "— (No registrado por remitente; se asigna en la GRT de la empresa)";
+                elCond.className = "fst-italic text-muted small";
+            } else {
+                elCond.textContent = "—";
+            }
+        }
+
         if (elObs) elObs.textContent = guia.observaciones_sunat || 'Esta es una representación impresa sin valor tributario de la Guía de Remisión Electrónica, generada en el sistema de la SUNAT. Puede verificarla utilizando su clave SOL';
     };
 

@@ -654,30 +654,35 @@ module.exports = function(db, tenantStorage) {
         const transportista_razon_social = getVal('RegistrationName', carBloque);
         const registro_mtc = getVal('CompanyID', carBloque);
 
-        // Partida
-        const mPartida = shipBloque.match(/<(?:\w+:)?OriginAddress[\s\S]*?<\/(?:\w+:)?OriginAddress>/i);
+        // Partida (OriginAddress o DespatchAddress)
+        const mPartida = (shipBloque || xmlStr).match(/<(?:\w+:)?(?:OriginAddress|DespatchAddress)[\s\S]*?<\/(?:\w+:)?(?:OriginAddress|DespatchAddress)>/i);
         const partBloque = mPartida ? mPartida[0] : '';
         const punto_partida_ubigeo = getVal('ID', partBloque);
-        const punto_partida_direccion = getVal('Line', partBloque);
+        const punto_partida_direccion = getVal('Line', partBloque) || getVal('StreetName', partBloque) || '';
 
-        // Llegada
-        const mLlegada = shipBloque.match(/<(?:\w+:)?DeliveryAddress[\s\S]*?<\/(?:\w+:)?DeliveryAddress>/i);
+        // Llegada (DeliveryAddress)
+        const mLlegada = (shipBloque || xmlStr).match(/<(?:\w+:)?DeliveryAddress[\s\S]*?<\/(?:\w+:)?DeliveryAddress>/i);
         const llegBloque = mLlegada ? mLlegada[0] : '';
         const punto_llegada_ubigeo = getVal('ID', llegBloque);
-        const punto_llegada_direccion = getVal('Line', llegBloque);
+        const punto_llegada_direccion = getVal('Line', llegBloque) || getVal('StreetName', llegBloque) || '';
 
         // Etapa de transporte / Fecha inicio
-        const mStage = shipBloque.match(/<(?:\w+:)?ShipmentStage[\s\S]*?<\/(?:\w+:)?ShipmentStage>/i);
+        const mStage = (shipBloque || xmlStr).match(/<(?:\w+:)?ShipmentStage[\s\S]*?<\/(?:\w+:)?ShipmentStage>/i);
         const stageBloque = mStage ? mStage[0] : '';
         const fecha_traslado = getVal('StartDate', stageBloque) || fecha_emision;
         const modalidadCode = getVal('TransportModeCode', stageBloque);
         const modalidad_traslado = modalidadCode === '02' ? 'Privado' : 'Público';
 
-        // Vehículos y Conductor si vienen
-        const mRoad = stageBloque.match(/<(?:\w+:)?RoadTransport[\s\S]*?<\/(?:\w+:)?RoadTransport>/i);
-        const placa_tracto = mRoad ? getVal('LicensePlateID', mRoad[0]) : '';
+        // Vehículos y Conductor si vienen (Modalidad Privada o cuando el remitente los especifica)
+        const mRoad = (stageBloque || xmlStr).match(/<(?:\w+:)?RoadTransport[\s\S]*?<\/(?:\w+:)?RoadTransport>/i)
+            || (stageBloque || xmlStr).match(/<(?:\w+:)?TransportMeans[\s\S]*?<\/(?:\w+:)?TransportMeans>/i);
+        const roadBloque = mRoad ? mRoad[0] : '';
+        const placa_tracto = getVal('LicensePlateID', roadBloque);
 
-        const mDriver = stageBloque.match(/<(?:\w+:)?DriverPerson[\s\S]*?<\/(?:\w+:)?DriverPerson>/i);
+        const mCarreta = (stageBloque || xmlStr).match(/<(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)[\s\S]*?<\/(?:\w+:)?(?:AttachedTransportMeans|TransportEquipment)>/i);
+        const placa_carreta = mCarreta ? (getVal('LicensePlateID', mCarreta[0]) || getVal('ID', mCarreta[0])) : '';
+
+        const mDriver = (stageBloque || xmlStr).match(/<(?:\w+:)?DriverPerson[\s\S]*?<\/(?:\w+:)?DriverPerson>/i);
         const driverBloque = mDriver ? mDriver[0] : '';
         const conductor_num_doc = getVal('ID', driverBloque);
         const conductor_nombre = `${getVal('FirstName', driverBloque)} ${getVal('FamilyName', driverBloque)}`.trim();
@@ -742,6 +747,7 @@ module.exports = function(db, tenantStorage) {
             punto_llegada_ubigeo,
             punto_llegada_direccion,
             placa_tracto,
+            placa_carreta,
             conductor_nombre,
             conductor_num_doc,
             conductor_licencia,
