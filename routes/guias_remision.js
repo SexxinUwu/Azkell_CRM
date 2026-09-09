@@ -704,18 +704,33 @@ module.exports = function(db, tenantStorage) {
             if (val) placa_carreta = val;
         }
 
-        // Si no se asignó placa principal pero hay LicensePlateID en el XML
-        if (!placa_tracto) {
-            const plateMatches = [...cleanXml.matchAll(/<(?:\w+:)?LicensePlateID[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:\w+:)?LicensePlateID>/gi)]
-                .map(m => m[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim().toUpperCase())
-                .filter(p => p.length >= 4 && p.length <= 12 && !p.includes('<'));
+        // Buscar todas las placas registradas en el XML
+        const plateMatches = [...cleanXml.matchAll(/<(?:\w+:)?LicensePlateID[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:\w+:)?LicensePlateID>/gi)]
+            .map(m => m[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim().toUpperCase())
+            .filter(p => p.length >= 4 && p.length <= 12 && !p.includes('<'));
 
+        // Si no se asignó placa principal pero se detectaron placas
+        if (!placa_tracto) {
             if (plateMatches.length > 0) {
                 placa_tracto = plateMatches[0];
                 if (plateMatches.length > 1 && !placa_carreta) {
                     placa_carreta = plateMatches[1];
                 }
+            } else if (placa_carreta) {
+                // Si sólo vino en mEquip pero no hay placa principal, es la principal
+                placa_tracto = placa_carreta;
+                placa_carreta = '';
             }
+        }
+
+        // Regla esencial: Si sólo hay una placa o placa_carreta quedó con valor mientras placa_tracto está vacía,
+        // la placa DEBE pertenecer al Vehículo Principal
+        if (!placa_tracto && placa_carreta) {
+            placa_tracto = placa_carreta;
+            placa_carreta = '';
+        } else if (placa_tracto && plateMatches.length === 1) {
+            // Si solo existe una placa en todo el documento, no debe haber secundaria
+            placa_carreta = '';
         }
 
         if (placa_carreta === placa_tracto) {
