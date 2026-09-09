@@ -35,10 +35,16 @@
         if (fDesde && !fDesde.value) fDesde.value = formatYMD(primerDia);
         if (fHasta && !fHasta.value) fHasta.value = formatYMD(hoy);
 
-        // Configurar Drag and Drop para el Modal de XML
+        // Configurar Drag and Drop y limpieza para el Modal de XML
         const modalConsultar = document.getElementById('greModalConsultar');
         const overlay = document.getElementById('greDropzoneOverlay');
         if (modalConsultar) {
+            modalConsultar.addEventListener('hidden.bs.modal', () => {
+                if (typeof window.greLimpiarYSubirOtroXml === 'function') {
+                    window.greLimpiarYSubirOtroXml();
+                }
+            });
+
             ['dragenter', 'dragover'].forEach(ev => {
                 modalConsultar.addEventListener(ev, (e) => {
                     e.preventDefault();
@@ -267,6 +273,9 @@
 
     // 4. Abrir Modales
     window.greAbrirModalConsultarSunat = function() {
+        if (typeof window.greLimpiarYSubirOtroXml === 'function') {
+            window.greLimpiarYSubirOtroXml();
+        }
         const modalEl = document.getElementById('greModalConsultar');
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
@@ -702,17 +711,57 @@
         window.greRenderizarDetalleSunat(guia);
     };
 
-    // Regresar al área de subir otro XML
+    // Regresar al área de subir otro XML y limpiar todo el estado
     window.greLimpiarYSubirOtroXml = function() {
         const fileInput = document.getElementById('greInputXmlFile');
         if (fileInput) fileInput.value = '';
         const txtXml = document.getElementById('greTextareaXml');
         if (txtXml) txtXml.value = '';
+        const inpSerie = document.getElementById('greInputSerieBd');
+        if (inpSerie) inpSerie.value = '';
+        const inpNum = document.getElementById('greInputNumeroBd');
+        if (inpNum) inpNum.value = '';
 
         const seccionUpload = document.getElementById('greSeccionUploadXml');
         const seccionVisor = document.getElementById('greSeccionVisorSunat');
         if (seccionUpload) seccionUpload.classList.remove('d-none');
         if (seccionVisor) seccionVisor.classList.add('d-none');
+
+        const boxPegar = document.getElementById('greBoxPegarXml');
+        if (boxPegar) boxPegar.classList.add('d-none');
+        const boxBuscar = document.getElementById('greBoxBusquedaManual');
+        if (boxBuscar) boxBuscar.classList.add('d-none');
+
+        // Limpiar elementos de texto para que la nueva consulta arranque 100% limpia
+        const elEmisor = document.getElementById('sunatDetalleEmisor');
+        if (elEmisor) elEmisor.textContent = '';
+        const elNumGuia = document.getElementById('sunatDetalleNumeroGuia');
+        if (elNumGuia) elNumGuia.textContent = '';
+        const elFecEmi = document.getElementById('sunatDetalleFecEmision');
+        if (elFecEmi) elFecEmi.textContent = '';
+        const elFecCdr = document.getElementById('sunatDetalleFecCdr');
+        if (elFecCdr) elFecCdr.textContent = '';
+        const elFecTras = document.getElementById('sunatDetalleFecTraslado');
+        if (elFecTras) elFecTras.textContent = '';
+        const elPartida = document.getElementById('sunatDetallePartida');
+        if (elPartida) elPartida.textContent = '';
+        const elLlegada = document.getElementById('sunatDetalleLlegada');
+        if (elLlegada) elLlegada.textContent = '';
+        const elDest = document.getElementById('sunatDetalleDestinatario');
+        if (elDest) elDest.textContent = '';
+        const tbody = document.getElementById('sunatDetalleTbodyItems');
+        if (tbody) tbody.innerHTML = '';
+        const elVolM3 = document.getElementById('sunatDetalleVolumenM3');
+        if (elVolM3) elVolM3.value = '';
+        const elQr = document.getElementById('sunatDetalleQr');
+        if (elQr) elQr.src = '';
+        const elTracto = document.getElementById('sunatDetalleTracto');
+        if (elTracto) elTracto.textContent = '—';
+        const elCarreta = document.getElementById('sunatDetalleCarreta');
+        if (elCarreta) elCarreta.textContent = '—';
+        const elCond = document.getElementById('sunatDetalleConductor');
+        if (elCond) elCond.textContent = '—';
+
         window._greUltimaConsultaData = null;
     };
 
