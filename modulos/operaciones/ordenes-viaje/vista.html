@@ -1224,7 +1224,7 @@
                 </thead>
                 <tbody id="ov-tabla-body">
                     <tr>
-                        <td colspan="14" class="text-center py-5 text-secondary">
+                        <td colspan="16" class="text-center py-5 text-secondary">
                             <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
                             <div class="small fw-semibold">Consultando base de datos del ERP...</div>
                         </td>
@@ -1331,7 +1331,29 @@
                         </div>
                     </div>
 
-                    <!-- ── SECCIÓN 3: ITINERARIO Y CARGA ─────────────────────── -->
+                    <!-- ── SECCIÓN 3: GPS / KILOMETRAJE / HORAS DE MOTOR ───────── -->
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white position-relative" style="border: 1px solid #e2e8f0 !important; z-index: 70;">
+                        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-1" style="font-size: 0.98rem;">
+                            <i class="bi bi-wifi text-primary"></i> GPS / Kilometraje / Horas de Motor
+                        </h6>
+                        <p class="text-muted small mb-3" style="font-size: 0.75rem;">
+                            Se intenta leer automáticamente desde el GPS (Wialon) al elegir la placa. Si no hay dato disponible, complete manualmente.
+                        </p>
+                        <div class="row g-2 g-md-3">
+                            <div class="col-12 col-md-6">
+                                <label class="ov-label-req mb-1">Kilometraje (Tracto)</label>
+                                <input type="number" step="1" id="ov-form-km-tracto" class="form-control form-control-sm border-secondary-subtle fw-bold" placeholder="Ej: 493217">
+                                <div class="form-text text-muted" style="font-size: 0.68rem;" id="ov-hint-km-tracto">Lectura de odómetro satelital del tracto.</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="ov-label-req mb-1">Horas de Motor (Remolque / Termoking)</label>
+                                <input type="number" step="1" id="ov-form-horas-remolque" class="form-control form-control-sm border-secondary-subtle fw-bold" placeholder="Ej: 1250">
+                                <div class="form-text text-muted" style="font-size: 0.68rem;" id="ov-hint-horas-remolque">Horómetro de la carreta o unidad de frío (Termoking).</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── SECCIÓN 4: ITINERARIO Y CARGA ─────────────────────── -->
                     <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white position-relative" style="border: 1px solid #e2e8f0 !important; z-index: 50;">
                         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.98rem;">
                             <i class="bi bi-geo-alt-fill text-primary"></i> Itinerario y Carga
@@ -1418,6 +1440,17 @@
                     </div>
                     <input type="number" step="1" id="ov-iniciar-km" class="form-control form-control-sm border-secondary-subtle fw-bold" placeholder="EJ: 125480" required style="min-height: 40px; border-radius: 10px; background-color: #fefce8; border-color: #fde047 !important;">
                     <small id="ov-iniciar-km-telemetria-hint" class="text-muted d-block mt-1" style="font-size: 0.68rem;">Kilometraje obtenido por telemetría GPS (editable si se requiere ajustar).</small>
+                </div>
+
+                <div class="text-start mb-3" id="ov-iniciar-horas-remolque-wrap">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="ov-label-req m-0" style="font-size: 0.72rem;">Horas de Motor (Remolque / Termoking)</label>
+                        <span id="ov-iniciar-horas-telemetria-badge" class="badge bg-light text-secondary border font-monospace" style="font-size:0.68rem; font-weight: normal;">
+                            <i class="bi bi-clock-history me-1 text-primary"></i> Termoking
+                        </span>
+                    </div>
+                    <input type="number" step="1" id="ov-iniciar-horas-remolque" class="form-control form-control-sm border-secondary-subtle fw-bold" placeholder="EJ: 1250" style="min-height: 40px; border-radius: 10px;">
+                    <small class="text-muted d-block mt-1" style="font-size: 0.68rem;">Lectura de horómetro de la carreta o unidad de frío (editable).</small>
                 </div>
 
                 <!-- Checkbox Confirmación -->

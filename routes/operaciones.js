@@ -329,6 +329,7 @@ module.exports = function (db, broadcast, logAudit) {
                     DATE_FORMAT(ov.fecha_fin, '%Y-%m-%d %H:%i:%s') AS fecha_fin,
                     ov.kilometraje_inicial,
                     ov.kilometraje_final,
+                    ov.horas_motor_remolque,
                     ov.usuario_creacion,
                     ov.usuario_finalizacion,
                     DATE_FORMAT(ov.creado_en, '%Y-%m-%d %H:%i:%s') AS fecha_registro,
@@ -450,6 +451,8 @@ module.exports = function (db, broadcast, logAudit) {
                 escolta,
                 observaciones,
                 usuario_creacion,
+                kilometraje_inicial,
+                horas_motor_remolque,
                 rutas // array opcional con órdenes de servicio / rutas
             } = req.body;
 
@@ -464,13 +467,17 @@ module.exports = function (db, broadcast, logAudit) {
             const fechaFinal = fecha_viaje || new Date().toISOString().slice(0, 19).replace('T', ' ');
             const userCreador = usuario_creacion || (req.user && req.user.nombre) || 'ADMINISTRADOR DEL SISTEMA';
 
+            const kmIniVal = kilometraje_inicial ? parseInt(kilometraje_inicial, 10) : null;
+            const hrRemVal = horas_motor_remolque ? parseInt(horas_motor_remolque, 10) : null;
+
             const [insertRes] = await tdb.query(`
                 INSERT INTO operaciones_ordenes_viaje (
                     viaje, fecha_viaje, id_conductor, conductor,
                     placa_tracto, placa_remolque, peso, ruta,
                     ubigeo_partida, direccion_partida, ubigeo_llegada, direccion_llegada,
-                    escolta, observaciones, estado, usuario_creacion
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?)
+                    escolta, observaciones, estado, usuario_creacion,
+                    kilometraje_inicial, horas_motor_remolque
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     fecha_viaje = VALUES(fecha_viaje),
                     id_conductor = VALUES(id_conductor),
@@ -485,7 +492,9 @@ module.exports = function (db, broadcast, logAudit) {
                     direccion_llegada = VALUES(direccion_llegada),
                     escolta = VALUES(escolta),
                     observaciones = VALUES(observaciones),
-                    usuario_creacion = COALESCE(operaciones_ordenes_viaje.usuario_creacion, VALUES(usuario_creacion))
+                    usuario_creacion = COALESCE(operaciones_ordenes_viaje.usuario_creacion, VALUES(usuario_creacion)),
+                    kilometraje_inicial = COALESCE(VALUES(kilometraje_inicial), operaciones_ordenes_viaje.kilometraje_inicial),
+                    horas_motor_remolque = COALESCE(VALUES(horas_motor_remolque), operaciones_ordenes_viaje.horas_motor_remolque)
             `, [
                 codeViaje,
                 fechaFinal,
@@ -501,7 +510,9 @@ module.exports = function (db, broadcast, logAudit) {
                 direccion_llegada || null,
                 escolta || null,
                 observaciones || null,
-                userCreador
+                userCreador,
+                kmIniVal,
+                hrRemVal
             ]);
 
             // Si se envió detalle de rutas / órdenes
@@ -535,30 +546,16 @@ module.exports = function (db, broadcast, logAudit) {
             if (logAudit) {
                 logAudit({
                     req,
-                    accion: 'REGISTRAR_ORDEN_VIAJE',
+                    accion: 'CREAR_ORDEN_VIAJE',
                     modulo: 'OPERACIONES',
-                    detalle: `Registrada Orden de Viaje ${codeViaje} para el vehículo ${placa_tracto} y conductor ${conductor}`
+                    detalle: `Creada Orden de Viaje ${codeViaje} (Tracto: ${placa_tracto}, Conductor: ${conductor}, KM: ${kmIniVal || '---'}, Horas Termoking: ${hrRemVal || '---'})`
                 });
             }
 
-            if (broadcast) {
-                broadcast({
-                    tipo: 'ORDEN_VIAJE_CREADA',
-                    viaje: codeViaje,
-                    placa_tracto,
-                    conductor
-                });
-            }
-
-            res.json({
-                ok: true,
-                message: `Orden de Viaje ${codeViaje} guardada correctamente.`,
-                viaje: codeViaje,
-                id: insertRes.insertId
-            });
+            res.json({ ok: true, message: `Orden de Viaje ${codeViaje} registrada exitosamente.`, viaje: codeViaje });
         } catch (err) {
             console.error('Error al registrar orden de viaje:', err);
-            res.status(500).json({ error: err.message });
+            res.status(500).json({ ok: false, error: err.message });
         }
     });
 
@@ -570,24 +567,28 @@ module.exports = function (db, broadcast, logAudit) {
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
             const codeViaje = req.params.viaje;
-            const { fecha_inicio, kilometraje_inicial } = req.body;
+            const { fecha_inicio, kilometraje_inicial, horas_motor_remolque } = req.body;
             const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
             const fechaInicioSql = fecha_inicio ? (fecha_inicio.length <= 10 ? fecha_inicio + ' ' + nowStr.slice(11) : fecha_inicio) : nowStr;
+            const kmIniVal = kilometraje_inicial ? parseInt(kilometraje_inicial, 10) : null;
+            const hrRemVal = horas_motor_remolque ? parseInt(horas_motor_remolque, 10) : null;
 
             await tdb.query(`
                 UPDATE operaciones_ordenes_viaje 
                 SET estado = 'INICIADO',
                     fecha_inicio = ?,
                     fecha_viaje = COALESCE(?, fecha_viaje),
-                    kilometraje_inicial = ?,
+                    kilometraje_inicial = COALESCE(?, kilometraje_inicial),
+                    horas_motor_remolque = COALESCE(?, horas_motor_remolque),
                     observaciones = CONCAT(COALESCE(observaciones, ''), IF(? IS NOT NULL, CONCAT(' [KM Inicial: ', ?, ']'), ''))
                 WHERE viaje = ?
             `, [
                 fechaInicioSql,
                 fechaInicioSql,
-                kilometraje_inicial || null,
-                kilometraje_inicial,
-                kilometraje_inicial,
+                kmIniVal,
+                hrRemVal,
+                kmIniVal,
+                kmIniVal,
                 codeViaje
             ]);
 
@@ -596,7 +597,7 @@ module.exports = function (db, broadcast, logAudit) {
                     req,
                     accion: 'INICIAR_ORDEN_VIAJE',
                     modulo: 'OPERACIONES',
-                    detalle: `Iniciada Orden de Viaje ${codeViaje} con KM: ${kilometraje_inicial}`
+                    detalle: `Iniciada Orden de Viaje ${codeViaje} con KM: ${kmIniVal} / Horas Termoking: ${hrRemVal}`
                 });
             }
 
@@ -674,12 +675,17 @@ module.exports = function (db, broadcast, logAudit) {
                 ubigeo_llegada,
                 direccion_llegada,
                 escolta,
-                observaciones
+                observaciones,
+                kilometraje_inicial,
+                horas_motor_remolque
             } = req.body;
 
             if (!placa_tracto || !conductor) {
                 return res.status(400).json({ ok: false, error: 'Conductor y Vehículo (Tracto) son obligatorios.' });
             }
+
+            const kmIniVal = kilometraje_inicial !== undefined && kilometraje_inicial !== '' ? parseInt(kilometraje_inicial, 10) : null;
+            const hrRemVal = horas_motor_remolque !== undefined && horas_motor_remolque !== '' ? parseInt(horas_motor_remolque, 10) : null;
 
             await tdb.query(`
                 UPDATE operaciones_ordenes_viaje
@@ -695,7 +701,9 @@ module.exports = function (db, broadcast, logAudit) {
                     ubigeo_llegada = ?,
                     direccion_llegada = ?,
                     escolta = ?,
-                    observaciones = ?
+                    observaciones = ?,
+                    kilometraje_inicial = COALESCE(?, kilometraje_inicial),
+                    horas_motor_remolque = COALESCE(?, horas_motor_remolque)
                 WHERE viaje = ?
             `, [
                 fecha_viaje || null,
@@ -711,6 +719,8 @@ module.exports = function (db, broadcast, logAudit) {
                 direccion_llegada || null,
                 escolta || null,
                 observaciones || null,
+                kmIniVal,
+                hrRemVal,
                 codeViaje
             ]);
 
