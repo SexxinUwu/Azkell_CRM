@@ -1024,50 +1024,6 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer,
         </div>
     </div>
 
-    <!-- ── TARJETAS DE MÉTRICAS OPERATIVAS (KPIS) COMPACTAS ───────────── -->
-    <div class="row g-2 mb-2">
-        <div class="col-6 col-md-3">
-            <div class="ov-kpi-card">
-                <div class="d-flex align-items-center justify-content-between mb-1">
-                    <span class="text-secondary fw-semibold" style="font-size:0.72rem;">Total de Viajes</span>
-                    <div class="ov-kpi-icon bg-primary-subtle text-primary"><i class="bi bi-diagram-3-fill"></i></div>
-                </div>
-                <div class="ov-kpi-val" id="ov-kpi-total">0</div>
-                <small class="text-muted" style="font-size:0.7rem;">Viajes registrados</small>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="ov-kpi-card">
-                <div class="d-flex align-items-center justify-content-between mb-1">
-                    <span class="text-secondary fw-semibold" style="font-size:0.72rem;">Órdenes de Servicio</span>
-                    <div class="ov-kpi-icon bg-info-subtle text-info"><i class="bi bi-receipt-cutoff"></i></div>
-                </div>
-                <div class="ov-kpi-val" id="ov-kpi-ordenes">0</div>
-                <small class="text-muted" style="font-size:0.7rem;">O/S vinculadas a viajes</small>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="ov-kpi-card">
-                <div class="d-flex align-items-center justify-content-between mb-1">
-                    <span class="text-secondary fw-semibold" style="font-size:0.72rem;">Carga Ida</span>
-                    <div class="ov-kpi-icon bg-success-subtle text-success"><i class="bi bi-arrow-right-circle-fill"></i></div>
-                </div>
-                <div class="ov-kpi-val" id="ov-kpi-peso-ida">0.0 TN</div>
-                <small class="text-muted" style="font-size:0.7rem;">Peso despachado (TN)</small>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="ov-kpi-card">
-                <div class="d-flex align-items-center justify-content-between mb-1">
-                    <span class="text-secondary fw-semibold" style="font-size:0.72rem;">Carga Retorno</span>
-                    <div class="ov-kpi-icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-arrow-left-circle-fill"></i></div>
-                </div>
-                <div class="ov-kpi-val" id="ov-kpi-peso-retorno">0.0 TN</div>
-                <small class="text-muted" style="font-size:0.7rem;">Peso retorno (TN)</small>
-            </div>
-        </div>
-    </div>
-
     <!-- ── BARRA DE BÚSQUEDA Y FILTROS COMPACTA CON RANGO DE FECHAS HOY ── -->
     <div class="ov-filters-bar mb-2">
         <div class="row g-2 align-items-center">
@@ -1266,31 +1222,7 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer,
                         </div>
                     </div>
 
-                    <!-- ── SECCIÓN 4: PUNTOS DE PARTIDA Y LLEGADA ────────────── -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white position-relative" style="border: 1px solid #e2e8f0 !important; z-index: 20;">
-                        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.98rem;">
-                            <i class="bi bi-signpost-2-fill text-primary"></i> Puntos de Partida y Llegada
-                        </h6>
-                        <div class="row g-2 g-md-3">
-                            <div class="col-12 col-md-4">
-                                <label class="ov-label-req">UBIGEO Partida</label>
-                                <input type="text" id="ov-form-ubigeo-partida" class="form-control form-control-sm text-uppercase border-secondary-subtle" placeholder="Código o Departamento - Provincia - Distrito">
-                            </div>
-                            <div class="col-12 col-md-8">
-                                <label class="ov-label-req">Dirección Partida</label>
-                                <input type="text" id="ov-form-dir-partida" class="form-control form-control-sm text-uppercase border-secondary-subtle" placeholder="Dirección completa del punto de partida">
-                            </div>
 
-                            <div class="col-12 col-md-4">
-                                <label class="ov-label-req">UBIGEO Llegada</label>
-                                <input type="text" id="ov-form-ubigeo-llegada" class="form-control form-control-sm text-uppercase border-secondary-subtle" placeholder="Código o Departamento - Provincia - Distrito">
-                            </div>
-                            <div class="col-12 col-md-8">
-                                <label class="ov-label-req">Dirección Llegada</label>
-                                <input type="text" id="ov-form-dir-llegada" class="form-control form-control-sm text-uppercase border-secondary-subtle" placeholder="Dirección completa del punto de llegada">
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- Footer Buttons dentro del formulario o sticky -->
                     <div class="d-flex align-items-center justify-content-end gap-2 pt-2 pb-1">
