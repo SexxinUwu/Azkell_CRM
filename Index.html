@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="/libs/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/libs/bootstrap-icons.css">    <link rel="stylesheet" href="/libs/leaflet.css" />    <link rel="stylesheet" href="./estilos.css?v=12">
-    <link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="/manifest.json">
     <script>
         const originalWarn = console.warn;
         console.warn = function(...args) {
@@ -17,11 +17,11 @@
             originalWarn.apply(console, args);
         };
     </script>
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="icon" href="/favicon-2003.png" type="image/png">
+    <link rel="icon" id="app-dynamic-favicon" href="/api/tenant-logo" type="image/png">
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js')
