@@ -51,6 +51,10 @@ module.exports = function (db, broadcast, logAudit) {
         escolta VARCHAR(150) NULL,
         observaciones TEXT NULL,
         estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
+        fecha_inicio DATETIME NULL,
+        fecha_fin DATETIME NULL,
+        usuario_creacion VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR DEL SISTEMA',
+        usuario_finalizacion VARCHAR(150) NULL,
         creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_viaje (viaje),
@@ -211,6 +215,9 @@ module.exports = function (db, broadcast, logAudit) {
                 await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN ubigeo_partida VARCHAR(10) NULL AFTER destino, ADD COLUMN direccion_partida VARCHAR(255) NULL AFTER ubigeo_partida, ADD COLUMN ubigeo_llegada VARCHAR(10) NULL AFTER direccion_partida, ADD COLUMN direccion_llegada VARCHAR(255) NULL AFTER ubigeo_llegada, ADD COLUMN escolta VARCHAR(150) NULL AFTER direccion_llegada, ADD COLUMN observaciones TEXT NULL AFTER escolta");
             } catch (ignore) {}
             try {
+                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN fecha_inicio DATETIME NULL AFTER estado, ADD COLUMN fecha_fin DATETIME NULL AFTER fecha_inicio, ADD COLUMN usuario_creacion VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR DEL SISTEMA' AFTER fecha_fin, ADD COLUMN usuario_finalizacion VARCHAR(150) NULL AFTER usuario_creacion");
+            } catch (ignore) {}
+            try {
                 await tdb.query(`ALTER TABLE operaciones_ordenes_servicio 
                     ADD COLUMN ruta_sistema VARCHAR(255) NULL AFTER placa_carreta,
                     ADD COLUMN tipo_medida VARCHAR(50) DEFAULT 'VIAJE' AFTER ruta_sistema,
@@ -312,6 +319,10 @@ module.exports = function (db, broadcast, logAudit) {
                     ov.escolta,
                     ov.observaciones,
                     ov.estado,
+                    DATE_FORMAT(ov.fecha_inicio, '%Y-%m-%d %H:%i:%s') AS fecha_inicio,
+                    DATE_FORMAT(ov.fecha_fin, '%Y-%m-%d %H:%i:%s') AS fecha_fin,
+                    ov.usuario_creacion,
+                    ov.usuario_finalizacion,
                     DATE_FORMAT(ov.creado_en, '%Y-%m-%d %H:%i:%s') AS fecha_registro,
                     COALESCE(r_agg.cant_ordenes, 0) AS cant_ordenes,
                     COALESCE(r_agg.peso_ida, 0) AS peso_ida,
@@ -430,6 +441,7 @@ module.exports = function (db, broadcast, logAudit) {
                 direccion_llegada,
                 escolta,
                 observaciones,
+                usuario_creacion,
                 rutas // array opcional con órdenes de servicio / rutas
             } = req.body;
 
@@ -442,14 +454,15 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             const fechaFinal = fecha_viaje || new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const userCreador = usuario_creacion || (req.user && req.user.nombre) || 'ADMINISTRADOR DEL SISTEMA';
 
             const [insertRes] = await tdb.query(`
                 INSERT INTO operaciones_ordenes_viaje (
                     viaje, fecha_viaje, id_conductor, conductor,
                     placa_tracto, placa_remolque, peso, ruta,
                     ubigeo_partida, direccion_partida, ubigeo_llegada, direccion_llegada,
-                    escolta, observaciones, estado
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO')
+                    escolta, observaciones, estado, usuario_creacion
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?)
                 ON DUPLICATE KEY UPDATE
                     fecha_viaje = VALUES(fecha_viaje),
                     id_conductor = VALUES(id_conductor),
@@ -463,7 +476,8 @@ module.exports = function (db, broadcast, logAudit) {
                     ubigeo_llegada = VALUES(ubigeo_llegada),
                     direccion_llegada = VALUES(direccion_llegada),
                     escolta = VALUES(escolta),
-                    observaciones = VALUES(observaciones)
+                    observaciones = VALUES(observaciones),
+                    usuario_creacion = COALESCE(operaciones_ordenes_viaje.usuario_creacion, VALUES(usuario_creacion))
             `, [
                 codeViaje,
                 fechaFinal,
@@ -478,7 +492,8 @@ module.exports = function (db, broadcast, logAudit) {
                 ubigeo_llegada || null,
                 direccion_llegada || null,
                 escolta || null,
-                observaciones || null
+                observaciones || null,
+                userCreador
             ]);
 
             // Si se envió detalle de rutas / órdenes
@@ -548,15 +563,19 @@ module.exports = function (db, broadcast, logAudit) {
 
             const codeViaje = req.params.viaje;
             const { fecha_inicio, kilometraje_inicial } = req.body;
+            const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const fechaInicioSql = fecha_inicio ? (fecha_inicio.length <= 10 ? fecha_inicio + ' ' + nowStr.slice(11) : fecha_inicio) : nowStr;
 
             await tdb.query(`
                 UPDATE operaciones_ordenes_viaje 
                 SET estado = 'INICIADO',
+                    fecha_inicio = ?,
                     fecha_viaje = COALESCE(?, fecha_viaje),
                     observaciones = CONCAT(COALESCE(observaciones, ''), IF(? IS NOT NULL, CONCAT(' [KM Inicial: ', ?, ']'), ''))
                 WHERE viaje = ?
             `, [
-                fecha_inicio ? fecha_inicio + ' 00:00:00' : null,
+                fechaInicioSql,
+                fechaInicioSql,
                 kilometraje_inicial,
                 kilometraje_inicial,
                 codeViaje
@@ -574,6 +593,50 @@ module.exports = function (db, broadcast, logAudit) {
             res.json({ ok: true, message: `El viaje ${codeViaje} ha sido iniciado exitosamente.` });
         } catch (err) {
             console.error('Error al iniciar viaje:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── PUT /api/operaciones/ordenes-viaje/:viaje/finalizar ─────────
+    router.put('/ordenes-viaje/:viaje/finalizar', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const codeViaje = req.params.viaje;
+            const { fecha_fin, kilometraje_final, usuario_finalizacion } = req.body;
+            const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const fechaFinSql = fecha_fin ? (fecha_fin.length <= 10 ? fecha_fin + ' ' + nowStr.slice(11) : fecha_fin) : nowStr;
+            const userFinaliza = usuario_finalizacion || (req.user && req.user.nombre) || 'ADMINISTRADOR DEL SISTEMA';
+
+            await tdb.query(`
+                UPDATE operaciones_ordenes_viaje 
+                SET estado = 'FINALIZADO',
+                    fecha_fin = ?,
+                    usuario_finalizacion = ?,
+                    observaciones = CONCAT(COALESCE(observaciones, ''), IF(? IS NOT NULL, CONCAT(' [KM Final: ', ?, ']'), ''))
+                WHERE viaje = ?
+            `, [
+                fechaFinSql,
+                userFinaliza,
+                kilometraje_final,
+                kilometraje_final,
+                codeViaje
+            ]);
+
+            if (logAudit) {
+                logAudit({
+                    req,
+                    accion: 'FINALIZAR_ORDEN_VIAJE',
+                    modulo: 'OPERACIONES',
+                    detalle: `Finalizada Orden de Viaje ${codeViaje} por ${userFinaliza}`
+                });
+            }
+
+            res.json({ ok: true, message: `El viaje ${codeViaje} ha sido finalizado exitosamente.` });
+        } catch (err) {
+            console.error('Error al finalizar viaje:', err);
             res.status(500).json({ error: err.message });
         }
     });
