@@ -425,10 +425,11 @@ window.ovRenderizarTabla = function() {
             // 3. Operación
             var operacionHtml = '';
             var viajeEsc = (v.viaje || '').replace(/"/g, '&quot;');
+            var placaEsc = (v.placa_tracto || '').replace(/"/g, '&quot;');
             if (esRegistrado) {
-                operacionHtml = `<button type="button" class="ov-btn-iniciar" onclick="window.ovAbrirModalIniciarViaje('${viajeEsc}')"><i class="bi bi-play-fill fs-6"></i> INICIAR</button>`;
+                operacionHtml = `<button type="button" class="ov-btn-iniciar" onclick="window.ovAbrirModalIniciarViaje('${viajeEsc}', '${placaEsc}')"><i class="bi bi-play-fill fs-6"></i> INICIAR</button>`;
             } else if (esIniciado) {
-                operacionHtml = `<button type="button" class="ov-btn-finalizar" onclick="window.ovAbrirModalFinalizarViaje('${viajeEsc}')"><i class="bi bi-flag-fill"></i> FINALIZAR</button>`;
+                operacionHtml = `<button type="button" class="ov-btn-finalizar" onclick="window.ovAbrirModalFinalizarViaje('${viajeEsc}', '${placaEsc}')"><i class="bi bi-flag-fill"></i> FINALIZAR</button>`;
             } else {
                 operacionHtml = `<span class="badge bg-secondary-subtle text-secondary font-monospace" style="font-size:0.7rem;"><i class="bi bi-check2-all me-1"></i>CERRADO</span>`;
             }
@@ -933,18 +934,74 @@ window.ovGuardarNuevoViaje = async function(e) {
     }
 };
 
+// ── HELPER TELEMETRÍA GPS / ODOMETRO WIALON ─────────────────────────
+window.ovObtenerKmTelemetriaVehiculo = async function(placa) {
+    if (!placa) return null;
+    var plcClean = (placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    if (!plcClean) return null;
+
+    // 1. Intentar desde CACHE.wialon si ya está en memoria
+    if (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0) {
+        var found = CACHE.wialon.find(w => (w.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase() === plcClean);
+        if (found && found.km) return Math.round(found.km);
+    }
+    if (Array.isArray(window._datosWialonGPS) && window._datosWialonGPS.length > 0) {
+        var found2 = window._datosWialonGPS.find(w => (w.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase() === plcClean);
+        if (found2 && found2.km) return Math.round(found2.km);
+    }
+
+    // 2. Si no está en caché, consultar al backend Wialon en tiempo real
+    try {
+        var r = await fetch('/api/script/obtenerDatosWialon', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: [] })
+        });
+        var res = await r.json();
+        var list = (res && res.data) ? res.data : [];
+        if (Array.isArray(list)) {
+            if (typeof CACHE !== 'undefined') CACHE.wialon = list;
+            window._datosWialonGPS = list;
+            var match = list.find(w => (w.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase() === plcClean);
+            if (match && match.km) return Math.round(match.km);
+        }
+    } catch(err) {
+        console.warn('No se pudo consultar telemetría GPS para placa ' + placa, err);
+    }
+    return null;
+};
+
 // ── GESTIÓN DEL MODAL INICIAR VIAJE (DISEÑO B) ──────────────────────
-window.ovAbrirModalIniciarViaje = function(viajeCode) {
+window.ovAbrirModalIniciarViaje = async function(viajeCode, placaVehiculo) {
     var lblViaje = document.getElementById('ov-iniciar-modal-viaje-num');
     var inputId = document.getElementById('ov-iniciar-viaje-id');
     var inputFecha = document.getElementById('ov-iniciar-fecha');
     var inputKm = document.getElementById('ov-iniciar-km');
     var checkConfirm = document.getElementById('ov-iniciar-check-confirm');
+    var badgeTelemetria = document.getElementById('ov-iniciar-km-telemetria-badge');
+    var hintTelemetria = document.getElementById('ov-iniciar-km-telemetria-hint');
+
+    // Identificar placa desde fila si no vino por parámetro
+    if (!placaVehiculo && viajeCode && Array.isArray(window._ordenesViajeCache)) {
+        var vItem = window._ordenesViajeCache.find(x => x.viaje === viajeCode);
+        if (vItem) placaVehiculo = vItem.placa_tracto;
+    }
 
     if (lblViaje) lblViaje.textContent = viajeCode || '---';
     if (inputId) inputId.value = viajeCode || '';
-    if (inputKm) inputKm.value = '';
+    if (inputKm) {
+        inputKm.value = '';
+        inputKm.placeholder = 'Consultando telemetría...';
+    }
     if (checkConfirm) checkConfirm.checked = false;
+
+    if (badgeTelemetria) {
+        badgeTelemetria.innerHTML = `<i class="bi bi-arrow-repeat spin me-1 text-primary"></i> Consultando GPS...`;
+        badgeTelemetria.className = 'badge bg-light text-secondary border font-monospace';
+    }
+    if (hintTelemetria) {
+        hintTelemetria.textContent = 'Consultando odómetro satelital del vehículo ' + (placaVehiculo || '') + '...';
+    }
 
     if (inputFecha) {
         var today = new Date();
@@ -958,6 +1015,37 @@ window.ovAbrirModalIniciarViaje = function(viajeCode) {
     if (modalEl && typeof bootstrap !== 'undefined') {
         var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
         modal.show();
+    }
+
+    // Consultar telemetría asíncrona de la placa
+    if (placaVehiculo) {
+        var kmGps = await window.ovObtenerKmTelemetriaVehiculo(placaVehiculo);
+        if (kmGps != null && kmGps > 0) {
+            if (inputKm) {
+                inputKm.value = kmGps;
+                inputKm.placeholder = 'EJ: ' + kmGps;
+            }
+            if (badgeTelemetria) {
+                badgeTelemetria.innerHTML = `<i class="bi bi-broadcast text-success me-1"></i> GPS: ${placaVehiculo} (${kmGps.toLocaleString()} km)`;
+                badgeTelemetria.className = 'badge bg-success-subtle text-success border border-success-subtle font-monospace';
+            }
+            if (hintTelemetria) {
+                hintTelemetria.textContent = `Odómetro satelital obtenido automáticamente (${kmGps} km). Es completamente editable si deseas corregirlo.`;
+            }
+        } else {
+            if (inputKm) inputKm.placeholder = 'EJ: 125480';
+            if (badgeTelemetria) {
+                badgeTelemetria.innerHTML = `<i class="bi bi-exclamation-circle me-1 text-muted"></i> Sin Odómetro GPS`;
+                badgeTelemetria.className = 'badge bg-light text-muted border font-monospace';
+            }
+            if (hintTelemetria) {
+                hintTelemetria.textContent = 'No se detectó odómetro satelital activo para la placa ' + placaVehiculo + '. Ingrésalo manualmente.';
+            }
+        }
+    } else {
+        if (inputKm) inputKm.placeholder = 'EJ: 125480';
+        if (badgeTelemetria) badgeTelemetria.style.display = 'none';
+        if (hintTelemetria) hintTelemetria.textContent = 'Ingresa el kilometraje actual del vehículo para iniciar.';
     }
 };
 
@@ -1017,7 +1105,7 @@ window.ovEjecutarIniciarViajeConfirmado = async function(e) {
 };
 
 // ── GESTIÓN DE FINALIZACIÓN DE VIAJES ────────────────────────────────
-window.ovAbrirModalFinalizarViaje = function(viajeCode) {
+window.ovAbrirModalFinalizarViaje = async function(viajeCode, placaVehiculo) {
     if (!viajeCode) return;
 
     var lblViaje = document.getElementById('ov-finalizar-modal-viaje-num');
@@ -1025,17 +1113,67 @@ window.ovAbrirModalFinalizarViaje = function(viajeCode) {
     var inputFecha = document.getElementById('ov-finalizar-fecha');
     var inputKm = document.getElementById('ov-finalizar-km');
     var checkConfirm = document.getElementById('ov-finalizar-check-confirm');
+    var badgeTelemetria = document.getElementById('ov-finalizar-km-telemetria-badge');
+    var hintTelemetria = document.getElementById('ov-finalizar-km-telemetria-hint');
+
+    // Identificar placa desde fila si no vino por parámetro
+    if (!placaVehiculo && viajeCode && Array.isArray(window._ordenesViajeCache)) {
+        var vItem = window._ordenesViajeCache.find(x => x.viaje === viajeCode);
+        if (vItem) placaVehiculo = vItem.placa_tracto;
+    }
 
     if (lblViaje) lblViaje.textContent = viajeCode;
     if (inputId) inputId.value = viajeCode;
     if (inputFecha) inputFecha.value = new Date().toISOString().slice(0, 10);
-    if (inputKm) inputKm.value = '';
+    if (inputKm) {
+        inputKm.value = '';
+        inputKm.placeholder = 'Consultando telemetría...';
+    }
     if (checkConfirm) checkConfirm.checked = false;
+
+    if (badgeTelemetria) {
+        badgeTelemetria.innerHTML = `<i class="bi bi-arrow-repeat spin me-1 text-primary"></i> Consultando GPS...`;
+        badgeTelemetria.className = 'badge bg-light text-secondary border font-monospace';
+    }
+    if (hintTelemetria) {
+        hintTelemetria.textContent = 'Consultando odómetro satelital del vehículo ' + (placaVehiculo || '') + '...';
+    }
 
     var modalEl = document.getElementById('modalFinalizarViajeConfirm');
     if (modalEl && typeof bootstrap !== 'undefined') {
         var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
         modal.show();
+    }
+
+    // Consultar telemetría asíncrona de la placa para odómetro de llegada
+    if (placaVehiculo) {
+        var kmGps = await window.ovObtenerKmTelemetriaVehiculo(placaVehiculo);
+        if (kmGps != null && kmGps > 0) {
+            if (inputKm) {
+                inputKm.value = kmGps;
+                inputKm.placeholder = 'EJ: ' + kmGps;
+            }
+            if (badgeTelemetria) {
+                badgeTelemetria.innerHTML = `<i class="bi bi-broadcast text-success me-1"></i> GPS: ${placaVehiculo} (${kmGps.toLocaleString()} km)`;
+                badgeTelemetria.className = 'badge bg-success-subtle text-success border border-success-subtle font-monospace';
+            }
+            if (hintTelemetria) {
+                hintTelemetria.textContent = `Odómetro satelital obtenido automáticamente (${kmGps} km). Es completamente editable si deseas corregirlo.`;
+            }
+        } else {
+            if (inputKm) inputKm.placeholder = 'EJ: 126200';
+            if (badgeTelemetria) {
+                badgeTelemetria.innerHTML = `<i class="bi bi-exclamation-circle me-1 text-muted"></i> Sin Odómetro GPS`;
+                badgeTelemetria.className = 'badge bg-light text-muted border font-monospace';
+            }
+            if (hintTelemetria) {
+                hintTelemetria.textContent = 'No se detectó odómetro satelital activo para la placa ' + placaVehiculo + '. Ingrésalo manualmente.';
+            }
+        }
+    } else {
+        if (inputKm) inputKm.placeholder = 'EJ: 126200';
+        if (badgeTelemetria) badgeTelemetria.style.display = 'none';
+        if (hintTelemetria) hintTelemetria.textContent = 'Ingresa el kilometraje de cierre del vehículo.';
     }
 };
 
