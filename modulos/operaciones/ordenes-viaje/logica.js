@@ -1605,27 +1605,32 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
 
                 if (badgeRutas) badgeRutas.textContent = listaOS.length;
                 if (listaOS.length > 0) {
-                    tbodyRutas.innerHTML = listaOS.map(os => `
-                        <tr>
-                            <td class="fw-bold text-dark font-monospace">${os.codigo_orden || '---'}</td>
+                    tbodyRutas.innerHTML = listaOS.map(os => {
+                        const liqTexto = os.estado_liquidacion || 'PENDIENTE';
+                        const badgeLiq = `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning-subtle font-monospace px-2 py-0.5" style="font-size:0.68rem;">${liqTexto}</span>`;
+                        const esRetorno = os.es_retorno === 1 || os.es_retorno === '1' || os.es_retorno === true;
+                        const badgeSentido = esRetorno 
+                            ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace"><i class="bi bi-arrow-left me-0.5"></i>RETORNO</span>`
+                            : `<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle font-monospace"><i class="bi bi-arrow-right me-0.5"></i>IDA</span>`;
+
+                        return `
+                        <tr style="cursor:pointer;" onclick="window.ovVerEditarOrdenServicio('${os.id || os.codigo_orden || ''}')" title="Clic para ver o editar Orden de Servicio">
+                            <td class="fw-bold text-primary font-monospace">${os.codigo_orden || '---'}</td>
                             <td><span class="badge ${os.estado_servicio === 'FINALIZADO' ? 'bg-primary' : 'bg-success-subtle text-success border border-success-subtle'}">${os.estado_servicio || 'INICIADO'}</span></td>
-                            <td><span class="text-muted small">${os.estado_liquidacion || '—'}</span></td>
+                            <td>${badgeLiq}</td>
                             <td class="font-monospace text-secondary">${os.fecha_fmt || (item.fecha_viaje || '').slice(0, 10) || '---'}</td>
                             <td><span class="badge bg-light text-secondary border">${os.tipo_contratacion || 'PROPIO'}</span></td>
-                            <td class="fw-semibold text-dark text-truncate" style="max-width:140px;">${os.cliente_nombre || item.cliente || 'CLIENTE'}</td>
-                            <td class="text-muted small text-truncate" style="max-width:140px;">${os.remitente || os.cliente_nombre || '---'}</td>
+                            <td class="fw-semibold text-dark text-truncate" style="max-width:140px;" title="${os.cliente_nombre || item.cliente || ''}">${os.cliente_nombre || item.cliente || 'CLIENTE'}</td>
+                            <td class="text-muted small text-truncate" style="max-width:140px;" title="${os.destinatario || ''}">${os.destinatario || '---'}</td>
+                            <td>${badgeSentido}</td>
                             <td><span class="badge bg-light text-secondary border">${os.tipo_servicio || 'CARGA GENERAL'}</span></td>
                             <td class="fw-semibold text-dark">${os.ruta || item.ruta || '---'}</td>
                             <td class="font-monospace">${parseFloat(os.volumen_documentos || 0).toFixed(3)}</td>
                             <td class="font-monospace">${os.carga_doc || 0}</td>
                             <td class="font-monospace fw-bold text-success">${parseFloat(os.peso_documentos || 0).toFixed(2)}</td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 fw-bold" style="font-size:0.7rem;" onclick="window.ovVerEditarOrdenServicio('${os.id || os.codigo_orden || ''}')" title="Ver / Gestionar Orden de Servicio">
-                                    <i class="bi bi-eye"></i> Ver
-                                </button>
-                            </td>
                         </tr>
-                    `).join('');
+                        `;
+                    }).join('');
                 } else {
                     if (badgeRutas) badgeRutas.textContent = '0';
                     tbodyRutas.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> Sin órdenes de servicio vinculadas a este viaje.</td></tr>`;
@@ -1633,6 +1638,76 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
             } catch (err) {
                 if (badgeRutas) badgeRutas.textContent = '0';
                 tbodyRutas.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> Sin órdenes de servicio vinculadas a este viaje.</td></tr>`;
+            }
+
+            // ── Cargar Documentos de Transporte (GREs) Vinculados a las OS del Viaje ──
+            var tbodyDocs = document.getElementById('ov-mon-tbody-documentos');
+            var badgeDocs = document.getElementById('ov-mon-badge-documentos');
+            var resPesoEl = document.getElementById('ov-mon-res-peso');
+
+            if (tbodyDocs) {
+                try {
+                    let totalDocsViaje = [];
+                    let pesoTotalCalculado = 0;
+
+                    if (Array.isArray(listaOS) && listaOS.length > 0) {
+                        for (const o of listaOS) {
+                            if (Array.isArray(o.documentos) && o.documentos.length > 0) {
+                                o.documentos.forEach(d => {
+                                    totalDocsViaje.push({ ...d, codigo_orden: o.codigo_orden, estado_liquidacion: o.estado_liquidacion });
+                                    pesoTotalCalculado += parseFloat(d.peso || 0);
+                                });
+                            } else {
+                                // Consultar detalle individual si no vinieron embebidos
+                                try {
+                                    var rDet = await fetch(`/api/operaciones/ordenes-servicio/${o.id || o.codigo_orden}`);
+                                    var jDet = await rDet.json();
+                                    if (jDet && jDet.ok && jDet.data && Array.isArray(jDet.data.documentos)) {
+                                        jDet.data.documentos.forEach(d => {
+                                            totalDocsViaje.push({ ...d, codigo_orden: o.codigo_orden, estado_liquidacion: o.estado_liquidacion });
+                                            pesoTotalCalculado += parseFloat(d.peso || 0);
+                                        });
+                                    }
+                                } catch (_) {}
+                            }
+                        }
+                    }
+
+                    if (badgeDocs) badgeDocs.textContent = totalDocsViaje.length;
+                    if (resPesoEl && pesoTotalCalculado > 0) {
+                        resPesoEl.textContent = (pesoTotalCalculado / 1000).toFixed(2);
+                    }
+
+                    if (totalDocsViaje.length > 0) {
+                        tbodyDocs.innerHTML = totalDocsViaje.map(d => `
+                            <tr>
+                                <td class="fw-bold text-primary font-monospace">${d.codigo_orden || '---'}</td>
+                                <td class="font-monospace fw-bold text-dark">${d.numero_documento || '---'}</td>
+                                <td><span class="badge bg-warning bg-opacity-10 text-warning border border-warning-subtle font-monospace">${d.estado_liquidacion || 'PENDIENTE'}</span></td>
+                                <td class="font-monospace text-secondary">${(d.fecha_carga || '').slice(0, 10) || '---'}</td>
+                                <td class="font-monospace">${d.gr_remitente || '---'}</td>
+                                <td class="font-monospace">${d.numero_transporte || '---'}</td>
+                                <td class="fw-semibold text-dark text-truncate" style="max-width:140px;" title="${d.remitente || ''}">${d.remitente || '---'}</td>
+                                <td class="text-dark text-truncate" style="max-width:140px;" title="${d.destinatario || ''}">${d.destinatario || '---'}</td>
+                                <td class="text-muted small text-truncate" style="max-width:160px;">${d.direccion_destino || '---'}</td>
+                                <td class="font-monospace text-secondary">${d.placa_referencia || item.placa_tracto || '---'}</td>
+                                <td class="font-monospace text-end">${parseFloat(d.volumen || 0).toFixed(3)}</td>
+                                <td class="font-monospace text-end">${d.cantidad || 1}</td>
+                                <td class="font-monospace text-end fw-bold text-success">${parseFloat(d.peso || 0).toLocaleString()}</td>
+                                <td class="font-monospace text-secondary">${(d.fecha_entrega || '').slice(0, 10) || '---'}</td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 fw-bold" style="font-size:0.68rem;" onclick="if(typeof cargarModuloAislado==='function') cargarModuloAislado('operaciones/guias-remision');">
+                                        <i class="bi bi-eye"></i> Ver
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbodyDocs.innerHTML = `<tr><td colspan="15" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> No se registran documentos de transporte para este viaje.</td></tr>`;
+                    }
+                } catch (eDoc) {
+                    tbodyDocs.innerHTML = `<tr><td colspan="15" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> No se registran documentos de transporte para este viaje.</td></tr>`;
+                }
             }
         })();
     }
