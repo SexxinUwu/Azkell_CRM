@@ -212,6 +212,18 @@ function _crearPngCuadrado(buf, targetSize = 512) {
     }
 }
 
+function _formatearNombreEmpresa(raw) {
+    if (!raw) return 'Azkell';
+    let s = String(raw).trim();
+    // Limpiar sufijos societarios comunes como S.A.C., S.A., S.R.L., etc.
+    s = s.replace(/\s+(S\.?A\.?C\.?|S\.?A\.?|S\.?R\.?L\.?|E\.?I\.?R\.?L\.?|SOCIEDAD ANONIMA CERRADA)\b/gi, '').trim();
+    // Capitalizar adecuadamente si está todo en mayúsculas
+    if (s === s.toUpperCase() && s.length > 2) {
+        s = s.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+    }
+    return s || 'Azkell';
+}
+
 app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
     try {
         let nombreEmpresaRaw = '';
@@ -236,13 +248,14 @@ app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
         }
 
         const cleanName = _formatearNombreEmpresa(nombreEmpresaRaw || req.tenantSlug || 'Azkell Fleet');
-        const pwaName = `${cleanName} | Azkell Fleet`;
-        const pwaShortName = cleanName.length > 15 ? cleanName : `${cleanName} Fleet`;
+        const pwaName = `${cleanName} - Azkell Fleet`;
+        const pwaShortName = `${cleanName} Fleet`;
 
         const hasCustomLogo = Boolean(logoRaw && logoRaw.length > 50);
         const iconSrc = hasCustomLogo ? '/api/tenant-logo' : '/app-icon-2002.png';
 
         const manifestData = {
+            id: '/',
             name: pwaName,
             short_name: pwaShortName,
             description: `Sistema ERP de Gestión de Flota y Mantenimiento — ${cleanName}`,
