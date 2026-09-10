@@ -86,7 +86,7 @@ window.ovConfigurarThead = function() {
     if (_ovModoVistaActual === 'viajes') {
         thead.innerHTML = `
             <tr>
-                <th style="min-width: 80px;">ACCIÓN</th>
+                <th class="ov-col-sticky-action text-center" style="width: 62px; min-width: 62px; max-width: 62px;">ACCIÓN</th>
                 <th style="min-width: 100px;">OPERACIÓN ${_sortIcon('estado')}</th>
                 <th style="min-width: 95px;">ESTADO ${_sortIcon('estado')}</th>
                 <th style="min-width: 140px;">F. Y HORA CREACIÓN ${_sortIcon('fecha_creacion')}</th>
@@ -591,7 +591,7 @@ window.ovRenderizarTabla = function() {
 
             // 3. Operación
             var operacionHtml = '';
-            var viajeEsc = (v.viaje || '').replace(/"/g, '&quot;');
+            var viajeEsc = (v.viaje || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
             var placaEsc = (v.placa_tracto || '').replace(/"/g, '&quot;');
             if (esRegistrado) {
                 operacionHtml = `<button type="button" class="ov-btn-iniciar" onclick="window.ovAbrirModalIniciarViaje('${viajeEsc}', '${placaEsc}')"><i class="bi bi-play-fill fs-6"></i> INICIAR</button>`;
@@ -633,15 +633,27 @@ window.ovRenderizarTabla = function() {
 
             html += `
                 <tr>
-                    <!-- 1. ACCIÓN -->
-                    <td>
-                        <div class="d-flex align-items-center gap-1">
-                            <button type="button" class="ov-btn-action-edit" onclick="window.ovAbrirModalEditarViaje('${v.viaje}')" title="Editar orden de viaje">
-                                EDITAR <i class="bi bi-chevron-down" style="font-size:0.65rem;"></i>
+                    <!-- 1. ACCIÓN (COLUMNA FIJA / STICKY CON BOTÓN DE 3 PUNTOS Y MENÚ FLOTANTE) -->
+                    <td class="ov-col-sticky-action text-center" onclick="event.stopPropagation();">
+                        <div class="dropdown d-inline-block">
+                            <button class="ov-btn-action-dots" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" title="Acciones del viaje">
+                                <i class="bi bi-three-dots-vertical"></i>
                             </button>
-                            <button type="button" class="ov-btn-action-delete" onclick="window.ovAbrirModalEliminarViaje('${viajeEsc}')" title="Eliminar orden de viaje">
-                                <i class="bi bi-trash3"></i>
-                            </button>
+                            <ul class="dropdown-menu ov-actions-dropdown-menu shadow-lg border">
+                                <li>
+                                    <a class="dropdown-item fw-semibold text-dark" href="javascript:void(0)" onclick="window.ovAbrirModalEditarViaje('${viajeEsc}')">
+                                        <i class="bi bi-pencil text-primary" style="font-size:0.95rem;"></i>
+                                        <span>Editar</span>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider my-1 border-secondary-subtle"></li>
+                                <li>
+                                    <a class="dropdown-item fw-bold text-danger item-delete" href="javascript:void(0)" onclick="window.ovAbrirModalEliminarViaje('${viajeEsc}')">
+                                        <i class="bi bi-trash3 text-danger" style="font-size:0.95rem;"></i>
+                                        <span>Eliminar</span>
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
                     </td>
 
@@ -2075,21 +2087,9 @@ window.ovInitLiquidWave = function() {
     renderWave();
 };
 
-// ── ILUMINACIÓN ESPECULAR VOLUMÉTRICA QUE SIGUE AL CURSOR ─────────────
-if (!window._ovSpecularConfigured) {
-    window._ovSpecularConfigured = true;
-    window.addEventListener('mousemove', function(e) {
-        var drawer = document.getElementById('ovMonDrawer');
-        if (!drawer || !drawer.classList.contains('active')) return;
-
-        var rect = drawer.getBoundingClientRect();
-        var x = e.clientX - rect.left;
-        var y = e.clientY - rect.top;
-
-        drawer.style.setProperty('--mouse-x', x + 'px');
-        drawer.style.setProperty('--mouse-y', y + 'px');
-    });
-}
+// ── ILUMINACIÓN ESPECULAR (DESACTIVADA PARA MÁXIMA NITIDEZ Y RENDIMIENTO) ──
+// Se neutraliza el cálculo dinámico en mousemove para evitar repintados continuos en la GPU
+window._ovSpecularConfigured = true;
 
 // ── UTILIDADES DE MOCK / COPIAR ───────────────────────────────────────
 window.ovCopiarCodigoViaje = function() {
