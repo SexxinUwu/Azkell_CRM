@@ -125,10 +125,89 @@
     background: #f8fafc;
 }
 
-@media (max-width: 768px) {
-    #moduloCombustibleValesContenedor {
-        padding: 0.5rem 0.5rem 80px 0.5rem !important;
-    }
+/* ── Modal Bottom Drawer para Vales de Combustible (Idéntico a Detalle de Viaje) ── */
+#cvModalForm.modal {
+    padding: 0 !important;
+    overflow: hidden !important;
+    z-index: 1071 !important;
+}
+
+#cvModalForm .modal-dialog {
+    position: fixed !important;
+    bottom: 0 !important;
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    margin: 0 auto !important;
+    width: min(1320px, 96vw) !important;
+    max-width: 96vw !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+    transform: translateY(100%) !important;
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+#cvModalForm.show .modal-dialog {
+    transform: translateY(0) !important;
+}
+
+#cvModalForm .modal-content {
+    height: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 28px 28px 0 0 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-bottom: none !important;
+    box-shadow: 0 -20px 60px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.08) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    background: #f8fafc !important;
+    -webkit-font-smoothing: subpixel-antialiased;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: geometricPrecision;
+}
+
+#cvModalForm .modal-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 0.85rem 1.4rem !important;
+    flex-shrink: 0;
+}
+
+#cvModalForm .modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto !important;
+    padding: 1.15rem 1.4rem !important;
+    background: #f8fafc;
+}
+
+#cvModalForm .modal-footer {
+    background: #ffffff !important;
+    border-top: 1px solid #e2e8f0 !important;
+    padding: 0.75rem 1.4rem !important;
+    flex-shrink: 0;
+}
+
+.cv-form-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    margin-bottom: 1rem;
+}
+.cv-form-card-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 </style>
 
@@ -349,133 +428,180 @@
     </div>
 </div>
 
-<!-- MODAL: REGISTRAR / EDITAR VALE MANUAL -->
-<div class="modal fade" id="cvModalForm" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
-            <div class="modal-header bg-slate-900 text-white py-3 px-4" style="background:#0f172a;">
-                <h5 class="modal-title fw-bold fs-6" id="cv-modal-form-title">Nuevo Vale de Combustible</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<!-- ============================================================ -->
+<!-- 📝 MODAL: REGISTRAR / EDITAR VALE MANUAL (Bottom Drawer)      -->
+<!-- ============================================================ -->
+<div class="modal fade" id="cvModalForm" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            
+            <!-- Modal Header con Botón Atrás Contextual -->
+            <div class="modal-header d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow-2xs" onclick="window.cvRegresarAtras()" title="Regresar">
+                        <i class="bi bi-arrow-left fs-6"></i>
+                        <span>Atrás</span>
+                    </button>
+                    <h5 class="modal-title m-0 fw-bold" id="cv-modal-form-title" style="color: #d97706; font-size: 1.15rem;">Nuevo Vale de Combustible</h5>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn-close" onclick="window.cvRegresarAtras()" aria-label="Close"></button>
+                </div>
             </div>
-            <div class="modal-body p-4 bg-light">
+
+            <!-- Modal Body Segmentado por Cards -->
+            <div class="modal-body">
                 <form id="cv-form-vale" onsubmit="window.cvGuardarFormulario(event)">
                     <input type="hidden" id="cv-form-id" value="">
                     
-                    <div class="row g-2 mb-2">
-                        <div class="col-6 col-md-4">
-                            <label class="form-label text-muted fw-bold small mb-1">Fecha y Hora *</label>
-                            <input type="datetime-local" class="form-control form-control-sm" id="cv-f-fecha" required>
+                    <!-- Card 1: Identificación y Unidad Operativa -->
+                    <div class="cv-form-card">
+                        <div class="cv-form-card-title">
+                            <i class="bi bi-truck text-warning"></i> Identificación y Unidad Operativa
                         </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label text-muted fw-bold small mb-1">Correlativo</label>
-                            <input type="text" class="form-control form-control-sm" id="cv-f-correlativo" placeholder="Ej: 2026-00001959">
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-muted fw-bold small mb-1">Fecha y Hora <span class="text-danger">(*)</span></label>
+                                <input type="datetime-local" class="form-control form-control-sm" id="cv-f-fecha" required>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-muted fw-bold small mb-1">Correlativo</label>
+                                <input type="text" class="form-control form-control-sm font-monospace" id="cv-f-correlativo" placeholder="Ej: 2026-00001959">
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-muted fw-bold small mb-1">Estado</label>
+                                <select class="form-select form-select-sm" id="cv-f-estado">
+                                    <option value="VÁLIDO" selected>VÁLIDO</option>
+                                    <option value="ANULADO">ANULADO</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label text-muted fw-bold small mb-1">Estado</label>
-                            <select class="form-select form-select-sm" id="cv-f-estado">
-                                <option value="VÁLIDO">VÁLIDO</option>
-                                <option value="ANULADO">ANULADO</option>
-                            </select>
+
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-muted fw-bold small mb-1">Placa / Vehículo <span class="text-danger">(*)</span></label>
+                                <input type="text" class="form-control form-control-sm fw-bold text-uppercase" id="cv-f-vehiculo" placeholder="BEQ701" required>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-muted fw-bold small mb-1 d-flex justify-content-between align-items-center">
+                                    <span>N° Viaje</span>
+                                    <span id="cv-viaje-lock-status" class="badge bg-light text-muted border font-monospace" style="font-size:0.65rem;">Desbloqueado</span>
+                                </label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white" id="cv-viaje-icon-container">
+                                        <i class="bi bi-unlock text-muted" id="cv-viaje-lock-icon"></i>
+                                    </span>
+                                    <input type="text" class="form-control form-control-sm font-monospace fw-bold" id="cv-f-viaje" placeholder="2026-00000492">
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-muted fw-bold small mb-1">Clase Vehículo</label>
+                                <input type="text" class="form-control form-control-sm" id="cv-f-clase" value="TRACTO">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-muted fw-bold small mb-1">Tipo</label>
+                                <input type="text" class="form-control form-control-sm" id="cv-f-tipo" value="RECARGA VUELTA">
+                            </div>
                         </div>
                     </div>
 
-                    <div class="row g-2 mb-2">
-                        <div class="col-6 col-md-3">
-                            <label class="form-label text-muted fw-bold small mb-1">Placa / Vehículo *</label>
-                            <input type="text" class="form-control form-control-sm fw-bold" id="cv-f-vehiculo" placeholder="BEQ701" required>
+                    <!-- Card 2: Operación y Abastecimiento -->
+                    <div class="cv-form-card">
+                        <div class="cv-form-card-title">
+                            <i class="bi bi-fuel-pump-fill text-warning"></i> Operación, Ruta y Estación de Servicio
                         </div>
-                        <div class="col-6 col-md-3">
-                            <label class="form-label text-muted fw-bold small mb-1">N° Viaje</label>
-                            <input type="text" class="form-control form-control-sm" id="cv-f-viaje" placeholder="2026-00000492">
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-muted fw-bold small mb-1">Conductor</label>
+                                <input type="text" class="form-control form-control-sm" id="cv-f-conductor" placeholder="Nombre del conductor">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-muted fw-bold small mb-1">Ruta</label>
+                                <input type="text" class="form-control form-control-sm" id="cv-f-ruta" placeholder="LIMA - AREQUIPA">
+                            </div>
                         </div>
-                        <div class="col-6 col-md-3">
-                            <label class="form-label text-muted fw-bold small mb-1">Clase Vehículo</label>
-                            <input type="text" class="form-control form-control-sm" id="cv-f-clase" value="TRACTO">
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="form-label text-muted fw-bold small mb-1">Tipo</label>
-                            <input type="text" class="form-control form-control-sm" id="cv-f-tipo" value="RECARGA VUELTA">
+
+                        <div class="row g-2">
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-muted fw-bold small mb-1">Estación / Grifo</label>
+                                <input type="text" class="form-control form-control-sm" id="cv-f-estacion" placeholder="E/S LOS REYES">
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-muted fw-bold small mb-1">Proveedor</label>
+                                <input type="text" class="form-control form-control-sm" id="cv-f-proveedor" placeholder="GASOLINERA S.A.C.">
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-muted fw-bold small mb-1">Tipo Combustible</label>
+                                <input type="text" class="form-control form-control-sm" id="cv-f-combustible" value="D2">
+                            </div>
                         </div>
                     </div>
 
-                    <div class="row g-2 mb-2">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label text-muted fw-bold small mb-1">Conductor</label>
-                            <input type="text" class="form-control form-control-sm" id="cv-f-conductor" placeholder="Nombre del conductor">
+                    <!-- Card 3: Odómetro y Liquidación Económica -->
+                    <div class="cv-form-card mb-0">
+                        <div class="cv-form-card-title">
+                            <i class="bi bi-cash-coin text-warning"></i> Odómetro y Liquidación Económica
                         </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label text-muted fw-bold small mb-1">Ruta</label>
-                            <input type="text" class="form-control form-control-sm" id="cv-f-ruta" placeholder="LIMA - AREQUIPA">
-                        </div>
-                    </div>
 
-                    <div class="row g-2 mb-2">
-                        <div class="col-6 col-md-4">
-                            <label class="form-label text-muted fw-bold small mb-1">Estación / Grifo</label>
-                            <input type="text" class="form-control form-control-sm" id="cv-f-estacion" placeholder="E/S LOS REYES">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-muted fw-bold small mb-1">Kilometraje (Odómetro)</label>
+                                <input type="number" step="0.1" class="form-control form-control-sm font-monospace" id="cv-f-kilometraje" value="0">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-muted fw-bold small mb-1">Galones <span class="text-danger">(*)</span></label>
+                                <input type="number" step="0.01" class="form-control form-control-sm font-monospace fw-bold text-primary" id="cv-f-galones" required oninput="window.cvRecalcularTotalForm()">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-muted fw-bold small mb-1">Costo / Galón (S/)</label>
+                                <input type="number" step="0.01" class="form-control form-control-sm font-monospace" id="cv-f-costo-gl" oninput="window.cvRecalcularTotalForm()">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-muted fw-bold small mb-1">Importe Total (S/) <span class="text-danger">(*)</span></label>
+                                <input type="number" step="0.01" class="form-control form-control-sm font-monospace fw-bold text-success" id="cv-f-importe" required>
+                            </div>
                         </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label text-muted fw-bold small mb-1">Proveedor</label>
-                            <input type="text" class="form-control form-control-sm" id="cv-f-proveedor" placeholder="GASOLINERA S.A.C.">
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label text-muted fw-bold small mb-1">Tipo Combustible</label>
-                            <input type="text" class="form-control form-control-sm" id="cv-f-combustible" value="D2">
-                        </div>
-                    </div>
 
-                    <div class="row g-2 mb-2">
-                        <div class="col-6 col-md-3">
-                            <label class="form-label text-muted fw-bold small mb-1">Kilometraje (Odómetro)</label>
-                            <input type="number" step="0.1" class="form-control form-control-sm font-monospace" id="cv-f-kilometraje" value="0">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-muted fw-bold small mb-1">N° Comprobante</label>
+                                <input type="text" class="form-control form-control-sm" id="cv-f-comprobante" placeholder="F003-000964">
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-muted fw-bold small mb-1">Tipo Pago</label>
+                                <select class="form-select form-select-sm" id="cv-f-tipo-pago">
+                                    <option value="ANTICIPO" selected>ANTICIPO</option>
+                                    <option value="CREDITO">CREDITO</option>
+                                    <option value="EFECTIVO">EFECTIVO</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-muted fw-bold small mb-1">Estado Pago</label>
+                                <select class="form-select form-select-sm" id="cv-f-estado-pago">
+                                    <option value="NO PAGADO" selected>NO PAGADO</option>
+                                    <option value="PAGADO">PAGADO</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="col-6 col-md-3">
-                            <label class="form-label text-muted fw-bold small mb-1">Galones *</label>
-                            <input type="number" step="0.01" class="form-control form-control-sm font-monospace fw-bold text-primary" id="cv-f-galones" required oninput="window.cvRecalcularTotalForm()">
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="form-label text-muted fw-bold small mb-1">Costo / Galón (S/)</label>
-                            <input type="number" step="0.01" class="form-control form-control-sm font-monospace" id="cv-f-costo-gl" oninput="window.cvRecalcularTotalForm()">
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="form-label text-muted fw-bold small mb-1">Importe Total (S/) *</label>
-                            <input type="number" step="0.01" class="form-control form-control-sm font-monospace fw-bold text-success" id="cv-f-importe" required>
-                        </div>
-                    </div>
 
-                    <div class="row g-2 mb-2">
-                        <div class="col-6 col-md-4">
-                            <label class="form-label text-muted fw-bold small mb-1">N° Comprobante</label>
-                            <input type="text" class="form-control form-control-sm" id="cv-f-comprobante" placeholder="F003-000964">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label text-muted fw-bold small mb-1">Observaciones</label>
+                                <textarea class="form-control form-control-sm" id="cv-f-obs" rows="2" placeholder="Notas operativas adicionales..."></textarea>
+                            </div>
                         </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label text-muted fw-bold small mb-1">Tipo Pago</label>
-                            <select class="form-select form-select-sm" id="cv-f-tipo-pago">
-                                <option value="ANTICIPO">ANTICIPO</option>
-                                <option value="CREDITO">CREDITO</option>
-                                <option value="EFECTIVO">EFECTIVO</option>
-                            </select>
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label text-muted fw-bold small mb-1">Estado Pago</label>
-                            <select class="form-select form-select-sm" id="cv-f-estado-pago">
-                                <option value="NO PAGADO">NO PAGADO</option>
-                                <option value="PAGADO">PAGADO</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="mb-2">
-                        <label class="form-label text-muted fw-bold small mb-1">Observaciones</label>
-                        <textarea class="form-control form-control-sm" id="cv-f-obs" rows="2" placeholder="Notas adicionales..."></textarea>
-                    </div>
-
-                    <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
-                        <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">Guardar Vale</button>
                     </div>
                 </form>
             </div>
+
+            <!-- Modal Footer con Botones -->
+            <div class="modal-footer d-flex align-items-center justify-content-between px-4 py-2 border-top bg-white">
+                <button type="button" class="btn btn-sm btn-light border px-4 fw-bold" onclick="window.cvRegresarAtras()">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-warning rounded-pill px-4 fw-bold text-white shadow-sm" style="background:#f59e0b; border-color:#d97706;" onclick="document.getElementById('cv-form-vale').requestSubmit()">Guardar Vale</button>
+            </div>
+
         </div>
     </div>
 </div>

@@ -660,8 +660,28 @@
         }
     };
 
-    // ── FORMULARIO MODAL NUEVO / EDITAR ────────────────────────────────────────
-    window.cvAbrirModalNuevo = function() {
+    // ── FORMULARIO MODAL NUEVO / EDITAR (Bottom Drawer) ────────────────────────
+    window._cvOrigenApertura = 'modulo_propio';
+
+    window.cvRegresarAtras = function() {
+        const modalEl = document.getElementById('cvModalForm');
+        if (modalEl) {
+            const inst = bootstrap.Modal.getInstance(modalEl);
+            if (inst) inst.hide();
+        }
+        if (window._cvOrigenApertura === 'detalle_viaje') {
+            const drawer = document.getElementById('ovMonDrawer');
+            const backdrop = document.getElementById('ovMonDrawerBackdrop');
+            if (drawer) drawer.classList.add('active');
+            if (backdrop) backdrop.classList.add('active');
+            if (typeof window.ovRecargarMonitoreoActual === 'function') {
+                window.ovRecargarMonitoreoActual();
+            }
+        }
+    };
+
+    window.cvAbrirModalNuevo = function(viajeAsignado = '', origen = 'modulo_propio') {
+        window._cvOrigenApertura = origen;
         document.getElementById('cv-form-id').value = '';
         document.getElementById('cv-modal-form-title').textContent = 'Nuevo Vale de Combustible';
         document.getElementById('cv-form-vale').reset();
@@ -670,16 +690,82 @@
         const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
         document.getElementById('cv-f-fecha').value = localIso;
 
+        // Configurar campo de Viaje
+        const inpViaje = document.getElementById('cv-f-viaje');
+        const lockIcon = document.getElementById('cv-viaje-lock-icon');
+        const lockStatus = document.getElementById('cv-viaje-lock-status');
+
+        if (viajeAsignado && String(viajeAsignado).trim() !== '') {
+            if (inpViaje) {
+                inpViaje.value = String(viajeAsignado).trim();
+                inpViaje.readOnly = true;
+                inpViaje.classList.add('bg-warning-subtle');
+            }
+            if (lockIcon) lockIcon.className = 'bi bi-lock-fill text-warning';
+            if (lockStatus) {
+                lockStatus.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace';
+                lockStatus.textContent = 'Bloqueado (Desde Viaje)';
+            }
+
+            // Intentar auto-completar datos si están en el detalle del viaje activo
+            const listaViajes = window._ovViajesGlobal || (typeof _ovViajesGlobal !== 'undefined' ? _ovViajesGlobal : []) || window.dataGlobalOrdenesViajeModulo || [];
+            const vData = listaViajes.find(x => x.viaje === viajeAsignado);
+            if (vData) {
+                if (vData.placa_tracto && !document.getElementById('cv-f-vehiculo').value) {
+                    document.getElementById('cv-f-vehiculo').value = vData.placa_tracto;
+                }
+                if (vData.conductor && !document.getElementById('cv-f-conductor').value) {
+                    document.getElementById('cv-f-conductor').value = vData.conductor;
+                }
+                if (vData.ruta && !document.getElementById('cv-f-ruta').value) {
+                    document.getElementById('cv-f-ruta').value = vData.ruta;
+                }
+            }
+        } else {
+            if (inpViaje) {
+                inpViaje.value = '';
+                inpViaje.readOnly = false;
+                inpViaje.classList.remove('bg-warning-subtle');
+            }
+            if (lockIcon) lockIcon.className = 'bi bi-unlock text-muted';
+            if (lockStatus) {
+                lockStatus.className = 'badge bg-light text-muted border font-monospace';
+                lockStatus.textContent = 'Desbloqueado';
+            }
+        }
+
         const modalEl = document.getElementById('cvModalForm');
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+        // Elevar backdrop sobre ovMonDrawer (z-index 1070)
+        setTimeout(() => {
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length > 0) {
+                const lastBd = backdrops[backdrops.length - 1];
+                lastBd.style.zIndex = '1070';
+                lastBd.style.backgroundColor = 'rgba(15, 23, 42, 0.68)';
+                lastBd.style.opacity = '1';
+            }
+        }, 15);
     };
 
-    window.cvAbrirModalEditar = function(id) {
-        const item = window._cvData.find(r => r.id === id);
+    window.cvAbrirModalEditar = async function(id, origen = 'modulo_propio') {
+        window._cvOrigenApertura = origen;
+        let item = (window._cvData || []).find(r => r.id === id || String(r.id) === String(id));
+        if (!item) {
+            // Intentar consultar a la API si no está en cache local
+            try {
+                const r = await fetch(`/api/combustible/vales/${id}`);
+                const j = await r.json();
+                if (j && j.ok && j.data) item = j.data;
+            } catch (e) {
+                console.warn("No se pudo cargar vale:", e);
+            }
+        }
         if (!item) return;
 
         document.getElementById('cv-form-id').value = item.id;
-        document.getElementById('cv-modal-form-title').textContent = `Editar Vale #${item.id} (${item.vehiculo})`;
+        document.getElementById('cv-modal-form-title').textContent = `Editar Vale #${item.id} (${item.vehiculo || ''})`;
 
         if (item.fecha) {
             const dt = new Date(item.fecha);
@@ -689,7 +775,6 @@
         document.getElementById('cv-f-correlativo').value = item.correlativo || '';
         document.getElementById('cv-f-estado').value = item.estado || 'VÁLIDO';
         document.getElementById('cv-f-vehiculo').value = item.vehiculo || '';
-        document.getElementById('cv-f-viaje').value = item.viaje || '';
         document.getElementById('cv-f-clase').value = item.clase_vehiculo || 'TRACTO';
         document.getElementById('cv-f-tipo').value = item.tipo || 'RECARGA VUELTA';
         document.getElementById('cv-f-conductor').value = item.conductor || '';
@@ -706,8 +791,50 @@
         document.getElementById('cv-f-estado-pago').value = item.estado_pago || 'NO PAGADO';
         document.getElementById('cv-f-obs').value = item.observacion || '';
 
+        // Configurar campo de Viaje
+        const inpViaje = document.getElementById('cv-f-viaje');
+        const lockIcon = document.getElementById('cv-viaje-lock-icon');
+        const lockStatus = document.getElementById('cv-viaje-lock-status');
+
+        const viajeVal = item.viaje || '';
+        if (inpViaje) inpViaje.value = viajeVal;
+
+        if (origen === 'detalle_viaje' || viajeVal) {
+            if (inpViaje) {
+                inpViaje.readOnly = (origen === 'detalle_viaje');
+                if (origen === 'detalle_viaje') inpViaje.classList.add('bg-warning-subtle');
+                else inpViaje.classList.remove('bg-warning-subtle');
+            }
+            if (lockIcon) lockIcon.className = (origen === 'detalle_viaje') ? 'bi bi-lock-fill text-warning' : 'bi bi-unlock text-muted';
+            if (lockStatus) {
+                lockStatus.className = (origen === 'detalle_viaje') ? 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace' : 'badge bg-light text-muted border font-monospace';
+                lockStatus.textContent = (origen === 'detalle_viaje') ? 'Bloqueado (Desde Viaje)' : 'Vinculado';
+            }
+        } else {
+            if (inpViaje) {
+                inpViaje.readOnly = false;
+                inpViaje.classList.remove('bg-warning-subtle');
+            }
+            if (lockIcon) lockIcon.className = 'bi bi-unlock text-muted';
+            if (lockStatus) {
+                lockStatus.className = 'badge bg-light text-muted border font-monospace';
+                lockStatus.textContent = 'Desbloqueado';
+            }
+        }
+
         const modalEl = document.getElementById('cvModalForm');
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+        // Elevar backdrop sobre ovMonDrawer (z-index 1070)
+        setTimeout(() => {
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length > 0) {
+                const lastBd = backdrops[backdrops.length - 1];
+                lastBd.style.zIndex = '1070';
+                lastBd.style.backgroundColor = 'rgba(15, 23, 42, 0.68)';
+                lastBd.style.opacity = '1';
+            }
+        }, 15);
     };
 
     window.cvRecalcularTotalForm = function() {
@@ -760,9 +887,10 @@
 
             if (data.ok) {
                 alert(`✅ ${data.mensaje || 'Guardado exitosamente'}`);
-                const modalEl = document.getElementById('cvModalForm');
-                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
-                window.cvCargarDatos(window._cvPaginaActual);
+                window.cvRegresarAtras();
+                if (window._cvOrigenApertura !== 'detalle_viaje') {
+                    window.cvCargarDatos(window._cvPaginaActual);
+                }
             } else {
                 alert(`Error: ${data.error || 'No se pudo guardar'}`);
             }
