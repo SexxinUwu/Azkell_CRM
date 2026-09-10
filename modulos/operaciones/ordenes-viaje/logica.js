@@ -90,7 +90,7 @@ window.ovConfigurarThead = function() {
                 <th style="min-width: 100px;">OPERACIÓN ${_sortIcon('estado')}</th>
                 <th style="min-width: 95px;">ESTADO ${_sortIcon('estado')}</th>
                 <th style="min-width: 140px;">F. Y HORA CREACIÓN ${_sortIcon('fecha_creacion')}</th>
-                <th style="min-width: 125px;">N° VIAJE ${_sortIcon('viaje')}</th>
+                <th style="min-width: 145px;">N° VIAJE ${_sortIcon('viaje')}</th>
                 <th style="min-width: 170px;">CONDUCTOR ${_sortIcon('conductor')}</th>
                 <th style="min-width: 100px;">VEHÍCULO (TRACTO) ${_sortIcon('tracto')}</th>
                 <th style="min-width: 105px;">SEMIRREMOLQUE ${_sortIcon('remolque')}</th>
@@ -636,7 +636,7 @@ window.ovRenderizarTabla = function() {
 
                     <!-- 5. N° VIAJE -->
                     <td>
-                        <a href="javascript:void(0)" class="ov-btn-viaje-eye fw-bold" title="Ver monitoreo detallado del viaje" onclick="window.ovAbrirModalMonitoreoViaje('${v.viaje}')">
+                        <a href="javascript:void(0)" class="ov-btn-viaje-eye fw-bold" style="white-space: nowrap !important; display: inline-flex; align-items: center;" title="Ver monitoreo detallado del viaje" onclick="window.ovAbrirModalMonitoreoViaje('${v.viaje}')">
                             <i class="bi bi-eye"></i> ${v.viaje || '---'}
                         </a>
                     </td>
