@@ -1575,34 +1575,65 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     var badgeRutas = document.getElementById('ov-mon-badge-rutas');
     if (badgeRutas) badgeRutas.textContent = rutasAsoc.length;
 
-    // Llenar tabla de órdenes de servicio vinculadas
+    // Llenar tabla de órdenes de servicio vinculadas en tiempo real
     var tbodyRutas = document.getElementById('ov-mon-tbody-rutas');
     if (tbodyRutas) {
-        if (rutasAsoc.length === 0) {
-            tbodyRutas.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> Sin órdenes de servicio vinculadas a este viaje.</td></tr>`;
-        } else {
-            tbodyRutas.innerHTML = rutasAsoc.map(r => `
-                <tr>
-                    <td class="fw-bold text-dark font-monospace">${r.orden || '---'}</td>
-                    <td><span class="badge bg-success-subtle text-success border border-success-subtle">EN CURSO</span></td>
-                    <td><span class="text-muted small">—</span></td>
-                    <td class="font-monospace text-secondary">${(item.fecha_viaje || '').slice(0, 10) || '---'}</td>
-                    <td><span class="badge bg-light text-secondary border">PROPIO</span></td>
-                    <td class="fw-semibold text-dark text-truncate" style="max-width:140px;">${item.cliente || 'CLIENTE OPERACIONES'}</td>
-                    <td class="text-muted small text-truncate" style="max-width:140px;">${r.remitente || item.cliente || '---'}</td>
-                    <td><span class="badge bg-light text-secondary border">${r.tipo_servicio || 'CARGA GENERAL'}</span></td>
-                    <td class="fw-semibold text-dark">${r.ruta || item.ruta || '---'}</td>
-                    <td class="font-monospace">${parseFloat(r.volumen_total || 0).toFixed(3)}</td>
-                    <td class="font-monospace">${r.cantidad_total || 0}</td>
-                    <td class="font-monospace fw-bold text-success">${parseFloat(r.peso_total || 0).toFixed(2)}</td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 fw-bold" style="font-size:0.7rem;" onclick="window.ovVerEditarOrdenServicio('${r.orden || ''}')" title="Ver / Gestionar Orden de Servicio">
-                            <i class="bi bi-eye"></i> Ver
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
+        tbodyRutas.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Buscando órdenes de servicio asociadas...</td></tr>`;
+        (async () => {
+            try {
+                var rOs = await fetch(`/api/operaciones/ordenes-servicio?viaje=${encodeURIComponent(viajeCode)}`);
+                var jOs = await rOs.json();
+                var listaOS = (jOs && jOs.ok && Array.isArray(jOs.data)) ? jOs.data : [];
+                
+                // Si no vinieron de API o viene vacío, combinar con rutasAsoc locales si existen
+                if (listaOS.length === 0 && rutasAsoc.length > 0) {
+                    listaOS = rutasAsoc.map(r => ({
+                        id: r.id || r.orden,
+                        codigo_orden: r.orden,
+                        estado_servicio: 'INICIADO',
+                        fecha_fmt: (item.fecha_viaje || '').slice(0, 10),
+                        tipo_contratacion: 'PROPIO',
+                        cliente_nombre: item.cliente,
+                        remitente: r.remitente || item.cliente,
+                        tipo_servicio: r.tipo_servicio || 'CARGA GENERAL',
+                        volumen_documentos: r.volumen_total || 0,
+                        carga_doc: r.cantidad_total || 0,
+                        peso_documentos: r.peso_total || 0
+                    }));
+                }
+
+                if (badgeRutas) badgeRutas.textContent = listaOS.length;
+                if (listaOS.length > 0) {
+                    tbodyRutas.innerHTML = listaOS.map(os => `
+                        <tr>
+                            <td class="fw-bold text-dark font-monospace">${os.codigo_orden || '---'}</td>
+                            <td><span class="badge ${os.estado_servicio === 'FINALIZADO' ? 'bg-primary' : 'bg-success-subtle text-success border border-success-subtle'}">${os.estado_servicio || 'INICIADO'}</span></td>
+                            <td><span class="text-muted small">${os.estado_liquidacion || '—'}</span></td>
+                            <td class="font-monospace text-secondary">${os.fecha_fmt || (item.fecha_viaje || '').slice(0, 10) || '---'}</td>
+                            <td><span class="badge bg-light text-secondary border">${os.tipo_contratacion || 'PROPIO'}</span></td>
+                            <td class="fw-semibold text-dark text-truncate" style="max-width:140px;">${os.cliente_nombre || item.cliente || 'CLIENTE'}</td>
+                            <td class="text-muted small text-truncate" style="max-width:140px;">${os.remitente || os.cliente_nombre || '---'}</td>
+                            <td><span class="badge bg-light text-secondary border">${os.tipo_servicio || 'CARGA GENERAL'}</span></td>
+                            <td class="fw-semibold text-dark">${os.ruta || item.ruta || '---'}</td>
+                            <td class="font-monospace">${parseFloat(os.volumen_documentos || 0).toFixed(3)}</td>
+                            <td class="font-monospace">${os.carga_doc || 0}</td>
+                            <td class="font-monospace fw-bold text-success">${parseFloat(os.peso_documentos || 0).toFixed(2)}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 fw-bold" style="font-size:0.7rem;" onclick="window.ovVerEditarOrdenServicio('${os.id || os.codigo_orden || ''}')" title="Ver / Gestionar Orden de Servicio">
+                                    <i class="bi bi-eye"></i> Ver
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    if (badgeRutas) badgeRutas.textContent = '0';
+                    tbodyRutas.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> Sin órdenes de servicio vinculadas a este viaje.</td></tr>`;
+                }
+            } catch (err) {
+                if (badgeRutas) badgeRutas.textContent = '0';
+                tbodyRutas.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> Sin órdenes de servicio vinculadas a este viaje.</td></tr>`;
+            }
+        })();
     }
 
     // ── 1. ABRIR VENTANA Y BACKDROP AL INSTANTE (0ms retraso, fluidez total 60fps) ──
@@ -2193,6 +2224,113 @@ if (!window._ovEscMonitoreoConfigurado) {
             }
         }
     });
+}
+
+// ── REFRESCAR MONITOREO ACTUAL ──────────────────────────────────────
+window.ovRecargarMonitoreoActual = function() {
+    if (window._ovViajeMonitoreoActivo) {
+        window.ovAbrirModalMonitoreoViaje(window._ovViajeMonitoreoActivo);
+    }
+};
+
+// ── INTEGRACIÓN CON FORMULARIOS DE OS Y VALES DESDE DETALLE DE VIAJE ───
+
+// 1. Órdenes de Servicio
+window.ovAgregarOrdenServicioDesdeDetalle = async function() {
+    const viajeCode = window._ovViajeMonitoreoActivo;
+    if (!viajeCode) return;
+    await asegurarModuloOrdenesServicioCargado();
+    if (typeof window.osAbrirModalNuevo === 'function') {
+        window.osAbrirModalNuevo(viajeCode, 'detalle_viaje');
+    }
+};
+
+window.ovVerEditarOrdenServicio = async function(idOCodigo) {
+    if (!idOCodigo) return;
+    await asegurarModuloOrdenesServicioCargado();
+    if (typeof window.osAbrirModalEditar === 'function') {
+        window.osAbrirModalEditar(idOCodigo, 'detalle_viaje');
+    }
+};
+
+async function asegurarModuloOrdenesServicioCargado() {
+    if (!document.getElementById('modalOsForm')) {
+        try {
+            const resp = await fetch('/modulos/operaciones/ordenes-servicio/vista.html');
+            const html = await resp.text();
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            
+            // Inyectar estilos
+            div.querySelectorAll('style').forEach(st => document.head.appendChild(st));
+            
+            // Inyectar modales
+            const modalForm = div.querySelector('#modalOsForm');
+            const modalGre = div.querySelector('#modalOsSelectorGre');
+            if (modalForm) document.body.appendChild(modalForm);
+            if (modalGre) document.body.appendChild(modalGre);
+        } catch (e) {
+            console.error("Error cargando vista de órdenes de servicio:", e);
+        }
+    }
+
+    if (typeof window.osAbrirModalNuevo !== 'function') {
+        await new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = '/modulos/operaciones/ordenes-servicio/logica.js?v=' + Date.now();
+            script.onload = () => resolve();
+            script.onerror = () => resolve();
+            document.body.appendChild(script);
+        });
+    }
+}
+
+// 2. Vales de Combustible
+window.ovAgregarValeCombustibleDesdeDetalle = async function() {
+    const viajeCode = window._ovViajeMonitoreoActivo;
+    if (!viajeCode) return;
+    await asegurarModuloCombustibleValesCargado();
+    if (typeof window.cvAbrirModalNuevo === 'function') {
+        window.cvAbrirModalNuevo(viajeCode, 'detalle_viaje');
+    }
+};
+
+window.ovVerEditarValeCombustible = async function(id) {
+    if (!id) return;
+    await asegurarModuloCombustibleValesCargado();
+    if (typeof window.cvAbrirModalEditar === 'function') {
+        window.cvAbrirModalEditar(id, 'detalle_viaje');
+    }
+};
+
+async function asegurarModuloCombustibleValesCargado() {
+    if (!document.getElementById('cvModalForm')) {
+        try {
+            const resp = await fetch('/modulos/operaciones/combustible-vales/vista.html');
+            const html = await resp.text();
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            
+            div.querySelectorAll('style').forEach(st => document.head.appendChild(st));
+            
+            const modalForm = div.querySelector('#cvModalForm');
+            const modalCompras = div.querySelector('#cvModalComprasExternas');
+            if (modalForm) document.body.appendChild(modalForm);
+            if (modalCompras) document.body.appendChild(modalCompras);
+        } catch (e) {
+            console.error("Error cargando vista de vales de combustible:", e);
+        }
+    }
+
+    if (typeof window.cvAbrirModalNuevo !== 'function') {
+        await new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = '/modulos/operaciones/combustible-vales/logica.js?v=' + Date.now();
+            script.onload = () => resolve();
+            script.onerror = () => resolve();
+            document.body.appendChild(script);
+        });
+    }
 }
 
 

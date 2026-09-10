@@ -8,6 +8,8 @@
     let _clientesCache = [];
     let _docsAdjuntosActuales = [];
     let _gresDisponiblesCache = [];
+    let _osRutasActuales = [];
+    window._osOrigenApertura = 'modulo_propio';
 
     // Inicialización del módulo
     window.init_operaciones_ordenes_servicio = function () {
@@ -239,13 +241,68 @@
         renderizarTabla(_osFilteredData);
     };
 
+    // ── Botón Atrás Contextual ──────────────────────────────────────
+    window.osRegresarAtras = function () {
+        const modalEl = document.getElementById('modalOsForm');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+        if (window._osOrigenApertura === 'detalle_viaje') {
+            const drawer = document.getElementById('ovMonDrawer');
+            const backdrop = document.getElementById('ovMonDrawerBackdrop');
+            if (drawer) drawer.classList.add('active');
+            if (backdrop) backdrop.classList.add('active');
+            if (typeof window.ovRecargarMonitoreoActual === 'function') {
+                window.ovRecargarMonitoreoActual();
+            }
+        }
+    };
+
     // ── Abrir Modal para Nuevo ──────────────────────────────────────
-    window.osAbrirModalNuevo = async function () {
+    window.osAbrirModalNuevo = async function (viajeAsignado = '', origen = 'modulo_propio') {
+        window._osOrigenApertura = origen;
         document.getElementById('modalOsFormLabel').textContent = 'Nueva Orden';
         document.getElementById('formOrdenServicio').reset();
         document.getElementById('os-input-id').value = '';
         _docsAdjuntosActuales = [];
         renderizarDocsAdjuntos();
+
+        // Inicializar rutas con 1 fila por defecto según Imagen 1
+        _osRutasActuales = [];
+        window.osAgregarFilaRuta();
+
+        // Configurar campo de Orden de Viaje Asignada
+        const inpViaje = document.getElementById('os-input-viaje-asignado');
+        const lockIcon = document.getElementById('os-viaje-lock-icon');
+        const lockStatus = document.getElementById('os-viaje-lock-status');
+        const helpText = document.getElementById('os-viaje-help-text');
+
+        if (viajeAsignado && String(viajeAsignado).trim() !== '') {
+            if (inpViaje) {
+                inpViaje.value = String(viajeAsignado).trim();
+                inpViaje.readOnly = true;
+                inpViaje.classList.add('bg-warning-subtle');
+            }
+            if (lockIcon) lockIcon.className = 'bi bi-lock-fill text-warning';
+            if (lockStatus) {
+                lockStatus.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace';
+                lockStatus.textContent = 'Bloqueado (Desde Viaje)';
+            }
+            if (helpText) helpText.textContent = 'Vinculada directamente al monitoreo de este viaje.';
+        } else {
+            if (inpViaje) {
+                inpViaje.value = '';
+                inpViaje.readOnly = false;
+                inpViaje.classList.remove('bg-warning-subtle');
+            }
+            if (lockIcon) lockIcon.className = 'bi bi-unlock text-muted';
+            if (lockStatus) {
+                lockStatus.className = 'badge bg-light text-muted border font-monospace';
+                lockStatus.textContent = 'Desbloqueado';
+            }
+            if (helpText) helpText.textContent = 'Puede ingresar o vincular la orden de viaje aquí.';
+        }
 
         // Obtener correlativo autogenerado
         try {
@@ -267,12 +324,24 @@
         activarTab('tab-os-orden-link');
 
         const modalEl = document.getElementById('modalOsForm');
-        const modal = new bootstrap.Modal(modalEl);
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
+
+        // Elevar backdrop sobre ovMonDrawer (z-index 1070)
+        setTimeout(() => {
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length > 0) {
+                const lastBd = backdrops[backdrops.length - 1];
+                lastBd.style.zIndex = '1070';
+                lastBd.style.backgroundColor = 'rgba(15, 23, 42, 0.68)';
+                lastBd.style.opacity = '1';
+            }
+        }, 15);
     };
 
     // ── Abrir Modal para Editar ─────────────────────────────────────
-    window.osAbrirModalEditar = async function (id) {
+    window.osAbrirModalEditar = async function (id, origen = 'modulo_propio') {
+        window._osOrigenApertura = origen;
         document.getElementById('modalOsFormLabel').textContent = 'Editar Orden';
         document.getElementById('formOrdenServicio').reset();
         document.getElementById('os-input-id').value = id;
@@ -286,6 +355,7 @@
             }
 
             const item = res.data;
+            document.getElementById('os-input-id').value = item.id;
             document.getElementById('os-input-serie').value = item.serie || '2026';
             document.getElementById('os-input-numero').value = item.numero || '';
             document.getElementById('os-input-fecha').value = item.fecha_fmt || '';
@@ -302,6 +372,52 @@
             document.getElementById('os-input-puntos-destino').value = item.puntos_destino || '1';
             document.getElementById('os-input-destinatario').value = item.destinatario || '';
             document.getElementById('os-input-observaciones').value = item.observaciones || '';
+
+            // Configurar campo de Orden de Viaje Asignada
+            const inpViaje = document.getElementById('os-input-viaje-asignado');
+            const lockIcon = document.getElementById('os-viaje-lock-icon');
+            const lockStatus = document.getElementById('os-viaje-lock-status');
+            const helpText = document.getElementById('os-viaje-help-text');
+
+            const viajeCode = item.viaje_asignado || '';
+            if (inpViaje) inpViaje.value = viajeCode;
+
+            if (origen === 'detalle_viaje' || viajeCode) {
+                if (inpViaje) {
+                    inpViaje.readOnly = (origen === 'detalle_viaje');
+                    if (origen === 'detalle_viaje') inpViaje.classList.add('bg-warning-subtle');
+                    else inpViaje.classList.remove('bg-warning-subtle');
+                }
+                if (lockIcon) lockIcon.className = (origen === 'detalle_viaje') ? 'bi bi-lock-fill text-warning' : 'bi bi-unlock text-muted';
+                if (lockStatus) {
+                    lockStatus.className = (origen === 'detalle_viaje') ? 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace' : 'badge bg-light text-muted border font-monospace';
+                    lockStatus.textContent = (origen === 'detalle_viaje') ? 'Bloqueado (Desde Viaje)' : 'Vinculado';
+                }
+                if (helpText) helpText.textContent = (origen === 'detalle_viaje') ? 'Vinculada directamente al monitoreo de este viaje.' : 'Orden vinculada a viaje.';
+            } else {
+                if (inpViaje) {
+                    inpViaje.readOnly = false;
+                    inpViaje.classList.remove('bg-warning-subtle');
+                }
+                if (lockIcon) lockIcon.className = 'bi bi-unlock text-muted';
+                if (lockStatus) {
+                    lockStatus.className = 'badge bg-light text-muted border font-monospace';
+                    lockStatus.textContent = 'Desbloqueado';
+                }
+                if (helpText) helpText.textContent = 'Puede ingresar o vincular la orden de viaje aquí.';
+            }
+
+            // Rutas asociadas a esta orden
+            _osRutasActuales = (item.rutas || []).map(r => ({
+                ruta: r.ruta || '',
+                distancia_km: r.distancia_km || '',
+                galones: r.galones || ''
+            }));
+            if (_osRutasActuales.length === 0) {
+                window.osAgregarFilaRuta();
+            } else {
+                osRenderizarTablaRutas();
+            }
 
             _docsAdjuntosActuales = (item.documentos || []).map(d => ({
                 id: d.id,
@@ -321,17 +437,96 @@
 
             renderizarDocsAdjuntos();
 
-            // Al editar, enfocar la pestaña de DOCUMENTOS tal como solicitó el usuario en la captura 3
-            activarTab('tab-os-documentos-link');
+            // Pestaña inicial según origen
+            activarTab(origen === 'detalle_viaje' ? 'tab-os-orden-link' : 'tab-os-documentos-link');
 
             const modalEl = document.getElementById('modalOsForm');
-            const modal = new bootstrap.Modal(modalEl);
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
+
+            // Elevar backdrop sobre ovMonDrawer (z-index 1070)
+            setTimeout(() => {
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                if (backdrops.length > 0) {
+                    const lastBd = backdrops[backdrops.length - 1];
+                    lastBd.style.zIndex = '1070';
+                    lastBd.style.backgroundColor = 'rgba(15, 23, 42, 0.68)';
+                    lastBd.style.opacity = '1';
+                }
+            }, 15);
         } catch (err) {
             console.error("Error al abrir edición:", err);
             alert("Error: " + err.message);
         }
     };
+
+    window.osAbrirModalEditarCodigo = async function (codigo, origen = 'detalle_viaje') {
+        return window.osAbrirModalEditar(codigo, origen);
+    };
+
+    // ── GESTIÓN DE FILAS DE RUTAS (Imagen 1) ────────────────────────
+    window.osAgregarFilaRuta = function (rutaVal = '', distVal = '', galVal = '') {
+        _osRutasActuales.push({
+            ruta: rutaVal,
+            distancia_km: distVal,
+            galones: galVal
+        });
+        osRenderizarTablaRutas();
+    };
+
+    window.osEliminarFilaRuta = function (idx) {
+        _osRutasActuales.splice(idx, 1);
+        if (_osRutasActuales.length === 0) {
+            _osRutasActuales.push({ ruta: '', distancia_km: '', galones: '' });
+        }
+        osRenderizarTablaRutas();
+    };
+
+    window.osActualizarRutaCampo = function (idx, campo, valor) {
+        if (_osRutasActuales[idx]) {
+            _osRutasActuales[idx][campo] = valor;
+        }
+    };
+
+    function osRenderizarTablaRutas() {
+        const tbody = document.getElementById('os-rutas-tbody');
+        if (!tbody) return;
+
+        if (!_osRutasActuales || _osRutasActuales.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-muted">
+                        No hay rutas configuradas. Haga clic en <b>+ Agregar</b> para añadir una.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        let html = '';
+        _osRutasActuales.forEach((r, idx) => {
+            html += `
+                <tr>
+                    <td>
+                        <input type="text" list="os-rutas-datalist" class="form-control form-control-sm text-uppercase fw-semibold" placeholder="Ej: LIMA - PIURA" value="${escapeHtml(r.ruta || '')}" oninput="window.osActualizarRutaCampo(${idx}, 'ruta', this.value)">
+                    </td>
+                    <td>
+                        <input type="number" step="0.1" class="form-control form-control-sm font-monospace" placeholder="0" value="${escapeHtml(String(r.distancia_km !== undefined ? r.distancia_km : ''))}" oninput="window.osActualizarRutaCampo(${idx}, 'distancia_km', this.value)">
+                    </td>
+                    <td>
+                        <input type="number" step="0.1" class="form-control form-control-sm font-monospace" placeholder="0" value="${escapeHtml(String(r.galones !== undefined ? r.galones : ''))}" oninput="window.osActualizarRutaCampo(${idx}, 'galones', this.value)">
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-danger btn-sm p-1 px-2.5 rounded-2 shadow-2xs" onclick="window.osEliminarFilaRuta(${idx})" title="Eliminar fila">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    }
 
     function activarTab(tabLinkId) {
         const linkEl = document.getElementById(tabLinkId);
@@ -427,12 +622,15 @@
         const puntos_destino = document.getElementById('os-input-puntos-destino')?.value;
         const destinatario = document.getElementById('os-input-destinatario')?.value;
         const observaciones = document.getElementById('os-input-observaciones')?.value;
+        const viaje_asignado = document.getElementById('os-input-viaje-asignado')?.value?.trim() || null;
 
         if (!cliente_nombre) {
             alert("Por favor seleccione un Cliente/Remitente (*).");
             activarTab('tab-os-orden-link');
             return;
         }
+
+        const rutasLimpia = _osRutasActuales.filter(r => (r.ruta && r.ruta.trim() !== '') || r.distancia_km || r.galones);
 
         const payload = {
             serie,
@@ -451,6 +649,8 @@
             puntos_destino,
             destinatario,
             observaciones,
+            viaje_asignado,
+            rutas: rutasLimpia,
             documentos: _docsAdjuntosActuales
         };
 
@@ -467,10 +667,10 @@
 
             if (result.ok) {
                 alert(result.message || "Orden de servicio guardada exitosamente.");
-                const modalEl = document.getElementById('modalOsForm');
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-                window.osCargarTabla();
+                window.osRegresarAtras();
+                if (window._osOrigenApertura !== 'detalle_viaje') {
+                    window.osCargarTabla();
+                }
             } else {
                 alert("Error: " + (result.error || 'No se pudo guardar la orden'));
             }

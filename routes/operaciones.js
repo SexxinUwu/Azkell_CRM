@@ -208,6 +208,20 @@ module.exports = function (db, broadcast, logAudit) {
             await tdb.query(TABLE_MARSISA_RUTAS_SQL);
             await tdb.query(TABLE_ORDENES_SERVICIO_SQL);
             await tdb.query(TABLE_ORDENES_SERVICIO_DOCS_SQL);
+            await tdb.query(`CREATE TABLE IF NOT EXISTS operaciones_ordenes_servicio_rutas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                orden_servicio_id INT NOT NULL,
+                codigo_orden VARCHAR(40) NOT NULL,
+                ruta VARCHAR(255) NULL,
+                distancia_km DECIMAL(10,2) DEFAULT 0.00,
+                galones DECIMAL(10,2) DEFAULT 0.00,
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_os_rutas_id (orden_servicio_id),
+                INDEX idx_os_rutas_cod (codigo_orden)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+            try {
+                await tdb.query("ALTER TABLE operaciones_ordenes_viaje_rutas ADD COLUMN distancia_km DECIMAL(10,2) NULL, ADD COLUMN galones DECIMAL(10,2) NULL");
+            } catch (ignore) {}
             try {
                 await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN peso DECIMAL(12,2) NULL DEFAULT 0.00 AFTER placa_remolque");
             } catch (ignore) {}
@@ -1445,7 +1459,7 @@ module.exports = function (db, broadcast, logAudit) {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
-            const { fecha_desde, fecha_hasta, cliente, q } = req.query;
+            const { fecha_desde, fecha_hasta, cliente, q, viaje } = req.query;
 
             let sql = `
                 SELECT 
@@ -1469,6 +1483,10 @@ module.exports = function (db, broadcast, logAudit) {
             `;
             const params = [];
 
+            if (viaje && String(viaje).trim() !== '') {
+                sql += ` AND os.viaje_asignado = ?`;
+                params.push(String(viaje).trim());
+            }
             if (fecha_desde) {
                 sql += ` AND os.fecha >= ?`;
                 params.push(fecha_desde);
@@ -1503,7 +1521,7 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
-    // 3. Obtener detalle de una Orden de Servicio (con sus documentos adjuntos)
+    // 3. Obtener detalle de una Orden de Servicio (con sus documentos y rutas adjuntas)
     router.get('/ordenes-servicio/:id', async (req, res) => {
         try {
             await ensureTables(req);
@@ -1511,8 +1529,8 @@ module.exports = function (db, broadcast, logAudit) {
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
             const [rows] = await tdb.query(
-                `SELECT *, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha_fmt, DATE_FORMAT(fecha_fin, '%Y-%m-%d') AS fecha_fin_fmt FROM operaciones_ordenes_servicio WHERE id = ?`,
-                [req.params.id]
+                `SELECT *, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha_fmt, DATE_FORMAT(fecha_fin, '%Y-%m-%d') AS fecha_fin_fmt FROM operaciones_ordenes_servicio WHERE id = ? OR codigo_orden = ?`,
+                [req.params.id, req.params.id]
             );
             if (!rows || rows.length === 0) {
                 return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
@@ -1527,7 +1545,16 @@ module.exports = function (db, broadcast, logAudit) {
                 [orden.id]
             );
 
+            const [rutas] = await tdb.query(
+                `SELECT id, ruta, distancia_km, galones 
+                 FROM operaciones_ordenes_servicio_rutas 
+                 WHERE orden_servicio_id = ? 
+                 ORDER BY id ASC`,
+                [orden.id]
+            );
+
             orden.documentos = docs || [];
+            orden.rutas = rutas || [];
             res.json({ ok: true, data: orden });
         } catch (err) {
             console.error('Error al obtener orden de servicio:', err);
@@ -1545,6 +1572,7 @@ module.exports = function (db, broadcast, logAudit) {
             const {
                 serie,
                 numero,
+                viaje_asignado,
                 fecha,
                 fecha_fin,
                 moneda,
@@ -1561,7 +1589,8 @@ module.exports = function (db, broadcast, logAudit) {
                 puntos_destino,
                 destinatario,
                 observaciones,
-                documentos
+                documentos,
+                rutas
             } = req.body;
 
             const yearSerie = serie || new Date().getFullYear().toString();
@@ -1580,15 +1609,16 @@ module.exports = function (db, broadcast, logAudit) {
 
             const [ins] = await tdb.query(`
                 INSERT INTO operaciones_ordenes_servicio (
-                    serie, numero, codigo_orden, fecha, fecha_fin, moneda, tipo_cambio,
+                    serie, numero, codigo_orden, viaje_asignado, fecha, fecha_fin, moneda, tipo_cambio,
                     tipo_contratacion, modalidad_ejecucion, cliente_id, cliente_nombre,
                     tipo_servicio, tipo_costo, impuesto, costo_flete, puntos_carga,
                     puntos_destino, destinatario, observaciones, estado_servicio
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'INICIADO')
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'INICIADO')
             `, [
                 yearSerie,
                 numFinal,
                 codigo_orden,
+                viaje_asignado || null,
                 fecha || new Date().toISOString().split('T')[0],
                 fecha_fin || null,
                 moneda || 'SOLES',
@@ -1608,6 +1638,41 @@ module.exports = function (db, broadcast, logAudit) {
             ]);
 
             const osId = ins.insertId;
+
+            // Anexar rutas si vienen en el payload
+            if (Array.isArray(rutas) && rutas.length > 0) {
+                for (const r of rutas) {
+                    await tdb.query(`
+                        INSERT INTO operaciones_ordenes_servicio_rutas (
+                            orden_servicio_id, codigo_orden, ruta, distancia_km, galones
+                        ) VALUES (?, ?, ?, ?, ?)
+                    `, [
+                        osId,
+                        codigo_orden,
+                        r.ruta || '',
+                        parseFloat(r.distancia_km) || 0,
+                        parseFloat(r.galones) || 0
+                    ]);
+
+                    if (viaje_asignado) {
+                        try {
+                            await tdb.query(`
+                                INSERT INTO operaciones_ordenes_viaje_rutas (
+                                    viaje, orden, ruta, distancia_km, galones, tipo_servicio
+                                ) VALUES (?, ?, ?, ?, ?, ?)
+                                ON DUPLICATE KEY UPDATE ruta = VALUES(ruta), distancia_km = VALUES(distancia_km), galones = VALUES(galones)
+                            `, [
+                                viaje_asignado,
+                                codigo_orden,
+                                r.ruta || '',
+                                parseFloat(r.distancia_km) || 0,
+                                parseFloat(r.galones) || 0,
+                                tipo_servicio || 'CARGA GENERAL'
+                            ]);
+                        } catch (ignore) {}
+                    }
+                }
+            }
 
             // Anexar documentos (GREs) si vienen en el payload
             if (Array.isArray(documentos) && documentos.length > 0) {
@@ -1685,6 +1750,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             const osId = req.params.id;
             const {
+                viaje_asignado,
                 fecha,
                 fecha_fin,
                 moneda,
@@ -1702,10 +1768,11 @@ module.exports = function (db, broadcast, logAudit) {
                 destinatario,
                 observaciones,
                 estado_servicio,
-                documentos
+                documentos,
+                rutas
             } = req.body;
 
-            const [prev] = await tdb.query(`SELECT codigo_orden FROM operaciones_ordenes_servicio WHERE id = ?`, [osId]);
+            const [prev] = await tdb.query(`SELECT codigo_orden, viaje_asignado FROM operaciones_ordenes_servicio WHERE id = ?`, [osId]);
             if (!prev || prev.length === 0) {
                 return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
             }
@@ -1713,6 +1780,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             await tdb.query(`
                 UPDATE operaciones_ordenes_servicio SET
+                    viaje_asignado = COALESCE(?, viaje_asignado),
                     fecha = COALESCE(?, fecha),
                     fecha_fin = ?,
                     moneda = COALESCE(?, moneda),
@@ -1732,6 +1800,7 @@ module.exports = function (db, broadcast, logAudit) {
                     estado_servicio = COALESCE(?, estado_servicio)
                 WHERE id = ?
             `, [
+                viaje_asignado !== undefined ? viaje_asignado : null,
                 fecha || null,
                 fecha_fin || null,
                 moneda || null,
@@ -1751,6 +1820,43 @@ module.exports = function (db, broadcast, logAudit) {
                 estado_servicio || null,
                 osId
             ]);
+
+            // Si se envían rutas, actualizar
+            if (Array.isArray(rutas)) {
+                await tdb.query(`DELETE FROM operaciones_ordenes_servicio_rutas WHERE orden_servicio_id = ?`, [osId]);
+                for (const r of rutas) {
+                    await tdb.query(`
+                        INSERT INTO operaciones_ordenes_servicio_rutas (
+                            orden_servicio_id, codigo_orden, ruta, distancia_km, galones
+                        ) VALUES (?, ?, ?, ?, ?)
+                    `, [
+                        osId,
+                        codigo_orden,
+                        r.ruta || '',
+                        parseFloat(r.distancia_km) || 0,
+                        parseFloat(r.galones) || 0
+                    ]);
+
+                    const finalViaje = viaje_asignado || prev[0].viaje_asignado;
+                    if (finalViaje) {
+                        try {
+                            await tdb.query(`
+                                INSERT INTO operaciones_ordenes_viaje_rutas (
+                                    viaje, orden, ruta, distancia_km, galones, tipo_servicio
+                                ) VALUES (?, ?, ?, ?, ?, ?)
+                                ON DUPLICATE KEY UPDATE ruta = VALUES(ruta), distancia_km = VALUES(distancia_km), galones = VALUES(galones)
+                            `, [
+                                finalViaje,
+                                codigo_orden,
+                                r.ruta || '',
+                                parseFloat(r.distancia_km) || 0,
+                                parseFloat(r.galones) || 0,
+                                tipo_servicio || 'CARGA GENERAL'
+                            ]);
+                        } catch (ignore) {}
+                    }
+                }
+            }
 
             // Si se envían documentos, actualizar sincronizando guias_remision
             if (Array.isArray(documentos)) {
