@@ -1433,7 +1433,7 @@ module.exports = function (db, broadcast, logAudit) {
                 [year]
             );
 
-            let nextNum = 1450;
+            let nextNum = 1;
             if (rows && rows.length > 0) {
                 const parsed = parseInt(rows[0].numero, 10);
                 if (!isNaN(parsed)) nextNum = parsed + 1;
@@ -1590,14 +1590,16 @@ module.exports = function (db, broadcast, logAudit) {
                 destinatario,
                 observaciones,
                 documentos,
-                rutas
+                rutas,
+                placa_tracto,
+                placa_carreta
             } = req.body;
 
             const yearSerie = serie || new Date().getFullYear().toString();
             let numFinal = numero;
             if (!numFinal) {
                 const [r] = await tdb.query(`SELECT numero FROM operaciones_ordenes_servicio WHERE serie = ? ORDER BY id DESC LIMIT 1`, [yearSerie]);
-                let next = 1450;
+                let next = 1;
                 if (r && r.length > 0) {
                     const p = parseInt(r[0].numero, 10);
                     if (!isNaN(p)) next = p + 1;
@@ -1612,8 +1614,8 @@ module.exports = function (db, broadcast, logAudit) {
                     serie, numero, codigo_orden, viaje_asignado, fecha, fecha_fin, moneda, tipo_cambio,
                     tipo_contratacion, modalidad_ejecucion, cliente_id, cliente_nombre,
                     tipo_servicio, tipo_costo, impuesto, costo_flete, puntos_carga,
-                    puntos_destino, destinatario, observaciones, estado_servicio
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'INICIADO')
+                    puntos_destino, destinatario, observaciones, placa_tracto, placa_carreta, estado_servicio
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'INICIADO')
             `, [
                 yearSerie,
                 numFinal,
@@ -1628,13 +1630,15 @@ module.exports = function (db, broadcast, logAudit) {
                 cliente_id || null,
                 cliente_nombre || 'CLIENTE GENERAL',
                 tipo_servicio || 'CARGA GENERAL',
-                tipo_costo || 'POR VIAJE',
-                impuesto || 'IGV 18%',
+                tipo_costo || 'COSTO TARIFA',
+                impuesto || 'INCLUYE IGV',
                 parseFloat(costo_flete) || 0.00,
                 parseInt(puntos_carga, 10) || 1,
                 parseInt(puntos_destino, 10) || 1,
                 destinatario || null,
-                observaciones || null
+                observaciones || null,
+                placa_tracto || null,
+                placa_carreta || null
             ]);
 
             const osId = ins.insertId;
@@ -1769,7 +1773,9 @@ module.exports = function (db, broadcast, logAudit) {
                 observaciones,
                 estado_servicio,
                 documentos,
-                rutas
+                rutas,
+                placa_tracto,
+                placa_carreta
             } = req.body;
 
             const [prev] = await tdb.query(`SELECT codigo_orden, viaje_asignado FROM operaciones_ordenes_servicio WHERE id = ?`, [osId]);
@@ -1797,6 +1803,8 @@ module.exports = function (db, broadcast, logAudit) {
                     puntos_destino = COALESCE(?, puntos_destino),
                     destinatario = ?,
                     observaciones = ?,
+                    placa_tracto = COALESCE(?, placa_tracto),
+                    placa_carreta = COALESCE(?, placa_carreta),
                     estado_servicio = COALESCE(?, estado_servicio)
                 WHERE id = ?
             `, [
@@ -1817,6 +1825,8 @@ module.exports = function (db, broadcast, logAudit) {
                 parseInt(puntos_destino, 10) || 1,
                 destinatario || null,
                 observaciones || null,
+                placa_tracto || null,
+                placa_carreta || null,
                 estado_servicio || null,
                 osId
             ]);

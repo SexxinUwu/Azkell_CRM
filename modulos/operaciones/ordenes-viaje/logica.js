@@ -1536,6 +1536,7 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
         alert('No se encontraron los datos del viaje para monitoreo.');
         return;
     }
+    window._ovViajeItemActivo = item;
 
     // Cabecera Folio
     var hFolio = document.getElementById('ov-mon-header-folio');
@@ -2239,9 +2240,15 @@ window.ovRecargarMonitoreoActual = function() {
 window.ovAgregarOrdenServicioDesdeDetalle = async function() {
     const viajeCode = window._ovViajeMonitoreoActivo;
     if (!viajeCode) return;
+    const item = window._ovViajeItemActivo || {};
     await asegurarModuloOrdenesServicioCargado();
     if (typeof window.osAbrirModalNuevo === 'function') {
-        window.osAbrirModalNuevo(viajeCode, 'detalle_viaje');
+        window.osAbrirModalNuevo(viajeCode, 'detalle_viaje', {
+            placa_tracto: item.placa_tracto || '',
+            placa_carreta: item.placa_remolque || item.placa_carreta || '',
+            cliente: item.cliente || '',
+            conductor: item.conductor || ''
+        });
     }
 };
 

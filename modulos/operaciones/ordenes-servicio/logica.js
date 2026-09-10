@@ -46,15 +46,14 @@
             _clientesCache = Array.isArray(data) ? data : (data.data || []);
 
             const selFiltro = document.getElementById('os-filtro-cliente');
-            const selModal = document.getElementById('os-input-cliente');
+            const datalistModal = document.getElementById('os-clientes-datalist');
 
             if (selFiltro) {
                 selFiltro.innerHTML = '<option value="TODOS">Seleccione...</option>' + 
                     _clientesCache.map(c => `<option value="${escapeHtml(c.razon_social)}">${escapeHtml(c.razon_social)}</option>`).join('');
             }
-            if (selModal) {
-                selModal.innerHTML = '<option value="">Seleccione...</option>' + 
-                    _clientesCache.map(c => `<option value="${escapeHtml(c.razon_social)}" data-id="${c.id}">${escapeHtml(c.razon_social)}</option>`).join('');
+            if (datalistModal) {
+                datalistModal.innerHTML = _clientesCache.map(c => `<option value="${escapeHtml(c.razon_social)}"></option>`).join('');
             }
         } catch (e) {
             console.warn("Error cargando clientes:", e);
@@ -68,7 +67,7 @@
 
         tbody.innerHTML = `
             <tr>
-                <td colspan="13" class="text-center py-5 text-muted">
+                <td colspan="19" class="text-center py-5 text-muted">
                     <div class="spinner-border spinner-border-sm text-warning me-2"></div>
                     Cargando órdenes de servicio...
                 </td>
@@ -96,11 +95,11 @@
                 _osFilteredData = [..._osData];
                 renderizarTabla(_osFilteredData);
             } else {
-                tbody.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-danger">Error: ${result.error || 'No se pudo cargar la información'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="19" class="text-center py-4 text-danger">Error: ${result.error || 'No se pudo cargar la información'}</td></tr>`;
             }
         } catch (err) {
             console.error("Error al consultar órdenes de servicio:", err);
-            tbody.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-danger">Error de conexión: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="19" class="text-center py-4 text-danger">Error de conexión: ${err.message}</td></tr>`;
         }
     };
 
@@ -111,7 +110,7 @@
         if (!lista || lista.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="13" class="text-center py-5 text-muted">
+                    <td colspan="19" class="text-center py-5 text-muted">
                         <i class="bi bi-inbox fs-3 d-block mb-2 opacity-50"></i>
                         No hay órdenes de servicio registradas para los filtros seleccionados.
                     </td>
@@ -122,47 +121,13 @@
 
         let html = '';
         lista.forEach(item => {
-            const estadoServ = item.estado_servicio || 'INICIADO';
-            let badgeServicio = '';
-            if (estadoServ === 'FINALIZADO') {
-                badgeServicio = `<span class="badge bg-primary bg-opacity-80 text-white px-2 py-0.5" style="font-size:0.68rem;">FINALIZADO</span>`;
-            } else if (estadoServ === 'INICIADO') {
-                badgeServicio = `<span class="badge bg-success bg-opacity-80 text-white px-2 py-0.5" style="font-size:0.68rem;">INICIADO</span>`;
-            } else {
-                badgeServicio = `<span class="badge bg-danger bg-opacity-80 text-white px-2 py-0.5" style="font-size:0.68rem;">ANULADO</span>`;
-            }
-
             const viajeAsignado = item.viaje_asignado ? `@${item.viaje_asignado}` : 'Sin asignar';
             const badgeViaje = item.viaje_asignado 
                 ? `<span class="badge bg-light text-dark border px-2 py-0.5 font-monospace" style="font-size:0.7rem;">${viajeAsignado}</span>`
-                : `<span class="badge bg-danger bg-opacity-80 text-white px-2 py-0.5" style="font-size:0.68rem;">Sin asignar</span>`;
-
-            const estadoViaje = item.viaje_asignado ? (item.estado_viaje || 'FINALIZADO') : 'Sin asignar';
-            const badgeEstadoViaje = item.viaje_asignado
-                ? `<span class="badge bg-primary bg-opacity-80 text-white px-2 py-0.5" style="font-size:0.68rem;">${escapeHtml(estadoViaje)}</span>`
-                : `<span class="badge bg-danger bg-opacity-80 text-white px-2 py-0.5" style="font-size:0.68rem;">Sin asignar</span>`;
-
-            const badgeDescarga = `<span class="badge bg-secondary bg-opacity-25 text-secondary border px-2 py-0.5" style="font-size:0.68rem;">${escapeHtml(item.estado_descarga || 'PENDIENTE')}</span>`;
-            
-            const countDoc = item.carga_doc || 0;
-            const badgeCargaDoc = countDoc > 0
-                ? `<span class="badge bg-secondary text-white px-2 py-0.5 font-monospace">${countDoc}</span>`
-                : `<span class="badge bg-danger text-white px-2 py-0.5 font-monospace">0</span>`;
+                : `<span class="badge bg-secondary bg-opacity-25 text-secondary border px-2 py-0.5" style="font-size:0.68rem;">Sin asignar</span>`;
 
             const fInicio = item.fecha_fmt ? formatFecha(item.fecha_fmt) : '—';
-            const fFin = item.fecha_fin_fmt ? formatFecha(item.fecha_fin_fmt) : '—';
-
-            // Cálculos y formateos para nuevas columnas
-            const volumenVal = parseFloat(item.volumen_documentos) || 0.000;
-            const cantidadVal = parseFloat(item.carga_doc) || 0;
-            const pesoVal = parseFloat(item.peso_documentos) || 0.00;
             const fleteVal = parseFloat(item.costo_flete) || 0.00;
-            const costoMedidaVal = parseFloat(item.costo_medida) || fleteVal;
-            const cargosVal = parseFloat(item.cargos_adicionales) || 0.00;
-            const descuentosVal = parseFloat(item.descuentos) || 0.00;
-            const subtotalVal = parseFloat(item.subtotal) || (fleteVal + cargosVal - descuentosVal);
-            const igvVal = parseFloat(item.igv) || ((item.impuesto || '').includes('18') ? Number((subtotalVal * 0.18).toFixed(2)) : 0.00);
-            const vehiculoStr = item.placa_tracto ? `${item.placa_tracto}${item.placa_carreta ? ' / ' + item.placa_carreta : ''}` : '—';
             const sustentoBtn = item.sustento_url 
                 ? `<a href="${item.sustento_url}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-1.5" title="Ver Sustento"><i class="bi bi-file-earmark-arrow-down"></i></a>`
                 : `<span class="text-muted opacity-50">—</span>`;
@@ -172,7 +137,7 @@
                     <td class="text-nowrap">
                         <div class="dropdown d-inline-block">
                             <button class="btn btn-sm os-btn-editar-drop dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                EDITAR
+                                ACCIÓN
                             </button>
                             <ul class="dropdown-menu shadow-sm border-0" style="font-size:0.8rem;">
                                 <li><a class="dropdown-item fw-bold text-primary" href="javascript:void(0)" onclick="window.osAbrirModalEditar(${item.id})"><i class="bi bi-pencil-square me-1"></i> Modificar Orden</a></li>
@@ -181,42 +146,24 @@
                             </ul>
                         </div>
                     </td>
-                    <td class="text-nowrap font-monospace text-secondary">${fInicio}</td>
-                    <td class="text-nowrap font-monospace fw-semibold">${fInicio}</td>
-                    <td class="text-nowrap font-monospace text-muted">${fFin}</td>
-                    <td class="text-nowrap font-monospace fw-bold text-dark" style="cursor:pointer;" onclick="window.osAbrirModalEditar(${item.id})" title="Ver detalles">${escapeHtml(item.codigo_orden)}</td>
-                    <td class="text-nowrap">${badgeServicio}</td>
+                    <td class="text-nowrap font-monospace fw-bold text-primary" style="cursor:pointer;" onclick="window.osAbrirModalEditar(${item.id})" title="Ver detalles">${escapeHtml(item.codigo_orden)}</td>
+                    <td class="text-nowrap font-monospace">${fInicio}</td>
                     <td class="text-nowrap">${badgeViaje}</td>
-                    <td class="text-nowrap">${badgeEstadoViaje}</td>
-                    <td class="text-nowrap">${badgeDescarga}</td>
-                    <td class="text-center text-nowrap">${badgeCargaDoc}</td>
-                    <td class="text-nowrap fw-semibold">${escapeHtml(item.conductor || '—')}</td>
-                    <td class="text-nowrap">${escapeHtml(item.tipo_contratacion || 'CLIENTE DIRECTO')}</td>
+                    <td class="text-nowrap font-monospace fw-semibold">${escapeHtml(item.placa_tracto || '—')}</td>
+                    <td class="text-nowrap font-monospace fw-semibold">${escapeHtml(item.placa_carreta || '—')}</td>
                     <td class="text-nowrap fw-bold text-dark">${escapeHtml(item.cliente_nombre || '—')}</td>
-                    <td class="text-nowrap">${escapeHtml(item.cliente_nombre || '—')}</td>
+                    <td class="text-nowrap">${escapeHtml(item.tipo_contratacion || 'CLIENTE DIRECTO')}</td>
+                    <td class="text-nowrap">${escapeHtml(item.modalidad_ejecucion || 'PROPIO')}</td>
+                    <td class="text-nowrap">${escapeHtml(item.tipo_servicio || 'CARGA GENERAL')}</td>
+                    <td class="text-nowrap">${escapeHtml(item.destinatario || '—')}</td>
                     <td class="text-center font-monospace">${item.puntos_carga || 1}</td>
                     <td class="text-center font-monospace">${item.puntos_destino || 1}</td>
-                    <td class="text-nowrap font-monospace text-muted">${escapeHtml(item.ruta_sistema || item.tipo_servicio || '—')}</td>
-                    <td class="text-nowrap">${escapeHtml(item.tipo_servicio || 'CARGA GENERAL')}</td>
-                    <td class="text-end font-monospace">${volumenVal.toFixed(3)}</td>
-                    <td class="text-end font-monospace">${cantidadVal.toLocaleString()}</td>
-                    <td class="text-end font-monospace">${pesoVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td class="text-nowrap">${escapeHtml(item.tipo_costo || 'POR VIAJE')}</td>
-                    <td class="text-nowrap">${escapeHtml(item.impuesto || 'IGV 18%')}</td>
+                    <td class="text-nowrap">${escapeHtml(item.tipo_costo || 'COSTO TARIFA')}</td>
+                    <td class="text-nowrap">${escapeHtml(item.impuesto || 'INCLUYE IGV')}</td>
                     <td class="text-nowrap font-monospace">${escapeHtml(item.moneda || 'SOLES')}</td>
-                    <td class="text-nowrap">${escapeHtml(item.tipo_medida || 'VIAJE')}</td>
-                    <td class="text-end font-monospace">${costoMedidaVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td class="text-end font-monospace text-secondary">${cargosVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td class="text-end font-monospace text-danger">${descuentosVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td class="text-end font-monospace fw-semibold">${subtotalVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td class="text-end font-monospace text-muted">${igvVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td class="text-end font-monospace fw-bold text-dark">${fleteVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td class="text-end font-monospace">${item.kilometraje_fin ? Number(item.kilometraje_fin).toLocaleString() : '—'}</td>
-                    <td class="text-nowrap font-monospace text-secondary">${escapeHtml(item.usuario_creacion || 'ADMINISTRADOR')}</td>
-                    <td class="text-nowrap" style="max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(item.observaciones || '')}">${escapeHtml(item.observaciones || '—')}</td>
-                    <td class="text-nowrap font-monospace fw-semibold">${escapeHtml(vehiculoStr)}</td>
-                    <td class="text-nowrap font-monospace">${escapeHtml(item.factura || '—')}</td>
+                    <td class="text-end font-monospace fw-bold text-dark">${item.moneda === 'DÓLARES' ? '$' : 'S/'} ${fleteVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td class="text-center text-nowrap">${sustentoBtn}</td>
+                    <td class="text-nowrap" style="max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(item.observaciones || '')}">${escapeHtml(item.observaciones || '—')}</td>
                 </tr>
             `;
         });
@@ -260,7 +207,23 @@
     };
 
     // ── Abrir Modal para Nuevo ──────────────────────────────────────
-    window.osAbrirModalNuevo = async function (viajeAsignado = '', origen = 'modulo_propio') {
+    // ── Cambio Dinámico de Moneda y Tipo de Cambio ──────────────────
+    window.osCambiarMoneda = function (moneda) {
+        const grp = document.getElementById('os-grp-tipo-cambio');
+        const inp = document.getElementById('os-input-tipo-cambio');
+        const isDolares = (moneda === 'DÓLARES' || moneda === 'DOLARES');
+        if (grp) {
+            grp.style.display = isDolares ? 'block' : 'none';
+        }
+        if (isDolares && inp) {
+            if (!inp.value || inp.value === '3.750' || inp.value === '0') {
+                inp.value = '3.40';
+            }
+        }
+    };
+
+    // ── Abrir Modal para Nuevo ──────────────────────────────────────
+    window.osAbrirModalNuevo = async function (viajeAsignado = '', origen = 'modulo_propio', datosExtra = {}) {
         window._osOrigenApertura = origen;
         document.getElementById('modalOsFormLabel').textContent = 'Nueva Orden';
         document.getElementById('formOrdenServicio').reset();
@@ -268,9 +231,36 @@
         _docsAdjuntosActuales = [];
         renderizarDocsAdjuntos();
 
+        // Moneda por defecto SOLES y Tipo de Cambio oculto
+        const selMoneda = document.getElementById('os-input-moneda');
+        if (selMoneda) selMoneda.value = 'SOLES';
+        window.osCambiarMoneda('SOLES');
+
         // Inicializar rutas con 1 fila por defecto según Imagen 1
         _osRutasActuales = [];
         window.osAgregarFilaRuta();
+
+        // Asignar Tracto y Carreta (ATP999)
+        const inpTracto = document.getElementById('os-input-tracto');
+        const inpCarreta = document.getElementById('os-input-carreta');
+        if (inpTracto) inpTracto.value = datosExtra.placa_tracto || '';
+        if (inpCarreta) inpCarreta.value = datosExtra.placa_carreta || datosExtra.placa_remolque || '';
+
+        // Si viene cliente asignado
+        const inpCliente = document.getElementById('os-input-cliente');
+        if (inpCliente && datosExtra.cliente) inpCliente.value = datosExtra.cliente;
+
+        // Selectores default
+        const selTipoCosto = document.getElementById('os-input-tipo-costo');
+        if (selTipoCosto) selTipoCosto.value = 'COSTO TARIFA';
+        const selImpuesto = document.getElementById('os-input-impuesto');
+        if (selImpuesto) selImpuesto.value = 'INCLUYE IGV';
+        const selPuntosCarga = document.getElementById('os-input-puntos-carga');
+        if (selPuntosCarga) selPuntosCarga.value = '1';
+        const selPuntosDestino = document.getElementById('os-input-puntos-destino');
+        if (selPuntosDestino) selPuntosDestino.value = '1';
+        const inpCostoFlete = document.getElementById('os-input-costo-flete');
+        if (inpCostoFlete) inpCostoFlete.value = '0.00';
 
         // Configurar campo de Orden de Viaje Asignada
         const inpViaje = document.getElementById('os-input-viaje-asignado');
@@ -304,7 +294,9 @@
             if (helpText) helpText.textContent = 'Puede ingresar o vincular la orden de viaje aquí.';
         }
 
-        // Obtener correlativo autogenerado
+        // Correlativo autogenerado (inicia en 00000001)
+        document.getElementById('os-input-serie').value = '2026';
+        document.getElementById('os-input-numero').value = '00000001';
         try {
             const r = await fetch('/api/operaciones/ordenes-servicio/correlativo');
             const d = await r.json();
@@ -359,14 +351,23 @@
             document.getElementById('os-input-serie').value = item.serie || '2026';
             document.getElementById('os-input-numero').value = item.numero || '';
             document.getElementById('os-input-fecha').value = item.fecha_fmt || '';
-            document.getElementById('os-input-moneda').value = item.moneda || 'SOLES';
-            document.getElementById('os-input-tipo-cambio').value = item.tipo_cambio || '3.750';
+
+            const monedaVal = item.moneda || 'SOLES';
+            document.getElementById('os-input-moneda').value = monedaVal;
+            window.osCambiarMoneda(monedaVal);
+            if (item.tipo_cambio) {
+                document.getElementById('os-input-tipo-cambio').value = item.tipo_cambio;
+            }
+
+            document.getElementById('os-input-tracto').value = item.placa_tracto || '';
+            document.getElementById('os-input-carreta').value = item.placa_carreta || '';
+
             document.getElementById('os-input-tipo-contratacion').value = item.tipo_contratacion || 'CLIENTE DIRECTO';
             document.getElementById('os-input-modalidad-ejecucion').value = item.modalidad_ejecucion || 'PROPIO';
             document.getElementById('os-input-cliente').value = item.cliente_nombre || '';
             document.getElementById('os-input-tipo-servicio').value = item.tipo_servicio || 'CARGA GENERAL';
-            document.getElementById('os-input-tipo-costo').value = item.tipo_costo || 'POR VIAJE';
-            document.getElementById('os-input-impuesto').value = item.impuesto || 'IGV 18%';
+            document.getElementById('os-input-tipo-costo').value = item.tipo_costo || 'COSTO TARIFA';
+            document.getElementById('os-input-impuesto').value = item.impuesto || 'INCLUYE IGV';
             document.getElementById('os-input-costo-flete').value = item.costo_flete || '0.00';
             document.getElementById('os-input-puntos-carga').value = item.puntos_carga || '1';
             document.getElementById('os-input-puntos-destino').value = item.puntos_destino || '1';
@@ -623,6 +624,8 @@
         const destinatario = document.getElementById('os-input-destinatario')?.value;
         const observaciones = document.getElementById('os-input-observaciones')?.value;
         const viaje_asignado = document.getElementById('os-input-viaje-asignado')?.value?.trim() || null;
+        const placa_tracto = document.getElementById('os-input-tracto')?.value?.trim() || null;
+        const placa_carreta = document.getElementById('os-input-carreta')?.value?.trim() || null;
 
         if (!cliente_nombre) {
             alert("Por favor seleccione un Cliente/Remitente (*).");
@@ -650,6 +653,8 @@
             destinatario,
             observaciones,
             viaje_asignado,
+            placa_tracto,
+            placa_carreta,
             rutas: rutasLimpia,
             documentos: _docsAdjuntosActuales
         };
