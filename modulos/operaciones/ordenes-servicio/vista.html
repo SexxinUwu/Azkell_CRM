@@ -468,47 +468,29 @@
                 <thead>
                     <tr>
                         <th>ACCIÓN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>OPERACIÓN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>N° ORDEN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>FECHA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>FECHA FIN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>ORDEN DE SERVICIO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>SERVICIO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>VIAJE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>ESTADO VIAJE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>DESCARGA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th class="text-center">CARGA DOC <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>CONDUCTOR <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>TIPO CONTRATACION <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>CLIENTE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>REMITENTE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th class="text-center">PUNTOS CARGA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th class="text-center">PUNTOS DESCARGA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>RUTA SISTEMA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>TRACTO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>CARRETA (ATP999) <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>CLIENTE / REMITENTE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>TIPO CONTRATACIÓN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>MODALIDAD <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>TIPO SERVICIO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th class="text-end">VOLUMEN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th class="text-end">CANTIDAD <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th class="text-end">PESO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>DESTINATARIO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th class="text-center"># PUNTOS CARGA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th class="text-center"># PUNTOS DESTINO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>TIPO COSTO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>IMPUESTO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>MONEDA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>TIPO MEDIDA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th class="text-end">COSTO MEDIDA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th class="text-end">CARGOS ADICIONALES <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th class="text-end">DESCUENTOS <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th class="text-end">SUBTOTAL <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th class="text-end">IGV <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th class="text-end">COSTO FLETE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th class="text-end">KILOMETRAJE FIN DE SERVICIO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>USUARIO CREACION <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>OBSERVACIONES <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>VEHÍCULO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
-                        <th>FACTURA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th class="text-center">SUSTENTO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>OBSERVACIONES <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                     </tr>
                 </thead>
                 <tbody id="os-tbody">
                     <tr>
-                        <td colspan="37" class="text-center py-5 text-muted">
+                        <td colspan="19" class="text-center py-5 text-muted">
                             <div class="spinner-border spinner-border-sm text-warning me-2"></div>
                             Cargando órdenes de servicio...
                         </td>
@@ -570,7 +552,7 @@
                         <form id="formOrdenServicio" autocomplete="off" onsubmit="window.osGuardarOrden(event)">
                             <input type="hidden" id="os-input-id" value="">
 
-                            <!-- Card 1: Identificación y Viaje Operativo -->
+                            <!-- Card 1: Identificación y Asignación de Viaje -->
                             <div class="os-form-card">
                                 <div class="os-form-card-title">
                                     <i class="bi bi-file-earmark-ruled text-primary"></i> Identificación y Asignación de Viaje
@@ -583,7 +565,7 @@
                                     </div>
                                     <div class="col-6 col-md-2">
                                         <label class="form-label">Número <span class="req">(*)</span></label>
-                                        <input type="text" id="os-input-numero" class="form-control" readonly tabindex="-1" placeholder="00001483" required>
+                                        <input type="text" id="os-input-numero" class="form-control font-monospace" readonly tabindex="-1" placeholder="00000001" value="00000001" required>
                                     </div>
                                     <div class="col-12 col-md-3">
                                         <label class="form-label">Fecha <span class="req">(*)</span></label>
@@ -591,18 +573,18 @@
                                     </div>
                                     <div class="col-6 col-md-2">
                                         <label class="form-label">Moneda <span class="req">(*)</span></label>
-                                        <select id="os-input-moneda" class="form-select" required>
+                                        <select id="os-input-moneda" class="form-select" onchange="window.osCambiarMoneda(this.value)" required>
                                             <option value="SOLES" selected>SOLES</option>
                                             <option value="DÓLARES">DÓLARES</option>
                                         </select>
                                     </div>
-                                    <div class="col-6 col-md-3">
+                                    <div class="col-6 col-md-3" id="os-grp-tipo-cambio" style="display: none;">
                                         <label class="form-label">Tipo Cambio <span class="req">(*)</span></label>
-                                        <input type="text" id="os-input-tipo-cambio" class="form-control" readonly tabindex="-1" value="3.750" required>
+                                        <input type="number" step="0.001" id="os-input-tipo-cambio" class="form-control font-monospace fw-bold" value="3.40">
                                     </div>
                                 </div>
 
-                                <!-- Casilla de Orden de Viaje Asignada (Bloqueada si entra desde Viaje / Desbloqueada si es directa) -->
+                                <!-- Orden de Viaje, Tracto y ATP999 (Carreta) -->
                                 <div class="row g-2">
                                     <div class="col-12 col-md-6">
                                         <label class="form-label d-flex align-items-center justify-content-between">
@@ -617,106 +599,141 @@
                                         </div>
                                         <small class="text-muted" id="os-viaje-help-text" style="font-size: 0.72rem;">Puede ingresar o vincular la orden de viaje aquí.</small>
                                     </div>
-                                </div>
-                            </div>
-
-                            <!-- Card 2: Cliente y Contratación -->
-                            <div class="os-form-card">
-                                <div class="os-form-card-title">
-                                    <i class="bi bi-briefcase text-primary"></i> Cliente y Modalidad de Contratación
-                                </div>
-                                <div class="row g-2">
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label">Tipo Contratación <span class="req">(*)</span></label>
-                                        <select id="os-input-tipo-contratacion" class="form-select" required>
-                                            <option value="CLIENTE DIRECTO" selected>CLIENTE DIRECTO</option>
-                                            <option value="TERCERO">TERCERO</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label">Modalidad Ejecución <span class="req">(*)</span></label>
-                                        <select id="os-input-modalidad-ejecucion" class="form-select" required>
-                                            <option value="PROPIO" selected>PROPIO</option>
-                                            <option value="TERCERIZADO">TERCERIZADO</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label">Cliente/Remitente <span class="req">(*)</span></label>
-                                        <select id="os-input-cliente" class="form-select" required>
-                                            <option value="">Seleccione...</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label">Tipo Servicio <span class="req">(*)</span></label>
-                                        <select id="os-input-tipo-servicio" class="form-select" required>
-                                            <option value="CARGA GENERAL" selected>CARGA GENERAL</option>
-                                            <option value="TRANSPORTE LOCAL">TRANSPORTE LOCAL</option>
-                                            <option value="TRANSPORTE NACIONAL">TRANSPORTE NACIONAL</option>
-                                            <option value="DISTRIBUCION">DISTRIBUCIÓN</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Card 3: Costos y Puntos de Carga/Destino -->
-                            <div class="os-form-card">
-                                <div class="os-form-card-title">
-                                    <i class="bi bi-currency-dollar text-primary"></i> Costeo, Puntos y Destinatario
-                                </div>
-                                <div class="row g-2 mb-3">
-                                    <div class="col-6 col-md-2">
-                                        <label class="form-label">Tipo Costo <span class="req">(*)</span></label>
-                                        <select id="os-input-tipo-costo" class="form-select" required>
-                                            <option value="POR VIAJE" selected>POR VIAJE</option>
-                                            <option value="POR TONELADA">POR TONELADA</option>
-                                            <option value="POR PALLET">POR PALLET</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-6 col-md-2">
-                                        <label class="form-label">Impuesto <span class="req">(*)</span></label>
-                                        <select id="os-input-impuesto" class="form-select" required>
-                                            <option value="IGV 18%" selected>IGV 18%</option>
-                                            <option value="EXONERADO">EXONERADO</option>
-                                            <option value="INAFECTO">INAFECTO</option>
-                                        </select>
+                                    <div class="col-6 col-md-3">
+                                        <label class="form-label">Tracto <span class="req">(*)</span></label>
+                                        <input type="text" id="os-input-tracto" class="form-control font-monospace fw-bold text-uppercase" placeholder="Placa Tracto">
                                     </div>
                                     <div class="col-6 col-md-3">
-                                        <label class="form-label">Costo Flete <span class="req">(*)</span></label>
-                                        <input type="number" step="0.01" id="os-input-costo-flete" class="form-control font-monospace fw-bold" value="0.00" required>
-                                    </div>
-                                    <div class="col-6 col-md-2">
-                                        <label class="form-label"># Puntos Carga <span class="req">(*)</span></label>
-                                        <select id="os-input-puntos-carga" class="form-select" required>
-                                            <option value="1" selected>1</option>
-                                            <option value="2">2</option>
-                                            <option value="3">3</option>
-                                            <option value="4">4</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label">Subir Sustento</label>
-                                        <input type="file" id="os-input-sustento" class="form-control form-control-sm">
-                                    </div>
-                                </div>
-
-                                <div class="row g-2">
-                                    <div class="col-12 col-md-9">
-                                        <label class="form-label">Destinatario</label>
-                                        <input type="text" id="os-input-destinatario" class="form-control text-uppercase" placeholder="Seleccione o ingrese destinatario...">
-                                    </div>
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label"># Puntos Destino <span class="req">(*)</span></label>
-                                        <select id="os-input-puntos-destino" class="form-select" required>
-                                            <option value="1" selected>1</option>
-                                            <option value="2">2</option>
-                                            <option value="3">3</option>
-                                            <option value="4">4</option>
-                                        </select>
+                                        <label class="form-label">Carreta (ATP999) <span class="req">(*)</span></label>
+                                        <input type="text" id="os-input-carreta" class="form-control font-monospace fw-bold text-uppercase" placeholder="Placa Carreta / ATP999">
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Card 4: Observaciones -->
+                            <!-- ── APARTADOS DIVIDIDOS A LA MITAD (50% / 50%) SEGÚN IMAGEN 2 ── -->
+                            <div class="row g-3 mb-3">
+                                <!-- Columna Izquierda (50%): CLIENTE Y MODALIDAD DE CONTRATACIÓN -->
+                                <div class="col-12 col-lg-6">
+                                    <div class="os-form-card h-100 mb-0">
+                                        <div class="os-form-card-title">
+                                            <i class="bi bi-briefcase text-primary"></i> Cliente y Modalidad de Contratación
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-12 col-sm-6">
+                                                <label class="form-label">Tipo Contratación <span class="req">(*)</span></label>
+                                                <select id="os-input-tipo-contratacion" class="form-select" required>
+                                                    <option value="CLIENTE DIRECTO" selected>CLIENTE DIRECTO</option>
+                                                    <option value="TERCERO">TERCERO</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-12 col-sm-6">
+                                                <label class="form-label">Modalidad Ejecución <span class="req">(*)</span></label>
+                                                <select id="os-input-modalidad-ejecucion" class="form-select" required>
+                                                    <option value="PROPIO" selected>PROPIO</option>
+                                                    <option value="TERCERIZADO">TERCERIZADO</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label">Cliente/Remitente <span class="req">(*)</span></label>
+                                                <input type="text" id="os-input-cliente" list="os-clientes-datalist" class="form-control text-uppercase" placeholder="Escriba o seleccione cliente/remitente..." required>
+                                                <datalist id="os-clientes-datalist"></datalist>
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label">Tipo Servicio <span class="req">(*)</span></label>
+                                                <select id="os-input-tipo-servicio" class="form-select" required>
+                                                    <option value="CARGA GENERAL" selected>CARGA GENERAL</option>
+                                                    <option value="TRANSPORTE LOCAL">TRANSPORTE LOCAL</option>
+                                                    <option value="TRANSPORTE NACIONAL">TRANSPORTE NACIONAL</option>
+                                                    <option value="DISTRIBUCION">DISTRIBUCIÓN</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-12 col-sm-6">
+                                                <label class="form-label"># Puntos Carga <span class="req">(*)</span></label>
+                                                <select id="os-input-puntos-carga" class="form-select" required>
+                                                    <option value="1" selected>1</option>
+                                                    <option value="2">2</option>
+                                                    <option value="3">3</option>
+                                                    <option value="4">4</option>
+                                                    <option value="5">5</option>
+                                                    <option value="6">6</option>
+                                                    <option value="7">7</option>
+                                                    <option value="8">8</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-12 col-sm-6">
+                                                <label class="form-label">Subir Sustento</label>
+                                                <input type="file" id="os-input-sustento" class="form-control form-control-sm">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Columna Derecha (50%): DESTINATARIO Y COSTEO -->
+                                <div class="col-12 col-lg-6 d-flex flex-column gap-3">
+                                    <!-- Tarjeta Destinatario -->
+                                    <div class="os-form-card mb-0">
+                                        <div class="os-form-card-title">
+                                            <i class="bi bi-geo-alt text-primary"></i> Destinatario
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-12 col-sm-8">
+                                                <label class="form-label">Destinatario</label>
+                                                <input type="text" id="os-input-destinatario" class="form-control text-uppercase" placeholder="Ingrese destinatario...">
+                                            </div>
+                                            <div class="col-12 col-sm-4">
+                                                <label class="form-label"># Puntos Destino <span class="req">(*)</span></label>
+                                                <select id="os-input-puntos-destino" class="form-select" required>
+                                                    <option value="1" selected>1</option>
+                                                    <option value="2">2</option>
+                                                    <option value="3">3</option>
+                                                    <option value="4">4</option>
+                                                    <option value="5">5</option>
+                                                    <option value="6">6</option>
+                                                    <option value="7">7</option>
+                                                    <option value="8">8</option>
+                                                    <option value="9">9</option>
+                                                    <option value="10">10</option>
+                                                    <option value="11">11</option>
+                                                    <option value="12">12</option>
+                                                    <option value="13">13</option>
+                                                    <option value="14">14</option>
+                                                    <option value="15">15</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tarjeta Costeo -->
+                                    <div class="os-form-card mb-0 flex-grow-1">
+                                        <div class="os-form-card-title">
+                                            <i class="bi bi-currency-dollar text-primary"></i> Costeo
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-12 col-sm-4">
+                                                <label class="form-label">Tipo Costo <span class="req">(*)</span></label>
+                                                <select id="os-input-tipo-costo" class="form-select" required>
+                                                    <option value="COSTO TARIFA" selected>COSTO TARIFA</option>
+                                                    <option value="TARIFA EXPRESS">TARIFA EXPRESS</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-12 col-sm-4">
+                                                <label class="form-label">Impuesto <span class="req">(*)</span></label>
+                                                <select id="os-input-impuesto" class="form-select" required>
+                                                    <option value="INCLUYE IGV" selected>INCLUYE IGV</option>
+                                                    <option value="MÁS IGV">MÁS IGV</option>
+                                                    <option value="NO APLICA">NO APLICA</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-12 col-sm-4">
+                                                <label class="form-label">Costo Flete <span class="req">(*)</span></label>
+                                                <input type="number" step="0.01" id="os-input-costo-flete" class="form-control font-monospace fw-bold" value="0.00" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 4: Observaciones Adicionales (Ancho Completo) -->
                             <div class="os-form-card mb-0">
                                 <div class="os-form-card-title">
                                     <i class="bi bi-chat-left-text text-primary"></i> Observaciones Adicionales
