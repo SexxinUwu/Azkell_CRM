@@ -215,7 +215,10 @@ module.exports = function (db, broadcast, logAudit) {
                 await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN ubigeo_partida VARCHAR(10) NULL AFTER destino, ADD COLUMN direccion_partida VARCHAR(255) NULL AFTER ubigeo_partida, ADD COLUMN ubigeo_llegada VARCHAR(10) NULL AFTER direccion_partida, ADD COLUMN direccion_llegada VARCHAR(255) NULL AFTER ubigeo_llegada, ADD COLUMN escolta VARCHAR(150) NULL AFTER direccion_llegada, ADD COLUMN observaciones TEXT NULL AFTER escolta");
             } catch (ignore) {}
             try {
-                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN fecha_inicio DATETIME NULL AFTER estado, ADD COLUMN fecha_fin DATETIME NULL AFTER fecha_inicio, ADD COLUMN usuario_creacion VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR DEL SISTEMA' AFTER fecha_fin, ADD COLUMN usuario_finalizacion VARCHAR(150) NULL AFTER usuario_creacion");
+                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN fecha_inicio DATETIME NULL AFTER estado, ADD COLUMN fecha_fin DATETIME NULL AFTER fecha_inicio, ADD COLUMN kilometraje_inicial INT NULL AFTER fecha_fin, ADD COLUMN kilometraje_final INT NULL AFTER kilometraje_inicial, ADD COLUMN usuario_creacion VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR DEL SISTEMA' AFTER kilometraje_final, ADD COLUMN usuario_finalizacion VARCHAR(150) NULL AFTER usuario_creacion");
+            } catch (ignore) {}
+            try {
+                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN kilometraje_inicial INT NULL AFTER fecha_fin, ADD COLUMN kilometraje_final INT NULL AFTER kilometraje_inicial");
             } catch (ignore) {}
             try {
                 await tdb.query(`ALTER TABLE operaciones_ordenes_servicio 
@@ -321,6 +324,8 @@ module.exports = function (db, broadcast, logAudit) {
                     ov.estado,
                     DATE_FORMAT(ov.fecha_inicio, '%Y-%m-%d %H:%i:%s') AS fecha_inicio,
                     DATE_FORMAT(ov.fecha_fin, '%Y-%m-%d %H:%i:%s') AS fecha_fin,
+                    ov.kilometraje_inicial,
+                    ov.kilometraje_final,
                     ov.usuario_creacion,
                     ov.usuario_finalizacion,
                     DATE_FORMAT(ov.creado_en, '%Y-%m-%d %H:%i:%s') AS fecha_registro,
@@ -571,11 +576,13 @@ module.exports = function (db, broadcast, logAudit) {
                 SET estado = 'INICIADO',
                     fecha_inicio = ?,
                     fecha_viaje = COALESCE(?, fecha_viaje),
+                    kilometraje_inicial = ?,
                     observaciones = CONCAT(COALESCE(observaciones, ''), IF(? IS NOT NULL, CONCAT(' [KM Inicial: ', ?, ']'), ''))
                 WHERE viaje = ?
             `, [
                 fechaInicioSql,
                 fechaInicioSql,
+                kilometraje_inicial || null,
                 kilometraje_inicial,
                 kilometraje_inicial,
                 codeViaje
@@ -614,11 +621,13 @@ module.exports = function (db, broadcast, logAudit) {
                 UPDATE operaciones_ordenes_viaje 
                 SET estado = 'FINALIZADO',
                     fecha_fin = ?,
+                    kilometraje_final = ?,
                     usuario_finalizacion = ?,
                     observaciones = CONCAT(COALESCE(observaciones, ''), IF(? IS NOT NULL, CONCAT(' [KM Final: ', ?, ']'), ''))
                 WHERE viaje = ?
             `, [
                 fechaFinSql,
+                kilometraje_final || null,
                 userFinaliza,
                 kilometraje_final,
                 kilometraje_final,
