@@ -93,7 +93,9 @@ window.ovConfigurarThead = function() {
                 <th style="min-width: 145px;">N° VIAJE ${_sortIcon('viaje')}</th>
                 <th style="min-width: 170px;">CONDUCTOR ${_sortIcon('conductor')}</th>
                 <th style="min-width: 100px;">VEHÍCULO (TRACTO) ${_sortIcon('tracto')}</th>
+                <th style="min-width: 105px;">KM (TRACTO) ${_sortIcon('km_tracto')}</th>
                 <th style="min-width: 105px;">SEMIRREMOLQUE ${_sortIcon('remolque')}</th>
+                <th style="min-width: 115px;">HORAS TERMOKING ${_sortIcon('horas_remolque')}</th>
                 <th style="min-width: 160px;">RUTA PROGRAMADA ${_sortIcon('ruta')}</th>
                 <th style="min-width: 120px; text-align: right;">CANTIDAD / PESO (TN) ${_sortIcon('peso')}</th>
                 <th style="min-width: 135px;">F. Y HORA INICIO ${_sortIcon('fecha_inicio')}</th>
@@ -126,7 +128,7 @@ window.ovCargarDatos = async function() {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="14" class="text-center py-4 text-secondary">
+                <td colspan="16" class="text-center py-4 text-secondary">
                     <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
                     <div class="small fw-semibold">Consultando base de datos del ERP...</div>
                 </td>
@@ -174,7 +176,7 @@ window.ovCargarDatos = async function() {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="14" class="text-center py-4 text-danger">
+                    <td colspan="16" class="text-center py-4 text-danger">
                         <i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>
                         <div class="fw-bold">Error al conectar con la base de datos</div>
                         <small class="text-muted">${err.message}</small>
@@ -326,9 +328,17 @@ window.ovAplicarFiltros = function() {
                         valA = (a.placa_tracto || '').toUpperCase();
                         valB = (b.placa_tracto || '').toUpperCase();
                         break;
+                    case 'km_tracto':
+                        valA = parseFloat(a.kilometraje_inicial || a.km || 0);
+                        valB = parseFloat(b.kilometraje_inicial || b.km || 0);
+                        break;
                     case 'remolque':
                         valA = (a.placa_remolque || '').toUpperCase();
                         valB = (b.placa_remolque || '').toUpperCase();
+                        break;
+                    case 'horas_remolque':
+                        valA = parseFloat(a.horas_motor_remolque || 0);
+                        valB = parseFloat(b.horas_motor_remolque || 0);
                         break;
                     case 'ruta':
                         valA = (a.ruta || '').toUpperCase();
@@ -485,7 +495,7 @@ window.ovRenderizarTabla = function() {
     if (pageItems.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="14" class="text-center py-4 text-secondary">
+                <td colspan="16" class="text-center py-4 text-secondary">
                     <i class="bi bi-inbox fs-3 d-block mb-1 text-muted"></i>
                     <div class="fw-bold" style="font-size:0.85rem;">No se encontraron viajes para los filtros seleccionados</div>
                     <small class="text-muted" style="font-size:0.75rem;">Modifica el rango de fechas o haz clic en "Registrar Nuevo Viaje".</small>
@@ -607,6 +617,16 @@ window.ovRenderizarTabla = function() {
             // 5. Placas y carga
             var vehiculo = v.placa_tracto || '';
             var semirremolque = v.placa_remolque || '';
+            var kmTractoVal = v.kilometraje_inicial != null && v.kilometraje_inicial !== '' ? Number(v.kilometraje_inicial) : null;
+            var kmTractoHtml = kmTractoVal != null
+                ? `<span class="badge bg-light text-dark border font-monospace px-2 py-1"><i class="bi bi-speedometer2 text-primary me-1"></i>${kmTractoVal.toLocaleString()} km</span>`
+                : `<span class="text-muted font-monospace small">---</span>`;
+
+            var horasRemolqueVal = v.horas_motor_remolque != null && v.horas_motor_remolque !== '' ? Number(v.horas_motor_remolque) : null;
+            var horasRemolqueHtml = horasRemolqueVal != null
+                ? `<span class="badge bg-warning-subtle text-dark border border-warning-subtle font-monospace px-2 py-1"><i class="bi bi-clock-history text-warning me-1"></i>${horasRemolqueVal.toLocaleString()} hrs</span>`
+                : `<span class="text-muted font-monospace small">---</span>`;
+
             var pesoTnVal = parseFloat(v.peso) || (parseFloat(v.peso_total_rutas) ? parseFloat(v.peso_total_rutas) / 1000 : 0);
             var pesoTnTxt = pesoTnVal > 0 ? (pesoTnVal).toFixed(2) + ' TN' : '0.00 TN';
             var rutaTxt = (v.ruta || '---').toUpperCase();
@@ -647,33 +667,39 @@ window.ovRenderizarTabla = function() {
                     <!-- 7. VEHÍCULO (TRACTO) -->
                     <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${vehiculo || '---'}</td>
 
-                    <!-- 8. SEMIRREMOLQUE (CARRETA) -->
+                    <!-- 8. KM (TRACTO) -->
+                    <td>${kmTractoHtml}</td>
+
+                    <!-- 9. SEMIRREMOLQUE (CARRETA) -->
                     <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${semirremolque || '---'}</td>
 
-                    <!-- 9. RUTA PROGRAMADA -->
+                    <!-- 10. HORAS TERMOKING -->
+                    <td>${horasRemolqueHtml}</td>
+
+                    <!-- 11. RUTA PROGRAMADA -->
                     <td class="fw-semibold text-dark small">
                         <i class="bi bi-geo-alt-fill text-danger me-1"></i>${rutaTxt}
                     </td>
 
-                    <!-- 10. CANTIDAD / PESO (TN) -->
+                    <!-- 12. CANTIDAD / PESO (TN) -->
                     <td style="text-align: right;" class="font-monospace fw-bold text-dark">
                         <span class="badge ${pesoTnVal > 0 ? 'bg-light text-dark border border-secondary-subtle' : 'bg-light text-muted'} font-monospace px-2 py-1 fw-bold">
                             ${pesoTnTxt}
                         </span>
                     </td>
 
-                    <!-- 11. F. Y HORA INICIO -->
+                    <!-- 13. F. Y HORA INICIO -->
                     <td class="font-monospace text-secondary" style="font-size:0.75rem;">${fechaInicioFmt}</td>
 
-                    <!-- 12. F. Y HORA CIERRE -->
+                    <!-- 14. F. Y HORA CIERRE -->
                     <td class="font-monospace text-secondary" style="font-size:0.75rem;">${fechaCierreFmt}</td>
 
-                    <!-- 13. USUARIO CREACIÓN -->
+                    <!-- 15. USUARIO CREACIÓN -->
                     <td class="fw-semibold text-dark" style="font-size:0.76rem;">
                         <span class="badge bg-light text-dark border px-2 py-1">${usuarioCreacion}</span>
                     </td>
 
-                    <!-- 14. USUARIO FINALIZACIÓN -->
+                    <!-- 16. USUARIO FINALIZACIÓN -->
                     <td class="fw-semibold text-dark" style="font-size:0.76rem;">
                         <span class="badge ${usuarioFinalizacion !== '—' ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-light text-muted border'} px-2 py-1">${usuarioFinalizacion}</span>
                     </td>
@@ -768,6 +794,12 @@ window.ovAbrirModalNuevoViaje = async function() {
         if (txt) txt.value = '';
         if (hid) hid.value = '';
     });
+
+    // Limpiar kilometraje y horas motor
+    var kmTractoInput = document.getElementById('ov-form-km-tracto');
+    if (kmTractoInput) kmTractoInput.value = '';
+    var horasRemolqueInput = document.getElementById('ov-form-horas-remolque');
+    if (horasRemolqueInput) horasRemolqueInput.value = '';
 
     // Cargar correlativo desde el backend
     try {
@@ -886,6 +918,12 @@ window.ovAbrirModalEditarViaje = async function(viajeCode) {
     if (remolqueTxt) remolqueTxt.value = remolqueVal;
     if (remolqueHid) remolqueHid.value = remolqueVal;
 
+    // Kilometraje Tracto y Horas Motor Remolque
+    var kmTractoInput = document.getElementById('ov-form-km-tracto');
+    if (kmTractoInput) kmTractoInput.value = item.kilometraje_inicial != null ? item.kilometraje_inicial : '';
+    var horasRemolqueInput = document.getElementById('ov-form-horas-remolque');
+    if (horasRemolqueInput) horasRemolqueInput.value = item.horas_motor_remolque != null ? item.horas_motor_remolque : '';
+
     // Ruta
     var rutaEl = document.getElementById('ov-form-ruta');
     if (rutaEl) rutaEl.value = item.ruta || '';
@@ -988,13 +1026,27 @@ window.ovCargarCombosFormulario = async function() {
                         hid.dataset.idConductor = (matched && matched.idConductor) || '';
                     }
                 });
-                window._cbOnSelect('ov-form-tracto', function(val, lbl) {
+                window._cbOnSelect('ov-form-tracto', async function(val, lbl) {
                     var hid = document.getElementById('ov-form-tracto');
                     if (hid) hid.value = val;
+                    if (val) {
+                        var tele = await window.ovObtenerTelemetryGPS(val);
+                        var inputKm = document.getElementById('ov-form-km-tracto');
+                        if (inputKm && tele && tele.km > 0) {
+                            inputKm.value = Math.round(tele.km);
+                        }
+                    }
                 });
-                window._cbOnSelect('ov-form-remolque', function(val, lbl) {
+                window._cbOnSelect('ov-form-remolque', async function(val, lbl) {
                     var hid = document.getElementById('ov-form-remolque');
                     if (hid) hid.value = val;
+                    if (val) {
+                        var tele = await window.ovObtenerTelemetryGPS(val);
+                        var inputHoras = document.getElementById('ov-form-horas-remolque');
+                        if (inputHoras && tele && tele.horas > 0) {
+                            inputHoras.value = Math.round(tele.horas);
+                        }
+                    }
                 });
             }
         }
@@ -1018,6 +1070,8 @@ window.ovGuardarNuevoViaje = async function(e) {
     var idConductor = selCond ? selCond.dataset.idConductor : null;
     var ruta = (document.getElementById('ov-form-ruta') || {}).value || '';
     var cantidad = parseFloat((document.getElementById('ov-form-cantidad') || {}).value) || 0;
+    var kmTracto = parseInt((document.getElementById('ov-form-km-tracto') || {}).value, 10) || null;
+    var horasRemolque = parseInt((document.getElementById('ov-form-horas-remolque') || {}).value, 10) || null;
     var ubigeoPartida = (document.getElementById('ov-form-ubigeo-partida') || {}).value || '';
     var dirPartida = (document.getElementById('ov-form-dir-partida') || {}).value || '';
     var ubigeoLlegada = (document.getElementById('ov-form-ubigeo-llegada') || {}).value || '';
@@ -1042,6 +1096,8 @@ window.ovGuardarNuevoViaje = async function(e) {
         conductor,
         placa_tracto: tracto,
         placa_remolque: remolque,
+        kilometraje_inicial: kmTracto,
+        horas_motor_remolque: horasRemolque,
         ruta,
         peso: cantidad,
         ubigeo_partida: ubigeoPartida,
@@ -1091,41 +1147,78 @@ window.ovGuardarNuevoViaje = async function(e) {
     }
 };
 
-// ── HELPER TELEMETRÍA GPS / ODOMETRO WIALON ─────────────────────────
-window.ovObtenerKmTelemetriaVehiculo = async function(placa) {
-    if (!placa) return null;
-    var plcClean = (placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
-    if (!plcClean) return null;
+// ── HELPER TELEMETRÍA GPS / ODOMETRO & HORAS MOTOR WIALON ───────────
+window.ovObtenerTelemetryGPS = async function(placa) {
+    if (!placa) return { km: 0, horas: 0 };
+    var pStr = placa.toString().trim().toUpperCase();
 
-    // 1. Intentar desde CACHE.wialon si ya está en memoria
+    // 1. Probar CACHE.wialon local
     if (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0) {
-        var found = CACHE.wialon.find(w => (w.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase() === plcClean);
-        if (found && found.km) return Math.round(found.km);
-    }
-    if (Array.isArray(window._datosWialonGPS) && window._datosWialonGPS.length > 0) {
-        var found2 = window._datosWialonGPS.find(w => (w.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase() === plcClean);
-        if (found2 && found2.km) return Math.round(found2.km);
+        var w = CACHE.wialon.find(x => (x.placa || '').toString().trim().toUpperCase() === pStr);
+        if (w && (w.km > 0 || w.horas > 0)) {
+            return { km: w.km || 0, horas: w.horas || 0 };
+        }
     }
 
-    // 2. Si no está en caché, consultar al backend Wialon en tiempo real
+    // 2. Probar /api/disponibilidad-flota
     try {
-        var r = await fetch('/api/script/obtenerDatosWialon', {
+        var r = await fetch('/api/disponibilidad-flota');
+        if (r.ok) {
+            var data = await r.json();
+            var list = Array.isArray(data) ? data : (data.data || []);
+            var match = list.find(v => (v.placa || '').toString().trim().toUpperCase() === pStr);
+            if (match) {
+                return {
+                    km: parseFloat(match.km || match.kilometraje || match.km_wialon || 0),
+                    horas: parseFloat(match.horas_motor || match.horas_wialon || match.horas || 0)
+                };
+            }
+        }
+    } catch(e) {}
+
+    // 3. Probar /api/vehiculos-flota
+    try {
+        var r2 = await fetch('/api/vehiculos-flota');
+        if (r2.ok) {
+            var data2 = await r2.json();
+            var list2 = Array.isArray(data2) ? data2 : [];
+            var match2 = list2.find(v => (v.placa || '').toString().trim().toUpperCase() === pStr);
+            if (match2) {
+                return {
+                    km: parseFloat(match2.km || match2.kilometraje || match2.km_inicial || 0),
+                    horas: parseFloat(match2.horas_motor || match2.horas || 0)
+                };
+            }
+        }
+    } catch(e) {}
+
+    // 4. Intentar script Wialon en tiempo real
+    try {
+        var r3 = await fetch('/api/script/obtenerDatosWialon', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ args: [] })
         });
-        var res = await r.json();
-        var list = (res && res.data) ? res.data : [];
-        if (Array.isArray(list)) {
-            if (typeof CACHE !== 'undefined') CACHE.wialon = list;
-            window._datosWialonGPS = list;
-            var match = list.find(w => (w.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase() === plcClean);
-            if (match && match.km) return Math.round(match.km);
+        var res3 = await r3.json();
+        var list3 = (res3 && res3.data) ? res3.data : [];
+        if (Array.isArray(list3)) {
+            if (typeof CACHE !== 'undefined') CACHE.wialon = list3;
+            var match3 = list3.find(w => (w.placa || '').toString().trim().toUpperCase() === pStr);
+            if (match3) {
+                return {
+                    km: parseFloat(match3.km || 0),
+                    horas: parseFloat(match3.horas || match3.horas_motor || 0)
+                };
+            }
         }
-    } catch(err) {
-        console.warn('No se pudo consultar telemetría GPS para placa ' + placa, err);
-    }
-    return null;
+    } catch(err) {}
+
+    return { km: 0, horas: 0 };
+};
+
+window.ovObtenerKmTelemetriaVehiculo = async function(placa) {
+    var tele = await window.ovObtenerTelemetryGPS(placa);
+    return tele && tele.km > 0 ? Math.round(tele.km) : null;
 };
 
 // ── GESTIÓN DEL MODAL INICIAR VIAJE (DISEÑO B) ──────────────────────
@@ -1134,22 +1227,22 @@ window.ovAbrirModalIniciarViaje = async function(viajeCode, placaVehiculo) {
     var inputId = document.getElementById('ov-iniciar-viaje-id');
     var inputFecha = document.getElementById('ov-iniciar-fecha');
     var inputKm = document.getElementById('ov-iniciar-km');
+    var inputHorasRem = document.getElementById('ov-iniciar-horas-remolque');
     var checkConfirm = document.getElementById('ov-iniciar-check-confirm');
     var badgeTelemetria = document.getElementById('ov-iniciar-km-telemetria-badge');
     var hintTelemetria = document.getElementById('ov-iniciar-km-telemetria-hint');
 
-    // Identificar placa desde fila si no vino por parámetro
-    if (!placaVehiculo && viajeCode && Array.isArray(window._ordenesViajeCache)) {
-        var vItem = window._ordenesViajeCache.find(x => x.viaje === viajeCode);
-        if (vItem) placaVehiculo = vItem.placa_tracto;
+    // Buscar objeto del viaje
+    var listaV = window._ovViajesGlobal || window.dataGlobalOrdenesViajeModulo || [];
+    var vItem = listaV.find(x => x.viaje === viajeCode);
+    if (!placaVehiculo && vItem) {
+        placaVehiculo = vItem.placa_tracto;
     }
 
     if (lblViaje) lblViaje.textContent = viajeCode || '---';
     if (inputId) inputId.value = viajeCode || '';
-    if (inputKm) {
-        inputKm.value = '';
-        inputKm.placeholder = 'Consultando telemetría...';
-    }
+    if (inputKm) inputKm.value = (vItem && vItem.kilometraje_inicial) ? vItem.kilometraje_inicial : '';
+    if (inputHorasRem) inputHorasRem.value = (vItem && vItem.horas_motor_remolque) ? vItem.horas_motor_remolque : '';
     if (checkConfirm) checkConfirm.checked = false;
 
     if (badgeTelemetria) {
@@ -1174,13 +1267,25 @@ window.ovAbrirModalIniciarViaje = async function(viajeCode, placaVehiculo) {
         modal.show();
     }
 
+    // Si ya tenía km registrado, usarlo directamente
+    if (vItem && vItem.kilometraje_inicial) {
+        if (badgeTelemetria) {
+            badgeTelemetria.innerHTML = `<i class="bi bi-check2-circle text-success me-1"></i> Pre-registrado (${Number(vItem.kilometraje_inicial).toLocaleString()} km)`;
+            badgeTelemetria.className = 'badge bg-success-subtle text-success border border-success-subtle font-monospace';
+        }
+        if (hintTelemetria) {
+            hintTelemetria.textContent = 'Kilometraje asignado desde la creación de la orden. Puedes modificarlo si es necesario.';
+        }
+        return;
+    }
+
     // Consultar telemetría asíncrona de la placa
     if (placaVehiculo) {
-        var kmGps = await window.ovObtenerKmTelemetriaVehiculo(placaVehiculo);
+        var tele = await window.ovObtenerTelemetryGPS(placaVehiculo);
+        var kmGps = tele && tele.km > 0 ? Math.round(tele.km) : null;
         if (kmGps != null && kmGps > 0) {
-            if (inputKm) {
+            if (inputKm && !inputKm.value) {
                 inputKm.value = kmGps;
-                inputKm.placeholder = 'EJ: ' + kmGps;
             }
             if (badgeTelemetria) {
                 badgeTelemetria.innerHTML = `<i class="bi bi-broadcast text-success me-1"></i> GPS: ${placaVehiculo} (${kmGps.toLocaleString()} km)`;
@@ -1204,6 +1309,14 @@ window.ovAbrirModalIniciarViaje = async function(viajeCode, placaVehiculo) {
         if (badgeTelemetria) badgeTelemetria.style.display = 'none';
         if (hintTelemetria) hintTelemetria.textContent = 'Ingresa el kilometraje actual del vehículo para iniciar.';
     }
+
+    // Si remolque no tiene horas cargadas, buscar telemetría de remolque
+    if (vItem && vItem.placa_remolque && inputHorasRem && !inputHorasRem.value) {
+        var teleRem = await window.ovObtenerTelemetryGPS(vItem.placa_remolque);
+        if (teleRem && teleRem.horas > 0) {
+            inputHorasRem.value = Math.round(teleRem.horas);
+        }
+    }
 };
 
 window.ovEjecutarIniciarViajeConfirmado = async function(e) {
@@ -1212,6 +1325,7 @@ window.ovEjecutarIniciarViajeConfirmado = async function(e) {
     var viajeCode = (document.getElementById('ov-iniciar-viaje-id') || {}).value;
     var fechaInicio = (document.getElementById('ov-iniciar-fecha') || {}).value;
     var kmActual = (document.getElementById('ov-iniciar-km') || {}).value;
+    var horasRemolque = (document.getElementById('ov-iniciar-horas-remolque') || {}).value;
     var checkConfirm = document.getElementById('ov-iniciar-check-confirm');
 
     if (!viajeCode) return;
@@ -1232,7 +1346,8 @@ window.ovEjecutarIniciarViajeConfirmado = async function(e) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 fecha_inicio: fechaInicio,
-                kilometraje_inicial: kmActual
+                kilometraje_inicial: kmActual,
+                horas_motor_remolque: horasRemolque || null
             })
         });
         var data = await res.json();
@@ -1250,7 +1365,6 @@ window.ovEjecutarIniciarViajeConfirmado = async function(e) {
                 if (modal) modal.hide();
             }
 
-            // Recargar datos
             await window.ovCargarDatos();
         } else {
             throw new Error((data && data.error) || 'Error al iniciar el viaje.');
