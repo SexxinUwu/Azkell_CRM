@@ -82,7 +82,8 @@ module.exports = function(db, tenantStorage) {
                 "ALTER TABLE guias_remision ADD COLUMN registro_mtc VARCHAR(50) DEFAULT NULL",
                 "ALTER TABLE guias_remision ADD COLUMN volumen_m3 DECIMAL(12,3) DEFAULT NULL",
                 "ALTER TABLE guias_remision ADD COLUMN xml_contenido LONGTEXT DEFAULT NULL",
-                "ALTER TABLE guias_remision ADD COLUMN orden_servicio VARCHAR(60) DEFAULT NULL"
+                "ALTER TABLE guias_remision ADD COLUMN orden_servicio VARCHAR(60) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN orden_viaje VARCHAR(60) DEFAULT NULL"
             ];
             for (const sql of addCols) {
                 try { await dbConn.query(sql); } catch(_) {}

@@ -559,6 +559,7 @@
                         <th>CLIENTE / REMITENTE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>TIPO CONTRATACIÓN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>MODALIDAD <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th>SENTIDO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>TIPO SERVICIO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>DESTINATARIO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th class="text-center"># PUNTOS CARGA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
@@ -727,7 +728,7 @@
                                                 <input type="text" id="os-input-cliente" list="os-clientes-datalist" class="form-control text-uppercase" placeholder="ESCRIBA O SELECCIONE CLIENTE/REMITENTE..." required>
                                                 <datalist id="os-clientes-datalist"></datalist>
                                             </div>
-                                            <div class="col-12">
+                                            <div class="col-12 col-sm-6">
                                                 <label class="form-label">Tipo Servicio <span class="req">(*)</span></label>
                                                 <input type="text" id="os-input-tipo-servicio" list="os-servicios-datalist" class="form-control text-uppercase" placeholder="ESCRIBA O SELECCIONE TIPO DE SERVICIO..." required>
                                                 <datalist id="os-servicios-datalist">
@@ -736,6 +737,13 @@
                                                     <option value="TRANSPORTE NACIONAL"></option>
                                                     <option value="DISTRIBUCIÓN"></option>
                                                 </datalist>
+                                            </div>
+                                            <div class="col-12 col-sm-6">
+                                                <label class="form-label">Sentido del Servicio <span class="req">(*)</span></label>
+                                                <select id="os-input-es-retorno" class="form-select" required>
+                                                    <option value="0" selected>SERVICIO DE IDA</option>
+                                                    <option value="1">SERVICIO DE RETORNO</option>
+                                                </select>
                                             </div>
                                             <div class="col-12 col-sm-6">
                                                 <label class="form-label"># Puntos Carga <span class="req">(*)</span></label>

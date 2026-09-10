@@ -154,6 +154,7 @@
                     <td class="text-nowrap fw-bold text-dark">${escapeHtml(item.cliente_nombre || '—')}</td>
                     <td class="text-nowrap">${escapeHtml(item.tipo_contratacion || 'CLIENTE DIRECTO')}</td>
                     <td class="text-nowrap">${escapeHtml(item.modalidad_ejecucion || 'PROPIO')}</td>
+                    <td class="text-nowrap">${(item.es_retorno === 1 || item.es_retorno === '1' || item.es_retorno === true) ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace"><i class="bi bi-arrow-left me-0.5"></i>RETORNO</span>' : '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle font-monospace"><i class="bi bi-arrow-right me-0.5"></i>IDA</span>'}</td>
                     <td class="text-nowrap">${escapeHtml(item.tipo_servicio || 'CARGA GENERAL')}</td>
                     <td class="text-nowrap">${escapeHtml(item.destinatario || '—')}</td>
                     <td class="text-center font-monospace">${item.puntos_carga || 1}</td>
@@ -249,6 +250,9 @@
         // Si viene cliente asignado
         const inpCliente = document.getElementById('os-input-cliente');
         if (inpCliente && datosExtra.cliente) inpCliente.value = datosExtra.cliente;
+
+        const selEsRetorno = document.getElementById('os-input-es-retorno');
+        if (selEsRetorno) selEsRetorno.value = '0';
 
         // Selectores default
         const selTipoCosto = document.getElementById('os-input-tipo-costo');
@@ -366,6 +370,8 @@
             document.getElementById('os-input-modalidad-ejecucion').value = item.modalidad_ejecucion || 'PROPIO';
             document.getElementById('os-input-cliente').value = item.cliente_nombre || '';
             document.getElementById('os-input-tipo-servicio').value = item.tipo_servicio || 'CARGA GENERAL';
+            const selEsRetorno = document.getElementById('os-input-es-retorno');
+            if (selEsRetorno) selEsRetorno.value = (item.es_retorno === 1 || item.es_retorno === '1' || item.es_retorno === true) ? '1' : '0';
             document.getElementById('os-input-tipo-costo').value = item.tipo_costo || 'COSTO TARIFA';
             document.getElementById('os-input-impuesto').value = item.impuesto || 'INCLUYE IGV';
             document.getElementById('os-input-costo-flete').value = item.costo_flete || '0.00';
@@ -616,6 +622,7 @@
         const modalidad_ejecucion = document.getElementById('os-input-modalidad-ejecucion')?.value;
         const cliente_nombre = document.getElementById('os-input-cliente')?.value;
         const tipo_servicio = document.getElementById('os-input-tipo-servicio')?.value;
+        const es_retorno = parseInt(document.getElementById('os-input-es-retorno')?.value || '0', 10);
         const tipo_costo = document.getElementById('os-input-tipo-costo')?.value;
         const impuesto = document.getElementById('os-input-impuesto')?.value;
         const costo_flete = document.getElementById('os-input-costo-flete')?.value;
@@ -645,6 +652,7 @@
             modalidad_ejecucion,
             cliente_nombre,
             tipo_servicio,
+            es_retorno,
             tipo_costo,
             impuesto,
             costo_flete,

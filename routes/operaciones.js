@@ -251,6 +251,12 @@ module.exports = function (db, broadcast, logAudit) {
                     ADD COLUMN factura VARCHAR(60) NULL AFTER usuario_creacion
                 `);
             } catch (ignore) {}
+            try {
+                await tdb.query(`ALTER TABLE operaciones_ordenes_servicio ADD COLUMN es_retorno TINYINT(1) DEFAULT 0 AFTER tipo_servicio`);
+            } catch (ignore) {}
+            try {
+                await tdb.query(`ALTER TABLE operaciones_ordenes_servicio ADD COLUMN estado_liquidacion VARCHAR(30) DEFAULT 'PENDIENTE' AFTER estado_servicio`);
+            } catch (ignore) {}
             _tenantsInitSet.add(tenantId);
         } catch (err) {
             console.error('Error asegurando tablas de operaciones:', err);
@@ -1582,6 +1588,7 @@ module.exports = function (db, broadcast, logAudit) {
                 cliente_id,
                 cliente_nombre,
                 tipo_servicio,
+                es_retorno,
                 tipo_costo,
                 impuesto,
                 costo_flete,
@@ -1613,9 +1620,9 @@ module.exports = function (db, broadcast, logAudit) {
                 INSERT INTO operaciones_ordenes_servicio (
                     serie, numero, codigo_orden, viaje_asignado, fecha, fecha_fin, moneda, tipo_cambio,
                     tipo_contratacion, modalidad_ejecucion, cliente_id, cliente_nombre,
-                    tipo_servicio, tipo_costo, impuesto, costo_flete, puntos_carga,
-                    puntos_destino, destinatario, observaciones, placa_tracto, placa_carreta, estado_servicio
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'INICIADO')
+                    tipo_servicio, es_retorno, tipo_costo, impuesto, costo_flete, puntos_carga,
+                    puntos_destino, destinatario, observaciones, placa_tracto, placa_carreta, estado_servicio, estado_liquidacion
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'INICIADO', 'PENDIENTE')
             `, [
                 yearSerie,
                 numFinal,
@@ -1630,6 +1637,7 @@ module.exports = function (db, broadcast, logAudit) {
                 cliente_id || null,
                 cliente_nombre || 'CLIENTE GENERAL',
                 tipo_servicio || 'CARGA GENERAL',
+                parseInt(es_retorno, 10) || 0,
                 tipo_costo || 'COSTO TARIFA',
                 impuesto || 'INCLUYE IGV',
                 parseFloat(costo_flete) || 0.00,
@@ -1709,15 +1717,15 @@ module.exports = function (db, broadcast, logAudit) {
                     if (doc.guia_remision_id) {
                         try {
                             await tdb.query(
-                                `UPDATE guias_remision SET orden_servicio = ? WHERE id = ?`,
-                                [codigo_orden, doc.guia_remision_id]
+                                `UPDATE guias_remision SET orden_servicio = ?, orden_viaje = COALESCE(?, orden_viaje) WHERE id = ?`,
+                                [codigo_orden, viaje_asignado || null, doc.guia_remision_id]
                             );
                         } catch (ignore) {}
                     } else if (doc.numero_documento) {
                         try {
                             await tdb.query(
-                                `UPDATE guias_remision SET orden_servicio = ? WHERE numero_guia = ?`,
-                                [codigo_orden, doc.numero_documento]
+                                `UPDATE guias_remision SET orden_servicio = ?, orden_viaje = COALESCE(?, orden_viaje) WHERE numero_guia = ?`,
+                                [codigo_orden, viaje_asignado || null, doc.numero_documento]
                             );
                         } catch (ignore) {}
                     }
@@ -1764,6 +1772,7 @@ module.exports = function (db, broadcast, logAudit) {
                 cliente_id,
                 cliente_nombre,
                 tipo_servicio,
+                es_retorno,
                 tipo_costo,
                 impuesto,
                 costo_flete,
@@ -1796,6 +1805,7 @@ module.exports = function (db, broadcast, logAudit) {
                     cliente_id = ?,
                     cliente_nombre = COALESCE(?, cliente_nombre),
                     tipo_servicio = COALESCE(?, tipo_servicio),
+                    es_retorno = COALESCE(?, es_retorno),
                     tipo_costo = COALESCE(?, tipo_costo),
                     impuesto = COALESCE(?, impuesto),
                     costo_flete = COALESCE(?, costo_flete),
@@ -1818,6 +1828,7 @@ module.exports = function (db, broadcast, logAudit) {
                 cliente_id || null,
                 cliente_nombre || null,
                 tipo_servicio || null,
+                es_retorno !== undefined ? parseInt(es_retorno, 10) : null,
                 tipo_costo || null,
                 impuesto || null,
                 parseFloat(costo_flete) || 0.00,
@@ -1904,13 +1915,14 @@ module.exports = function (db, broadcast, logAudit) {
                     ]);
 
                     // Actualizar trazabilidad en guias_remision
+                    const targetViaje = viaje_asignado !== undefined ? viaje_asignado : prev[0].viaje_asignado;
                     if (doc.guia_remision_id) {
                         try {
-                            await tdb.query(`UPDATE guias_remision SET orden_servicio = ? WHERE id = ?`, [codigo_orden, doc.guia_remision_id]);
+                            await tdb.query(`UPDATE guias_remision SET orden_servicio = ?, orden_viaje = COALESCE(?, orden_viaje) WHERE id = ?`, [codigo_orden, targetViaje || null, doc.guia_remision_id]);
                         } catch (ignore) {}
                     } else if (doc.numero_documento) {
                         try {
-                            await tdb.query(`UPDATE guias_remision SET orden_servicio = ? WHERE numero_guia = ?`, [codigo_orden, doc.numero_documento]);
+                            await tdb.query(`UPDATE guias_remision SET orden_servicio = ?, orden_viaje = COALESCE(?, orden_viaje) WHERE numero_guia = ?`, [codigo_orden, targetViaje || null, doc.numero_documento]);
                         } catch (ignore) {}
                     }
                 }

@@ -241,6 +241,10 @@
                 ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-2 py-1 font-monospace fw-bold" style="cursor:pointer;" onclick="if(typeof cargarModuloAislado==='function') cargarModuloAislado('operaciones/ordenes-servicio');" title="Ver Orden de Servicio vinculada"><i class="bi bi-briefcase-fill me-1"></i>${esc(g.orden_servicio)}</span>`
                 : `<span class="text-muted opacity-50 font-monospace">—</span>`;
 
+            const badgeOV = (g.orden_viaje && String(g.orden_viaje).trim() !== '' && g.orden_viaje !== '—')
+                ? `<span class="badge bg-info bg-opacity-10 text-info border border-info-subtle px-2 py-1 font-monospace fw-bold" style="cursor:pointer;" onclick="if(typeof cargarModuloAislado==='function') cargarModuloAislado('operaciones/ordenes-viaje');" title="Ver Orden de Viaje"><i class="bi bi-truck me-1"></i>${esc(g.orden_viaje)}</span>`
+                : `<span class="text-muted opacity-50 font-monospace">—</span>`;
+
             html += `
                 <tr>
                     <td class="font-monospace fw-bold text-nowrap" style="color:#0052cc; cursor:pointer;" onclick="window.greVerDetalleSunatPorIndice(${idx})" title="Ver Detalle Oficial de GRE SUNAT">
@@ -248,6 +252,7 @@
                     </td>
                     <td class="text-nowrap">${badgeEstado}</td>
                     <td class="text-center text-nowrap">${badgeOS}</td>
+                    <td class="text-center text-nowrap">${badgeOV}</td>
                     <td class="text-nowrap font-monospace fw-semibold text-dark">
                         ${fEmi}${hEmi}
                     </td>
