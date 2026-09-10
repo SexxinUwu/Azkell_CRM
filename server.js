@@ -78,12 +78,138 @@ app.use((req, res, next) => {
     });
 });
 
-// ── PWA Manifest & Logo Dinámicos por Empresa / Tenant ──────────
-function _formatearNombreEmpresa(raw) {
-    if (!raw) return 'Azkell';
-    let clean = String(raw).trim();
-    clean = clean.replace(/\s+(S\.?A\.?C\.?|S\.?R\.?L\.?|E\.?I\.?R\.?L\.?|S\.?A\.?)$/i, '').trim();
-    return clean.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+// ── Helper para generar PNG cuadrado (1:1) centrado con padding automático ──
+// Permite que logos alargados/rectangulares cumplan con la estricta validación 1:1 de PWA/Chrome
+const zlib = require('zlib');
+
+function _makePngChunk(type, data) {
+    const len = data.length;
+    const buf = Buffer.alloc(4 + 4 + len + 4);
+    buf.writeUInt32BE(len, 0);
+    buf.write(type, 4);
+    data.copy(buf, 8);
+    let crc = 0 ^ (-1);
+    const td = Buffer.concat([Buffer.from(type), data]);
+    for (let i = 0; i < td.length; i++) {
+        let c = (crc ^ td[i]) & 0xff;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        crc = (crc >>> 8) ^ c;
+    }
+    buf.writeUInt32BE((crc ^ (-1)) >>> 0, 8 + len);
+    return buf;
+}
+
+function _crearPngCuadrado(buf, targetSize = 512) {
+    if (!buf || buf.length < 32) return null;
+    // Validar cabecera PNG
+    if (buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4E || buf[3] !== 0x47) return null;
+
+    let pos = 8, width = 0, height = 0, colorType = 0, bitDepth = 0;
+    const idat = [];
+    while (pos < buf.length) {
+        const len = buf.readUInt32BE(pos);
+        const type = buf.toString('ascii', pos + 4, pos + 8);
+        const data = buf.subarray(pos + 8, pos + 8 + len);
+        if (type === 'IHDR') {
+            width = data.readUInt32BE(0);
+            height = data.readUInt32BE(4);
+            bitDepth = data[8];
+            colorType = data[9];
+        } else if (type === 'IDAT') {
+            idat.push(data);
+        } else if (type === 'IEND') {
+            break;
+        }
+        pos += 8 + len + 4;
+    }
+
+    if (width === height) return buf; // Ya es perfectamente cuadrado
+    if (bitDepth !== 8 || colorType !== 6) return null; // Solo RGBA 8-bit
+
+    try {
+        const inflated = zlib.inflateSync(Buffer.concat(idat));
+        const rowStride = 1 + width * 4;
+        const pixels = Buffer.alloc(width * height * 4);
+
+        for (let y = 0; y < height; y++) {
+            const filter = inflated[y * rowStride];
+            const prevRow = y > 0 ? pixels.subarray((y - 1) * width * 4, y * width * 4) : null;
+            const curRow = pixels.subarray(y * width * 4, (y + 1) * width * 4);
+
+            for (let x = 0; x < width * 4; x++) {
+                const raw = inflated[y * rowStride + 1 + x];
+                const a = x >= 4 ? curRow[x - 4] : 0;
+                const b = prevRow ? prevRow[x] : 0;
+                const c = (prevRow && x >= 4) ? prevRow[x - 4] : 0;
+                let val = 0;
+                if (filter === 0) val = raw;
+                else if (filter === 1) val = (raw + a) & 0xff;
+                else if (filter === 2) val = (raw + b) & 0xff;
+                else if (filter === 3) val = (raw + Math.floor((a + b) / 2)) & 0xff;
+                else if (filter === 4) {
+                    const p = a + b - c;
+                    const pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+                    val = (raw + ((pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c))) & 0xff;
+                }
+                curRow[x] = val;
+            }
+        }
+
+        // Color de fondo armónico: si las esquinas tienen fondo sólido (ej: blanco/gris), extenderlo. Si son transparentes, usar el azul oscuro del ERP.
+        const cornerA = pixels[3];
+        const isCornerTransparent = cornerA < 128;
+        const bg = isCornerTransparent ? [15, 23, 42, 255] : [pixels[0], pixels[1], pixels[2], 255];
+
+        const maxDim = Math.round(targetSize * 0.90);
+        const scale = Math.min(maxDim / width, maxDim / height);
+        const dstW = Math.round(width * scale);
+        const dstH = Math.round(height * scale);
+        const startX = Math.round((targetSize - dstW) / 2);
+        const startY = Math.round((targetSize - dstH) / 2);
+        const rowSize = 1 + targetSize * 4;
+        const raw = Buffer.alloc(targetSize * rowSize);
+
+        for (let y = 0; y < targetSize; y++) {
+            const rOff = y * rowSize;
+            raw[rOff] = 0; // Filter None
+            for (let x = 0; x < targetSize; x++) {
+                const px = rOff + 1 + x * 4;
+                if (x >= startX && x < startX + dstW && y >= startY && y < startY + dstH) {
+                    const sx = Math.min(width - 1, Math.floor((x - startX) / scale));
+                    const sy = Math.min(height - 1, Math.floor((y - startY) / scale));
+                    const so = (sy * width + sx) * 4;
+                    const sa = pixels[so + 3] / 255;
+                    if (sa === 0) {
+                        raw[px] = bg[0]; raw[px + 1] = bg[1]; raw[px + 2] = bg[2]; raw[px + 3] = bg[3];
+                    } else if (sa === 1) {
+                        raw[px] = pixels[so]; raw[px + 1] = pixels[so + 1]; raw[px + 2] = pixels[so + 2]; raw[px + 3] = 255;
+                    } else {
+                        raw[px] = Math.round(pixels[so] * sa + bg[0] * (1 - sa));
+                        raw[px + 1] = Math.round(pixels[so + 1] * sa + bg[1] * (1 - sa));
+                        raw[px + 2] = Math.round(pixels[so + 2] * sa + bg[2] * (1 - sa));
+                        raw[px + 3] = 255;
+                    }
+                } else {
+                    raw[px] = bg[0]; raw[px + 1] = bg[1]; raw[px + 2] = bg[2]; raw[px + 3] = bg[3];
+                }
+            }
+        }
+
+        const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+        const ihdrD = Buffer.alloc(13);
+        ihdrD.writeUInt32BE(targetSize, 0); ihdrD.writeUInt32BE(targetSize, 4);
+        ihdrD[8] = 8; ihdrD[9] = 6; ihdrD[10] = 0; ihdrD[11] = 0; ihdrD[12] = 0;
+
+        return Buffer.concat([
+            sig,
+            _makePngChunk('IHDR', ihdrD),
+            _makePngChunk('IDAT', zlib.deflateSync(raw, { level: 6 })),
+            _makePngChunk('IEND', Buffer.alloc(0))
+        ]);
+    } catch (e) {
+        console.warn('[_crearPngCuadrado] Error adaptando icono a formato cuadrado:', e.message);
+        return null;
+    }
 }
 
 app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
@@ -129,12 +255,20 @@ app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
                 {
                     src: iconSrc,
                     sizes: '192x192',
-                    type: 'image/png'
+                    type: 'image/png',
+                    purpose: 'any'
                 },
                 {
                     src: iconSrc,
                     sizes: '512x512',
-                    type: 'image/png'
+                    type: 'image/png',
+                    purpose: 'any'
+                },
+                {
+                    src: iconSrc,
+                    sizes: '512x512',
+                    type: 'image/png',
+                    purpose: 'maskable'
                 }
             ]
         };
@@ -153,7 +287,7 @@ app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
     }
 });
 
-// Endpoint que sirve la imagen del logo del tenant actual como PNG/JPEG nativo
+// Endpoint que sirve la imagen del logo del tenant actual como PNG nativo (1:1 perfectamente cuadrado para PWA)
 app.get('/api/tenant-logo', async (req, res) => {
     try {
         let logoRaw = '';
@@ -170,10 +304,22 @@ app.get('/api/tenant-logo', async (req, res) => {
             const matches = logoRaw.match(/^data:(image\/[^;]+);base64,(.+)$/);
             if (matches) {
                 const mimeType = matches[1];
-                const imgBuffer = Buffer.from(matches[2], 'base64');
+                const rawBuffer = Buffer.from(matches[2], 'base64');
+
+                // Si es un PNG rectangular, adaptarlo a cuadrado 512x512 automáticamente
+                if (mimeType === 'image/png') {
+                    const squarePng = _crearPngCuadrado(rawBuffer, 512);
+                    if (squarePng) {
+                        res.setHeader('Content-Type', 'image/png');
+                        res.setHeader('Cache-Control', 'public, max-age=86400');
+                        return res.send(squarePng);
+                    }
+                }
+
+                // Fallback para JPEG o imágenes ya cuadradas
                 res.setHeader('Content-Type', mimeType);
                 res.setHeader('Cache-Control', 'public, max-age=86400');
-                return res.send(imgBuffer);
+                return res.send(rawBuffer);
             }
         }
 

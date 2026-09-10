@@ -215,10 +215,13 @@ module.exports = function (db, broadcast, logAudit) {
                 await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN ubigeo_partida VARCHAR(10) NULL AFTER destino, ADD COLUMN direccion_partida VARCHAR(255) NULL AFTER ubigeo_partida, ADD COLUMN ubigeo_llegada VARCHAR(10) NULL AFTER direccion_partida, ADD COLUMN direccion_llegada VARCHAR(255) NULL AFTER ubigeo_llegada, ADD COLUMN escolta VARCHAR(150) NULL AFTER direccion_llegada, ADD COLUMN observaciones TEXT NULL AFTER escolta");
             } catch (ignore) {}
             try {
-                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN fecha_inicio DATETIME NULL AFTER estado, ADD COLUMN fecha_fin DATETIME NULL AFTER fecha_inicio, ADD COLUMN kilometraje_inicial INT NULL AFTER fecha_fin, ADD COLUMN kilometraje_final INT NULL AFTER kilometraje_inicial, ADD COLUMN usuario_creacion VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR DEL SISTEMA' AFTER kilometraje_final, ADD COLUMN usuario_finalizacion VARCHAR(150) NULL AFTER usuario_creacion");
+                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN fecha_inicio DATETIME NULL AFTER estado, ADD COLUMN fecha_fin DATETIME NULL AFTER fecha_inicio, ADD COLUMN kilometraje_inicial INT NULL AFTER fecha_fin, ADD COLUMN kilometraje_final INT NULL AFTER kilometraje_inicial, ADD COLUMN horas_motor_remolque INT NULL AFTER kilometraje_final, ADD COLUMN usuario_creacion VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR DEL SISTEMA' AFTER horas_motor_remolque, ADD COLUMN usuario_finalizacion VARCHAR(150) NULL AFTER usuario_creacion");
             } catch (ignore) {}
             try {
-                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN kilometraje_inicial INT NULL AFTER fecha_fin, ADD COLUMN kilometraje_final INT NULL AFTER kilometraje_inicial");
+                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN kilometraje_inicial INT NULL AFTER fecha_fin, ADD COLUMN kilometraje_final INT NULL AFTER kilometraje_inicial, ADD COLUMN horas_motor_remolque INT NULL AFTER kilometraje_final");
+            } catch (ignore) {}
+            try {
+                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN horas_motor_remolque INT NULL AFTER kilometraje_final");
             } catch (ignore) {}
             try {
                 await tdb.query(`ALTER TABLE operaciones_ordenes_servicio 
