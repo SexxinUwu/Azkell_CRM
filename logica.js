@@ -2130,6 +2130,20 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(data => {
         localStorage.setItem('fleet_empresa_nombre', data.empresa_nombre || '');
         localStorage.setItem('fleet_empresa_logo', data.empresa_logo || '');
+        
+        // Formatear nombre para la pestaña y el logo
+        var rawName = (data.empresa_nombre || '').trim();
+        var cleanName = rawName.replace(/\s+(S\.?A\.?C\.?|S\.?A\.?|S\.?R\.?L\.?|E\.?I\.?R\.?L\.?|SOCIEDAD ANONIMA CERRADA)\b/gi, '').trim();
+        if (cleanName === cleanName.toUpperCase() && cleanName.length > 2) {
+            cleanName = cleanName.toLowerCase().replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+        }
+        if (cleanName) {
+            var fullTitle = cleanName + ' - Azkell Fleet';
+            document.title = fullTitle;
+            var brandTitle = document.querySelector('.brand-title-text');
+            if (brandTitle) brandTitle.textContent = cleanName.toUpperCase() + ' FLEET';
+        }
+
         if (data.empresa_logo) {
             var brandImg = document.querySelector('.brand-logo-icon img');
             if (brandImg) brandImg.src = data.empresa_logo;
