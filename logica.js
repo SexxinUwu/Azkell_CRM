@@ -2130,6 +2130,12 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(data => {
         localStorage.setItem('fleet_empresa_nombre', data.empresa_nombre || '');
         localStorage.setItem('fleet_empresa_logo', data.empresa_logo || '');
+        if (data.empresa_logo) {
+            var brandImg = document.querySelector('.brand-logo-icon img');
+            if (brandImg) brandImg.src = data.empresa_logo;
+            var fav = document.getElementById('app-dynamic-favicon');
+            if (fav) fav.href = data.empresa_logo;
+        }
     })
     .catch(err => console.error("Error loading ERP config:", err));
 
