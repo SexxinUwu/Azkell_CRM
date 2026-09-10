@@ -719,8 +719,17 @@
 
     window.osAbrirSelectorGre = async function () {
         const modalEl = document.getElementById('modalOsSelectorGre');
-        const modal = new bootstrap.Modal(modalEl);
+        if (modalEl && modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
+        setTimeout(() => {
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length > 1) {
+                backdrops[backdrops.length - 1].style.zIndex = '1080';
+            }
+        }, 50);
         await window.osRecargarGresDisponibles();
     };
 
@@ -772,13 +781,16 @@
         }
 
         let html = '';
-        disponibles.forEach(g => {
+        disponibles.forEach((g, idx) => {
             const fCarga = g.fecha_traslado || g.fecha_emision || '—';
             const fEntrega = g.fecha_traslado || '—';
             const jsonDoc = encodeURIComponent(JSON.stringify(g));
 
             html += `
                 <tr>
+                    <td class="text-center">
+                        <input type="checkbox" class="form-check-input os-gre-row-check" data-json="${jsonDoc}" onchange="window.osActualizarContadorGresSeleccionadas()">
+                    </td>
                     <td class="text-nowrap font-monospace">${escapeHtml(fCarga)}</td>
                     <td class="text-nowrap font-monospace fw-bold text-primary">${escapeHtml(g.numero_guia)}</td>
                     <td class="text-nowrap">${escapeHtml(g.numero_guia)}</td>
@@ -800,7 +812,67 @@
         });
 
         tbody.innerHTML = html;
+        window.osActualizarContadorGresSeleccionadas();
     }
+
+    window.osToggleSeleccionarTodasGres = function(checked) {
+        document.querySelectorAll('.os-gre-row-check').forEach(chk => {
+            chk.checked = checked;
+        });
+        window.osActualizarContadorGresSeleccionadas();
+    };
+
+    window.osActualizarContadorGresSeleccionadas = function() {
+        const checks = document.querySelectorAll('.os-gre-row-check:checked');
+        const counter = document.getElementById('os-gre-seleccionados-counter');
+        if (counter) {
+            counter.textContent = `${checks.length} guía(s) seleccionada(s)`;
+        }
+    };
+
+    window.osAnexarGresSeleccionadasMultiples = function() {
+        const checks = document.querySelectorAll('.os-gre-row-check:checked');
+        if (checks.length === 0) {
+            alert('Por favor seleccione al menos una guía con las casillas.');
+            return;
+        }
+
+        let agregadas = 0;
+        checks.forEach(chk => {
+            const rawJson = chk.getAttribute('data-json');
+            if (rawJson) {
+                try {
+                    const g = JSON.parse(decodeURIComponent(rawJson));
+                    _docsAdjuntosActuales.push({
+                        guia_remision_id: g.id,
+                        numero_documento: g.numero_guia,
+                        tipo_documento: 'GRE',
+                        gr_remitente: g.numero_guia,
+                        numero_transporte: g.numero_guia,
+                        placa_referencia: g.placa_tracto || '',
+                        volumen: parseFloat(g.volumen_m3) || 0.000,
+                        cantidad: parseFloat(g.total_items) || 1.00,
+                        peso: parseFloat(g.peso_bruto_total) || 0.00,
+                        remitente: g.remitente_razon_social || '',
+                        destinatario: g.destinatario_razon_social || '',
+                        fecha_carga: g.fecha_traslado || g.fecha_emision || '',
+                        fecha_entrega: g.fecha_traslado || ''
+                    });
+                    agregadas++;
+                } catch (_) {}
+            }
+        });
+
+        renderizarDocsAdjuntos();
+
+        // Cerrar modal selector
+        const modalEl = document.getElementById('modalOsSelectorGre');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+        document.body.classList.add('modal-open');
+    };
 
     window.osFiltrarGresDisponibles = function (txt) {
         const q = (txt || '').toLowerCase().trim();
