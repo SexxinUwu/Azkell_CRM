@@ -718,7 +718,7 @@ thead .ov-col-sticky-action {
     transform: scale(0.95);
 }
 
-/* ── VENTANA MODAL DETALLE: MONITOREO DE VIAJE (FONDO DESENFOCADO + DETALLE 100% NÍTIDO HD) ── */
+/* ── VENTANA MODAL DETALLE: MONITOREO DE VIAJE (FONDO OSCURO PURO + ALTO RENDIMIENTO 60FPS) ── */
 .ov-mon-drawer-backdrop {
     position: fixed;
     top: 0;
@@ -727,13 +727,11 @@ thead .ov-col-sticky-action {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(12px) saturate(160%);
-    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    background: rgba(15, 23, 42, 0.68);
     z-index: 1060;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.25s ease, visibility 0.25s ease;
+    transition: opacity 0.18s ease, visibility 0.18s ease;
 }
 .ov-mon-drawer-backdrop.active {
     opacity: 1;

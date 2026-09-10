@@ -1605,98 +1605,7 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
         }
     }
 
-    // Buscar combustible asociado por viaje o placa
-    var tbodyComb = document.getElementById('ov-mon-tbody-combustible');
-    if (tbodyComb) {
-        tbodyComb.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-warning me-2"></div>Buscando abastecimientos...</td></tr>`;
-        try {
-            var paramsComb = new URLSearchParams({ viaje: viajeCode, limit: 20 });
-            var rComb = await fetch(`/api/combustible/vales?${paramsComb.toString()}`);
-            var jComb = await rComb.json();
-            var badgeComb = document.getElementById('ov-mon-tab-comb-badge');
-            if (jComb && jComb.ok && Array.isArray(jComb.data) && jComb.data.length > 0) {
-                if (badgeComb) badgeComb.textContent = jComb.data.length;
-                tbodyComb.innerHTML = jComb.data.map(c => `
-                    <tr>
-                        <td class="fw-bold text-primary font-monospace">${c.correlativo || '---'}</td>
-                        <td class="font-monospace">${(c.fecha || '').slice(0, 10)}</td>
-                        <td>${c.estacion || '---'}</td>
-                        <td>${c.proveedor || '---'}</td>
-                        <td class="font-monospace fw-bold">${parseFloat(c.galones || 0).toFixed(2)} GL</td>
-                        <td class="font-monospace">${c.kilometraje || '---'}</td>
-                        <td class="font-monospace fw-bold text-success">S/ ${parseFloat(c.importe || 0).toFixed(2)}</td>
-                        <td><span class="badge bg-success-subtle text-success border border-success-subtle">${c.estado || 'VÁLIDO'}</span></td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-outline-warning btn-sm py-0 px-2 fw-bold" style="font-size:0.7rem;" onclick="window.ovVerEditarValeCombustible('${c.id || ''}')" title="Ver / Editar Vale">
-                                <i class="bi bi-pencil-square"></i> Ver
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
-            } else {
-                if (badgeComb) badgeComb.textContent = '0';
-                tbodyComb.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> No se registran abastecimientos para este viaje.</td></tr>`;
-            }
-        } catch(e) {
-            var badgeCombCatch = document.getElementById('ov-mon-tab-comb-badge');
-            if (badgeCombCatch) badgeCombCatch.textContent = '0';
-            tbodyComb.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> No se registran abastecimientos para este viaje.</td></tr>`;
-        }
-    }
-
-    // ── Obtener Capacidad Real de Tanque desde la tabla de Placas ──
-    var capEl = document.getElementById('ov-mon-comb-capacidad');
-    var autoEl = document.getElementById('ov-mon-comb-autonomia');
-    var tractoPlaca = (item.placa_tracto || '').trim().toUpperCase();
-
-    if (capEl) {
-        // Valor por defecto mientras resuelve
-        capEl.textContent = 'Consultando...';
-        try {
-            // Reutilizar o consultar la lista de placas
-            if (!window._ovPlacasCache || !window._ovPlacasCache.length) {
-                var rPlacas = await fetch('/api/placas-lista').then(r => r.ok ? r.json() : []).catch(() => []);
-                if (Array.isArray(rPlacas)) window._ovPlacasCache = rPlacas;
-            }
-            
-            var pObj = (window._ovPlacasCache || []).find(p => {
-                var pl = (p.placa || p[0] || '').toString().trim().toUpperCase();
-                return pl === tractoPlaca;
-            });
-
-            var capTanqueNum = 0;
-            if (pObj) {
-                // capacidad_tanque puede ser numérico o string con los galones totales
-                var rawCap = pObj.capacidad_tanque || pObj['CAPACIDAD DE TANQUE TOTAL'] || pObj['Capacidad Tanque Total'] || '';
-                if (!rawCap && (pObj.tanque_1 || pObj.tanque_2 || pObj.tanque_3)) {
-                    var t1 = parseFloat(pObj.tanque_1) || 0;
-                    var t2 = parseFloat(pObj.tanque_2) || 0;
-                    var t3 = parseFloat(pObj.tanque_3) || 0;
-                    rawCap = t1 + t2 + t3;
-                }
-                capTanqueNum = parseFloat(rawCap) || 0;
-            }
-
-            if (capTanqueNum > 0) {
-                capEl.textContent = `${capTanqueNum % 1 === 0 ? capTanqueNum : capTanqueNum.toFixed(1)} Gal`;
-                if (autoEl) {
-                    var autEst = Math.round(capTanqueNum * 6.5); // Autonomía estimada (~6.5 km/gal estándar ruta)
-                    autoEl.textContent = `Autonomía: ~${autEst} km`;
-                }
-            } else {
-                capEl.textContent = '150 Gal'; // Valor referencial si la placa no tiene tanque registrado
-                if (autoEl) autoEl.textContent = 'Autonomía: ~980 km';
-            }
-        } catch(e) {
-            capEl.textContent = '150 Gal';
-        }
-    }
-
-    // Resetear a la primera tab (Resumen)
-    var btnPrimeraTab = document.querySelector('.ov-mon-tab-item');
-    if (btnPrimeraTab) window.ovMonCambiarTabSpatial(0, 'resumen', btnPrimeraTab);
-
-    // Abrir Ventana y Backdrop
+    // ── 1. ABRIR VENTANA Y BACKDROP AL INSTANTE (0ms retraso, fluidez total 60fps) ──
     var drawer = document.getElementById('ovMonDrawer');
     var backdrop = document.getElementById('ovMonDrawerBackdrop');
     if (drawer) {
@@ -1707,11 +1616,104 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     }
     if (backdrop) backdrop.classList.add('active');
 
+    // Resetear a la primera tab (Resumen)
+    var btnPrimeraTab = document.querySelector('.ov-mon-tab-item');
+    if (btnPrimeraTab) window.ovMonCambiarTabSpatial(0, 'resumen', btnPrimeraTab);
+
     // Inicializar posición de píldora elástica
     setTimeout(() => {
         var firstBtn = document.querySelector('.ov-mon-tab-item[data-index="0"]');
         if (firstBtn) window.ovMoverPildoraElastica(firstBtn, 0);
-    }, 100);
+    }, 50);
+
+    // ── 2. CARGA ASÍNCRONA EN SEGUNDO PLANO (NO BLOQUEA LA APERTURA) ──
+    // Buscar combustible asociado por viaje o placa
+    var tbodyComb = document.getElementById('ov-mon-tbody-combustible');
+    if (tbodyComb) {
+        tbodyComb.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-warning me-2"></div>Buscando abastecimientos...</td></tr>`;
+        (async () => {
+            try {
+                var paramsComb = new URLSearchParams({ viaje: viajeCode, limit: 20 });
+                var rComb = await fetch(`/api/combustible/vales?${paramsComb.toString()}`);
+                var jComb = await rComb.json();
+                var badgeComb = document.getElementById('ov-mon-tab-comb-badge');
+                if (jComb && jComb.ok && Array.isArray(jComb.data) && jComb.data.length > 0) {
+                    if (badgeComb) badgeComb.textContent = jComb.data.length;
+                    tbodyComb.innerHTML = jComb.data.map(c => `
+                        <tr>
+                            <td class="fw-bold text-primary font-monospace">${c.correlativo || '---'}</td>
+                            <td class="font-monospace">${(c.fecha || '').slice(0, 10)}</td>
+                            <td>${c.estacion || '---'}</td>
+                            <td>${c.proveedor || '---'}</td>
+                            <td class="font-monospace fw-bold">${parseFloat(c.galones || 0).toFixed(2)} GL</td>
+                            <td class="font-monospace">${c.kilometraje || '---'}</td>
+                            <td class="font-monospace fw-bold text-success">S/ ${parseFloat(c.importe || 0).toFixed(2)}</td>
+                            <td><span class="badge bg-success-subtle text-success border border-success-subtle">${c.estado || 'VÁLIDO'}</span></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-outline-warning btn-sm py-0 px-2 fw-bold" style="font-size:0.7rem;" onclick="window.ovVerEditarValeCombustible('${c.id || ''}')" title="Ver / Editar Vale">
+                                    <i class="bi bi-pencil-square"></i> Ver
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    if (badgeComb) badgeComb.textContent = '0';
+                    tbodyComb.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> No se registran abastecimientos para este viaje.</td></tr>`;
+                }
+            } catch(e) {
+                var badgeCombCatch = document.getElementById('ov-mon-tab-comb-badge');
+                if (badgeCombCatch) badgeCombCatch.textContent = '0';
+                tbodyComb.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> No se registran abastecimientos para este viaje.</td></tr>`;
+            }
+        })();
+    }
+
+    // ── Obtener Capacidad Real de Tanque desde la tabla de Placas ──
+    var capEl = document.getElementById('ov-mon-comb-capacidad');
+    var autoEl = document.getElementById('ov-mon-comb-autonomia');
+    var tractoPlaca = (item.placa_tracto || '').trim().toUpperCase();
+
+    if (capEl) {
+        capEl.textContent = 'Consultando...';
+        (async () => {
+            try {
+                if (!window._ovPlacasCache || !window._ovPlacasCache.length) {
+                    var rPlacas = await fetch('/api/placas-lista').then(r => r.ok ? r.json() : []).catch(() => []);
+                    if (Array.isArray(rPlacas)) window._ovPlacasCache = rPlacas;
+                }
+                
+                var pObj = (window._ovPlacasCache || []).find(p => {
+                    var pl = (p.placa || p[0] || '').toString().trim().toUpperCase();
+                    return pl === tractoPlaca;
+                });
+
+                var capTanqueNum = 0;
+                if (pObj) {
+                    var rawCap = pObj.capacidad_tanque || pObj['CAPACIDAD DE TANQUE TOTAL'] || pObj['Capacidad Tanque Total'] || '';
+                    if (!rawCap && (pObj.tanque_1 || pObj.tanque_2 || pObj.tanque_3)) {
+                        var t1 = parseFloat(pObj.tanque_1) || 0;
+                        var t2 = parseFloat(pObj.tanque_2) || 0;
+                        var t3 = parseFloat(pObj.tanque_3) || 0;
+                        rawCap = t1 + t2 + t3;
+                    }
+                    capTanqueNum = parseFloat(rawCap) || 0;
+                }
+
+                if (capTanqueNum > 0) {
+                    capEl.textContent = `${capTanqueNum % 1 === 0 ? capTanqueNum : capTanqueNum.toFixed(1)} Gal`;
+                    if (autoEl) {
+                        var autEst = Math.round(capTanqueNum * 6.5);
+                        autoEl.textContent = `Autonomía: ~${autEst} km`;
+                    }
+                } else {
+                    capEl.textContent = '150 Gal';
+                    if (autoEl) autoEl.textContent = 'Autonomía: ~980 km';
+                }
+            } catch(e) {
+                capEl.textContent = '150 Gal';
+            }
+        })();
+    }
 };
 
 window.ovCerrarMonitoreoViaje = function() {
