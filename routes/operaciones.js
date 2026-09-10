@@ -655,6 +655,46 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ── DELETE /api/operaciones/ordenes-viaje/:viaje (Eliminar Orden de Viaje) ───
+    router.delete('/ordenes-viaje/:viaje', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const codeViaje = req.params.viaje;
+            if (!codeViaje) {
+                return res.status(400).json({ ok: false, error: 'El código de viaje es requerido.' });
+            }
+
+            // Verificar si el viaje existe
+            const [rows] = await tdb.query('SELECT * FROM operaciones_ordenes_viaje WHERE viaje = ?', [codeViaje]);
+            if (!rows || rows.length === 0) {
+                return res.status(404).json({ ok: false, error: `No se encontró la orden de viaje ${codeViaje}.` });
+            }
+
+            // Eliminar rutas asociadas al viaje
+            await tdb.query('DELETE FROM operaciones_ordenes_viaje_rutas WHERE viaje = ?', [codeViaje]);
+
+            // Eliminar el viaje
+            await tdb.query('DELETE FROM operaciones_ordenes_viaje WHERE viaje = ?', [codeViaje]);
+
+            if (logAudit) {
+                logAudit({
+                    req,
+                    accion: 'ELIMINAR_ORDEN_VIAJE',
+                    modulo: 'OPERACIONES',
+                    detalle: `Eliminada Orden de Viaje ${codeViaje}`
+                });
+            }
+
+            res.json({ ok: true, message: `Orden de Viaje ${codeViaje} eliminada exitosamente.` });
+        } catch (err) {
+            console.error('Error al eliminar orden de viaje:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     // ── GET /api/operaciones/reporte-viajes ───────────────────────────
     // Reporte consolidado: N° Viaje, Fecha (solo fecha), Placas, Motor, Ruta, Peso Ida/Retorno y Galones Teóricos Matriz D2
     router.get('/reporte-viajes', async (req, res) => {

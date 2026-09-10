@@ -205,6 +205,25 @@
     color: #0f172a;
     border-color: #94a3b8;
 }
+.ov-btn-action-delete {
+    background: #fff;
+    border: 1px solid #fecdd3;
+    color: #e11d48;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 7px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+.ov-btn-action-delete:hover {
+    background: #ffe4e6;
+    border-color: #fda4af;
+    color: #be123c;
+}
 .ov-btn-finalizar {
     background: #0284c7;
     border: 1px solid #0284c7;
@@ -546,6 +565,30 @@
 }
 .ov-btn-confirm-circle:hover {
     background: #047857 !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.ov-eliminar-badge-icon {
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 1.1rem auto;
+    background: #ffe4e6;
+    color: #e11d48;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.3rem;
+    box-shadow: 0 8px 20px rgba(225, 29, 72, 0.18);
+    transition: transform 0.2s ease;
+}
+.ov-btn-delete-circle {
+    background: #e11d48 !important;
+    color: #ffffff !important;
+    box-shadow: 0 6px 18px rgba(225, 29, 72, 0.35);
+}
+.ov-btn-delete-circle:hover {
+    background: #be123c !important;
     transform: scale(1.06);
     color: #ffffff !important;
 }
@@ -1225,14 +1268,22 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer,
 
 
                     <!-- Footer Buttons dentro del formulario o sticky -->
-                    <div class="d-flex align-items-center justify-content-end gap-2 pt-2 pb-1">
-                        <button type="button" class="btn btn-light fw-bold rounded-3 px-3 py-2" data-bs-dismiss="modal" style="min-height: 42px;">
-                            Cancelar
-                        </button>
-                        <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm rounded-3 d-flex align-items-center gap-2" style="background: #0284c7; border-color: #0284c7; min-height: 42px;">
-                            <i class="bi bi-check-circle-fill"></i>
-                            <span>Guardar Orden de Viaje</span>
-                        </button>
+                    <div class="d-flex align-items-center justify-content-between gap-2 pt-2 pb-1">
+                        <div>
+                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold rounded-3 px-3 py-2 d-none align-items-center gap-1" id="ov-btn-eliminar-modal" onclick="window.ovEliminarDesdeModalEdicion()" style="min-height: 42px;">
+                                <i class="bi bi-trash3"></i>
+                                <span>Eliminar Viaje</span>
+                            </button>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-light fw-bold rounded-3 px-3 py-2" data-bs-dismiss="modal" style="min-height: 42px;">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm rounded-3 d-flex align-items-center gap-2" style="background: #0284c7; border-color: #0284c7; min-height: 42px;">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span>Guardar Orden de Viaje</span>
+                            </button>
+                        </div>
                     </div>
 
                 </form>
@@ -1297,6 +1348,62 @@ body:has(#sidebarMenu.collapsed) .ov-mon-drawer,
                     <!-- Iniciar (Play verde) -->
                     <button type="submit" class="ov-btn-circle ov-btn-confirm-circle" id="btnEjecutarIniciarViaje" title="Iniciar Ahora!">
                         <i class="bi bi-play-fill" style="font-size: 1.8rem; margin-left: 2px;"></i>
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 🗑️ MODAL CONFIRMACIÓN DE ELIMINAR VIAJE                           -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalEliminarViajeConfirm" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered ov-iniciar-dialog">
+        <div class="modal-content ov-iniciar-card border-0">
+            
+            <!-- Icono Basurero Rojo -->
+            <div class="ov-eliminar-badge-icon">
+                <i class="bi bi-trash3-fill"></i>
+            </div>
+
+            <!-- Título -->
+            <h4 class="fw-bolder text-dark mb-1" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+                Eliminar Orden de Viaje
+            </h4>
+            <div class="text-danger fw-bold mb-3" id="ov-eliminar-modal-viaje-num" style="font-size: 0.95rem;">
+                2026-00000001
+            </div>
+
+            <form id="ovFormConfirmarEliminacion" onsubmit="window.ovEjecutarEliminarViajeConfirmado(event)">
+                <input type="hidden" id="ov-eliminar-viaje-id">
+                
+                <p class="text-secondary small mb-3">
+                    ¿Está seguro de que desea eliminar permanentemente esta orden de viaje y sus rutas asociadas?
+                </p>
+
+                <!-- Checkbox Confirmación -->
+                <div class="form-check text-start mb-2 ps-4">
+                    <input class="form-check-input" type="checkbox" id="ov-eliminar-check-confirm" required style="cursor: pointer;">
+                    <label class="form-check-label fw-bold text-dark" for="ov-eliminar-check-confirm" style="font-size: 0.76rem; cursor: pointer;">
+                        Confirmo que deseo eliminar este viaje
+                    </label>
+                </div>
+                <div class="text-danger fw-bold text-start ps-1 mb-4" style="font-size: 0.7rem;">
+                    Esta acción es irreversible y eliminará todos los registros del viaje
+                </div>
+
+                <!-- Botones Circulares de Acción -->
+                <div class="d-flex align-items-center justify-content-center gap-4">
+                    <!-- Cancelar (X negro) -->
+                    <button type="button" class="ov-btn-circle ov-btn-cancel-circle" data-bs-dismiss="modal" title="Cancelar">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+
+                    <!-- Eliminar (Trash rojo) -->
+                    <button type="submit" class="ov-btn-circle ov-btn-delete-circle" id="btnEjecutarEliminarViaje" title="Eliminar Definitivamente">
+                        <i class="bi bi-trash3-fill" style="font-size: 1.4rem;"></i>
                     </button>
                 </div>
             </form>

@@ -427,9 +427,14 @@ window.ovRenderizarTabla = function() {
                 <tr>
                     <!-- 1. ACCIÓN -->
                     <td>
-                        <button type="button" class="ov-btn-action-edit" onclick="window.ovAbrirModalEditarViaje('${v.viaje}')">
-                            EDITAR <i class="bi bi-chevron-down" style="font-size:0.65rem;"></i>
-                        </button>
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="ov-btn-action-edit" onclick="window.ovAbrirModalEditarViaje('${v.viaje}')" title="Editar orden de viaje">
+                                EDITAR <i class="bi bi-chevron-down" style="font-size:0.65rem;"></i>
+                            </button>
+                            <button type="button" class="ov-btn-action-delete" onclick="window.ovAbrirModalEliminarViaje('${viajeEsc}')" title="Eliminar orden de viaje">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </div>
                     </td>
 
                     <!-- 2. OPERACIÓN -->
@@ -531,6 +536,11 @@ window.ovAbrirModalNuevoViaje = async function() {
 
     var editIdEl = document.getElementById('ov-form-edit-id');
     if (editIdEl) editIdEl.value = '';
+    var btnEliminarModal = document.getElementById('ov-btn-eliminar-modal');
+    if (btnEliminarModal) {
+        btnEliminarModal.classList.add('d-none');
+        btnEliminarModal.classList.remove('d-inline-flex');
+    }
     var modalTitleEl = document.getElementById('ovModalNuevoViajeLabel');
     if (modalTitleEl) {
         modalTitleEl.innerHTML = `<i class="bi bi-truck text-primary"></i> <span>Nueva Orden de Viaje</span> <span class="text-muted fw-normal fs-6" id="ov-header-folio-badge">N° Operacional</span>`;
@@ -601,6 +611,12 @@ window.ovAbrirModalEditarViaje = async function(viajeCode) {
     // Marcar que estamos editando
     var editIdEl = document.getElementById('ov-form-edit-id');
     if (editIdEl) editIdEl.value = viajeCode;
+
+    var btnEliminarModal = document.getElementById('ov-btn-eliminar-modal');
+    if (btnEliminarModal) {
+        btnEliminarModal.classList.remove('d-none');
+        btnEliminarModal.classList.add('d-inline-flex');
+    }
 
     var modalTitleEl = document.getElementById('ovModalNuevoViajeLabel');
     if (modalTitleEl) {
@@ -950,6 +966,92 @@ window.ovEjecutarIniciarViajeConfirmado = async function(e) {
     } catch(err) {
         console.error('Error al iniciar viaje:', err);
         alert('Error: ' + err.message);
+    }
+};
+
+// ── GESTIÓN DE ELIMINACIÓN DE VIAJES ─────────────────────────────────
+window.ovAbrirModalEliminarViaje = function(viajeCode) {
+    if (!viajeCode) return;
+
+    var lblViaje = document.getElementById('ov-eliminar-modal-viaje-num');
+    var inputId = document.getElementById('ov-eliminar-viaje-id');
+    var checkConfirm = document.getElementById('ov-eliminar-check-confirm');
+
+    if (lblViaje) lblViaje.textContent = viajeCode;
+    if (inputId) inputId.value = viajeCode;
+    if (checkConfirm) checkConfirm.checked = false;
+
+    var modalEl = document.getElementById('modalEliminarViajeConfirm');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
+window.ovEliminarDesdeModalEdicion = function() {
+    var editId = (document.getElementById('ov-form-edit-id') || {}).value;
+    if (!editId) {
+        alert('No se pudo identificar la orden de viaje a eliminar.');
+        return;
+    }
+
+    // Cerrar modal de edición
+    var modalEditEl = document.getElementById('ovModalNuevoViaje');
+    if (modalEditEl && typeof bootstrap !== 'undefined') {
+        var modalEdit = bootstrap.Modal.getInstance(modalEditEl);
+        if (modalEdit) modalEdit.hide();
+    }
+
+    // Abrir modal de confirmación de eliminación
+    window.ovAbrirModalEliminarViaje(editId);
+};
+
+window.ovEjecutarEliminarViajeConfirmado = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    var viajeCode = (document.getElementById('ov-eliminar-viaje-id') || {}).value;
+    var checkConfirm = document.getElementById('ov-eliminar-check-confirm');
+
+    if (!viajeCode) return;
+
+    if (!checkConfirm || !checkConfirm.checked) {
+        alert('Debe confirmar que desea eliminar este viaje.');
+        return;
+    }
+
+    var btnSubmit = document.getElementById('btnEjecutarEliminarViaje');
+    if (btnSubmit) btnSubmit.disabled = true;
+
+    try {
+        var res = await fetch(`/api/operaciones/ordenes-viaje/${encodeURIComponent(viajeCode)}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        var data = await res.json();
+
+        if (data && data.ok) {
+            if (typeof window.showToastNotification === 'function') {
+                window.showToastNotification(data.message || `Orden de Viaje ${viajeCode} eliminada con éxito.`, 'success');
+            } else {
+                alert(data.message || `Orden de Viaje ${viajeCode} eliminada con éxito.`);
+            }
+
+            var modalEl = document.getElementById('modalEliminarViajeConfirm');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+
+            // Recargar datos y actualizar tabla
+            await window.ovCargarDatos();
+        } else {
+            throw new Error((data && data.error) || 'Error al eliminar la orden de viaje.');
+        }
+    } catch(err) {
+        console.error('Error al eliminar orden de viaje:', err);
+        alert('Error: ' + err.message);
+    } finally {
+        if (btnSubmit) btnSubmit.disabled = false;
     }
 };
 
