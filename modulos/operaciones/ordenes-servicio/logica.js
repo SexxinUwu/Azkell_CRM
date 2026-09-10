@@ -150,6 +150,21 @@
             const fInicio = item.fecha_fmt ? formatFecha(item.fecha_fmt) : '—';
             const fFin = item.fecha_fin_fmt ? formatFecha(item.fecha_fin_fmt) : '—';
 
+            // Cálculos y formateos para nuevas columnas
+            const volumenVal = parseFloat(item.volumen_documentos) || 0.000;
+            const cantidadVal = parseFloat(item.carga_doc) || 0;
+            const pesoVal = parseFloat(item.peso_documentos) || 0.00;
+            const fleteVal = parseFloat(item.costo_flete) || 0.00;
+            const costoMedidaVal = parseFloat(item.costo_medida) || fleteVal;
+            const cargosVal = parseFloat(item.cargos_adicionales) || 0.00;
+            const descuentosVal = parseFloat(item.descuentos) || 0.00;
+            const subtotalVal = parseFloat(item.subtotal) || (fleteVal + cargosVal - descuentosVal);
+            const igvVal = parseFloat(item.igv) || ((item.impuesto || '').includes('18') ? Number((subtotalVal * 0.18).toFixed(2)) : 0.00);
+            const vehiculoStr = item.placa_tracto ? `${item.placa_tracto}${item.placa_carreta ? ' / ' + item.placa_carreta : ''}` : '—';
+            const sustentoBtn = item.sustento_url 
+                ? `<a href="${item.sustento_url}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-1.5" title="Ver Sustento"><i class="bi bi-file-earmark-arrow-down"></i></a>`
+                : `<span class="text-muted opacity-50">—</span>`;
+
             html += `
                 <tr>
                     <td class="text-nowrap">
@@ -176,6 +191,30 @@
                     <td class="text-nowrap fw-semibold">${escapeHtml(item.conductor || '—')}</td>
                     <td class="text-nowrap">${escapeHtml(item.tipo_contratacion || 'CLIENTE DIRECTO')}</td>
                     <td class="text-nowrap fw-bold text-dark">${escapeHtml(item.cliente_nombre || '—')}</td>
+                    <td class="text-nowrap">${escapeHtml(item.cliente_nombre || '—')}</td>
+                    <td class="text-center font-monospace">${item.puntos_carga || 1}</td>
+                    <td class="text-center font-monospace">${item.puntos_destino || 1}</td>
+                    <td class="text-nowrap font-monospace text-muted">${escapeHtml(item.ruta_sistema || item.tipo_servicio || '—')}</td>
+                    <td class="text-nowrap">${escapeHtml(item.tipo_servicio || 'CARGA GENERAL')}</td>
+                    <td class="text-end font-monospace">${volumenVal.toFixed(3)}</td>
+                    <td class="text-end font-monospace">${cantidadVal.toLocaleString()}</td>
+                    <td class="text-end font-monospace">${pesoVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="text-nowrap">${escapeHtml(item.tipo_costo || 'POR VIAJE')}</td>
+                    <td class="text-nowrap">${escapeHtml(item.impuesto || 'IGV 18%')}</td>
+                    <td class="text-nowrap font-monospace">${escapeHtml(item.moneda || 'SOLES')}</td>
+                    <td class="text-nowrap">${escapeHtml(item.tipo_medida || 'VIAJE')}</td>
+                    <td class="text-end font-monospace">${costoMedidaVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="text-end font-monospace text-secondary">${cargosVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="text-end font-monospace text-danger">${descuentosVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="text-end font-monospace fw-semibold">${subtotalVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="text-end font-monospace text-muted">${igvVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="text-end font-monospace fw-bold text-dark">${fleteVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="text-end font-monospace">${item.kilometraje_fin ? Number(item.kilometraje_fin).toLocaleString() : '—'}</td>
+                    <td class="text-nowrap font-monospace text-secondary">${escapeHtml(item.usuario_creacion || 'ADMINISTRADOR')}</td>
+                    <td class="text-nowrap" style="max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(item.observaciones || '')}">${escapeHtml(item.observaciones || '—')}</td>
+                    <td class="text-nowrap font-monospace fw-semibold">${escapeHtml(vehiculoStr)}</td>
+                    <td class="text-nowrap font-monospace">${escapeHtml(item.factura || '—')}</td>
+                    <td class="text-center text-nowrap">${sustentoBtn}</td>
                 </tr>
             `;
         });

@@ -150,6 +150,16 @@ module.exports = function (db, broadcast, logAudit) {
         conductor VARCHAR(150) NULL,
         placa_tracto VARCHAR(20) NULL,
         placa_carreta VARCHAR(20) NULL,
+        ruta_sistema VARCHAR(255) NULL,
+        tipo_medida VARCHAR(50) DEFAULT 'VIAJE',
+        costo_medida DECIMAL(12,2) DEFAULT 0.00,
+        cargos_adicionales DECIMAL(12,2) DEFAULT 0.00,
+        descuentos DECIMAL(12,2) DEFAULT 0.00,
+        subtotal DECIMAL(12,2) DEFAULT 0.00,
+        igv DECIMAL(12,2) DEFAULT 0.00,
+        kilometraje_fin INT NULL,
+        usuario_creacion VARCHAR(100) DEFAULT 'ADMINISTRADOR',
+        factura VARCHAR(60) NULL,
         creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_codigo_orden (codigo_orden),
@@ -199,6 +209,20 @@ module.exports = function (db, broadcast, logAudit) {
             } catch (ignore) {}
             try {
                 await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN ubigeo_partida VARCHAR(10) NULL AFTER destino, ADD COLUMN direccion_partida VARCHAR(255) NULL AFTER ubigeo_partida, ADD COLUMN ubigeo_llegada VARCHAR(10) NULL AFTER direccion_partida, ADD COLUMN direccion_llegada VARCHAR(255) NULL AFTER ubigeo_llegada, ADD COLUMN escolta VARCHAR(150) NULL AFTER direccion_llegada, ADD COLUMN observaciones TEXT NULL AFTER escolta");
+            } catch (ignore) {}
+            try {
+                await tdb.query(`ALTER TABLE operaciones_ordenes_servicio 
+                    ADD COLUMN ruta_sistema VARCHAR(255) NULL AFTER placa_carreta,
+                    ADD COLUMN tipo_medida VARCHAR(50) DEFAULT 'VIAJE' AFTER ruta_sistema,
+                    ADD COLUMN costo_medida DECIMAL(12,2) DEFAULT 0.00 AFTER tipo_medida,
+                    ADD COLUMN cargos_adicionales DECIMAL(12,2) DEFAULT 0.00 AFTER costo_medida,
+                    ADD COLUMN descuentos DECIMAL(12,2) DEFAULT 0.00 AFTER cargos_adicionales,
+                    ADD COLUMN subtotal DECIMAL(12,2) DEFAULT 0.00 AFTER descuentos,
+                    ADD COLUMN igv DECIMAL(12,2) DEFAULT 0.00 AFTER subtotal,
+                    ADD COLUMN kilometraje_fin INT NULL AFTER igv,
+                    ADD COLUMN usuario_creacion VARCHAR(100) DEFAULT 'ADMINISTRADOR' AFTER kilometraje_fin,
+                    ADD COLUMN factura VARCHAR(60) NULL AFTER usuario_creacion
+                `);
             } catch (ignore) {}
             _tenantsInitSet.add(tenantId);
         } catch (err) {
