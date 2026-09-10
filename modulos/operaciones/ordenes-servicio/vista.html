@@ -263,27 +263,66 @@
     flex-shrink: 0;
 }
 
+/* ── Estilos Premium Pastel y Tamaños Confortables (Estilo Orden de Viaje) ── */
+.os-pastel-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+.os-badge-blue {
+    background: #eff6ff !important;
+    color: #0284c7 !important;
+    border: 1px solid #bfdbfe !important;
+}
+.os-badge-amber {
+    background: #fffbeb !important;
+    color: #d97706 !important;
+    border: 1px solid #fde68a !important;
+}
+.os-badge-purple {
+    background: #faf5ff !important;
+    color: #8b5cf6 !important;
+    border: 1px solid #e9d5ff !important;
+}
+.os-badge-emerald {
+    background: #ecfdf5 !important;
+    color: #059669 !important;
+    border: 1px solid #a7f3d0 !important;
+}
+.os-badge-slate {
+    background: #f8fafc !important;
+    color: #64748b !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
 /* Card Segmentation Inside Modal */
 .os-form-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 1.1rem 1.25rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    margin-bottom: 1rem;
+    border-radius: 18px;
+    padding: 1.25rem 1.45rem;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+    margin-bottom: 1.15rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
+.os-form-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
 .os-form-card-title {
-    font-size: 0.8rem;
+    font-size: 0.92rem;
     font-weight: 800;
-    color: #1e293b;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    margin-bottom: 0.85rem;
-    padding-bottom: 0.45rem;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+    margin-bottom: 1.1rem;
+    padding-bottom: 0.65rem;
     border-bottom: 1px solid #f1f5f9;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
 #modalOsForm .nav-tabs {
@@ -309,41 +348,85 @@
 }
 
 #modalOsForm .form-label {
-    font-size: 0.73rem;
-    font-weight: 700;
-    color: #475569;
-    margin-bottom: 0.25rem;
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: #334155;
+    margin-bottom: 0.4rem;
     display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 #modalOsForm .form-label span.req {
     color: #ef4444;
-    font-weight: bold;
+    font-weight: 800;
 }
 
+/* Casillas gruesas, no comprimidas (Mismo diseño de tamaño y tacto que Orden de Viaje) */
 #modalOsForm .form-control,
 #modalOsForm .form-select {
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    padding: 0.42rem 0.65rem;
-    color: #1e293b;
+    min-height: 46px !important;
+    padding: 0.58rem 0.95rem !important;
+    border-radius: 12px !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    border: 1.5px solid #d0d7de !important;
+    background-color: #ffffff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 #modalOsForm .form-control:focus,
 #modalOsForm .form-select:focus {
-    border-color: #0284c7;
-    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14) !important;
     outline: none;
+    background-color: #ffffff !important;
 }
 
 #modalOsForm .form-control[readonly],
 #modalOsForm .form-control:disabled {
-    background-color: #f1f5f9 !important;
+    background-color: #f8fafc !important;
     color: #475569 !important;
-    border-color: #cfd8dc !important;
+    border-color: #e2e8f0 !important;
     user-select: none;
+}
+
+/* Input group adaptado a las casillas gruesas */
+#modalOsForm .input-group > .input-group-text {
+    min-height: 46px !important;
+    border-radius: 12px 0 0 12px !important;
+    border: 1.5px solid #d0d7de !important;
+    border-right: none !important;
+    padding: 0.58rem 0.85rem !important;
+    background-color: #f8fafc !important;
+}
+#modalOsForm .input-group > .form-control {
+    border-radius: 0 12px 12px 0 !important;
+}
+
+/* Casillas Pastel Especiales (Imagen 3) */
+.os-pastel-flete-box {
+    background: #f0fdf4 !important;
+    border: 2px solid #86efac !important;
+    color: #15803d !important;
+    font-weight: 800 !important;
+    font-size: 1.05rem !important;
+}
+.os-pastel-flete-box:focus {
+    border-color: #22c55e !important;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2) !important;
+}
+
+.os-pastel-tag {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    letter-spacing: 0.3px;
 }
 
 .os-btn-doc-agregar {
@@ -554,18 +637,21 @@
 
                             <!-- Card 1: Identificación y Asignación de Viaje -->
                             <div class="os-form-card">
-                                <div class="os-form-card-title">
-                                    <i class="bi bi-file-earmark-ruled text-primary"></i> Identificación y Asignación de Viaje
+                                <div class="os-form-card-title d-flex align-items-center gap-2">
+                                    <span class="os-pastel-badge os-badge-blue">
+                                        <i class="bi bi-file-earmark-text-fill"></i>
+                                    </span>
+                                    <span>1. Identificación y Asignación de Viaje</span>
                                 </div>
                                 
                                 <div class="row g-2 mb-2">
                                     <div class="col-6 col-md-2">
                                         <label class="form-label">Serie <span class="req">(*)</span></label>
-                                        <input type="text" id="os-input-serie" class="form-control" readonly tabindex="-1" value="2026" required>
+                                        <input type="text" id="os-input-serie" class="form-control font-monospace fw-bold" readonly tabindex="-1" value="2026" required>
                                     </div>
                                     <div class="col-6 col-md-2">
                                         <label class="form-label">Número <span class="req">(*)</span></label>
-                                        <input type="text" id="os-input-numero" class="form-control font-monospace" readonly tabindex="-1" placeholder="00000001" value="00000001" required>
+                                        <input type="text" id="os-input-numero" class="form-control font-monospace fw-bold" readonly tabindex="-1" placeholder="00000001" value="00000001" required>
                                     </div>
                                     <div class="col-12 col-md-3">
                                         <label class="form-label">Fecha <span class="req">(*)</span></label>
@@ -591,32 +677,35 @@
                                             <span>Orden de Viaje Asignada</span>
                                             <span id="os-viaje-lock-status" class="badge bg-light text-muted border font-monospace" style="font-size: 0.68rem;">Desbloqueado</span>
                                         </label>
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-text bg-white" id="os-viaje-icon-container">
+                                        <div class="input-group">
+                                            <span class="input-group-text" id="os-viaje-icon-container">
                                                 <i class="bi bi-unlock text-muted" id="os-viaje-lock-icon"></i>
                                             </span>
                                             <input type="text" id="os-input-viaje-asignado" class="form-control font-monospace fw-bold" placeholder="Ej: 2026-00000001 (Opcional)">
                                         </div>
-                                        <small class="text-muted" id="os-viaje-help-text" style="font-size: 0.72rem;">Puede ingresar o vincular la orden de viaje aquí.</small>
+                                        <small class="text-muted mt-1 d-block" id="os-viaje-help-text" style="font-size: 0.72rem;">Puede ingresar o vincular la orden de viaje aquí.</small>
                                     </div>
                                     <div class="col-6 col-md-3">
                                         <label class="form-label">Tracto <span class="req">(*)</span></label>
-                                        <input type="text" id="os-input-tracto" class="form-control font-monospace fw-bold text-uppercase" placeholder="Placa Tracto">
+                                        <input type="text" id="os-input-tracto" class="form-control font-monospace fw-bold text-uppercase" placeholder="PLACA TRACTO">
                                     </div>
                                     <div class="col-6 col-md-3">
                                         <label class="form-label">Carreta (ATP999) <span class="req">(*)</span></label>
-                                        <input type="text" id="os-input-carreta" class="form-control font-monospace fw-bold text-uppercase" placeholder="Placa Carreta / ATP999">
+                                        <input type="text" id="os-input-carreta" class="form-control font-monospace fw-bold text-uppercase" placeholder="PLACA CARRETA / ATP999">
                                     </div>
                                 </div>
                             </div>
 
                             <!-- ── APARTADOS DIVIDIDOS A LA MITAD (50% / 50%) SEGÚN IMAGEN 2 ── -->
                             <div class="row g-3 mb-3">
-                                <!-- Columna Izquierda (50%): CLIENTE Y MODALIDAD DE CONTRATACIÓN -->
+                                <!-- Columna Izquierda (50%): 2. CLIENTE Y MODALIDAD DE CONTRATACIÓN -->
                                 <div class="col-12 col-lg-6">
                                     <div class="os-form-card h-100 mb-0">
-                                        <div class="os-form-card-title">
-                                            <i class="bi bi-briefcase text-primary"></i> Cliente y Modalidad de Contratación
+                                        <div class="os-form-card-title d-flex align-items-center gap-2">
+                                            <span class="os-pastel-badge os-badge-amber">
+                                                <i class="bi bi-briefcase-fill"></i>
+                                            </span>
+                                            <span>2. Cliente y Modalidad de Contratación</span>
                                         </div>
                                         <div class="row g-2">
                                             <div class="col-12 col-sm-6">
@@ -635,17 +724,18 @@
                                             </div>
                                             <div class="col-12">
                                                 <label class="form-label">Cliente/Remitente <span class="req">(*)</span></label>
-                                                <input type="text" id="os-input-cliente" list="os-clientes-datalist" class="form-control text-uppercase" placeholder="Escriba o seleccione cliente/remitente..." required>
+                                                <input type="text" id="os-input-cliente" list="os-clientes-datalist" class="form-control text-uppercase" placeholder="ESCRIBA O SELECCIONE CLIENTE/REMITENTE..." required>
                                                 <datalist id="os-clientes-datalist"></datalist>
                                             </div>
                                             <div class="col-12">
                                                 <label class="form-label">Tipo Servicio <span class="req">(*)</span></label>
-                                                <select id="os-input-tipo-servicio" class="form-select" required>
-                                                    <option value="CARGA GENERAL" selected>CARGA GENERAL</option>
-                                                    <option value="TRANSPORTE LOCAL">TRANSPORTE LOCAL</option>
-                                                    <option value="TRANSPORTE NACIONAL">TRANSPORTE NACIONAL</option>
-                                                    <option value="DISTRIBUCION">DISTRIBUCIÓN</option>
-                                                </select>
+                                                <input type="text" id="os-input-tipo-servicio" list="os-servicios-datalist" class="form-control text-uppercase" placeholder="ESCRIBA O SELECCIONE TIPO DE SERVICIO..." required>
+                                                <datalist id="os-servicios-datalist">
+                                                    <option value="CARGA GENERAL"></option>
+                                                    <option value="TRANSPORTE LOCAL"></option>
+                                                    <option value="TRANSPORTE NACIONAL"></option>
+                                                    <option value="DISTRIBUCIÓN"></option>
+                                                </datalist>
                                             </div>
                                             <div class="col-12 col-sm-6">
                                                 <label class="form-label"># Puntos Carga <span class="req">(*)</span></label>
@@ -662,23 +752,26 @@
                                             </div>
                                             <div class="col-12 col-sm-6">
                                                 <label class="form-label">Subir Sustento</label>
-                                                <input type="file" id="os-input-sustento" class="form-control form-control-sm">
+                                                <input type="file" id="os-input-sustento" class="form-control">
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- Columna Derecha (50%): DESTINATARIO Y COSTEO -->
+                                <!-- Columna Derecha (50%): 3. DESTINATARIO Y 4. COSTEO -->
                                 <div class="col-12 col-lg-6 d-flex flex-column gap-3">
-                                    <!-- Tarjeta Destinatario -->
+                                    <!-- Tarjeta 3: Destinatario -->
                                     <div class="os-form-card mb-0">
-                                        <div class="os-form-card-title">
-                                            <i class="bi bi-geo-alt text-primary"></i> Destinatario
+                                        <div class="os-form-card-title d-flex align-items-center gap-2">
+                                            <span class="os-pastel-badge os-badge-purple">
+                                                <i class="bi bi-geo-alt-fill"></i>
+                                            </span>
+                                            <span>3. Destinatario</span>
                                         </div>
                                         <div class="row g-2">
                                             <div class="col-12 col-sm-8">
                                                 <label class="form-label">Destinatario</label>
-                                                <input type="text" id="os-input-destinatario" class="form-control text-uppercase" placeholder="Ingrese destinatario...">
+                                                <input type="text" id="os-input-destinatario" class="form-control text-uppercase" placeholder="INGRESE DESTINATARIO...">
                                             </div>
                                             <div class="col-12 col-sm-4">
                                                 <label class="form-label"># Puntos Destino <span class="req">(*)</span></label>
@@ -703,10 +796,13 @@
                                         </div>
                                     </div>
 
-                                    <!-- Tarjeta Costeo -->
+                                    <!-- Tarjeta 4: Costeo -->
                                     <div class="os-form-card mb-0 flex-grow-1">
-                                        <div class="os-form-card-title">
-                                            <i class="bi bi-currency-dollar text-primary"></i> Costeo
+                                        <div class="os-form-card-title d-flex align-items-center gap-2">
+                                            <span class="os-pastel-badge os-badge-emerald">
+                                                <i class="bi bi-cash-stack"></i>
+                                            </span>
+                                            <span>4. Costeo</span>
                                         </div>
                                         <div class="row g-2">
                                             <div class="col-12 col-sm-4">
@@ -725,18 +821,24 @@
                                                 </select>
                                             </div>
                                             <div class="col-12 col-sm-4">
-                                                <label class="form-label">Costo Flete <span class="req">(*)</span></label>
-                                                <input type="number" step="0.01" id="os-input-costo-flete" class="form-control font-monospace fw-bold" value="0.00" required>
+                                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                                    <label class="form-label m-0">Costo Flete <span class="req">(*)</span></label>
+                                                    <span class="os-pastel-tag">Total S/</span>
+                                                </div>
+                                                <input type="number" step="0.01" id="os-input-costo-flete" class="form-control os-pastel-flete-box font-monospace fw-bold" value="0.00" required>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Card 4: Observaciones Adicionales (Ancho Completo) -->
+                            <!-- Card 5: Observaciones Adicionales (Ancho Completo) -->
                             <div class="os-form-card mb-0">
-                                <div class="os-form-card-title">
-                                    <i class="bi bi-chat-left-text text-primary"></i> Observaciones Adicionales
+                                <div class="os-form-card-title d-flex align-items-center gap-2">
+                                    <span class="os-pastel-badge os-badge-slate">
+                                        <i class="bi bi-chat-left-text-fill"></i>
+                                    </span>
+                                    <span>5. Observaciones Adicionales</span>
                                 </div>
                                 <div class="row g-2">
                                     <div class="col-12">
