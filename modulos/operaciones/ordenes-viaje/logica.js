@@ -63,29 +63,16 @@ window.ovConfigurarThead = function() {
     if (_ovModoVistaActual === 'viajes') {
         thead.innerHTML = `
             <tr>
-                <th style="min-width: 90px;">ACCIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 110px;">OPERACIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 80px;">ACCIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 100px;">OPERACIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
                 <th style="min-width: 100px;">ESTADO <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 170px;">CONFIRMACION CONDUCTOR <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 155px;">FECHA <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 155px;">VIAJE <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 165px;">CONFIRMACION CARGA <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 95px; text-align:center;"># SERVICIOS <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 80px; text-align:center;"># GRET <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 160px; text-align: right;">PESO TOTAL SEGUN GRET <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 95px;">SERVICIO <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 105px;">VEHICULO <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 150px;">N° VIAJE <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 140px;">FECHA Y HORA <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 200px;">CONDUCTOR <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 110px;">VEHÍCULO (TRACTO) <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
                 <th style="min-width: 125px;">SEMIRREMOLQUE <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 120px; text-align:center;">MÁXIMO CARGA <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 220px;">CONDUCTOR <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 220px;">USUARIO CREACIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 165px;">FECHA HORA REGISTRO <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 120px; text-align:center;"># CONDUCTORES <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 140px;">CONDUCTORES <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 110px;">FECHA INICIO <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 110px;">FECHA FIN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 130px;">DURACIÓN DE VIAJE <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 145px;">MOTIVO ANULACIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 200px;">RUTA PROGRAMADA <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 130px; text-align: right;">CANTIDAD / PESO (TN) <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
             </tr>
         `;
     } else {
@@ -432,6 +419,10 @@ window.ovRenderizarTabla = function() {
             var conductorNombre = (v.conductor || '').toUpperCase();
             var usuarioCreacion = (v.usuario_creacion || v.usuario || 'ADMINISTRADOR DEL SISTEMA').toUpperCase();
 
+            var pesoTnVal = parseFloat(v.peso) || (parseFloat(v.peso_total_rutas) ? parseFloat(v.peso_total_rutas) / 1000 : 0);
+            var pesoTnTxt = pesoTnVal > 0 ? (pesoTnVal).toFixed(2) + ' TN' : '0.00 TN';
+            var rutaTxt = (v.ruta || '---').toUpperCase();
+
             html += `
                 <tr>
                     <!-- 1. ACCIÓN -->
@@ -447,69 +438,36 @@ window.ovRenderizarTabla = function() {
                     <!-- 3. ESTADO -->
                     <td>${estadoBadge}</td>
 
-                    <!-- 4. CONFIRMACIÓN CONDUCTOR -->
-                    <td><span class="ov-badge-confirm-pill">CONFIRMACION - PENDIENTE</span></td>
-
-                    <!-- 5. FECHA -->
-                    <td class="font-monospace text-secondary" style="font-size:0.77rem;">${fechaStr}</td>
-
-                    <!-- 6. VIAJE -->
+                    <!-- 4. N° VIAJE -->
                     <td>
-                        <a href="javascript:void(0)" class="ov-btn-viaje-eye" title="Ver monitoreo detallado del viaje" onclick="window.ovAbrirModalMonitoreoViaje('${v.viaje}')">
+                        <a href="javascript:void(0)" class="ov-btn-viaje-eye fw-bold" title="Ver monitoreo detallado del viaje" onclick="window.ovAbrirModalMonitoreoViaje('${v.viaje}')">
                             <i class="bi bi-eye"></i> ${v.viaje || '---'}
                         </a>
                     </td>
 
-                    <!-- 7. CONFIRMACIÓN CARGA -->
-                    <td><span class="ov-badge-confirm-pill">CONFIRMACION - PENDIENTE</span></td>
+                    <!-- 5. FECHA Y HORA -->
+                    <td class="font-monospace text-secondary" style="font-size:0.77rem;">${fechaStr}</td>
 
-                    <!-- 8. # SERVICIOS -->
-                    <td style="text-align: center;"><span class="ov-badge-count-gray">${cantServicios}</span></td>
+                    <!-- 6. CONDUCTOR -->
+                    <td class="fw-semibold text-dark" style="font-size:0.78rem;">${conductorNombre || '---'}</td>
 
-                    <!-- 9. # GRET -->
-                    <td style="text-align: center;">${gretBadge}</td>
+                    <!-- 7. VEHÍCULO (TRACTO) -->
+                    <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${vehiculo || '---'}</td>
 
-                    <!-- 10. PESO TOTAL SEGÚN GRET -->
-                    <td style="text-align: right;" class="font-monospace fw-bold text-dark" style="font-size:0.78rem;">${pesoGretTxt}</td>
+                    <!-- 8. SEMIRREMOLQUE (CARRETA) -->
+                    <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${semirremolque || '---'}</td>
 
-                    <!-- 11. SERVICIO -->
-                    <td class="fw-semibold text-secondary" style="font-size:0.77rem;">PROPIO</td>
+                    <!-- 9. RUTA PROGRAMADA -->
+                    <td class="fw-semibold text-dark small">
+                        <i class="bi bi-geo-alt-fill text-danger me-1"></i>${rutaTxt}
+                    </td>
 
-                    <!-- 12. VEHÍCULO (TRACTO) -->
-                    <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${vehiculo}</td>
-
-                    <!-- 13. SEMIRREMOLQUE (CARRETA) -->
-                    <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${semirremolque}</td>
-
-                    <!-- 14. MÁXIMO CARGA -->
-                    <td style="text-align: center;"><span class="ov-badge-max-carga">NaN M3 MÁXIMO</span></td>
-
-                    <!-- 15. CONDUCTOR -->
-                    <td class="fw-semibold text-dark" style="font-size:0.78rem;">${conductorNombre}</td>
-
-                    <!-- 16. USUARIO CREACIÓN -->
-                    <td class="text-secondary fw-medium" style="font-size:0.76rem;">${usuarioCreacion}</td>
-
-                    <!-- 17. FECHA HORA REGISTRO -->
-                    <td class="font-monospace text-secondary" style="font-size:0.77rem;">${fechaRegistroStr}</td>
-
-                    <!-- 18. # CONDUCTORES -->
-                    <td style="text-align: center;"><span class="ov-badge-count-red">0</span></td>
-
-                    <!-- 19. CONDUCTORES -->
-                    <td></td>
-
-                    <!-- 20. FECHA INICIO -->
-                    <td class="font-monospace text-secondary" style="font-size:0.77rem;">${fechaInicioStr}</td>
-
-                    <!-- 21. FECHA FIN -->
-                    <td class="font-monospace text-secondary" style="font-size:0.77rem;">${fechaFinStr}</td>
-
-                    <!-- 22. DURACIÓN DE VIAJE -->
-                    <td class="text-secondary fw-semibold" style="font-size:0.76rem;">${duracionStr}</td>
-
-                    <!-- 23. MOTIVO ANULACIÓN -->
-                    <td class="text-muted small">${v.motivo_anulacion || ''}</td>
+                    <!-- 10. CANTIDAD / PESO (TN) -->
+                    <td style="text-align: right;" class="font-monospace fw-bold text-dark" style="font-size:0.78rem;">
+                        <span class="badge ${pesoTnVal > 0 ? 'bg-light text-dark border border-secondary-subtle' : 'bg-light text-muted'} font-monospace px-2 py-1 fw-bold">
+                            ${pesoTnTxt}
+                        </span>
+                    </td>
                 </tr>
             `;
         });
