@@ -638,8 +638,31 @@ app.get('/api/proxy/placa', async (req, res) => {
     });
 });
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'Index.html'));
+app.get('/', async (req, res) => {
+    try {
+        let nombreEmpresaRaw = '';
+        if (req.db) {
+            try {
+                const [rows] = await req.db.promise().query(
+                    "SELECT valor FROM configuracion_erp WHERE clave = 'empresa_nombre' LIMIT 1"
+                );
+                if (rows && rows[0] && rows[0].valor) nombreEmpresaRaw = rows[0].valor;
+            } catch (e) {}
+        }
+        if (!nombreEmpresaRaw && req.tenantInfo && req.tenantInfo.nombre_empresa) {
+            nombreEmpresaRaw = req.tenantInfo.nombre_empresa;
+        }
+
+        const cleanName = _formatearNombreEmpresa(nombreEmpresaRaw || req.tenantSlug || 'Azkell Fleet');
+        const pageTitle = `${cleanName} - Azkell Fleet`;
+
+        let html = fs.readFileSync(path.join(__dirname, 'Index.html'), 'utf8');
+        html = html.replace('<title>Azkell Fleet</title>', `<title>${pageTitle}</title>`);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.send(html);
+    } catch (e) {
+        res.sendFile(path.join(__dirname, 'Index.html'));
+    }
 });
 
 // ============================================================
