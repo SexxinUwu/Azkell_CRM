@@ -14,6 +14,20 @@ var _ovPaginaActual = 1;
 var _ovItemsPorPagina = 25;
 var _ovDebounceTimer = null;
 var _ovListaRutasSubFormulario = []; // Para el modal de nuevo viaje
+var _ovSortCol = null; // Columna activa para ordenar
+var _ovSortAsc = true; // true: asc, false: desc
+
+window.ovOrdenarPorColumna = function(columna) {
+    if (_ovSortCol === columna) {
+        _ovSortAsc = !_ovSortAsc;
+    } else {
+        _ovSortCol = columna;
+        _ovSortAsc = true;
+    }
+    _ovPaginaActual = 1;
+    window.ovConfigurarThead();
+    window.ovAplicarFiltros();
+};
 
 // Formatear fecha local en formato YYYY-MM-DD
 function _ovObtenerFechaHoyString() {
@@ -60,38 +74,47 @@ window.ovConfigurarThead = function() {
     var thead = document.getElementById('ov-tabla-thead');
     if (!thead) return;
 
+    function _sortIcon(col) {
+        var activeClass = _ovSortCol === col ? ' active' : '';
+        var iconClass = 'bi bi-arrow-down-up';
+        if (_ovSortCol === col) {
+            iconClass = _ovSortAsc ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
+        }
+        return `<span class="ov-sort-arrow${activeClass}" onclick="event.stopPropagation(); window.ovOrdenarPorColumna('${col}')" title="Ordenar por esta columna"><i class="${iconClass}"></i></span>`;
+    }
+
     if (_ovModoVistaActual === 'viajes') {
         thead.innerHTML = `
             <tr>
-                <th style="min-width: 80px;">ACCIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 100px;">OPERACIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 95px;">ESTADO <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 130px;">N° VIAJE <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 135px;">F. Y HORA CREACIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 135px;">F. Y HORA INICIO <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 135px;">F. Y HORA CIERRE <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 150px;">USUARIO CREACIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 150px;">USUARIO FINALIZACIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 170px;">CONDUCTOR <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 100px;">VEHÍCULO (TRACTO) <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 105px;">SEMIRREMOLQUE <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 160px;">RUTA PROGRAMADA <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 120px; text-align: right;">CANTIDAD / PESO (TN) <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 80px;">ACCIÓN</th>
+                <th style="min-width: 100px;">OPERACIÓN ${_sortIcon('estado')}</th>
+                <th style="min-width: 95px;">ESTADO ${_sortIcon('estado')}</th>
+                <th style="min-width: 140px;">F. Y HORA CREACIÓN ${_sortIcon('fecha_creacion')}</th>
+                <th style="min-width: 125px;">N° VIAJE ${_sortIcon('viaje')}</th>
+                <th style="min-width: 170px;">CONDUCTOR ${_sortIcon('conductor')}</th>
+                <th style="min-width: 100px;">VEHÍCULO (TRACTO) ${_sortIcon('tracto')}</th>
+                <th style="min-width: 105px;">SEMIRREMOLQUE ${_sortIcon('remolque')}</th>
+                <th style="min-width: 160px;">RUTA PROGRAMADA ${_sortIcon('ruta')}</th>
+                <th style="min-width: 120px; text-align: right;">CANTIDAD / PESO (TN) ${_sortIcon('peso')}</th>
+                <th style="min-width: 135px;">F. Y HORA INICIO ${_sortIcon('fecha_inicio')}</th>
+                <th style="min-width: 135px;">F. Y HORA CIERRE ${_sortIcon('fecha_fin')}</th>
+                <th style="min-width: 150px;">USUARIO CREACIÓN ${_sortIcon('usuario_creacion')}</th>
+                <th style="min-width: 150px;">USUARIO FINALIZACIÓN ${_sortIcon('usuario_finalizacion')}</th>
             </tr>
         `;
     } else {
         thead.innerHTML = `
             <tr>
-                <th style="width: 125px;">N° Viaje</th>
-                <th style="width: 125px;">N° Orden Serv.</th>
-                <th style="width: 100px; text-align: center;">Tramo</th>
-                <th style="width: 95px;">Tracto</th>
-                <th style="width: 95px;">Carreta</th>
-                <th>Conductor</th>
-                <th>Ruta Despachada</th>
-                <th style="width: 130px;">Tipo de Servicio</th>
-                <th style="width: 105px; text-align: right;">Peso Carga</th>
-                <th style="width: 75px; text-align: center;">Estado</th>
+                <th style="width: 125px;">N° Viaje ${_sortIcon('viaje')}</th>
+                <th style="width: 125px;">N° Orden Serv. ${_sortIcon('orden')}</th>
+                <th style="width: 100px; text-align: center;">Tramo ${_sortIcon('tramo')}</th>
+                <th style="width: 95px;">Tracto ${_sortIcon('tracto')}</th>
+                <th style="width: 95px;">Carreta ${_sortIcon('remolque')}</th>
+                <th>Conductor ${_sortIcon('conductor')}</th>
+                <th>Ruta Despachada ${_sortIcon('ruta')}</th>
+                <th style="width: 130px;">Tipo de Servicio ${_sortIcon('tipo_servicio')}</th>
+                <th style="width: 105px; text-align: right;">Peso Carga ${_sortIcon('peso')}</th>
+                <th style="width: 75px; text-align: center;">Estado ${_sortIcon('estado')}</th>
             </tr>
         `;
     }
@@ -271,6 +294,77 @@ window.ovAplicarFiltros = function() {
 
             return true;
         });
+
+        // Aplicar ordenamiento dinámico por columna seleccionada
+        if (_ovSortCol) {
+            filtradosV.sort(function(a, b) {
+                var valA = '';
+                var valB = '';
+
+                switch (_ovSortCol) {
+                    case 'fecha_creacion':
+                        valA = new Date(a.fecha_registro || a.creado_en || 0).getTime() || 0;
+                        valB = new Date(b.fecha_registro || b.creado_en || 0).getTime() || 0;
+                        break;
+                    case 'fecha_inicio':
+                        valA = new Date(a.fecha_inicio || a.fecha_viaje || 0).getTime() || 0;
+                        valB = new Date(b.fecha_inicio || b.fecha_viaje || 0).getTime() || 0;
+                        break;
+                    case 'fecha_fin':
+                        valA = new Date(a.fecha_fin || 0).getTime() || 0;
+                        valB = new Date(b.fecha_fin || 0).getTime() || 0;
+                        break;
+                    case 'viaje':
+                        valA = (a.viaje || '').toUpperCase();
+                        valB = (b.viaje || '').toUpperCase();
+                        break;
+                    case 'conductor':
+                        valA = (a.conductor || '').toUpperCase();
+                        valB = (b.conductor || '').toUpperCase();
+                        break;
+                    case 'tracto':
+                        valA = (a.placa_tracto || '').toUpperCase();
+                        valB = (b.placa_tracto || '').toUpperCase();
+                        break;
+                    case 'remolque':
+                        valA = (a.placa_remolque || '').toUpperCase();
+                        valB = (b.placa_remolque || '').toUpperCase();
+                        break;
+                    case 'ruta':
+                        valA = (a.ruta || '').toUpperCase();
+                        valB = (b.ruta || '').toUpperCase();
+                        break;
+                    case 'peso':
+                        valA = parseFloat(a.peso) || (parseFloat(a.peso_total_rutas) ? parseFloat(a.peso_total_rutas) / 1000 : 0);
+                        valB = parseFloat(b.peso) || (parseFloat(b.peso_total_rutas) ? parseFloat(b.peso_total_rutas) / 1000 : 0);
+                        break;
+                    case 'usuario_creacion':
+                        valA = (a.usuario_creacion || a.usuario || '').toUpperCase();
+                        valB = (b.usuario_creacion || b.usuario || '').toUpperCase();
+                        break;
+                    case 'usuario_finalizacion':
+                        valA = (a.usuario_finalizacion || '').toUpperCase();
+                        valB = (b.usuario_finalizacion || '').toUpperCase();
+                        break;
+                    case 'estado':
+                        valA = (a.estado || '').toUpperCase();
+                        valB = (b.estado || '').toUpperCase();
+                        break;
+                    default:
+                        valA = (a[_ovSortCol] || '').toString().toUpperCase();
+                        valB = (b[_ovSortCol] || '').toString().toUpperCase();
+                        break;
+                }
+
+                if (typeof valA === 'number' && typeof valB === 'number') {
+                    return _ovSortAsc ? (valA - valB) : (valB - valA);
+                }
+                return _ovSortAsc
+                    ? String(valA).localeCompare(String(valB))
+                    : String(valB).localeCompare(String(valA));
+            });
+        }
+
         window.datosFiltradosOrdenesViajeModulo = filtradosV;
     } else {
         var listaR = window.dataGlobalRutasModulo || [];
@@ -298,6 +392,69 @@ window.ovAplicarFiltros = function() {
 
             return true;
         });
+
+        // Aplicar ordenamiento dinámico en modo rutas
+        if (_ovSortCol) {
+            filtradosR.sort(function(a, b) {
+                var valA = '';
+                var valB = '';
+
+                switch (_ovSortCol) {
+                    case 'viaje':
+                        valA = (a.viaje || '').toUpperCase();
+                        valB = (b.viaje || '').toUpperCase();
+                        break;
+                    case 'orden':
+                        valA = (a.orden || '').toUpperCase();
+                        valB = (b.orden || '').toUpperCase();
+                        break;
+                    case 'conductor':
+                        valA = (a.conductor || '').toUpperCase();
+                        valB = (b.conductor || '').toUpperCase();
+                        break;
+                    case 'tracto':
+                        valA = (a.placa_tracto || '').toUpperCase();
+                        valB = (b.placa_tracto || '').toUpperCase();
+                        break;
+                    case 'remolque':
+                        valA = (a.placa_remolque || '').toUpperCase();
+                        valB = (b.placa_remolque || '').toUpperCase();
+                        break;
+                    case 'ruta':
+                        valA = (a.ruta || '').toUpperCase();
+                        valB = (b.ruta || '').toUpperCase();
+                        break;
+                    case 'peso':
+                        valA = parseFloat(a.peso_total) || 0;
+                        valB = parseFloat(b.peso_total) || 0;
+                        break;
+                    case 'tramo':
+                        valA = parseInt(a.es_retorno, 10) || 0;
+                        valB = parseInt(b.es_retorno, 10) || 0;
+                        break;
+                    case 'tipo_servicio':
+                        valA = (a.tipo_servicio || '').toUpperCase();
+                        valB = (b.tipo_servicio || '').toUpperCase();
+                        break;
+                    case 'estado':
+                        valA = (a.estado || '').toUpperCase();
+                        valB = (b.estado || '').toUpperCase();
+                        break;
+                    default:
+                        valA = (a[_ovSortCol] || '').toString().toUpperCase();
+                        valB = (b[_ovSortCol] || '').toString().toUpperCase();
+                        break;
+                }
+
+                if (typeof valA === 'number' && typeof valB === 'number') {
+                    return _ovSortAsc ? (valA - valB) : (valB - valA);
+                }
+                return _ovSortAsc
+                    ? String(valA).localeCompare(String(valB))
+                    : String(valB).localeCompare(String(valA));
+            });
+        }
+
         window.datosFiltradosOrdenesViajeModulo = filtradosR;
     }
 
@@ -474,51 +631,51 @@ window.ovRenderizarTabla = function() {
                     <!-- 3. ESTADO -->
                     <td>${estadoBadge}</td>
 
-                    <!-- 4. N° VIAJE -->
+                    <!-- 4. F. Y HORA CREACIÓN -->
+                    <td class="font-monospace text-secondary" style="font-size:0.75rem;">${fechaCreacionStr}</td>
+
+                    <!-- 5. N° VIAJE -->
                     <td>
                         <a href="javascript:void(0)" class="ov-btn-viaje-eye fw-bold" title="Ver monitoreo detallado del viaje" onclick="window.ovAbrirModalMonitoreoViaje('${v.viaje}')">
                             <i class="bi bi-eye"></i> ${v.viaje || '---'}
                         </a>
                     </td>
 
-                    <!-- 5. F. Y HORA CREACIÓN -->
-                    <td class="font-monospace text-secondary" style="font-size:0.75rem;">${fechaCreacionStr}</td>
-
-                    <!-- 6. F. Y HORA INICIO -->
-                    <td class="font-monospace text-secondary" style="font-size:0.75rem;">${fechaInicioFmt}</td>
-
-                    <!-- 7. F. Y HORA CIERRE -->
-                    <td class="font-monospace text-secondary" style="font-size:0.75rem;">${fechaCierreFmt}</td>
-
-                    <!-- 8. USUARIO CREACIÓN -->
-                    <td class="fw-semibold text-dark" style="font-size:0.76rem;">
-                        <span class="badge bg-light text-dark border px-2 py-1">${usuarioCreacion}</span>
-                    </td>
-
-                    <!-- 9. USUARIO FINALIZACIÓN -->
-                    <td class="fw-semibold text-dark" style="font-size:0.76rem;">
-                        <span class="badge ${usuarioFinalizacion !== '—' ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-light text-muted border'} px-2 py-1">${usuarioFinalizacion}</span>
-                    </td>
-
-                    <!-- 10. CONDUCTOR -->
+                    <!-- 6. CONDUCTOR -->
                     <td class="fw-semibold text-dark" style="font-size:0.78rem;">${conductorNombre || '---'}</td>
 
-                    <!-- 11. VEHÍCULO (TRACTO) -->
+                    <!-- 7. VEHÍCULO (TRACTO) -->
                     <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${vehiculo || '---'}</td>
 
-                    <!-- 12. SEMIRREMOLQUE (CARRETA) -->
+                    <!-- 8. SEMIRREMOLQUE (CARRETA) -->
                     <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${semirremolque || '---'}</td>
 
-                    <!-- 13. RUTA PROGRAMADA -->
+                    <!-- 9. RUTA PROGRAMADA -->
                     <td class="fw-semibold text-dark small">
                         <i class="bi bi-geo-alt-fill text-danger me-1"></i>${rutaTxt}
                     </td>
 
-                    <!-- 14. CANTIDAD / PESO (TN) -->
-                    <td style="text-align: right;" class="font-monospace fw-bold text-dark" style="font-size:0.78rem;">
+                    <!-- 10. CANTIDAD / PESO (TN) -->
+                    <td style="text-align: right;" class="font-monospace fw-bold text-dark">
                         <span class="badge ${pesoTnVal > 0 ? 'bg-light text-dark border border-secondary-subtle' : 'bg-light text-muted'} font-monospace px-2 py-1 fw-bold">
                             ${pesoTnTxt}
                         </span>
+                    </td>
+
+                    <!-- 11. F. Y HORA INICIO -->
+                    <td class="font-monospace text-secondary" style="font-size:0.75rem;">${fechaInicioFmt}</td>
+
+                    <!-- 12. F. Y HORA CIERRE -->
+                    <td class="font-monospace text-secondary" style="font-size:0.75rem;">${fechaCierreFmt}</td>
+
+                    <!-- 13. USUARIO CREACIÓN -->
+                    <td class="fw-semibold text-dark" style="font-size:0.76rem;">
+                        <span class="badge bg-light text-dark border px-2 py-1">${usuarioCreacion}</span>
+                    </td>
+
+                    <!-- 14. USUARIO FINALIZACIÓN -->
+                    <td class="fw-semibold text-dark" style="font-size:0.76rem;">
+                        <span class="badge ${usuarioFinalizacion !== '—' ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-light text-muted border'} px-2 py-1">${usuarioFinalizacion}</span>
                     </td>
                 </tr>
             `;

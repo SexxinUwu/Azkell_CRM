@@ -70,6 +70,132 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 
+// ── Multi-Tenant SaaS Middleware ─────────────────────────────────
+const { resolveTenantMiddleware } = require('./services/tenant_master');
+app.use((req, res, next) => {
+    resolveTenantMiddleware(req, res, () => {
+        tenantStorage.run(req.db, next);
+    });
+});
+
+// ── PWA Manifest & Logo Dinámicos por Empresa / Tenant ──────────
+function _formatearNombreEmpresa(raw) {
+    if (!raw) return 'Azkell';
+    let clean = String(raw).trim();
+    clean = clean.replace(/\s+(S\.?A\.?C\.?|S\.?R\.?L\.?|E\.?I\.?R\.?L\.?|S\.?A\.?)$/i, '').trim();
+    return clean.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+}
+
+app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
+    try {
+        let nombreEmpresaRaw = '';
+        let logoRaw = '';
+
+        if (req.db) {
+            try {
+                const [rows] = await req.db.promise().query(
+                    "SELECT clave, valor FROM configuracion_erp WHERE clave IN ('empresa_nombre', 'empresa_logo')"
+                );
+                rows.forEach(r => {
+                    if (r.clave === 'empresa_nombre') nombreEmpresaRaw = r.valor;
+                    if (r.clave === 'empresa_logo') logoRaw = r.valor;
+                });
+            } catch (e) {
+                console.warn('[Manifest] No se pudo leer configuracion_erp:', e.message);
+            }
+        }
+
+        if (!nombreEmpresaRaw && req.tenantInfo && req.tenantInfo.nombre_empresa) {
+            nombreEmpresaRaw = req.tenantInfo.nombre_empresa;
+        }
+
+        const cleanName = _formatearNombreEmpresa(nombreEmpresaRaw || req.tenantSlug || 'Azkell Fleet');
+        const pwaName = `${cleanName} | Azkell Fleet`;
+        const pwaShortName = cleanName.length > 15 ? cleanName : `${cleanName} Fleet`;
+
+        const hasCustomLogo = Boolean(logoRaw && logoRaw.length > 50);
+        const iconSrc = hasCustomLogo ? '/api/tenant-logo' : '/app-icon-2002.png';
+
+        const manifestData = {
+            name: pwaName,
+            short_name: pwaShortName,
+            description: `Sistema ERP de Gestión de Flota y Mantenimiento — ${cleanName}`,
+            start_url: '/',
+            display: 'standalone',
+            background_color: '#0f172a',
+            theme_color: '#0f172a',
+            orientation: 'portrait',
+            icons: [
+                {
+                    src: iconSrc,
+                    sizes: '192x192',
+                    type: 'image/png'
+                },
+                {
+                    src: iconSrc,
+                    sizes: '512x512',
+                    type: 'image/png'
+                }
+            ]
+        };
+
+        res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        return res.json(manifestData);
+    } catch (err) {
+        console.error('[Manifest] Error generando manifest:', err);
+        return res.status(500).json({
+            name: 'Azkell Fleet',
+            short_name: 'Azkell Fleet',
+            start_url: '/',
+            display: 'standalone'
+        });
+    }
+});
+
+// Endpoint que sirve la imagen del logo del tenant actual como PNG/JPEG nativo
+app.get('/api/tenant-logo', async (req, res) => {
+    try {
+        let logoRaw = '';
+        if (req.db) {
+            const [rows] = await req.db.promise().query(
+                "SELECT valor FROM configuracion_erp WHERE clave = 'empresa_logo' LIMIT 1"
+            );
+            if (rows && rows[0] && rows[0].valor) {
+                logoRaw = rows[0].valor;
+            }
+        }
+
+        if (logoRaw && logoRaw.startsWith('data:image')) {
+            const matches = logoRaw.match(/^data:(image\/[^;]+);base64,(.+)$/);
+            if (matches) {
+                const mimeType = matches[1];
+                const imgBuffer = Buffer.from(matches[2], 'base64');
+                res.setHeader('Content-Type', mimeType);
+                res.setHeader('Cache-Control', 'public, max-age=86400');
+                return res.send(imgBuffer);
+            }
+        }
+
+        if (logoRaw && (logoRaw.startsWith('http://') || logoRaw.startsWith('https://'))) {
+            return res.redirect(logoRaw);
+        }
+
+        // Fallback al logo estándar de Azkell Fleet
+        const defaultIconPath = path.join(__dirname, 'app-icon-2002.png');
+        if (fs.existsSync(defaultIconPath)) {
+            res.setHeader('Content-Type', 'image/png');
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.sendFile(defaultIconPath);
+        }
+
+        return res.status(404).end();
+    } catch (e) {
+        console.error('[TenantLogo] Error:', e.message);
+        return res.redirect('/app-icon-2002.png');
+    }
+});
+
 // Archivos en /libs/ son librerías estáticas → cachear agresivamente (30 días)
 app.use('/libs', express.static(path.join(__dirname, 'libs'), {
     maxAge: '30d',
@@ -86,13 +212,7 @@ app.use(express.static(__dirname, {
     }
 }));
 
-// ── Multi-Tenant SaaS Middleware ─────────────────────────────────
-const { resolveTenantMiddleware } = require('./services/tenant_master');
-app.use((req, res, next) => {
-    resolveTenantMiddleware(req, res, () => {
-        tenantStorage.run(req.db, next);
-    });
-});
+
 app.use('/api/superadmin', require('./routes/superadmin')());
 
 // ── CONFIGURACION ERP ─────────────────────────────────────────────────────────

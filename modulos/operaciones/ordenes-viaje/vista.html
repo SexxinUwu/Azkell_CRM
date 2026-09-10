@@ -174,7 +174,7 @@
 /* Estilos idénticos a la tabla operativa */
 .ov-table th {
     white-space: nowrap !important;
-    user-select: none;
+    user-select: text !important;
     font-size: 0.73rem !important;
     font-weight: 800 !important;
     color: #475569 !important;
@@ -182,10 +182,25 @@
 }
 .ov-sort-arrow {
     display: inline-flex;
-    margin-left: 4px;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
     font-size: 0.72rem;
     color: #94a3b8;
     vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+.ov-sort-arrow:hover {
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.08);
+}
+.ov-sort-arrow.active {
+    color: #2563eb;
+    font-weight: 900;
 }
 .ov-btn-action-edit {
     background: #ffffff;
