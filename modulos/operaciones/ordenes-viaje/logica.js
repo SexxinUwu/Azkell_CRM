@@ -65,14 +65,18 @@ window.ovConfigurarThead = function() {
             <tr>
                 <th style="min-width: 80px;">ACCIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
                 <th style="min-width: 100px;">OPERACIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 100px;">ESTADO <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 150px;">N° VIAJE <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 140px;">FECHA Y HORA <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 200px;">CONDUCTOR <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 110px;">VEHÍCULO (TRACTO) <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 125px;">SEMIRREMOLQUE <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 200px;">RUTA PROGRAMADA <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
-                <th style="min-width: 130px; text-align: right;">CANTIDAD / PESO (TN) <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 95px;">ESTADO <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 130px;">N° VIAJE <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 135px;">F. Y HORA CREACIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 135px;">F. Y HORA INICIO <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 135px;">F. Y HORA CIERRE <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 150px;">USUARIO CREACIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 150px;">USUARIO FINALIZACIÓN <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 170px;">CONDUCTOR <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 100px;">VEHÍCULO (TRACTO) <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 105px;">SEMIRREMOLQUE <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 160px;">RUTA PROGRAMADA <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
+                <th style="min-width: 120px; text-align: right;">CANTIDAD / PESO (TN) <span class="ov-sort-arrow"><i class="bi bi-arrow-down-up"></i></span></th>
             </tr>
         `;
     } else {
@@ -99,7 +103,7 @@ window.ovCargarDatos = async function() {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center py-4 text-secondary">
+                <td colspan="14" class="text-center py-4 text-secondary">
                     <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
                     <div class="small fw-semibold">Consultando base de datos del ERP...</div>
                 </td>
@@ -147,7 +151,7 @@ window.ovCargarDatos = async function() {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center py-4 text-danger">
+                    <td colspan="14" class="text-center py-4 text-danger">
                         <i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>
                         <div class="fw-bold">Error al conectar con la base de datos</div>
                         <small class="text-muted">${err.message}</small>
@@ -324,7 +328,7 @@ window.ovRenderizarTabla = function() {
     if (pageItems.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center py-4 text-secondary">
+                <td colspan="14" class="text-center py-4 text-secondary">
                     <i class="bi bi-inbox fs-3 d-block mb-1 text-muted"></i>
                     <div class="fw-bold" style="font-size:0.85rem;">No se encontraron viajes para los filtros seleccionados</div>
                     <small class="text-muted" style="font-size:0.75rem;">Modifica el rango de fechas o haz clic en "Registrar Nuevo Viaje".</small>
@@ -372,14 +376,41 @@ window.ovRenderizarTabla = function() {
                 }
             }
 
+            var fechaCreacionStr = fechaRegistroStr;
+            var fechaInicioFmt = '---';
+            if (v.fecha_inicio) {
+                var dtIni = new Date(v.fecha_inicio);
+                if (!isNaN(dtIni.getTime())) {
+                    var dI = String(dtIni.getDate()).padStart(2, '0');
+                    var mI = String(dtIni.getMonth() + 1).padStart(2, '0');
+                    var yI = dtIni.getFullYear();
+                    var hhI = String(dtIni.getHours()).padStart(2, '0');
+                    var mmI = String(dtIni.getMinutes()).padStart(2, '0');
+                    var ssI = String(dtIni.getSeconds()).padStart(2, '0');
+                    fechaInicioFmt = `${dI}/${mI}/${yI} ${hhI}:${mmI}:${ssI}`;
+                }
+            } else if (v.fecha_viaje && (esIniciado || esFinalizado)) {
+                fechaInicioFmt = fechaStr;
+            }
+
+            var fechaCierreFmt = '---';
+            if (v.fecha_fin) {
+                var dtFin = new Date(v.fecha_fin);
+                if (!isNaN(dtFin.getTime())) {
+                    var dF = String(dtFin.getDate()).padStart(2, '0');
+                    var mF = String(dtFin.getMonth() + 1).padStart(2, '0');
+                    var yF = dtFin.getFullYear();
+                    var hhF = String(dtFin.getHours()).padStart(2, '0');
+                    var mmF = String(dtFin.getMinutes()).padStart(2, '0');
+                    var ssF = String(dtFin.getSeconds()).padStart(2, '0');
+                    fechaCierreFmt = `${dF}/${mF}/${yF} ${hhF}:${mmF}:${ssF}`;
+                }
+            }
+
             var estadoUpper = (v.estado || 'REGISTRADO').toUpperCase();
             var esFinalizado = estadoUpper === 'FINALIZADO';
             var esIniciado = estadoUpper === 'INICIADO';
             var esRegistrado = !esFinalizado && !esIniciado;
-
-            if (esFinalizado && fechaInicioStr) {
-                fechaFinStr = fechaInicioStr;
-            }
 
             // 2. Estado Badge
             var estadoBadge = '';
@@ -397,28 +428,27 @@ window.ovRenderizarTabla = function() {
             if (esRegistrado) {
                 operacionHtml = `<button type="button" class="ov-btn-iniciar" onclick="window.ovAbrirModalIniciarViaje('${viajeEsc}')"><i class="bi bi-play-fill fs-6"></i> INICIAR</button>`;
             } else if (esIniciado) {
-                operacionHtml = `<button type="button" class="ov-btn-finalizar"><i class="bi bi-flag-fill"></i> FINALIZAR</button>`;
+                operacionHtml = `<button type="button" class="ov-btn-finalizar" onclick="window.ovAbrirModalFinalizarViaje('${viajeEsc}')"><i class="bi bi-flag-fill"></i> FINALIZAR</button>`;
+            } else {
+                operacionHtml = `<span class="badge bg-secondary-subtle text-secondary font-monospace" style="font-size:0.7rem;"><i class="bi bi-check2-all me-1"></i>CERRADO</span>`;
             }
 
-            // 4. Servicios y Gret
-            var cantServicios = parseInt(v.cant_ordenes, 10) || 1;
-            var cantGret = v.cant_gret != null ? parseInt(v.cant_gret, 10) : 0;
-            var gretBadge = cantGret > 0
-                ? `<span class="ov-badge-count-red">${cantGret}</span>`
-                : `<span class="ov-badge-count-red">0</span>`;
-
-            // 5. Peso Gret
-            var pesoTotalVal = parseFloat(v.peso_total_rutas) || (parseFloat(v.peso) ? parseFloat(v.peso) * 1000 : 0);
-            var pesoGretTxt = pesoTotalVal > 0 ? (pesoTotalVal).toFixed(3) + ' KG' : '';
-
-            // 6. Placas
-            var vehiculo = v.placa_tracto || '';
-            var semirremolque = v.placa_remolque || '';
-
-            // 7. Conductor y Usuario
+            // 4. Conductor y Usuarios
             var conductorNombre = (v.conductor || '').toUpperCase();
             var usuarioCreacion = (v.usuario_creacion || v.usuario || 'ADMINISTRADOR DEL SISTEMA').toUpperCase();
+            var usuarioFinalizacion = (v.usuario_finalizacion || '—').toUpperCase();
 
+            // Limpieza de usuario si contiene correo (mostrar solo nombre)
+            if (usuarioCreacion.includes('@')) {
+                usuarioCreacion = usuarioCreacion.split('@')[0];
+            }
+            if (usuarioFinalizacion.includes('@')) {
+                usuarioFinalizacion = usuarioFinalizacion.split('@')[0];
+            }
+
+            // 5. Placas y carga
+            var vehiculo = v.placa_tracto || '';
+            var semirremolque = v.placa_remolque || '';
             var pesoTnVal = parseFloat(v.peso) || (parseFloat(v.peso_total_rutas) ? parseFloat(v.peso_total_rutas) / 1000 : 0);
             var pesoTnTxt = pesoTnVal > 0 ? (pesoTnVal).toFixed(2) + ' TN' : '0.00 TN';
             var rutaTxt = (v.ruta || '---').toUpperCase();
@@ -450,24 +480,40 @@ window.ovRenderizarTabla = function() {
                         </a>
                     </td>
 
-                    <!-- 5. FECHA Y HORA -->
-                    <td class="font-monospace text-secondary" style="font-size:0.77rem;">${fechaStr}</td>
+                    <!-- 5. F. Y HORA CREACIÓN -->
+                    <td class="font-monospace text-secondary" style="font-size:0.75rem;">${fechaCreacionStr}</td>
 
-                    <!-- 6. CONDUCTOR -->
+                    <!-- 6. F. Y HORA INICIO -->
+                    <td class="font-monospace text-secondary" style="font-size:0.75rem;">${fechaInicioFmt}</td>
+
+                    <!-- 7. F. Y HORA CIERRE -->
+                    <td class="font-monospace text-secondary" style="font-size:0.75rem;">${fechaCierreFmt}</td>
+
+                    <!-- 8. USUARIO CREACIÓN -->
+                    <td class="fw-semibold text-dark" style="font-size:0.76rem;">
+                        <span class="badge bg-light text-dark border px-2 py-1">${usuarioCreacion}</span>
+                    </td>
+
+                    <!-- 9. USUARIO FINALIZACIÓN -->
+                    <td class="fw-semibold text-dark" style="font-size:0.76rem;">
+                        <span class="badge ${usuarioFinalizacion !== '—' ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-light text-muted border'} px-2 py-1">${usuarioFinalizacion}</span>
+                    </td>
+
+                    <!-- 10. CONDUCTOR -->
                     <td class="fw-semibold text-dark" style="font-size:0.78rem;">${conductorNombre || '---'}</td>
 
-                    <!-- 7. VEHÍCULO (TRACTO) -->
+                    <!-- 11. VEHÍCULO (TRACTO) -->
                     <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${vehiculo || '---'}</td>
 
-                    <!-- 8. SEMIRREMOLQUE (CARRETA) -->
+                    <!-- 12. SEMIRREMOLQUE (CARRETA) -->
                     <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${semirremolque || '---'}</td>
 
-                    <!-- 9. RUTA PROGRAMADA -->
+                    <!-- 13. RUTA PROGRAMADA -->
                     <td class="fw-semibold text-dark small">
                         <i class="bi bi-geo-alt-fill text-danger me-1"></i>${rutaTxt}
                     </td>
 
-                    <!-- 10. CANTIDAD / PESO (TN) -->
+                    <!-- 14. CANTIDAD / PESO (TN) -->
                     <td style="text-align: right;" class="font-monospace fw-bold text-dark" style="font-size:0.78rem;">
                         <span class="badge ${pesoTnVal > 0 ? 'bg-light text-dark border border-secondary-subtle' : 'bg-light text-muted'} font-monospace px-2 py-1 fw-bold">
                             ${pesoTnTxt}
@@ -846,6 +892,7 @@ window.ovGuardarNuevoViaje = async function(e) {
         direccion_llegada: dirLlegada,
         observaciones,
         escolta,
+        usuario_creacion: (typeof window.usuarioLogueado !== 'undefined' && window.usuarioLogueado) || localStorage.getItem('fleet_user') || 'ADMINISTRADOR DEL SISTEMA',
         rutas: _ovListaRutasSubFormulario
     };
 
@@ -966,6 +1013,87 @@ window.ovEjecutarIniciarViajeConfirmado = async function(e) {
     } catch(err) {
         console.error('Error al iniciar viaje:', err);
         alert('Error: ' + err.message);
+    }
+};
+
+// ── GESTIÓN DE FINALIZACIÓN DE VIAJES ────────────────────────────────
+window.ovAbrirModalFinalizarViaje = function(viajeCode) {
+    if (!viajeCode) return;
+
+    var lblViaje = document.getElementById('ov-finalizar-modal-viaje-num');
+    var inputId = document.getElementById('ov-finalizar-viaje-id');
+    var inputFecha = document.getElementById('ov-finalizar-fecha');
+    var inputKm = document.getElementById('ov-finalizar-km');
+    var checkConfirm = document.getElementById('ov-finalizar-check-confirm');
+
+    if (lblViaje) lblViaje.textContent = viajeCode;
+    if (inputId) inputId.value = viajeCode;
+    if (inputFecha) inputFecha.value = new Date().toISOString().slice(0, 10);
+    if (inputKm) inputKm.value = '';
+    if (checkConfirm) checkConfirm.checked = false;
+
+    var modalEl = document.getElementById('modalFinalizarViajeConfirm');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
+window.ovEjecutarFinalizarViajeConfirmado = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    var viajeCode = (document.getElementById('ov-finalizar-viaje-id') || {}).value;
+    var fechaFin = (document.getElementById('ov-finalizar-fecha') || {}).value;
+    var kmActual = (document.getElementById('ov-finalizar-km') || {}).value;
+    var checkConfirm = document.getElementById('ov-finalizar-check-confirm');
+
+    if (!viajeCode) return;
+
+    if (!checkConfirm || !checkConfirm.checked) {
+        alert('Debe confirmar que desea finalizar este viaje.');
+        return;
+    }
+
+    var btnSubmit = document.getElementById('btnEjecutarFinalizarViaje');
+    if (btnSubmit) btnSubmit.disabled = true;
+
+    try {
+        var userFinaliza = (typeof window.usuarioLogueado !== 'undefined' && window.usuarioLogueado) || localStorage.getItem('fleet_user') || 'ADMINISTRADOR DEL SISTEMA';
+
+        var res = await fetch(`/api/operaciones/ordenes-viaje/${encodeURIComponent(viajeCode)}/finalizar`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fecha_fin: fechaFin,
+                kilometraje_final: kmActual,
+                usuario_finalizacion: userFinaliza
+            })
+        });
+        var data = await res.json();
+
+        if (data && data.ok) {
+            if (typeof window.showToastNotification === 'function') {
+                window.showToastNotification(data.message || `Viaje ${viajeCode} finalizado con éxito.`, 'success');
+            } else {
+                alert(data.message || `Viaje ${viajeCode} finalizado con éxito.`);
+            }
+
+            var modalEl = document.getElementById('modalFinalizarViajeConfirm');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+
+            // Recargar datos
+            await window.ovCargarDatos();
+        } else {
+            throw new Error((data && data.error) || 'Error al finalizar el viaje.');
+        }
+    } catch(err) {
+        console.error('Error al finalizar viaje:', err);
+        alert('Error: ' + err.message);
+    } finally {
+        if (btnSubmit) btnSubmit.disabled = false;
     }
 };
 
@@ -1107,21 +1235,31 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     var badgeRutas = document.getElementById('ov-mon-badge-rutas');
     if (badgeRutas) badgeRutas.textContent = rutasAsoc.length;
 
-    // Llenar tabla de rutas
+    // Llenar tabla de órdenes de servicio vinculadas
     var tbodyRutas = document.getElementById('ov-mon-tbody-rutas');
     if (tbodyRutas) {
         if (rutasAsoc.length === 0) {
-            tbodyRutas.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Sin órdenes de servicio registradas para este viaje.</td></tr>`;
+            tbodyRutas.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> Sin órdenes de servicio vinculadas a este viaje.</td></tr>`;
         } else {
             tbodyRutas.innerHTML = rutasAsoc.map(r => `
                 <tr>
                     <td class="fw-bold text-dark font-monospace">${r.orden || '---'}</td>
-                    <td>${parseInt(r.es_retorno, 10) === 1 ? '<span class="badge bg-warning-subtle text-warning-emphasis">RETORNO</span>' : '<span class="badge bg-primary-subtle text-primary">IDA</span>'}</td>
-                    <td><span class="fw-semibold text-dark">${r.ruta || '---'}</span></td>
+                    <td><span class="badge bg-success-subtle text-success border border-success-subtle">EN CURSO</span></td>
+                    <td><span class="text-muted small">—</span></td>
+                    <td class="font-monospace text-secondary">${(item.fecha_viaje || '').slice(0, 10) || '---'}</td>
+                    <td><span class="badge bg-light text-secondary border">PROPIO</span></td>
+                    <td class="fw-semibold text-dark text-truncate" style="max-width:140px;">${item.cliente || 'CLIENTE OPERACIONES'}</td>
+                    <td class="text-muted small text-truncate" style="max-width:140px;">${r.remitente || item.cliente || '---'}</td>
                     <td><span class="badge bg-light text-secondary border">${r.tipo_servicio || 'CARGA GENERAL'}</span></td>
-                    <td class="font-monospace fw-bold text-success">${parseFloat(r.peso_total || 0).toFixed(2)}</td>
+                    <td class="fw-semibold text-dark">${r.ruta || item.ruta || '---'}</td>
+                    <td class="font-monospace">${parseFloat(r.volumen_total || 0).toFixed(3)}</td>
                     <td class="font-monospace">${r.cantidad_total || 0}</td>
-                    <td class="font-monospace">${parseFloat(r.volumen_total || 0).toFixed(2)}</td>
+                    <td class="font-monospace fw-bold text-success">${parseFloat(r.peso_total || 0).toFixed(2)}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 fw-bold" style="font-size:0.7rem;" onclick="window.ovVerEditarOrdenServicio('${r.orden || ''}')" title="Ver / Gestionar Orden de Servicio">
+                            <i class="bi bi-eye"></i> Ver
+                        </button>
+                    </td>
                 </tr>
             `).join('');
         }
@@ -1130,12 +1268,14 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     // Buscar combustible asociado por viaje o placa
     var tbodyComb = document.getElementById('ov-mon-tbody-combustible');
     if (tbodyComb) {
-        tbodyComb.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-warning me-2"></div>Buscando abastecimientos...</td></tr>`;
+        tbodyComb.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-warning me-2"></div>Buscando abastecimientos...</td></tr>`;
         try {
-            var paramsComb = new URLSearchParams({ viaje: viajeCode, limit: 10 });
+            var paramsComb = new URLSearchParams({ viaje: viajeCode, limit: 20 });
             var rComb = await fetch(`/api/combustible/vales?${paramsComb.toString()}`);
             var jComb = await rComb.json();
+            var badgeComb = document.getElementById('ov-mon-tab-comb-badge');
             if (jComb && jComb.ok && Array.isArray(jComb.data) && jComb.data.length > 0) {
+                if (badgeComb) badgeComb.textContent = jComb.data.length;
                 tbodyComb.innerHTML = jComb.data.map(c => `
                     <tr>
                         <td class="fw-bold text-primary font-monospace">${c.correlativo || '---'}</td>
@@ -1146,33 +1286,21 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
                         <td class="font-monospace">${c.kilometraje || '---'}</td>
                         <td class="font-monospace fw-bold text-success">S/ ${parseFloat(c.importe || 0).toFixed(2)}</td>
                         <td><span class="badge bg-success-subtle text-success border border-success-subtle">${c.estado || 'VÁLIDO'}</span></td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-outline-warning btn-sm py-0 px-2 fw-bold" style="font-size:0.7rem;" onclick="window.ovVerEditarValeCombustible('${c.id || ''}')" title="Ver / Editar Vale">
+                                <i class="bi bi-pencil-square"></i> Ver
+                            </button>
+                        </td>
                     </tr>
                 `).join('');
             } else {
-                tbodyComb.innerHTML = `
-                    <tr>
-                        <td><a href="javascript:void(0)" class="text-primary fw-bold font-monospace text-decoration-none">2026-00000038</a></td>
-                        <td class="font-monospace text-secondary">2026-01-07</td>
-                        <td class="fw-semibold text-dark">BASE</td>
-                        <td class="fw-bold text-dark">ROSYMAR SERVICE S.A.C.</td>
-                        <td class="font-monospace fw-bold text-dark">28.85 GL</td>
-                        <td class="font-monospace text-secondary">1.00</td>
-                        <td class="font-monospace fw-bold text-success">S/ 384.57</td>
-                        <td><span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">VÁLIDO</span></td>
-                    </tr>`;
+                if (badgeComb) badgeComb.textContent = '0';
+                tbodyComb.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> No se registran abastecimientos para este viaje.</td></tr>`;
             }
         } catch(e) {
-            tbodyComb.innerHTML = `
-                <tr>
-                    <td><a href="javascript:void(0)" class="text-primary fw-bold font-monospace text-decoration-none">2026-00000038</a></td>
-                    <td class="font-monospace text-secondary">2026-01-07</td>
-                    <td class="fw-semibold text-dark">BASE</td>
-                    <td class="fw-bold text-dark">ROSYMAR SERVICE S.A.C.</td>
-                    <td class="font-monospace fw-bold text-dark">28.85 GL</td>
-                    <td class="font-monospace text-secondary">1.00</td>
-                    <td class="font-monospace fw-bold text-success">S/ 384.57</td>
-                    <td><span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">VÁLIDO</span></td>
-                </tr>`;
+            var badgeCombCatch = document.getElementById('ov-mon-tab-comb-badge');
+            if (badgeCombCatch) badgeCombCatch.textContent = '0';
+            tbodyComb.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox me-1"></i> No se registran abastecimientos para este viaje.</td></tr>`;
         }
     }
 
@@ -1228,26 +1356,13 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     var btnPrimeraTab = document.querySelector('.ov-mon-tab-item');
     if (btnPrimeraTab) window.ovMonCambiarTabSpatial(0, 'resumen', btnPrimeraTab);
 
-    // Abrir Ventana Spatial y Backdrop
+    // Abrir Ventana y Backdrop
     var drawer = document.getElementById('ovMonDrawer');
     var backdrop = document.getElementById('ovMonDrawerBackdrop');
     if (drawer) {
-        // Calcular ancho real exacto de la barra lateral para centrar el cuadro en el área visible restante
-        var sb = document.getElementById('sidebarMenu');
-        var sbW = (sb && window.innerWidth > 768) ? sb.getBoundingClientRect().width : 0;
-        var availableW = window.innerWidth - sbW;
-        var drawerW = Math.min(1380, availableW - 32);
-        var leftOffset = sbW + Math.max(16, (availableW - drawerW) / 2);
-        
-        if (window.innerWidth > 768) {
-            drawer.style.left = `${Math.round(leftOffset)}px`;
-            drawer.style.width = `${Math.round(drawerW)}px`;
-            drawer.style.right = 'auto';
-        } else {
-            drawer.style.left = '8px';
-            drawer.style.right = '8px';
-            drawer.style.width = 'auto';
-        }
+        drawer.style.left = '';
+        drawer.style.right = '';
+        drawer.style.width = '';
         drawer.classList.add('active');
     }
     if (backdrop) backdrop.classList.add('active');
@@ -1269,6 +1384,49 @@ window.ovCerrarMonitoreoViaje = function() {
     if (window._ovWaveAnimationId) {
         cancelAnimationFrame(window._ovWaveAnimationId);
         window._ovWaveAnimationId = null;
+    }
+};
+
+// ── ACCIONES DIRECTAS DESDE EL DETALLE DEL VIAJE (AGREGAR / EDITAR) ───
+window.ovAgregarValeCombustibleDesdeDetalle = function() {
+    var viajeCode = window._ovViajeMonitoreoActivo;
+    if (typeof window.cvAbrirModalNuevo === 'function') {
+        window.cvAbrirModalNuevo();
+        var fViaje = document.getElementById('cv-f-viaje');
+        if (fViaje && viajeCode) fViaje.value = viajeCode;
+    } else if (typeof window.cargarModuloAislado === 'function') {
+        window.cargarModuloAislado('operaciones/combustible-vales');
+    } else {
+        alert('Módulo de Vales de Combustible disponible en el menú de Operaciones.');
+    }
+};
+
+window.ovVerEditarValeCombustible = function(valeId) {
+    if (typeof window.cvAbrirModalEditar === 'function') {
+        window.cvAbrirModalEditar(valeId);
+    } else {
+        alert(`Vale de Combustible seleccionado: ${valeId}`);
+    }
+};
+
+window.ovAgregarOrdenServicioDesdeDetalle = function() {
+    var viajeCode = window._ovViajeMonitoreoActivo;
+    if (typeof window.osAbrirModalNuevo === 'function') {
+        window.osAbrirModalNuevo();
+    } else if (typeof window.cargarModuloAislado === 'function') {
+        window.cargarModuloAislado('operaciones/ordenes-servicio');
+    } else {
+        alert('Módulo de Órdenes de Servicio disponible en el menú de Operaciones.');
+    }
+};
+
+window.ovVerEditarOrdenServicio = function(codigoOrden) {
+    if (typeof window.osAbrirModalEditarCodigo === 'function') {
+        window.osAbrirModalEditarCodigo(codigoOrden);
+    } else if (typeof window.cargarModuloAislado === 'function') {
+        window.cargarModuloAislado('operaciones/ordenes-servicio');
+    } else {
+        alert(`Orden de Servicio: ${codigoOrden}`);
     }
 };
 
@@ -1418,6 +1576,117 @@ window.ovMonCambiarTabSpatial = function(newIdx, tabKey, targetBtn) {
     if (tabKey === 'combustible') {
         requestAnimationFrame(window.ovInitLiquidWave);
     }
+
+    // Si es seguimiento GPS, renderizar o recalcular mapa Leaflet
+    if (tabKey === 'gps') {
+        setTimeout(() => {
+            window.ovRenderGpsMap();
+        }, 60);
+    }
+};
+
+// ── RUTA INTERACTIVA Y MAPA SATELITAL (LEAFLET) ───────────────────────
+window._ovMapInstance = null;
+
+window.ovRenderGpsMap = function() {
+    var container = document.getElementById('ov-map-seguimiento');
+    if (!container || typeof L === 'undefined') return;
+
+    var viajeCode = window._ovViajeMonitoreoActivo;
+    var listaViajes = window._ovViajesGlobal || (typeof _ovViajesGlobal !== 'undefined' ? _ovViajesGlobal : []) || window.dataGlobalOrdenesViajeModulo || [];
+    var item = listaViajes.find(x => x.viaje === viajeCode) || {};
+
+    // Obtener ruta y puntos de partida / llegada
+    var rutaTxt = (item.ruta || '').trim();
+    var partidaTxt = 'LIMA / CALLAO';
+    var llegadaTxt = rutaTxt || 'DESTINO NACIONAL';
+
+    var txtPartidaEl = document.getElementById('ov-map-txt-partida');
+    var txtLlegadaEl = document.getElementById('ov-map-txt-llegada');
+    if (txtPartidaEl) txtPartidaEl.textContent = partidaTxt;
+    if (txtLlegadaEl) txtLlegadaEl.textContent = llegadaTxt;
+
+    // Coordenadas base por ciudad / punto conocido en Perú
+    var ciudadesCoords = {
+        'AREQUIPA': [-16.409047, -71.537451],
+        'TRUJILLO': [-8.11599, -79.02998],
+        'CHICLAYO': [-6.77137, -79.84088],
+        'PIURA': [-5.19449, -80.63282],
+        'CUSCO': [-13.53195, -71.96746],
+        'HUANCAYO': [-12.06513, -75.20486],
+        'ICA': [-14.06777, -75.72861],
+        'PISCO': [-13.710278, -76.205],
+        'CHINCHA': [-13.41847, -76.13235],
+        'TACNA': [-18.00657, -70.24627],
+        'CHIMBOTE': [-9.07444, -78.59361],
+        'LIMA': [-12.046374, -77.042793],
+        'CALLAO': [-12.0565, -77.1181]
+    };
+
+    var startCoords = [-12.046374, -77.042793]; // Lima
+    var endCoords = [-16.409047, -71.537451];   // Arequipa por defecto si no coincide
+
+    var matchKey = Object.keys(ciudadesCoords).find(c => rutaTxt.toUpperCase().includes(c));
+    if (matchKey && matchKey !== 'LIMA' && matchKey !== 'CALLAO') {
+        endCoords = ciudadesCoords[matchKey];
+    } else if (matchKey === 'CALLAO' || matchKey === 'LIMA') {
+        endCoords = [-12.000, -77.000];
+    }
+
+    if (!window._ovMapInstance) {
+        window._ovMapInstance = L.map('ov-map-seguimiento', {
+            zoomControl: true,
+            attributionControl: false
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(window._ovMapInstance);
+    }
+
+    // Limpiar capas previas excepto el tilelayer
+    window._ovMapInstance.eachLayer(layer => {
+        if (layer instanceof L.Marker || layer instanceof L.Polyline) {
+            window._ovMapInstance.removeLayer(layer);
+        }
+    });
+
+    // Icono Verde Partida
+    var startIcon = L.divIcon({
+        className: 'ov-map-marker-start',
+        html: `<div style="background:#16a34a; color:#fff; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.3); border:2px solid #fff;"><i class="bi bi-geo-alt-fill" style="font-size:14px;"></i></div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 28]
+    });
+
+    // Icono Rojo Llegada
+    var endIcon = L.divIcon({
+        className: 'ov-map-marker-end',
+        html: `<div style="background:#dc2626; color:#fff; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.3); border:2px solid #fff;"><i class="bi bi-flag-fill" style="font-size:13px;"></i></div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 28]
+    });
+
+    var markerStart = L.marker(startCoords, { icon: startIcon }).addTo(window._ovMapInstance);
+    markerStart.bindPopup(`<b>Punto de Partida:</b><br>${partidaTxt}`);
+
+    var markerEnd = L.marker(endCoords, { icon: endIcon }).addTo(window._ovMapInstance);
+    markerEnd.bindPopup(`<b>Punto de Llegada:</b><br>${llegadaTxt}`);
+
+    // Trazar línea de ruta
+    var routeLine = L.polyline([startCoords, endCoords], {
+        color: '#0284c7',
+        weight: 4,
+        opacity: 0.85,
+        dashArray: '8, 8'
+    }).addTo(window._ovMapInstance);
+
+    var bounds = L.latLngBounds([startCoords, endCoords]);
+    window._ovMapInstance.fitBounds(bounds, { padding: [50, 50] });
+
+    setTimeout(() => {
+        if (window._ovMapInstance) window._ovMapInstance.invalidateSize();
+    }, 150);
 };
 
 // Compatibilidad para llamadas existentes
