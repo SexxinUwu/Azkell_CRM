@@ -140,21 +140,13 @@ window._cuentasRenderTabla = function(data) {
         // 1. Sustento de Liquidación (Orden / Factura del servicio)
         var sustentoLiqHtml = '<span class="text-muted small">—</span>';
         if (item.documento_view_url) {
-            var esPdfLiq = (item.documento_url || '').toLowerCase().includes('.pdf');
-            var iconClassLiq = esPdfLiq ? 'bi-file-earmark-pdf-fill text-danger' : 'bi-file-earmark-image-fill text-primary';
-            sustentoLiqHtml = '<a href="' + item.documento_view_url + '" target="_blank" class="btn btn-sm btn-light border py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm" style="font-size:0.75rem;" title="Ver Orden de Liquidación / Factura">' +
-                '<i class="bi ' + iconClassLiq + '"></i> Ver' +
-            '</a>';
+            sustentoLiqHtml = '<a href="' + item.documento_view_url + '" target="_blank" rel="noopener noreferrer" class="fw-bold text-danger text-decoration-underline" style="font-size:0.8rem; cursor:pointer;" title="Abrir Orden de Liquidación / Factura en nueva pestaña">VER</a>';
         }
 
         // 2. Sustento de Pago / Constancia de Depósito
         var sustentoPagoHtml = '<span class="text-muted small">—</span>';
         if (item.sustento_pago_view_url) {
-            var esPdfPago = (item.sustento_pago_url || '').toLowerCase().includes('.pdf');
-            var iconClassPago = esPdfPago ? 'bi-file-earmark-pdf-fill text-danger' : 'bi-file-earmark-image-fill text-success';
-            sustentoPagoHtml = '<a href="' + item.sustento_pago_view_url + '" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm" style="font-size:0.75rem;" title="Ver Voucher / Constancia de Depósito">' +
-                '<i class="bi ' + iconClassPago + '"></i> Pago' +
-            '</a>';
+            sustentoPagoHtml = '<a href="' + item.sustento_pago_view_url + '" target="_blank" rel="noopener noreferrer" class="fw-bold text-danger text-decoration-underline" style="font-size:0.8rem; cursor:pointer;" title="Abrir Constancia o Sustento de Pago en nueva pestaña">VER</a>';
         }
 
         var iconEstado = esPagado ? '<i class="bi bi-check-circle-fill"></i> ' : (est === 'ANULADO' ? '<i class="bi bi-x-circle-fill"></i> ' : '<i class="bi bi-clock-fill"></i> ');
@@ -216,6 +208,7 @@ window._cuentasRenderTabla = function(data) {
         return '<tr>' +
             '<td class="col-sticky-action text-center">' + accionesHtml + '</td>' +
             '<td class="fw-bold text-primary">' + (item.codigo_liquidacion || '—') + '</td>' +
+            '<td class="text-center">' + sustentoLiqHtml + '</td>' +
             '<td>' + _fmtDate(item.fecha_liquidacion) + '</td>' +
             '<td><span class="badge bg-light text-dark border fw-bold">' + (item.numero_viaje || '—') + '</span></td>' +
             '<td>' + _fmtDate(item.fecha_servicio) + '</td>' +
@@ -241,7 +234,6 @@ window._cuentasRenderTabla = function(data) {
             '<td>' + _fmtDate(item.fecha_cobrar) + '</td>' +
             '<td>' + _fmtDate(item.fecha_deposito) + '</td>' +
             '<td class="text-center">' + btnEstadoHtml + '</td>' +
-            '<td class="text-center">' + sustentoLiqHtml + '</td>' +
             '<td class="text-center">' + sustentoPagoHtml + '</td>' +
             '<td class="num-cell">' + netoCobradoHtml + '</td>' +
             '<td class="num-cell ' + diffClass + '">' + diffSign + _fmtMoney(diff) + '</td>' +
