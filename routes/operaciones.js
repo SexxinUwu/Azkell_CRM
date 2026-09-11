@@ -359,8 +359,8 @@ module.exports = function (db, broadcast, logAudit) {
                     COALESCE(r_agg.peso_total_calc, ov.peso, 0) AS peso_total_rutas,
                     r_agg.ordenes_list,
                     r_agg.rutas_list,
-                    COALESCE(NULLIF(TRIM(p.configuracion), ''), '') AS configuracion_tracto,
-                    COALESCE(NULLIF(TRIM(pr.configuracion), ''), '') AS configuracion_remolque
+                    COALESCE(NULLIF(TRIM(ov.configuracion_tracto), ''), NULLIF(TRIM(p.configuracion), ''), '') AS configuracion_tracto,
+                    COALESCE(NULLIF(TRIM(ov.configuracion_remolque), ''), NULLIF(TRIM(pr.configuracion), ''), '') AS configuracion_remolque
                 FROM operaciones_ordenes_viaje ov
                 LEFT JOIN placas p ON ov.placa_tracto = p.placa
                 LEFT JOIN placas pr ON ov.placa_remolque = pr.placa
@@ -768,6 +768,8 @@ module.exports = function (db, broadcast, logAudit) {
                     conductor = ?,
                     placa_tracto = ?,
                     placa_remolque = ?,
+                    configuracion_tracto = ?,
+                    configuracion_remolque = ?,
                     ruta = ?,
                     peso = ?,
                     ubigeo_partida = ?,
@@ -785,6 +787,8 @@ module.exports = function (db, broadcast, logAudit) {
                 String(conductor).trim().toUpperCase(),
                 String(placa_tracto).trim().toUpperCase(),
                 placa_remolque ? String(placa_remolque).trim().toUpperCase() : null,
+                configuracion_tracto ? String(configuracion_tracto).trim().toUpperCase() : null,
+                configuracion_remolque ? String(configuracion_remolque).trim().toUpperCase() : null,
                 ruta ? String(ruta).trim() : null,
                 pesoVal,
                 ubigeo_partida || null,
@@ -798,23 +802,39 @@ module.exports = function (db, broadcast, logAudit) {
                 codeViaje
             ]);
 
-            // Actualizar o guardar configuración en la tabla placas para tracto y carreta
+            // Actualizar o insertar configuración en la tabla placas para tracto y carreta
             if (configuracion_tracto && String(configuracion_tracto).trim() && placa_tracto) {
                 try {
-                    await tdb.query(
+                    const cTr = String(configuracion_tracto).trim().toUpperCase();
+                    const pTr = String(placa_tracto).trim().toUpperCase();
+                    const [resUpd] = await tdb.query(
                         `UPDATE placas SET configuracion = ? WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?))`,
-                        [String(configuracion_tracto).trim().toUpperCase(), String(placa_tracto).trim()]
+                        [cTr, pTr]
                     );
+                    if (resUpd && resUpd.affectedRows === 0) {
+                        await tdb.query(
+                            `INSERT INTO placas (placa, configuracion, tipo, sub_tipo, estado) VALUES (?, ?, 'Tracto', 'Tracto', 'Activa') ON DUPLICATE KEY UPDATE configuracion = VALUES(configuracion)`,
+                            [pTr, cTr]
+                        );
+                    }
                 } catch(pErr) {
                     console.warn('No se pudo actualizar configuración de tracto en tabla placas:', pErr.message);
                 }
             }
             if (configuracion_remolque && String(configuracion_remolque).trim() && placa_remolque) {
                 try {
-                    await tdb.query(
+                    const cRem = String(configuracion_remolque).trim().toUpperCase();
+                    const pRem = String(placa_remolque).trim().toUpperCase();
+                    const [resUpd] = await tdb.query(
                         `UPDATE placas SET configuracion = ? WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?))`,
-                        [String(configuracion_remolque).trim().toUpperCase(), String(placa_remolque).trim()]
+                        [cRem, pRem]
                     );
+                    if (resUpd && resUpd.affectedRows === 0) {
+                        await tdb.query(
+                            `INSERT INTO placas (placa, configuracion, tipo, sub_tipo, estado) VALUES (?, ?, 'Carreta', 'Carreta', 'Activa') ON DUPLICATE KEY UPDATE configuracion = VALUES(configuracion)`,
+                            [pRem, cRem]
+                        );
+                    }
                 } catch(pErr) {
                     console.warn('No se pudo actualizar configuración de remolque en tabla placas:', pErr.message);
                 }
