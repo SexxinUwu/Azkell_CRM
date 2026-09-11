@@ -928,7 +928,10 @@
     // Helper: Buscar registro en la matriz de combustible D2
     function buscarEnMatrizCombustible(rutaStr, sentidoStr, motorStr, confgStr) {
         if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) return null;
-        const rNorm = caNormalizar(rutaStr).replace(/^(IDA|RETORNO)\s*:\s*/i, '');
+        let rNorm = caNormalizar(rutaStr).replace(/^(IDA|RETORNO)\s*:\s*/i, '');
+        if (rNorm.includes('/')) {
+            rNorm = rNorm.split('/')[0].trim();
+        }
         const sNorm = (sentidoStr || 'IDA').toUpperCase().trim();
         const mNorm = caNormalizarMotor(motorStr);
         const cNorm = caNormalizar(confgStr);
@@ -947,8 +950,8 @@
             const mMotor = caNormalizarMotor(m.motor);
             const mConfg = caNormalizar(m.confg);
 
-            // 1. Ruta
-            const rutaMatch = mRuta && (rNorm.includes(mRuta) || mRuta.includes(rNorm));
+            // 1. Ruta (match exacto o inclusión mutua limpia)
+            const rutaMatch = mRuta && (rNorm === mRuta || rNorm.includes(mRuta) || mRuta.includes(rNorm));
             if (!rutaMatch) return false;
 
             // 2. Motor
@@ -1084,13 +1087,19 @@
             const gastoRealRet = vRet.reduce((s, x) => s + (x.importe || 0), 0);
 
             const rawPesoIda = Math.max(0, ...vIda.map(x => parseFloat(x.peso || 0)));
-            let pesoIdaVal = rawPesoIda > 0 ? (rawPesoIda > 50 ? +(rawPesoIda / 1000).toFixed(2) : +rawPesoIda.toFixed(2)) : (t.pesoIda || 0);
+            let pesoIdaVal = (t.pesoIda !== undefined && t.pesoIda > 0) ? t.pesoIda : (rawPesoIda > 0 ? (rawPesoIda > 50 ? +(rawPesoIda / 1000).toFixed(2) : +rawPesoIda.toFixed(2)) : 0);
 
-            // Regla Operativa ERP: La IDA siempre lleva la carga del viaje y el RETORNO siempre va vacío (0.00 Tn)
-            if (pesoIdaVal === 0 && (t.pesoMaxTn || 0) > 0) {
+            // Si aún es 0 pero el viaje tiene peso total y no hay peso de retorno, asignar a la ida
+            if (pesoIdaVal === 0 && (t.pesoMaxTn || 0) > 0 && (!t.pesoRetorno || t.pesoRetorno === 0)) {
                 pesoIdaVal = (t.pesoMaxTn || 0);
             }
-            let pesoRetVal = 0; // El tramo de Retorno es siempre Vacío (0.00 Tn)
+
+            const rawPesoRet = Math.max(0, ...vRet.map(x => parseFloat(x.peso || 0)));
+            let pesoRetVal = (t.pesoRetorno !== undefined && t.pesoRetorno > 0) ? t.pesoRetorno : (rawPesoRet > 0 ? (rawPesoRet > 50 ? +(rawPesoRet / 1000).toFixed(2) : +rawPesoRet.toFixed(2)) : 0);
+
+            // Rutas diferenciadas por tramo
+            const rutaTramoIda = t.rutaIda || t.ruta;
+            const rutaTramoRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : t.ruta);
 
             // Odómetros por tramo
             const minOdoIda = kInicio > 0 ? kInicio : (vIda.length > 0 ? Math.min(...vIda.map(x => x.odometro || 0).filter(Boolean)) : 0);
@@ -1103,9 +1112,9 @@
             const recKmRet = (maxOdoRet > minOdoRet && minOdoRet > 0) ? (maxOdoRet - minOdoRet) : 0;
             const rendRet = (galRealRet > 0 && recKmRet > 0) ? (recKmRet / galRealRet) : 0;
 
-            // ── Cálculo Teórico Matriz Estricto (Ida + Retorno con Motor, Configuración y Regla de Techo con Fallback) ──
-            const galTeoricoIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', pesoIdaVal, t.motor, t.configuracion);
-            const galTeoricoRetorno = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', pesoRetVal, t.motor, t.configuracion);
+            // ── Cálculo Teórico Matriz Estricto (Ida con rutaTramoIda y Retorno con rutaTramoRet) ──
+            const galTeoricoIda = obtenerConsumoTeoricoGalones(rutaTramoIda, 'IDA', pesoIdaVal, t.motor, t.configuracion);
+            const galTeoricoRetorno = (rutaTramoRet || t.rutaRetorno) ? obtenerConsumoTeoricoGalones(rutaTramoRet, 'RETORNO', pesoRetVal, t.motor, t.configuracion) : 0;
             const galTeoricoBase = (galTeoricoIda > 0 || galTeoricoRetorno > 0) ? (galTeoricoIda + galTeoricoRetorno) : 0;
 
             // Regla Operativa: Si la unidad rueda sin carreta (solo tracto), se le descuenta el 25% del teórico consolidado (Ida + Retorno)
@@ -1113,8 +1122,8 @@
             const galTeoricoTotal = (esSinCarreta && galTeoricoBase > 0) ? (galTeoricoBase * 0.75) : galTeoricoBase;
             const galDescontado = (esSinCarreta && galTeoricoBase > 0) ? (galTeoricoBase * 0.25) : 0;
 
-            const kmTeoricoIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor, t.configuracion);
-            const kmTeoricoRetorno = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor, t.configuracion);
+            const kmTeoricoIda = obtenerKmTeorico(rutaTramoIda, 'IDA', t.motor, t.configuracion);
+            const kmTeoricoRetorno = (rutaTramoRet || t.rutaRetorno) ? obtenerKmTeorico(rutaTramoRet, 'RETORNO', t.motor, t.configuracion) : 0;
             const kmTeoricoTotal = (kmTeoricoIda > 0 || kmTeoricoRetorno > 0) ? (kmTeoricoIda + kmTeoricoRetorno) : 0;
 
             const rendTeoricoIda = (galTeoricoIda > 0 && kmTeoricoIda > 0) ? (kmTeoricoIda / galTeoricoIda) : 0;
@@ -1264,7 +1273,7 @@
                     <td class="text-muted small">${esc(t.placa)}</td>
                     <td class="text-muted small font-monospace">${t.carreta ? `<span class="badge bg-light text-dark border px-2 py-0.5" style="font-size:0.72rem;">${esc(t.carreta)}</span>` : '—'}</td>
                     <td class="text-muted small">${esc(t.motor || '—')}</td>
-                    <td class="text-muted small"><span class="fw-semibold text-secondary">Ida: ${esc(t.ruta)}</span></td>
+                    <td class="text-muted small"><span class="fw-semibold text-secondary">Ida: ${esc(rutaTramoIda || t.ruta)}</span></td>
                     <td class="text-end font-monospace fw-bold text-success">
                         ${pesoIdaVal > 0 ? `${pesoIdaVal.toFixed(2)} Tn` : '<span class="text-muted opacity-50">0.00 Tn (Vacío)</span>'}
                     </td>
@@ -1292,7 +1301,7 @@
                     </td>
 
                     <td colspan="7" class="text-muted small fst-italic ps-3">
-                        <i class="bi bi-info-circle me-1"></i>${vIda.length} vale(s) de recarga en tramo de ida
+                        <i class="bi bi-info-circle me-1"></i>${vIda.length} vale(s) de recarga en tramo de ida${t.ordenIda ? ` | OS: ${esc(t.ordenIda)}` : ''}
                     </td>
                 </tr>
 
@@ -1304,7 +1313,7 @@
                     <td class="text-muted small">${esc(t.placa)}</td>
                     <td class="text-muted small font-monospace">${t.carreta ? `<span class="badge bg-light text-dark border px-2 py-0.5" style="font-size:0.72rem;">${esc(t.carreta)}</span>` : '—'}</td>
                     <td class="text-muted small">${esc(t.motor || '—')}</td>
-                    <td class="text-muted small"><span class="fw-semibold text-secondary">Retorno: ${esc(t.ruta)}</span></td>
+                    <td class="text-muted small"><span class="fw-semibold text-secondary">Retorno: ${esc(rutaTramoRet || 'Sin Retorno')}</span></td>
                     <td class="text-end font-monospace fw-bold text-primary">
                         ${pesoRetVal > 0 ? `${pesoRetVal.toFixed(2)} Tn` : '<span class="text-muted opacity-50">0.00 Tn (Vacío)</span>'}
                     </td>
@@ -1332,7 +1341,7 @@
                     </td>
 
                     <td colspan="7" class="text-muted small fst-italic ps-3">
-                        <i class="bi bi-info-circle me-1"></i>${vRet.length} vale(s) de recarga en tramo de retorno
+                        <i class="bi bi-info-circle me-1"></i>${vRet.length} vale(s) de recarga en tramo de retorno${t.ordenRetorno ? ` | OS: ${esc(t.ordenRetorno)}` : ''}
                     </td>
                 </tr>
             `;
@@ -1355,15 +1364,18 @@
                 totalSumVales += (totGal || 0);
                 totalSumKmReal += (fs ? fs.recorridoKm : (t.recorridoKm || 0));
 
-                const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || 0, t.motor, t.configuracion);
-                const gRet = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor, t.configuracion);
+                const rIda = t.rutaIda || t.ruta;
+                const rRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : '');
+
+                const gIda = obtenerConsumoTeoricoGalones(rIda, 'IDA', t.pesoIda || 0, t.motor, t.configuracion);
+                const gRet = rRet ? obtenerConsumoTeoricoGalones(rRet, 'RETORNO', t.pesoRetorno || 0, t.motor, t.configuracion) : 0;
                 const gBase = (gIda + gRet);
                 const esSinCarreta = !t.carreta || t.carreta === '—' || t.carreta === '-' || (typeof t.carreta === 'string' && (t.carreta.trim() === '' || t.carreta.toUpperCase().includes('SIN CARRETA') || t.carreta.toUpperCase().includes('SOLO TRACTO')));
                 const gFinal = (esSinCarreta && gBase > 0) ? (gBase * 0.75) : gBase;
                 totalSumTeorico += gFinal;
 
-                const kIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor, t.configuracion);
-                const kRet = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor, t.configuracion);
+                const kIda = obtenerKmTeorico(rIda, 'IDA', t.motor, t.configuracion);
+                const kRet = rRet ? obtenerKmTeorico(rRet, 'RETORNO', t.motor, t.configuracion) : 0;
                 totalSumKmTeorico += (kIda + kRet);
 
                 const gps = t.gpsTelemetria || t.wialonGps;
@@ -1816,13 +1828,16 @@
             const rend = fs ? fs.rendimiento : t.rendimiento;
             const valesCount = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
 
-            const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || 0, t.motor);
-            const gRet = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor);
+            const rIda = t.rutaIda || t.ruta;
+            const rRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : '');
+
+            const gIda = obtenerConsumoTeoricoGalones(rIda, 'IDA', t.pesoIda || 0, t.motor, t.configuracion);
+            const gRet = rRet ? obtenerConsumoTeoricoGalones(rRet, 'RETORNO', t.pesoRetorno || 0, t.motor, t.configuracion) : 0;
             const gTeoricoTotal = (gIda > 0 || gRet > 0) ? (gIda + gRet) : 0;
             const difGalones = gTeoricoTotal > 0 ? parseFloat((totGal - gTeoricoTotal).toFixed(2)) : null;
 
-            const kIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor);
-            const kRet = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor);
+            const kIda = obtenerKmTeorico(rIda, 'IDA', t.motor, t.configuracion);
+            const kRet = rRet ? obtenerKmTeorico(rRet, 'RETORNO', t.motor, t.configuracion) : 0;
             const kTeoricoTotal = (kIda > 0 || kRet > 0) ? (kIda + kRet) : 0;
             const rendTeoricoTotal = (gTeoricoTotal > 0 && kTeoricoTotal > 0) ? parseFloat((kTeoricoTotal / gTeoricoTotal).toFixed(2)) : '—';
 

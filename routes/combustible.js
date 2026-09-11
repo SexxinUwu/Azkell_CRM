@@ -1007,7 +1007,9 @@ module.exports = function (db, broadcast, logAudit) {
 
             // 2. Consultar órdenes de viaje correspondientes en paralelo
             const ovTable = valesTable === 'marsisa_combustible_vales' ? 'marsisa_ordenes_viaje' : 'operaciones_ordenes_viaje';
+            const ovRutasTable = valesTable === 'marsisa_combustible_vales' ? 'marsisa_ordenes_viaje_rutas' : 'operaciones_ordenes_viaje_rutas';
             let ovRows = [];
+            let ovRutasRows = [];
             try {
                 const [r] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque FROM ${ovTable}`);
                 ovRows = r;
@@ -1015,6 +1017,30 @@ module.exports = function (db, broadcast, logAudit) {
                 const [r] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque FROM operaciones_ordenes_viaje`);
                 ovRows = r;
             }
+
+            try {
+                const [rr] = await tdb.query(`SELECT viaje, orden, ruta, es_retorno, peso_total FROM ${ovRutasTable} ORDER BY id ASC`);
+                ovRutasRows = rr;
+            } catch (e) {
+                try {
+                    const [rr] = await tdb.query(`SELECT viaje, orden, ruta, es_retorno, peso_total FROM operaciones_ordenes_viaje_rutas ORDER BY id ASC`);
+                    ovRutasRows = rr;
+                } catch (e2) {
+                    ovRutasRows = [];
+                }
+            }
+
+            // Normalizador de ruta compuesta (ej: "LIMA - CHULUCANAS / SULLANA" -> "LIMA - CHULUCANAS")
+            const normalizarRutaTramo = (rStr) => {
+                if (!rStr) return '';
+                let r = String(rStr).trim();
+                if (r.includes('/')) {
+                    const p1 = r.split('/')[0].trim();
+                    if (p1) return p1;
+                }
+                return r;
+            };
+
             const ovMap = new Map();
             ovRows.forEach(o => {
                 if (o.viaje) {
@@ -1022,6 +1048,35 @@ module.exports = function (db, broadcast, logAudit) {
                     ovMap.set(raw, o);
                     const clean = raw.replace(/^\d{4}-0*/, '');
                     if (clean) ovMap.set(clean, o);
+                }
+            });
+
+            // Mapear tramos de IDA (es_retorno = 0) y RETORNO (es_retorno = 1) por viaje
+            const ovTramosMap = new Map();
+            ovRutasRows.forEach(rt => {
+                if (rt.viaje) {
+                    const vKey = String(rt.viaje).trim();
+                    const cleanKey = vKey.replace(/^\d{4}-0*/, '');
+                    
+                    const guardarTramo = (k) => {
+                        if (!ovTramosMap.has(k)) {
+                            ovTramosMap.set(k, { ida: [], retorno: [] });
+                        }
+                        const info = ovTramosMap.get(k);
+                        const esRet = parseInt(rt.es_retorno, 10) === 1;
+                        const rNorm = normalizarRutaTramo(rt.ruta);
+                        const pesoKg = parseFloat(rt.peso_total || 0);
+                        const pesoTn = pesoKg > 50 ? +(pesoKg / 1000).toFixed(2) : +pesoKg.toFixed(2);
+                        
+                        if (esRet) {
+                            info.retorno.push({ orden: rt.orden, ruta: rNorm, rutaRaw: rt.ruta, pesoTn, pesoKg });
+                        } else {
+                            info.ida.push({ orden: rt.orden, ruta: rNorm, rutaRaw: rt.ruta, pesoTn, pesoKg });
+                        }
+                    };
+
+                    guardarTramo(vKey);
+                    if (cleanKey && cleanKey !== vKey) guardarTramo(cleanKey);
                 }
             });
 
@@ -1152,11 +1207,41 @@ module.exports = function (db, broadcast, logAudit) {
                     const rawPesoRet = Math.max(0, ...vouchersRetorno.map(x => parseFloat(x.peso || 0)));
                     let pesoRetornoCalculado = rawPesoRet > 50 ? parseFloat((rawPesoRet / 1000).toFixed(2)) : parseFloat(rawPesoRet.toFixed(2));
 
-                    // Regla Operativa: La IDA lleva la carga del viaje y el RETORNO va vacío (0 Tn).
-                    if (pesoIdaCalculado === 0 && pesoCalculadoTn > 0) {
-                        pesoIdaCalculado = pesoCalculadoTn;
+                    // Obtener desglose de rutas de ida y retorno desde ovTramosMap
+                    const tramosInfo = ovTramosMap.get(t.viaje) || ovTramosMap.get(String(t.viaje).replace(/^\d{4}-0*/, '')) || { ida: [], retorno: [] };
+                    
+                    let rutaIdaCalculada = '';
+                    let rutaRetornoCalculada = '';
+                    let ordenIda = '';
+                    let ordenRetorno = '';
+
+                    if (tramosInfo.ida.length > 0) {
+                        rutaIdaCalculada = tramosInfo.ida[0].ruta;
+                        ordenIda = tramosInfo.ida.map(x => x.orden).join(', ');
+                        const sumaPesoIda = tramosInfo.ida.reduce((s, x) => s + x.pesoTn, 0);
+                        if (sumaPesoIda > 0) pesoIdaCalculado = parseFloat(sumaPesoIda.toFixed(2));
                     }
-                    if (vouchersRetorno.length === 0) {
+
+                    if (tramosInfo.retorno.length > 0) {
+                        rutaRetornoCalculada = tramosInfo.retorno[0].ruta;
+                        ordenRetorno = tramosInfo.retorno.map(x => x.orden).join(', ');
+                        const sumaPesoRet = tramosInfo.retorno.reduce((s, x) => s + x.pesoTn, 0);
+                        if (sumaPesoRet > 0) pesoRetornoCalculado = parseFloat(sumaPesoRet.toFixed(2));
+                    }
+
+                    // Si no hubo tramos desagregados en BD, separar por pipe '|' de la ruta principal si existiera
+                    if (!rutaIdaCalculada && t.ruta) {
+                        const parts = t.ruta.split('|').map(p => normalizarRutaTramo(p.trim())).filter(Boolean);
+                        if (parts.length >= 2) {
+                            rutaIdaCalculada = parts[0];
+                            rutaRetornoCalculada = parts[1];
+                        } else {
+                            rutaIdaCalculada = normalizarRutaTramo(t.ruta);
+                        }
+                    }
+
+                    // Si no hay retorno, pesoRetorno es 0
+                    if (!rutaRetornoCalculada && tramosInfo.retorno.length === 0) {
                         pesoRetornoCalculado = 0;
                     }
 
@@ -1243,6 +1328,10 @@ module.exports = function (db, broadcast, logAudit) {
                         marca: placaMarcaMap.get(t.placa) || '',
                         configuracion: placaConfigMap.get(t.placa) || '',
                         ruta: t.ruta,
+                        rutaIda: rutaIdaCalculada || t.ruta,
+                        rutaRetorno: rutaRetornoCalculada || '',
+                        ordenIda,
+                        ordenRetorno,
                         fechaInicio,
                         fechaFin,
                         kmInicio,
