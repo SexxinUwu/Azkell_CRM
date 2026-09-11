@@ -370,14 +370,9 @@
             <button type="button" class="btn btn-sm caja-toolbar-btn d-flex align-items-center gap-1" onclick="window.cajaExportarExcel()">
                 <i class="bi bi-file-earmark-excel text-success"></i> Excel
             </button>
-            <div class="dropdown">
-                <button type="button" class="btn btn-sm caja-toolbar-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    Mostrar Columnas
-                </button>
-                <div class="dropdown-menu p-2 shadow-sm" id="caja-menu-columnas" style="max-height: 280px; overflow-y: auto; font-size: 0.78rem;">
-                    <!-- Se rellena dinámicamente con checkboxes -->
-                </div>
-            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" onclick="window.cajaAbrirModalBancos()" style="font-size:0.78rem; font-weight:600; border-radius:6px;">
+                <i class="bi bi-bank"></i> Cuentas Bancarias
+            </button>
         </div>
 
         <div class="d-flex align-items-center gap-2 ms-auto">
@@ -386,7 +381,7 @@
         </div>
     </div>
 
-    <!-- ── 4. TABLA CON TODAS LAS COLUMNAS EXACTAS (Imágenes 4 y 5) ─────── -->
+    <!-- ── 4. TABLA CON COLUMNAS EXACTAS DEL FORMULARIO ─────── -->
     <div class="caja-table-card">
         <div class="caja-scroll-table">
             <table class="caja-table" id="caja-tabla-principal">
@@ -397,33 +392,31 @@
                         <th data-col="estado" onclick="window.cajaOrdenarTabla('estado')">ESTADO <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="numero" onclick="window.cajaOrdenarTabla('numero')">NÚMERO <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="viaje" onclick="window.cajaOrdenarTabla('orden_viaje')">VIAJE <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="placa" onclick="window.cajaOrdenarTabla('placa')">PLACA <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="conductor" onclick="window.cajaOrdenarTabla('conductor')">CONDUCTOR <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="ruta" onclick="window.cajaOrdenarTabla('ruta_viaje')">RUTA <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="autoriza" onclick="window.cajaOrdenarTabla('autoriza')">AUTORIZA <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="motivo" onclick="window.cajaOrdenarTabla('motivo')">MOTIVO <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="sub_motivo" onclick="window.cajaOrdenarTabla('sub_motivo')">SUB MOTIVO <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="modalidad" onclick="window.cajaOrdenarTabla('modalidad_pago')">MODALIDAD <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="descripcion" onclick="window.cajaOrdenarTabla('descripcion')">DESCRIPCION <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="tipo_persona" onclick="window.cajaOrdenarTabla('tipo_persona')">TIPO PERSONA <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="persona" onclick="window.cajaOrdenarTabla('persona')">PERSONA <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="tipo" onclick="window.cajaOrdenarTabla('tipo_movimiento')">TIPO <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th class="text-end" data-col="subtotal" onclick="window.cajaOrdenarTabla('subtotal')">SUBTOTAL <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th class="text-end" data-col="retencion_detraccion" onclick="window.cajaOrdenarTabla('retencion_detraccion')">RETENCION / DETRACCION <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th class="text-end" data-col="importe" onclick="window.cajaOrdenarTabla('importe_total')">IMPORTE <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th class="text-center" data-col="tipo_cambio" onclick="window.cajaOrdenarTabla('tipo_cambio')">TIPO CAMBIO <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="tipo_documento" onclick="window.cajaOrdenarTabla('tipo_comprobante')">TIPO DOCUMENTO <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th class="text-center" data-col="archivo">ARCHIVO <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="usuario_creacion" onclick="window.cajaOrdenarTabla('usuario_creacion')">USUARIO CREACION <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="comentario" onclick="window.cajaOrdenarTabla('comentario')">COMENTARIO <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="usuario_aprobacion" onclick="window.cajaOrdenarTabla('usuario_aprobacion')">USUARIO APROBACIÓN <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="fecha_aprobacion" onclick="window.cajaOrdenarTabla('fecha_aprobacion')">FECHA APROBACIÓN <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="banco" onclick="window.cajaOrdenarTabla('cuenta_bancaria_empresa')">BANCO <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="factura" onclick="window.cajaOrdenarTabla('numero_factura')">FACTURA <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="motivo_anulacion" onclick="window.cajaOrdenarTabla('motivo_anulacion')">MOTIVO ANULACION <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="moneda" onclick="window.cajaOrdenarTabla('moneda')">MONEDA <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th class="text-end" data-col="importe" onclick="window.cajaOrdenarTabla('importe_total')">IMPORTE TOTAL <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th class="text-center" data-col="tipo_cambio" onclick="window.cajaOrdenarTabla('tipo_cambio')">TC <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="modalidad" onclick="window.cajaOrdenarTabla('modalidad_pago')">MODALIDAD PAGO <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="cuenta_persona" onclick="window.cajaOrdenarTabla('cuenta_bancaria_persona')">CUENTA DESTINO <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="banco" onclick="window.cajaOrdenarTabla('cuenta_bancaria_empresa')">CUENTA ORIGEN <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="tipo_documento" onclick="window.cajaOrdenarTabla('tipo_comprobante')">COMPROBANTE <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="factura" onclick="window.cajaOrdenarTabla('numero_factura')">N° FACTURA <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="constancia" onclick="window.cajaOrdenarTabla('numero_constancia_deposito')">N° CONSTANCIA <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th class="text-center" data-col="voucher">VOUCHER <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th class="text-center" data-col="sustento">SUSTENTO <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="usuario_creacion" onclick="window.cajaOrdenarTabla('usuario_creacion')">USUARIO REGISTRO <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="usuario_aprobacion" onclick="window.cajaOrdenarTabla('usuario_aprobacion')">USUARIO APROBACIÓN <i class="bi bi-arrow-down-up sort-icon"></i></th>
                     </tr>
                 </thead>
                 <tbody id="caja-tbody">
                     <tr>
-                        <td colspan="27" class="text-center py-4 text-muted">
+                        <td colspan="25" class="text-center py-4 text-muted">
                             No hay datos disponibles en la tabla
                         </td>
                     </tr>
@@ -434,7 +427,9 @@
 
 </div>
 
-<!-- ── 5. MODAL NUEVA CAJA (Formulario Exacto de la Imagen 3) ──────────── -->
+<!-- ════════════════════════════════════════════════════════════════════════════
+     MODAL DE NUEVA / EDICIÓN DE CAJA (SEGMENTADO Y CENTRADO)
+     ════════════════════════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="modalCajaForm" tabindex="-1" aria-labelledby="modalCajaFormLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content border-0 shadow">
@@ -446,6 +441,7 @@
 
             <div class="modal-body p-3 p-md-4">
                 <form id="formNuevaCaja" autocomplete="off">
+                    <input type="hidden" id="caja-input-id" value="">
                     
                     <!-- ═══ BLOQUE 1: FOLIO Y FECHAS ═══ -->
                     <div class="caja-segmento-card">
@@ -533,18 +529,8 @@
                             </div>
                             <div class="col-12 col-md-3">
                                 <label class="form-label">Motivo <span class="req">(*)</span></label>
-                                <select id="caja-input-motivo" class="form-select" required onchange="window.cajaAlCambiarMotivo(this.value)">
+                                <select id="caja-input-motivo" class="form-select">
                                     <option value="">Seleccione...</option>
-                                    <option value="ANTICIPO DE VIAJE">ANTICIPO DE VIAJE</option>
-                                    <option value="PEAJES">PEAJES</option>
-                                    <option value="COMBUSTIBLE">COMBUSTIBLE</option>
-                                    <option value="VIÁTICOS / ALIMENTACIÓN">VIÁTICOS / ALIMENTACIÓN</option>
-                                    <option value="GASTOS DE RUTA">GASTOS DE RUTA</option>
-                                    <option value="REPUESTOS / COMPRAS TALLER">REPUESTOS / COMPRAS TALLER</option>
-                                    <option value="SERVICIOS TERCEROS">SERVICIOS TERCEROS</option>
-                                    <option value="PAGO DE CONDUCTORES">PAGO DE CONDUCTORES</option>
-                                    <option value="SERVICIOS ADMINISTRATIVOS">SERVICIOS ADMINISTRATIVOS</option>
-                                    <option value="OTROS EGRESOS">OTROS EGRESOS</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md-3">
@@ -558,20 +544,17 @@
                         <div class="row g-2">
                             <div class="col-12 col-md-4">
                                 <label class="form-label">Tipo de Persona <span class="req">(*)</span></label>
-                                <select id="caja-input-tipo-persona" class="form-select" required onchange="window.cajaAlCambiarTipoPersona(this.value)">
+                                <select id="caja-input-tipo-persona" class="form-select" required>
                                     <option value="">Seleccione...</option>
-                                    <option value="CONDUCTOR">CONDUCTOR</option>
                                     <option value="PROVEEDOR">PROVEEDOR</option>
-                                    <option value="COLABORADOR / EMPLEADO">COLABORADOR / EMPLEADO</option>
-                                    <option value="CLIENTE">CLIENTE</option>
-                                    <option value="TERCERO">TERCERO</option>
+                                    <option value="CONDUCTOR">CONDUCTOR</option>
+                                    <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
+                                    <option value="BANCO">BANCO</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md-8">
                                 <label class="form-label">Persona / Beneficiario <span class="req">(*)</span></label>
-                                <select id="caja-input-persona" class="form-select" required onchange="window.cajaAlSeleccionarPersona(this.value)">
-                                    <option value="">Seleccione...</option>
-                                </select>
+                                <input type="text" id="caja-input-persona" class="form-control" placeholder="Nombre o Razón Social del beneficiario..." required>
                             </div>
                         </div>
                     </div>
@@ -590,12 +573,16 @@
                             </div>
                             <div class="col-6 col-md-4">
                                 <label class="form-label">Moneda <span class="req">(*)</span></label>
-                                <select id="caja-input-moneda" class="form-select" required>
+                                <select id="caja-input-moneda" class="form-select" required onchange="window.cajaAlCambiarMoneda(this.value)">
                                     <option value="SOLES" selected>SOLES</option>
                                     <option value="DOLARES">DOLARES</option>
                                 </select>
                             </div>
-                            <div class="col-6 col-md-4">
+                            <div class="col-6 col-md-4" id="caja-wrap-tc" style="display: none;">
+                                <label class="form-label">Tipo de Cambio (TC) <span class="req">(*)</span></label>
+                                <input type="number" step="0.001" id="caja-input-tipo-cambio" class="form-control fw-bold text-success" value="3.400" placeholder="3.400">
+                            </div>
+                            <div class="col-12 col-md-4" id="caja-wrap-modalidad">
                                 <label class="form-label">Modalidad de Pago <span class="req">(*)</span></label>
                                 <select id="caja-input-modalidad" class="form-select" required>
                                     <option value="">Seleccione...</option>
@@ -611,32 +598,18 @@
                         <div class="row g-2 mb-2">
                             <div class="col-12 col-md-6">
                                 <label class="form-label">Cuenta Bancaria de Persona (Destino) <span class="req">(*)</span></label>
-                                <select id="caja-input-cuenta-persona" class="form-select" required>
-                                    <option value="">Seleccione...</option>
-                                    <option value="BCP AHORROS - SOLES">BCP AHORROS - SOLES</option>
-                                    <option value="BBVA AHORROS - SOLES">BBVA AHORROS - SOLES</option>
-                                    <option value="INTERBANK - SOLES">INTERBANK - SOLES</option>
-                                    <option value="BANCO DE LA NACION">BANCO DE LA NACION</option>
-                                    <option value="EFECTIVO EN MANO">EFECTIVO EN MANO</option>
-                                </select>
+                                <input type="text" id="caja-input-cuenta-persona" class="form-control" placeholder="Ej: BCP 191-XXXXXXXX-X-XX o CCI" required>
                             </div>
                             <div class="col-12 col-md-6">
                                 <label class="form-label">Cuenta Bancaria de Empresa (Origen)</label>
                                 <select id="caja-input-cuenta-empresa" class="form-select">
-                                    <option value="">Seleccionar...</option>
-                                    <option value="BCP CORRIENTE SOLES - 191-23948293-0-12">BCP CORRIENTE SOLES - 191-23948293-0-12</option>
-                                    <option value="BBVA CORRIENTE SOLES - 0011-0293-0100029384">BBVA CORRIENTE SOLES - 0011-0293-0100029384</option>
-                                    <option value="CAJA CHICA CENTRAL EFECTIVO">CAJA CHICA CENTRAL EFECTIVO</option>
+                                    <option value="">Seleccionar cuenta...</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="row g-2">
-                            <div class="col-12 col-md-8">
-                                <label class="form-label">Descripción / Detalle del Movimiento <span class="req">(*)</span></label>
-                                <input type="text" id="caja-input-descripcion" class="form-control" placeholder="Ingrese el detalle o concepto del movimiento..." required>
-                            </div>
-                            <div class="col-12 col-md-4">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label">Tipo de Comprobante <span class="req">(*)</span></label>
                                 <select id="caja-input-tipo-comprobante" class="form-select" required>
                                     <option value="">Seleccione...</option>
@@ -648,6 +621,8 @@
                                     <option value="SIN COMPROBANTE">SIN COMPROBANTE</option>
                                 </select>
                             </div>
+                            <!-- Descripción oculta por solicitud -->
+                            <input type="hidden" id="caja-input-descripcion" value="Movimiento de Caja">
                         </div>
                     </div>
 
@@ -699,6 +674,150 @@
                 </form>
             </div>
 
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     MODAL SUBIR DOCUMENTOS (PARA CAJAS APROBADAS / PROCESADAS)
+     ════════════════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalCajaSubirDocs" tabindex="-1" aria-labelledby="modalCajaSubirDocsLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-primary" id="modalCajaSubirDocsLabel">Subir Documentos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-3 p-md-4">
+                <form id="formCajaSubirDocs" autocomplete="off" onsubmit="window.cajaGuardarSubirDocumentos(event)">
+                    <input type="hidden" id="caja-docs-id" value="">
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small fw-bold">Caja <span class="text-danger">(*)</span></label>
+                            <input type="text" id="caja-docs-numero" class="form-control form-control-sm" readonly>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small fw-bold">Fecha <span class="text-danger">(*)</span></label>
+                            <input type="text" id="caja-docs-fecha" class="form-control form-control-sm" readonly>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small fw-bold">Número Constancia Depósito</label>
+                            <input type="text" id="caja-docs-constancia" class="form-control form-control-sm" placeholder="N° de operación">
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small fw-bold">Número Factura</label>
+                            <input type="text" id="caja-docs-factura" class="form-control form-control-sm" placeholder="Ej: F001-0029">
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-uppercase">Subir Voucher</label>
+                            <input type="file" id="caja-docs-voucher" class="form-control form-control-sm" accept="image/*,.pdf">
+                        </div>
+                        <div class="col-12 mt-2">
+                            <label class="form-label small fw-bold text-uppercase">Subir Sustento</label>
+                            <input type="file" id="caja-docs-sustento" class="form-control form-control-sm" accept="image/*,.pdf,.xlsx,.csv">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <button type="button" class="btn btn-light btn-sm px-3" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" id="caja-docs-btn-submit" class="btn btn-primary btn-sm px-4 fw-bold">
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     MODAL GESTIÓN DE BANCOS (CUENTAS BANCARIAS EMPRESA)
+     ════════════════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalCajaBancos" tabindex="-1" aria-labelledby="modalCajaBancosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="modalCajaBancosLabel">
+                    <i class="bi bi-bank text-primary me-1"></i> Cuentas Bancarias de Empresa
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-3 p-md-4">
+                <!-- Formulario Agregar Banco -->
+                <div class="caja-segmento-card mb-3">
+                    <h6 class="fw-bold mb-2 text-primary" style="font-size:0.85rem;">Agregar Nueva Cuenta</h6>
+                    <form id="formNuevoBanco" onsubmit="window.cajaGuardarNuevoBanco(event)">
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small fw-bold">Banco (*)</label>
+                                <input type="text" id="banco-input-nombre" class="form-control form-control-sm" placeholder="Ej: BCP, BBVA, etc." required>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small fw-bold">Titular</label>
+                                <input type="text" id="banco-input-titular" class="form-control form-control-sm" placeholder="Razón social / Empresa">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label small fw-bold">Moneda</label>
+                                <select id="banco-input-moneda" class="form-select form-select-sm">
+                                    <option value="SOLES" selected>SOLES</option>
+                                    <option value="DOLARES">DOLARES</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label small fw-bold">N° Cuenta (*)</label>
+                                <input type="text" id="banco-input-numero" class="form-control form-control-sm" placeholder="191-XXXXXXXX-X-XX" required>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold">CCI</label>
+                                <input type="text" id="banco-input-cci" class="form-control form-control-sm" placeholder="002-XXXXXXXXXXXXXX-XX">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small fw-bold">Tipo Cuenta</label>
+                                <select id="banco-input-tipo" class="form-select form-select-sm">
+                                    <option value="CORRIENTE" selected>CORRIENTE</option>
+                                    <option value="AHORROS">AHORROS</option>
+                                    <option value="EFECTIVO">EFECTIVO</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-5 d-flex align-items-end">
+                                <button type="submit" class="btn btn-success btn-sm w-100 fw-bold">
+                                    <i class="bi bi-plus-circle me-1"></i> Guardar Cuenta
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabla de Cuentas -->
+                <div class="table-responsive border rounded">
+                    <table class="table table-sm table-hover mb-0" style="font-size:0.75rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>BANCO</th>
+                                <th>TITULAR</th>
+                                <th>MONEDA</th>
+                                <th>NÚMERO DE CUENTA</th>
+                                <th>CCI</th>
+                                <th>TIPO</th>
+                                <th class="text-center">ACCIÓN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="caja-bancos-tbody">
+                            <tr><td colspan="7" class="text-center py-3 text-muted">Cargando cuentas...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
         </div>
     </div>
 </div>

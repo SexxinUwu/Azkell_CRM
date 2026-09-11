@@ -120,51 +120,71 @@ window.cajaRenderizarTabla = function() {
     var html = '';
     rows.forEach(function(r) {
         var badgeEstadoClass = 'bg-secondary';
-        var est = (r.estado || 'PENDIENTE').toUpperCase();
-        if (est === 'APROBADO' || est === 'PAGADO') badgeEstadoClass = 'bg-success';
-        else if (est === 'PENDIENTE') badgeEstadoClass = 'bg-warning text-dark';
-        else if (est === 'RECHAZADO' || est === 'ANULADO') badgeEstadoClass = 'bg-danger';
+        var est = (r.estado || 'REGISTRADO').toUpperCase();
+        if (est === 'APROBADO') badgeEstadoClass = 'bg-primary text-white';
+        else if (est === 'PROCESADO' || est === 'PAGADO') badgeEstadoClass = 'bg-success text-white';
+        else if (est === 'REGISTRADO' || est === 'PENDIENTE') badgeEstadoClass = 'bg-warning text-dark';
+        else if (est === 'RECHAZADO' || est === 'ANULADO') badgeEstadoClass = 'bg-danger text-white';
 
         var numDoc = (r.serie && r.numero) ? (r.serie + '-' + r.numero) : (r.numero || '—');
 
         var archivoHtml = r.voucher_signed ? 
-            '<a href="' + r.voucher_signed + '" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-1.5" title="Ver Comprobante/Voucher" style="font-size:0.7rem;"><i class="bi bi-file-earmark-image"></i></a>' : '—';
+            '<a href="' + r.voucher_signed + '" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-1.5" title="Ver Voucher" style="font-size:0.7rem;"><i class="bi bi-file-earmark-image"></i></a>' : '—';
         
         var sustentoHtml = r.sustento_signed ? 
             '<a href="' + r.sustento_signed + '" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-1.5" title="Ver Sustento" style="font-size:0.7rem;"><i class="bi bi-paperclip"></i></a>' : '—';
 
-        html += '<tr>' +
-            '<td class="text-center">' +
-                '<button type="button" class="btn btn-outline-danger btn-sm p-1 rounded-circle lh-1" onclick="window.cajaEliminarRegistro(' + r.id + ')" title="Eliminar registro">' +
-                    '<i class="bi bi-trash" style="font-size:0.75rem;"></i>' +
+        // Acciones según estado:
+        // Si está REGISTRADO: Editar, Aprobar, Eliminar
+        // Si está APROBADO o PROCESADO: Subir Documentos, Eliminar
+        var accionesHtml = '<div class="d-flex align-items-center justify-content-center gap-1">';
+        if (est === 'REGISTRADO' || est === 'PENDIENTE') {
+            accionesHtml += 
+                '<button type="button" class="btn btn-sm btn-outline-primary p-1 rounded-circle lh-1" onclick="window.cajaAbrirModalEditar(' + r.id + ')" title="Editar Caja">' +
+                    '<i class="bi bi-pencil" style="font-size:0.75rem;"></i>' +
                 '</button>' +
-            '</td>' +
+                '<button type="button" class="btn btn-sm btn-outline-success p-1 rounded-circle lh-1" onclick="window.cajaAprobar(' + r.id + ')" title="Aprobar Caja">' +
+                    '<i class="bi bi-check-lg" style="font-size:0.75rem;"></i>' +
+                '</button>';
+        } else {
+            // Ya está aprobada o procesada: Botón Subir Documentos
+            accionesHtml += 
+                '<button type="button" class="btn btn-xs btn-outline-info py-0 px-1.5 fw-bold" onclick="window.cajaAbrirModalSubirDocs(' + r.id + ')" title="Subir Documentos" style="font-size:0.68rem;">' +
+                    '<i class="bi bi-upload me-0.5"></i> Subir Docs' +
+                '</button>';
+        }
+        accionesHtml += 
+            '<button type="button" class="btn btn-outline-danger btn-sm p-1 rounded-circle lh-1" onclick="window.cajaEliminarRegistro(' + r.id + ')" title="Eliminar">' +
+                '<i class="bi bi-trash" style="font-size:0.75rem;"></i>' +
+            '</button>' +
+        '</div>';
+
+        html += '<tr>' +
+            '<td class="text-center">' + accionesHtml + '</td>' +
             '<td>' + fmtDate(r.fecha) + '</td>' +
-            '<td><span class="badge ' + badgeEstadoClass + ' px-2 py-1" style="font-size:0.68rem;">' + esc(r.estado) + '</span></td>' +
+            '<td><span class="badge ' + badgeEstadoClass + ' px-2 py-1" style="font-size:0.68rem;">' + esc(est) + '</span></td>' +
             '<td class="font-monospace fw-bold text-primary">' + esc(numDoc) + '</td>' +
             '<td>' + esc(r.orden_viaje || '—') + '</td>' +
-            '<td><span class="badge bg-light text-dark border font-monospace">' + esc(r.placa || '—') + '</span></td>' +
+            '<td>' + esc(r.conductor || '—') + '</td>' +
+            '<td>' + esc(r.ruta_viaje || '—') + '</td>' +
+            '<td>' + esc(r.autoriza || '—') + '</td>' +
             '<td>' + esc(r.motivo || '—') + '</td>' +
             '<td>' + esc(r.sub_motivo || '—') + '</td>' +
-            '<td>' + esc(r.modalidad_pago || '—') + '</td>' +
-            '<td class="text-truncate" style="max-width:200px;" title="' + esc(r.descripcion) + '">' + esc(r.descripcion || '—') + '</td>' +
             '<td>' + esc(r.tipo_persona || '—') + '</td>' +
             '<td class="fw-semibold">' + esc(r.persona || '—') + '</td>' +
-            '<td><span class="badge bg-danger-subtle text-danger border border-danger-subtle">' + esc(r.tipo_movimiento || 'EGRESO') + '</span></td>' +
-            '<td class="text-end font-monospace">' + fmtMoney(r.subtotal) + '</td>' +
-            '<td class="text-end font-monospace text-muted">' + fmtMoney(r.retencion_detraccion) + '</td>' +
+            '<td><span class="badge bg-light text-dark border">' + esc(r.moneda || 'SOLES') + '</span></td>' +
             '<td class="text-end font-monospace fw-bold text-dark">' + fmtMoney(r.importe_total) + '</td>' +
             '<td class="text-center font-monospace">' + fmtMoney(r.tipo_cambio) + '</td>' +
-            '<td>' + esc(r.tipo_comprobante || '—') + '</td>' +
-            '<td class="text-center">' + archivoHtml + '</td>' +
-            '<td>' + esc(r.usuario_creacion || '—') + '</td>' +
-            '<td>' + esc(r.comentario || '—') + '</td>' +
-            '<td>' + esc(r.usuario_aprobacion || '—') + '</td>' +
-            '<td>' + esc(r.fecha_aprobacion || '—') + '</td>' +
+            '<td>' + esc(r.modalidad_pago || '—') + '</td>' +
+            '<td>' + esc(r.cuenta_bancaria_persona || '—') + '</td>' +
             '<td>' + esc(r.cuenta_bancaria_empresa || '—') + '</td>' +
+            '<td>' + esc(r.tipo_comprobante || '—') + '</td>' +
             '<td>' + esc(r.numero_factura || '—') + '</td>' +
-            '<td>' + esc(r.motivo_anulacion || '—') + '</td>' +
+            '<td>' + esc(r.numero_constancia_deposito || '—') + '</td>' +
+            '<td class="text-center">' + archivoHtml + '</td>' +
             '<td class="text-center">' + sustentoHtml + '</td>' +
+            '<td>' + esc(r.usuario_creacion || '—') + '</td>' +
+            '<td>' + esc(r.usuario_aprobacion || '—') + '</td>' +
         '</tr>';
     });
 
@@ -198,35 +218,126 @@ window.cajaAbrirModalNuevo = function() {
     var form = document.getElementById('formNuevaCaja');
     if (form) form.reset();
 
+    var idEl = document.getElementById('caja-input-id');
+    if (idEl) idEl.value = '';
+
+    var lbl = document.getElementById('modalCajaFormLabel');
+    if (lbl) lbl.textContent = 'Nueva Caja';
+
     var hoy = new Date();
     var ymd = hoy.toISOString().slice(0, 10);
     var hhmmss = hoy.toTimeString().slice(0, 8);
 
     var fEl = document.getElementById('caja-input-fecha');
     var hEl = document.getElementById('caja-input-hora');
-    var fValEl = document.getElementById('caja-input-fecha-valuta');
-    var hValEl = document.getElementById('caja-input-hora-valuta');
     var serieEl = document.getElementById('caja-input-serie');
 
     if (fEl) fEl.value = ymd;
     if (hEl) hEl.value = hhmmss;
-    if (fValEl) fValEl.value = ymd;
-    if (hValEl) hValEl.value = hhmmss;
     if (serieEl) serieEl.value = String(hoy.getFullYear());
+
+    // Reiniciar moneda y TC
+    window.cajaAlCambiarMoneda('SOLES');
+
+    // Cargar cuentas de bancos de empresa
+    window.cajaCargarBancosSelect();
 
     // Obtener siguiente correlativo automático
     window.cajaActualizarCorrelativo();
 
-    // Cargar opciones para tipo persona
-    var tipoPer = document.getElementById('caja-input-tipo-persona');
-    if (tipoPer) {
-        tipoPer.value = 'CONDUCTOR';
-        window.cajaAlCambiarTipoPersona('CONDUCTOR');
-    }
-
     var modalEl = document.getElementById('modalCajaForm');
     if (modalEl) {
         bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+};
+
+// Abrir modal en modo edición
+window.cajaAbrirModalEditar = function(id) {
+    var r = (window._cajaData || []).find(function(item) { return item.id == id; });
+    if (!r) return;
+
+    var est = (r.estado || 'REGISTRADO').toUpperCase();
+    if (est !== 'REGISTRADO' && est !== 'PENDIENTE') {
+        alert('Esta caja ya está en estado ' + est + ' y no puede ser editada.');
+        return;
+    }
+
+    var form = document.getElementById('formNuevaCaja');
+    if (form) form.reset();
+
+    var idEl = document.getElementById('caja-input-id');
+    if (idEl) idEl.value = r.id;
+
+    var lbl = document.getElementById('modalCajaFormLabel');
+    if (lbl) lbl.textContent = 'Editar Caja: ' + (r.serie ? (r.serie + '-' + r.numero) : r.numero);
+
+    if (document.getElementById('caja-input-serie')) document.getElementById('caja-input-serie').value = r.serie || '2026';
+    if (document.getElementById('caja-input-numero')) document.getElementById('caja-input-numero').value = r.numero || '';
+    if (document.getElementById('caja-input-num-factura')) document.getElementById('caja-input-num-factura').value = r.numero_factura || '';
+    if (document.getElementById('caja-input-constancia')) document.getElementById('caja-input-constancia').value = r.numero_constancia_deposito || '';
+    if (document.getElementById('caja-input-fecha')) document.getElementById('caja-input-fecha').value = r.fecha || '';
+    if (document.getElementById('caja-input-hora')) document.getElementById('caja-input-hora').value = r.hora || '';
+    if (document.getElementById('caja-input-orden-viaje')) document.getElementById('caja-input-orden-viaje').value = r.orden_viaje || '';
+    if (document.getElementById('caja-input-conductor')) document.getElementById('caja-input-conductor').value = r.conductor || '';
+    if (document.getElementById('caja-input-ruta')) document.getElementById('caja-input-ruta').value = r.ruta_viaje || '';
+    if (document.getElementById('caja-input-placa')) document.getElementById('caja-input-placa').value = r.placa || '';
+    if (document.getElementById('caja-input-autoriza')) document.getElementById('caja-input-autoriza').value = r.autoriza || '';
+    if (document.getElementById('caja-input-tipo-persona')) document.getElementById('caja-input-tipo-persona').value = r.tipo_persona || '';
+    if (document.getElementById('caja-input-persona')) document.getElementById('caja-input-persona').value = r.persona || '';
+    if (document.getElementById('caja-input-importe-total')) document.getElementById('caja-input-importe-total').value = r.importe_total || 0;
+    if (document.getElementById('caja-input-moneda')) document.getElementById('caja-input-moneda').value = r.moneda || 'SOLES';
+    if (document.getElementById('caja-input-modalidad')) document.getElementById('caja-input-modalidad').value = r.modalidad_pago || 'TRANSFERENCIA BANCARIA';
+    if (document.getElementById('caja-input-cuenta-persona')) document.getElementById('caja-input-cuenta-persona').value = r.cuenta_bancaria_persona || '';
+    if (document.getElementById('caja-input-tipo-comprobante')) document.getElementById('caja-input-tipo-comprobante').value = r.tipo_comprobante || '';
+    if (document.getElementById('caja-input-observacion')) document.getElementById('caja-input-observacion').value = r.observacion || '';
+    if (document.getElementById('caja-check-no-aplica-liq')) document.getElementById('caja-check-no-aplica-liq').checked = !!r.no_aplica_liquidacion;
+
+    window.cajaAlCambiarMoneda(r.moneda || 'SOLES');
+    if (document.getElementById('caja-input-tipo-cambio') && r.tipo_cambio) {
+        document.getElementById('caja-input-tipo-cambio').value = r.tipo_cambio;
+    }
+
+    window.cajaCargarBancosSelect(r.cuenta_bancaria_empresa);
+
+    var modalEl = document.getElementById('modalCajaForm');
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+};
+
+// Cambio de moneda (mostrar TC si es DOLARES)
+window.cajaAlCambiarMoneda = function(moneda) {
+    var wrapTc = document.getElementById('caja-wrap-tc');
+    var tcInput = document.getElementById('caja-input-tipo-cambio');
+    if (!wrapTc) return;
+
+    if (moneda === 'DOLARES') {
+        wrapTc.style.display = 'block';
+        if (tcInput && (!tcInput.value || tcInput.value == '1' || tcInput.value == '1.0000')) {
+            tcInput.value = '3.400';
+        }
+    } else {
+        wrapTc.style.display = 'none';
+        if (tcInput) tcInput.value = '1.000';
+    }
+};
+
+// Cargar Cuentas Bancarias de Empresa en el selector
+window.cajaCargarBancosSelect = async function(seleccionado) {
+    var sel = document.getElementById('caja-input-cuenta-empresa');
+    if (!sel) return;
+    try {
+        var resp = await fetch('/api/tesoreria/bancos');
+        var res = await resp.json();
+        sel.innerHTML = '<option value="">Seleccionar cuenta...</option>';
+        if (res.ok && Array.isArray(res.data)) {
+            res.data.forEach(function(b) {
+                var label = b.banco + ' - ' + b.numero_cuenta + ' (' + b.moneda + ')';
+                var opt = new Option(label, label);
+                if (seleccionado && label === seleccionado) opt.selected = true;
+                sel.add(opt);
+            });
+        }
+    } catch(e) {
+        console.warn('Error cargando bancos:', e);
     }
 };
 
@@ -259,108 +370,36 @@ window.cajaCargarOrdenesViajeDatalist = function() {
                 }
             }
         })
-        .catch(function(e) { console.warn('Error cargando datalist viajes:', e); });
+        .catch(function(err) { console.warn('Error cargando órdenes de viaje:', err); });
 };
 
-window.cajaAlSeleccionarOrdenViaje = function(val) {
-    if (!val || !window._cajaOrdenesViajeList) return;
-    var match = window._cajaOrdenesViajeList.find(function(o) {
-        return o.viaje && o.viaje.toLowerCase() === val.toLowerCase().trim();
+window.cajaAlSeleccionarOrdenViaje = function(viaje) {
+    if (!viaje || !window._cajaOrdenesViajeList) return;
+    var encontrado = window._cajaOrdenesViajeList.find(function(o) {
+        return o.viaje.trim().toLowerCase() === viaje.trim().toLowerCase();
     });
 
-    if (match) {
+    if (encontrado) {
         var cEl = document.getElementById('caja-input-conductor');
         var rEl = document.getElementById('caja-input-ruta');
         var pEl = document.getElementById('caja-input-placa');
-        if (cEl) cEl.value = match.conductor || '';
-        if (rEl) rEl.value = match.ruta || '';
-        if (pEl) pEl.value = match.placa_tracto || '';
-
-        // Si el tipo de persona es Conductor, seleccionarlo automáticamente
         var perEl = document.getElementById('caja-input-persona');
-        if (perEl && match.conductor) {
-            // Verificar si existe en el select o agregarlo
-            var found = Array.from(perEl.options).some(function(opt) { return opt.value === match.conductor; });
-            if (!found) perEl.add(new Option(match.conductor, match.conductor));
-            perEl.value = match.conductor;
-        }
+        var tipoPerEl = document.getElementById('caja-input-tipo-persona');
+
+        if (cEl) cEl.value = encontrado.conductor || '';
+        if (rEl) rEl.value = encontrado.ruta || '';
+        if (pEl) pEl.value = encontrado.placa_tracto || '';
+        if (perEl && !perEl.value && encontrado.conductor) perEl.value = encontrado.conductor;
+        if (tipoPerEl && !tipoPerEl.value) tipoPerEl.value = 'CONDUCTOR';
     }
 };
 
-// ── 7. Motivos y Sub Motivos Dinámicos ───────────────────────────
+// ── 7. Motivos y Sub Motivos (Vacíos por ahora - Centros de Costos) ──
 window.cajaAlCambiarMotivo = function(motivo) {
-    var subEl = document.getElementById('caja-input-submotivo');
-    if (!subEl) return;
-    subEl.innerHTML = '<option value="">Seleccione...</option>';
-
-    var mapaSub = {
-        'ANTICIPO DE VIAJE': ['VIÁTICOS RUTA', 'ANTICIPO PEAJE', 'ANTICIPO COMBUSTIBLE', 'GASTOS DE DESPACHO'],
-        'PEAJES': ['PEAJE ELECTRÓNICO (E-PASS/FACILPASS)', 'PEAJE EN EFECTIVO', 'PENALIDAD PEAJE'],
-        'COMBUSTIBLE': ['DIESEL B5 S50', 'UREA LÍQUIDA', 'VALE DE EMERGENCIA'],
-        'VIÁTICOS / ALIMENTACIÓN': ['DESAYUNO / ALMUERZO / CENA', 'HOSPEDAJE', 'MOVILIDAD LOCAL'],
-        'GASTOS DE RUTA': ['COCHERA / GUARDIANÍA', 'LLANTERÍA / PARCHE', 'BALANZA / PESAJE', 'DESESTIBA / ESTIBA'],
-        'REPUESTOS / COMPRAS TALLER': ['FILTROS', 'LUBRICANTES / ACEITES', 'NEUMÁTICOS', 'BATERÍAS', 'REPUESTOS VARIOS'],
-        'SERVICIOS TERCEROS': ['SERVICIO DE TORNO', 'VULCANIZADO', 'GRÚA / AUXILIO MECÁNICO', 'LAVADO DE FLOTA'],
-        'PAGO DE CONDUCTORES': ['PAGO POR KILÓMETRO', 'BONO DE DESPACHO', 'DESCUENTO POR DESCUADRE', 'LIQUIDACIÓN FINAL'],
-        'SERVICIOS ADMINISTRATIVOS': ['ÚTILES DE OFICINA', 'MENSAJERÍA / ENCOMIENDAS', 'SERVICIOS PÚBLICOS', 'HONORARIOS LEGALES'],
-        'OTROS EGRESOS': ['MULTAS / SANCIONES', 'GASTOS BANCARIOS', 'IMPREVISTOS']
-    };
-
-    var subOpciones = mapaSub[motivo] || ['GENERAL'];
-    subOpciones.forEach(function(sub) {
-        subEl.add(new Option(sub, sub));
-    });
+    // Reservado para centro de costos
 };
 
-// ── 8. Tipo Persona y Personas Dinámicas ─────────────────────────
-window.cajaAlCambiarTipoPersona = function(tipo) {
-    var perEl = document.getElementById('caja-input-persona');
-    if (!perEl) return;
-    perEl.innerHTML = '<option value="">Seleccione...</option>';
-
-    if (tipo === 'CONDUCTOR') {
-        fetch('/api/conductores')
-            .then(function(r) { return r.json(); })
-            .then(function(res) {
-                var list = Array.isArray(res) ? res : (res.data || []);
-                list.forEach(function(c) {
-                    var nom = c.nombres ? (c.nombres + ' ' + (c.apellidos || '')) : (c.nombre || c.nombre_completo || '');
-                    if (nom) perEl.add(new Option(nom.trim(), nom.trim()));
-                });
-            })
-            .catch(function(e) { console.warn(e); });
-    } else if (tipo === 'PROVEEDOR') {
-        fetch('/api/proveedores')
-            .then(function(r) { return r.json(); })
-            .then(function(res) {
-                var list = Array.isArray(res) ? res : (res.data || []);
-                list.forEach(function(p) {
-                    var nom = p.razon_social || p.nombre || '';
-                    if (nom) perEl.add(new Option(nom.trim(), nom.trim()));
-                });
-            })
-            .catch(function(e) { console.warn(e); });
-    } else if (tipo === 'COLABORADOR / EMPLEADO') {
-        fetch('/api/usuarios')
-            .then(function(r) { return r.json(); })
-            .then(function(res) {
-                var list = Array.isArray(res) ? res : (res.data || []);
-                list.forEach(function(u) {
-                    var nom = u.nombre || '';
-                    if (nom) perEl.add(new Option(nom.trim(), nom.trim()));
-                });
-            })
-            .catch(function(e) { console.warn(e); });
-    } else {
-        perEl.add(new Option('CLIENTE / TERCERO GENERAL', 'CLIENTE / TERCERO GENERAL'));
-    }
-};
-
-window.cajaAlSeleccionarPersona = function(persona) {
-    // Si la persona tiene cuenta registrada en proveedores o conductores, autocompletar
-};
-
-// ── 9. Guardar Formulario (POST /api/tesoreria/caja) ────────────
+// ── 8. Guardar Formulario (Crear o Editar) ──────────────────────
 window.cajaGuardarFormulario = async function(e) {
     if (e && e.preventDefault) e.preventDefault();
 
@@ -370,11 +409,10 @@ window.cajaGuardarFormulario = async function(e) {
         btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
     }
 
+    var editId = (document.getElementById('caja-input-id') || {}).value;
     var formData = new FormData();
     formData.append('fecha', (document.getElementById('caja-input-fecha') || {}).value || '');
     formData.append('hora', (document.getElementById('caja-input-hora') || {}).value || '');
-    formData.append('fecha_valuta', (document.getElementById('caja-input-fecha-valuta') || {}).value || '');
-    formData.append('hora_valuta', (document.getElementById('caja-input-hora-valuta') || {}).value || '');
     formData.append('numero_constancia_deposito', (document.getElementById('caja-input-constancia') || {}).value || '');
     formData.append('numero_factura', (document.getElementById('caja-input-num-factura') || {}).value || '');
     formData.append('serie', (document.getElementById('caja-input-serie') || {}).value || '2026');
@@ -388,10 +426,11 @@ window.cajaGuardarFormulario = async function(e) {
     formData.append('sub_motivo', (document.getElementById('caja-input-submotivo') || {}).value || '');
     formData.append('modalidad_pago', (document.getElementById('caja-input-modalidad') || {}).value || '');
     formData.append('moneda', (document.getElementById('caja-input-moneda') || {}).value || 'SOLES');
+    formData.append('tipo_cambio', (document.getElementById('caja-input-tipo-cambio') || {}).value || '1.000');
     formData.append('tipo_persona', (document.getElementById('caja-input-tipo-persona') || {}).value || '');
     formData.append('persona', (document.getElementById('caja-input-persona') || {}).value || '');
     formData.append('importe_total', (document.getElementById('caja-input-importe-total') || {}).value || '0');
-    formData.append('descripcion', (document.getElementById('caja-input-descripcion') || {}).value || '');
+    formData.append('descripcion', (document.getElementById('caja-input-descripcion') || {}).value || 'Movimiento de Caja');
     formData.append('tipo_comprobante', (document.getElementById('caja-input-tipo-comprobante') || {}).value || '');
     formData.append('cuenta_bancaria_persona', (document.getElementById('caja-input-cuenta-persona') || {}).value || '');
     formData.append('cuenta_bancaria_empresa', (document.getElementById('caja-input-cuenta-empresa') || {}).value || '');
@@ -406,20 +445,21 @@ window.cajaGuardarFormulario = async function(e) {
     if (fSustento && fSustento[0]) formData.append('sustento', fSustento[0]);
 
     try {
-        var resp = await fetch('/api/tesoreria/caja', {
-            method: 'POST',
+        var url = editId ? ('/api/tesoreria/caja/' + editId) : '/api/tesoreria/caja';
+        var method = editId ? 'PUT' : 'POST';
+
+        var resp = await fetch(url, {
+            method: method,
             body: formData
         });
         var res = await resp.json();
         if (res.ok) {
-            // Cerrar modal
             var modalEl = document.getElementById('modalCajaForm');
             if (modalEl) bootstrap.Modal.getInstance(modalEl).hide();
 
-            // Recargar datos
             await window.cajaCargarMovimientos();
             if (typeof Swal !== 'undefined') {
-                Swal.fire({ icon: 'success', title: '¡Guardado!', text: 'El registro de caja fue creado correctamente.', timer: 2000, showConfirmButton: false });
+                Swal.fire({ icon: 'success', title: '¡Guardado!', text: 'El registro de caja fue guardado correctamente.', timer: 2000, showConfirmButton: false });
             } else {
                 alert('Registro de caja guardado con éxito.');
             }
@@ -437,7 +477,193 @@ window.cajaGuardarFormulario = async function(e) {
     }
 };
 
-// ── 10. Eliminar Registro ───────────────────────────────────────
+// ── 9. Aprobar Caja ─────────────────────────────────────────────
+window.cajaAprobar = async function(id) {
+    if (!confirm('¿Desea aprobar este registro de caja? Una vez aprobado ya no podrá ser editado directamente.')) return;
+    try {
+        var resp = await fetch('/api/tesoreria/caja/' + id + '/aprobar', { method: 'POST' });
+        var res = await resp.json();
+        if (res.ok) {
+            await window.cajaCargarMovimientos();
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'success', title: '¡Aprobado!', text: 'La caja fue aprobada con éxito.', timer: 1800, showConfirmButton: false });
+            } else {
+                alert('Caja aprobada con éxito.');
+            }
+        } else {
+            alert('Error al aprobar: ' + (res.error || 'No se pudo procesar'));
+        }
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+};
+
+// ── 10. Subir Documentos (Para cajas aprobadas) ──────────────────
+window.cajaAbrirModalSubirDocs = function(id) {
+    var r = (window._cajaData || []).find(function(item) { return item.id == id; });
+    if (!r) return;
+
+    var idEl = document.getElementById('caja-docs-id');
+    var numEl = document.getElementById('caja-docs-numero');
+    var fecEl = document.getElementById('caja-docs-fecha');
+    var constEl = document.getElementById('caja-docs-constancia');
+    var factEl = document.getElementById('caja-docs-factura');
+
+    if (idEl) idEl.value = r.id;
+    if (numEl) numEl.value = (r.serie && r.numero) ? (r.serie + '-' + r.numero) : r.numero;
+    if (fecEl) fecEl.value = r.fecha || '';
+    if (constEl) constEl.value = r.numero_constancia_deposito || '';
+    if (factEl) factEl.value = r.numero_factura || '';
+
+    // Limpiar inputs file
+    if (document.getElementById('caja-docs-voucher')) document.getElementById('caja-docs-voucher').value = '';
+    if (document.getElementById('caja-docs-sustento')) document.getElementById('caja-docs-sustento').value = '';
+
+    var modalEl = document.getElementById('modalCajaSubirDocs');
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+};
+
+window.cajaGuardarSubirDocumentos = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    var id = (document.getElementById('caja-docs-id') || {}).value;
+    if (!id) return;
+
+    var btn = document.getElementById('caja-docs-btn-submit');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Subiendo...';
+    }
+
+    var formData = new FormData();
+    formData.append('numero_constancia_deposito', (document.getElementById('caja-docs-constancia') || {}).value || '');
+    formData.append('numero_factura', (document.getElementById('caja-docs-factura') || {}).value || '');
+
+    var vFile = (document.getElementById('caja-docs-voucher') || {}).files;
+    if (vFile && vFile[0]) formData.append('voucher', vFile[0]);
+
+    var sFile = (document.getElementById('caja-docs-sustento') || {}).files;
+    if (sFile && sFile[0]) formData.append('sustento', sFile[0]);
+
+    try {
+        var resp = await fetch('/api/tesoreria/caja/' + id + '/subir-documentos', {
+            method: 'POST',
+            body: formData
+        });
+        var res = await resp.json();
+        if (res.ok) {
+            var modalEl = document.getElementById('modalCajaSubirDocs');
+            if (modalEl) bootstrap.Modal.getInstance(modalEl).hide();
+
+            await window.cajaCargarMovimientos();
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'success', title: '¡Comprobantes Subidos!', text: 'El estado ha pasado a PROCESADO.', timer: 2000, showConfirmButton: false });
+            } else {
+                alert('Documentos guardados con éxito. Estado actualizado a PROCESADO.');
+            }
+        } else {
+            alert('Error al subir: ' + (res.error || 'No se pudo guardar'));
+        }
+    } catch(err) {
+        alert('Error de conexión: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Guardar';
+        }
+    }
+};
+
+// ── 11. Gestión de Bancos Modal ─────────────────────────────────
+window.cajaAbrirModalBancos = function() {
+    window.cajaCargarTablaBancos();
+    var modalEl = document.getElementById('modalCajaBancos');
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+};
+
+window.cajaCargarTablaBancos = async function() {
+    var tbody = document.getElementById('caja-bancos-tbody');
+    if (!tbody) return;
+    try {
+        var resp = await fetch('/api/tesoreria/bancos');
+        var res = await resp.json();
+        if (res.ok && Array.isArray(res.data)) {
+            if (!res.data.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted">No hay cuentas bancarias registradas.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = res.data.map(function(b) {
+                return '<tr>' +
+                    '<td class="fw-bold">' + (b.banco || '') + '</td>' +
+                    '<td>' + (b.titular || '—') + '</td>' +
+                    '<td><span class="badge bg-light text-dark border">' + (b.moneda || 'SOLES') + '</span></td>' +
+                    '<td class="font-monospace fw-semibold">' + (b.numero_cuenta || '') + '</td>' +
+                    '<td class="font-monospace text-muted">' + (b.cci || '—') + '</td>' +
+                    '<td>' + (b.tipo_cuenta || 'CORRIENTE') + '</td>' +
+                    '<td class="text-center">' +
+                        '<button type="button" class="btn btn-outline-danger btn-xs py-0 px-1" onclick="window.cajaEliminarBanco(' + b.id + ')" title="Eliminar cuenta">' +
+                            '<i class="bi bi-trash"></i>' +
+                        '</button>' +
+                    '</td>' +
+                '</tr>';
+            }).join('');
+        }
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-danger">Error cargando cuentas bancarias</td></tr>';
+    }
+};
+
+window.cajaGuardarNuevoBanco = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    var bNombre = (document.getElementById('banco-input-nombre') || {}).value;
+    var bNum = (document.getElementById('banco-input-numero') || {}).value;
+    if (!bNombre || !bNum) return alert('Banco y Número de cuenta son obligatorios.');
+
+    var payload = {
+        banco: bNombre,
+        titular: (document.getElementById('banco-input-titular') || {}).value,
+        moneda: (document.getElementById('banco-input-moneda') || {}).value,
+        numero_cuenta: bNum,
+        cci: (document.getElementById('banco-input-cci') || {}).value,
+        tipo_cuenta: (document.getElementById('banco-input-tipo') || {}).value
+    };
+
+    try {
+        var resp = await fetch('/api/tesoreria/bancos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        var res = await resp.json();
+        if (res.ok) {
+            document.getElementById('formNuevoBanco').reset();
+            window.cajaCargarTablaBancos();
+            window.cajaCargarBancosSelect();
+        } else {
+            alert('Error al guardar cuenta: ' + res.error);
+        }
+    } catch(err) {
+        alert('Error: ' + err.message);
+    }
+};
+
+window.cajaEliminarBanco = async function(id) {
+    if (!confirm('¿Eliminar esta cuenta bancaria?')) return;
+    try {
+        var resp = await fetch('/api/tesoreria/bancos/' + id, { method: 'DELETE' });
+        var res = await resp.json();
+        if (res.ok) {
+            window.cajaCargarTablaBancos();
+            window.cajaCargarBancosSelect();
+        } else {
+            alert('Error al eliminar: ' + res.error);
+        }
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+};
+
+// ── 12. Eliminar Registro ───────────────────────────────────────
 window.cajaEliminarRegistro = async function(id) {
     if (!confirm('¿Está seguro de eliminar este registro de caja?')) return;
     try {
@@ -453,7 +679,7 @@ window.cajaEliminarRegistro = async function(id) {
     }
 };
 
-// ── 11. Imprimir y Exportar Excel ───────────────────────────────
+// ── 13. Imprimir y Exportar Excel ───────────────────────────────
 window.cajaImprimirTabla = function() {
     window.print();
 };
@@ -476,27 +702,24 @@ window.cajaExportarExcel = function() {
             'ESTADO': r.estado,
             'NÚMERO': (r.serie && r.numero) ? (r.serie + '-' + r.numero) : r.numero,
             'VIAJE': r.orden_viaje,
-            'PLACA': r.placa,
+            'CONDUCTOR': r.conductor,
+            'RUTA': r.ruta_viaje,
+            'AUTORIZA': r.autoriza,
             'MOTIVO': r.motivo,
             'SUB MOTIVO': r.sub_motivo,
-            'MODALIDAD': r.modalidad_pago,
-            'DESCRIPCION': r.descripcion,
             'TIPO PERSONA': r.tipo_persona,
             'PERSONA': r.persona,
-            'TIPO': r.tipo_movimiento,
-            'SUBTOTAL': r.subtotal,
-            'RETENCION/DETRACCION': r.retencion_detraccion,
-            'IMPORTE': r.importe_total,
-            'TIPO CAMBIO': r.tipo_cambio,
-            'TIPO DOCUMENTO': r.tipo_comprobante,
-            'USUARIO CREACION': r.usuario_creacion,
-            'COMENTARIO': r.comentario,
-            'USUARIO APROBACIÓN': r.usuario_aprobacion,
-            'FECHA APROBACIÓN': r.fecha_aprobacion,
-            'BANCO': r.cuenta_bancaria_empresa,
-            'FACTURA': r.numero_factura,
-            'FECHA VALUTA': r.fecha_valuta,
-            'MOTIVO ANULACION': r.motivo_anulacion
+            'MONEDA': r.moneda,
+            'IMPORTE TOTAL': r.importe_total,
+            'TC': r.tipo_cambio,
+            'MODALIDAD': r.modalidad_pago,
+            'CUENTA DESTINO': r.cuenta_bancaria_persona,
+            'CUENTA ORIGEN': r.cuenta_bancaria_empresa,
+            'COMPROBANTE': r.tipo_comprobante,
+            'N° FACTURA': r.numero_factura,
+            'N° CONSTANCIA': r.numero_constancia_deposito,
+            'USUARIO REGISTRO': r.usuario_creacion,
+            'USUARIO APROBACIÓN': r.usuario_aprobacion
         };
     });
 
@@ -506,7 +729,7 @@ window.cajaExportarExcel = function() {
     XLSX.writeFile(wb, 'Tesoreria_Caja_' + new Date().toISOString().slice(0, 10) + '.xlsx');
 };
 
-// ── 12. Selector de Columnas Dinámicas ───────────────────────────
+// ── 14. Selector de Columnas Dinámicas ───────────────────────────
 window.cajaInicializarColumnasSelector = function() {
     var menu = document.getElementById('caja-menu-columnas');
     var ths = document.querySelectorAll('#caja-tabla-principal thead th');
