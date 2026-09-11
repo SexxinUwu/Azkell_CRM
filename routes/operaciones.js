@@ -1087,14 +1087,15 @@ module.exports = function (db, broadcast, logAudit) {
                 const p = Math.max(0, parseFloat(pesoTn) || 0);
                 const fields = ['km_0', 'km_5', 'km_10', 'km_15', 'km_20', 'km_25', 'km_30'];
 
+                // Determinar índice del escalón según regla de punto medio (umbral 2.5 Tn entre intervalos de 5)
                 let targetIdx = 0;
-                if (p <= 0) targetIdx = 0;
-                else if (p <= 5) targetIdx = 1;
-                else if (p <= 10) targetIdx = 2;
-                else if (p <= 15) targetIdx = 3;
-                else if (p <= 20) targetIdx = 4;
-                else if (p <= 25) targetIdx = 5;
-                else targetIdx = 6;
+                if (p <= 2.5) targetIdx = 0;       // km_0 (0 Tn)
+                else if (p <= 7.5) targetIdx = 1;  // km_5 (5 Tn)
+                else if (p <= 12.5) targetIdx = 2; // km_10 (10 Tn)
+                else if (p <= 17.5) targetIdx = 3; // km_15 (15 Tn)
+                else if (p <= 22.5) targetIdx = 4; // km_20 (20 Tn)
+                else if (p <= 27.5) targetIdx = 5; // km_25 (25 Tn)
+                else targetIdx = 6;                // km_30 (> 27.5 Tn)
 
                 // 1. Intentar desde targetIdx hacia abajo (si el escalón actual es 0.00, usar el peso anterior no-cero)
                 for (let i = targetIdx; i >= 0; i--) {
