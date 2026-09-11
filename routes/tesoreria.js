@@ -27,6 +27,7 @@ module.exports = function (db, broadcast, logAudit) {
                 codigo_liquidacion VARCHAR(60) NOT NULL DEFAULT '',
                 fecha_liquidacion DATE NULL,
                 numero_viaje VARCHAR(60) NOT NULL DEFAULT '',
+                orden_servicio VARCHAR(60) NOT NULL DEFAULT '',
                 fecha_servicio DATE NULL,
                 razon_social VARCHAR(150) NOT NULL DEFAULT '',
                 placa_camion VARCHAR(50) NOT NULL DEFAULT '',
@@ -35,7 +36,7 @@ module.exports = function (db, broadcast, logAudit) {
                 cliente VARCHAR(150) NOT NULL DEFAULT '',
                 lugar VARCHAR(150) NOT NULL DEFAULT '',
                 flete DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                comision_porcentaje DECIMAL(5,2) NOT NULL DEFAULT 10.00,
+                comision_porcentaje DECIMAL(5,2) NOT NULL DEFAULT 0.00,
                 tarifa DECIMAL(12,2) NOT NULL DEFAULT 0.00,
                 gastos_operativos DECIMAL(12,2) NOT NULL DEFAULT 0.00,
                 base_imponible DECIMAL(12,2) NOT NULL DEFAULT 0.00,
@@ -48,6 +49,9 @@ module.exports = function (db, broadcast, logAudit) {
                 fecha_factura DATE NULL,
                 serie VARCHAR(30) NOT NULL DEFAULT '',
                 factura VARCHAR(50) NOT NULL DEFAULT '',
+                factura_documento_url TEXT NULL,
+                nota_credito VARCHAR(60) NOT NULL DEFAULT '',
+                nota_credito_url TEXT NULL,
                 credito_dias INT NOT NULL DEFAULT 0,
                 fecha_cobrar DATE NULL,
                 fecha_deposito DATE NULL,
@@ -58,6 +62,7 @@ module.exports = function (db, broadcast, logAudit) {
                 creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_cod_liq (codigo_liquidacion),
+                INDEX idx_os (orden_servicio),
                 INDEX idx_fecha_liq (fecha_liquidacion),
                 INDEX idx_num_viaje (numero_viaje),
                 INDEX idx_factura (serie, factura),
@@ -73,18 +78,44 @@ module.exports = function (db, broadcast, logAudit) {
             // Migraciones de columnas en tablas existentes si faltan
             const migraciones = [
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN codigo_liquidacion VARCHAR(60) NOT NULL DEFAULT '' AFTER id",
+                "ALTER TABLE tesoreria_cuentas ADD COLUMN orden_servicio VARCHAR(60) NOT NULL DEFAULT '' AFTER id",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN numero_viaje VARCHAR(60) NOT NULL DEFAULT '' AFTER fecha_liquidacion",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN placa_camion VARCHAR(50) NOT NULL DEFAULT '' AFTER razon_social",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN placa_carreta VARCHAR(50) NOT NULL DEFAULT '' AFTER placa_camion",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN flete DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER lugar",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN comision_porcentaje DECIMAL(5,2) NOT NULL DEFAULT 10.00 AFTER flete",
+                "ALTER TABLE tesoreria_cuentas ADD COLUMN comision_porcentaje DECIMAL(5,2) NOT NULL DEFAULT 0.00 AFTER flete",
+                "ALTER TABLE tesoreria_cuentas ALTER COLUMN comision_porcentaje SET DEFAULT 0.00",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN documento_url TEXT NULL AFTER observacion",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN neto_cobrado DECIMAL(12,2) NULL DEFAULT NULL AFTER neto_cobrar",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN sustento_pago_url TEXT NULL AFTER documento_url"
+                "ALTER TABLE tesoreria_cuentas ADD COLUMN sustento_pago_url TEXT NULL AFTER documento_url",
+                "ALTER TABLE tesoreria_cuentas ADD COLUMN factura_documento_url TEXT NULL AFTER factura",
+                "ALTER TABLE tesoreria_cuentas ADD COLUMN nota_credito VARCHAR(60) NOT NULL DEFAULT '' AFTER factura_documento_url",
+                "ALTER TABLE tesoreria_cuentas ADD COLUMN nota_credito_url TEXT NULL AFTER nota_credito"
             ];
             for (const mig of migraciones) {
                 try { await tdb.query(mig); } catch(e){}
             }
+
+            // Crear tabla de historial de notas de crédito y reemplazo de facturas
+            await tdb.query(`CREATE TABLE IF NOT EXISTS tesoreria_cuentas_historial_facturas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                cuenta_id INT NOT NULL,
+                factura_anterior_serie VARCHAR(30) NOT NULL DEFAULT '',
+                factura_anterior_numero VARCHAR(50) NOT NULL DEFAULT '',
+                factura_anterior_url TEXT NULL,
+                nota_credito_serie VARCHAR(30) NOT NULL DEFAULT '',
+                nota_credito_numero VARCHAR(50) NOT NULL DEFAULT '',
+                nota_credito_url TEXT NULL,
+                motivo_anulacion VARCHAR(255) NOT NULL DEFAULT '',
+                factura_nueva_serie VARCHAR(30) NOT NULL DEFAULT '',
+                factura_nueva_numero VARCHAR(50) NOT NULL DEFAULT '',
+                factura_nueva_url TEXT NULL,
+                usuario_registro VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR',
+                fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_cuenta_id (cuenta_id),
+                INDEX idx_nc (nota_credito_serie, nota_credito_numero)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
             _tenantsInitSet.add(tenantSlug);
         } catch (e) {
             console.warn(`[Tesorería] Error verificando tabla tesoreria_cuentas (${tenantSlug}):`, e.message);
@@ -201,6 +232,7 @@ module.exports = function (db, broadcast, logAudit) {
                 SELECT 
                     id,
                     codigo_liquidacion,
+                    orden_servicio,
                     DATE_FORMAT(fecha_liquidacion, '%Y-%m-%d') AS fecha_liquidacion,
                     numero_viaje,
                     DATE_FORMAT(fecha_servicio, '%Y-%m-%d') AS fecha_servicio,
@@ -225,6 +257,9 @@ module.exports = function (db, broadcast, logAudit) {
                     DATE_FORMAT(fecha_factura, '%Y-%m-%d') AS fecha_factura,
                     serie,
                     factura,
+                    factura_documento_url,
+                    nota_credito,
+                    nota_credito_url,
                     credito_dias,
                     DATE_FORMAT(fecha_cobrar, '%Y-%m-%d') AS fecha_cobrar,
                     DATE_FORMAT(fecha_deposito, '%Y-%m-%d') AS fecha_deposito,
@@ -254,6 +289,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const term = `%${buscar.trim()}%`;
                 sql += ` AND (
                     codigo_liquidacion LIKE ? OR
+                    orden_servicio LIKE ? OR
                     numero_viaje LIKE ? OR
                     razon_social LIKE ? OR 
                     placa_camion LIKE ? OR 
@@ -262,10 +298,11 @@ module.exports = function (db, broadcast, logAudit) {
                     cliente LIKE ? OR 
                     factura LIKE ? OR 
                     serie LIKE ? OR
+                    nota_credito LIKE ? OR
                     lugar LIKE ? OR
                     observacion LIKE ?
                 )`;
-                params.push(term, term, term, term, term, term, term, term, term, term, term);
+                params.push(term, term, term, term, term, term, term, term, term, term, term, term, term);
             }
 
             sql += ` ORDER BY fecha_liquidacion DESC, id DESC LIMIT 5000`;
@@ -299,6 +336,32 @@ module.exports = function (db, broadcast, logAudit) {
                 } else if (r.sustento_pago_url) {
                     r.sustento_pago_view_url = r.sustento_pago_url;
                 }
+
+                if (r.factura_documento_url && r.factura_documento_url.includes('amazonaws.com')) {
+                    try {
+                        const key = s3KeyFromUrl(r.factura_documento_url);
+                        if (key) {
+                            r.factura_documento_view_url = await getPresignedUrl(key, 7200);
+                        }
+                    } catch(e) {
+                        r.factura_documento_view_url = r.factura_documento_url;
+                    }
+                } else if (r.factura_documento_url) {
+                    r.factura_documento_view_url = r.factura_documento_url;
+                }
+
+                if (r.nota_credito_url && r.nota_credito_url.includes('amazonaws.com')) {
+                    try {
+                        const key = s3KeyFromUrl(r.nota_credito_url);
+                        if (key) {
+                            r.nota_credito_view_url = await getPresignedUrl(key, 7200);
+                        }
+                    } catch(e) {
+                        r.nota_credito_view_url = r.nota_credito_url;
+                    }
+                } else if (r.nota_credito_url) {
+                    r.nota_credito_view_url = r.nota_credito_url;
+                }
             }
 
             res.json({ ok: true, data: rows || [] });
@@ -309,7 +372,7 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ── POST /api/tesoreria/cuentas (Crear registro individual con archivo opcional) ──
-    router.post('/cuentas', upload.single('archivo_adjunto'), async (req, res) => {
+    router.post('/cuentas', upload.fields([{ name: 'archivo_adjunto', maxCount: 1 }, { name: 'archivo_factura', maxCount: 1 }]), async (req, res) => {
         try {
             await ensureTable(req);
             const tdb = getDb(req);
@@ -319,27 +382,38 @@ module.exports = function (db, broadcast, logAudit) {
             const { cam, car } = parsePlacas(b.placa, b.placa_camion, b.placa_carreta);
 
             let docUrl = b.documento_url || null;
+            let facturaDocUrl = b.factura_documento_url || null;
 
-            // Si se subió un archivo (PDF o Imagen)
-            if (req.file) {
-                const ext = (req.file.originalname || '').split('.').pop() || 'pdf';
+            // Si se subió archivo de liquidación
+            if (req.files && req.files['archivo_adjunto'] && req.files['archivo_adjunto'][0]) {
+                const f = req.files['archivo_adjunto'][0];
+                const ext = (f.originalname || '').split('.').pop() || 'pdf';
                 const s3Key = `tesoreria/liquidaciones/liq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
-                docUrl = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
+                docUrl = await uploadToS3(f.buffer, s3Key, f.mimetype);
+            }
+
+            // Si se subió archivo de factura
+            if (req.files && req.files['archivo_factura'] && req.files['archivo_factura'][0]) {
+                const f = req.files['archivo_factura'][0];
+                const ext = (f.originalname || '').split('.').pop() || 'pdf';
+                const s3Key = `tesoreria/facturas/fac_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
+                facturaDocUrl = await uploadToS3(f.buffer, s3Key, f.mimetype);
             }
 
             const insertSql = `
                 INSERT INTO tesoreria_cuentas (
-                    codigo_liquidacion, fecha_liquidacion, numero_viaje, fecha_servicio, razon_social,
+                    codigo_liquidacion, orden_servicio, fecha_liquidacion, numero_viaje, fecha_servicio, razon_social,
                     placa_camion, placa_carreta, conductor, cliente, lugar,
                     flete, comision_porcentaje,
                     tarifa, gastos_operativos, base_imponible, igv, total, adelanto, detraccion, neto_cobrar,
-                    mes_facturacion, fecha_factura, serie, factura, credito_dias, fecha_cobrar, fecha_deposito,
+                    mes_facturacion, fecha_factura, serie, factura, factura_documento_url, credito_dias, fecha_cobrar, fecha_deposito,
                     estado_servicio, diferencia, observacion, documento_url
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
 
             const values = [
                 (b.codigo_liquidacion || '').trim(),
+                (b.orden_servicio || '').trim(),
                 safeDate(b.fecha_liquidacion),
                 (b.numero_viaje || '').trim(),
                 safeDate(b.fecha_servicio),
@@ -350,7 +424,7 @@ module.exports = function (db, broadcast, logAudit) {
                 (b.cliente || '').trim(),
                 (b.lugar || '').trim(),
                 safeNum(b.flete),
-                b.comision_porcentaje !== undefined && b.comision_porcentaje !== '' ? safeNum(b.comision_porcentaje) : 10.0,
+                b.comision_porcentaje !== undefined && b.comision_porcentaje !== '' ? safeNum(b.comision_porcentaje) : 0.0,
                 safeNum(b.tarifa),
                 safeNum(b.gastos_operativos),
                 safeNum(b.base_imponible),
@@ -363,6 +437,7 @@ module.exports = function (db, broadcast, logAudit) {
                 safeDate(b.fecha_factura),
                 (b.serie || '').trim(),
                 (b.factura || '').trim(),
+                facturaDocUrl,
                 parseInt(b.credito_dias, 10) || 15,
                 safeDate(b.fecha_cobrar),
                 safeDate(b.fecha_deposito),
@@ -378,7 +453,7 @@ module.exports = function (db, broadcast, logAudit) {
                 logAudit(req, 'TESORERIA', 'CUENTAS', 'CREO', `Creó registro liquidación ${b.codigo_liquidacion} factura ${b.serie}-${b.factura}`);
             }
 
-            res.json({ ok: true, id: result.insertId, documento_url: docUrl, message: 'Registro creado exitosamente' });
+            res.json({ ok: true, id: result.insertId, documento_url: docUrl, factura_documento_url: facturaDocUrl, message: 'Registro creado exitosamente' });
         } catch (err) {
             console.error('Error al crear registro de tesoreria:', err);
             res.status(500).json({ error: err.message });
@@ -386,7 +461,7 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ── PUT /api/tesoreria/cuentas/:id (Editar registro con archivo opcional) ──
-    router.put('/cuentas/:id', upload.single('archivo_adjunto'), async (req, res) => {
+    router.put('/cuentas/:id', upload.fields([{ name: 'archivo_adjunto', maxCount: 1 }, { name: 'archivo_factura', maxCount: 1 }]), async (req, res) => {
         try {
             await ensureTable(req);
             const tdb = getDb(req);
@@ -402,16 +477,26 @@ module.exports = function (db, broadcast, logAudit) {
             const { cam, car } = parsePlacas(b.placa, b.placa_camion, b.placa_carreta);
 
             let docUrl = b.documento_url || null;
+            let facturaDocUrl = b.factura_documento_url || null;
 
-            if (req.file) {
-                const ext = (req.file.originalname || '').split('.').pop() || 'pdf';
+            if (req.files && req.files['archivo_adjunto'] && req.files['archivo_adjunto'][0]) {
+                const f = req.files['archivo_adjunto'][0];
+                const ext = (f.originalname || '').split('.').pop() || 'pdf';
                 const s3Key = `tesoreria/liquidaciones/liq_${id}_${Date.now()}.${ext}`;
-                docUrl = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
+                docUrl = await uploadToS3(f.buffer, s3Key, f.mimetype);
+            }
+
+            if (req.files && req.files['archivo_factura'] && req.files['archivo_factura'][0]) {
+                const f = req.files['archivo_factura'][0];
+                const ext = (f.originalname || '').split('.').pop() || 'pdf';
+                const s3Key = `tesoreria/facturas/fac_${id}_${Date.now()}.${ext}`;
+                facturaDocUrl = await uploadToS3(f.buffer, s3Key, f.mimetype);
             }
 
             const updateSql = `
                 UPDATE tesoreria_cuentas SET
                     codigo_liquidacion = ?,
+                    orden_servicio = ?,
                     fecha_liquidacion = ?,
                     numero_viaje = ?,
                     fecha_servicio = ?,
@@ -441,12 +526,14 @@ module.exports = function (db, broadcast, logAudit) {
                     estado_servicio = ?,
                     diferencia = ?,
                     observacion = ?,
-                    documento_url = COALESCE(?, documento_url)
+                    documento_url = COALESCE(?, documento_url),
+                    factura_documento_url = COALESCE(?, factura_documento_url)
                 WHERE id = ?
             `;
 
             const values = [
                 (b.codigo_liquidacion || '').trim(),
+                (b.orden_servicio || '').trim(),
                 safeDate(b.fecha_liquidacion),
                 (b.numero_viaje || '').trim(),
                 safeDate(b.fecha_servicio),
@@ -457,7 +544,7 @@ module.exports = function (db, broadcast, logAudit) {
                 (b.cliente || '').trim(),
                 (b.lugar || '').trim(),
                 safeNum(b.flete),
-                b.comision_porcentaje !== undefined && b.comision_porcentaje !== '' ? safeNum(b.comision_porcentaje) : 10.0,
+                b.comision_porcentaje !== undefined && b.comision_porcentaje !== '' ? safeNum(b.comision_porcentaje) : 0.0,
                 safeNum(b.tarifa),
                 safeNum(b.gastos_operativos),
                 safeNum(b.base_imponible),
@@ -477,6 +564,7 @@ module.exports = function (db, broadcast, logAudit) {
                 safeNum(b.diferencia),
                 (b.observacion || '').trim(),
                 docUrl,
+                facturaDocUrl,
                 id
             ];
 
@@ -486,7 +574,7 @@ module.exports = function (db, broadcast, logAudit) {
                 logAudit(req, 'TESORERIA', 'CUENTAS', 'MODIFICO', `Modificó registro ID ${id} liquidación ${b.codigo_liquidacion}`);
             }
 
-            res.json({ ok: true, documento_url: docUrl, message: 'Registro actualizado exitosamente' });
+            res.json({ ok: true, documento_url: docUrl, factura_documento_url: facturaDocUrl, message: 'Registro actualizado exitosamente' });
         } catch (err) {
             console.error('Error al editar registro tesoreria:', err);
             res.status(500).json({ error: err.message });
@@ -607,6 +695,164 @@ module.exports = function (db, broadcast, logAudit) {
             });
         } catch (err) {
             console.error('Error al registrar pago en tesoreria:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── POST /api/tesoreria/cuentas/:id/cambiar-factura-nc (Cambiar Factura emitiendo Nota de Crédito) ──
+    router.post('/cuentas/:id/cambiar-factura-nc', upload.fields([
+        { name: 'archivo_nc', maxCount: 1 },
+        { name: 'archivo_nueva_factura', maxCount: 1 }
+    ]), async (req, res) => {
+        try {
+            await ensureTable(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const id = req.params.id;
+            const b = req.body || {};
+
+            const [rows] = await tdb.query('SELECT * FROM tesoreria_cuentas WHERE id = ?', [id]);
+            if (!rows || !rows.length) {
+                return res.status(404).json({ error: 'Registro de cuenta no encontrado' });
+            }
+            const actual = rows[0];
+
+            const facAntSerie = (actual.serie || '').trim();
+            const facAntNum = (actual.factura || '').trim();
+            const facAntUrl = actual.factura_documento_url || null;
+
+            const ncSerie = (b.nc_serie || '').trim().toUpperCase();
+            const ncNumero = (b.nc_numero || '').trim();
+            const motivo = (b.motivo_anulacion || '').trim();
+
+            const nuevaSerie = (b.nueva_serie || '').trim().toUpperCase();
+            const nuevoNumero = (b.nuevo_numero || '').trim();
+            const nuevaFecha = safeDate(b.nueva_fecha_factura) || new Date().toISOString().slice(0, 10);
+
+            if (!ncSerie || !ncNumero) {
+                return res.status(400).json({ error: 'Debe especificar Serie y Número de la Nota de Crédito.' });
+            }
+            if (!motivo) {
+                return res.status(400).json({ error: 'Debe indicar el motivo de la Nota de Crédito / cambio de factura.' });
+            }
+            if (!nuevaSerie || !nuevoNumero) {
+                return res.status(400).json({ error: 'Debe especificar Serie y Número de la Nueva Factura.' });
+            }
+
+            let ncUrl = null;
+            if (req.files && req.files['archivo_nc'] && req.files['archivo_nc'][0]) {
+                const f = req.files['archivo_nc'][0];
+                const ext = (f.originalname || '').split('.').pop() || 'pdf';
+                const s3Key = `tesoreria/notas_credito/nc_${id}_${Date.now()}.${ext}`;
+                ncUrl = await uploadToS3(f.buffer, s3Key, f.mimetype);
+            }
+
+            let nuevaFacUrl = null;
+            if (req.files && req.files['archivo_nueva_factura'] && req.files['archivo_nueva_factura'][0]) {
+                const f = req.files['archivo_nueva_factura'][0];
+                const ext = (f.originalname || '').split('.').pop() || 'pdf';
+                const s3Key = `tesoreria/facturas/fac_${id}_${Date.now()}.${ext}`;
+                nuevaFacUrl = await uploadToS3(f.buffer, s3Key, f.mimetype);
+            }
+
+            // Registrar en historial de auditoría
+            const userStr = (req.user && req.user.nombre) ? req.user.nombre : 'ADMINISTRADOR';
+            await tdb.query(`
+                INSERT INTO tesoreria_cuentas_historial_facturas (
+                    cuenta_id, factura_anterior_serie, factura_anterior_numero, factura_anterior_url,
+                    nota_credito_serie, nota_credito_numero, nota_credito_url, motivo_anulacion,
+                    factura_nueva_serie, factura_nueva_numero, factura_nueva_url, usuario_registro
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                id, facAntSerie, facAntNum, facAntUrl,
+                ncSerie, ncNumero, ncUrl, motivo,
+                nuevaSerie, nuevoNumero, nuevaFacUrl, userStr
+            ]);
+
+            // Actualizar la factura activa en tesoreria_cuentas y anexar nota de auditoría
+            const obsActual = (actual.observacion || '').trim();
+            const notaHistorial = `[NC ${ncSerie}-${ncNumero} reemplaza a ${facAntSerie}-${facAntNum} Motivo: ${motivo}]`;
+            const obsFinal = obsActual ? `${obsActual} | ${notaHistorial}` : notaHistorial;
+            const fullNc = `${ncSerie}-${ncNumero}`;
+
+            await tdb.query(`
+                UPDATE tesoreria_cuentas SET
+                    serie = ?,
+                    factura = ?,
+                    fecha_factura = ?,
+                    factura_documento_url = COALESCE(?, factura_documento_url),
+                    nota_credito = ?,
+                    nota_credito_url = COALESCE(?, nota_credito_url),
+                    observacion = ?
+                WHERE id = ?
+            `, [nuevaSerie, nuevoNumero, nuevaFecha, nuevaFacUrl, fullNc, ncUrl, obsFinal, id]);
+
+            if (typeof logAudit === 'function') {
+                logAudit(req, 'TESORERIA', 'CUENTAS', 'CAMBIO_FACTURA_NC', `Emitió NC ${fullNc} anulando factura ${facAntSerie}-${facAntNum} por nueva factura ${nuevaSerie}-${nuevoNumero} (Cuenta ID ${id})`);
+            }
+
+            res.json({
+                ok: true,
+                message: `Factura reemplazada exitosamente con Nota de Crédito ${fullNc}.`,
+                nueva_serie: nuevaSerie,
+                nuevo_numero: nuevoNumero,
+                nueva_factura_url: nuevaFacUrl,
+                nota_credito: fullNc,
+                nota_credito_url: ncUrl
+            });
+        } catch (err) {
+            console.error('Error al cambiar factura con NC en tesorería:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── GET /api/tesoreria/cuentas/:id/historial-facturas (Listar historial de NC y Facturas) ──
+    router.get('/cuentas/:id/historial-facturas', async (req, res) => {
+        try {
+            await ensureTable(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const id = req.params.id;
+            const [rows] = await tdb.query(`
+                SELECT * FROM tesoreria_cuentas_historial_facturas
+                WHERE cuenta_id = ?
+                ORDER BY id DESC
+            `, [id]);
+
+            for (let r of rows) {
+                if (r.factura_anterior_url && r.factura_anterior_url.includes('amazonaws.com')) {
+                    try {
+                        const k = s3KeyFromUrl(r.factura_anterior_url);
+                        if (k) r.factura_anterior_view_url = await getPresignedUrl(k, 7200);
+                    } catch(e) { r.factura_anterior_view_url = r.factura_anterior_url; }
+                } else if (r.factura_anterior_url) {
+                    r.factura_anterior_view_url = r.factura_anterior_url;
+                }
+
+                if (r.nota_credito_url && r.nota_credito_url.includes('amazonaws.com')) {
+                    try {
+                        const k = s3KeyFromUrl(r.nota_credito_url);
+                        if (k) r.nota_credito_view_url = await getPresignedUrl(k, 7200);
+                    } catch(e) { r.nota_credito_view_url = r.nota_credito_url; }
+                } else if (r.nota_credito_url) {
+                    r.nota_credito_view_url = r.nota_credito_url;
+                }
+
+                if (r.factura_nueva_url && r.factura_nueva_url.includes('amazonaws.com')) {
+                    try {
+                        const k = s3KeyFromUrl(r.factura_nueva_url);
+                        if (k) r.factura_nueva_view_url = await getPresignedUrl(k, 7200);
+                    } catch(e) { r.factura_nueva_view_url = r.factura_nueva_url; }
+                } else if (r.factura_nueva_url) {
+                    r.factura_nueva_view_url = r.factura_nueva_url;
+                }
+            }
+
+            res.json({ ok: true, data: rows || [] });
+        } catch (err) {
+            console.error('Error al obtener historial de facturas:', err);
             res.status(500).json({ error: err.message });
         }
     });
