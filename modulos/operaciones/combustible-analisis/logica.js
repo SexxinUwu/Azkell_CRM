@@ -925,6 +925,18 @@
         return (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     }
 
+    // Helper: Invertir ruta para tramo retorno (ej: "LIMA - AREQUIPA" -> "AREQUIPA - LIMA")
+    function caInvertirRutaRetorno(rStr) {
+        if (!rStr) return '';
+        let norm = caNormalizar(rStr).replace(/^(IDA|RETORNO)\s*:\s*/i, '');
+        if (norm.includes('/')) norm = norm.split('/')[0].trim();
+        const partes = norm.split('-').map(p => p.trim()).filter(Boolean);
+        if (partes.length === 2 && partes[0] !== partes[1]) {
+            return `${partes[1]} - ${partes[0]}`;
+        }
+        return norm;
+    }
+
     // Helper: Buscar registro en la matriz de combustible D2
     function buscarEnMatrizCombustible(rutaStr, sentidoStr, motorStr, confgStr) {
         if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) return null;
@@ -1097,9 +1109,12 @@
             const rawPesoRet = Math.max(0, ...vRet.map(x => parseFloat(x.peso || 0)));
             let pesoRetVal = (t.pesoRetorno !== undefined && t.pesoRetorno > 0) ? t.pesoRetorno : (rawPesoRet > 0 ? (rawPesoRet > 50 ? +(rawPesoRet / 1000).toFixed(2) : +rawPesoRet.toFixed(2)) : 0);
 
-            // Rutas diferenciadas por tramo
+            // Rutas diferenciadas por tramo con inversión inteligente de retorno
             const rutaTramoIda = t.rutaIda || t.ruta;
-            const rutaTramoRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : t.ruta);
+            let rutaTramoRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : '');
+            if (!rutaTramoRet || caNormalizar(rutaTramoRet) === caNormalizar(rutaTramoIda)) {
+                rutaTramoRet = caInvertirRutaRetorno(rutaTramoIda);
+            }
 
             // Odómetros por tramo
             const minOdoIda = kInicio > 0 ? kInicio : (vIda.length > 0 ? Math.min(...vIda.map(x => x.odometro || 0).filter(Boolean)) : 0);
@@ -1365,7 +1380,10 @@
                 totalSumKmReal += (fs ? fs.recorridoKm : (t.recorridoKm || 0));
 
                 const rIda = t.rutaIda || t.ruta;
-                const rRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : '');
+                let rRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : '');
+                if (!rRet || caNormalizar(rRet) === caNormalizar(rIda)) {
+                    rRet = caInvertirRutaRetorno(rIda);
+                }
 
                 const gIda = obtenerConsumoTeoricoGalones(rIda, 'IDA', t.pesoIda || 0, t.motor, t.configuracion);
                 const gRet = rRet ? obtenerConsumoTeoricoGalones(rRet, 'RETORNO', t.pesoRetorno || 0, t.motor, t.configuracion) : 0;
@@ -1829,7 +1847,10 @@
             const valesCount = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
 
             const rIda = t.rutaIda || t.ruta;
-            const rRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : '');
+            let rRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : '');
+            if (!rRet || caNormalizar(rRet) === caNormalizar(rIda)) {
+                rRet = caInvertirRutaRetorno(rIda);
+            }
 
             const gIda = obtenerConsumoTeoricoGalones(rIda, 'IDA', t.pesoIda || 0, t.motor, t.configuracion);
             const gRet = rRet ? obtenerConsumoTeoricoGalones(rRet, 'RETORNO', t.pesoRetorno || 0, t.motor, t.configuracion) : 0;
