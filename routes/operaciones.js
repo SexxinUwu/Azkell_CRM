@@ -1070,11 +1070,11 @@ module.exports = function (db, broadcast, logAudit) {
                 let galonesIda = calcularGalonesTeoricos(rutaIdaTexto, 'IDA', pesoIdaTn, v.modelo_motor, v.configuracion_tracto);
                 let galonesRetorno = calcularGalonesTeoricos(rutaRetornoTexto, 'RETORNO', pesoRetornoTn, v.modelo_motor, v.configuracion_tracto);
 
-                // Descuento -10% si va sin carreta (solo tracto)
+                // Descuento -25% si va sin carreta (solo tracto)
                 const esSinCarreta = !v.placa_remolque || v.placa_remolque.trim() === '' || v.placa_remolque === '—';
                 if (esSinCarreta) {
-                    galonesIda = +(galonesIda * 0.90).toFixed(2);
-                    galonesRetorno = +(galonesRetorno * 0.90).toFixed(2);
+                    galonesIda = +(galonesIda * 0.75).toFixed(2);
+                    galonesRetorno = +(galonesRetorno * 0.75).toFixed(2);
                 }
 
                 const galonesTotal = +(galonesIda + galonesRetorno).toFixed(2);
