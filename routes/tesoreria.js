@@ -859,7 +859,7 @@ module.exports = function (db, broadcast, logAudit) {
                     tipo_comprobante, cuenta_bancaria_persona, cuenta_bancaria_empresa,
                     voucher_url, sustento_url, observacion, no_aplica_liquidacion,
                     estado, usuario_creacion
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REGISTRADO', ?)
             `;
 
             const [result] = await tdb.query(insertSql, [
@@ -905,6 +905,226 @@ module.exports = function (db, broadcast, logAudit) {
             res.json({ ok: true, id: result.insertId, message: 'Registro de caja guardado con éxito' });
         } catch (err) {
             console.error('Error al guardar registro de caja:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Editar registro de caja (Solo si estado es REGISTRADO o PENDIENTE)
+    router.put('/caja/:id', upload.fields([{ name: 'voucher', maxCount: 1 }, { name: 'sustento', maxCount: 1 }]), async (req, res) => {
+        try {
+            await ensureTableCaja(req);
+            const tdb = getDb(req);
+            const { id } = req.params;
+            const b = req.body;
+
+            const [rows] = await tdb.query('SELECT estado, voucher_url, sustento_url FROM tesoreria_caja WHERE id = ?', [id]);
+            if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
+
+            const estadoActual = (rows[0].estado || 'REGISTRADO').toUpperCase();
+            if (estadoActual !== 'REGISTRADO' && estadoActual !== 'PENDIENTE') {
+                return res.status(400).json({ error: 'No se puede editar una caja en estado ' + estadoActual });
+            }
+
+            let voucherUrl = rows[0].voucher_url;
+            if (req.files && req.files['voucher'] && req.files['voucher'][0]) {
+                const f = req.files['voucher'][0];
+                const ext = (f.originalname.split('.').pop() || 'bin').toLowerCase();
+                const key = `tesoreria/caja/voucher_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+                voucherUrl = await uploadToS3(key, f.buffer, f.mimetype);
+            }
+
+            let sustentoUrl = rows[0].sustento_url;
+            if (req.files && req.files['sustento'] && req.files['sustento'][0]) {
+                const f = req.files['sustento'][0];
+                const ext = (f.originalname.split('.').pop() || 'bin').toLowerCase();
+                const key = `tesoreria/caja/sustento_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+                sustentoUrl = await uploadToS3(key, f.buffer, f.mimetype);
+            }
+
+            const impTotal = safeNum(b.importe_total);
+            const retDet = safeNum(b.retencion_detraccion);
+            const subTot = safeNum(b.subtotal) || Math.max(0, impTotal - retDet);
+
+            await tdb.query(`
+                UPDATE tesoreria_caja SET
+                    numero_constancia_deposito = ?,
+                    numero_factura = ?,
+                    orden_viaje = ?,
+                    conductor = ?,
+                    ruta_viaje = ?,
+                    placa = ?,
+                    autoriza = ?,
+                    motivo = ?,
+                    sub_motivo = ?,
+                    modalidad_pago = ?,
+                    moneda = ?,
+                    tipo_persona = ?,
+                    persona = ?,
+                    subtotal = ?,
+                    retencion_detraccion = ?,
+                    importe_total = ?,
+                    tipo_cambio = ?,
+                    descripcion = ?,
+                    tipo_comprobante = ?,
+                    cuenta_bancaria_persona = ?,
+                    cuenta_bancaria_empresa = ?,
+                    voucher_url = ?,
+                    sustento_url = ?,
+                    observacion = ?,
+                    no_aplica_liquidacion = ?
+                WHERE id = ?
+            `, [
+                (b.numero_constancia_deposito || '').trim(),
+                (b.numero_factura || '').trim(),
+                (b.orden_viaje || '').trim(),
+                (b.conductor || '').trim(),
+                (b.ruta_viaje || '').trim(),
+                (b.placa || '').toUpperCase().trim(),
+                (b.autoriza || '').trim(),
+                (b.motivo || '').trim(),
+                (b.sub_motivo || '').trim(),
+                (b.modalidad_pago || '').trim(),
+                (b.moneda || 'SOLES').trim(),
+                (b.tipo_persona || '').trim(),
+                (b.persona || '').trim(),
+                subTot,
+                retDet,
+                impTotal,
+                safeNum(b.tipo_cambio) || 1.0000,
+                (b.descripcion || '').trim(),
+                (b.tipo_comprobante || '').trim(),
+                (b.cuenta_bancaria_persona || '').trim(),
+                (b.cuenta_bancaria_empresa || '').trim(),
+                voucherUrl,
+                sustentoUrl,
+                (b.observacion || '').trim(),
+                b.no_aplica_liquidacion === '1' || b.no_aplica_liquidacion === 1 || b.no_aplica_liquidacion === true ? 1 : 0,
+                id
+            ]);
+
+            res.json({ ok: true, message: 'Registro de caja actualizado' });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Cambiar estado a APROBADO
+    router.post('/caja/:id/aprobar', async (req, res) => {
+        try {
+            await ensureTableCaja(req);
+            const tdb = getDb(req);
+            const { id } = req.params;
+            const userName = (req.user && req.user.nombre) ? req.user.nombre : 'Administrador';
+
+            const [rows] = await tdb.query('SELECT estado FROM tesoreria_caja WHERE id = ?', [id]);
+            if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
+
+            await tdb.query(`
+                UPDATE tesoreria_caja SET
+                    estado = 'APROBADO',
+                    usuario_aprobacion = ?,
+                    fecha_aprobacion = NOW()
+                WHERE id = ?
+            `, [userName, id]);
+
+            res.json({ ok: true, message: 'Caja aprobada con éxito' });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Subir documentos posteriores (Pasa estado a PROCESADO si ya estaba aprobado)
+    router.post('/caja/:id/subir-documentos', upload.fields([{ name: 'voucher', maxCount: 1 }, { name: 'sustento', maxCount: 1 }]), async (req, res) => {
+        try {
+            await ensureTableCaja(req);
+            const tdb = getDb(req);
+            const { id } = req.params;
+            const b = req.body;
+
+            const [rows] = await tdb.query('SELECT estado, voucher_url, sustento_url FROM tesoreria_caja WHERE id = ?', [id]);
+            if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
+
+            let voucherUrl = rows[0].voucher_url;
+            if (req.files && req.files['voucher'] && req.files['voucher'][0]) {
+                const f = req.files['voucher'][0];
+                const ext = (f.originalname.split('.').pop() || 'bin').toLowerCase();
+                const key = `tesoreria/caja/voucher_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+                voucherUrl = await uploadToS3(key, f.buffer, f.mimetype);
+            }
+
+            let sustentoUrl = rows[0].sustento_url;
+            if (req.files && req.files['sustento'] && req.files['sustento'][0]) {
+                const f = req.files['sustento'][0];
+                const ext = (f.originalname.split('.').pop() || 'bin').toLowerCase();
+                const key = `tesoreria/caja/sustento_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+                sustentoUrl = await uploadToS3(key, f.buffer, f.mimetype);
+            }
+
+            const nuevoEstado = (rows[0].estado === 'APROBADO' || rows[0].estado === 'PROCESADO') ? 'PROCESADO' : rows[0].estado;
+
+            await tdb.query(`
+                UPDATE tesoreria_caja SET
+                    numero_constancia_deposito = COALESCE(NULLIF(?, ''), numero_constancia_deposito),
+                    numero_factura = COALESCE(NULLIF(?, ''), numero_factura),
+                    voucher_url = ?,
+                    sustento_url = ?,
+                    estado = ?
+                WHERE id = ?
+            `, [
+                (b.numero_constancia_deposito || '').trim(),
+                (b.numero_factura || '').trim(),
+                voucherUrl,
+                sustentoUrl,
+                nuevoEstado,
+                id
+            ]);
+
+            res.json({ ok: true, message: 'Documentos adjuntados con éxito' });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── GESTIÓN DE BANCOS (TESORERÍA) ─────────────────────────────────
+    router.get('/bancos', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const [rows] = await tdb.query('SELECT * FROM tesoreria_bancos ORDER BY banco ASC');
+            res.json({ ok: true, data: rows });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    router.post('/bancos', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const b = req.body;
+            const [result] = await tdb.query(`
+                INSERT INTO tesoreria_bancos (banco, titular, moneda, tipo_cuenta, numero_cuenta, cci, saldo_inicial, estado)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                (b.banco || '').trim(),
+                (b.titular || '').trim(),
+                (b.moneda || 'SOLES').trim(),
+                (b.tipo_cuenta || 'CORRIENTE').trim(),
+                (b.numero_cuenta || '').trim(),
+                (b.cci || '').trim(),
+                safeNum(b.saldo_inicial) || 0,
+                (b.estado || 'ACTIVO').trim()
+            ]);
+            res.json({ ok: true, id: result.insertId, message: 'Cuenta bancaria guardada' });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    router.delete('/bancos/:id', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            await tdb.query('DELETE FROM tesoreria_bancos WHERE id = ?', [req.params.id]);
+            res.json({ ok: true, message: 'Cuenta bancaria eliminada' });
+        } catch (err) {
             res.status(500).json({ error: err.message });
         }
     });
