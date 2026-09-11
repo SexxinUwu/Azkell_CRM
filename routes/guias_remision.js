@@ -83,7 +83,10 @@ module.exports = function(db, tenantStorage) {
                 "ALTER TABLE guias_remision ADD COLUMN volumen_m3 DECIMAL(12,3) DEFAULT NULL",
                 "ALTER TABLE guias_remision ADD COLUMN xml_contenido LONGTEXT DEFAULT NULL",
                 "ALTER TABLE guias_remision ADD COLUMN orden_servicio VARCHAR(60) DEFAULT NULL",
-                "ALTER TABLE guias_remision ADD COLUMN orden_viaje VARCHAR(60) DEFAULT NULL"
+                "ALTER TABLE guias_remision ADD COLUMN orden_viaje VARCHAR(60) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN foto_evidencia TEXT DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN fecha_entrega DATE DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN numero_transporte VARCHAR(50) DEFAULT NULL"
             ];
             for (const sql of addCols) {
                 try { await dbConn.query(sql); } catch(_) {}
@@ -982,7 +985,10 @@ module.exports = function(db, tenantStorage) {
                         conductor_nombre = ?, conductor_licencia = ?, peso_bruto_total = ?, unidad_medida = ?,
                         volumen_m3 = ?, motivo_traslado = ?, descripcion_motivo = ?, modalidad_traslado = ?,
                         transportista_ruc = ?, transportista_razon_social = ?, registro_mtc = ?,
-                        xml_hash = ?, observaciones_sunat = ?, xml_contenido = ?, modo_emision = 'XML_SUNAT'
+                        xml_hash = ?, observaciones_sunat = ?, xml_contenido = ?, modo_emision = 'XML_SUNAT',
+                        foto_evidencia = COALESCE(?, foto_evidencia),
+                        fecha_entrega = COALESCE(?, fecha_entrega),
+                        numero_transporte = COALESCE(?, numero_transporte)
                     WHERE id = ?
                 `, [
                     d.tipo_documento || '09', d.fecha_emision || null, d.hora_emision || null, d.fecha_cdr || null, d.hora_cdr || null,
@@ -995,6 +1001,9 @@ module.exports = function(db, tenantStorage) {
                     d.volumen_m3 ? Number(d.volumen_m3) : null, d.motivo_traslado || '01', d.descripcion_motivo || 'VENTA', d.modalidad_traslado || 'Público',
                     d.transportista_ruc || null, d.transportista_razon_social || null, d.registro_mtc || null,
                     d.xml_hash || null, d.observaciones_sunat || 'Guía importada desde XML oficial de SUNAT', d.xml_contenido || null,
+                    d.foto_evidencia || null,
+                    d.fecha_entrega || null,
+                    d.numero_transporte || null,
                     guiaId
                 ]);
 
@@ -1013,8 +1022,8 @@ module.exports = function(db, tenantStorage) {
                         conductor_nombre, conductor_licencia, peso_bruto_total, unidad_medida,
                         volumen_m3, motivo_traslado, descripcion_motivo, modalidad_traslado,
                         transportista_ruc, transportista_razon_social, registro_mtc,
-                        xml_hash, observaciones_sunat, xml_contenido, modo_emision, estado_sunat
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'XML_SUNAT', 'ACEPTADO')
+                        xml_hash, observaciones_sunat, xml_contenido, modo_emision, estado_sunat, foto_evidencia, fecha_entrega, numero_transporte
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'XML_SUNAT', 'ACEPTADO', ?, ?, ?)
                 `, [
                     numGuia, d.tipo_documento || '09', d.fecha_emision || null, d.hora_emision || null, d.fecha_cdr || null, d.hora_cdr || null,
                     d.fecha_traslado || d.fecha_emision || null, d.remitente_ruc, d.remitente_razon_social || '—',
@@ -1025,7 +1034,10 @@ module.exports = function(db, tenantStorage) {
                     d.conductor_nombre || '—', d.conductor_licencia || '—', Number(d.peso_bruto_total || 0), d.unidad_medida || 'KGM',
                     d.volumen_m3 ? Number(d.volumen_m3) : null, d.motivo_traslado || '01', d.descripcion_motivo || 'VENTA', d.modalidad_traslado || 'Público',
                     d.transportista_ruc || null, d.transportista_razon_social || null, d.registro_mtc || null,
-                    d.xml_hash || null, d.observaciones_sunat || 'Guía importada desde XML oficial de SUNAT', d.xml_contenido || null
+                    d.xml_hash || null, d.observaciones_sunat || 'Guía importada desde XML oficial de SUNAT', d.xml_contenido || null,
+                    d.foto_evidencia || null,
+                    d.fecha_entrega || null,
+                    d.numero_transporte || null
                 ]);
                 guiaId = ins.insertId;
             }
@@ -1062,7 +1074,7 @@ module.exports = function(db, tenantStorage) {
         }
     });
 
-    // 4.5 Registrar GRE Manualmente (cuando la consulta SUNAT no devuelve datos detallados)
+    // 4.5 Registrar GRE Manualmente (cuando no se tiene XML o registro físico)
     router.post('/registrar-gre-manual', async (req, res) => {
         try {
             const dbConn = getDb(req);
@@ -1074,13 +1086,23 @@ module.exports = function(db, tenantStorage) {
                 return res.status(400).json({ ok: false, error: "Número de guía y RUC del remitente son obligatorios." });
             }
 
+            // Normalizar numeración
+            let numGuia = String(d.numero_guia).trim().toUpperCase();
+            if (numGuia.includes('-')) {
+                const parts = numGuia.split('-');
+                const serie = parts[0].trim();
+                let correlativo = parts[1].trim();
+                if (/^\d+$/.test(correlativo)) correlativo = correlativo.padStart(8, '0');
+                numGuia = `${serie}-${correlativo}`;
+            }
+
             // Verificar duplicado
             const [existentes] = await dbConn.query(
                 "SELECT id FROM guias_remision WHERE numero_guia = ?",
-                [d.numero_guia]
+                [numGuia]
             );
             if (existentes.length > 0) {
-                return res.status(409).json({ ok: false, error: `La guía ${d.numero_guia} ya está registrada en el ERP con ID #${existentes[0].id}.` });
+                return res.status(409).json({ ok: false, error: `La guía ${numGuia} ya está registrada en el ERP con ID #${existentes[0].id}.` });
             }
 
             const [insertRes] = await dbConn.query(`
@@ -1089,31 +1111,79 @@ module.exports = function(db, tenantStorage) {
                     remitente_ruc, remitente_razon_social, destinatario_ruc, destinatario_razon_social,
                     punto_partida_direccion, punto_partida_ubigeo, punto_llegada_direccion, punto_llegada_ubigeo,
                     placa_tracto, placa_carreta, conductor_tipo_doc, conductor_num_doc, conductor_nombre, conductor_licencia,
-                    peso_bruto_total, unidad_medida, estado_sunat, codigo_respuesta_sunat, observaciones_sunat, modo_emision
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'MANUAL')
+                    peso_bruto_total, unidad_medida, volumen_m3, motivo_traslado, descripcion_motivo, modalidad_traslado,
+                    transportista_ruc, transportista_razon_social, registro_mtc,
+                    estado_sunat, codigo_respuesta_sunat, observaciones_sunat, modo_emision, foto_evidencia, fecha_entrega, numero_transporte
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REGISTRADO MANUAL', '0', ?, 'MANUAL', ?, ?, ?)
             `, [
-                d.numero_guia, d.tipo_documento || '09', d.fecha_emision || new Date().toISOString().slice(0, 10), d.fecha_traslado || d.fecha_emision || new Date().toISOString().slice(0, 10),
+                numGuia, d.tipo_documento || '09', d.fecha_emision || new Date().toISOString().slice(0, 10), d.fecha_traslado || d.fecha_emision || new Date().toISOString().slice(0, 10),
                 d.remitente_ruc, d.remitente_razon_social || '—', d.destinatario_ruc || '—', d.destinatario_razon_social || '—',
                 d.punto_partida_direccion || '—', d.punto_partida_ubigeo || '', d.punto_llegada_direccion || '—', d.punto_llegada_ubigeo || '',
                 d.placa_tracto || '—', d.placa_carreta || '—', d.conductor_tipo_doc || 'DNI', d.conductor_num_doc || '—', d.conductor_nombre || '—', d.conductor_licencia || '—',
-                Number(d.peso_bruto_total || 0), d.unidad_medida || 'KGM', 'REGISTRADO MANUAL', '0', d.observaciones || 'GRE registrada manualmente desde documento del remitente.'
+                Number(d.peso_bruto_total || 0), d.unidad_medida || 'KGM', d.volumen_m3 ? Number(d.volumen_m3) : null,
+                d.motivo_traslado || '01', d.descripcion_motivo || 'VENTA', d.modalidad_traslado || 'Público',
+                d.transportista_ruc || null, d.transportista_razon_social || null, d.registro_mtc || null,
+                d.observaciones || 'GRE registrada manualmente desde documento del remitente.',
+                d.foto_evidencia || null,
+                d.fecha_entrega || null,
+                d.numero_transporte || null
             ]);
 
             const newId = insertRes.insertId;
 
             // Guardar ítems si vienen
             if (d.items && Array.isArray(d.items) && d.items.length > 0) {
-                for (const item of d.items) {
+                for (let i = 0; i < d.items.length; i++) {
+                    const item = d.items[i];
                     await dbConn.query(`
-                        INSERT INTO guias_remision_items (guia_id, codigo, descripcion, cantidad, unidad_medida, peso_unitario)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    `, [newId, item.codigo || '001', item.descripcion || '—', Number(item.cantidad || 1), item.unidad_medida || 'NIU', Number(item.peso_unitario || 0)]);
+                        INSERT INTO guias_remision_items (guia_id, item_numero, bien_normalizado, codigo_bien, codigo, descripcion, cantidad, unidad_medida, peso_unitario)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        newId,
+                        item.item_numero || (i + 1),
+                        item.bien_normalizado || 'NO',
+                        item.codigo_bien || item.codigo || `ITM-${i + 1}`,
+                        item.codigo || item.codigo_bien || `ITM-${i + 1}`,
+                        item.descripcion || '—',
+                        Number(item.cantidad || 1),
+                        item.unidad_medida || 'NIU',
+                        Number(item.peso_unitario || 0)
+                    ]);
                 }
             }
 
-            res.json({ ok: true, message: `GRE ${d.numero_guia} registrada exitosamente en el ERP.`, id: newId });
+            res.json({ ok: true, message: `GRE ${numGuia} registrada exitosamente en el ERP.`, id: newId });
         } catch (err) {
             console.error("[GRE Manual] Error:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 4.6 Subida de imagen/evidencia de guía (Base64 a S3 o almacenamiento seguro)
+    router.post('/upload-evidencia', async (req, res) => {
+        try {
+            const { imagen_base64, nombre_archivo } = req.body || {};
+            if (!imagen_base64) {
+                return res.status(400).json({ ok: false, error: "No se proporcionó imagen." });
+            }
+
+            // Si hay módulo S3 disponible, subir a S3
+            try {
+                const { uploadToS3 } = require('../utils/s3');
+                const matches = imagen_base64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+                const buffer = matches ? Buffer.from(matches[2], 'base64') : Buffer.from(imagen_base64, 'base64');
+                const mime = matches ? matches[1] : 'image/jpeg';
+                const ext = mime.includes('png') ? 'png' : (mime.includes('pdf') ? 'pdf' : 'jpg');
+                const s3Key = `guias-remision/evidencias/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+
+                const url = await uploadToS3(buffer, s3Key, mime);
+                return res.json({ ok: true, url });
+            } catch (s3Err) {
+                console.warn("[GRE Upload S3 falló, guardando base64 directamente]:", s3Err.message);
+                // Si no hay S3 configurado, retornamos la imagen base64 como evidencia utilizable
+                return res.json({ ok: true, url: imagen_base64 });
+            }
+        } catch (err) {
             res.status(500).json({ ok: false, error: err.message });
         }
     });
