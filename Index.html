@@ -369,7 +369,7 @@
                 <div id="wrap-tesoreria">
                     <button class="nav-section-toggle" data-section="tesoreria" aria-expanded="false" onclick="window.toggleNavSection('tesoreria')">
                         <span class="link-text">Tesorería</span>
-                        <span class="section-badge">2</span>
+                        <span class="section-badge">3</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-tesoreria">
@@ -380,6 +380,10 @@
                         <a id="nav-tesoreria-cuentas" class="nav-item" onclick="cargarModuloAislado('tesoreria/cuentas')">
                             <i class="bi bi-receipt-cutoff nav-icon"></i>
                             <span class="link-text">Cuentas por Cobrar/Pagar</span>
+                        </a>
+                        <a id="nav-tesoreria-bancos" class="nav-item" onclick="cargarModuloAislado('tesoreria/bancos')">
+                            <i class="bi bi-bank nav-icon"></i>
+                            <span class="link-text">Bancos</span>
                         </a>
                     </div>
                 </div>
@@ -1370,6 +1374,14 @@
                     <div class="bnav-row-content">
                         <p class="bnav-row-title">Cuentas por Cobrar/Pagar</p>
                         <p class="bnav-row-desc">Facturas y vencimientos</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
+                <div id="mbnav-tesoreria-bancos" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetTesoreria')).hide(); cargarModuloAislado('tesoreria/bancos'); setBottomNavActive('bnav-tesoreria');">
+                    <div class="bnav-row-icon" style="color: #0284c7;"><i class="bi bi-bank"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Bancos</p>
+                        <p class="bnav-row-desc">Cuentas bancarias de la empresa</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>

@@ -1,0 +1,316 @@
+<!-- Módulo: Bancos — Tesorería ERP Azkell -->
+<style>
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
+#mod-tesoreria-bancos {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    padding: 1rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+.bancos-btn-nuevo {
+    background-color: #0284c7 !important;
+    border-color: #0369a1 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 0.82rem;
+    border-radius: 6px;
+    padding: 0.45rem 1.1rem;
+    transition: all 0.2s ease;
+}
+.bancos-btn-nuevo:hover {
+    background-color: #0369a1 !important;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+}
+
+.bancos-table-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    overflow: hidden;
+}
+
+.bancos-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.76rem;
+    white-space: nowrap;
+}
+
+.bancos-table thead th {
+    background-color: #ffffff;
+    color: #1e293b;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.4px;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 2px solid #cbd5e1;
+}
+
+.bancos-table tbody td {
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #334155;
+    font-weight: 500;
+}
+
+.bancos-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+/* ── Modal Bancos: Centrado, Altura 80% y Animación Bottom-up ── */
+#modalBancoForm {
+    display: none;
+}
+#modalBancoForm.modal {
+    padding-left: 0 !important;
+}
+#modalBancoForm .modal-dialog {
+    max-width: 860px;
+    width: 95%;
+    height: 80vh !important;
+    max-height: 80vh !important;
+    margin: auto !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#modalBancoForm .modal-content {
+    height: 80vh !important;
+    max-height: 80vh !important;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+    border: none;
+}
+
+#modalBancoForm .modal-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.85rem 1.25rem;
+}
+
+#modalBancoForm .modal-title {
+    color: #0284c7;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+#modalBancoForm .modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem !important;
+    background: #f8fafc;
+}
+
+#modalBancoForm .modal-footer {
+    flex-shrink: 0;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    padding: 0.85rem 1.5rem;
+}
+
+#modalBancoForm.fade .modal-dialog {
+    transform: translateY(100vh) !important;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease !important;
+    opacity: 0;
+}
+#modalBancoForm.show .modal-dialog {
+    transform: translateY(0) !important;
+    opacity: 1;
+}
+
+/* Tarjetas segmentadas y numeradas */
+.banco-segmento-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.banco-segmento-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed #e2e8f0;
+}
+.banco-segmento-num {
+    width: 26px;
+    height: 26px;
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.banco-segmento-titulo {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin: 0;
+}
+</style>
+
+<div id="mod-tesoreria-bancos" class="modulo-wrapper">
+
+    <!-- Encabezado -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div>
+            <h4 class="fw-bold text-dark m-0" style="font-size: 1.35rem; letter-spacing: -0.01em;">
+                Bancos <span class="text-muted fw-normal fs-6 ms-1">Tesorería</span>
+            </h4>
+            <span class="text-secondary small">Gestión y registro de cuentas bancarias de la empresa</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm bancos-btn-nuevo d-flex align-items-center gap-1.5" onclick="window.bancosAbrirModalNuevo()">
+                <i class="bi bi-plus-lg"></i> Nueva Cuenta
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabla Principal de Bancos -->
+    <div class="bancos-table-card">
+        <div class="table-responsive">
+            <table class="bancos-table" id="bancos-tabla-principal">
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width: 80px;">ACCIÓN</th>
+                        <th>ENTIDAD BANCARIA</th>
+                        <th>TITULAR / RAZÓN SOCIAL</th>
+                        <th>MONEDA</th>
+                        <th>TIPO CUENTA</th>
+                        <th>NÚMERO DE CUENTA</th>
+                        <th>CÓDIGO INTERBANCARIO (CCI)</th>
+                        <th>ESTADO</th>
+                    </tr>
+                </thead>
+                <tbody id="bancos-tbody">
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            No hay cuentas bancarias registradas
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     MODAL NUEVA / EDITAR CUENTA BANCARIA (CENTRADO, AL 80%, SEGMENTADO)
+     ════════════════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalBancoForm" tabindex="-1" aria-labelledby="modalBancoFormLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalBancoFormLabel">Nueva Cuenta Bancaria</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body p-3 p-md-4">
+                <form id="formNuevaCuentaBanco" autocomplete="off" onsubmit="window.bancosGuardarFormulario(event)">
+                    <input type="hidden" id="banco-modal-id" value="">
+                    
+                    <!-- ═══ SEGMENTO 1: ENTIDAD Y TITULAR ═══ -->
+                    <div class="banco-segmento-card">
+                        <div class="banco-segmento-header">
+                            <span class="banco-segmento-num">1</span>
+                            <h6 class="banco-segmento-titulo">Entidad Financiera y Titularidad</h6>
+                        </div>
+                        
+                        <div class="row g-2">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Banco / Entidad <span class="text-danger">(*)</span></label>
+                                <input type="text" id="banco-modal-nombre" class="form-control" placeholder="Ej: BCP, BBVA, INTERBANK, SCOTIABANK, BANCO DE LA NACIÓN..." required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Titular / Razón Social <span class="text-danger">(*)</span></label>
+                                <input type="text" id="banco-modal-titular" class="form-control" placeholder="Nombre o Razón social de la empresa titular..." required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ═══ SEGMENTO 2: NÚMEROS DE CUENTA Y TIPO ═══ -->
+                    <div class="banco-segmento-card">
+                        <div class="banco-segmento-header">
+                            <span class="banco-segmento-num">2</span>
+                            <h6 class="banco-segmento-titulo">Detalles y Numeración de Cuenta</h6>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold">Moneda <span class="text-danger">(*)</span></label>
+                                <select id="banco-modal-moneda" class="form-select" required>
+                                    <option value="SOLES" selected>SOLES</option>
+                                    <option value="DOLARES">DOLARES</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold">Tipo de Cuenta <span class="text-danger">(*)</span></label>
+                                <select id="banco-modal-tipo" class="form-select" required>
+                                    <option value="CORRIENTE" selected>CORRIENTE</option>
+                                    <option value="AHORROS">AHORROS</option>
+                                    <option value="DETRACCIONES">DETRACCIONES</option>
+                                    <option value="EFECTIVO">EFECTIVO</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold">Estado <span class="text-danger">(*)</span></label>
+                                <select id="banco-modal-estado" class="form-select" required>
+                                    <option value="ACTIVO" selected>ACTIVO</option>
+                                    <option value="INACTIVO">INACTIVO</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Número de Cuenta <span class="text-danger">(*)</span></label>
+                                <input type="text" id="banco-modal-numero" class="form-control font-monospace fw-bold" placeholder="Ej: 191-23948293-0-12" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Código Interbancario (CCI)</label>
+                                <input type="text" id="banco-modal-cci" class="form-control font-monospace" placeholder="Ej: 002-191-0023948293012-55">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer de botones fijo -->
+                    <div class="d-flex align-items-center justify-content-between pt-2 border-top">
+                        <button type="button" class="btn btn-light px-3 fw-semibold text-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" id="banco-modal-btn-submit" class="btn btn-primary px-4 fw-bold shadow-sm" style="background: #0284c7; border:none;">
+                            Guardar Cuenta
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
