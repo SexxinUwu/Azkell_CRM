@@ -915,83 +915,107 @@
     };
 
     // Helper: Buscar consumo teórico en Galones según Sentido (IDA / RETORNO), Ruta, Peso (Regla de Techo) y Motor (BÚSQUEDA ESTRICTA)
-    function obtenerConsumoTeoricoGalones(rutaStr, sentidoStr, pesoTn, motorStr) {
-        if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) return 0;
-        const rNorm = (rutaStr || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-        const sNorm = (sentidoStr || 'IDA').toUpperCase().trim();
-        const mNorm = (motorStr || '').toUpperCase().trim();
-        
-        // 1. Búsqueda con Motor: Sentido + Ruta + Motor coincidentes
-        let match = window._caMatrizRendimiento.find(m => {
-            const mSentido = (m.sentido || 'IDA').toUpperCase().trim();
-            if (mSentido !== sNorm) return false;
-            const mRuta = (m.ruta || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-            const mMotor = (m.motor || '').toUpperCase().trim();
-            const rutaCoincide = mRuta && (rNorm.includes(mRuta) || mRuta.includes(rNorm));
-            
-            // Si la unidad tiene motor especificado y la matriz tiene motor -> DEBEN coincidir
-            if (mNorm && mMotor) {
-                return rutaCoincide && (mNorm.includes(mMotor) || mMotor.includes(mNorm));
-            }
-            // Si ninguno especifica motor -> coincide
-            if (!mNorm && !mMotor) {
-                return rutaCoincide;
-            }
-            // Si uno tiene motor y el otro no -> NO coincide (evita cruces incorrectos)
-            return false;
-        });
-
-        // Si no existe la combinación de esa ruta para ese motor específico, retornar 0 (debe quedar en blanco)
-        if (!match) return 0;
-
-        // Regla de Techo: Si el peso está entre dos rangos, toma la columna superior
-        const p = parseFloat(pesoTn || 0);
-        let consumo = 0;
-        if (p <= 0) consumo = parseFloat(match.km_0 || match.retorno_vacio || 0);
-        else if (p <= 5) consumo = parseFloat(match.km_5 || 0);
-        else if (p <= 10) consumo = parseFloat(match.km_10 || 0);
-        else if (p <= 15) consumo = parseFloat(match.km_15 || 0);
-        else if (p <= 20) consumo = parseFloat(match.km_20 || 0);
-        else if (p <= 25) consumo = parseFloat(match.km_25 || 0);
-        else consumo = parseFloat(match.km_30 || 0);
-
-        return consumo > 0 ? consumo : 0;
+    // Helper: Normalizar texto para comparaciones robustas
+    function caNormalizar(str) {
+        return (str || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
     }
 
-    // Helper: Buscar Km Teórico según Sentido (IDA / RETORNO), Ruta y Motor
-    function obtenerKmTeorico(rutaStr, sentidoStr, motorStr) {
-        if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) return 0;
-        const rNorm = (rutaStr || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    // Helper: Normalizar código de motor (ej: "DC13 450" -> "DC13450")
+    function caNormalizarMotor(str) {
+        return (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    }
+
+    // Helper: Buscar registro en la matriz de combustible D2
+    function buscarEnMatrizCombustible(rutaStr, sentidoStr, motorStr, confgStr) {
+        if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) return null;
+        const rNorm = caNormalizar(rutaStr).replace(/^(IDA|RETORNO)\s*:\s*/i, '');
         const sNorm = (sentidoStr || 'IDA').toUpperCase().trim();
-        const mNorm = (motorStr || '').toUpperCase().trim();
-        
-        let match = window._caMatrizRendimiento.find(m => {
+        const mNorm = caNormalizarMotor(motorStr);
+        const cNorm = caNormalizar(confgStr);
+
+        // Candidatos con Sentido coincidente
+        const candidatos = window._caMatrizRendimiento.filter(m => {
             const mSentido = (m.sentido || 'IDA').toUpperCase().trim();
-            if (mSentido !== sNorm) return false;
-            const mRuta = (m.ruta || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-            const mMotor = (m.motor || '').toUpperCase().trim();
-            const rutaCoincide = mRuta && (rNorm.includes(mRuta) || mRuta.includes(rNorm));
-            
-            if (mNorm && mMotor) {
-                return rutaCoincide && (mNorm.includes(mMotor) || mMotor.includes(mNorm));
-            }
-            if (!mNorm && !mMotor) {
-                return rutaCoincide;
-            }
-            return false;
+            return mSentido === sNorm;
         });
 
+        if (candidatos.length === 0) return null;
+
+        // Función de coincidencia para un elemento de la matriz
+        function evaluarCoincidencia(m, requiereConfg) {
+            const mRuta = caNormalizar(m.ruta);
+            const mMotor = caNormalizarMotor(m.motor);
+            const mConfg = caNormalizar(m.confg);
+
+            // 1. Ruta
+            const rutaMatch = mRuta && (rNorm.includes(mRuta) || mRuta.includes(rNorm));
+            if (!rutaMatch) return false;
+
+            // 2. Motor
+            if (mNorm && mMotor) {
+                const motorMatch = (mNorm.includes(mMotor) || mMotor.includes(mNorm));
+                if (!motorMatch) return false;
+            } else if (mNorm || mMotor) {
+                return false;
+            }
+
+            // 3. Configuración (si aplica)
+            if (requiereConfg && cNorm && mConfg) {
+                return cNorm === mConfg || cNorm.startsWith(mConfg) || mConfg.startsWith(cNorm);
+            }
+            return true;
+        }
+
+        // Intento 1: Con Configuración exacta
+        if (cNorm) {
+            const matchExacto = candidatos.find(m => evaluarCoincidencia(m, true));
+            if (matchExacto) return matchExacto;
+        }
+
+        // Intento 2: Sin restringir Configuración
+        return candidatos.find(m => evaluarCoincidencia(m, false)) || null;
+    }
+
+    // Helper: Buscar consumo teórico en Galones según Sentido (IDA / RETORNO), Ruta, Peso (con Fallback hacia atrás) y Motor
+    function obtenerConsumoTeoricoGalones(rutaStr, sentidoStr, pesoTn, motorStr, confgStr) {
+        const match = buscarEnMatrizCombustible(rutaStr, sentidoStr, motorStr, confgStr);
+        if (!match) return 0;
+
+        const p = parseFloat(pesoTn || 0);
+        const fields = ['km_0', 'km_5', 'km_10', 'km_15', 'km_20', 'km_25', 'km_30'];
+
+        // Determinar índice del escalón superior según intervalo
+        let targetIdx = 0;
+        if (p <= 0) targetIdx = 0;
+        else if (p <= 5) targetIdx = 1;
+        else if (p <= 10) targetIdx = 2;
+        else if (p <= 15) targetIdx = 3;
+        else if (p <= 20) targetIdx = 4;
+        else if (p <= 25) targetIdx = 5;
+        else targetIdx = 6; // > 25 Tn (30 Tn)
+
+        // Si el escalón objetivo es 0.00 o no tiene valor, retroceder al anterior disponible > 0
+        for (let i = targetIdx; i >= 0; i--) {
+            const val = parseFloat(match[fields[i]] || 0);
+            if (val > 0) return val;
+        }
+
+        return 0;
+    }
+
+    // Helper: Buscar Km Teórico según Sentido (IDA / RETORNO), Ruta, Motor y Configuración
+    function obtenerKmTeorico(rutaStr, sentidoStr, motorStr, confgStr) {
+        const match = buscarEnMatrizCombustible(rutaStr, sentidoStr, motorStr, confgStr);
         if (!match) return 0;
         const distKm = parseFloat(match.km || 0);
         return distKm > 0 ? distKm : 0;
     }
 
     // Helper: Rendimiento teórico Km/Galón
-    function obtenerRendimientoTeorico(rutaStr, pesoTn, motorStr) {
+    function obtenerRendimientoTeorico(rutaStr, pesoTn, motorStr, confgStr) {
         if (!window._caMatrizRendimiento || window._caMatrizRendimiento.length === 0) return null;
-        const consumoGal = obtenerConsumoTeoricoGalones(rutaStr, 'IDA', pesoTn, motorStr);
-        const match = window._caMatrizRendimiento.find(m => (rutaStr || '').toUpperCase().includes((m.ruta || '').toUpperCase()));
-        const distKm = match ? parseFloat(match.km || 0) : 0;
+        const consumoGal = obtenerConsumoTeoricoGalones(rutaStr, 'IDA', pesoTn, motorStr, confgStr);
+        const distKm = obtenerKmTeorico(rutaStr, 'IDA', motorStr, confgStr);
         if (distKm > 0 && consumoGal > 0) return distKm / consumoGal;
         return null;
     }
@@ -1079,9 +1103,9 @@
             const recKmRet = (maxOdoRet > minOdoRet && minOdoRet > 0) ? (maxOdoRet - minOdoRet) : 0;
             const rendRet = (galRealRet > 0 && recKmRet > 0) ? (recKmRet / galRealRet) : 0;
 
-            // ── Cálculo Teórico Matriz Estricto (Ida + Retorno con Motor y Regla de Techo) ──
-            const galTeoricoIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', pesoIdaVal, t.motor);
-            const galTeoricoRetorno = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', pesoRetVal, t.motor);
+            // ── Cálculo Teórico Matriz Estricto (Ida + Retorno con Motor, Configuración y Regla de Techo con Fallback) ──
+            const galTeoricoIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', pesoIdaVal, t.motor, t.configuracion);
+            const galTeoricoRetorno = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', pesoRetVal, t.motor, t.configuracion);
             const galTeoricoBase = (galTeoricoIda > 0 || galTeoricoRetorno > 0) ? (galTeoricoIda + galTeoricoRetorno) : 0;
 
             // Regla Operativa: Si la unidad rueda sin carreta (solo tracto), se le descuenta el 25% del teórico consolidado (Ida + Retorno)
@@ -1089,8 +1113,8 @@
             const galTeoricoTotal = (esSinCarreta && galTeoricoBase > 0) ? (galTeoricoBase * 0.75) : galTeoricoBase;
             const galDescontado = (esSinCarreta && galTeoricoBase > 0) ? (galTeoricoBase * 0.25) : 0;
 
-            const kmTeoricoIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor);
-            const kmTeoricoRetorno = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor);
+            const kmTeoricoIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor, t.configuracion);
+            const kmTeoricoRetorno = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor, t.configuracion);
             const kmTeoricoTotal = (kmTeoricoIda > 0 || kmTeoricoRetorno > 0) ? (kmTeoricoIda + kmTeoricoRetorno) : 0;
 
             const rendTeoricoIda = (galTeoricoIda > 0 && kmTeoricoIda > 0) ? (kmTeoricoIda / galTeoricoIda) : 0;
@@ -1331,15 +1355,15 @@
                 totalSumVales += (totGal || 0);
                 totalSumKmReal += (fs ? fs.recorridoKm : (t.recorridoKm || 0));
 
-                const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || 0, t.motor);
-                const gRet = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor);
+                const gIda = obtenerConsumoTeoricoGalones(t.ruta, 'IDA', t.pesoIda || 0, t.motor, t.configuracion);
+                const gRet = obtenerConsumoTeoricoGalones(t.ruta, 'RETORNO', t.pesoRetorno || 0, t.motor, t.configuracion);
                 const gBase = (gIda + gRet);
                 const esSinCarreta = !t.carreta || t.carreta === '—' || t.carreta === '-' || (typeof t.carreta === 'string' && (t.carreta.trim() === '' || t.carreta.toUpperCase().includes('SIN CARRETA') || t.carreta.toUpperCase().includes('SOLO TRACTO')));
                 const gFinal = (esSinCarreta && gBase > 0) ? (gBase * 0.75) : gBase;
                 totalSumTeorico += gFinal;
 
-                const kIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor);
-                const kRet = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor);
+                const kIda = obtenerKmTeorico(t.ruta, 'IDA', t.motor, t.configuracion);
+                const kRet = obtenerKmTeorico(t.ruta, 'RETORNO', t.motor, t.configuracion);
                 totalSumKmTeorico += (kIda + kRet);
 
                 const gps = t.gpsTelemetria || t.wialonGps;

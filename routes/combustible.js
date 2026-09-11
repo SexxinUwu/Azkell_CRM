@@ -1064,15 +1064,17 @@ module.exports = function (db, broadcast, logAudit) {
                 return peruDateFmt.format(d).replace(',', '');
             };
 
-            // Consultar modelo de motor y marca de las placas para enriquecer el análisis
-            const [placasRows] = await tdb.query("SELECT placa, modelo_motor, marca, modelo_uts FROM placas");
+            // Consultar modelo de motor, marca y configuración de las placas para enriquecer el análisis
+            const [placasRows] = await tdb.query("SELECT placa, modelo_motor, marca, modelo_uts, configuracion FROM placas");
             const placaMotorMap = new Map();
             const placaMarcaMap = new Map();
+            const placaConfigMap = new Map();
             placasRows.forEach(p => {
                 if (p.placa) {
                     const plKey = p.placa.trim().toUpperCase();
                     placaMotorMap.set(plKey, p.modelo_motor || '');
                     placaMarcaMap.set(plKey, p.marca || '');
+                    placaConfigMap.set(plKey, p.configuracion || '');
                 }
             });
 
@@ -1147,7 +1149,6 @@ module.exports = function (db, broadcast, logAudit) {
 
                     const rawPesoIda = Math.max(0, ...vouchersIda.map(x => parseFloat(x.peso || 0)));
                     let pesoIdaCalculado = rawPesoIda > 50 ? parseFloat((rawPesoIda / 1000).toFixed(2)) : parseFloat(rawPesoIda.toFixed(2));
-
                     const rawPesoRet = Math.max(0, ...vouchersRetorno.map(x => parseFloat(x.peso || 0)));
                     let pesoRetornoCalculado = rawPesoRet > 50 ? parseFloat((rawPesoRet / 1000).toFixed(2)) : parseFloat(rawPesoRet.toFixed(2));
 
@@ -1240,6 +1241,7 @@ module.exports = function (db, broadcast, logAudit) {
                         carreta: carretaFinal,
                         motor: placaMotorMap.get(t.placa) || '',
                         marca: placaMarcaMap.get(t.placa) || '',
+                        configuracion: placaConfigMap.get(t.placa) || '',
                         ruta: t.ruta,
                         fechaInicio,
                         fechaFin,
