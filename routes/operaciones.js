@@ -358,8 +358,12 @@ module.exports = function (db, broadcast, logAudit) {
                     COALESCE(r_agg.peso_retorno, 0) AS peso_retorno,
                     COALESCE(r_agg.peso_total_calc, ov.peso, 0) AS peso_total_rutas,
                     r_agg.ordenes_list,
-                    r_agg.rutas_list
+                    r_agg.rutas_list,
+                    COALESCE(NULLIF(TRIM(p.configuracion), ''), '') AS configuracion_tracto,
+                    COALESCE(NULLIF(TRIM(pr.configuracion), ''), '') AS configuracion_remolque
                 FROM operaciones_ordenes_viaje ov
+                LEFT JOIN placas p ON ov.placa_tracto = p.placa
+                LEFT JOIN placas pr ON ov.placa_remolque = pr.placa
                 LEFT JOIN (
                     SELECT 
                         viaje,
@@ -387,8 +391,8 @@ module.exports = function (db, broadcast, logAudit) {
 
             if (q && String(q).trim()) {
                 const search = `%${String(q).trim()}%`;
-                sql += ` AND (ov.viaje LIKE ? OR ov.conductor LIKE ? OR ov.placa_tracto LIKE ? OR ov.placa_remolque LIKE ? OR ov.ruta LIKE ? OR r_agg.ordenes_list LIKE ? OR r_agg.rutas_list LIKE ?)`;
-                params.push(search, search, search, search, search, search, search);
+                sql += ` AND (ov.viaje LIKE ? OR ov.conductor LIKE ? OR ov.placa_tracto LIKE ? OR ov.placa_remolque LIKE ? OR ov.ruta LIKE ? OR r_agg.ordenes_list LIKE ? OR r_agg.rutas_list LIKE ? OR p.configuracion LIKE ? OR pr.configuracion LIKE ?)`;
+                params.push(search, search, search, search, search, search, search, search, search);
             }
 
             if (placa && String(placa).trim()) {
@@ -400,7 +404,26 @@ module.exports = function (db, broadcast, logAudit) {
             params.push(parseInt(limit, 10) || 1500);
 
             const [rows] = await tdb.query(sql, params);
-            res.json({ ok: true, data: rows });
+
+            // Formatear configuración vehicular conjunta para la vista
+            function formatearConfigConjunta(confTracto, confRemolque) {
+                const t = (confTracto || '').trim().toUpperCase();
+                let r = (confRemolque || '').trim().toUpperCase();
+                if (r.startsWith('SE')) {
+                    r = 'S' + r.substring(2);
+                }
+                if (t && r) {
+                    return (r.startsWith('R') || t.startsWith('C')) ? `${t} - ${r}` : `${t} ${r}`;
+                }
+                return t || r || '---';
+            }
+
+            const rowsConConfig = (rows || []).map(row => ({
+                ...row,
+                configuracion: formatearConfigConjunta(row.configuracion_tracto, row.configuracion_remolque)
+            }));
+
+            res.json({ ok: true, data: rowsConConfig });
         } catch (err) {
             console.error('Error al listar ordenes de viaje:', err);
             res.status(500).json({ error: err.message });
@@ -473,6 +496,8 @@ module.exports = function (db, broadcast, logAudit) {
                 usuario_creacion,
                 kilometraje_inicial,
                 horas_motor_remolque,
+                configuracion_tracto,
+                configuracion_remolque,
                 rutas // array opcional con órdenes de servicio / rutas
             } = req.body;
 
@@ -534,6 +559,28 @@ module.exports = function (db, broadcast, logAudit) {
                 kmIniVal,
                 hrRemVal
             ]);
+
+            // Actualizar o guardar configuración en la tabla placas para tracto y carreta
+            if (configuracion_tracto && String(configuracion_tracto).trim() && placa_tracto) {
+                try {
+                    await tdb.query(
+                        `UPDATE placas SET configuracion = ? WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?))`,
+                        [String(configuracion_tracto).trim().toUpperCase(), String(placa_tracto).trim()]
+                    );
+                } catch(pErr) {
+                    console.warn('No se pudo actualizar configuración de tracto en tabla placas:', pErr.message);
+                }
+            }
+            if (configuracion_remolque && String(configuracion_remolque).trim() && placa_remolque) {
+                try {
+                    await tdb.query(
+                        `UPDATE placas SET configuracion = ? WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?))`,
+                        [String(configuracion_remolque).trim().toUpperCase(), String(placa_remolque).trim()]
+                    );
+                } catch(pErr) {
+                    console.warn('No se pudo actualizar configuración de remolque en tabla placas:', pErr.message);
+                }
+            }
 
             // Si se envió detalle de rutas / órdenes
             if (Array.isArray(rutas) && rutas.length > 0) {
@@ -697,7 +744,9 @@ module.exports = function (db, broadcast, logAudit) {
                 escolta,
                 observaciones,
                 kilometraje_inicial,
-                horas_motor_remolque
+                horas_motor_remolque,
+                configuracion_tracto,
+                configuracion_remolque
             } = req.body;
 
             if (!placa_tracto || !conductor) {
@@ -743,6 +792,28 @@ module.exports = function (db, broadcast, logAudit) {
                 hrRemVal,
                 codeViaje
             ]);
+
+            // Actualizar o guardar configuración en la tabla placas para tracto y carreta
+            if (configuracion_tracto && String(configuracion_tracto).trim() && placa_tracto) {
+                try {
+                    await tdb.query(
+                        `UPDATE placas SET configuracion = ? WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?))`,
+                        [String(configuracion_tracto).trim().toUpperCase(), String(placa_tracto).trim()]
+                    );
+                } catch(pErr) {
+                    console.warn('No se pudo actualizar configuración de tracto en tabla placas:', pErr.message);
+                }
+            }
+            if (configuracion_remolque && String(configuracion_remolque).trim() && placa_remolque) {
+                try {
+                    await tdb.query(
+                        `UPDATE placas SET configuracion = ? WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?))`,
+                        [String(configuracion_remolque).trim().toUpperCase(), String(placa_remolque).trim()]
+                    );
+                } catch(pErr) {
+                    console.warn('No se pudo actualizar configuración de remolque en tabla placas:', pErr.message);
+                }
+            }
 
             if (logAudit) {
                 logAudit({
