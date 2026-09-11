@@ -512,8 +512,10 @@ module.exports = function (db, broadcast, logAudit) {
             const fechaFinal = fecha_viaje || new Date().toISOString().slice(0, 19).replace('T', ' ');
             const userCreador = usuario_creacion || (req.user && req.user.nombre) || 'ADMINISTRADOR DEL SISTEMA';
 
-            const kmIniVal = kilometraje_inicial ? parseInt(kilometraje_inicial, 10) : null;
-            const hrRemVal = horas_motor_remolque ? parseInt(horas_motor_remolque, 10) : null;
+            const parsedKm = parseInt(kilometraje_inicial, 10);
+            const kmIniVal = (!isNaN(parsedKm) && parsedKm >= 0) ? parsedKm : null;
+            const parsedHr = parseInt(horas_motor_remolque, 10);
+            const hrRemVal = (!isNaN(parsedHr) && parsedHr >= 0) ? parsedHr : null;
 
             const [insertRes] = await tdb.query(`
                 INSERT INTO operaciones_ordenes_viaje (
@@ -753,8 +755,11 @@ module.exports = function (db, broadcast, logAudit) {
                 return res.status(400).json({ ok: false, error: 'Conductor y Vehículo (Tracto) son obligatorios.' });
             }
 
-            const kmIniVal = kilometraje_inicial !== undefined && kilometraje_inicial !== '' ? parseInt(kilometraje_inicial, 10) : null;
-            const hrRemVal = horas_motor_remolque !== undefined && horas_motor_remolque !== '' ? parseInt(horas_motor_remolque, 10) : null;
+            const parsedKm = parseInt(kilometraje_inicial, 10);
+            const kmIniVal = (!isNaN(parsedKm) && parsedKm >= 0) ? parsedKm : null;
+            const parsedHr = parseInt(horas_motor_remolque, 10);
+            const hrRemVal = (!isNaN(parsedHr) && parsedHr >= 0) ? parsedHr : null;
+            const pesoVal = !isNaN(parseFloat(peso)) ? parseFloat(peso) : 0.00;
 
             await tdb.query(`
                 UPDATE operaciones_ordenes_viaje
@@ -781,7 +786,7 @@ module.exports = function (db, broadcast, logAudit) {
                 String(placa_tracto).trim().toUpperCase(),
                 placa_remolque ? String(placa_remolque).trim().toUpperCase() : null,
                 ruta ? String(ruta).trim() : null,
-                parseFloat(peso) || 0.00,
+                pesoVal,
                 ubigeo_partida || null,
                 direccion_partida || null,
                 ubigeo_llegada || null,
