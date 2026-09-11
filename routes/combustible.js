@@ -1041,6 +1041,17 @@ module.exports = function (db, broadcast, logAudit) {
                 return r;
             };
 
+            // Invertir ruta para retornos sin tramo explícito (ej: "LIMA - AREQUIPA" -> "AREQUIPA - LIMA")
+            const invertirRutaRetorno = (rStr) => {
+                if (!rStr) return '';
+                const norm = normalizarRutaTramo(rStr);
+                const partes = norm.split('-').map(p => p.trim()).filter(Boolean);
+                if (partes.length === 2 && partes[0].toUpperCase() !== partes[1].toUpperCase()) {
+                    return `${partes[1]} - ${partes[0]}`;
+                }
+                return norm;
+            };
+
             const ovMap = new Map();
             ovRows.forEach(o => {
                 if (o.viaje) {
@@ -1240,8 +1251,13 @@ module.exports = function (db, broadcast, logAudit) {
                         }
                     }
 
-                    // Si no hay retorno, pesoRetorno es 0
-                    if (!rutaRetornoCalculada && tramosInfo.retorno.length === 0) {
+                    // Inversión inteligente de retorno si no vino tramo de retorno registrado o si viene igual a la ida
+                    if (!rutaRetornoCalculada || rutaRetornoCalculada.toUpperCase().trim() === (rutaIdaCalculada || '').toUpperCase().trim()) {
+                        rutaRetornoCalculada = invertirRutaRetorno(rutaIdaCalculada || t.ruta);
+                    }
+
+                    // Si no hay retorno registrado con carga, el peso del retorno va en 0 Tn (vacío)
+                    if (tramosInfo.retorno.length === 0) {
                         pesoRetornoCalculado = 0;
                     }
 
