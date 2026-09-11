@@ -1829,6 +1829,74 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             }
 
+            // ── Sincronizar automáticamente con Cuentas por Cobrar (Tesorería) ──
+            try {
+                // Obtener datos complementarios del viaje si existe
+                let conductorViaje = null;
+                let razonSocialViaje = '';
+                if (viaje_asignado) {
+                    const [vRows] = await tdb.query(`SELECT conductor, empresa_nombre FROM operaciones_ordenes_viaje WHERE viaje = ? LIMIT 1`, [viaje_asignado]);
+                    if (vRows && vRows.length > 0) {
+                        conductorViaje = vRows[0].conductor;
+                        razonSocialViaje = vRows[0].empresa_nombre || '';
+                    }
+                }
+
+                const fleteNum = parseFloat(costo_flete) || 0.00;
+                // Tarifa con 0% de comisión por defecto
+                const tarifaNum = fleteNum;
+                const biNum = tarifaNum;
+                const igvNum = parseFloat((biNum * 0.18).toFixed(2));
+                const totalNum = parseFloat((biNum + igvNum).toFixed(2));
+                const detraccionNum = totalNum > 700 ? Math.round(totalNum * 0.04) : 0.00;
+                const netoCobrarNum = parseFloat((totalNum - detraccionNum).toFixed(2));
+
+                let lugarStr = '';
+                if (Array.isArray(rutas) && rutas.length > 0) {
+                    lugarStr = rutas.map(r => r.ruta).filter(Boolean).join(' - ');
+                }
+
+                await tdb.query(`
+                    INSERT INTO tesoreria_cuentas (
+                        orden_servicio, numero_viaje, fecha_servicio, razon_social,
+                        placa_camion, placa_carreta, conductor, cliente, lugar,
+                        flete, comision_porcentaje, tarifa, gastos_operativos,
+                        base_imponible, igv, total, adelanto, detraccion, neto_cobrar,
+                        estado_servicio
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, ?, 0.00, ?, ?, ?, 0.00, ?, ?, 'PENDIENTE')
+                    ON DUPLICATE KEY UPDATE
+                        numero_viaje = VALUES(numero_viaje),
+                        fecha_servicio = VALUES(fecha_servicio),
+                        cliente = VALUES(cliente),
+                        flete = VALUES(flete),
+                        tarifa = VALUES(tarifa),
+                        base_imponible = VALUES(base_imponible),
+                        igv = VALUES(igv),
+                        total = VALUES(total),
+                        detraccion = VALUES(detraccion),
+                        neto_cobrar = VALUES(neto_cobrar)
+                `, [
+                    codigo_orden,
+                    viaje_asignado || '',
+                    fecha || new Date().toISOString().split('T')[0],
+                    razonSocialViaje,
+                    placa_tracto || '',
+                    placa_carreta || '',
+                    conductorViaje || '',
+                    cliente_nombre || 'CLIENTE GENERAL',
+                    lugarStr,
+                    fleteNum,
+                    tarifaNum,
+                    biNum,
+                    igvNum,
+                    totalNum,
+                    detraccionNum,
+                    netoCobrarNum
+                ]);
+            } catch (errSync) {
+                console.warn('[Operaciones -> Tesorería] Error sincronizando OS con Cuentas por Cobrar:', errSync.message);
+            }
+
             if (logAudit) {
                 logAudit({
                     req,
@@ -1840,7 +1908,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             res.json({
                 ok: true,
-                message: `Orden de Servicio ${codigo_orden} guardada exitosamente.`,
+                message: `Orden de Servicio ${codigo_orden} guardada exitosamente y sincronizada con Cuentas por Cobrar.`,
                 id: osId,
                 codigo_orden
             });
@@ -2052,10 +2120,28 @@ module.exports = function (db, broadcast, logAudit) {
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
             const { estado_servicio } = req.body;
+            const [prev] = await tdb.query(`SELECT codigo_orden FROM operaciones_ordenes_servicio WHERE id = ?`, [req.params.id]);
             await tdb.query(
                 `UPDATE operaciones_ordenes_servicio SET estado_servicio = ? WHERE id = ?`,
                 [estado_servicio, req.params.id]
             );
+
+            // Sincronizar estado con Cuentas por Cobrar si se cancela o anula
+            if (prev && prev.length > 0 && prev[0].codigo_orden) {
+                try {
+                    const cod = prev[0].codigo_orden;
+                    let estadoTesoreria = null;
+                    const estUpper = String(estado_servicio).toUpperCase();
+                    if (estUpper.includes('ANULA') || estUpper.includes('CANCEL')) {
+                        estadoTesoreria = 'ANULADO';
+                    }
+                    if (estadoTesoreria) {
+                        await tdb.query(`UPDATE tesoreria_cuentas SET estado_servicio = ? WHERE orden_servicio = ?`, [estadoTesoreria, cod]);
+                    }
+                } catch (eSync) {
+                    console.warn('[Operaciones -> Tesorería] Error actualizando estado en Cuentas por Cobrar:', eSync.message);
+                }
+            }
 
             res.json({ ok: true, message: `Estado actualizado a ${estado_servicio}.` });
         } catch (err) {

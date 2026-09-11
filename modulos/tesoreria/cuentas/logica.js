@@ -137,13 +137,21 @@ window._cuentasRenderTabla = function(data) {
         var esPagado = (est === 'PAGADO');
         var badgeClass = esPagado ? 'pagado' : (est === 'ANULADO' ? 'anulado' : 'pendiente');
 
-        // 1. Sustento de Liquidación (Orden / Factura del servicio)
+        // 1. Sustento de Liquidación (Orden / Liquidación manual del flete)
         var sustentoLiqHtml = '<span class="text-muted small">—</span>';
         if (item.documento_view_url) {
-            sustentoLiqHtml = '<a href="' + item.documento_view_url + '" target="_blank" rel="noopener noreferrer" class="fw-bold text-danger text-decoration-underline" style="font-size:0.8rem; cursor:pointer;" title="Abrir Orden de Liquidación / Factura en nueva pestaña">VER</a>';
+            sustentoLiqHtml = '<a href="' + item.documento_view_url + '" target="_blank" rel="noopener noreferrer" class="fw-bold text-danger text-decoration-underline" style="font-size:0.8rem; cursor:pointer;" title="Abrir Sustento de Liquidación en nueva pestaña">VER</a>';
         }
 
-        // 2. Sustento de Pago / Constancia de Depósito
+        // 2. Sustento de Factura Activa (PDF o Imagen de Factura)
+        var sustentoFacturaHtml = '<span class="text-muted small">—</span>';
+        if (item.factura_documento_view_url) {
+            sustentoFacturaHtml = '<a href="' + item.factura_documento_view_url + '" target="_blank" rel="noopener noreferrer" class="fw-bold text-danger text-decoration-underline" style="font-size:0.8rem; cursor:pointer;" title="Abrir Factura en nueva pestaña">VER</a>';
+        } else if (item.factura && item.factura !== '—') {
+            sustentoFacturaHtml = '<span class="badge bg-secondary-subtle text-secondary" style="font-size:0.7rem;">Sin PDF</span>';
+        }
+
+        // 3. Sustento de Pago / Constancia de Depósito
         var sustentoPagoHtml = '<span class="text-muted small">—</span>';
         if (item.sustento_pago_view_url) {
             sustentoPagoHtml = '<a href="' + item.sustento_pago_view_url + '" target="_blank" rel="noopener noreferrer" class="fw-bold text-danger text-decoration-underline" style="font-size:0.8rem; cursor:pointer;" title="Abrir Constancia o Sustento de Pago en nueva pestaña">VER</a>';
@@ -155,6 +163,9 @@ window._cuentasRenderTabla = function(data) {
         var btnEstadoHtml = '<span class="badge-estado ' + badgeClass + '">' +
             iconEstado + est +
         '</span>';
+
+        // Determinar si tiene factura para permitir emitir Nota de Crédito
+        var tieneFactura = !!(item.serie && item.factura);
 
         // Menú de 3 puntos (Dropdown con data-bs-strategy="fixed" para sobreponerse a todo)
         var accionesHtml = '<div class="dropdown d-inline-block">' +
@@ -172,6 +183,16 @@ window._cuentasRenderTabla = function(data) {
                     '<a class="dropdown-item text-success fw-bold" href="javascript:void(0)" onclick="window.abrirModalRegistrarPago(' + item.id + ')">' +
                         '<i class="bi bi-credit-card-2-front text-success me-1"></i> ' + (esPagado ? 'Ver / Subir Sustento' : 'Registrar Pago / Sustento') +
                     '</a>' +
+                '</li>' +
+                '<li><hr class="dropdown-divider my-1"></li>' +
+                '<li>' +
+                    (tieneFactura ?
+                        '<a class="dropdown-item text-danger fw-bold" href="javascript:void(0)" onclick="window.abrirModalCambiarFacturaNC(' + item.id + ')"><i class="bi bi-arrow-repeat text-danger me-1"></i> Cambiar Factura (Emitir NC)</a>' :
+                        '<span class="dropdown-item disabled text-muted" title="Requiere factura para emitir NC"><i class="bi bi-arrow-repeat me-1"></i> Cambiar Factura (Sin Factura)</span>'
+                    ) +
+                '</li>' +
+                '<li>' +
+                    '<a class="dropdown-item text-secondary" href="javascript:void(0)" onclick="window.abrirModalHistorialFacturasNC(' + item.id + ')"><i class="bi bi-clock-history me-1"></i> Ver Historial NC</a>' +
                 '</li>' +
                 '<li><hr class="dropdown-divider my-1"></li>' +
                 '<li>' +
@@ -205,12 +226,19 @@ window._cuentasRenderTabla = function(data) {
             ('<span class="fw-bold text-dark">' + _fmtMoney(netoCobrado) + '</span>') : 
             '<span class="text-muted small">—</span>';
 
+        // Detalle de Nota de Crédito en Factura si aplica
+        var facturaHtml = (item.factura || '—');
+        if (item.nota_credito) {
+            facturaHtml += ' <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size:0.65rem;" title="Rectificada con NC: ' + item.nota_credito + '">NC</span>';
+        }
+
         return '<tr>' +
             '<td class="col-sticky-action text-center">' + accionesHtml + '</td>' +
+            '<td><span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">' + (item.orden_servicio || '—') + '</span></td>' +
+            '<td><span class="badge bg-light text-dark border fw-bold">' + (item.numero_viaje || '—') + '</span></td>' +
             '<td class="fw-bold text-primary">' + (item.codigo_liquidacion || '—') + '</td>' +
             '<td class="text-center">' + sustentoLiqHtml + '</td>' +
             '<td>' + _fmtDate(item.fecha_liquidacion) + '</td>' +
-            '<td><span class="badge bg-light text-dark border fw-bold">' + (item.numero_viaje || '—') + '</span></td>' +
             '<td>' + _fmtDate(item.fecha_servicio) + '</td>' +
             '<td class="fw-bold text-dark">' + (item.razon_social || '—') + '</td>' +
             '<td><span class="badge bg-light text-dark border fw-bold">' + (item.placa_camion || '—') + '</span></td>' +
@@ -218,6 +246,8 @@ window._cuentasRenderTabla = function(data) {
             '<td>' + (item.conductor || '—') + '</td>' +
             '<td class="fw-semibold">' + (item.cliente || '—') + '</td>' +
             '<td>' + (item.lugar || '—') + '</td>' +
+            '<td class="num-cell fw-semibold">' + _fmtMoney(item.flete) + '</td>' +
+            '<td class="text-center"><span class="badge bg-light text-muted border">' + (item.comision_porcentaje != null ? item.comision_porcentaje : 0) + '%</span></td>' +
             '<td class="num-cell">' + _fmtMoney(item.tarifa) + '</td>' +
             '<td class="num-cell text-danger">' + _fmtMoney(item.gastos_operativos) + '</td>' +
             '<td class="num-cell">' + _fmtMoney(item.base_imponible) + '</td>' +
@@ -229,7 +259,8 @@ window._cuentasRenderTabla = function(data) {
             '<td><span class="badge bg-secondary-subtle text-secondary fw-semibold">' + (item.mes_facturacion || '—') + '</span></td>' +
             '<td>' + _fmtDate(item.fecha_factura) + '</td>' +
             '<td>' + (item.serie || '—') + '</td>' +
-            '<td class="fw-bold">' + (item.factura || '—') + '</td>' +
+            '<td class="fw-bold">' + facturaHtml + '</td>' +
+            '<td class="text-center">' + sustentoFacturaHtml + '</td>' +
             '<td class="text-center">' + (item.credito_dias != null ? item.credito_dias : '—') + '</td>' +
             '<td>' + _fmtDate(item.fecha_cobrar) + '</td>' +
             '<td>' + _fmtDate(item.fecha_deposito) + '</td>' +
@@ -348,9 +379,10 @@ window.abrirModalNuevoRegistro = function() {
         if (el) el.value = val;
     };
     setV('fc-codigo-liquidacion', '');
+    setV('fc-orden-servicio', '');
     setV('fc-numero-viaje', '');
     setV('fc-flete', '');
-    setV('fc-comision', '10');
+    setV('fc-comision', '0');
     setV('fc-gastos-operativos', '');
     setV('fc-adelanto', '');
     setV('fc-tarifa', '0.00');
@@ -362,6 +394,11 @@ window.abrirModalNuevoRegistro = function() {
     setV('fc-credito-dias', '15');
     setV('fc-mes-facturacion', '');
     setV('fc-fecha-cobrar', '');
+
+    var facWrap = document.getElementById('fc-factura-link-wrap');
+    if (facWrap) facWrap.style.display = 'none';
+    var fileFac = document.getElementById('fc-archivo-factura');
+    if (fileFac) fileFac.value = '';
 
     var modal = new bootstrap.Modal(document.getElementById('modalCuentaForm'));
     modal.show();
@@ -383,6 +420,7 @@ window.abrirEditarRegistro = function(id) {
 
     setV('form-cuenta-id', item.id);
     setV('fc-codigo-liquidacion', item.codigo_liquidacion);
+    setV('fc-orden-servicio', item.orden_servicio);
     setV('fc-fecha-liquidacion', item.fecha_liquidacion ? item.fecha_liquidacion.split('T')[0] : '');
     setV('fc-numero-viaje', item.numero_viaje);
     setV('fc-fecha-servicio', item.fecha_servicio ? item.fecha_servicio.split('T')[0] : '');
@@ -393,13 +431,13 @@ window.abrirEditarRegistro = function(id) {
     setV('fc-cliente', item.cliente);
     setV('fc-lugar', item.lugar);
 
-    // Flete y Comisión
-    var comisionVal = (item.comision_porcentaje != null && item.comision_porcentaje !== '') ? item.comision_porcentaje : 10;
+    // Flete y Comisión (por defecto 0%)
+    var comisionVal = (item.comision_porcentaje != null && item.comision_porcentaje !== '') ? item.comision_porcentaje : 0;
     setV('fc-comision', comisionVal);
 
     var fleteVal = item.flete;
     if ((fleteVal == null || parseFloat(fleteVal) === 0) && item.tarifa && parseFloat(item.tarifa) > 0) {
-        var factor = (1 - (parseFloat(comisionVal) || 10) / 100);
+        var factor = (1 - (parseFloat(comisionVal) || 0) / 100);
         fleteVal = factor > 0 ? (parseFloat(item.tarifa) / factor).toFixed(2) : item.tarifa;
     }
     setV('fc-flete', fleteVal != null ? fleteVal : '');
@@ -440,6 +478,17 @@ window.abrirEditarRegistro = function(id) {
         docWrap.style.display = 'none';
     }
 
+    var facWrap = document.getElementById('fc-factura-link-wrap');
+    var facLink = document.getElementById('fc-factura-link');
+    if (item.factura_documento_view_url && facWrap && facLink) {
+        facLink.href = item.factura_documento_view_url;
+        facWrap.style.display = 'inline-block';
+    } else if (facWrap) {
+        facWrap.style.display = 'none';
+    }
+    var fileFac = document.getElementById('fc-archivo-factura');
+    if (fileFac) fileFac.value = '';
+
     document.getElementById('modalCuentaFormTitulo').textContent = 'Editar Registro (ID ' + item.id + ')';
     var modal = new bootstrap.Modal(document.getElementById('modalCuentaForm'));
     modal.show();
@@ -450,11 +499,11 @@ window.autoCalcularTotalesForm = function() {
     // 1. Flete
     var flete = parseFloat(document.getElementById('fc-flete').value) || 0;
 
-    // 2. Comisión % (por defecto 10%)
+    // 2. Comisión % (por defecto 0%)
     var comisionStr = (document.getElementById('fc-comision').value || '').trim();
-    var comision = comisionStr !== '' ? (parseFloat(comisionStr) || 0) : 10;
+    var comision = comisionStr !== '' ? (parseFloat(comisionStr) || 0) : 0;
 
-    // 3. Tarifa (-10% / 20%) = Flete - (Flete * Comision / 100)
+    // 3. Tarifa = Flete - (Flete * Comision / 100)
     var montoComision = flete * (comision / 100);
     var tarifa = flete - montoComision;
     if (tarifa < 0) tarifa = 0;
@@ -501,6 +550,7 @@ window.guardarCuentaForm = function(e) {
 
     var formData = new FormData();
     formData.append('codigo_liquidacion', getV('fc-codigo-liquidacion').trim());
+    formData.append('orden_servicio', getV('fc-orden-servicio').trim());
     formData.append('fecha_liquidacion', getV('fc-fecha-liquidacion') || '');
     formData.append('numero_viaje', getV('fc-numero-viaje').trim());
     formData.append('fecha_servicio', getV('fc-fecha-servicio') || '');
@@ -511,7 +561,7 @@ window.guardarCuentaForm = function(e) {
     formData.append('cliente', getV('fc-cliente').trim());
     formData.append('lugar', getV('fc-lugar').trim());
     formData.append('flete', parseFloat(getV('fc-flete')) || 0);
-    formData.append('comision_porcentaje', parseFloat(getV('fc-comision')) || 10);
+    formData.append('comision_porcentaje', parseFloat(getV('fc-comision')) || 0);
     formData.append('tarifa', parseFloat(getV('fc-tarifa')) || 0);
     formData.append('gastos_operativos', parseFloat(getV('fc-gastos-operativos')) || 0);
     formData.append('base_imponible', parseFloat(getV('fc-base-imponible')) || 0);
@@ -534,6 +584,11 @@ window.guardarCuentaForm = function(e) {
     var fileInput = document.getElementById('fc-archivo');
     if (fileInput && fileInput.files && fileInput.files[0]) {
         formData.append('archivo_adjunto', fileInput.files[0]);
+    }
+
+    var fileFac = document.getElementById('fc-archivo-factura');
+    if (fileFac && fileFac.files && fileFac.files[0]) {
+        formData.append('archivo_factura', fileFac.files[0]);
     }
 
     var url = id ? ('/api/tesoreria/cuentas/' + id) : '/api/tesoreria/cuentas';
@@ -1049,6 +1104,157 @@ window.exportarCuentasExcel = function() {
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Cuentas');
     XLSX.writeFile(wb, 'Cuentas_Cobrar_Pagar_' + new Date().toISOString().split('T')[0] + '.xlsx');
+};
+
+// ── CAMBIAR FACTURA (EMITIR NOTA DE CRÉDITO) ──────────────────────
+window.abrirModalCambiarFacturaNC = function(id) {
+    var item = (window._cuentasData || []).find(function(c) { return c.id === id; });
+    if (!item) return;
+
+    if (!item.serie || !item.factura) {
+        alert('Este registro aún no cuenta con Serie y Factura asignada.');
+        return;
+    }
+
+    var form = document.getElementById('formCambiarFacturaNC');
+    if (form) form.reset();
+
+    var idEl = document.getElementById('nc-input-cuenta-id');
+    if (idEl) idEl.value = item.id;
+
+    var txtFac = document.getElementById('nc-txt-factura-actual');
+    if (txtFac) txtFac.textContent = item.serie + '-' + item.factura;
+
+    var txtTot = document.getElementById('nc-txt-total-actual');
+    if (txtTot) txtTot.textContent = 'S/ ' + _fmtMoney(item.total);
+
+    var inputFecha = document.getElementById('nc-input-nueva-fecha');
+    if (inputFecha) inputFecha.value = new Date().toISOString().split('T')[0];
+
+    var modal = new bootstrap.Modal(document.getElementById('modalCambiarFacturaNC'));
+    modal.show();
+};
+
+window.guardarCambioFacturaNC = function(e) {
+    if (e) e.preventDefault();
+    var id = document.getElementById('nc-input-cuenta-id').value;
+    if (!id) return;
+
+    var serieNC = (document.getElementById('nc-input-serie').value || '').trim();
+    var numNC = (document.getElementById('nc-input-numero').value || '').trim();
+    var motivo = (document.getElementById('nc-input-motivo').value || '').trim();
+    var nuevaSerie = (document.getElementById('nc-input-nueva-serie').value || '').trim();
+    var nuevoNum = (document.getElementById('nc-input-nuevo-numero').value || '').trim();
+    var nuevaFecha = (document.getElementById('nc-input-nueva-fecha').value || '').trim();
+
+    var fileNC = document.getElementById('nc-input-archivo');
+    var fileNuevaFac = document.getElementById('nc-input-archivo-nueva-factura');
+
+    if (!fileNC || !fileNC.files || !fileNC.files[0]) {
+        alert('Debe adjuntar el archivo PDF o Imagen de la Nota de Crédito.');
+        return;
+    }
+    if (!fileNuevaFac || !fileNuevaFac.files || !fileNuevaFac.files[0]) {
+        alert('Debe adjuntar el archivo PDF o Imagen de la Nueva Factura.');
+        return;
+    }
+
+    var formData = new FormData();
+    formData.append('nc_serie', serieNC);
+    formData.append('nc_numero', numNC);
+    formData.append('motivo_anulacion', motivo);
+    formData.append('nueva_serie', nuevaSerie);
+    formData.append('nuevo_numero', nuevoNum);
+    formData.append('nueva_fecha_factura', nuevaFecha);
+    formData.append('archivo_nc', fileNC.files[0]);
+    formData.append('archivo_nueva_factura', fileNuevaFac.files[0]);
+
+    var btnSubmit = document.getElementById('nc-btn-submit');
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando cambios...';
+    }
+
+    fetch('/api/tesoreria/cuentas/' + id + '/cambiar-factura-nc', {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="bi bi-arrow-repeat fs-5"></i> Aplicar NC y Reemplazar Factura';
+        }
+        if (res.error) throw new Error(res.error);
+
+        var modalEl = document.getElementById('modalCambiarFacturaNC');
+        var modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        alert(res.message || 'Factura cambiada exitosamente.');
+        window.cargarCuentas();
+    })
+    .catch(function(err) {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="bi bi-arrow-repeat fs-5"></i> Aplicar NC y Reemplazar Factura';
+        }
+        alert('Error al cambiar factura: ' + err.message);
+    });
+};
+
+// ── VER HISTORIAL DE FACTURAS Y NOTAS DE CRÉDITO ───────────────────
+window.abrirModalHistorialFacturasNC = function(id) {
+    var tbody = document.getElementById('nc-historial-tbody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando historial de comprobantes...</td></tr>';
+    }
+
+    var modal = new bootstrap.Modal(document.getElementById('modalHistorialFacturasNC'));
+    modal.show();
+
+    fetch('/api/tesoreria/cuentas/' + id + '/historial-facturas')
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            var list = res.data || [];
+            if (!list.length) {
+                if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No se registran cambios ni Notas de Crédito emitidas para este servicio.</td></tr>';
+                return;
+            }
+
+            var html = list.map(function(h) {
+                var facAntHtml = h.factura_anterior_serie + '-' + h.factura_anterior_numero;
+                if (h.factura_anterior_view_url) {
+                    facAntHtml += ' <a href="' + h.factura_anterior_view_url + '" target="_blank" class="fw-bold text-danger ms-1 text-decoration-underline" style="font-size:0.75rem;">VER</a>';
+                }
+
+                var ncHtml = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">' + h.nota_credito_serie + '-' + h.nota_credito_numero + '</span>';
+                if (h.nota_credito_view_url) {
+                    ncHtml += ' <a href="' + h.nota_credito_view_url + '" target="_blank" class="fw-bold text-danger ms-1 text-decoration-underline" style="font-size:0.75rem;">VER</a>';
+                }
+
+                var facNuevaHtml = h.factura_nueva_serie + '-' + h.factura_nueva_numero;
+                if (h.factura_nueva_view_url) {
+                    facNuevaHtml += ' <a href="' + h.factura_nueva_view_url + '" target="_blank" class="fw-bold text-success ms-1 text-decoration-underline" style="font-size:0.75rem;">VER</a>';
+                }
+
+                var fechaStr = h.fecha_registro ? _fmtDate(h.fecha_registro) : '—';
+
+                return '<tr>' +
+                    '<td>' + fechaStr + '</td>' +
+                    '<td>' + facAntHtml + '</td>' +
+                    '<td>' + ncHtml + '</td>' +
+                    '<td><span class="small fw-semibold text-secondary">' + (h.motivo_anulacion || '—') + '</span></td>' +
+                    '<td class="fw-bold text-primary">' + facNuevaHtml + '</td>' +
+                    '<td><small class="text-muted">' + (h.usuario_registro || 'ADMIN') + '</small></td>' +
+                '</tr>';
+            }).join('');
+
+            if (tbody) tbody.innerHTML = html;
+        })
+        .catch(function(err) {
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Error al cargar historial: ' + err.message + '</td></tr>';
+        });
 };
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
