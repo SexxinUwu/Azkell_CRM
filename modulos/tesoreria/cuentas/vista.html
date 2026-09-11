@@ -142,21 +142,72 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 10px rgba(0,0,0,0.08);
 }
-.badge-estado:active {
-    transform: scale(0.96);
+.badge-estado {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    user-select: none;
+    cursor: default !important;
 }
 .badge-estado.pagado { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-.badge-estado.pagado:hover { background: #bbf7d0; color: #166534; }
 .badge-estado.pendiente { background: #fef3c7; color: #b45309; border: 1px solid #fde047; }
-.badge-estado.pendiente:hover { background: #fde68a; color: #92400e; }
 .badge-estado.anulado { 
     background: #fee2e2 !important; 
     color: #b91c1c !important; 
     border: 1px solid #fca5a5 !important; 
-    cursor: not-allowed !important;
-    transform: none !important;
-    box-shadow: none !important;
     opacity: 0.9;
+}
+
+/* ── Menú de 3 puntos (Dropdown Acciones) ── */
+.btn-action-dots {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #64748b;
+    transition: all 0.15s ease;
+}
+.btn-action-dots:hover, .btn-action-dots:focus {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+.dropdown-menu-actions {
+    border-radius: 14px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+    padding: 0.4rem !important;
+    min-width: 200px !important;
+    z-index: 1050;
+}
+.dropdown-menu-actions .dropdown-item {
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.45rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #334155;
+}
+.dropdown-menu-actions .dropdown-item:hover {
+    background-color: #f8fafc;
+}
+.dropdown-menu-actions .dropdown-item.disabled, 
+.dropdown-menu-actions .dropdown-item:disabled {
+    color: #94a3b8 !important;
+    background-color: transparent !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
 }
 
 /* Sticky first column for actions */
@@ -465,13 +516,14 @@
                     <th>FECHA DEPÓSITO / TRANSF.</th>
                     <th class="text-center">ESTADO SERVICIO</th>
                     <th class="text-center" style="width:80px;">ADJUNTO</th>
+                    <th class="text-end">NETO COBRADO</th>
                     <th class="text-end">DIFERENCIA</th>
                     <th>OBSERVACIÓN</th>
                 </tr>
             </thead>
             <tbody id="cuentas-tbody">
                 <tr>
-                    <td colspan="30" class="text-center py-5 text-muted">
+                    <td colspan="31" class="text-center py-5 text-muted">
                         <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando información de Tesorería...
                     </td>
                 </tr>
@@ -757,3 +809,109 @@
         </div>
     </div>
 </div>
+
+<!-- ═══ MODAL REGISTRAR PAGO / SUBIR SUSTENTO (DRAWER PREMIUM) ════════════ -->
+<div class="modal fade" id="modalRegistrarPago" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable ck-floating-drawer-dialog" style="max-width: 580px !important;">
+        <div class="modal-content ck-floating-drawer-content">
+            
+            <!-- Header -->
+            <div class="modal-header bg-white border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#f0fdf4; color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">
+                        <i class="bi bi-check2-circle"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark m-0" id="modalRegistrarPagoLabel" style="font-size:1.05rem;">Registrar Pago / Sustento</h5>
+                        <small class="text-secondary" id="modalRegistrarPagoSubtitulo">Liquidación: —</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Body -->
+            <form id="formRegistrarPago" onsubmit="window.guardarRegistroPago(event)" class="d-flex flex-column flex-grow-1 overflow-hidden">
+                <div class="modal-body p-4 flex-grow-1 overflow-y-auto" style="background:#f8fafc;">
+                    <input type="hidden" id="pago-input-id">
+
+                    <!-- Resumen del Cobro -->
+                    <div class="card-segment mb-3" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:18px; padding:1.25rem;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-secondary small fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Neto por Cobrar (Facturado)</span>
+                            <span id="pago-resumen-neto-cobrar" class="fw-bold fs-6 text-primary">S/ 0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-secondary small fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Cliente / Factura</span>
+                            <span id="pago-resumen-cliente" class="fw-semibold text-dark small text-truncate" style="max-width:260px;">—</span>
+                        </div>
+                    </div>
+
+                    <!-- Datos del Pago -->
+                    <div class="card-segment mb-3" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:18px; padding:1.25rem;">
+                        <div class="card-segment-header d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                            <i class="bi bi-currency-dollar text-success fs-5"></i>
+                            <h6 class="fw-bold m-0 text-dark" style="font-size:0.9rem;">Información del Depósito</h6>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#475569;">
+                                Neto Cobrado / Depositado <span class="text-danger">(*)</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light fw-bold border-end-0" style="border-radius:12px 0 0 12px; border-color:#cbd5e1;">S/</span>
+                                <input type="number" step="0.01" inputmode="decimal" id="pago-input-neto-cobrado" class="form-control fw-bold fs-6 text-success border-start-0" required placeholder="0.00" oninput="window.calcularDiferenciaPagoModal()" style="border-radius:0 12px 12px 0;">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#475569;">
+                                Fecha de Depósito / Cobro <span class="text-danger">(*)</span>
+                            </label>
+                            <input type="date" id="pago-input-fecha-deposito" class="form-control fw-semibold" required>
+                        </div>
+
+                        <div class="p-2.5 rounded-3 mb-2" id="pago-wrap-diferencia" style="background:#f1f5f9; border:1px dashed #cbd5e1; display:flex; justify-content:space-between; align-items:center;">
+                            <span class="small fw-bold text-secondary" style="font-size:0.75rem;">Diferencia resultante:</span>
+                            <span id="pago-preview-diferencia" class="fw-bold" style="font-size:0.92rem;">S/ 0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Adjuntar Constancia / Sustento -->
+                    <div class="card-segment" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:18px; padding:1.25rem;">
+                        <div class="card-segment-header d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                            <i class="bi bi-paperclip text-primary fs-5"></i>
+                            <h6 class="fw-bold m-0 text-dark" style="font-size:0.9rem;">Constancia o Sustento de Pago</h6>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label" style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#475569;">
+                                Archivo Voucher / PDF / Imagen
+                            </label>
+                            <input type="file" id="pago-input-archivo" class="form-control" accept=".pdf, .png, .jpg, .jpeg">
+                            <small class="text-secondary d-block mt-1" style="font-size:0.72rem;">Sube el comprobante de depósito bancario o transferencia.</small>
+                        </div>
+
+                        <div id="pago-wrap-archivo-actual" style="display:none;" class="mt-2 pt-2 border-top">
+                            <span class="text-secondary small d-block mb-1">Sustento actual registrado:</span>
+                            <a id="pago-link-archivo-actual" href="#" target="_blank" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1.5" style="font-size:0.78rem;">
+                                <i class="bi bi-file-earmark-check"></i> Ver Sustento Actual
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-light border rounded-3 px-4 py-2 fw-semibold text-secondary" data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+                    <button type="submit" id="pago-btn-submit" class="btn btn-success rounded-3 px-4 py-2 fw-bold d-flex align-items-center gap-2" style="box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);">
+                        <i class="bi bi-check2-circle fs-5"></i> Guardar y Marcar PAGADO
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
