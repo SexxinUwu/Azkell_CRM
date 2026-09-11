@@ -167,12 +167,12 @@
     font-size: 1.1rem;
 }
 
-/* ── Floating Drawer Modal & Inputs Styling (1:1 Reporte de Fallas / Órdenes de Viaje) ── */
+/* ── Floating Drawer Modal & Inputs Styling (1:1 Idéntico a Reporte de Fallas) ── */
 .caja-floating-drawer-dialog {
-    max-width: 800px !important;
+    max-width: 740px !important;
     width: 100% !important;
-    height: 80vh !important;
-    max-height: 80vh !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
     margin: 0 auto !important;
     position: fixed !important;
     bottom: 0 !important;
@@ -188,7 +188,7 @@
 
 .caja-floating-drawer-content {
     height: 100% !important;
-    max-height: 80vh !important;
+    max-height: 94vh !important;
     border-radius: 28px 28px 0 0 !important;
     border-bottom: none !important;
     box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.25) !important;
@@ -201,23 +201,25 @@
 #modalCajaForm .modal-header {
     background: #ffffff !important;
     border-bottom: 1px solid #e2e8f0 !important;
-    padding: 1rem 1.5rem !important;
+    padding: 0.85rem 1.4rem !important;
     flex-shrink: 0;
 }
 
 #modalCajaForm .modal-title {
     color: #0284c7;
     font-weight: 800;
-    font-size: 1.15rem;
+    font-size: 1.18rem;
+    letter-spacing: -0.2px;
 }
 
 #modalCajaForm .modal-body {
     flex: 1 1 auto;
     overflow-y: auto !important;
-    padding: 1.25rem 1.5rem !important;
+    padding: 1.25rem 1.4rem !important;
+    background: #f8fafc !important;
 }
 
-/* Modal Form Inputs: Enlarge & Beautify (Idéntico a Reporte de Fallas y Órdenes de Viaje) */
+/* Modal Form Inputs: Enlarge & Beautify (Idéntico a Reporte de Fallas) */
 #modalCajaForm .form-control,
 #modalCajaForm .form-select {
     min-height: 44px !important;
@@ -261,14 +263,14 @@
     font-weight: bold;
 }
 
-/* Tarjetas segmentadas y numeradas (Idéntico a Órdenes de Viaje / Reporte de Fallas) */
+/* Tarjetas segmentadas y numeradas (Idéntico a Reporte de Fallas) */
 .caja-segmento-card {
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 18px !important;
     padding: 1.15rem 1.35rem !important;
     margin-bottom: 1.15rem !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
 }
 
 .caja-segmento-header {
@@ -295,7 +297,7 @@
 }
 
 .caja-segmento-titulo {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 800;
     color: #1e293b;
     text-transform: uppercase;
@@ -304,13 +306,30 @@
 }
 
 @media (max-width: 768px) {
-    .caja-floating-drawer-dialog {
+    .caja-floating-drawer-dialog,
+    #modalCajaForm .caja-floating-drawer-dialog {
         max-width: 100vw !important;
         width: 100vw !important;
         min-width: 100vw !important;
-        height: 85vh !important;
-        max-height: 85vh !important;
-        border-radius: 20px 20px 0 0 !important;
+        height: 96vh !important;
+        max-height: 96vh !important;
+        margin: 0 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        transform: translateY(100%) !important;
+        border-radius: 24px 24px 0 0 !important;
+    }
+    #modalCajaForm.show .caja-floating-drawer-dialog {
+        transform: translateY(0) !important;
+    }
+    .caja-floating-drawer-content,
+    #modalCajaForm .caja-floating-drawer-content {
+        width: 100vw !important;
+        min-width: 100vw !important;
+        border-radius: 24px 24px 0 0 !important;
     }
 }
 </style>
