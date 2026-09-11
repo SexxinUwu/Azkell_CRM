@@ -636,6 +636,7 @@ window.verificarSesionGuardada = function() {
             'tesoreria/caja': 'tesoreria_caja',
             'tesoreria/caja-chica': 'tesoreria_caja',
             'tesoreria/cuentas': 'tesoreria_cuentas',
+            'tesoreria/bancos': 'tesoreria_caja',
             'seguridad/unidades': 'seguridad_unidades',
             'seguridad/entrega-vehiculos': 'seguridad_unidades',
             'seguridad/unidades-base': 'unidades_base',
@@ -3718,6 +3719,7 @@ const TITULOS_MODULOS = {
     'tesoreria/caja':                   'Caja',
     'tesoreria/caja-chica':             'Caja',
     'tesoreria/cuentas':                'Cuentas por Cobrar y Pagar',
+    'tesoreria/bancos':                 'Bancos',
 };
 
 const MENU_IDS = {
@@ -3782,6 +3784,7 @@ const MENU_IDS = {
     'tesoreria/caja':              'nav-tesoreria-caja',
     'tesoreria/caja-chica':        'nav-tesoreria-caja',
     'tesoreria/cuentas':           'nav-tesoreria-cuentas',
+    'tesoreria/bancos':            'nav-tesoreria-bancos',
 };
 
 const MENU_SECTION = {
@@ -3841,6 +3844,7 @@ const MENU_SECTION = {
     'tesoreria/caja':              'tesoreria',
     'tesoreria/caja-chica':        'tesoreria',
     'tesoreria/cuentas':           'tesoreria',
+    'tesoreria/bancos':            'tesoreria',
 };
 
 const BREADCRUMB_MAP = {
@@ -3848,6 +3852,7 @@ const BREADCRUMB_MAP = {
     'tesoreria/caja':             ['Tesorería','Caja'],
     'tesoreria/caja-chica':       ['Tesorería','Caja'],
     'tesoreria/cuentas':          ['Tesorería','Cuentas por Cobrar/Pagar'],
+    'tesoreria/bancos':           ['Tesorería','Bancos'],
     'operaciones/programacion':    ['Operaciones','Programación'],
     'operaciones/ordenes-viaje':   ['Operaciones','Órdenes de Viaje'],
     'operaciones/reporte-viajes':  ['Operaciones','Reporte de Viajes'],
