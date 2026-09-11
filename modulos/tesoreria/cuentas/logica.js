@@ -137,20 +137,23 @@ window._cuentasRenderTabla = function(data) {
         var esPagado = (est === 'PAGADO');
         var badgeClass = esPagado ? 'pagado' : (est === 'ANULADO' ? 'anulado' : 'pendiente');
 
-        // Documento orden/factura adjunta
-        var docHtml = '<span class="text-muted small">—</span>';
+        // 1. Sustento de Liquidación (Orden / Factura del servicio)
+        var sustentoLiqHtml = '<span class="text-muted small">—</span>';
         if (item.documento_view_url) {
-            var esPdf = (item.documento_url || '').toLowerCase().includes('.pdf');
-            var iconClass = esPdf ? 'bi-file-earmark-pdf-fill text-danger' : 'bi-file-earmark-image-fill text-primary';
-            docHtml = '<a href="' + item.documento_view_url + '" target="_blank" class="btn btn-sm btn-light border py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm" style="font-size:0.75rem;" title="Ver Orden / Documento Adjunto">' +
-                '<i class="bi ' + iconClass + '"></i> Ver' +
+            var esPdfLiq = (item.documento_url || '').toLowerCase().includes('.pdf');
+            var iconClassLiq = esPdfLiq ? 'bi-file-earmark-pdf-fill text-danger' : 'bi-file-earmark-image-fill text-primary';
+            sustentoLiqHtml = '<a href="' + item.documento_view_url + '" target="_blank" class="btn btn-sm btn-light border py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm" style="font-size:0.75rem;" title="Ver Orden de Liquidación / Factura">' +
+                '<i class="bi ' + iconClassLiq + '"></i> Ver' +
             '</a>';
         }
 
-        // Sustento de pago adjunto (si existe)
+        // 2. Sustento de Pago / Constancia de Depósito
+        var sustentoPagoHtml = '<span class="text-muted small">—</span>';
         if (item.sustento_pago_view_url) {
-            docHtml += '<a href="' + item.sustento_pago_view_url + '" target="_blank" class="btn btn-sm btn-outline-success py-0 px-1.5 ms-1 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm" style="font-size:0.72rem;" title="Ver Sustento de Pago">' +
-                '<i class="bi bi-receipt-cutoff"></i> Pago' +
+            var esPdfPago = (item.sustento_pago_url || '').toLowerCase().includes('.pdf');
+            var iconClassPago = esPdfPago ? 'bi-file-earmark-pdf-fill text-danger' : 'bi-file-earmark-image-fill text-success';
+            sustentoPagoHtml = '<a href="' + item.sustento_pago_view_url + '" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm" style="font-size:0.75rem;" title="Ver Voucher / Constancia de Depósito">' +
+                '<i class="bi ' + iconClassPago + '"></i> Pago' +
             '</a>';
         }
 
@@ -238,7 +241,8 @@ window._cuentasRenderTabla = function(data) {
             '<td>' + _fmtDate(item.fecha_cobrar) + '</td>' +
             '<td>' + _fmtDate(item.fecha_deposito) + '</td>' +
             '<td class="text-center">' + btnEstadoHtml + '</td>' +
-            '<td class="text-center">' + docHtml + '</td>' +
+            '<td class="text-center">' + sustentoLiqHtml + '</td>' +
+            '<td class="text-center">' + sustentoPagoHtml + '</td>' +
             '<td class="num-cell">' + netoCobradoHtml + '</td>' +
             '<td class="num-cell ' + diffClass + '">' + diffSign + _fmtMoney(diff) + '</td>' +
             '<td>' + (item.observacion || '') + '</td>' +
