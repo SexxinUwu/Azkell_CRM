@@ -210,7 +210,92 @@
     border-left: 4px solid #0284c7;
     background-color: #f0f9ff;
     padding: 0.75rem 1rem;
-    border-radius: 4px;
+    border-radius: 6px;
+}
+
+/* ── Modal Caja: Centrado, Altura 80% y Animación Bottom-up ── */
+#modalCajaForm .modal-dialog {
+    max-width: 920px;
+    width: 95%;
+    height: 80vh !important;
+    margin: auto !important;
+    display: flex;
+    align-items: center;
+}
+
+#modalCajaForm .modal-content {
+    height: 80vh !important;
+    max-height: 80vh !important;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+}
+
+#modalCajaForm .modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem !important;
+    background: #f8fafc;
+}
+
+#modalCajaForm .modal-footer,
+#modalCajaForm .caja-modal-footer {
+    flex-shrink: 0;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    padding: 0.85rem 1.5rem;
+}
+
+/* Animación apertura suave de abajo hacia arriba */
+#modalCajaForm.fade .modal-dialog {
+    transform: translate(0, 100px);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    opacity: 0;
+}
+#modalCajaForm.show .modal-dialog {
+    transform: translate(0, 0);
+    opacity: 1;
+}
+
+/* Tarjetas segmentadas y numeradas */
+.caja-segmento-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.caja-segmento-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed #e2e8f0;
+}
+.caja-segmento-num {
+    width: 26px;
+    height: 26px;
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.caja-segmento-titulo {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin: 0;
 }
 </style>
 
@@ -354,234 +439,255 @@
             <div class="modal-body p-3 p-md-4">
                 <form id="formNuevaCaja" autocomplete="off">
                     
-                    <!-- Fila 1: Fecha(*), Hora(*), Fecha Valuta(*), Hora(*), Número Constancia Depósito -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-6 col-md">
-                            <label class="form-label">Fecha<span class="req">(*)</span></label>
-                            <input type="date" id="caja-input-fecha" class="form-control" readonly tabindex="-1" required>
+                    <!-- ═══ BLOQUE 1: FOLIO Y FECHAS ═══ -->
+                    <div class="caja-segmento-card">
+                        <div class="caja-segmento-header">
+                            <span class="caja-segmento-num">1</span>
+                            <h6 class="caja-segmento-titulo">Folio, Serie y Registro de Fechas</h6>
                         </div>
-                        <div class="col-6 col-md">
-                            <label class="form-label">Hora<span class="req">(*)</span></label>
-                            <input type="text" id="caja-input-hora" class="form-control" readonly tabindex="-1" placeholder="17:06:00" required>
-                        </div>
-                        <div class="col-6 col-md">
-                            <label class="form-label">Fecha Valuta<span class="req">(*)</span></label>
-                            <input type="date" id="caja-input-fecha-valuta" class="form-control" readonly tabindex="-1" required>
-                        </div>
-                        <div class="col-6 col-md">
-                            <label class="form-label">Hora<span class="req">(*)</span></label>
-                            <input type="text" id="caja-input-hora-valuta" class="form-control" readonly tabindex="-1" placeholder="17:06:00" required>
-                        </div>
-                        <div class="col-12 col-md">
-                            <label class="form-label">Número Constancia Deposito</label>
-                            <input type="text" id="caja-input-constancia" class="form-control" placeholder="">
-                        </div>
-                    </div>
-
-                    <!-- Fila 2: Número Factura, Serie(*), Número(*) -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Número Factura</label>
-                            <input type="text" id="caja-input-num-factura" class="form-control" placeholder="">
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label">Serie <span class="req">(*)</span></label>
-                            <input type="text" id="caja-input-serie" class="form-control" readonly tabindex="-1" value="2026" required>
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label">Número <span class="req">(*)</span></label>
-                            <input type="text" id="caja-input-numero" class="form-control" readonly tabindex="-1" placeholder="00008567" required>
-                        </div>
-                    </div>
-
-                    <!-- Fila 3: Orden de Viaje (Para gastos y descuentos), Conductor, Ruta de viaje -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Orden de Viaje <span class="text-muted fw-normal" style="font-size:0.7rem;">( Para gastos y descuentos)</span></label>
-                            <div class="position-relative">
-                                <input type="text" id="caja-input-orden-viaje" class="form-control" placeholder="Buscar por Serie-Número o dia/mes/a..." list="caja-dl-ordenes-viaje" onchange="window.cajaAlSeleccionarOrdenViaje(this.value)">
-                                <datalist id="caja-dl-ordenes-viaje"></datalist>
+                        
+                        <div class="row g-2 mb-2">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Serie <span class="req">(*)</span></label>
+                                <input type="text" id="caja-input-serie" class="form-control" readonly tabindex="-1" value="2026" required>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Número <span class="req">(*)</span></label>
+                                <input type="text" id="caja-input-numero" class="form-control" readonly tabindex="-1" placeholder="00008567" required>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Número Factura</label>
+                                <input type="text" id="caja-input-num-factura" class="form-control" placeholder="Ej: F001-0029">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">N° Constancia Depósito</label>
+                                <input type="text" id="caja-input-constancia" class="form-control" placeholder="N° de operación">
                             </div>
                         </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Conductor</label>
-                            <input type="text" id="caja-input-conductor" class="form-control" readonly tabindex="-1" placeholder="">
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Ruta de viaje</label>
-                            <input type="text" id="caja-input-ruta" class="form-control" readonly tabindex="-1" placeholder="">
-                            <input type="hidden" id="caja-input-placa" value="">
+
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Fecha Emisión <span class="req">(*)</span></label>
+                                <input type="date" id="caja-input-fecha" class="form-control" readonly tabindex="-1" required>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Hora <span class="req">(*)</span></label>
+                                <input type="text" id="caja-input-hora" class="form-control" readonly tabindex="-1" placeholder="17:06:00" required>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Fecha Valuta <span class="req">(*)</span></label>
+                                <input type="date" id="caja-input-fecha-valuta" class="form-control" readonly tabindex="-1" required>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Hora Valuta <span class="req">(*)</span></label>
+                                <input type="text" id="caja-input-hora-valuta" class="form-control" readonly tabindex="-1" placeholder="17:06:00" required>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Fila 4: Autoriza(*) -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12">
-                            <label class="form-label">Autoriza <span class="req">(*)</span></label>
-                            <select id="caja-input-autoriza" class="form-select" required>
-                                <option value="">Seleccione...</option>
-                                <option value="Saul Henry Rosas (Gerente General)">Saul Henry Rosas (Gerente General)</option>
-                                <option value="Administrador">Administrador</option>
-                                <option value="Jhonn Hagi Ore Camarena (Supervisor de Flota)">Jhonn Hagi Ore Camarena (Supervisor de Flota)</option>
-                                <option value="Amador Marino Rojas (Jefe de Mantenimiento)">Amador Marino Rojas (Jefe de Mantenimiento)</option>
-                            </select>
+                    <!-- ═══ BLOQUE 2: VINCULACIÓN OPERATIVA (ORDEN DE VIAJE) ═══ -->
+                    <div class="caja-segmento-card">
+                        <div class="caja-segmento-header">
+                            <span class="caja-segmento-num">2</span>
+                            <h6 class="caja-segmento-titulo">Vinculación Operativa (Orden de Viaje & Conductor)</h6>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-12 col-md-5">
+                                <label class="form-label">Orden de Viaje <span class="text-muted fw-normal" style="font-size:0.7rem;">(Para gastos y descuentos)</span></label>
+                                <div class="position-relative">
+                                    <input type="text" id="caja-input-orden-viaje" class="form-control" placeholder="Buscar por Serie-Número o día/mes/año..." list="caja-dl-ordenes-viaje" onchange="window.cajaAlSeleccionarOrdenViaje(this.value)">
+                                    <datalist id="caja-dl-ordenes-viaje"></datalist>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label">Conductor Asignado</label>
+                                <input type="text" id="caja-input-conductor" class="form-control" readonly tabindex="-1" placeholder="Conductor del viaje...">
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Ruta de Viaje</label>
+                                <input type="text" id="caja-input-ruta" class="form-control" readonly tabindex="-1" placeholder="Ruta del viaje...">
+                                <input type="hidden" id="caja-input-placa" value="">
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Fila 5: Motivo(*), Sub Motivo(*) -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label">Motivo <span class="req">(*)</span></label>
-                            <select id="caja-input-motivo" class="form-select" required onchange="window.cajaAlCambiarMotivo(this.value)">
-                                <option value="">Seleccione...</option>
-                                <option value="ANTICIPO DE VIAJE">ANTICIPO DE VIAJE</option>
-                                <option value="PEAJES">PEAJES</option>
-                                <option value="COMBUSTIBLE">COMBUSTIBLE</option>
-                                <option value="VIÁTICOS / ALIMENTACIÓN">VIÁTICOS / ALIMENTACIÓN</option>
-                                <option value="GASTOS DE RUTA">GASTOS DE RUTA</option>
-                                <option value="REPUESTOS / COMPRAS TALLER">REPUESTOS / COMPRAS TALLER</option>
-                                <option value="SERVICIOS TERCEROS">SERVICIOS TERCEROS</option>
-                                <option value="PAGO DE CONDUCTORES">PAGO DE CONDUCTORES</option>
-                                <option value="SERVICIOS ADMINISTRATIVOS">SERVICIOS ADMINISTRATIVOS</option>
-                                <option value="OTROS EGRESOS">OTROS EGRESOS</option>
-                            </select>
+                    <!-- ═══ BLOQUE 3: CONCEPTO, BENEFICIARIO Y AUTORIZACIÓN ═══ -->
+                    <div class="caja-segmento-card">
+                        <div class="caja-segmento-header">
+                            <span class="caja-segmento-num">3</span>
+                            <h6 class="caja-segmento-titulo">Concepto, Beneficiario & Autorización</h6>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label">Sub Motivo <span class="req">(*)</span></label>
-                            <select id="caja-input-submotivo" class="form-select">
-                                <option value="">Seleccione...</option>
-                            </select>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Autoriza <span class="req">(*)</span></label>
+                                <select id="caja-input-autoriza" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="Saul Henry Rosas (Gerente General)">Saul Henry Rosas (Gerente General)</option>
+                                    <option value="Administrador">Administrador</option>
+                                    <option value="Jhonn Hagi Ore Camarena (Supervisor de Flota)">Jhonn Hagi Ore Camarena (Supervisor de Flota)</option>
+                                    <option value="Amador Marino Rojas (Jefe de Mantenimiento)">Amador Marino Rojas (Jefe de Mantenimiento)</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Motivo <span class="req">(*)</span></label>
+                                <select id="caja-input-motivo" class="form-select" required onchange="window.cajaAlCambiarMotivo(this.value)">
+                                    <option value="">Seleccione...</option>
+                                    <option value="ANTICIPO DE VIAJE">ANTICIPO DE VIAJE</option>
+                                    <option value="PEAJES">PEAJES</option>
+                                    <option value="COMBUSTIBLE">COMBUSTIBLE</option>
+                                    <option value="VIÁTICOS / ALIMENTACIÓN">VIÁTICOS / ALIMENTACIÓN</option>
+                                    <option value="GASTOS DE RUTA">GASTOS DE RUTA</option>
+                                    <option value="REPUESTOS / COMPRAS TALLER">REPUESTOS / COMPRAS TALLER</option>
+                                    <option value="SERVICIOS TERCEROS">SERVICIOS TERCEROS</option>
+                                    <option value="PAGO DE CONDUCTORES">PAGO DE CONDUCTORES</option>
+                                    <option value="SERVICIOS ADMINISTRATIVOS">SERVICIOS ADMINISTRATIVOS</option>
+                                    <option value="OTROS EGRESOS">OTROS EGRESOS</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Sub Motivo <span class="req">(*)</span></label>
+                                <select id="caja-input-submotivo" class="form-select">
+                                    <option value="">Seleccione...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label">Tipo de Persona <span class="req">(*)</span></label>
+                                <select id="caja-input-tipo-persona" class="form-select" required onchange="window.cajaAlCambiarTipoPersona(this.value)">
+                                    <option value="">Seleccione...</option>
+                                    <option value="CONDUCTOR">CONDUCTOR</option>
+                                    <option value="PROVEEDOR">PROVEEDOR</option>
+                                    <option value="COLABORADOR / EMPLEADO">COLABORADOR / EMPLEADO</option>
+                                    <option value="CLIENTE">CLIENTE</option>
+                                    <option value="TERCERO">TERCERO</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-8">
+                                <label class="form-label">Persona / Beneficiario <span class="req">(*)</span></label>
+                                <select id="caja-input-persona" class="form-select" required onchange="window.cajaAlSeleccionarPersona(this.value)">
+                                    <option value="">Seleccione...</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Fila 6: Modalidad de Pago(*), Moneda(*) -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label">Modalidad de Pago <span class="req">(*)</span></label>
-                            <select id="caja-input-modalidad" class="form-select" required>
-                                <option value="">Seleccione...</option>
-                                <option value="TRANSFERENCIA BANCARIA" selected>TRANSFERENCIA BANCARIA</option>
-                                <option value="EFECTIVO">EFECTIVO</option>
-                                <option value="YAPE / PLIN">YAPE / PLIN</option>
-                                <option value="DEPOSITO EN CUENTA">DEPOSITO EN CUENTA</option>
-                                <option value="TARJETA DE CRÉDITO/DÉBITO">TARJETA DE CRÉDITO/DÉBITO</option>
-                            </select>
+                    <!-- ═══ BLOQUE 4: IMPORTE Y DETALLES DEL PAGO ═══ -->
+                    <div class="caja-segmento-card">
+                        <div class="caja-segmento-header">
+                            <span class="caja-segmento-num">4</span>
+                            <h6 class="caja-segmento-titulo">Importe, Moneda & Cuentas Bancarias</h6>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label">Moneda <span class="req">(*)</span></label>
-                            <select id="caja-input-moneda" class="form-select" required>
-                                <option value="SOLES" selected>SOLES</option>
-                                <option value="DOLARES">DOLARES</option>
-                            </select>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label">Importe Total <span class="req">(*)</span></label>
+                                <input type="number" step="0.01" id="caja-input-importe-total" class="form-control fw-bold fs-6 text-primary" value="0" required placeholder="0.00">
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label">Moneda <span class="req">(*)</span></label>
+                                <select id="caja-input-moneda" class="form-select" required>
+                                    <option value="SOLES" selected>SOLES</option>
+                                    <option value="DOLARES">DOLARES</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label">Modalidad de Pago <span class="req">(*)</span></label>
+                                <select id="caja-input-modalidad" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="TRANSFERENCIA BANCARIA" selected>TRANSFERENCIA BANCARIA</option>
+                                    <option value="EFECTIVO">EFECTIVO</option>
+                                    <option value="YAPE / PLIN">YAPE / PLIN</option>
+                                    <option value="DEPOSITO EN CUENTA">DEPOSITO EN CUENTA</option>
+                                    <option value="TARJETA DE CRÉDITO/DÉBITO">TARJETA DE CRÉDITO/DÉBITO</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Cuenta Bancaria de Persona (Destino) <span class="req">(*)</span></label>
+                                <select id="caja-input-cuenta-persona" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="BCP AHORROS - SOLES">BCP AHORROS - SOLES</option>
+                                    <option value="BBVA AHORROS - SOLES">BBVA AHORROS - SOLES</option>
+                                    <option value="INTERBANK - SOLES">INTERBANK - SOLES</option>
+                                    <option value="BANCO DE LA NACION">BANCO DE LA NACION</option>
+                                    <option value="EFECTIVO EN MANO">EFECTIVO EN MANO</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Cuenta Bancaria de Empresa (Origen)</label>
+                                <select id="caja-input-cuenta-empresa" class="form-select">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="BCP CORRIENTE SOLES - 191-23948293-0-12">BCP CORRIENTE SOLES - 191-23948293-0-12</option>
+                                    <option value="BBVA CORRIENTE SOLES - 0011-0293-0100029384">BBVA CORRIENTE SOLES - 0011-0293-0100029384</option>
+                                    <option value="CAJA CHICA CENTRAL EFECTIVO">CAJA CHICA CENTRAL EFECTIVO</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-12 col-md-8">
+                                <label class="form-label">Descripción / Detalle del Movimiento <span class="req">(*)</span></label>
+                                <input type="text" id="caja-input-descripcion" class="form-control" placeholder="Ingrese el detalle o concepto del movimiento..." required>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label">Tipo de Comprobante <span class="req">(*)</span></label>
+                                <select id="caja-input-tipo-comprobante" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="FACTURA">FACTURA</option>
+                                    <option value="BOLETA DE VENTA">BOLETA DE VENTA</option>
+                                    <option value="RECIBO POR HONORARIOS">RECIBO POR HONORARIOS</option>
+                                    <option value="VALE PROVISIONAL DE CAJA">VALE PROVISIONAL DE CAJA</option>
+                                    <option value="TICKET DE PEAJE">TICKET DE PEAJE</option>
+                                    <option value="SIN COMPROBANTE">SIN COMPROBANTE</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Fila 7: Tipo Persona(*), Persona(*) -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label">Tipo Persona <span class="req">(*)</span></label>
-                            <select id="caja-input-tipo-persona" class="form-select" required onchange="window.cajaAlCambiarTipoPersona(this.value)">
-                                <option value="">Seleccione...</option>
-                                <option value="CONDUCTOR">CONDUCTOR</option>
-                                <option value="PROVEEDOR">PROVEEDOR</option>
-                                <option value="COLABORADOR / EMPLEADO">COLABORADOR / EMPLEADO</option>
-                                <option value="CLIENTE">CLIENTE</option>
-                                <option value="TERCERO">TERCERO</option>
-                            </select>
+                    <!-- ═══ BLOQUE 5: SUSTENTOS Y OBSERVACIONES ═══ -->
+                    <div class="caja-segmento-card mb-3">
+                        <div class="caja-segmento-header">
+                            <span class="caja-segmento-num">5</span>
+                            <h6 class="caja-segmento-titulo">Sustentos Digitales & Observaciones</h6>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label">Persona <span class="req">(*)</span></label>
-                            <select id="caja-input-persona" class="form-select" required onchange="window.cajaAlSeleccionarPersona(this.value)">
-                                <option value="">Seleccione...</option>
-                            </select>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-uppercase" style="font-size:0.7rem;">SUBIR VOUCHER</label>
+                                <input type="file" id="caja-input-file-voucher" class="form-control form-control-sm" accept="image/*,.pdf">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-uppercase" style="font-size:0.7rem;">SUBIR SUSTENTO</label>
+                                <input type="file" id="caja-input-file-sustento" class="form-control form-control-sm" accept="image/*,.pdf,.xlsx,.csv">
+                            </div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label">Observación</label>
+                            <textarea id="caja-input-observacion" class="form-control" rows="2" placeholder="Observaciones adicionales..."></textarea>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="caja-check-no-aplica-liq">
+                            <label class="form-check-label small fw-semibold text-secondary" for="caja-check-no-aplica-liq">
+                                No aplica para liquidación de viaje
+                            </label>
                         </div>
                     </div>
 
-                    <!-- Fila 8: Importe Total(*) -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label">Importe Total <span class="req">(*)</span></label>
-                            <input type="number" step="0.01" id="caja-input-importe-total" class="form-control fw-bold fs-6" value="0" required placeholder="0.00">
-                        </div>
-                    </div>
-
-                    <!-- Fila 9: Descripción(*), Tipo de Comprobante(*) -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12 col-md-8">
-                            <label class="form-label">Descripción <span class="req">(*)</span></label>
-                            <input type="text" id="caja-input-descripcion" class="form-control" placeholder="Ingrese el detalle o concepto del movimiento..." required>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Tipo de Comprobante <span class="req">(*)</span></label>
-                            <select id="caja-input-tipo-comprobante" class="form-select" required>
-                                <option value="">Seleccione...</option>
-                                <option value="FACTURA">FACTURA</option>
-                                <option value="BOLETA DE VENTA">BOLETA DE VENTA</option>
-                                <option value="RECIBO POR HONORARIOS">RECIBO POR HONORARIOS</option>
-                                <option value="VALE PROVISIONAL DE CAJA">VALE PROVISIONAL DE CAJA</option>
-                                <option value="TICKET DE PEAJE">TICKET DE PEAJE</option>
-                                <option value="SIN COMPROBANTE">SIN COMPROBANTE</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Fila 10: Cuenta Bancaria de Persona(*), Cuenta Bancaria de Empresa -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label">Cuenta Bancaria de Persona <span class="req">(*)</span></label>
-                            <select id="caja-input-cuenta-persona" class="form-select" required>
-                                <option value="">Seleccione...</option>
-                                <option value="BCP AHORROS - SOLES">BCP AHORROS - SOLES</option>
-                                <option value="BBVA AHORROS - SOLES">BBVA AHORROS - SOLES</option>
-                                <option value="INTERBANK - SOLES">INTERBANK - SOLES</option>
-                                <option value="BANCO DE LA NACION">BANCO DE LA NACION</option>
-                                <option value="EFECTIVO EN MANO">EFECTIVO EN MANO</option>
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label">Cuenta Bancaria de Empresa</label>
-                            <select id="caja-input-cuenta-empresa" class="form-select">
-                                <option value="">Seleccionar...</option>
-                                <option value="BCP CORRIENTE SOLES - 191-23948293-0-12">BCP CORRIENTE SOLES - 191-23948293-0-12</option>
-                                <option value="BBVA CORRIENTE SOLES - 0011-0293-0100029384">BBVA CORRIENTE SOLES - 0011-0293-0100029384</option>
-                                <option value="CAJA CHICA CENTRAL EFECTIVO">CAJA CHICA CENTRAL EFECTIVO</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Fila 11: SUBIR VOUCHER, SUBIR SUSTENTO -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label text-uppercase" style="font-size:0.7rem;">SUBIR VOUCHER</label>
-                            <input type="file" id="caja-input-file-voucher" class="form-control form-control-sm" accept="image/*,.pdf">
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label text-uppercase" style="font-size:0.7rem;">SUBIR SUSTENTO</label>
-                            <input type="file" id="caja-input-file-sustento" class="form-control form-control-sm" accept="image/*,.pdf,.xlsx,.csv">
-                        </div>
-                    </div>
-
-                    <!-- Fila 12: Observación -->
-                    <div class="mb-3">
-                        <label class="form-label">Observación</label>
-                        <textarea id="caja-input-observacion" class="form-control" rows="2" placeholder="Observaciones adicionales..."></textarea>
-                    </div>
-
-                    <!-- Checkbox: No aplica para liquidación de viaje -->
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="caja-check-no-aplica-liq">
-                        <label class="form-check-label small fw-semibold text-secondary" for="caja-check-no-aplica-liq">
-                            No aplica para liquidación de viaje
-                        </label>
-                    </div>
-
-                    <!-- Banner de Atención (Imagen 3) -->
-                    <div class="caja-callout-info mb-4">
+                    <!-- Banner de Atención -->
+                    <div class="caja-callout-info mb-3">
                         <div class="fw-bold text-primary" style="font-size: 0.85rem; letter-spacing: 0.2px;">ATENCIÓN:</div>
-                        <div class="text-secondary small mt-0.5" style="color: #0369a1 !important;">Esta solicitud de caja será evaluado y autorizado por un usuario encargado.</div>
+                        <div class="text-secondary small mt-0.5" style="color: #0369a1 !important;">Esta solicitud de caja será evaluada y autorizada por un usuario encargado.</div>
                     </div>
 
-                    <!-- Footer de botones en el modal -->
+                    <!-- Footer de botones fijo en el modal -->
                     <div class="d-flex align-items-center justify-content-between pt-2 border-top">
                         <button type="button" class="btn btn-light px-3 fw-semibold text-secondary" data-bs-dismiss="modal">Cerrar</button>
                         <button type="submit" id="caja-btn-submit" class="btn btn-primary px-4 fw-bold shadow-sm" style="background: #0284c7; border:none;">
