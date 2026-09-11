@@ -163,7 +163,6 @@ window.cajaRenderizarTabla = function() {
             '<td>' + esc(r.fecha_aprobacion || '—') + '</td>' +
             '<td>' + esc(r.cuenta_bancaria_empresa || '—') + '</td>' +
             '<td>' + esc(r.numero_factura || '—') + '</td>' +
-            '<td>' + fmtDate(r.fecha_valuta) + '</td>' +
             '<td>' + esc(r.motivo_anulacion || '—') + '</td>' +
             '<td class="text-center">' + sustentoHtml + '</td>' +
         '</tr>';

@@ -214,13 +214,21 @@
 }
 
 /* ── Modal Caja: Centrado, Altura 80% y Animación Bottom-up ── */
+#modalCajaForm {
+    display: none;
+}
+#modalCajaForm.modal {
+    padding-left: 0 !important;
+}
 #modalCajaForm .modal-dialog {
     max-width: 920px;
     width: 95%;
     height: 80vh !important;
+    max-height: 80vh !important;
     margin: auto !important;
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 
 #modalCajaForm .modal-content {
@@ -231,6 +239,7 @@
     flex-direction: column;
     overflow: hidden;
     box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+    border: none;
 }
 
 #modalCajaForm .modal-body {
@@ -248,14 +257,14 @@
     padding: 0.85rem 1.5rem;
 }
 
-/* Animación apertura suave de abajo hacia arriba */
+/* Animación apertura: sube desde abajo (100vh) hasta el centro de la pantalla */
 #modalCajaForm.fade .modal-dialog {
-    transform: translate(0, 100px);
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    transform: translateY(100vh) !important;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease !important;
     opacity: 0;
 }
 #modalCajaForm.show .modal-dialog {
-    transform: translate(0, 0);
+    transform: translateY(0) !important;
     opacity: 1;
 }
 
@@ -408,14 +417,13 @@
                         <th data-col="fecha_aprobacion" onclick="window.cajaOrdenarTabla('fecha_aprobacion')">FECHA APROBACIÓN <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="banco" onclick="window.cajaOrdenarTabla('cuenta_bancaria_empresa')">BANCO <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="factura" onclick="window.cajaOrdenarTabla('numero_factura')">FACTURA <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                        <th data-col="fecha_valuta" onclick="window.cajaOrdenarTabla('fecha_valuta')">FECHA VALUTA <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="motivo_anulacion" onclick="window.cajaOrdenarTabla('motivo_anulacion')">MOTIVO ANULACION <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th class="text-center" data-col="sustento">SUSTENTO <i class="bi bi-arrow-down-up sort-icon"></i></th>
                     </tr>
                 </thead>
                 <tbody id="caja-tbody">
                     <tr>
-                        <td colspan="28" class="text-center py-4 text-muted">
+                        <td colspan="27" class="text-center py-4 text-muted">
                             No hay datos disponibles en la tabla
                         </td>
                     </tr>
@@ -466,22 +474,16 @@
                         </div>
 
                         <div class="row g-2">
-                            <div class="col-6 col-md-3">
+                            <div class="col-6 col-md-6">
                                 <label class="form-label">Fecha Emisión <span class="req">(*)</span></label>
                                 <input type="date" id="caja-input-fecha" class="form-control" readonly tabindex="-1" required>
                             </div>
-                            <div class="col-6 col-md-3">
+                            <div class="col-6 col-md-6">
                                 <label class="form-label">Hora <span class="req">(*)</span></label>
                                 <input type="text" id="caja-input-hora" class="form-control" readonly tabindex="-1" placeholder="17:06:00" required>
                             </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label">Fecha Valuta <span class="req">(*)</span></label>
-                                <input type="date" id="caja-input-fecha-valuta" class="form-control" readonly tabindex="-1" required>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label">Hora Valuta <span class="req">(*)</span></label>
-                                <input type="text" id="caja-input-hora-valuta" class="form-control" readonly tabindex="-1" placeholder="17:06:00" required>
-                            </div>
+                            <input type="hidden" id="caja-input-fecha-valuta" value="">
+                            <input type="hidden" id="caja-input-hora-valuta" value="">
                         </div>
                     </div>
 
@@ -524,10 +526,9 @@
                                 <label class="form-label">Autoriza <span class="req">(*)</span></label>
                                 <select id="caja-input-autoriza" class="form-select" required>
                                     <option value="">Seleccione...</option>
-                                    <option value="Saul Henry Rosas (Gerente General)">Saul Henry Rosas (Gerente General)</option>
-                                    <option value="Administrador">Administrador</option>
-                                    <option value="Jhonn Hagi Ore Camarena (Supervisor de Flota)">Jhonn Hagi Ore Camarena (Supervisor de Flota)</option>
-                                    <option value="Amador Marino Rojas (Jefe de Mantenimiento)">Amador Marino Rojas (Jefe de Mantenimiento)</option>
+                                    <option value="Marco Rosas">Marco Rosas</option>
+                                    <option value="Leo Rosas">Leo Rosas</option>
+                                    <option value="Saul Rosas">Saul Rosas</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md-3">
