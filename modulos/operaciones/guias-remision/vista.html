@@ -217,6 +217,157 @@
     background: #fee2e2;
     color: #b91c1c;
 }
+
+/* ── Modal Floating Drawer desde Abajo hacia Arriba (Idéntico a Orden de Servicio y Viaje) ── */
+#greModalConsultar.modal,
+#greModalRegistroManual.modal {
+    padding: 0 !important;
+    overflow: hidden !important;
+    z-index: 1071 !important;
+}
+
+#greModalConsultar .modal-dialog,
+#greModalRegistroManual .modal-dialog {
+    position: fixed !important;
+    bottom: 0 !important;
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    margin: 0 auto !important;
+    width: min(1320px, 96vw) !important;
+    max-width: 96vw !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+    transform: translateY(100%) !important;
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+#greModalConsultar.show .modal-dialog,
+#greModalRegistroManual.show .modal-dialog {
+    transform: translateY(0) !important;
+}
+
+#greModalConsultar .modal-content,
+#greModalRegistroManual .modal-content {
+    height: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 28px 28px 0 0 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-bottom: none !important;
+    box-shadow: 0 -20px 60px rgba(15, 23, 42, 0.35) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+}
+
+/* ── Casillas y Formularios Robustos Colores Pastel (ERP Azkell) ── */
+.gre-form-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.25rem 1.4rem;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+    margin-bottom: 1.15rem;
+    transition: all 0.2s ease;
+}
+.gre-form-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.gre-pastel-section-header {
+    font-size: 0.92rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    padding: 0.65rem 1rem;
+    border-radius: 10px;
+    margin-bottom: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.gre-sec-blue { background: #f0f9ff; color: #0369a1; border: 1.5px solid #bae6fd; }
+.gre-sec-amber { background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; }
+.gre-sec-emerald { background: #f0fdf4; color: #047857; border: 1.5px solid #bbf7d0; }
+.gre-sec-purple { background: #faf5ff; color: #6b21a8; border: 1.5px solid #e9d5ff; }
+.gre-sec-slate { background: #f8fafc; color: #334155; border: 1.5px solid #e2e8f0; }
+
+.gre-label-req {
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 0.4rem;
+    display: block;
+}
+.gre-label-req span { color: #dc2626; font-weight: 800; }
+
+/* Casillas gruesas, no comprimidas (Mismo diseño de tamaño y tacto que Orden de Servicio y Viaje) */
+#greModalRegistroManual .form-control,
+#greModalRegistroManual .form-select {
+    min-height: 46px !important;
+    border-radius: 12px !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    border: 1.5px solid #d0d7de !important;
+    padding: 0.58rem 0.95rem !important;
+    background-color: #ffffff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#greModalRegistroManual .form-control:focus,
+#greModalRegistroManual .form-select:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+    outline: none;
+    background-color: #ffffff !important;
+}
+
+/* Casillas con fondo pastel suave para lectura descansada y profesional */
+.gre-input-pastel-blue {
+    background-color: #f8fbff !important;
+    border-color: #bae6fd !important;
+}
+.gre-input-pastel-amber {
+    background-color: #fffdf5 !important;
+    border-color: #fde68a !important;
+}
+.gre-input-pastel-emerald {
+    background-color: #f6fef9 !important;
+    border-color: #bbf7d0 !important;
+}
+.gre-input-pastel-purple {
+    background-color: #fdfaff !important;
+    border-color: #e9d5ff !important;
+}
+
+.gre-input-pastel-blue:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2) !important;
+    background-color: #ffffff !important;
+}
+.gre-input-pastel-emerald:focus {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
+    background-color: #ffffff !important;
+}
+.gre-input-pastel-amber:focus {
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2) !important;
+    background-color: #ffffff !important;
+}
+
+/* Tabla dinámica dentro de modal con inputs cómodos */
+#tablaManualArticulos input.form-control,
+#tablaManualArticulos select.form-select {
+    min-height: 40px !important;
+    border-radius: 8px !important;
+    font-size: 0.82rem !important;
+    padding: 0.4rem 0.65rem !important;
+}
 </style>
 
 <div class="gre-container" id="moduloGuiasRemisionContenedor">
@@ -240,6 +391,9 @@
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <button id="greBtnEmitirGrt" class="btn btn-warning btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-dark" onclick="window.grtAbrirModalEmitir()">
                 <i class="bi bi-send-plus-fill"></i> Emitir GRT Transportista
+            </button>
+            <button id="greBtnRegistroManual" class="btn btn-warning btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-dark" onclick="window.greAbrirModalRegistroManual()">
+                <i class="bi bi-pencil-square"></i> + Registro Manual (Hoja)
             </button>
             <button id="greBtnSubirXmlSunat" class="btn btn-primary btn-sm rounded-pill px-3.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 text-white" onclick="window.greAbrirModalConsultarSunat()">
                 <i class="bi bi-file-earmark-arrow-up-fill"></i> Subir XML de SUNAT (GRE)
@@ -362,6 +516,7 @@
                         <th class="text-center">Orden de Viaje</th>
                         <th>Fecha Emisión</th>
                         <th>Fecha Traslado</th>
+                        <th>Fecha Entrega</th>
                         <th>Remitente (Cliente)</th>
                         <th>Destinatario</th>
                         <th>Punto Partida (Origen)</th>
@@ -416,6 +571,9 @@
                             <div class="d-flex gap-2 flex-wrap justify-content-center">
                                 <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm">
                                     <i class="bi bi-folder2-open me-1"></i> Explorar Archivo XML
+                                </button>
+                                <button type="button" class="btn btn-warning btn-sm rounded-pill px-3.5 fw-bold shadow-sm text-dark d-flex align-items-center gap-1.5" onclick="event.stopPropagation(); window.greAbrirModalRegistroManual();">
+                                    <i class="bi bi-pencil-square"></i> Registro Manual (Hoja Física)
                                 </button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold" onclick="event.stopPropagation(); window.greTogglePegarXml();">
                                     <i class="bi bi-clipboard me-1"></i> Pegar Texto XML
@@ -563,12 +721,39 @@
                                     <span class="text-muted">Peso bruto total de la carga:</span>
                                     <strong id="sunatDetallePesoTotal" class="text-dark fs-6 font-monospace ms-2">0.00</strong>
                                 </div>
-                                <div class="mb-2 d-flex align-items-center gap-2 p-2 rounded-2" style="background: #f1f5f9;">
-                                    <span class="text-dark fw-bold" style="font-size: 0.78rem;">
-                                        <i class="bi bi-box-seam text-primary me-1"></i>Volumen Total (M3):
-                                    </span>
-                                    <input type="number" step="0.001" id="sunatDetalleVolumenM3" class="form-control form-control-sm font-monospace fw-bold" style="width: 120px;" placeholder="Ej. 28.50">
-                                    <small class="text-muted" style="font-size: 0.7rem;">(Dato operativo del cliente)</small>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <div class="p-2 rounded-2" style="background: #f1f5f9;">
+                                            <span class="text-dark fw-bold d-block" style="font-size: 0.76rem;">
+                                                <i class="bi bi-box-seam text-primary me-1"></i>Volumen (M3):
+                                            </span>
+                                            <input type="number" step="0.001" id="sunatDetalleVolumenM3" class="form-control form-control-sm font-monospace fw-bold" placeholder="Ej. 28.50">
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2 rounded-2" style="background: #ecfdf5; border: 1px solid #a7f3d0;">
+                                            <span class="text-success fw-bold d-block" style="font-size: 0.76rem;">
+                                                <i class="bi bi-calendar-check-fill text-success me-1"></i>Fecha Entrega:
+                                            </span>
+                                            <input type="date" id="sunatDetalleFechaEntrega" class="form-control form-control-sm fw-bold">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-2 p-2 rounded-2" style="background: #fdf4ff; border: 1px dashed #d946ef;">
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <span class="text-dark fw-bold" style="font-size: 0.76rem;">
+                                            <i class="bi bi-camera-fill text-purple me-1" style="color:#c026d3;"></i>Evidencia / Foto Guía Física:
+                                        </span>
+                                        <button type="button" class="btn btn-xs btn-outline-dark py-0 px-2 fw-bold" style="font-size:0.68rem;" onclick="document.getElementById('sunatDetalleFotoInput').click();">
+                                            <i class="bi bi-upload"></i> Subir Foto
+                                        </button>
+                                        <input type="file" id="sunatDetalleFotoInput" accept="image/*,application/pdf" class="d-none" onchange="window.greHandleFotoEvidencia(this.files, 'xml')">
+                                    </div>
+                                    <div id="sunatDetalleFotoPreviewWrap" class="d-none align-items-center gap-2 mt-1.5 p-1 bg-white rounded border">
+                                        <img id="sunatDetalleFotoPreview" src="" alt="Evidencia" style="width: 44px; height: 44px; object-fit: cover; border-radius: 4px;">
+                                        <div class="small text-truncate flex-grow-1" id="sunatDetalleFotoNombre" style="font-size: 0.72rem;">archivo.jpg</div>
+                                        <button type="button" class="btn btn-sm text-danger p-0 px-1" onclick="window.greQuitarFotoEvidencia('xml')" title="Quitar foto"><i class="bi bi-x-circle-fill"></i></button>
+                                    </div>
                                 </div>
 
                                 <div class="mt-3">
@@ -642,6 +827,260 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 📝 MODAL: REGISTRO MANUAL DE GRE (HOJA FÍSICA / SIN XML)     -->
+<!-- ============================================================ -->
+<div class="modal fade" id="greModalRegistroManual" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+            
+            <!-- Header Azul Oficial -->
+            <div class="modal-header px-4 py-3 text-white d-flex align-items-center justify-content-between" style="background: #0284c7;">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-3 p-1.5 bg-white bg-opacity-20 text-white">
+                        <i class="bi bi-pencil-square fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold m-0" style="font-size: 1.05rem; letter-spacing: 0.2px;">Registro Manual de Guía de Remisión (Física)</h6>
+                        <small class="text-white text-opacity-80" style="font-size: 0.72rem;">Complete los datos de la hoja física cuando no disponga del archivo XML</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Body con Formulario Estructurado en Colores Pastel -->
+            <div class="modal-body p-4 bg-light" style="font-size: 0.85rem;">
+                
+                <!-- ZONA DE ACCIÓN RÁPIDA: SUBIR XML PARA AUTOLLENAR FORMULARIO -->
+                <div class="card border-0 rounded-4 p-3 shadow-xs mb-3 text-center" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px dashed #0284c7 !important;">
+                    <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2 text-start">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle p-2.5 bg-white text-primary shadow-xs d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
+                                <i class="bi bi-file-earmark-arrow-up-fill fs-4 text-primary"></i>
+                            </div>
+                            <div>
+                                <span class="fw-bold text-dark d-block" style="font-size: 0.95rem;">¿Tienes el XML de SUNAT de esta Guía?</span>
+                                <small class="text-muted">Cárgalo aquí y se rellenarán automáticamente todos los campos y la tabla de artículos.</small>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="file" id="manual-modal-xml-input" accept=".xml" class="d-none" onchange="window.greLlenarFormularioDesdeXml(this.files)">
+                            <button type="button" class="btn btn-primary rounded-pill px-3.5 py-1.5 fw-bold shadow-xs text-white d-flex align-items-center gap-1.5" onclick="document.getElementById('manual-modal-xml-input').click();">
+                                <i class="bi bi-cloud-arrow-up-fill"></i> Subir y Cargar Datos de XML
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="formGreRegistroManual" onsubmit="window.greGuardarRegistroManual(event)">
+                    
+                    <!-- 1. IDENTIFICACIÓN Y DOCUMENTO -->
+                    <div class="gre-form-card">
+                        <div class="gre-pastel-section-header gre-sec-blue">
+                            <i class="bi bi-card-heading fs-5"></i> 1. Identificación y Numeración de la GRE
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="gre-label-req">N° Guía Remitente <span>(*)</span></label>
+                                <input type="text" id="manual-gre-numero" class="form-control font-monospace text-uppercase fw-bold gre-input-pastel-blue" placeholder="Ej: T002-00047502" required>
+                                <small class="text-muted" style="font-size:0.7rem;">Serie de 4 caracteres y 8 dígitos</small>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="gre-label-req">N° Transporte / Viaje</label>
+                                <input type="text" id="manual-gre-num-transporte" class="form-control font-monospace text-uppercase fw-bold" placeholder="Ej: TR-000045">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="gre-label-req">Fecha Emisión <span>(*)</span></label>
+                                <input type="date" id="manual-gre-fec-emision" class="form-control fw-bold" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="gre-label-req">Fecha Traslado <span>(*)</span></label>
+                                <input type="date" id="manual-gre-fec-traslado" class="form-control fw-bold" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="gre-label-req">Fecha Entrega</label>
+                                <input type="date" id="manual-gre-fec-entrega" class="form-control fw-bold gre-input-pastel-emerald" title="Fecha límite o pactada de entrega">
+                            </div>
+                            <div class="col-md-12 mt-2">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="gre-label-req">Motivo Traslado</label>
+                                        <select id="manual-gre-motivo" class="form-select fw-semibold">
+                                            <option value="01" selected>01 - VENTA</option>
+                                            <option value="02">02 - COMPRA</option>
+                                            <option value="04">04 - TRASLADO ENTRE ESTABLECIMIENTOS DE LA MISMA EMPRESA</option>
+                                            <option value="13">13 - OTROS</option>
+                                            <option value="14">14 - VENTA SUJETA A CONFIRMACIÓN DEL COMPRADOR</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="gre-label-req">Modalidad de Traslado</label>
+                                        <select id="manual-gre-modalidad" class="form-select fw-semibold">
+                                            <option value="Público" selected>Público (Transportista autorizado)</option>
+                                            <option value="Privado">Privado</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. CLIENTE / REMITENTE Y DESTINATARIO -->
+                    <div class="gre-form-card">
+                        <div class="gre-pastel-section-header gre-sec-amber">
+                            <i class="bi bi-people-fill fs-5"></i> 2. Cliente / Remitente y Destinatario
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="gre-label-req">RUC Remitente (Cliente) <span>(*)</span></label>
+                                <input type="text" id="manual-gre-rem-ruc" class="form-control font-monospace fw-bold gre-input-pastel-amber" placeholder="20XXXXXXXXX" maxlength="11" required>
+                            </div>
+                            <div class="col-md-9">
+                                <label class="gre-label-req">Razón Social Remitente <span>(*)</span></label>
+                                <input type="text" id="manual-gre-rem-razon" class="form-control text-uppercase fw-semibold" placeholder="Nombre de la empresa remitente / cliente" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="gre-label-req">RUC / DNI Destinatario</label>
+                                <input type="text" id="manual-gre-dest-ruc" class="form-control font-monospace" placeholder="RUC o DNI" maxlength="11">
+                            </div>
+                            <div class="col-md-9">
+                                <label class="gre-label-req">Razón Social Destinatario</label>
+                                <input type="text" id="manual-gre-dest-razon" class="form-control text-uppercase fw-semibold" placeholder="Destinatario final de la mercancía">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. RUTA Y PUNTOS DE TRASLADO -->
+                    <div class="gre-form-card">
+                        <div class="gre-pastel-section-header gre-sec-emerald">
+                            <i class="bi bi-geo-alt-fill fs-5"></i> 3. Ruta (Puntos de Partida y Llegada)
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="gre-label-req"><i class="bi bi-geo-alt text-success me-1"></i>Punto de Partida (Dirección Completa)</label>
+                                <input type="text" id="manual-gre-partida-dir" class="form-control text-uppercase" placeholder="Av. Principal N° 123, Almacén Central">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="gre-label-req"><i class="bi bi-geo-alt-fill text-danger me-1"></i>Punto de Llegada (Dirección Destino)</label>
+                                <input type="text" id="manual-gre-llegada-dir" class="form-control text-uppercase" placeholder="Jr. Destino N° 456, Tienda o Sucursal">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. TABLA DINÁMICA DE ARTÍCULOS / BIENES A TRANSPORTAR -->
+                    <div class="gre-form-card">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between mb-2">
+                            <div class="gre-pastel-section-header gre-sec-purple m-0 border-0 p-0" style="background:transparent;">
+                                <i class="bi bi-box-seam-fill fs-5 text-purple" style="color:#8b5cf6;"></i> 4. Detalle de Carga y Artículos Transportados
+                            </div>
+                            <button type="button" class="btn btn-primary rounded-pill px-3.5 py-1.5 fw-bold shadow-2xs d-inline-flex align-items-center gap-1.5" style="font-size: 0.8rem;" onclick="window.greAgregarFilaArticuloManual()">
+                                <i class="bi bi-plus-circle-fill"></i> + Agregar Artículo
+                            </button>
+                        </div>
+
+                        <div class="table-responsive border rounded-3 mb-2 bg-white mt-2" style="max-height: 280px; overflow-y: auto;">
+                            <table class="table table-sm table-hover align-middle mb-0" id="tablaManualArticulos" style="font-size: 0.82rem;">
+                                <thead class="table-light sticky-top">
+                                    <tr class="text-secondary text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.2px;">
+                                        <th style="width: 45px;" class="text-center">N°</th>
+                                        <th style="width: 140px;">CÓDIGO</th>
+                                        <th>DESCRIPCIÓN DETALLADA DEL ARTÍCULO (*)</th>
+                                        <th style="width: 130px;" class="text-center">U. MEDIDA</th>
+                                        <th style="width: 110px;" class="text-end">CANTIDAD</th>
+                                        <th style="width: 110px;" class="text-end">PESO (KG)</th>
+                                        <th style="width: 50px;" class="text-center"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="manual-articulos-tbody">
+                                    <!-- Se inyectan filas dinámicas -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center px-2 py-1 bg-light rounded-3 text-muted" style="font-size:0.78rem;">
+                            <span>Artículos en la lista: <strong id="manual-total-items-badge" class="text-dark">0</strong></span>
+                            <span>Total Cantidad: <strong id="manual-total-cant-badge" class="text-dark">0</strong> | Total Peso: <strong id="manual-total-peso-badge" class="text-success font-monospace fw-bold">0.00 KG</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- 5. VEHÍCULO, CONDUCTOR Y PESOS TOTALES -->
+                    <div class="gre-form-card">
+                        <div class="gre-pastel-section-header gre-sec-slate">
+                            <i class="bi bi-truck fs-5"></i> 5. Vehículo, Conductor y Datos Operativos
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="gre-label-req">Placa Tracto / Camión</label>
+                                <input type="text" id="manual-gre-tracto" class="form-control font-monospace text-uppercase fw-bold" placeholder="Ej: B8O-835" maxlength="10">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="gre-label-req">Placa Carreta / Semirremolque</label>
+                                <input type="text" id="manual-gre-carreta" class="form-control font-monospace text-uppercase" placeholder="Ej: ATP-999" maxlength="10">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="gre-label-req">Nombre Conductor</label>
+                                <input type="text" id="manual-gre-conductor-nombre" class="form-control text-uppercase" placeholder="Nombre completo del chofer">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="gre-label-req">DNI / Licencia Conductor</label>
+                                <input type="text" id="manual-gre-conductor-doc" class="form-control font-monospace" placeholder="Documento o Brevete">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="gre-label-req">Peso Bruto Total (KG) <span>(*)</span></label>
+                                <input type="number" step="0.01" id="manual-gre-peso-total" class="form-control font-monospace fw-bold text-success gre-input-pastel-emerald" placeholder="0.00" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="gre-label-req">Volumen Total (M3)</label>
+                                <input type="number" step="0.001" id="manual-gre-volumen" class="form-control font-monospace fw-bold" placeholder="Ej: 28.50">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="gre-label-req">Observaciones Adicionales</label>
+                                <input type="text" id="manual-gre-observaciones" class="form-control" placeholder="Notas operativas...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6. ADJUNTAR FOTO / EVIDENCIA DE LA GUÍA FÍSICA -->
+                    <div class="gre-form-card" style="border: 2px dashed #0284c7 !important; background: #f8fcff;">
+                        <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom border-info-subtle">
+                            <div class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.9rem; color: #0284c7 !important;">
+                                <i class="bi bi-camera-fill text-primary"></i> 6. Foto o Evidencia de la Hoja Física (Respaldo)
+                            </div>
+                            <button type="button" class="btn btn-outline-primary rounded-pill px-3.5 py-1 fw-bold" onclick="document.getElementById('manual-gre-foto-input').click();">
+                                <i class="bi bi-paperclip"></i> Adjuntar Foto o Documento
+                            </button>
+                            <input type="file" id="manual-gre-foto-input" accept="image/*,application/pdf" class="d-none" onchange="window.greHandleFotoEvidencia(this.files, 'manual')">
+                        </div>
+                        <div id="manual-gre-foto-preview-wrap" class="d-none align-items-center gap-3 p-2.5 bg-white rounded-3 border">
+                            <img id="manual-gre-foto-preview" src="" alt="Foto Evidencia" style="width: 58px; height: 58px; object-fit: cover; border-radius: 8px;">
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="fw-bold text-dark text-truncate" id="manual-gre-foto-nombre" style="font-size: 0.82rem;">guia_foto.jpg</div>
+                                <small class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Evidencia lista para guardar en ERP</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-light border text-danger" onclick="window.greQuitarFotoEvidencia('manual')" title="Quitar archivo">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                        </div>
+                        <div id="manual-gre-foto-empty" class="text-center py-2 text-muted" style="font-size: 0.8rem;">
+                            <i class="bi bi-image me-1"></i> Si tiene la foto tomada con el celular o escaneo de la guía en papel, adjúntela aquí como respaldo visual.
+                        </div>
+                    </div>
+
+                    <!-- Footer del Modal -->
+                    <div class="d-flex align-items-center justify-content-between pt-2">
+                        <button type="button" class="btn btn-light border rounded-pill px-4 fw-bold" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                        <button type="submit" id="greBtnGuardarManual" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm text-white d-flex align-items-center gap-2">
+                            <i class="bi bi-check-circle-fill"></i> Guardar GRE en Sistema ERP
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -958,123 +1397,5 @@
     </div>
 </div>
 
-<!-- MODAL: Registro Manual de GRE (cuando SUNAT no devuelve datos detallados) -->
-<div class="modal fade" id="greModalRegistroManual" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-            <div class="modal-header border-bottom px-4 py-3 bg-light">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="rounded-3 p-2 bg-success bg-opacity-10 text-success">
-                        <i class="bi bi-pencil-square fs-5"></i>
-                    </div>
-                    <div>
-                        <h6 class="fw-bold text-dark m-0">Registrar GRE Manualmente</h6>
-                        <small class="text-muted" style="font-size:0.75rem;">Ingrese los datos de la guía del remitente directamente</small>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <form id="greFormRegistroManual" onsubmit="window.greSubmitRegistroManual(event)">
-                    <!-- Datos Básicos -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold small">Número Guía *</label>
-                            <input type="text" id="greManualNumGuia" class="form-control font-monospace fw-bold text-uppercase" placeholder="EG07-00000625" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold small">Tipo Documento</label>
-                            <select id="greManualTipoDoc" class="form-select">
-                                <option value="09" selected>09 - GRE Remitente</option>
-                                <option value="31">31 - GRE Transportista</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold small">Fecha Emisión *</label>
-                            <input type="date" id="greManualFechaEmision" class="form-control font-monospace" required>
-                        </div>
-                    </div>
+<!-- Fin Modales Guías de Remisión -->
 
-                    <!-- Remitente / Destinatario -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold small">RUC Remitente *</label>
-                            <input type="text" id="greManualRucRemitente" class="form-control font-monospace" maxlength="11" required>
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label fw-bold small">Razón Social Remitente</label>
-                            <input type="text" id="greManualRazonRemitente" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold small">Fecha Traslado</label>
-                            <input type="date" id="greManualFechaTraslado" class="form-control font-monospace">
-                        </div>
-                    </div>
-
-                    <!-- Destinatario -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold small">RUC Destinatario</label>
-                            <input type="text" id="greManualRucDest" class="form-control font-monospace" maxlength="11">
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label fw-bold small">Razón Social Destinatario</label>
-                            <input type="text" id="greManualRazonDest" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold small">Peso Bruto Total (Kg)</label>
-                            <input type="number" step="0.01" id="greManualPeso" class="form-control font-monospace" value="0">
-                        </div>
-                    </div>
-
-                    <!-- Puntos -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold small"><i class="bi bi-geo-alt text-success me-1"></i>Punto de Partida</label>
-                            <input type="text" id="greManualPartida" class="form-control" placeholder="Dirección de partida">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold small"><i class="bi bi-geo-alt-fill text-danger me-1"></i>Punto de Llegada</label>
-                            <input type="text" id="greManualLlegada" class="form-control" placeholder="Dirección de llegada">
-                        </div>
-                    </div>
-
-                    <!-- Vehículo y Conductor -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold small">Placa Tracto</label>
-                            <input type="text" id="greManualPlacaTracto" class="form-control font-monospace text-uppercase" maxlength="7">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold small">Placa Carreta</label>
-                            <input type="text" id="greManualPlacaCarreta" class="form-control font-monospace text-uppercase" maxlength="7">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold small">DNI Conductor</label>
-                            <input type="text" id="greManualDniConductor" class="form-control font-monospace" maxlength="8">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold small">Nombre Conductor</label>
-                            <input type="text" id="greManualNombreConductor" class="form-control">
-                        </div>
-                    </div>
-
-                    <!-- Observaciones -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small">Observaciones</label>
-                        <textarea id="greManualObservaciones" class="form-control" rows="2" placeholder="Notas adicionales sobre la guía..."></textarea>
-                    </div>
-
-                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
-                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold" data-bs-dismiss="modal">
-                            Cancelar
-                        </button>
-                        <button type="submit" id="greBtnSubmitManual" class="btn btn-success btn-sm rounded-pill px-4 fw-bold shadow-sm text-white d-flex align-items-center gap-1.5">
-                            <i class="bi bi-check-circle-fill"></i> Registrar GRE en el ERP
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>

@@ -259,6 +259,9 @@
                     <td class="text-nowrap font-monospace text-secondary">
                         ${fTras}
                     </td>
+                    <td class="text-nowrap font-monospace fw-bold text-success">
+                        ${g.fecha_entrega ? (window._formatFechaPeru || formatFechaPeru)(g.fecha_entrega) : '<span class="text-muted opacity-50">—</span>'}
+                    </td>
                     <td>
                         <span class="gre-cell-clip fw-semibold text-dark" style="max-width: 170px;" title="${esc(g.remitente_razon_social)}">
                             ${esc(g.remitente_razon_social)}
@@ -847,6 +850,10 @@
         const pesoNum = Number(guia.peso_bruto_total || 0);
         if (elPesoTot) elPesoTot.textContent = pesoNum.toLocaleString('es-PE', { minimumFractionDigits: 2 });
         if (elVolM3) elVolM3.value = guia.volumen_m3 || '';
+        const elFecEntr = document.getElementById('sunatDetalleFechaEntrega');
+        if (elFecEntr) {
+            elFecEntr.value = guia.fecha_entrega ? String(guia.fecha_entrega).split('T')[0] : '';
+        }
         if (elMod) elMod.textContent = guia.modalidad_traslado || 'Público';
 
         // Indicador oficial de registro de vehículos SUNAT
@@ -942,6 +949,21 @@
         }
 
         if (elObs) elObs.textContent = guia.observaciones_sunat || 'Esta es una representación impresa sin valor tributario de la Guía de Remisión Electrónica, generada en el sistema de la SUNAT. Puede verificarla utilizando su clave SOL';
+
+        // Cargar foto de evidencia si existe
+        if (guia.foto_evidencia) {
+            _fotoEvidenciaXmlBase64 = guia.foto_evidencia;
+            const preview = document.getElementById('sunatDetalleFotoPreview');
+            const nameEl = document.getElementById('sunatDetalleFotoNombre');
+            const wrap = document.getElementById('sunatDetalleFotoPreviewWrap');
+            if (preview) preview.src = guia.foto_evidencia.includes('.pdf') ? 'https://img.icons8.com/color/96/pdf.png' : guia.foto_evidencia;
+            if (nameEl) nameEl.textContent = 'Evidencia_Adjunta';
+            if (wrap) wrap.classList.remove('d-none');
+        } else {
+            if (typeof window.greQuitarFotoEvidencia === 'function') {
+                window.greQuitarFotoEvidencia('xml');
+            }
+        }
     };
 
     // Ver Detalle Oficial SUNAT para una guía existente en la tabla
@@ -1006,6 +1028,10 @@
         if (elCarreta) elCarreta.textContent = '—';
         const elCond = document.getElementById('sunatDetalleConductor');
         if (elCond) elCond.textContent = '—';
+
+        if (typeof window.greQuitarFotoEvidencia === 'function') {
+            window.greQuitarFotoEvidencia('xml');
+        }
 
         window._greUltimaConsultaData = null;
     };
@@ -1075,6 +1101,13 @@
             const elVolM3 = document.getElementById('sunatDetalleVolumenM3');
             if (elVolM3 && elVolM3.value) {
                 guia.volumen_m3 = parseFloat(elVolM3.value) || null;
+            }
+            const elFecEntrega = document.getElementById('sunatDetalleFechaEntrega');
+            if (elFecEntrega && elFecEntrega.value) {
+                guia.fecha_entrega = elFecEntrega.value;
+            }
+            if (_fotoEvidenciaXmlBase64) {
+                guia.foto_evidencia = _fotoEvidenciaXmlBase64;
             }
 
             const resp = await fetch('/api/guias-remision/guardar-gre-xml', {
@@ -1686,61 +1719,340 @@
 
     // ── Registro Manual de GRE ──
     window.greAbrirRegistroManual = function() {
-        // Pre-llenar con datos de la última consulta si existen
-        const modalConsultar = document.getElementById('greModalConsultar');
-        if (modalConsultar) {
-            const instance = bootstrap.Modal.getInstance(modalConsultar);
-            if (instance) instance.hide();
+        if (typeof window.greAbrirModalRegistroManual === 'function') {
+            window.greAbrirModalRegistroManual();
         }
-
-        const serie = (document.getElementById('greInputSerie')?.value || '').trim().toUpperCase();
-        const correlativo = (document.getElementById('greInputCorrelativo')?.value || '').trim();
-        const ruc = (document.getElementById('greInputRucEmisor')?.value || '').trim();
-        const fechaEmi = (document.getElementById('greInputFechaEmision')?.value || '').trim();
-
-        setTimeout(() => {
-            const numGuia = (serie && correlativo) ? `${serie}-${correlativo.padStart(8, '0')}` : '';
-            if (document.getElementById('greManualNumGuia')) document.getElementById('greManualNumGuia').value = numGuia;
-            if (document.getElementById('greManualRucRemitente')) document.getElementById('greManualRucRemitente').value = ruc;
-            if (document.getElementById('greManualFechaEmision')) document.getElementById('greManualFechaEmision').value = fechaEmi || new Date().toISOString().slice(0, 10);
-
-            const modalManual = document.getElementById('greModalRegistroManual');
-            if (modalManual) bootstrap.Modal.getOrCreateInstance(modalManual).show();
-        }, 350);
     };
 
-    window.greSubmitRegistroManual = async function(e) {
-        if (e) e.preventDefault();
-        const btn = document.getElementById('greBtnSubmitManual');
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Registrando…';
+    // =========================================================================
+    // 📸 GESTIÓN DE EVIDENCIA FOTOGRÁFICA / IMAGEN DE GUÍA
+    // =========================================================================
+    let _fotoEvidenciaXmlBase64 = null;
+    let _fotoEvidenciaManualBase64 = null;
+
+    window.greHandleFotoEvidencia = function(files, origen) {
+        if (!files || files.length === 0) return;
+        const file = files[0];
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const base64 = e.target.result;
+            if (origen === 'xml') {
+                _fotoEvidenciaXmlBase64 = base64;
+                const preview = document.getElementById('sunatDetalleFotoPreview');
+                const nameEl = document.getElementById('sunatDetalleFotoNombre');
+                const wrap = document.getElementById('sunatDetalleFotoPreviewWrap');
+                if (preview) preview.src = file.type.includes('pdf') ? 'https://img.icons8.com/color/96/pdf.png' : base64;
+                if (nameEl) nameEl.textContent = file.name;
+                if (wrap) wrap.classList.remove('d-none');
+            } else {
+                _fotoEvidenciaManualBase64 = base64;
+                const preview = document.getElementById('manual-gre-foto-preview');
+                const nameEl = document.getElementById('manual-gre-foto-nombre');
+                const wrap = document.getElementById('manual-gre-foto-preview-wrap');
+                const empty = document.getElementById('manual-gre-foto-empty');
+                if (preview) preview.src = file.type.includes('pdf') ? 'https://img.icons8.com/color/96/pdf.png' : base64;
+                if (nameEl) nameEl.textContent = file.name;
+                if (wrap) wrap.classList.remove('d-none');
+                if (empty) empty.classList.add('d-none');
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    window.greQuitarFotoEvidencia = function(origen) {
+        if (origen === 'xml') {
+            _fotoEvidenciaXmlBase64 = null;
+            const input = document.getElementById('sunatDetalleFotoInput');
+            if (input) input.value = '';
+            const wrap = document.getElementById('sunatDetalleFotoPreviewWrap');
+            if (wrap) wrap.classList.add('d-none');
+        } else {
+            _fotoEvidenciaManualBase64 = null;
+            const input = document.getElementById('manual-gre-foto-input');
+            if (input) input.value = '';
+            const wrap = document.getElementById('manual-gre-foto-preview-wrap');
+            if (wrap) wrap.classList.add('d-none');
+            const empty = document.getElementById('manual-gre-foto-empty');
+            if (empty) empty.classList.remove('d-none');
+        }
+    };
+
+    // =========================================================================
+    // 📝 REGISTRO MANUAL DE GRE (CON TABLA DE ARTÍCULOS DINÁMICA)
+    // =========================================================================
+    let _contadorFilasArticulos = 0;
+
+    window.greAbrirModalRegistroManual = function() {
+        // Cerrar modal de consulta si está abierto
+        const modalCons = document.getElementById('greModalConsultar');
+        if (modalCons) {
+            bootstrap.Modal.getInstance(modalCons)?.hide();
+        }
+
+        const modalEl = document.getElementById('greModalRegistroManual');
+        if (modalEl) {
+            // Inicializar fechas hoy si están vacías
+            const hoy = new Date().toISOString().slice(0, 10);
+            const elFecEmi = document.getElementById('manual-gre-fec-emision');
+            if (elFecEmi && !elFecEmi.value) elFecEmi.value = hoy;
+            const elFecTras = document.getElementById('manual-gre-fec-traslado');
+            if (elFecTras && !elFecTras.value) elFecTras.value = hoy;
+
+            // Inicializar tabla de artículos si está vacía
+            const tbody = document.getElementById('manual-articulos-tbody');
+            if (tbody && tbody.children.length === 0) {
+                _contadorFilasArticulos = 0;
+                window.greAgregarFilaArticuloManual();
+            }
+
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    };
+
+    window.greAgregarFilaArticuloManual = function(datos = {}) {
+        const tbody = document.getElementById('manual-articulos-tbody');
+        if (!tbody) return;
+
+        _contadorFilasArticulos++;
+        const rowId = `manual-art-row-${_contadorFilasArticulos}`;
+
+        const tr = document.createElement('tr');
+        tr.id = rowId;
+        tr.innerHTML = `
+            <td class="text-center font-monospace text-muted py-2">${_contadorFilasArticulos}</td>
+            <td>
+                <input type="text" class="form-control form-control-sm font-monospace text-uppercase manual-item-codigo" placeholder="Ej: COL-01" value="${escapeHtml(datos.codigo || '')}">
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm text-uppercase manual-item-desc" placeholder="Descripción detallada de la mercancía..." value="${escapeHtml(datos.descripcion || '')}" required>
+            </td>
+            <td>
+                <select class="form-select form-select-sm text-center manual-item-umed">
+                    <option value="NIU" ${(!datos.unidad_medida || datos.unidad_medida === 'NIU') ? 'selected' : ''}>NIU (Unidades)</option>
+                    <option value="KGM" ${datos.unidad_medida === 'KGM' ? 'selected' : ''}>KGM (Kilos)</option>
+                    <option value="BX" ${datos.unidad_medida === 'BX' ? 'selected' : ''}>BX (Cajas)</option>
+                    <option value="PK" ${datos.unidad_medida === 'PK' ? 'selected' : ''}>PK (Paquetes)</option>
+                    <option value="MTR" ${datos.unidad_medida === 'MTR' ? 'selected' : ''}>MTR (Metros)</option>
+                    <option value="TNE" ${datos.unidad_medida === 'TNE' ? 'selected' : ''}>TNE (Toneladas)</option>
+                </select>
+            </td>
+            <td>
+                <input type="number" step="0.01" class="form-control form-control-sm text-end font-monospace manual-item-cant" value="${datos.cantidad || 1}" oninput="window.greRecalcularTotalesArticulosManual()" required>
+            </td>
+            <td>
+                <input type="number" step="0.01" class="form-control form-control-sm text-end font-monospace manual-item-peso" value="${datos.peso || 0}" oninput="window.greRecalcularTotalesArticulosManual()">
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm text-danger p-0 px-1" onclick="window.greEliminarFilaArticuloManual('${rowId}')" title="Eliminar fila">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(tr);
+        window.greRecalcularTotalesArticulosManual();
+    };
+
+    window.greEliminarFilaArticuloManual = function(rowId) {
+        const row = document.getElementById(rowId);
+        if (row) {
+            row.remove();
+            // Reenumerar filas
+            const tbody = document.getElementById('manual-articulos-tbody');
+            if (tbody) {
+                Array.from(tbody.children).forEach((tr, i) => {
+                    const firstTd = tr.querySelector('td:first-child');
+                    if (firstTd) firstTd.textContent = i + 1;
+                });
+            }
+            window.greRecalcularTotalesArticulosManual();
+        }
+    };
+
+    window.greRecalcularTotalesArticulosManual = function() {
+        const tbody = document.getElementById('manual-articulos-tbody');
+        if (!tbody) return;
+
+        let totalItems = 0;
+        let sumaCant = 0;
+        let sumaPeso = 0;
+
+        tbody.querySelectorAll('tr').forEach(tr => {
+            totalItems++;
+            const cant = parseFloat(tr.querySelector('.manual-item-cant')?.value || 0);
+            const peso = parseFloat(tr.querySelector('.manual-item-peso')?.value || 0);
+            sumaCant += cant;
+            sumaPeso += peso;
+        });
+
+        const badgeItems = document.getElementById('manual-total-items-badge');
+        const badgeCant = document.getElementById('manual-total-cant-badge');
+        const badgePeso = document.getElementById('manual-total-peso-badge');
+
+        if (badgeItems) badgeItems.textContent = totalItems;
+        if (badgeCant) badgeCant.textContent = sumaCant.toLocaleString();
+        if (badgePeso) badgePeso.textContent = sumaPeso.toFixed(2) + ' KG';
+
+        // Si el peso total general del formulario está en 0 o vacío, sugerir la suma de los ítems
+        const inputPesoTotal = document.getElementById('manual-gre-peso-total');
+        if (inputPesoTotal && (!inputPesoTotal.value || parseFloat(inputPesoTotal.value) === 0) && sumaPeso > 0) {
+            inputPesoTotal.value = sumaPeso.toFixed(2);
+        }
+    };
+
+    // Cargar y Llenar Formulario Automáticamente al soltar/seleccionar XML
+    window.greLlenarFormularioDesdeXml = async function(files) {
+        if (!files || !files[0]) return;
+        const file = files[0];
+        if (!file.name.toLowerCase().endsWith('.xml')) {
+            alert('Por favor seleccione un archivo .xml válido de SUNAT.');
+            return;
         }
 
         try {
-            const payload = {
-                numero_guia: (document.getElementById('greManualNumGuia')?.value || '').trim().toUpperCase(),
-                tipo_documento: document.getElementById('greManualTipoDoc')?.value || '09',
-                fecha_emision: document.getElementById('greManualFechaEmision')?.value || '',
-                fecha_traslado: document.getElementById('greManualFechaTraslado')?.value || '',
-                remitente_ruc: (document.getElementById('greManualRucRemitente')?.value || '').trim(),
-                remitente_razon_social: (document.getElementById('greManualRazonRemitente')?.value || '').trim(),
-                destinatario_ruc: (document.getElementById('greManualRucDest')?.value || '').trim(),
-                destinatario_razon_social: (document.getElementById('greManualRazonDest')?.value || '').trim(),
-                peso_bruto_total: parseFloat(document.getElementById('greManualPeso')?.value || '0'),
-                punto_partida_direccion: (document.getElementById('greManualPartida')?.value || '').trim(),
-                punto_llegada_direccion: (document.getElementById('greManualLlegada')?.value || '').trim(),
-                placa_tracto: (document.getElementById('greManualPlacaTracto')?.value || '').trim().toUpperCase(),
-                placa_carreta: (document.getElementById('greManualPlacaCarreta')?.value || '').trim().toUpperCase(),
-                conductor_num_doc: (document.getElementById('greManualDniConductor')?.value || '').trim(),
-                conductor_nombre: (document.getElementById('greManualNombreConductor')?.value || '').trim(),
-                observaciones: (document.getElementById('greManualObservaciones')?.value || '').trim()
-            };
+            const xmlText = await file.text();
+            let guia = parseUblXmlClient(xmlText);
 
-            if (!payload.numero_guia || !payload.remitente_ruc) {
-                alert('Número de guía y RUC del remitente son obligatorios.');
+            if (!guia || !guia.numero_guia) {
+                const resp = await fetch('/api/guias-remision/parse-xml', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ xml_contenido: xmlText })
+                });
+                const resJson = await resp.json();
+                if (resJson.ok && resJson.data) guia = resJson.data;
+            }
+
+            if (!guia || !guia.numero_guia) {
+                alert('No se pudo identificar una GRE UBL válida en el archivo XML seleccionado.');
                 return;
             }
+
+            // Población de casillas pastel
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.value = val || '';
+            };
+
+            setVal('manual-gre-numero', guia.numero_guia);
+            setVal('manual-gre-fec-emision', guia.fecha_emision ? String(guia.fecha_emision).split('T')[0] : '');
+            setVal('manual-gre-fec-traslado', (guia.fecha_traslado || guia.fecha_emision) ? String(guia.fecha_traslado || guia.fecha_emision).split('T')[0] : '');
+            setVal('manual-gre-motivo', guia.motivo_traslado || '01');
+            setVal('manual-gre-rem-ruc', guia.remitente_ruc);
+            setVal('manual-gre-rem-razon', guia.remitente_razon_social);
+            setVal('manual-gre-dest-ruc', guia.destinatario_ruc);
+            setVal('manual-gre-dest-razon', guia.destinatario_razon_social);
+            setVal('manual-gre-partida-dir', guia.punto_partida_direccion);
+            setVal('manual-gre-llegada-dir', guia.punto_llegada_direccion);
+            setVal('manual-gre-tracto', guia.placa_tracto);
+            setVal('manual-gre-carreta', guia.placa_carreta);
+            setVal('manual-gre-conductor-nombre', guia.conductor_nombre);
+            setVal('manual-gre-conductor-doc', guia.conductor_num_doc || guia.conductor_licencia);
+            setVal('manual-gre-peso-total', guia.peso_bruto_total || '');
+            setVal('manual-gre-volumen', guia.volumen_m3 || '');
+            setVal('manual-gre-modalidad', guia.modalidad_traslado || 'Público');
+            setVal('manual-gre-observaciones', guia.observaciones_sunat || '');
+
+            // Poblar tabla dinámica de artículos con los ítems del XML
+            const tbody = document.getElementById('manual-articulos-tbody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                _contadorFilasArticulos = 0;
+                if (guia.items && guia.items.length > 0) {
+                    guia.items.forEach(it => {
+                        window.greAgregarFilaArticuloManual({
+                            codigo: it.codigo_bien || it.codigo || '',
+                            descripcion: it.descripcion || '',
+                            unidad_medida: it.unidad_medida || 'NIU',
+                            cantidad: it.cantidad || 1,
+                            peso: it.peso_unitario || 0
+                        });
+                    });
+                } else {
+                    window.greAgregarFilaArticuloManual();
+                }
+            }
+
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta(`✓ Datos del XML cargados al formulario: ${guia.numero_guia}`, 'success');
+            } else {
+                alert(`✓ Datos del XML cargados al formulario: ${guia.numero_guia}`);
+            }
+        } catch (e) {
+            console.error("Error al llenar formulario desde XML:", e);
+            alert("Error al leer el archivo XML: " + e.message);
+        }
+    };
+
+    window.greGuardarRegistroManual = async function(e) {
+        if (e) e.preventDefault();
+
+        const btn = document.getElementById('greBtnGuardarManual');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando en ERP...';
+        }
+
+        try {
+            // Recoger lista de artículos
+            const items = [];
+            const tbody = document.getElementById('manual-articulos-tbody');
+            if (tbody) {
+                tbody.querySelectorAll('tr').forEach((tr, index) => {
+                    const cod = tr.querySelector('.manual-item-codigo')?.value.trim() || `ITM-${index + 1}`;
+                    const desc = tr.querySelector('.manual-item-desc')?.value.trim() || '';
+                    const umed = tr.querySelector('.manual-item-umed')?.value || 'NIU';
+                    const cant = parseFloat(tr.querySelector('.manual-item-cant')?.value || 1);
+                    const peso = parseFloat(tr.querySelector('.manual-item-peso')?.value || 0);
+
+                    if (desc) {
+                        items.push({
+                            item_numero: index + 1,
+                            codigo_bien: cod,
+                            codigo: cod,
+                            descripcion: desc,
+                            unidad_medida: umed,
+                            cantidad: cant,
+                            peso_unitario: peso
+                        });
+                    }
+                });
+            }
+
+            if (items.length === 0) {
+                alert('Debe ingresar al menos un artículo a transportar en la tabla.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-save-fill"></i> Guardar GRE en Sistema ERP';
+                }
+                return;
+            }
+
+            const payload = {
+                numero_guia: (document.getElementById('manual-gre-numero')?.value || '').trim().toUpperCase(),
+                numero_transporte: (document.getElementById('manual-gre-num-transporte')?.value || '').trim().toUpperCase(),
+                fecha_emision: document.getElementById('manual-gre-fec-emision')?.value || '',
+                fecha_traslado: document.getElementById('manual-gre-fec-traslado')?.value || '',
+                fecha_entrega: document.getElementById('manual-gre-fec-entrega')?.value || null,
+                motivo_traslado: document.getElementById('manual-gre-motivo')?.value || '01',
+                remitente_ruc: (document.getElementById('manual-gre-rem-ruc')?.value || '').trim(),
+                remitente_razon_social: (document.getElementById('manual-gre-rem-razon')?.value || '').trim().toUpperCase(),
+                destinatario_ruc: (document.getElementById('manual-gre-dest-ruc')?.value || '').trim(),
+                destinatario_razon_social: (document.getElementById('manual-gre-dest-razon')?.value || '').trim().toUpperCase(),
+                punto_partida_direccion: (document.getElementById('manual-gre-partida-dir')?.value || '').trim().toUpperCase(),
+                punto_llegada_direccion: (document.getElementById('manual-gre-llegada-dir')?.value || '').trim().toUpperCase(),
+                placa_tracto: (document.getElementById('manual-gre-tracto')?.value || '').trim().toUpperCase(),
+                placa_carreta: (document.getElementById('manual-gre-carreta')?.value || '').trim().toUpperCase(),
+                conductor_nombre: (document.getElementById('manual-gre-conductor-nombre')?.value || '').trim().toUpperCase(),
+                conductor_num_doc: (document.getElementById('manual-gre-conductor-doc')?.value || '').trim(),
+                peso_bruto_total: parseFloat(document.getElementById('manual-gre-peso-total')?.value || 0),
+                volumen_m3: parseFloat(document.getElementById('manual-gre-volumen')?.value || 0) || null,
+                modalidad_traslado: document.getElementById('manual-gre-modalidad')?.value || 'Público',
+                observaciones: document.getElementById('manual-gre-observaciones')?.value || '',
+                foto_evidencia: _fotoEvidenciaManualBase64,
+                items: items
+            };
 
             const resp = await fetch('/api/guias-remision/registrar-gre-manual', {
                 method: 'POST',
@@ -1752,27 +2064,35 @@
 
             if (result.ok) {
                 if (typeof window.mostrarAlerta === 'function') {
-                    window.mostrarAlerta(`✓ ${result.message}`, 'success');
+                    window.mostrarAlerta(`✓ ${result.message || 'GRE registrada exitosamente'}`, 'success');
                 } else {
-                    alert(result.message);
+                    alert(`✓ ${result.message || 'GRE registrada exitosamente'}`);
                 }
-                const modalManual = document.getElementById('greModalRegistroManual');
-                if (modalManual) bootstrap.Modal.getInstance(modalManual)?.hide();
 
-                // Limpiar formulario
-                document.getElementById('greFormRegistroManual')?.reset();
+                // Cerrar modal
+                const modalEl = document.getElementById('greModalRegistroManual');
+                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
 
-                await window.greCargarGuias();
+                // Limpiar formulario y fotos
+                document.getElementById('formGreRegistroManual')?.reset();
+                window.greQuitarFotoEvidencia('manual');
+                const tbody = document.getElementById('manual-articulos-tbody');
+                if (tbody) tbody.innerHTML = '';
+
+                // Recargar listado
+                if (typeof window.greCargarGuias === 'function') {
+                    await window.greCargarGuias();
+                }
             } else {
-                alert(`Error: ${result.error}`);
+                alert(`Error al registrar GRE: ${result.error || 'Ocurrió un error inesperado'}`);
             }
         } catch (err) {
-            console.error("Error en registro manual GRE:", err);
+            console.error("Error guardando GRE manual:", err);
             alert(`Error de conexión: ${err.message}`);
         } finally {
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Registrar GRE en el ERP';
+                btn.innerHTML = '<i class="bi bi-save-fill"></i> Guardar GRE en Sistema ERP';
             }
         }
     };
