@@ -567,17 +567,17 @@
                         <div class="row g-2">
                             <div class="col-12 col-md-4">
                                 <label class="form-label">Tipo de Persona <span class="req">(*)</span></label>
-                                <select id="caja-input-tipo-persona" class="form-select" required>
-                                    <option value="">Seleccione...</option>
-                                    <option value="PROVEEDOR">PROVEEDOR</option>
+                                <select id="caja-input-tipo-persona" class="form-select" required onchange="window.cajaAlCambiarTipoPersona(this.value)">
+                                    <option value="ADMINISTRATIVO" selected>ADMINISTRATIVO</option>
                                     <option value="CONDUCTOR">CONDUCTOR</option>
-                                    <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
+                                    <option value="PROVEEDOR">PROVEEDOR</option>
                                     <option value="BANCO">BANCO</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md-8">
                                 <label class="form-label">Persona / Beneficiario <span class="req">(*)</span></label>
-                                <input type="text" id="caja-input-persona" class="form-control" placeholder="Nombre o Razón Social del beneficiario..." required>
+                                <input type="text" id="caja-input-persona" class="form-control" placeholder="Nombre o Razón Social del beneficiario..." list="caja-dl-beneficiarios" onchange="window.cajaAlSeleccionarPersona(this.value)" autocomplete="off" required>
+                                <datalist id="caja-dl-beneficiarios"></datalist>
                             </div>
                         </div>
                     </div>
@@ -620,14 +620,15 @@
 
                         <div class="row g-2 mb-2">
                             <div class="col-12 col-md-6">
-                                <label class="form-label">Cuenta Bancaria de Persona (Destino) <span class="req">(*)</span></label>
-                                <input type="text" id="caja-input-cuenta-persona" class="form-control" placeholder="Ej: BCP 191-XXXXXXXX-X-XX o CCI" required>
-                            </div>
-                            <div class="col-12 col-md-6">
                                 <label class="form-label">Cuenta Bancaria de Empresa (Origen)</label>
                                 <select id="caja-input-cuenta-empresa" class="form-select">
                                     <option value="">Seleccionar cuenta...</option>
                                 </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Cuenta Bancaria de Persona (Destino) <span class="req">(*)</span></label>
+                                <input type="text" id="caja-input-cuenta-persona" class="form-control" placeholder="Ej: BCP 191-XXXXXXXX-X-XX o CCI" list="caja-dl-cuentas-persona" autocomplete="off" required>
+                                <datalist id="caja-dl-cuentas-persona"></datalist>
                             </div>
                         </div>
 

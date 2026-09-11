@@ -78,7 +78,9 @@ module.exports = function (db, broadcast, logAudit) {
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN placa_carreta VARCHAR(50) NOT NULL DEFAULT '' AFTER placa_camion",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN flete DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER lugar",
                 "ALTER TABLE tesoreria_cuentas ADD COLUMN comision_porcentaje DECIMAL(5,2) NOT NULL DEFAULT 10.00 AFTER flete",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN documento_url TEXT NULL AFTER observacion"
+                "ALTER TABLE tesoreria_cuentas ADD COLUMN documento_url TEXT NULL AFTER observacion",
+                "ALTER TABLE tesoreria_cuentas ADD COLUMN neto_cobrado DECIMAL(12,2) NULL DEFAULT NULL AFTER neto_cobrar",
+                "ALTER TABLE tesoreria_cuentas ADD COLUMN sustento_pago_url TEXT NULL AFTER documento_url"
             ];
             for (const mig of migraciones) {
                 try { await tdb.query(mig); } catch(e){}
@@ -218,6 +220,7 @@ module.exports = function (db, broadcast, logAudit) {
                     adelanto,
                     detraccion,
                     neto_cobrar,
+                    neto_cobrado,
                     mes_facturacion,
                     DATE_FORMAT(fecha_factura, '%Y-%m-%d') AS fecha_factura,
                     serie,
@@ -229,6 +232,7 @@ module.exports = function (db, broadcast, logAudit) {
                     diferencia,
                     observacion,
                     documento_url,
+                    sustento_pago_url,
                     creado_en,
                     actualizado_en
                 FROM tesoreria_cuentas
@@ -281,6 +285,19 @@ module.exports = function (db, broadcast, logAudit) {
                     }
                 } else if (r.documento_url) {
                     r.documento_view_url = r.documento_url;
+                }
+
+                if (r.sustento_pago_url && r.sustento_pago_url.includes('amazonaws.com')) {
+                    try {
+                        const key = s3KeyFromUrl(r.sustento_pago_url);
+                        if (key) {
+                            r.sustento_pago_view_url = await getPresignedUrl(key, 7200);
+                        }
+                    } catch(e) {
+                        r.sustento_pago_view_url = r.sustento_pago_url;
+                    }
+                } else if (r.sustento_pago_url) {
+                    r.sustento_pago_view_url = r.sustento_pago_url;
                 }
             }
 
@@ -376,6 +393,11 @@ module.exports = function (db, broadcast, logAudit) {
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
             const id = req.params.id;
+            const [existente] = await tdb.query('SELECT estado_servicio FROM tesoreria_cuentas WHERE id = ?', [id]);
+            if (existente && existente[0] && (existente[0].estado_servicio || '').toUpperCase() === 'PAGADO') {
+                return res.status(400).json({ error: 'El registro se encuentra en estado PAGADO y no puede ser editado.' });
+            }
+
             const b = req.body || {};
             const { cam, car } = parsePlacas(b.placa, b.placa_camion, b.placa_carreta);
 
@@ -502,12 +524,23 @@ module.exports = function (db, broadcast, logAudit) {
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
             const id = req.params.id;
-            const [rows] = await tdb.query('SELECT documento_url FROM tesoreria_cuentas WHERE id = ?', [id]);
+            const [existente] = await tdb.query('SELECT estado_servicio FROM tesoreria_cuentas WHERE id = ?', [id]);
+            if (existente && existente[0] && (existente[0].estado_servicio || '').toUpperCase() === 'PAGADO') {
+                return res.status(400).json({ error: 'El registro se encuentra en estado PAGADO y no puede ser eliminado.' });
+            }
+
+            const [rows] = await tdb.query('SELECT documento_url, sustento_pago_url FROM tesoreria_cuentas WHERE id = ?', [id]);
             await tdb.query('DELETE FROM tesoreria_cuentas WHERE id = ?', [id]);
 
-            if (rows && rows[0] && rows[0].documento_url && rows[0].documento_url.includes('amazonaws.com')) {
-                const key = s3KeyFromUrl(rows[0].documento_url);
-                if (key) deleteFromS3(key).catch(() => {});
+            if (rows && rows[0]) {
+                if (rows[0].documento_url && rows[0].documento_url.includes('amazonaws.com')) {
+                    const key = s3KeyFromUrl(rows[0].documento_url);
+                    if (key) deleteFromS3(key).catch(() => {});
+                }
+                if (rows[0].sustento_pago_url && rows[0].sustento_pago_url.includes('amazonaws.com')) {
+                    const keyS = s3KeyFromUrl(rows[0].sustento_pago_url);
+                    if (keyS) deleteFromS3(keyS).catch(() => {});
+                }
             }
 
             if (typeof logAudit === 'function') {
@@ -517,6 +550,63 @@ module.exports = function (db, broadcast, logAudit) {
             res.json({ ok: true, message: 'Registro eliminado exitosamente' });
         } catch (err) {
             console.error('Error al eliminar registro de tesoreria:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── POST /api/tesoreria/cuentas/:id/registrar-pago (Registrar Neto Cobrado, Fecha y Sustento) ──
+    router.post('/cuentas/:id/registrar-pago', upload.single('archivo_sustento'), async (req, res) => {
+        try {
+            await ensureTable(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const id = req.params.id;
+            const b = req.body || {};
+
+            // Obtener datos actuales del registro
+            const [rows] = await tdb.query('SELECT neto_cobrar, sustento_pago_url FROM tesoreria_cuentas WHERE id = ?', [id]);
+            if (!rows || !rows.length) {
+                return res.status(404).json({ error: 'Registro no encontrado' });
+            }
+
+            const netoCobrar = parseFloat(rows[0].neto_cobrar) || 0;
+            const netoCobrado = parseFloat(b.neto_cobrado) || 0;
+            const fechaDeposito = safeDate(b.fecha_deposito) || new Date().toISOString().slice(0, 10);
+            const diferencia = netoCobrado - netoCobrar;
+
+            let sustentoUrl = rows[0].sustento_pago_url || null;
+            if (req.file) {
+                const ext = (req.file.originalname || '').split('.').pop() || 'pdf';
+                const s3Key = `tesoreria/sustentos_pago/sustento_${id}_${Date.now()}.${ext}`;
+                sustentoUrl = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
+            }
+
+            await tdb.query(`
+                UPDATE tesoreria_cuentas SET
+                    neto_cobrado = ?,
+                    fecha_deposito = ?,
+                    diferencia = ?,
+                    estado_servicio = 'PAGADO',
+                    sustento_pago_url = COALESCE(?, sustento_pago_url)
+                WHERE id = ?
+            `, [netoCobrado, fechaDeposito, diferencia, sustentoUrl, id]);
+
+            if (typeof logAudit === 'function') {
+                logAudit(req, 'TESORERIA', 'CUENTAS', 'REGISTRO_PAGO', `Registró pago de S/ ${netoCobrado} para cuenta ID ${id}`);
+            }
+
+            res.json({
+                ok: true,
+                message: 'Pago registrado exitosamente. Estado cambiado a PAGADO.',
+                neto_cobrado: netoCobrado,
+                fecha_deposito: fechaDeposito,
+                diferencia: diferencia,
+                estado_servicio: 'PAGADO',
+                sustento_pago_url: sustentoUrl
+            });
+        } catch (err) {
+            console.error('Error al registrar pago en tesoreria:', err);
             res.status(500).json({ error: err.message });
         }
     });

@@ -236,6 +236,11 @@ window.cajaAbrirModalNuevo = function() {
     if (hEl) hEl.value = hhmmss;
     if (serieEl) serieEl.value = String(hoy.getFullYear());
 
+    // Tipo de Persona por defecto ADMINISTRATIVO (si no se selecciona viaje)
+    var tipoPerEl = document.getElementById('caja-input-tipo-persona');
+    if (tipoPerEl) tipoPerEl.value = 'ADMINISTRATIVO';
+    window.cajaAlCambiarTipoPersona('ADMINISTRATIVO');
+
     // Reiniciar moneda y TC
     window.cajaAlCambiarMoneda('SOLES');
 
@@ -389,8 +394,117 @@ window.cajaAlSeleccionarOrdenViaje = function(viaje) {
         if (cEl) cEl.value = encontrado.conductor || '';
         if (rEl) rEl.value = encontrado.ruta || '';
         if (pEl) pEl.value = encontrado.placa_tracto || '';
-        if (perEl && !perEl.value && encontrado.conductor) perEl.value = encontrado.conductor;
-        if (tipoPerEl && !tipoPerEl.value) tipoPerEl.value = 'CONDUCTOR';
+        
+        // Al vincular una orden de viaje, cambiar automáticamente a CONDUCTOR y poner el nombre
+        if (tipoPerEl) {
+            tipoPerEl.value = 'CONDUCTOR';
+            window.cajaAlCambiarTipoPersona('CONDUCTOR');
+        }
+        if (perEl && encontrado.conductor) {
+            perEl.value = encontrado.conductor;
+        }
+    }
+};
+
+// ── 6.1 Catálogos dinámicos para Tipo de Persona y Beneficiarios ───
+window._cajaPersonalList = window._cajaPersonalList || [];
+window._cajaProveedoresList = window._cajaProveedoresList || [];
+
+window.cajaCargarDirectorioYProveedores = async function() {
+    // 1. Cargar Personal / Conductores
+    if (!window._cajaPersonalList.length) {
+        try {
+            var rPersonal = await fetch('/api/seguridad/recursos');
+            var dataP = await rPersonal.json();
+            if (dataP && Array.isArray(dataP.conductores)) {
+                window._cajaPersonalList = dataP.conductores;
+            }
+        } catch(e) {
+            console.warn('Error cargando personal:', e);
+        }
+    }
+    // 2. Cargar Proveedores y sus cuentas bancarias
+    if (!window._cajaProveedoresList.length) {
+        try {
+            var rProv = await fetch('/api/almacen/proveedores');
+            var dataProv = await rProv.json();
+            if (Array.isArray(dataProv)) {
+                window._cajaProveedoresList = dataProv;
+            }
+        } catch(e) {
+            console.warn('Error cargando proveedores:', e);
+        }
+    }
+};
+
+window.cajaAlCambiarTipoPersona = function(tipo) {
+    tipo = (tipo || '').toUpperCase();
+    var dlBen = document.getElementById('caja-dl-beneficiarios');
+    var dlCuentas = document.getElementById('caja-dl-cuentas-persona');
+    var inputPersona = document.getElementById('caja-input-persona');
+    var inputCuentaPersona = document.getElementById('caja-input-cuenta-persona');
+
+    if (dlCuentas) dlCuentas.innerHTML = '';
+
+    if (tipo === 'CONDUCTOR' || tipo === 'ADMINISTRATIVO') {
+        // Asegurar carga de personal
+        window.cajaCargarDirectorioYProveedores().then(function() {
+            if (dlBen) {
+                dlBen.innerHTML = (window._cajaPersonalList || []).map(function(nombre) {
+                    return '<option value="' + nombre + '">';
+                }).join('');
+            }
+        });
+        if (inputPersona) inputPersona.placeholder = 'Seleccione o escriba personal / conductor...';
+    } else if (tipo === 'PROVEEDOR') {
+        window.cajaCargarDirectorioYProveedores().then(function() {
+            if (dlBen) {
+                dlBen.innerHTML = (window._cajaProveedoresList || []).map(function(p) {
+                    var display = (p.razon_social || p.nombre || '') + (p.numero_documento ? (' (' + p.numero_documento + ')') : '');
+                    return '<option value="' + (p.razon_social || p.nombre || '') + '" label="' + display + '">';
+                }).join('');
+            }
+        });
+        if (inputPersona) inputPersona.placeholder = 'Seleccione o escriba nombre de proveedor...';
+    } else if (tipo === 'BANCO') {
+        if (dlBen) dlBen.innerHTML = '';
+        if (inputPersona) {
+            inputPersona.placeholder = 'Nombre de banco o entidad financiera...';
+        }
+        if (inputCuentaPersona) {
+            inputCuentaPersona.placeholder = 'N° de cuenta bancaria...';
+        }
+    }
+};
+
+window.cajaAlSeleccionarPersona = function(nombrePersona) {
+    if (!nombrePersona) return;
+    var tipo = ((document.getElementById('caja-input-tipo-persona') || {}).value || '').toUpperCase();
+    var dlCuentas = document.getElementById('caja-dl-cuentas-persona');
+    var inputCuentaPersona = document.getElementById('caja-input-cuenta-persona');
+    if (!dlCuentas) return;
+
+    if (tipo === 'PROVEEDOR' && window._cajaProveedoresList) {
+        var cleanNom = nombrePersona.trim().toLowerCase();
+        var prov = window._cajaProveedoresList.find(function(p) {
+            return (p.razon_social && p.razon_social.toLowerCase() === cleanNom) ||
+                   (p.nombre && p.nombre.toLowerCase() === cleanNom);
+        });
+
+        if (prov && Array.isArray(prov.cuentas) && prov.cuentas.length > 0) {
+            dlCuentas.innerHTML = prov.cuentas.map(function(c) {
+                var cLabel = (c.banco || '') + ' - ' + (c.numero_cuenta || '') + (c.tipo_cuenta ? (' (' + c.tipo_cuenta + ')') : '');
+                return '<option value="' + cLabel + '">';
+            }).join('');
+
+            // Si hay exactamente una cuenta bancaria o el campo está vacío, sugerir la primera
+            if (inputCuentaPersona && (!inputCuentaPersona.value || prov.cuentas.length === 1)) {
+                var first = prov.cuentas[0];
+                inputCuentaPersona.value = (first.banco || '') + ' - ' + (first.numero_cuenta || '');
+            }
+        } else {
+            dlCuentas.innerHTML = '';
+        }
     }
 };
 

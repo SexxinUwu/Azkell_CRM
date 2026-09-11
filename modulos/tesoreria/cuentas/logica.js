@@ -134,8 +134,10 @@ window._cuentasRenderTabla = function(data) {
 
     var html = data.map(function(item) {
         var est = (item.estado_servicio || 'PENDIENTE').toUpperCase();
-        var badgeClass = est === 'PAGADO' ? 'pagado' : (est === 'ANULADO' ? 'anulado' : 'pendiente');
+        var esPagado = (est === 'PAGADO');
+        var badgeClass = esPagado ? 'pagado' : (est === 'ANULADO' ? 'anulado' : 'pendiente');
 
+        // Documento orden/factura adjunta
         var docHtml = '<span class="text-muted small">—</span>';
         if (item.documento_view_url) {
             var esPdf = (item.documento_url || '').toLowerCase().includes('.pdf');
@@ -145,26 +147,71 @@ window._cuentasRenderTabla = function(data) {
             '</a>';
         }
 
-        var iconEstado = est === 'PAGADO' ? '<i class="bi bi-check-circle-fill"></i> ' : (est === 'ANULADO' ? '<i class="bi bi-x-circle-fill"></i> ' : '<i class="bi bi-clock-fill"></i> ');
-
-        var btnEstadoHtml = '';
-        if (est === 'ANULADO') {
-            btnEstadoHtml = '<span class="badge-estado anulado" title="Registro Anulado (modificar desde Editar)">' +
-                iconEstado + est +
-            '</span>';
-        } else {
-            btnEstadoHtml = '<button type="button" class="badge-estado ' + badgeClass + '" title="Clic para alternar entre Pendiente y Pagado" onclick="window.toggleEstadoCuenta(' + item.id + ', \'' + est + '\')">' +
-                iconEstado + est +
-            '</button>';
+        // Sustento de pago adjunto (si existe)
+        if (item.sustento_pago_view_url) {
+            docHtml += '<a href="' + item.sustento_pago_view_url + '" target="_blank" class="btn btn-sm btn-outline-success py-0 px-1.5 ms-1 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm" style="font-size:0.72rem;" title="Ver Sustento de Pago">' +
+                '<i class="bi bi-receipt-cutoff"></i> Pago' +
+            '</a>';
         }
 
+        var iconEstado = esPagado ? '<i class="bi bi-check-circle-fill"></i> ' : (est === 'ANULADO' ? '<i class="bi bi-x-circle-fill"></i> ' : '<i class="bi bi-clock-fill"></i> ');
+
+        // Badge plano no interactivo
+        var btnEstadoHtml = '<span class="badge-estado ' + badgeClass + '">' +
+            iconEstado + est +
+        '</span>';
+
+        // Menú de 3 puntos (Dropdown)
+        var accionesHtml = '<div class="dropdown">' +
+            '<button class="btn btn-action-dots" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Acciones">' +
+                '<i class="bi bi-three-dots-vertical"></i>' +
+            '</button>' +
+            '<ul class="dropdown-menu dropdown-menu-actions shadow-sm">' +
+                '<li>' +
+                    (esPagado ? 
+                        '<span class="dropdown-item disabled text-muted" title="Bloqueado: Registro ya Pagado"><i class="bi bi-pencil me-1"></i> Editar (Bloqueado)</span>' :
+                        '<a class="dropdown-item" href="javascript:void(0)" onclick="window.abrirEditarRegistro(' + item.id + ')"><i class="bi bi-pencil text-primary me-1"></i> Editar</a>'
+                    ) +
+                '</li>' +
+                '<li>' +
+                    '<a class="dropdown-item text-success fw-bold" href="javascript:void(0)" onclick="window.abrirModalRegistrarPago(' + item.id + ')">' +
+                        '<i class="bi bi-credit-card-2-front text-success me-1"></i> ' + (esPagado ? 'Ver / Subir Sustento' : 'Registrar Pago / Sustento') +
+                    '</a>' +
+                '</li>' +
+                '<li><hr class="dropdown-divider my-1"></li>' +
+                '<li>' +
+                    (esPagado ? 
+                        '<span class="dropdown-item disabled text-muted" title="Bloqueado: Registro ya Pagado"><i class="bi bi-trash me-1"></i> Eliminar (Bloqueado)</span>' :
+                        '<a class="dropdown-item text-danger" href="javascript:void(0)" onclick="window.eliminarCuenta(' + item.id + ')"><i class="bi bi-trash text-danger me-1"></i> Eliminar</a>'
+                    ) +
+                '</li>' +
+            '</ul>' +
+        '</div>';
+
+        // Cálculo de Neto Cobrado y Diferencia
+        var netoCobrar = parseFloat(item.neto_cobrar) || 0;
+        var netoCobrado = item.neto_cobrado != null ? parseFloat(item.neto_cobrado) : null;
+        
+        // Si hay neto cobrado registrado, calcular diferencia = cobrado - debido; si no, usar item.diferencia
+        var diff = (netoCobrado != null) ? (netoCobrado - netoCobrar) : (parseFloat(item.diferencia) || 0);
+        
+        var diffClass = 'text-muted';
+        var diffSign = '';
+        if (diff < 0) {
+            diffClass = 'text-danger fw-bold';
+        } else if (diff > 0) {
+            diffClass = 'text-success fw-bold';
+            diffSign = '+';
+        } else if (diff === 0 && (esPagado || netoCobrado != null)) {
+            diffClass = 'text-success fw-semibold';
+        }
+
+        var netoCobradoHtml = (netoCobrado != null) ? 
+            ('<span class="fw-bold text-dark">' + _fmtMoney(netoCobrado) + '</span>') : 
+            '<span class="text-muted small">—</span>';
+
         return '<tr>' +
-            '<td class="col-sticky-action text-center">' +
-                '<div class="btn-group btn-group-sm">' +
-                    '<button class="btn btn-light border py-1 px-2 text-primary" title="Editar" onclick="window.abrirEditarRegistro(' + item.id + ')"><i class="bi bi-pencil-fill" style="font-size:0.75rem;"></i></button>' +
-                    '<button class="btn btn-light border py-1 px-2 text-danger" title="Eliminar" onclick="window.eliminarCuenta(' + item.id + ')"><i class="bi bi-trash-fill" style="font-size:0.75rem;"></i></button>' +
-                '</div>' +
-            '</td>' +
+            '<td class="col-sticky-action text-center">' + accionesHtml + '</td>' +
             '<td class="fw-bold text-primary">' + (item.codigo_liquidacion || '—') + '</td>' +
             '<td>' + _fmtDate(item.fecha_liquidacion) + '</td>' +
             '<td><span class="badge bg-light text-dark border fw-bold">' + (item.numero_viaje || '—') + '</span></td>' +
@@ -192,7 +239,8 @@ window._cuentasRenderTabla = function(data) {
             '<td>' + _fmtDate(item.fecha_deposito) + '</td>' +
             '<td class="text-center">' + btnEstadoHtml + '</td>' +
             '<td class="text-center">' + docHtml + '</td>' +
-            '<td class="num-cell ' + ((parseFloat(item.diferencia) || 0) < 0 ? 'text-danger' : '') + '">' + _fmtMoney(item.diferencia) + '</td>' +
+            '<td class="num-cell">' + netoCobradoHtml + '</td>' +
+            '<td class="num-cell ' + diffClass + '">' + diffSign + _fmtMoney(diff) + '</td>' +
             '<td>' + (item.observacion || '') + '</td>' +
         '</tr>';
     }).join('');
@@ -326,6 +374,11 @@ window.abrirModalNuevoRegistro = function() {
 window.abrirEditarRegistro = function(id) {
     var item = (window._cuentasData || []).find(function(c) { return c.id === id; });
     if (!item) return;
+
+    if ((item.estado_servicio || '').toUpperCase() === 'PAGADO') {
+        alert('Este registro se encuentra en estado PAGADO y no puede ser editado.');
+        return;
+    }
 
     var setV = function(elId, val) {
         var el = document.getElementById(elId);
@@ -522,6 +575,12 @@ window.guardarCuentaForm = function(e) {
 };
 
 window.eliminarCuenta = function(id) {
+    var item = (window._cuentasData || []).find(function(c) { return c.id === id; });
+    if (item && (item.estado_servicio || '').toUpperCase() === 'PAGADO') {
+        alert('Este registro se encuentra en estado PAGADO y no puede ser eliminado.');
+        return;
+    }
+
     if (!confirm('¿Está seguro de eliminar este registro de cuenta?')) return;
     fetch('/api/tesoreria/cuentas/' + id, { method: 'DELETE' })
         .then(function(r) { return r.json(); })
@@ -532,6 +591,128 @@ window.eliminarCuenta = function(id) {
         .catch(function(err) {
             alert('Error al eliminar registro: ' + err.message);
         });
+};
+
+// ── REGISTRAR PAGO / SUBIR SUSTENTO (MODAL) ────────────────────────
+window.abrirModalRegistrarPago = function(id) {
+    var item = (window._cuentasData || []).find(function(c) { return c.id === id; });
+    if (!item) return;
+
+    var form = document.getElementById('formRegistrarPago');
+    if (form) form.reset();
+
+    var idEl = document.getElementById('pago-input-id');
+    if (idEl) idEl.value = item.id;
+
+    var lblSub = document.getElementById('modalRegistrarPagoSubtitulo');
+    if (lblSub) lblSub.textContent = 'Liquidación: ' + (item.codigo_liquidacion || 'ID ' + item.id) + ' | N° Viaje: ' + (item.numero_viaje || '—');
+
+    var rNeto = document.getElementById('pago-resumen-neto-cobrar');
+    if (rNeto) rNeto.textContent = 'S/ ' + _fmtMoney(item.neto_cobrar);
+
+    var rCli = document.getElementById('pago-resumen-cliente');
+    if (rCli) rCli.textContent = (item.cliente || item.razon_social || '—') + (item.factura ? (' (Fact: ' + (item.serie ? item.serie + '-' : '') + item.factura + ')') : '');
+
+    var inputNeto = document.getElementById('pago-input-neto-cobrado');
+    if (inputNeto) {
+        // Si ya tenía neto cobrado, precargar ese valor, sino sugerir el neto_cobrar completo
+        var valDefecto = (item.neto_cobrado != null && item.neto_cobrado !== '') ? item.neto_cobrado : item.neto_cobrar;
+        inputNeto.value = (valDefecto != null && valDefecto !== '') ? parseFloat(valDefecto).toFixed(2) : '';
+    }
+
+    var inputFecha = document.getElementById('pago-input-fecha-deposito');
+    if (inputFecha) {
+        if (item.fecha_deposito) {
+            inputFecha.value = item.fecha_deposito.split('T')[0];
+        } else {
+            inputFecha.value = new Date().toISOString().split('T')[0];
+        }
+    }
+
+    // Sustento actual
+    var wrapAct = document.getElementById('pago-wrap-archivo-actual');
+    var linkAct = document.getElementById('pago-link-archivo-actual');
+    if (item.sustento_pago_view_url && wrapAct && linkAct) {
+        linkAct.href = item.sustento_pago_view_url;
+        wrapAct.style.display = 'block';
+    } else if (wrapAct) {
+        wrapAct.style.display = 'none';
+    }
+
+    window.calcularDiferenciaPagoModal();
+
+    var modalEl = document.getElementById('modalRegistrarPago');
+    if (modalEl) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+};
+
+window.calcularDiferenciaPagoModal = function() {
+    var id = parseInt((document.getElementById('pago-input-id') || {}).value, 10);
+    var item = (window._cuentasData || []).find(function(c) { return c.id === id; });
+    var netoCobrar = item ? (parseFloat(item.neto_cobrar) || 0) : 0;
+
+    var cobradoVal = parseFloat((document.getElementById('pago-input-neto-cobrado') || {}).value) || 0;
+    var diff = cobradoVal - netoCobrar;
+
+    var preview = document.getElementById('pago-preview-diferencia');
+    if (preview) {
+        var sign = diff > 0 ? '+' : '';
+        preview.textContent = sign + 'S/ ' + _fmtMoney(diff);
+        if (diff < 0) {
+            preview.className = 'fw-bold text-danger';
+        } else if (diff > 0) {
+            preview.className = 'fw-bold text-success';
+        } else {
+            preview.className = 'fw-bold text-success';
+        }
+    }
+};
+
+window.guardarRegistroPago = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    var id = (document.getElementById('pago-input-id') || {}).value;
+    if (!id) return;
+
+    var btn = document.getElementById('pago-btn-submit');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
+    }
+
+    var formData = new FormData();
+    formData.append('neto_cobrado', (document.getElementById('pago-input-neto-cobrado') || {}).value || '0');
+    formData.append('fecha_deposito', (document.getElementById('pago-input-fecha-deposito') || {}).value || '');
+
+    var fileEl = document.getElementById('pago-input-archivo');
+    if (fileEl && fileEl.files && fileEl.files[0]) {
+        formData.append('archivo_sustento', fileEl.files[0]);
+    }
+
+    try {
+        var resp = await fetch('/api/tesoreria/cuentas/' + id + '/registrar-pago', {
+            method: 'POST',
+            body: formData
+        });
+        var res = await resp.json();
+        if (res.error) throw new Error(res.error);
+
+        var modalEl = document.getElementById('modalRegistrarPago');
+        if (modalEl) {
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+
+        window.cargarCuentas();
+    } catch(err) {
+        alert('Error al registrar pago: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> Guardar y Marcar PAGADO';
+        }
+    }
 };
 
 // ── DESCARGA DE PLANTILLA EXCEL ────────────────────────────────────
