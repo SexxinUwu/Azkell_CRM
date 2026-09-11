@@ -95,6 +95,7 @@ window.ovConfigurarThead = function() {
                 <th style="min-width: 100px;">VEHÍCULO (TRACTO) ${_sortIcon('tracto')}</th>
                 <th style="min-width: 105px;">KM (TRACTO) ${_sortIcon('km_tracto')}</th>
                 <th style="min-width: 105px;">SEMIRREMOLQUE ${_sortIcon('remolque')}</th>
+                <th style="min-width: 110px;">CONFIGURACIÓN ${_sortIcon('configuracion')}</th>
                 <th style="min-width: 115px;">HORAS TERMOKING ${_sortIcon('horas_remolque')}</th>
                 <th style="min-width: 160px;">RUTA PROGRAMADA ${_sortIcon('ruta')}</th>
                 <th style="min-width: 120px; text-align: right;">CANTIDAD / PESO (TN) ${_sortIcon('peso')}</th>
@@ -128,7 +129,7 @@ window.ovCargarDatos = async function() {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="16" class="text-center py-4 text-secondary">
+                <td colspan="17" class="text-center py-4 text-secondary">
                     <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
                     <div class="small fw-semibold">Consultando base de datos del ERP...</div>
                 </td>
@@ -430,6 +431,10 @@ window.ovAplicarFiltros = function() {
                         valA = (a.placa_remolque || '').toUpperCase();
                         valB = (b.placa_remolque || '').toUpperCase();
                         break;
+                    case 'configuracion':
+                        valA = (a.configuracion || '').toUpperCase();
+                        valB = (b.configuracion || '').toUpperCase();
+                        break;
                     case 'ruta':
                         valA = (a.ruta || '').toUpperCase();
                         valB = (b.ruta || '').toUpperCase();
@@ -495,7 +500,7 @@ window.ovRenderizarTabla = function() {
     if (pageItems.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="16" class="text-center py-4 text-secondary">
+                <td colspan="17" class="text-center py-4 text-secondary">
                     <i class="bi bi-inbox fs-3 d-block mb-1 text-muted"></i>
                     <div class="fw-bold" style="font-size:0.85rem;">No se encontraron viajes para los filtros seleccionados</div>
                     <small class="text-muted" style="font-size:0.75rem;">Modifica el rango de fechas o haz clic en "Registrar Nuevo Viaje".</small>
@@ -685,6 +690,13 @@ window.ovRenderizarTabla = function() {
                     <!-- 9. SEMIRREMOLQUE (CARRETA) -->
                     <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${semirremolque || '---'}</td>
 
+                    <!-- 9.1 CONFIGURACIÓN VEHICULAR CONJUNTA -->
+                    <td>
+                        <span class="badge ${v.configuracion && v.configuracion !== '---' ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-light text-muted'} font-monospace px-2 py-1 fw-bold" style="font-size:0.75rem;">
+                            ${v.configuracion || '---'}
+                        </span>
+                    </td>
+
                     <!-- 10. HORAS TERMOKING -->
                     <td>${horasRemolqueHtml}</td>
 
@@ -807,11 +819,15 @@ window.ovAbrirModalNuevoViaje = async function() {
         if (hid) hid.value = '';
     });
 
-    // Limpiar kilometraje y horas motor
+    // Limpiar kilometraje, horas motor y configuraciones
     var kmTractoInput = document.getElementById('ov-form-km-tracto');
     if (kmTractoInput) kmTractoInput.value = '';
     var horasRemolqueInput = document.getElementById('ov-form-horas-remolque');
     if (horasRemolqueInput) horasRemolqueInput.value = '';
+    var confTractoInput = document.getElementById('ov-form-config-tracto');
+    if (confTractoInput) confTractoInput.value = '';
+    var confRemolqueInput = document.getElementById('ov-form-config-remolque');
+    if (confRemolqueInput) confRemolqueInput.value = '';
 
     // Cargar correlativo desde el backend
     try {
@@ -936,6 +952,12 @@ window.ovAbrirModalEditarViaje = async function(viajeCode) {
     var horasRemolqueInput = document.getElementById('ov-form-horas-remolque');
     if (horasRemolqueInput) horasRemolqueInput.value = item.horas_motor_remolque != null ? item.horas_motor_remolque : '';
 
+    // Configuraciones de placas
+    var confTractoInput = document.getElementById('ov-form-config-tracto');
+    if (confTractoInput) confTractoInput.value = item.configuracion_tracto || '';
+    var confRemolqueInput = document.getElementById('ov-form-config-remolque');
+    if (confRemolqueInput) confRemolqueInput.value = item.configuracion_remolque || '';
+
     // Ruta
     var rutaEl = document.getElementById('ov-form-ruta');
     if (rutaEl) rutaEl.value = item.ruta || '';
@@ -988,10 +1010,15 @@ window.ovCargarCombosFormulario = async function() {
 
         var tractos = [];
         var carretas = [];
+        window._ovPlacasConfigMap = {};
 
         (resPlacas || []).forEach(function(p) {
-            var placa = (p.placa || p[0] || '').toString().trim();
+            var placa = (p.placa || p[0] || '').toString().trim().toUpperCase();
             if (!placa) return;
+            var conf = (p.configuracion || p.tipo || '').toString().trim().toUpperCase();
+            if (conf) {
+                window._ovPlacasConfigMap[placa] = conf;
+            }
             var tipo = (p.tipo || p[5] || '').toString().trim().toUpperCase();
             var desc = `${placa}${p.marca ? ' · ' + p.marca : ''}`;
 
@@ -1041,6 +1068,12 @@ window.ovCargarCombosFormulario = async function() {
                 window._cbOnSelect('ov-form-tracto', async function(val, lbl) {
                     var hid = document.getElementById('ov-form-tracto');
                     if (hid) hid.value = val;
+                    // Autocompletar configuración del tracto si existe en tabla placas
+                    var inputConfTracto = document.getElementById('ov-form-config-tracto');
+                    if (inputConfTracto && val && window._ovPlacasConfigMap) {
+                        var cVal = window._ovPlacasConfigMap[val.toUpperCase()] || '';
+                        if (cVal) inputConfTracto.value = cVal;
+                    }
                     if (val) {
                         var tele = await window.ovObtenerTelemetryGPS(val);
                         var inputKm = document.getElementById('ov-form-km-tracto');
@@ -1052,6 +1085,12 @@ window.ovCargarCombosFormulario = async function() {
                 window._cbOnSelect('ov-form-remolque', async function(val, lbl) {
                     var hid = document.getElementById('ov-form-remolque');
                     if (hid) hid.value = val;
+                    // Autocompletar configuración de carreta si existe en tabla placas
+                    var inputConfRem = document.getElementById('ov-form-config-remolque');
+                    if (inputConfRem && val && window._ovPlacasConfigMap) {
+                        var cVal = window._ovPlacasConfigMap[val.toUpperCase()] || '';
+                        if (cVal) inputConfRem.value = cVal;
+                    }
                     if (val) {
                         var tele = await window.ovObtenerTelemetryGPS(val);
                         var inputHoras = document.getElementById('ov-form-horas-remolque');
@@ -1084,6 +1123,8 @@ window.ovGuardarNuevoViaje = async function(e) {
     var cantidad = parseFloat((document.getElementById('ov-form-cantidad') || {}).value) || 0;
     var kmTracto = parseInt((document.getElementById('ov-form-km-tracto') || {}).value, 10) || null;
     var horasRemolque = parseInt((document.getElementById('ov-form-horas-remolque') || {}).value, 10) || null;
+    var configTracto = ((document.getElementById('ov-form-config-tracto') || {}).value || '').trim().toUpperCase();
+    var configRemolque = ((document.getElementById('ov-form-config-remolque') || {}).value || '').trim().toUpperCase();
     var ubigeoPartida = (document.getElementById('ov-form-ubigeo-partida') || {}).value || '';
     var dirPartida = (document.getElementById('ov-form-dir-partida') || {}).value || '';
     var ubigeoLlegada = (document.getElementById('ov-form-ubigeo-llegada') || {}).value || '';
@@ -1108,6 +1149,8 @@ window.ovGuardarNuevoViaje = async function(e) {
         conductor,
         placa_tracto: tracto,
         placa_remolque: remolque,
+        configuracion_tracto: configTracto,
+        configuracion_remolque: configRemolque,
         kilometraje_inicial: kmTracto,
         horas_motor_remolque: horasRemolque,
         ruta,

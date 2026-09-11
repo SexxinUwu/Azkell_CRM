@@ -1246,7 +1246,7 @@ thead .ov-col-sticky-action {
                 </thead>
                 <tbody id="ov-tabla-body">
                     <tr>
-                        <td colspan="16" class="text-center py-5 text-secondary">
+                        <td colspan="17" class="text-center py-5 text-secondary">
                             <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
                             <div class="small fw-semibold">Consultando base de datos del ERP...</div>
                         </td>
@@ -1298,10 +1298,10 @@ thead .ov-col-sticky-action {
                 <form id="ovFormNuevoViaje" onsubmit="window.ovGuardarNuevoViaje(event)">
                     <input type="hidden" id="ov-form-edit-id" value="">
                     
-                    <!-- ── SECCIÓN 1: DATOS DE LA ORDEN ──────────────────────── -->
+                    <!-- ── SECCIÓN 1: DATOS DE LA ORDEN Y UNIDADES ASIGNADAS ─────── -->
                     <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white position-relative" style="border: 1px solid #e2e8f0 !important; z-index: 100;">
                         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.98rem;">
-                            <i class="bi bi-file-earmark-text-fill text-primary"></i> Datos de la Orden
+                            <i class="bi bi-file-earmark-text-fill text-primary"></i> Datos de la Orden y Unidades Asignadas
                         </h6>
                         <div class="row g-2 g-md-3">
                             <div class="col-6 col-md-3">
@@ -1324,31 +1324,34 @@ thead .ov-col-sticky-action {
                                     <div id="ov-form-conductor-dd" class="cb-dropdown"></div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- ── SECCIÓN 2: UNIDADES ASIGNADAS ─────────────────────── -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white position-relative" style="border: 1px solid #e2e8f0 !important; z-index: 80;">
-                        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.98rem;">
-                            <i class="bi bi-truck text-primary"></i> Unidades Asignadas
-                        </h6>
-                        <div class="row g-2 g-md-3">
-                            <div class="col-12 col-md-6">
+                            <!-- Fila de Vehículo Tracto y su Configuración -->
+                            <div class="col-8 col-md-8">
                                 <label class="ov-label-req">Vehículo (Tracto) <span>(*)</span></label>
-                                <div class="position-relative" style="z-index: 88;">
+                                <div class="position-relative" style="z-index: 95;">
                                     <input type="text" id="ov-form-tracto-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE TRACTO..." autocomplete="off" oninput="window._cbFiltrar('ov-form-tracto')" onfocus="window._cbFiltrar('ov-form-tracto')" onblur="window._cbHide('ov-form-tracto')">
                                     <input type="hidden" id="ov-form-tracto" name="tracto" required>
                                     <div id="ov-form-tracto-dd" class="cb-dropdown"></div>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-6">
+                            <div class="col-4 col-md-4">
+                                <label class="ov-label-req">Config. Tracto</label>
+                                <input type="text" id="ov-form-config-tracto" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle font-monospace text-center" placeholder="Ej: C3 / T3" maxlength="15" title="Configuración vehicular del tracto (según tabla placas o nueva)">
+                            </div>
+
+                            <!-- Fila de Semirremolque y su Configuración -->
+                            <div class="col-8 col-md-8">
                                 <label class="ov-label-req">Semirremolque / Remolque</label>
-                                <div class="position-relative" style="z-index: 86;">
+                                <div class="position-relative" style="z-index: 90;">
                                     <input type="text" id="ov-form-remolque-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE CARRETA..." autocomplete="off" oninput="window._cbFiltrar('ov-form-remolque')" onfocus="window._cbFiltrar('ov-form-remolque')" onblur="window._cbHide('ov-form-remolque')">
                                     <input type="hidden" id="ov-form-remolque" name="remolque">
                                     <div id="ov-form-remolque-dd" class="cb-dropdown"></div>
                                 </div>
-                                <div class="form-text text-muted" style="font-size:0.72rem;">Opcional: asigne la carreta o semirremolque vinculado al viaje.</div>
+                                <div class="form-text text-muted" style="font-size:0.72rem;">Opcional: carreta o semirremolque vinculado al viaje.</div>
+                            </div>
+                            <div class="col-4 col-md-4">
+                                <label class="ov-label-req">Config. Carreta</label>
+                                <input type="text" id="ov-form-config-remolque" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle font-monospace text-center" placeholder="Ej: R2 / S3" maxlength="15" title="Configuración de la carreta o semirremolque (según tabla placas o nueva)">
                             </div>
                         </div>
                     </div>
