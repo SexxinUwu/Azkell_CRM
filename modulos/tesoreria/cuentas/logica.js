@@ -161,12 +161,12 @@ window._cuentasRenderTabla = function(data) {
             iconEstado + est +
         '</span>';
 
-        // Menú de 3 puntos (Dropdown)
-        var accionesHtml = '<div class="dropdown">' +
-            '<button class="btn btn-action-dots" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Acciones">' +
+        // Menú de 3 puntos (Dropdown con data-bs-strategy="fixed" para sobreponerse a todo)
+        var accionesHtml = '<div class="dropdown d-inline-block">' +
+            '<button class="btn btn-action-dots" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false" title="Acciones">' +
                 '<i class="bi bi-three-dots-vertical"></i>' +
             '</button>' +
-            '<ul class="dropdown-menu dropdown-menu-actions shadow-sm">' +
+            '<ul class="dropdown-menu dropdown-menu-actions shadow">' +
                 '<li>' +
                     (esPagado ? 
                         '<span class="dropdown-item disabled text-muted" title="Bloqueado: Registro ya Pagado"><i class="bi bi-pencil me-1"></i> Editar (Bloqueado)</span>' :
