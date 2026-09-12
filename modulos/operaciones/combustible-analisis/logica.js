@@ -1211,6 +1211,14 @@
                     <td class="font-monospace fw-bold text-secondary" style="font-size: 0.82rem;">
                         ${t.carreta ? `<span class="badge bg-light text-dark border px-2 py-0.5 fw-semibold" style="font-size:0.75rem;">${esc(t.carreta)}</span>` : '<span class="text-muted opacity-50">—</span>'}
                     </td>
+                    <td class="text-center">
+                        ${(() => {
+                            const est = String(t.estado || 'INICIADO').toUpperCase();
+                            if (est === 'FINALIZADO') return '<span class="ca-badge-status-finalizado">FINALIZADO</span>';
+                            if (est === 'INICIADO') return '<span class="ca-badge-status-iniciado">INICIADO</span>';
+                            return `<span class="ca-badge-status-registrado">${esc(est)}</span>`;
+                        })()}
+                    </td>
                     <td class="small font-monospace">
                         ${t.motor ? `<span class="badge bg-light text-dark border px-2 py-0.5 fw-semibold" style="font-size:0.75rem;">${esc(t.motor)}</span>` : '<span class="text-muted opacity-50">—</span>'}
                     </td>
@@ -1287,6 +1295,7 @@
                     </td>
                     <td class="text-muted small">${esc(t.placa)}</td>
                     <td class="text-muted small font-monospace">${t.carreta ? `<span class="badge bg-light text-dark border px-2 py-0.5" style="font-size:0.72rem;">${esc(t.carreta)}</span>` : '—'}</td>
+                    <td class="text-center text-muted opacity-50">—</td>
                     <td class="text-muted small">${esc(t.motor || '—')}</td>
                     <td class="text-muted small"><span class="fw-semibold text-secondary">Ida: ${esc(rutaTramoIda || t.ruta)}</span></td>
                     <td class="text-end font-monospace fw-bold text-success">
@@ -1327,6 +1336,7 @@
                     </td>
                     <td class="text-muted small">${esc(t.placa)}</td>
                     <td class="text-muted small font-monospace">${t.carreta ? `<span class="badge bg-light text-dark border px-2 py-0.5" style="font-size:0.72rem;">${esc(t.carreta)}</span>` : '—'}</td>
+                    <td class="text-center text-muted opacity-50">—</td>
                     <td class="text-muted small">${esc(t.motor || '—')}</td>
                     <td class="text-muted small"><span class="fw-semibold text-secondary">Retorno: ${esc(rutaTramoRet || 'Sin Retorno')}</span></td>
                     <td class="text-end font-monospace fw-bold text-primary">
@@ -1417,6 +1427,7 @@
             tfoot.innerHTML = `
                 <tr style="background:#f8fafc; border-top: 2px solid #cbd5e1; font-weight: bold;">
                     <td class="ps-3 py-3 font-monospace fw-bolder text-dark" style="font-size:0.88rem;">TOTAL</td>
+                    <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
@@ -1821,14 +1832,24 @@
     };
 
     // Exportar Resumen Consolidado a Excel (con Telemetría GPS CAN Bus)
-    window.caExportarResumenExcel = function() {
+    window.caExportarResumenExcel = async function() {
         if (typeof XLSX === 'undefined') {
-            alert('Librería SheetJS no disponible.');
+            if (typeof window.loadExcel === 'function') {
+                try {
+                    await window.loadExcel();
+                } catch(e) {
+                    console.error('Error cargando SheetJS:', e);
+                }
+            }
+        }
+
+        if (typeof XLSX === 'undefined') {
+            alert('Librería SheetJS (XLSX) no disponible. Por favor, refresque la página.');
             return;
         }
 
         if (!window._caFilteredTrips || window._caFilteredTrips.length === 0) {
-            alert('No hay viajes para exportar.');
+            alert('No hay viajes visibles o filtrados para exportar.');
             return;
         }
 
@@ -1866,6 +1887,7 @@
                 "N° VIAJE": t.numViaje || t.viaje || '---',
                 "PLACA": t.placa || '---',
                 "CARRETA": t.carreta || '---',
+                "ESTADO": String(t.estado || 'INICIADO').toUpperCase(),
                 "MOTOR": t.motor || '---',
                 "RUTA": t.ruta || '---',
                 "PESO (Tn)": (t.pesoMaxTn !== undefined && t.pesoMaxTn > 0) ? parseFloat(t.pesoMaxTn.toFixed(2)) : 0,
@@ -1918,6 +1940,7 @@
             "N° VIAJE": "TOTAL",
             "PLACA": "",
             "CARRETA": "",
+            "ESTADO": "",
             "MOTOR": "",
             "RUTA": "",
             "PESO (Tn)": "",
@@ -1956,6 +1979,8 @@
             { wch: 18 }, // N° VIAJE
             { wch: 12 }, // PLACA
             { wch: 12 }, // CARRETA
+            { wch: 14 }, // ESTADO
+            { wch: 14 }, // MOTOR
             { wch: 25 }, // RUTA
             { wch: 20 }, // FECHA INICIO
             { wch: 20 }, // FECHA FIN
