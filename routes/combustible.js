@@ -1335,7 +1335,18 @@ module.exports = function (db, broadcast, logAudit) {
 
                     const ovInfo = ovMap.get(t.viaje) || ovMap.get(String(t.viaje).replace(/^\d{4}-0*/, ''));
                     const carretaFinal = (ovInfo && ovInfo.placa_remolque) ? ovInfo.placa_remolque : (t.carreta || '');
-                    const estadoViaje = (ovInfo && ovInfo.estado) ? ovInfo.estado : 'INICIADO';
+                    
+                    // Determinar estado real del viaje:
+                    // 1. Si los vales del viaje tienen un vale de 'FIN DE SERVICIO' -> FINALIZADO
+                    // 2. Si la orden tiene estado explícito FINALIZADO -> FINALIZADO
+                    // 3. Caso contrario, al estar en ruta o tener recargas -> INICIADO
+                    const tieneFinDeServicio = (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('FIN'));
+                    let estadoViaje = 'INICIADO';
+                    if (tieneFinDeServicio || (ovInfo && String(ovInfo.estado).toUpperCase() === 'FINALIZADO')) {
+                        estadoViaje = 'FINALIZADO';
+                    } else if (ovInfo && String(ovInfo.estado).toUpperCase() === 'ANULADO') {
+                        estadoViaje = 'ANULADO';
+                    }
 
                     trips.push({
                         viaje: t.viaje,
