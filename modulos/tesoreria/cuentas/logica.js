@@ -57,6 +57,7 @@ window.filtrarCuentas = function() {
 
     window._cuentasFiltradas = (window._cuentasData || []).filter(function(item) {
         var matchB = !buscar ||
+            (String(item.id || '')).includes(buscar) ||
             (item.codigo_liquidacion || '').toLowerCase().includes(buscar) ||
             (item.numero_viaje || '').toLowerCase().includes(buscar) ||
             (item.razon_social || '').toLowerCase().includes(buscar) ||
@@ -234,6 +235,7 @@ window._cuentasRenderTabla = function(data) {
 
         return '<tr>' +
             '<td class="col-sticky-action text-center">' + accionesHtml + '</td>' +
+            '<td class="text-center fw-bold text-secondary" style="font-size:0.8rem;">' + (item.id || '—') + '</td>' +
             '<td><span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">' + (item.orden_servicio || '—') + '</span></td>' +
             '<td><span class="badge bg-light text-dark border fw-bold">' + (item.numero_viaje || '—') + '</span></td>' +
             '<td class="fw-bold text-primary">' + (item.codigo_liquidacion || '—') + '</td>' +
@@ -1059,7 +1061,7 @@ window.exportarCuentasExcel = function() {
     }
 
     var cabeceras = [
-        'COD DE LIQUIDACION', 'FECHA DE LIQUIDACION', 'N° DE VIAJE', 'FECHA SERVICIO', 'RAZON SOCIAL',
+        'ID', 'COD DE LIQUIDACION', 'FECHA DE LIQUIDACION', 'N° DE VIAJE', 'FECHA SERVICIO', 'RAZON SOCIAL',
         'PLACA (CAMION)', 'PLACA (CARRETA)', 'CONDUCTOR', 'CLIENTE', 'LUGAR',
         'TARIFA -10% Y/O 20% POR TIPO DE CAMION', '(-) GASTOS OPERATIVOS', 'B.I', 'IGV',
         'TOTAL', 'ADELANTO', 'DETRACCION', 'NETO POR COBRAR', 'MES FACTURACION', 'FECHA',
@@ -1069,6 +1071,7 @@ window.exportarCuentasExcel = function() {
 
     var filas = datos.map(function(d) {
         return [
+            d.id || '',
             d.codigo_liquidacion || '',
             _fmtDate(d.fecha_liquidacion),
             d.numero_viaje || '',
