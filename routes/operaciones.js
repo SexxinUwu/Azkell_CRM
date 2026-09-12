@@ -1250,9 +1250,20 @@ module.exports = function (db, broadcast, logAudit) {
                         ov.conductor,
                         ov.placa_tracto,
                         ov.placa_remolque,
-                        ov.estado
+                        CASE 
+                            WHEN ov.estado = 'FINALIZADO' THEN 'FINALIZADO'
+                            WHEN v_stat.tiene_fin > 0 THEN 'FINALIZADO'
+                            ELSE 'INICIADO'
+                        END AS estado
                     FROM marsisa_ordenes_viaje_rutas r
                     LEFT JOIN marsisa_ordenes_viaje ov ON r.viaje = ov.viaje
+                    LEFT JOIN (
+                        SELECT 
+                            viaje,
+                            SUM(CASE WHEN tipo LIKE '%FIN%' THEN 1 ELSE 0 END) AS tiene_fin
+                        FROM marsisa_combustible_vales
+                        GROUP BY viaje
+                    ) v_stat ON (r.viaje = v_stat.viaje OR r.viaje = CONCAT('2026-', v_stat.viaje) OR r.viaje = CONCAT('2025-', v_stat.viaje))
                     WHERE 1=1
                 `;
                 const params = [];
@@ -1290,7 +1301,12 @@ module.exports = function (db, broadcast, logAudit) {
                     ov.ruta,
                     ov.origen,
                     ov.destino,
-                    ov.estado,
+                    CASE 
+                        WHEN ov.estado = 'FINALIZADO' THEN 'FINALIZADO'
+                        WHEN v_stat.tiene_fin > 0 THEN 'FINALIZADO'
+                        WHEN v_stat.total_vales > 0 THEN 'INICIADO'
+                        ELSE 'INICIADO'
+                    END AS estado,
                     COALESCE(r_agg.cant_ordenes, 0) AS cant_ordenes,
                     COALESCE(r_agg.peso_ida, 0) AS peso_ida,
                     COALESCE(r_agg.peso_retorno, 0) AS peso_retorno,
@@ -1298,6 +1314,14 @@ module.exports = function (db, broadcast, logAudit) {
                     r_agg.ordenes_list,
                     r_agg.rutas_list
                 FROM marsisa_ordenes_viaje ov
+                LEFT JOIN (
+                    SELECT 
+                        viaje,
+                        COUNT(*) AS total_vales,
+                        SUM(CASE WHEN tipo LIKE '%FIN%' THEN 1 ELSE 0 END) AS tiene_fin
+                    FROM marsisa_combustible_vales
+                    GROUP BY viaje
+                ) v_stat ON (ov.viaje = v_stat.viaje OR ov.viaje = CONCAT('2026-', v_stat.viaje) OR ov.viaje = CONCAT('2025-', v_stat.viaje))
                 LEFT JOIN (
                     SELECT 
                         viaje,

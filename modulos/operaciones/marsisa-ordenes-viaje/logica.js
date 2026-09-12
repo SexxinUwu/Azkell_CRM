@@ -344,7 +344,14 @@ window.ovRenderizarTabla = function() {
                             ${(pesoTotalVal / 1000).toFixed(2)} TN
                         </span>
                     </td>
-                    <td style="text-align: center;"><span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size:0.72rem; font-weight:700;">ACTIVO</span></td>
+                    <td style="text-align: center;">
+                        ${(() => {
+                            var est = String(v.estado || 'INICIADO').toUpperCase();
+                            if (est === 'FINALIZADO') return '<span class="ov-badge-status-finalizado">FINALIZADO</span>';
+                            if (est === 'INICIADO') return '<span class="ov-badge-status-iniciado">INICIADO</span>';
+                            return `<span class="badge bg-secondary-subtle text-secondary border px-2 py-1" style="font-size:0.72rem; font-weight:700;">${est}</span>`;
+                        })()}
+                    </td>
                 </tr>
             `;
         });
@@ -380,7 +387,14 @@ window.ovRenderizarTabla = function() {
                             ${pesoR > 0 ? (pesoR / 1000).toFixed(2) + ' TN' : '0.00 TN'}
                         </span>
                     </td>
-                    <td style="text-align: center;"><span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size:0.72rem; font-weight:700;">ACTIVO</span></td>
+                    <td style="text-align: center;">
+                        ${(() => {
+                            var est = String(r.estado || 'INICIADO').toUpperCase();
+                            if (est === 'FINALIZADO') return '<span class="ov-badge-status-finalizado">FINALIZADO</span>';
+                            if (est === 'INICIADO') return '<span class="ov-badge-status-iniciado">INICIADO</span>';
+                            return `<span class="badge bg-secondary-subtle text-secondary border px-2 py-1" style="font-size:0.72rem; font-weight:700;">${est}</span>`;
+                        })()}
+                    </td>
                 </tr>
             `;
         });
