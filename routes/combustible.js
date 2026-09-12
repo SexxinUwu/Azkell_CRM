@@ -1011,10 +1011,10 @@ module.exports = function (db, broadcast, logAudit) {
             let ovRows = [];
             let ovRutasRows = [];
             try {
-                const [r] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque FROM ${ovTable}`);
+                const [r] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque, estado FROM ${ovTable}`);
                 ovRows = r;
             } catch (e) {
-                const [r] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque FROM operaciones_ordenes_viaje`);
+                const [r] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque, estado FROM operaciones_ordenes_viaje`);
                 ovRows = r;
             }
 
@@ -1335,11 +1335,13 @@ module.exports = function (db, broadcast, logAudit) {
 
                     const ovInfo = ovMap.get(t.viaje) || ovMap.get(String(t.viaje).replace(/^\d{4}-0*/, ''));
                     const carretaFinal = (ovInfo && ovInfo.placa_remolque) ? ovInfo.placa_remolque : (t.carreta || '');
+                    const estadoViaje = (ovInfo && ovInfo.estado) ? ovInfo.estado : 'INICIADO';
 
                     trips.push({
                         viaje: t.viaje,
                         placa: t.placa,
                         carreta: carretaFinal,
+                        estado: estadoViaje,
                         motor: placaMotorMap.get(t.placa) || '',
                         marca: placaMarcaMap.get(t.placa) || '',
                         configuracion: placaConfigMap.get(t.placa) || '',
