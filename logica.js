@@ -722,28 +722,43 @@ window.verificarSesionGuardada = function() {
         }
     };
 
-    // 🧭 RESOLUCIÓN DE RUTA INICIAL (Soporte directo para Ctrl+Click y recargas con Ctrl+F5)
+    // 🧭 RESOLUCIÓN DE RUTA INICIAL (Soporte directo para Ctrl+Click, nuevas pestañas y recargas con Ctrl+F5)
+    var MAPA_RUTAS_VALIDAS = {
+        'dashboard': 1, 'operaciones/programacion': 1, 'operaciones/ordenes-viaje': 1,
+        'operaciones/ordenes-servicio': 1, 'operaciones/reporte-viajes': 1, 'operaciones/guias-remision': 1,
+        'operaciones/combustible-vales': 1, 'operaciones/combustible-estaciones': 1, 'operaciones/combustible-analisis': 1,
+        'operaciones/urea-analisis': 1, 'operaciones/combustible-matriz': 1, 'operaciones/marsisa-ordenes-viaje': 1,
+        'operaciones/marsisa-combustible-vales': 1, 'mantenimiento/inspecciones': 1, 'flota/placas': 1,
+        'mantenimiento/fleetrun': 1, 'mantenimiento/otros': 1, 'mantenimiento/checklist': 1,
+        'mantenimiento/status-rampa': 1, 'mantenimiento/reportes-ot': 1, 'mantenimiento/trabajos-ot': 1,
+        'mantenimiento/neumaticos-analisis': 1, 'mantenimiento/neumaticos-ultimas': 1, 'mantenimiento/incidencias-ruta': 1,
+        'flota/disponibilidad': 1, 'flota/ubicacion': 1, 'flota/documentos': 1,
+        'almacen/dashboard-financiero': 1, 'almacen/inventario': 1, 'almacen/entradas': 1,
+        'almacen/recepcion-compras': 1, 'almacen/salidas': 1, 'almacen/kardex': 1, 'almacen/proveedores': 1,
+        'directorio/conductores': 1, 'directorio/clientes': 1,
+        'rrhh/personal': 1, 'rrhh/asistencia': 1, 'rrhh/nomina': 1,
+        'tesoreria/caja': 1, 'tesoreria/cuentas': 1, 'tesoreria/bancos': 1, 'tesoreria/centros-costos': 1,
+        'sistema/configuracion': 1, 'sistema/usuarios': 1, 'sistema/auditoria': 1
+    };
+
     let rutaHash = null;
     try {
         let h = (window.location.hash || '').replace(/^#\/?/, '').trim();
         if (h) {
-            // Resolver si coincide directamente con una ruta conocida
-            if (MENU_IDS && MENU_IDS[h]) {
+            if (MAPA_RUTAS_VALIDAS[h]) {
                 rutaHash = h;
-            } else if (MENU_IDS) {
-                // Si viene con guiones (ej. operaciones-ordenes-viaje), buscar la ruta real correspondiente
-                for (let r in MENU_IDS) {
+            } else {
+                for (let r in MAPA_RUTAS_VALIDAS) {
                     if (r === h || r.replace(/\//g, '-') === h) {
                         rutaHash = r;
                         break;
                     }
                 }
             }
-            // Si no estuvo en MENU_IDS, probar con / en lugar de -
             if (!rutaHash) {
-                let rConSlash = h.replace(/-/g, '/');
-                if (window.esRutaValidaYPermitida(rConSlash)) {
-                    rutaHash = rConSlash;
+                let rSlash = h.replace(/-/g, '/');
+                if (MAPA_RUTAS_VALIDAS[rSlash] || window.esRutaValidaYPermitida(rSlash)) {
+                    rutaHash = rSlash;
                 } else if (window.esRutaValidaYPermitida(h)) {
                     rutaHash = h;
                 }
@@ -755,6 +770,7 @@ window.verificarSesionGuardada = function() {
     if (isSuperAdminDomain) {
         cargarModuloAislado('sistema/superadmin');
     } else if (rutaHash && window.esRutaValidaYPermitida(rutaHash)) {
+        // Si la URL vino con un hash específico (#operaciones/ordenes-servicio), SIEMPRE carga ese módulo
         cargarModuloAislado(rutaHash);
     } else if (rutaGuardada && rutaGuardada !== 'login' && window.esRutaValidaYPermitida(rutaGuardada)) {
         cargarModuloAislado(rutaGuardada);
