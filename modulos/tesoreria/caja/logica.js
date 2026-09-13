@@ -6,6 +6,104 @@ window._cajaData = window._cajaData || [];
 window._cajaDataFiltrada = window._cajaDataFiltrada || [];
 window._cajaOrdenSort = { col: 'fecha', asc: false };
 
+// ── CATÁLOGO MAESTRO DE MOTIVOS Y SUBMOTIVOS CON CENTRO DE COSTOS SUGERIDO ──
+window.CATALOGO_GASTOS = {
+    'Combustibles y Fluidos': {
+        ccSugerido: 'CC-300',
+        submotivos: [
+            'Diésel B5 / Gasolina de ruta',
+            'Úrea / AdBlue',
+            'Gasolina vehículos auxiliares/supervisión',
+            'Aceites y lubricantes de motor'
+        ]
+    },
+    'Gastos de Viaje y Ruta': {
+        ccSugerido: 'CC-300',
+        submotivos: [
+            'Peajes (físico / telepeaje)',
+            'Viáticos / Alimentación choferes',
+            'Pernocte / Hospedaje en ruta',
+            'Estibadores / Carga y descarga menor',
+            'Cochera / Parqueo de ruta',
+            'Lavado y engrase de unidad en viaje',
+            'Balanza y pesaje'
+        ]
+    },
+    'Mantenimiento y Auxilio': {
+        ccSugerido: 'CC-400',
+        submotivos: [
+            'Llantas y parchados de emergencia',
+            'Lavado y engrase de unidad en taller',
+            'Repuestos menores / Accesorios de viaje',
+            'Grúa o auxilio mecánico en ruta',
+            'Frenos, suspensión y aire',
+            'Servicios de tornería y soldadura',
+            'Mantenimiento preventivo programado'
+        ]
+    },
+    'Servicios de Terceros': {
+        ccSugerido: 'CC-100',
+        submotivos: [
+            'Asesoría contable / legal externa',
+            'Mantenimiento de software / GPS satelital',
+            'Notaría, trámites y legalizaciones',
+            'Seguridad, monitoreo y vigilancia',
+            'Consultoría y auditoría externa'
+        ]
+    },
+    'Gastos Administrativos / Oficina': {
+        ccSugerido: 'CC-100',
+        submotivos: [
+            'Útiles de escritorio y papelería',
+            'Artículos de limpieza y aseo',
+            'Servicios básicos oficina (Agua, Luz, Internet)',
+            'Envíos de courier / correspondencia',
+            'Alquiler de oficina o instalaciones',
+            'Telefonía y comunicaciones móviles'
+        ]
+    },
+    'Comercial y Representación': {
+        ccSugerido: 'CC-200',
+        submotivos: [
+            'Movilidad local ejecutivos de cuenta',
+            'Almuerzos de trabajo / Clientes',
+            'Merchandising y publicidad física',
+            'Comisiones por venta o corretaje'
+        ]
+    },
+    'Personal y Planilla': {
+        ccSugerido: 'CC-100',
+        submotivos: [
+            'Sueldos y jornales',
+            'Adelantos de sueldo',
+            'Gratificaciones / CTS',
+            'Exámenes médicos ocupacionales',
+            'Capacitación de personal y choferes',
+            'EPPs e indumentaria de trabajo'
+        ]
+    },
+    'Financieros y Bancarios': {
+        ccSugerido: 'CC-100',
+        submotivos: [
+            'Comisiones bancarias y mantenimiento',
+            'ITF (Impuesto a Transacciones Financieras)',
+            'Intereses de préstamos / leasing',
+            'Portes y transferencias interbancarias'
+        ]
+    },
+    'Impuestos y Tributos': {
+        ccSugerido: 'CC-100',
+        submotivos: [
+            'Pago IGV / Renta mensual SUNAT',
+            'Detracciones SUNAT',
+            'Arbitrios municipales y predial',
+            'Tasas administrativas / MTC / SUTRAN'
+        ]
+    }
+};
+
+window._cajaCentrosCostosList = [];
+
 window.init_tesoreria_caja = function() {
     console.log('Inicializando módulo Caja (Tesorería)...');
     
@@ -18,6 +116,10 @@ window.init_tesoreria_caja = function() {
     var fHasta = document.getElementById('caja-filtro-hasta');
     if (fDesde && !fDesde.value) fDesde.value = formatYMD(primerDia);
     if (fHasta && !fHasta.value) fHasta.value = formatYMD(hoy);
+
+    // Inicializar selectores dinámicos
+    window.cajaCargarCentrosCostosSelect();
+    window.cajaPoblarMotivosSelect();
 
     // Inicializar selector de columnas en el toolbar
     window.cajaInicializarColumnasSelector();
@@ -167,9 +269,11 @@ window.cajaRenderizarTabla = function() {
             '<td>' + esc(r.orden_viaje || '—') + '</td>' +
             '<td>' + esc(r.conductor || '—') + '</td>' +
             '<td>' + esc(r.ruta_viaje || '—') + '</td>' +
+            '<td class="font-monospace fw-bold">' + esc(r.placa || '—') + '</td>' +
             '<td>' + esc(r.autoriza || '—') + '</td>' +
             '<td>' + esc(r.motivo || '—') + '</td>' +
             '<td>' + esc(r.sub_motivo || '—') + '</td>' +
+            '<td><span class="badge bg-indigo-subtle text-indigo border fw-semibold" style="font-size:0.7rem; background:#eef2ff; color:#4f46e5;">' + esc(r.centro_costo || '—') + '</span></td>' +
             '<td>' + esc(r.tipo_persona || '—') + '</td>' +
             '<td class="fw-semibold">' + esc(r.persona || '—') + '</td>' +
             '<td><span class="badge bg-light text-dark border">' + esc(r.moneda || 'SOLES') + '</span></td>' +
@@ -247,6 +351,13 @@ window.cajaAbrirModalNuevo = function() {
     // Cargar cuentas de bancos de empresa
     window.cajaCargarBancosSelect();
 
+    // Poblar catálogo de Motivos y Submotivos
+    window.cajaPoblarMotivosSelect('');
+
+    // Cargar selector de Centros de Costos
+    window.cajaCargarCentrosCostosSelect('');
+    window.cajaAlCambiarCentroCosto('');
+
     // Obtener siguiente correlativo automático
     window.cajaActualizarCorrelativo();
 
@@ -297,6 +408,15 @@ window.cajaAbrirModalEditar = function(id) {
     if (document.getElementById('caja-input-observacion')) document.getElementById('caja-input-observacion').value = r.observacion || '';
     if (document.getElementById('caja-check-no-aplica-liq')) document.getElementById('caja-check-no-aplica-liq').checked = !!r.no_aplica_liquidacion;
 
+    // Poblar Motivos y Submotivos guardados
+    window.cajaPoblarMotivosSelect(r.motivo, r.sub_motivo);
+
+    // Cargar Centros de Costos con el valor guardado
+    window.cajaCargarCentrosCostosSelect(r.centro_costo);
+    setTimeout(function() {
+        window.cajaAlCambiarCentroCosto(r.centro_costo);
+    }, 250);
+
     window.cajaAlCambiarMoneda(r.moneda || 'SOLES');
     if (document.getElementById('caja-input-tipo-cambio') && r.tipo_cambio) {
         document.getElementById('caja-input-tipo-cambio').value = r.tipo_cambio;
@@ -322,6 +442,124 @@ window.cajaAlCambiarMoneda = function(moneda) {
     } else {
         wrapTc.style.display = 'none';
         if (tcInput) tcInput.value = '1.000';
+    }
+};
+
+// ── CARGA Y ENLACE INTELIGENTE DE MOTIVOS Y CENTROS DE COSTOS ───
+window.cajaCargarCentrosCostosSelect = async function(seleccionado) {
+    var sel = document.getElementById('caja-input-centro-costo');
+    if (!sel) return;
+    try {
+        var resp = await fetch('/api/tesoreria/centros-costos');
+        var res = await resp.json();
+        sel.innerHTML = '<option value="">-- Seleccione Centro de Costos --</option>';
+        if (res.ok && Array.isArray(res.data)) {
+            window._cajaCentrosCostosList = res.data;
+            res.data.forEach(function(c) {
+                if (c.estado === 'INACTIVO') return;
+                var label = c.codigo + ' - ' + c.nombre + (c.cuenta_contable ? (' (' + c.cuenta_contable + ')') : '');
+                var val = c.codigo + ': ' + c.nombre;
+                var opt = new Option(label, val);
+                opt.dataset.codigo = c.codigo;
+                opt.dataset.requierePlaca = c.requiere_placa;
+                if (seleccionado && (val === seleccionado || c.codigo === seleccionado || c.nombre === seleccionado)) {
+                    opt.selected = true;
+                }
+                sel.add(opt);
+            });
+        }
+    } catch(e) {
+        console.warn('Error cargando centros de costos:', e);
+    }
+};
+
+window.cajaPoblarMotivosSelect = function(motivoSel, submotivoSel) {
+    var selMot = document.getElementById('caja-input-motivo');
+    var selSub = document.getElementById('caja-input-submotivo');
+    if (!selMot) return;
+
+    selMot.innerHTML = '<option value="">-- Seleccione Motivo --</option>';
+    Object.keys(window.CATALOGO_GASTOS).forEach(function(cat) {
+        var opt = new Option(cat, cat);
+        if (motivoSel && cat === motivoSel) opt.selected = true;
+        selMot.add(opt);
+    });
+
+    if (motivoSel) {
+        window.cajaPoblarSubmotivosSelect(motivoSel, submotivoSel);
+    } else if (selSub) {
+        selSub.innerHTML = '<option value="">-- Primero elija Motivo --</option>';
+    }
+};
+
+window.cajaPoblarSubmotivosSelect = function(motivo, submotivoSel) {
+    var selSub = document.getElementById('caja-input-submotivo');
+    if (!selSub) return;
+
+    var catObj = window.CATALOGO_GASTOS[motivo];
+    if (!catObj || !catObj.submotivos) {
+        selSub.innerHTML = '<option value="">-- Seleccione Sub Motivo --</option>';
+        return;
+    }
+
+    selSub.innerHTML = '<option value="">-- Seleccione Sub Motivo --</option>';
+    catObj.submotivos.forEach(function(sub) {
+        var opt = new Option(sub, sub);
+        if (submotivoSel && sub === submotivoSel) opt.selected = true;
+        selSub.add(opt);
+    });
+};
+
+window.cajaAlCambiarMotivo = function(motivo) {
+    window.cajaPoblarSubmotivosSelect(motivo);
+
+    // Sugerir automáticamente el Centro de Costos correspondiente si está vacío o por defecto
+    var catObj = window.CATALOGO_GASTOS[motivo];
+    if (catObj && catObj.ccSugerido) {
+        window.cajaSugerirCentroCosto(catObj.ccSugerido);
+    }
+};
+
+window.cajaAlCambiarSubmotivo = function(submotivo) {
+    // Si es gasto operativo directo o combustible, reforzar CC-300
+    var mot = (document.getElementById('caja-input-motivo') || {}).value;
+    if (mot === 'Combustibles y Fluidos' || mot === 'Gastos de Viaje y Ruta') {
+        window.cajaSugerirCentroCosto('CC-300');
+    }
+};
+
+window.cajaSugerirCentroCosto = function(codigoCC) {
+    var selCC = document.getElementById('caja-input-centro-costo');
+    if (!selCC) return;
+    for (var i = 0; i < selCC.options.length; i++) {
+        var opt = selCC.options[i];
+        if (opt.dataset && opt.dataset.codigo === codigoCC) {
+            selCC.selectedIndex = i;
+            window.cajaAlCambiarCentroCosto(opt.value);
+            break;
+        }
+    }
+};
+
+window.cajaAlCambiarCentroCosto = function(valorCC) {
+    var selCC = document.getElementById('caja-input-centro-costo');
+    var reqPlacaEl = document.getElementById('caja-req-placa');
+    var inputPlaca = document.getElementById('caja-input-placa');
+
+    var reqPlaca = false;
+    if (selCC && selCC.selectedOptions && selCC.selectedOptions[0]) {
+        reqPlaca = (selCC.selectedOptions[0].dataset.requierePlaca == 1);
+    }
+
+    if (reqPlacaEl) reqPlacaEl.style.display = reqPlaca ? 'inline' : 'none';
+    if (inputPlaca) {
+        if (reqPlaca) {
+            inputPlaca.classList.add('border-warning');
+            inputPlaca.placeholder = 'Requerido para este CC (ej: B00835)';
+        } else {
+            inputPlaca.classList.remove('border-warning');
+            inputPlaca.placeholder = 'Opcional (ej: B00835)';
+        }
     }
 };
 
@@ -402,6 +640,16 @@ window.cajaAlSeleccionarOrdenViaje = function(viaje) {
         }
         if (perEl && encontrado.conductor) {
             perEl.value = encontrado.conductor;
+        }
+
+        // Sugerir automáticamente Centro de Costos de Operaciones de Ruta (CC-300)
+        window.cajaSugerirCentroCosto('CC-300');
+
+        // Si el motivo está vacío, preseleccionar Gastos de Viaje y Ruta
+        var motEl = document.getElementById('caja-input-motivo');
+        if (motEl && !motEl.value) {
+            motEl.value = 'Gastos de Viaje y Ruta';
+            window.cajaPoblarSubmotivosSelect('Gastos de Viaje y Ruta');
         }
     }
 };
@@ -508,14 +756,29 @@ window.cajaAlSeleccionarPersona = function(nombrePersona) {
     }
 };
 
-// ── 7. Motivos y Sub Motivos (Vacíos por ahora - Centros de Costos) ──
-window.cajaAlCambiarMotivo = function(motivo) {
-    // Reservado para centro de costos
-};
-
 // ── 8. Guardar Formulario (Crear o Editar) ──────────────────────
 window.cajaGuardarFormulario = async function(e) {
     if (e && e.preventDefault) e.preventDefault();
+
+    var centroCostoVal = (document.getElementById('caja-input-centro-costo') || {}).value || '';
+    var placaVal = ((document.getElementById('caja-input-placa') || {}).value || '').trim();
+
+    // Validar si el centro de costos seleccionado exige placa
+    var selCC = document.getElementById('caja-input-centro-costo');
+    var reqPlaca = false;
+    if (selCC && selCC.selectedOptions && selCC.selectedOptions[0]) {
+        reqPlaca = (selCC.selectedOptions[0].dataset.requierePlaca == 1);
+    }
+    if (reqPlaca && !placaVal) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({ icon: 'warning', title: 'Placa Requerida', text: 'El Centro de Costos seleccionado requiere especificar la Placa de la unidad.' });
+        } else {
+            alert('El Centro de Costos seleccionado requiere especificar la Placa de la unidad.');
+        }
+        var pInput = document.getElementById('caja-input-placa');
+        if (pInput) pInput.focus();
+        return;
+    }
 
     var btnSubmit = document.getElementById('caja-btn-submit');
     if (btnSubmit) {
@@ -534,10 +797,11 @@ window.cajaGuardarFormulario = async function(e) {
     formData.append('orden_viaje', (document.getElementById('caja-input-orden-viaje') || {}).value || '');
     formData.append('conductor', (document.getElementById('caja-input-conductor') || {}).value || '');
     formData.append('ruta_viaje', (document.getElementById('caja-input-ruta') || {}).value || '');
-    formData.append('placa', (document.getElementById('caja-input-placa') || {}).value || '');
+    formData.append('placa', placaVal);
     formData.append('autoriza', (document.getElementById('caja-input-autoriza') || {}).value || '');
     formData.append('motivo', (document.getElementById('caja-input-motivo') || {}).value || '');
     formData.append('sub_motivo', (document.getElementById('caja-input-submotivo') || {}).value || '');
+    formData.append('centro_costo', centroCostoVal);
     formData.append('modalidad_pago', (document.getElementById('caja-input-modalidad') || {}).value || '');
     formData.append('moneda', (document.getElementById('caja-input-moneda') || {}).value || 'SOLES');
     formData.append('tipo_cambio', (document.getElementById('caja-input-tipo-cambio') || {}).value || '1.000');
@@ -819,6 +1083,8 @@ window.cajaExportarExcel = function() {
             'CONDUCTOR': r.conductor,
             'RUTA': r.ruta_viaje,
             'AUTORIZA': r.autoriza,
+            'PLACA': r.placa || '',
+            'CENTRO DE COSTOS': r.centro_costo || '',
             'MOTIVO': r.motivo,
             'SUB MOTIVO': r.sub_motivo,
             'TIPO PERSONA': r.tipo_persona,

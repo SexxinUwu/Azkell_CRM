@@ -965,6 +965,7 @@ module.exports = function (db, broadcast, logAudit) {
                 placa VARCHAR(50) NULL,
                 autoriza VARCHAR(150) NOT NULL,
                 motivo VARCHAR(150) NOT NULL,
+                centro_costo VARCHAR(150) NULL,
                 sub_motivo VARCHAR(150) NULL,
                 modalidad_pago VARCHAR(100) NOT NULL,
                 moneda VARCHAR(20) NOT NULL DEFAULT 'SOLES',
@@ -1083,6 +1084,7 @@ module.exports = function (db, broadcast, logAudit) {
                     placa,
                     autoriza,
                     motivo,
+                    centro_costo,
                     sub_motivo,
                     modalidad_pago,
                     moneda,
@@ -1132,13 +1134,14 @@ module.exports = function (db, broadcast, logAudit) {
                     orden_viaje LIKE ? OR
                     placa LIKE ? OR
                     motivo LIKE ? OR
+                    centro_costo LIKE ? OR
                     sub_motivo LIKE ? OR
                     descripcion LIKE ? OR
                     persona LIKE ? OR
                     autoriza LIKE ? OR
                     numero_factura LIKE ?
                 )`;
-                params.push(term, term, term, term, term, term, term, term, term);
+                params.push(term, term, term, term, term, term, term, term, term, term);
             }
 
             sql += ` ORDER BY fecha DESC, id DESC LIMIT 500`;
@@ -1148,14 +1151,25 @@ module.exports = function (db, broadcast, logAudit) {
             // Generar presigned URLs para voucher y sustento
             for (const r of rows) {
                 if (r.voucher_url && typeof getPresignedUrl === 'function') {
-                    r.voucher_signed = await getPresignedUrl(r.voucher_url).catch(() => r.voucher_url);
+                    try {
+                        const k = s3KeyFromUrl(r.voucher_url);
+                        if (k) r.voucher_view_url = await getPresignedUrl(k, 7200);
+                    } catch(e) { r.voucher_view_url = r.voucher_url; }
+                } else if (r.voucher_url) {
+                    r.voucher_view_url = r.voucher_url;
                 }
+
                 if (r.sustento_url && typeof getPresignedUrl === 'function') {
-                    r.sustento_signed = await getPresignedUrl(r.sustento_url).catch(() => r.sustento_url);
+                    try {
+                        const k = s3KeyFromUrl(r.sustento_url);
+                        if (k) r.sustento_view_url = await getPresignedUrl(k, 7200);
+                    } catch(e) { r.sustento_view_url = r.sustento_url; }
+                } else if (r.sustento_url) {
+                    r.sustento_view_url = r.sustento_url;
                 }
             }
 
-            res.json({ ok: true, data: rows });
+            res.json({ ok: true, data: rows || [] });
         } catch (err) {
             console.error('Error al listar movimientos de caja:', err);
             res.status(500).json({ error: err.message });
@@ -1167,7 +1181,7 @@ module.exports = function (db, broadcast, logAudit) {
         try {
             await ensureTableCaja(req);
             const tdb = getDb(req);
-            const b = req.body;
+            const b = req.body || {};
 
             let voucherUrl = null;
             if (req.files && req.files.voucher && req.files.voucher[0]) {
@@ -1197,13 +1211,13 @@ module.exports = function (db, broadcast, logAudit) {
                     fecha, hora, fecha_valuta, hora_valuta,
                     numero_constancia_deposito, numero_factura, serie, numero,
                     orden_viaje, conductor, ruta_viaje, placa,
-                    autoriza, motivo, sub_motivo, modalidad_pago, moneda,
+                    autoriza, motivo, centro_costo, sub_motivo, modalidad_pago, moneda,
                     tipo_persona, persona, tipo_movimiento, subtotal,
                     retencion_detraccion, importe_total, tipo_cambio, descripcion,
                     tipo_comprobante, cuenta_bancaria_persona, cuenta_bancaria_empresa,
                     voucher_url, sustento_url, observacion, no_aplica_liquidacion,
                     estado, usuario_creacion
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REGISTRADO', ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REGISTRADO', ?)
             `;
 
             const [result] = await tdb.query(insertSql, [
@@ -1221,6 +1235,7 @@ module.exports = function (db, broadcast, logAudit) {
                 (b.placa || '').toUpperCase().trim(),
                 (b.autoriza || '').trim(),
                 (b.motivo || '').trim(),
+                (b.centro_costo || '').trim(),
                 (b.sub_motivo || '').trim(),
                 (b.modalidad_pago || '').trim(),
                 (b.moneda || 'SOLES').trim(),
@@ -1259,7 +1274,7 @@ module.exports = function (db, broadcast, logAudit) {
             await ensureTableCaja(req);
             const tdb = getDb(req);
             const { id } = req.params;
-            const b = req.body;
+            const b = req.body || {};
 
             const [rows] = await tdb.query('SELECT estado, voucher_url, sustento_url FROM tesoreria_caja WHERE id = ?', [id]);
             if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
@@ -1299,6 +1314,7 @@ module.exports = function (db, broadcast, logAudit) {
                     placa = ?,
                     autoriza = ?,
                     motivo = ?,
+                    centro_costo = ?,
                     sub_motivo = ?,
                     modalidad_pago = ?,
                     moneda = ?,
@@ -1326,6 +1342,7 @@ module.exports = function (db, broadcast, logAudit) {
                 (b.placa || '').toUpperCase().trim(),
                 (b.autoriza || '').trim(),
                 (b.motivo || '').trim(),
+                (b.centro_costo || '').trim(),
                 (b.sub_motivo || '').trim(),
                 (b.modalidad_pago || '').trim(),
                 (b.moneda || 'SOLES').trim(),
@@ -1486,6 +1503,129 @@ module.exports = function (db, broadcast, logAudit) {
                 if (rows[0].sustento_url) deleteFromS3(s3KeyFromUrl(rows[0].sustento_url)).catch(() => {});
             }
             res.json({ ok: true, message: 'Registro eliminado' });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ── MÓDULO CENTROS DE COSTOS (TESORERÍA) ──────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+    async function ensureTableCentrosCostos(req) {
+        const tdb = getDb(req);
+        if (!tdb) return;
+        await tdb.query(`
+            CREATE TABLE IF NOT EXISTS tesoreria_centros_costos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                codigo VARCHAR(50) NOT NULL UNIQUE,
+                nombre VARCHAR(150) NOT NULL,
+                nivel VARCHAR(50) NOT NULL DEFAULT 'Principal',
+                cuenta_contable VARCHAR(100) NULL,
+                requiere_placa TINYINT(1) NOT NULL DEFAULT 0,
+                descripcion TEXT NULL,
+                estado VARCHAR(20) NOT NULL DEFAULT 'ACTIVO',
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `).catch(() => {});
+    }
+
+    // Listar Centros de Costos
+    router.get('/centros-costos', async (req, res) => {
+        try {
+            await ensureTableCentrosCostos(req);
+            const tdb = getDb(req);
+            const [rows] = await tdb.query('SELECT * FROM tesoreria_centros_costos ORDER BY codigo ASC');
+            res.json({ ok: true, data: rows || [] });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Crear Centro de Costos
+    router.post('/centros-costos', async (req, res) => {
+        try {
+            await ensureTableCentrosCostos(req);
+            const tdb = getDb(req);
+            const b = req.body || {};
+            const codigo = (b.codigo || '').trim().toUpperCase();
+            const nombre = (b.nombre || '').trim();
+
+            if (!codigo || !nombre) {
+                return res.status(400).json({ error: 'El código y el nombre son obligatorios.' });
+            }
+
+            const [result] = await tdb.query(`
+                INSERT INTO tesoreria_centros_costos (codigo, nombre, nivel, cuenta_contable, requiere_placa, descripcion, estado)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `, [
+                codigo,
+                nombre,
+                (b.nivel || 'Principal').trim(),
+                (b.cuenta_contable || '').trim(),
+                b.requiere_placa ? 1 : 0,
+                (b.descripcion || '').trim(),
+                (b.estado || 'ACTIVO').trim()
+            ]);
+
+            res.json({ ok: true, id: result.insertId, message: 'Centro de costos creado exitosamente.' });
+        } catch (err) {
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(400).json({ error: 'Ya existe un centro de costos con ese código.' });
+            }
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Actualizar Centro de Costos
+    router.put('/centros-costos/:id', async (req, res) => {
+        try {
+            await ensureTableCentrosCostos(req);
+            const tdb = getDb(req);
+            const { id } = req.params;
+            const b = req.body || {};
+            const codigo = (b.codigo || '').trim().toUpperCase();
+            const nombre = (b.nombre || '').trim();
+
+            if (!codigo || !nombre) {
+                return res.status(400).json({ error: 'El código y el nombre son obligatorios.' });
+            }
+
+            await tdb.query(`
+                UPDATE tesoreria_centros_costos SET
+                    codigo = ?,
+                    nombre = ?,
+                    nivel = ?,
+                    cuenta_contable = ?,
+                    requiere_placa = ?,
+                    descripcion = ?,
+                    estado = ?
+                WHERE id = ?
+            `, [
+                codigo,
+                nombre,
+                (b.nivel || 'Principal').trim(),
+                (b.cuenta_contable || '').trim(),
+                b.requiere_placa ? 1 : 0,
+                (b.descripcion || '').trim(),
+                (b.estado || 'ACTIVO').trim(),
+                id
+            ]);
+
+            res.json({ ok: true, message: 'Centro de costos actualizado correctamente.' });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Eliminar Centro de Costos
+    router.delete('/centros-costos/:id', async (req, res) => {
+        try {
+            await ensureTableCentrosCostos(req);
+            const tdb = getDb(req);
+            const { id } = req.params;
+            await tdb.query('DELETE FROM tesoreria_centros_costos WHERE id = ?', [id]);
+            res.json({ ok: true, message: 'Centro de costos eliminado.' });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
