@@ -193,7 +193,7 @@ window._cuentasRenderTabla = function(data) {
                     ) +
                 '</li>' +
                 '<li>' +
-                    '<a class="dropdown-item text-secondary" href="javascript:void(0)" onclick="window.abrirModalHistorialFacturasNC(' + item.id + ')"><i class="bi bi-clock-history me-1"></i> Ver Historial NC</a>' +
+                    '<a class="dropdown-item text-dark fw-semibold" href="javascript:void(0)" onclick="window.abrirModalHistorialFacturasNC(' + item.id + ')"><i class="bi bi-clock-history me-1 text-primary"></i> Ver Historial NC</a>' +
                 '</li>' +
                 '<li><hr class="dropdown-divider my-1"></li>' +
                 '<li>' +
@@ -1131,6 +1131,21 @@ window.abrirModalCambiarFacturaNC = function(id) {
     var txtTot = document.getElementById('nc-txt-total-actual');
     if (txtTot) txtTot.textContent = 'S/ ' + _fmtMoney(item.total);
 
+    var wrapDocAct = document.getElementById('nc-wrap-doc-actual');
+    var linkDocAct = document.getElementById('nc-link-doc-actual');
+    var wrapSubirFacAnt = document.getElementById('nc-wrap-subir-fac-ant');
+    var inputFacAnt = document.getElementById('nc-input-archivo-factura-anterior');
+    if (inputFacAnt) inputFacAnt.value = '';
+
+    if (item.factura_documento_view_url && wrapDocAct && linkDocAct) {
+        linkDocAct.href = item.factura_documento_view_url;
+        wrapDocAct.style.display = 'inline-block';
+        if (wrapSubirFacAnt) wrapSubirFacAnt.style.display = 'none';
+    } else {
+        if (wrapDocAct) wrapDocAct.style.display = 'none';
+        if (wrapSubirFacAnt) wrapSubirFacAnt.style.display = 'block';
+    }
+
     var inputFecha = document.getElementById('nc-input-nueva-fecha');
     if (inputFecha) inputFecha.value = new Date().toISOString().split('T')[0];
 
@@ -1152,6 +1167,7 @@ window.guardarCambioFacturaNC = function(e) {
 
     var fileNC = document.getElementById('nc-input-archivo');
     var fileNuevaFac = document.getElementById('nc-input-archivo-nueva-factura');
+    var fileFacAnt = document.getElementById('nc-input-archivo-factura-anterior');
 
     if (!fileNC || !fileNC.files || !fileNC.files[0]) {
         alert('Debe adjuntar el archivo PDF o Imagen de la Nota de Crédito.');
@@ -1171,6 +1187,9 @@ window.guardarCambioFacturaNC = function(e) {
     formData.append('nueva_fecha_factura', nuevaFecha);
     formData.append('archivo_nc', fileNC.files[0]);
     formData.append('archivo_nueva_factura', fileNuevaFac.files[0]);
+    if (fileFacAnt && fileFacAnt.files && fileFacAnt.files[0]) {
+        formData.append('archivo_factura_anterior', fileFacAnt.files[0]);
+    }
 
     var btnSubmit = document.getElementById('nc-btn-submit');
     if (btnSubmit) {

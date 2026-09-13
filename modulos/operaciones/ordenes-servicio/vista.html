@@ -126,17 +126,24 @@
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    margin-bottom: 1rem;
 }
 
 .os-scroll-table {
     width: 100%;
     overflow-x: auto;
-    max-height: calc(100vh - 290px);
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+    min-height: 480px;
 }
 
 .os-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     font-size: 0.74rem;
     white-space: nowrap;
 }
@@ -151,6 +158,28 @@
     padding: 0.65rem 0.85rem;
     border-bottom: 2px solid #cbd5e1;
     vertical-align: middle;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Columna de acción pegajosa a la izquierda con z-index dinámico */
+.col-sticky-os-accion {
+    position: sticky;
+    left: 0;
+    background: #ffffff;
+    z-index: 11;
+    box-shadow: 2px 0 6px rgba(0,0,0,0.03);
+}
+.os-table thead th.col-sticky-os-accion {
+    z-index: 25;
+    background: #ffffff;
+}
+.os-table tbody tr:hover .col-sticky-os-accion {
+    background-color: #fffaf5;
+}
+.os-table td.col-sticky-os-accion:has(.show) {
+    z-index: 1050 !important;
 }
 
 .os-table tbody td {
@@ -589,7 +618,7 @@
             <table class="os-table" id="tablaOrdenesServicio">
                 <thead>
                     <tr>
-                        <th>ACCIÓN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th class="col-sticky-os-accion">ACCIÓN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>N° ORDEN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>FECHA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>VIAJE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
