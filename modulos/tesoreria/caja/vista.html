@@ -417,9 +417,11 @@
                         <th data-col="viaje" onclick="window.cajaOrdenarTabla('orden_viaje')">VIAJE <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="conductor" onclick="window.cajaOrdenarTabla('conductor')">CONDUCTOR <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="ruta" onclick="window.cajaOrdenarTabla('ruta_viaje')">RUTA <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="placa" onclick="window.cajaOrdenarTabla('placa')">PLACA <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="autoriza" onclick="window.cajaOrdenarTabla('autoriza')">AUTORIZA <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="motivo" onclick="window.cajaOrdenarTabla('motivo')">MOTIVO <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="sub_motivo" onclick="window.cajaOrdenarTabla('sub_motivo')">SUB MOTIVO <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                        <th data-col="centro_costo" onclick="window.cajaOrdenarTabla('centro_costo')">CENTRO DE COSTOS <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="tipo_persona" onclick="window.cajaOrdenarTabla('tipo_persona')">TIPO PERSONA <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="persona" onclick="window.cajaOrdenarTabla('persona')">PERSONA <i class="bi bi-arrow-down-up sort-icon"></i></th>
                         <th data-col="moneda" onclick="window.cajaOrdenarTabla('moneda')">MONEDA <i class="bi bi-arrow-down-up sort-icon"></i></th>
@@ -514,21 +516,24 @@
                         </div>
 
                         <div class="row g-2">
-                            <div class="col-12 col-md-5">
-                                <label class="form-label">Orden de Viaje <span class="text-muted fw-normal" style="font-size:0.7rem;">(Para gastos y descuentos)</span></label>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label">Orden de Viaje <span class="text-muted fw-normal" style="font-size:0.7rem;">(Para gastos de ruta)</span></label>
                                 <div class="position-relative">
-                                    <input type="text" id="caja-input-orden-viaje" class="form-control" placeholder="Buscar por Serie-Número o día/mes/año..." list="caja-dl-ordenes-viaje" onchange="window.cajaAlSeleccionarOrdenViaje(this.value)">
+                                    <input type="text" id="caja-input-orden-viaje" class="form-control" placeholder="Buscar por Orden o Viaje..." list="caja-dl-ordenes-viaje" onchange="window.cajaAlSeleccionarOrdenViaje(this.value)">
                                     <datalist id="caja-dl-ordenes-viaje"></datalist>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Conductor Asignado</label>
-                                <input type="text" id="caja-input-conductor" class="form-control" readonly tabindex="-1" placeholder="Conductor del viaje...">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Placa / Unidad <span id="caja-req-placa" class="req" style="display:none;">(*)</span></label>
+                                <input type="text" id="caja-input-placa" class="form-control text-uppercase font-monospace fw-bold" placeholder="EJ: B00835">
                             </div>
-                            <div class="col-12 col-md-3">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Conductor Asignado</label>
+                                <input type="text" id="caja-input-conductor" class="form-control" placeholder="Conductor del viaje...">
+                            </div>
+                            <div class="col-12 col-md-2">
                                 <label class="form-label">Ruta de Viaje</label>
-                                <input type="text" id="caja-input-ruta" class="form-control" readonly tabindex="-1" placeholder="Ruta del viaje...">
-                                <input type="hidden" id="caja-input-placa" value="">
+                                <input type="text" id="caja-input-ruta" class="form-control" placeholder="Ruta...">
                             </div>
                         </div>
                     </div>
@@ -541,7 +546,7 @@
                         </div>
 
                         <div class="row g-2 mb-2">
-                            <div class="col-12 col-md-6">
+                            <div class="col-12 col-md-3">
                                 <label class="form-label">Autoriza <span class="req">(*)</span></label>
                                 <select id="caja-input-autoriza" class="form-select" required>
                                     <option value="">Seleccione...</option>
@@ -551,15 +556,21 @@
                                 </select>
                             </div>
                             <div class="col-12 col-md-3">
-                                <label class="form-label">Motivo <span class="req">(*)</span></label>
-                                <select id="caja-input-motivo" class="form-select">
+                                <label class="form-label">Motivo (Naturaleza) <span class="req">(*)</span></label>
+                                <select id="caja-input-motivo" class="form-select" onchange="window.cajaAlCambiarMotivo(this.value)">
                                     <option value="">Seleccione...</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md-3">
-                                <label class="form-label">Sub Motivo <span class="req">(*)</span></label>
-                                <select id="caja-input-submotivo" class="form-select">
+                                <label class="form-label">Sub Motivo (Detalle) <span class="req">(*)</span></label>
+                                <select id="caja-input-submotivo" class="form-select" onchange="window.cajaAlCambiarSubmotivo(this.value)">
                                     <option value="">Seleccione...</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label text-indigo fw-bold">Centro de Costos (Destino) <span class="req">(*)</span></label>
+                                <select id="caja-input-centro-costo" class="form-select fw-semibold" onchange="window.cajaAlCambiarCentroCosto(this.value)">
+                                    <option value="">Cargando centros...</option>
                                 </select>
                             </div>
                         </div>

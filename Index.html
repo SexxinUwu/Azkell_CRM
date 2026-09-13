@@ -369,7 +369,7 @@
                 <div id="wrap-tesoreria">
                     <button class="nav-section-toggle" data-section="tesoreria" aria-expanded="false" onclick="window.toggleNavSection('tesoreria')">
                         <span class="link-text">Tesorería</span>
-                        <span class="section-badge">3</span>
+                        <span class="section-badge">4</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-tesoreria">
@@ -384,6 +384,10 @@
                         <a id="nav-tesoreria-bancos" class="nav-item" onclick="cargarModuloAislado('tesoreria/bancos')">
                             <i class="bi bi-bank nav-icon"></i>
                             <span class="link-text">Bancos</span>
+                        </a>
+                        <a id="nav-tesoreria-centros-costos" class="nav-item" onclick="cargarModuloAislado('tesoreria/centros-costos')">
+                            <i class="bi bi-diagram-3 nav-icon text-indigo"></i>
+                            <span class="link-text">Centros de Costos</span>
                         </a>
                     </div>
                 </div>
@@ -1382,6 +1386,14 @@
                     <div class="bnav-row-content">
                         <p class="bnav-row-title">Bancos</p>
                         <p class="bnav-row-desc">Cuentas bancarias de la empresa</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
+                <div id="mbnav-tesoreria-centros-costos" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetTesoreria')).hide(); cargarModuloAislado('tesoreria/centros-costos'); setBottomNavActive('bnav-tesoreria');">
+                    <div class="bnav-row-icon" style="color: #6366f1;"><i class="bi bi-diagram-3"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Centros de Costos</p>
+                        <p class="bnav-row-desc">Catálogo y distribución analítica NIIF / SUNAT</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
