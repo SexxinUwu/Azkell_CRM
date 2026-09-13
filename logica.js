@@ -6444,20 +6444,19 @@ window.exportarStatusExcel = function() {
 
 // ─── SOPORTE DE PESTAÑAS NUEVAS (Ctrl+Click, Cmd+Click, Clic Central y Clic Derecho) ─────
 (function initNavLinksParaPestanas() {
-    function configurarEnlacesNav() {
-        // Mapeo especial para botones que usan helpers personalizados
-        const rutasEspeciales = {
-            'nav-op-guias-remitente': 'operaciones/guias-remision',
-            'nav-op-guias-transportista': 'operaciones/guias-remision',
-            'nav-cfg-empresa': 'sistema/configuracion',
-            'nav-cfg-apariencia': 'sistema/configuracion',
-            'nav-cfg-accesibilidad': 'sistema/configuracion',
-            'nav-cfg-idioma': 'sistema/configuracion'
-        };
+    const rutasEspeciales = {
+        'nav-op-guias-remitente': 'operaciones/guias-remision',
+        'nav-op-guias-transportista': 'operaciones/guias-remision',
+        'nav-cfg-empresa': 'sistema/configuracion',
+        'nav-cfg-apariencia': 'sistema/configuracion',
+        'nav-cfg-accesibilidad': 'sistema/configuracion',
+        'nav-cfg-idioma': 'sistema/configuracion'
+    };
 
-        // Buscar todos los enlaces de navegación del sidebar y menús
-        const navLinks = document.querySelectorAll('.sidebar-nav a.nav-item, #sidebarMenu a.nav-item, .bottom-nav a.bnav-item');
+    function configurarEnlacesNav() {
+        const navLinks = document.querySelectorAll('.sidebar-nav a.nav-item, #sidebarMenu a.nav-item, .bottom-nav a.bnav-item, [id^="nav-"]');
         navLinks.forEach(a => {
+            if (a.tagName !== 'A' && a.tagName !== 'BUTTON') return;
             if (a.hasAttribute('data-nav-enhanced')) return;
 
             let ruta = null;
@@ -6474,30 +6473,39 @@ window.exportarStatusExcel = function() {
             if (ruta) {
                 a.setAttribute('data-nav-enhanced', 'true');
                 a.setAttribute('data-ruta-modulo', ruta);
-                // Asignar href con el hash del módulo para que el navegador lo reconozca como hyperlink nativo
-                if (!a.getAttribute('href') || a.getAttribute('href') === '#') {
+                if (a.tagName === 'A') {
                     a.setAttribute('href', '#' + ruta);
                 }
 
-                // Interceptar click
+                // Guardar la acción SPA y limpiar el onclick inline para que no se dispare antes
+                const originalOnClick = a.onclick;
+                a.onclick = null;
+                a.removeAttribute('onclick');
+
+                // Listener en fase de captura para interceptar ANTES que cualquier otro manejador
                 a.addEventListener('click', function(e) {
-                    // Si el usuario presiona Ctrl, Cmd (Mac), Shift, o clic central (botón 1)
-                    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) {
-                        // Dejar que el navegador realice su comportamiento nativo abriendo nueva pestaña/ventana
-                        e.stopPropagation();
-                        return;
+                    const esNuevaPestana = e.ctrlKey || e.metaKey || e.button === 1;
+
+                    if (esNuevaPestana) {
+                        // DETENER la navegación en esta misma pestaña
+                        e.stopImmediatePropagation();
+                        // Abrir URL en nueva pestaña en segundo plano
+                        const urlDestino = window.location.origin + window.location.pathname + '#' + ruta;
+                        window.open(urlDestino, '_blank');
+                        e.preventDefault();
+                        return false;
                     }
 
-                    // En un clic normal con botón izquierdo, mantenemos la experiencia SPA fluida
+                    // Clic normal con botón izquierdo (0)
                     if (e.button === 0) {
                         e.preventDefault();
-                        if (typeof a.onclick === 'function') {
-                            // Si ya tiene onclick definido, dejar que ejecute su función original
+                        if (typeof originalOnClick === 'function') {
+                            originalOnClick.call(a, e);
                         } else {
                             cargarModuloAislado(ruta);
                         }
                     }
-                });
+                }, true); // true = capture phase
             }
         });
     }
@@ -6507,6 +6515,6 @@ window.exportarStatusExcel = function() {
     } else {
         configurarEnlacesNav();
     }
-    // Re-ejecutar tras 1s por si algún menú dinámico termina de renderizarse
-    setTimeout(configurarEnlacesNav, 1000);
+    setTimeout(configurarEnlacesNav, 800);
+    setTimeout(configurarEnlacesNav, 2000);
 })();
