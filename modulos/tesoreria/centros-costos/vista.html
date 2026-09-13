@@ -205,83 +205,143 @@
         </div>
     </div>
 
-    <!-- ── RESUMEN EN TARJETAS ── -->
-    <div class="cc-kpis-grid">
-        <div class="cc-kpi-card">
-            <div class="cc-kpi-icon" style="background:#e0e7ff; color:#4338ca;">
-                <i class="bi bi-buildings"></i>
-            </div>
-            <div>
-                <span class="text-muted small fw-semibold d-block">Administración (CC-100)</span>
-                <span class="fw-bolder text-dark fs-6" id="cc-kpi-admin">Cuenta 941</span>
-            </div>
-        </div>
-        <div class="cc-kpi-card">
-            <div class="cc-kpi-icon" style="background:#fef3c7; color:#b45309;">
-                <i class="bi bi-megaphone"></i>
-            </div>
-            <div>
-                <span class="text-muted small fw-semibold d-block">Ventas & Comercial (CC-200)</span>
-                <span class="fw-bolder text-dark fs-6" id="cc-kpi-ventas">Cuenta 951</span>
-            </div>
-        </div>
-        <div class="cc-kpi-card">
-            <div class="cc-kpi-icon" style="background:#dcfce7; color:#15803d;">
-                <i class="bi bi-truck"></i>
-            </div>
-            <div>
-                <span class="text-muted small fw-semibold d-block">Operaciones de Ruta (CC-300)</span>
-                <span class="fw-bolder text-dark fs-6" id="cc-kpi-ruta">Cuenta 911 (Costo Directo)</span>
-            </div>
-        </div>
-        <div class="cc-kpi-card">
-            <div class="cc-kpi-icon" style="background:#f3e8ff; color:#7e22ce;">
-                <i class="bi bi-tools"></i>
-            </div>
-            <div>
-                <span class="text-muted small fw-semibold d-block">Taller & Mantenimiento (CC-400)</span>
-                <span class="fw-bolder text-dark fs-6" id="cc-kpi-taller">Cuenta 912 (Indirecto)</span>
-            </div>
-        </div>
-    </div>
+    <!-- ── PESTAÑAS DE NAVEGACIÓN ── -->
+    <ul class="nav nav-pills mb-3 border-bottom pb-2 gap-2" id="cc-main-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" id="tab-cc-btn" data-bs-toggle="pill" data-bs-target="#tab-panel-centros" type="button" role="tab">
+                <i class="bi bi-diagram-3-fill"></i> 1. Centros de Costos (Destino / NIIF)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" id="tab-motivos-btn" data-bs-toggle="pill" data-bs-target="#tab-panel-motivos" type="button" role="tab" onclick="window.ccCargarMotivosTab()">
+                <i class="bi bi-tags-fill"></i> 2. Motivos y Sub Motivos de Gasto (Naturaleza)
+            </button>
+        </li>
+    </ul>
 
-    <!-- ── TABLA DE CENTROS DE COSTOS ── -->
-    <div class="cc-table-card">
-        <div class="cc-table-toolbar">
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1.5 fw-bold" id="cc-badge-total">
-                    0 Centros Registrados
-                </span>
+    <div class="tab-content flex-grow-1" id="cc-tab-content">
+        <!-- ════════════ PANEL 1: CENTROS DE COSTOS ════════════ -->
+        <div class="tab-pane fade show active" id="tab-panel-centros" role="tabpanel">
+            <!-- ── RESUMEN EN TARJETAS ── -->
+            <div class="cc-kpis-grid">
+                <div class="cc-kpi-card">
+                    <div class="cc-kpi-icon" style="background:#e0e7ff; color:#4338ca;">
+                        <i class="bi bi-buildings"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small fw-semibold d-block">Administración (CC-100)</span>
+                        <span class="fw-bolder text-dark fs-6" id="cc-kpi-admin">Cuenta 941</span>
+                    </div>
+                </div>
+                <div class="cc-kpi-card">
+                    <div class="cc-kpi-icon" style="background:#fef3c7; color:#b45309;">
+                        <i class="bi bi-megaphone"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small fw-semibold d-block">Ventas & Comercial (CC-200)</span>
+                        <span class="fw-bolder text-dark fs-6" id="cc-kpi-ventas">Cuenta 951</span>
+                    </div>
+                </div>
+                <div class="cc-kpi-card">
+                    <div class="cc-kpi-icon" style="background:#dcfce7; color:#15803d;">
+                        <i class="bi bi-truck"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small fw-semibold d-block">Operaciones de Ruta (CC-300)</span>
+                        <span class="fw-bolder text-dark fs-6" id="cc-kpi-ruta">Cuenta 911 (Costo Directo)</span>
+                    </div>
+                </div>
+                <div class="cc-kpi-card">
+                    <div class="cc-kpi-icon" style="background:#f3e8ff; color:#7e22ce;">
+                        <i class="bi bi-tools"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small fw-semibold d-block">Taller & Mantenimiento (CC-400)</span>
+                        <span class="fw-bolder text-dark fs-6" id="cc-kpi-taller">Cuenta 912 (Indirecto)</span>
+                    </div>
+                </div>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <label class="small text-muted fw-bold text-nowrap m-0" for="cc-input-buscar">Buscar:</label>
-                <input type="text" id="cc-input-buscar" class="form-control form-control-sm" placeholder="Código, nombre, cuenta..." oninput="window.ccFiltrarTabla(this.value)" style="width: 240px; border-radius: 8px;">
+
+            <!-- ── TABLA DE CENTROS DE COSTOS ── -->
+            <div class="cc-table-card">
+                <div class="cc-table-toolbar">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1.5 fw-bold" id="cc-badge-total">
+                            0 Centros Registrados
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="small text-muted fw-bold text-nowrap m-0" for="cc-input-buscar">Buscar:</label>
+                        <input type="text" id="cc-input-buscar" class="form-control form-control-sm" placeholder="Código, nombre, cuenta..." oninput="window.ccFiltrarTabla(this.value)" style="width: 240px; border-radius: 8px;">
+                    </div>
+                </div>
+
+                <div class="cc-scroll-table">
+                    <table class="cc-table" id="tablaCentrosCostos">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width:70px;">ACCIÓN</th>
+                                <th>CÓDIGO</th>
+                                <th>CENTRO DE COSTOS</th>
+                                <th>NIVEL</th>
+                                <th>CUENTA CONTABLE (SUNAT)</th>
+                                <th class="text-center">REQUIERE PLACA</th>
+                                <th>DESCRIPCIÓN / DETALLE</th>
+                                <th class="text-center">ESTADO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cc-tbody">
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <div class="spinner-border spinner-border-sm text-indigo me-2"></div>
+                                    Cargando catálogo de centros de costos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <div class="cc-scroll-table">
-            <table class="cc-table" id="tablaCentrosCostos">
-                <thead>
-                    <tr>
-                        <th class="text-center" style="width:70px;">ACCIÓN</th>
-                        <th>CÓDIGO</th>
-                        <th>CENTRO DE COSTOS</th>
-                        <th>NIVEL</th>
-                        <th>CUENTA CONTABLE (SUNAT)</th>
-                        <th class="text-center">REQUIERE PLACA</th>
-                        <th>DESCRIPCIÓN / DETALLE</th>
-                        <th class="text-center">ESTADO</th>
-                    </tr>
-                </thead>
-                <tbody id="cc-tbody">
-                    <tr>
-                        <td colspan="8" class="text-center py-5 text-muted">
-                            <div class="spinner-border spinner-border-sm text-indigo me-2"></div>
-                            Cargando catálogo de centros de costos...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- ════════════ PANEL 2: MOTIVOS Y SUBMOTIVOS ════════════ -->
+        <div class="tab-pane fade" id="tab-panel-motivos" role="tabpanel">
+            <div class="cc-table-card">
+                <div class="cc-table-toolbar justify-content-between flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-indigo-subtle text-indigo border border-indigo-subtle px-2.5 py-1.5 fw-bold" id="cc-badge-motivos-total">
+                            0 Conceptos de Gasto
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="text" id="cc-input-buscar-motivos" class="form-control form-control-sm" placeholder="Buscar motivo, submotivo, CC..." oninput="window.ccFiltrarTablaMotivosTab(this.value)" style="width: 240px; border-radius: 8px;">
+                        <button type="button" class="btn btn-sm btn-primary fw-bold px-3 d-flex align-items-center gap-1 rounded-3" onclick="window.ccAbrirModalNuevoMotivo()">
+                            <i class="bi bi-plus-lg"></i> Nuevo Concepto
+                        </button>
+                    </div>
+                </div>
+
+                <div class="cc-scroll-table">
+                    <table class="cc-table" id="tablaMotivosGastosTab">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width:70px;">ACCIÓN</th>
+                                <th>MOTIVO PRINCIPAL (CATEGORÍA)</th>
+                                <th>SUB MOTIVO (CONCEPTO DETALLADO)</th>
+                                <th>CENTRO DE COSTOS PREDETERMINADO</th>
+                                <th class="text-center">ESTADO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cc-motivos-tab-tbody">
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <div class="spinner-border spinner-border-sm text-indigo me-2"></div>
+                                    Cargando catálogo de motivos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -375,3 +435,68 @@
         </div>
     </div>
 </div>
+
+<!-- ── MODAL: NUEVO / EDITAR MOTIVO Y SUBMOTIVO DE GASTO ── -->
+<div class="modal fade" id="modalMotivoForm" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-white border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width: 36px; height: 36px; background:#eef2ff; color:#4f46e5; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                        <i class="bi bi-tag-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark m-0" id="modalMotivoTitulo">Nuevo Concepto de Gasto</h5>
+                        <small class="text-secondary" style="font-size: 0.75rem;">Configuración de Motivo, Submotivo y Centro de Costos</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <form id="formMotivoGasto" onsubmit="window.ccGuardarMotivoGasto(event)">
+                <input type="hidden" id="motivo-input-id" value="">
+
+                <div class="modal-body p-4 bg-light">
+                    <div class="card border-0 rounded-3 p-3 shadow-sm bg-white">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-dark text-uppercase">Motivo Principal (Categoría) (*)</label>
+                                <input type="text" id="motivo-modal-motivo" class="form-control fw-bold" placeholder="EJ: Servicios Operativos" list="cc-dl-motivos-principales" required>
+                                <datalist id="cc-dl-motivos-principales"></datalist>
+                                <small class="text-muted" style="font-size:0.7rem;">Puede ingresar uno nuevo o seleccionar uno ya existente</small>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-dark text-uppercase">Sub Motivo (Concepto Detallado) (*)</label>
+                                <input type="text" id="motivo-modal-submotivo" class="form-control" placeholder="EJ: Servicio de grúa pesada" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-indigo text-uppercase">Centro de Costos Predeterminado (Sugerido)</label>
+                                <select id="motivo-modal-centro-costo" class="form-select fw-semibold">
+                                    <option value="">-- Sin sugerencia automática --</option>
+                                </select>
+                                <small class="text-muted" style="font-size:0.7rem;">Al elegir este motivo en Caja, se autoseleccionará este centro de costos</small>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-dark text-uppercase">Estado</label>
+                                <select id="motivo-modal-estado" class="form-select fw-semibold">
+                                    <option value="ACTIVO" selected>ACTIVO</option>
+                                    <option value="INACTIVO">INACTIVO</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-light rounded-3 px-3 fw-semibold" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" id="motivo-modal-btn-submit" class="btn cc-btn-nuevo px-4 fw-bold">
+                        <i class="bi bi-check2-circle me-1"></i> Guardar Concepto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

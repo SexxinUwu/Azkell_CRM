@@ -556,7 +556,12 @@
                                 </select>
                             </div>
                             <div class="col-12 col-md-3">
-                                <label class="form-label">Motivo (Naturaleza) <span class="req">(*)</span></label>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label m-0">Motivo (Naturaleza) <span class="req">(*)</span></label>
+                                    <button type="button" class="btn btn-link p-0 text-decoration-none text-indigo fw-bold" style="font-size:0.7rem;" onclick="window.cajaAbrirModalGestionMotivos()" title="Gestionar o agregar motivos de gasto">
+                                        <i class="bi bi-gear-fill"></i> Gestionar
+                                    </button>
+                                </div>
                                 <select id="caja-input-motivo" class="form-select" onchange="window.cajaAlCambiarMotivo(this.value)">
                                     <option value="">Seleccione...</option>
                                 </select>
@@ -856,3 +861,82 @@
         </div>
     </div>
 </div>
+
+<!-- ── MODAL RÁPIDO: GESTIÓN DE MOTIVOS Y SUB MOTIVOS DESDE CAJA ── -->
+<div class="modal fade" id="modalCajaGestionMotivos" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-white border-bottom px-4 py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width: 36px; height: 36px; background:#eef2ff; color:#4f46e5; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                        <i class="bi bi-tag-fill"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold text-dark m-0">Catálogo de Motivos y Sub Motivos de Gasto</h6>
+                        <small class="text-secondary" style="font-size:0.75rem;">Agregue nuevos conceptos y asócielos al Centro de Costos sugerido</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <!-- Formulario Agregar Motivo/Submotivo -->
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white mb-3">
+                    <h6 class="fw-bold text-indigo small mb-3"><i class="bi bi-plus-circle me-1"></i> Registrar Nuevo Motivo / Sub Motivo</h6>
+                    <form id="formCajaNuevoMotivoGasto" onsubmit="window.cajaGuardarNuevoMotivo(event)">
+                        <div class="row g-2">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold">Motivo Principal (*)</label>
+                                <input type="text" id="caja-quick-motivo" class="form-control form-control-sm" placeholder="EJ: Servicios Operativos" list="caja-dl-motivos-existentes" required>
+                                <datalist id="caja-dl-motivos-existentes"></datalist>
+                                <small class="text-muted" style="font-size:0.68rem;">Escriba uno nuevo o seleccione existente</small>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold">Sub Motivo (Detalle) (*)</label>
+                                <input type="text" id="caja-quick-submotivo" class="form-control form-control-sm" placeholder="EJ: Servicio de grúa pesada" required>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold text-indigo">Centro de Costos Sugerido</label>
+                                <select id="caja-quick-centro-costo" class="form-select form-select-sm">
+                                    <option value="">-- Sin sugerencia --</option>
+                                </select>
+                            </div>
+                            <div class="col-12 d-flex justify-content-end mt-2">
+                                <button type="submit" id="caja-btn-guardar-motivo" class="btn btn-primary btn-sm px-3 fw-bold rounded-3">
+                                    <i class="bi bi-check2-circle me-1"></i> Guardar Concepto
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Buscador y Tabla de Motivos Registrados -->
+                <div class="card border-0 shadow-sm rounded-3 bg-white overflow-hidden">
+                    <div class="p-2 border-bottom bg-light d-flex justify-content-between align-items-center">
+                        <span class="small fw-bold text-muted" id="caja-badge-motivos-count">0 Conceptos Registrados</span>
+                        <input type="text" class="form-control form-control-sm w-auto" placeholder="Buscar concepto..." oninput="window.cajaFiltrarTablaMotivos(this.value)" style="font-size:0.75rem;">
+                    </div>
+                    <div class="table-responsive" style="max-height: 240px; overflow-y:auto;">
+                        <table class="table table-sm table-hover mb-0 align-middle" style="font-size:0.75rem;">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>MOTIVO PRINCIPAL</th>
+                                    <th>SUB MOTIVO (DETALLE)</th>
+                                    <th>CENTRO DE COSTOS ASOCIADO</th>
+                                    <th class="text-center">ESTADO</th>
+                                    <th class="text-center" style="width:60px;">ACCIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody id="caja-motivos-tbody">
+                                <tr><td colspan="5" class="text-center py-3 text-muted">Cargando motivos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-white border-top py-2 px-4">
+                <button type="button" class="btn btn-light btn-sm fw-semibold" data-bs-dismiss="modal">Listo / Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+

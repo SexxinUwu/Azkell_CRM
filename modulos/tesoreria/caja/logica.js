@@ -473,10 +473,44 @@ window.cajaCargarCentrosCostosSelect = async function(seleccionado) {
     }
 };
 
-window.cajaPoblarMotivosSelect = function(motivoSel, submotivoSel) {
+window._cajaMotivosGastosRaw = [];
+
+window.cajaCargarCatalogoMotivosAPI = async function() {
+    try {
+        var resp = await fetch('/api/tesoreria/motivos-gastos?solo_activos=1');
+        var res = await resp.json();
+        if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
+            window._cajaMotivosGastosRaw = res.data;
+            var catObj = {};
+            res.data.forEach(function(item) {
+                var m = item.motivo;
+                if (!catObj[m]) {
+                    catObj[m] = {
+                        ccSugerido: item.centro_costo_codigo || null,
+                        submotivos: [],
+                        mapSubmotivos: {}
+                    };
+                }
+                if (!catObj[m].submotivos.includes(item.sub_motivo)) {
+                    catObj[m].submotivos.push(item.sub_motivo);
+                }
+                catObj[m].mapSubmotivos[item.sub_motivo] = item.centro_costo_codigo || catObj[m].ccSugerido;
+            });
+            window.CATALOGO_GASTOS = catObj;
+        }
+    } catch(e) {
+        console.warn('Error cargando motivos desde backend, usando catálogo base:', e);
+    }
+};
+
+window.cajaPoblarMotivosSelect = async function(motivoSel, submotivoSel) {
     var selMot = document.getElementById('caja-input-motivo');
     var selSub = document.getElementById('caja-input-submotivo');
     if (!selMot) return;
+
+    if (!window._cajaMotivosGastosRaw || !window._cajaMotivosGastosRaw.length) {
+        await window.cajaCargarCatalogoMotivosAPI();
+    }
 
     selMot.innerHTML = '<option value="">-- Seleccione Motivo --</option>';
     Object.keys(window.CATALOGO_GASTOS).forEach(function(cat) {
@@ -513,7 +547,7 @@ window.cajaPoblarSubmotivosSelect = function(motivo, submotivoSel) {
 window.cajaAlCambiarMotivo = function(motivo) {
     window.cajaPoblarSubmotivosSelect(motivo);
 
-    // Sugerir automáticamente el Centro de Costos correspondiente si está vacío o por defecto
+    // Sugerir automáticamente el Centro de Costos correspondiente si está configurado
     var catObj = window.CATALOGO_GASTOS[motivo];
     if (catObj && catObj.ccSugerido) {
         window.cajaSugerirCentroCosto(catObj.ccSugerido);
@@ -521,14 +555,17 @@ window.cajaAlCambiarMotivo = function(motivo) {
 };
 
 window.cajaAlCambiarSubmotivo = function(submotivo) {
-    // Si es gasto operativo directo o combustible, reforzar CC-300
     var mot = (document.getElementById('caja-input-motivo') || {}).value;
-    if (mot === 'Combustibles y Fluidos' || mot === 'Gastos de Viaje y Ruta') {
-        window.cajaSugerirCentroCosto('CC-300');
+    var catObj = window.CATALOGO_GASTOS[mot];
+    if (catObj && catObj.mapSubmotivos && catObj.mapSubmotivos[submotivo]) {
+        window.cajaSugerirCentroCosto(catObj.mapSubmotivos[submotivo]);
+    } else if (catObj && catObj.ccSugerido) {
+        window.cajaSugerirCentroCosto(catObj.ccSugerido);
     }
 };
 
 window.cajaSugerirCentroCosto = function(codigoCC) {
+    if (!codigoCC) return;
     var selCC = document.getElementById('caja-input-centro-costo');
     if (!selCC) return;
     for (var i = 0; i < selCC.options.length; i++) {
@@ -538,6 +575,140 @@ window.cajaSugerirCentroCosto = function(codigoCC) {
             window.cajaAlCambiarCentroCosto(opt.value);
             break;
         }
+    }
+};
+
+// ── Métodos para Modal Rápido de Gestión de Motivos ──
+window.cajaAbrirModalGestionMotivos = async function() {
+    var selCC = document.getElementById('caja-quick-centro-costo');
+    if (selCC) {
+        selCC.innerHTML = '<option value="">-- Sin sugerencia --</option>';
+        (window._cajaCentrosCostosList || []).forEach(function(c) {
+            if (c.estado === 'INACTIVO') return;
+            selCC.add(new Option(c.codigo + ' - ' + c.nombre, c.codigo));
+        });
+    }
+
+    await window.cajaCargarTablaMotivosModal();
+    var modalEl = document.getElementById('modalCajaGestionMotivos');
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+};
+
+window.cajaCargarTablaMotivosModal = async function() {
+    var tbody = document.getElementById('caja-motivos-tbody');
+    var badgeCount = document.getElementById('caja-badge-motivos-count');
+    var dl = document.getElementById('caja-dl-motivos-existentes');
+    if (!tbody) return;
+
+    try {
+        var resp = await fetch('/api/tesoreria/motivos-gastos');
+        var res = await resp.json();
+        if (res.ok && Array.isArray(res.data)) {
+            window._cajaTodosMotivosList = res.data;
+            if (badgeCount) badgeCount.textContent = res.data.length + ' Conceptos Registrados';
+
+            // Datalist de motivos principales para autocompletar
+            if (dl) {
+                var unicos = Array.from(new Set(res.data.map(function(d) { return d.motivo; })));
+                dl.innerHTML = unicos.map(function(m) { return '<option value="' + m + '">'; }).join('');
+            }
+
+            window.cajaRenderizarFilasMotivos(res.data);
+        }
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-danger">Error: ' + e.message + '</td></tr>';
+    }
+};
+
+window.cajaRenderizarFilasMotivos = function(items) {
+    var tbody = document.getElementById('caja-motivos-tbody');
+    if (!tbody) return;
+
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">No hay motivos registrados.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = items.map(function(item) {
+        var ccLabel = item.centro_costo_codigo ? ('<span class="badge bg-indigo-subtle text-primary border">' + item.centro_costo_codigo + '</span>') : '<span class="text-muted">—</span>';
+        var est = item.estado === 'ACTIVO' ? '<span class="badge bg-success-subtle text-success">ACTIVO</span>' : '<span class="badge bg-secondary-subtle text-secondary">INACTIVO</span>';
+        return '<tr>' +
+            '<td class="fw-bold text-dark">' + item.motivo + '</td>' +
+            '<td>' + item.sub_motivo + '</td>' +
+            '<td>' + ccLabel + '</td>' +
+            '<td class="text-center">' + est + '</td>' +
+            '<td class="text-center">' +
+                '<button type="button" class="btn btn-outline-danger btn-xs py-0 px-1" onclick="window.cajaEliminarMotivoGasto(' + item.id + ')" title="Eliminar concepto">' +
+                    '<i class="bi bi-trash"></i>' +
+                '</button>' +
+            '</td>' +
+        '</tr>';
+    }).join('');
+};
+
+window.cajaFiltrarTablaMotivos = function(q) {
+    q = (q || '').trim().toLowerCase();
+    if (!q) {
+        window.cajaRenderizarFilasMotivos(window._cajaTodosMotivosList || []);
+        return;
+    }
+    var filtrados = (window._cajaTodosMotivosList || []).filter(function(item) {
+        return (item.motivo && item.motivo.toLowerCase().includes(q)) ||
+               (item.sub_motivo && item.sub_motivo.toLowerCase().includes(q)) ||
+               (item.centro_costo_codigo && item.centro_costo_codigo.toLowerCase().includes(q));
+    });
+    window.cajaRenderizarFilasMotivos(filtrados);
+};
+
+window.cajaGuardarNuevoMotivo = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    var mot = ((document.getElementById('caja-quick-motivo') || {}).value || '').trim();
+    var sub = ((document.getElementById('caja-quick-submotivo') || {}).value || '').trim();
+    var cc = ((document.getElementById('caja-quick-centro-costo') || {}).value || '').trim();
+
+    if (!mot || !sub) return alert('Motivo Principal y Sub Motivo son obligatorios.');
+
+    var btn = document.getElementById('caja-btn-guardar-motivo');
+    if (btn) { btn.disabled = true; btn.innerHTML = 'Guardando...'; }
+
+    try {
+        var resp = await fetch('/api/tesoreria/motivos-gastos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ motivo: mot, sub_motivo: sub, centro_costo_codigo: cc, estado: 'ACTIVO' })
+        });
+        var res = await resp.json();
+        if (res.ok) {
+            document.getElementById('caja-quick-submotivo').value = '';
+            await window.cajaCargarCatalogoMotivosAPI();
+            await window.cajaCargarTablaMotivosModal();
+            // Actualizar selectores del formulario principal de Caja
+            window.cajaPoblarMotivosSelect(mot, sub);
+            if (cc) window.cajaSugerirCentroCosto(cc);
+        } else {
+            alert('Error: ' + res.error);
+        }
+    } catch(err) {
+        alert('Error: ' + err.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Guardar Concepto'; }
+    }
+};
+
+window.cajaEliminarMotivoGasto = async function(id) {
+    if (!confirm('¿Está seguro de eliminar este concepto de gasto?')) return;
+    try {
+        var resp = await fetch('/api/tesoreria/motivos-gastos/' + id, { method: 'DELETE' });
+        var res = await resp.json();
+        if (res.ok) {
+            await window.cajaCargarCatalogoMotivosAPI();
+            await window.cajaCargarTablaMotivosModal();
+            window.cajaPoblarMotivosSelect();
+        } else {
+            alert('Error al eliminar: ' + res.error);
+        }
+    } catch(e) {
+        alert('Error: ' + e.message);
     }
 };
 
