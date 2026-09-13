@@ -702,7 +702,8 @@ module.exports = function (db, broadcast, logAudit) {
     // ── POST /api/tesoreria/cuentas/:id/cambiar-factura-nc (Cambiar Factura emitiendo Nota de Crédito) ──
     router.post('/cuentas/:id/cambiar-factura-nc', upload.fields([
         { name: 'archivo_nc', maxCount: 1 },
-        { name: 'archivo_nueva_factura', maxCount: 1 }
+        { name: 'archivo_nueva_factura', maxCount: 1 },
+        { name: 'archivo_factura_anterior', maxCount: 1 }
     ]), async (req, res) => {
         try {
             await ensureTable(req);
@@ -720,7 +721,14 @@ module.exports = function (db, broadcast, logAudit) {
 
             const facAntSerie = (actual.serie || '').trim();
             const facAntNum = (actual.factura || '').trim();
-            const facAntUrl = actual.factura_documento_url || null;
+            let facAntUrl = actual.factura_documento_url || null;
+
+            if (req.files && req.files['archivo_factura_anterior'] && req.files['archivo_factura_anterior'][0]) {
+                const f = req.files['archivo_factura_anterior'][0];
+                const ext = (f.originalname || '').split('.').pop() || 'pdf';
+                const s3Key = `tesoreria/facturas/fac_ant_${id}_${Date.now()}.${ext}`;
+                facAntUrl = await uploadToS3(f.buffer, s3Key, f.mimetype);
+            }
 
             const ncSerie = (b.nc_serie || '').trim().toUpperCase();
             const ncNumero = (b.nc_numero || '').trim();

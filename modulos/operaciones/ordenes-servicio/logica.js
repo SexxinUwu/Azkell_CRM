@@ -134,9 +134,9 @@
 
             html += `
                 <tr>
-                    <td class="text-nowrap">
+                    <td class="text-nowrap col-sticky-os-accion">
                         <div class="dropdown d-inline-block">
-                            <button class="btn btn-sm os-btn-editar-drop dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn btn-sm os-btn-editar-drop dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false">
                                 ACCIÓN
                             </button>
                             <ul class="dropdown-menu shadow-sm border-0" style="font-size:0.8rem;">

@@ -596,8 +596,8 @@
 
                         <div class="row g-2 g-md-3 align-items-center">
                             <div class="col-md-3">
-                                <label class="form-label text-primary">Cod. de Liquidación (*)</label>
-                                <input type="text" id="fc-codigo-liquidacion" class="form-control fw-bold" placeholder="EJ: LIQ-2026-001" required>
+                                <label class="form-label text-primary">Cod. de Liquidación</label>
+                                <input type="text" id="fc-codigo-liquidacion" class="form-control fw-bold" placeholder="EJ: LIQ-2026-001">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Fecha de Liquidación</label>
@@ -980,12 +980,25 @@
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <span class="small fw-bold text-muted text-uppercase d-block" style="font-size:0.7rem; letter-spacing:0.4px;">Factura Actual a Rectificar / Anular</span>
-                                <h5 id="nc-txt-factura-actual" class="fw-bolder text-danger m-0" style="font-size:1.15rem;">F001-000000</h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h5 id="nc-txt-factura-actual" class="fw-bolder text-danger m-0" style="font-size:1.15rem;">F001-000000</h5>
+                                    <span id="nc-wrap-doc-actual" style="display:none;">
+                                        <a id="nc-link-doc-actual" href="#" target="_blank" class="badge bg-danger text-white text-decoration-none py-1 px-2 fw-semibold" style="font-size:0.75rem;">
+                                            <i class="bi bi-eye me-1"></i>Ver Factura
+                                        </a>
+                                    </span>
+                                </div>
                             </div>
                             <div class="text-end">
                                 <span class="small fw-bold text-muted text-uppercase d-block" style="font-size:0.7rem;">Monto Total</span>
                                 <h6 id="nc-txt-total-actual" class="fw-bold text-dark m-0">S/ 0.00</h6>
                             </div>
+                        </div>
+                        <div id="nc-wrap-subir-fac-ant" class="mt-2 pt-2 border-top" style="display:none;">
+                            <label class="form-label text-muted d-block mb-1" style="font-size:0.75rem; font-weight:600;">
+                                <i class="bi bi-cloud-arrow-up text-primary me-1"></i>Adjuntar PDF de esta Factura Actual (opcional para el historial):
+                            </label>
+                            <input type="file" id="nc-input-archivo-factura-anterior" class="form-control form-control-sm" accept=".pdf, image/*">
                         </div>
                     </div>
 
