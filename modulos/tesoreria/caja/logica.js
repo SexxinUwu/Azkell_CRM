@@ -630,15 +630,15 @@ window.cajaRenderizarFilasMotivos = function(items) {
     }
 
     tbody.innerHTML = items.map(function(item) {
-        var ccLabel = item.centro_costo_codigo ? ('<span class="badge bg-indigo-subtle text-primary border">' + item.centro_costo_codigo + '</span>') : '<span class="text-muted">—</span>';
-        var est = item.estado === 'ACTIVO' ? '<span class="badge bg-success-subtle text-success">ACTIVO</span>' : '<span class="badge bg-secondary-subtle text-secondary">INACTIVO</span>';
+        var ccLabel = item.centro_costo_codigo ? ('<span class="badge" style="background:#eff6ff; color:#2563eb; font-weight:700; border-radius:6px; padding:3px 8px; font-family:monospace;">' + item.centro_costo_codigo + '</span>') : '<span class="text-muted opacity-50">—</span>';
+        var est = item.estado === 'ACTIVO' ? '<span class="badge" style="background:#ecfdf5; color:#059669; font-weight:700; border-radius:8px; padding:4px 10px; font-size:0.75rem;">ACTIVO</span>' : '<span class="badge" style="background:#f1f5f9; color:#64748b; font-weight:700; border-radius:8px; padding:4px 10px; font-size:0.75rem;">INACTIVO</span>';
         return '<tr>' +
-            '<td class="fw-bold text-dark">' + item.motivo + '</td>' +
-            '<td>' + item.sub_motivo + '</td>' +
+            '<td class="fw-bold text-dark" style="font-size:0.86rem;">' + item.motivo + '</td>' +
+            '<td class="fw-semibold text-secondary" style="font-size:0.85rem;">' + item.sub_motivo + '</td>' +
             '<td>' + ccLabel + '</td>' +
             '<td class="text-center">' + est + '</td>' +
             '<td class="text-center">' +
-                '<button type="button" class="btn btn-outline-danger btn-xs py-0 px-1" onclick="window.cajaEliminarMotivoGasto(' + item.id + ')" title="Eliminar concepto">' +
+                '<button type="button" class="btn-action-pastel btn-delete" onclick="window.cajaEliminarMotivoGasto(' + item.id + ')" title="Eliminar concepto">' +
                     '<i class="bi bi-trash"></i>' +
                 '</button>' +
             '</td>' +

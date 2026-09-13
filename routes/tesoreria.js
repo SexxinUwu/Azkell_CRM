@@ -1634,7 +1634,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── GESTIÓN DE MOTIVOS Y SUBMOTIVOS DE GASTO ───────────────────
     async function ensureTableMotivosGastos(req) {
         const tdb = getDb(req);
-        const tenantSlug = getTenantSlug(req);
         try {
             await tdb.query(`
                 CREATE TABLE IF NOT EXISTS tesoreria_motivos_gastos (
@@ -1649,9 +1648,9 @@ module.exports = function (db, broadcast, logAudit) {
                     INDEX idx_submotivo (sub_motivo),
                     INDEX idx_cc_codigo (centro_costo_codigo)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-            `);
+            `).catch(() => {});
         } catch (e) {
-            console.warn(`[Tesorería Motivos] Error verificando tabla tesoreria_motivos_gastos (${tenantSlug}):`, e.message);
+            console.warn('[Tesorería Motivos] Error verificando tabla tesoreria_motivos_gastos:', e.message);
         }
     }
 

@@ -54,34 +54,34 @@ window.ccRenderizarTabla = function(rows) {
 
     var html = rows.map(function(item) {
         var estadoBadge = (item.estado === 'ACTIVO')
-            ? '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">ACTIVO</span>'
-            : '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">INACTIVO</span>';
+            ? '<span class="badge" style="background:#ecfdf5; color:#059669; font-weight:700; border-radius:8px; padding:4px 10px; font-size:0.75rem;">ACTIVO</span>'
+            : '<span class="badge" style="background:#f1f5f9; color:#64748b; font-weight:700; border-radius:8px; padding:4px 10px; font-size:0.75rem;">INACTIVO</span>';
 
         var nivelBadge = (item.nivel === 'Principal')
-            ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Principal</span>'
-            : '<span class="badge bg-light text-dark border">Subcentro</span>';
+            ? '<span class="badge" style="background:#eff6ff; color:#2563eb; font-weight:600; border-radius:6px; padding:3px 8px;">Principal</span>'
+            : '<span class="badge" style="background:#f8fafc; color:#475569; font-weight:600; border-radius:6px; padding:3px 8px; border:1px solid #e2e8f0;">Subcentro</span>';
 
         var reqPlacaBadge = (item.requiere_placa == 1 || item.requiere_placa === true)
-            ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold"><i class="bi bi-truck me-1"></i>SÍ (Obligatorio)</span>'
-            : '<span class="text-muted small">No</span>';
+            ? '<span class="badge" style="background:#fffbeb; color:#b45309; font-weight:700; border-radius:8px; padding:4px 10px; font-size:0.72rem;"><i class="bi bi-truck me-1"></i>SÍ (Obligatorio)</span>'
+            : '<span class="text-muted" style="font-size:0.8rem;">No</span>';
 
         return '<tr>' +
             '<td class="text-center">' +
-                '<div class="d-inline-flex gap-1">' +
-                    '<button type="button" class="btn btn-sm btn-outline-primary p-1 rounded-circle lh-1" onclick="window.ccAbrirModalEditar(' + item.id + ')" title="Editar Centro">' +
-                        '<i class="bi bi-pencil-square" style="font-size:0.75rem;"></i>' +
+                '<div class="d-inline-flex align-items-center gap-1.5">' +
+                    '<button type="button" class="btn-action-pastel btn-edit" onclick="window.ccAbrirModalEditar(' + item.id + ')" title="Editar Centro">' +
+                        '<i class="bi bi-pencil-square"></i>' +
                     '</button>' +
-                    '<button type="button" class="btn btn-sm btn-outline-danger p-1 rounded-circle lh-1" onclick="window.ccEliminar(' + item.id + ')" title="Eliminar Centro">' +
-                        '<i class="bi bi-trash" style="font-size:0.75rem;"></i>' +
+                    '<button type="button" class="btn-action-pastel btn-delete" onclick="window.ccEliminar(' + item.id + ')" title="Eliminar Centro">' +
+                        '<i class="bi bi-trash"></i>' +
                     '</button>' +
                 '</div>' +
             '</td>' +
-            '<td class="font-monospace fw-bold text-dark fs-6">' + esc(item.codigo) + '</td>' +
-            '<td class="fw-bold text-primary">' + esc(item.nombre) + '</td>' +
+            '<td class="font-monospace fw-bold text-dark" style="font-size:0.86rem;">' + esc(item.codigo) + '</td>' +
+            '<td class="fw-bold" style="color:#0284c7; font-size:0.86rem;">' + esc(item.nombre) + '</td>' +
             '<td>' + nivelBadge + '</td>' +
-            '<td class="font-monospace text-secondary">' + (item.cuenta_contable ? esc(item.cuenta_contable) : '<span class="text-muted opacity-50">—</span>') + '</td>' +
+            '<td class="font-monospace text-secondary" style="font-size:0.8rem;">' + (item.cuenta_contable ? esc(item.cuenta_contable) : '<span class="text-muted opacity-50">—</span>') + '</td>' +
             '<td class="text-center">' + reqPlacaBadge + '</td>' +
-            '<td class="small text-muted" style="max-width:260px; overflow:hidden; text-overflow:ellipsis;" title="' + esc(item.descripcion) + '">' + (item.descripcion ? esc(item.descripcion) : '<span class="text-muted opacity-50">—</span>') + '</td>' +
+            '<td class="text-muted" style="max-width:260px; overflow:hidden; text-overflow:ellipsis; font-size:0.8rem;" title="' + esc(item.descripcion) + '">' + (item.descripcion ? esc(item.descripcion) : '<span class="text-muted opacity-50">—</span>') + '</td>' +
             '<td class="text-center">' + estadoBadge + '</td>' +
         '</tr>';
     }).join('');
@@ -275,26 +275,26 @@ window.ccRenderizarTablaMotivosTab = function(rows) {
 
     var html = rows.map(function(item) {
         var ccLabel = item.centro_costo_codigo
-            ? ('<span class="badge bg-indigo-subtle text-primary border border-indigo-subtle font-monospace fw-bold">' + esc(item.centro_costo_codigo) + '</span>')
+            ? ('<span class="badge" style="background:#eff6ff; color:#2563eb; font-weight:700; border-radius:6px; padding:3px 8px; font-family:monospace;">' + esc(item.centro_costo_codigo) + '</span>')
             : '<span class="text-muted opacity-50">—</span>';
 
         var estadoBadge = (item.estado === 'ACTIVO')
-            ? '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">ACTIVO</span>'
-            : '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">INACTIVO</span>';
+            ? '<span class="badge" style="background:#ecfdf5; color:#059669; font-weight:700; border-radius:8px; padding:4px 10px; font-size:0.75rem;">ACTIVO</span>'
+            : '<span class="badge" style="background:#f1f5f9; color:#64748b; font-weight:700; border-radius:8px; padding:4px 10px; font-size:0.75rem;">INACTIVO</span>';
 
         return '<tr>' +
             '<td class="text-center">' +
-                '<div class="d-inline-flex gap-1">' +
-                    '<button type="button" class="btn btn-sm btn-outline-primary p-1 rounded-circle lh-1" onclick="window.ccAbrirModalEditarMotivo(' + item.id + ')" title="Editar Concepto">' +
-                        '<i class="bi bi-pencil-square" style="font-size:0.75rem;"></i>' +
+                '<div class="d-inline-flex align-items-center gap-1.5">' +
+                    '<button type="button" class="btn-action-pastel btn-edit" onclick="window.ccAbrirModalEditarMotivo(' + item.id + ')" title="Editar Concepto">' +
+                        '<i class="bi bi-pencil-square"></i>' +
                     '</button>' +
-                    '<button type="button" class="btn btn-sm btn-outline-danger p-1 rounded-circle lh-1" onclick="window.ccEliminarMotivoGastoTab(' + item.id + ')" title="Eliminar Concepto">' +
-                        '<i class="bi bi-trash" style="font-size:0.75rem;"></i>' +
+                    '<button type="button" class="btn-action-pastel btn-delete" onclick="window.ccEliminarMotivoGastoTab(' + item.id + ')" title="Eliminar Concepto">' +
+                        '<i class="bi bi-trash"></i>' +
                     '</button>' +
                 '</div>' +
             '</td>' +
-            '<td class="fw-bold text-dark">' + esc(item.motivo) + '</td>' +
-            '<td class="fw-semibold text-secondary">' + esc(item.sub_motivo) + '</td>' +
+            '<td class="fw-bold text-dark" style="font-size:0.86rem;">' + esc(item.motivo) + '</td>' +
+            '<td class="fw-semibold text-secondary" style="font-size:0.85rem;">' + esc(item.sub_motivo) + '</td>' +
             '<td>' + ccLabel + '</td>' +
             '<td class="text-center">' + estadoBadge + '</td>' +
         '</tr>';
