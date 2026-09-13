@@ -158,11 +158,15 @@
     // Limpiar todos los filtros
     window.greLimpiarFiltros = function() {
         const fPlaca = document.getElementById('gre-filter-placa');
+        const fOs = document.getElementById('gre-filter-os');
+        const fOv = document.getElementById('gre-filter-ov');
         const fSearch = document.getElementById('gre-filter-search');
         const fDesde = document.getElementById('gre-filter-desde');
         const fHasta = document.getElementById('gre-filter-hasta');
 
         if (fPlaca) fPlaca.value = '';
+        if (fOs) fOs.value = '';
+        if (fOv) fOv.value = '';
         if (fSearch) fSearch.value = '';
 
         const hoy = new Date();
@@ -175,6 +179,14 @@
         window.greCargarGuias();
     };
 
+    let _greDebounceTimer = null;
+    window.greCargarGuiasDebounced = function() {
+        clearTimeout(_greDebounceTimer);
+        _greDebounceTimer = setTimeout(function() {
+            window.greCargarGuias();
+        }, 220);
+    };
+
     // 1. Cargar Guías desde el Backend
     window.greCargarGuias = async function() {
         const tbody = document.getElementById('gre-tbody');
@@ -183,12 +195,16 @@
         const fDesde = document.getElementById('gre-filter-desde')?.value || '';
         const fHasta = document.getElementById('gre-filter-hasta')?.value || '';
         const fPlaca = document.getElementById('gre-filter-placa')?.value || '';
+        const fOs = document.getElementById('gre-filter-os')?.value || '';
+        const fOv = document.getElementById('gre-filter-ov')?.value || '';
         const fSearch = document.getElementById('gre-filter-search')?.value || '';
 
         const params = new URLSearchParams();
         if (fDesde) params.append('desde', fDesde);
         if (fHasta) params.append('hasta', fHasta);
         if (fPlaca) params.append('placa', fPlaca);
+        if (fOs) params.append('orden_servicio', fOs.trim());
+        if (fOv) params.append('orden_viaje', fOv.trim());
         if (fSearch) params.append('search', fSearch);
         if (window._greTipoFiltro && window._greTipoFiltro !== 'TODAS') {
             params.append('tipoDoc', window._greTipoFiltro);
@@ -249,11 +265,11 @@
             const fTras = (window._formatFechaPeru || formatFechaPeru)(g.fecha_traslado || g.fecha_emision);
 
             const badgeOS = (g.orden_servicio && String(g.orden_servicio).trim() !== '' && g.orden_servicio !== '—')
-                ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-2 py-1 font-monospace fw-bold" style="cursor:pointer;" onclick="if(typeof cargarModuloAislado==='function') cargarModuloAislado('operaciones/ordenes-servicio');" title="Ver Orden de Servicio vinculada"><i class="bi bi-briefcase-fill me-1"></i>${esc(g.orden_servicio)}</span>`
+                ? `<span class="fw-bold font-monospace text-dark" style="cursor:pointer;" onclick="if(typeof cargarModuloAislado==='function') cargarModuloAislado('operaciones/ordenes-servicio');" title="Ver Orden de Servicio vinculada">${esc(g.orden_servicio)}</span>`
                 : `<span class="text-muted opacity-50 font-monospace">—</span>`;
 
             const badgeOV = (g.orden_viaje && String(g.orden_viaje).trim() !== '' && g.orden_viaje !== '—')
-                ? `<span class="badge bg-info bg-opacity-10 text-info border border-info-subtle px-2 py-1 font-monospace fw-bold" style="cursor:pointer;" onclick="if(typeof cargarModuloAislado==='function') cargarModuloAislado('operaciones/ordenes-viaje');" title="Ver Orden de Viaje"><i class="bi bi-truck me-1"></i>${esc(g.orden_viaje)}</span>`
+                ? `<span class="fw-bold font-monospace text-dark" style="cursor:pointer;" onclick="if(typeof cargarModuloAislado==='function') cargarModuloAislado('operaciones/ordenes-viaje');" title="Ver Orden de Viaje">${esc(g.orden_viaje)}</span>`
                 : `<span class="text-muted opacity-50 font-monospace">—</span>`;
 
             html += `

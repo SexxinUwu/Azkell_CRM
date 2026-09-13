@@ -245,12 +245,14 @@ window.ovOnFiltrar = function() {
 
 window.ovLimpiarFiltros = function() {
     var viajeEl = document.getElementById('ov-filtro-viaje');
+    var osEl = document.getElementById('ov-filtro-os');
     var qEl = document.getElementById('ov-filtro-q');
     var tramoEl = document.getElementById('ov-filtro-tramo');
     var inputDesde = document.getElementById('ov-filtro-fecha-desde');
     var inputHasta = document.getElementById('ov-filtro-fecha-hasta');
 
     if (viajeEl) viajeEl.value = '';
+    if (osEl) osEl.value = '';
     if (qEl) qEl.value = '';
     if (tramoEl) tramoEl.value = 'TODOS';
     if (inputDesde) inputDesde.value = '';
@@ -261,10 +263,12 @@ window.ovLimpiarFiltros = function() {
 
 window.ovAplicarFiltros = function() {
     var viajeEl = document.getElementById('ov-filtro-viaje');
+    var osEl = document.getElementById('ov-filtro-os');
     var qEl = document.getElementById('ov-filtro-q');
     var tramoEl = document.getElementById('ov-filtro-tramo');
 
     var fViaje = viajeEl ? (viajeEl.value || '').trim().toUpperCase() : '';
+    var fOs = osEl ? (osEl.value || '').trim().toUpperCase() : '';
     var q = qEl ? (qEl.value || '').trim().toUpperCase() : '';
     var tramo = tramoEl ? tramoEl.value : 'TODOS';
 
@@ -277,15 +281,21 @@ window.ovAplicarFiltros = function() {
                 if (!numViaje.includes(fViaje)) return false;
             }
 
+            // Filtro exclusivo por N° de Orden de Servicio
+            if (fOs) {
+                var ords = (v.ordenes_list || v.orden_servicio || '').toUpperCase();
+                if (!ords.includes(fOs)) return false;
+            }
+
             // Filtro general (O/S, Placa, Conductor, Rutas)
             if (q) {
                 var tracto = (v.placa_tracto || '').toUpperCase();
                 var carreta = (v.placa_remolque || '').toUpperCase();
                 var cond = (v.conductor || '').toUpperCase();
                 var ruta = (v.ruta || '').toUpperCase();
-                var ords = (v.ordenes_list || '').toUpperCase();
+                var ordsGeneral = (v.ordenes_list || '').toUpperCase();
                 var ruts = (v.rutas_list || '').toUpperCase();
-                var match = tracto.includes(q) || carreta.includes(q) || cond.includes(q) || ruta.includes(q) || ords.includes(q) || ruts.includes(q);
+                var match = tracto.includes(q) || carreta.includes(q) || cond.includes(q) || ruta.includes(q) || ordsGeneral.includes(q) || ruts.includes(q);
                 if (!match) return false;
             }
 
@@ -386,15 +396,21 @@ window.ovAplicarFiltros = function() {
                 if (!numViaje.includes(fViaje)) return false;
             }
 
+            // Filtro exclusivo por N° de Orden de Servicio
+            if (fOs) {
+                var orden = (r.orden || '').toUpperCase();
+                if (!orden.includes(fOs)) return false;
+            }
+
             // Filtro general (O/S, Placa, Conductor, Ruta, Tipo Servicio)
             if (q) {
-                var orden = (r.orden || '').toUpperCase();
+                var ordenG = (r.orden || '').toUpperCase();
                 var ruta = (r.ruta || '').toUpperCase();
                 var tipoServ = (r.tipo_servicio || '').toUpperCase();
                 var cond = (r.conductor || '').toUpperCase();
                 var tracto = (r.placa_tracto || '').toUpperCase();
                 var carreta = (r.placa_remolque || '').toUpperCase();
-                var match = orden.includes(q) || ruta.includes(q) || tipoServ.includes(q) || cond.includes(q) || tracto.includes(q) || carreta.includes(q);
+                var match = ordenG.includes(q) || ruta.includes(q) || tipoServ.includes(q) || cond.includes(q) || tracto.includes(q) || carreta.includes(q);
                 if (!match) return false;
             }
 

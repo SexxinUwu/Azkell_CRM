@@ -197,7 +197,7 @@ module.exports = function(db, tenantStorage) {
             const dbConn = getDb(req);
             await initTables(dbConn);
 
-            const { desde, hasta, search, placa, tipoDoc } = req.query;
+            const { desde, hasta, search, placa, tipoDoc, orden_servicio, orden_viaje } = req.query;
 
             let query = `
                 SELECT 
@@ -223,6 +223,14 @@ module.exports = function(db, tenantStorage) {
             if (tipoDoc) {
                 query += ` AND g.tipo_documento = ?`;
                 params.push(tipoDoc);
+            }
+            if (orden_servicio) {
+                query += ` AND g.orden_servicio LIKE ?`;
+                params.push(`%${orden_servicio}%`);
+            }
+            if (orden_viaje) {
+                query += ` AND g.orden_viaje LIKE ?`;
+                params.push(`%${orden_viaje}%`);
             }
             if (search) {
                 query += ` AND (

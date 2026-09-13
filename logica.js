@@ -619,6 +619,7 @@ window.verificarSesionGuardada = function() {
             'operaciones/marsisa-combustible-vales': 'combustible_vales',
             'operaciones/programacion': 'op_programacion',
             'operaciones/ordenes-viaje': 'op_guias_remision',
+            'operaciones/ordenes-servicio': 'op_guias_remision',
             'operaciones/guias-remision': 'op_guias_remision',
             'operaciones/rutas': 'op_rutas',
             'operaciones/asignacion': 'op_asignacion',
@@ -721,9 +722,24 @@ window.verificarSesionGuardada = function() {
         }
     };
 
+    // 🧭 RESOLUCIÓN DE RUTA INICIAL (Soporte directo para Ctrl+Click y nuevas pestañas mediante hash)
+    let rutaHash = null;
+    try {
+        let h = (window.location.hash || '').replace(/^#\/?/, '').trim();
+        if (h) {
+            if (window.esRutaValidaYPermitida(h)) {
+                rutaHash = h;
+            } else if (window.esRutaValidaYPermitida(h.replace(/-/g, '/'))) {
+                rutaHash = h.replace(/-/g, '/');
+            }
+        }
+    } catch(e) {}
+
     let rutaGuardada = sessionStorage.getItem('fleet_rutaActual');
     if (isSuperAdminDomain) {
         cargarModuloAislado('sistema/superadmin');
+    } else if (rutaHash) {
+        cargarModuloAislado(rutaHash);
     } else if (rutaGuardada && rutaGuardada !== 'login' && window.esRutaValidaYPermitida(rutaGuardada)) {
         cargarModuloAislado(rutaGuardada);
     } else {
@@ -3714,6 +3730,7 @@ const TITULOS_MODULOS = {
     'operaciones/combustible-matriz':   'Matriz de Combustible (D2)',
     'operaciones/programacion':         'Programación de Vehículos',
     'operaciones/ordenes-viaje':        'Órdenes de Viaje',
+    'operaciones/ordenes-servicio':     'Órdenes de Servicio',
     'operaciones/reporte-viajes':       'Reporte de Viajes',
     'operaciones/marsisa-ordenes-viaje': 'Órdenes de Viaje (Marsisa)',
     'operaciones/marsisa-combustible-vales': 'Vales de Combustible (Marsisa)',
@@ -3728,6 +3745,7 @@ const MENU_IDS = {
     'dashboard':                   'nav-dashboard',
     'operaciones/programacion':    'nav-op-programacion',
     'operaciones/ordenes-viaje':   'nav-op-ordenes-viaje',
+    'operaciones/ordenes-servicio': 'nav-op-ordenes-servicio',
     'operaciones/reporte-viajes':  'nav-op-reporte-viajes',
     'operaciones/guias-remision':  'nav-op-guias-remision',
     'operaciones/combustible-vales': 'nav-combustible-vales',
@@ -3835,6 +3853,7 @@ const MENU_SECTION = {
     'seguridad/unidades-base':    'seguridad',
     'operaciones/programacion':    'operaciones',
     'operaciones/ordenes-viaje':   'operaciones',
+    'operaciones/ordenes-servicio': 'operaciones',
     'operaciones/reporte-viajes':  'operaciones',
     'operaciones/combustible-vales': 'operaciones',
     'operaciones/combustible-estaciones': 'operaciones',
@@ -3860,6 +3879,7 @@ const BREADCRUMB_MAP = {
     'tesoreria/centros-costos':   ['Tesorería','Centros de Costos'],
     'operaciones/programacion':    ['Operaciones','Programación'],
     'operaciones/ordenes-viaje':   ['Operaciones','Órdenes de Viaje'],
+    'operaciones/ordenes-servicio': ['Operaciones','Órdenes de Servicio'],
     'operaciones/reporte-viajes':  ['Operaciones','Reporte de Viajes'],
     'operaciones/combustible-vales': ['Operaciones','Combustible','Vales'],
     'operaciones/combustible-estaciones': ['Operaciones','Combustible','Estaciones de Proveedores'],
@@ -6405,3 +6425,72 @@ window.exportarStatusExcel = function() {
     link.click();
     document.body.removeChild(link);
 };
+
+// ─── SOPORTE DE PESTAÑAS NUEVAS (Ctrl+Click, Cmd+Click, Clic Central y Clic Derecho) ─────
+(function initNavLinksParaPestanas() {
+    function configurarEnlacesNav() {
+        // Mapeo especial para botones que usan helpers personalizados
+        const rutasEspeciales = {
+            'nav-op-guias-remitente': 'operaciones/guias-remision',
+            'nav-op-guias-transportista': 'operaciones/guias-remision',
+            'nav-cfg-empresa': 'sistema/configuracion',
+            'nav-cfg-apariencia': 'sistema/configuracion',
+            'nav-cfg-accesibilidad': 'sistema/configuracion',
+            'nav-cfg-idioma': 'sistema/configuracion'
+        };
+
+        // Buscar todos los enlaces de navegación del sidebar y menús
+        const navLinks = document.querySelectorAll('.sidebar-nav a.nav-item, #sidebarMenu a.nav-item, .bottom-nav a.bnav-item');
+        navLinks.forEach(a => {
+            if (a.hasAttribute('data-nav-enhanced')) return;
+
+            let ruta = null;
+            if (rutasEspeciales[a.id]) {
+                ruta = rutasEspeciales[a.id];
+            } else {
+                const onclickAttr = a.getAttribute('onclick') || '';
+                const match = onclickAttr.match(/cargarModuloAislado\(['"]([^'"]+)['"]\)/);
+                if (match && match[1]) {
+                    ruta = match[1];
+                }
+            }
+
+            if (ruta) {
+                a.setAttribute('data-nav-enhanced', 'true');
+                a.setAttribute('data-ruta-modulo', ruta);
+                // Asignar href con el hash del módulo para que el navegador lo reconozca como hyperlink nativo
+                if (!a.getAttribute('href') || a.getAttribute('href') === '#') {
+                    a.setAttribute('href', '#' + ruta);
+                }
+
+                // Interceptar click
+                a.addEventListener('click', function(e) {
+                    // Si el usuario presiona Ctrl, Cmd (Mac), Shift, o clic central (botón 1)
+                    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) {
+                        // Dejar que el navegador realice su comportamiento nativo abriendo nueva pestaña/ventana
+                        e.stopPropagation();
+                        return;
+                    }
+
+                    // En un clic normal con botón izquierdo, mantenemos la experiencia SPA fluida
+                    if (e.button === 0) {
+                        e.preventDefault();
+                        if (typeof a.onclick === 'function') {
+                            // Si ya tiene onclick definido, dejar que ejecute su función original
+                        } else {
+                            cargarModuloAislado(ruta);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', configurarEnlacesNav);
+    } else {
+        configurarEnlacesNav();
+    }
+    // Re-ejecutar tras 1s por si algún menú dinámico termina de renderizarse
+    setTimeout(configurarEnlacesNav, 1000);
+})();
