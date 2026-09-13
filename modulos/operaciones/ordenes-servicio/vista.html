@@ -144,19 +144,19 @@
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    font-size: 0.74rem;
+    font-size: 0.75rem;
     white-space: nowrap;
 }
 
 .os-table thead th {
-    background-color: #ffffff;
-    color: #1e293b;
-    font-weight: 800;
+    background-color: #fafbfc;
+    color: #475569;
+    font-weight: 700;
     text-transform: uppercase;
-    font-size: 0.69rem;
-    letter-spacing: 0.3px;
-    padding: 0.65rem 0.85rem;
-    border-bottom: 2px solid #cbd5e1;
+    font-size: 0.68rem;
+    letter-spacing: 0.4px;
+    padding: 0.45rem 0.7rem;
+    border-bottom: 1px solid #e2e8f0;
     vertical-align: middle;
     position: sticky;
     top: 0;
@@ -170,45 +170,51 @@
     background: #ffffff;
     z-index: 11;
     box-shadow: 2px 0 6px rgba(0,0,0,0.03);
+    padding: 0.35rem 0.55rem !important;
 }
 .os-table thead th.col-sticky-os-accion {
     z-index: 25;
-    background: #ffffff;
+    background: #fafbfc;
 }
 .os-table tbody tr:hover .col-sticky-os-accion {
-    background-color: #fffaf5;
+    background-color: #f8fafc;
 }
 .os-table td.col-sticky-os-accion:has(.show) {
     z-index: 1050 !important;
 }
 
+.os-table tbody tr {
+    transition: background-color 0.15s ease;
+    border-bottom: 1px solid #f8fafc;
+}
+
 .os-table tbody td {
-    padding: 0.55rem 0.85rem;
+    padding: 0.38rem 0.7rem;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
-    color: #334155;
+    color: #0f172a;
     font-weight: 500;
 }
 
 .os-table tbody tr:hover {
-    background-color: #fffaf5;
+    background-color: #f8fafc;
 }
 
-/* ── Botones de Fila de Tabla ── */
+/* ── Botones de Fila de Tabla (Compacto Pastel) ── */
 .os-btn-editar-drop {
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    color: #475569;
-    font-size: 0.72rem;
+    background: #f0f9ff;
+    border: none !important;
+    color: #0284c7;
+    font-size: 0.7rem;
     font-weight: 700;
     padding: 2px 8px;
-    border-radius: 4px;
+    border-radius: 6px;
     text-transform: uppercase;
+    transition: all 0.15s ease;
 }
 .os-btn-editar-drop:hover {
-    background: #f8fafc;
-    border-color: #94a3b8;
-    color: #0f172a;
+    background: #e0f2fe;
+    color: #0369a1;
 }
 
 .os-btn-finalizar {
