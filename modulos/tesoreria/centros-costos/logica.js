@@ -58,12 +58,12 @@ window.ccRenderizarTabla = function(rows) {
             : '<span class="badge" style="background:#f1f5f9; color:#64748b; font-weight:700; border-radius:8px; padding:4px 10px; font-size:0.75rem;">INACTIVO</span>';
 
         var nivelBadge = (item.nivel === 'Principal')
-            ? '<span class="badge" style="background:#eff6ff; color:#2563eb; font-weight:600; border-radius:6px; padding:3px 8px;">Principal</span>'
-            : '<span class="badge" style="background:#f8fafc; color:#475569; font-weight:600; border-radius:6px; padding:3px 8px; border:1px solid #e2e8f0;">Subcentro</span>';
+            ? '<span class="badge" style="background:#eff6ff; color:#1d4ed8; font-weight:700; border-radius:6px; padding:3px 8px;">Principal</span>'
+            : '<span class="badge" style="background:#f8fafc; color:#0f172a; font-weight:700; border-radius:6px; padding:3px 8px; border:1px solid #cbd5e1;">Subcentro</span>';
 
         var reqPlacaBadge = (item.requiere_placa == 1 || item.requiere_placa === true)
-            ? '<span class="badge" style="background:#fffbeb; color:#b45309; font-weight:700; border-radius:8px; padding:4px 10px; font-size:0.72rem;"><i class="bi bi-truck me-1"></i>SÍ (Obligatorio)</span>'
-            : '<span class="text-muted" style="font-size:0.8rem;">No</span>';
+            ? '<span class="badge" style="background:#fffbeb; color:#9a3412; font-weight:700; border-radius:8px; padding:4px 10px; font-size:0.75rem;"><i class="bi bi-truck me-1"></i>SÍ (Obligatorio)</span>'
+            : '<span class="fw-semibold" style="color:#0f172a; font-size:0.82rem;">No</span>';
 
         return '<tr>' +
             '<td class="text-center">' +
@@ -76,12 +76,12 @@ window.ccRenderizarTabla = function(rows) {
                     '</button>' +
                 '</div>' +
             '</td>' +
-            '<td class="font-monospace fw-bold text-dark" style="font-size:0.86rem;">' + esc(item.codigo) + '</td>' +
-            '<td class="fw-bold" style="color:#0284c7; font-size:0.86rem;">' + esc(item.nombre) + '</td>' +
+            '<td class="font-monospace fw-bold" style="color:#0f172a; font-size:0.88rem;">' + esc(item.codigo) + '</td>' +
+            '<td class="fw-bold" style="color:#0284c7; font-size:0.88rem;">' + esc(item.nombre) + '</td>' +
             '<td>' + nivelBadge + '</td>' +
-            '<td class="font-monospace text-secondary" style="font-size:0.8rem;">' + (item.cuenta_contable ? esc(item.cuenta_contable) : '<span class="text-muted opacity-50">—</span>') + '</td>' +
+            '<td class="font-monospace fw-semibold" style="color:#0f172a; font-size:0.82rem;">' + (item.cuenta_contable ? esc(item.cuenta_contable) : '<span style="color:#64748b;">—</span>') + '</td>' +
             '<td class="text-center">' + reqPlacaBadge + '</td>' +
-            '<td class="text-muted" style="max-width:260px; overflow:hidden; text-overflow:ellipsis; font-size:0.8rem;" title="' + esc(item.descripcion) + '">' + (item.descripcion ? esc(item.descripcion) : '<span class="text-muted opacity-50">—</span>') + '</td>' +
+            '<td class="fw-medium" style="color:#0f172a; max-width:280px; overflow:hidden; text-overflow:ellipsis; font-size:0.82rem;" title="' + esc(item.descripcion) + '">' + (item.descripcion ? esc(item.descripcion) : '<span style="color:#64748b;">—</span>') + '</td>' +
             '<td class="text-center">' + estadoBadge + '</td>' +
         '</tr>';
     }).join('');
@@ -275,8 +275,8 @@ window.ccRenderizarTablaMotivosTab = function(rows) {
 
     var html = rows.map(function(item) {
         var ccLabel = item.centro_costo_codigo
-            ? ('<span class="badge" style="background:#eff6ff; color:#2563eb; font-weight:700; border-radius:6px; padding:3px 8px; font-family:monospace;">' + esc(item.centro_costo_codigo) + '</span>')
-            : '<span class="text-muted opacity-50">—</span>';
+            ? ('<span class="badge font-monospace" style="background:#eff6ff; color:#0f172a; font-weight:800; border:1px solid #bfdbfe; border-radius:6px; padding:3px 8px; font-size:0.8rem;">' + esc(item.centro_costo_codigo) + '</span>')
+            : '<span style="color:#64748b;">—</span>';
 
         var estadoBadge = (item.estado === 'ACTIVO')
             ? '<span class="badge" style="background:#ecfdf5; color:#059669; font-weight:700; border-radius:8px; padding:4px 10px; font-size:0.75rem;">ACTIVO</span>'
@@ -293,8 +293,8 @@ window.ccRenderizarTablaMotivosTab = function(rows) {
                     '</button>' +
                 '</div>' +
             '</td>' +
-            '<td class="fw-bold text-dark" style="font-size:0.86rem;">' + esc(item.motivo) + '</td>' +
-            '<td class="fw-semibold text-secondary" style="font-size:0.85rem;">' + esc(item.sub_motivo) + '</td>' +
+            '<td class="fw-bold" style="color:#0f172a; font-size:0.88rem;">' + esc(item.motivo) + '</td>' +
+            '<td class="fw-semibold" style="color:#0f172a; font-size:0.86rem;">' + esc(item.sub_motivo) + '</td>' +
             '<td>' + ccLabel + '</td>' +
             '<td class="text-center">' + estadoBadge + '</td>' +
         '</tr>';
