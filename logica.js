@@ -722,15 +722,31 @@ window.verificarSesionGuardada = function() {
         }
     };
 
-    // 🧭 RESOLUCIÓN DE RUTA INICIAL (Soporte directo para Ctrl+Click y nuevas pestañas mediante hash)
+    // 🧭 RESOLUCIÓN DE RUTA INICIAL (Soporte directo para Ctrl+Click y recargas con Ctrl+F5)
     let rutaHash = null;
     try {
         let h = (window.location.hash || '').replace(/^#\/?/, '').trim();
         if (h) {
-            if (window.esRutaValidaYPermitida(h)) {
+            // Resolver si coincide directamente con una ruta conocida
+            if (MENU_IDS && MENU_IDS[h]) {
                 rutaHash = h;
-            } else if (window.esRutaValidaYPermitida(h.replace(/-/g, '/'))) {
-                rutaHash = h.replace(/-/g, '/');
+            } else if (MENU_IDS) {
+                // Si viene con guiones (ej. operaciones-ordenes-viaje), buscar la ruta real correspondiente
+                for (let r in MENU_IDS) {
+                    if (r === h || r.replace(/\//g, '-') === h) {
+                        rutaHash = r;
+                        break;
+                    }
+                }
+            }
+            // Si no estuvo en MENU_IDS, probar con / en lugar de -
+            if (!rutaHash) {
+                let rConSlash = h.replace(/-/g, '/');
+                if (window.esRutaValidaYPermitida(rConSlash)) {
+                    rutaHash = rConSlash;
+                } else if (window.esRutaValidaYPermitida(h)) {
+                    rutaHash = h;
+                }
             }
         }
     } catch(e) {}
@@ -738,7 +754,7 @@ window.verificarSesionGuardada = function() {
     let rutaGuardada = sessionStorage.getItem('fleet_rutaActual');
     if (isSuperAdminDomain) {
         cargarModuloAislado('sistema/superadmin');
-    } else if (rutaHash) {
+    } else if (rutaHash && window.esRutaValidaYPermitida(rutaHash)) {
         cargarModuloAislado(rutaHash);
     } else if (rutaGuardada && rutaGuardada !== 'login' && window.esRutaValidaYPermitida(rutaGuardada)) {
         cargarModuloAislado(rutaGuardada);
@@ -4042,9 +4058,9 @@ window.cargarModuloAislado = async function(rutaModulo) {
     if (rutaModulo !== 'login') {
         sessionStorage.setItem('fleet_rutaActual', rutaModulo);
         pushReciente(rutaModulo);
-        // 📍 HISTORY API — botón atrás nativo en móvil
+        // 📍 HISTORY API — botón atrás nativo en móvil y navegación directa
         if (!window._navFromPopstate) {
-            var hashRuta = '#' + rutaModulo.replace(/\//g, '-');
+            var hashRuta = '#' + rutaModulo;
             history.pushState({ ruta: rutaModulo }, '', hashRuta);
         }
         window._navFromPopstate = false;
