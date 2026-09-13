@@ -121,10 +121,9 @@
 
         let html = '';
         lista.forEach(item => {
-            const viajeAsignado = item.viaje_asignado ? `@${item.viaje_asignado}` : 'Sin asignar';
             const badgeViaje = item.viaje_asignado 
-                ? `<span class="badge bg-light text-dark border px-2 py-0.5 font-monospace" style="font-size:0.7rem;">${viajeAsignado}</span>`
-                : `<span class="badge bg-secondary bg-opacity-25 text-secondary border px-2 py-0.5" style="font-size:0.68rem;">Sin asignar</span>`;
+                ? `<span class="fw-bold text-dark font-monospace">${escapeHtml(item.viaje_asignado)}</span>`
+                : `<span class="text-muted opacity-50">—</span>`;
 
             const fInicio = item.fecha_fmt ? formatFecha(item.fecha_fmt) : '—';
             const fleteVal = parseFloat(item.costo_flete) || 0.00;
