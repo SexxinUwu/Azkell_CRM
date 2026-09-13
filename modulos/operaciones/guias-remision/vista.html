@@ -456,11 +456,27 @@
                 </div>
             </div>
 
+            <!-- Buscador Orden de Servicio -->
+            <div class="col-6 col-md-2">
+                <div class="position-relative">
+                    <i class="bi bi-briefcase position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" style="font-size:0.78rem;"></i>
+                    <input type="text" id="gre-filter-os" class="form-control form-control-sm ps-4 text-uppercase fw-semibold border-secondary-subtle" placeholder="O/S (EJ: 2026-00000001)" oninput="window.greCargarGuiasDebounced()" style="border-radius:8px; height:33px; font-size:0.76rem;">
+                </div>
+            </div>
+
+            <!-- Buscador Orden de Viaje -->
+            <div class="col-6 col-md-2">
+                <div class="position-relative">
+                    <i class="bi bi-diagram-3 position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" style="font-size:0.78rem;"></i>
+                    <input type="text" id="gre-filter-ov" class="form-control form-control-sm ps-4 text-uppercase fw-semibold border-secondary-subtle" placeholder="O/V (EJ: 2026-00000001)" oninput="window.greCargarGuiasDebounced()" style="border-radius:8px; height:33px; font-size:0.76rem;">
+                </div>
+            </div>
+
             <!-- Buscador General -->
             <div class="col-12 col-md">
                 <div class="position-relative">
                     <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" style="font-size:0.78rem;"></i>
-                    <input type="text" id="gre-filter-search" class="form-control form-control-sm ps-4 fw-semibold border-secondary-subtle" placeholder="BUSCAR CLIENTE, DESTINO, CONDUCTOR, N° GUÍA..." oninput="window.greCargarGuias()" style="border-radius:8px; height:33px; font-size:0.76rem;">
+                    <input type="text" id="gre-filter-search" class="form-control form-control-sm ps-4 fw-semibold border-secondary-subtle" placeholder="BUSCAR CLIENTE, DESTINO, CONDUCTOR, N° GUÍA..." oninput="window.greCargarGuiasDebounced()" style="border-radius:8px; height:33px; font-size:0.76rem;">
                 </div>
             </div>
 

@@ -566,32 +566,17 @@
     <div class="os-filter-card">
         <div class="row g-2 align-items-end">
             <!-- Fecha Desde -->
-            <div class="col-12 col-sm-6 col-md-2">
+            <div class="col-12 col-sm-6 col-md-3">
                 <label class="os-filter-label">Fecha Desde</label>
                 <input type="date" id="os-filtro-desde" class="form-control form-control-sm" title="Fecha Desde">
             </div>
             <!-- Fecha Hasta -->
-            <div class="col-12 col-sm-6 col-md-2">
+            <div class="col-12 col-sm-6 col-md-3">
                 <label class="os-filter-label">Fecha Hasta</label>
                 <input type="date" id="os-filtro-hasta" class="form-control form-control-sm" title="Fecha Hasta">
             </div>
-            <!-- Tipo Resultado -->
-            <div class="col-12 col-sm-6 col-md-3">
-                <label class="os-filter-label">Tipo Resultado de Búsqueda</label>
-                <select id="os-filtro-tipo-res" class="form-select form-select-sm">
-                    <option value="SEGÚN FECHA">SEGÚN FECHA</option>
-                    <option value="TODOS">TODOS LOS REGISTROS</option>
-                </select>
-            </div>
-            <!-- Cliente (*) -->
-            <div class="col-12 col-sm-6 col-md-3">
-                <label class="os-filter-label">Cliente (*)</label>
-                <select id="os-filtro-cliente" class="form-select form-select-sm">
-                    <option value="TODOS">Seleccione...</option>
-                </select>
-            </div>
             <!-- Botón Buscar -->
-            <div class="col-12 col-md-2">
+            <div class="col-12 col-sm-12 col-md-2">
                 <button type="button" class="btn btn-sm os-btn-buscar w-100 d-flex align-items-center justify-content-center gap-1.5" onclick="window.osCargarTabla()">
                     <i class="bi bi-search"></i> Buscar
                 </button>
@@ -599,7 +584,7 @@
         </div>
     </div>
 
-    <!-- ── 3. TOOLBAR DE TABLA (Imprimir, Excel, Mostrar Columnas, Buscar en tabla) ── -->
+    <!-- ── 3. TOOLBAR DE TABLA (Imprimir, Excel, Buscar en tabla) ── -->
     <div class="os-table-toolbar">
         <div class="d-flex align-items-center gap-1.5">
             <button type="button" class="btn btn-sm os-toolbar-btn d-flex align-items-center gap-1" onclick="window.osImprimirTabla()">
@@ -607,9 +592,6 @@
             </button>
             <button type="button" class="btn btn-sm os-toolbar-btn d-flex align-items-center gap-1" onclick="window.osExportarExcel()">
                 <i class="bi bi-file-earmark-excel text-success"></i> Excel
-            </button>
-            <button type="button" class="btn btn-sm os-toolbar-btn d-flex align-items-center gap-1" onclick="window.osToggleColumnas()">
-                <i class="bi bi-layout-three-columns"></i> Mostrar Columnas
             </button>
         </div>
         <div class="d-flex align-items-center gap-2">

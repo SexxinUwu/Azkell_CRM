@@ -76,15 +76,10 @@
 
         const desde = document.getElementById('os-filtro-desde')?.value || '';
         const hasta = document.getElementById('os-filtro-hasta')?.value || '';
-        const cliente = document.getElementById('os-filtro-cliente')?.value || 'TODOS';
-        const tipoRes = document.getElementById('os-filtro-tipo-res')?.value || 'SEGÚN FECHA';
 
         const params = new URLSearchParams();
-        if (tipoRes === 'SEGÚN FECHA') {
-            if (desde) params.append('fecha_desde', desde);
-            if (hasta) params.append('fecha_hasta', hasta);
-        }
-        if (cliente && cliente !== 'TODOS') params.append('cliente', cliente);
+        if (desde) params.append('fecha_desde', desde);
+        if (hasta) params.append('fecha_hasta', hasta);
 
         try {
             const resp = await fetch(`/api/operaciones/ordenes-servicio?${params.toString()}`);
