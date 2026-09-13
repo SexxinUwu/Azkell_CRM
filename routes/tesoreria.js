@@ -1631,5 +1631,129 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ── GESTIÓN DE MOTIVOS Y SUBMOTIVOS DE GASTO ───────────────────
+    async function ensureTableMotivosGastos(req) {
+        const tdb = getDb(req);
+        const tenantSlug = getTenantSlug(req);
+        try {
+            await tdb.query(`
+                CREATE TABLE IF NOT EXISTS tesoreria_motivos_gastos (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    motivo VARCHAR(150) NOT NULL,
+                    sub_motivo VARCHAR(150) NOT NULL,
+                    centro_costo_codigo VARCHAR(50) NULL,
+                    estado ENUM('ACTIVO', 'INACTIVO') DEFAULT 'ACTIVO',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_motivo (motivo),
+                    INDEX idx_submotivo (sub_motivo),
+                    INDEX idx_cc_codigo (centro_costo_codigo)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            `);
+        } catch (e) {
+            console.warn(`[Tesorería Motivos] Error verificando tabla tesoreria_motivos_gastos (${tenantSlug}):`, e.message);
+        }
+    }
+
+    // Listar Motivos y Submotivos (con opción de filtrar solo activos)
+    router.get('/motivos-gastos', async (req, res) => {
+        try {
+            await ensureTableMotivosGastos(req);
+            const tdb = getDb(req);
+            const soloActivos = req.query.solo_activos === '1' || req.query.solo_activos === 'true';
+            let sql = 'SELECT * FROM tesoreria_motivos_gastos';
+            const params = [];
+            if (soloActivos) {
+                sql += ' WHERE estado = ?';
+                params.push('ACTIVO');
+            }
+            sql += ' ORDER BY motivo ASC, sub_motivo ASC';
+            const [rows] = await tdb.query(sql, params);
+            res.json({ ok: true, data: rows });
+        } catch (err) {
+            console.error('Error al listar motivos de gastos:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Crear Motivo / Submotivo
+    router.post('/motivos-gastos', async (req, res) => {
+        try {
+            await ensureTableMotivosGastos(req);
+            const tdb = getDb(req);
+            const b = req.body || {};
+            const motivo = (b.motivo || '').trim();
+            const sub_motivo = (b.sub_motivo || '').trim();
+            const centro_costo_codigo = (b.centro_costo_codigo || '').trim().toUpperCase();
+
+            if (!motivo || !sub_motivo) {
+                return res.status(400).json({ error: 'El Motivo y el Sub Motivo son obligatorios.' });
+            }
+
+            const [result] = await tdb.query(`
+                INSERT INTO tesoreria_motivos_gastos (motivo, sub_motivo, centro_costo_codigo, estado)
+                VALUES (?, ?, ?, ?)
+            `, [
+                motivo,
+                sub_motivo,
+                centro_costo_codigo || null,
+                (b.estado || 'ACTIVO').trim()
+            ]);
+
+            res.json({ ok: true, id: result.insertId, message: 'Motivo de gasto registrado exitosamente.' });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Actualizar Motivo / Submotivo
+    router.put('/motivos-gastos/:id', async (req, res) => {
+        try {
+            await ensureTableMotivosGastos(req);
+            const tdb = getDb(req);
+            const { id } = req.params;
+            const b = req.body || {};
+            const motivo = (b.motivo || '').trim();
+            const sub_motivo = (b.sub_motivo || '').trim();
+            const centro_costo_codigo = (b.centro_costo_codigo || '').trim().toUpperCase();
+
+            if (!motivo || !sub_motivo) {
+                return res.status(400).json({ error: 'El Motivo y el Sub Motivo son obligatorios.' });
+            }
+
+            await tdb.query(`
+                UPDATE tesoreria_motivos_gastos SET
+                    motivo = ?,
+                    sub_motivo = ?,
+                    centro_costo_codigo = ?,
+                    estado = ?
+                WHERE id = ?
+            `, [
+                motivo,
+                sub_motivo,
+                centro_costo_codigo || null,
+                (b.estado || 'ACTIVO').trim(),
+                id
+            ]);
+
+            res.json({ ok: true, message: 'Motivo de gasto actualizado correctamente.' });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Eliminar Motivo / Submotivo
+    router.delete('/motivos-gastos/:id', async (req, res) => {
+        try {
+            await ensureTableMotivosGastos(req);
+            const tdb = getDb(req);
+            const { id } = req.params;
+            await tdb.query('DELETE FROM tesoreria_motivos_gastos WHERE id = ?', [id]);
+            res.json({ ok: true, message: 'Motivo de gasto eliminado correctamente.' });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     return router;
 };
