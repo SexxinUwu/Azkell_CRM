@@ -447,6 +447,19 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // Vaciar completamente la matriz (Truncate / Limpieza masiva)
+    router.delete('/matriz/vaciar-todo', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            await tdb.query("TRUNCATE TABLE combustible_matriz_d2");
+            if (logAudit) logAudit(req, 'COMBUSTIBLE', 'VACIAR_MATRIZ_COMPLETA', 'Se vació toda la matriz de combustible D2');
+            res.json({ ok: true, message: 'La matriz de combustible ha sido vaciada completamente.' });
+        } catch (err) {
+            console.error("Error al vaciar matriz de combustible:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     // Eliminar una ruta de la matriz (Soft delete)
     router.delete('/matriz/:id', async (req, res) => {
         try {

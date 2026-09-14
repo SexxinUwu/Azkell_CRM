@@ -408,6 +408,34 @@
         }
     };
 
+    // 10. Vaciar completamente la matriz (Eliminación masiva)
+    window.matrizVaciarTodo = async function() {
+        if (!confirm('⚠️ ATENCIÓN: ¿Está seguro de que desea VACIAR COMPLETAMENTE la Matriz de Combustible?\n\nEsta acción eliminará todos los registros de rutas y consumos teóricos actuales para permitir una carga limpia.')) {
+            return;
+        }
+
+        const token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token');
+        try {
+            const res = await fetch('/api/combustible/matriz/vaciar-todo', {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': token ? `Bearer ${token}` : '',
+                    'Content-Type': 'application/json'
+                }
+            });
+            const json = await res.json();
+            if (json.ok) {
+                alert(json.message || 'La matriz de combustible ha sido vaciada con éxito.');
+                window.matrizCargarRutas();
+            } else {
+                alert(json.error || 'Error al vaciar la matriz.');
+            }
+        } catch (err) {
+            console.error('Error vaciando matriz:', err);
+            alert('Error al comunicarse con el servidor para vaciar la matriz.');
+        }
+    };
+
     // Inicializar al cargar la vista
     window.matrizCargarRutas();
 
