@@ -2238,12 +2238,23 @@ module.exports = function (db, broadcast, logAudit) {
                             lugarStr = (rutasRows || []).map(r => r.ruta).filter(Boolean).join(' - ');
                         } catch(eRuta) {}
 
-                        const fleteNum = parseFloat(osRow.costo_flete) || 0.00;
-                        const tarifaNum = fleteNum;
-                        const biNum = tarifaNum;
-                        const igvNum = parseFloat((biNum * 0.18).toFixed(2));
-                        const totalNum = parseFloat((biNum + igvNum).toFixed(2));
-                        const detraccionNum = totalNum > 700 ? Math.round(totalNum * 0.04) : 0.00;
+                        const netoDeseado = parseFloat(osRow.costo_flete) || 0.00;
+                        let totalNum = netoDeseado > 700 ? Math.round(netoDeseado / 0.96) : netoDeseado;
+                        let detraccionNum = totalNum > 700 ? Math.round(totalNum * 0.04) : 0.00;
+
+                        while ((totalNum - detraccionNum) < netoDeseado) {
+                            totalNum++;
+                            detraccionNum = totalNum > 700 ? Math.round(totalNum * 0.04) : 0.00;
+                        }
+                        while ((totalNum - detraccionNum) > netoDeseado) {
+                            totalNum--;
+                            detraccionNum = totalNum > 700 ? Math.round(totalNum * 0.04) : 0.00;
+                        }
+
+                        const biNum = parseFloat((totalNum / 1.18).toFixed(2));
+                        const igvNum = parseFloat((totalNum - biNum).toFixed(2));
+                        const tarifaNum = biNum;
+                        const fleteNum = biNum;
                         const netoCobrarNum = parseFloat((totalNum - detraccionNum).toFixed(2));
 
                         // Verificar si ya existe el registro de cuentas para esta orden de servicio
