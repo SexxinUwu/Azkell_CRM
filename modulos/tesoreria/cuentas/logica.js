@@ -7,6 +7,14 @@ window._cuentasFiltradas = window._cuentasFiltradas || [];
 
 window.init_tesoreria_cuentas = function() {
     console.log('Inicializando módulo Cuentas por Cobrar y Pagar...');
+    
+    // Por defecto: Rango de fecha con el día actual (Hoy)
+    var fDesdeEl = document.getElementById('cuentas-filtro-desde');
+    var fHastaEl = document.getElementById('cuentas-filtro-hasta');
+    var hoyStr = new Date().toISOString().split('T')[0];
+    if (fDesdeEl && !fDesdeEl.value) fDesdeEl.value = hoyStr;
+    if (fHastaEl && !fHastaEl.value) fHastaEl.value = hoyStr;
+
     window.cargarCuentas();
 };
 
@@ -93,12 +101,49 @@ window.filtrarCuentas = function() {
     window._cuentasRenderTabla(window._cuentasFiltradas);
 };
 
+window.alCambiarFiltroEstado = function(est) {
+    var estado = (est || 'TODOS').toUpperCase();
+    var fDesdeEl = document.getElementById('cuentas-filtro-desde');
+    var fHastaEl = document.getElementById('cuentas-filtro-hasta');
+    var hoyStr = new Date().toISOString().split('T')[0];
+
+    if (estado === 'PENDIENTE') {
+        // Encontrar automáticamente el rango desde el PRIMER pendiente hasta el día actual / último pendiente
+        // Esto se hace 100% en memoria con los datos ya cargados sin saturar la BD con peticiones extra
+        var pendientes = (window._cuentasData || []).filter(function(item) {
+            return (item.estado_servicio || '').toUpperCase() === 'PENDIENTE';
+        });
+
+        if (pendientes.length > 0) {
+            var fechas = pendientes.map(function(item) {
+                var f = item.fecha_servicio || item.fecha_liquidacion;
+                return f ? String(f).split('T')[0] : null;
+            }).filter(Boolean).sort();
+
+            if (fechas.length > 0) {
+                var minFecha = fechas[0];
+                var maxFecha = fechas[fechas.length - 1];
+                if (maxFecha < hoyStr) maxFecha = hoyStr; // Cubrir hasta la fecha actual
+
+                if (fDesdeEl) fDesdeEl.value = minFecha;
+                if (fHastaEl) fHastaEl.value = maxFecha;
+            }
+        }
+    } else if (estado === 'TODOS') {
+        // Si vuelve a TODOS, restaurar al día actual por defecto
+        if (fDesdeEl) fDesdeEl.value = hoyStr;
+        if (fHastaEl) fHastaEl.value = hoyStr;
+    }
+
+    window.filtrarCuentas();
+};
+
 window.filtrarPorEstado = function(est) {
     var sel = document.getElementById('cuentas-filtro-estado');
     if (sel) {
         sel.value = est;
-        window.filtrarCuentas();
     }
+    window.alCambiarFiltroEstado(est);
 };
 
 window._cuentasRenderKPIs = function(dataFiltrada) {
