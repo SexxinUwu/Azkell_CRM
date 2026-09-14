@@ -8,7 +8,7 @@ module.exports = function globalRBAC(req, res, next) {
         '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/notificaciones',
         '/script/obtener', '/script/buscar', '/integraciones', '/catalogos_taller',
         '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read',
-        '/presign-read'
+        '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos'
     ];
     if (ignoredPaths.some(ip => path === ip || path.startsWith(ip)) || path.endsWith('/presign-read') || path.endsWith('/presigned')) return next();
 
