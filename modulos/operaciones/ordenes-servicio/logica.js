@@ -321,8 +321,12 @@
             console.warn("No se pudo obtener correlativo:", e);
         }
 
-        // Fecha actual
-        const hoy = new Date().toISOString().split('T')[0];
+        // Fecha actual en hora local (evita desfase UTC de toISOString)
+        const ahoraLocal = new Date();
+        const yLocal = ahoraLocal.getFullYear();
+        const mLocal = String(ahoraLocal.getMonth() + 1).padStart(2, '0');
+        const dLocal = String(ahoraLocal.getDate()).padStart(2, '0');
+        const hoy = `${yLocal}-${mLocal}-${dLocal}`;
         document.getElementById('os-input-fecha').value = hoy;
 
         // Activar tab de Orden de Servicio por defecto
