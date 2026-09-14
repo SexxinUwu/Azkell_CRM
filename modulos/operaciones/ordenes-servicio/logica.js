@@ -149,6 +149,7 @@
                             <ul class="dropdown-menu shadow-sm border-0" style="font-size:0.8rem;">
                                 <li><a class="dropdown-item fw-bold text-primary" href="javascript:void(0)" onclick="window.osAbrirModalEditar(${item.id})"><i class="bi bi-pencil-square me-1"></i> Modificar Orden</a></li>
                                 ${estServ !== 'INICIADO' && estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-primary fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'INICIADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-play-fill me-1"></i> Iniciar Servicio</a></li>` : ''}
+                                ${estServ === 'INICIADO' ? `<li><a class="dropdown-item text-warning fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'PENDIENTE', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-arrow-counterclockwise me-1"></i> Volver a Pendiente</a></li>` : ''}
                                 ${estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-success fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'FINALIZADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-check2-circle me-1"></i> Finalizar Servicio</a></li>` : ''}
                                 ${estServ !== 'ANULADO' ? `<li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'ANULADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-x-circle me-1"></i> Anular Orden</a></li>` : ''}
                             </ul>
@@ -828,6 +829,13 @@
                     if (modal) modal.hide();
                 }
                 window.osCargarTabla();
+
+                // Si viene información de cochera, abrir de inmediato el formulario express de Caja
+                if (res.cochera && window.osAbrirModalCocheraExpress) {
+                    setTimeout(() => {
+                        window.osAbrirModalCocheraExpress(res.cochera);
+                    }, 350);
+                }
             } else {
                 alert("Error al iniciar servicio: " + (res.error || ''));
             }
