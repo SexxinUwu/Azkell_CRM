@@ -1672,10 +1672,20 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
                             ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace"><i class="bi bi-arrow-left me-0.5"></i>RETORNO</span>`
                             : `<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle font-monospace"><i class="bi bi-arrow-right me-0.5"></i>IDA</span>`;
 
+                        const estServOs = String(os.estado_servicio || 'PENDIENTE').toUpperCase();
+                        let badgeServOs = '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning-subtle font-monospace px-2 py-0.5">PENDIENTE</span>';
+                        if (estServOs === 'INICIADO') {
+                            badgeServOs = '<span class="badge bg-success-subtle text-success border border-success-subtle font-monospace px-2 py-0.5">INICIADO</span>';
+                        } else if (estServOs === 'FINALIZADO') {
+                            badgeServOs = '<span class="badge bg-primary text-white font-monospace px-2 py-0.5">FINALIZADO</span>';
+                        } else if (estServOs === 'ANULADO' || estServOs === 'CANCELADO') {
+                            badgeServOs = '<span class="badge bg-danger text-white font-monospace px-2 py-0.5">ANULADO</span>';
+                        }
+
                         return `
                         <tr style="cursor:pointer;" onclick="window.ovVerEditarOrdenServicio('${os.id || os.codigo_orden || ''}')" title="Clic para ver o editar Orden de Servicio">
                             <td class="fw-bold text-primary font-monospace">${os.codigo_orden || '---'}</td>
-                            <td><span class="badge ${os.estado_servicio === 'FINALIZADO' ? 'bg-primary' : 'bg-success-subtle text-success border border-success-subtle'}">${os.estado_servicio || 'INICIADO'}</span></td>
+                            <td>${badgeServOs}</td>
                             <td>${badgeLiq}</td>
                             <td class="font-monospace text-secondary">${os.fecha_fmt || (item.fecha_viaje || '').slice(0, 10) || '---'}</td>
                             <td><span class="badge bg-light text-secondary border">${os.tipo_contratacion || 'PROPIO'}</span></td>
