@@ -198,6 +198,25 @@
     flex-direction: column !important;
 }
 
+#modalCajaForm.show .caja-floating-drawer-dialog,
+#modalCajaGestionMotivos.show .caja-floating-drawer-dialog {
+    transform: translateX(-50%) translateY(0) !important;
+}
+
+/* Checkbox con borde azul visible y marcado */
+#caja-check-no-aplica-liq {
+    border: 2px solid #0284c7 !important;
+    border-radius: 5px !important;
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    cursor: pointer !important;
+    box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.2) !important;
+}
+#caja-check-no-aplica-liq:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.3) !important;
+}
+
 #modalCajaForm .modal-header {
     background: #ffffff !important;
     border-bottom: 1px solid #e2e8f0 !important;
@@ -322,11 +341,13 @@
         transform: translateY(100%) !important;
         border-radius: 24px 24px 0 0 !important;
     }
-    #modalCajaForm.show .caja-floating-drawer-dialog {
+    #modalCajaForm.show .caja-floating-drawer-dialog,
+    #modalCajaGestionMotivos.show .caja-floating-drawer-dialog {
         transform: translateY(0) !important;
     }
     .caja-floating-drawer-content,
-    #modalCajaForm .caja-floating-drawer-content {
+    #modalCajaForm .caja-floating-drawer-content,
+    #modalCajaGestionMotivos .caja-floating-drawer-content {
         width: 100vw !important;
         min-width: 100vw !important;
         border-radius: 24px 24px 0 0 !important;
@@ -476,22 +497,16 @@
                         </div>
                         
                         <div class="row g-2 mb-2">
-                            <div class="col-6 col-md-3">
+                            <div class="col-6 col-md-6">
                                 <label class="form-label">Serie <span class="req">(*)</span></label>
                                 <input type="text" id="caja-input-serie" class="form-control" readonly tabindex="-1" value="2026" required>
                             </div>
-                            <div class="col-6 col-md-3">
+                            <div class="col-6 col-md-6">
                                 <label class="form-label">Número <span class="req">(*)</span></label>
                                 <input type="text" id="caja-input-numero" class="form-control" readonly tabindex="-1" placeholder="00008567" required>
                             </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label">Número Factura</label>
-                                <input type="text" id="caja-input-num-factura" class="form-control" placeholder="Ej: F001-0029">
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label">N° Constancia Depósito</label>
-                                <input type="text" id="caja-input-constancia" class="form-control" placeholder="N° de operación">
-                            </div>
+                            <input type="hidden" id="caja-input-num-factura" value="">
+                            <input type="hidden" id="caja-input-constancia" value="">
                         </div>
 
                         <div class="row g-2">
@@ -545,8 +560,9 @@
                             <h6 class="caja-segmento-titulo">Concepto, Beneficiario & Autorización</h6>
                         </div>
 
-                        <div class="row g-2 mb-2">
-                            <div class="col-12 col-md-3">
+                        <!-- Fila 1: Autoriza y Centro de Costos -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label">Autoriza <span class="req">(*)</span></label>
                                 <select id="caja-input-autoriza" class="form-select" required>
                                     <option value="">Seleccione...</option>
@@ -555,24 +571,7 @@
                                     <option value="Saul Rosas">Saul Rosas</option>
                                 </select>
                             </div>
-                            <div class="col-12 col-md-3">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label class="form-label m-0">Motivo (Naturaleza) <span class="req">(*)</span></label>
-                                    <button type="button" class="btn btn-link p-0 text-decoration-none text-indigo fw-bold" style="font-size:0.7rem;" onclick="window.cajaAbrirModalGestionMotivos()" title="Gestionar o agregar motivos de gasto">
-                                        <i class="bi bi-gear-fill"></i> Gestionar
-                                    </button>
-                                </div>
-                                <select id="caja-input-motivo" class="form-select" onchange="window.cajaAlCambiarMotivo(this.value)">
-                                    <option value="">Seleccione...</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-3">
-                                <label class="form-label">Sub Motivo (Detalle) <span class="req">(*)</span></label>
-                                <select id="caja-input-submotivo" class="form-select" onchange="window.cajaAlCambiarSubmotivo(this.value)">
-                                    <option value="">Seleccione...</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-3">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label text-indigo fw-bold">Centro de Costos (Destino) <span class="req">(*)</span></label>
                                 <select id="caja-input-centro-costo" class="form-select fw-semibold" onchange="window.cajaAlCambiarCentroCosto(this.value)">
                                     <option value="">Cargando centros...</option>
@@ -580,6 +579,28 @@
                             </div>
                         </div>
 
+                        <!-- Fila 2: Motivo y Sub Motivo con botón Gestionar limpio y alineado -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-md-6">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label m-0">Motivo (Naturaleza) <span class="req">(*)</span></label>
+                                    <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none text-indigo fw-bold" style="font-size:0.75rem;" onclick="window.cajaAbrirModalGestionMotivos()" title="Gestionar o agregar motivos de gasto">
+                                        <i class="bi bi-gear-fill me-1"></i>Gestionar
+                                    </button>
+                                </div>
+                                <select id="caja-input-motivo" class="form-select" onchange="window.cajaAlCambiarMotivo(this.value)">
+                                    <option value="">Seleccione...</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Sub Motivo (Detalle) <span class="req">(*)</span></label>
+                                <select id="caja-input-submotivo" class="form-select" onchange="window.cajaAlCambiarSubmotivo(this.value)">
+                                    <option value="">Seleccione...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Fila 3: Tipo de Persona y Persona / Beneficiario -->
                         <div class="row g-2">
                             <div class="col-12 col-md-4">
                                 <label class="form-label">Tipo de Persona <span class="req">(*)</span></label>
@@ -673,14 +694,43 @@
                             <h6 class="caja-segmento-titulo">Sustentos Digitales & Observaciones</h6>
                         </div>
 
-                        <div class="row g-2 mb-2">
-                            <div class="col-12 col-md-6">
-                                <label class="form-label text-uppercase" style="font-size:0.7rem;">SUBIR VOUCHER</label>
-                                <input type="file" id="caja-input-file-voucher" class="form-control form-control-sm" accept="image/*,.pdf">
+                        <!-- SUBIR SUSTENTO (El por qué generó la caja) y Botón para Adjuntos de Pago -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-md-7">
+                                <label class="form-label text-uppercase" style="font-size:0.75rem;">SUBIR SUSTENTO <span class="text-muted fw-normal">(Motivo por el que generó la caja)</span></label>
+                                <input type="file" id="caja-input-file-sustento" class="form-control" accept="image/*,.pdf,.xlsx,.csv">
                             </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label text-uppercase" style="font-size:0.7rem;">SUBIR SUSTENTO</label>
-                                <input type="file" id="caja-input-file-sustento" class="form-control form-control-sm" accept="image/*,.pdf,.xlsx,.csv">
+                            <div class="col-12 col-md-5 d-flex flex-column justify-content-end">
+                                <button type="button" class="btn btn-outline-primary fw-bold w-100 d-flex align-items-center justify-content-center gap-2" style="min-height: 44px; border-radius: 12px;" onclick="window.cajaAlternarSeccionAdjuntos()">
+                                    <i class="bi bi-paperclip fs-5"></i>
+                                    <span id="caja-btn-adjuntos-texto">Subir Adjunto (Voucher / Factura)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Sección desplegable opcional para subir voucher, constancia, factura y n° factura -->
+                        <div id="caja-seccion-adjuntos-extra" class="p-3 mb-3 rounded-3 border" style="display: none; background: #f0fdf4; border-color: #bbf7d0 !important;">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                                <h6 class="fw-bold text-success small m-0"><i class="bi bi-receipt me-1"></i> Adjuntos de Pago y Facturación (Opcional)</h6>
+                                <button type="button" class="btn-close btn-sm" onclick="window.cajaAlternarSeccionAdjuntos(false)" aria-label="Cerrar"></button>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold">Subir Voucher</label>
+                                    <input type="file" id="caja-input-file-voucher" class="form-control" accept="image/*,.pdf">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold">N° Constancia Depósito</label>
+                                    <input type="text" id="caja-input-constancia-visible" class="form-control" placeholder="N° de operación" oninput="document.getElementById('caja-input-constancia').value = this.value">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold">Subir Factura / Comprobante</label>
+                                    <input type="file" id="caja-input-file-factura" class="form-control" accept="image/*,.pdf">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold">Número Factura</label>
+                                    <input type="text" id="caja-input-num-factura-visible" class="form-control" placeholder="Ej: F001-0029" oninput="document.getElementById('caja-input-num-factura').value = this.value">
+                                </div>
                             </div>
                         </div>
 
@@ -862,23 +912,26 @@
     </div>
 </div>
 
-<!-- ── MODAL RÁPIDO: GESTIÓN DE MOTIVOS Y SUB MOTIVOS DESDE CAJA ── -->
+<!-- ── MODAL RÁPIDO: GESTIÓN DE MOTIVOS Y SUB MOTIVOS DESDE CAJA (DRAWER 1:1 IDÉNTICO A FORMULARIO CAJA) ── -->
 <div class="modal fade" id="modalCajaGestionMotivos" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header bg-white border-bottom px-4 py-3">
+    <div class="modal-dialog modal-dialog-scrollable caja-floating-drawer-dialog">
+        <div class="modal-content border-0 caja-floating-drawer-content">
+            <div class="modal-header d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-light rounded-circle p-2 d-flex align-items-center justify-content-center text-secondary border shadow-sm" data-bs-dismiss="modal" title="Regresar al formulario de Caja" style="width: 36px; height: 36px;">
+                        <i class="bi bi-arrow-left fs-5"></i>
+                    </button>
                     <div style="width: 36px; height: 36px; background:#eef2ff; color:#4f46e5; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
                         <i class="bi bi-tag-fill"></i>
                     </div>
                     <div>
-                        <h6 class="modal-title fw-bold text-dark m-0">Catálogo de Motivos y Sub Motivos de Gasto</h6>
-                        <small class="text-secondary" style="font-size:0.75rem;">Agregue nuevos conceptos y asócielos al Centro de Costos sugerido</small>
+                        <h6 class="modal-title fw-bold text-dark m-0" style="color: #0284c7 !important; font-size: 1.15rem;">Catálogo de Motivos de Gasto</h6>
+                        <small class="text-secondary" style="font-size:0.75rem;">Agregue nuevos conceptos y asócielos a un Centro de Costos sugerido</small>
                     </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <div class="modal-body p-4 bg-light">
+            <div class="modal-body p-3 p-md-4">
                 <!-- Formulario Agregar Motivo/Submotivo -->
                 <div class="card border-0 shadow-sm rounded-3 p-3 bg-white mb-3">
                     <h6 class="fw-bold text-indigo small mb-3"><i class="bi bi-plus-circle me-1"></i> Registrar Nuevo Motivo / Sub Motivo</h6>
