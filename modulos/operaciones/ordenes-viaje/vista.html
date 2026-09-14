@@ -2202,28 +2202,86 @@ thead .ov-col-sticky-action {
 
         <!-- ================= 6. TAB LIQUIDACIÓN DE GASTOS OPERATIVOS ================= -->
         <div id="ov-mon-panel-liquidaciones" class="ov-mon-panel d-none" data-index="6">
-            <div class="ov-mon-card-section">
-                <div class="ov-mon-section-title" style="color:#16a34a;">
-                    <i class="bi bi-cash-stack text-success"></i> LIQUIDACIÓN DE GASTOS OPERATIVOS
+            <div class="ov-mon-card-section mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <div class="ov-mon-section-title m-0 p-0 border-0" style="color:#16a34a;">
+                        <i class="bi bi-cash-stack text-success"></i> LIQUIDACIÓN DE GASTOS OPERATIVOS DEL VIAJE
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-success btn-sm fw-bold px-3 shadow-sm" onclick="window.ovAbrirModalNuevoGastoLiquidacion()">
+                            <i class="bi bi-plus-circle-fill me-1"></i> Registrar Gasto / Comprobante
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bento KPI Tiles de Balance Operativo -->
+                <div class="row g-2 mb-3">
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 rounded-3 border bg-white shadow-sm d-flex align-items-center justify-content-between">
+                            <div>
+                                <small class="text-muted fw-bold text-uppercase d-block" style="font-size:0.68rem;">Total Asignado (Cajas / Depósitos)</small>
+                                <span class="fs-5 fw-bold font-monospace text-primary" id="ov-liq-kpi-depositado">S/ 0.00</span>
+                            </div>
+                            <div class="rounded-circle bg-primary bg-opacity-10 text-primary p-2">
+                                <i class="bi bi-wallet2 fs-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 rounded-3 border bg-white shadow-sm d-flex align-items-center justify-content-between">
+                            <div>
+                                <small class="text-muted fw-bold text-uppercase d-block" style="font-size:0.68rem;">Total Rendido (Comprobantes)</small>
+                                <span class="fs-5 fw-bold font-monospace text-dark" id="ov-liq-kpi-rendido">S/ 0.00</span>
+                            </div>
+                            <div class="rounded-circle bg-dark bg-opacity-10 text-dark p-2">
+                                <i class="bi bi-receipt fs-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 rounded-3 border bg-white shadow-sm d-flex align-items-center justify-content-between" id="ov-liq-kpi-saldo-card">
+                            <div>
+                                <small class="text-muted fw-bold text-uppercase d-block" style="font-size:0.68rem;" id="ov-liq-kpi-saldo-label">Balance / Saldo Pendiente</small>
+                                <span class="fs-5 fw-bold font-monospace text-success" id="ov-liq-kpi-saldo">S/ 0.00</span>
+                            </div>
+                            <div class="rounded-circle bg-success bg-opacity-10 text-success p-2" id="ov-liq-kpi-saldo-icon">
+                                <i class="bi bi-check-circle-fill fs-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Banner de Acción Compensatoria Automática -->
+                <div class="alert alert-info border-0 rounded-3 mb-3 d-flex align-items-center justify-content-between py-2 px-3 d-none" id="ov-liq-banner-compensacion" style="font-size:0.84rem;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-arrow-left-right fs-5 text-primary" id="ov-liq-banner-icon"></i>
+                        <span id="ov-liq-banner-texto">Calculando estado de liquidación...</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1 shadow-sm" id="ov-liq-btn-compensar" onclick="window.ovEjecutarCajaCompensacion()">
+                        Generar Caja Automática
+                    </button>
                 </div>
                 
+                <!-- Tabla de Gastos Rendidos -->
                 <div class="table-responsive">
-                    <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.78rem;">
                         <thead class="table-light">
-                            <tr class="text-uppercase text-secondary" style="font-size:0.67rem;">
-                                <th style="width: 40px;">ITEM</th>
+                            <tr class="text-uppercase text-secondary" style="font-size:0.67rem; font-weight:800;">
+                                <th style="width: 40px;">#</th>
                                 <th>FECHA</th>
-                                <th>USUARIO RENDIDO</th>
                                 <th>TIPO GASTO</th>
-                                <th>DETALLES</th>
-                                <th>ARCHIVO</th>
-                                <th>C. FISCAL</th>
+                                <th>SUBMOTIVO</th>
+                                <th>COMPROBANTE</th>
+                                <th>PROVEEDOR</th>
+                                <th>DETALLE</th>
+                                <th>SUSTENTO</th>
                                 <th class="text-end">IMPORTE</th>
+                                <th class="text-center" style="width:50px;">ACCIÓN</th>
                             </tr>
                         </thead>
                         <tbody id="ov-mon-tbody-liquidaciones">
                             <tr id="ov-mon-empty-liquidaciones">
-                                <td colspan="8" class="text-center py-4 text-muted">
+                                <td colspan="10" class="text-center py-4 text-muted">
                                     <i class="bi bi-inbox me-1"></i> No se registran gastos de liquidación para este viaje.
                                 </td>
                             </tr>
@@ -2356,6 +2414,171 @@ thead .ov-col-sticky-action {
         </div>
     </div>
 
+</div>
+
+<!-- Modal para Registrar Gasto de Liquidación / Rendición de Viaje -->
+<div class="modal fade" id="ovModalNuevoGastoLiq" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom py-3 px-4 bg-light rounded-top-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-success bg-opacity-10 text-success p-2">
+                        <i class="bi bi-receipt fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold m-0 text-dark">Registrar Gasto de Liquidación</h6>
+                        <small class="text-muted" id="ov-liq-form-subtitle">Rendición de comprobante para este viaje</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="ovFormNuevoGastoLiq" onsubmit="window.ovGuardarGastoLiquidacion(event)">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-dark mb-1">Fecha del Gasto *</label>
+                            <input type="date" class="form-control form-control-sm" id="ov-gl-fecha" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-dark mb-1">Tipo de Gasto *</label>
+                            <select class="form-select form-select-sm" id="ov-gl-tipo" required onchange="window.ovActualizarSubmotivosGastoLiq()">
+                                <option value="COCHERA">COCHERA / PARQUEO</option>
+                                <option value="PEAJES">PEAJE / GARITA</option>
+                                <option value="VIATICOS">VIÁTICOS / ALIMENTACIÓN</option>
+                                <option value="PERNOCTE">PERNOCTE / HOSPEDAJE</option>
+                                <option value="ESTIBA">ESTIBA / DESCARGA</option>
+                                <option value="LLANTAS">LLANTAS / PARCHADO</option>
+                                <option value="MANTENIMIENTO">AUXILIO MECÁNICO</option>
+                                <option value="OTROS">OTROS GASTOS</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark mb-1">Submotivo / Concepto</label>
+                            <input type="text" class="form-control form-control-sm" id="ov-gl-submotivo" placeholder="Ej: Cochera nocturna Huancayo">
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold text-dark mb-1">Comprobante</label>
+                            <select class="form-select form-select-sm" id="ov-gl-comprobante">
+                                <option value="BOLETA">BOLETA</option>
+                                <option value="FACTURA">FACTURA</option>
+                                <option value="TICKET">TICKET PEAJE</option>
+                                <option value="RECIBO">RECIBO / DECLARACIÓN</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold text-dark mb-1">Serie / Número</label>
+                            <input type="text" class="form-control form-control-sm" id="ov-gl-numero" placeholder="B001-1234">
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold text-dark mb-1">Importe (S/) *</label>
+                            <input type="number" step="0.01" min="0.1" class="form-control form-control-sm fw-bold text-success" id="ov-gl-importe" placeholder="0.00" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark mb-1">Proveedor / RUC (Opcional)</label>
+                            <input type="text" class="form-control form-control-sm" id="ov-gl-proveedor" placeholder="Nombre de cochera o establecimiento">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark mb-1">Detalle / Justificación</label>
+                            <textarea class="form-control form-control-sm" id="ov-gl-detalle" rows="2" placeholder="Observaciones o notas del gasto..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark mb-1">Foto / Archivo del Comprobante (Sustento)</label>
+                            <input type="file" class="form-control form-control-sm" id="ov-gl-sustento" accept="image/*,.pdf">
+                            <small class="text-muted" style="font-size:0.7rem;">Sube la foto del ticket, boleta o recibo de cochera/peaje.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-2 px-4 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-4 fw-bold shadow-sm" id="ov-btn-save-gasto-liq">
+                        <i class="bi bi-check-lg me-1"></i> Guardar Gasto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Decidir Imputación / Destino de Devolución o Reembolso -->
+<div class="modal fade" id="ovModalCompensarLiquidacion" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom py-3 px-4 bg-light rounded-top-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-warning bg-opacity-10 text-warning p-2" id="ov-comp-modal-icon">
+                        <i class="bi bi-bank fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold m-0 text-dark" id="ov-comp-modal-title">Liquidar Saldo de Viaje</h6>
+                        <small class="text-muted" id="ov-comp-modal-subtitle">Selecciona el destino contable del saldo</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-light border rounded-3 p-3 mb-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small d-block">Monto a Liquidar:</span>
+                        <span class="fs-4 fw-bold font-monospace text-dark" id="ov-comp-monto-label">S/ 0.00</span>
+                    </div>
+                    <span class="badge bg-warning text-dark fw-bold px-2 py-1" id="ov-comp-tipo-label">DEVOLUCIÓN</span>
+                </div>
+
+                <div id="ov-comp-bloque-devolucion">
+                    <label class="form-label small fw-bold text-dark mb-2">¿A dónde ingresa el saldo sobrante del conductor?</label>
+                    <div class="d-flex flex-column gap-2">
+                        <label class="p-2.5 border rounded-3 d-flex align-items-center gap-2 cursor-pointer bg-light">
+                            <input type="radio" name="ov_destino_dev" value="CAJA_PRINCIPAL" checked class="form-check-input mt-0">
+                            <div>
+                                <strong class="d-block text-dark" style="font-size:0.83rem;">Caja Principal de Tesorería (Banco)</strong>
+                                <small class="text-muted">El chofer deposita a cuenta corriente de la empresa.</small>
+                            </div>
+                        </label>
+                        <label class="p-2.5 border rounded-3 d-flex align-items-center gap-2 cursor-pointer bg-light">
+                            <input type="radio" name="ov_destino_dev" value="CAJA_CHICA" class="form-check-input mt-0">
+                            <div>
+                                <strong class="d-block text-dark" style="font-size:0.83rem;">Caja Chica de Operaciones (Efectivo)</strong>
+                                <small class="text-muted">El chofer devuelve el efectivo en físico en garita/base.</small>
+                            </div>
+                        </label>
+                        <label class="p-2.5 border rounded-3 d-flex align-items-center gap-2 cursor-pointer bg-light">
+                            <input type="radio" name="ov_destino_dev" value="DESCUENTO_PLANILLA" class="form-check-input mt-0">
+                            <div>
+                                <strong class="d-block text-dark" style="font-size:0.83rem;">Descontar de su próxima Asignación / Planilla</strong>
+                                <small class="text-muted">Se descuenta en la próxima orden de viaje o sueldo.</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="ov-comp-bloque-reembolso" class="d-none">
+                    <label class="form-label small fw-bold text-dark mb-2">¿Cómo se reembolsará el gasto en exceso al conductor?</label>
+                    <div class="d-flex flex-column gap-2">
+                        <label class="p-2.5 border rounded-3 d-flex align-items-center gap-2 cursor-pointer bg-light">
+                            <input type="radio" name="ov_destino_reemb" value="TRANSFERENCIA" checked class="form-check-input mt-0">
+                            <div>
+                                <strong class="d-block text-dark" style="font-size:0.83rem;">Transferencia Bancaria Inmediata</strong>
+                                <small class="text-muted">Caja de egreso por transferencia a la cuenta del conductor.</small>
+                            </div>
+                        </label>
+                        <label class="p-2.5 border rounded-3 d-flex align-items-center gap-2 cursor-pointer bg-light">
+                            <input type="radio" name="ov_destino_reemb" value="EFECTIVO" class="form-check-input mt-0">
+                            <div>
+                                <strong class="d-block text-dark" style="font-size:0.83rem;">Efectivo por Caja Chica</strong>
+                                <small class="text-muted">Reembolso inmediato en garita o ventanilla.</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top py-2 px-4 bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold shadow-sm" id="ov-btn-confirmar-compensacion" onclick="window.ovConfirmarCajaCompensacion()">
+                    <i class="bi bi-check2-circle me-1"></i> Generar Registro de Caja
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 

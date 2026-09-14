@@ -374,13 +374,17 @@
                 <div id="wrap-tesoreria">
                     <button class="nav-section-toggle" data-section="tesoreria" aria-expanded="false" onclick="window.toggleNavSection('tesoreria')">
                         <span class="link-text">Tesorería</span>
-                        <span class="section-badge">4</span>
+                        <span class="section-badge">5</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-tesoreria">
                         <a id="nav-tesoreria-caja" class="nav-item" onclick="cargarModuloAislado('tesoreria/caja')">
                             <i class="bi bi-cash-stack nav-icon"></i>
                             <span class="link-text">Caja</span>
+                        </a>
+                        <a id="nav-tesoreria-liquidaciones" class="nav-item" onclick="cargarModuloAislado('tesoreria/liquidaciones')">
+                            <i class="bi bi-calculator-fill nav-icon text-success"></i>
+                            <span class="link-text">Liquidación de Gastos</span>
                         </a>
                         <a id="nav-tesoreria-cuentas" class="nav-item" onclick="cargarModuloAislado('tesoreria/cuentas')">
                             <i class="bi bi-receipt-cutoff nav-icon"></i>

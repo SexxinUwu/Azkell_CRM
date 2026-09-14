@@ -1890,6 +1890,478 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
             }
         })();
     }
+
+    // ── Cargar Depósitos / Cajas Reales de Tesorería Vinculadas a este Viaje ──
+    window.ovCargarDepositosViaje(viajeCode);
+};
+
+// ── CARGA DINÁMICA DE CAJAS / VIÁTICOS VINCULADOS A LA ORDEN DE VIAJE ──
+window.ovCargarDepositosViaje = async function(viajeCode) {
+    var tbody = document.getElementById('ov-mon-tbody-depositos');
+    if (!tbody) return;
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="11" class="text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm text-success me-2"></div> Consultando registros de caja y depósitos en Tesorería...
+            </td>
+        </tr>
+    `;
+
+    try {
+        var res = await fetch(`/api/tesoreria/caja?orden_viaje=${encodeURIComponent(viajeCode)}`);
+        var json = await res.json();
+        var lista = (json && json.ok && Array.isArray(json.data)) ? json.data : [];
+
+        if (lista.length === 0) {
+            tbody.innerHTML = `
+                <tr id="ov-mon-empty-depositos">
+                    <td colspan="11" class="text-center py-4 text-muted">
+                        <i class="bi bi-info-circle me-1"></i> No se registran depósitos ni viáticos asignados a este viaje en Tesorería.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = lista.map((c, idx) => {
+            var numStr = (c.serie && c.numero) ? `${c.serie}-${c.numero}` : (c.numero || `#CAJA-${c.id}`);
+            var fHora = (c.fecha || '') + (c.hora && c.hora !== '00:00:00' ? ' ' + c.hora : '');
+            var fAprob = c.fecha_aprobacion || '—';
+            var benef = c.persona || c.conductor || '—';
+            var mot = c.motivo || '—';
+            var submot = c.sub_motivo || '—';
+            var imp = 'S/ ' + parseFloat(c.importe_total || 0).toFixed(2);
+            var desc = c.descripcion || '—';
+
+            // Estado de la Caja
+            var est = (c.estado || 'PENDIENTE').toUpperCase();
+            var badgeEstado = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace px-2 py-0.5">PENDIENTE</span>';
+            if (est === 'APROBADO') {
+                badgeEstado = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-0.5">APROBADO</span>';
+            } else if (est === 'PROCESADO' || est === 'REGISTRADO') {
+                badgeEstado = '<span class="badge bg-success-subtle text-success border border-success-subtle font-monospace px-2 py-0.5">PROCESADO</span>';
+            } else if (est === 'ANULADO') {
+                badgeEstado = '<span class="badge bg-danger text-white font-monospace px-2 py-0.5">ANULADO</span>';
+            }
+
+            // Validación (si aplica)
+            var valTexto = c.no_aplica_liquidacion ? 'NO APLICA' : (est === 'PROCESADO' ? 'VALIDADO' : 'PENDIENTE');
+            var badgeVal = valTexto === 'VALIDADO'
+                ? '<span class="badge bg-light text-secondary border font-monospace">VALIDADO</span>'
+                : '<span class="badge bg-light text-muted border font-monospace">' + valTexto + '</span>';
+
+            // Voucher Link
+            var voucherUrl = c.voucher_view_url || c.voucher_url;
+            var voucherHtml = '—';
+            if (voucherUrl) {
+                voucherHtml = `
+                    <a href="${voucherUrl}" target="_blank" class="text-danger fw-bold text-decoration-none d-inline-flex align-items-center gap-1" title="Ver comprobante de depósito">
+                        <i class="bi bi-file-earmark-arrow-down-fill"></i> Ver
+                    </a>
+                `;
+            }
+
+            // Sustento Adicional (si tiene)
+            var sustentoUrl = c.sustento_view_url || c.sustento_url;
+            var sustentoBtn = '';
+            if (sustentoUrl) {
+                sustentoBtn = `
+                    <a href="${sustentoUrl}" target="_blank" class="text-primary small ms-1 text-decoration-none" title="Ver sustento adicional">
+                        <i class="bi bi-paperclip"></i>
+                    </a>
+                `;
+            }
+
+            return `
+                <tr class="stagger-child" style="animation-delay: ${idx * 40}ms;">
+                    <td class="font-monospace fw-bold text-primary">${numStr}</td>
+                    <td class="font-monospace text-secondary">${fHora || '—'}</td>
+                    <td class="font-monospace text-secondary">${fAprob}</td>
+                    <td class="fw-semibold text-dark text-truncate" style="max-width: 150px;" title="${benef}">${benef}</td>
+                    <td><span class="badge bg-light text-dark border">${mot}</span></td>
+                    <td class="text-muted small">${submot}</td>
+                    <td class="font-monospace fw-bold text-dark text-nowrap">${imp}</td>
+                    <td class="text-nowrap">${voucherHtml} ${sustentoBtn}</td>
+                    <td>${badgeEstado}</td>
+                    <td>${badgeVal}</td>
+                    <td class="text-muted small text-truncate" style="max-width: 180px;" title="${desc}">${desc}</td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error('Error al cargar depósitos de caja de viaje:', err);
+        tbody.innerHTML = `
+            <tr id="ov-mon-empty-depositos">
+                <td colspan="11" class="text-center py-4 text-danger">
+                    <i class="bi bi-exclamation-triangle me-1"></i> Error al consultar los depósitos asignados a este viaje.
+                </td>
+            </tr>
+        `;
+    }
+
+    // Cargar también las liquidaciones de gastos asociadas
+    window.ovCargarLiquidacionesViaje(viajeCode);
+};
+
+// ── CARGA DINÁMICA DE LIQUIDACIÓN DE GASTOS OPERATIVOS DEL VIAJE ──
+window._ovLiqDataCache = null;
+
+window.ovCargarLiquidacionesViaje = async function(viajeCode) {
+    var tbody = document.getElementById('ov-mon-tbody-liquidaciones');
+    var badgeLiq = document.getElementById('ov-mon-badge-liquidaciones');
+    if (!tbody) return;
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="10" class="text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm text-success me-2"></div> Consultando gastos de liquidación y balance...
+            </td>
+        </tr>
+    `;
+
+    try {
+        var res = await fetch(`/api/tesoreria/liquidaciones-gastos?orden_viaje=${encodeURIComponent(viajeCode)}`);
+        var json = await res.json();
+        
+        if (!json || !json.ok) {
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-muted">No se pudo consultar la liquidación.</td></tr>`;
+            return;
+        }
+
+        window._ovLiqDataCache = json;
+        var gastos = json.gastos || [];
+        if (badgeLiq) badgeLiq.textContent = gastos.length;
+
+        // Actualizar Bento KPIs
+        var kpiDep = document.getElementById('ov-liq-kpi-depositado');
+        var kpiRen = document.getElementById('ov-liq-kpi-rendido');
+        var kpiSal = document.getElementById('ov-liq-kpi-saldo');
+        var kpiSalLabel = document.getElementById('ov-liq-kpi-saldo-label');
+        var kpiSalCard = document.getElementById('ov-liq-kpi-saldo-card');
+        var kpiSalIcon = document.getElementById('ov-liq-kpi-saldo-icon');
+
+        var totalDep = parseFloat(json.total_depositado || 0);
+        var totalRen = parseFloat(json.total_rendido || 0);
+        var saldo = parseFloat(json.saldo_diferencia || 0);
+
+        if (kpiDep) kpiDep.textContent = `S/ ${totalDep.toFixed(2)}`;
+        if (kpiRen) kpiRen.textContent = `S/ ${totalRen.toFixed(2)}`;
+
+        // Formatear Saldo y Alertas de Compensación
+        var bannerComp = document.getElementById('ov-liq-banner-compensacion');
+        var bannerTexto = document.getElementById('ov-liq-banner-texto');
+        var btnCompensar = document.getElementById('ov-liq-btn-compensar');
+        var bannerIcon = document.getElementById('ov-liq-banner-icon');
+
+        if (kpiSal) {
+            if (saldo === 0) {
+                kpiSal.textContent = `S/ 0.00`;
+                kpiSal.className = 'fs-5 fw-bold font-monospace text-success';
+                if (kpiSalLabel) kpiSalLabel.textContent = 'Balance Cuadrado (Conforme)';
+                if (kpiSalIcon) kpiSalIcon.className = 'rounded-circle bg-success bg-opacity-10 text-success p-2';
+                if (bannerComp) bannerComp.classList.add('d-none');
+            } else if (saldo > 0) {
+                // Gastó menos -> Saldo a favor de la empresa
+                kpiSal.textContent = `+ S/ ${saldo.toFixed(2)}`;
+                kpiSal.className = 'fs-5 fw-bold font-monospace text-warning-emphasis';
+                if (kpiSalLabel) kpiSalLabel.textContent = 'Saldo a Favor de Empresa (Por devolver)';
+                if (kpiSalIcon) kpiSalIcon.className = 'rounded-circle bg-warning bg-opacity-10 text-warning p-2';
+
+                if (bannerComp && bannerTexto && btnCompensar) {
+                    bannerComp.className = 'alert alert-warning border-0 rounded-3 mb-3 d-flex align-items-center justify-content-between py-2 px-3';
+                    if (bannerIcon) bannerIcon.className = 'bi bi-cash-coin fs-5 text-warning';
+                    bannerTexto.innerHTML = `<strong>Sobrante de Viáticos:</strong> El conductor tiene un saldo pendiente de devolver por <strong>S/ ${saldo.toFixed(2)}</strong>.`;
+                    btnCompensar.textContent = 'Generar Caja de Ingreso (Devolución)';
+                    btnCompensar.className = 'btn btn-sm btn-warning text-dark fw-bold px-3 py-1 shadow-sm';
+                    btnCompensar.dataset.tipoComp = 'DEVOLUCION_EMPRESA';
+                    btnCompensar.dataset.monto = saldo.toFixed(2);
+                    bannerComp.classList.remove('d-none');
+                }
+            } else {
+                // Gastó más -> Saldo a favor del conductor
+                var absSaldo = Math.abs(saldo);
+                kpiSal.textContent = `- S/ ${absSaldo.toFixed(2)}`;
+                kpiSal.className = 'fs-5 fw-bold font-monospace text-danger';
+                if (kpiSalLabel) kpiSalLabel.textContent = 'Saldo a Favor Conductor (Por reembolsar)';
+                if (kpiSalIcon) kpiSalIcon.className = 'rounded-circle bg-danger bg-opacity-10 text-danger p-2';
+
+                if (bannerComp && bannerTexto && btnCompensar) {
+                    bannerComp.className = 'alert alert-danger border-0 rounded-3 mb-3 d-flex align-items-center justify-content-between py-2 px-3';
+                    if (bannerIcon) bannerIcon.className = 'bi bi-arrow-down-left-circle-fill fs-5 text-danger';
+                    bannerTexto.innerHTML = `<strong>Gasto en Exceso:</strong> El conductor gastó <strong>S/ ${absSaldo.toFixed(2)}</strong> de más que requiere reembolso.`;
+                    btnCompensar.textContent = 'Generar Caja de Reembolso (Egreso)';
+                    btnCompensar.className = 'btn btn-sm btn-danger fw-bold px-3 py-1 shadow-sm';
+                    btnCompensar.dataset.tipoComp = 'REEMBOLSO_CONDUCTOR';
+                    btnCompensar.dataset.monto = absSaldo.toFixed(2);
+                    bannerComp.classList.remove('d-none');
+                }
+            }
+        }
+
+        // Renderizar tabla de gastos
+        if (gastos.length === 0) {
+            tbody.innerHTML = `
+                <tr id="ov-mon-empty-liquidaciones">
+                    <td colspan="10" class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox me-1"></i> No se registran gastos de liquidación para este viaje. Haz clic en "Registrar Gasto" para agregar uno.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = gastos.map((g, i) => {
+            var sustHtml = '—';
+            var sUrl = g.sustento_view_url || g.sustento_url;
+            if (sUrl) {
+                sustHtml = `
+                    <a href="${sUrl}" target="_blank" class="text-danger fw-bold text-decoration-none d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-paperclip"></i> Ver
+                    </a>
+                `;
+            }
+
+            var compStr = (g.tipo_comprobante || 'BOLETA') + (g.numero ? ` (${g.numero})` : '');
+            var provStr = g.proveedor_nombre || g.proveedor_ruc || '—';
+
+            return `
+                <tr class="stagger-child" style="animation-delay:${i * 30}ms;">
+                    <td class="font-monospace fw-bold text-secondary">${i + 1}</td>
+                    <td class="font-monospace">${g.fecha || '—'}</td>
+                    <td><span class="badge bg-light text-dark border">${g.tipo_gasto}</span></td>
+                    <td class="text-muted small">${g.sub_motivo || '—'}</td>
+                    <td><span class="badge bg-light text-secondary border font-monospace" style="font-size:0.68rem;">${compStr}</span></td>
+                    <td class="text-truncate" style="max-width:140px;" title="${provStr}">${provStr}</td>
+                    <td class="text-muted small text-truncate" style="max-width:150px;" title="${g.detalle || ''}">${g.detalle || '—'}</td>
+                    <td>${sustHtml}</td>
+                    <td class="font-monospace fw-bold text-dark text-end text-nowrap">S/ ${parseFloat(g.importe || 0).toFixed(2)}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" title="Eliminar comprobante" onclick="window.ovEliminarGastoLiquidacion(${g.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error('Error al cargar liquidaciones de gastos:', err);
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger">Error al cargar liquidación de gastos.</td></tr>`;
+    }
+};
+
+// ── REGISTRAR NUEVO GASTO / COMPROBANTE ──
+window.ovAbrirModalNuevoGastoLiquidacion = function() {
+    var viajeCode = window._ovViajeMonitoreoActivo;
+    if (!viajeCode) return;
+    var item = window._ovViajeItemActivo || {};
+
+    var fFecha = document.getElementById('ov-gl-fecha');
+    var fSub = document.getElementById('ov-liq-form-subtitle');
+    if (fFecha) fFecha.value = new Date().toISOString().slice(0, 10);
+    if (fSub) fSub.textContent = `Viaje: ${viajeCode} | Conductor: ${item.conductor || '---'}`;
+
+    var form = document.getElementById('ovFormNuevoGastoLiq');
+    if (form) form.reset();
+    if (fFecha) fFecha.value = new Date().toISOString().slice(0, 10);
+
+    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('ovModalNuevoGastoLiq'));
+    modal.show();
+};
+
+window.ovActualizarSubmotivosGastoLiq = function() {
+    var tipo = (document.getElementById('ov-gl-tipo')?.value || '').toUpperCase();
+    var inpSub = document.getElementById('ov-gl-submotivo');
+    if (!inpSub) return;
+    if (tipo === 'COCHERA') inpSub.placeholder = 'Ej: Cochera nocturna de ruta';
+    else if (tipo === 'PEAJES') inpSub.placeholder = 'Ej: Peaje pesaje Faucett / Pucusana';
+    else if (tipo === 'VIATICOS') inpSub.placeholder = 'Ej: Almuerzo / Cena de ruta';
+    else if (tipo === 'PERNOCTE') inpSub.placeholder = 'Ej: Hotel en descanso obligatorio';
+    else if (tipo === 'LLANTAS') inpSub.placeholder = 'Ej: Parchado neumático posterior';
+    else inpSub.placeholder = 'Concepto o detalle';
+};
+
+window.ovGuardarGastoLiquidacion = async function(e) {
+    if (e) e.preventDefault();
+    var viajeCode = window._ovViajeMonitoreoActivo;
+    if (!viajeCode) return;
+    var item = window._ovViajeItemActivo || {};
+
+    var btn = document.getElementById('ov-btn-save-gasto-liq');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...'; }
+
+    try {
+        var formData = new FormData();
+        formData.append('orden_viaje', viajeCode);
+        formData.append('fecha', document.getElementById('ov-gl-fecha')?.value || '');
+        formData.append('conductor', item.conductor || '');
+        formData.append('tipo_gasto', document.getElementById('ov-gl-tipo')?.value || 'COCHERA');
+        formData.append('sub_motivo', document.getElementById('ov-gl-submotivo')?.value || '');
+        formData.append('tipo_comprobante', document.getElementById('ov-gl-comprobante')?.value || 'BOLETA');
+        formData.append('numero', document.getElementById('ov-gl-numero')?.value || '');
+        formData.append('importe', document.getElementById('ov-gl-importe')?.value || '0');
+        formData.append('proveedor_nombre', document.getElementById('ov-gl-proveedor')?.value || '');
+        formData.append('detalle', document.getElementById('ov-gl-detalle')?.value || '');
+
+        var userActual = (typeof window.usuarioLogueado !== 'undefined' && window.usuarioLogueado) || localStorage.getItem('fleet_user') || 'OPERACIONES';
+        formData.append('usuario_creacion', userActual);
+
+        var fileInput = document.getElementById('ov-gl-sustento');
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+            formData.append('sustento', fileInput.files[0]);
+        }
+
+        var res = await fetch('/api/tesoreria/liquidaciones-gastos', {
+            method: 'POST',
+            body: formData
+        });
+        var json = await res.json();
+
+        if (json && json.ok) {
+            if (typeof window.ovMostrarToastIsland === 'function') {
+                window.ovMostrarToastIsland('Gasto registrado con éxito');
+            } else {
+                alert('Gasto registrado con éxito');
+            }
+            var modal = bootstrap.Modal.getInstance(document.getElementById('ovModalNuevoGastoLiq'));
+            if (modal) modal.hide();
+            window.ovCargarLiquidacionesViaje(viajeCode);
+        } else {
+            alert(json.error || 'Error al guardar gasto');
+        }
+    } catch(err) {
+        console.error('Error al guardar gasto:', err);
+        alert('Error al procesar la solicitud: ' + err.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Guardar Gasto'; }
+    }
+};
+
+window.ovEliminarGastoLiquidacion = async function(id) {
+    if (!confirm('¿Estás seguro de eliminar este gasto de liquidación?')) return;
+    try {
+        var res = await fetch(`/api/tesoreria/liquidaciones-gastos/${id}`, { method: 'DELETE' });
+        var json = await res.json();
+        if (json && json.ok) {
+            if (typeof window.ovMostrarToastIsland === 'function') {
+                window.ovMostrarToastIsland('Gasto eliminado');
+            }
+            if (window._ovViajeMonitoreoActivo) {
+                window.ovCargarLiquidacionesViaje(window._ovViajeMonitoreoActivo);
+            }
+        } else {
+            alert(json.error || 'No se pudo eliminar');
+        }
+    } catch(err) {
+        alert('Error al eliminar gasto: ' + err.message);
+    }
+};
+
+// ── EJECUTAR CAJA DE COMPENSACIÓN AUTOMÁTICA (DEVOLUCIÓN O REEMBOLSO) ──
+window.ovEjecutarCajaCompensacion = function() {
+    var viajeCode = window._ovViajeMonitoreoActivo;
+    if (!viajeCode || !window._ovLiqDataCache) return;
+    var btn = document.getElementById('ov-liq-btn-compensar');
+    if (!btn) return;
+
+    var tipoComp = btn.dataset.tipoComp;
+    var monto = parseFloat(btn.dataset.monto || 0);
+
+    var modalEl = document.getElementById('ovModalCompensarLiquidacion');
+    if (!modalEl) return;
+
+    var lblMonto = document.getElementById('ov-comp-monto-label');
+    var lblTipo = document.getElementById('ov-comp-tipo-label');
+    var bDev = document.getElementById('ov-comp-bloque-devolucion');
+    var bReemb = document.getElementById('ov-comp-bloque-reembolso');
+
+    if (lblMonto) lblMonto.textContent = `S/ ${monto.toFixed(2)}`;
+
+    if (tipoComp === 'DEVOLUCION_EMPRESA') {
+        if (lblTipo) {
+            lblTipo.textContent = 'DEVOLUCIÓN A FAVOR DE EMPRESA';
+            lblTipo.className = 'badge bg-warning text-dark fw-bold px-2 py-1';
+        }
+        if (bDev) bDev.classList.remove('d-none');
+        if (bReemb) bReemb.classList.add('d-none');
+    } else {
+        if (lblTipo) {
+            lblTipo.textContent = 'REEMBOLSO AL CONDUCTOR';
+            lblTipo.className = 'badge bg-danger text-white fw-bold px-2 py-1';
+        }
+        if (bDev) bDev.classList.add('d-none');
+        if (bReemb) bReemb.classList.remove('d-none');
+    }
+
+    var bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    bsModal.show();
+};
+
+window.ovConfirmarCajaCompensacion = async function() {
+    var viajeCode = window._ovViajeMonitoreoActivo;
+    if (!viajeCode || !window._ovLiqDataCache) return;
+    var item = window._ovViajeItemActivo || {};
+    var btnTrigger = document.getElementById('ov-liq-btn-compensar');
+    var btnConfirm = document.getElementById('ov-btn-confirmar-compensacion');
+    if (!btnTrigger) return;
+
+    var tipoComp = btnTrigger.dataset.tipoComp;
+    var monto = parseFloat(btnTrigger.dataset.monto || 0);
+
+    var destino = 'CAJA_PRINCIPAL';
+    if (tipoComp === 'DEVOLUCION_EMPRESA') {
+        var opt = document.querySelector('input[name="ov_destino_dev"]:checked');
+        if (opt) destino = opt.value;
+    } else {
+        var optR = document.querySelector('input[name="ov_destino_reemb"]:checked');
+        if (optR) destino = optR.value;
+    }
+
+    if (btnConfirm) {
+        btnConfirm.disabled = true;
+        btnConfirm.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Procesando...';
+    }
+
+    try {
+        var userCreacion = (typeof window.usuarioLogueado !== 'undefined' && window.usuarioLogueado) || localStorage.getItem('fleet_user') || 'ADMINISTRADOR';
+
+        var res = await fetch('/api/tesoreria/liquidaciones-gastos/generar-caja-compensacion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                orden_viaje: viajeCode,
+                tipo_compensacion: tipoComp,
+                destino_devolucion: destino,
+                importe: monto,
+                conductor: item.conductor || '',
+                placa: item.placa_tracto || '',
+                usuario_creacion: userCreacion,
+                descripcion: `Compensación automática viaje ${viajeCode} [Destino: ${destino}]`
+            })
+        });
+        var json = await res.json();
+
+        if (json && json.ok) {
+            alert(json.message || 'Caja de compensación generada con éxito.');
+            var modalEl = document.getElementById('ovModalCompensarLiquidacion');
+            var bsModal = bootstrap.Modal.getInstance(modalEl);
+            if (bsModal) bsModal.hide();
+
+            window.ovCargarDepositosViaje(viajeCode);
+            window.ovCargarLiquidacionesViaje(viajeCode);
+        } else {
+            alert(json.error || 'Error al generar caja de compensación');
+        }
+    } catch (err) {
+        alert('Error de conexión: ' + err.message);
+    } finally {
+        if (btnConfirm) {
+            btnConfirm.disabled = false;
+            btnConfirm.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Generar Registro de Caja';
+        }
+    }
 };
 
 window.ovCerrarMonitoreoViaje = function() {

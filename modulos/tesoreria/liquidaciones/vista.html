@@ -1,0 +1,248 @@
+<!-- ================================================================ -->
+<!-- MÓDULO: LIQUIDACIONES DE GASTOS OPERATIVOS — TESORERÍA ERP AZKELL  -->
+<!-- ================================================================ -->
+<style>
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
+#mod-tesoreria-liquidaciones {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    padding: 1rem 1.25rem 3rem 1.25rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+.tliq-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+}
+
+.tliq-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #0f172a;
+    margin: 0;
+}
+.tliq-title small {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #10b981;
+    margin-left: 6px;
+    background: #ecfdf5;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.tliq-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    padding: 1.25rem;
+}
+
+.tliq-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+</style>
+
+<div id="mod-tesoreria-liquidaciones">
+    <!-- Header -->
+    <div class="tliq-header">
+        <div>
+            <h1 class="tliq-title">
+                <i class="bi bi-calculator-fill text-success me-1"></i> Liquidación de Gastos Operativos
+                <small>Tesorería & Ruta</small>
+            </h1>
+            <p class="text-secondary m-0" style="font-size:0.83rem;">
+                Control de anticipos, viáticos, peajes, cocheras y rendición de cuentas de conductores por orden de viaje.
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm fw-bold" onclick="window.tliqCargarViajes()">
+                <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros Superiores -->
+    <div class="tliq-card mb-3 p-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+                <label class="form-label text-muted fw-bold text-uppercase mb-1" style="font-size:0.68rem;">Buscar Viaje / Conductor / Placa</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control border-start-0" id="tliq-filtro-buscar" placeholder="Ej: 2026-00000974..." onkeyup="if(event.key==='Enter') window.tliqCargarViajes()">
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label text-muted fw-bold text-uppercase mb-1" style="font-size:0.68rem;">Estado Balance</label>
+                <select class="form-select form-select-sm" id="tliq-filtro-estado" onchange="window.tliqCargarViajes()">
+                    <option value="TODOS">TODOS</option>
+                    <option value="PENDIENTE">CON SALDO PENDIENTE</option>
+                    <option value="CUADRADO">CUADRADOS (S/ 0.00)</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <button type="button" class="btn btn-primary btn-sm w-100 fw-bold shadow-sm" onclick="window.tliqCargarViajes()">
+                    <i class="bi bi-funnel-fill me-1"></i> Filtrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Principal de Viajes y Liquidaciones -->
+    <div class="tliq-card p-0 overflow-hidden mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size:0.8rem;">
+                <thead class="table-light">
+                    <tr class="text-uppercase text-secondary" style="font-size:0.68rem; font-weight:800; letter-spacing:0.3px;">
+                        <th class="ps-3">Viaje</th>
+                        <th>Fecha</th>
+                        <th>Conductor</th>
+                        <th>Tracto / Remolque</th>
+                        <th>Ruta</th>
+                        <th class="text-end">Total Entregado</th>
+                        <th class="text-end">Total Rendido</th>
+                        <th class="text-end">Saldo / Diferencia</th>
+                        <th>Estado Balance</th>
+                        <th class="text-center pe-3">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tliq-tbody-viajes">
+                    <tr>
+                        <td colspan="10" class="text-center py-5 text-muted">
+                            <div class="spinner-border spinner-border-sm text-primary me-2"></div> Cargando liquidaciones de viajes...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Ver Detalle y Liquidar Viaje desde Tesorería -->
+<div class="modal fade" id="tliqModalDetalle" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom py-3 px-4 bg-light rounded-top-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-success bg-opacity-10 text-success p-2">
+                        <i class="bi bi-wallet2 fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold m-0 text-dark" id="tliq-modal-title">Auditoría y Liquidación de Viaje</h6>
+                        <small class="text-muted" id="tliq-modal-subtitle">Detalle de depósitos, comprobantes y balances</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4" id="tliq-modal-body">
+                <!-- Se llena dinámicamente -->
+            </div>
+            <div class="modal-footer border-top py-2 px-4 bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-sm btn-dark rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Decidir Imputación / Destino en Tesorería -->
+<div class="modal fade" id="tliqModalCompensacion" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom py-3 px-4 bg-light rounded-top-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-warning bg-opacity-10 text-warning p-2">
+                        <i class="bi bi-bank fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold m-0 text-dark">Liquidar Saldo y Generar Caja</h6>
+                        <small class="text-muted">Imputación contable del sobrante o reembolso</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-light border rounded-3 p-3 mb-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small d-block">Monto a Liquidar:</span>
+                        <span class="fs-4 fw-bold font-monospace text-dark" id="tliq-comp-monto-label">S/ 0.00</span>
+                    </div>
+                    <span class="badge bg-warning text-dark fw-bold px-2 py-1" id="tliq-comp-tipo-label">DEVOLUCIÓN</span>
+                </div>
+
+                <div id="tliq-comp-bloque-devolucion">
+                    <label class="form-label small fw-bold text-dark mb-2">¿A dónde ingresa el saldo sobrante del conductor?</label>
+                    <div class="d-flex flex-column gap-2">
+                        <label class="p-2.5 border rounded-3 d-flex align-items-center gap-2 cursor-pointer bg-light">
+                            <input type="radio" name="tliq_destino_dev" value="CAJA_PRINCIPAL" checked class="form-check-input mt-0">
+                            <div>
+                                <strong class="d-block text-dark" style="font-size:0.83rem;">Caja Principal de Tesorería (Banco)</strong>
+                                <small class="text-muted">El chofer deposita a cuenta corriente de la empresa.</small>
+                            </div>
+                        </label>
+                        <label class="p-2.5 border rounded-3 d-flex align-items-center gap-2 cursor-pointer bg-light">
+                            <input type="radio" name="tliq_destino_dev" value="CAJA_CHICA" class="form-check-input mt-0">
+                            <div>
+                                <strong class="d-block text-dark" style="font-size:0.83rem;">Caja Chica de Operaciones (Efectivo)</strong>
+                                <small class="text-muted">El chofer devuelve el efectivo en físico en garita/base.</small>
+                            </div>
+                        </label>
+                        <label class="p-2.5 border rounded-3 d-flex align-items-center gap-2 cursor-pointer bg-light">
+                            <input type="radio" name="tliq_destino_dev" value="DESCUENTO_PLANILLA" class="form-check-input mt-0">
+                            <div>
+                                <strong class="d-block text-dark" style="font-size:0.83rem;">Descontar de su próxima Asignación / Planilla</strong>
+                                <small class="text-muted">Se descuenta en la próxima orden de viaje o sueldo.</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="tliq-comp-bloque-reembolso" class="d-none">
+                    <label class="form-label small fw-bold text-dark mb-2">¿Cómo se reembolsará el gasto en exceso al conductor?</label>
+                    <div class="d-flex flex-column gap-2">
+                        <label class="p-2.5 border rounded-3 d-flex align-items-center gap-2 cursor-pointer bg-light">
+                            <input type="radio" name="tliq_destino_reemb" value="TRANSFERENCIA" checked class="form-check-input mt-0">
+                            <div>
+                                <strong class="d-block text-dark" style="font-size:0.83rem;">Transferencia Bancaria Inmediata</strong>
+                                <small class="text-muted">Caja de egreso por transferencia a la cuenta del conductor.</small>
+                            </div>
+                        </label>
+                        <label class="p-2.5 border rounded-3 d-flex align-items-center gap-2 cursor-pointer bg-light">
+                            <input type="radio" name="tliq_destino_reemb" value="EFECTIVO" class="form-check-input mt-0">
+                            <div>
+                                <strong class="d-block text-dark" style="font-size:0.83rem;">Efectivo por Caja Chica</strong>
+                                <small class="text-muted">Reembolso inmediato en garita o ventanilla.</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top py-2 px-4 bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold shadow-sm" id="tliq-btn-confirmar-compensacion" onclick="window.tliqConfirmarCajaCompensacion()">
+                    <i class="bi bi-check2-circle me-1"></i> Generar Registro de Caja
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
