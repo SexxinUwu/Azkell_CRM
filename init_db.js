@@ -950,6 +950,8 @@ async function initDB(defaultDb) {
         await promisePool.query("INSERT IGNORE INTO configuracion_erp (clave, valor) VALUES ('empresa_nombre', 'Azkell Fleet')");
         await promisePool.query("INSERT IGNORE INTO configuracion_erp (clave, valor) VALUES ('empresa_logo', '')");
         await promisePool.query("INSERT IGNORE INTO roles (id, nombre, color, permisos_json, es_admin, orden) VALUES (1, 'Administrador', '#5865F2', '{\"admin\":true}', 1, 1)");
+        await promisePool.query("INSERT IGNORE INTO roles (id, nombre, color, permisos_json, es_admin, orden) VALUES (2, 'Tesorería', '#10b981', '{\"dashboard\":{\"l\":1},\"tesoreria_caja\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0},\"tesoreria_liquidaciones\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0},\"tesoreria_cuentas\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0},\"tesoreria_bancos\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0},\"tesoreria_centros_costos\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0}}', 0, 2)");
+        await promisePool.query("INSERT IGNORE INTO roles (id, nombre, color, permisos_json, es_admin, orden) VALUES (3, 'Conductor', '#22c55e', '{\"dashboard\":{\"l\":0},\"conductor_portal\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0}}', 0, 3)");
         
         // Catálogos semillas predeterminados (INSERT IGNORE garantiza no alterar Marsisa ni datos existentes)
         await promisePool.query("INSERT IGNORE INTO cat_situaciones (id, codigo, descripcion) VALUES (1, 'S01', 'En Espera'), (2, 'S02', 'En Diagnóstico'), (3, 'S03', 'En Reparación'), (4, 'S04', 'Finalizada')");
