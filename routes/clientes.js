@@ -214,6 +214,68 @@ module.exports = function (db, logAudit) {
         });
     });
 
+    // ── POST /api/clientes/importar-masivo (Carga masiva desde Excel) ───────
+    router.post('/importar-masivo', (req, res) => {
+        const tdb = getDb(req);
+        const { clientes } = req.body;
+
+        if (!Array.isArray(clientes) || clientes.length === 0) {
+            return res.status(400).json({ error: 'No se enviaron clientes para importar' });
+        }
+
+        const validos = [];
+        for (const c of clientes) {
+            const razon = (c.razon_social || c.razon || c.nombre || '').toString().trim().toUpperCase();
+            if (!razon) continue;
+            const ruc = (c.ruc_dni || c.ruc || c.dni || '').toString().trim();
+            const tel = (c.telefono || c.celular || '').toString().trim();
+            const email = (c.email || c.correo || '').toString().trim().toLowerCase();
+            const dir = (c.direccion || '').toString().trim();
+            const est = (c.estado || 'Activo').toString().trim();
+            const notas = (c.notas || c.observaciones || '').toString().trim();
+
+            validos.push([ruc, razon, dir, tel, email, est, notas]);
+        }
+
+        if (validos.length === 0) {
+            return res.status(400).json({ error: 'Ningún registro contiene una Razón Social válida' });
+        }
+
+        const sql = `
+            INSERT INTO clientes (ruc_dni, razon_social, direccion, telefono, email, estado, notas)
+            VALUES ?
+            ON DUPLICATE KEY UPDATE
+                ruc_dni = VALUES(ruc_dni),
+                direccion = VALUES(direccion),
+                telefono = VALUES(telefono),
+                email = VALUES(email),
+                estado = VALUES(estado),
+                notas = VALUES(notas)
+        `;
+
+        tdb.query(sql, [validos], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            // Sincronizar placas asociadas
+            const syncPlacasSql = `
+            UPDATE placas p
+            JOIN clientes c ON (p.ruc_dni IS NOT NULL AND p.ruc_dni != '' AND p.ruc_dni = c.ruc_dni)
+                            OR (
+                                REPLACE(REPLACE(REPLACE(UPPER(p.cliente) COLLATE utf8mb4_general_ci, '.', ''), ' ', ''), '-', '') = 
+                                REPLACE(REPLACE(REPLACE(UPPER(c.razon_social) COLLATE utf8mb4_general_ci, '.', ''), ' ', ''), '-', '')
+                            )
+            SET p.cliente = c.razon_social, p.ruc_dni = IF(c.ruc_dni IS NOT NULL AND c.ruc_dni != '', c.ruc_dni, p.ruc_dni);
+            `;
+            tdb.query(syncPlacasSql, () => {});
+
+            res.json({
+                ok: true,
+                importados: validos.length,
+                affectedRows: result ? result.affectedRows : 0
+            });
+        });
+    });
+
     // ── PUT /api/clientes/:id (Editar cliente y cascadear a todas sus placas en vivo) ──
     router.put('/:id', (req, res) => {
         const tdb = getDb(req);
