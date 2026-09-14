@@ -1,0 +1,628 @@
+<!-- Módulo: Gerencia - Aprobación de Caja -->
+<style>
+#root-dinamico { padding: 0 !important; }
+.mod-wrap-gerencia-aprobaciones-caja {
+    padding: 1.25rem 1.5rem;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: var(--text, #1e293b);
+}
+@media (max-width: 768px) {
+    .mod-wrap-gerencia-aprobaciones-caja { padding: 0.75rem 0.75rem 90px 0.75rem; }
+}
+
+/* Bento Cards Header */
+.kpi-bento-caja {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 1rem;
+    padding: 1.1rem 1.25rem;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+.kpi-bento-caja:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+}
+.kpi-bento-caja::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+}
+.kpi-bento-caja.kpi-pend::before { background: #f59e0b; }
+.kpi-bento-caja.kpi-aprob::before { background: #10b981; }
+.kpi-bento-caja.kpi-anul::before { background: #ef4444; }
+.kpi-bento-caja.kpi-monto::before { background: #0284c7; }
+
+/* Filter Tabs */
+.caja-tabs-nav {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+.caja-tab-btn {
+    border: 1px solid var(--border, #e2e8f0);
+    background: var(--surface, #ffffff);
+    color: var(--subtext, #64748b);
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.caja-tab-btn:hover {
+    background: var(--hover, #f1f5f9);
+    color: var(--text, #0f172a);
+}
+.caja-tab-btn.active {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+}
+.caja-tab-btn .badge-pill {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.2);
+}
+.caja-tab-btn:not(.active) .badge-pill {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+/* Caja Card Item */
+.caja-approval-card {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 1.1rem;
+    padding: 1.25rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+.caja-approval-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.08);
+}
+.caja-approval-card.status-registrado,
+.caja-approval-card.status-pendiente {
+    border-left: 5px solid #f59e0b;
+}
+.caja-approval-card.status-aprobado {
+    border-left: 5px solid #10b981;
+    background: linear-gradient(to right, rgba(16, 185, 129, 0.02), var(--surface, #ffffff));
+}
+.caja-approval-card.status-anulado {
+    border-left: 5px solid #ef4444;
+    opacity: 0.85;
+}
+
+/* Table Style */
+.table-aprobaciones-caja th {
+    font-size: 0.73rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #475569;
+    background: #f8fafc;
+    padding: 0.75rem 0.85rem;
+    border-bottom: 2px solid var(--border, #e2e8f0);
+    white-space: nowrap;
+}
+.table-aprobaciones-caja td {
+    padding: 0.75rem 0.85rem;
+    vertical-align: middle;
+    font-size: 0.83rem;
+    border-bottom: 1px solid var(--border, #f1f5f9);
+}
+.table-aprobaciones-caja tbody tr:hover {
+    background-color: #f8fafc !important;
+}
+
+/* Botones de acción directa */
+.btn-caja-autorizar {
+    background: #059669;
+    color: #ffffff;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.35rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: all 0.15s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.btn-caja-autorizar:hover {
+    background: #047857;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.2);
+}
+
+.btn-caja-anular {
+    background: #e11d48;
+    color: #ffffff;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.35rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: all 0.15s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.btn-caja-anular:hover {
+    background: #be123c;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(225, 29, 72, 0.2);
+}
+
+.btn-caja-code {
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 0.25rem 0.55rem;
+    border-radius: 0.4rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.btn-caja-code:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #0284c7;
+}
+</style>
+
+<div class="mod-wrap-gerencia-aprobaciones-caja container-fluid">
+    <!-- Header Principal -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                <span class="badge bg-dark text-white rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.72rem; letter-spacing:0.02em;">
+                    <i class="bi bi-shield-check text-warning me-1"></i> DIRECCIÓN / GERENCIA
+                </span>
+                <h4 class="fw-bolder text-dark m-0" style="letter-spacing:-0.02em;">Aprobación de Movimientos de Caja</h4>
+            </div>
+            <p class="text-secondary m-0" style="font-size:0.83rem;">
+                Bandeja gerencial para la autorización, validación de sustentos y anulación de egresos de caja y transferencias
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5 shadow-2xs" style="font-size:0.82rem;" onclick="window.recargarAprobacionesCaja()">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            </button>
+            <div class="btn-group p-0.5 bg-light rounded-3 border" role="group">
+                <button type="button" class="btn btn-sm btn-white active fw-bold px-2.5 py-1.5 rounded-2" id="btn-caja-view-table" onclick="window.cambiarModoVistaCaja('table')" title="Vista Tabla">
+                    <i class="bi bi-list-task"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-transparent text-secondary fw-semibold px-2.5 py-1.5 rounded-2" id="btn-caja-view-cards" onclick="window.cambiarModoVistaCaja('cards')" title="Vista Tarjetas">
+                    <i class="bi bi-grid-fill"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bento KPI Summary -->
+    <div class="row g-3 mb-4">
+        <!-- Pendientes / Registrados -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-bento-caja kpi-pend" style="cursor:pointer;" onclick="window.filtrarPorTabCaja('pendiente')">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Por Aprobar (Pendientes)</span>
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill fw-bold" style="font-size:0.7rem;">
+                        <i class="bi bi-clock-history"></i> En Espera
+                    </span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <h3 class="fw-black text-dark m-0" id="kpi-caja-count-pendientes" style="font-size:1.6rem; letter-spacing:-0.03em;">0</h3>
+                    <span class="text-muted fw-semibold" style="font-size:0.8rem;">movimientos</span>
+                </div>
+                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size:0.78rem;">
+                    <span class="text-secondary">Monto en espera:</span>
+                    <strong class="text-warning-emphasis fw-bold" id="kpi-caja-monto-pendientes">S/ 0.00</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aprobadas -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-bento-caja kpi-aprob" style="cursor:pointer;" onclick="window.filtrarPorTabCaja('aprobado')">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Aprobadas / Autorizadas</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold" style="font-size:0.7rem;">
+                        <i class="bi bi-check-circle-fill"></i> Validadas
+                    </span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <h3 class="fw-black text-dark m-0" id="kpi-caja-count-aprobadas" style="font-size:1.6rem; letter-spacing:-0.03em;">0</h3>
+                    <span class="text-muted fw-semibold" style="font-size:0.8rem;">movimientos</span>
+                </div>
+                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size:0.78rem;">
+                    <span class="text-secondary">Monto Autorizado:</span>
+                    <strong class="text-success fw-bold" id="kpi-caja-monto-aprobadas">S/ 0.00</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Anuladas -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-bento-caja kpi-anul" style="cursor:pointer;" onclick="window.filtrarPorTabCaja('anulado')">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Anuladas / Desestimadas</span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fw-bold" style="font-size:0.7rem;">
+                        <i class="bi bi-x-circle-fill"></i> Anuladas
+                    </span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <h3 class="fw-black text-dark m-0" id="kpi-caja-count-anuladas" style="font-size:1.6rem; letter-spacing:-0.03em;">0</h3>
+                    <span class="text-muted fw-semibold" style="font-size:0.8rem;">movimientos</span>
+                </div>
+                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size:0.78rem;">
+                    <span class="text-secondary">Monto no ejecutado:</span>
+                    <strong class="text-danger fw-bold" id="kpi-caja-monto-anuladas">S/ 0.00</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total General Acumulado -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-bento-caja kpi-monto" style="cursor:pointer;" onclick="window.filtrarPorTabCaja('todos')">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Total General Egresos</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold" style="font-size:0.7rem;">
+                        <i class="bi bi-wallet2"></i> Consolidado
+                    </span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <h3 class="fw-black text-dark m-0" id="kpi-caja-count-todos" style="font-size:1.6rem; letter-spacing:-0.03em;">0</h3>
+                    <span class="text-muted fw-semibold" style="font-size:0.8rem;">totales</span>
+                </div>
+                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size:0.78rem;">
+                    <span class="text-secondary">Monto Consolidado:</span>
+                    <strong class="text-primary fw-bold" id="kpi-caja-monto-todos">S/ 0.00</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Filtros, Fechas y Búsqueda -->
+    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-4 bg-white" style="border:1px solid var(--border,#e2e8f0)!important;">
+        <div class="row g-3 align-items-center mb-3 pb-3 border-bottom">
+            <!-- Selector de Rango de Fechas -->
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="flex-grow-1">
+                        <label class="form-label text-secondary fw-bold mb-1 d-flex align-items-center gap-1" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em;">
+                            <i class="bi bi-calendar-event text-primary"></i> FECHA DESDE
+                        </label>
+                        <input type="date" id="filtro-caja-fecha-desde" class="form-control rounded-3 border bg-light py-1.5 px-2.5 fw-semibold" style="font-size:0.83rem;" onchange="window.aplicarFiltrosCaja()">
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="form-label text-secondary fw-bold mb-1 d-flex align-items-center gap-1" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em;">
+                            <i class="bi bi-calendar-check text-primary"></i> FECHA HASTA
+                        </label>
+                        <input type="date" id="filtro-caja-fecha-hasta" class="form-control rounded-3 border bg-light py-1.5 px-2.5 fw-semibold" style="font-size:0.83rem;" onchange="window.aplicarFiltrosCaja()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buscador y Selector de Motivo/Tipo -->
+            <div class="col-12 col-md-6 col-xl-8">
+                <label class="form-label text-secondary fw-bold mb-1" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em;">
+                    Búsqueda Rápida & Criterio
+                </label>
+                <div class="d-flex gap-2">
+                    <div class="position-relative flex-grow-1">
+                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
+                        <input type="text" id="filtro-caja-buscar" class="form-control ps-5 py-1.5 rounded-3 border bg-light" placeholder="Buscar por N° Caja, Beneficiario, Placa, Motivo o Viaje..." style="font-size:0.83rem;" oninput="window.aplicarFiltrosCaja()">
+                    </div>
+                    <select id="filtro-caja-motivo" class="form-select rounded-3 border bg-light py-1.5" style="font-size:0.83rem; width:180px;" onchange="window.aplicarFiltrosCaja()">
+                        <option value="">Todos los Motivos</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fila de Tabs de Estados -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="caja-tabs-nav">
+                <button class="caja-tab-btn" data-tab="todos" onclick="window.filtrarPorTabCaja('todos')">
+                    <i class="bi bi-collection"></i> Todos <span class="badge-pill" id="tab-badge-caja-todos">0</span>
+                </button>
+                <button class="caja-tab-btn active" data-tab="pendiente" onclick="window.filtrarPorTabCaja('pendiente')">
+                    <i class="bi bi-hourglass-split text-warning"></i> Por Aprobar <span class="badge-pill" id="tab-badge-caja-pendiente">0</span>
+                </button>
+                <button class="caja-tab-btn" data-tab="aprobado" onclick="window.filtrarPorTabCaja('aprobado')">
+                    <i class="bi bi-check2-circle text-success"></i> Aprobadas <span class="badge-pill" id="tab-badge-caja-aprobado">0</span>
+                </button>
+                <button class="caja-tab-btn" data-tab="anulado" onclick="window.filtrarPorTabCaja('anulado')">
+                    <i class="bi bi-x-circle text-danger"></i> Anuladas <span class="badge-pill" id="tab-badge-caja-anulado">0</span>
+                </button>
+            </div>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold" style="font-size:0.75rem;" onclick="window.limpiarFiltrosCaja()">
+                    <i class="bi bi-arrow-counterclockwise"></i> Limpiar Filtros
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor de Vista: Tarjetas -->
+    <div id="contenedor-caja-vista-cards" class="row g-3 d-none">
+        <!-- Renderizado dinámico desde logica.js -->
+    </div>
+
+    <!-- Contenedor de Vista: Tabla Horizontal -->
+    <div id="contenedor-caja-vista-table" class="card border-0 shadow-2xs rounded-4 bg-white overflow-hidden" style="border:1px solid var(--border,#e2e8f0)!important;">
+        <div class="table-responsive">
+            <table class="table table-hover table-aprobaciones-caja m-0 align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 1%; white-space: nowrap;">ACCIÓN</th>
+                        <th style="width: 1%; white-space: nowrap;">FECHA</th>
+                        <th style="width: 1%; white-space: nowrap;">N° CAJA</th>
+                        <th style="width: 1%; white-space: nowrap;">ESTADO</th>
+                        <th style="min-width: 160px;">BENEFICIARIO / CONDUCTOR</th>
+                        <th style="min-width: 180px;">MOTIVO & SUBMOTIVO</th>
+                        <th style="min-width: 140px;">PLACA / VIAJE</th>
+                        <th style="min-width: 160px;">CUENTA ORIGEN</th>
+                        <th style="min-width: 160px;">CUENTA DESTINO</th>
+                        <th class="text-end" style="width: 1%; white-space: nowrap;">IMPORTE</th>
+                        <th style="width: 1%; white-space: nowrap;">REGISTRADO POR</th>
+                        <th style="width: 1%; white-space: nowrap;">APROBADO POR</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpo-tabla-aprobaciones-caja">
+                    <!-- Renderizado dinámico desde logica.js -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Empty State si no hay resultados -->
+    <div id="empty-state-aprobaciones-caja" class="card border-0 shadow-2xs rounded-4 p-5 text-center bg-white d-none" style="border:1px dashed var(--border,#cbd5e1)!important;">
+        <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle p-3 mb-3 mx-auto" style="width:64px;height:64px;">
+            <i class="bi bi-inbox text-secondary" style="font-size:1.8rem;"></i>
+        </div>
+        <h5 class="fw-bold text-dark mb-1">No se encontraron movimientos de caja</h5>
+        <p class="text-secondary mb-3" style="font-size:0.85rem;">No hay registros que coincidan con los filtros seleccionados en esta bandeja.</p>
+        <div>
+            <button class="btn btn-outline-secondary btn-sm rounded-3 px-3 fw-semibold" onclick="window.limpiarFiltrosCaja()">
+                Restablecer Filtros
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: DETALLE DE MOVIMIENTO DE CAJA -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalDetalleCaja" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+            <!-- Header Modal -->
+            <div class="modal-header border-bottom py-3 px-4 bg-light">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 bg-success text-white p-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                        <i class="bi bi-cash-coin fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="modal-title fw-black text-dark m-0" id="det-caja-numero">CAJA-2026-00000001</h5>
+                            <span class="badge rounded-pill fw-bold" id="det-caja-badge-estado">PENDIENTE</span>
+                        </div>
+                        <span class="text-secondary" style="font-size:0.8rem;" id="det-caja-fecha-emision">Registrado el —</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Body Modal -->
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <!-- Columna Izquierda: Información de la Operación y Personas -->
+                    <div class="col-12 col-lg-8">
+                        <!-- Card Beneficiario & Imputación -->
+                        <div class="p-3 rounded-3 bg-light border mb-4">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <div class="text-secondary fw-semibold mb-1" style="font-size:0.75rem; text-transform:uppercase;">Beneficiario / Persona</div>
+                                    <div class="fw-bold text-dark" id="det-caja-persona" style="font-size:0.95rem;">-</div>
+                                    <div class="text-secondary" style="font-size:0.82rem;" id="det-caja-tipo-persona">Tipo: -</div>
+                                    <div class="text-secondary" style="font-size:0.82rem;" id="det-caja-cta-destino">Cta Destino: -</div>
+                                </div>
+                                <div class="col-12 col-md-6 border-start-md">
+                                    <div class="text-secondary fw-semibold mb-1" style="font-size:0.75rem; text-transform:uppercase;">Asignación Operativa</div>
+                                    <div class="fw-bold text-dark" id="det-caja-placa-viaje" style="font-size:0.95rem;">-</div>
+                                    <div class="text-secondary" style="font-size:0.82rem;" id="det-caja-ruta">Ruta: -</div>
+                                    <div class="text-secondary" style="font-size:0.82rem;" id="det-caja-centro-costo">Centro de Costos: -</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Concepto / Motivo -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
+                                <i class="bi bi-tag-fill text-primary"></i> Concepto del Egreso
+                            </h6>
+                            <div class="p-3 rounded-3 bg-white border" style="font-size:0.86rem; line-height:1.5; color:#334155;">
+                                <div class="mb-1"><strong>Motivo:</strong> <span id="det-caja-motivo">-</span></div>
+                                <div class="mb-1"><strong>Submotivo:</strong> <span id="det-caja-submotivo">-</span></div>
+                                <div class="mb-1"><strong>Descripción:</strong> <span id="det-caja-descripcion">-</span></div>
+                                <div class="mt-2 pt-2 border-top"><strong>Observaciones / Notas:</strong> <span id="det-caja-observacion" class="text-secondary">-</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Sustento y Vouchers Adjuntos -->
+                        <div>
+                            <h6 class="fw-bold text-dark mb-2 d-flex align-items-center justify-content-between">
+                                <span><i class="bi bi-paperclip text-primary me-1"></i> Comprobante y Documentos Adjuntos</span>
+                            </h6>
+                            <div class="row g-3" id="det-caja-adjuntos-wrap">
+                                <!-- Voucher / Sustento se inyectan dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Resumen Financiero y Cuentas Bancarias -->
+                    <div class="col-12 col-lg-4">
+                        <div class="card border rounded-4 p-3 bg-light mb-3">
+                            <h6 class="fw-bold text-dark mb-3">Detalle Financiero</h6>
+                            <div class="d-flex justify-content-between text-secondary mb-2" style="font-size:0.84rem;">
+                                <span>Modalidad de Pago:</span>
+                                <span class="fw-semibold text-dark" id="det-caja-modalidad">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-secondary mb-2" style="font-size:0.84rem;">
+                                <span>Moneda / TC:</span>
+                                <span class="fw-semibold text-dark" id="det-caja-moneda-tc">SOLES (1.000)</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-secondary mb-2" style="font-size:0.84rem;">
+                                <span>Tipo Comprobante:</span>
+                                <span class="badge bg-white text-dark border fw-bold" id="det-caja-tipo-comp">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-secondary mb-3" style="font-size:0.84rem;">
+                                <span>Cuenta Origen Empresa:</span>
+                                <span class="fw-semibold text-dark text-end" style="font-size:0.78rem;" id="det-caja-cta-empresa">-</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <span class="fw-bold text-dark" style="font-size:0.95rem;">TOTAL EGRESO:</span>
+                                <h4 class="fw-black text-success m-0" id="det-caja-monto-total">S/ 0.00</h4>
+                            </div>
+                        </div>
+
+                        <!-- Auditoría y Trazabilidad -->
+                        <div class="card border rounded-4 p-3 bg-white mb-3 shadow-2xs">
+                            <h6 class="fw-bold text-dark mb-2" style="font-size:0.85rem;"><i class="bi bi-shield-check"></i> Auditoría del Movimiento</h6>
+                            <div class="text-secondary" style="font-size:0.8rem;">
+                                <div class="mb-1"><strong>Registrado por:</strong> <span id="det-caja-usuario-reg" class="text-dark fw-semibold">-</span></div>
+                                <div class="mb-1"><strong>Aprobado por:</strong> <span id="det-caja-usuario-aprob" class="text-dark fw-semibold">-</span></div>
+                                <div><strong>Fecha Aprobación:</strong> <span id="det-caja-fecha-aprob">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer con Acciones Gerenciales -->
+            <div class="modal-footer border-top py-3 px-4 bg-light d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-3 fw-semibold" data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+                <div class="d-flex gap-2" id="det-caja-modal-actions">
+                    <button type="button" class="btn btn-caja-anular rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1.5" onclick="window.abrirModalAnularCaja()">
+                        <i class="bi bi-x-circle-fill"></i> Anular Caja
+                    </button>
+                    <button type="button" class="btn btn-caja-autorizar rounded-3 px-4 py-2 fw-bold d-flex align-items-center gap-1.5 shadow-sm" onclick="window.abrirModalAutorizarCaja()">
+                        <i class="bi bi-check-circle-fill"></i> Aprobar Caja
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: CONFIRMAR AUTORIZACIÓN DE CAJA -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalAutorizarCaja" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+        <div class="modal-content rounded-4 border-0 shadow-lg p-2 bg-white">
+            <div class="modal-header border-0 pb-0 pt-2 px-3 d-flex justify-content-between align-items-center">
+                <h5 class="modal-title fw-bold m-0" style="color: #059669; font-size: 1.15rem; letter-spacing: -0.01em;">Aprobar Caja</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.8rem;"></button>
+            </div>
+            <div class="modal-body px-3 pt-2 pb-2 text-center">
+                <div class="d-inline-flex align-items-center justify-content-center my-2">
+                    <div class="rounded-4 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; background: #ecfdf5;">
+                        <i class="bi bi-check2-circle" style="font-size: 2.8rem; color: #059669;"></i>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-center gap-2 mt-2 mb-1">
+                    <input class="form-check-input mt-0" type="checkbox" id="modal-caja-check-autorizar" style="cursor: pointer; width: 1.15rem; height: 1.15rem; border-color: #94a3b8;">
+                    <label class="form-check-label text-dark fw-semibold" for="modal-caja-check-autorizar" style="font-size: 0.84rem; cursor: pointer;">
+                        Confirmo la aprobación de esta caja
+                    </label>
+                </div>
+
+                <div class="fw-bold mb-3" style="color: #059669; font-size: 0.82rem; line-height: 1.3;">
+                    Al aprobarse, el movimiento quedará bloqueado para edición
+                </div>
+
+                <div class="my-2">
+                    <div class="fw-black text-dark" id="modal-caja-autorizar-codigo" style="font-size: 1.35rem; letter-spacing: -0.02em;">CAJA-2026-00000001</div>
+                    <div class="fw-black text-success mt-1" id="modal-caja-autorizar-monto" style="font-size: 1.4rem; letter-spacing: -0.02em;">S/ 0.00</div>
+                    <div class="text-secondary small mt-1" id="modal-caja-autorizar-beneficiario">-</div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-1 pb-3 px-3 d-flex justify-content-center gap-2">
+                <button type="button" class="btn btn-light rounded-3 px-4 py-2 fw-semibold text-secondary border" data-bs-dismiss="modal" style="font-size: 0.85rem; min-width: 90px; background: #f1f5f9;">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success rounded-3 px-4 py-2 fw-bold text-white shadow-sm" id="btn-submit-aprobar-caja" onclick="window.confirmarAprobacionCaja()" style="font-size: 0.85rem; background: #059669; border-color: #059669; min-width: 140px;">
+                    Aprobar Ahora!
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: ANULAR CAJA CON MOTIVO -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalAnularCaja" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0 pt-4 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle p-2 d-flex align-items-center justify-content-center bg-danger-subtle text-danger" style="width:40px;height:40px;">
+                        <i class="bi bi-x-circle-fill" style="font-size:1.2rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark m-0">Anular Movimiento de Caja</h5>
+                        <span class="text-secondary" style="font-size:0.8rem;" id="modal-anular-caja-subtitulo">Caja: -</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <p class="text-secondary mb-3" style="font-size:0.86rem;">
+                    Esta acción cambiará el estado a <strong>ANULADO</strong> y bloqueará el movimiento de caja de forma permanente.
+                </p>
+                <div class="mb-2">
+                    <label class="form-label fw-bold text-dark" style="font-size:0.8rem;">Motivo de la Anulación *:</label>
+                    <textarea id="modal-anular-caja-motivo" class="form-control rounded-3" rows="3" placeholder="Ingrese la justificación de la anulación..." style="font-size:0.84rem;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-4 px-4 d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-3 fw-semibold" data-bs-dismiss="modal">
+                    Volver
+                </button>
+                <button type="button" class="btn btn-danger rounded-3 px-4 fw-bold" id="btn-submit-anular-caja" onclick="window.confirmarAnulacionCaja()">
+                    Confirmar Anulación
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

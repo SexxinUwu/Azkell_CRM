@@ -439,6 +439,7 @@ window.verificarSesionGuardada = function() {
     safe('wrap-gerencia', showGerencia);
     safe('bnav-gerencia', showGerencia);
     safe('nav-gerencia-aprobaciones-oc', showGerencia);
+    safe('nav-gerencia-aprobaciones-caja', showGerencia);
     safe('mbnav-gerencia-aprobaciones', showGerencia);
 
     // TESORERÍA
@@ -3755,6 +3756,7 @@ const TITULOS_MODULOS = {
     'seguridad/unidades':          'Control de Unidades',
     'seguridad/unidades-base':     'Status "Unidades en Base"',
     'gerencia/aprobaciones-oc':    'Aprobación de Órdenes de Compra',
+    'gerencia/aprobaciones-caja':  'Aprobación de Caja',
     'operaciones/combustible-vales': 'Vales de Combustible',
     'operaciones/combustible-estaciones': 'Estaciones de proveedores',
     'operaciones/combustible-analisis': 'Análisis de Combustible (D2)',
@@ -3831,6 +3833,7 @@ const MENU_IDS = {
     'sistema/usuarios':            'nav-usuarios',
     'sistema/auditoria':           'nav-auditoria',
     'gerencia/aprobaciones-oc':    'nav-gerencia-aprobaciones-oc',
+    'gerencia/aprobaciones-caja':  'nav-gerencia-aprobaciones-caja',
     'seguridad/unidades':          'nav-seg-unidades',
     'seguridad/unidades-base':     'nav-seg-unidades-base',
     'tesoreria/caja':              'nav-tesoreria-caja',
@@ -3881,6 +3884,7 @@ const MENU_SECTION = {
     'sistema/usuarios':           'configuracion',
     'sistema/auditoria':          'configuracion',
     'gerencia/aprobaciones-oc':   'gerencia',
+    'gerencia/aprobaciones-caja': 'gerencia',
     'seguridad/unidades':         'seguridad',
     'seguridad/unidades-base':    'seguridad',
     'operaciones/programacion':    'operaciones',
@@ -3955,6 +3959,7 @@ const BREADCRUMB_MAP = {
     'sistema/auditoria':          ['Configuración','Auditoría'],
     'sistema/configuracion':      ['Sistema','Configuración'],
     'gerencia/aprobaciones-oc':   ['Gerencia','Aprobación de O/C'],
+    'gerencia/aprobaciones-caja': ['Gerencia','Aprobación de Caja'],
     'seguridad/unidades':         ['Seguridad','Unidades'],
     'seguridad/unidades-base':    ['Seguridad','Unidades en Base'],
 };

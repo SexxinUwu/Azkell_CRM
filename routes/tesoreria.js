@@ -1369,13 +1369,14 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
-    // Cambiar estado a APROBADO
+    // Cambiar estado a APROBADO (Desde módulo Gerencia / Aprobación de Caja)
     router.post('/caja/:id/aprobar', async (req, res) => {
         try {
             await ensureTableCaja(req);
             const tdb = getDb(req);
             const { id } = req.params;
-            const userName = (req.user && req.user.nombre) ? req.user.nombre : 'Administrador';
+            const b = req.body || {};
+            const userName = (req.user && req.user.nombre) ? req.user.nombre : (b.usuario_aprobacion || 'Administrador');
 
             const [rows] = await tdb.query('SELECT estado FROM tesoreria_caja WHERE id = ?', [id]);
             if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
@@ -1388,7 +1389,37 @@ module.exports = function (db, broadcast, logAudit) {
                 WHERE id = ?
             `, [userName, id]);
 
-            res.json({ ok: true, message: 'Caja aprobada con éxito' });
+            res.json({ ok: true, message: 'Caja aprobada con éxito por ' + userName });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Cambiar estado a ANULADO (Desde módulo Gerencia / Aprobación de Caja)
+    router.post('/caja/:id/anular', async (req, res) => {
+        try {
+            await ensureTableCaja(req);
+            const tdb = getDb(req);
+            const { id } = req.params;
+            const b = req.body || {};
+            const userName = (req.user && req.user.nombre) ? req.user.nombre : (b.usuario_anulacion || 'Administrador');
+            const motivo = (b.motivo || 'Anulado por Gerencia').trim();
+
+            const [rows] = await tdb.query('SELECT estado, observacion FROM tesoreria_caja WHERE id = ?', [id]);
+            if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
+
+            const obsPrev = rows[0].observacion || '';
+            const nuevaObs = obsPrev ? `${obsPrev} | [ANULACIÓN]: ${motivo} (Por ${userName})` : `[ANULACIÓN]: ${motivo} (Por ${userName})`;
+
+            await tdb.query(`
+                UPDATE tesoreria_caja SET
+                    estado = 'ANULADO',
+                    usuario_aprobacion = ?,
+                    observacion = ?
+                WHERE id = ?
+            `, [userName, nuevaObs, id]);
+
+            res.json({ ok: true, message: 'Caja anulada correctamente' });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
