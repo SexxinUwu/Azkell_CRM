@@ -2219,18 +2219,24 @@ module.exports = function (db, broadcast, logAudit) {
             if (codOrden) {
                 try {
                     if (estUpper === 'INICIADO') {
-                        let conductorViaje = null;
+                        let conductorViaje = osRow.conductor || null;
                         let razonSocialViaje = '';
                         if (viajeCode) {
-                            const [vRows] = await tdb.query(`SELECT conductor, empresa_nombre FROM operaciones_ordenes_viaje WHERE viaje = ? LIMIT 1`, [viajeCode]);
-                            if (vRows && vRows.length > 0) {
-                                conductorViaje = vRows[0].conductor;
-                                razonSocialViaje = vRows[0].empresa_nombre || '';
+                            try {
+                                const [vRows] = await tdb.query(`SELECT conductor FROM operaciones_ordenes_viaje WHERE viaje = ? LIMIT 1`, [viajeCode]);
+                                if (vRows && vRows.length > 0 && vRows[0].conductor) {
+                                    conductorViaje = vRows[0].conductor;
+                                }
+                            } catch(eViaje) {
+                                console.warn('[Operaciones -> Cuentas] Error consultando viaje:', eViaje.message);
                             }
                         }
 
-                        const [rutasRows] = await tdb.query(`SELECT ruta FROM operaciones_ordenes_servicio_rutas WHERE orden_servicio_id = ?`, [req.params.id]);
-                        let lugarStr = (rutasRows || []).map(r => r.ruta).filter(Boolean).join(' - ');
+                        let lugarStr = '';
+                        try {
+                            const [rutasRows] = await tdb.query(`SELECT ruta FROM operaciones_ordenes_servicio_rutas WHERE orden_servicio_id = ?`, [req.params.id]);
+                            lugarStr = (rutasRows || []).map(r => r.ruta).filter(Boolean).join(' - ');
+                        } catch(eRuta) {}
 
                         const fleteNum = parseFloat(osRow.costo_flete) || 0.00;
                         const tarifaNum = fleteNum;
@@ -2240,44 +2246,74 @@ module.exports = function (db, broadcast, logAudit) {
                         const detraccionNum = totalNum > 700 ? Math.round(totalNum * 0.04) : 0.00;
                         const netoCobrarNum = parseFloat((totalNum - detraccionNum).toFixed(2));
 
-                        await tdb.query(`
-                            INSERT INTO tesoreria_cuentas (
-                                orden_servicio, numero_viaje, fecha_servicio, razon_social,
-                                placa_camion, placa_carreta, conductor, cliente, lugar,
-                                flete, comision_porcentaje, tarifa, gastos_operativos,
-                                base_imponible, igv, total, adelanto, detraccion, neto_cobrar,
-                                estado_servicio
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, ?, 0.00, ?, ?, ?, 0.00, ?, ?, 'PENDIENTE')
-                            ON DUPLICATE KEY UPDATE
-                                numero_viaje = VALUES(numero_viaje),
-                                fecha_servicio = VALUES(fecha_servicio),
-                                cliente = VALUES(cliente),
-                                flete = VALUES(flete),
-                                tarifa = VALUES(tarifa),
-                                base_imponible = VALUES(base_imponible),
-                                igv = VALUES(igv),
-                                total = VALUES(total),
-                                detraccion = VALUES(detraccion),
-                                neto_cobrar = VALUES(neto_cobrar),
-                                estado_servicio = 'PENDIENTE'
-                        `, [
-                            codOrden,
-                            viajeCode || '',
-                            fecha_inicio || osRow.fecha || new Date().toISOString().split('T')[0],
-                            razonSocialViaje,
-                            osRow.placa_tracto || '',
-                            osRow.placa_carreta || '',
-                            conductorViaje || '',
-                            osRow.cliente_nombre || 'CLIENTE GENERAL',
-                            lugarStr,
-                            fleteNum,
-                            tarifaNum,
-                            biNum,
-                            igvNum,
-                            totalNum,
-                            detraccionNum,
-                            netoCobrarNum
-                        ]);
+                        // Verificar si ya existe el registro de cuentas para esta orden de servicio
+                        const [cExist] = await tdb.query(`SELECT id FROM tesoreria_cuentas WHERE orden_servicio = ? LIMIT 1`, [codOrden]);
+                        if (cExist && cExist.length > 0) {
+                            await tdb.query(`
+                                UPDATE tesoreria_cuentas SET
+                                    numero_viaje = ?,
+                                    fecha_servicio = ?,
+                                    razon_social = COALESCE(NULLIF(?, ''), razon_social),
+                                    placa_camion = ?,
+                                    placa_carreta = ?,
+                                    conductor = COALESCE(NULLIF(?, ''), conductor),
+                                    cliente = ?,
+                                    lugar = ?,
+                                    flete = ?,
+                                    tarifa = ?,
+                                    base_imponible = ?,
+                                    igv = ?,
+                                    total = ?,
+                                    detraccion = ?,
+                                    neto_cobrar = ?,
+                                    estado_servicio = 'PENDIENTE'
+                                WHERE id = ?
+                            `, [
+                                viajeCode || '',
+                                fecha_inicio || osRow.fecha || new Date().toISOString().split('T')[0],
+                                razonSocialViaje,
+                                osRow.placa_tracto || '',
+                                osRow.placa_carreta || '',
+                                conductorViaje || '',
+                                osRow.cliente_nombre || 'CLIENTE GENERAL',
+                                lugarStr,
+                                fleteNum,
+                                tarifaNum,
+                                biNum,
+                                igvNum,
+                                totalNum,
+                                detraccionNum,
+                                netoCobrarNum,
+                                cExist[0].id
+                            ]);
+                        } else {
+                            await tdb.query(`
+                                INSERT INTO tesoreria_cuentas (
+                                    orden_servicio, numero_viaje, fecha_servicio, razon_social,
+                                    placa_camion, placa_carreta, conductor, cliente, lugar,
+                                    flete, comision_porcentaje, tarifa, gastos_operativos,
+                                    base_imponible, igv, total, adelanto, detraccion, neto_cobrar,
+                                    estado_servicio
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, ?, 0.00, ?, ?, ?, 0.00, ?, ?, 'PENDIENTE')
+                            `, [
+                                codOrden,
+                                viajeCode || '',
+                                fecha_inicio || osRow.fecha || new Date().toISOString().split('T')[0],
+                                razonSocialViaje,
+                                osRow.placa_tracto || '',
+                                osRow.placa_carreta || '',
+                                conductorViaje || '',
+                                osRow.cliente_nombre || 'CLIENTE GENERAL',
+                                lugarStr,
+                                fleteNum,
+                                tarifaNum,
+                                biNum,
+                                igvNum,
+                                totalNum,
+                                detraccionNum,
+                                netoCobrarNum
+                            ]);
+                        }
                     } else if (estUpper.includes('ANULA') || estUpper.includes('CANCEL')) {
                         await tdb.query(`UPDATE tesoreria_cuentas SET estado_servicio = 'ANULADO' WHERE orden_servicio = ?`, [codOrden]);
                     }
