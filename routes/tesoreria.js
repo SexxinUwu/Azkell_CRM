@@ -1192,7 +1192,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const f = req.files.voucher[0];
                 const ext = (f.originalname.split('.').pop() || 'png').toLowerCase();
                 const key = `tesoreria/caja/voucher_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
-                voucherUrl = await uploadToS3(key, f.buffer, f.mimetype);
+                voucherUrl = await uploadToS3(f.buffer, key, f.mimetype);
             }
 
             let sustentoUrl = null;
@@ -1200,7 +1200,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const f = req.files.sustento[0];
                 const ext = (f.originalname.split('.').pop() || 'pdf').toLowerCase();
                 const key = `tesoreria/caja/sustento_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
-                sustentoUrl = await uploadToS3(key, f.buffer, f.mimetype);
+                sustentoUrl = await uploadToS3(f.buffer, key, f.mimetype);
             }
 
             // Calcular importe total y subtotal
@@ -1293,7 +1293,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const f = req.files['voucher'][0];
                 const ext = (f.originalname.split('.').pop() || 'bin').toLowerCase();
                 const key = `tesoreria/caja/voucher_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
-                voucherUrl = await uploadToS3(key, f.buffer, f.mimetype);
+                voucherUrl = await uploadToS3(f.buffer, key, f.mimetype);
             }
 
             let sustentoUrl = rows[0].sustento_url;
@@ -1301,7 +1301,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const f = req.files['sustento'][0];
                 const ext = (f.originalname.split('.').pop() || 'bin').toLowerCase();
                 const key = `tesoreria/caja/sustento_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
-                sustentoUrl = await uploadToS3(key, f.buffer, f.mimetype);
+                sustentoUrl = await uploadToS3(f.buffer, key, f.mimetype);
             }
 
             const impTotal = safeNum(b.importe_total);
@@ -1445,7 +1445,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const f = req.files['voucher'][0];
                 const ext = (f.originalname.split('.').pop() || 'bin').toLowerCase();
                 const key = `tesoreria/caja/voucher_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
-                voucherUrl = await uploadToS3(key, f.buffer, f.mimetype);
+                voucherUrl = await uploadToS3(f.buffer, key, f.mimetype);
             }
 
             let sustentoUrl = rows[0].sustento_url;
@@ -1453,7 +1453,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const f = req.files['sustento'][0];
                 const ext = (f.originalname.split('.').pop() || 'bin').toLowerCase();
                 const key = `tesoreria/caja/sustento_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
-                sustentoUrl = await uploadToS3(key, f.buffer, f.mimetype);
+                sustentoUrl = await uploadToS3(f.buffer, key, f.mimetype);
             }
 
             const nuevoEstado = (rows[0].estado === 'APROBADO' || rows[0].estado === 'PROCESADO') ? 'PROCESADO' : rows[0].estado;
@@ -1987,7 +1987,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const f = req.file;
                 const ext = (f.originalname.split('.').pop() || 'jpg').toLowerCase();
                 const key = `tesoreria/liquidaciones/gasto_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
-                sustentoUrl = await uploadToS3(key, f.buffer, f.mimetype);
+                sustentoUrl = await uploadToS3(f.buffer, key, f.mimetype);
             }
 
             const [result] = await tdb.query(`
