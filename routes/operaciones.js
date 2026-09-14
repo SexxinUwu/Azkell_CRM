@@ -2144,7 +2144,7 @@ module.exports = function (db, broadcast, logAudit) {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
-            const { estado_servicio } = req.body;
+            const { estado_servicio, fecha_inicio } = req.body;
             const [prev] = await tdb.query(`SELECT codigo_orden, viaje_asignado FROM operaciones_ordenes_servicio WHERE id = ?`, [req.params.id]);
             if (!prev || !prev.length) {
                 return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
@@ -2154,15 +2154,23 @@ module.exports = function (db, broadcast, logAudit) {
             const viajeCode = prev[0].viaje_asignado;
             const estUpper = String(estado_servicio || '').trim().toUpperCase();
 
-            await tdb.query(
-                `UPDATE operaciones_ordenes_servicio SET estado_servicio = ? WHERE id = ?`,
-                [estUpper, req.params.id]
-            );
+            // Si se pasa fecha_inicio específica al iniciar, actualizarla también en la OS
+            if (fecha_inicio && estUpper === 'INICIADO') {
+                await tdb.query(
+                    `UPDATE operaciones_ordenes_servicio SET estado_servicio = ?, fecha = ? WHERE id = ?`,
+                    [estUpper, fecha_inicio, req.params.id]
+                );
+            } else {
+                await tdb.query(
+                    `UPDATE operaciones_ordenes_servicio SET estado_servicio = ? WHERE id = ?`,
+                    [estUpper, req.params.id]
+                );
+            }
 
             // ── Sincronización Automática con la Orden de Viaje (OV) ──
             if (viajeCode) {
                 try {
-                    const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                    const nowStr = fecha_inicio ? `${fecha_inicio} 00:00:00` : new Date().toISOString().slice(0, 19).replace('T', ' ');
                     if (estUpper === 'INICIADO') {
                         // Al iniciar una OS: si la OV no está iniciada ni finalizada, pasa a INICIADO
                         const [ovRows] = await tdb.query(`SELECT estado, fecha_inicio FROM operaciones_ordenes_viaje WHERE viaje = ?`, [viajeCode]);

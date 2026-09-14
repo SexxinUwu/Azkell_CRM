@@ -54,6 +54,8 @@ window.filtrarCuentas = function() {
     var buscar = ((document.getElementById('cuentas-buscar') || {}).value || '').toLowerCase().trim();
     var estado = ((document.getElementById('cuentas-filtro-estado') || {}).value || 'TODOS').toUpperCase();
     var mes = ((document.getElementById('cuentas-filtro-mes') || {}).value || 'TODOS').toUpperCase();
+    var fDesde = (document.getElementById('cuentas-filtro-desde') || {}).value || '';
+    var fHasta = (document.getElementById('cuentas-filtro-hasta') || {}).value || '';
 
     window._cuentasFiltradas = (window._cuentasData || []).filter(function(item) {
         var matchB = !buscar ||
@@ -73,7 +75,18 @@ window.filtrarCuentas = function() {
         var matchE = (estado === 'TODOS') || ((item.estado_servicio || '').toUpperCase() === estado);
         var matchM = (mes === 'TODOS') || ((item.mes_facturacion || '').toUpperCase() === mes);
 
-        return matchB && matchE && matchM;
+        // Filtro por rango de fechas (evaluando fecha_servicio o fecha_liquidacion)
+        var matchF = true;
+        var itemFechaStr = item.fecha_servicio || item.fecha_liquidacion || '';
+        if (itemFechaStr && (fDesde || fHasta)) {
+            var fSolo = String(itemFechaStr).split('T')[0];
+            if (fDesde && fSolo < fDesde) matchF = false;
+            if (fHasta && fSolo > fHasta) matchF = false;
+        } else if (!itemFechaStr && (fDesde || fHasta)) {
+            matchF = false;
+        }
+
+        return matchB && matchE && matchM && matchF;
     });
 
     window._cuentasRenderKPIs(window._cuentasFiltradas);

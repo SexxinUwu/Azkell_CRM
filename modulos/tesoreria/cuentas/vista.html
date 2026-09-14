@@ -466,8 +466,8 @@
 
     <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS RÁPIDOS ────────────────────── -->
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 480px;">
-            <div class="position-relative flex-grow-1">
+        <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1" style="max-width: 580px;">
+            <div class="position-relative flex-grow-1" style="min-width: 200px;">
                 <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
                 <input type="text" id="cuentas-buscar" class="ck-apple-search" placeholder="Buscar por código, cliente, placa, razón social, factura..." oninput="window.filtrarCuentas()">
             </div>
@@ -479,8 +479,21 @@
             </select>
         </div>
 
-        <div class="d-flex align-items-center gap-2">
-            <select id="cuentas-filtro-mes" class="form-select form-select-sm rounded-3 bg-white border" style="max-width: 140px; height: 38px; font-weight: 600; font-size: 0.82rem;" onchange="window.filtrarCuentas()">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <!-- Rango de Fechas -->
+            <div class="d-flex align-items-center gap-1 bg-white border rounded-3 px-2 py-1" style="height: 38px;">
+                <span class="text-secondary small fw-bold text-uppercase" style="font-size: 0.68rem;">Desde</span>
+                <input type="date" id="cuentas-filtro-desde" class="form-control form-control-sm border-0 p-0 fw-semibold" style="width: 125px; font-size: 0.8rem; background: transparent;" onchange="window.filtrarCuentas()">
+            </div>
+            <div class="d-flex align-items-center gap-1 bg-white border rounded-3 px-2 py-1" style="height: 38px;">
+                <span class="text-secondary small fw-bold text-uppercase" style="font-size: 0.68rem;">Hasta</span>
+                <input type="date" id="cuentas-filtro-hasta" class="form-control form-control-sm border-0 p-0 fw-semibold" style="width: 125px; font-size: 0.8rem; background: transparent;" onchange="window.filtrarCuentas()">
+            </div>
+            <button type="button" class="btn btn-sm btn-light border rounded-3 d-flex align-items-center" style="height: 38px; padding: 0 10px;" title="Limpiar rango de fechas" onclick="document.getElementById('cuentas-filtro-desde').value=''; document.getElementById('cuentas-filtro-hasta').value=''; window.filtrarCuentas();">
+                <i class="bi bi-x-circle text-muted"></i>
+            </button>
+
+            <select id="cuentas-filtro-mes" class="form-select form-select-sm rounded-3 bg-white border" style="max-width: 135px; height: 38px; font-weight: 600; font-size: 0.82rem;" onchange="window.filtrarCuentas()">
                 <option value="TODOS">Todos los Meses</option>
                 <option value="ENERO">ENERO</option>
                 <option value="FEBRERO">FEBRERO</option>
