@@ -237,19 +237,18 @@ window.cajaRenderizarTabla = function() {
             '<a href="' + r.sustento_signed + '" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-1.5" title="Ver Sustento" style="font-size:0.7rem;"><i class="bi bi-paperclip"></i></a>' : '—';
 
         // Acciones según estado:
-        // Si está REGISTRADO: Editar, Aprobar, Eliminar
-        // Si está APROBADO o PROCESADO: Subir Documentos, Eliminar
+        // En Caja NO se aprueba (la aprobación es exclusiva del módulo Gerencia > Aprobación de Caja).
+        // Si está REGISTRADO o PENDIENTE: Editar, Eliminar
+        // Si está APROBADO o PROCESADO: Subir Documentos, Eliminar (edición bloqueada)
+        // Si está ANULADO: Bloqueado (solo eliminar)
         var accionesHtml = '<div class="d-flex align-items-center justify-content-center gap-1">';
         if (est === 'REGISTRADO' || est === 'PENDIENTE') {
             accionesHtml += 
                 '<button type="button" class="btn btn-sm btn-outline-primary p-1 rounded-circle lh-1" onclick="window.cajaAbrirModalEditar(' + r.id + ')" title="Editar Caja">' +
                     '<i class="bi bi-pencil" style="font-size:0.75rem;"></i>' +
-                '</button>' +
-                '<button type="button" class="btn btn-sm btn-outline-success p-1 rounded-circle lh-1" onclick="window.cajaAprobar(' + r.id + ')" title="Aprobar Caja">' +
-                    '<i class="bi bi-check-lg" style="font-size:0.75rem;"></i>' +
                 '</button>';
-        } else {
-            // Ya está aprobada o procesada: Botón Subir Documentos
+        } else if (est === 'APROBADO' || est === 'PROCESADO') {
+            // Ya está aprobada: Botón Subir Documentos
             accionesHtml += 
                 '<button type="button" class="btn btn-xs btn-outline-info py-0 px-1.5 fw-bold" onclick="window.cajaAbrirModalSubirDocs(' + r.id + ')" title="Subir Documentos" style="font-size:0.68rem;">' +
                     '<i class="bi bi-upload me-0.5"></i> Subir Docs' +

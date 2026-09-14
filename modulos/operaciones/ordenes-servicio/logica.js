@@ -1252,6 +1252,8 @@
         formData.append('cuenta_bancaria_empresa', ctaEmpresa);
         formData.append('observacion', `Generado automáticamente desde Operaciones para el viaje ${viaje}`);
         formData.append('no_aplica_liquidacion', 0);
+        const usuarioActualReg = localStorage.getItem('fleet_nombre_usuario') || localStorage.getItem('fleet_user') || (typeof usuarioLogueado !== 'undefined' && usuarioLogueado) || 'Sthefano Avila';
+        formData.append('usuario_creacion', usuarioActualReg);
 
         try {
             const resp = await fetch('/api/tesoreria/caja', {
