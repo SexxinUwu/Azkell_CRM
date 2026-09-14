@@ -224,8 +224,41 @@ function _formatearNombreEmpresa(raw) {
     return s || 'Azkell';
 }
 
+function _isSuperAdminReq(req) {
+    const host = (req.headers.host || '').toLowerCase().split(':')[0];
+    return req.tenantSlug === 'master' || req.tenantSlug === 'admin' || host.startsWith('admin.');
+}
+
 app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
     try {
+        if (_isSuperAdminReq(req)) {
+            return res.json({
+                id: '/',
+                name: 'SuperAdmin SaaS Master - Azkell Fleet',
+                short_name: 'Azkell Master',
+                description: 'Panel de Administración SaaS Master — Azkell Fleet',
+                start_url: '/',
+                display: 'standalone',
+                background_color: '#0f172a',
+                theme_color: '#0f172a',
+                orientation: 'portrait',
+                icons: [
+                    {
+                        src: '/favicon-2003.png',
+                        sizes: '192x192',
+                        type: 'image/png',
+                        purpose: 'any'
+                    },
+                    {
+                        src: '/favicon-2003.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                        purpose: 'any maskable'
+                    }
+                ]
+            });
+        }
+
         let nombreEmpresaRaw = '';
         let logoRaw = '';
 
@@ -303,6 +336,16 @@ app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
 // Endpoint que sirve la imagen del logo del tenant actual como PNG nativo (1:1 perfectamente cuadrado para PWA)
 app.get('/api/tenant-logo', async (req, res) => {
     try {
+        // En SuperAdmin Master o admin.*, servir SIEMPRE el logo inicial oficial de Azkell Fleet
+        if (_isSuperAdminReq(req)) {
+            const azkellIconPath = path.join(__dirname, 'favicon-2003.png');
+            if (fs.existsSync(azkellIconPath)) {
+                res.setHeader('Content-Type', 'image/png');
+                res.setHeader('Cache-Control', 'public, max-age=86400');
+                return res.sendFile(azkellIconPath);
+            }
+        }
+
         let logoRaw = '';
         if (req.db) {
             const [rows] = await req.db.promise().query(
@@ -341,7 +384,7 @@ app.get('/api/tenant-logo', async (req, res) => {
         }
 
         // Fallback al logo estándar de Azkell Fleet
-        const defaultIconPath = path.join(__dirname, 'app-icon-2002.png');
+        const defaultIconPath = path.join(__dirname, 'favicon-2003.png');
         if (fs.existsSync(defaultIconPath)) {
             res.setHeader('Content-Type', 'image/png');
             res.setHeader('Cache-Control', 'public, max-age=86400');
@@ -351,7 +394,7 @@ app.get('/api/tenant-logo', async (req, res) => {
         return res.status(404).end();
     } catch (e) {
         console.error('[TenantLogo] Error:', e.message);
-        return res.redirect('/app-icon-2002.png');
+        return res.redirect('/favicon-2003.png');
     }
 });
 
@@ -377,33 +420,13 @@ app.use('/api/superadmin', require('./routes/superadmin')());
 // ── CONFIGURACION ERP ─────────────────────────────────────────────────────────
 app.get('/api/configuracion', async (req, res) => {
     try {
-        const [rows] = await db.promise().query("SELECT clave, valor FROM configuracion_erp");
-        let config = {};
-        rows.forEach(r => config[r.clave] = r.valor);
-        res.json(config);
-    } catch (error) {
-        console.error("Error obteniendo configuracion:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
-    }
-});
-
-app.post('/api/configuracion', async (req, res) => {
-    try {
-        const payload = req.body;
-        for (const clave in payload) {
-            let valor = payload[clave] || '';
-            await db.promise().query("INSERT INTO configuracion_erp (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?", [clave, valor, valor]);
+        if (_isSuperAdminReq(req)) {
+            return res.json({
+                empresa_nombre: 'Azkell Fleet',
+                empresa_logo: '/favicon-2003.png',
+                empresa_ruc: ''
+            });
         }
-        res.json({ success: true, message: "Configuración guardada" });
-    } catch (error) {
-        console.error("Error guardando configuracion:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
-    }
-});
-
-// ── CONFIGURACION ERP ─────────────────────────────────────────────────────────
-app.get('/api/configuracion', async (req, res) => {
-    try {
         const [rows] = await db.promise().query("SELECT clave, valor FROM configuracion_erp");
         let config = {};
         rows.forEach(r => config[r.clave] = r.valor);
@@ -640,21 +663,26 @@ app.get('/api/proxy/placa', async (req, res) => {
 
 app.get('/', async (req, res) => {
     try {
-        let nombreEmpresaRaw = '';
-        if (req.db) {
-            try {
-                const [rows] = await req.db.promise().query(
-                    "SELECT valor FROM configuracion_erp WHERE clave = 'empresa_nombre' LIMIT 1"
-                );
-                if (rows && rows[0] && rows[0].valor) nombreEmpresaRaw = rows[0].valor;
-            } catch (e) {}
-        }
-        if (!nombreEmpresaRaw && req.tenantInfo && req.tenantInfo.nombre_empresa) {
-            nombreEmpresaRaw = req.tenantInfo.nombre_empresa;
-        }
+        let pageTitle = 'Azkell Fleet';
+        if (_isSuperAdminReq(req)) {
+            pageTitle = 'SuperAdmin SaaS Master — Azkell Fleet';
+        } else {
+            let nombreEmpresaRaw = '';
+            if (req.db) {
+                try {
+                    const [rows] = await req.db.promise().query(
+                        "SELECT valor FROM configuracion_erp WHERE clave = 'empresa_nombre' LIMIT 1"
+                    );
+                    if (rows && rows[0] && rows[0].valor) nombreEmpresaRaw = rows[0].valor;
+                } catch (e) {}
+            }
+            if (!nombreEmpresaRaw && req.tenantInfo && req.tenantInfo.nombre_empresa) {
+                nombreEmpresaRaw = req.tenantInfo.nombre_empresa;
+            }
 
-        const cleanName = _formatearNombreEmpresa(nombreEmpresaRaw || req.tenantSlug || 'Azkell Fleet');
-        const pageTitle = `${cleanName} - Azkell Fleet`;
+            const cleanName = _formatearNombreEmpresa(nombreEmpresaRaw || req.tenantSlug || 'Azkell Fleet');
+            pageTitle = `${cleanName} - Azkell Fleet`;
+        }
 
         let html = fs.readFileSync(path.join(__dirname, 'Index.html'), 'utf8');
         html = html.replace('<title>Azkell Fleet</title>', `<title>${pageTitle}</title>`);

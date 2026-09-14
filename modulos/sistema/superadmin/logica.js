@@ -7,6 +7,9 @@ var saasEmpresasLista = [];
 
 function init_superadmin() {
     console.log('🚀 Inicializando Módulo SuperAdmin SaaS...');
+    document.title = 'SuperAdmin SaaS Master — Azkell Fleet';
+    var fav = document.getElementById('app-dynamic-favicon');
+    if (fav) fav.href = '/favicon-2003.png';
     saasCargarEmpresas();
 }
 
