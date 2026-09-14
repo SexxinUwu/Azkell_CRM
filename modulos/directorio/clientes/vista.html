@@ -122,8 +122,7 @@
     border-bottom: 1px solid var(--border, #f1f5f9);
 }
 #moduloClientes tbody tr:hover {
-    background: rgba(2, 132, 199, 0.04);
-    cursor: pointer;
+    background: rgba(2, 132, 199, 0.02);
 }
 
 /* Modales centrados anclados abajo (700px max-width, 92vh height) */
@@ -137,8 +136,7 @@
 }
 #cliBackdrop.open { display: block !important; }
 
-#modalCliente,
-#drawerDetalleCliente {
+#modalCliente {
     position: fixed;
     bottom: 0 !important;
     left: 50% !important;
@@ -162,22 +160,19 @@
     visibility: hidden;
     margin: 0 !important;
 }
-#modalCliente.open,
-#drawerDetalleCliente.open {
+#modalCliente.open {
     transform: translateX(-50%) translateY(0) !important;
     visibility: visible !important;
 }
 
 @media (max-width: 767.98px) {
-    #modalCliente,
-    #drawerDetalleCliente {
+    #modalCliente {
         max-width: 100% !important;
         left: 0 !important;
         transform: translateY(100%) !important;
         border-radius: 28px 28px 0 0 !important;
     }
-    #modalCliente.open,
-    #drawerDetalleCliente.open {
+    #modalCliente.open {
         transform: translateY(0) !important;
     }
 }
@@ -199,8 +194,15 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
+            <input type="file" id="cliInputExcel" accept=".xlsx,.xls,.csv" style="display:none;" onchange="window.cliProcesarExcelImport(event)">
             <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.cliCargar()" title="Actualizar">
                 <i class="bi bi-arrow-clockwise fs-6"></i>
+            </button>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.cliDescargarPlantilla()" title="Descargar Plantilla Excel">
+                <i class="bi bi-file-earmark-arrow-down text-primary"></i> <span class="d-none d-md-inline">Descargar Plantilla</span>
+            </button>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="document.getElementById('cliInputExcel').click()" title="Importar Clientes desde Excel">
+                <i class="bi bi-file-earmark-arrow-up text-success"></i> <span>Importar</span>
             </button>
             <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.cliExportarExcel()" title="Exportar a Excel">
                 <i class="bi bi-file-earmark-excel text-success"></i> <span class="d-none d-md-inline">Excel</span>
@@ -361,75 +363,4 @@
             <button type="submit" class="btn btn-sm btn-primary fw-bold"><i class="bi bi-save me-1"></i>Guardar Cliente</button>
         </div>
     </form>
-</div>
-
-<!-- ═══ DRAWER FICHA 360° DEL CLIENTE ═════════════════════════════ -->
-<div id="drawerDetalleCliente">
-    <div style="padding:1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; background:var(--surface);">
-        <div class="d-flex align-items-center gap-2">
-            <div style="width:36px;height:36px;border-radius:12px;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;" class="fs-5">
-                <i class="bi bi-building-check"></i>
-            </div>
-            <div>
-                <div id="cli-det-nombre" class="fw-bold fs-6 text-dark">Cliente</div>
-                <div id="cli-det-subt" class="text-muted" style="font-size:0.7rem;">Ficha 360° del Cliente</div>
-            </div>
-        </div>
-        <button class="btn btn-sm text-secondary" onclick="window.cliCerrarTodo()"><i class="bi bi-x-lg"></i></button>
-    </div>
-
-    <!-- Pestañas Ficha 360 -->
-    <ul class="nav nav-tabs px-3 pt-2 bg-light border-bottom" role="tablist">
-        <li class="nav-item">
-            <button class="nav-link active fw-bold small" data-bs-toggle="tab" data-bs-target="#tab-cli-info">
-                <i class="bi bi-info-circle me-1"></i>General
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link fw-bold small" data-bs-toggle="tab" data-bs-target="#tab-cli-flota" onclick="window.cliCargarFlotaDetalle()">
-                <i class="bi bi-truck me-1"></i>Flota Vinculada (<span id="cli-det-count-flota">0</span>)
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link fw-bold small" data-bs-toggle="tab" data-bs-target="#tab-cli-ots" onclick="window.cliCargarOTsDetalle()">
-                <i class="bi bi-tools me-1"></i>Historial OTs (<span id="cli-det-count-ots">0</span>)
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link fw-bold small" data-bs-toggle="tab" data-bs-target="#tab-cli-backlog" onclick="window.cliCargarBacklogDetalle()">
-                <i class="bi bi-clock-history me-1"></i>Backlog (<span id="cli-det-count-backlog">0</span>)
-            </button>
-        </li>
-    </ul>
-
-    <div class="tab-content flex-grow-1 overflow-auto p-3">
-        <!-- Pestaña 1: General -->
-        <div class="tab-pane fade show active" id="tab-cli-info">
-            <div class="card border-0 bg-light p-3 mb-3 rounded-4">
-                <div class="row g-2">
-                    <div class="col-6"><span class="text-muted small fw-bold">RUC / DNI:</span> <div id="cli-det-ruc" class="fw-bold text-dark">-</div></div>
-                    <div class="col-6"><span class="text-muted small fw-bold">Estado:</span> <div id="cli-det-estado" class="fw-bold">-</div></div>
-                    <div class="col-6"><span class="text-muted small fw-bold">Teléfono:</span> <div id="cli-det-telefono" class="fw-bold text-dark">-</div></div>
-                    <div class="col-6"><span class="text-muted small fw-bold">Correo:</span> <div id="cli-det-email" class="fw-bold text-dark">-</div></div>
-                    <div class="col-12"><span class="text-muted small fw-bold">Dirección:</span> <div id="cli-det-direccion" class="fw-bold text-dark">-</div></div>
-                    <div class="col-12"><span class="text-muted small fw-bold">Notas:</span> <div id="cli-det-notas" class="text-secondary small">-</div></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Pestaña 2: Flota Vinculada -->
-        <div class="tab-pane fade" id="tab-cli-flota">
-            <div id="cli-det-flota-list">Cargando flota asociada...</div>
-        </div>
-
-        <!-- Pestaña 3: Historial OTs -->
-        <div class="tab-pane fade" id="tab-cli-ots">
-            <div id="cli-det-ots-list">Cargando órdenes de trabajo...</div>
-        </div>
-
-        <!-- Pestaña 4: Backlog -->
-        <div class="tab-pane fade" id="tab-cli-backlog">
-            <div id="cli-det-backlog-list">Cargando tareas pendientes...</div>
-        </div>
-    </div>
 </div>

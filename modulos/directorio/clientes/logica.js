@@ -79,7 +79,7 @@ window.cliRenderTabla = function() {
             ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold">Activo</span>'
             : '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill fw-bold">Inactivo</span>';
 
-        html += '<tr onclick="window.cliAbrirDetalle(' + c.id + ')">';
+        html += '<tr>';
         html += '<td class="fw-bold text-dark"><i class="bi bi-building me-2 text-primary"></i>' + (c.razon_social || '-') + '</td>';
         html += '<td><code class="text-secondary">' + (c.ruc_dni || '-') + '</code></td>';
         html += '<td>' + (c.telefono || '-') + '</td>';
@@ -87,7 +87,7 @@ window.cliRenderTabla = function() {
         html += '<td>' + (c.direccion || '-') + '</td>';
         html += '<td class="text-center"><span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold px-2">' + (c.total_flota || 0) + ' veh.</span></td>';
         html += '<td>' + badgeEst + '</td>';
-        html += '<td class="text-end" onclick="event.stopPropagation()">';
+        html += '<td class="text-end">';
         html += '<button class="btn btn-sm btn-light me-1" onclick="window.cliAbrirEditar(' + c.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>';
         html += '<button class="btn btn-sm btn-outline-danger" onclick="window.cliEliminar(' + c.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>';
         html += '</td>';
@@ -161,7 +161,6 @@ window.cliLimpiarForm = function() {
 
 window.cliCerrarTodo = function() {
     var m = document.getElementById('modalCliente'); if (m) m.classList.remove('open');
-    var d = document.getElementById('drawerDetalleCliente'); if (d) d.classList.remove('open');
     var b = document.getElementById('cliBackdrop'); if (b) b.classList.remove('open');
 };
 
@@ -263,129 +262,136 @@ window.cliEliminar = function(id) {
     });
 };
 
-// ── Ficha 360° del Cliente ────────────────────────────────────────────────────
-window.cliAbrirDetalle = function(id) {
-    var c = window.cliData.find(function(x) { return x.id === id; });
-    if (!c) return;
-    window.cliClienteSeleccionado = c;
+// ── Descargar Plantilla Excel ────────────────────────────────────────────────
+window.cliDescargarPlantilla = function() {
+    if (typeof XLSX === 'undefined') {
+        alert('Librería XLSX no disponible');
+        return;
+    }
 
-    document.getElementById('cli-det-nombre').textContent = c.razon_social;
-    document.getElementById('cli-det-subt').textContent = 'RUC/DNI: ' + (c.ruc_dni || 'No registrado');
+    var cabeceras = [
+        ["Razón Social / Nombre", "RUC / DNI", "Teléfono", "Correo", "Dirección", "Estado", "Notas"]
+    ];
+    var ejemplo = [
+        ["TRANSPORTES EJEMPLO S.A.C.", "20123456789", "987654321", "contacto@ejemplo.com", "Av. Industrial 123, Lima", "Activo", "Cliente corporativo"]
+    ];
 
-    document.getElementById('cli-det-ruc').textContent = c.ruc_dni || '-';
-    document.getElementById('cli-det-estado').textContent = c.estado || 'Activo';
-    document.getElementById('cli-det-telefono').textContent = c.telefono || '-';
-    document.getElementById('cli-det-email').textContent = c.email || '-';
-    document.getElementById('cli-det-direccion').textContent = c.direccion || '-';
-    document.getElementById('cli-det-notas').textContent = c.notas || 'Sin observaciones.';
+    var ws = XLSX.utils.aoa_to_sheet(cabeceras.concat(ejemplo));
+    ws['!cols'] = [
+        { wch: 35 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 25 },
+        { wch: 35 },
+        { wch: 12 },
+        { wch: 30 }
+    ];
 
-    document.getElementById('cli-det-count-flota').textContent = c.total_flota || 0;
-    document.getElementById('cli-det-flota-list').innerHTML = 'Haz clic en la pestaña para cargar vehículos...';
-    document.getElementById('cli-det-ots-list').innerHTML = 'Haz clic en la pestaña para cargar historial...';
-    document.getElementById('cli-det-backlog-list').innerHTML = 'Haz clic en la pestaña para cargar backlog...';
-
-    document.getElementById('drawerDetalleCliente').classList.add('open');
-    document.getElementById('cliBackdrop').classList.add('open');
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Plantilla_Clientes");
+    XLSX.writeFile(wb, "Plantilla_Importar_Clientes.xlsx");
 };
 
-window.cliCargarFlotaDetalle = function() {
-    if (!window.cliClienteSeleccionado) return;
-    var cont = document.getElementById('cli-det-flota-list');
-    cont.innerHTML = '<div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando unidades del cliente...';
+// ── Procesar Importación Masiva desde Excel ──────────────────────────────────
+window.cliProcesarExcelImport = function(event) {
+    var file = event.target.files && event.target.files[0];
+    if (!file) return;
 
-    fetch('/api/clientes/' + window.cliClienteSeleccionado.id + '/flota')
-        .then(function(res) { return res.json(); })
-        .then(function(placas) {
-            document.getElementById('cli-det-count-flota').textContent = placas.length;
-            if (!placas.length) {
-                cont.innerHTML = '<div class="text-muted small py-3"><i class="bi bi-truck me-1"></i>No hay vehículos registrados para este cliente.</div>';
+    if (typeof XLSX === 'undefined') {
+        alert('La librería Excel aún no ha cargado en la página');
+        event.target.value = '';
+        return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var data = new Uint8Array(e.target.result);
+            var workbook = XLSX.read(data, { type: 'array' });
+            var sheetName = workbook.SheetNames[0];
+            var sheet = workbook.Sheets[sheetName];
+            var rawRows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+            if (!rawRows || !rawRows.length) {
+                alert('El archivo Excel seleccionado no contiene filas con datos.');
+                event.target.value = '';
                 return;
             }
-            var html = '<div class="list-group list-group-flush border rounded-3 overflow-hidden">';
-            placas.forEach(function(p) {
-                var badge = (p.estado || 'Activa').toLowerCase() === 'activa'
-                    ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Activa</span>'
-                    : '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill">' + p.estado + '</span>';
 
-                html += '<div class="list-group-item d-flex align-items-center justify-content-between py-2">';
-                html += '<div>';
-                html += '<div class="fw-bold text-dark"><i class="bi bi-truck me-2 text-primary"></i>' + p.placa + '</div>';
-                html += '<div class="text-muted" style="font-size:0.73rem;">' + (p.marca || '') + ' ' + (p.modelo_uts || p.modelo || '') + ' — ' + (p.tipo || '') + '</div>';
-                html += '</div>';
-                html += badge;
-                html += '</div>';
+            // Normalización y mapeo inteligente de columnas
+            var listaClientes = [];
+            rawRows.forEach(function(row) {
+                var c = {};
+                for (var key in row) {
+                    var k = key.trim().toLowerCase()
+                        .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // remover tildes
+                    var val = (row[key] !== undefined && row[key] !== null) ? String(row[key]).trim() : '';
+
+                    if (k.includes('razon') || k.includes('nombre') || k.includes('cliente') || k.includes('empresa')) {
+                        if (!c.razon_social) c.razon_social = val;
+                    } else if (k.includes('ruc') || k.includes('dni') || k.includes('documento')) {
+                        if (!c.ruc_dni) c.ruc_dni = val;
+                    } else if (k.includes('tel') || k.includes('cel') || k.includes('movil')) {
+                        if (!c.telefono) c.telefono = val;
+                    } else if (k.includes('correo') || k.includes('email') || k.includes('mail')) {
+                        if (!c.email) c.email = val;
+                    } else if (k.includes('direc') || k.includes('domicilio')) {
+                        if (!c.direccion) c.direccion = val;
+                    } else if (k.includes('estado')) {
+                        if (!c.estado) c.estado = val;
+                    } else if (k.includes('nota') || k.includes('obs')) {
+                        if (!c.notas) c.notas = val;
+                    }
+                }
+
+                if (c.razon_social) {
+                    listaClientes.push(c);
+                }
             });
-            html += '</div>';
-            cont.innerHTML = html;
-        })
-        .catch(function(err) {
-            console.error('Error cargando flota cliente:', err);
-            cont.innerHTML = '<div class="text-danger small py-2">Error al cargar flota</div>';
-        });
-};
 
-window.cliCargarOTsDetalle = function() {
-    if (!window.cliClienteSeleccionado) return;
-    var cont = document.getElementById('cli-det-ots-list');
-    cont.innerHTML = '<div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando OTs del cliente...';
-
-    fetch('/api/clientes/' + window.cliClienteSeleccionado.id + '/ots')
-        .then(function(res) { return res.json(); })
-        .then(function(ots) {
-            document.getElementById('cli-det-count-ots').textContent = ots.length;
-            if (!ots.length) {
-                cont.innerHTML = '<div class="text-muted small py-3"><i class="bi bi-tools me-1"></i>No hay OTs registradas para los vehículos de este cliente.</div>';
+            if (!listaClientes.length) {
+                alert('No se encontraron registros válidos. Verifique que la columna Razón Social / Nombre exista en el Excel.');
+                event.target.value = '';
                 return;
             }
-            var html = '<div class="list-group list-group-flush border rounded-3 overflow-hidden">';
-            ots.forEach(function(ot) {
-                html += '<div class="list-group-item d-flex align-items-center justify-content-between py-2">';
-                html += '<div>';
-                html += '<div class="fw-bold text-primary">OT-' + (ot.id_ot || ot.id) + ' <span class="text-dark font-monospace ms-2">[' + ot.placa + ']</span></div>';
-                html += '<div class="text-muted" style="font-size:0.73rem;">' + (ot.trabajo_realizar || ot.descripcion || 'Mantenimiento') + '</div>';
-                html += '</div>';
-                html += '<span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">' + (ot.estado || 'Atención') + '</span>';
-                html += '</div>';
-            });
-            html += '</div>';
-            cont.innerHTML = html;
-        })
-        .catch(function(err) {
-            console.error('Error cargando OTs cliente:', err);
-            cont.innerHTML = '<div class="text-danger small py-2">Error al cargar historial de OTs</div>';
-        });
-};
 
-window.cliCargarBacklogDetalle = function() {
-    if (!window.cliClienteSeleccionado) return;
-    var cont = document.getElementById('cli-det-backlog-list');
-    cont.innerHTML = '<div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando backlog del cliente...';
-
-    fetch('/api/clientes/' + window.cliClienteSeleccionado.id + '/backlog')
-        .then(function(res) { return res.json(); })
-        .then(function(backlog) {
-            document.getElementById('cli-det-count-backlog').textContent = backlog.length;
-            if (!backlog.length) {
-                cont.innerHTML = '<div class="text-muted small py-3"><i class="bi bi-clock-history me-1"></i>No hay tareas pendientes en backlog para este cliente.</div>';
+            if (!confirm('Se detectaron ' + listaClientes.length + ' cliente(s) listos para importar.\n¿Desea importarlos a la base de datos ahora?')) {
+                event.target.value = '';
                 return;
             }
-            var html = '<div class="list-group list-group-flush border rounded-3 overflow-hidden">';
-            backlog.forEach(function(b) {
-                html += '<div class="list-group-item d-flex align-items-center justify-content-between py-2">';
-                html += '<div>';
-                html += '<div class="fw-bold text-dark"><span class="badge bg-warning text-dark me-2">' + b.placa + '</span> ' + (b.tema || 'Mantenimiento') + '</div>';
-                html += '<div class="text-muted" style="font-size:0.73rem;">' + (b.tarea || '') + '</div>';
-                html += '</div>';
-                html += '<span class="badge bg-secondary-subtle text-secondary rounded-pill">' + (b.estado || 'Pendiente') + '</span>';
-                html += '</div>';
+
+            fetch('/api/clientes/importar-masivo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientes: listaClientes })
+            })
+            .then(function(res) {
+                if (!res.ok) return res.json().then(function(e){ throw new Error(e.error || 'Error en servidor'); });
+                return res.json();
+            })
+            .then(function(resp) {
+                if (typeof window.rotToast === 'function') {
+                    window.rotToast('Se importaron ' + (resp.importados || listaClientes.length) + ' clientes correctamente.', 'bg-success');
+                } else {
+                    alert('Se importaron ' + (resp.importados || listaClientes.length) + ' clientes correctamente.');
+                }
+                window.cliCargar();
+            })
+            .catch(function(err) {
+                console.error('Error importando clientes:', err);
+                alert('Error al importar clientes: ' + err.message);
+            })
+            .finally(function() {
+                event.target.value = '';
             });
-            html += '</div>';
-            cont.innerHTML = html;
-        })
-        .catch(function(err) {
-            console.error('Error cargando backlog cliente:', err);
-            cont.innerHTML = '<div class="text-danger small py-2">Error al cargar backlog</div>';
-        });
+
+        } catch (errEx) {
+            console.error('Error al procesar el archivo Excel:', errEx);
+            alert('Ocurrió un error leyendo el archivo Excel. Verifique el formato.');
+            event.target.value = '';
+        }
+    };
+    reader.readAsArrayBuffer(file);
 };
 
 // ── Exportar a Excel ─────────────────────────────────────────────────────────
