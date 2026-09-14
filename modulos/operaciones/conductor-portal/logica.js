@@ -15,34 +15,33 @@ window.init_conductor_portal = function() {
     window.condCargarPortal();
 };
 
-// Cargar portal del conductor por DNI o usuario
+// Cargar portal del conductor sistematizado 100% por sesión
 window.condCargarPortal = async function() {
-    var inputDni = document.getElementById('cond-input-dni');
-    var dniVal = (inputDni ? inputDni.value : '').trim();
+    // 1. Obtener datos de la sesión del usuario conectado
+    var sesionNombre = (localStorage.getItem('fleet_user') || '').trim();
+    var sesionDni    = (localStorage.getItem('fleet_dni') || '').trim();
+    var sesionCorreo = (localStorage.getItem('fleet_correo') || '').trim();
 
-    // 1. Prioridad: DNI guardado en la cuenta de usuario (localStorage 'fleet_dni')
-    var sesionDni = (localStorage.getItem('fleet_dni') || '').trim();
-    var boxSwitch = document.getElementById('cond-box-switch-dni');
-
-    if (!dniVal && sesionDni) {
-        dniVal = sesionDni;
-        if (inputDni) inputDni.value = sesionDni;
-        // Si ya tiene DNI en su perfil y es Conductor, no necesita escribirlo
-        var rol = (localStorage.getItem('fleet_rol') || '').toLowerCase();
-        if (boxSwitch && (rol.includes('conductor') || rol.includes('chofer'))) {
-            boxSwitch.style.display = 'none';
-        }
-    } else if (!dniVal && typeof window.usuarioLogueado !== 'undefined' && window.usuarioLogueado) {
-        dniVal = window.usuarioLogueado;
+    // Actualizar de inmediato el saludo con el nombre real del usuario conectado
+    var lblNom = document.getElementById('cond-nombre-label');
+    var lblDni = document.getElementById('cond-dni-label');
+    if (lblNom) {
+        lblNom.textContent = sesionNombre ? `Hola, ${sesionNombre.toUpperCase()}` : 'Bienvenido, Conductor';
+    }
+    if (lblDni) {
+        lblDni.textContent = sesionDni ? `DNI: ${sesionDni}` : (sesionCorreo ? `Usuario: ${sesionCorreo}` : 'Conductor');
     }
 
     var url = `/api/operaciones/conductor-portal/viaje-activo`;
-    if (dniVal) {
-        if (/^\d+$/.test(dniVal)) {
-            url += `?dni=${encodeURIComponent(dniVal)}`;
-        } else {
-            url += `?nombre=${encodeURIComponent(dniVal)}`;
-        }
+    var params = [];
+    if (sesionDni) {
+        params.push(`dni=${encodeURIComponent(sesionDni)}`);
+    }
+    if (sesionNombre) {
+        params.push(`nombre=${encodeURIComponent(sesionNombre)}`);
+    }
+    if (params.length > 0) {
+        url += `?${params.join('&')}`;
     }
 
     try {
@@ -50,7 +49,7 @@ window.condCargarPortal = async function() {
         var json = await res.json();
 
         if (!json || !json.ok) {
-            alert('No se pudo conectar al servidor de viajes.');
+            console.warn('Respuesta viaje activo:', json);
             return;
         }
 
@@ -61,11 +60,17 @@ window.condCargarPortal = async function() {
 
         window._condViajeActivoData = json;
 
-        // Actualizar datos del conductor
-        var lblNom = document.getElementById('cond-nombre-label');
-        var lblDni = document.getElementById('cond-dni-label');
-        if (lblNom) lblNom.textContent = cond.nombre ? `Hola, ${cond.nombre}` : 'Bienvenido, Conductor';
-        if (lblDni) lblDni.textContent = cond.dni ? `DNI: ${cond.dni}` : 'Conductor de Ruta';
+        // Si el backend encontró un nombre de conductor específico en el viaje
+        if (lblNom && sesionNombre) {
+            lblNom.textContent = `Hola, ${sesionNombre.toUpperCase()}`;
+        } else if (lblNom && cond.nombre) {
+            lblNom.textContent = `Hola, ${cond.nombre.toUpperCase()}`;
+        }
+        if (lblDni && sesionDni) {
+            lblDni.textContent = `DNI: ${sesionDni}`;
+        } else if (lblDni && cond.dni) {
+            lblDni.textContent = `DNI: ${cond.dni}`;
+        }
 
         // Actualizar tarjeta del Viaje
         var boxHero = document.getElementById('cond-hero-trip');
