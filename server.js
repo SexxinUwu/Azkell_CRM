@@ -380,6 +380,13 @@ app.get('/api/tenant-logo', async (req, res) => {
         }
 
         if (logoRaw && (logoRaw.startsWith('http://') || logoRaw.startsWith('https://'))) {
+            const key = s3KeyFromUrl(logoRaw);
+            if (key) {
+                try {
+                    const signedUrl = await getPresignedUrl(key, 86400);
+                    return res.redirect(signedUrl);
+                } catch(e) {}
+            }
             return res.redirect(logoRaw);
         }
 
@@ -429,7 +436,20 @@ app.get('/api/configuracion', async (req, res) => {
         }
         const [rows] = await db.promise().query("SELECT clave, valor FROM configuracion_erp");
         let config = {};
-        rows.forEach(r => config[r.clave] = r.valor);
+        for (const r of rows) {
+            config[r.clave] = r.valor;
+        }
+
+        // Si el logo está en AWS S3, firmar la URL con vigencia para que el navegador pueda mostrarlo
+        if (config.empresa_logo && config.empresa_logo.startsWith('http')) {
+            const key = s3KeyFromUrl(config.empresa_logo);
+            if (key) {
+                try {
+                    config.empresa_logo = await getPresignedUrl(key, 86400);
+                } catch(e) {}
+            }
+        }
+
         res.json(config);
     } catch (error) {
         console.error("Error obteniendo configuracion:", error);
@@ -465,7 +485,20 @@ app.post('/api/configuracion', async (req, res) => {
 
             await db.promise().query("INSERT INTO configuracion_erp (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?", [clave, valor, valor]);
         }
-        res.json({ success: true, message: "Configuración guardada" });
+
+        let logoFinal = payload.empresa_logo;
+        if (logoFinal && typeof logoFinal === 'string' && logoFinal.startsWith('data:image')) {
+            const [rows] = await db.promise().query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_logo'");
+            if (rows && rows[0] && rows[0].valor) {
+                logoFinal = rows[0].valor;
+                const key = s3KeyFromUrl(logoFinal);
+                if (key) {
+                    try { logoFinal = await getPresignedUrl(key, 86400); } catch(e) {}
+                }
+            }
+        }
+
+        res.json({ success: true, message: "Configuración guardada", empresa_logo: logoFinal });
     } catch (error) {
         console.error("Error guardando configuracion:", error);
         res.status(500).json({ error: "Error interno del servidor" });

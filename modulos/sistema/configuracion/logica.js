@@ -313,9 +313,16 @@ window.guardarDatosEmpresa = async function() {
 
         if (data.success || res.ok) {
             localStorage.setItem('fleet_empresa_nombre', nombreVal);
+            const savedLogo = data.empresa_logo || window._tempLogoBase64 || '';
             if (window._tempLogoBase64 !== null) {
-                localStorage.setItem('fleet_empresa_logo', window._tempLogoBase64);
+                localStorage.setItem('fleet_empresa_logo', savedLogo);
                 window._tempLogoBase64 = null;
+            }
+            if (savedLogo) {
+                const brandImg = document.querySelector('.brand-logo-icon img');
+                if (brandImg) brandImg.src = savedLogo;
+                const fav = document.getElementById('app-dynamic-favicon');
+                if (fav) fav.href = savedLogo;
             }
 
             _mostrarToast('Datos de empresa guardados');
