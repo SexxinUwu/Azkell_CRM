@@ -383,7 +383,8 @@
             document.getElementById('os-input-tipo-contratacion').value = item.tipo_contratacion || 'CLIENTE DIRECTO';
             document.getElementById('os-input-modalidad-ejecucion').value = item.modalidad_ejecucion || 'PROPIO';
             document.getElementById('os-input-cliente').value = item.cliente_nombre || '';
-            document.getElementById('os-input-tipo-servicio').value = item.tipo_servicio || 'CARGA GENERAL';
+            const tServ = String(item.tipo_servicio || '').toUpperCase();
+            document.getElementById('os-input-tipo-servicio').value = (tServ.includes('LOCAL')) ? 'TRANSPORTE LOCAL' : 'TRANSPORTE NACIONAL';
             const selEsRetorno = document.getElementById('os-input-es-retorno');
             if (selEsRetorno) selEsRetorno.value = (item.es_retorno === 1 || item.es_retorno === '1' || item.es_retorno === true) ? '1' : '0';
             document.getElementById('os-input-tipo-costo').value = item.tipo_costo || 'COSTO TARIFA';

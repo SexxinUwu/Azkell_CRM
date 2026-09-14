@@ -12,7 +12,7 @@ window.init_clientes = function() {
 // ── Cargar Clientes desde Backend ─────────────────────────────────────────────
 window.cliCargar = function() {
     var tbody = document.getElementById('cli-tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2 text-primary"></div>Cargando clientes...</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2 text-primary"></div>Cargando clientes...</td></tr>';
 
     fetch('/api/clientes')
         .then(function(res) {
@@ -25,7 +25,7 @@ window.cliCargar = function() {
         })
         .catch(function(err) {
             console.error('Error cargando clientes:', err);
-            if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-1"></i>Error al cargar los clientes</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-1"></i>Error al cargar los clientes</td></tr>';
         });
 };
 
@@ -64,7 +64,7 @@ window.cliRenderTabla = function() {
     if (!tbody) return;
 
     if (!window.cliFiltrados.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>No se encontraron clientes</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>No se encontraron clientes</td></tr>';
         document.getElementById('cli-paginacion').innerHTML = '';
         return;
     }
@@ -85,7 +85,6 @@ window.cliRenderTabla = function() {
         html += '<td>' + (c.telefono || '-') + '</td>';
         html += '<td>' + (c.email || '-') + '</td>';
         html += '<td>' + (c.direccion || '-') + '</td>';
-        html += '<td class="text-center"><span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold px-2">' + (c.total_flota || 0) + ' veh.</span></td>';
         html += '<td>' + badgeEst + '</td>';
         html += '<td class="text-end">';
         html += '<button class="btn btn-sm btn-light me-1" onclick="window.cliAbrirEditar(' + c.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>';

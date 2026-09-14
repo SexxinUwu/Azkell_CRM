@@ -868,13 +868,10 @@
                                             </div>
                                             <div class="col-12 col-sm-6">
                                                 <label class="form-label">Tipo Servicio <span class="req">(*)</span></label>
-                                                <input type="text" id="os-input-tipo-servicio" list="os-servicios-datalist" class="form-control text-uppercase" placeholder="ESCRIBA O SELECCIONE TIPO DE SERVICIO..." required>
-                                                <datalist id="os-servicios-datalist">
-                                                    <option value="CARGA GENERAL"></option>
-                                                    <option value="TRANSPORTE LOCAL"></option>
-                                                    <option value="TRANSPORTE NACIONAL"></option>
-                                                    <option value="DISTRIBUCIÓN"></option>
-                                                </datalist>
+                                                <select id="os-input-tipo-servicio" class="form-select" required>
+                                                    <option value="TRANSPORTE NACIONAL" selected>NACIONAL</option>
+                                                    <option value="TRANSPORTE LOCAL">LOCAL</option>
+                                                </select>
                                             </div>
                                             <div class="col-12 col-sm-6">
                                                 <label class="form-label">Sentido del Servicio <span class="req">(*)</span></label>
@@ -917,7 +914,7 @@
                                         <div class="row g-2">
                                             <div class="col-12 col-sm-8">
                                                 <label class="form-label">Destinatario</label>
-                                                <input type="text" id="os-input-destinatario" class="form-control text-uppercase" placeholder="INGRESE DESTINATARIO...">
+                                                <input type="text" id="os-input-destinatario" list="os-clientes-datalist" class="form-control text-uppercase" placeholder="ESCRIBA O SELECCIONE DESTINATARIO...">
                                             </div>
                                             <div class="col-12 col-sm-4">
                                                 <label class="form-label"># Puntos Destino <span class="req">(*)</span></label>

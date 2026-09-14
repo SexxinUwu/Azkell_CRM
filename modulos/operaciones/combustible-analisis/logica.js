@@ -1107,7 +1107,7 @@
             }
 
             const rawPesoRet = Math.max(0, ...vRet.map(x => parseFloat(x.peso || 0)));
-            let pesoRetVal = (t.pesoRetorno !== undefined && t.pesoRetorno > 0) ? t.pesoRetorno : (rawPesoRet > 0 ? (rawPesoRet > 50 ? +(rawPesoRet / 1000).toFixed(2) : +rawPesoRet.toFixed(2)) : 0);
+            let pesoRetVal = (t.pesoRetorno !== undefined) ? (parseFloat(t.pesoRetorno) || 0) : (rawPesoRet > 0 ? (rawPesoRet > 50 ? +(rawPesoRet / 1000).toFixed(2) : +rawPesoRet.toFixed(2)) : 0);
 
             // Rutas diferenciadas por tramo con inversión inteligente de retorno
             const rutaTramoIda = t.rutaIda || t.ruta;
