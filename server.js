@@ -2360,22 +2360,24 @@ app.get('/api/auditoria', (req, res) => {
 // ============================================================
 
 app.get('/api/roles', (req, res) => {
+    const targetDb = req.db || db;
     const sql = `
         SELECT r.*, COUNT(u.idUsuario) AS miembros
         FROM roles r
         LEFT JOIN usuarios u ON u.rol_id = r.id
         GROUP BY r.id
         ORDER BY r.orden ASC, r.id ASC`;
-    db.query(sql, (err, results) => {
+    targetDb.query(sql, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ data: results });
     });
 });
 
 app.post('/api/roles', (req, res) => {
+    const targetDb = req.db || db;
     const { nombre, color, permisos_json, es_admin, orden } = req.body;
     if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
-    db.query(
+    targetDb.query(
         'INSERT INTO roles (nombre, color, permisos_json, es_admin, orden) VALUES (?, ?, ?, ?, ?)',
         [nombre, color || '#5865F2', permisos_json || '{}', es_admin ? 1 : 0, orden || 0],
         (err, result) => {
@@ -2415,10 +2417,11 @@ app.put('/api/roles/:id', (req, res) => {
 
 app.delete('/api/roles/:id', (req, res) => {
     const { id } = req.params;
-    db.query('SELECT COUNT(*) AS cnt FROM usuarios WHERE rol_id = ?', [id], (err, results) => {
+    const targetDb = req.db || db;
+    targetDb.query('SELECT COUNT(*) AS cnt FROM usuarios WHERE rol_id = ?', [id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         if (results[0].cnt > 0) return res.status(400).json({ error: `Este rol tiene ${results[0].cnt} usuario(s) asignado(s). Reasígnalos antes de eliminar.` });
-        db.query('DELETE FROM roles WHERE id=?', [id], (err2) => {
+        targetDb.query('DELETE FROM roles WHERE id=?', [id], (err2) => {
             if (err2) return res.status(500).json({ error: err2.message });
             broadcast('usuarios', 'eliminar_rol');
             const actor = req.user ? req.user.correo : 'admin';
@@ -2433,13 +2436,14 @@ app.delete('/api/roles/:id', (req, res) => {
 // ============================================================
 
 app.post('/api/usuarios-v2', async (req, res) => {
+    const targetDb = req.db || db;
     const { nombre, dni, cargo, correo, password, estado, rol_id } = req.body;
     if (!correo) return res.status(400).json({ error: 'Correo requerido' });
     const rolId = (rol_id && rol_id !== '') ? parseInt(rol_id) || null : null;
     let rol = 'Personalizado';
     if (correo.trim().toLowerCase() === 'admin@azkell.com') rol = 'Fundador';
     const hashedPassword = password ? await bcrypt.hash(password, 10) : '';
-    db.query('SELECT idUsuario FROM usuarios', (err, results) => {
+    targetDb.query('SELECT idUsuario FROM usuarios', (err, results) => {
         let maxId = 1000;
         if (!err && results) {
             results.forEach(r => {
@@ -2450,7 +2454,7 @@ app.post('/api/usuarios-v2', async (req, res) => {
             });
         }
         const newId = `USR-${maxId + 1}`;
-        db.query(
+        targetDb.query(
             'INSERT INTO usuarios (idUsuario, nombre, dni, cargo, correo, password, password_visible, rol, estado, permisos_json, rol_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
             [newId, nombre || '', (dni || '').trim(), cargo || '', correo, hashedPassword, '', rol, estado || 'Activo', '{}', rolId],
             (err2) => {
@@ -2465,6 +2469,7 @@ app.post('/api/usuarios-v2', async (req, res) => {
 });
 
 app.put('/api/usuarios-v2/:id', async (req, res) => {
+    const targetDb = req.db || db;
     const { id } = req.params;
     const { nombre, dni, cargo, correo, password, estado, rol_id } = req.body;
     const rolId = (rol_id !== undefined && rol_id !== '' && rol_id !== null) ? parseInt(rol_id) || null : null;
@@ -2478,7 +2483,7 @@ app.put('/api/usuarios-v2/:id', async (req, res) => {
         fields.push('password_visible=?'); values.push('');
     }
     values.push(id);
-    db.query(`UPDATE usuarios SET ${fields.join(',')} WHERE idUsuario=?`, values, (err) => {
+    targetDb.query(`UPDATE usuarios SET ${fields.join(',')} WHERE idUsuario=?`, values, (err) => {
         if (err) return res.status(500).json({ error: err.message });
         broadcast('usuarios', 'actualizar');
         const editor = req.body.editado_por || 'admin';

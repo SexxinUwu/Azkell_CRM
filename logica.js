@@ -443,15 +443,31 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-gerencia-aprobaciones', showGerencia);
 
     // TESORERÍA
-    var vTesoCaja = _cL('tesoreria_caja');
+    var vTesoCaja    = _cL('tesoreria_caja');
+    var vTesoLiq     = _cL('tesoreria_liquidaciones');
     var vTesoCuentas = _cL('tesoreria_cuentas');
-    var showTeso = vTesoCaja || vTesoCuentas;
-    safe('nav-tesoreria-caja', vTesoCaja);
-    safe('mbnav-tesoreria-caja', vTesoCaja);
-    safe('nav-tesoreria-cuentas', vTesoCuentas);
-    safe('mbnav-tesoreria-cuentas', vTesoCuentas);
+    var vTesoBancos  = _cL('tesoreria_bancos') || _cL('tesoreria_caja');
+    var vTesoCC      = _cL('tesoreria_centros_costos') || _cL('tesoreria_caja');
+    var showTeso     = vTesoCaja || vTesoLiq || vTesoCuentas || vTesoBancos || vTesoCC;
+
+    safe('nav-tesoreria-caja',           vTesoCaja);
+    safe('mbnav-tesoreria-caja',         vTesoCaja);
+    safe('nav-tesoreria-liquidaciones',  vTesoLiq);
+    safe('mbnav-tesoreria-liquidaciones',vTesoLiq);
+    safe('nav-tesoreria-cuentas',        vTesoCuentas);
+    safe('mbnav-tesoreria-cuentas',      vTesoCuentas);
+    safe('nav-tesoreria-bancos',         vTesoBancos);
+    safe('mbnav-tesoreria-bancos',       vTesoBancos);
+    safe('nav-tesoreria-centros-costos', vTesoCC);
+    safe('mbnav-tesoreria-centros-costos', vTesoCC);
     safe('wrap-tesoreria', showTeso);
     safe('bnav-tesoreria', showTeso);
+
+    // CONDUCTOR (Portal Móvil y Escritorio)
+    var vCondPortal = isAdm || _cL('conductor_portal') || (rolLogueado && rolLogueado.toLowerCase().includes('conductor'));
+    safe('wrap-conductor', vCondPortal);
+    safe('nav-conductor-portal', vCondPortal);
+    safe('bnav-conductor', vCondPortal);
 
     // SEGURIDAD
     var showSeguridadHub = _cHub('hub_seguridad');
@@ -703,11 +719,13 @@ window.verificarSesionGuardada = function() {
             'rrhh/personal': 'rrhh_personal',
             'rrhh/asistencia': 'rrhh_asistencia',
             'rrhh/nomina': 'rrhh_nomina',
+            'operaciones/conductor-portal': 'conductor_portal',
             'tesoreria/caja': 'tesoreria_caja',
             'tesoreria/caja-chica': 'tesoreria_caja',
+            'tesoreria/liquidaciones': 'tesoreria_liquidaciones',
             'tesoreria/cuentas': 'tesoreria_cuentas',
-            'tesoreria/bancos': 'tesoreria_caja',
-            'tesoreria/centros-costos': 'tesoreria_caja',
+            'tesoreria/bancos': 'tesoreria_bancos',
+            'tesoreria/centros-costos': 'tesoreria_centros_costos',
             'seguridad/unidades': 'seguridad_unidades',
             'seguridad/entrega-vehiculos': 'seguridad_unidades',
             'seguridad/unidades-base': 'unidades_base',
@@ -1805,12 +1823,18 @@ window.checkPerm = function(modKey, action) {
             'op_rutas': ['op_rutas'],
             'op_asignacion': ['op_asignacion'],
             'op_monitoreo': ['op_monitoreo'],
+            'op_ordenes_viaje': ['op_ordenes_viaje', 'op_guias_remision'],
+            'op_ordenes_servicio': ['op_ordenes_servicio', 'op_guias_remision'],
+            'conductor_portal': ['conductor_portal'],
             'rrhh_personal': ['rrhh_personal'],
             'rrhh_asistencia': ['rrhh_asistencia'],
             'rrhh_nomina': ['rrhh_nomina'],
             'tesoreria_caja': ['tesoreria_caja'],
+            'tesoreria_liquidaciones': ['tesoreria_liquidaciones'],
             'tesoreria_flujo': ['tesoreria_flujo'],
-            'tesoreria_cuentas': ['tesoreria_cuentas']
+            'tesoreria_cuentas': ['tesoreria_cuentas'],
+            'tesoreria_bancos': ['tesoreria_bancos'],
+            'tesoreria_centros_costos': ['tesoreria_centros_costos']
         };
 
         var keysToCheck = [modKey];
