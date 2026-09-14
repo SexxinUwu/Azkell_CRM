@@ -348,6 +348,13 @@ window.cajaAbrirModalNuevo = function() {
     // Reiniciar moneda y TC
     window.cajaAlCambiarMoneda('SOLES');
 
+    // Limpiar adjuntos y sección desplegable
+    window.cajaAlternarSeccionAdjuntos(false);
+    if (document.getElementById('caja-input-constancia-visible')) document.getElementById('caja-input-constancia-visible').value = '';
+    if (document.getElementById('caja-input-num-factura-visible')) document.getElementById('caja-input-num-factura-visible').value = '';
+    if (document.getElementById('caja-input-file-voucher')) document.getElementById('caja-input-file-voucher').value = '';
+    if (document.getElementById('caja-input-file-sustento')) document.getElementById('caja-input-file-sustento').value = '';
+
     // Cargar cuentas de bancos de empresa
     window.cajaCargarBancosSelect();
 
@@ -364,6 +371,19 @@ window.cajaAbrirModalNuevo = function() {
     var modalEl = document.getElementById('modalCajaForm');
     if (modalEl) {
         bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+};
+
+// Alternar visibilidad de la sección de adjuntos de pago / comprobante
+window.cajaAlternarSeccionAdjuntos = function(forzar) {
+    var sec = document.getElementById('caja-seccion-adjuntos-extra');
+    var txt = document.getElementById('caja-btn-adjuntos-texto');
+    if (!sec) return;
+
+    var mostrar = (typeof forzar === 'boolean') ? forzar : (sec.style.display === 'none' || !sec.style.display);
+    sec.style.display = mostrar ? 'block' : 'none';
+    if (txt) {
+        txt.textContent = mostrar ? 'Ocultar Adjuntos de Pago' : 'Subir Adjunto (Voucher / Factura)';
     }
 };
 
@@ -391,6 +411,16 @@ window.cajaAbrirModalEditar = function(id) {
     if (document.getElementById('caja-input-numero')) document.getElementById('caja-input-numero').value = r.numero || '';
     if (document.getElementById('caja-input-num-factura')) document.getElementById('caja-input-num-factura').value = r.numero_factura || '';
     if (document.getElementById('caja-input-constancia')) document.getElementById('caja-input-constancia').value = r.numero_constancia_deposito || '';
+    if (document.getElementById('caja-input-num-factura-visible')) document.getElementById('caja-input-num-factura-visible').value = r.numero_factura || '';
+    if (document.getElementById('caja-input-constancia-visible')) document.getElementById('caja-input-constancia-visible').value = r.numero_constancia_deposito || '';
+
+    // Si tiene factura o constancia o comprobantes, mostrar panel de adjuntos
+    if (r.numero_factura || r.numero_constancia_deposito || r.voucher_url) {
+        window.cajaAlternarSeccionAdjuntos(true);
+    } else {
+        window.cajaAlternarSeccionAdjuntos(false);
+    }
+
     if (document.getElementById('caja-input-fecha')) document.getElementById('caja-input-fecha').value = r.fecha || '';
     if (document.getElementById('caja-input-hora')) document.getElementById('caja-input-hora').value = r.hora || '';
     if (document.getElementById('caja-input-orden-viaje')) document.getElementById('caja-input-orden-viaje').value = r.orden_viaje || '';
@@ -638,8 +668,8 @@ window.cajaRenderizarFilasMotivos = function(items) {
             '<td>' + ccLabel + '</td>' +
             '<td class="text-center">' + est + '</td>' +
             '<td class="text-center">' +
-                '<button type="button" class="btn-action-pastel btn-delete" onclick="window.cajaEliminarMotivoGasto(' + item.id + ')" title="Eliminar concepto">' +
-                    '<i class="bi bi-trash"></i>' +
+                '<button type="button" class="btn btn-sm btn-link text-danger p-1 border-0 shadow-none text-decoration-none" onclick="window.cajaEliminarMotivoGasto(' + item.id + ')" title="Eliminar concepto">' +
+                    '<i class="bi bi-trash3 fs-5"></i>' +
                 '</button>' +
             '</td>' +
         '</tr>';
