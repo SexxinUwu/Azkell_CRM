@@ -2360,5 +2360,150 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ════════════════════════════════════════════════════════════════
+    // 🚚 PORTAL MÓVIL DEL CONDUCTOR — VIAJE ACTIVO Y LIQUIDACIONES
+    // ════════════════════════════════════════════════════════════════
+    router.get('/conductor-portal/viaje-activo', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            const qDni = (req.query.dni || '').trim();
+            const qNombre = (req.query.nombre || '').trim();
+
+            let conductorNombre = qNombre;
+            let conductorDni = qDni;
+
+            // Si se envió DNI, buscar el nombre completo en la tabla conductores
+            if (qDni) {
+                const [cRows] = await tdb.query(
+                    'SELECT idConductor, nombre, dni, licencia, telefono FROM conductores WHERE TRIM(dni) = ? LIMIT 1',
+                    [qDni]
+                );
+                if (cRows && cRows.length > 0) {
+                    conductorNombre = cRows[0].nombre;
+                    conductorDni = cRows[0].dni;
+                }
+            } else if (qNombre) {
+                const [cRows] = await tdb.query(
+                    'SELECT idConductor, nombre, dni, licencia, telefono FROM conductores WHERE UPPER(TRIM(nombre)) LIKE UPPER(?) LIMIT 1',
+                    [`%${qNombre}%`]
+                );
+                if (cRows && cRows.length > 0) {
+                    conductorNombre = cRows[0].nombre;
+                    conductorDni = cRows[0].dni;
+                }
+            }
+
+            // Buscar viaje activo o más reciente para este conductor
+            let viaje = null;
+            if (conductorNombre) {
+                const [vRows] = await tdb.query(`
+                    SELECT ov.*, 
+                           DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d') AS fecha_formateada,
+                           DATE_FORMAT(ov.fecha_inicio, '%Y-%m-%d %H:%i') AS inicio_formateado
+                    FROM operaciones_ordenes_viaje ov
+                    WHERE UPPER(TRIM(ov.conductor)) LIKE UPPER(?)
+                    ORDER BY 
+                        CASE WHEN UPPER(ov.estado) = 'ACTIVO' THEN 1 
+                             WHEN UPPER(ov.estado) = 'INICIADO' THEN 2 
+                             ELSE 3 END ASC,
+                        ov.fecha_viaje DESC, ov.id DESC
+                    LIMIT 1
+                `, [`%${conductorNombre}%`]);
+
+                if (vRows && vRows.length > 0) {
+                    viaje = vRows[0];
+                }
+            }
+
+            // Si aún no encontró por nombre y había DNI, intentar buscar por id_conductor o en observaciones
+            if (!viaje && conductorDni) {
+                const [vRows] = await tdb.query(`
+                    SELECT ov.*, 
+                           DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d') AS fecha_formateada,
+                           DATE_FORMAT(ov.fecha_inicio, '%Y-%m-%d %H:%i') AS inicio_formateado
+                    FROM operaciones_ordenes_viaje ov
+                    WHERE ov.conductor LIKE ? OR ov.observaciones LIKE ?
+                    ORDER BY ov.fecha_viaje DESC, ov.id DESC
+                    LIMIT 1
+                `, [`%${conductorDni}%`, `%${conductorDni}%`]);
+                if (vRows && vRows.length > 0) viaje = vRows[0];
+            }
+
+            // Si no tiene viaje activo
+            if (!viaje) {
+                return res.json({
+                    ok: true,
+                    conductor: { nombre: conductorNombre || 'Conductor', dni: conductorDni || '' },
+                    viaje: null,
+                    message: 'No se encontró un viaje asignado para este conductor.'
+                });
+            }
+
+            // Obtener depósitos/cajas de Tesorería asignados a este viaje
+            const [cajas] = await tdb.query(`
+                SELECT id, serie, numero, motivo, sub_motivo, importe_total, tipo_movimiento,
+                       DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, estado, voucher_url
+                FROM tesoreria_caja
+                WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(estado) != 'ANULADO'
+                ORDER BY fecha ASC, id ASC
+            `, [viaje.viaje]);
+
+            let totalDepositado = 0;
+            let totalDevoluciones = 0;
+            cajas.forEach(c => {
+                const imp = parseFloat(c.importe_total || 0);
+                if (c.tipo_movimiento === 'INGRESO') totalDevoluciones += imp;
+                else totalDepositado += imp;
+            });
+            const netoAsignado = totalDepositado - totalDevoluciones;
+
+            // Obtener gastos rendidos por el conductor
+            const [gastos] = await tdb.query(`
+                SELECT id, fecha, tipo_gasto, sub_motivo, tipo_comprobante, serie, numero,
+                       proveedor_nombre, detalle, importe, sustento_url, estado
+                FROM tesoreria_liquidaciones_gastos
+                WHERE UPPER(TRIM(orden_viaje)) = UPPER(?)
+                ORDER BY fecha DESC, id DESC
+            `, [viaje.viaje]);
+
+            let totalGastado = 0;
+            gastos.forEach(g => {
+                if (g.estado !== 'RECHAZADO') totalGastado += parseFloat(g.importe || 0);
+            });
+
+            const saldo = netoAsignado - totalGastado;
+
+            res.json({
+                ok: true,
+                conductor: {
+                    nombre: conductorNombre || viaje.conductor,
+                    dni: conductorDni
+                },
+                viaje: {
+                    id: viaje.id,
+                    codigo: viaje.viaje,
+                    placa_tracto: viaje.placa_tracto,
+                    placa_remolque: viaje.placa_remolque || '---',
+                    origen: viaje.origen || 'BASE',
+                    destino: viaje.destino || 'DESTINO',
+                    ruta: viaje.ruta || `${viaje.origen || 'BASE'} - ${viaje.destino || 'DESTINO'}`,
+                    estado: viaje.estado,
+                    fecha: viaje.fecha_formateada
+                },
+                balance: {
+                    total_asignado: netoAsignado,
+                    total_rendido: totalGastado,
+                    saldo_restante: saldo
+                },
+                depositos: cajas || [],
+                gastos: gastos || []
+            });
+        } catch (err) {
+            console.error('Error en portal de conductor:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     return router;
 };

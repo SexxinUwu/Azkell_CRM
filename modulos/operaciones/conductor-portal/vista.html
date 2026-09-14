@@ -1,0 +1,323 @@
+<!-- ═══════════════════════════════════════════════════════════════════
+     MÓDULO: CONDUCTOR (Portal Móvil de Rendición y Viajes) — ERP Azkell
+     ═══════════════════════════════════════════════════════════════════ -->
+<style>
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
+#mod-conductor-portal {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    padding: 1rem 1rem 4rem 1rem !important;
+    width: 100% !important;
+    max-width: 900px !important;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+/* ── Encabezado Estilo App Móvil ──────────────────────────────── */
+.cond-app-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #ffffff;
+    border-radius: 20px;
+    padding: 1.25rem 1.4rem;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
+    margin-bottom: 1.25rem;
+    position: relative;
+    overflow: hidden;
+}
+.cond-app-header::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    bottom: -20px;
+    width: 130px;
+    height: 130px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, rgba(255,255,255,0) 70%);
+    border-radius: 50%;
+}
+
+.cond-user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.12);
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+}
+
+/* ── Hero Card: Viaje Activo ───────────────────────────────────── */
+.cond-trip-hero {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.cond-kpi-pill {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 0.8rem 1rem;
+    text-align: center;
+}
+
+/* ── Botones Grandes de Menú (Estilo Checklist Unidades) ─────────── */
+.cond-menu-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+@media (min-width: 640px) {
+    .cond-menu-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.cond-action-btn {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    width: 100%;
+    position: relative;
+    user-select: none;
+}
+.cond-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    border-color: #cbd5e1;
+}
+.cond-action-btn:active {
+    transform: scale(0.98);
+}
+.cond-action-btn.btn-active-primary {
+    border-color: #22c55e;
+    background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+}
+.cond-action-btn.btn-disabled {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    cursor: pointer;
+    opacity: 0.85;
+}
+
+.cond-btn-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    flex-shrink: 0;
+}
+
+/* ── Comprobantes Rendidos Card ─────────────────────────────────── */
+.cond-gasto-item {
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+</style>
+
+<div id="mod-conductor-portal">
+    <!-- Header Móvil Conductor -->
+    <div class="cond-app-header">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+                <span class="cond-user-badge">
+                    <i class="bi bi-person-badge text-success"></i> <span id="cond-dni-label">DNI: Conductor</span>
+                </span>
+                <h4 class="fw-bold mt-2 mb-0" id="cond-nombre-label">Bienvenido, Conductor</h4>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold" onclick="window.condCargarPortal()">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+        <p class="text-white-50 small m-0">Portal móvil de rendición operativa y control de viaje en ruta.</p>
+    </div>
+
+    <!-- Buscador o Switch de DNI rápido si es consulta en Garita/Pruebas -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white" id="cond-box-switch-dni">
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small fw-bold text-nowrap"><i class="bi bi-search me-1"></i> Mi DNI:</span>
+            <input type="text" class="form-control form-control-sm font-monospace fw-bold" id="cond-input-dni" placeholder="Ingresa tu DNI (Ej: 40889211)..." onkeyup="if(event.key==='Enter') window.condCambiarDni()">
+            <button type="button" class="btn btn-sm btn-dark fw-bold px-3" onclick="window.condCambiarDni()">Ver</button>
+        </div>
+    </div>
+
+    <!-- Card Principal: Viaje Asignado Actual -->
+    <div class="cond-trip-hero" id="cond-hero-trip">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-bold font-monospace" id="cond-viaje-estado">
+                    EN RUTA
+                </span>
+                <span class="fw-bold font-monospace text-primary fs-6" id="cond-viaje-codigo">Viaje: ---</span>
+            </div>
+            <span class="text-muted small" id="cond-viaje-fecha">--/--/----</span>
+        </div>
+
+        <!-- Placas y Ruta -->
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <div class="p-2.5 bg-light rounded-3 border">
+                    <small class="text-muted d-block" style="font-size:0.7rem; font-weight:700;">TRACTO / REMOLQUE</small>
+                    <span class="fw-bold text-dark font-monospace" id="cond-viaje-placas" style="font-size:0.85rem;">--- / ---</span>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-2.5 bg-light rounded-3 border">
+                    <small class="text-muted d-block" style="font-size:0.7rem; font-weight:700;">RUTA ASIGNADA</small>
+                    <span class="fw-bold text-dark text-truncate d-block" id="cond-viaje-ruta" style="font-size:0.85rem;" title="">---</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bento Pills de Dinero: Lo que te depositamos vs Lo que has rendido -->
+        <div class="row g-2">
+            <div class="col-4">
+                <div class="cond-kpi-pill">
+                    <small class="text-muted d-block fw-bold" style="font-size:0.68rem;">DEPOSITADO</small>
+                    <span class="fw-bold font-monospace text-primary" style="font-size:1.05rem;" id="cond-kpi-depositado">S/ 0.00</span>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="cond-kpi-pill">
+                    <small class="text-muted d-block fw-bold" style="font-size:0.68rem;">RENDIDO</small>
+                    <span class="fw-bold font-monospace text-dark" style="font-size:1.05rem;" id="cond-kpi-rendido">S/ 0.00</span>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="cond-kpi-pill">
+                    <small class="text-muted d-block fw-bold" style="font-size:0.68rem;">TU SALDO</small>
+                    <span class="fw-bold font-monospace text-success" style="font-size:1.05rem;" id="cond-kpi-saldo">S/ 0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menú Táctil de Acciones para el Conductor (2 Opciones Solicitadas) -->
+    <h6 class="text-secondary fw-bold text-uppercase small mb-2 px-1" style="font-size:0.72rem; letter-spacing:0.5px;">¿Qué deseas hacer hoy?</h6>
+    <div class="cond-menu-grid">
+        <!-- Botón 1: Liquidar Gastos de Viaje -->
+        <button type="button" class="cond-action-btn btn-active-primary" onclick="window.condAbrirModalSubirGasto()">
+            <div class="cond-btn-icon bg-success bg-opacity-10 text-success">
+                <i class="bi bi-receipt-cutoff"></i>
+            </div>
+            <div>
+                <strong class="d-block text-dark fs-6 mb-0.5">Rendir Gastos de Viaje</strong>
+                <small class="text-muted d-block" style="font-size:0.78rem;">Sube fotos de tus boletas, cocheras, peajes y viáticos.</small>
+            </div>
+            <i class="bi bi-chevron-right text-success ms-auto fs-5"></i>
+        </button>
+
+        <!-- Botón 2: Vales de Combustible (Próximamente) -->
+        <button type="button" class="cond-action-btn btn-disabled" onclick="window.condAvisoCombustibleProximamente()">
+            <div class="cond-btn-icon bg-warning bg-opacity-10 text-warning">
+                <i class="bi bi-fuel-pump-fill"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-0.5">
+                    <strong class="text-dark fs-6">Vale de Combustible</strong>
+                    <span class="badge bg-warning text-dark font-monospace" style="font-size:0.62rem;">PRÓXIMAMENTE</span>
+                </div>
+                <small class="text-muted d-block" style="font-size:0.78rem;">Registro y abastecimiento de Diésel / Urea en ruta.</small>
+            </div>
+            <i class="bi bi-lock-fill text-muted ms-auto fs-6"></i>
+        </button>
+    </div>
+
+    <!-- Sección Rápida de Comprobantes Subidos en Este Viaje -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold text-dark m-0"><i class="bi bi-journal-text text-primary me-1"></i> Comprobantes que ya subiste</h6>
+            <span class="badge bg-light text-secondary border rounded-pill" id="cond-badge-total-gastos">0 registrados</span>
+        </div>
+        <div id="cond-lista-gastos">
+            <div class="text-center py-4 text-muted small">
+                <i class="bi bi-inbox fs-4 d-block mb-1 text-secondary"></i>
+                Aún no has registrado gastos en este viaje. Pulsa "Rendir Gastos" para empezar.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Móvil para Subir Comprobante (Cámara / Foto Directa) -->
+<div class="modal fade" id="condModalSubirGasto" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom py-3 px-4 bg-light rounded-top-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-success bg-opacity-10 text-success p-2">
+                        <i class="bi bi-camera-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold m-0 text-dark">Tomar Foto y Rendir Gasto</h6>
+                        <small class="text-muted" id="cond-modal-subtitulo">Viaje actual en curso</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="condFormNuevoGasto" onsubmit="window.condGuardarGasto(event)">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark mb-1">¿Qué gastaste? *</label>
+                            <select class="form-select form-select-lg fw-bold" id="cond-gasto-tipo" required>
+                                <option value="COCHERA">Cochera / Parqueo</option>
+                                <option value="PEAJES">Peaje / Garita</option>
+                                <option value="VIATICOS">Viáticos / Comida</option>
+                                <option value="PERNOCTE">Hotel / Pernocte</option>
+                                <option value="LLANTAS">Parchado / Llantas</option>
+                                <option value="MANTENIMIENTO">Auxilio Mecánico</option>
+                                <option value="OTROS">Otro Gasto de Ruta</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark mb-1">Monto Pagado (S/) *</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-light fw-bold">S/</span>
+                                <input type="number" step="0.01" min="0.1" class="form-control fw-bold text-success font-monospace" id="cond-gasto-importe" placeholder="0.00" required style="font-size:1.5rem;">
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark mb-1">Foto de la Boleta / Ticket *</label>
+                            <input type="file" class="form-control form-control-lg" id="cond-gasto-foto" accept="image/*,.pdf" capture="environment" required>
+                            <small class="text-muted" style="font-size:0.75rem;">Puedes tomar foto con la cámara de tu celular directamente.</small>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark mb-1">Nota o Lugar (Opcional)</label>
+                            <input type="text" class="form-control" id="cond-gasto-nota" placeholder="Ej: Cochera grifo San Pedro">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" id="cond-btn-enviar-gasto">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Subir Mi Gasto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
