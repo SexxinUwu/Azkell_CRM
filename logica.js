@@ -631,6 +631,9 @@ window.verificarSesionGuardada = function() {
 
     window.esRutaValidaYPermitida = function(r) {
         if (!r) return false;
+        if (r === 'gerencia/aprobaciones/caja' || r === 'gerencia/aprobacion-caja') r = 'gerencia/aprobaciones-caja';
+        if (r === 'gerencia/aprobaciones/oc' || r === 'gerencia/aprobacion-oc') r = 'gerencia/aprobaciones-oc';
+
         // Rutas públicas y de acceso al sistema/preferencias siempre permitidas
         if (r === 'login' || r === 'sistema/login' || r === 'sistema/configuracion' || r === 'sistema/ajustes' || r === 'sistema/perfil') return true;
 
@@ -4132,6 +4135,16 @@ window.cargarConfigSection = function(section) {
 };
 
 window.cargarModuloAislado = async function(rutaModulo) {
+    if (!rutaModulo) return;
+
+    // Normalizar posibles variaciones de rutas
+    if (rutaModulo === 'gerencia/aprobaciones/caja' || rutaModulo === 'gerencia/aprobacion-caja') {
+        rutaModulo = 'gerencia/aprobaciones-caja';
+    }
+    if (rutaModulo === 'gerencia/aprobaciones/oc' || rutaModulo === 'gerencia/aprobacion-oc') {
+        rutaModulo = 'gerencia/aprobaciones-oc';
+    }
+
     // Si el rol es Seguridad y solicita dashboard, redirigir automáticamente al portal de seguridad
     if (rutaModulo === 'dashboard') {
         var rol = (localStorage.getItem('fleet_rol') || '').toLowerCase();
