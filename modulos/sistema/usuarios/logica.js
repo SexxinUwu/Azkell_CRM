@@ -597,7 +597,11 @@ function _guBuildUserPanel(user) {
     html += '<div class="gu-field-label">Nombre Completo</div>'
         + '<input type="text" id="guUserNombre" class="gu-input-inset" value="' + _guEsc(user.nombre||'') + '" placeholder="Ej. Juan Pérez" required>'
         + '<div class="gu-field-label"><i class="bi bi-person-vcard text-primary me-1"></i>N° DNI / Documento (Vínculo Operativo / Chofer)</div>'
-        + '<input type="text" id="guUserDni" class="gu-input-inset" value="' + _guEsc(user.dni||'') + '" placeholder="Ej. 45101717 (8 dígitos)">'
+        + '<div style="position:relative; margin-bottom:12px;">'
+        + '<input type="text" id="guUserDni" class="gu-input-inset" value="' + _guEsc(user.dni||'') + '" placeholder="Ej. 45101717 (8 dígitos)" maxlength="12" style="padding-right:45px; margin-bottom:0;" onkeyup="if(event.key===\'Enter\') window.guConsultarDniRENIEC()">'
+        + '<button type="button" id="guUserDniSearchBtn" onclick="window.guConsultarDniRENIEC()" title="Buscar en RENIEC por DNI" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:#0284c7; color:#ffffff; border:none; border-radius:10px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 4px rgba(2,132,199,0.25); transition:all 0.15s ease;">'
+        + '<i class="bi bi-search" id="guUserDniSearchIcon" style="font-size:0.85rem;"></i></button>'
+        + '</div>'
         + '<div class="gu-field-label">Cargo</div>'
         + '<input type="text" id="guUserCargo" class="gu-input-inset" value="' + _guEsc(user.cargo||'') + '" placeholder="Ej. Conductor / Operaciones">'
         + '<div class="gu-field-label">Usuario / Correo (Login)</div>'
@@ -688,6 +692,65 @@ window._guToggleChangePass = function() {
     var visible = sec.style.display !== 'none';
     sec.style.display = visible ? 'none' : '';
     if (!visible) { var inp = document.getElementById('guUserPassword'); if (inp) inp.focus(); }
+};
+
+// ── Consulta RENIEC / DNI con autocompletado de Nombre Completo ───────
+window.guConsultarDniRENIEC = async function() {
+    var dniInput = document.getElementById('guUserDni');
+    var val = (dniInput ? dniInput.value : '').replace(/[^0-9]/g, '').trim();
+    if (!val || val.length !== 8) {
+        alert('Por favor ingrese un número de DNI válido de 8 dígitos.');
+        if (dniInput) dniInput.focus();
+        return;
+    }
+
+    var icon = document.getElementById('guUserDniSearchIcon');
+    var btn = document.getElementById('guUserDniSearchBtn');
+    if (icon) icon.className = 'spinner-border spinner-border-sm';
+    if (btn) btn.disabled = true;
+
+    try {
+        var res = await fetch('/api/proxy/documento?tipo=DNI&numero=' + val);
+        if (!res.ok) throw new Error('No se encontró información para este DNI');
+        var data = await res.json();
+
+        var nombreCompleto = '';
+        if (data.nombres && (data.apellidoPaterno || data.apellido_paterno)) {
+            var aPaterno = data.apellidoPaterno || data.apellido_paterno || '';
+            var aMaterno = data.apellidoMaterno || data.apellido_materno || '';
+            nombreCompleto = (data.nombres + ' ' + aPaterno + ' ' + aMaterno).trim();
+        } else if (data.nombre) {
+            nombreCompleto = data.nombre.trim();
+        } else if (data.razon_social) {
+            nombreCompleto = data.razon_social.trim();
+        }
+
+        if (nombreCompleto) {
+            var nombreInput = document.getElementById('guUserNombre');
+            if (nombreInput) {
+                nombreInput.value = nombreCompleto.toUpperCase();
+                nombreInput.classList.add('border-success');
+                setTimeout(() => nombreInput.classList.remove('border-success'), 2000);
+            }
+
+            // Si el correo/login está vacío, sugerir el DNI por defecto
+            var correoInput = document.getElementById('guUserCorreo');
+            if (correoInput && !correoInput.value.trim()) {
+                correoInput.value = val;
+            }
+
+            if (typeof window.rotToast === 'function') {
+                window.rotToast('✨ Nombre obtenido de RENIEC exitosamente', 'bg-success');
+            }
+        } else {
+            alert('No se encontraron nombres vinculados a este DNI en RENIEC.');
+        }
+    } catch(err) {
+        alert('Error al consultar RENIEC: ' + err.message);
+    } finally {
+        if (icon) icon.className = 'bi bi-search';
+        if (btn) btn.disabled = false;
+    }
 };
 
 window.guSeleccionarUsuario = function(id) {
