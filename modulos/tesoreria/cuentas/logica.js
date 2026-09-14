@@ -555,6 +555,7 @@ window.abrirEditarRegistro = function(id) {
 };
 
 // ── CÁLCULO AUTOMÁTICO DE LIQUIDACIÓN ECONÓMICA ─────────────────────
+// 1. Cálculo Directo: Flete -> Tarifa -> B.I -> IGV -> Total -> Detracción -> Neto por Cobrar
 window.autoCalcularTotalesForm = function() {
     // 1. Flete
     var flete = parseFloat(document.getElementById('fc-flete').value) || 0;
@@ -592,8 +593,8 @@ window.autoCalcularTotalesForm = function() {
     // 8. Adelanto
     var adelanto = parseFloat(document.getElementById('fc-adelanto').value) || 0;
 
-    // 9. Detracción (4% redondeado al entero según normativa SUNAT SPOT)
-    var detraccion = (total > 0) ? Math.round(total * 0.04) : 0;
+    // 9. Detracción (4% redondeado al entero según normativa SUNAT SPOT si > 700)
+    var detraccion = (total > 700) ? Math.round(total * 0.04) : 0;
     var elDetraccion = document.getElementById('fc-detraccion');
     if (elDetraccion) elDetraccion.value = detraccion.toFixed(2);
 
@@ -601,6 +602,49 @@ window.autoCalcularTotalesForm = function() {
     var neto = total - adelanto - detraccion;
     var elNeto = document.getElementById('fc-neto-cobrar');
     if (elNeto) elNeto.value = neto.toFixed(2);
+};
+
+// 2. Cálculo Inverso: Si se ingresa el Neto por Cobrar deseado (ej. 8000), calcular Flete, B.I, IGV y Total
+window.autoCalcularDesdeNeto = function() {
+    var netoDeseado = parseFloat(document.getElementById('fc-neto-cobrar').value) || 0;
+    if (netoDeseado <= 0) return;
+
+    var comisionStr = (document.getElementById('fc-comision').value || '').trim();
+    var comision = comisionStr !== '' ? (parseFloat(comisionStr) || 0) : 0;
+    var gastos = parseFloat(document.getElementById('fc-gastos-operativos').value) || 0;
+    var adelanto = parseFloat(document.getElementById('fc-adelanto').value) || 0;
+
+    // total - adelanto - detraccion = netoDeseado => total - detraccion = netoDeseado + adelanto
+    // si total > 700: detraccion = Math.round(total * 0.04)
+    var total = netoDeseado > 700 ? Math.round((netoDeseado + adelanto) / 0.96) : (netoDeseado + adelanto);
+    var detraccion = total > 700 ? Math.round(total * 0.04) : 0;
+
+    while ((total - adelanto - detraccion) < netoDeseado) {
+        total++;
+        detraccion = total > 700 ? Math.round(total * 0.04) : 0;
+    }
+    while ((total - adelanto - detraccion) > netoDeseado) {
+        total--;
+        detraccion = total > 700 ? Math.round(total * 0.04) : 0;
+    }
+
+    var bi = parseFloat((total / 1.18).toFixed(2));
+    var igv = parseFloat((total - bi).toFixed(2));
+    var tarifa = parseFloat((bi + gastos).toFixed(2));
+    var flete = comision > 0 ? parseFloat((tarifa / (1 - (comision / 100))).toFixed(2)) : tarifa;
+
+    var elFlete = document.getElementById('fc-flete');
+    if (elFlete) elFlete.value = flete.toFixed(2);
+    var elTarifa = document.getElementById('fc-tarifa');
+    if (elTarifa) elTarifa.value = tarifa.toFixed(2);
+    var elBI = document.getElementById('fc-base-imponible');
+    if (elBI) elBI.value = bi.toFixed(2);
+    var elIGV = document.getElementById('fc-igv');
+    if (elIGV) elIGV.value = igv.toFixed(2);
+    var elTotal = document.getElementById('fc-total');
+    if (elTotal) elTotal.value = total.toFixed(2);
+    var elDet = document.getElementById('fc-detraccion');
+    if (elDet) elDet.value = detraccion.toFixed(2);
 };
 
 window.guardarCuentaForm = function(e) {
