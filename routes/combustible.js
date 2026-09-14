@@ -467,6 +467,11 @@ module.exports = function (db, broadcast, logAudit) {
         try {
             const tdb = getDb(req);
             const items = req.body && Array.isArray(req.body.items) ? req.body.items : (Array.isArray(req.body) ? req.body : []);
+            const limpiarExistentes = req.body && req.body.limpiar_existentes === true;
+
+            if (limpiarExistentes) {
+                await tdb.query("TRUNCATE TABLE combustible_matriz_d2");
+            }
 
             if (!items.length) {
                 return res.status(400).json({ ok: false, error: 'No se enviaron filas para importar.' });
