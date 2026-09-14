@@ -1066,7 +1066,7 @@ module.exports = function (db, broadcast, logAudit) {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
-            const { fecha_desde, fecha_hasta, estado, buscar } = req.query;
+            const { fecha_desde, fecha_hasta, estado, buscar, orden_viaje } = req.query;
             let sql = `
                 SELECT 
                     id,
@@ -1115,6 +1115,10 @@ module.exports = function (db, broadcast, logAudit) {
             `;
             const params = [];
 
+            if (orden_viaje && orden_viaje.trim()) {
+                sql += ` AND UPPER(TRIM(orden_viaje)) = UPPER(?)`;
+                params.push(orden_viaje.trim());
+            }
             if (fecha_desde) {
                 sql += ` AND fecha >= ?`;
                 params.push(safeDate(fecha_desde));
@@ -1773,14 +1777,354 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // Eliminar Motivo / Submotivo
-    router.delete('/motivos-gastos/:id', async (req, res) => {
+    // ── GESTIÓN DE LIQUIDACIÓN DE GASTOS OPERATIVOS DE VIAJE ─────────
+    async function ensureTableLiquidacionesGastos(req) {
+        const tenantSlug = req.tenantSlug || 'default';
+        const key = `liq_gastos_${tenantSlug}`;
+        if (_tenantsInitSet.has(key)) return;
+
+        const tdb = getDb(req);
+        if (!tdb) return;
+
+        const createSql = `
+            CREATE TABLE IF NOT EXISTS tesoreria_liquidaciones_gastos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                orden_viaje VARCHAR(100) NOT NULL,
+                fecha DATE NOT NULL,
+                conductor VARCHAR(150) NULL,
+                tipo_gasto VARCHAR(100) NOT NULL,
+                sub_motivo VARCHAR(150) NULL,
+                tipo_comprobante VARCHAR(50) NOT NULL DEFAULT 'BOLETA',
+                serie VARCHAR(30) NULL,
+                numero VARCHAR(50) NULL,
+                proveedor_ruc VARCHAR(20) NULL,
+                proveedor_nombre VARCHAR(200) NULL,
+                detalle TEXT NULL,
+                importe DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+                sustento_url TEXT NULL,
+                estado VARCHAR(50) NOT NULL DEFAULT 'APROBADO',
+                usuario_registro VARCHAR(150) NULL,
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_liq_viaje (orden_viaje),
+                INDEX idx_liq_fecha (fecha)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `;
+
         try {
-            await ensureTableMotivosGastos(req);
+            await tdb.query(createSql);
+            _tenantsInitSet.add(key);
+        } catch(e) {
+            console.warn('[Liquidaciones Gastos] Error verificando tabla:', e.message);
+        }
+    }
+
+    // Listar gastos de liquidación de un viaje + Balance consolidado contra depósitos de caja
+    router.get('/liquidaciones-gastos', async (req, res) => {
+        try {
+            await ensureTableLiquidacionesGastos(req);
+            await ensureTableCaja(req);
+            const tdb = getDb(req);
+            const { orden_viaje } = req.query;
+
+            // Si no se especifica orden_viaje, listar el consolidado de viajes con depósitos o liquidaciones
+            if (!orden_viaje || !orden_viaje.trim()) {
+                const { q, estado_balance, limit } = req.query;
+                
+                // Obtener viajes recientes de operaciones
+                let sql = `
+                    SELECT ov.viaje, DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d') AS fecha,
+                           ov.conductor, ov.placa_tracto, ov.placa_remolque, ov.ruta, ov.estado
+                    FROM operaciones_ordenes_viaje ov
+                    WHERE 1=1
+                `;
+                const params = [];
+                if (q && q.trim()) {
+                    const term = `%${q.trim()}%`;
+                    sql += ` AND (ov.viaje LIKE ? OR ov.conductor LIKE ? OR ov.placa_tracto LIKE ? OR ov.placa_remolque LIKE ? OR ov.ruta LIKE ?)`;
+                    params.push(term, term, term, term, term);
+                }
+                sql += ` ORDER BY ov.fecha_viaje DESC, ov.id DESC LIMIT ?`;
+                params.push(parseInt(limit, 10) || 50);
+
+                const [viajes] = await tdb.query(sql, params);
+
+                // Para cada viaje, calcular rápidamente sus totales
+                const resultado = [];
+                for (const v of viajes) {
+                    const [cajas] = await tdb.query(`
+                        SELECT tipo_movimiento, SUM(importe_total) AS total
+                        FROM tesoreria_caja
+                        WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(estado) != 'ANULADO'
+                        GROUP BY tipo_movimiento
+                    `, [v.viaje]);
+
+                    let dep = 0, dev = 0;
+                    (cajas || []).forEach(c => {
+                        const t = parseFloat(c.total || 0);
+                        if (c.tipo_movimiento === 'INGRESO') dev += t;
+                        else dep += t;
+                    });
+                    const netoDep = dep - dev;
+
+                    const [gastos] = await tdb.query(`
+                        SELECT SUM(importe) AS total_gastos, COUNT(id) AS cant_gastos
+                        FROM tesoreria_liquidaciones_gastos
+                        WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND estado != 'RECHAZADO'
+                    `, [v.viaje]);
+
+                    const ren = parseFloat((gastos && gastos[0] && gastos[0].total_gastos) || 0);
+                    const cantGastos = parseInt((gastos && gastos[0] && gastos[0].cant_gastos) || 0, 10);
+                    const diff = netoDep - ren;
+
+                    let estadoBal = 'CUADRADO';
+                    if (diff > 0.01) estadoBal = 'SALDO_EMPRESA';
+                    else if (diff < -0.01) estadoBal = 'SALDO_CONDUCTOR';
+
+                    // Filtrar por estado de balance si fue solicitado
+                    if (estado_balance === 'PENDIENTE' && estadoBal === 'CUADRADO') continue;
+                    if (estado_balance === 'CUADRADO' && estadoBal !== 'CUADRADO') continue;
+
+                    resultado.push({
+                        ...v,
+                        total_depositado: netoDep,
+                        total_rendido: ren,
+                        saldo_diferencia: diff,
+                        cant_gastos: cantGastos,
+                        estado_balance: estadoBal
+                    });
+                }
+
+                return res.json({ ok: true, data: resultado });
+            }
+
+            const ovTrim = orden_viaje.trim();
+
+            // 1. Obtener gastos rendidos del viaje específico
+            const [gastos] = await tdb.query(`
+                SELECT id, orden_viaje, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, conductor,
+                       tipo_gasto, sub_motivo, tipo_comprobante, serie, numero,
+                       proveedor_ruc, proveedor_nombre, detalle, importe, sustento_url,
+                       estado, usuario_registro, creado_en
+                FROM tesoreria_liquidaciones_gastos
+                WHERE UPPER(TRIM(orden_viaje)) = UPPER(?)
+                ORDER BY fecha ASC, id ASC
+            `, [ovTrim]);
+
+            for (const g of gastos) {
+                if (g.sustento_url && typeof getPresignedUrl === 'function') {
+                    try {
+                        const k = s3KeyFromUrl(g.sustento_url);
+                        if (k) g.sustento_view_url = await getPresignedUrl(k, 7200);
+                    } catch(e) { g.sustento_view_url = g.sustento_url; }
+                } else if (g.sustento_url) {
+                    g.sustento_view_url = g.sustento_url;
+                }
+            }
+
+            // 2. Obtener depósitos/cajas asignados a este viaje (excluyendo ANULADO)
+            const [cajas] = await tdb.query(`
+                SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, serie, numero, motivo, sub_motivo,
+                       persona, importe_total, tipo_movimiento, estado, voucher_url, sustento_url,
+                       DATE_FORMAT(fecha_aprobacion, '%Y-%m-%d %H:%i') AS fecha_aprobacion
+                FROM tesoreria_caja
+                WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(estado) != 'ANULADO'
+                ORDER BY fecha ASC, id ASC
+            `, [ovTrim]);
+
+            // Sumatorias
+            let totalDepositado = 0;
+            let totalDevoluciones = 0;
+            cajas.forEach(c => {
+                const imp = parseFloat(c.importe_total || 0);
+                if (c.tipo_movimiento === 'INGRESO') {
+                    totalDevoluciones += imp;
+                } else {
+                    totalDepositado += imp;
+                }
+            });
+
+            let totalGastos = 0;
+            gastos.forEach(g => {
+                if (g.estado !== 'RECHAZADO') {
+                    totalGastos += parseFloat(g.importe || 0);
+                }
+            });
+
+            // Saldo = Total Entregado (Egresos - Ingresos) - Total Gastado
+            // Si saldo > 0: El conductor gastó menos (saldo a favor de la empresa / por devolver o descontar)
+            // Si saldo < 0: El conductor gastó más (saldo a favor del conductor / por reembolsar)
+            const netoEntregado = totalDepositado - totalDevoluciones;
+            const saldoDiferencia = netoEntregado - totalGastos;
+
+            res.json({
+                ok: true,
+                orden_viaje: ovTrim,
+                gastos: gastos || [],
+                total_depositado: netoEntregado,
+                total_rendido: totalGastos,
+                saldo_diferencia: saldoDiferencia,
+                estado_balance: saldoDiferencia === 0 ? 'CUADRADO' : (saldoDiferencia > 0 ? 'SALDO_EMPRESA' : 'SALDO_CONDUCTOR')
+            });
+        } catch (err) {
+            console.error('Error al listar liquidaciones de gastos:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Registrar nuevo gasto de liquidación con comprobante adjunto
+    router.post('/liquidaciones-gastos', upload.single('sustento'), async (req, res) => {
+        try {
+            await ensureTableLiquidacionesGastos(req);
+            const tdb = getDb(req);
+            const b = req.body || {};
+
+            if (!b.orden_viaje || !b.importe) {
+                return res.status(400).json({ error: 'orden_viaje e importe requeridos' });
+            }
+
+            let sustentoUrl = null;
+            if (req.file) {
+                const f = req.file;
+                const ext = (f.originalname.split('.').pop() || 'jpg').toLowerCase();
+                const key = `tesoreria/liquidaciones/gasto_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+                sustentoUrl = await uploadToS3(key, f.buffer, f.mimetype);
+            }
+
+            const [result] = await tdb.query(`
+                INSERT INTO tesoreria_liquidaciones_gastos (
+                    orden_viaje, fecha, conductor, tipo_gasto, sub_motivo,
+                    tipo_comprobante, serie, numero, proveedor_ruc, proveedor_nombre,
+                    detalle, importe, sustento_url, estado, usuario_registro
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                (b.orden_viaje || '').trim(),
+                safeDate(b.fecha) || new Date(),
+                (b.conductor || '').trim(),
+                (b.tipo_gasto || 'OTROS GASTOS').trim(),
+                (b.sub_motivo || '').trim(),
+                (b.tipo_comprobante || 'BOLETA').trim(),
+                (b.serie || '').trim(),
+                (b.numero || '').trim(),
+                (b.proveedor_ruc || '').trim(),
+                (b.proveedor_nombre || '').trim(),
+                (b.detalle || '').trim(),
+                safeNum(b.importe),
+                sustentoUrl,
+                (b.estado || 'APROBADO').trim(),
+                (req.user && req.user.nombre) ? req.user.nombre : (b.usuario_creacion || 'SISTEMA')
+            ]);
+
+            res.json({ ok: true, id: result.insertId, message: 'Gasto registrado con éxito' });
+        } catch (err) {
+            console.error('Error al registrar gasto de liquidación:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Eliminar gasto de liquidación
+    router.delete('/liquidaciones-gastos/:id', async (req, res) => {
+        try {
+            await ensureTableLiquidacionesGastos(req);
             const tdb = getDb(req);
             const { id } = req.params;
-            await tdb.query('DELETE FROM tesoreria_motivos_gastos WHERE id = ?', [id]);
-            res.json({ ok: true, message: 'Motivo de gasto eliminado correctamente.' });
+            await tdb.query('DELETE FROM tesoreria_liquidaciones_gastos WHERE id = ?', [id]);
+            res.json({ ok: true, message: 'Gasto de liquidación eliminado' });
         } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Generar Caja de Compensación (Devolución por saldo a favor o Reembolso por exceso de gasto)
+    router.post('/liquidaciones-gastos/generar-caja-compensacion', async (req, res) => {
+        try {
+            await ensureTableCaja(req);
+            await ensureTableLiquidacionesGastos(req);
+            const tdb = getDb(req);
+            const b = req.body || {};
+
+            const { orden_viaje, tipo_compensacion, importe, conductor, placa, descripcion, destino_devolucion } = b;
+
+            if (!orden_viaje || !importe || parseFloat(importe) <= 0) {
+                return res.status(400).json({ error: 'orden_viaje e importe válido requeridos' });
+            }
+
+            const tipoMov = (tipo_compensacion === 'DEVOLUCION_EMPRESA') ? 'INGRESO' : 'EGRESO';
+            let motivo = (tipo_compensacion === 'DEVOLUCION_EMPRESA') ? 'Devolución de Viáticos / Gastos' : 'Reembolso de Gastos de Viaje';
+            let submot = (tipo_compensacion === 'DEVOLUCION_EMPRESA') ? 'Sobrante de Viáticos' : 'Reembolso por Exceso de Gasto';
+            let modPago = 'TRANSFERENCIA BANCARIA';
+
+            if (tipo_compensacion === 'DEVOLUCION_EMPRESA') {
+                if (destino_devolucion === 'CAJA_CHICA') {
+                    submot = 'Sobrante de Viáticos (Caja Chica)';
+                    modPago = 'EFECTIVO';
+                } else if (destino_devolucion === 'DESCUENTO_PLANILLA') {
+                    submot = 'Descuento en Planilla / Asignación';
+                    modPago = 'DESCUENTO EN PLANILLA';
+                } else {
+                    submot = 'Sobrante de Viáticos (Caja Principal)';
+                    modPago = 'DEPOSITO EN CUENTA';
+                }
+            }
+
+            // Correlativo
+            const anio = new Date().getFullYear().toString();
+            const [lastNum] = await tdb.query(
+                "SELECT numero FROM tesoreria_caja WHERE serie = ? ORDER BY id DESC LIMIT 1",
+                [anio]
+            );
+            let nextCorrelativo = 1;
+            if (lastNum && lastNum.length > 0 && lastNum[0].numero) {
+                const parsed = parseInt(lastNum[0].numero, 10);
+                if (!isNaN(parsed)) nextCorrelativo = parsed + 1;
+            }
+            const numeroFormateado = String(nextCorrelativo).padStart(8, '0');
+
+            const impNum = safeNum(importe);
+            const descFinal = descripcion || `${motivo} - Orden de Viaje ${orden_viaje} - Conductor: ${conductor || 'Personal'} [Destino: ${destino_devolucion || 'CAJA_PRINCIPAL'}]`;
+            const userCreacion = (req.user && req.user.nombre) ? req.user.nombre : (b.usuario_creacion || 'ADMINISTRACION');
+
+            const insertSql = `
+                INSERT INTO tesoreria_caja (
+                    fecha, hora, serie, numero, orden_viaje, conductor, placa, autoriza,
+                    motivo, centro_costo, sub_motivo, modalidad_pago, moneda,
+                    tipo_persona, persona, tipo_movimiento, subtotal, importe_total,
+                    descripcion, estado, usuario_creacion
+                ) VALUES (
+                    CURDATE(), CURTIME(), ?, ?, ?, ?, ?, ?,
+                    ?, 'CC-300', ?, ?, 'SOLES',
+                    'CONDUCTOR', ?, ?, ?, ?,
+                    ?, 'PENDIENTE', ?
+                )
+            `;
+
+            const [rCaja] = await tdb.query(insertSql, [
+                anio,
+                numeroFormateado,
+                orden_viaje,
+                conductor || '',
+                placa || '',
+                'GERENCIA',
+                motivo,
+                submot,
+                modPago,
+                conductor || 'CONDUCTOR',
+                tipoMov,
+                impNum,
+                impNum,
+                descFinal,
+                userCreacion
+            ]);
+
+            res.json({
+                ok: true,
+                caja_id: rCaja.insertId,
+                caja_numero: `${anio}-${numeroFormateado}`,
+                tipo_movimiento: tipoMov,
+                destino: destino_devolucion || 'CAJA_PRINCIPAL',
+                message: `Caja ${anio}-${numeroFormateado} (${tipoMov}) generada con éxito para ${destino_devolucion || 'Caja Principal'}`
+            });
+        } catch (err) {
+            console.error('Error al generar caja de compensación:', err);
             res.status(500).json({ error: err.message });
         }
     });
