@@ -2271,6 +2271,18 @@ document.addEventListener('DOMContentLoaded', function() {
   fetch('/api/configuracion')
     .then(res => res.json())
     .then(data => {
+        var isSuperAdminDomain = window.location.hostname.includes('admin.azkell.com') || window.location.hostname.startsWith('admin.') || (window.location.hash && window.location.hash.includes('superadmin'));
+        if (isSuperAdminDomain) {
+            document.title = 'SuperAdmin SaaS Master — Azkell Fleet';
+            var brandImg = document.querySelector('.brand-logo-icon img');
+            if (brandImg) brandImg.src = '/favicon-2003.png';
+            var brandTitle = document.querySelector('.brand-title-text');
+            if (brandTitle) brandTitle.textContent = 'AZKELL FLEET';
+            var fav = document.getElementById('app-dynamic-favicon');
+            if (fav) fav.href = '/favicon-2003.png';
+            return;
+        }
+
         localStorage.setItem('fleet_empresa_nombre', data.empresa_nombre || '');
         localStorage.setItem('fleet_empresa_logo', data.empresa_logo || '');
         
@@ -4247,6 +4259,9 @@ window.cargarModuloAislado = async function(rutaModulo) {
         const main = document.querySelector('.main-area');
         if (main) main.style.padding = '';
         if (root) root.style.padding = '15px 25px';
+        document.title = 'SuperAdmin SaaS Master — Azkell Fleet';
+        var fav = document.getElementById('app-dynamic-favicon');
+        if (fav) fav.href = '/favicon-2003.png';
     } else {
         const sb = document.getElementById('sidebarMenu');
         if (sb) sb.style.removeProperty('display');

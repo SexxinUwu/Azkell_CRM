@@ -48,8 +48,9 @@ async function provisionNewTenant({ slug, nombre_empresa, ruc, admin_email, admi
 
     // 2. Obtener pool de la nueva base de datos e inicializar todas las tablas del ERP
     const tenantPool = getTenantPool(dbName);
-    await initDB(tenantPool);
+    await initDB(tenantPool, dbName);
     try {
+        await tenantPool.promise().query(`USE \`${dbName}\``);
         await tenantPool.promise().query("INSERT INTO configuracion_erp (clave, valor) VALUES ('empresa_nombre', ?) ON DUPLICATE KEY UPDATE valor = ?", [nombre_empresa.trim(), nombre_empresa.trim()]);
     } catch(e) {}
 
@@ -59,7 +60,7 @@ async function provisionNewTenant({ slug, nombre_empresa, ruc, admin_email, admi
 
     await new Promise((resolve, reject) => {
         const sqlUser = `
-        INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, password_visible, rol, estado, rol_id, permisos_json)
+        INSERT INTO \`${dbName}\`.usuarios (idUsuario, nombre, cargo, correo, password, password_visible, rol, estado, rol_id, permisos_json)
         VALUES (?, ?, ?, ?, ?, ?, 'Administrador', 'Activo', 1, '{"admin":true}')
         ON DUPLICATE KEY UPDATE nombre = VALUES(nombre), password = VALUES(password), password_visible = VALUES(password_visible), rol_id = 1, permisos_json = '{"admin":true}';
         `;

@@ -911,53 +911,28 @@ const TABLAS = [
     }
 ];
 
-async function initDB(defaultDb) {
+async function initDB(defaultDb, specificDb) {
     const promisePool = defaultDb.promise();
     try {
-        
-        // Obtener todas las bases de datos tenant (ej. azkell_tenant_marsisa, azkell_tenant_azkell, etc.)
         let databasesToInit = [];
-        try {
-            const [dbs] = await promisePool.query("SHOW DATABASES LIKE 'azkell_tenant_%'");
-            databasesToInit = dbs.map(d => Object.values(d)[0]);
-        } catch (e) {
-            databasesToInit = [];
-        }
+        if (specificDb) {
+            databasesToInit = [specificDb];
+        } else {
+            try {
+                const [dbs] = await promisePool.query("SHOW DATABASES LIKE 'azkell_tenant_%'");
+                databasesToInit = dbs.map(d => Object.values(d)[0]);
+            } catch (e) {
+                databasesToInit = [];
+            }
 
-        // Si no se encontraron por query, al menos inicializar la BD por defecto
-        if (!databasesToInit.length) {
-            databasesToInit = [process.env.DB_NAME || 'azkell_tenant_marsisa'];
-        }
-
-        console.log(`📦 [Multi-Tenant initDB] Verificando esquemas en: ${databasesToInit.join(', ')}`);
-
-        for (const dbName of databasesToInit) {
-            for (const tabla of TABLAS) {
-                try {
-                    await promisePool.query(`USE \`${dbName}\``);
-                    await promisePool.query(tabla.sql);
-                } catch (err) {
-                    console.error(`❌ Error en tabla ${tabla.nombre} (${dbName}):`, err.message);
-                }
+            if (!databasesToInit.length) {
+                databasesToInit = [process.env.DB_NAME || 'azkell_tenant_marsisa'];
             }
         }
-        console.log(`✅ [Multi-Tenant initDB] Tablas verificadas en todas las empresas.`);
-    } catch (errGlobal) {
-        console.error('❌ Error global en initDB:', errGlobal.message);
-    }
 
-    try {
-        await promisePool.query("INSERT IGNORE INTO configuracion_erp (clave, valor) VALUES ('empresa_nombre', 'Azkell Fleet')");
-        await promisePool.query("INSERT IGNORE INTO configuracion_erp (clave, valor) VALUES ('empresa_logo', '')");
-        await promisePool.query("INSERT IGNORE INTO roles (id, nombre, color, permisos_json, es_admin, orden) VALUES (1, 'Administrador', '#5865F2', '{\"admin\":true}', 1, 1)");
-        await promisePool.query("INSERT IGNORE INTO roles (id, nombre, color, permisos_json, es_admin, orden) VALUES (2, 'Tesorería', '#10b981', '{\"dashboard\":{\"l\":1},\"tesoreria_caja\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0},\"tesoreria_liquidaciones\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0},\"tesoreria_cuentas\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0},\"tesoreria_bancos\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0},\"tesoreria_centros_costos\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0}}', 0, 2)");
-        await promisePool.query("INSERT IGNORE INTO roles (id, nombre, color, permisos_json, es_admin, orden) VALUES (3, 'Conductor', '#22c55e', '{\"dashboard\":{\"l\":0},\"conductor_portal\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0}}', 0, 3)");
-        
-        // Catálogos semillas predeterminados (INSERT IGNORE garantiza no alterar Marsisa ni datos existentes)
-        await promisePool.query("INSERT IGNORE INTO cat_situaciones (id, codigo, descripcion) VALUES (1, 'S01', 'En Espera'), (2, 'S02', 'En Diagnóstico'), (3, 'S03', 'En Reparación'), (4, 'S04', 'Finalizada')");
-        await promisePool.query("INSERT IGNORE INTO tipos_mantenimiento (id, tipo_mp, marca, descripcion) VALUES (1, 'MP1', 'TODOS', 'Mantenimiento Preventivo 1'), (2, 'MP2', 'TODOS', 'Mantenimiento Preventivo 2'), (3, 'MP3', 'TODOS', 'Mantenimiento Preventivo 3')");
+        console.log(`📦 [Multi-Tenant initDB] Verificando esquemas y semillas en: ${databasesToInit.join(', ')}`);
 
-        // Catálogos Neumáticos - Semillas
+        // Listas maestras para catálogos
         const marcasNeu = [
             'AEOLUS', 'AMBERTONE', 'APLUS', 'ARMORSTEEL', 'AUSTONE', 'AUFINE', 'BLACKLION', 'BRIDGESTONE',
             'CHAOYANG', 'CONTINENTAL', 'DUNLOP', 'DOUBLESTAR', 'DURATURN', 'DYNACARGO', 'FULLRUN', 'GITI',
@@ -966,24 +941,12 @@ async function initDB(defaultDb) {
             'MAXELL', 'MAXXIS', 'MICHELIN', 'NIPPON', 'PIRELLI', 'PRINX', 'ROADLUX', 'ROYAL BLACK',
             'STEELMARK', 'SUPERHAWK', 'TRIANGLE', 'WESTLAKE', 'WINDPOWER', 'WOSEN', 'YOKOHAMA', 'EVERGREEN', 'ROADMASTER'
         ];
-        for (const m of marcasNeu) {
-            await promisePool.query("INSERT IGNORE INTO cat_neumaticos_marcas (nombre) VALUES (?)", [m]);
-        }
-
         const medidasNeu = [
             '11R22.5', '235/70R17.5', '235/75R17.5', '245/70R17.5', '245/70R19.5', '245/70R22.5',
             '275/70R22.5', '275/80R22.5', '295/80R22.5', '315/80R22.5', '385/65R22.5', '425/65R22.5',
             '445/65R22.5', '9.5R17.5'
         ];
-        for (const med of medidasNeu) {
-            await promisePool.query("INSERT IGNORE INTO cat_neumaticos_medidas (nombre) VALUES (?)", [med]);
-        }
-
         const accionesNeu = ['Inspeccion', 'Reparacion', 'Cambio', 'Instalacion', 'Rotacion'];
-        for (const ac of accionesNeu) {
-            await promisePool.query("INSERT IGNORE INTO cat_neumaticos_acciones (nombre) VALUES (?)", [ac]);
-        }
-
         const modelosNeu = [
             '10558', '17', '366', '785', 'AAR603', 'ACEL2', 'AD153', 'ADR35', 'ADR6', 'ADR8', 'AEL2', 'AEL5',
             'AF177', 'AG510', 'AGD', 'AGD5', 'AH+', 'AHS', 'AHT', 'AMS', 'AT115A', 'AT121', 'AT161', 'AT27',
@@ -1001,103 +964,146 @@ async function initDB(defaultDb) {
             'V1111', 'WGC28', 'WS', 'WS778', 'WS788', 'WS806', 'XLINE', 'XMULTI', 'Y115', 'Y126', 'Y201', 'Y209',
             'Y631', 'Y99', 'Y999', 'EAU91', 'TR605', 'RM230HH', 'MSS2'
         ];
-        for (const mod of modelosNeu) {
-            await promisePool.query("INSERT IGNORE INTO cat_neumaticos_modelos (nombre) VALUES (?)", [mod]);
-        }
 
-        // Migraciones de columnas en cat_rampas y usuarios para instalaciones existentes
-        try { await promisePool.query("ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0"); } catch(e) {}
-        try { await promisePool.query("UPDATE cat_rampas SET orden=id WHERE orden=0"); } catch(e) {}
-
-        const colsUsuarios = ['telefono VARCHAR(50) NULL', 'avatar_url TEXT NULL', 'banner_url TEXT NULL', 'firma_digital LONGTEXT NULL', 'preferencias_json LONGTEXT NULL'];
-        for (const colDef of colsUsuarios) {
-            try { await promisePool.query(`ALTER TABLE usuarios ADD COLUMN ${colDef}`); } catch(e) {}
-        }
-
-        const colsNeumaticos = [
-            'r4 INT DEFAULT 0',
-            'rot VARCHAR(50) DEFAULT \'NO\'',
-            'foto1 LONGTEXT NULL',
-            'foto2 LONGTEXT NULL',
-            'foto3 LONGTEXT NULL'
-        ];
-        const colsPlacas = [
-            'tanque_1 VARCHAR(20) NOT NULL DEFAULT \'\'',
-            'tanque_2 VARCHAR(20) NOT NULL DEFAULT \'\'',
-            'tanque_3 VARCHAR(20) NOT NULL DEFAULT \'\'',
-            'capacidad_tanque VARCHAR(20) NOT NULL DEFAULT \'\'',
-            'tara VARCHAR(20) NOT NULL DEFAULT \'\'',
-            'wialon_name VARCHAR(100) DEFAULT NULL'
-        ];
-        for (const colDef of colsPlacas) {
-            try { await promisePool.query(`ALTER TABLE placas ADD COLUMN ${colDef}`); } catch(e) {}
-        }
-
-        // Migración de auditoría (garantizar modulo y submodulo)
-        try { await promisePool.query("ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL"); } catch(e) {}
-        try { await promisePool.query("ALTER TABLE auditoria ADD COLUMN submodulo VARCHAR(50) DEFAULT NULL"); } catch(e) {}
-
-        // Limpieza de tablas obsoletas no utilizadas
-        try { await promisePool.query("DROP TABLE IF EXISTS combustible_abastecimientos"); } catch(e) {}
-
-        // Tablas de Guías de Remisión garantizadas en todos los tenants
         for (const dbName of databasesToInit) {
+            await promisePool.query(`USE \`${dbName}\``);
+
+            // 1. Crear tablas del ERP
+            for (const tabla of TABLAS) {
+                try {
+                    await promisePool.query(tabla.sql);
+                } catch (err) {
+                    console.error(`❌ Error en tabla ${tabla.nombre} (${dbName}):`, err.message);
+                }
+            }
+
+            // 2. Semillas base (Configuracion, Roles, Catálogos)
             try {
-                await promisePool.query(`USE \`${dbName}\``);
-                await promisePool.query(`
-                    CREATE TABLE IF NOT EXISTS guias_remision (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        numero_guia VARCHAR(30) NOT NULL UNIQUE,
-                        tipo_documento VARCHAR(10) DEFAULT '31',
-                        fecha_emision DATE DEFAULT NULL,
-                        fecha_traslado DATE DEFAULT NULL,
-                        remitente_ruc VARCHAR(20) DEFAULT NULL,
-                        remitente_razon_social VARCHAR(255) DEFAULT NULL,
-                        destinatario_ruc VARCHAR(20) DEFAULT NULL,
-                        destinatario_razon_social VARCHAR(255) DEFAULT NULL,
-                        punto_partida_direccion TEXT DEFAULT NULL,
-                        punto_partida_ubigeo VARCHAR(10) DEFAULT NULL,
-                        punto_llegada_direccion TEXT DEFAULT NULL,
-                        punto_llegada_ubigeo VARCHAR(10) DEFAULT NULL,
-                        placa_tracto VARCHAR(20) DEFAULT NULL,
-                        placa_carreta VARCHAR(20) DEFAULT NULL,
-                        conductor_tipo_doc VARCHAR(10) DEFAULT 'DNI',
-                        conductor_num_doc VARCHAR(20) DEFAULT NULL,
-                        conductor_nombre VARCHAR(200) DEFAULT NULL,
-                        conductor_licencia VARCHAR(30) DEFAULT NULL,
-                        peso_bruto_total DECIMAL(12,2) DEFAULT 0,
-                        unidad_medida VARCHAR(10) DEFAULT 'KGM',
-                        estado_sunat VARCHAR(50) DEFAULT 'ACEPTADO',
-                        codigo_respuesta_sunat VARCHAR(20) DEFAULT '0',
-                        observaciones_sunat TEXT DEFAULT NULL,
-                        datos_json LONGTEXT DEFAULT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                        INDEX idx_numero_guia (numero_guia),
-                        INDEX idx_placa_tracto (placa_tracto),
-                        INDEX idx_fecha_emision (fecha_emision)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-                `);
-                await promisePool.query(`
-                    CREATE TABLE IF NOT EXISTS guias_remision_items (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        guia_id INT NOT NULL,
-                        codigo VARCHAR(50) DEFAULT NULL,
-                        descripcion TEXT NOT NULL,
-                        cantidad DECIMAL(12,2) DEFAULT 1,
-                        unidad_medida VARCHAR(20) DEFAULT 'NIU',
-                        peso_unitario DECIMAL(12,2) DEFAULT 0,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        INDEX idx_guia_id (guia_id),
-                        FOREIGN KEY (guia_id) REFERENCES guias_remision(id) ON DELETE CASCADE
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-                `);
-            } catch(e) {}
+                await promisePool.query("INSERT IGNORE INTO configuracion_erp (clave, valor) VALUES ('empresa_nombre', 'Azkell Fleet')");
+                await promisePool.query("INSERT IGNORE INTO configuracion_erp (clave, valor) VALUES ('empresa_logo', '')");
+                await promisePool.query("INSERT IGNORE INTO roles (id, nombre, color, permisos_json, es_admin, orden) VALUES (1, 'Administrador', '#5865F2', '{\"admin\":true}', 1, 1)");
+                await promisePool.query("INSERT IGNORE INTO roles (id, nombre, color, permisos_json, es_admin, orden) VALUES (2, 'Tesorería', '#10b981', '{\"dashboard\":{\"l\":1},\"tesoreria_caja\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0},\"tesoreria_liquidaciones\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0},\"tesoreria_cuentas\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0},\"tesoreria_bancos\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0},\"tesoreria_centros_costos\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0}}', 0, 2)");
+                await promisePool.query("INSERT IGNORE INTO roles (id, nombre, color, permisos_json, es_admin, orden) VALUES (3, 'Conductor', '#22c55e', '{\"dashboard\":{\"l\":0},\"conductor_portal\":{\"l\":1,\"c\":1,\"e\":1,\"d\":0}}', 0, 3)");
+                
+                // Catálogos semillas predeterminados (INSERT IGNORE garantiza no alterar Marsisa ni datos existentes)
+                await promisePool.query("INSERT IGNORE INTO cat_situaciones (id, codigo, descripcion) VALUES (1, 'S01', 'En Espera'), (2, 'S02', 'En Diagnóstico'), (3, 'S03', 'En Reparación'), (4, 'S04', 'Finalizada')");
+                await promisePool.query("INSERT IGNORE INTO tipos_mantenimiento (id, tipo_mp, marca, descripcion) VALUES (1, 'MP1', 'TODOS', 'Mantenimiento Preventivo 1'), (2, 'MP2', 'TODOS', 'Mantenimiento Preventivo 2'), (3, 'MP3', 'TODOS', 'Mantenimiento Preventivo 3')");
+
+                // Catálogos Neumáticos - Semillas
+                for (const m of marcasNeu) {
+                    await promisePool.query("INSERT IGNORE INTO cat_neumaticos_marcas (nombre) VALUES (?)", [m]);
+                }
+
+                for (const med of medidasNeu) {
+                    await promisePool.query("INSERT IGNORE INTO cat_neumaticos_medidas (nombre) VALUES (?)", [med]);
+                }
+
+                for (const ac of accionesNeu) {
+                    await promisePool.query("INSERT IGNORE INTO cat_neumaticos_acciones (nombre) VALUES (?)", [ac]);
+                }
+
+                for (const mod of modelosNeu) {
+                    await promisePool.query("INSERT IGNORE INTO cat_neumaticos_modelos (nombre) VALUES (?)", [mod]);
+                }
+
+                // Migraciones de columnas en cat_rampas y usuarios para instalaciones existentes
+                try { await promisePool.query("ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0"); } catch(e) {}
+                try { await promisePool.query("UPDATE cat_rampas SET orden=id WHERE orden=0"); } catch(e) {}
+
+                const colsUsuarios = ['telefono VARCHAR(50) NULL', 'avatar_url TEXT NULL', 'banner_url TEXT NULL', 'firma_digital LONGTEXT NULL', 'preferencias_json LONGTEXT NULL'];
+                for (const colDef of colsUsuarios) {
+                    try { await promisePool.query(`ALTER TABLE usuarios ADD COLUMN ${colDef}`); } catch(e) {}
+                }
+
+                const colsNeumaticos = [
+                    'r4 INT DEFAULT 0',
+                    'rot VARCHAR(50) DEFAULT \'NO\'',
+                    'foto1 LONGTEXT NULL',
+                    'foto2 LONGTEXT NULL',
+                    'foto3 LONGTEXT NULL'
+                ];
+                const colsPlacas = [
+                    'tanque_1 VARCHAR(20) NOT NULL DEFAULT \'\'',
+                    'tanque_2 VARCHAR(20) NOT NULL DEFAULT \'\'',
+                    'tanque_3 VARCHAR(20) NOT NULL DEFAULT \'\'',
+                    'capacidad_tanque VARCHAR(20) NOT NULL DEFAULT \'\'',
+                    'tara VARCHAR(20) NOT NULL DEFAULT \'\'',
+                    'wialon_name VARCHAR(100) DEFAULT NULL'
+                ];
+                for (const colDef of colsPlacas) {
+                    try { await promisePool.query(`ALTER TABLE placas ADD COLUMN ${colDef}`); } catch(e) {}
+                }
+
+                // Migración de auditoría (garantizar modulo y submodulo)
+                try { await promisePool.query("ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL"); } catch(e) {}
+                try { await promisePool.query("ALTER TABLE auditoria ADD COLUMN submodulo VARCHAR(50) DEFAULT NULL"); } catch(e) {}
+
+                // Limpieza de tablas obsoletas no utilizadas
+                try { await promisePool.query("DROP TABLE IF EXISTS combustible_abastecimientos"); } catch(e) {}
+
+                // Tablas de Guías de Remisión garantizadas en todos los tenants
+                try {
+                    await promisePool.query(`
+                        CREATE TABLE IF NOT EXISTS guias_remision (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            numero_guia VARCHAR(30) NOT NULL UNIQUE,
+                            tipo_documento VARCHAR(10) DEFAULT '31',
+                            fecha_emision DATE DEFAULT NULL,
+                            fecha_traslado DATE DEFAULT NULL,
+                            remitente_ruc VARCHAR(20) DEFAULT NULL,
+                            remitente_razon_social VARCHAR(255) DEFAULT NULL,
+                            destinatario_ruc VARCHAR(20) DEFAULT NULL,
+                            destinatario_razon_social VARCHAR(255) DEFAULT NULL,
+                            punto_partida_direccion TEXT DEFAULT NULL,
+                            punto_partida_ubigeo VARCHAR(10) DEFAULT NULL,
+                            punto_llegada_direccion TEXT DEFAULT NULL,
+                            punto_llegada_ubigeo VARCHAR(10) DEFAULT NULL,
+                            placa_tracto VARCHAR(20) DEFAULT NULL,
+                            placa_carreta VARCHAR(20) DEFAULT NULL,
+                            conductor_tipo_doc VARCHAR(10) DEFAULT 'DNI',
+                            conductor_num_doc VARCHAR(20) DEFAULT NULL,
+                            conductor_nombre VARCHAR(200) DEFAULT NULL,
+                            conductor_licencia VARCHAR(30) DEFAULT NULL,
+                            peso_bruto_total DECIMAL(12,2) DEFAULT 0,
+                            unidad_medida VARCHAR(10) DEFAULT 'KGM',
+                            estado_sunat VARCHAR(50) DEFAULT 'ACEPTADO',
+                            codigo_respuesta_sunat VARCHAR(20) DEFAULT '0',
+                            observaciones_sunat TEXT DEFAULT NULL,
+                            datos_json LONGTEXT DEFAULT NULL,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            INDEX idx_numero_guia (numero_guia),
+                            INDEX idx_placa_tracto (placa_tracto),
+                            INDEX idx_fecha_emision (fecha_emision)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    `);
+                    await promisePool.query(`
+                        CREATE TABLE IF NOT EXISTS guias_remision_items (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            guia_id INT NOT NULL,
+                            codigo VARCHAR(50) DEFAULT NULL,
+                            descripcion TEXT NOT NULL,
+                            cantidad DECIMAL(12,2) DEFAULT 1,
+                            unidad_medida VARCHAR(20) DEFAULT 'NIU',
+                            peso_unitario DECIMAL(12,2) DEFAULT 0,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            INDEX idx_guia_id (guia_id),
+                            FOREIGN KEY (guia_id) REFERENCES guias_remision(id) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    `);
+                } catch(e) {}
+            } catch (errSeeds) {
+                console.error(`❌ Error en semillas/migraciones (${dbName}):`, errSeeds.message);
+            }
         }
 
-        console.log(`✅ Default configurations, catalogs and roles seeded`);
-    } catch (err) {
-        console.error(`❌ Error seeding configurations:`, err.message);
+        if (!specificDb) {
+            await promisePool.query(`USE \`${process.env.DB_NAME || 'azkell_tenant_marsisa'}\``);
+        }
+
+        console.log(`✅ [Multi-Tenant initDB] Tablas y semillas verificadas en todas las empresas.`);
+    } catch (errGlobal) {
+        console.error('❌ Error global en initDB:', errGlobal.message);
     }
 }
 
