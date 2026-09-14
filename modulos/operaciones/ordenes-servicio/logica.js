@@ -148,9 +148,9 @@
                             </button>
                             <ul class="dropdown-menu shadow-sm border-0" style="font-size:0.8rem;">
                                 <li><a class="dropdown-item fw-bold text-primary" href="javascript:void(0)" onclick="window.osAbrirModalEditar(${item.id})"><i class="bi bi-pencil-square me-1"></i> Modificar Orden</a></li>
-                                ${estServ !== 'INICIADO' && estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-primary fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'INICIADO')"><i class="bi bi-play-fill me-1"></i> Iniciar Servicio</a></li>` : ''}
-                                ${estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-success fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'FINALIZADO')"><i class="bi bi-check2-circle me-1"></i> Finalizar Servicio</a></li>` : ''}
-                                ${estServ !== 'ANULADO' ? `<li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'ANULADO')"><i class="bi bi-x-circle me-1"></i> Anular Orden</a></li>` : ''}
+                                ${estServ !== 'INICIADO' && estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-primary fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'INICIADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-play-fill me-1"></i> Iniciar Servicio</a></li>` : ''}
+                                ${estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-success fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'FINALIZADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-check2-circle me-1"></i> Finalizar Servicio</a></li>` : ''}
+                                ${estServ !== 'ANULADO' ? `<li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'ANULADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-x-circle me-1"></i> Anular Orden</a></li>` : ''}
                             </ul>
                         </div>
                     </td>
@@ -745,8 +745,35 @@
         }
     };
 
-    // ── Cambiar Estado (Finalizar o Anular) ──────────────────────────
-    window.osCambiarEstado = async function (id, nuevoEstado) {
+    // ── Cambiar Estado (Iniciar, Finalizar o Anular) ────────────────
+    window.osCambiarEstado = async function (id, nuevoEstado, codigoOrden = '') {
+        if (nuevoEstado === 'INICIADO') {
+            // Abrir modal estilizado con diseño IDÉNTICO al de Iniciar Viaje (Diseño B)
+            var lblCodigo = document.getElementById('os-iniciar-modal-codigo');
+            var inputId = document.getElementById('os-iniciar-id');
+            var inputFecha = document.getElementById('os-iniciar-fecha');
+            var checkConfirm = document.getElementById('os-iniciar-check-confirm');
+
+            if (lblCodigo) lblCodigo.textContent = codigoOrden || String(id);
+            if (inputId) inputId.value = id;
+            if (checkConfirm) checkConfirm.checked = false;
+
+            if (inputFecha) {
+                var today = new Date();
+                var y = today.getFullYear();
+                var m = String(today.getMonth() + 1).padStart(2, '0');
+                var d = String(today.getDate()).padStart(2, '0');
+                inputFecha.value = `${y}-${m}-${d}`;
+            }
+
+            var modalEl = document.getElementById('modalIniciarServicioConfirm');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+            return;
+        }
+
         if (!confirm(`¿Está seguro de marcar la orden de servicio como ${nuevoEstado}?`)) return;
         try {
             const resp = await fetch(`/api/operaciones/ordenes-servicio/${id}/estado`, {
@@ -762,6 +789,52 @@
             }
         } catch (e) {
             alert("Error al actualizar estado: " + e.message);
+        }
+    };
+
+    // ── Ejecutar Inicio de Servicio Confirmado desde el Modal Estilizado ─
+    window.osEjecutarIniciarServicioConfirmado = async function (e) {
+        if (e && e.preventDefault) e.preventDefault();
+
+        var id = (document.getElementById('os-iniciar-id') || {}).value;
+        var fechaInicio = (document.getElementById('os-iniciar-fecha') || {}).value;
+        var checkConfirm = document.getElementById('os-iniciar-check-confirm');
+
+        if (!id) return;
+
+        if (!checkConfirm || !checkConfirm.checked) {
+            alert('Debe confirmar que desea realizar esta operación.');
+            return;
+        }
+
+        var btnSubmit = document.getElementById('btnEjecutarIniciarServicio');
+        if (btnSubmit) btnSubmit.disabled = true;
+
+        try {
+            const resp = await fetch(`/api/operaciones/ordenes-servicio/${id}/estado`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    estado_servicio: 'INICIADO',
+                    fecha_inicio: fechaInicio
+                })
+            });
+            const res = await resp.json();
+
+            if (res.ok) {
+                var modalEl = document.getElementById('modalIniciarServicioConfirm');
+                if (modalEl && typeof bootstrap !== 'undefined') {
+                    var modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+                window.osCargarTabla();
+            } else {
+                alert("Error al iniciar servicio: " + (res.error || ''));
+            }
+        } catch (err) {
+            alert("Error al conectar con el servidor: " + err.message);
+        } finally {
+            if (btnSubmit) btnSubmit.disabled = false;
         }
     };
 

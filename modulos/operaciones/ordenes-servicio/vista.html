@@ -544,6 +544,87 @@
     font-weight: 700;
     font-size: 1.05rem;
 }
+/* ── Modal Iniciar Servicio (Diseño B - Card Ultra Moderna y Redondeada) ── */
+.ov-iniciar-dialog {
+    max-width: 380px !important;
+    width: 90% !important;
+    margin: 1.75rem auto !important;
+}
+.ov-iniciar-card {
+    background: #ffffff !important;
+    border-radius: 28px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15) !important;
+    padding: 2.2rem 1.8rem 1.8rem 1.8rem !important;
+    text-align: center;
+    transform: translateZ(0);
+}
+.ov-iniciar-badge-icon {
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 1.1rem auto;
+    background: #ecfdf5;
+    color: #059669;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.6rem;
+    box-shadow: 0 8px 20px rgba(5, 150, 105, 0.18);
+    transition: transform 0.2s ease;
+}
+.ov-iniciar-badge-icon i {
+    margin-left: 5px; /* centrar visualmente el triángulo de play */
+}
+.ov-btn-circle {
+    width: 54px;
+    height: 54px;
+    border-radius: 50% !important;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    outline: none;
+    will-change: transform;
+}
+.ov-btn-cancel-circle {
+    background: #18181b !important;
+    color: #ffffff !important;
+}
+.ov-btn-cancel-circle:hover {
+    background: #09090b !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.ov-btn-confirm-circle {
+    background: #059669 !important;
+    color: #ffffff !important;
+    box-shadow: 0 6px 18px rgba(5, 150, 105, 0.35);
+}
+.ov-btn-confirm-circle:hover {
+    background: #047857 !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.ov-checkbox-highlight-green {
+    border: 2px solid #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
+    border-radius: 5px !important;
+    width: 1.25em !important;
+    height: 1.25em !important;
+    transition: all 0.2s ease;
+}
+.ov-checkbox-highlight-green:checked {
+    background-color: #10b981 !important;
+    border-color: #059669 !important;
+}
+.ov-btn-confirm-circle:active,
+.ov-btn-cancel-circle:active {
+    transform: scale(0.95);
+}
 </style>
 
 <div id="mod-operaciones-ordenes-servicio" class="modulo-wrapper">
@@ -1216,3 +1297,62 @@
         </div>
     </div>
 </div>
+
+<!-- ================================================================= -->
+<!-- 🚀 MODAL CONFIRMACIÓN DE INICIAR SERVICIO (DISEÑO B)              -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalIniciarServicioConfirm" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered ov-iniciar-dialog">
+        <div class="modal-content ov-iniciar-card border-0">
+            
+            <!-- Icono Play Verde Esmeralda -->
+            <div class="ov-iniciar-badge-icon">
+                <i class="bi bi-play-fill"></i>
+            </div>
+
+            <!-- Título -->
+            <h4 class="fw-bolder text-dark mb-1" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+                Iniciar Servicio
+            </h4>
+            <div class="text-primary fw-bold mb-3" id="os-iniciar-modal-codigo" style="font-size: 0.95rem;">
+                ---
+            </div>
+
+            <form id="osFormConfirmarInicio" onsubmit="window.osEjecutarIniciarServicioConfirmado(event)">
+                <input type="hidden" id="os-iniciar-id">
+                
+                <!-- Inputs del Modal -->
+                <div class="text-start mb-3">
+                    <label class="form-label fw-bold text-uppercase text-secondary mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Fecha <span class="text-danger">(*)</span></label>
+                    <input type="date" id="os-iniciar-fecha" class="form-control form-control-sm border-secondary-subtle fw-semibold" required style="min-height: 40px; border-radius: 10px;">
+                </div>
+
+                <!-- Checkbox Confirmación -->
+                <div class="form-check text-start mb-2 ps-4">
+                    <input class="form-check-input ov-checkbox-highlight-green" type="checkbox" id="os-iniciar-check-confirm" required style="cursor: pointer;">
+                    <label class="form-check-label fw-bold text-dark" for="os-iniciar-check-confirm" style="font-size: 0.76rem; cursor: pointer;">
+                        Confirmo realizar esta operación
+                    </label>
+                </div>
+                <div class="text-danger fw-bold text-start ps-1 mb-4" style="font-size: 0.7rem;">
+                    Esta acción no se podrá revertir
+                </div>
+
+                <!-- Botones Circulares de Acción (Diseño B) -->
+                <div class="d-flex align-items-center justify-content-center gap-4">
+                    <!-- Cancelar (X negro) -->
+                    <button type="button" class="ov-btn-circle ov-btn-cancel-circle" data-bs-dismiss="modal" title="Cancelar">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+
+                    <!-- Iniciar (Play verde) -->
+                    <button type="submit" class="ov-btn-circle ov-btn-confirm-circle" id="btnEjecutarIniciarServicio" title="Iniciar Ahora!">
+                        <i class="bi bi-play-fill" style="font-size: 1.8rem; margin-left: 2px;"></i>
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
