@@ -24,7 +24,9 @@
         const ahora = new Date();
         const y = ahora.getFullYear();
         const m = String(ahora.getMonth() + 1).padStart(2, '0');
-        const d = String(ahora.getDate()).padStart(2, '0');
+        // Último día del mes actual para que cubra todo el mes en curso
+        const ultimoDiaMes = new Date(y, ahora.getMonth() + 1, 0).getDate();
+        const dFin = String(ultimoDiaMes).padStart(2, '0');
 
         // Primer día del mes actual para "Desde"
         const fDesde = document.getElementById('os-filtro-desde');
@@ -32,10 +34,10 @@
             fDesde.value = `${y}-${m}-01`;
         }
 
-        // Hoy para "Hasta"
+        // Fin de mes para "Hasta" (para que no se corten servicios programados o creados con fecha futura/hoy)
         const fHasta = document.getElementById('os-filtro-hasta');
         if (fHasta && !fHasta.value) {
-            fHasta.value = `${y}-${m}-${d}`;
+            fHasta.value = `${y}-${m}-${dFin}`;
         }
     }
 
