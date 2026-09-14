@@ -20,14 +20,24 @@ window.condCargarPortal = async function() {
     var inputDni = document.getElementById('cond-input-dni');
     var dniVal = (inputDni ? inputDni.value : '').trim();
 
-    // Si no ingresó DNI manual, tomar el de sesión si existe
-    if (!dniVal && typeof window.usuarioLogueado !== 'undefined' && window.usuarioLogueado) {
+    // 1. Prioridad: DNI guardado en la cuenta de usuario (localStorage 'fleet_dni')
+    var sesionDni = (localStorage.getItem('fleet_dni') || '').trim();
+    var boxSwitch = document.getElementById('cond-box-switch-dni');
+
+    if (!dniVal && sesionDni) {
+        dniVal = sesionDni;
+        if (inputDni) inputDni.value = sesionDni;
+        // Si ya tiene DNI en su perfil y es Conductor, no necesita escribirlo
+        var rol = (localStorage.getItem('fleet_rol') || '').toLowerCase();
+        if (boxSwitch && (rol.includes('conductor') || rol.includes('chofer'))) {
+            boxSwitch.style.display = 'none';
+        }
+    } else if (!dniVal && typeof window.usuarioLogueado !== 'undefined' && window.usuarioLogueado) {
         dniVal = window.usuarioLogueado;
     }
 
     var url = `/api/operaciones/conductor-portal/viaje-activo`;
     if (dniVal) {
-        // Verificar si es numérico (DNI) o nombre
         if (/^\d+$/.test(dniVal)) {
             url += `?dni=${encodeURIComponent(dniVal)}`;
         } else {

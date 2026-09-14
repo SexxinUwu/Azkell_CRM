@@ -35,6 +35,7 @@ async function iniciarSesion(event, formObj) {
             
             localStorage.setItem('fleet_user', respuesta.nombre);
             localStorage.setItem('fleet_rol', respuesta.rol);
+            localStorage.setItem('fleet_dni', respuesta.dni || '');
             localStorage.setItem('fleet_correo', formObj.correo.value);
             localStorage.setItem('fleet_permisos', respuesta.permisos || '{}');
             window._permCache = null; // Invalidar cache de permisos

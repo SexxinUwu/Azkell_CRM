@@ -512,7 +512,7 @@ router.post('/:metodo', async (req, res) => {
 
     if (metodo === 'obtenerDatosUsuarios') {
         const query = `
-            SELECT u.idUsuario, u.nombre, u.cargo, u.correo, u.password, u.rol,
+            SELECT u.idUsuario, u.nombre, u.dni, u.cargo, u.correo, u.password, u.rol,
                    u.estado, u.permisos_json, u.rol_id,
                    u.ultimo_acceso, u.ultimo_ip, u.ultimo_dispositivo,
                    r.nombre AS rol_nombre, r.color AS rol_color, r.es_admin AS rol_es_admin
@@ -536,12 +536,13 @@ router.post('/:metodo', async (req, res) => {
                         if (typeof permisosFinales === 'string') permisosFinales = JSON.parse(permisosFinales);
                     } catch (e) { permisosFinales = {}; }
                 }
-                // [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password_visible [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo
+                // [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password_visible [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo [13]dni
                 return [
                     r.idUsuario, r.nombre, r.cargo, r.correo,
                     rolLabel, r.estado, '••••••••',
                     JSON.stringify(permisosFinales), r.rol_id || null, r.rol_color || null,
-                    r.ultimo_acceso || null, r.ultimo_ip || null, r.ultimo_dispositivo || null
+                    r.ultimo_acceso || null, r.ultimo_ip || null, r.ultimo_dispositivo || null,
+                    r.dni || ''
                 ];
             });
             return res.json({ data: filas });
