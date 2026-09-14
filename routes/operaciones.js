@@ -1743,7 +1743,7 @@ module.exports = function (db, broadcast, logAudit) {
                     tipo_contratacion, modalidad_ejecucion, cliente_id, cliente_nombre,
                     tipo_servicio, es_retorno, tipo_costo, impuesto, costo_flete, puntos_carga,
                     puntos_destino, destinatario, observaciones, placa_tracto, placa_carreta, estado_servicio, estado_liquidacion
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'INICIADO', 'PENDIENTE')
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'PENDIENTE'), 'PENDIENTE')
             `, [
                 yearSerie,
                 numFinal,
@@ -1767,7 +1767,8 @@ module.exports = function (db, broadcast, logAudit) {
                 destinatario || null,
                 observaciones || null,
                 placa_tracto || null,
-                placa_carreta || null
+                placa_carreta || null,
+                req.body.estado_servicio || 'PENDIENTE'
             ]);
 
             const osId = ins.insertId;
@@ -2136,7 +2137,7 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
-    // 6. Cambiar estado de servicio (ej: FINALIZAR / ANULAR)
+    // 6. Cambiar estado de servicio (ej: INICIADO / FINALIZADO / ANULADO) y sincronizar con Orden de Viaje
     router.put('/ordenes-servicio/:id/estado', async (req, res) => {
         try {
             await ensureTables(req);
@@ -2144,30 +2145,85 @@ module.exports = function (db, broadcast, logAudit) {
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
             const { estado_servicio } = req.body;
-            const [prev] = await tdb.query(`SELECT codigo_orden FROM operaciones_ordenes_servicio WHERE id = ?`, [req.params.id]);
+            const [prev] = await tdb.query(`SELECT codigo_orden, viaje_asignado FROM operaciones_ordenes_servicio WHERE id = ?`, [req.params.id]);
+            if (!prev || !prev.length) {
+                return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
+            }
+
+            const codOrden = prev[0].codigo_orden;
+            const viajeCode = prev[0].viaje_asignado;
+            const estUpper = String(estado_servicio || '').trim().toUpperCase();
+
             await tdb.query(
                 `UPDATE operaciones_ordenes_servicio SET estado_servicio = ? WHERE id = ?`,
-                [estado_servicio, req.params.id]
+                [estUpper, req.params.id]
             );
 
-            // Sincronizar estado con Cuentas por Cobrar si se cancela o anula
-            if (prev && prev.length > 0 && prev[0].codigo_orden) {
+            // ── Sincronización Automática con la Orden de Viaje (OV) ──
+            if (viajeCode) {
                 try {
-                    const cod = prev[0].codigo_orden;
+                    const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                    if (estUpper === 'INICIADO') {
+                        // Al iniciar una OS: si la OV no está iniciada ni finalizada, pasa a INICIADO
+                        const [ovRows] = await tdb.query(`SELECT estado, fecha_inicio FROM operaciones_ordenes_viaje WHERE viaje = ?`, [viajeCode]);
+                        if (ovRows.length > 0) {
+                            const ovEst = String(ovRows[0].estado || '').toUpperCase();
+                            if (ovEst !== 'INICIADO' && ovEst !== 'FINALIZADO') {
+                                await tdb.query(`
+                                    UPDATE operaciones_ordenes_viaje 
+                                    SET estado = 'INICIADO',
+                                        fecha_inicio = COALESCE(fecha_inicio, ?)
+                                    WHERE viaje = ?
+                                `, [nowStr, viajeCode]);
+                            }
+                        }
+                    } else if (estUpper === 'FINALIZADO') {
+                        // Al finalizar una OS: verificar todas las OS vinculadas a este viaje
+                        // Solo si TODAS las OS asociadas están FINALIZADAS (o ANULADAS), la OV pasa a FINALIZADO
+                        const [todasOs] = await tdb.query(`
+                            SELECT id, estado_servicio 
+                            FROM operaciones_ordenes_servicio 
+                            WHERE viaje_asignado = ?
+                        `, [viajeCode]);
+
+                        const tienenPendientesOIniciadas = (todasOs || []).some(o => {
+                            const est = String(o.estado_servicio || '').toUpperCase();
+                            return est === 'INICIADO' || est === 'PENDIENTE';
+                        });
+
+                        if (!tienenPendientesOIniciadas && todasOs.length > 0) {
+                            // Todas están finalizadas o anuladas -> finalizar la OV
+                            const userFinaliza = (req.user && req.user.nombre) || 'ADMINISTRADOR DEL SISTEMA';
+                            await tdb.query(`
+                                UPDATE operaciones_ordenes_viaje 
+                                SET estado = 'FINALIZADO',
+                                    fecha_fin = COALESCE(fecha_fin, ?),
+                                    usuario_finalizacion = COALESCE(usuario_finalizacion, ?)
+                                WHERE viaje = ?
+                            `, [nowStr, userFinaliza, viajeCode]);
+                        }
+                    }
+                } catch (eSyncOv) {
+                    console.warn('[Operaciones] Error sincronizando estado de OS con OV:', eSyncOv.message);
+                }
+            }
+
+            // Sincronizar estado con Cuentas por Cobrar si se cancela o anula
+            if (codOrden) {
+                try {
                     let estadoTesoreria = null;
-                    const estUpper = String(estado_servicio).toUpperCase();
                     if (estUpper.includes('ANULA') || estUpper.includes('CANCEL')) {
                         estadoTesoreria = 'ANULADO';
                     }
                     if (estadoTesoreria) {
-                        await tdb.query(`UPDATE tesoreria_cuentas SET estado_servicio = ? WHERE orden_servicio = ?`, [estadoTesoreria, cod]);
+                        await tdb.query(`UPDATE tesoreria_cuentas SET estado_servicio = ? WHERE orden_servicio = ?`, [estadoTesoreria, codOrden]);
                     }
                 } catch (eSync) {
                     console.warn('[Operaciones -> Tesorería] Error actualizando estado en Cuentas por Cobrar:', eSync.message);
                 }
             }
 
-            res.json({ ok: true, message: `Estado actualizado a ${estado_servicio}.` });
+            res.json({ ok: true, message: `Estado actualizado a ${estUpper}.` });
         } catch (err) {
             console.error('Error al cambiar estado de orden de servicio:', err);
             res.status(500).json({ ok: false, error: err.message });

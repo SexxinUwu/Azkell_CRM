@@ -126,6 +126,17 @@
                 ? `<a href="${item.sustento_url}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-1.5" title="Ver Sustento"><i class="bi bi-file-earmark-arrow-down"></i></a>`
                 : `<span class="text-muted opacity-50">—</span>`;
 
+            // Badge estilizado de Estado de Servicio
+            const estServ = String(item.estado_servicio || 'PENDIENTE').toUpperCase();
+            let badgeEstado = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace px-2 py-1"><i class="bi bi-clock me-1"></i>PENDIENTE</span>';
+            if (estServ === 'INICIADO') {
+                badgeEstado = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle font-monospace px-2 py-1"><i class="bi bi-play-circle me-1"></i>INICIADO</span>';
+            } else if (estServ === 'FINALIZADO') {
+                badgeEstado = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle font-monospace px-2 py-1"><i class="bi bi-check2-circle me-1"></i>FINALIZADO</span>';
+            } else if (estServ === 'ANULADO' || estServ === 'CANCELADO') {
+                badgeEstado = '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle font-monospace px-2 py-1"><i class="bi bi-x-circle me-1"></i>ANULADO</span>';
+            }
+
             html += `
                 <tr>
                     <td class="text-nowrap col-sticky-os-accion">
@@ -135,12 +146,14 @@
                             </button>
                             <ul class="dropdown-menu shadow-sm border-0" style="font-size:0.8rem;">
                                 <li><a class="dropdown-item fw-bold text-primary" href="javascript:void(0)" onclick="window.osAbrirModalEditar(${item.id})"><i class="bi bi-pencil-square me-1"></i> Modificar Orden</a></li>
-                                <li><a class="dropdown-item text-success fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'FINALIZADO')"><i class="bi bi-check2-circle me-1"></i> Marcar como Finalizado</a></li>
-                                <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'ANULADO')"><i class="bi bi-x-circle me-1"></i> Anular Orden</a></li>
+                                ${estServ !== 'INICIADO' && estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-primary fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'INICIADO')"><i class="bi bi-play-fill me-1"></i> Iniciar Servicio</a></li>` : ''}
+                                ${estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-success fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'FINALIZADO')"><i class="bi bi-check2-circle me-1"></i> Finalizar Servicio</a></li>` : ''}
+                                ${estServ !== 'ANULADO' ? `<li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'ANULADO')"><i class="bi bi-x-circle me-1"></i> Anular Orden</a></li>` : ''}
                             </ul>
                         </div>
                     </td>
                     <td class="text-nowrap font-monospace fw-bold text-primary" style="cursor:pointer;" onclick="window.osAbrirModalEditar(${item.id})" title="Ver detalles">${escapeHtml(item.codigo_orden)}</td>
+                    <td class="text-center text-nowrap">${badgeEstado}</td>
                     <td class="text-nowrap font-monospace">${fInicio}</td>
                     <td class="text-nowrap">${badgeViaje}</td>
                     <td class="text-nowrap font-monospace fw-semibold">${escapeHtml(item.placa_tracto || '—')}</td>
@@ -673,10 +686,49 @@
             const result = await resp.json();
 
             if (result.ok) {
-                alert(result.message || "Orden de servicio guardada exitosamente.");
+                const esNuevo = !id;
+                const nuevoCodigo = result.codigo_orden || `${serie}-${numero}`;
+                const osGuardadaId = result.id || id;
+
                 window.osRegresarAtras();
                 if (window._osOrigenApertura !== 'detalle_viaje') {
                     window.osCargarTabla();
+                }
+
+                // Si es un nuevo registro y tiene viaje vinculado, ofrecer generar la caja de cochera al conductor
+                if (esNuevo) {
+                    setTimeout(async () => {
+                        let nombreCond = '';
+                        let rutaViaje = '';
+                        if (viaje_asignado) {
+                            try {
+                                const rV = await fetch(`/api/operaciones/ordenes-viaje?q=${encodeURIComponent(viaje_asignado)}`);
+                                const dV = await rV.json();
+                                if (dV.ok && Array.isArray(dV.data)) {
+                                    const vEncontrado = dV.data.find(v => v.viaje === viaje_asignado);
+                                    if (vEncontrado) {
+                                        nombreCond = vEncontrado.conductor || '';
+                                        rutaViaje = vEncontrado.ruta || '';
+                                    }
+                                }
+                            } catch(eIgn) {}
+                        }
+
+                        window.osAbrirModalCocheraExpress({
+                            id: osGuardadaId,
+                            codigo_orden: nuevoCodigo,
+                            viaje_asignado: viaje_asignado,
+                            placa_tracto: placa_tracto,
+                            conductor: nombreCond,
+                            ruta: rutaViaje
+                        });
+                    }, 250);
+                } else {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'success', title: '¡Guardado!', text: result.message || 'Orden de servicio guardada exitosamente.', timer: 1800, showConfirmButton: false });
+                    } else {
+                        alert(result.message || "Orden de servicio guardada exitosamente.");
+                    }
                 }
             } else {
                 alert("Error: " + (result.error || 'No se pudo guardar la orden'));
@@ -934,6 +986,223 @@
         alert("Personalización de visibilidad de columnas disponible en la próxima actualización.");
     };
 
+    // =========================================================================
+    // 🚗 CAJA POR COCHERA DEL CONDUCTOR (EXPRESS)
+    // =========================================================================
+    window._osBancosEmpresaCache = [];
+    window._osCuentasConductorCache = [];
+
+    window.osAbrirModalCocheraExpress = async function (datos) {
+        if (!datos) return;
+        const modalEl = document.getElementById('modalOsExpressCochera');
+        if (!modalEl) return;
+
+        // Resumen
+        document.getElementById('os-cochera-resumen-os').textContent = datos.codigo_orden || '—';
+        document.getElementById('os-cochera-resumen-ov').textContent = datos.viaje_asignado || 'Sin Asignar';
+        document.getElementById('os-cochera-resumen-conductor').textContent = datos.conductor || 'CONDUCTOR';
+        document.getElementById('os-cochera-resumen-placa').textContent = datos.placa_tracto || '—';
+
+        // Inputs ocultos
+        document.getElementById('os-cochera-input-os-id').value = datos.id || '';
+        document.getElementById('os-cochera-input-viaje').value = datos.viaje_asignado || '';
+        document.getElementById('os-cochera-input-placa').value = datos.placa_tracto || '';
+        document.getElementById('os-cochera-input-conductor').value = datos.conductor || '';
+        document.getElementById('os-cochera-input-ruta').value = datos.ruta || '';
+
+        // Reset inputs editables
+        document.getElementById('os-cochera-input-monto').value = '30.00';
+        document.getElementById('os-cochera-input-modalidad').value = 'TRANSFERENCIA BANCARIA';
+        document.getElementById('os-cochera-input-cuenta-conductor').value = '';
+
+        // Cargar cuentas de empresa
+        const selEmpresa = document.getElementById('os-cochera-input-cuenta-empresa');
+        if (selEmpresa) {
+            selEmpresa.innerHTML = '<option value="">Cargando cuentas...</option>';
+            try {
+                const resp = await fetch('/api/tesoreria/bancos');
+                const res = await resp.json();
+                if (res.ok && Array.isArray(res.data)) {
+                    window._osBancosEmpresaCache = res.data.filter(b => b.estado === 'ACTIVO');
+                    selEmpresa.innerHTML = '<option value="">-- Seleccionar cuenta de empresa --</option>';
+                    window._osBancosEmpresaCache.forEach((b, idx) => {
+                        const optText = `${b.banco} (${b.moneda || 'SOLES'} - ${b.tipo_cuenta || 'CTE'}): ${b.numero_cuenta}`;
+                        const opt = new Option(optText, optText);
+                        opt.dataset.banco = b.banco;
+                        opt.dataset.moneda = b.moneda;
+                        opt.dataset.numero = b.numero_cuenta;
+                        // Preseleccionar BCP Soles por defecto o la primera
+                        if (idx === 0 || (b.banco && b.banco.toUpperCase().includes('BCP') && (b.moneda === 'SOLES' || !b.moneda))) {
+                            opt.selected = true;
+                        }
+                        selEmpresa.add(opt);
+                    });
+                } else {
+                    selEmpresa.innerHTML = '<option value="">-- Sin cuentas registradas --</option>';
+                }
+            } catch(e) {
+                selEmpresa.innerHTML = '<option value="">-- Error cargando cuentas --</option>';
+            }
+        }
+
+        // Consultar cuentas del conductor desde el directorio de seguridad/personal
+        const dlCuentas = document.getElementById('os-cochera-dl-cuentas-conductor');
+        const inpCtaCond = document.getElementById('os-cochera-input-cuenta-conductor');
+        if (dlCuentas) dlCuentas.innerHTML = '';
+        window._osCuentasConductorCache = [];
+
+        if (datos.conductor) {
+            try {
+                const rP = await fetch('/api/seguridad/recursos');
+                const dP = await rP.json();
+                if (dP && Array.isArray(dP.conductores)) {
+                    const cMatch = dP.conductores.find(c => (c.nombre_completo || c.nombre || '').toLowerCase().includes(datos.conductor.toLowerCase()));
+                    if (cMatch) {
+                        const lista = [];
+                        if (cMatch.numero_cuenta) lista.push(`${cMatch.banco || 'BANCO'}: ${cMatch.numero_cuenta}`);
+                        if (cMatch.cci) lista.push(`CCI: ${cMatch.cci}`);
+                        if (cMatch.telefono || cMatch.celular) lista.push(`YAPE / PLIN: ${cMatch.telefono || cMatch.celular}`);
+                        window._osCuentasConductorCache = lista;
+                        if (dlCuentas) {
+                            dlCuentas.innerHTML = lista.map(cta => `<option value="${cta}">`).join('');
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
+
+        // Sincronizar automáticamente la cuenta del conductor con el banco de la empresa seleccionado
+        window.osAlCambiarCuentaEmpresaCochera(selEmpresa ? selEmpresa.value : '');
+
+        // Mostrar el modal express
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    };
+
+    window.osAlCambiarCuentaEmpresaCochera = function (valEmpresa) {
+        const inpCtaCond = document.getElementById('os-cochera-input-cuenta-conductor');
+        if (!inpCtaCond) return;
+
+        const selEmpresa = document.getElementById('os-cochera-input-cuenta-empresa');
+        let bancoEmpresa = '';
+        if (selEmpresa && selEmpresa.selectedOptions && selEmpresa.selectedOptions[0]) {
+            bancoEmpresa = (selEmpresa.selectedOptions[0].dataset.banco || '').toUpperCase();
+        }
+
+        // Si tenemos cuentas en caché del conductor, buscar coincidencia por banco
+        if (window._osCuentasConductorCache && window._osCuentasConductorCache.length > 0) {
+            let coincidente = window._osCuentasConductorCache.find(c => bancoEmpresa && c.toUpperCase().includes(bancoEmpresa));
+            if (!coincidente) {
+                coincidente = window._osCuentasConductorCache[0];
+            }
+            if (coincidente && !inpCtaCond.value) {
+                inpCtaCond.value = coincidente;
+            }
+        }
+    };
+
+    window.osGuardarCajaCocheraExpress = async function (e) {
+        if (e && e.preventDefault) e.preventDefault();
+
+        const monto = parseFloat(document.getElementById('os-cochera-input-monto')?.value) || 0;
+        if (monto <= 0) {
+            alert('Por favor ingrese un monto válido para la cochera.');
+            return;
+        }
+
+        const btn = document.getElementById('os-cochera-btn-guardar');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Registrando...';
+        }
+
+        const viaje = document.getElementById('os-cochera-input-viaje')?.value || '';
+        const placa = document.getElementById('os-cochera-input-placa')?.value || '';
+        const conductor = document.getElementById('os-cochera-input-conductor')?.value || '';
+        const ruta = document.getElementById('os-cochera-input-ruta')?.value || '';
+        const ctaEmpresa = document.getElementById('os-cochera-input-cuenta-empresa')?.value || '';
+        const ctaConductor = document.getElementById('os-cochera-input-cuenta-conductor')?.value || '';
+        const modalidad = document.getElementById('os-cochera-input-modalidad')?.value || 'TRANSFERENCIA BANCARIA';
+
+        // Obtener correlativo de caja
+        let serieCaja = String(new Date().getFullYear());
+        let numeroCaja = '00000001';
+        try {
+            const rCorr = await fetch('/api/tesoreria/caja/correlativo');
+            const dCorr = await rCorr.json();
+            if (dCorr.ok) {
+                serieCaja = dCorr.serie;
+                numeroCaja = dCorr.numero;
+            }
+        } catch(e) {}
+
+        const hoy = new Date();
+        const ymd = hoy.toISOString().slice(0, 10);
+        const hhmmss = hoy.toTimeString().slice(0, 8);
+
+        const formData = new FormData();
+        formData.append('fecha', ymd);
+        formData.append('hora', hhmmss);
+        formData.append('serie', serieCaja);
+        formData.append('numero', numeroCaja);
+        formData.append('orden_viaje', viaje);
+        formData.append('conductor', conductor);
+        formData.append('ruta_viaje', ruta);
+        formData.append('placa', placa);
+        formData.append('autoriza', 'Marco Rosas');
+        formData.append('motivo', 'Gastos de Viaje y Ruta');
+        formData.append('sub_motivo', 'Cochera');
+        formData.append('centro_costo', 'CC-300: Operaciones de Ruta (Costo Servicio)');
+        formData.append('modalidad_pago', modalidad);
+        formData.append('moneda', 'SOLES');
+        formData.append('tipo_cambio', '1.000');
+        formData.append('tipo_persona', 'CONDUCTOR');
+        formData.append('persona', conductor);
+        formData.append('importe_total', monto);
+        formData.append('descripcion', 'Cochera de Conductor por Orden de Servicio');
+        formData.append('tipo_comprobante', 'SIN COMPROBANTE');
+        formData.append('cuenta_bancaria_persona', ctaConductor);
+        formData.append('cuenta_bancaria_empresa', ctaEmpresa);
+        formData.append('observacion', `Generado automáticamente desde Operaciones para el viaje ${viaje}`);
+        formData.append('no_aplica_liquidacion', 0);
+
+        try {
+            const resp = await fetch('/api/tesoreria/caja', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await resp.json();
+            if (res.ok) {
+                const modalEl = document.getElementById('modalOsExpressCochera');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Caja Generada!',
+                        text: `Se registró la caja Nº ${serieCaja}-${numeroCaja} por concepto de Cochera (S/ ${monto.toFixed(2)}).`,
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(`¡Caja de Cochera Nº ${serieCaja}-${numeroCaja} registrada exitosamente!`);
+                }
+            } else {
+                alert('Error al generar la caja de cochera: ' + (res.error || 'No se pudo procesar'));
+            }
+        } catch(err) {
+            console.error('Error al enviar caja express:', err);
+            alert('Error de conexión: ' + err.message);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check2-circle"></i> Generar Caja';
+            }
+        }
+    };
+
     // ── Helpers ─────────────────────────────────────────────────────
     function escapeHtml(str) {
         if (str === null || str === undefined) return '';
@@ -953,3 +1222,4 @@
     }
 
 })();
+

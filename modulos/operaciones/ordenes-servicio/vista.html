@@ -608,6 +608,7 @@
                     <tr>
                         <th class="col-sticky-os-accion">ACCIÓN <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>ORDEN DE SERVICIO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
+                        <th class="text-center">ESTADO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>FECHA <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>ORDEN DE VIAJE <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
                         <th>TRACTO <i class="bi bi-arrow-down-up opacity-50 ms-1"></i></th>
@@ -630,7 +631,7 @@
                 </thead>
                 <tbody id="os-tbody">
                     <tr>
-                        <td colspan="19" class="text-center py-5 text-muted">
+                        <td colspan="20" class="text-center py-5 text-muted">
                             <div class="spinner-border spinner-border-sm text-warning me-2"></div>
                             Cargando órdenes de servicio...
                         </td>
@@ -1100,6 +1101,118 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 🚗 MODAL EXPRESS: GENERAR CAJA POR COCHERA DE CONDUCTOR      -->
+<!-- ============================================================ -->
+<div class="modal fade" id="modalOsExpressCochera" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 540px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-white border-bottom px-4 py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width: 40px; height: 40px; background: #e0f2fe; color: #0284c7; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                        <i class="bi bi-p-square-fill"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold text-dark m-0" style="color: #0284c7 !important; font-size: 1.1rem;">Caja de Cochera del Conductor</h6>
+                        <small class="text-secondary" style="font-size:0.75rem;">Generación rápida de caja vinculada a la Orden de Viaje</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body p-4 bg-light">
+                <!-- Resumen de Vinculación Operativa -->
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white mb-3">
+                    <div class="row g-2 small">
+                        <div class="col-6">
+                            <span class="text-muted d-block fw-semibold" style="font-size: 0.72rem;">ORDEN DE SERVICIO:</span>
+                            <span id="os-cochera-resumen-os" class="fw-bold font-monospace text-primary">—</span>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted d-block fw-semibold" style="font-size: 0.72rem;">ORDEN DE VIAJE:</span>
+                            <span id="os-cochera-resumen-ov" class="fw-bold font-monospace text-dark">—</span>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted d-block fw-semibold" style="font-size: 0.72rem;">CONDUCTOR:</span>
+                            <span id="os-cochera-resumen-conductor" class="fw-bold text-dark">—</span>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted d-block fw-semibold" style="font-size: 0.72rem;">PLACA TRACTO:</span>
+                            <span id="os-cochera-resumen-placa" class="fw-bold font-monospace text-dark">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulario Express de Caja -->
+                <form id="formOsExpressCochera" onsubmit="window.osGuardarCajaCocheraExpress(event)" autocomplete="off">
+                    <input type="hidden" id="os-cochera-input-os-id" value="">
+                    <input type="hidden" id="os-cochera-input-viaje" value="">
+                    <input type="hidden" id="os-cochera-input-placa" value="">
+                    <input type="hidden" id="os-cochera-input-conductor" value="">
+                    <input type="hidden" id="os-cochera-input-ruta" value="">
+
+                    <!-- Monto y Moneda -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-8">
+                            <label class="form-label small fw-bold text-uppercase text-secondary mb-1">Monto Cochera (S/) <span class="text-danger">(*)</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text fw-bold bg-white text-success border-end-0">S/</span>
+                                <input type="number" step="0.01" id="os-cochera-input-monto" class="form-control fw-bold fs-5 text-success border-start-0" placeholder="0.00" value="30.00" required autofocus>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold text-uppercase text-secondary mb-1">Modalidad</label>
+                            <select id="os-cochera-input-modalidad" class="form-select form-select-sm" style="min-height: 44px; border-radius: 8px;">
+                                <option value="TRANSFERENCIA BANCARIA" selected>TRANSFERENCIA</option>
+                                <option value="EFECTIVO">EFECTIVO</option>
+                                <option value="YAPE / PLIN">YAPE / PLIN</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Cuentas Bancarias: Empresa y Conductor -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-secondary mb-1">Pagar Desde (Cuenta Empresa - Origen)</label>
+                        <select id="os-cochera-input-cuenta-empresa" class="form-select form-select-sm mb-2" onchange="window.osAlCambiarCuentaEmpresaCochera(this.value)">
+                            <option value="">-- Seleccionar cuenta bancaria de empresa --</option>
+                        </select>
+                        <small class="text-muted d-block" style="font-size:0.7rem;">Seleccione de qué cuenta saldrá el dinero del pago</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-secondary mb-1">Transferir a (Cuenta Conductor - Destino)</label>
+                        <input type="text" id="os-cochera-input-cuenta-conductor" class="form-control form-control-sm" placeholder="Ej: BCP 191-XXXXXXXX-X-XX o Celular Yape..." list="os-cochera-dl-cuentas-conductor" required>
+                        <datalist id="os-cochera-dl-cuentas-conductor"></datalist>
+                        <small class="text-muted d-block" style="font-size:0.7rem;">Cuentas bancarias del conductor detectadas automáticamente</small>
+                    </div>
+
+                    <!-- Datos predeterminados informativos -->
+                    <div class="p-2.5 rounded-3 border bg-white small text-muted mb-3" style="font-size: 0.73rem;">
+                        <div class="d-flex justify-content-between">
+                            <span><strong>Concepto:</strong> Gastos de Viaje y Ruta</span>
+                            <span><strong>Sub Motivo:</strong> Cochera</span>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1">
+                            <span><strong>Centro de Costos:</strong> CC-300 (Operaciones de Ruta)</span>
+                            <span><strong>Autoriza:</strong> Marco Rosas</span>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Acción -->
+                    <div class="d-flex align-items-center justify-content-between pt-3 border-top">
+                        <button type="button" class="btn btn-light px-3 fw-semibold text-secondary" data-bs-dismiss="modal">
+                            Omitir Cochera
+                        </button>
+                        <button type="submit" id="os-cochera-btn-guardar" class="btn btn-primary px-4 fw-bold shadow-sm d-flex align-items-center gap-1.5" style="background: #0284c7; border:none;">
+                            <i class="bi bi-check2-circle"></i> Generar Caja
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
