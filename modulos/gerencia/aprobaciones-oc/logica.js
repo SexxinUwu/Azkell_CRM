@@ -237,6 +237,18 @@
         if (bObs) bObs.innerText = obs.length;
         const bRech = document.getElementById('tab-badge-rechazado');
         if (bRech) bRech.innerText = rech.length;
+
+        // Actualizar badge en sidebar para Aprobación de O/C
+        const elBadgeOC = document.getElementById('badge-count-oc-pend');
+        if (elBadgeOC) {
+            if (pend.length > 0) {
+                elBadgeOC.textContent = `${pend.length} Pend.`;
+                elBadgeOC.style.display = 'inline-block';
+            } else {
+                elBadgeOC.textContent = '';
+                elBadgeOC.style.display = 'none';
+            }
+        }
     }
 
     // Filtrar por Pestaña

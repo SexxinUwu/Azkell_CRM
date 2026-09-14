@@ -538,7 +538,7 @@ window.verificarSesionGuardada = function() {
         safe('sidebarMenu', true);
     }
     // ── ACTUALIZACIÓN DINÁMICA DE BADGES Y SECCIONES DEL SIDEBAR ──
-    ['operaciones', 'flota', 'mantenimiento', 'almacen', 'directorio', 'seguridad', 'rrhh', 'tesoreria', 'administracion', 'configuracion'].forEach(function(sec) {
+    ['operaciones', 'flota', 'mantenimiento', 'almacen', 'directorio', 'seguridad', 'rrhh', 'tesoreria', 'administracion', 'configuracion', 'gerencia'].forEach(function(sec) {
         var wrap = document.getElementById('wrap-' + sec);
         if (!wrap) return;
         var badge = wrap.querySelector('.section-badge');
@@ -554,6 +554,71 @@ window.verificarSesionGuardada = function() {
             }
         }
     });
+
+    // ── FUNCIÓN GLOBAL PARA ACTUALIZAR BADGES DE PENDIENTES DE GERENCIA ──
+    window.actualizarBadgesGerenciaGlobal = async function() {
+        try {
+            // 1. Consultar O/C pendientes
+            let pendOC = 0;
+            try {
+                const respOC = await fetch('/api/almacen/entradas');
+                if (respOC.ok) {
+                    const dataOC = await respOC.json();
+                    if (Array.isArray(dataOC)) {
+                        pendOC = dataOC.filter(d => {
+                            const st = (d.estado || 'REGISTRADA').toUpperCase();
+                            return st === 'REGISTRADA' || st === 'REGISTRADO' || st === 'PENDIENTE';
+                        }).length;
+                    }
+                }
+            } catch(e) {}
+
+            const elBadgeOC = document.getElementById('badge-count-oc-pend');
+            if (elBadgeOC) {
+                if (pendOC > 0) {
+                    elBadgeOC.textContent = `${pendOC} Pend.`;
+                    elBadgeOC.style.display = 'inline-block';
+                } else {
+                    elBadgeOC.textContent = '';
+                    elBadgeOC.style.display = 'none';
+                }
+            }
+
+            // 2. Consultar Caja pendientes
+            let pendCaja = 0;
+            try {
+                const respCaja = await fetch('/api/tesoreria/caja');
+                if (respCaja.ok) {
+                    const resC = await respCaja.json();
+                    const dataC = Array.isArray(resC) ? resC : (Array.isArray(resC?.data) ? resC.data : []);
+                    pendCaja = dataC.filter(c => {
+                        const st = (c.estado || 'REGISTRADO').toUpperCase();
+                        return st === 'REGISTRADO' || st === 'PENDIENTE';
+                    }).length;
+                }
+            } catch(e) {}
+
+            const elBadgeCaja = document.getElementById('badge-count-caja-pend');
+            if (elBadgeCaja) {
+                if (pendCaja > 0) {
+                    elBadgeCaja.textContent = `${pendCaja} Pend.`;
+                    elBadgeCaja.style.display = 'inline-block';
+                } else {
+                    elBadgeCaja.textContent = '';
+                    elBadgeCaja.style.display = 'none';
+                }
+            }
+        } catch(err) {
+            console.warn('Error actualizando badges globales de gerencia:', err);
+        }
+    };
+
+    // Invocar actualización inicial de badges de Gerencia
+    setTimeout(function() {
+        if (typeof window.actualizarBadgesGerenciaGlobal === 'function') {
+            window.actualizarBadgesGerenciaGlobal();
+        }
+    }, 1200);
     // ─────────────────────────────────────────────────────────────────
     // ─────────────────────────────────────────────────────────────────
 
