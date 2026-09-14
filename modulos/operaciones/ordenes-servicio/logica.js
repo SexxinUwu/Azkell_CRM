@@ -1238,7 +1238,7 @@
         formData.append('placa', placa);
         formData.append('autoriza', 'Marco Rosas');
         formData.append('motivo', 'Gastos de Viaje y Ruta');
-        formData.append('sub_motivo', 'Cochera');
+        formData.append('sub_motivo', 'Cochera / Parqueo de ruta');
         formData.append('centro_costo', 'CC-300: Operaciones de Ruta (Costo Servicio)');
         formData.append('modalidad_pago', modalidad);
         formData.append('moneda', 'SOLES');

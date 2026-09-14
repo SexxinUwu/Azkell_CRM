@@ -566,9 +566,24 @@ window.cajaPoblarSubmotivosSelect = function(motivo, submotivoSel) {
     }
 
     selSub.innerHTML = '<option value="">-- Seleccione Sub Motivo --</option>';
+    var normTarget = (submotivoSel || '').trim().toLowerCase();
+
+    // Determinar si hay coincidencia exacta o coincidencia parcial
+    var subExacto = catObj.submotivos.find(function(s) {
+        return s === submotivoSel;
+    });
+    var subParcial = !subExacto && normTarget ? catObj.submotivos.find(function(s) {
+        var n = s.toLowerCase();
+        return n.includes(normTarget) || normTarget.includes(n);
+    }) : null;
+
     catObj.submotivos.forEach(function(sub) {
         var opt = new Option(sub, sub);
-        if (submotivoSel && sub === submotivoSel) opt.selected = true;
+        if (subExacto && sub === subExacto) {
+            opt.selected = true;
+        } else if (!subExacto && subParcial && sub === subParcial) {
+            opt.selected = true;
+        }
         selSub.add(opt);
     });
 };
