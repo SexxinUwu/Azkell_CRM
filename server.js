@@ -1730,6 +1730,7 @@ app.post('/api/login', (req, res) => {
                     exito: true,
                     token: token,
                     nombre: usuario.nombre,
+                    dni: usuario.dni || '',
                     rol: rolFinal,
                     permisos: permisosFinales,
                     rol_color: usuario.rol_color || null,
@@ -2432,7 +2433,7 @@ app.delete('/api/roles/:id', (req, res) => {
 // ============================================================
 
 app.post('/api/usuarios-v2', async (req, res) => {
-    const { nombre, cargo, correo, password, estado, rol_id } = req.body;
+    const { nombre, dni, cargo, correo, password, estado, rol_id } = req.body;
     if (!correo) return res.status(400).json({ error: 'Correo requerido' });
     const rolId = (rol_id && rol_id !== '') ? parseInt(rol_id) || null : null;
     let rol = 'Personalizado';
@@ -2450,8 +2451,8 @@ app.post('/api/usuarios-v2', async (req, res) => {
         }
         const newId = `USR-${maxId + 1}`;
         db.query(
-            'INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, password_visible, rol, estado, permisos_json, rol_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-            [newId, nombre || '', cargo || '', correo, hashedPassword, '', rol, estado || 'Activo', '{}', rolId],
+            'INSERT INTO usuarios (idUsuario, nombre, dni, cargo, correo, password, password_visible, rol, estado, permisos_json, rol_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+            [newId, nombre || '', (dni || '').trim(), cargo || '', correo, hashedPassword, '', rol, estado || 'Activo', '{}', rolId],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 broadcast('usuarios', 'crear');
@@ -2465,12 +2466,12 @@ app.post('/api/usuarios-v2', async (req, res) => {
 
 app.put('/api/usuarios-v2/:id', async (req, res) => {
     const { id } = req.params;
-    const { nombre, cargo, correo, password, estado, rol_id } = req.body;
+    const { nombre, dni, cargo, correo, password, estado, rol_id } = req.body;
     const rolId = (rol_id !== undefined && rol_id !== '' && rol_id !== null) ? parseInt(rol_id) || null : null;
     let rol = 'Personalizado';
     if (correo && correo.trim().toLowerCase() === 'admin@azkell.com') rol = 'Fundador';
-    const fields = ['nombre=?', 'cargo=?', 'correo=?', 'estado=?', 'rol=?', 'rol_id=?'];
-    const values = [nombre || '', cargo || '', correo || '', estado || 'Activo', rol, rolId];
+    const fields = ['nombre=?', 'dni=?', 'cargo=?', 'correo=?', 'estado=?', 'rol=?', 'rol_id=?'];
+    const values = [nombre || '', (dni || '').trim(), cargo || '', correo || '', estado || 'Activo', rol, rolId];
     if (password && password.trim() !== '') {
         const hashedPassword = await bcrypt.hash(password.trim(), 10);
         fields.push('password=?'); values.push(hashedPassword);

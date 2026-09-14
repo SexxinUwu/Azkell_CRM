@@ -104,11 +104,11 @@ window.guCargarTodo = async function(forzar) {
         var jUsers = await resUsers.json();
         window.dataGlobalRoles = jRoles.data || [];
         var rawUsers = jUsers.data || [];
-        // fila: [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password_visible [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo [13]roles_ids
+        // fila: [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password_visible [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo [13]dni
         window.dataGlobalUsuarios = rawUsers.map(function(r) {
             return { id:r[0], nombre:r[1], cargo:r[2], correo:r[3], rol_label:r[4],
                      estado:r[5], password:r[6], permisos:r[7], rol_id:r[8], rol_color:r[9],
-                     ultimo_acceso:r[10], ultimo_ip:r[11], ultimo_dispositivo:r[12] };
+                     ultimo_acceso:r[10], ultimo_ip:r[11], ultimo_dispositivo:r[12], dni:r[13] || '' };
         });
         var sub = document.getElementById('gu-subtitle');
         if (sub) sub.textContent = window.dataGlobalRoles.length + ' roles · ' + window.dataGlobalUsuarios.length + ' miembros';
@@ -596,10 +596,12 @@ function _guBuildUserPanel(user) {
 
     html += '<div class="gu-field-label">Nombre Completo</div>'
         + '<input type="text" id="guUserNombre" class="gu-input-inset" value="' + _guEsc(user.nombre||'') + '" placeholder="Ej. Juan Pérez" required>'
+        + '<div class="gu-field-label"><i class="bi bi-person-vcard text-primary me-1"></i>N° DNI / Documento (Vínculo Operativo / Chofer)</div>'
+        + '<input type="text" id="guUserDni" class="gu-input-inset" value="' + _guEsc(user.dni||'') + '" placeholder="Ej. 45101717 (8 dígitos)">'
         + '<div class="gu-field-label">Cargo</div>'
-        + '<input type="text" id="guUserCargo" class="gu-input-inset" value="' + _guEsc(user.cargo||'') + '" placeholder="Ej. Supervisor de Operaciones">'
-        + '<div class="gu-field-label">Usuario / DNI / Correo (Login)</div>'
-        + '<input type="text" id="guUserCorreo" class="gu-input-inset" value="' + _guEsc(user.correo||'') + '" placeholder="DNI o correo (ej. 75060024 o usuario@azkell.com)" required>';
+        + '<input type="text" id="guUserCargo" class="gu-input-inset" value="' + _guEsc(user.cargo||'') + '" placeholder="Ej. Conductor / Operaciones">'
+        + '<div class="gu-field-label">Usuario / Correo (Login)</div>'
+        + '<input type="text" id="guUserCorreo" class="gu-input-inset" value="' + _guEsc(user.correo||'') + '" placeholder="DNI o correo (ej. 45101717 o chofer@azkell.com)" required>';
 
     // Contraseña: usuario existente vs nuevo
     if (user.id) {
@@ -724,6 +726,7 @@ window.guGuardarUsuario = async function() {
     var esNuevoUser = !(window._guSeleccionado && window._guSeleccionado.id !== 'nuevo');
     if (!window.guardAction('seg', esNuevoUser ? 'c' : 'e')) return;
     var nombre   = (document.getElementById('guUserNombre')  ||{}).value || '';
+    var dni      = (document.getElementById('guUserDni')     ||{}).value || '';
     var cargo    = (document.getElementById('guUserCargo')   ||{}).value || '';
     var correo   = (document.getElementById('guUserCorreo')  ||{}).value || '';
     var password = (document.getElementById('guUserPassword')||{}).value || '';
@@ -736,7 +739,7 @@ window.guGuardarUsuario = async function() {
         var eId  = (window._guSeleccionado && window._guSeleccionado.id !== 'nuevo') ? window._guSeleccionado.id : null;
         var url  = eId ? '/api/usuarios-v2/' + eId : '/api/usuarios-v2';
         var meth = eId ? 'PUT' : 'POST';
-        var body = { nombre, cargo, correo, estado, rol_id: rol_id || null,
+        var body = { nombre, dni, cargo, correo, estado, rol_id: rol_id || null,
             creado_por: localStorage.getItem('fleet_correo')||'admin',
             editado_por: localStorage.getItem('fleet_correo')||'admin' };
         if (password.trim()) body.password = password.trim();
