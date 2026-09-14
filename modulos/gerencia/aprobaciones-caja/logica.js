@@ -342,9 +342,15 @@
             }
 
             const motivoTxt = escapeHtml(c.motivo || '—');
-            const subMotivoTxt = c.sub_motivo ? `<div class="text-secondary small">${escapeHtml(c.sub_motivo)}</div>` : '';
+            const subMotivoTxt = c.sub_motivo ? ` <span class="text-secondary small fw-normal">(${escapeHtml(c.sub_motivo)})</span>` : '';
             const beneficiarioTxt = escapeHtml(c.persona || c.conductor || '—');
-            const placaViaje = [c.placa ? `Placa: ${c.placa}` : '', c.orden_viaje ? `Viaje: ${c.orden_viaje}` : ''].filter(Boolean).join('<br>') || '—';
+            
+            // Placa y Viaje en una sola línea
+            let placaViajeArr = [];
+            if (c.placa) placaViajeArr.push(`Placa: ${c.placa}`);
+            if (c.orden_viaje) placaViajeArr.push(`Viaje: ${c.orden_viaje}`);
+            const placaViaje = escapeHtml(placaViajeArr.join(' | ') || '—');
+
             const ctaOrigen = escapeHtml(c.cuenta_bancaria_empresa || '—');
             const ctaDestino = escapeHtml(c.cuenta_bancaria_persona || '—');
             const usuarioReg = escapeHtml(c.usuario_creacion || 'Sistema');
@@ -352,25 +358,24 @@
 
             return `
                 <tr>
-                    <td>${btnAcciones}</td>
-                    <td class="text-secondary fw-semibold">${formatearFecha(c.fecha)}</td>
-                    <td>
+                    <td class="text-nowrap py-2">${btnAcciones}</td>
+                    <td class="text-secondary fw-semibold text-nowrap py-2">${formatearFecha(c.fecha)}</td>
+                    <td class="text-nowrap py-2">
                         <button class="btn-caja-code" onclick="window.verDetalleCaja(${id})">
-                            <i class="bi bi-hash"></i> ${escapeHtml(num)}
+                            <i class="bi bi-hash"></i>${escapeHtml(num)}
                         </button>
                     </td>
-                    <td>${getBadgeEstado(c.estado)}</td>
-                    <td class="fw-bold text-dark">${beneficiarioTxt}</td>
-                    <td>
-                        <div class="fw-semibold text-dark">${motivoTxt}</div>
-                        ${subMotivoTxt}
+                    <td class="text-nowrap py-2">${getBadgeEstado(c.estado)}</td>
+                    <td class="fw-bold text-dark text-nowrap py-2">${beneficiarioTxt}</td>
+                    <td class="text-nowrap py-2">
+                        <span class="fw-semibold text-dark">${motivoTxt}</span>${subMotivoTxt}
                     </td>
-                    <td class="small text-secondary">${placaViaje}</td>
-                    <td class="small text-secondary" style="max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${ctaOrigen}">${ctaOrigen}</td>
-                    <td class="small text-secondary" style="max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${ctaDestino}">${ctaDestino}</td>
-                    <td class="text-end fw-black text-dark" style="font-size:0.92rem;">${formatearMoneda(c.importe_total, c.moneda)}</td>
-                    <td class="small text-secondary"><i class="bi bi-person me-1"></i>${usuarioReg}</td>
-                    <td class="small text-secondary"><i class="bi bi-shield-check text-success me-1"></i>${usuarioAprob}</td>
+                    <td class="small text-secondary text-nowrap py-2">${placaViaje}</td>
+                    <td class="small text-secondary text-nowrap py-2" title="${ctaOrigen}">${ctaOrigen}</td>
+                    <td class="small text-secondary text-nowrap py-2" title="${ctaDestino}">${ctaDestino}</td>
+                    <td class="text-end fw-black text-dark text-nowrap py-2" style="font-size:0.88rem;">${formatearMoneda(c.importe_total, c.moneda)}</td>
+                    <td class="small text-secondary text-nowrap py-2"><i class="bi bi-person me-1"></i>${usuarioReg}</td>
+                    <td class="small text-secondary text-nowrap py-2"><i class="bi bi-shield-check text-success me-1"></i>${usuarioAprob}</td>
                 </tr>
             `;
         }).join('');
@@ -482,7 +487,12 @@
         setTxt('det-caja-observacion', item.observacion || 'Ninguna');
 
         setTxt('det-caja-modalidad', item.modalidad_pago || 'TRANSFERENCIA BANCARIA');
-        setTxt('det-caja-moneda-tc', `${item.moneda || 'SOLES'} (TC: ${item.tipo_cambio || '1.000'})`);
+        const mon = (item.moneda || 'SOLES').toUpperCase();
+        if (mon === 'SOLES' || mon === 'PEN') {
+            setTxt('det-caja-moneda-tc', 'SOLES');
+        } else {
+            setTxt('det-caja-moneda-tc', `${mon} (TC: ${item.tipo_cambio || '1.000'})`);
+        }
         setTxt('det-caja-tipo-comp', item.tipo_comprobante || 'SIN COMPROBANTE');
         setTxt('det-caja-cta-empresa', item.cuenta_bancaria_empresa || 'Caja Efectivo / Por definir');
         setTxt('det-caja-monto-total', formatearMoneda(item.importe_total, item.moneda));
