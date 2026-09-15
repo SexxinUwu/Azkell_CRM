@@ -2457,15 +2457,15 @@ module.exports = function (db, broadcast, logAudit) {
                 if (c.tipo_movimiento === 'INGRESO') totalDevoluciones += imp;
                 else totalDepositado += imp;
             });
-            const netoAsignado = totalDepositado - totalDevoluciones;
-
-            // Obtener gastos rendidos por el conductor
+            // Obtener gastos rendidos por el conductor con fecha y hora legibles
             const [gastos] = await tdb.query(`
-                SELECT id, fecha, tipo_gasto, sub_motivo, tipo_comprobante, serie, numero,
+                SELECT id, 
+                       DATE_FORMAT(IFNULL(creado_en, fecha), '%d/%m/%Y %H:%i') AS fecha_formateada,
+                       fecha, tipo_gasto, sub_motivo, tipo_comprobante, serie, numero,
                        proveedor_nombre, detalle, importe, sustento_url, estado
                 FROM tesoreria_liquidaciones_gastos
                 WHERE UPPER(TRIM(orden_viaje)) = UPPER(?)
-                ORDER BY fecha DESC, id DESC
+                ORDER BY IFNULL(creado_en, fecha) DESC, id DESC
             `, [viaje.viaje]);
 
             let totalGastado = 0;
