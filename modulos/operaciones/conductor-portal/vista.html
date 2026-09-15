@@ -8,9 +8,9 @@
 
 #mod-conductor-portal {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    padding: 1rem 1rem 4rem 1rem !important;
+    padding: 0.75rem 0.75rem 5.5rem 0.75rem !important;
     width: 100% !important;
-    max-width: 900px !important;
+    max-width: 680px !important;
     margin: 0 auto;
     box-sizing: border-box;
 }
@@ -19,10 +19,10 @@
 .cond-app-header {
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     color: #ffffff;
-    border-radius: 20px;
-    padding: 1.25rem 1.4rem;
-    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
-    margin-bottom: 1.25rem;
+    border-radius: 24px;
+    padding: 1.25rem 1.35rem;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.22);
+    margin-bottom: 1rem;
     position: relative;
     overflow: hidden;
 }
@@ -33,8 +33,9 @@
     bottom: -20px;
     width: 130px;
     height: 130px;
-    background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, rgba(255,255,255,0) 70%);
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.22) 0%, rgba(255,255,255,0) 70%);
     border-radius: 50%;
+    pointer-events: none;
 }
 
 .cond-user-badge {
@@ -44,35 +45,84 @@
     background: rgba(255, 255, 255, 0.12);
     padding: 4px 10px;
     border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.72rem;
+    font-weight: 700;
     backdrop-filter: blur(4px);
+    letter-spacing: 0.3px;
+    color: #ffffff !important;
 }
 
-/* ── Hero Card: Viaje Activo ───────────────────────────────────── */
+/* ── Hero Card: Viaje Activo con Estilo Bento y Colores Pastel ── */
 .cond-trip-hero {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 20px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-    padding: 1.25rem;
-    margin-bottom: 1.25rem;
+    border-radius: 24px;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+    padding: 1.2rem;
+    margin-bottom: 1.15rem;
+}
+
+.cond-chip-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 999px;
+    letter-spacing: 0.5px;
+}
+.cond-chip-status::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.cond-box-pastel {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 0.8rem 0.95rem;
+    height: 100%;
 }
 
 .cond-kpi-pill {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 0.8rem 1rem;
+    border-radius: 18px;
+    padding: 0.9rem 0.6rem;
     text-align: center;
+    border: 1.5px solid transparent;
+    transition: transform 0.15s ease;
+}
+.cond-kpi-pill.pastel-blue {
+    background: #f0f9ff;
+    border-color: #bae6fd;
+}
+.cond-kpi-pill.pastel-slate {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+.cond-kpi-pill.pastel-emerald {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+}
+.cond-kpi-pill.pastel-rose {
+    background: #fff1f2;
+    border-color: #fecdd3;
 }
 
-/* ── Botones Grandes de Menú (Estilo Checklist Unidades) ─────────── */
+/* ── Botones Grandes de Menú ─────────────────────────────────────── */
 .cond-menu-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
 }
 @media (min-width: 640px) {
     .cond-menu-grid {
@@ -83,11 +133,11 @@
 .cond-action-btn {
     background: #ffffff;
     border: 1.5px solid #e2e8f0;
-    border-radius: 18px;
-    padding: 1.25rem;
+    border-radius: 20px;
+    padding: 1.15rem 1.25rem;
     display: flex;
     align-items: center;
-    gap: 1.1rem;
+    gap: 1rem;
     cursor: pointer;
     text-align: left;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -98,31 +148,31 @@
 }
 .cond-action-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
     border-color: #cbd5e1;
 }
 .cond-action-btn:active {
     transform: scale(0.98);
 }
 .cond-action-btn.btn-active-primary {
-    border-color: #22c55e;
+    border-color: #a7f3d0;
     background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
 }
 .cond-action-btn.btn-disabled {
     background: #f8fafc;
     border-color: #e2e8f0;
     cursor: pointer;
-    opacity: 0.85;
+    opacity: 0.9;
 }
 
 .cond-btn-icon {
-    width: 54px;
-    height: 54px;
-    border-radius: 14px;
+    width: 50px;
+    height: 50px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem;
+    font-size: 1.4rem;
     flex-shrink: 0;
 }
 
@@ -130,12 +180,150 @@
 .cond-gasto-item {
     background: #ffffff;
     border: 1px solid #f1f5f9;
-    border-radius: 14px;
-    padding: 0.85rem 1rem;
+    border-radius: 18px;
+    padding: 0.95rem 1.05rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.65rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+.cond-gasto-item:hover {
+    background: #f8fafc;
+    transform: translateY(-1px);
+}
+
+/* ── Bottom Sheet Drawer / Formulario de Abajo hacia Arriba (80-85% Alto) ── */
+#condModalSubirGasto {
+    padding: 0 !important;
+}
+
+#condModalSubirGasto .modal-dialog {
+    margin: 0 auto;
+    max-width: 600px;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+}
+
+@media (max-width: 767.98px) {
+    #condModalSubirGasto .modal-dialog {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        align-items: flex-end !important;
+    }
+    #condModalSubirGasto .modal-content {
+        border-radius: 28px 28px 0 0 !important;
+        max-height: 82vh !important;
+        height: 82vh !important;
+        width: 100% !important;
+        margin: 0 !important;
+        border: none !important;
+    }
+}
+
+@media (min-width: 768px) {
+    #condModalSubirGasto .modal-dialog {
+        align-items: center;
+        max-width: 540px;
+    }
+    #condModalSubirGasto .modal-content {
+        border-radius: 24px !important;
+        max-height: 86vh !important;
+    }
+}
+
+#condModalSubirGasto .modal-content {
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+    animation: condSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+}
+
+@keyframes condSlideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0.5;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.cond-drag-handle {
+    width: 44px;
+    height: 5px;
+    background: #cbd5e1;
+    border-radius: 99px;
+    margin: 10px auto 4px auto;
+}
+
+/* Casillas / Secciones del formulario con colores pastel */
+.cond-step-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1.1rem;
+    margin-bottom: 0.85rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.cond-step-card.pastel-blue-box {
+    border-color: #bae6fd;
+    background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+}
+
+.cond-step-card.pastel-emerald-box {
+    border-color: #a7f3d0;
+    background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+}
+
+.cond-step-card.pastel-purple-box {
+    border-color: #ddd6fe;
+    background: linear-gradient(180deg, #ffffff 0%, #f5f3ff 100%);
+}
+
+.cond-step-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.8rem;
+}
+
+.cond-step-circle {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.cond-step-circle.bg-num-blue {
+    background: #0284c7;
+}
+.cond-step-circle.bg-num-emerald {
+    background: #059669;
+}
+.cond-step-circle.bg-num-purple {
+    background: #7c3aed;
+}
+
+.cond-step-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #0f172a;
+    text-transform: uppercase;
+    margin: 0;
 }
 </style>
 
@@ -145,41 +333,39 @@
         <div class="d-flex justify-content-between align-items-start mb-2">
             <div>
                 <span class="cond-user-badge">
-                    <i class="bi bi-person-badge text-success"></i> <span id="cond-dni-label" style="color: #ffffff !important;">DNI: Conductor</span>
+                    <i class="bi bi-person-badge-fill text-info"></i> <span id="cond-dni-label">DNI: Conductor</span>
                 </span>
-                <h4 class="fw-bold mt-2 mb-0 text-white" id="cond-nombre-label" style="color: #ffffff !important;">Bienvenido, Conductor</h4>
+                <h4 class="fw-bold mt-2 mb-0 text-white" id="cond-nombre-label">Hola, Conductor</h4>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold" onclick="window.condCargarPortal()">
-                <i class="bi bi-arrow-clockwise"></i>
+            <button type="button" class="btn btn-sm btn-outline-light rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;" onclick="window.condCargarPortal()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise fs-5"></i>
             </button>
         </div>
-        <p class="small m-0 text-white-50" style="color: rgba(255,255,255,0.7) !important;">Portal móvil de rendición operativa y control de viaje en ruta.</p>
+        <p class="small m-0 text-white-50">Portal móvil de rendición operativa y control de viaje en ruta.</p>
     </div>
 
-    <!-- Card Principal: Viaje Asignado Actual -->
+    <!-- Card Principal: Viaje Asignado Actual (Bento Pastel) -->
     <div class="cond-trip-hero" id="cond-hero-trip">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-bold font-monospace" id="cond-viaje-estado">
-                    EN RUTA
-                </span>
-                <span class="fw-bold font-monospace text-primary fs-6" id="cond-viaje-codigo">Viaje: ---</span>
+                <span class="cond-chip-status" id="cond-viaje-estado">ACTIVO</span>
+                <span class="fw-bold font-monospace text-primary fs-6" id="cond-viaje-codigo">Viaje: 2026-00000001</span>
             </div>
-            <span class="text-muted small" id="cond-viaje-fecha">--/--/----</span>
+            <span class="text-muted small fw-semibold font-monospace" id="cond-viaje-fecha">2026-09-14</span>
         </div>
 
-        <!-- Placas y Ruta -->
+        <!-- Placas y Ruta (Casillas Bento) -->
         <div class="row g-2 mb-3">
             <div class="col-6">
-                <div class="p-2.5 bg-light rounded-3 border">
-                    <small class="text-muted d-block" style="font-size:0.7rem; font-weight:700;">TRACTO / REMOLQUE</small>
-                    <span class="fw-bold text-dark font-monospace" id="cond-viaje-placas" style="font-size:0.85rem;">--- / ---</span>
+                <div class="cond-box-pastel">
+                    <small class="text-muted d-block text-uppercase" style="font-size:0.68rem; font-weight:800; letter-spacing:0.3px;">Tracto / Remolque</small>
+                    <span class="fw-bold text-dark font-monospace" id="cond-viaje-placas" style="font-size:0.88rem;">--- / ---</span>
                 </div>
             </div>
             <div class="col-6">
-                <div class="p-2.5 bg-light rounded-3 border">
-                    <small class="text-muted d-block" style="font-size:0.7rem; font-weight:700;">RUTA ASIGNADA</small>
-                    <span class="fw-bold text-dark text-truncate d-block" id="cond-viaje-ruta" style="font-size:0.85rem;" title="">---</span>
+                <div class="cond-box-pastel">
+                    <small class="text-muted d-block text-uppercase" style="font-size:0.68rem; font-weight:800; letter-spacing:0.3px;">Ruta Asignada</small>
+                    <span class="fw-bold text-dark text-truncate d-block" id="cond-viaje-ruta" style="font-size:0.88rem;" title="">---</span>
                 </div>
             </div>
         </div>
@@ -187,27 +373,27 @@
         <!-- Bento Pills de Dinero: Lo que te depositamos vs Lo que has rendido -->
         <div class="row g-2">
             <div class="col-4">
-                <div class="cond-kpi-pill">
-                    <small class="text-muted d-block fw-bold" style="font-size:0.68rem;">DEPOSITADO</small>
-                    <span class="fw-bold font-monospace text-primary" style="font-size:1.05rem;" id="cond-kpi-depositado">S/ 0.00</span>
+                <div class="cond-kpi-pill pastel-blue">
+                    <small class="text-secondary d-block fw-bold" style="font-size:0.68rem; letter-spacing:0.3px;">DEPOSITADO</small>
+                    <span class="fw-bold font-monospace text-primary" style="font-size:1.1rem;" id="cond-kpi-depositado">S/ 0.00</span>
                 </div>
             </div>
             <div class="col-4">
-                <div class="cond-kpi-pill">
-                    <small class="text-muted d-block fw-bold" style="font-size:0.68rem;">RENDIDO</small>
-                    <span class="fw-bold font-monospace text-dark" style="font-size:1.05rem;" id="cond-kpi-rendido">S/ 0.00</span>
+                <div class="cond-kpi-pill pastel-slate">
+                    <small class="text-secondary d-block fw-bold" style="font-size:0.68rem; letter-spacing:0.3px;">RENDIDO</small>
+                    <span class="fw-bold font-monospace text-dark" style="font-size:1.1rem;" id="cond-kpi-rendido">S/ 0.00</span>
                 </div>
             </div>
             <div class="col-4">
-                <div class="cond-kpi-pill">
-                    <small class="text-muted d-block fw-bold" style="font-size:0.68rem;">TU SALDO</small>
-                    <span class="fw-bold font-monospace text-success" style="font-size:1.05rem;" id="cond-kpi-saldo">S/ 0.00</span>
+                <div class="cond-kpi-pill pastel-emerald" id="cond-kpi-saldo-box">
+                    <small class="text-secondary d-block fw-bold" style="font-size:0.68rem; letter-spacing:0.3px;">TU SALDO</small>
+                    <span class="fw-bold font-monospace text-success" style="font-size:1.1rem;" id="cond-kpi-saldo">S/ 0.00</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Menú Táctil de Acciones para el Conductor (2 Opciones Solicitadas) -->
+    <!-- Menú Táctil de Acciones para el Conductor -->
     <h6 class="text-secondary fw-bold text-uppercase small mb-2 px-1" style="font-size:0.72rem; letter-spacing:0.5px;">¿Qué deseas hacer hoy?</h6>
     <div class="cond-menu-grid">
         <!-- Botón 1: Liquidar Gastos de Viaje -->
@@ -240,9 +426,11 @@
 
     <!-- Sección Rápida de Comprobantes Subidos en Este Viaje -->
     <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="fw-bold text-dark m-0"><i class="bi bi-journal-text text-primary me-1"></i> Comprobantes que ya subiste</h6>
-            <span class="badge bg-light text-secondary border rounded-pill" id="cond-badge-total-gastos">0 registrados</span>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                <i class="bi bi-journal-check text-primary fs-5"></i> Comprobantes que ya subiste
+            </h6>
+            <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" id="cond-badge-total-gastos">0 registrados</span>
         </div>
         <div id="cond-lista-gastos">
             <div class="text-center py-4 text-muted small">
@@ -253,58 +441,85 @@
     </div>
 </div>
 
-<!-- Modal Móvil para Subir Comprobante (Cámara / Foto Directa) -->
+<!-- Modal Bottom Sheet Móvil (Sube de abajo hacia arriba al 80-85% de la pantalla) -->
 <div class="modal fade" id="condModalSubirGasto" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-bottom py-3 px-4 bg-light rounded-top-4">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="rounded-circle bg-success bg-opacity-10 text-success p-2">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="cond-drag-handle d-md-none"></div>
+            
+            <div class="modal-header border-bottom py-3 px-4 bg-white">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-2 d-flex align-items-center justify-content-center" style="width:40px; height:40px;">
                         <i class="bi bi-camera-fill fs-5"></i>
                     </div>
                     <div>
                         <h6 class="modal-title fw-bold m-0 text-dark">Tomar Foto y Rendir Gasto</h6>
-                        <small class="text-muted" id="cond-modal-subtitulo">Viaje actual en curso</small>
+                        <small class="text-muted font-monospace" id="cond-modal-subtitulo" style="font-size:0.75rem;">Viaje en curso</small>
                     </div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <form id="condFormNuevoGasto" onsubmit="window.condGuardarGasto(event)">
-                <div class="modal-body p-4">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label small fw-bold text-dark mb-1">¿Qué gastaste? *</label>
-                            <select class="form-select form-select-lg fw-bold" id="cond-gasto-tipo" required>
-                                <option value="COCHERA">Cochera / Parqueo</option>
-                                <option value="PEAJES">Peaje / Garita</option>
-                                <option value="VIATICOS">Viáticos / Comida</option>
-                                <option value="PERNOCTE">Hotel / Pernocte</option>
-                                <option value="LLANTAS">Parchado / Llantas</option>
-                                <option value="MANTENIMIENTO">Auxilio Mecánico</option>
-                                <option value="OTROS">Otro Gasto de Ruta</option>
-                            </select>
+
+            <form id="condFormNuevoGasto" onsubmit="window.condGuardarGasto(event)" class="d-flex flex-column flex-grow-1 overflow-hidden m-0">
+                <div class="modal-body p-3 p-md-4 overflow-y-auto" style="background:#f8fafc;">
+                    
+                    <!-- Casilla 1: Concepto y Tipo de Gasto (Azul Pastel) -->
+                    <div class="cond-step-card pastel-blue-box">
+                        <div class="cond-step-head">
+                            <span class="cond-step-circle bg-num-blue">1</span>
+                            <h6 class="cond-step-title">Concepto y Detalle</h6>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold text-dark mb-1">Monto Pagado (S/) *</label>
-                            <div class="input-group input-group-lg">
-                                <span class="input-group-text bg-light fw-bold">S/</span>
-                                <input type="number" step="0.01" min="0.1" class="form-control fw-bold text-success font-monospace" id="cond-gasto-importe" placeholder="0.00" required style="font-size:1.5rem;">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-secondary mb-1">¿QUÉ GASTASTE? (*)</label>
+                                <select class="form-select fw-bold py-2.5 rounded-3 border-2" id="cond-gasto-tipo" required style="background-color:#ffffff;">
+                                    <option value="COCHERA">🅿️ Cochera / Parqueo</option>
+                                    <option value="PEAJES">🛣️ Peaje / Garita</option>
+                                    <option value="VIATICOS">🍽️ Viáticos / Alimentación</option>
+                                    <option value="PERNOCTE">🏨 Hotel / Hospedaje</option>
+                                    <option value="LLANTAS">🛞 Parchado / Llantas</option>
+                                    <option value="MANTENIMIENTO">🔧 Auxilio Mecánico</option>
+                                    <option value="OTROS">📝 Otro Gasto de Ruta</option>
+                                </select>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <label class="form-label small fw-bold text-secondary mb-1">LUGAR O NOTA (OPCIONAL)</label>
+                                <input type="text" class="form-control rounded-3" id="cond-gasto-nota" placeholder="Ej: Cochera grifo San Pedro">
                             </div>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold text-dark mb-1">Foto de la Boleta / Ticket *</label>
-                            <input type="file" class="form-control form-control-lg" id="cond-gasto-foto" accept="image/*,.pdf" capture="environment" required>
-                            <small class="text-muted" style="font-size:0.75rem;">Puedes tomar foto con la cámara de tu celular directamente.</small>
+                    </div>
+
+                    <!-- Casilla 2: Monto del Comprobante (Verde Pastel) -->
+                    <div class="cond-step-card pastel-emerald-box">
+                        <div class="cond-step-head">
+                            <span class="cond-step-circle bg-num-emerald">2</span>
+                            <h6 class="cond-step-title">Monto Pagado</h6>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold text-dark mb-1">Nota o Lugar (Opcional)</label>
-                            <input type="text" class="form-control" id="cond-gasto-nota" placeholder="Ej: Cochera grifo San Pedro">
+                        <label class="form-label small fw-bold text-secondary mb-1">MONTO PAGADO (S/) (*)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white fw-bold border-2 text-dark px-3">S/</span>
+                            <input type="number" step="0.01" min="0.1" class="form-control form-control-lg fw-bold text-success font-monospace border-2" id="cond-gasto-importe" placeholder="0.00" required style="font-size:1.6rem; background:#ffffff;">
                         </div>
                     </div>
+
+                    <!-- Casilla 3: Foto de la Boleta / Voucher (Púrpura Pastel) -->
+                    <div class="cond-step-card pastel-purple-box mb-0">
+                        <div class="cond-step-head">
+                            <span class="cond-step-circle bg-num-purple">3</span>
+                            <h6 class="cond-step-title">Foto de la Boleta / Ticket</h6>
+                        </div>
+                        <label class="form-label small fw-bold text-secondary mb-1">SELECCIONA O TOMA LA FOTO (*)</label>
+                        <input type="file" class="form-control form-control-lg border-2 rounded-3" id="cond-gasto-foto" accept="image/*,.pdf" capture="environment" required style="background:#ffffff;">
+                        <div class="d-flex align-items-center gap-1 mt-1 text-muted" style="font-size:0.75rem;">
+                            <i class="bi bi-camera text-primary"></i> Puedes tomar foto con la cámara de tu celular directamente.
+                        </div>
+                    </div>
+
                 </div>
-                <div class="modal-footer border-top py-3 px-4 bg-light rounded-bottom-4">
-                    <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" id="cond-btn-enviar-gasto">
+
+                <div class="modal-footer border-top py-3 px-4 bg-white flex-shrink-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4 py-2.5 fw-bold shadow-sm flex-grow-1" id="cond-btn-enviar-gasto">
                         <i class="bi bi-cloud-arrow-up-fill me-1"></i> Subir Mi Gasto
                     </button>
                 </div>

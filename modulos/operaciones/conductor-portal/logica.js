@@ -92,15 +92,19 @@ window.condCargarPortal = async function() {
         } else {
             if (lblCod) lblCod.textContent = `Viaje: ${viaje.codigo}`;
             if (lblEst) {
-                lblEst.textContent = (viaje.estado || 'EN RUTA').toUpperCase();
-                lblEst.className = 'badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-bold font-monospace';
+                lblEst.textContent = (viaje.estado || 'ACTIVO').toUpperCase();
+                lblEst.className = 'cond-chip-status';
             }
             if (lblPlacas) lblPlacas.textContent = `${viaje.placa_tracto || '---'} / ${viaje.placa_remolque || '---'}`;
             if (lblRuta) {
                 lblRuta.textContent = viaje.ruta || '---';
                 lblRuta.title = viaje.ruta || '';
             }
-            if (lblFec) lblFec.textContent = viaje.fecha || '---';
+            if (lblFec) {
+                // Formatear fecha del viaje
+                var fecRaw = viaje.fecha_formateada || viaje.fecha_viaje || viaje.fecha || '';
+                lblFec.textContent = String(fecRaw).slice(0, 10);
+            }
         }
 
         // Actualizar KPIs de Dinero
@@ -113,7 +117,11 @@ window.condCargarPortal = async function() {
         if (kpiSal) {
             var salNum = parseFloat(balance.saldo_restante || 0);
             kpiSal.textContent = `S/ ${salNum.toFixed(2)}`;
-            kpiSal.className = salNum >= 0 ? 'fw-bold font-monospace text-success fs-5' : 'fw-bold font-monospace text-danger fs-5';
+            var boxSal = document.getElementById('cond-kpi-saldo-box');
+            if (boxSal) {
+                boxSal.className = salNum >= 0 ? 'cond-kpi-pill pastel-emerald' : 'cond-kpi-pill pastel-rose';
+            }
+            kpiSal.className = salNum >= 0 ? 'fw-bold font-monospace text-success' : 'fw-bold font-monospace text-danger';
         }
 
         // Renderizar lista de gastos
@@ -133,20 +141,56 @@ window.condCargarPortal = async function() {
             return;
         }
 
+        // Función para limpiar y mostrar fecha amigable
+        function formatearFechaHoraGasto(g) {
+            if (g.fecha_formateada) return g.fecha_formateada;
+            var raw = g.creado_en || g.fecha;
+            if (!raw) return '';
+            var str = String(raw).replace('T', ' ').replace('.000Z', '').trim();
+            if (str.length >= 16) {
+                var partes = str.slice(0, 10).split('-');
+                if (partes.length === 3) {
+                    var hora = str.slice(11, 16);
+                    return `${partes[2]}/${partes[1]}/${partes[0]} ${hora}`;
+                }
+            }
+            if (str.length === 10) {
+                var partes2 = str.split('-');
+                if (partes2.length === 3) {
+                    return `${partes2[2]}/${partes2[1]}/${partes2[0]}`;
+                }
+            }
+            return str;
+        }
+
+        // Mapeo de colores e iconos para conceptos
+        var tipoIconos = {
+            'COCHERA': '🅿️',
+            'PEAJES': '🛣️',
+            'VIATICOS': '🍽️',
+            'PERNOCTE': '🏨',
+            'LLANTAS': '🛞',
+            'MANTENIMIENTO': '🔧',
+            'OTROS': '📝'
+        };
+
         containerGastos.innerHTML = gastos.map(g => {
             var sUrl = g.sustento_url;
-            var linkFoto = sUrl ? `<a href="${sUrl}" target="_blank" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size:0.75rem;"><i class="bi bi-image me-1"></i> Ver Foto</a>` : '<span class="text-muted small">Sin Foto</span>';
+            var linkFoto = sUrl ? `<a href="${sUrl}" target="_blank" class="btn btn-sm btn-outline-primary bg-primary bg-opacity-10 text-primary border-primary border-opacity-25 py-1 px-2.5 rounded-pill fw-bold shadow-none" style="font-size:0.75rem;"><i class="bi bi-image me-1"></i> Ver Foto</a>` : '<span class="text-muted small">Sin Foto</span>';
+            var fechaTexto = formatearFechaHoraGasto(g);
+            var iconoTipo = tipoIconos[(g.tipo_gasto || '').toUpperCase()] || '🧾';
+
             return `
                 <div class="cond-gasto-item">
-                    <div>
-                        <div class="d-flex align-items-center gap-2 mb-0.5">
-                            <span class="badge bg-light text-dark border fw-bold" style="font-size:0.7rem;">${g.tipo_gasto}</span>
-                            <span class="text-muted font-monospace" style="font-size:0.72rem;">${g.fecha || ''}</span>
+                    <div class="me-2">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge bg-light text-dark border fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.72rem;">${iconoTipo} ${g.tipo_gasto}</span>
+                            <span class="text-muted font-monospace fw-semibold" style="font-size:0.75rem;"><i class="bi bi-clock me-1 text-secondary"></i>${fechaTexto}</span>
                         </div>
-                        <small class="text-secondary d-block">${g.sub_motivo || g.detalle || 'Gasto de ruta'}</small>
+                        <small class="text-secondary fw-semibold d-block text-truncate" style="max-width:260px;">${g.sub_motivo || g.detalle || 'Gasto de ruta'}</small>
                     </div>
-                    <div class="text-end">
-                        <span class="d-block font-monospace fw-bold text-dark fs-6">S/ ${parseFloat(g.importe || 0).toFixed(2)}</span>
+                    <div class="text-end flex-shrink-0">
+                        <span class="d-block font-monospace fw-bold text-dark fs-6 mb-1">S/ ${parseFloat(g.importe || 0).toFixed(2)}</span>
                         ${linkFoto}
                     </div>
                 </div>
@@ -173,7 +217,7 @@ window.condAbrirModalSubirGasto = function() {
 
     var viaje = window._condViajeActivoData.viaje;
     var subEl = document.getElementById('cond-modal-subtitulo');
-    if (subEl) subEl.textContent = `Viaje: ${viaje.codigo} | ${viaje.placa_tracto}`;
+    if (subEl) subEl.textContent = `Viaje: ${viaje.codigo} | ${viaje.placa_tracto || 'Tracto'}`;
 
     var form = document.getElementById('condFormNuevoGasto');
     if (form) form.reset();
