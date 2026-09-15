@@ -1934,15 +1934,21 @@ module.exports = function (db, broadcast, logAudit) {
                 ORDER BY fecha ASC, id ASC
             `, [ovTrim]);
 
-            // Sumatorias
+            // Sumatorias: SOLO cajas con estado PROCESADO representan fondos efectivamente depositados/entregados
             let totalDepositado = 0;
             let totalDevoluciones = 0;
+            let totalPendientePago = 0;
             cajas.forEach(c => {
                 const imp = parseFloat(c.importe_total || 0);
-                if (c.tipo_movimiento === 'INGRESO') {
-                    totalDevoluciones += imp;
-                } else {
-                    totalDepositado += imp;
+                const est = (c.estado || '').toUpperCase().trim();
+                if (est === 'PROCESADO' || est === 'REGISTRADO') {
+                    if (c.tipo_movimiento === 'INGRESO') {
+                        totalDevoluciones += imp;
+                    } else {
+                        totalDepositado += imp;
+                    }
+                } else if (est !== 'ANULADO') {
+                    totalPendientePago += imp;
                 }
             });
 
@@ -1953,8 +1959,8 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             });
 
-            // Saldo = Total Entregado (Egresos - Ingresos) - Total Gastado
-            // Si saldo > 0: El conductor gastó menos (saldo a favor de la empresa / por devolver o descontar)
+            // Saldo = Total Entregado Procesado (Egresos - Ingresos) - Total Gastado
+            // Si saldo > 0: El conductor gastó menos (saldo a favor de la empresa / por devolver)
             // Si saldo < 0: El conductor gastó más (saldo a favor del conductor / por reembolsar)
             const netoEntregado = totalDepositado - totalDevoluciones;
             const saldoDiferencia = netoEntregado - totalGastos;
@@ -1964,6 +1970,7 @@ module.exports = function (db, broadcast, logAudit) {
                 orden_viaje: ovTrim,
                 gastos: gastos || [],
                 total_depositado: netoEntregado,
+                total_pendiente_pago: totalPendientePago,
                 total_rendido: totalGastos,
                 saldo_diferencia: saldoDiferencia,
                 estado_balance: saldoDiferencia === 0 ? 'CUADRADO' : (saldoDiferencia > 0 ? 'SALDO_EMPRESA' : 'SALDO_CONDUCTOR')
@@ -2006,7 +2013,7 @@ module.exports = function (db, broadcast, logAudit) {
                 (b.orden_viaje || '').trim(),
                 safeDate(b.fecha) || new Date(),
                 (b.conductor || '').trim(),
-                (b.tipo_gasto || 'OTROS GASTOS').trim(),
+                (b.tipo_gasto || 'Gastos de Viaje y Ruta').trim(),
                 (b.sub_motivo || '').trim(),
                 (b.tipo_comprobante || 'BOLETA').trim(),
                 (b.serie || '').trim(),
@@ -2051,7 +2058,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             if (b.tipo_gasto !== undefined) {
                 sets.push('tipo_gasto = ?');
-                params.push((b.tipo_gasto || 'OTROS').trim());
+                params.push((b.tipo_gasto || 'Gastos de Viaje y Ruta').trim());
             }
             if (b.sub_motivo !== undefined) {
                 sets.push('sub_motivo = ?');
@@ -2097,94 +2104,188 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
-    // Generar Caja de Compensación (Devolución por saldo a favor o Reembolso por exceso de gasto)
+    // Generar Caja de Compensación (Devolución por saldo a favor o Reembolso agrupado por conceptos)
     router.post('/liquidaciones-gastos/generar-caja-compensacion', async (req, res) => {
         try {
             await ensureTableCaja(req);
             await ensureTableLiquidacionesGastos(req);
+            await ensureTableMotivosGastos(req);
             const tdb = getDb(req);
             const b = req.body || {};
 
-            const { orden_viaje, tipo_compensacion, importe, conductor, placa, descripcion, destino_devolucion } = b;
+            const { orden_viaje, tipo_compensacion, importe, conductor, placa, descripcion, destino_devolucion, conceptos } = b;
 
-            if (!orden_viaje || !importe || parseFloat(importe) <= 0) {
-                return res.status(400).json({ error: 'orden_viaje e importe válido requeridos' });
+            if (!orden_viaje) {
+                return res.status(400).json({ error: 'orden_viaje es requerido' });
             }
 
             const tipoMov = (tipo_compensacion === 'DEVOLUCION_EMPRESA') ? 'INGRESO' : 'EGRESO';
-            let motivo = (tipo_compensacion === 'DEVOLUCION_EMPRESA') ? 'Devolución de Viáticos / Gastos' : 'Reembolso de Gastos de Viaje';
-            let submot = (tipo_compensacion === 'DEVOLUCION_EMPRESA') ? 'Sobrante de Viáticos' : 'Reembolso por Exceso de Gasto';
-            let modPago = 'TRANSFERENCIA BANCARIA';
+            const anio = new Date().getFullYear().toString();
+            const userCreacion = (req.user && req.user.nombre) ? req.user.nombre : (b.usuario_creacion || 'ADMINISTRACION');
+
+            // Cargar mapa de centros de costo para motivos/submotivos
+            const [catalogoMotivos] = await tdb.query('SELECT motivo, sub_motivo, centro_costo_codigo FROM tesoreria_motivos_gastos WHERE estado = "ACTIVO"').catch(() => [[]]);
+            const getCentroCosto = (mot, sub) => {
+                const found = (catalogoMotivos || []).find(m => 
+                    (m.motivo || '').toLowerCase() === (mot || '').toLowerCase() &&
+                    (m.sub_motivo || '').toLowerCase() === (sub || '').toLowerCase()
+                );
+                return (found && found.centro_costo_codigo) ? found.centro_costo_codigo : 'CC-300';
+            };
+
+            const cajasGeneradas = [];
 
             if (tipo_compensacion === 'DEVOLUCION_EMPRESA') {
+                // Generar 1 Caja de INGRESO por el saldo a favor de la empresa
+                const impNum = safeNum(importe);
+                if (impNum <= 0) return res.status(400).json({ error: 'Importe de devolución inválido' });
+
+                let submot = 'Sobrante de Viáticos (Caja Principal)';
+                let modPago = 'DEPOSITO EN CUENTA';
                 if (destino_devolucion === 'CAJA_CHICA') {
                     submot = 'Sobrante de Viáticos (Caja Chica)';
                     modPago = 'EFECTIVO';
                 } else if (destino_devolucion === 'DESCUENTO_PLANILLA') {
                     submot = 'Descuento en Planilla / Asignación';
                     modPago = 'DESCUENTO EN PLANILLA';
+                }
+
+                const [lastNum] = await tdb.query("SELECT numero FROM tesoreria_caja WHERE serie = ? ORDER BY id DESC LIMIT 1", [anio]);
+                let nextCorrelativo = 1;
+                if (lastNum && lastNum.length > 0 && lastNum[0].numero) {
+                    const parsed = parseInt(lastNum[0].numero, 10);
+                    if (!isNaN(parsed)) nextCorrelativo = parsed + 1;
+                }
+                const numeroFormateado = String(nextCorrelativo).padStart(8, '0');
+                const descFinal = descripcion || `Devolución de Viáticos - Orden de Viaje ${orden_viaje} - Conductor: ${conductor || 'Personal'} [Destino: ${destino_devolucion || 'CAJA_PRINCIPAL'}]`;
+
+                const [rCaja] = await tdb.query(`
+                    INSERT INTO tesoreria_caja (
+                        fecha, hora, serie, numero, orden_viaje, conductor, placa, autoriza,
+                        motivo, centro_costo, sub_motivo, modalidad_pago, moneda,
+                        tipo_persona, persona, tipo_movimiento, subtotal, importe_total,
+                        descripcion, estado, usuario_creacion
+                    ) VALUES (
+                        CURDATE(), CURTIME(), ?, ?, ?, ?, ?, ?,
+                        'Gastos de Viaje y Ruta', 'CC-300', ?, ?, 'SOLES',
+                        'CONDUCTOR', ?, 'INGRESO', ?, ?,
+                        ?, 'PENDIENTE', ?
+                    )
+                `, [
+                    anio, numeroFormateado, orden_viaje, conductor || '', placa || '', 'GERENCIA',
+                    submot, modPago, conductor || 'CONDUCTOR', impNum, impNum, descFinal, userCreacion
+                ]);
+
+                cajasGeneradas.push({
+                    id: rCaja.insertId,
+                    numero: `${anio}-${numeroFormateado}`,
+                    sub_motivo: submot,
+                    importe: impNum
+                });
+
+            } else {
+                // REEMBOLSO AL CONDUCTOR: Agrupar por sub_motivo
+                let listaConceptos = [];
+
+                if (Array.isArray(conceptos) && conceptos.length > 0) {
+                    listaConceptos = conceptos.map(c => ({
+                        sub_motivo: (c.sub_motivo || c.concepto || 'Gastos de Viaje y Ruta').trim(),
+                        importe: safeNum(c.importe || 0),
+                        centro_costo: (c.centro_costo || getCentroCosto('Gastos de Viaje y Ruta', c.sub_motivo || c.concepto)).trim()
+                    })).filter(c => c.importe > 0);
                 } else {
-                    submot = 'Sobrante de Viáticos (Caja Principal)';
-                    modPago = 'DEPOSITO EN CUENTA';
+                    // Consultar automáticamente los gastos de liquidación de este viaje y agruparlos por sub_motivo
+                    const [gastosAgrup] = await tdb.query(`
+                        SELECT COALESCE(NULLIF(sub_motivo, ''), NULLIF(tipo_gasto, ''), 'Gastos de Viaje y Ruta') as sub_mot,
+                               SUM(importe) as total_grupo
+                        FROM tesoreria_liquidaciones_gastos
+                        WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND estado != 'RECHAZADO'
+                        GROUP BY sub_mot
+                    `, [orden_viaje]);
+
+                    if (gastosAgrup && gastosAgrup.length > 0) {
+                        listaConceptos = gastosAgrup.map(g => ({
+                            sub_motivo: g.sub_mot,
+                            importe: parseFloat(g.total_grupo || 0),
+                            centro_costo: getCentroCosto('Gastos de Viaje y Ruta', g.sub_mot)
+                        })).filter(c => c.importe > 0);
+                    } else {
+                        // Fallback con importe directo
+                        const impNum = safeNum(importe);
+                        if (impNum > 0) {
+                            listaConceptos = [{
+                                sub_motivo: 'Viáticos / Alimentación choferes',
+                                importe: impNum,
+                                centro_costo: 'CC-300'
+                            }];
+                        }
+                    }
+                }
+
+                if (listaConceptos.length === 0) {
+                    return res.status(400).json({ error: 'No se encontraron montos o conceptos válidos para generar caja.' });
+                }
+
+                const modPago = (destino_devolucion === 'EFECTIVO') ? 'EFECTIVO' : 'TRANSFERENCIA BANCARIA';
+
+                // Generar una caja por cada concepto
+                for (let i = 0; i < listaConceptos.length; i++) {
+                    const itemConcepto = listaConceptos[i];
+                    
+                    const [lastNum] = await tdb.query("SELECT numero FROM tesoreria_caja WHERE serie = ? ORDER BY id DESC LIMIT 1", [anio]);
+                    let nextCorrelativo = 1;
+                    if (lastNum && lastNum.length > 0 && lastNum[0].numero) {
+                        const parsed = parseInt(lastNum[0].numero, 10);
+                        if (!isNaN(parsed)) nextCorrelativo = parsed + 1;
+                    }
+                    const numeroFormateado = String(nextCorrelativo).padStart(8, '0');
+                    const descFinal = descripcion || `Reembolso por Liquidación [${itemConcepto.sub_motivo}] - Orden de Viaje ${orden_viaje} - Conductor: ${conductor || 'Personal'}`;
+
+                    const [rCaja] = await tdb.query(`
+                        INSERT INTO tesoreria_caja (
+                            fecha, hora, serie, numero, orden_viaje, conductor, placa, autoriza,
+                            motivo, centro_costo, sub_motivo, modalidad_pago, moneda,
+                            tipo_persona, persona, tipo_movimiento, subtotal, importe_total,
+                            descripcion, estado, usuario_creacion
+                        ) VALUES (
+                            CURDATE(), CURTIME(), ?, ?, ?, ?, ?, ?,
+                            'Gastos de Viaje y Ruta', ?, ?, ?, 'SOLES',
+                            'CONDUCTOR', ?, 'EGRESO', ?, ?,
+                            ?, 'PENDIENTE', ?
+                        )
+                    `, [
+                        anio,
+                        numeroFormateado,
+                        orden_viaje,
+                        conductor || '',
+                        placa || '',
+                        'GERENCIA',
+                        itemConcepto.centro_costo || 'CC-300',
+                        itemConcepto.sub_motivo,
+                        modPago,
+                        conductor || 'CONDUCTOR',
+                        itemConcepto.importe,
+                        itemConcepto.importe,
+                        descFinal,
+                        userCreacion
+                    ]);
+
+                    cajasGeneradas.push({
+                        id: rCaja.insertId,
+                        numero: `${anio}-${numeroFormateado}`,
+                        sub_motivo: itemConcepto.sub_motivo,
+                        centro_costo: itemConcepto.centro_costo || 'CC-300',
+                        importe: itemConcepto.importe
+                    });
                 }
             }
 
-            // Correlativo
-            const anio = new Date().getFullYear().toString();
-            const [lastNum] = await tdb.query(
-                "SELECT numero FROM tesoreria_caja WHERE serie = ? ORDER BY id DESC LIMIT 1",
-                [anio]
-            );
-            let nextCorrelativo = 1;
-            if (lastNum && lastNum.length > 0 && lastNum[0].numero) {
-                const parsed = parseInt(lastNum[0].numero, 10);
-                if (!isNaN(parsed)) nextCorrelativo = parsed + 1;
-            }
-            const numeroFormateado = String(nextCorrelativo).padStart(8, '0');
-
-            const impNum = safeNum(importe);
-            const descFinal = descripcion || `${motivo} - Orden de Viaje ${orden_viaje} - Conductor: ${conductor || 'Personal'} [Destino: ${destino_devolucion || 'CAJA_PRINCIPAL'}]`;
-            const userCreacion = (req.user && req.user.nombre) ? req.user.nombre : (b.usuario_creacion || 'ADMINISTRACION');
-
-            const insertSql = `
-                INSERT INTO tesoreria_caja (
-                    fecha, hora, serie, numero, orden_viaje, conductor, placa, autoriza,
-                    motivo, centro_costo, sub_motivo, modalidad_pago, moneda,
-                    tipo_persona, persona, tipo_movimiento, subtotal, importe_total,
-                    descripcion, estado, usuario_creacion
-                ) VALUES (
-                    CURDATE(), CURTIME(), ?, ?, ?, ?, ?, ?,
-                    ?, 'CC-300', ?, ?, 'SOLES',
-                    'CONDUCTOR', ?, ?, ?, ?,
-                    ?, 'PENDIENTE', ?
-                )
-            `;
-
-            const [rCaja] = await tdb.query(insertSql, [
-                anio,
-                numeroFormateado,
-                orden_viaje,
-                conductor || '',
-                placa || '',
-                'GERENCIA',
-                motivo,
-                submot,
-                modPago,
-                conductor || 'CONDUCTOR',
-                tipoMov,
-                impNum,
-                impNum,
-                descFinal,
-                userCreacion
-            ]);
-
             res.json({
                 ok: true,
-                caja_id: rCaja.insertId,
-                caja_numero: `${anio}-${numeroFormateado}`,
+                cajas_generadas: cajasGeneradas,
+                total_cajas: cajasGeneradas.length,
                 tipo_movimiento: tipoMov,
-                destino: destino_devolucion || 'CAJA_PRINCIPAL',
-                message: `Caja ${anio}-${numeroFormateado} (${tipoMov}) generada con éxito para ${destino_devolucion || 'Caja Principal'}`
+                message: `Se ${cajasGeneradas.length === 1 ? 'generó 1 caja' : 'generaron ' + cajasGeneradas.length + ' cajas'} de ${tipoMov} en estado PENDIENTE.`
             });
         } catch (err) {
             console.error('Error al generar caja de compensación:', err);

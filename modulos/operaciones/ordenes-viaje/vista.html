@@ -1734,13 +1734,13 @@ thead .ov-col-sticky-action {
             </div>
         </div>
 
-        <!-- Torre de Control -->
+        <!-- Coordinador Operativo -->
         <div class="ov-mon-kpi-chip">
             <div class="ov-mon-kpi-avatar ov-kpi-av-amber">
-                <i class="bi bi-shield-check"></i>
+                <i class="bi bi-person-badge-fill"></i>
             </div>
             <div class="text-truncate">
-                <div class="ov-mon-kpi-chip-label">Torre Control</div>
+                <div class="ov-mon-kpi-chip-label">Coordinador</div>
                 <div class="ov-mon-kpi-chip-val text-truncate" id="ov-mon-kpi-coordinador">---</div>
             </div>
         </div>
@@ -2274,13 +2274,11 @@ thead .ov-col-sticky-action {
                     <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.78rem;">
                         <thead class="table-light">
                             <tr class="text-uppercase text-secondary" style="font-size:0.67rem; font-weight:800;">
-                                <th style="width: 40px;">#</th>
+                                <th style="width: 80px; white-space: nowrap;">ID GASTO</th>
                                 <th>FECHA</th>
-                                <th>TIPO GASTO</th>
-                                <th>SUBMOTIVO</th>
-                                <th>COMPROBANTE</th>
-                                <th>PROVEEDOR</th>
-                                <th>DETALLE</th>
+                                <th>CONCEPTO (SUB MOTIVO)</th>
+                                <th>USUARIO RENDIDO</th>
+                                <th>DETALLE / NOTA</th>
                                 <th>SUSTENTO</th>
                                 <th class="text-end">IMPORTE</th>
                                 <th class="text-center" style="width:50px;">ACCIÓN</th>
@@ -2288,7 +2286,7 @@ thead .ov-col-sticky-action {
                         </thead>
                         <tbody id="ov-mon-tbody-liquidaciones">
                             <tr id="ov-mon-empty-liquidaciones">
-                                <td colspan="10" class="text-center py-4 text-muted">
+                                <td colspan="8" class="text-center py-4 text-muted">
                                     <i class="bi bi-inbox me-1"></i> No se registran gastos de liquidación para este viaje.
                                 </td>
                             </tr>
@@ -2447,24 +2445,25 @@ thead .ov-col-sticky-action {
                             <input type="date" class="form-control form-control-sm" id="ov-gl-fecha" required>
                         </div>
                         <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-dark mb-1">Tipo de Gasto *</label>
-                            <select class="form-select form-select-sm" id="ov-gl-tipo" required onchange="window.ovActualizarSubmotivosGastoLiq()">
-                                <option value="COCHERA">COCHERA / PARQUEO</option>
-                                <option value="PEAJES">PEAJE / GARITA</option>
-                                <option value="VIATICOS">VIÁTICOS / ALIMENTACIÓN</option>
-                                <option value="PERNOCTE">PERNOCTE / HOSPEDAJE</option>
-                                <option value="ESTIBA">ESTIBA / DESCARGA</option>
-                                <option value="LLANTAS">LLANTAS / PARCHADO</option>
-                                <option value="MANTENIMIENTO">AUXILIO MECÁNICO</option>
-                                <option value="OTROS">OTROS GASTOS</option>
+                            <label class="form-label small fw-bold text-dark mb-1">Concepto / Sub Motivo *</label>
+                            <select class="form-select form-select-sm" id="ov-gl-submotivo" required>
+                                <option value="Peajes (físico / telepeaje)">🛣️ Peajes (físico / telepeaje)</option>
+                                <option value="Viáticos / Alimentación choferes" selected>🍽️ Viáticos / Alimentación choferes</option>
+                                <option value="Cochera / Parqueo de ruta">🅿️ Cochera / Parqueo de ruta</option>
+                                <option value="Pernocte / Hospedaje en ruta">🏨 Pernocte / Hospedaje en ruta</option>
+                                <option value="Balanza y pesaje">⚖️ Balanza y pesaje</option>
+                                <option value="Lavado y engrase de unidad en viaje">🚿 Lavado y engrase de unidad en viaje</option>
+                                <option value="Estibadores / Carga y descarga menor">📦 Estibadores / Carga y descarga menor</option>
+                                <option value="Auxilio mecánico / Mantenimiento en ruta">🔧 Auxilio mecánico / Mantenimiento en ruta</option>
+                                <option value="Otros gastos de viaje y ruta">📝 Otros gastos de viaje y ruta</option>
                             </select>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold text-dark mb-1">Submotivo / Concepto</label>
-                            <input type="text" class="form-control form-control-sm" id="ov-gl-submotivo" placeholder="Ej: Cochera nocturna Huancayo">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-dark mb-1">Importe (S/) *</label>
+                            <input type="number" step="0.01" min="0.1" class="form-control form-control-sm fw-bold text-success" id="ov-gl-importe" placeholder="0.00" required>
                         </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label small fw-bold text-dark mb-1">Comprobante</label>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-dark mb-1">Comprobante (Opcional)</label>
                             <select class="form-select form-select-sm" id="ov-gl-comprobante">
                                 <option value="BOLETA">BOLETA</option>
                                 <option value="FACTURA">FACTURA</option>
@@ -2472,26 +2471,14 @@ thead .ov-col-sticky-action {
                                 <option value="RECIBO">RECIBO / DECLARACIÓN</option>
                             </select>
                         </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label small fw-bold text-dark mb-1">Serie / Número</label>
-                            <input type="text" class="form-control form-control-sm" id="ov-gl-numero" placeholder="B001-1234">
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label small fw-bold text-dark mb-1">Importe (S/) *</label>
-                            <input type="number" step="0.01" min="0.1" class="form-control form-control-sm fw-bold text-success" id="ov-gl-importe" placeholder="0.00" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold text-dark mb-1">Proveedor / RUC (Opcional)</label>
-                            <input type="text" class="form-control form-control-sm" id="ov-gl-proveedor" placeholder="Nombre de cochera o establecimiento">
-                        </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold text-dark mb-1">Detalle / Justificación</label>
-                            <textarea class="form-control form-control-sm" id="ov-gl-detalle" rows="2" placeholder="Observaciones o notas del gasto..."></textarea>
+                            <input type="text" class="form-control form-control-sm" id="ov-gl-detalle" placeholder="Ej: Almuerzo en ruta La Oroya o cochera km 45">
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold text-dark mb-1">Foto / Archivo del Comprobante (Sustento)</label>
                             <input type="file" class="form-control form-control-sm" id="ov-gl-sustento" accept="image/*,.pdf">
-                            <small class="text-muted" style="font-size:0.7rem;">Sube la foto del ticket, boleta o recibo de cochera/peaje.</small>
+                            <small class="text-muted" style="font-size:0.7rem;">Sube la foto del ticket, boleta o recibo.</small>
                         </div>
                     </div>
                 </div>
@@ -2559,6 +2546,13 @@ thead .ov-col-sticky-action {
                 </div>
 
                 <div id="ov-comp-bloque-reembolso" class="d-none">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark mb-1">Conceptos a generar en Tesorería:</label>
+                        <div id="ov-comp-desglose-conceptos" class="d-flex flex-column gap-1.5 p-2.5 bg-light border rounded-3" style="font-size:0.83rem;">
+                            <!-- Desglose dinámico por submotivo -->
+                        </div>
+                    </div>
+
                     <label class="form-label small fw-bold text-dark mb-2">¿Cómo se reembolsará el gasto en exceso al conductor?</label>
                     <div class="d-flex flex-column gap-2">
                         <label class="p-2.5 border rounded-3 d-flex align-items-center gap-2 cursor-pointer bg-light">
