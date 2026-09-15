@@ -61,12 +61,33 @@ window.bancosRenderizarTabla = function(rows) {
     tbody.innerHTML = html;
 };
 
+window.bancosToggleOtroBanco = function(val) {
+    var otroCont = document.getElementById('banco-modal-otro-container');
+    var otroInp = document.getElementById('banco-modal-nombre-otro');
+    if (!otroCont) return;
+    if (val === 'OTRO') {
+        otroCont.classList.remove('d-none');
+        if (otroInp) {
+            otroInp.required = true;
+            otroInp.focus();
+        }
+    } else {
+        otroCont.classList.add('d-none');
+        if (otroInp) {
+            otroInp.required = false;
+            otroInp.value = '';
+        }
+    }
+};
+
 window.bancosAbrirModalNuevo = function() {
     var form = document.getElementById('formNuevaCuentaBanco');
     if (form) form.reset();
 
     var idEl = document.getElementById('banco-modal-id');
     if (idEl) idEl.value = '';
+
+    window.bancosToggleOtroBanco('');
 
     var modalEl = document.getElementById('modalBancoForm');
     if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
@@ -81,8 +102,14 @@ window.bancosGuardarFormulario = async function(e) {
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
     }
 
+    var selBanco = (document.getElementById('banco-modal-nombre') || {}).value || '';
+    var bancoFinal = selBanco;
+    if (selBanco === 'OTRO') {
+        bancoFinal = (document.getElementById('banco-modal-nombre-otro') || {}).value?.trim() || 'OTRO';
+    }
+
     var payload = {
-        banco: (document.getElementById('banco-modal-nombre') || {}).value,
+        banco: bancoFinal,
         titular: (document.getElementById('banco-modal-titular') || {}).value,
         moneda: (document.getElementById('banco-modal-moneda') || {}).value,
         tipo_cuenta: (document.getElementById('banco-modal-tipo') || {}).value,
