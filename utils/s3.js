@@ -88,12 +88,21 @@ async function deleteFromS3(key) {
  * Extrae la key de S3 desde una URL completa.
  */
 function s3KeyFromUrl(url) {
-    if (!url || !BUCKET) return null;
-    const region = (process.env.AWS_REGION || 'us-east-2').trim();
-    const prefix = `https://${BUCKET}.s3.${region}.amazonaws.com/`;
-    if (url.startsWith(prefix)) return url.slice(prefix.length);
-    const prefix2 = `https://s3.${region}.amazonaws.com/${BUCKET}/`;
-    if (url.startsWith(prefix2)) return url.slice(prefix2.length);
+    if (!url) return null;
+    try {
+        const cleanUrl = url.split('?')[0];
+        const match = cleanUrl.match(/amazonaws\.com\/(.+)$/);
+        if (match && match[1]) {
+            let k = decodeURIComponent(match[1]);
+            if (BUCKET && k.startsWith(`${BUCKET}/`)) {
+                k = k.slice(BUCKET.length + 1);
+            }
+            return k;
+        }
+        if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+            return cleanUrl;
+        }
+    } catch(e) {}
     return null;
 }
 

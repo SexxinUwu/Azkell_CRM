@@ -176,23 +176,25 @@ window.condCargarPortal = async function() {
 
         containerGastos.innerHTML = gastos.map(g => {
             var sUrl = g.sustento_url;
-            var linkFoto = sUrl ? `<a href="${sUrl}" target="_blank" rel="noopener noreferrer" onclick="window.condVerFoto(event, '${sUrl}')" class="btn btn-sm btn-outline-primary bg-primary bg-opacity-10 text-primary border-primary border-opacity-25 py-1 px-2.5 rounded-pill fw-bold shadow-none" style="font-size:0.75rem;"><i class="bi bi-image me-1"></i> Ver Foto</a>` : '<span class="text-muted small">Sin Foto</span>';
-            var btnEditar = `<button type="button" onclick="window.condAbrirModalEditarGasto(${g.id})" class="btn btn-sm btn-outline-secondary bg-light text-dark border py-1 px-2.5 rounded-pill fw-bold shadow-none" style="font-size:0.75rem;"><i class="bi bi-pencil-square me-1 text-primary"></i> Editar</button>`;
+            var linkFoto = sUrl ? `<button type="button" onclick="window.condVerFoto(event, '${sUrl}')" class="cond-icon-btn btn-view-photo" title="Ver Comprobante"><i class="bi bi-eye-fill"></i></button>` : '';
+            var btnEditar = `<button type="button" onclick="window.condAbrirModalEditarGasto(${g.id})" class="cond-icon-btn btn-edit-item" title="Editar Comprobante"><i class="bi bi-pencil-square"></i></button>`;
             var fechaTexto = formatearFechaHoraGasto(g);
             var iconoTipo = tipoIconos[(g.tipo_gasto || '').toUpperCase()] || '🧾';
 
             return `
                 <div class="cond-gasto-item">
-                    <div class="me-2">
-                        <div class="d-flex align-items-center gap-2 mb-1">
+                    <div class="flex-grow-1 overflow-hidden me-2">
+                        <div class="d-flex flex-wrap align-items-center gap-1.5 mb-1">
                             <span class="badge bg-light text-dark border fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.72rem;">${iconoTipo} ${g.tipo_gasto}</span>
                             <span class="text-muted font-monospace fw-semibold" style="font-size:0.75rem;"><i class="bi bi-clock me-1 text-secondary"></i>${fechaTexto}</span>
                         </div>
-                        <small class="text-secondary fw-semibold d-block text-truncate" style="max-width:260px;">${g.sub_motivo || g.detalle || 'Gasto de ruta'}</small>
+                        <div class="text-secondary fw-semibold text-truncate small" title="${g.sub_motivo || g.detalle || 'Gasto de ruta'}">
+                            ${g.sub_motivo || g.detalle || 'Gasto de ruta'}
+                        </div>
                     </div>
-                    <div class="text-end flex-shrink-0">
-                        <span class="d-block font-monospace fw-bold text-dark fs-6 mb-1">S/ ${parseFloat(g.importe || 0).toFixed(2)}</span>
-                        <div class="d-flex align-items-center justify-content-end gap-1.5">
+                    <div class="text-end flex-shrink-0 d-flex flex-column align-items-end justify-content-between">
+                        <span class="font-monospace fw-bold text-dark fs-6 mb-1.5">S/ ${parseFloat(g.importe || 0).toFixed(2)}</span>
+                        <div class="d-flex align-items-center gap-1.5">
                             ${btnEditar}
                             ${linkFoto}
                         </div>
@@ -361,9 +363,51 @@ window.condAvisoCombustibleProximamente = function() {
     alert('⛽ Módulo de Vales de Combustible para Conductor:\n\nEsta función estará disponible muy pronto para que registres tus cargas de Diésel y Urea en ruta de manera directa.');
 };
 
-// ── VER FOTO EN OTRA VENTANA DIRECTAMENTE ──────────────────────────
+// ── VER FOTO EN OTRA VENTANA DIRECTAMENTE SIN FORZAR DESCARGA ──────
 window.condVerFoto = function(e, url) {
-    if (e) e.preventDefault();
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
     if (!url) return;
-    window.open(url, '_blank', 'noopener,noreferrer');
+
+    var win = window.open('', '_blank');
+    if (win) {
+        var isPdf = url.toLowerCase().includes('.pdf');
+        win.document.write(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Comprobante de Gasto</title>
+                <style>
+                    * { box-sizing: border-box; margin: 0; padding: 0; }
+                    body { background: #0b0f19; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; font-family: system-ui, -apple-system, sans-serif; color: white; }
+                    .top-bar { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+                    .viewer-box { width: 100%; max-width: 900px; height: 86vh; display: flex; align-items: center; justify-content: center; background: #1e293b; border-radius: 16px; overflow: hidden; border: 1px solid #334155; }
+                    img { max-width: 100%; max-height: 100%; object-fit: contain; }
+                    iframe { width: 100%; height: 100%; border: none; }
+                    .btn-action { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer; transition: background 0.2s; }
+                    .btn-action:hover { background: rgba(255,255,255,0.3); }
+                </style>
+            </head>
+            <body>
+                <div class="top-bar">
+                    <span style="font-weight: 700; font-size: 14px;">🧾 Sustento de Gasto</span>
+                    <div style="display:flex; gap:8px;">
+                        <a href="${url}" target="_blank" download class="btn-action">Descargar</a>
+                        <button onclick="window.close()" class="btn-action">Cerrar ✕</button>
+                    </div>
+                </div>
+                <div class="viewer-box">
+                    ${isPdf ? `<iframe src="${url}"></iframe>` : `<img src="${url}" alt="Comprobante" onerror="this.onerror=null; window.location.replace('${url}');">`}
+                </div>
+            </body>
+            </html>
+        `);
+        win.document.close();
+    } else {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
 };
