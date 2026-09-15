@@ -221,13 +221,13 @@ window.condAbrirModalSubirGasto = function() {
 
     var viaje = window._condViajeActivoData.viaje;
     var subEl = document.getElementById('cond-modal-subtitulo');
-    if (subEl) subEl.textContent = `Viaje: ${viaje.codigo} | ${viaje.placa_tracto || 'Tracto'}`;
+    if (subEl) subEl.textContent = `N° ${viaje.codigo}`;
 
     var titleEl = document.getElementById('cond-modal-title');
-    if (titleEl) titleEl.textContent = 'Tomar Foto y Rendir Gasto';
+    if (titleEl) titleEl.textContent = 'Rendir Gasto de Viaje';
 
     var btnTxt = document.getElementById('cond-btn-enviar-gasto-txt');
-    if (btnTxt) btnTxt.textContent = 'Subir Mi Gasto';
+    if (btnTxt) btnTxt.textContent = 'Guardar Gasto';
 
     var idInput = document.getElementById('cond-gasto-id');
     if (idInput) idInput.value = '';
