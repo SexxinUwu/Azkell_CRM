@@ -13,6 +13,36 @@ window.init_conductor_portal = function() {
         inputDni.value = userStorage;
     }
     window.condCargarPortal();
+    window.condCargarSubmotivosGastos();
+};
+
+window.condCargarSubmotivosGastos = async function(selectedVal) {
+    var sel = document.getElementById('cond-gasto-tipo');
+    if (!sel) return;
+    try {
+        var res = await fetch('/api/tesoreria/motivos-gastos?solo_activos=1');
+        var json = await res.json();
+        if (json && json.ok && Array.isArray(json.data) && json.data.length > 0) {
+            var items = json.data.filter(function(item) {
+                var m = (item.motivo || '').toLowerCase();
+                return m.includes('viaje') || m.includes('ruta');
+            });
+            if (items.length > 0) {
+                var currentVal = selectedVal || sel.value || 'Viáticos / Alimentación choferes';
+                sel.innerHTML = items.map(function(it) {
+                    return `<option value="${it.sub_motivo}">${it.sub_motivo}</option>`;
+                }).join('');
+                if (currentVal && items.some(function(it) { return it.sub_motivo === currentVal; })) {
+                    sel.value = currentVal;
+                } else if (items.some(function(it) { return it.sub_motivo.includes('Viáticos'); })) {
+                    var v = items.find(function(it) { return it.sub_motivo.includes('Viáticos'); });
+                    sel.value = v.sub_motivo;
+                }
+            }
+        }
+    } catch(e) {
+        console.warn('Error cargando submotivos para conductor:', e);
+    }
 };
 
 // Cargar portal del conductor sistematizado 100% por sesión
@@ -239,6 +269,8 @@ window.condAbrirModalSubirGasto = function() {
     var form = document.getElementById('condFormNuevoGasto');
     if (form) form.reset();
 
+    window.condCargarSubmotivosGastos('Viáticos / Alimentación choferes');
+
     var fotoInput = document.getElementById('cond-gasto-foto');
     if (fotoInput) fotoInput.required = true;
 
@@ -268,8 +300,11 @@ window.condAbrirModalEditarGasto = function(gastoId) {
     var subEl = document.getElementById('cond-modal-subtitulo');
     if (subEl) subEl.textContent = `Editando comprobante #${g.id} — ${g.tipo_gasto}`;
 
+    var targetSubmotivo = g.sub_motivo || g.tipo_gasto || 'Viáticos / Alimentación choferes';
+    window.condCargarSubmotivosGastos(targetSubmotivo);
+
     var selTipo = document.getElementById('cond-gasto-tipo');
-    if (selTipo) selTipo.value = g.sub_motivo || g.tipo_gasto || 'Viáticos / Alimentación choferes';
+    if (selTipo) selTipo.value = targetSubmotivo;
 
     var inpNota = document.getElementById('cond-gasto-nota');
     if (inpNota) inpNota.value = g.detalle || g.sub_motivo || '';
