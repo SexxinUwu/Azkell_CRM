@@ -672,7 +672,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             // Registros paginados con orden dinámico
             const [rows] = await tdb.query(
-                `SELECT * FROM ${valesTable} 
+                `SELECT *, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha FROM ${valesTable} 
                  ${whereSQL} 
                  ORDER BY ${sortCol} ${sortDir}, id_remoto DESC 
                  LIMIT ? OFFSET ?`,
