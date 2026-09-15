@@ -1068,6 +1068,9 @@ function cerrarSesion() {
     if (sb) sb.style.display = 'none';
     if (tb) tb.style.display = 'none';
 
+    const bNav = document.getElementById('bottom-nav');
+    if (bNav) bNav.style.display = 'none';
+
     ['menuMantenimiento', 'menuAlmacen', 'menuFlota'].forEach(id => { 
         const el = document.getElementById(id); 
         if (!el) return; 
@@ -1077,14 +1080,9 @@ function cerrarSesion() {
         if (inst) inst.dispose(); 
     });
     document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
-    // 🧹 Redirección limpia para purgar memoria, sockets y estados SPA
-    window.location.href = window.location.origin + '/#login';
-    // Fallback por si la redirección tarda o el navegador bloquea la navegación
-    setTimeout(function() {
-        if (!window.location.hash.includes('login')) {
-            cargarModuloAislado('login');
-        }
-    }, 100);
+    
+    // Recarga limpia a la raíz mostrando directamente el Login sin estados residuales
+    window.location.replace(window.location.origin + '/');
 }
 
 window.restaurarCascaronApp = function() {

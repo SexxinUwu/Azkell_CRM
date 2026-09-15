@@ -30,7 +30,9 @@ module.exports = function (db, broadcast, logAudit) {
         database: process.env.REMOTE_FUEL_DATABASE || 'marsisadb_prod',
         connectTimeout: 15000,
         waitForConnections: true,
-        connectionLimit: 5
+        connectionLimit: 5,
+        timezone: 'Z',
+        dateStrings: true
     };
 
     let _remotePool = null;
@@ -58,35 +60,34 @@ module.exports = function (db, broadcast, logAudit) {
         vehiculo_marca VARCHAR(100) NULL,
         vehiculo_modelo VARCHAR(100) NULL,
         conductor VARCHAR(150) NOT NULL DEFAULT '',
-        ruta VARCHAR(255) NOT NULL DEFAULT '',
-        departamento VARCHAR(80) NOT NULL DEFAULT '',
-        provincia VARCHAR(80) NOT NULL DEFAULT '',
-        distrito VARCHAR(80) NOT NULL DEFAULT '',
+        ruta VARCHAR(150) NOT NULL DEFAULT '',
+        departamento VARCHAR(100) NOT NULL DEFAULT '',
+        provincia VARCHAR(100) NOT NULL DEFAULT '',
+        distrito VARCHAR(100) NOT NULL DEFAULT '',
         estacion VARCHAR(150) NOT NULL DEFAULT '',
         tipo_combustible VARCHAR(50) NOT NULL DEFAULT 'D2',
-        proveedor VARCHAR(200) NOT NULL DEFAULT '',
+        proveedor VARCHAR(150) NOT NULL DEFAULT '',
         ruc VARCHAR(20) NOT NULL DEFAULT '',
-        kilometraje DECIMAL(12,2) NOT NULL DEFAULT 0,
+        kilometraje DECIMAL(10,2) NOT NULL DEFAULT 0,
         peso_tn DECIMAL(10,2) NOT NULL DEFAULT 0,
         galones DECIMAL(10,2) NOT NULL DEFAULT 0,
-        costo_gl DECIMAL(10,2) NOT NULL DEFAULT 0,
-        tipo_pago VARCHAR(50) NOT NULL DEFAULT 'ANTICIPO',
+        costo_gl DECIMAL(10,4) NOT NULL DEFAULT 0,
+        tipo_pago VARCHAR(50) NOT NULL DEFAULT 'CONTADO',
         dias_credito INT NOT NULL DEFAULT 0,
         moneda VARCHAR(20) NOT NULL DEFAULT 'SOLES',
-        importe DECIMAL(12,2) NOT NULL DEFAULT 0,
-        numero_comprobante VARCHAR(50) NOT NULL DEFAULT '',
-        tipo_cambio DECIMAL(8,4) NULL,
+        importe DECIMAL(10,2) NOT NULL DEFAULT 0,
+        numero_comprobante VARCHAR(100) NOT NULL DEFAULT '',
+        tipo_cambio DECIMAL(10,4) NULL,
         archivo_url VARCHAR(255) NULL,
         observacion TEXT NULL,
-        tipo VARCHAR(80) NOT NULL DEFAULT 'RECARGA VUELTA',
+        tipo VARCHAR(50) NOT NULL DEFAULT 'RECARGA VUELTA',
         creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_vehiculo (vehiculo),
-        INDEX idx_viaje (viaje),
         INDEX idx_fecha (fecha),
+        INDEX idx_viaje (viaje),
+        INDEX idx_vehiculo (vehiculo),
         INDEX idx_correlativo (correlativo),
-        INDEX idx_id_remoto (id_remoto),
-        INDEX idx_estado (estado)
+        INDEX idx_id_remoto (id_remoto)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
     const TABLE_MATRIZ_SQL = `CREATE TABLE IF NOT EXISTS combustible_matriz_d2 (
@@ -154,14 +155,23 @@ module.exports = function (db, broadcast, logAudit) {
     function safeSqlDate(val, serie) {
         const defaultYear = (serie && /^\d{4}$/.test(serie)) ? serie : '2025';
         if (!val) return `${defaultYear}-01-01 00:00:00`;
+        if (typeof val === 'string') {
+            const s = val.trim().replace('T', ' ');
+            if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+                return s.length === 10 ? `${s} 00:00:00` : s.slice(0, 19);
+            }
+        }
         try {
-            let dt = (val instanceof Date) ? new Date(val.getTime()) : new Date(val);
+            let dt = (val instanceof Date) ? val : new Date(val);
             if (!isNaN(dt.getTime())) {
-                const currentYear = new Date().getFullYear();
-                if (dt.getFullYear() > currentYear && serie && /^\d{4}$/.test(serie)) {
-                    dt.setFullYear(parseInt(serie, 10));
-                }
-                return dt.toISOString().slice(0, 19).replace('T', ' ');
+                const pad = n => String(n).padStart(2, '0');
+                const Y = dt.getFullYear();
+                const M = pad(dt.getMonth() + 1);
+                const D = pad(dt.getDate());
+                const h = pad(dt.getHours());
+                const m = pad(dt.getMinutes());
+                const s = pad(dt.getSeconds());
+                return `${Y}-${M}-${D} ${h}:${m}:${s}`;
             }
         } catch(e) {}
         return `${defaultYear}-01-01 00:00:00`;
