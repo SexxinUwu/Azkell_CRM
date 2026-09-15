@@ -1077,9 +1077,14 @@ function cerrarSesion() {
         if (inst) inst.dispose(); 
     });
     document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
-    document.querySelectorAll('.modal-backdrop, .offcanvas-backdrop, #rotDrawerBackdrop').forEach(el => el.remove());
-
-    cargarModuloAislado('login');
+    // 🧹 Redirección limpia para purgar memoria, sockets y estados SPA
+    window.location.href = window.location.origin + '/#login';
+    // Fallback por si la redirección tarda o el navegador bloquea la navegación
+    setTimeout(function() {
+        if (!window.location.hash.includes('login')) {
+            cargarModuloAislado('login');
+        }
+    }, 100);
 }
 
 window.restaurarCascaronApp = function() {
@@ -4386,7 +4391,29 @@ window.cargarModuloAislado = async function(rutaModulo) {
         if (typeof actualizarBottomNavActivo === 'function') actualizarBottomNavActivo(rutaModulo);
     } catch(e) {
         window._navProgress.done();
-        if (root) root.innerHTML = `<div class="alert alert-danger m-4 shadow-sm"><i class="bi bi-exclamation-triangle-fill"></i> Error de Arquitectura: ${e.message}</div>`;
+        if (root) {
+            const esLogin = rutaModulo === 'login';
+            const esFalloRed = e.message && (e.message.includes('Failed to fetch') || e.message.includes('NetworkError') || e.message.includes('ERR_INTERNET'));
+            
+            if (esLogin || esFalloRed) {
+                root.innerHTML = `
+                    <div class="d-flex flex-column align-items-center justify-content-center min-vh-100 p-4 text-center" style="background:#f8fafc;">
+                        <div class="card shadow-lg border-0 rounded-4 p-4 p-md-5" style="max-width: 440px; width: 100%;">
+                            <div class="rounded-circle bg-danger bg-opacity-10 text-danger d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 64px; height: 64px; font-size: 2rem;">
+                                <i class="bi bi-shield-lock-fill"></i>
+                            </div>
+                            <h5 class="fw-bold text-dark mb-2">Sesión Finalizada</h5>
+                            <p class="text-muted small mb-4">Tu sesión ha concluido de forma segura. Si experimentaste un corte de conexión, haz clic en el botón para reconectar e iniciar sesión.</p>
+                            <button class="btn btn-primary fw-bold py-2.5 rounded-3 w-100 shadow-sm" onclick="window.location.reload()">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Reconectar / Iniciar Sesión
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                root.innerHTML = `<div class="alert alert-danger m-4 shadow-sm"><i class="bi bi-exclamation-triangle-fill"></i> Error de Arquitectura: ${e.message}</div>`;
+            }
+        }
     }
 };
 
