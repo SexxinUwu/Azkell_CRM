@@ -259,10 +259,11 @@ window.verificarSesionGuardada = function() {
     };
 
     // DASHBOARD
-    var vDash = _cL('dashboard');
+    var vDash = isAdm || (_cL('dashboard') && !(rolLogueado && rolLogueado.toLowerCase().includes('conductor')));
     safe('nav-dashboard', vDash);
     safe('mbnav-dashboard', vDash);
     safe('wrap-dashboard', vDash);
+    safe('bnav-dashboard', vDash);
 
     // FLOTA — hub: hub_flota
     var showFlotaHub = _cHub('hub_flota');
@@ -574,6 +575,10 @@ window.verificarSesionGuardada = function() {
     // ── FUNCIÓN GLOBAL PARA ACTUALIZAR BADGES DE PENDIENTES DE GERENCIA ──
     window.actualizarBadgesGerenciaGlobal = async function() {
         try {
+            var rol = (localStorage.getItem('fleet_rol') || window.rolLogueado || '').toLowerCase();
+            if (rol.includes('conductor')) return;
+            if (!isAdm && !window.checkPerm('tesoreria_caja', 'l') && !window.checkPerm('ordenes_compra', 'l') && !window.checkPerm('recepcion_compras', 'l')) return;
+
             // 1. Consultar O/C pendientes
             let pendOC = 0;
             try {
@@ -757,7 +762,10 @@ window.verificarSesionGuardada = function() {
     };
 
     window.obtenerPrimeraRutaPermitida = function() {
-        var rol = (localStorage.getItem('fleet_rol') || '').toLowerCase();
+        var rol = (localStorage.getItem('fleet_rol') || window.rolLogueado || '').toLowerCase();
+        if (rol.includes('conductor')) {
+            return 'operaciones/conductor-portal';
+        }
         if (rol.includes('analista') || rol.includes('combustible')) {
             if (window.checkPerm('combustible_analisis', 'l')) return 'operaciones/combustible-analisis';
             if (window.checkPerm('combustible_vales', 'l')) return 'operaciones/combustible-vales';
@@ -769,6 +777,7 @@ window.verificarSesionGuardada = function() {
         }
         if (isAdm || window.checkPerm('dashboard', 'l')) return 'dashboard';
         var posibles = [
+            'operaciones/conductor-portal',
             'operaciones/combustible-analisis',
             'operaciones/combustible-vales',
             'operaciones/ordenes-viaje',
@@ -795,12 +804,15 @@ window.verificarSesionGuardada = function() {
         for (var i = 0; i < posibles.length; i++) {
             if (window.esRutaValidaYPermitida(posibles[i])) return posibles[i];
         }
-        return 'dashboard';
+        return 'operaciones/conductor-portal';
     };
 
     window.irAInicio = function() {
-        var rol = (localStorage.getItem('fleet_rol') || '').toLowerCase();
-        if (rol.includes('seguridad')) {
+        var rol = (localStorage.getItem('fleet_rol') || window.rolLogueado || '').toLowerCase();
+        if (rol.includes('conductor')) {
+            cargarModuloAislado('operaciones/conductor-portal');
+            setBottomNavActive('bnav-conductor');
+        } else if (rol.includes('seguridad')) {
             cargarModuloAislado('seguridad/unidades');
             setBottomNavActive('bnav-seguridad');
         } else {
