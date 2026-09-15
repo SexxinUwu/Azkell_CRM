@@ -86,8 +86,7 @@ window.ovConfigurarThead = function() {
     if (_ovModoVistaActual === 'viajes') {
         thead.innerHTML = `
             <tr>
-                <th class="ov-col-sticky-action text-center" style="width: 62px; min-width: 62px; max-width: 62px;">ACCIÓN</th>
-                <th style="min-width: 100px;">OPERACIÓN ${_sortIcon('estado')}</th>
+                <th class="ov-col-sticky-action text-center" style="width: 50px; min-width: 50px; max-width: 50px;">ACCIÓN</th>
                 <th style="min-width: 95px;">ESTADO ${_sortIcon('estado')}</th>
                 <th style="min-width: 140px;">F. Y HORA CREACIÓN ${_sortIcon('fecha_creacion')}</th>
                 <th style="min-width: 145px;">N° VIAJE ${_sortIcon('viaje')}</th>
@@ -678,10 +677,7 @@ window.ovRenderizarTabla = function() {
                         </div>
                     </td>
 
-                    <!-- 2. OPERACIÓN -->
-                    <td>${operacionHtml}</td>
-
-                    <!-- 3. ESTADO -->
+                    <!-- 2. ESTADO -->
                     <td>${estadoBadge}</td>
 
                     <!-- 4. F. Y HORA CREACIÓN -->
