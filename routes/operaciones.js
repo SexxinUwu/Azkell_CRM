@@ -1,5 +1,6 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
+const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
@@ -2468,9 +2469,19 @@ module.exports = function (db, broadcast, logAudit) {
             `, [viaje.viaje]);
 
             let totalGastado = 0;
-            gastos.forEach(g => {
+            for (let g of gastos) {
                 if (g.estado !== 'RECHAZADO') totalGastado += parseFloat(g.importe || 0);
-            });
+                if (g.sustento_url && (g.sustento_url.includes('amazonaws.com') || g.sustento_url.startsWith('http'))) {
+                    try {
+                        const key = s3KeyFromUrl(g.sustento_url);
+                        if (key) {
+                            g.sustento_url = await getPresignedUrl(key, 7200);
+                        }
+                    } catch (e) {
+                        console.warn('Error al firmar sustento_url de gasto:', e.message);
+                    }
+                }
+            }
 
             const saldo = netoAsignado - totalGastado;
 
