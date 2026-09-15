@@ -179,12 +179,13 @@
 /* ── Comprobantes Rendidos Card ─────────────────────────────────── */
 .cond-gasto-item {
     background: #ffffff;
-    border: 1px solid #f1f5f9;
+    border: 1px solid #e2e8f0;
     border-radius: 18px;
-    padding: 0.95rem 1.05rem;
+    padding: 0.85rem 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 0.75rem;
     margin-bottom: 0.65rem;
     box-shadow: 0 2px 6px rgba(0,0,0,0.02);
     transition: background 0.15s ease, transform 0.15s ease;
@@ -192,6 +193,48 @@
 .cond-gasto-item:hover {
     background: #f8fafc;
     transform: translateY(-1px);
+}
+
+.cond-icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    padding: 0;
+    outline: none;
+}
+.cond-icon-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.cond-icon-btn.btn-view-photo {
+    background: #eff6ff;
+    color: #0284c7;
+    border-color: #bae6fd;
+}
+.cond-icon-btn.btn-view-photo:hover {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+}
+.cond-icon-btn.btn-edit-item {
+    background: #f8fafc;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+.cond-icon-btn.btn-edit-item:hover {
+    background: #1e293b;
+    color: #ffffff;
+    border-color: #1e293b;
 }
 
 /* ── Floating Drawer Modal & Inputs Styling (1:1 Idéntico a Reporte de Fallas) ── */
