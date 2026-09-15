@@ -772,6 +772,18 @@ thead .ov-col-sticky-action {
     visibility: visible;
 }
 
+/* Modales emergentes y oscurecimiento de fondo (backdrop) sobre el drawer de detalle */
+.modal-backdrop {
+    z-index: 1075 !important;
+}
+.modal-backdrop.show {
+    opacity: 0.65 !important;
+    background-color: #0f172a !important;
+}
+.modal {
+    z-index: 1080 !important;
+}
+
 /* Capa specular neutralizada para evitar velo lechoso sobre los textos */
 .ov-ambient-specular {
     display: none !important;
@@ -2412,7 +2424,7 @@ thead .ov-col-sticky-action {
 </div>
 
 <!-- Modal para Registrar Gasto de Liquidación / Rendición de Viaje -->
-<div class="modal fade" id="ovModalNuevoGastoLiq" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+<div class="modal fade" id="ovModalNuevoGastoLiq" tabindex="-1" aria-hidden="true" style="z-index: 1080;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-bottom py-3 px-4 bg-light rounded-top-4">
@@ -2495,7 +2507,7 @@ thead .ov-col-sticky-action {
 </div>
 
 <!-- Modal para Decidir Imputación / Destino de Devolución o Reembolso -->
-<div class="modal fade" id="ovModalCompensarLiquidacion" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+<div class="modal fade" id="ovModalCompensarLiquidacion" tabindex="-1" aria-hidden="true" style="z-index: 1080;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-bottom py-3 px-4 bg-light rounded-top-4">
