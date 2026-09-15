@@ -157,13 +157,21 @@ module.exports = function (db, broadcast, logAudit) {
         if (!val) return `${defaultYear}-01-01 00:00:00`;
         if (typeof val === 'string') {
             const s = val.trim().replace('T', ' ');
+            if (s.startsWith('0000-00-00') || s.startsWith('0000-00')) {
+                return `${defaultYear}-01-01 00:00:00`;
+            }
             if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+                // Verificar que no tenga año 0000 o meses/días inválidos
+                const anio = parseInt(s.slice(0, 4), 10);
+                if (anio < 2000 || anio > 2100) {
+                    return `${defaultYear}-01-01 00:00:00`;
+                }
                 return s.length === 10 ? `${s} 00:00:00` : s.slice(0, 19);
             }
         }
         try {
             let dt = (val instanceof Date) ? val : new Date(val);
-            if (!isNaN(dt.getTime())) {
+            if (!isNaN(dt.getTime()) && dt.getFullYear() >= 2000) {
                 const pad = n => String(n).padStart(2, '0');
                 const Y = dt.getFullYear();
                 const M = pad(dt.getMonth() + 1);
