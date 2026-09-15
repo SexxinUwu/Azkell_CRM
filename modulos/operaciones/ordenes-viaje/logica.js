@@ -1608,9 +1608,9 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     if (tractoEl) tractoEl.textContent = item.placa_tracto || '---';
     if (remolqueEl) remolqueEl.textContent = item.placa_remolque || '---';
     if (condEl) condEl.textContent = item.conductor || '---';
-    if (clienteEl) clienteEl.textContent = item.cliente || 'CLIENTE OPERACIONES';
+    if (clienteEl) clienteEl.textContent = item.cliente || '---';
     if (rutaEl) rutaEl.textContent = item.ruta || '---';
-    if (coordEl) coordEl.textContent = (item.usuario_creacion || item.usuario || 'ADMINISTRADOR DEL SISTEMA').toUpperCase();
+    if (coordEl) coordEl.textContent = (item.usuario_creacion || item.usuario || 'ADMINISTRADOR').toUpperCase();
 
     // Panel Resumen -> Ficha Operacional Técnica
     var resServicio = document.getElementById('ov-mon-res-servicio');
@@ -2098,7 +2098,7 @@ window.ovCargarLiquidacionesViaje = async function(viajeCode) {
         if (gastos.length === 0) {
             tbody.innerHTML = `
                 <tr id="ov-mon-empty-liquidaciones">
-                    <td colspan="10" class="text-center py-4 text-muted">
+                    <td colspan="8" class="text-center py-4 text-muted">
                         <i class="bi bi-inbox me-1"></i> No se registran gastos de liquidación para este viaje. Haz clic en "Registrar Gasto" para agregar uno.
                     </td>
                 </tr>
@@ -2117,18 +2117,19 @@ window.ovCargarLiquidacionesViaje = async function(viajeCode) {
                 `;
             }
 
-            var compStr = (g.tipo_comprobante || 'BOLETA') + (g.numero ? ` (${g.numero})` : '');
-            var provStr = g.proveedor_nombre || g.proveedor_ruc || '—';
+            var idStr = `G-${String(g.id).padStart(4, '0')}`;
+            var conceptoStr = g.sub_motivo || g.tipo_gasto || 'Gastos de Viaje y Ruta';
+            var userStr = g.usuario_registro || g.usuario_creacion || g.conductor || 'CONDUCTOR';
 
             return `
                 <tr class="stagger-child" style="animation-delay:${i * 30}ms;">
-                    <td class="font-monospace fw-bold text-secondary">${i + 1}</td>
-                    <td class="font-monospace">${g.fecha || '—'}</td>
-                    <td><span class="badge bg-light text-dark border">${g.tipo_gasto}</span></td>
-                    <td class="text-muted small">${g.sub_motivo || '—'}</td>
-                    <td><span class="badge bg-light text-secondary border font-monospace" style="font-size:0.68rem;">${compStr}</span></td>
-                    <td class="text-truncate" style="max-width:140px;" title="${provStr}">${provStr}</td>
-                    <td class="text-muted small text-truncate" style="max-width:150px;" title="${g.detalle || ''}">${g.detalle || '—'}</td>
+                    <td class="font-monospace fw-bold text-primary">${idStr}</td>
+                    <td class="font-monospace">${g.fecha ? String(g.fecha).split('T')[0] : '—'}</td>
+                    <td><span class="badge bg-light text-dark border fw-semibold">${conceptoStr}</span></td>
+                    <td class="text-dark fw-semibold small text-truncate" style="max-width:180px;" title="${userStr}">
+                        <i class="bi bi-person-fill text-secondary me-1"></i>${userStr}
+                    </td>
+                    <td class="text-muted small text-truncate" style="max-width:180px;" title="${g.detalle || ''}">${g.detalle || '—'}</td>
                     <td>${sustHtml}</td>
                     <td class="font-monospace fw-bold text-dark text-end text-nowrap">S/ ${parseFloat(g.importe || 0).toFixed(2)}</td>
                     <td class="text-center">
@@ -2142,7 +2143,7 @@ window.ovCargarLiquidacionesViaje = async function(viajeCode) {
 
     } catch (err) {
         console.error('Error al cargar liquidaciones de gastos:', err);
-        tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger">Error al cargar liquidación de gastos.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">Error al cargar liquidación de gastos.</td></tr>`;
     }
 };
 
@@ -2191,12 +2192,12 @@ window.ovGuardarGastoLiquidacion = async function(e) {
         formData.append('orden_viaje', viajeCode);
         formData.append('fecha', document.getElementById('ov-gl-fecha')?.value || '');
         formData.append('conductor', item.conductor || '');
-        formData.append('tipo_gasto', document.getElementById('ov-gl-tipo')?.value || 'COCHERA');
-        formData.append('sub_motivo', document.getElementById('ov-gl-submotivo')?.value || '');
+        formData.append('tipo_gasto', 'Gastos de Viaje y Ruta');
+        formData.append('sub_motivo', document.getElementById('ov-gl-submotivo')?.value || 'Viáticos / Alimentación choferes');
         formData.append('tipo_comprobante', document.getElementById('ov-gl-comprobante')?.value || 'BOLETA');
-        formData.append('numero', document.getElementById('ov-gl-numero')?.value || '');
+        formData.append('numero', '');
         formData.append('importe', document.getElementById('ov-gl-importe')?.value || '0');
-        formData.append('proveedor_nombre', document.getElementById('ov-gl-proveedor')?.value || '');
+        formData.append('proveedor_nombre', '');
         formData.append('detalle', document.getElementById('ov-gl-detalle')?.value || '');
 
         var userActual = (typeof window.usuarioLogueado !== 'undefined' && window.usuarioLogueado) || localStorage.getItem('fleet_user') || 'OPERACIONES';
@@ -2287,6 +2288,35 @@ window.ovEjecutarCajaCompensacion = function() {
         }
         if (bDev) bDev.classList.add('d-none');
         if (bReemb) bReemb.classList.remove('d-none');
+
+        // Renderizar desglose de conceptos para reembolso
+        var desgloseEl = document.getElementById('ov-comp-desglose-conceptos');
+        if (desgloseEl) {
+            var gastos = (window._ovLiqDataCache && Array.isArray(window._ovLiqDataCache.gastos)) ? window._ovLiqDataCache.gastos : [];
+            var grupos = {};
+            gastos.forEach(g => {
+                if (g.estado !== 'RECHAZADO') {
+                    var cName = g.sub_motivo || g.tipo_gasto || 'Gastos de Viaje y Ruta';
+                    grupos[cName] = (grupos[cName] || 0) + parseFloat(g.importe || 0);
+                }
+            });
+
+            var keys = Object.keys(grupos);
+            if (keys.length > 0) {
+                desgloseEl.innerHTML = keys.map(k => `
+                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+                        <div class="d-flex align-items-center gap-1.5">
+                            <i class="bi bi-wallet2 text-primary"></i>
+                            <span class="fw-semibold text-dark">${k}</span>
+                            <span class="badge bg-secondary-subtle text-secondary font-monospace" style="font-size:0.65rem;">CC-300</span>
+                        </div>
+                        <span class="font-monospace fw-bold text-dark">S/ ${grupos[k].toFixed(2)}</span>
+                    </div>
+                `).join('') + `<div class="d-flex justify-content-between align-items-center pt-2 fw-bold text-dark border-top"><span>Total Reembolso:</span><span class="font-monospace text-danger">S/ ${monto.toFixed(2)}</span></div>`;
+            } else {
+                desgloseEl.innerHTML = `<div class="d-flex justify-content-between align-items-center fw-bold"><span>Reembolso General:</span><span class="font-monospace text-danger">S/ ${monto.toFixed(2)}</span></div>`;
+            }
+        }
     }
 
     var bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);

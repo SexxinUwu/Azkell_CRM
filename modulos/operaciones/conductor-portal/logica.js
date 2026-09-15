@@ -179,17 +179,19 @@ window.condCargarPortal = async function() {
             var linkFoto = sUrl ? `<a href="${sUrl}" target="_blank" rel="noopener noreferrer" class="cond-icon-btn btn-view-photo" title="Ver Comprobante"><i class="bi bi-eye-fill"></i></a>` : '';
             var btnEditar = `<button type="button" onclick="window.condAbrirModalEditarGasto(${g.id})" class="cond-icon-btn btn-edit-item" title="Editar Comprobante"><i class="bi bi-pencil-square"></i></button>`;
             var fechaTexto = formatearFechaHoraGasto(g);
-            var iconoTipo = tipoIconos[(g.tipo_gasto || '').toUpperCase()] || '🧾';
+            var idGastoStr = `G-${String(g.id).padStart(4, '0')}`;
+            var subMotivoStr = g.sub_motivo || g.tipo_gasto || 'Gasto de ruta';
 
             return `
                 <div class="cond-gasto-item">
                     <div class="flex-grow-1 overflow-hidden me-2">
                         <div class="d-flex flex-wrap align-items-center gap-1.5 mb-1">
-                            <span class="badge bg-light text-dark border fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.72rem;">${iconoTipo} ${g.tipo_gasto}</span>
+                            <span class="badge bg-dark font-monospace text-white fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.70rem;">${idGastoStr}</span>
+                            <span class="badge bg-light text-dark border fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.72rem;">🧾 ${subMotivoStr}</span>
                             <span class="text-muted font-monospace fw-semibold" style="font-size:0.75rem;"><i class="bi bi-clock me-1 text-secondary"></i>${fechaTexto}</span>
                         </div>
-                        <div class="text-secondary fw-semibold text-truncate small" title="${g.sub_motivo || g.detalle || 'Gasto de ruta'}">
-                            ${g.sub_motivo || g.detalle || 'Gasto de ruta'}
+                        <div class="text-secondary fw-semibold text-truncate small" title="${g.detalle || subMotivoStr}">
+                            ${g.detalle || subMotivoStr}
                         </div>
                     </div>
                     <div class="text-end flex-shrink-0 d-flex flex-column align-items-end justify-content-between">
@@ -267,10 +269,10 @@ window.condAbrirModalEditarGasto = function(gastoId) {
     if (subEl) subEl.textContent = `Editando comprobante #${g.id} — ${g.tipo_gasto}`;
 
     var selTipo = document.getElementById('cond-gasto-tipo');
-    if (selTipo) selTipo.value = g.tipo_gasto || 'COCHERA';
+    if (selTipo) selTipo.value = g.sub_motivo || g.tipo_gasto || 'Viáticos / Alimentación choferes';
 
     var inpNota = document.getElementById('cond-gasto-nota');
-    if (inpNota) inpNota.value = g.sub_motivo || g.detalle || '';
+    if (inpNota) inpNota.value = g.detalle || g.sub_motivo || '';
 
     var inpImp = document.getElementById('cond-gasto-importe');
     if (inpImp) inpImp.value = parseFloat(g.importe || 0).toFixed(2);
@@ -365,12 +367,14 @@ window.condGuardarGasto = async function(e) {
 
     try {
         var formData = new FormData();
+        var submotivoSel = document.getElementById('cond-gasto-tipo')?.value || 'Viáticos / Alimentación choferes';
+        var notaVal = document.getElementById('cond-gasto-nota')?.value || '';
         formData.append('orden_viaje', viaje.codigo);
         formData.append('conductor', cond.nombre || 'Conductor');
-        formData.append('tipo_gasto', document.getElementById('cond-gasto-tipo')?.value || 'COCHERA');
-        formData.append('sub_motivo', document.getElementById('cond-gasto-nota')?.value || document.getElementById('cond-gasto-tipo')?.value || 'Gasto ruta');
+        formData.append('tipo_gasto', 'Gastos de Viaje y Ruta');
+        formData.append('sub_motivo', submotivoSel);
         formData.append('importe', document.getElementById('cond-gasto-importe')?.value || '0');
-        formData.append('detalle', document.getElementById('cond-gasto-nota')?.value || 'Registrado desde portal móvil conductor');
+        formData.append('detalle', notaVal || submotivoSel);
         formData.append('usuario_creacion', cond.nombre ? `${cond.nombre} (Conductor)` : 'CONDUCTOR MÓVIL');
 
         var fileInput = document.getElementById('cond-gasto-foto');
