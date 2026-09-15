@@ -1793,14 +1793,12 @@ window.ovAbrirModalMonitoreoViaje = async function(viajeCode) {
     if (backdrop) backdrop.classList.add('active');
 
     // Resetear a la primera tab (Resumen)
-    var btnPrimeraTab = document.querySelector('.ov-mon-tab-item');
+    var btnPrimeraTab = document.querySelector('.ov-mon-tab-item[data-index="0"]') || document.querySelector('.ov-mon-tab-item');
     if (btnPrimeraTab) window.ovMonCambiarTabSpatial(0, 'resumen', btnPrimeraTab);
 
-    // Inicializar posición de píldora elástica
-    setTimeout(() => {
-        var firstBtn = document.querySelector('.ov-mon-tab-item[data-index="0"]');
-        if (firstBtn) window.ovMoverPildoraElastica(firstBtn, 0);
-    }, 50);
+    // Cargar depósitos y liquidaciones de gastos en tiempo real
+    window.ovCargarDepositosViaje(viajeCode);
+    window.ovCargarLiquidacionesViaje(viajeCode);
 
     // ── 2. CARGA ASÍNCRONA EN SEGUNDO PLANO (NO BLOQUEA LA APERTURA) ──
     // Buscar combustible asociado por viaje o placa
@@ -2500,24 +2498,17 @@ window.ovMoverPildoraElastica = function(targetBtn, prevIndex = window._ovCurren
 
     var trackRect = track.getBoundingClientRect();
     var btnRect = targetBtn.getBoundingClientRect();
-    var newIdx = parseInt(targetBtn.getAttribute('data-index') || '0', 10);
 
-    var leftPos = btnRect.left - trackRect.left;
+    var leftPos = (btnRect.left - trackRect.left) + track.scrollLeft;
     var w = btnRect.width;
-
-    var direction = newIdx > prevIndex ? 'right' : newIdx < prevIndex ? 'left' : 'none';
-    if (direction === 'right') {
-        pill.classList.add('stretch-right');
-    } else if (direction === 'left') {
-        pill.classList.add('stretch-left');
-    }
 
     pill.style.left = leftPos + 'px';
     pill.style.width = w + 'px';
 
-    setTimeout(() => {
-        pill.classList.remove('stretch-right', 'stretch-left');
-    }, 110);
+    // Auto-scroll suave para centrar la pestaña seleccionada en móviles o pantallas reducidas
+    if (typeof targetBtn.scrollIntoView === 'function') {
+        targetBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
 };
 
 window.ovMonCambiarTabSpatial = function(newIdx, tabKey, targetBtn) {
