@@ -176,7 +176,7 @@ window.condCargarPortal = async function() {
 
         containerGastos.innerHTML = gastos.map(g => {
             var sUrl = g.sustento_url;
-            var linkFoto = sUrl ? `<a href="${sUrl}" target="_blank" class="btn btn-sm btn-outline-primary bg-primary bg-opacity-10 text-primary border-primary border-opacity-25 py-1 px-2.5 rounded-pill fw-bold shadow-none" style="font-size:0.75rem;"><i class="bi bi-image me-1"></i> Ver Foto</a>` : '<span class="text-muted small">Sin Foto</span>';
+            var linkFoto = sUrl ? `<a href="${sUrl}" target="_blank" rel="noopener noreferrer" onclick="window.condVerFoto(event, '${sUrl}')" class="btn btn-sm btn-outline-primary bg-primary bg-opacity-10 text-primary border-primary border-opacity-25 py-1 px-2.5 rounded-pill fw-bold shadow-none" style="font-size:0.75rem;"><i class="bi bi-image me-1"></i> Ver Foto</a>` : '<span class="text-muted small">Sin Foto</span>';
             var fechaTexto = formatearFechaHoraGasto(g);
             var iconoTipo = tipoIconos[(g.tipo_gasto || '').toUpperCase()] || '🧾';
 
@@ -282,4 +282,11 @@ window.condGuardarGasto = async function(e) {
 // ── BOTÓN 2: AVISO PRÓXIMAMENTE PARA VALES DE COMBUSTIBLE ──────────
 window.condAvisoCombustibleProximamente = function() {
     alert('⛽ Módulo de Vales de Combustible para Conductor:\n\nEsta función estará disponible muy pronto para que registres tus cargas de Diésel y Urea en ruta de manera directa.');
+};
+
+// ── VER FOTO EN OTRA VENTANA DIRECTAMENTE ──────────────────────────
+window.condVerFoto = function(e, url) {
+    if (e) e.preventDefault();
+    if (!url) return;
+    window.open(url, '_blank', 'noopener,noreferrer');
 };
