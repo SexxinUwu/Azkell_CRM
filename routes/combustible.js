@@ -1032,7 +1032,7 @@ module.exports = function (db, broadcast, logAudit) {
             // 1. Consultar vales filtrados a máxima velocidad (índice directo)
             const [rows] = await tdb.query(
                 `SELECT 
-                    id, fecha, estado, correlativo, viaje, vehiculo, conductor, ruta,
+                    id, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha, estado, correlativo, viaje, vehiculo, conductor, ruta,
                     estacion, proveedor, tipo_combustible, kilometraje, peso_tn, galones,
                     importe, numero_comprobante, tipo
                 FROM ${valesTable} 
@@ -1161,6 +1161,10 @@ module.exports = function (db, broadcast, logAudit) {
 
             const formatPeruDate = (f) => {
                 if (!f) return '';
+                if (typeof f === 'string') {
+                    const s = f.trim().replace('T', ' ').replace('.000Z', '');
+                    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 19);
+                }
                 const d = new Date(f);
                 if (isNaN(d.getTime())) return String(f);
                 return peruDateFmt.format(d).replace(',', '');

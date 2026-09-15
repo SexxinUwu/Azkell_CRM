@@ -39,6 +39,7 @@ function getMimeTypeFromKey(key) {
     if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
     if (lower.endsWith('.webp')) return 'image/webp';
     if (lower.endsWith('.gif')) return 'image/gif';
+    if (lower.endsWith('.heic') || lower.endsWith('.heif')) return 'image/heic';
     return null;
 }
 
@@ -46,7 +47,8 @@ async function getPresignedUrl(key, expiresIn = 3600, responseContentType = null
     const mime = responseContentType || getMimeTypeFromKey(key);
     const commandParams = {
         Bucket: BUCKET,
-        Key: key
+        Key: key,
+        ResponseContentDisposition: 'inline'
     };
     if (mime) {
         commandParams.ResponseContentType = mime;
