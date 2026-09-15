@@ -1146,72 +1146,70 @@ thead .ov-col-sticky-action {
     justify-content: space-between;
     flex-shrink: 0;
 }
+/* ── Responsive del Header y Filtros ── */
+@media (max-width: 768px) {
+    .ov-container {
+        padding: 0.35rem 0.35rem 1rem 0.35rem !important;
+    }
+    .ov-header-desc {
+        display: none !important;
+    }
+    .ov-header-title {
+        font-size: 1.05rem !important;
+    }
+    .ov-btn-top {
+        font-size: 0.72rem !important;
+        height: 28px !important;
+        padding: 0 0.55rem !important;
+    }
+}
 </style>
 
 <div class="ov-container" id="modulo-ordenes-viaje">
 
-    <!-- ── CABECERA PRINCIPAL COMPACTA (ESPACIO REDUCIDO) ─────────────── -->
-    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-2 pt-1">
-        <div>
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="ov-header-badge"><i class="bi bi-diagram-3-fill"></i> Operaciones</span>
-                <span class="badge bg-secondary-subtle text-secondary py-1" id="ov-lbl-total-badge" style="font-size:0.7rem;">0 viajes</span>
-            </div>
-            <h4 class="fw-bold text-dark m-0" style="letter-spacing: -0.02em; line-height: 1.2;">Órdenes de Viaje y Rutas</h4>
-            <p class="text-secondary m-0" style="font-size:0.78rem;">Control operacional: registro de O.V., tracto, carreta, conductor, itinerario y pesos.</p>
-        </div>
+    <!-- ── CABECERA PRINCIPAL ULTRA-COMPACTA ─────────────── -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-1 mb-2 pt-0.5">
         <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" style="font-size:0.8rem; height:32px;" onclick="window.ovCargarDatos()">
-                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            <span class="ov-header-badge"><i class="bi bi-diagram-3-fill"></i> Operaciones</span>
+            <h5 class="fw-bold text-dark m-0 ov-header-title" style="letter-spacing: -0.02em;">Órdenes de Viaje</h5>
+            <span class="badge bg-secondary-subtle text-secondary py-0.5 px-2" id="ov-lbl-total-badge" style="font-size:0.68rem;">0 viajes</span>
+        </div>
+        <div class="d-flex align-items-center gap-1.5 ms-auto">
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 fw-semibold d-flex align-items-center gap-1 ov-btn-top" style="font-size:0.75rem; height:29px;" onclick="window.ovCargarDatos()" title="Actualizar datos">
+                <i class="bi bi-arrow-clockwise"></i> <span class="d-none d-sm-inline">Actualizar</span>
             </button>
-            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold d-flex align-items-center gap-1 shadow-sm" style="font-size:0.82rem; height:32px; background:#0284c7; border:none;" onclick="window.ovAbrirModalNuevoViaje()">
-                <i class="bi bi-plus-lg"></i> Registrar Nuevo Viaje
+            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold d-flex align-items-center gap-1 shadow-sm ov-btn-top" style="font-size:0.75rem; height:29px; background:#0284c7; border:none;" onclick="window.ovAbrirModalNuevoViaje()">
+                <i class="bi bi-plus-lg"></i> <span>Nuevo Viaje</span>
             </button>
         </div>
     </div>
 
-    <!-- ── BARRA DE BÚSQUEDA Y FILTROS COMPACTA CON RANGO DE FECHAS HOY ── -->
+    <!-- ── BARRA DE BÚSQUEDA Y FILTROS ULTRA-COMPACTA (OPTIMIZADA MÓVIL/FOLD/DESKTOP) ── -->
     <div class="ov-filters-bar mb-2">
-        <div class="row g-2 align-items-center">
+        <div class="row g-1.5 align-items-center">
             <!-- Selector de Modo de Vista con Estilo Apple Segmented Pills -->
-            <div class="col-12 col-md-auto">
+            <div class="col-auto">
                 <div class="ov-apple-segmented" role="group">
                     <button type="button" class="ov-segment-item active" id="ov-tab-viajes" onclick="window.ovCambiarModoVista('viajes')">
-                        <i class="bi bi-truck"></i> Por Viaje
+                        <i class="bi bi-truck"></i> Viajes
                     </button>
                     <button type="button" class="ov-segment-item" id="ov-tab-rutas" onclick="window.ovCambiarModoVista('rutas')">
-                        <i class="bi bi-card-checklist"></i> Por O/S y Ruta
+                        <i class="bi bi-card-checklist"></i> O/S & Rutas
                     </button>
-                </div>
-            </div>
-
-            <!-- Filtro N° Viaje -->
-            <div class="col-6 col-md-2">
-                <div class="position-relative">
-                    <i class="bi bi-diagram-3 position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" style="font-size:0.78rem;"></i>
-                    <input type="text" id="ov-filtro-viaje" class="form-control form-control-sm ps-4 text-uppercase fw-semibold border-secondary-subtle" placeholder="N° VIAJE (EJ: 2026-00000967)" oninput="window.ovOnFiltrarDebounced()" style="border-radius:8px; height:33px; font-size:0.76rem;">
-                </div>
-            </div>
-
-            <!-- Filtro N° Orden de Servicio -->
-            <div class="col-6 col-md-2">
-                <div class="position-relative">
-                    <i class="bi bi-briefcase position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" style="font-size:0.78rem;"></i>
-                    <input type="text" id="ov-filtro-os" class="form-control form-control-sm ps-4 text-uppercase fw-semibold border-secondary-subtle" placeholder="O/S (EJ: 2026-00000001)" oninput="window.ovOnFiltrarDebounced()" style="border-radius:8px; height:33px; font-size:0.76rem;">
                 </div>
             </div>
 
             <!-- Buscador General -->
-            <div class="col-12 col-md">
+            <div class="col">
                 <div class="position-relative">
-                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" style="font-size:0.78rem;"></i>
-                    <input type="text" id="ov-filtro-q" class="form-control form-control-sm ps-4 text-uppercase fw-semibold border-secondary-subtle" placeholder="BUSCAR PLACA, CONDUCTOR, RUTA..." oninput="window.ovOnFiltrarDebounced()" style="border-radius:8px; height:33px; font-size:0.76rem;">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" style="font-size:0.74rem;"></i>
+                    <input type="text" id="ov-filtro-q" class="form-control form-control-sm ps-4 text-uppercase fw-semibold border-secondary-subtle" placeholder="Buscar viaje, O/S, placa, conductor..." oninput="window.ovOnFiltrarDebounced()" style="border-radius:8px; height:30px; font-size:0.74rem;">
                 </div>
             </div>
 
             <!-- Tramo -->
-            <div class="col-6 col-md-auto" style="min-width: 125px;">
-                <select id="ov-filtro-tramo" class="form-select form-select-sm border-secondary-subtle fw-semibold" onchange="window.ovOnFiltrar()" style="border-radius:8px; height:33px; font-size:0.76rem;">
+            <div class="col-auto d-none d-md-block" style="min-width: 110px;">
+                <select id="ov-filtro-tramo" class="form-select form-select-sm border-secondary-subtle fw-semibold" onchange="window.ovOnFiltrar()" style="border-radius:8px; height:30px; font-size:0.74rem; padding-left: 0.5rem;">
                     <option value="TODOS">Ida y Retorno</option>
                     <option value="SOLO_IDA">Solo Ida</option>
                     <option value="SOLO_RETORNO">Solo Retorno</option>
@@ -1219,21 +1217,21 @@ thead .ov-col-sticky-action {
             </div>
 
             <!-- Rango Pastel de Fechas (Desde - Hasta) con valores de hoy por defecto -->
-            <div class="col-12 col-md-auto">
-                <div class="ov-date-box">
-                    <span class="text-success fw-bold d-inline-flex align-items-center gap-1" style="font-size:0.72rem;">
-                        <i class="bi bi-calendar3"></i> Desde:
+            <div class="col-auto">
+                <div class="ov-date-box" style="min-height:30px; height:30px; padding:0 0.35rem;">
+                    <span class="text-success fw-bold d-none d-sm-inline-flex align-items-center gap-1" style="font-size:0.7rem;">
+                        <i class="bi bi-calendar3"></i>
                     </span>
-                    <input type="date" id="ov-filtro-fecha-desde" class="ov-date-input" onchange="window.ovOnCambiarFecha()" title="Fecha desde">
-                    <span class="text-muted fw-bold" style="font-size:0.72rem;">— Hasta:</span>
-                    <input type="date" id="ov-filtro-fecha-hasta" class="ov-date-input" onchange="window.ovOnCambiarFecha()" title="Fecha hasta">
+                    <input type="date" id="ov-filtro-fecha-desde" class="ov-date-input" onchange="window.ovOnCambiarFecha()" title="Fecha desde" style="width:92px; font-size:0.72rem;">
+                    <span class="text-muted fw-bold" style="font-size:0.68rem;">—</span>
+                    <input type="date" id="ov-filtro-fecha-hasta" class="ov-date-input" onchange="window.ovOnCambiarFecha()" title="Fecha hasta" style="width:92px; font-size:0.72rem;">
                 </div>
             </div>
 
             <!-- Botón Limpiar Pastel Rojo Compacto -->
             <div class="col-auto">
-                <button type="button" class="ov-btn-clear" onclick="window.ovLimpiarFiltros()" title="Limpiar todos los filtros">
-                    <i class="bi bi-eraser-fill"></i>
+                <button type="button" class="ov-btn-clear" onclick="window.ovLimpiarFiltros()" title="Limpiar filtros" style="width:30px; height:30px; min-width:30px;">
+                    <i class="bi bi-eraser-fill" style="font-size:0.8rem;"></i>
                 </button>
             </div>
         </div>
