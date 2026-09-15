@@ -2024,6 +2024,60 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // Actualizar / Editar gasto de liquidación
+    router.put('/liquidaciones-gastos/:id', upload.single('sustento'), async (req, res) => {
+        try {
+            await ensureTableLiquidacionesGastos(req);
+            const tdb = getDb(req);
+            const { id } = req.params;
+            const b = req.body || {};
+
+            let sustentoUrl = undefined;
+            if (req.file) {
+                const f = req.file;
+                const ext = (f.originalname.split('.').pop() || 'jpg').toLowerCase();
+                const key = `tesoreria/liquidaciones/gasto_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+                sustentoUrl = await uploadToS3(f.buffer, key, f.mimetype);
+            }
+
+            const sets = [];
+            const params = [];
+
+            if (b.tipo_gasto !== undefined) {
+                sets.push('tipo_gasto = ?');
+                params.push((b.tipo_gasto || 'OTROS').trim());
+            }
+            if (b.sub_motivo !== undefined) {
+                sets.push('sub_motivo = ?');
+                params.push((b.sub_motivo || '').trim());
+            }
+            if (b.detalle !== undefined) {
+                sets.push('detalle = ?');
+                params.push((b.detalle || '').trim());
+            }
+            if (b.importe !== undefined) {
+                sets.push('importe = ?');
+                params.push(safeNum(b.importe));
+            }
+            if (sustentoUrl !== undefined) {
+                sets.push('sustento_url = ?');
+                params.push(sustentoUrl);
+            }
+
+            if (sets.length === 0) {
+                return res.json({ ok: true, message: 'Sin cambios' });
+            }
+
+            params.push(id);
+            await tdb.query(`UPDATE tesoreria_liquidaciones_gastos SET ${sets.join(', ')} WHERE id = ?`, params);
+
+            res.json({ ok: true, message: 'Gasto actualizado con éxito' });
+        } catch (err) {
+            console.error('Error al actualizar gasto de liquidación:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // Eliminar gasto de liquidación
     router.delete('/liquidaciones-gastos/:id', async (req, res) => {
         try {
