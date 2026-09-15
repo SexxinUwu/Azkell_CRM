@@ -294,7 +294,59 @@
                         <div class="row g-2">
                             <div class="col-12 col-md-6">
                                 <label class="form-label small fw-bold">Banco / Entidad <span class="text-danger">(*)</span></label>
-                                <input type="text" id="banco-modal-nombre" class="form-control" placeholder="Ej: BCP, BBVA, INTERBANK, SCOTIABANK, BANCO DE LA NACIÓN..." required>
+                                <select id="banco-modal-nombre" class="form-select" required onchange="window.bancosToggleOtroBanco(this.value)">
+                                    <option value="" disabled selected>-- Seleccione Banco / Entidad --</option>
+                                    <optgroup label="🏦 Bancos Principales">
+                                        <option value="BCP (BANCO DE CRÉDITO DEL PERÚ)">BCP (BANCO DE CRÉDITO DEL PERÚ)</option>
+                                        <option value="BBVA PERÚ">BBVA PERÚ</option>
+                                        <option value="INTERBANK">INTERBANK</option>
+                                        <option value="SCOTIABANK PERÚ">SCOTIABANK PERÚ</option>
+                                        <option value="BANCO DE LA NACIÓN">BANCO DE LA NACIÓN</option>
+                                        <option value="BANBIF">BANBIF</option>
+                                        <option value="BANCO PICHINCHA">BANCO PICHINCHA</option>
+                                        <option value="MIBANCO">MIBANCO</option>
+                                        <option value="BANCO GNB PERÚ">BANCO GNB PERÚ</option>
+                                        <option value="BANCO SANTANDER PERÚ">BANCO SANTANDER PERÚ</option>
+                                        <option value="BANCO DE COMERCIO">BANCO DE COMERCIO</option>
+                                        <option value="BANCO FALABELLA">BANCO FALABELLA</option>
+                                        <option value="BANCO RIPLEY">BANCO RIPLEY</option>
+                                        <option value="BANCO ALFIN">BANCO ALFIN</option>
+                                        <option value="ICBC PERÚ BANK">ICBC PERÚ BANK</option>
+                                        <option value="BANK OF CHINA PERÚ">BANK OF CHINA PERÚ</option>
+                                    </optgroup>
+                                    <optgroup label="🏛️ Cajas Municipales (CMAC)">
+                                        <option value="CAJA AREQUIPA">CAJA AREQUIPA</option>
+                                        <option value="CAJA HUANCAYO">CAJA HUANCAYO</option>
+                                        <option value="CAJA PIURA">CAJA PIURA</option>
+                                        <option value="CAJA CUSCO">CAJA CUSCO</option>
+                                        <option value="CAJA TRUJILLO">CAJA TRUJILLO</option>
+                                        <option value="CAJA ICA">CAJA ICA</option>
+                                        <option value="CAJA TACNA">CAJA TACNA</option>
+                                        <option value="CAJA MAYNAS">CAJA MAYNAS</option>
+                                        <option value="CAJA DEL SANTA">CAJA DEL SANTA</option>
+                                        <option value="CAJA PAITA">CAJA PAITA</option>
+                                    </optgroup>
+                                    <optgroup label="💼 Financieras y Cajas Rurales">
+                                        <option value="FINANCIERA CREDISCOTIA">FINANCIERA CREDISCOTIA</option>
+                                        <option value="FINANCIERA COMPARTAMOS">FINANCIERA COMPARTAMOS</option>
+                                        <option value="FINANCIERA CONFIANZA">FINANCIERA CONFIANZA</option>
+                                        <option value="FINANCIERA EFECTIVA">FINANCIERA EFECTIVA</option>
+                                        <option value="FINANCIERA PROEMPRESA">FINANCIERA PROEMPRESA</option>
+                                        <option value="FINANCIERA OH!">FINANCIERA OH!</option>
+                                        <option value="FINANCIERA QAPAQ">FINANCIERA QAPAQ</option>
+                                        <option value="CAJA RURAL LOS ANDES">CAJA RURAL LOS ANDES</option>
+                                        <option value="CAJA RURAL DEL CENTRO">CAJA RURAL DEL CENTRO</option>
+                                        <option value="CAJA RURAL PRYMERA">CAJA RURAL PRYMERA</option>
+                                    </optgroup>
+                                    <optgroup label="📱 Billeteras Digitales / Otros">
+                                        <option value="YAPE">YAPE</option>
+                                        <option value="PLIN">PLIN</option>
+                                        <option value="OTRO">OTRA ENTIDAD (ESPECIFICAR)...</option>
+                                    </optgroup>
+                                </select>
+                                <div id="banco-modal-otro-container" class="d-none mt-2">
+                                    <input type="text" id="banco-modal-nombre-otro" class="form-control" placeholder="Escriba el nombre del banco o entidad...">
+                                </div>
                             </div>
                             <div class="col-12 col-md-6">
                                 <label class="form-label small fw-bold">Titular / Razón Social <span class="text-danger">(*)</span></label>
