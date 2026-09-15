@@ -177,6 +177,7 @@ window.condCargarPortal = async function() {
         containerGastos.innerHTML = gastos.map(g => {
             var sUrl = g.sustento_url;
             var linkFoto = sUrl ? `<a href="${sUrl}" target="_blank" rel="noopener noreferrer" onclick="window.condVerFoto(event, '${sUrl}')" class="btn btn-sm btn-outline-primary bg-primary bg-opacity-10 text-primary border-primary border-opacity-25 py-1 px-2.5 rounded-pill fw-bold shadow-none" style="font-size:0.75rem;"><i class="bi bi-image me-1"></i> Ver Foto</a>` : '<span class="text-muted small">Sin Foto</span>';
+            var btnEditar = `<button type="button" onclick="window.condAbrirModalEditarGasto(${g.id})" class="btn btn-sm btn-outline-secondary bg-light text-dark border py-1 px-2.5 rounded-pill fw-bold shadow-none" style="font-size:0.75rem;"><i class="bi bi-pencil-square me-1 text-primary"></i> Editar</button>`;
             var fechaTexto = formatearFechaHoraGasto(g);
             var iconoTipo = tipoIconos[(g.tipo_gasto || '').toUpperCase()] || '🧾';
 
@@ -191,7 +192,10 @@ window.condCargarPortal = async function() {
                     </div>
                     <div class="text-end flex-shrink-0">
                         <span class="d-block font-monospace fw-bold text-dark fs-6 mb-1">S/ ${parseFloat(g.importe || 0).toFixed(2)}</span>
-                        ${linkFoto}
+                        <div class="d-flex align-items-center justify-content-end gap-1.5">
+                            ${btnEditar}
+                            ${linkFoto}
+                        </div>
                     </div>
                 </div>
             `;
@@ -219,25 +223,95 @@ window.condAbrirModalSubirGasto = function() {
     var subEl = document.getElementById('cond-modal-subtitulo');
     if (subEl) subEl.textContent = `Viaje: ${viaje.codigo} | ${viaje.placa_tracto || 'Tracto'}`;
 
+    var titleEl = document.getElementById('cond-modal-title');
+    if (titleEl) titleEl.textContent = 'Tomar Foto y Rendir Gasto';
+
+    var btnTxt = document.getElementById('cond-btn-enviar-gasto-txt');
+    if (btnTxt) btnTxt.textContent = 'Subir Mi Gasto';
+
+    var idInput = document.getElementById('cond-gasto-id');
+    if (idInput) idInput.value = '';
+
     var form = document.getElementById('condFormNuevoGasto');
     if (form) form.reset();
+
+    var fotoInput = document.getElementById('cond-gasto-foto');
+    if (fotoInput) fotoInput.required = true;
+
+    var fotoMsg = document.getElementById('cond-gasto-foto-actual-msg');
+    if (fotoMsg) fotoMsg.classList.add('d-none');
 
     var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('condModalSubirGasto'));
     modal.show();
 };
 
-// Guardar gasto desde la interfaz del conductor
+// ── ABRIR MODAL PARA EDITAR GASTO EXISTENTE ────────────────────────
+window.condAbrirModalEditarGasto = function(gastoId) {
+    if (!window._condViajeActivoData || !window._condViajeActivoData.gastos) return;
+    var gastos = window._condViajeActivoData.gastos || [];
+    var g = gastos.find(x => x.id == gastoId);
+    if (!g) {
+        alert('No se encontró el comprobante para editar.');
+        return;
+    }
+
+    var idInput = document.getElementById('cond-gasto-id');
+    if (idInput) idInput.value = g.id;
+
+    var titleEl = document.getElementById('cond-modal-title');
+    if (titleEl) titleEl.textContent = 'Editar Gasto de Viaje';
+
+    var subEl = document.getElementById('cond-modal-subtitulo');
+    if (subEl) subEl.textContent = `Editando comprobante #${g.id} — ${g.tipo_gasto}`;
+
+    var selTipo = document.getElementById('cond-gasto-tipo');
+    if (selTipo) selTipo.value = g.tipo_gasto || 'COCHERA';
+
+    var inpNota = document.getElementById('cond-gasto-nota');
+    if (inpNota) inpNota.value = g.sub_motivo || g.detalle || '';
+
+    var inpImp = document.getElementById('cond-gasto-importe');
+    if (inpImp) inpImp.value = parseFloat(g.importe || 0).toFixed(2);
+
+    var fotoInput = document.getElementById('cond-gasto-foto');
+    if (fotoInput) {
+        fotoInput.value = '';
+        fotoInput.required = false; // Opcional al editar
+    }
+
+    var fotoMsg = document.getElementById('cond-gasto-foto-actual-msg');
+    if (fotoMsg) {
+        if (g.sustento_url) {
+            fotoMsg.classList.remove('d-none');
+        } else {
+            fotoMsg.classList.add('d-none');
+        }
+    }
+
+    var btnTxt = document.getElementById('cond-btn-enviar-gasto-txt');
+    if (btnTxt) btnTxt.textContent = 'Guardar Cambios';
+
+    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('condModalSubirGasto'));
+    modal.show();
+};
+
+// Guardar gasto desde la interfaz del conductor (Crear o Actualizar)
 window.condGuardarGasto = async function(e) {
     if (e) e.preventDefault();
     if (!window._condViajeActivoData || !window._condViajeActivoData.viaje) return;
 
     var viaje = window._condViajeActivoData.viaje;
     var cond = window._condViajeActivoData.conductor || {};
+    var editId = (document.getElementById('cond-gasto-id')?.value || '').trim();
+    var esEdicion = !!editId;
 
     var btn = document.getElementById('cond-btn-enviar-gasto');
+    var btnTxt = document.getElementById('cond-btn-enviar-gasto-txt');
+    var origTxt = btnTxt ? btnTxt.textContent : (esEdicion ? 'Guardar Cambios' : 'Subir Mi Gasto');
+
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Subiendo foto...';
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> ${esEdicion ? 'Actualizando gasto...' : 'Subiendo foto...'}`;
     }
 
     try {
@@ -255,26 +329,29 @@ window.condGuardarGasto = async function(e) {
             formData.append('sustento', fileInput.files[0]);
         }
 
-        var res = await fetch('/api/tesoreria/liquidaciones-gastos', {
-            method: 'POST',
+        var url = esEdicion ? `/api/tesoreria/liquidaciones-gastos/${editId}` : `/api/tesoreria/liquidaciones-gastos`;
+        var method = esEdicion ? 'PUT' : 'POST';
+
+        var res = await fetch(url, {
+            method: method,
             body: formData
         });
         var json = await res.json();
 
         if (json && json.ok) {
-            alert('¡Gasto registrado con éxito!');
+            alert(esEdicion ? '¡Gasto actualizado con éxito!' : '¡Gasto registrado con éxito!');
             var modal = bootstrap.Modal.getInstance(document.getElementById('condModalSubirGasto'));
             if (modal) modal.hide();
             window.condCargarPortal();
         } else {
-            alert(json.error || 'No se pudo registrar el gasto');
+            alert(json.error || 'No se pudo guardar el gasto');
         }
     } catch(err) {
-        alert('Error al subir comprobante: ' + err.message);
+        alert('Error al procesar comprobante: ' + err.message);
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-1"></i> Subir Mi Gasto';
+            btn.innerHTML = `<i class="bi bi-cloud-arrow-up-fill me-1"></i> <span id="cond-btn-enviar-gasto-txt">${origTxt}</span>`;
         }
     }
 };

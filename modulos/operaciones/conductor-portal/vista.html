@@ -453,7 +453,7 @@
                         <i class="bi bi-camera-fill fs-5"></i>
                     </div>
                     <div>
-                        <h6 class="modal-title fw-bold m-0 text-dark">Tomar Foto y Rendir Gasto</h6>
+                        <h6 class="modal-title fw-bold m-0 text-dark" id="cond-modal-title">Tomar Foto y Rendir Gasto</h6>
                         <small class="text-muted font-monospace" id="cond-modal-subtitulo" style="font-size:0.75rem;">Viaje en curso</small>
                     </div>
                 </div>
@@ -461,6 +461,7 @@
             </div>
 
             <form id="condFormNuevoGasto" onsubmit="window.condGuardarGasto(event)" class="d-flex flex-column flex-grow-1 overflow-hidden m-0">
+                <input type="hidden" id="cond-gasto-id" value="">
                 <div class="modal-body p-3 p-md-4 overflow-y-auto" style="background:#f8fafc;">
                     
                     <!-- Casilla 1: Concepto y Tipo de Gasto (Azul Pastel) -->
@@ -506,10 +507,13 @@
                     <div class="cond-step-card pastel-purple-box mb-0">
                         <div class="cond-step-head">
                             <span class="cond-step-circle bg-num-purple">3</span>
-                            <h6 class="cond-step-title">Foto de la Boleta / Ticket</h6>
+                            <h6 class="cond-step-title" id="cond-step-foto-title">Foto de la Boleta / Ticket</h6>
                         </div>
-                        <label class="form-label small fw-bold text-secondary mb-1">SELECCIONA O TOMA LA FOTO (*)</label>
+                        <label class="form-label small fw-bold text-secondary mb-1" id="cond-step-foto-label">SELECCIONA O TOMA LA FOTO (*)</label>
                         <input type="file" class="form-control form-control-lg border-2 rounded-3" id="cond-gasto-foto" accept="image/*,.pdf" capture="environment" required style="background:#ffffff;">
+                        <div id="cond-gasto-foto-actual-msg" class="d-none mt-1.5 p-2 rounded-3 bg-info bg-opacity-10 text-primary small fw-semibold">
+                            <i class="bi bi-info-circle me-1"></i> Ya tienes una foto guardada. Selecciona una nueva solo si deseas reemplazarla.
+                        </div>
                         <div class="d-flex align-items-center gap-1 mt-1 text-muted" style="font-size:0.75rem;">
                             <i class="bi bi-camera text-primary"></i> Puedes tomar foto con la cámara de tu celular directamente.
                         </div>
@@ -520,7 +524,7 @@
                 <div class="modal-footer border-top py-3 px-4 bg-white flex-shrink-0">
                     <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-success rounded-pill px-4 py-2.5 fw-bold shadow-sm flex-grow-1" id="cond-btn-enviar-gasto">
-                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Subir Mi Gasto
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> <span id="cond-btn-enviar-gasto-txt">Subir Mi Gasto</span>
                     </button>
                 </div>
             </form>
