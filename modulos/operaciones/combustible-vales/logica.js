@@ -220,10 +220,26 @@
 
         const fmtFecha = (f) => {
             if (!f) return '—';
+            if (typeof f === 'string') {
+                const s = f.trim().replace('T', ' ').replace('.000Z', '');
+                if (s.length >= 19) {
+                    const partes = s.slice(0, 10).split('-');
+                    if (partes.length === 3) {
+                        const hora = s.slice(11, 19);
+                        return `${partes[2]}/${partes[1]}/${partes[0]} ${hora}`;
+                    }
+                } else if (s.length >= 16) {
+                    const partes = s.slice(0, 10).split('-');
+                    if (partes.length === 3) {
+                        const hora = s.slice(11, 16);
+                        return `${partes[2]}/${partes[1]}/${partes[0]} ${hora}:00`;
+                    }
+                }
+            }
             const d = new Date(f);
             if (isNaN(d.getTime())) return f;
             const pad = (n) => String(n).padStart(2, '0');
-            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
         };
 
         const esc = (s) => String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

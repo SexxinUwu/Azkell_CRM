@@ -2483,6 +2483,7 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             }
 
+            const netoAsignado = totalDepositado - totalDevoluciones;
             const saldo = netoAsignado - totalGastado;
 
             res.json({
