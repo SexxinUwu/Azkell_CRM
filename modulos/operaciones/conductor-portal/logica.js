@@ -297,6 +297,53 @@ window.condAbrirModalEditarGasto = function(gastoId) {
     modal.show();
 };
 
+// Convertir fotos móviles a JPEG optimizado antes de subir
+async function condAsegurarJpeg(file) {
+    if (!file) return null;
+    if (file.type === 'application/pdf') return file;
+    try {
+        return await new Promise((resolve) => {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var img = new Image();
+                img.onload = function() {
+                    var canvas = document.createElement('canvas');
+                    var maxW = 1920, maxH = 1920;
+                    var width = img.width, height = img.height;
+                    if (width > maxW || height > maxH) {
+                        if (width > height) {
+                            height = Math.round((height * maxW) / width);
+                            width = maxW;
+                        } else {
+                            width = Math.round((width * maxH) / height);
+                            height = maxH;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            var cleanName = (file.name || 'comprobante').replace(/\.[^/.]+$/, "") + ".jpg";
+                            var newFile = new File([blob], cleanName, { type: 'image/jpeg' });
+                            resolve(newFile);
+                        } else {
+                            resolve(file);
+                        }
+                    }, 'image/jpeg', 0.88);
+                };
+                img.onerror = function() { resolve(file); };
+                img.src = e.target.result;
+            };
+            reader.onerror = function() { resolve(file); };
+            reader.readAsDataURL(file);
+        });
+    } catch(err) {
+        return file;
+    }
+}
+
 // Guardar gasto desde la interfaz del conductor (Crear o Actualizar)
 window.condGuardarGasto = async function(e) {
     if (e) e.preventDefault();
@@ -328,7 +375,8 @@ window.condGuardarGasto = async function(e) {
 
         var fileInput = document.getElementById('cond-gasto-foto');
         if (fileInput && fileInput.files && fileInput.files[0]) {
-            formData.append('sustento', fileInput.files[0]);
+            var archivoFinal = await condAsegurarJpeg(fileInput.files[0]);
+            formData.append('sustento', archivoFinal);
         }
 
         var url = esEdicion ? `/api/tesoreria/liquidaciones-gastos/${editId}` : `/api/tesoreria/liquidaciones-gastos`;
