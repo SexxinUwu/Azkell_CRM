@@ -2147,6 +2147,35 @@ window.ovCargarLiquidacionesViaje = async function(viajeCode) {
     }
 };
 
+window.ovCargarSubmotivosGastosLiq = async function(selectedVal) {
+    var sel = document.getElementById('ov-gl-submotivo');
+    if (!sel) return;
+    try {
+        var res = await fetch('/api/tesoreria/motivos-gastos?solo_activos=1');
+        var json = await res.json();
+        if (json && json.ok && Array.isArray(json.data) && json.data.length > 0) {
+            var items = json.data.filter(function(item) {
+                var m = (item.motivo || '').toLowerCase();
+                return m.includes('viaje') || m.includes('ruta');
+            });
+            if (items.length > 0) {
+                var currentVal = selectedVal || sel.value || 'Viáticos / Alimentación choferes';
+                sel.innerHTML = items.map(function(it) {
+                    return `<option value="${it.sub_motivo}">${it.sub_motivo}</option>`;
+                }).join('');
+                if (currentVal && items.some(function(it) { return it.sub_motivo === currentVal; })) {
+                    sel.value = currentVal;
+                } else if (items.some(function(it) { return it.sub_motivo.includes('Viáticos'); })) {
+                    var v = items.find(function(it) { return it.sub_motivo.includes('Viáticos'); });
+                    sel.value = v.sub_motivo;
+                }
+            }
+        }
+    } catch(e) {
+        console.warn('Error cargando submotivos para liquidaciones:', e);
+    }
+};
+
 // ── REGISTRAR NUEVO GASTO / COMPROBANTE ──
 window.ovAbrirModalNuevoGastoLiquidacion = function() {
     var viajeCode = window._ovViajeMonitoreoActivo;
@@ -2161,6 +2190,8 @@ window.ovAbrirModalNuevoGastoLiquidacion = function() {
     var form = document.getElementById('ovFormNuevoGastoLiq');
     if (form) form.reset();
     if (fFecha) fFecha.value = new Date().toISOString().slice(0, 10);
+
+    window.ovCargarSubmotivosGastosLiq('Viáticos / Alimentación choferes');
 
     var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('ovModalNuevoGastoLiq'));
     modal.show();
