@@ -32,15 +32,13 @@ async function uploadToS3(buffer, key, contentType) {
  * Genera una URL pre-firmada para leer un objeto de S3 (1 hora por defecto).
  */
 function getMimeTypeFromKey(key) {
-    if (!key) return null;
+    if (!key) return 'image/jpeg';
     const lower = key.toLowerCase();
     if (lower.endsWith('.pdf')) return 'application/pdf';
     if (lower.endsWith('.png')) return 'image/png';
-    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
     if (lower.endsWith('.webp')) return 'image/webp';
     if (lower.endsWith('.gif')) return 'image/gif';
-    if (lower.endsWith('.heic') || lower.endsWith('.heif')) return 'image/heic';
-    return null;
+    return 'image/jpeg';
 }
 
 async function getPresignedUrl(key, expiresIn = 3600, responseContentType = null) {

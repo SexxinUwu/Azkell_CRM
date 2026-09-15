@@ -1988,9 +1988,12 @@ module.exports = function (db, broadcast, logAudit) {
             let sustentoUrl = null;
             if (req.file) {
                 const f = req.file;
-                const ext = (f.originalname.split('.').pop() || 'jpg').toLowerCase();
+                let ext = (f.originalname.split('.').pop() || 'jpg').toLowerCase();
+                if (ext === 'heic' || ext === 'heif') ext = 'jpg';
                 const key = `tesoreria/liquidaciones/gasto_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
-                sustentoUrl = await uploadToS3(f.buffer, key, f.mimetype);
+                let mime = f.mimetype || 'image/jpeg';
+                if (mime === 'image/heic' || mime === 'image/heif') mime = 'image/jpeg';
+                sustentoUrl = await uploadToS3(f.buffer, key, mime);
             }
 
             const [result] = await tdb.query(`
@@ -2035,9 +2038,12 @@ module.exports = function (db, broadcast, logAudit) {
             let sustentoUrl = undefined;
             if (req.file) {
                 const f = req.file;
-                const ext = (f.originalname.split('.').pop() || 'jpg').toLowerCase();
+                let ext = (f.originalname.split('.').pop() || 'jpg').toLowerCase();
+                if (ext === 'heic' || ext === 'heif') ext = 'jpg';
                 const key = `tesoreria/liquidaciones/gasto_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
-                sustentoUrl = await uploadToS3(f.buffer, key, f.mimetype);
+                let mime = f.mimetype || 'image/jpeg';
+                if (mime === 'image/heic' || mime === 'image/heif') mime = 'image/jpeg';
+                sustentoUrl = await uploadToS3(f.buffer, key, mime);
             }
 
             const sets = [];
