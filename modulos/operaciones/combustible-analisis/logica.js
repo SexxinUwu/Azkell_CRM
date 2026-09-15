@@ -1856,6 +1856,7 @@
         const fuelFilter = window._caFiltrosState?.combustible || document.getElementById('ca-filter-fuel')?.value || 'D2';
 
         const exportData = window._caFilteredTrips.map(t => {
+            const gps = t.gpsTelemetria || t.wialonGps;
             const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
             const fInicio = fs ? fs.fechaInicio : t.fechaInicio;
             const fFin = fs ? fs.fechaFin : t.fechaFin;
@@ -1875,7 +1876,9 @@
 
             const gIda = obtenerConsumoTeoricoGalones(rIda, 'IDA', t.pesoIda || 0, t.motor, t.configuracion);
             const gRet = rRet ? obtenerConsumoTeoricoGalones(rRet, 'RETORNO', t.pesoRetorno || 0, t.motor, t.configuracion) : 0;
-            const gTeoricoTotal = (gIda > 0 || gRet > 0) ? (gIda + gRet) : 0;
+            const gTeoricoBase = (gIda > 0 || gRet > 0) ? (gIda + gRet) : 0;
+            const esSinCarreta = !t.carreta || t.carreta === '—' || t.carreta === '-' || (typeof t.carreta === 'string' && (t.carreta.trim() === '' || t.carreta.toUpperCase().includes('SIN CARRETA') || t.carreta.toUpperCase().includes('SOLO TRACTO')));
+            const gTeoricoTotal = (esSinCarreta && gTeoricoBase > 0) ? (gTeoricoBase * 0.75) : gTeoricoBase;
             const difGalones = gTeoricoTotal > 0 ? parseFloat((totGal - gTeoricoTotal).toFixed(2)) : null;
 
             const kIda = obtenerKmTeorico(rIda, 'IDA', t.motor, t.configuracion);
