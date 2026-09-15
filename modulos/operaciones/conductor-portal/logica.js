@@ -176,7 +176,7 @@ window.condCargarPortal = async function() {
 
         containerGastos.innerHTML = gastos.map(g => {
             var sUrl = g.sustento_url;
-            var linkFoto = sUrl ? `<button type="button" onclick="window.condVerFoto(event, '${sUrl}')" class="cond-icon-btn btn-view-photo" title="Ver Comprobante"><i class="bi bi-eye-fill"></i></button>` : '';
+            var linkFoto = sUrl ? `<a href="${sUrl}" target="_blank" rel="noopener noreferrer" class="cond-icon-btn btn-view-photo" title="Ver Comprobante"><i class="bi bi-eye-fill"></i></a>` : '';
             var btnEditar = `<button type="button" onclick="window.condAbrirModalEditarGasto(${g.id})" class="cond-icon-btn btn-edit-item" title="Editar Comprobante"><i class="bi bi-pencil-square"></i></button>`;
             var fechaTexto = formatearFechaHoraGasto(g);
             var iconoTipo = tipoIconos[(g.tipo_gasto || '').toUpperCase()] || '🧾';
@@ -353,7 +353,7 @@ window.condGuardarGasto = async function(e) {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = `<i class="bi bi-cloud-arrow-up-fill me-1"></i> <span id="cond-btn-enviar-gasto-txt">${origTxt}</span>`;
+            btn.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> <span id="cond-btn-enviar-gasto-txt">${origTxt}</span>`;
         }
     }
 };
@@ -361,53 +361,4 @@ window.condGuardarGasto = async function(e) {
 // ── BOTÓN 2: AVISO PRÓXIMAMENTE PARA VALES DE COMBUSTIBLE ──────────
 window.condAvisoCombustibleProximamente = function() {
     alert('⛽ Módulo de Vales de Combustible para Conductor:\n\nEsta función estará disponible muy pronto para que registres tus cargas de Diésel y Urea en ruta de manera directa.');
-};
-
-// ── VER FOTO EN OTRA VENTANA DIRECTAMENTE SIN FORZAR DESCARGA ──────
-window.condVerFoto = function(e, url) {
-    if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-    if (!url) return;
-
-    var win = window.open('', '_blank');
-    if (win) {
-        var isPdf = url.toLowerCase().includes('.pdf');
-        win.document.write(`
-            <!DOCTYPE html>
-            <html lang="es">
-            <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Comprobante de Gasto</title>
-                <style>
-                    * { box-sizing: border-box; margin: 0; padding: 0; }
-                    body { background: #0b0f19; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; font-family: system-ui, -apple-system, sans-serif; color: white; }
-                    .top-bar { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-                    .viewer-box { width: 100%; max-width: 900px; height: 86vh; display: flex; align-items: center; justify-content: center; background: #1e293b; border-radius: 16px; overflow: hidden; border: 1px solid #334155; }
-                    img { max-width: 100%; max-height: 100%; object-fit: contain; }
-                    iframe { width: 100%; height: 100%; border: none; }
-                    .btn-action { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer; transition: background 0.2s; }
-                    .btn-action:hover { background: rgba(255,255,255,0.3); }
-                </style>
-            </head>
-            <body>
-                <div class="top-bar">
-                    <span style="font-weight: 700; font-size: 14px;">🧾 Sustento de Gasto</span>
-                    <div style="display:flex; gap:8px;">
-                        <a href="${url}" target="_blank" download class="btn-action">Descargar</a>
-                        <button onclick="window.close()" class="btn-action">Cerrar ✕</button>
-                    </div>
-                </div>
-                <div class="viewer-box">
-                    ${isPdf ? `<iframe src="${url}"></iframe>` : `<img src="${url}" alt="Comprobante" onerror="this.onerror=null; window.location.replace('${url}');">`}
-                </div>
-            </body>
-            </html>
-        `);
-        win.document.close();
-    } else {
-        window.open(url, '_blank', 'noopener,noreferrer');
-    }
 };
