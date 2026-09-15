@@ -27,7 +27,7 @@ window.init_trabajos_ot = function() {
 // ── Carga de datos ────────────────────────────────────────────────
 window.totCargar = function() {
     var tbody = document.getElementById('tot-tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
 
     fetch('/api/ot-trabajos')
         .then(function(r) {
@@ -51,6 +51,41 @@ window.totCargar = function() {
 // ── Helpers ───────────────────────────────────────────────────────
 function totFmtMoney(val) {
     return 'S/.' + parseFloat(val || 0).toFixed(2);
+}
+
+function totFmtKm(t) {
+    if (!t) return '—';
+    var otDet = {};
+    if (t.ot_detalles_json) {
+        try { otDet = typeof t.ot_detalles_json === 'string' ? JSON.parse(t.ot_detalles_json) : (t.ot_detalles_json || {}); }
+        catch(e) {}
+    }
+    var trDet = totParseDetalles(t);
+
+    var horasMotor = otDet.horas_motor || trDet.horas_motor || t.horas_motor;
+    if (horasMotor) {
+        var numH = Number(horasMotor);
+        return (!isNaN(numH) ? numH.toLocaleString('es-PE') : String(horasMotor)) + ' hrs';
+    }
+
+    var kmVal = (otDet.km !== undefined && otDet.km !== null && otDet.km !== '')
+        ? otDet.km
+        : (otDet.kilometraje !== undefined && otDet.kilometraje !== null && otDet.kilometraje !== ''
+            ? otDet.kilometraje
+            : (otDet.km_tablero !== undefined && otDet.km_tablero !== null && otDet.km_tablero !== ''
+                ? otDet.km_tablero
+                : (trDet.km !== undefined && trDet.km !== null && trDet.km !== ''
+                    ? trDet.km
+                    : (trDet.kilometraje !== undefined && trDet.kilometraje !== null && trDet.kilometraje !== ''
+                        ? trDet.kilometraje
+                        : (t.kilometraje !== undefined && t.kilometraje !== null && t.kilometraje !== ''
+                            ? t.kilometraje
+                            : (t.km !== undefined && t.km !== null && t.km !== '' ? t.km : null))))));
+
+    if (kmVal === null || kmVal === '' || kmVal === undefined) return '—';
+    var num = Number(kmVal);
+    if (isNaN(num)) return totEsc(String(kmVal));
+    return num.toLocaleString('es-PE') + ' km';
 }
 
 function totFmtDateTime(iso) {
@@ -206,7 +241,7 @@ function totRenderTablaRows() {
     var nextBtn = document.getElementById('tot-pag-next');
 
     if (total === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="td-placeholder"><i class="bi bi-tools" style="font-size:1.5rem; opacity:0.3"></i><br>Sin trabajos encontrados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="td-placeholder"><i class="bi bi-tools" style="font-size:1.5rem; opacity:0.3"></i><br>Sin trabajos encontrados</td></tr>';
         if (infoEl)  infoEl.textContent = 'Mostrando 0 - 0 de 0 trabajos';
         if (indEl)   indEl.textContent = 'Página 1 de 1';
         if (prevBtn) prevBtn.disabled = true;
@@ -248,6 +283,7 @@ function totRenderTablaRows() {
             '<td style="white-space:nowrap;"><span class="fw-bold" style="color:var(--primary,#0284c7);">' + totEsc(totGetId(t) || '—') + '</span></td>'
             + '<td style="white-space:nowrap;"><strong>' + totEsc(otVal) + '</strong></td>'
             + '<td style="white-space:nowrap;"><span class="badge bg-white border text-dark fw-bolder px-2 py-1 shadow-2xs">' + totEsc(placaVal) + '</span></td>'
+            + '<td style="font-size:0.84rem; font-weight:600; white-space:nowrap;">' + totFmtKm(t) + '</td>'
             + '<td style="font-size:0.80rem; white-space:nowrap;">' + totFmtDateTime(t.fecha_trabajo) + '</td>'
             + '<td style="max-width:280px; font-size:0.82rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + totEsc(t.trabajo_realizado || '—') + '">' + totEsc(t.trabajo_realizado || '—') + '</td>'
             + '<td style="white-space:nowrap; font-size:0.82rem;">' + totEsc(det.personal || t.tecnico || '—') + '</td>'
@@ -280,6 +316,7 @@ function totAbrirDetalle(t) {
     html += '<div class="tot-sec-hd">Información del Trabajo</div>';
     html += '<div class="tot-field"><div class="tot-field-lbl">Estado</div><div class="tot-field-val">' + totBadge(t.estado) + '</div></div>';
     html += '<div class="tot-field"><div class="tot-field-lbl">Placa</div><div class="tot-field-val"><strong>' + totEsc(t.placa || '—') + '</strong></div></div>';
+    html += '<div class="tot-field"><div class="tot-field-lbl">Kilometraje</div><div class="tot-field-val"><strong>' + totFmtKm(t) + '</strong></div></div>';
     html += '<div class="tot-field"><div class="tot-field-lbl">Trabajador(es)</div><div class="tot-field-val" style="white-space:normal;">' + totEsc(det.personal || t.tecnico || '—') + '</div></div>';
     html += '<div class="tot-field"><div class="tot-field-lbl">Descripción</div><div class="tot-field-val" style="white-space:normal;">' + totEsc(t.trabajo_realizado || '—') + '</div></div>';
     html += '<div class="tot-field"><div class="tot-field-lbl">F/H Inicio</div><div class="tot-field-val">' + totFmtDateTime(t.fecha_trabajo) + '</div></div>';
@@ -633,13 +670,14 @@ window.totExportar = function() {
         var tbl = document.createElement('table');
         tbl.id = tmpId;
         tbl.style.display = 'none';
-        var thead = '<thead><tr><th>ID Trabajo</th><th>N° OT</th><th>Placa</th><th>Trabajador(es)</th><th>Descripción</th><th>F/H Inicio</th><th>F/H Fin</th><th>Costo</th><th>Estado</th></tr></thead>';
+        var thead = '<thead><tr><th>ID Trabajo</th><th>N° OT</th><th>Placa</th><th>Kilometraje</th><th>Trabajador(es)</th><th>Descripción</th><th>F/H Inicio</th><th>F/H Fin</th><th>Costo</th><th>Estado</th></tr></thead>';
         var tbody = '<tbody>' + datos.map(function(t) {
             var det = totParseDetalles(t);
             return '<tr>'
                 + '<td>' + (t.ticket_visita || '') + '</td>'
                 + '<td>' + (t.id_ot || '') + '</td>'
                 + '<td>' + (t.placa || '') + '</td>'
+                + '<td>' + totFmtKm(t) + '</td>'
                 + '<td>' + (det.personal || t.tecnico || '') + '</td>'
                 + '<td>' + (t.trabajo_realizado || '') + '</td>'
                 + '<td>' + totFmtDateTime(t.fecha_trabajo) + '</td>'
@@ -656,13 +694,14 @@ window.totExportar = function() {
     }
 
     // Fallback CSV
-    var rows = [['ID Trabajo','N° OT','Placa','Trabajador(es)','Descripción','F/H Inicio','F/H Fin','Costo','Estado']];
+    var rows = [['ID Trabajo','N° OT','Placa','Kilometraje','Trabajador(es)','Descripción','F/H Inicio','F/H Fin','Costo','Estado']];
     datos.forEach(function(t) {
         var det = totParseDetalles(t);
         rows.push([
             t.ticket_visita || '',
             t.id_ot || '',
             t.placa || '',
+            totFmtKm(t),
             det.personal || t.tecnico || '',
             t.trabajo_realizado || '',
             totFmtDateTime(t.fecha_trabajo),

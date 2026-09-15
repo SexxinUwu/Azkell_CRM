@@ -403,7 +403,8 @@ router.get('/ot-trabajos', (req, res) => {
     const { id_ot } = req.query;
     let sql = `SELECT t.*, 
                       COALESCE(NULLIF(t.placa, ''), ot.placa, JSON_UNQUOTE(JSON_EXTRACT(t.detalles_json, '$.placa')), '') as placa, 
-                      COALESCE(ot.id_ot, t.ticket_visita) as ot_id 
+                      COALESCE(ot.id_ot, t.ticket_visita) as ot_id,
+                      ot.detalles_json as ot_detalles_json 
                FROM trabajos_ot t 
                LEFT JOIN ordenes_trabajo ot 
                  ON (ot.ticket_entrada = t.ticket_visita OR ot.id_ot = t.ticket_visita)`;
