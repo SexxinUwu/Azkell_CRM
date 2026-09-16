@@ -1390,29 +1390,131 @@ db.query(
         else   console.log('✅ Tabla placa_auditoria verificada');
     }
 );
-// ── Nodemailer: transporter de correo ─────────────────────────────────────
-const mailTransporter = nodemailer.createTransport({
-    host:   process.env.EMAIL_HOST       || 'smtp.gmail.com',
-    port:   parseInt(process.env.EMAIL_PORT_SMTP) || 587,
-    secure: false,
-    auth: {
-        user: process.env.EMAIL_USER || '',
-        pass: process.env.EMAIL_PASS || ''
-    },
-    tls: { rejectUnauthorized: false }
+// ── Tablas de Correo y Notificaciones ──────────────────────────────────────────
+db.query(`CREATE TABLE IF NOT EXISTS configuracion_email (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    smtp_host VARCHAR(150) NOT NULL DEFAULT 'smtp.gmail.com',
+    smtp_port INT NOT NULL DEFAULT 587,
+    smtp_secure TINYINT(1) NOT NULL DEFAULT 0,
+    smtp_user VARCHAR(150) NULL,
+    smtp_pass VARCHAR(255) NULL,
+    from_name VARCHAR(150) NULL DEFAULT 'Azkell ERP Alertas',
+    from_email VARCHAR(150) NULL,
+    alertas_checklist TINYINT(1) DEFAULT 1,
+    alertas_vencimientos TINYINT(1) DEFAULT 1,
+    alertas_planes TINYINT(1) DEFAULT 1,
+    actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`, () => {});
+
+db.query(`CREATE TABLE IF NOT EXISTS destinatarios_alertas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    correo VARCHAR(150) NOT NULL,
+    cargo VARCHAR(100) NULL,
+    notif_checklist TINYINT(1) DEFAULT 1,
+    notif_vencimientos TINYINT(1) DEFAULT 1,
+    notif_1d TINYINT(1) DEFAULT 1,
+    notif_3d TINYINT(1) DEFAULT 1,
+    notif_7d TINYINT(1) DEFAULT 1,
+    activo TINYINT(1) DEFAULT 1,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`, () => {
+    try {
+        db.query("ALTER TABLE destinatarios_alertas ADD COLUMN notif_checklist TINYINT(1) DEFAULT 1, ADD COLUMN notif_vencimientos TINYINT(1) DEFAULT 1, ADD COLUMN cargo VARCHAR(100) NULL", () => {});
+    } catch(e) {}
 });
 
-// ── Función de envío de email ─────────────────────────────────────────────
-async function enviarEmailAlerta(para, asunto, htmlBody) {
-    if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('correo@')) {
-        console.log(`[Email DEMO] Para: ${para} | Asunto: ${asunto}`);
-        return { demo: true };
+db.query(`CREATE TABLE IF NOT EXISTS reportes_programaciones_email (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_reporte VARCHAR(150) NOT NULL,
+    modulo VARCHAR(100) NOT NULL,
+    destinatarios_para TEXT NOT NULL,
+    destinatarios_cc TEXT NULL,
+    destinatarios_cco TEXT NULL,
+    frecuencia VARCHAR(50) NOT NULL DEFAULT 'DIARIO',
+    hora_envio VARCHAR(10) DEFAULT '08:00',
+    dias_semana VARCHAR(50) NULL,
+    asunto_personalizado VARCHAR(255) NULL,
+    mensaje_personalizado TEXT NULL,
+    incluir_pdf TINYINT(1) DEFAULT 1,
+    incluir_excel TINYINT(1) DEFAULT 0,
+    activo TINYINT(1) DEFAULT 1,
+    ultimo_envio DATETIME NULL,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`, () => {});
+
+// ── Nodemailer: Transporter Dinámico de Correo ─────────────────────────────
+let _dynamicTransporter = null;
+let _currentMailConfig = null;
+
+async function getMailConfig() {
+    return new Promise((resolve) => {
+        db.query("SELECT * FROM configuracion_email ORDER BY id DESC LIMIT 1", (err, rows) => {
+            if (!err && rows && rows.length > 0) {
+                const r = rows[0];
+                _currentMailConfig = {
+                    host: r.smtp_host || process.env.EMAIL_HOST || 'smtp.gmail.com',
+                    port: parseInt(r.smtp_port) || parseInt(process.env.EMAIL_PORT_SMTP) || 587,
+                    secure: !!r.smtp_secure,
+                    user: r.smtp_user || process.env.EMAIL_USER || '',
+                    pass: r.smtp_pass || process.env.EMAIL_PASS || '',
+                    from_name: r.from_name || 'Azkell ERP Alertas',
+                    from_email: r.from_email || r.smtp_user || process.env.EMAIL_FROM || process.env.EMAIL_USER || '',
+                    alertas_checklist: r.alertas_checklist !== 0,
+                    alertas_vencimientos: r.alertas_vencimientos !== 0,
+                    alertas_planes: r.alertas_planes !== 0
+                };
+            } else {
+                _currentMailConfig = {
+                    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+                    port: parseInt(process.env.EMAIL_PORT_SMTP) || 587,
+                    secure: false,
+                    user: process.env.EMAIL_USER || '',
+                    pass: process.env.EMAIL_PASS || '',
+                    from_name: 'Azkell ERP Alertas',
+                    from_email: process.env.EMAIL_FROM || process.env.EMAIL_USER || '',
+                    alertas_checklist: true,
+                    alertas_vencimientos: true,
+                    alertas_planes: true
+                };
+            }
+            resolve(_currentMailConfig);
+        });
+    });
+}
+
+async function getTransporterInstance() {
+    const cfg = await getMailConfig();
+    _dynamicTransporter = nodemailer.createTransport({
+        host: cfg.host,
+        port: cfg.port,
+        secure: cfg.secure,
+        auth: (cfg.user && cfg.pass) ? {
+            user: cfg.user,
+            pass: cfg.pass
+        } : undefined,
+        tls: { rejectUnauthorized: false }
+    });
+    return { transporter: _dynamicTransporter, config: cfg };
+}
+
+// ── Función Universal de Envío de Correo ─────────────────────────────────────
+async function enviarEmailAlerta(para, asunto, htmlBody, attachments = []) {
+    const { transporter, config } = await getTransporterInstance();
+    if (!config.user || !config.pass) {
+        console.log(`[Email NO CONFIGURADO] Para: ${para} | Asunto: ${asunto}`);
+        return { demo: true, warning: 'Credenciales SMTP no configuradas' };
     }
-    return mailTransporter.sendMail({
-        from:    process.env.EMAIL_FROM || process.env.EMAIL_USER,
-        to:      para,
+    const fromHeader = config.from_name 
+        ? `"${config.from_name}" <${config.from_email || config.user}>`
+        : (config.from_email || config.user);
+
+    return transporter.sendMail({
+        from: fromHeader,
+        to: para,
         subject: asunto,
-        html:    htmlBody
+        html: htmlBody,
+        attachments: attachments
     });
 }
 
@@ -1859,6 +1961,269 @@ app.post('/api/login', (req, res) => {
 
 const perfilRoutes = require('./routes/perfil')(db, logAudit);
 app.use('/api', perfilRoutes);
+
+// ============================================================
+// 📬 RUTAS DE CONFIGURACIÓN DE CORREO (SMTP) Y ENVÍO DE REPORTES
+// ============================================================
+app.get('/api/configuracion/email', async (req, res) => {
+    try {
+        const cfg = await getMailConfig();
+        res.json({
+            ok: true,
+            data: {
+                host: cfg.host,
+                port: cfg.port,
+                secure: cfg.secure,
+                user: cfg.user,
+                has_pass: !!cfg.pass,
+                from_name: cfg.from_name,
+                from_email: cfg.from_email,
+                alertas_checklist: cfg.alertas_checklist,
+                alertas_vencimientos: cfg.alertas_vencimientos,
+                alertas_planes: cfg.alertas_planes
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+app.post('/api/configuracion/email/smtp', async (req, res) => {
+    try {
+        const { host, port, secure, user, pass, from_name, from_email, alertas_checklist, alertas_vencimientos, alertas_planes } = req.body;
+        
+        // Obtener configuración anterior para no sobreescribir la contraseña si se envió vacía
+        const prevCfg = await getMailConfig();
+        const finalPass = (pass && pass.trim()) ? pass.trim() : prevCfg.pass;
+
+        const [rows] = await new Promise((resolve, reject) => {
+            db.query("SELECT id FROM configuracion_email ORDER BY id DESC LIMIT 1", (err, r) => err ? reject(err) : resolve([r]));
+        });
+
+        if (rows && rows.length > 0) {
+            await new Promise((resolve, reject) => {
+                db.query(`UPDATE configuracion_email SET 
+                    smtp_host=?, smtp_port=?, smtp_secure=?, smtp_user=?, smtp_pass=?, from_name=?, from_email=?,
+                    alertas_checklist=?, alertas_vencimientos=?, alertas_planes=?
+                    WHERE id=?`, 
+                    [host || 'smtp.gmail.com', parseInt(port) || 587, secure ? 1 : 0, user || '', finalPass || '', from_name || 'Azkell ERP Alertas', from_email || user || '', alertas_checklist ? 1 : 0, alertas_vencimientos ? 1 : 0, alertas_planes ? 1 : 0, rows[0].id],
+                    (err) => err ? reject(err) : resolve()
+                );
+            });
+        } else {
+            await new Promise((resolve, reject) => {
+                db.query(`INSERT INTO configuracion_email 
+                    (smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, from_name, from_email, alertas_checklist, alertas_vencimientos, alertas_planes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [host || 'smtp.gmail.com', parseInt(port) || 587, secure ? 1 : 0, user || '', finalPass || '', from_name || 'Azkell ERP Alertas', from_email || user || '', alertas_checklist ? 1 : 0, alertas_vencimientos ? 1 : 0, alertas_planes ? 1 : 0],
+                    (err) => err ? reject(err) : resolve()
+                );
+            });
+        }
+
+        // Resetear transporter en memoria
+        _dynamicTransporter = null;
+        _currentMailConfig = null;
+
+        res.json({ ok: true, message: 'Configuración SMTP guardada exitosamente.' });
+    } catch (err) {
+        console.error('Error guardando configuración SMTP:', err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+app.post('/api/configuracion/email/test', async (req, res) => {
+    try {
+        const { test_email, host, port, secure, user, pass, from_name, from_email } = req.body;
+        if (!test_email || !test_email.includes('@')) {
+            return res.status(400).json({ ok: false, error: 'Debe proporcionar un correo de destino válido para la prueba.' });
+        }
+
+        let testTransporter;
+        let senderName = from_name || 'Azkell ERP Alertas';
+        let senderEmail = from_email || user;
+
+        if (host && user) {
+            const prevCfg = await getMailConfig();
+            const finalPass = (pass && pass.trim()) ? pass.trim() : prevCfg.pass;
+            testTransporter = nodemailer.createTransport({
+                host: host,
+                port: parseInt(port) || 587,
+                secure: !!secure,
+                auth: { user: user, pass: finalPass },
+                tls: { rejectUnauthorized: false }
+            });
+        } else {
+            const inst = await getTransporterInstance();
+            testTransporter = inst.transporter;
+            senderName = inst.config.from_name;
+            senderEmail = inst.config.from_email;
+        }
+
+        const htmlTest = `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.05);">
+                <div style="background: linear-gradient(135deg, #0284c7, #2563eb); padding: 24px; text-align: center; color: #ffffff;">
+                    <h2 style="margin: 0; font-size: 1.35rem; font-weight: 800;">Azkell ERP — Prueba de Correo</h2>
+                    <p style="margin: 6px 0 0 0; opacity: 0.9; font-size: 0.88rem;">Servicio de Notificaciones y Alertas Automáticas</p>
+                </div>
+                <div style="padding: 24px; color: #1e293b; font-size: 0.92rem; line-height: 1.5;">
+                    <p style="margin-top: 0; font-weight: 600; color: #10b981;">¡Conexión SMTP Establecida con Éxito! 🎉</p>
+                    <p>Este es un correo de prueba enviado desde tu servidor de <b>Azkell ERP</b>. La configuración de correo saliente está funcionando correctamente.</p>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin: 18px 0; font-size: 0.82rem;">
+                        <div style="margin-bottom: 4px;"><b>Remitente:</b> ${senderName} &lt;${senderEmail}&gt;</div>
+                        <div style="margin-bottom: 4px;"><b>Destino de prueba:</b> ${test_email}</div>
+                        <div><b>Fecha y Hora:</b> ${new Date().toLocaleString('es-PE')}</div>
+                    </div>
+                    <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 0;">Ya puedes utilizar este canal para el envío de Reportes PDF, Alertas de Fallas y Notificaciones de Vencimientos.</p>
+                </div>
+            </div>
+        `;
+
+        await testTransporter.sendMail({
+            from: `"${senderName}" <${senderEmail}>`,
+            to: test_email,
+            subject: '✅ Azkell ERP — Prueba de Conexión SMTP Exitosa',
+            html: htmlTest
+        });
+
+        res.json({ ok: true, message: `Correo de prueba enviado correctamente a ${test_email}.` });
+    } catch (err) {
+        console.error('Error al enviar correo de prueba:', err);
+        res.status(500).json({ ok: false, error: err.message || 'Fallo de autenticación o conexión SMTP' });
+    }
+});
+
+app.post('/api/reportes/enviar-correo', async (req, res) => {
+    try {
+        const { para, cc, cco, asunto, mensaje, nombre_reporte, modulo, adjunto_nombre, adjunto_base64 } = req.body;
+        
+        if (!para || !String(para).trim()) {
+            return res.status(400).json({ ok: false, error: 'Debe especificar al menos un destinatario (Para).' });
+        }
+
+        const { transporter, config } = await getTransporterInstance();
+        if (!config.user || !config.pass) {
+            return res.status(400).json({ ok: false, error: 'El servidor SMTP no está configurado en el sistema. Vaya a Ajustes > Notificaciones para configurarlo.' });
+        }
+
+        const attachments = [];
+        if (adjunto_base64 && adjunto_nombre) {
+            let base64Clean = adjunto_base64;
+            if (base64Clean.includes('base64,')) {
+                base64Clean = base64Clean.split('base64,')[1];
+            }
+            attachments.push({
+                filename: adjunto_nombre,
+                content: Buffer.from(base64Clean, 'base64'),
+                contentType: 'application/pdf'
+            });
+        }
+
+        const htmlEmail = `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.05);">
+                <div style="background: linear-gradient(135deg, #0284c7, #2563eb); padding: 22px 24px; color: #ffffff;">
+                    <h2 style="margin: 0; font-size: 1.25rem; font-weight: 800;">${config.from_name || 'Azkell ERP'}</h2>
+                    <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 0.85rem;">${nombre_reporte || 'Reporte del Sistema'}</p>
+                </div>
+                <div style="padding: 24px; color: #1e293b; font-size: 0.92rem; line-height: 1.5;">
+                    <div style="white-space: pre-line; margin-bottom: 20px;">
+                        ${mensaje || 'Adjunto encontrará el reporte solicitado generado automáticamente desde el ERP.'}
+                    </div>
+                    ${attachments.length > 0 ? `
+                        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                            <div>
+                                <span style="font-weight: 700; color: #0f172a; font-size: 0.85rem;">📎 ${adjunto_nombre || 'Reporte.pdf'}</span>
+                                <div style="color: #64748b; font-size: 0.75rem;">Documento PDF adjunto a este correo</div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                    <div style="color: #94a3b8; font-size: 0.75rem; text-align: center;">
+                        Este mensaje fue generado automáticamente por <b>Azkell ERP</b>.<br>
+                        Fecha de emisión: ${new Date().toLocaleString('es-PE')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const mailOptions = {
+            from: `"${config.from_name || 'Azkell ERP'}" <${config.from_email || config.user}>`,
+            to: Array.isArray(para) ? para.join(', ') : para,
+            subject: asunto || `Reporte — ${nombre_reporte || 'Azkell ERP'}`,
+            html: htmlEmail,
+            attachments: attachments
+        };
+
+        if (cc && String(cc).trim()) {
+            mailOptions.cc = Array.isArray(cc) ? cc.join(', ') : cc;
+        }
+        if (cco && String(cco).trim()) {
+            mailOptions.bcc = Array.isArray(cco) ? cco.join(', ') : cco;
+        }
+
+        await transporter.sendMail(mailOptions);
+
+        res.json({ ok: true, message: 'Reporte enviado por correo exitosamente.' });
+    } catch (err) {
+        console.error('Error al enviar reporte por correo:', err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+app.get('/api/configuracion/email/destinatarios', (req, res) => {
+    db.query("SELECT * FROM destinatarios_alertas ORDER BY nombre ASC", (err, rows) => {
+        if (err) return res.status(500).json({ ok: false, error: err.message });
+        res.json({ ok: true, data: rows || [] });
+    });
+});
+
+app.post('/api/configuracion/email/destinatarios', (req, res) => {
+    const { nombre, correo, cargo, notif_checklist, notif_vencimientos, notif_1d, notif_3d, notif_7d } = req.body;
+    if (!nombre || !correo) return res.status(400).json({ ok: false, error: 'Nombre y correo son obligatorios' });
+
+    db.query(
+        `INSERT INTO destinatarios_alertas (nombre, correo, cargo, notif_checklist, notif_vencimientos, notif_1d, notif_3d, notif_7d, activo)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        [nombre, correo, cargo || '', notif_checklist ? 1 : 0, notif_vencimientos ? 1 : 0, notif_1d ? 1 : 0, notif_3d ? 1 : 0, notif_7d ? 1 : 0],
+        (err, result) => {
+            if (err) return res.status(500).json({ ok: false, error: err.message });
+            res.json({ ok: true, id: result.insertId, message: 'Destinatario registrado exitosamente' });
+        }
+    );
+});
+
+app.delete('/api/configuracion/email/destinatarios/:id', (req, res) => {
+    db.query("DELETE FROM destinatarios_alertas WHERE id = ?", [req.params.id], (err) => {
+        if (err) return res.status(500).json({ ok: false, error: err.message });
+        res.json({ ok: true, message: 'Destinatario eliminado' });
+    });
+});
+
+app.get('/api/configuracion/email/programaciones', (req, res) => {
+    db.query("SELECT * FROM reportes_programaciones_email ORDER BY id DESC", (err, rows) => {
+        if (err) return res.status(500).json({ ok: false, error: err.message });
+        res.json({ ok: true, data: rows || [] });
+    });
+});
+
+app.post('/api/configuracion/email/programaciones', (req, res) => {
+    const { nombre_reporte, modulo, destinatarios_para, destinatarios_cc, destinatarios_cco, frecuencia, hora_envio, dias_semana, asunto_personalizado, mensaje_personalizado } = req.body;
+    
+    if (!nombre_reporte || !destinatarios_para) {
+        return res.status(400).json({ ok: false, error: 'Nombre de reporte y destinatarios son requeridos' });
+    }
+
+    db.query(
+        `INSERT INTO reportes_programaciones_email 
+         (nombre_reporte, modulo, destinatarios_para, destinatarios_cc, destinatarios_cco, frecuencia, hora_envio, dias_semana, asunto_personalizado, mensaje_personalizado, activo)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        [nombre_reporte, modulo || 'general', destinatarios_para, destinatarios_cc || '', destinatarios_cco || '', frecuencia || 'DIARIO', hora_envio || '08:00', dias_semana || '', asunto_personalizado || '', mensaje_personalizado || ''],
+        (err, result) => {
+            if (err) return res.status(500).json({ ok: false, error: err.message });
+            res.json({ ok: true, id: result.insertId, message: 'Programación guardada exitosamente' });
+        }
+    );
+});
 
 // ============================================================
 // 🚀 RUTAS TALLER Y MANTENIMIENTO (deben ir ANTES del legacy wildcard)

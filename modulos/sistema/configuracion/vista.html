@@ -390,6 +390,229 @@
 
         </div>
 
+        <!-- ════════════════════════════════════════════════════════ -->
+        <!-- 5. PANEL: NOTIFICACIONES & CORREO (SMTP)                 -->
+        <!-- ════════════════════════════════════════════════════════ -->
+        <div id="cfg-panel-notificaciones" class="config-panel d-none">
+            
+            <h2 class="cfg-section-title">Servidor de Correo Saliente (SMTP)</h2>
+            <div class="cfg-group-box">
+                <div class="p-3 border-bottom bg-light bg-opacity-50">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="cfg-item-title mb-1"><i class="bi bi-envelope-gear" style="color: #ea580c;"></i> Emisor de Notificaciones</p>
+                            <p class="cfg-item-desc">Configura tu correo (Gmail, Outlook o Correo Corporativo) para enviar reportes PDF y alertas automáticas.</p>
+                        </div>
+                        <span class="badge bg-secondary-subtle text-secondary px-3 py-2 rounded-pill fw-bold" id="cfg-smtp-badge-status" style="font-size:0.75rem;">
+                            <i class="bi bi-circle-fill me-1" style="font-size: 0.55rem;"></i> Estado: Verificando...
+                        </span>
+                    </div>
+                </div>
+
+                <div class="p-3">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-8">
+                            <label class="form-label small fw-bold text-secondary mb-1">Servidor Host SMTP</label>
+                            <input type="text" class="form-control form-control-sm fw-semibold" id="cfg-smtp-host" placeholder="Ej. smtp.gmail.com o mail.tuempresa.com" style="border-radius:10px;">
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <label class="form-label small fw-bold text-secondary mb-1">Puerto</label>
+                            <input type="number" class="form-control form-control-sm fw-semibold" id="cfg-smtp-port" placeholder="587 ó 465" style="border-radius:10px;">
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1">Correo Emisor (Usuario)</label>
+                            <input type="email" class="form-control form-control-sm fw-semibold" id="cfg-smtp-user" placeholder="tuempresa@gmail.com" style="border-radius:10px;">
+                            <div class="form-text small" style="font-size:0.72rem; color:#64748b;">Correo que emitirá los reportes.</div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1">Contraseña de Aplicación / Password</label>
+                            <div class="input-group input-group-sm">
+                                <input type="password" class="form-control fw-semibold" id="cfg-smtp-pass" placeholder="••••••••••••••••" style="border-top-left-radius:10px; border-bottom-left-radius:10px;">
+                                <button class="btn btn-outline-secondary" type="button" onclick="window.toggleSmtpPassVisibility()" style="border-top-right-radius:10px; border-bottom-right-radius:10px;">
+                                    <i class="bi bi-eye" id="cfg-smtp-pass-icon"></i>
+                                </button>
+                            </div>
+                            <div class="form-text small" style="font-size:0.72rem; color:#64748b;">En Gmail usa una <a href="https://myaccount.google.com/apppasswords" target="_blank" class="text-primary text-decoration-none fw-bold">Contraseña de Aplicación (16 dígitos)</a>.</div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1">Nombre Visible del Remitente</label>
+                            <input type="text" class="form-control form-control-sm fw-semibold" id="cfg-smtp-fromname" placeholder="Ej. Alertas Azkell ERP / Marsisa" style="border-radius:10px;">
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1">Correo 'Responder a' / From (Opcional)</label>
+                            <input type="email" class="form-control form-control-sm fw-semibold" id="cfg-smtp-fromemail" placeholder="operaciones@tuempresa.com" style="border-radius:10px;">
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check form-switch mt-1">
+                                <input class="form-check-input" type="checkbox" id="cfg-smtp-secure" role="switch">
+                                <label class="form-check-label small fw-bold text-dark" for="cfg-smtp-secure">Usar SSL Directo (Puerto 465). Dejar desactivado para TLS/STARTTLS (Puerto 587).</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Acción SMTP -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-4 pt-3 border-top">
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-2 fw-bold d-flex align-items-center gap-2" onclick="window.abrirModalPruebaSMTP()">
+                            <i class="bi bi-send-check"></i> <span>Enviar Correo de Prueba</span>
+                        </button>
+
+                        <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm" onclick="window.guardarConfigSMTP()">
+                            <i class="bi bi-check2-circle fs-6"></i> <span>Guardar Servidor SMTP</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="cfg-section-title">Automatización de Alertas del ERP</h2>
+            <div class="cfg-group-box">
+                <div class="cfg-row-item">
+                    <div class="cfg-item-info">
+                        <p class="cfg-item-title"><i class="bi bi-shield-exclamation" style="color: #ef4444;"></i> Alertas por Falla Crítica en Checklist</p>
+                        <p class="cfg-item-desc">Enviar correo inmediato a supervisores si se marca una falla crítica en Motor, Frenos o Dirección.</p>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input cfg-switch" type="checkbox" id="cfg-alert-checklist" role="switch" checked>
+                    </div>
+                </div>
+
+                <div class="cfg-row-item">
+                    <div class="cfg-item-info">
+                        <p class="cfg-item-title"><i class="bi bi-calendar-x" style="color: #f59e0b;"></i> Alertas de Vencimiento (Flota y RRHH)</p>
+                        <p class="cfg-item-desc">Avisos automáticos preventivos a 30, 15 y 7 días antes del vencimiento de SOAT, CITV, Licencias y Contratos.</p>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input cfg-switch" type="checkbox" id="cfg-alert-vencimientos" role="switch" checked>
+                    </div>
+                </div>
+
+                <div class="cfg-row-item">
+                    <div class="cfg-item-info">
+                        <p class="cfg-item-title"><i class="bi bi-tools" style="color: #3b82f6;"></i> Alertas de Planes de Mantenimiento Atrasados</p>
+                        <p class="cfg-item-desc">Notificar retrasos (+1, +3 y +7 días) en órdenes y planes de mantenimiento preventivo.</p>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input cfg-switch" type="checkbox" id="cfg-alert-planes" role="switch" checked>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="cfg-section-title">Destinatarios de Alertas Automáticas</h2>
+            <div class="cfg-group-box p-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <p class="cfg-item-desc m-0">Contactos y supervisores que recibirán copia de las alertas automáticas generadas por el ERP.</p>
+                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold d-flex align-items-center gap-1" onclick="window.abrirModalNuevoDestinatarioAlertas()">
+                        <i class="bi bi-plus-lg"></i> <span>Añadir Destinatario</span>
+                    </button>
+                </div>
+
+                <div class="table-responsive rounded-3 border">
+                    <table class="table table-hover align-middle mb-0" style="font-size:0.85rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="py-2">Nombre y Cargo</th>
+                                <th class="py-2">Correo Electrónico</th>
+                                <th class="py-2 text-center">Fallas</th>
+                                <th class="py-2 text-center">Vencimientos</th>
+                                <th class="py-2 text-center">Planes</th>
+                                <th class="py-2 text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cfg-tabla-destinatarios-body">
+                            <tr>
+                                <td colspan="6" class="text-center py-3 text-muted">Cargando destinatarios...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal: Prueba de Envío SMTP -->
+<div class="modal fade" id="modalPruebaSMTP" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-primary text-white p-3">
+                <h6 class="modal-title fw-bold d-flex align-items-center gap-2 m-0" style="font-size:1rem;">
+                    <i class="bi bi-send-check-fill"></i> Enviar Correo de Prueba
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="small text-muted mb-3">
+                    Ingresa tu correo electrónico personal o corporativo para recibir una confirmación inmediata desde el servidor SMTP.
+                </p>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-dark">Correo de Destino</label>
+                    <input type="email" class="form-control" id="cfg-test-email-dest" placeholder="tu-correo@empresa.com" style="border-radius:10px;">
+                </div>
+                <div id="cfg-test-email-status" class="alert d-none small py-2 px-3 mb-0 rounded-3"></div>
+            </div>
+            <div class="modal-footer border-top p-3 bg-light d-flex justify-content-between">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="btn-ejecutar-prueba-smtp" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold d-flex align-items-center gap-2" onclick="window.ejecutarPruebaSMTP()">
+                    <i class="bi bi-send-fill"></i> <span>Enviar Ahora</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Añadir Destinatario de Alertas -->
+<div class="modal fade" id="modalNuevoDestinatarioAlertas" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-light p-3">
+                <h6 class="modal-title fw-bold text-dark d-flex align-items-center gap-2 m-0" style="font-size:1rem;">
+                    <i class="bi bi-person-plus-fill text-primary"></i> Añadir Destinatario de Alertas
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary mb-1">Nombre Completo</label>
+                    <input type="text" class="form-control form-control-sm" id="cfg-dest-nombre" placeholder="Ej. Juan Pérez" style="border-radius:8px;">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary mb-1">Correo Electrónico</label>
+                    <input type="email" class="form-control form-control-sm" id="cfg-dest-correo" placeholder="juan.perez@empresa.com" style="border-radius:8px;">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary mb-1">Cargo / Área (Opcional)</label>
+                    <input type="text" class="form-control form-control-sm" id="cfg-dest-cargo" placeholder="Ej. Jefe de Mantenimiento / Gerente de Operaciones" style="border-radius:8px;">
+                </div>
+
+                <div class="border rounded-3 p-3 bg-light">
+                    <div class="fw-bold small text-dark mb-2">Tipos de Alerta que recibirá:</div>
+                    <div class="form-check form-check-sm mb-1">
+                        <input class="form-check-input" type="checkbox" id="cfg-dest-notif-checklist" checked>
+                        <label class="form-check-label small" for="cfg-dest-notif-checklist">🚨 Reporte de Fallas Críticas (Checklist)</label>
+                    </div>
+                    <div class="form-check form-check-sm mb-1">
+                        <input class="form-check-input" type="checkbox" id="cfg-dest-notif-vencimientos" checked>
+                        <label class="form-check-label small" for="cfg-dest-notif-vencimientos">📅 Vencimiento de Documentos (Flota y RRHH)</label>
+                    </div>
+                    <div class="form-check form-check-sm">
+                        <input class="form-check-input" type="checkbox" id="cfg-dest-notif-planes" checked>
+                        <label class="form-check-label small" for="cfg-dest-notif-planes">⏰ Planes de Mantenimiento Atrasados</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top p-3 bg-light d-flex justify-content-between">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold" onclick="window.guardarDestinatarioAlertas()">
+                    <i class="bi bi-check2 me-1"></i> Guardar Destinatario
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 

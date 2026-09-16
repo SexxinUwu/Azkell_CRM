@@ -46,16 +46,21 @@ window.init_configuracion = function() {
 
     // 8. Sincronizar Datos de Empresa
     _cargarDatosEmpresaEnFormulario();
+
+    // 9. Sincronizar Notificaciones y SMTP
+    _cargarConfigNotificaciones();
+    _cargarDestinatariosAlertas();
 };
 
 // ---- Navegación de paneles ----
 window.showConfig = function(panel) {
-    const panels = ['apariencia', 'accesibilidad', 'idioma', 'empresa'];
+    const panels = ['apariencia', 'accesibilidad', 'idioma', 'empresa', 'notificaciones'];
     const titleMap = {
         'apariencia': 'Tema y Apariencia',
         'accesibilidad': 'Accesibilidad',
         'idioma': 'Idioma del Sistema',
-        'empresa': 'Datos de la Empresa'
+        'empresa': 'Datos de la Empresa',
+        'notificaciones': 'Notificaciones y Correo (SMTP)'
     };
 
     window._activeConfigSection = panel;
@@ -344,6 +349,296 @@ window.guardarDatosEmpresa = async function() {
             btn.disabled = false;
             btn.innerHTML = origHtml;
         }
+    }
+};
+
+// ============================================================
+// 📬 GESTIÓN DE NOTIFICACIONES Y SERVIDOR SMTP
+// ============================================================
+async function _cargarConfigNotificaciones() {
+    try {
+        const res = await fetch('/api/configuracion/email');
+        const json = await res.json();
+        if (json.ok && json.data) {
+            const d = json.data;
+            const h = document.getElementById('cfg-smtp-host');
+            const p = document.getElementById('cfg-smtp-port');
+            const u = document.getElementById('cfg-smtp-user');
+            const fn = document.getElementById('cfg-smtp-fromname');
+            const fe = document.getElementById('cfg-smtp-fromemail');
+            const sec = document.getElementById('cfg-smtp-secure');
+            const pwd = document.getElementById('cfg-smtp-pass');
+            const badge = document.getElementById('cfg-smtp-badge-status');
+
+            if (h) h.value = d.host || 'smtp.gmail.com';
+            if (p) p.value = d.port || 587;
+            if (u) u.value = d.user || '';
+            if (fn) fn.value = d.from_name || 'Azkell ERP Alertas';
+            if (fe) fe.value = d.from_email || '';
+            if (sec) sec.checked = !!d.secure;
+            if (pwd && d.has_pass) pwd.placeholder = '•••••••••••••••• (Guardada)';
+
+            const swChk = document.getElementById('cfg-alert-checklist');
+            const swVenc = document.getElementById('cfg-alert-vencimientos');
+            const swPlanes = document.getElementById('cfg-alert-planes');
+            if (swChk) swChk.checked = d.alertas_checklist !== false;
+            if (swVenc) swVenc.checked = d.alertas_vencimientos !== false;
+            if (swPlanes) swPlanes.checked = d.alertas_planes !== false;
+
+            if (badge) {
+                if (d.user && d.has_pass) {
+                    badge.className = 'badge bg-success-subtle text-success px-3 py-2 rounded-pill fw-bold';
+                    badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Estado: Configurado y Activo';
+                } else {
+                    badge.className = 'badge bg-warning-subtle text-warning-emphasis px-3 py-2 rounded-pill fw-bold';
+                    badge.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Estado: Requiere Credenciales';
+                }
+            }
+        }
+    } catch(err) {
+        console.warn('Error cargando configuración SMTP:', err);
+    }
+}
+
+window.toggleSmtpPassVisibility = function() {
+    const input = document.getElementById('cfg-smtp-pass');
+    const icon = document.getElementById('cfg-smtp-pass-icon');
+    if (!input || !icon) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+};
+
+window.guardarConfigSMTP = async function() {
+    const host = (document.getElementById('cfg-smtp-host') || {}).value || '';
+    const port = (document.getElementById('cfg-smtp-port') || {}).value || '587';
+    const user = (document.getElementById('cfg-smtp-user') || {}).value || '';
+    const pass = (document.getElementById('cfg-smtp-pass') || {}).value || '';
+    const from_name = (document.getElementById('cfg-smtp-fromname') || {}).value || '';
+    const from_email = (document.getElementById('cfg-smtp-fromemail') || {}).value || '';
+    const secure = (document.getElementById('cfg-smtp-secure') || {}).checked;
+
+    const alertas_checklist = (document.getElementById('cfg-alert-checklist') || {}).checked;
+    const alertas_vencimientos = (document.getElementById('cfg-alert-vencimientos') || {}).checked;
+    const alertas_planes = (document.getElementById('cfg-alert-planes') || {}).checked;
+
+    try {
+        const res = await fetch('/api/configuracion/email/smtp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                host, port, secure, user, pass, from_name, from_email,
+                alertas_checklist, alertas_vencimientos, alertas_planes
+            })
+        });
+        const json = await res.json();
+        if (json.ok) {
+            _mostrarToast('Servidor SMTP guardado');
+            if (typeof window.showToastNotification === 'function') {
+                window.showToastNotification('Configuración SMTP actualizada con éxito.', 'success');
+            }
+            _cargarConfigNotificaciones();
+        } else {
+            throw new Error(json.error || 'Error al guardar');
+        }
+    } catch (err) {
+        alert('Error al guardar configuración SMTP: ' + err.message);
+    }
+};
+
+window.abrirModalPruebaSMTP = function() {
+    const user = (document.getElementById('cfg-smtp-user') || {}).value || '';
+    const inputDest = document.getElementById('cfg-test-email-dest');
+    if (inputDest && user) inputDest.value = user;
+
+    const statusEl = document.getElementById('cfg-test-email-status');
+    if (statusEl) statusEl.className = 'alert d-none small py-2 px-3 mb-0 rounded-3';
+
+    const m = document.getElementById('modalPruebaSMTP');
+    if (m && typeof bootstrap !== 'undefined') {
+        bootstrap.Modal.getOrCreateInstance(m).show();
+    }
+};
+
+window.ejecutarPruebaSMTP = async function() {
+    const dest = (document.getElementById('cfg-test-email-dest') || {}).value || '';
+    const statusEl = document.getElementById('cfg-test-email-status');
+    const btn = document.getElementById('btn-ejecutar-prueba-smtp');
+
+    if (!dest || !dest.includes('@')) {
+        if (statusEl) {
+            statusEl.className = 'alert alert-danger small py-2 px-3 mb-0 rounded-3 d-block';
+            statusEl.textContent = 'Ingrese un correo de destino válido.';
+        }
+        return;
+    }
+
+    const host = (document.getElementById('cfg-smtp-host') || {}).value || '';
+    const port = (document.getElementById('cfg-smtp-port') || {}).value || '587';
+    const user = (document.getElementById('cfg-smtp-user') || {}).value || '';
+    const pass = (document.getElementById('cfg-smtp-pass') || {}).value || '';
+    const from_name = (document.getElementById('cfg-smtp-fromname') || {}).value || '';
+    const from_email = (document.getElementById('cfg-smtp-fromemail') || {}).value || '';
+    const secure = (document.getElementById('cfg-smtp-secure') || {}).checked;
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enviando...';
+    }
+    if (statusEl) {
+        statusEl.className = 'alert alert-info small py-2 px-3 mb-0 rounded-3 d-block';
+        statusEl.innerHTML = '<i class="bi bi-arrow-repeat-spin me-1"></i> Conectando al servidor SMTP y enviando prueba...';
+    }
+
+    try {
+        const res = await fetch('/api/configuracion/email/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                test_email: dest, host, port, secure, user, pass, from_name, from_email
+            })
+        });
+        const json = await res.json();
+        if (json.ok) {
+            if (statusEl) {
+                statusEl.className = 'alert alert-success small py-2 px-3 mb-0 rounded-3 d-block';
+                statusEl.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> <b>¡Éxito!</b> ${json.message}`;
+            }
+        } else {
+            throw new Error(json.error || 'Error al conectar con SMTP');
+        }
+    } catch (err) {
+        if (statusEl) {
+            statusEl.className = 'alert alert-danger small py-2 px-3 mb-0 rounded-3 d-block';
+            statusEl.innerHTML = `<i class="bi bi-x-circle-fill me-1"></i> <b>Error:</b> ${err.message}`;
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-send-fill me-1"></i> Enviar Ahora';
+        }
+    }
+};
+
+// ── DIRECTOTIO DE DESTINATARIOS DE ALERTAS ──────────────────────
+async function _cargarDestinatariosAlertas() {
+    const tbody = document.getElementById('cfg-tabla-destinatarios-body');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch('/api/configuracion/email/destinatarios');
+        const json = await res.json();
+        const items = (json && json.ok && json.data) ? json.data : [];
+
+        if (items.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-3 text-muted">
+                        <i class="bi bi-people me-1"></i> No hay destinatarios registrados aún. Haz clic en <b>Añadir Destinatario</b>.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        let html = '';
+        items.forEach(d => {
+            const chkBadge = d.notif_checklist ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle">Sí</span>' : '<span class="text-muted">No</span>';
+            const vencBadge = d.notif_vencimientos ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Sí</span>' : '<span class="text-muted">No</span>';
+            const planBadge = d.notif_1d || d.notif_3d || d.notif_7d ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Sí</span>' : '<span class="text-muted">No</span>';
+
+            html += `
+                <tr>
+                    <td class="fw-bold text-dark">
+                        ${d.nombre}
+                        ${d.cargo ? `<div class="small text-muted fw-normal">${d.cargo}</div>` : ''}
+                    </td>
+                    <td class="text-primary fw-semibold">${d.correo}</td>
+                    <td class="text-center">${chkBadge}</td>
+                    <td class="text-center">${vencBadge}</td>
+                    <td class="text-center">${planBadge}</td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0 p-1" onclick="window.eliminarDestinatarioAlertas(${d.id})" title="Eliminar destinatario">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    } catch(err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-2">Error al cargar: ${err.message}</td></tr>`;
+    }
+}
+
+window.abrirModalNuevoDestinatarioAlertas = function() {
+    const nom = document.getElementById('cfg-dest-nombre');
+    const cor = document.getElementById('cfg-dest-correo');
+    const car = document.getElementById('cfg-dest-cargo');
+    if (nom) nom.value = '';
+    if (cor) cor.value = '';
+    if (car) car.value = '';
+
+    const m = document.getElementById('modalNuevoDestinatarioAlertas');
+    if (m && typeof bootstrap !== 'undefined') {
+        bootstrap.Modal.getOrCreateInstance(m).show();
+    }
+};
+
+window.guardarDestinatarioAlertas = async function() {
+    const nombre = (document.getElementById('cfg-dest-nombre') || {}).value || '';
+    const correo = (document.getElementById('cfg-dest-correo') || {}).value || '';
+    const cargo = (document.getElementById('cfg-dest-cargo') || {}).value || '';
+    const notif_checklist = (document.getElementById('cfg-dest-notif-checklist') || {}).checked;
+    const notif_vencimientos = (document.getElementById('cfg-dest-notif-vencimientos') || {}).checked;
+    const notif_planes = (document.getElementById('cfg-dest-notif-planes') || {}).checked;
+
+    if (!nombre || !correo || !correo.includes('@')) {
+        alert('Nombre y correo válido son requeridos.');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/configuracion/email/destinatarios', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nombre, correo, cargo,
+                notif_checklist, notif_vencimientos,
+                notif_1d: notif_planes, notif_3d: notif_planes, notif_7d: notif_planes
+            })
+        });
+        const json = await res.json();
+        if (json.ok) {
+            const m = document.getElementById('modalNuevoDestinatarioAlertas');
+            if (m && typeof bootstrap !== 'undefined') {
+                bootstrap.Modal.getOrCreateInstance(m).hide();
+            }
+            _mostrarToast('Destinatario guardado');
+            _cargarDestinatariosAlertas();
+        } else {
+            throw new Error(json.error || 'Error al guardar');
+        }
+    } catch(err) {
+        alert('Error: ' + err.message);
+    }
+};
+
+window.eliminarDestinatarioAlertas = async function(id) {
+    if (!confirm('¿Desea eliminar este destinatario de las alertas?')) return;
+    try {
+        const res = await fetch(`/api/configuracion/email/destinatarios/${id}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (json.ok) {
+            _mostrarToast('Destinatario eliminado');
+            _cargarDestinatariosAlertas();
+        }
+    } catch(err) {
+        alert('Error: ' + err.message);
     }
 };
 
