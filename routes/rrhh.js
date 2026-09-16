@@ -91,7 +91,7 @@ async function ensureTablesRRHH(req) {
                 talla_pantalon VARCHAR(10) NULL,
                 talla_calzado VARCHAR(10) NULL,
                 talla_chaleco VARCHAR(10) NULL,
-                foto_url TEXT NULL,
+                foto_url LONGTEXT NULL,
                 creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -104,7 +104,8 @@ async function ensureTablesRRHH(req) {
             `ALTER TABLE rrhh_personal ADD COLUMN talla_pantalon VARCHAR(10) NULL`,
             `ALTER TABLE rrhh_personal ADD COLUMN talla_calzado VARCHAR(10) NULL`,
             `ALTER TABLE rrhh_personal ADD COLUMN talla_chaleco VARCHAR(10) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN foto_url TEXT NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN foto_url LONGTEXT NULL`,
+            `ALTER TABLE rrhh_personal MODIFY COLUMN foto_url LONGTEXT NULL`,
             `ALTER TABLE rrhh_personal ADD COLUMN contacto_emergencia_nombre VARCHAR(100) NULL`,
             `ALTER TABLE rrhh_personal ADD COLUMN contacto_emergencia_parentesco VARCHAR(50) NULL`,
             `ALTER TABLE rrhh_personal ADD COLUMN contacto_emergencia_telefono VARCHAR(30) NULL`,
@@ -304,6 +305,8 @@ router.post('/personal', upload.single('foto'), async (req, res) => {
         let foto_url = null;
         if (req.file) {
             foto_url = `/uploads/rrhh/${req.file.filename}`;
+        } else if (b.foto_url) {
+            foto_url = b.foto_url;
         }
 
         const query = `
@@ -454,6 +457,9 @@ router.put('/personal/:id', upload.single('foto'), async (req, res) => {
         if (req.file) {
             fotoClause = ', foto_url = ?';
             params.push(`/uploads/rrhh/${req.file.filename}`);
+        } else if (b.foto_url) {
+            fotoClause = ', foto_url = ?';
+            params.push(b.foto_url);
         }
 
         params.push(id);

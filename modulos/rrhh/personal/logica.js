@@ -605,7 +605,13 @@ window.rrhhPersonalAbrirModalEditar = function(id) {
     setVal('pers-talla-chaleco', p.talla_chaleco || 'ESTANDAR');
 
     var prevFoto = document.getElementById('pers-foto-preview');
-    if (prevFoto) prevFoto.src = p.foto_url || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
+    var fcAvatar = document.getElementById('fc-avatar');
+    window._rrhhFotoBase64 = p.foto_url || null;
+    var fotoVal = p.foto_url || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
+    if (prevFoto) prevFoto.src = fotoVal;
+    if (fcAvatar) fcAvatar.src = fotoVal;
+    var hidFoto = document.getElementById('pers-foto-url');
+    if (hidFoto) hidFoto.value = p.foto_url || '';
 
     window.rrhhPersonalToggleRol(p.categoria_rol);
     window.rrhhPersonalOnTipoContratoChange(p.tipo_contrato || 'PLAZO_FIJO');
@@ -666,7 +672,8 @@ window.rrhhPersonalGuardar = async function(e) {
         talla_polo: document.getElementById('pers-talla-polo')?.value,
         talla_pantalon: document.getElementById('pers-talla-pantalon')?.value,
         talla_calzado: document.getElementById('pers-talla-calzado')?.value,
-        talla_chaleco: document.getElementById('pers-talla-chaleco')?.value
+        talla_chaleco: document.getElementById('pers-talla-chaleco')?.value,
+        foto_url: window._rrhhFotoBase64 || document.getElementById('pers-foto-url')?.value || null
     };
 
     try {
@@ -826,335 +833,691 @@ window.rrhhPersonalExportarExcel = async function() {
     }
 };
 
-// ── Ficha 360° Visualización Detallada ─────────────────────────────────
-// ── Ficha 360° Visualización Detallada (Formato Oficial Documentario A4) ───
+// ── Ficha 360° Visualización Detallada (Estilo Apple / Segmentada en Nueva Pestaña) ───
 window._rrhhColaboradorFichaActual = null;
 
 window.rrhhPersonalVerFicha = async function(id) {
     try {
         var res = await fetch(`/api/rrhh/personal/${id}`);
         var json = await res.json();
-        if (!json || !json.ok || !json.data) return;
+        if (!json || !json.ok || !json.data) {
+            alert('No se pudo cargar la información del colaborador.');
+            return;
+        }
 
         var p = json.data;
         window._rrhhColaboradorFichaActual = p;
 
-        var elNom = document.getElementById('ficha-nombre');
-        var elCar = document.getElementById('ficha-cargo');
-        var elAv = document.getElementById('ficha-avatar');
-        var elBody = document.getElementById('ficha-body');
-
-        if (elNom) elNom.textContent = `${p.apellidos}, ${p.nombres}`;
-        if (elCar) elCar.textContent = `${p.cargo} — ${p.area || 'OPERACIONES'}`;
-        if (elAv) elAv.textContent = (p.nombres.charAt(0) + (p.apellidos.charAt(0) || '')).toUpperCase();
-
         var empNombre = (localStorage.getItem('fleet_empresa_nombre') || 'AZKELL TRANSPORTES S.A.C.').toUpperCase();
         var empLogo = localStorage.getItem('fleet_empresa_logo') || document.getElementById('nav-logo-img')?.src || '/favicon-2003.png';
-        var fotoSrc = p.foto_url || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
+        var fotoSrc = p.foto_url || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 24 24' fill='%2394a3b8'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
 
         var fechaEmision = p.fecha_ingreso ? p.fecha_ingreso.slice(0, 10) : new Date().toISOString().slice(0, 10);
 
-        var docHtml = `
-            <div class="ficha-paper-container" id="ficha-print-area">
-                
-                <!-- Encabezado Documentario -->
-                <table class="ficha-doc-header">
-                    <tr>
-                        <td style="width: 25%; text-align: center; background: #ffffff;">
-                            <img src="${empLogo}" alt="Logo Empresa" style="max-height: 48px; max-width: 170px; object-fit: contain;">
-                            <div style="font-size: 0.72rem; font-weight: 800; color: #334155; margin-top: 4px;">${empNombre}</div>
-                        </td>
-                        <td style="width: 50%; text-align: center;">
-                            <div class="ficha-doc-title">FICHA DE REGISTRO<br>DE INGRESO DE PERSONAL</div>
-                        </td>
-                        <td style="width: 25%; padding: 0;">
-                            <table class="ficha-doc-meta-table">
-                                <tr>
-                                    <td class="ficha-doc-lbl" style="width: 45%;">Registro</td>
-                                    <td class="ficha-doc-val">RH 004</td>
-                                </tr>
-                                <tr>
-                                    <td class="ficha-doc-lbl">Versión</td>
-                                    <td class="ficha-doc-val">1</td>
-                                </tr>
-                                <tr>
-                                    <td class="ficha-doc-lbl">Fecha</td>
-                                    <td class="ficha-doc-val font-monospace">${fechaEmision}</td>
-                                </tr>
-                                <tr>
-                                    <td class="ficha-doc-lbl">Página</td>
-                                    <td class="ficha-doc-val">1 de 1</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
+        var rolNombre = (p.categoria_rol || 'ADMINISTRATIVO').replace(/_/g, ' ');
+        var estContratoBadge = (p.tipo_contrato === 'INDETERMINADO') ? 'INDETERMINADO' : (p.fecha_fin_contrato ? `VENCE: ${p.fecha_fin_contrato.slice(0, 10)}` : 'VIGENTE');
 
-                <div class="ficha-doc-main-sub">FICHA PERSONAL</div>
-
-                <!-- A) DATOS PERSONALES -->
-                <div class="ficha-doc-section-head">A) DATOS PERSONALES</div>
-                <table class="ficha-doc-table">
-                    <tr>
-                        <td class="ficha-doc-lbl">Nombre Completo:</td>
-                        <td class="ficha-doc-val fw-bold" colspan="3" style="font-size: 0.88rem; color: #0284c7;">${p.apellidos}, ${p.nombres}</td>
-                        <td rowspan="6" style="width: 130px; text-align: center; vertical-align: middle; background: #fafafa; padding: 4px;">
-                            <div class="ficha-doc-photo-box">
-                                <img src="${fotoSrc}" alt="Foto ${p.nombres}">
-                            </div>
-                            <small class="text-muted d-block mt-1" style="font-size: 0.65rem; font-weight: bold;">FOTO OFICIAL</small>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">DNI / Documento:</td>
-                        <td class="ficha-doc-val font-monospace fw-bold">${p.numero_documento}</td>
-                        <td class="ficha-doc-lbl">Fecha Nacimiento:</td>
-                        <td class="ficha-doc-val font-monospace">${p.fecha_nacimiento ? p.fecha_nacimiento.slice(0, 10) : '—'}</td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">Nacionalidad:</td>
-                        <td class="ficha-doc-val">${p.nacionalidad || 'PERUANA'}</td>
-                        <td class="ficha-doc-lbl">Estado Civil:</td>
-                        <td class="ficha-doc-val">${p.estado_civil || 'SOLTERO(A)'}</td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">Dirección:</td>
-                        <td class="ficha-doc-val" colspan="3">${p.direccion || '—'}</td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">Distrito / Prov:</td>
-                        <td class="ficha-doc-val">${p.distrito || '—'} / ${p.provincia || '—'}</td>
-                        <td class="ficha-doc-lbl">Teléfono / Celular:</td>
-                        <td class="ficha-doc-val font-monospace">${p.telefono || '—'}</td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">Correo Electrónico:</td>
-                        <td class="ficha-doc-val" colspan="3">${p.email || '—'}</td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">AFP / ONP:</td>
-                        <td class="ficha-doc-val fw-bold">${p.regimen_pensionario || 'ONP'}</td>
-                        <td class="ficha-doc-lbl">Comisión AFP:</td>
-                        <td class="ficha-doc-val" colspan="2">${p.tipo_comision_afp || 'FLUJO'} &nbsp;|&nbsp; <strong>CUSPP:</strong> <span class="font-monospace">${p.cuspp || '—'}</span></td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">Especifique Tallas:</td>
-                        <td class="ficha-doc-val" colspan="4">
-                            <strong>Zapato/Calzado:</strong> ${p.talla_calzado || '41'} &nbsp;&nbsp;|&nbsp;&nbsp; 
-                            <strong>Camisa/Polo:</strong> ${p.talla_polo || 'M'} &nbsp;&nbsp;|&nbsp;&nbsp; 
-                            <strong>Pantalón:</strong> ${p.talla_pantalon || '32'} &nbsp;&nbsp;|&nbsp;&nbsp; 
-                            <strong>Chaleco:</strong> ${p.talla_chaleco || 'ESTÁNDAR'}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">¿Tiene Hijos? / Asig. Fam:</td>
-                        <td class="ficha-doc-val" colspan="4">
-                            <span class="badge ${p.tiene_asignacion_familiar ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-light text-dark border'} fw-bold me-2">
-                                ${p.tiene_asignacion_familiar ? 'SÍ (Percibe S/ 113.00 de Asignación Familiar)' : 'NO APLICA'}
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">Contacto de Emergencia:</td>
-                        <td class="ficha-doc-val" colspan="4">
-                            <strong>Nombre:</strong> ${p.contacto_emergencia_nombre || '—'} &nbsp;&nbsp;|&nbsp;&nbsp;
-                            <strong>Parentesco:</strong> ${p.contacto_emergencia_parentesco || '—'} &nbsp;&nbsp;|&nbsp;&nbsp;
-                            <strong>Teléfono:</strong> <span class="font-monospace">${p.contacto_emergencia_telefono || '—'}</span>
-                        </td>
-                    </tr>
-                </table>
-
-                <!-- B) DATOS LABORALES, CONTRATO Y CENTRO DE COSTOS -->
-                <div class="ficha-doc-section-head">B) DATOS LABORALES, CONTRATO Y CENTRO DE COSTOS</div>
-                <table class="ficha-doc-table">
-                    <tr>
-                        <td class="ficha-doc-lbl">Cargo / Puesto:</td>
-                        <td class="ficha-doc-val fw-bold">${p.cargo}</td>
-                        <td class="ficha-doc-lbl">Área Operativa:</td>
-                        <td class="ficha-doc-val">${p.area || 'OPERACIONES'}</td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">Rol / Categoría:</td>
-                        <td class="ficha-doc-val">${p.categoria_rol ? p.categoria_rol.replace('_', ' ') : '—'}</td>
-                        <td class="ficha-doc-lbl">Centro de Costos:</td>
-                        <td class="ficha-doc-val font-monospace fw-bold text-primary">${p.centro_costo_codigo || 'CC-100'}</td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">Sede / Base:</td>
-                        <td class="ficha-doc-val">${p.sede || 'BASE PRINCIPAL'}</td>
-                        <td class="ficha-doc-lbl">Fecha de Ingreso:</td>
-                        <td class="ficha-doc-val font-monospace fw-bold">${p.fecha_ingreso ? p.fecha_ingreso.slice(0, 10) : '—'}</td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">Tipo de Contrato:</td>
-                        <td class="ficha-doc-val fw-bold">${p.tipo_contrato || 'PLAZO_FIJO'}</td>
-                        <td class="ficha-doc-lbl">Vigencia Contrato:</td>
-                        <td class="ficha-doc-val font-monospace">
-                            ${p.fecha_inicio_contrato ? p.fecha_inicio_contrato.slice(0, 10) : '—'} al 
-                            ${p.fecha_fin_contrato ? p.fecha_fin_contrato.slice(0, 10) : (p.tipo_contrato === 'INDETERMINADO' ? 'INDETERMINADO' : '—')}
-                        </td>
-                    </tr>
-                </table>
-
-                <!-- C) PLANILLAS, REMUNERACIONES Y CUENTAS BANCARIAS -->
-                <div class="ficha-doc-section-head">C) PLANILLAS, REMUNERACIONES Y CUENTAS BANCARIAS</div>
-                <table class="ficha-doc-table">
-                    <tr>
-                        <td class="ficha-doc-lbl">Sueldo Básico:</td>
-                        <td class="ficha-doc-val font-monospace fw-bold text-success">S/ ${parseFloat(p.sueldo_basico || 0).toFixed(2)}</td>
-                        <td class="ficha-doc-lbl">Asignación Familiar:</td>
-                        <td class="ficha-doc-val font-monospace">${p.tiene_asignacion_familiar ? 'S/ 113.00' : 'S/ 0.00'}</td>
-                        <td class="ficha-doc-lbl">Bono Fijo:</td>
-                        <td class="ficha-doc-val font-monospace">S/ ${parseFloat(p.bono_fijo || 0).toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">Banco Haberes:</td>
-                        <td class="ficha-doc-val fw-bold">${p.banco_haberes || 'BCP'}</td>
-                        <td class="ficha-doc-lbl">N° Cuenta Sueldo:</td>
-                        <td class="ficha-doc-val font-monospace">${p.cuenta_haberes || '—'}</td>
-                        <td class="ficha-doc-lbl">CCI Haberes:</td>
-                        <td class="ficha-doc-val font-monospace">${p.cci_haberes || '—'}</td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">Banco Depósito CTS:</td>
-                        <td class="ficha-doc-val fw-bold">${p.banco_cts || '—'}</td>
-                        <td class="ficha-doc-lbl">N° Cuenta CTS:</td>
-                        <td class="ficha-doc-val font-monospace" colspan="3">${p.cuenta_cts || '—'}</td>
-                    </tr>
-                </table>
-
-                <!-- D) SEGURIDAD Y SALUD EN EL TRABAJO (SST) & CONDUCCIÓN -->
-                <div class="ficha-doc-section-head">D) SEGURIDAD Y SALUD EN EL TRABAJO (SST) & CONDUCCIÓN</div>
-                <table class="ficha-doc-table">
-                    <tr>
-                        <td class="ficha-doc-lbl">Grupo Sanguíneo:</td>
-                        <td class="ficha-doc-val fw-bold text-danger">${p.grupo_sanguineo || 'O+'}</td>
-                        <td class="ficha-doc-lbl">Brevete MTC:</td>
-                        <td class="ficha-doc-val font-monospace fw-bold">${p.licencia_conducir || 'N/A'} (Cat: ${p.licencia_categoria || '---'})</td>
-                        <td class="ficha-doc-lbl">Venc. Brevete:</td>
-                        <td class="ficha-doc-val font-monospace">${p.licencia_vencimiento ? p.licencia_vencimiento.slice(0, 10) : '—'}</td>
-                    </tr>
-                    <tr>
-                        <td class="ficha-doc-lbl">Póliza SCTR Salud:</td>
-                        <td class="ficha-doc-val fw-bold ${p.sctr_salud_vigente ? 'text-success' : 'text-danger'}">${p.sctr_salud_vigente ? 'VIGENTE' : 'NO CUBIERTO'}</td>
-                        <td class="ficha-doc-lbl">Póliza SCTR Pensión:</td>
-                        <td class="ficha-doc-val fw-bold ${p.sctr_pension_vigente ? 'text-success' : 'text-danger'}">${p.sctr_pension_vigente ? 'VIGENTE' : 'NO CUBIERTO'}</td>
-                        <td class="ficha-doc-lbl">Examen Médico EMO:</td>
-                        <td class="ficha-doc-val"><strong>${p.emo_condicion || 'APTO'}</strong> (${p.emo_fecha_vencimiento ? p.emo_fecha_vencimiento.slice(0, 10) : '—'})</td>
-                    </tr>
-                </table>
-
-                <!-- Firmas y Declaración -->
-                <div style="margin-top: 25px; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
-                    <p style="font-size: 0.68rem; color: #64748b; text-align: justify; margin-bottom: 20px;">
-                        Declaro bajo juramento que toda la información consignada en la presente Ficha de Registro de Personal es verídica y autorizo a la empresa a su verificación correspondiente conforme a las normativas laborales vigentes.
-                    </p>
-                    <table style="width: 100%; margin-top: 20px;">
-                        <tr>
-                            <td style="width: 40%; text-align: center; vertical-align: bottom;">
-                                <div class="ficha-sign-line">
-                                    FIRMA DEL COLABORADOR<br>
-                                    <span style="font-size: 0.7rem; font-weight: normal;">DNI: ${p.numero_documento}</span>
-                                </div>
-                            </td>
-                            <td style="width: 20%; text-align: center; vertical-align: middle;">
-                                <div class="ficha-huella-box">
-                                    HUELLA<br>DIGITAL
-                                </div>
-                            </td>
-                            <td style="width: 40%; text-align: center; vertical-align: bottom;">
-                                <div class="ficha-sign-line">
-                                    RECURSOS HUMANOS / GERENCIA<br>
-                                    <span style="font-size: 0.7rem; font-weight: normal;">${empNombre}</span>
-                                </div>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-
-            </div>
-        `;
-
-        if (elBody) {
-            elBody.innerHTML = docHtml;
+        var win = window.open('', '_blank');
+        if (!win) {
+            alert('El navegador bloqueó la ventana emergente. Por favor, permita las ventanas emergentes para ver la ficha.');
+            return;
         }
 
-        var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPersonalFicha'));
-        modal.show();
+        win.document.write(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Ficha Oficial 360° — ${p.apellidos}, ${p.nombres}</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+                <style>
+                    :root {
+                        --apple-bg: #f8fafc;
+                        --apple-card-bg: rgba(255, 255, 255, 0.92);
+                        --apple-blue: #0071e3;
+                        --apple-blue-hover: #0077ed;
+                        --apple-dark: #0f172a;
+                        --apple-gray: #64748b;
+                        --radius-lg: 22px;
+                        --radius-md: 14px;
+                        --radius-sm: 10px;
+                        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.03);
+                        --shadow-md: 0 10px 28px -6px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02);
+                    }
+                    * { box-sizing: border-box; margin: 0; padding: 0; }
+                    body {
+                        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                        background: var(--apple-bg);
+                        color: var(--apple-dark);
+                        line-height: 1.45;
+                        padding-bottom: 60px;
+                        -webkit-font-smoothing: antialiased;
+                    }
+                    .font-mono { font-family: 'JetBrains Mono', monospace; }
+                    
+                    /* Sticky Apple Topbar */
+                    .apple-topbar {
+                        position: sticky;
+                        top: 0;
+                        z-index: 100;
+                        background: rgba(255, 255, 255, 0.82);
+                        backdrop-filter: blur(20px);
+                        -webkit-backdrop-filter: blur(20px);
+                        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+                        padding: 12px 24px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+                    }
+                    .apple-brand {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                    }
+                    .apple-brand img {
+                        height: 38px;
+                        max-width: 140px;
+                        object-fit: contain;
+                    }
+                    .apple-brand-title {
+                        font-size: 0.95rem;
+                        font-weight: 800;
+                        color: #0f172a;
+                        letter-spacing: -0.2px;
+                    }
+                    .apple-brand-sub {
+                        font-size: 0.74rem;
+                        font-weight: 600;
+                        color: #64748b;
+                    }
+                    .apple-actions {
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    }
+                    .btn-apple-primary {
+                        background: var(--apple-blue);
+                        color: #ffffff;
+                        font-family: inherit;
+                        font-size: 0.86rem;
+                        font-weight: 700;
+                        padding: 8px 20px;
+                        border-radius: 980px;
+                        border: none;
+                        cursor: pointer;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        transition: all 0.2s ease;
+                        box-shadow: 0 4px 14px rgba(0, 113, 227, 0.25);
+                    }
+                    .btn-apple-primary:hover {
+                        background: var(--apple-blue-hover);
+                        transform: translateY(-1px);
+                    }
+                    .btn-apple-secondary {
+                        background: #f1f5f9;
+                        color: #334155;
+                        font-family: inherit;
+                        font-size: 0.86rem;
+                        font-weight: 700;
+                        padding: 8px 18px;
+                        border-radius: 980px;
+                        border: 1px solid #e2e8f0;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    }
+                    .btn-apple-secondary:hover {
+                        background: #e2e8f0;
+                    }
+
+                    /* Main Container */
+                    .doc-container {
+                        max-width: 980px;
+                        margin: 28px auto 0 auto;
+                        padding: 0 20px;
+                    }
+
+                    /* Hero Profile Card */
+                    .hero-card {
+                        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 45%, #f5f3ff 100%);
+                        border: 1px solid #bae6fd;
+                        border-radius: var(--radius-lg);
+                        padding: 28px;
+                        box-shadow: var(--shadow-md);
+                        display: flex;
+                        flex-direction: row;
+                        align-items: center;
+                        gap: 24px;
+                        margin-bottom: 22px;
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    .hero-photo-wrap {
+                        flex-shrink: 0;
+                        position: relative;
+                    }
+                    .hero-photo {
+                        width: 135px;
+                        height: 135px;
+                        border-radius: 26px;
+                        object-fit: cover;
+                        background: #ffffff;
+                        border: 4px solid #ffffff;
+                        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+                    }
+                    .hero-info {
+                        flex-grow: 1;
+                    }
+                    .hero-name {
+                        font-size: 1.6rem;
+                        font-weight: 800;
+                        letter-spacing: -0.5px;
+                        color: #0f172a;
+                        margin-bottom: 4px;
+                    }
+                    .hero-role-title {
+                        font-size: 1.05rem;
+                        font-weight: 700;
+                        color: #0284c7;
+                        margin-bottom: 12px;
+                    }
+                    .hero-tags {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                    }
+                    .hero-badge {
+                        padding: 5px 12px;
+                        border-radius: 980px;
+                        font-size: 0.74rem;
+                        font-weight: 800;
+                        letter-spacing: 0.3px;
+                        text-transform: uppercase;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 4px;
+                    }
+                    .badge-blue { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+                    .badge-purple { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+                    .badge-green { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+                    .badge-amber { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+                    .badge-rose { background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; }
+                    .badge-slate { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+
+                    /* Segmented Grid Layout */
+                    .segmented-grid {
+                        display: grid;
+                        grid-template-columns: repeat(2, 1fr);
+                        gap: 18px;
+                        margin-bottom: 18px;
+                    }
+                    @media (max-width: 768px) {
+                        .segmented-grid { grid-template-columns: 1fr; }
+                        .hero-card { flex-direction: column; text-align: center; }
+                    }
+
+                    /* Apple Segmented Card */
+                    .apple-card {
+                        background: #ffffff;
+                        border-radius: var(--radius-lg);
+                        padding: 22px 24px;
+                        box-shadow: var(--shadow-sm);
+                        border: 1px solid #e2e8f0;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        transition: transform 0.2s ease;
+                    }
+                    .card-blue { border-color: #bae6fd; background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 50px); }
+                    .card-purple { border-color: #e9d5ff; background: linear-gradient(180deg, #faf5ff 0%, #ffffff 50px); }
+                    .card-green { border-color: #bbf7d0; background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 50px); }
+                    .card-amber { border-color: #fef3c7; background: linear-gradient(180deg, #fffbeb 0%, #ffffff 50px); }
+                    .card-rose { border-color: #fecdd3; background: linear-gradient(180deg, #fff1f2 0%, #ffffff 50px); }
+                    .card-slate { border-color: #e2e8f0; background: linear-gradient(180deg, #f8fafc 0%, #ffffff 50px); }
+
+                    .card-header {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        margin-bottom: 16px;
+                        padding-bottom: 10px;
+                        border-bottom: 1px solid rgba(0,0,0,0.06);
+                    }
+                    .card-title {
+                        font-size: 0.95rem;
+                        font-weight: 800;
+                        color: #0f172a;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+                    .card-icon {
+                        width: 28px;
+                        height: 28px;
+                        border-radius: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 0.9rem;
+                    }
+
+                    /* Inline Data Rows */
+                    .data-list {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+                    }
+                    .data-row {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 8px 12px;
+                        background: #f8fafc;
+                        border-radius: var(--radius-sm);
+                        border: 1px solid #f1f5f9;
+                        font-size: 0.83rem;
+                    }
+                    .data-label {
+                        color: #64748b;
+                        font-weight: 600;
+                    }
+                    .data-val {
+                        color: #0f172a;
+                        font-weight: 700;
+                        text-align: right;
+                    }
+                    .data-val-highlight {
+                        color: #0284c7;
+                        font-weight: 800;
+                    }
+                    .data-val-success {
+                        color: #15803d;
+                        font-weight: 800;
+                    }
+
+                    /* Signature Zone */
+                    .sign-card {
+                        background: #ffffff;
+                        border: 1px solid #e2e8f0;
+                        border-radius: var(--radius-lg);
+                        padding: 24px;
+                        box-shadow: var(--shadow-sm);
+                        margin-top: 18px;
+                    }
+                    .sign-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 90px 1fr;
+                        gap: 20px;
+                        align-items: end;
+                        margin-top: 30px;
+                    }
+                    .sign-box {
+                        text-align: center;
+                    }
+                    .sign-line {
+                        border-top: 1.5px solid #334155;
+                        padding-top: 6px;
+                        font-size: 0.78rem;
+                        font-weight: 800;
+                        color: #1e293b;
+                    }
+                    .huella-box {
+                        width: 75px;
+                        height: 95px;
+                        border: 1.5px dashed #64748b;
+                        border-radius: 8px;
+                        margin: 0 auto;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 0.65rem;
+                        font-weight: 700;
+                        color: #64748b;
+                        text-align: center;
+                    }
+
+                    @media print {
+                        body { background: #ffffff; padding: 0; }
+                        .apple-topbar { display: none !important; }
+                        .doc-container { max-width: 100%; margin: 0; padding: 0; }
+                        .hero-card, .apple-card, .sign-card {
+                            box-shadow: none !important;
+                            border: 1px solid #cbd5e1 !important;
+                            page-break-inside: avoid;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                
+                <!-- Floating Apple Bar -->
+                <div class="apple-topbar">
+                    <div class="apple-brand">
+                        <img src="${empLogo}" alt="Logo">
+                        <div>
+                            <div class="apple-brand-title">${empNombre}</div>
+                            <div class="apple-brand-sub">Ficha de Registro de Ingreso de Personal &bull; RH-004</div>
+                        </div>
+                    </div>
+                    <div class="apple-actions">
+                        <button type="button" class="btn-apple-primary" onclick="window.print()">
+                            🖨️ Imprimir / Guardar PDF
+                        </button>
+                        <button type="button" class="btn-apple-secondary" onclick="window.close()">
+                            ✕ Cerrar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="doc-container">
+
+                    <!-- Hero Profile Header -->
+                    <div class="hero-card">
+                        <div class="hero-photo-wrap">
+                            <img src="${fotoSrc}" alt="Foto de ${p.nombres}" class="hero-photo">
+                        </div>
+                        <div class="hero-info">
+                            <div class="hero-name">${p.apellidos}, ${p.nombres}</div>
+                            <div class="hero-role-title">${p.cargo} &bull; ${p.area || 'OPERACIONES'}</div>
+                            <div class="hero-tags">
+                                <span class="hero-badge badge-blue font-mono">DNI ${p.numero_documento}</span>
+                                <span class="hero-badge badge-purple">${rolNombre}</span>
+                                <span class="hero-badge badge-green font-mono">${p.centro_costo_codigo || 'CC-100'}</span>
+                                <span class="hero-badge badge-amber">${p.tipo_contrato || 'PLAZO_FIJO'}</span>
+                                <span class="hero-badge badge-slate">${p.sede || 'BASE PRINCIPAL'}</span>
+                                <span class="hero-badge ${p.estado === 'ACTIVO' ? 'badge-green' : 'badge-slate'}">${p.estado || 'ACTIVO'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Segmented Grid -->
+                    <div class="segmented-grid">
+
+                        <!-- 1. Identidad & Datos Personales -->
+                        <div class="apple-card card-blue">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon" style="background:#e0f2fe; color:#0369a1;">👤</span>
+                                    Identidad & Información Personal
+                                </div>
+                                <span class="hero-badge badge-blue">Personal</span>
+                            </div>
+                            <div class="data-list">
+                                <div class="data-row">
+                                    <span class="data-label">Nombre Completo</span>
+                                    <span class="data-val data-val-highlight">${p.apellidos}, ${p.nombres}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Tipo & N° Documento</span>
+                                    <span class="data-val font-mono">${p.tipo_documento || 'DNI'}: ${p.numero_documento}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Fecha de Nacimiento</span>
+                                    <span class="data-val font-mono">${p.fecha_nacimiento ? p.fecha_nacimiento.slice(0, 10) : '—'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Nacionalidad / Estado Civil</span>
+                                    <span class="data-val">${p.nacionalidad || 'PERUANA'} &bull; ${p.estado_civil || 'SOLTERO(A)'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Dirección Domiciliaria</span>
+                                    <span class="data-val">${p.direccion || '—'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Distrito / Provincia</span>
+                                    <span class="data-val">${p.distrito || '—'} / ${p.provincia || '—'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Teléfono / Celular</span>
+                                    <span class="data-val font-mono">${p.telefono || '—'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Correo Electrónico</span>
+                                    <span class="data-val">${p.email || '—'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Puesto, Área & Costos -->
+                        <div class="apple-card card-purple">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon" style="background:#f3e8ff; color:#7e22ce;">💼</span>
+                                    Puesto, Área & Centro de Costos
+                                </div>
+                                <span class="hero-badge badge-purple">Laboral</span>
+                            </div>
+                            <div class="data-list">
+                                <div class="data-row">
+                                    <span class="data-label">Cargo Asignado</span>
+                                    <span class="data-val fw-bold" style="color:#7e22ce;">${p.cargo}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Rol Operativo</span>
+                                    <span class="data-val">${rolNombre}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Área Corporativa</span>
+                                    <span class="data-val">${p.area || 'OPERACIONES'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Sede / Base</span>
+                                    <span class="data-val">${p.sede || 'BASE PRINCIPAL'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Centro de Costos</span>
+                                    <span class="data-val font-mono data-val-highlight">${p.centro_costo_codigo || 'CC-100'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Fecha de Ingreso</span>
+                                    <span class="data-val font-mono">${p.fecha_ingreso ? p.fecha_ingreso.slice(0, 10) : '—'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Tipo de Contrato</span>
+                                    <span class="data-val">${p.tipo_contrato || 'PLAZO_FIJO'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Vigencia de Contrato</span>
+                                    <span class="data-val font-mono">${estContratoBadge}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Planilla & Compensación -->
+                        <div class="apple-card card-green">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon" style="background:#dcfce7; color:#15803d;">💰</span>
+                                    Planilla, Sueldos & Compensación
+                                </div>
+                                <span class="hero-badge badge-green">Remuneración</span>
+                            </div>
+                            <div class="data-list">
+                                <div class="data-row">
+                                    <span class="data-label">Sueldo Básico Mensual</span>
+                                    <span class="data-val font-mono data-val-success" style="font-size: 1.05rem;">S/ ${parseFloat(p.sueldo_basico || 0).toFixed(2)}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Asignación Familiar</span>
+                                    <span class="data-val font-mono">${p.tiene_asignacion_familiar ? '<span class="hero-badge badge-green">S/ 113.00 (ACTIVO)</span>' : 'S/ 0.00'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Bono Fijo Mensual</span>
+                                    <span class="data-val font-mono">S/ ${parseFloat(p.bono_fijo || 0).toFixed(2)}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Régimen Pensionario</span>
+                                    <span class="data-val fw-bold">${p.regimen_pensionario || 'ONP'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Tipo de Comisión AFP</span>
+                                    <span class="data-val">${p.tipo_comision_afp || 'FLUJO'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Código CUSPP</span>
+                                    <span class="data-val font-mono">${p.cuspp || '—'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Cuentas Bancarias & CTS -->
+                        <div class="apple-card card-amber">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon" style="background:#fef3c7; color:#b45309;">🏦</span>
+                                    Cuentas Bancarias & Depósito CTS
+                                </div>
+                                <span class="hero-badge badge-amber">Finanzas</span>
+                            </div>
+                            <div class="data-list">
+                                <div class="data-row">
+                                    <span class="data-label">Banco de Haberes (Sueldo)</span>
+                                    <span class="data-val fw-bold">${p.banco_haberes || 'BCP'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">N° Cuenta Haberes</span>
+                                    <span class="data-val font-mono">${p.cuenta_haberes || '—'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Código Interbancario (CCI)</span>
+                                    <span class="data-val font-mono">${p.cci_haberes || '—'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Banco Depósito CTS</span>
+                                    <span class="data-val fw-bold">${p.banco_cts || '—'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">N° Cuenta Depósito CTS</span>
+                                    <span class="data-val font-mono">${p.cuenta_cts || '—'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5. Seguridad SST & Conducción -->
+                        <div class="apple-card card-rose">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon" style="background:#ffe4e6; color:#be123c;">🛡️</span>
+                                    Seguridad SST, Brevete & Salud EMO
+                                </div>
+                                <span class="hero-badge badge-rose">SST & Flota</span>
+                            </div>
+                            <div class="data-list">
+                                <div class="data-row">
+                                    <span class="data-label">Grupo Sanguíneo</span>
+                                    <span class="hero-badge badge-rose">${p.grupo_sanguineo || 'O+'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Licencia Conducir MTC</span>
+                                    <span class="data-val font-mono">${p.licencia_conducir || 'N/A'} (Cat: ${p.licencia_categoria || '---'})</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Vencimiento Brevete</span>
+                                    <span class="data-val font-mono">${p.licencia_vencimiento ? p.licencia_vencimiento.slice(0, 10) : '—'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Póliza SCTR Salud</span>
+                                    <span class="data-val">${p.sctr_salud_vigente ? '<span class="hero-badge badge-green">VIGENTE</span>' : '<span class="hero-badge badge-rose">NO CUBIERTO</span>'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Póliza SCTR Pensión</span>
+                                    <span class="data-val">${p.sctr_pension_vigente ? '<span class="hero-badge badge-green">VIGENTE</span>' : '<span class="hero-badge badge-rose">NO CUBIERTO</span>'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Condición Médica EMO</span>
+                                    <span class="data-val fw-bold">${p.emo_condicion || 'APTO'} (${p.emo_fecha_vencimiento ? p.emo_fecha_vencimiento.slice(0, 10) : '—'})</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 6. Dotación EPP & Emergencias -->
+                        <div class="apple-card card-slate">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon" style="background:#f1f5f9; color:#334155;">🦺</span>
+                                    Dotación EPP & Emergencias
+                                </div>
+                                <span class="hero-badge badge-slate">Logística</span>
+                            </div>
+                            <div class="data-list">
+                                <div class="data-row">
+                                    <span class="data-label">Talla Polo / Camisa</span>
+                                    <span class="data-val font-mono fw-bold">${p.talla_polo || 'M'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Talla Pantalón</span>
+                                    <span class="data-val font-mono fw-bold">${p.talla_pantalon || '32'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Calzado de Seguridad</span>
+                                    <span class="data-val font-mono fw-bold">${p.talla_calzado || '41'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Chaleco Reflectivo</span>
+                                    <span class="data-val font-mono fw-bold">${p.talla_chaleco || 'ESTÁNDAR'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Contacto de Emergencia</span>
+                                    <span class="data-val">${p.contacto_emergencia_nombre || '—'} (${p.contacto_emergencia_parentesco || '—'})</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Teléfono de Emergencia</span>
+                                    <span class="data-val font-mono data-val-highlight">${p.contacto_emergencia_telefono || '—'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Signatures Card -->
+                    <div class="sign-card">
+                        <p style="font-size: 0.76rem; color: #64748b; text-align: justify; margin-bottom: 20px;">
+                            Declaro bajo juramento que toda la información consignada en la presente Ficha Oficial de Registro de Personal es verídica y autorizo a la empresa a su verificación correspondiente conforme a las normativas laborales vigentes.
+                        </p>
+                        <div class="sign-grid">
+                            <div class="sign-box">
+                                <div class="sign-line">
+                                    FIRMA DEL COLABORADOR<br>
+                                    <span style="font-weight: normal; font-size: 0.72rem; color: #64748b;">DNI: ${p.numero_documento}</span>
+                                </div>
+                            </div>
+                            <div class="sign-box">
+                                <div class="huella-box">
+                                    HUELLA<br>DIGITAL
+                                </div>
+                            </div>
+                            <div class="sign-box">
+                                <div class="sign-line">
+                                    RECURSOS HUMANOS / GERENCIA<br>
+                                    <span style="font-weight: normal; font-size: 0.72rem; color: #64748b;">${empNombre}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </body>
+            </html>
+        `);
+        win.document.close();
+        setTimeout(() => { win.focus(); }, 300);
+
     } catch(err) {
-        console.error('Error abriendo Ficha 360:', err);
+        console.error('Error abriendo Ficha en nueva pestaña:', err);
+        alert('Error al abrir la ficha: ' + err.message);
     }
 };
 
 window.rrhhPersonalAbrirModalEditarDesdeFicha = function() {
     if (window._rrhhColaboradorFichaActual && window._rrhhColaboradorFichaActual.id) {
-        var modalFicha = bootstrap.Modal.getInstance(document.getElementById('modalPersonalFicha'));
-        if (modalFicha) modalFicha.hide();
         window.rrhhPersonalAbrirModalEditar(window._rrhhColaboradorFichaActual.id);
     }
-};
-
-window.rrhhPersonalImprimirFicha = function() {
-    var content = document.getElementById('ficha-print-area');
-    if (!content) return;
-
-    var empNombre = (localStorage.getItem('fleet_empresa_nombre') || 'AZKELL TRANSPORTES S.A.C.').toUpperCase();
-    var p = window._rrhhColaboradorFichaActual || {};
-    var dni = p.numero_documento || 'Colaborador';
-
-    var win = window.open('', '_blank', 'width=950,height=800');
-    win.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Ficha de Registro de Ingreso - ${dni}</title>
-            <style>
-                @page {
-                    size: A4 portrait;
-                    margin: 12mm 15mm 12mm 15mm;
-                }
-                body {
-                    margin: 0;
-                    padding: 20px;
-                    background: #f1f5f9;
-                    font-family: Arial, Helvetica, sans-serif;
-                    color: #0f172a;
-                    -webkit-print-color-adjust: exact;
-                    print-color-adjust: exact;
-                }
-                .print-toolbar {
-                    text-align: center;
-                    margin-bottom: 20px;
-                }
-                .btn-print {
-                    background: #0284c7;
-                    color: #ffffff;
-                    border: none;
-                    padding: 10px 24px;
-                    font-size: 15px;
-                    font-weight: bold;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
-                }
-                ${document.querySelector('style')?.innerHTML || ''}
-                @media print {
-                    body { background: #ffffff; padding: 0; }
-                    .print-toolbar { display: none !important; }
-                    .ficha-paper-container { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="print-toolbar">
-                <button class="btn-print" onclick="window.print()">🖨️ Imprimir Ficha / Guardar como PDF</button>
-            </div>
-            ${content.outerHTML}
-        </body>
-        </html>
-    `);
-    win.document.close();
-    setTimeout(() => { win.focus(); }, 300);
 };
 
 // ── Inicialización Automática ──────────────────────────────────────────
