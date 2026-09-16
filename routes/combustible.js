@@ -1047,11 +1047,15 @@ module.exports = function (db, broadcast, logAudit) {
             let ovRows = [];
             let ovRutasRows = [];
             try {
-                const [r] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque, estado FROM ${ovTable}`);
+                const [r] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque, estado, conductor FROM ${ovTable}`);
                 ovRows = r;
             } catch (e) {
-                const [r] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque, estado FROM operaciones_ordenes_viaje`);
-                ovRows = r;
+                try {
+                    const [r] = await tdb.query(`SELECT viaje, ruta, peso, placa_remolque, estado, conductor FROM operaciones_ordenes_viaje`);
+                    ovRows = r;
+                } catch (e2) {
+                    ovRows = [];
+                }
             }
 
             try {
@@ -1388,10 +1392,20 @@ module.exports = function (db, broadcast, logAudit) {
                         estadoViaje = 'ANULADO';
                     }
 
+                    // Determinar conductor del viaje (desde la orden de viaje o el primer vale válido)
+                    let conductorViaje = '';
+                    if (ovInfo && ovInfo.conductor && String(ovInfo.conductor).trim() !== '' && ovInfo.conductor !== '—' && ovInfo.conductor !== '-') {
+                        conductorViaje = String(ovInfo.conductor).trim();
+                    } else {
+                        const vConductor = (t.vouchers || []).find(v => v.conductor && String(v.conductor).trim() !== '' && v.conductor !== '—' && v.conductor !== '-');
+                        conductorViaje = vConductor ? String(vConductor.conductor).trim() : '';
+                    }
+
                     trips.push({
                         viaje: t.viaje,
                         placa: t.placa,
                         carreta: carretaFinal,
+                        conductor: conductorViaje,
                         estado: estadoViaje,
                         motor: placaMotorMap.get(t.placa) || '',
                         marca: placaMarcaMap.get(t.placa) || '',
