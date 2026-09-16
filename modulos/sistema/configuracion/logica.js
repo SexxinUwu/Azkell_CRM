@@ -400,6 +400,50 @@ async function _cargarConfigNotificaciones() {
     }
 }
 
+window.cfgSetPresetProveedor = function(tipo) {
+    const h = document.getElementById('cfg-smtp-host');
+    const p = document.getElementById('cfg-smtp-port');
+    const sec = document.getElementById('cfg-smtp-secure');
+    const fn = document.getElementById('cfg-smtp-fromname');
+    const help = document.getElementById('cfg-smtp-pass-help');
+
+    if (tipo === 'gmail') {
+        if (h) h.value = 'smtp.gmail.com';
+        if (p) p.value = '587';
+        if (sec) sec.checked = false;
+        if (fn && !fn.value) fn.value = 'Alertas Azkell ERP';
+        if (help) {
+            help.innerHTML = 'En Gmail: <a href="https://myaccount.google.com/apppasswords" target="_blank" class="text-primary fw-bold text-decoration-none">Generar Clave de Aplicación (16 letras) aquí ↗</a>';
+        }
+        if (typeof window.showToastNotification === 'function') {
+            window.showToastNotification('Plantilla Gmail aplicada (smtp.gmail.com:587 TLS).', 'info');
+        }
+    } else if (tipo === 'outlook') {
+        if (h) h.value = 'smtp.office365.com';
+        if (p) p.value = '587';
+        if (sec) sec.checked = false;
+        if (fn && !fn.value) fn.value = 'Alertas Azkell ERP';
+        if (help) {
+            help.innerHTML = 'En Outlook / Hotmail: Usa tu contraseña habitual o de aplicación.';
+        }
+        if (typeof window.showToastNotification === 'function') {
+            window.showToastNotification('Plantilla Outlook / Office 365 aplicada (smtp.office365.com:587 TLS).', 'info');
+        }
+    } else if (tipo === 'cpanel') {
+        let domain = window.location.hostname.replace('www.', '').split('.').slice(-2).join('.');
+        if (!domain || domain.includes('localhost') || domain.includes('sslip.io')) domain = 'azkell.com';
+        if (h) h.value = 'mail.' + domain;
+        if (p) p.value = '465';
+        if (sec) sec.checked = true;
+        if (help) {
+            help.innerHTML = 'En cPanel / Webmail: Usa la contraseña habitual de tu buzón corporativo.';
+        }
+        if (typeof window.showToastNotification === 'function') {
+            window.showToastNotification('Plantilla Correo Corporativo / cPanel aplicada (Puerto 465 SSL).', 'info');
+        }
+    }
+};
+
 window.toggleSmtpPassVisibility = function() {
     const input = document.getElementById('cfg-smtp-pass');
     const icon = document.getElementById('cfg-smtp-pass-icon');
