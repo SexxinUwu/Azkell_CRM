@@ -4,6 +4,8 @@
 // ═════════════════════════════════════════════════════════════════════
 
 window._rrhhPersonalList = [];
+window._rrhhDniTimeout = null;
+window._rrhhFotoBase64 = null;
 
 window.init_rrhh_personal = function() {
     window.rrhhPersonalCargarListado();
@@ -89,21 +91,23 @@ window.rrhhPersonalRenderizarTabla = function(lista) {
 
         // Semáforo de vencimiento de contrato
         var contratoHtml = `<span class="badge bg-light text-dark border">${p.tipo_contrato}</span>`;
-        if (p.fecha_fin_contrato) {
+        if (p.tipo_contrato === 'INDETERMINADO') {
+            contratoHtml += `<div class="text-success fw-bold small mt-1"><i class="bi bi-infinity"></i> Indeterminado</div>`;
+        } else if (p.fecha_fin_contrato) {
             var fFin = new Date(p.fecha_fin_contrato);
             var hoy = new Date();
             var diffDias = Math.ceil((fFin - hoy) / (1000 * 60 * 60 * 24));
             
             if (diffDias < 0) {
-                contratoHtml += `<div class="text-danger fw-bold small mt-1 font-monospace"><i class="bi bi-exclamation-triangle-fill"></i> Venció (${p.fecha_fin_contrato})</div>`;
+                contratoHtml += `<div class="text-danger fw-bold small mt-1 font-monospace"><i class="bi bi-exclamation-triangle-fill"></i> Venció (${p.fecha_fin_contrato.slice(0,10)})</div>`;
             } else if (diffDias <= 30) {
-                contratoHtml += `<div class="text-warning fw-bold small mt-1 font-monospace"><i class="bi bi-clock-history"></i> Vence en ${diffDias}d (${p.fecha_fin_contrato})</div>`;
+                contratoHtml += `<div class="text-warning fw-bold small mt-1 font-monospace"><i class="bi bi-clock-history"></i> Vence en ${diffDias}d (${p.fecha_fin_contrato.slice(0,10)})</div>`;
             } else {
-                contratoHtml += `<div class="text-muted small mt-1 font-monospace">${p.fecha_fin_contrato}</div>`;
+                contratoHtml += `<div class="text-muted small mt-1 font-monospace">${p.fecha_fin_contrato.slice(0,10)}</div>`;
             }
         }
 
-        // Semáforo SST / Brevete
+        // Semáforo SST / Brevete / EMO
         var sstHtml = '';
         if (p.categoria_rol === 'CONDUCTOR') {
             var breveteTxt = p.licencia_conducir ? `${p.licencia_categoria || 'A-III'} (${p.licencia_conducir})` : 'Sin brevete';
@@ -137,7 +141,7 @@ window.rrhhPersonalRenderizarTabla = function(lista) {
                 </td>
                 <td>
                     <div class="fw-semibold text-dark small">${p.area || 'OPERACIONES'}</div>
-                    <small class="text-muted font-monospace">${p.sede || 'BASE'}</small>
+                    <small class="text-muted font-monospace">${p.centro_costo_codigo || 'CC-100'}</small>
                 </td>
                 <td>${contratoHtml}</td>
                 <td>
@@ -188,24 +192,28 @@ window.rrhhPersonalLimpiarFiltros = function() {
     window.rrhhPersonalRenderizarTabla(window._rrhhPersonalList);
 };
 
-window.rrhhPersonalToggleRol = function(rol) {
-    var boxLic = document.getElementById('box-pers-licencia');
-    var boxCat = document.getElementById('box-pers-licencia-cat');
-    var boxVenc = document.getElementById('box-pers-licencia-venc');
-    var esConductor = (rol === 'CONDUCTOR');
+// ── Control de Pestañas Apple Segmented ────────────────────────────────
+window.rrhhPersonalSwitchTab = function(tabId) {
+    document.querySelectorAll('.rrhh-tab-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
+    });
+    document.querySelectorAll('.rrhh-tab-pane').forEach(function(pane) {
+        pane.classList.toggle('d-none', pane.id !== tabId);
+    });
 
-    if (boxLic) boxLic.style.opacity = esConductor ? '1' : '0.6';
-    if (boxCat) boxCat.style.opacity = esConductor ? '1' : '0.6';
-    if (boxVenc) boxVenc.style.opacity = esConductor ? '1' : '0.6';
+    if (tabId === 'tab-pers-fotocheck') {
+        window.rrhhPersonalActualizarFotocheckPreview();
+    }
 };
 
+// ── Interactividad DNI y RENIEC ─────────────────────────────────────────
 window.rrhhPersonalOnTipoDocChange = function(tipo) {
     var docInput = document.getElementById('pers-num-doc');
     var hint = document.getElementById('pers-doc-hint');
     var btn = document.getElementById('btn-pers-buscar-dni');
     if (tipo === 'DNI') {
         if (docInput) { docInput.maxLength = 8; docInput.placeholder = '12345678'; }
-        if (hint) hint.innerHTML = '<i class="bi bi-magic text-primary me-1"></i> Digite los 8 dígitos para autocompletar nombres desde RENIEC.';
+        if (hint) hint.innerHTML = '<i class="bi bi-magic text-primary me-1"></i> Digite los 8 dígitos para autocompletar nombres.';
         if (btn) btn.classList.remove('d-none');
     } else if (tipo === 'CE') {
         if (docInput) { docInput.maxLength = 12; docInput.placeholder = '001234567'; }
@@ -216,7 +224,6 @@ window.rrhhPersonalOnTipoDocChange = function(tipo) {
     }
 };
 
-window._rrhhDniTimeout = null;
 window.rrhhPersonalOnDocInput = function(val) {
     var tipo = document.getElementById('pers-tipo-doc')?.value || 'DNI';
     var cleanVal = (val || '').trim();
@@ -248,7 +255,7 @@ window.rrhhPersonalConsultarDNI = async function() {
     
     if (icon) icon.className = 'spinner-border spinner-border-sm';
     if (btn) btn.disabled = true;
-    if (hint) hint.innerHTML = '<span class="spinner-border spinner-border-sm text-primary me-1"></span> Consultando RENIEC / SUNAT...';
+    if (hint) hint.innerHTML = '<span class="spinner-border spinner-border-sm text-primary me-1"></span> Consultando datos...';
 
     try {
         var res = await fetch(`/api/proxy/documento?tipo=${tipo}&numero=${numDoc}`);
@@ -279,8 +286,16 @@ window.rrhhPersonalConsultarDNI = async function() {
                 elFec.value = (data.fecha_nacimiento || data.fechaNacimiento).slice(0, 10);
             }
 
-            if (hint) hint.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Datos obtenidos de RENIEC exitosamente</span>';
-            if (typeof window.rotToast === 'function') window.rotToast('✨ Datos obtenidos de RENIEC', 'bg-success');
+            // Sincronizar brevete si es conductor y está vacío
+            var brevInput = document.getElementById('pers-licencia-num');
+            if (brevInput && !brevInput.value) {
+                brevInput.value = 'Q' + numDoc;
+            }
+
+            if (hint) hint.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Datos obtenidos exitosamente</span>';
+            if (typeof window.rotToast === 'function') window.rotToast('✨ Datos de DNI obtenidos', 'bg-success');
+            
+            window.rrhhPersonalActualizarFotocheckPreview();
         } else {
             if (hint) hint.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i> No se encontraron datos para este DNI</span>';
             if (typeof window.rotToast === 'function') window.rotToast('No se encontraron datos para este DNI', 'bg-warning');
@@ -295,10 +310,208 @@ window.rrhhPersonalConsultarDNI = async function() {
     }
 };
 
+// ── Lógica de Área Operativa y Centro de Costos ────────────────────────
+window.rrhhPersonalOnAreaChange = function(area) {
+    var ccSelect = document.getElementById('pers-centro-costo');
+    if (!ccSelect) return;
+
+    var mapping = {
+        'GERENCIA': 'CC-100',
+        'ADMINISTRACION': 'CC-100',
+        'COMERCIAL': 'CC-200',
+        'OPERACIONES': 'CC-300',
+        'FLOTA': 'CC-300',
+        'MANTENIMIENTO': 'CC-400',
+        'ALMACEN': 'CC-500'
+    };
+
+    if (mapping[area]) {
+        ccSelect.value = mapping[area];
+    }
+};
+
+// ── Lógica de Tipos de Contrato y Cálculo Automático de Fechas ─────────
+window.rrhhPersonalOnTipoContratoChange = function(tipo) {
+    var wrapMeses = document.getElementById('wrap-pers-meses-contrato');
+    var finInput = document.getElementById('pers-fin-contrato');
+    var mesesSelect = document.getElementById('pers-meses-duracion');
+
+    if (tipo === 'INDETERMINADO') {
+        if (wrapMeses) wrapMeses.classList.add('d-none');
+        if (finInput) {
+            finInput.value = '';
+            finInput.disabled = true;
+            finInput.placeholder = 'Indeterminado';
+        }
+    } else if (tipo === 'LOCACION_SERVICIOS') {
+        if (wrapMeses) wrapMeses.classList.add('d-none');
+        if (finInput) {
+            finInput.value = '';
+            finInput.disabled = true;
+            finInput.placeholder = 'Sin vencimiento';
+        }
+    } else if (tipo === 'PERIODO_PRUEBA') {
+        if (wrapMeses) wrapMeses.classList.remove('d-none');
+        if (mesesSelect) mesesSelect.value = '3';
+        if (finInput) finInput.disabled = false;
+        window.rrhhPersonalRecalcularFechaFin();
+    } else {
+        // PLAZO_FIJO o PRACTICANTE
+        if (wrapMeses) wrapMeses.classList.remove('d-none');
+        if (finInput) finInput.disabled = false;
+        window.rrhhPersonalRecalcularFechaFin();
+    }
+};
+
+window.rrhhPersonalRecalcularFechaFin = function() {
+    var tipo = document.getElementById('pers-tipo-contrato')?.value;
+    if (tipo === 'INDETERMINADO' || tipo === 'LOCACION_SERVICIOS') return;
+
+    var inicioVal = document.getElementById('pers-inicio-contrato')?.value;
+    var mesesVal = document.getElementById('pers-meses-duracion')?.value;
+    var finInput = document.getElementById('pers-fin-contrato');
+    if (!inicioVal || !finInput || mesesVal === 'CUSTOM') return;
+
+    var meses = parseInt(mesesVal, 10);
+    if (isNaN(meses) || meses <= 0) return;
+
+    var d = new Date(inicioVal + 'T00:00:00');
+    d.setMonth(d.getMonth() + meses);
+    d.setDate(d.getDate() - 1); // El contrato termina un día antes al completar el ciclo
+
+    finInput.value = d.toISOString().slice(0, 10);
+};
+
+window.rrhhPersonalToggleRol = function(rol) {
+    var boxLic = document.getElementById('box-pers-licencia');
+    var boxCat = document.getElementById('box-pers-licencia-cat');
+    var boxVenc = document.getElementById('box-pers-licencia-venc');
+    var esConductor = (rol === 'CONDUCTOR');
+
+    if (boxLic) boxLic.style.opacity = esConductor ? '1' : '0.6';
+    if (boxCat) boxCat.style.opacity = esConductor ? '1' : '0.6';
+    if (boxVenc) boxVenc.style.opacity = esConductor ? '1' : '0.6';
+};
+
+// ── Gestión de Fotografía y Fotocheck ──────────────────────────────────
+window.rrhhPersonalOnFotoSelect = function(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    var reader = new FileReader();
+    reader.onload = function(evt) {
+        window._rrhhFotoBase64 = evt.target.result;
+        var prev = document.getElementById('pers-foto-preview');
+        var fcAvatar = document.getElementById('fc-avatar');
+        if (prev) prev.src = window._rrhhFotoBase64;
+        if (fcAvatar) fcAvatar.src = window._rrhhFotoBase64;
+    };
+    reader.readAsDataURL(file);
+};
+
+window.rrhhPersonalActualizarFotocheckPreview = function() {
+    var empNombre = (localStorage.getItem('fleet_empresa_nombre') || 'AZKELL TRANSPORTES S.A.C.').toUpperCase();
+    var empLogo = localStorage.getItem('fleet_empresa_logo') || document.getElementById('nav-logo-img')?.src || '/img/logo.png';
+
+    var elEmp = document.getElementById('fc-empresa');
+    var elLogo = document.getElementById('fc-logo');
+    if (elEmp) elEmp.textContent = empNombre;
+    if (elLogo && empLogo) elLogo.src = empLogo;
+
+    var nom = (document.getElementById('pers-nombres')?.value || '').trim();
+    var ape = (document.getElementById('pers-apellidos')?.value || '').trim();
+    var cargo = (document.getElementById('pers-cargo')?.value || '').trim();
+    var area = (document.getElementById('pers-area')?.value || 'OPERACIONES').trim();
+    var dni = (document.getElementById('pers-num-doc')?.value || '00000000').trim();
+
+    var fcNom = document.getElementById('fc-nombre');
+    var fcCargo = document.getElementById('fc-cargo');
+    var fcArea = document.getElementById('fc-area');
+    var fcDni = document.getElementById('fc-dni');
+
+    if (fcNom) fcNom.textContent = (ape || nom) ? `${ape}, ${nom}` : 'NOMBRES Y APELLIDOS';
+    if (fcCargo) fcCargo.textContent = cargo || 'CARGO DEL COLABORADOR';
+    if (fcArea) fcArea.textContent = area || 'OPERACIONES';
+    if (fcDni) fcDni.textContent = `DNI: ${dni}`;
+
+    // Render QR
+    var qrContainer = document.getElementById('fc-qrcode');
+    if (qrContainer) {
+        qrContainer.innerHTML = '';
+        var qrData = `AZKELL|DNI:${dni}|COLABORADOR:${nom} ${ape}|CARGO:${cargo}|VALIDO:ACTIVO`;
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(qrContainer, {
+                text: qrData,
+                width: 90,
+                height: 90,
+                colorDark: '#0f172a',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } else {
+            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(qrData)}" style="width:90px;height:90px;" alt="QR">`;
+        }
+    }
+};
+
+window.rrhhPersonalImprimirFotocheck = function() {
+    window.rrhhPersonalActualizarFotocheckPreview();
+    var card = document.getElementById('fotocheck-card-render');
+    if (!card) return;
+
+    var win = window.open('', '_blank', 'width=800,height=700');
+    win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Fotocheck Oficial - ${document.getElementById('pers-num-doc')?.value || 'Personal'}</title>
+            <style>
+                body {
+                    margin: 0;
+                    padding: 40px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    background: #f1f5f9;
+                    font-family: system-ui, -apple-system, sans-serif;
+                }
+                .print-container {
+                    background: #ffffff;
+                    padding: 20px;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                }
+                ${document.querySelector('style')?.innerHTML || ''}
+                @media print {
+                    body { background: #ffffff; padding: 0; }
+                    .print-container { box-shadow: none; padding: 0; }
+                    .no-print { display: none !important; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="no-print" style="margin-bottom: 20px;">
+                <button onclick="window.print()" style="padding: 10px 24px; font-weight: bold; background: #0284c7; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 15px;">
+                    🖨️ Imprimir Fotocheck
+                </button>
+            </div>
+            <div class="print-container">
+                ${card.outerHTML}
+            </div>
+        </body>
+        </html>
+    `);
+    win.document.close();
+    setTimeout(() => { win.focus(); }, 300);
+};
+
+// ── Modal Form: Apertura y Relleno ─────────────────────────────────────
 window.rrhhPersonalAbrirModalNuevo = function() {
     var form = document.getElementById('formPersonal');
     if (form) form.reset();
 
+    window._rrhhFotoBase64 = null;
     var idEl = document.getElementById('pers-id');
     if (idEl) idEl.value = '';
 
@@ -317,6 +530,13 @@ window.rrhhPersonalAbrirModalNuevo = function() {
     var fIniCont = document.getElementById('pers-inicio-contrato');
     if (fIniCont) fIniCont.value = new Date().toISOString().slice(0, 10);
 
+    var prevFoto = document.getElementById('pers-foto-preview');
+    if (prevFoto) prevFoto.src = 'https://via.placeholder.com/150?text=Foto';
+
+    window.rrhhPersonalSwitchTab('tab-pers-identidad');
+    window.rrhhPersonalOnTipoContratoChange('PLAZO_FIJO');
+    window.rrhhPersonalOnAreaChange('OPERACIONES');
+
     var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPersonalForm'));
     modal.show();
 };
@@ -325,6 +545,7 @@ window.rrhhPersonalAbrirModalEditar = function(id) {
     var p = window._rrhhPersonalList.find(x => x.id == id);
     if (!p) return;
 
+    window._rrhhFotoBase64 = null;
     var idEl = document.getElementById('pers-id');
     if (idEl) idEl.value = p.id;
 
@@ -336,44 +557,55 @@ window.rrhhPersonalAbrirModalEditar = function(id) {
         if (el) el.value = val || '';
     };
 
-    setVal('pers-tipo-doc', p.tipo_documento);
+    setVal('pers-tipo-doc', p.tipo_documento || 'DNI');
     setVal('pers-num-doc', p.numero_documento);
     setVal('pers-nombres', p.nombres);
     setVal('pers-apellidos', p.apellidos);
-    setVal('pers-sexo', p.sexo);
+    setVal('pers-sexo', p.sexo || 'M');
     setVal('pers-fecha-nac', p.fecha_nacimiento ? p.fecha_nacimiento.slice(0, 10) : '');
     setVal('pers-telefono', p.telefono);
     setVal('pers-email', p.email);
     setVal('pers-direccion', p.direccion);
     setVal('pers-contacto-emergencia', p.contacto_emergencia_nombre ? `${p.contacto_emergencia_nombre} (${p.contacto_emergencia_parentesco || ''}) ${p.contacto_emergencia_telefono || ''}` : '');
 
+    setVal('pers-area', p.area || 'OPERACIONES');
     setVal('pers-rol', p.categoria_rol);
     setVal('pers-cargo', p.cargo);
-    setVal('pers-area', p.area);
-    setVal('pers-sede', p.sede);
-    setVal('pers-centro-costo', p.centro_costo_codigo);
+    setVal('pers-sede', p.sede || 'BASE PRINCIPAL');
+    setVal('pers-centro-costo', p.centro_costo_codigo || 'CC-300');
     setVal('pers-fecha-ingreso', p.fecha_ingreso ? p.fecha_ingreso.slice(0, 10) : '');
 
-    setVal('pers-tipo-contrato', p.tipo_contrato);
+    setVal('pers-tipo-contrato', p.tipo_contrato || 'PLAZO_FIJO');
     setVal('pers-inicio-contrato', p.fecha_inicio_contrato ? p.fecha_inicio_contrato.slice(0, 10) : '');
     setVal('pers-fin-contrato', p.fecha_fin_contrato ? p.fecha_fin_contrato.slice(0, 10) : '');
     setVal('pers-sueldo', parseFloat(p.sueldo_basico || 0).toFixed(2));
     setVal('pers-bono', parseFloat(p.bono_fijo || 0).toFixed(2));
     setVal('pers-asig-familiar', p.tiene_asignacion_familiar ? '1' : '0');
-    setVal('pers-regimen-pension', p.regimen_pensionario);
+    setVal('pers-regimen-pension', p.regimen_pensionario || 'ONP');
     setVal('pers-cuspp', p.cuspp);
-    setVal('pers-banco-haberes', p.banco_haberes);
+    setVal('pers-banco-haberes', p.banco_haberes || 'BCP');
     setVal('pers-cuenta-haberes', p.cuenta_haberes);
     setVal('pers-cci-haberes', p.cci_haberes);
 
+    setVal('pers-grupo-sanguineo', p.grupo_sanguineo || 'O+');
     setVal('pers-licencia-num', p.licencia_conducir);
-    setVal('pers-licencia-cat', p.licencia_categoria);
+    setVal('pers-licencia-cat', p.licencia_categoria || 'A-IIIC');
     setVal('pers-licencia-venc', p.licencia_vencimiento ? p.licencia_vencimiento.slice(0, 10) : '');
     setVal('pers-sctr-salud', p.sctr_salud_vigente ? '1' : '0');
     setVal('pers-sctr-pension', p.sctr_pension_vigente ? '1' : '0');
-    setVal('pers-emo-condicion', p.emo_condicion);
+    setVal('pers-emo-condicion', p.emo_condicion || 'APTO');
+
+    setVal('pers-talla-polo', p.talla_polo || 'M');
+    setVal('pers-talla-pantalon', p.talla_pantalon || '32');
+    setVal('pers-talla-calzado', p.talla_calzado || '41');
+    setVal('pers-talla-chaleco', p.talla_chaleco || 'ESTANDAR');
+
+    var prevFoto = document.getElementById('pers-foto-preview');
+    if (prevFoto) prevFoto.src = p.foto_url || 'https://via.placeholder.com/150?text=Foto';
 
     window.rrhhPersonalToggleRol(p.categoria_rol);
+    window.rrhhPersonalOnTipoContratoChange(p.tipo_contrato || 'PLAZO_FIJO');
+    window.rrhhPersonalSwitchTab('tab-pers-identidad');
 
     var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPersonalForm'));
     modal.show();
@@ -400,9 +632,9 @@ window.rrhhPersonalGuardar = async function(e) {
         direccion: document.getElementById('pers-direccion')?.value,
         contacto_emergencia_nombre: document.getElementById('pers-contacto-emergencia')?.value,
         
+        area: document.getElementById('pers-area')?.value,
         categoria_rol: document.getElementById('pers-rol')?.value,
         cargo: document.getElementById('pers-cargo')?.value,
-        area: document.getElementById('pers-area')?.value,
         sede: document.getElementById('pers-sede')?.value,
         centro_costo_codigo: document.getElementById('pers-centro-costo')?.value,
         fecha_ingreso: document.getElementById('pers-fecha-ingreso')?.value,
@@ -419,12 +651,18 @@ window.rrhhPersonalGuardar = async function(e) {
         cuenta_haberes: document.getElementById('pers-cuenta-haberes')?.value,
         cci_haberes: document.getElementById('pers-cci-haberes')?.value,
         
+        grupo_sanguineo: document.getElementById('pers-grupo-sanguineo')?.value,
         licencia_conducir: document.getElementById('pers-licencia-num')?.value,
         licencia_categoria: document.getElementById('pers-licencia-cat')?.value,
         licencia_vencimiento: document.getElementById('pers-licencia-venc')?.value || null,
         sctr_salud_vigente: document.getElementById('pers-sctr-salud')?.value,
         sctr_pension_vigente: document.getElementById('pers-sctr-pension')?.value,
-        emo_condicion: document.getElementById('pers-emo-condicion')?.value
+        emo_condicion: document.getElementById('pers-emo-condicion')?.value,
+        
+        talla_polo: document.getElementById('pers-talla-polo')?.value,
+        talla_pantalon: document.getElementById('pers-talla-pantalon')?.value,
+        talla_calzado: document.getElementById('pers-talla-calzado')?.value,
+        talla_chaleco: document.getElementById('pers-talla-chaleco')?.value
     };
 
     try {
@@ -439,7 +677,11 @@ window.rrhhPersonalGuardar = async function(e) {
         var json = await res.json();
 
         if (json && json.ok) {
-            alert(esEdicion ? '¡Colaborador actualizado con éxito!' : '¡Colaborador registrado con éxito!');
+            if (typeof window.rotToast === 'function') {
+                window.rotToast(esEdicion ? '✨ Colaborador actualizado con éxito' : '✨ Colaborador registrado con éxito', 'bg-success');
+            } else {
+                alert(esEdicion ? '¡Colaborador actualizado con éxito!' : '¡Colaborador registrado con éxito!');
+            }
             var modal = bootstrap.Modal.getInstance(document.getElementById('modalPersonalForm'));
             if (modal) modal.hide();
             window.rrhhPersonalCargarListado();
@@ -459,6 +701,7 @@ window.rrhhPersonalEliminar = async function(id) {
         var res = await fetch(`/api/rrhh/personal/${id}`, { method: 'DELETE' });
         var json = await res.json();
         if (json && json.ok) {
+            if (typeof window.rotToast === 'function') window.rotToast('Colaborador eliminado', 'bg-info');
             window.rrhhPersonalCargarListado();
         } else {
             alert(json.error || 'No se pudo eliminar');
@@ -468,6 +711,103 @@ window.rrhhPersonalEliminar = async function(id) {
     }
 };
 
+// ── Exportación a Excel con Listas Desplegables Nativas ─────────────────
+window.rrhhPersonalExportarExcel = async function() {
+    if (typeof XLSX === 'undefined') {
+        if (typeof window.loadLazyLib === 'function') {
+            await window.loadLazyLib('xlsx');
+        }
+    }
+
+    if (typeof XLSX === 'undefined') {
+        alert('La librería Excel aún se está cargando. Por favor, intente en unos segundos.');
+        return;
+    }
+
+    var lista = window._rrhhPersonalList || [];
+    if (lista.length === 0) {
+        alert('No hay datos de colaboradores para exportar.');
+        return;
+    }
+
+    // Cabeceras enriquecidas
+    var headers = [
+        'ID', 'TIPO DOC', 'N° DOCUMENTO', 'APELLIDOS', 'NOMBRES', 'SEXO', 'FEC. NACIMIENTO',
+        'TELEFONO', 'EMAIL', 'DIRECCION', 'CONTACTO EMERGENCIA', 'ÁREA OPERATIVA', 'ROL / CATEGORÍA',
+        'CARGO', 'SEDE / BASE', 'CENTRO COSTOS', 'FECHA INGRESO', 'ESTADO', 'TIPO CONTRATO',
+        'INICIO CONTRATO', 'FIN CONTRATO', 'SUELDO BÁSICO', 'BONO FIJO', 'ASIG. FAMILIAR',
+        'RÉGIMEN PENSIÓN', 'CUSPP', 'BANCO SUELDO', 'N° CUENTA', 'CCI', 'GRUPO SANGUÍNEO',
+        'BREVETE MTC', 'CAT. BREVETE', 'VENC. BREVETE', 'SCTR SALUD', 'SCTR PENSIÓN', 'CONDICIÓN EMO',
+        'TALLA POLO', 'TALLA PANTALÓN', 'TALLA CALZADO', 'TALLA CHALECO'
+    ];
+
+    var rows = lista.map(function(p) {
+        return [
+            p.id,
+            p.tipo_documento || 'DNI',
+            p.numero_documento || '',
+            p.apellidos || '',
+            p.nombres || '',
+            p.sexo || 'M',
+            p.fecha_nacimiento ? p.fecha_nacimiento.slice(0, 10) : '',
+            p.telefono || '',
+            p.email || '',
+            p.direccion || '',
+            p.contacto_emergencia_nombre ? `${p.contacto_emergencia_nombre} (${p.contacto_emergencia_telefono || ''})` : '',
+            p.area || 'OPERACIONES',
+            p.categoria_rol || 'ADMINISTRATIVO',
+            p.cargo || '',
+            p.sede || 'BASE PRINCIPAL',
+            p.centro_costo_codigo || 'CC-100',
+            p.fecha_ingreso ? p.fecha_ingreso.slice(0, 10) : '',
+            p.estado || 'ACTIVO',
+            p.tipo_contrato || 'PLAZO_FIJO',
+            p.fecha_inicio_contrato ? p.fecha_inicio_contrato.slice(0, 10) : '',
+            p.fecha_fin_contrato ? p.fecha_fin_contrato.slice(0, 10) : '',
+            parseFloat(p.sueldo_basico || 0),
+            parseFloat(p.bono_fijo || 0),
+            p.tiene_asignacion_familiar ? 113.00 : 0.00,
+            p.regimen_pensionario || 'ONP',
+            p.cuspp || '',
+            p.banco_haberes || 'BCP',
+            p.cuenta_haberes || '',
+            p.cci_haberes || '',
+            p.grupo_sanguineo || 'O+',
+            p.licencia_conducir || '',
+            p.licencia_categoria || '',
+            p.licencia_vencimiento ? p.licencia_vencimiento.slice(0, 10) : '',
+            p.sctr_salud_vigente ? 'ACTIVO' : 'NO CUBIERTO',
+            p.sctr_pension_vigente ? 'ACTIVO' : 'NO CUBIERTO',
+            p.emo_condicion || 'APTO',
+            p.talla_polo || 'M',
+            p.talla_pantalon || '32',
+            p.talla_calzado || '41',
+            p.talla_chaleco || 'ESTANDAR'
+        ];
+    });
+
+    var wsData = [headers].concat(rows);
+    var ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Ajustar anchos de columnas
+    var colWidths = headers.map(function(h) {
+        return { wch: Math.max(h.length + 4, 14) };
+    });
+    ws['!cols'] = colWidths;
+
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Personal_Legajos_360');
+
+    var fechaHoy = new Date().toISOString().slice(0, 10);
+    var nombreArchivo = `RRHH_Gestion_Personal_Legajos_${fechaHoy}.xlsx`;
+    XLSX.writeFile(wb, nombreArchivo);
+
+    if (typeof window.rotToast === 'function') {
+        window.rotToast('📥 Archivo Excel generado con éxito', 'bg-success');
+    }
+};
+
+// ── Ficha 360° Visualización Detallada ─────────────────────────────────
 window.rrhhPersonalVerFicha = async function(id) {
     try {
         var res = await fetch(`/api/rrhh/personal/${id}`);
@@ -484,7 +824,7 @@ window.rrhhPersonalVerFicha = async function(id) {
         var elBody = document.getElementById('ficha-body');
 
         if (elNom) elNom.textContent = `${p.apellidos}, ${p.nombres}`;
-        if (elCar) elCar.textContent = `${p.cargo} — ${p.categoria_rol}`;
+        if (elCar) elCar.textContent = `${p.cargo} — ${p.area || 'OPERACIONES'}`;
         if (elAv) elAv.textContent = (p.nombres.charAt(0) + (p.apellidos.charAt(0) || '')).toUpperCase();
 
         var licHtml = lic.length ? lic.map(l => `
@@ -492,14 +832,14 @@ window.rrhhPersonalVerFicha = async function(id) {
                 <div><strong>${l.tipo}</strong> (${l.dias_totales} días): ${l.motivo || 'Sin motivo'}</div>
                 <span class="font-monospace text-muted">${l.fecha_inicio} al ${l.fecha_fin}</span>
             </div>
-        `).join('') : '<p class="text-muted small">Sin licencias registradas.</p>';
+        `).join('') : '<p class="text-muted small m-0">Sin licencias registradas.</p>';
 
         var sstHtml = sst.length ? sst.map(s => `
             <div class="p-2 border rounded-3 mb-1.5 bg-white small d-flex justify-content-between">
                 <div><strong>${s.tipo_registro}</strong>: ${s.descripcion}</div>
                 <span class="font-monospace text-muted">${s.fecha_registro}</span>
             </div>
-        `).join('') : '<p class="text-muted small">Sin constancias SST registradas.</p>';
+        `).join('') : '<p class="text-muted small m-0">Sin constancias SST registradas.</p>';
 
         if (elBody) {
             elBody.innerHTML = `
@@ -514,23 +854,27 @@ window.rrhhPersonalVerFicha = async function(id) {
                         <div class="p-3 bg-white border rounded-4">
                             <small class="text-muted fw-bold d-block text-uppercase">SUELDO BÁSICO</small>
                             <span class="fw-bold fs-6 font-monospace text-success">S/ ${parseFloat(p.sueldo_basico || 0).toFixed(2)}</span>
+                            <small class="d-block text-muted">${p.tiene_asignacion_familiar ? '+ S/ 113.00 Asig. Familiar' : 'Sin Asig. Familiar'}</small>
                         </div>
                     </div>
                     <div class="col-12 col-md-4">
                         <div class="p-3 bg-white border rounded-4">
                             <small class="text-muted fw-bold d-block text-uppercase">RÉGIMEN PENSIÓN</small>
                             <span class="fw-bold fs-6 font-monospace">${p.regimen_pensionario}</span>
+                            <small class="d-block text-muted font-monospace">${p.cuspp ? 'CUSPP: ' + p.cuspp : 'Sin CUSPP'}</small>
                         </div>
                     </div>
                 </div>
 
                 <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white border">
-                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-shield-check text-primary me-1"></i> Cumplimiento SST y Habilitaciones (Ley 29783)</h6>
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-shield-check text-primary me-1"></i> Cumplimiento SST, Brevetes & Dotación EPP</h6>
                     <div class="row g-2 small">
+                        <div class="col-6"><strong>Grupo Sanguíneo:</strong> <span class="badge bg-danger text-white">${p.grupo_sanguineo || 'O+'}</span></div>
+                        <div class="col-6"><strong>Brevete MTC:</strong> <span class="font-monospace fw-bold">${p.licencia_conducir || 'N/A'} (${p.licencia_categoria || '---'})</span></div>
                         <div class="col-6"><strong>Póliza SCTR Salud:</strong> ${p.sctr_salud_vigente ? '<span class="text-success fw-bold">VIGENTE</span>' : '<span class="text-danger fw-bold">NO VIGENTE</span>'}</div>
                         <div class="col-6"><strong>Póliza SCTR Pensión:</strong> ${p.sctr_pension_vigente ? '<span class="text-success fw-bold">VIGENTE</span>' : '<span class="text-danger fw-bold">NO VIGENTE</span>'}</div>
-                        <div class="col-6"><strong>Condición Médica EMO:</strong> <span class="fw-bold">${p.emo_condicion}</span></div>
-                        <div class="col-6"><strong>Brevete MTC:</strong> <span class="font-monospace fw-bold">${p.licencia_conducir || 'N/A'} (${p.licencia_categoria || '---'})</span></div>
+                        <div class="col-6"><strong>Condición Médica EMO:</strong> <span class="fw-bold">${p.emo_condicion || 'APTO'}</span></div>
+                        <div class="col-6"><strong>Tallas EPP:</strong> Polo: ${p.talla_polo || 'M'} | Pant: ${p.talla_pantalon || '32'} | Calzado: ${p.talla_calzado || '41'}</div>
                     </div>
                 </div>
 
@@ -548,11 +892,12 @@ window.rrhhPersonalVerFicha = async function(id) {
 
         var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPersonalFicha'));
         modal.show();
-    } catch(e) {
-        console.error(e);
+    } catch(err) {
+        console.error('Error abriendo Ficha 360:', err);
     }
 };
 
+// ── Inicialización Automática ──────────────────────────────────────────
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', window.init_rrhh_personal);
 } else {

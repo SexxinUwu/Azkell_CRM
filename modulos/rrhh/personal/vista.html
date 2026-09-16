@@ -29,7 +29,7 @@
 
 /* ── Floating Drawer Modal & Inputs Styling (1:1 Idéntico a Reporte de Fallas) ── */
 .rrhh-floating-drawer-dialog {
-    max-width: 860px !important;
+    max-width: 880px !important;
     width: 100% !important;
     height: 94vh !important;
     max-height: 94vh !important;
@@ -94,6 +94,48 @@
     overflow-x: visible !important;
 }
 
+/* ── Apple-style Segmented Modal Tabs ── */
+.rrhh-tabs-nav {
+    display: flex;
+    background: #e2e8f0;
+    padding: 4px;
+    border-radius: 14px;
+    gap: 4px;
+    margin-bottom: 1.15rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.rrhh-tabs-nav::-webkit-scrollbar {
+    display: none;
+}
+.rrhh-tab-btn {
+    flex: 1;
+    min-width: fit-content;
+    padding: 9px 15px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #64748b;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+.rrhh-tab-btn:hover {
+    color: #0f172a;
+}
+.rrhh-tab-btn.active {
+    background: #ffffff;
+    color: #0284c7;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 .rrhh-badge-rol {
     font-size: 0.68rem;
     font-weight: 800;
@@ -120,6 +162,94 @@
     font-weight: 800;
     color: #475569;
 }
+
+/* ── Fotocheck Card Styling ── */
+.fotocheck-card {
+    width: 320px;
+    height: 480px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 2px solid #0284c7;
+    box-shadow: 0 10px 30px rgba(2, 132, 199, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 18px 16px;
+    position: relative;
+    overflow: hidden;
+    margin: 0 auto;
+}
+.fotocheck-header {
+    width: 100%;
+    text-align: center;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e2e8f0;
+}
+.fotocheck-logo {
+    max-height: 42px;
+    max-width: 180px;
+    object-fit: contain;
+    margin-bottom: 4px;
+}
+.fotocheck-empresa {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.fotocheck-avatar-wrap {
+    margin: 12px 0 8px 0;
+    position: relative;
+}
+.fotocheck-avatar {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #0284c7;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    background: #e2e8f0;
+}
+.fotocheck-nombre {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+    text-align: center;
+    line-height: 1.2;
+    margin-top: 4px;
+    text-transform: uppercase;
+}
+.fotocheck-cargo {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #0284c7;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    text-align: center;
+}
+.fotocheck-badge-area {
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 12px;
+    border-radius: 999px;
+    text-transform: uppercase;
+}
+.fotocheck-qr-wrap {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.fotocheck-dni {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #334155;
+    font-family: monospace;
+}
 </style>
 
 <div class="container-fluid p-3 p-md-4">
@@ -133,11 +263,14 @@
                 </div>
                 <div>
                     <h4 class="fw-bold text-dark m-0">Gestión de Personal & Legajos 360°</h4>
-                    <p class="text-muted small m-0">Administración integral de colaboradores, contratos, sueldos y cumplimiento SST</p>
+                    <p class="text-muted small m-0">Administración integral de colaboradores, contratos, sueldos, EPPs y cumplimiento SST</p>
                 </div>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-outline-success rounded-pill px-3.5 fw-bold shadow-sm" onclick="window.rrhhPersonalExportarExcel()" title="Exportar reporte en formato Excel">
+                <i class="bi bi-file-earmark-excel-fill me-1"></i> Exportar Excel
+            </button>
             <button type="button" class="btn btn-outline-secondary rounded-pill px-3 fw-bold" onclick="window.rrhhPersonalCargarListado()">
                 <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
             </button>
@@ -274,13 +407,13 @@
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════════════
-     MODAL NUEVO / EDITAR COLABORADOR (1:1 IDÉNTICO A REPORTE DE FALLAS)
+     MODAL NUEVO / EDITAR COLABORADOR (ORGANIZADO POR PESTAÑAS 1:1 REPORTE DE FALLAS)
      ════════════════════════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="modalPersonalForm" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-scrollable rrhh-floating-drawer-dialog">
         <div class="modal-content border-0 rrhh-floating-drawer-content">
             
-            <!-- Modal Header (1:1 Reporte de Fallas) -->
+            <!-- Modal Header -->
             <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center flex-shrink-0">
                 <div>
                     <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2 m-0" style="font-size: 1.2rem;">
@@ -296,255 +429,447 @@
 
                 <div class="modal-body p-3 p-md-4 custom-scrollbar overflow-y-auto" style="background:#f8fafc;">
                     
-                    <!-- ── SECCIÓN 1: DATOS PERSONALES & IDENTIDAD ──────────────── -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 100; overflow: visible !important;">
-                        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
-                            <i class="bi bi-person-lines-fill text-primary"></i> 1. Datos Personales y Contacto
-                        </h6>
-                        <div class="row g-3">
-                            <div class="col-12 col-md-3">
-                                <label class="form-label">Tipo Doc (<span class="text-danger">*</span>)</label>
-                                <select class="form-select" id="pers-tipo-doc" required onchange="window.rrhhPersonalOnTipoDocChange(this.value)">
-                                    <option value="DNI" selected>DNI</option>
-                                    <option value="CE">CARNET EXTRANJERÍA</option>
-                                    <option value="PASAPORTE">PASAPORTE</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-5">
-                                <label class="form-label">N° Documento (<span class="text-danger">*</span>)</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control font-monospace fw-bold" id="pers-num-doc" placeholder="12345678" maxlength="15" required autocomplete="off" oninput="window.rrhhPersonalOnDocInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();window.rrhhPersonalConsultarDNI();}">
-                                    <button class="btn btn-primary px-3 fw-bold d-flex align-items-center gap-1.5" type="button" id="btn-pers-buscar-dni" onclick="window.rrhhPersonalConsultarDNI()" title="Consultar RENIEC / SUNAT">
-                                        <i class="bi bi-search" id="icon-pers-buscar-dni"></i>
-                                        <span>RENIEC</span>
-                                    </button>
+                    <!-- ── PESTAÑAS NAVEGACIÓN ESTILO APPLE ── -->
+                    <div class="rrhh-tabs-nav">
+                        <button type="button" class="rrhh-tab-btn active" data-tab="tab-pers-identidad" onclick="window.rrhhPersonalSwitchTab('tab-pers-identidad')">
+                            <i class="bi bi-person-lines-fill"></i> 1. Identidad & Contacto
+                        </button>
+                        <button type="button" class="rrhh-tab-btn" data-tab="tab-pers-puesto" onclick="window.rrhhPersonalSwitchTab('tab-pers-puesto')">
+                            <i class="bi bi-briefcase-fill"></i> 2. Puesto & Área
+                        </button>
+                        <button type="button" class="rrhh-tab-btn" data-tab="tab-pers-contrato" onclick="window.rrhhPersonalSwitchTab('tab-pers-contrato')">
+                            <i class="bi bi-cash-stack"></i> 3. Contrato & Sueldos
+                        </button>
+                        <button type="button" class="rrhh-tab-btn" data-tab="tab-pers-sst" onclick="window.rrhhPersonalSwitchTab('tab-pers-sst')">
+                            <i class="bi bi-shield-check"></i> 4. SST, Brevetes & EPPs
+                        </button>
+                        <button type="button" class="rrhh-tab-btn" data-tab="tab-pers-fotocheck" onclick="window.rrhhPersonalSwitchTab('tab-pers-fotocheck')">
+                            <i class="bi bi-person-badge-fill"></i> 5. Foto & Fotocheck
+                        </button>
+                    </div>
+
+                    <!-- ═════════════════════════════════════════════════════════
+                         PESTAÑA 1: IDENTIDAD & CONTACTO
+                         ═════════════════════════════════════════════════════════ -->
+                    <div class="rrhh-tab-pane" id="tab-pers-identidad">
+                        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
+                                <i class="bi bi-person-vcard text-primary"></i> Datos de Identificación y Domicilio
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label">Tipo Doc (<span class="text-danger">*</span>)</label>
+                                    <select class="form-select" id="pers-tipo-doc" required onchange="window.rrhhPersonalOnTipoDocChange(this.value)">
+                                        <option value="DNI" selected>DNI</option>
+                                        <option value="CE">CARNET EXTRANJERÍA</option>
+                                        <option value="PASAPORTE">PASAPORTE</option>
+                                    </select>
                                 </div>
-                                <div class="form-text mt-1 text-muted" style="font-size:0.75rem;" id="pers-doc-hint">
-                                    <i class="bi bi-magic text-primary me-1"></i> Digite el DNI para autocompletar nombres.
+                                <div class="col-12 col-md-5">
+                                    <label class="form-label">N° Documento (<span class="text-danger">*</span>)</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control font-monospace fw-bold" id="pers-num-doc" placeholder="12345678" maxlength="15" required autocomplete="off" oninput="window.rrhhPersonalOnDocInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();window.rrhhPersonalConsultarDNI();}">
+                                        <button class="btn btn-primary px-3 fw-bold d-flex align-items-center justify-content-center" type="button" id="btn-pers-buscar-dni" onclick="window.rrhhPersonalConsultarDNI()" title="Buscar en RENIEC por DNI">
+                                            <i class="bi bi-search" id="icon-pers-buscar-dni"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text mt-1 text-muted" style="font-size:0.75rem;" id="pers-doc-hint">
+                                        <i class="bi bi-magic text-primary me-1"></i> Digite los 8 dígitos para autocompletar nombres.
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Nombres (<span class="text-danger">*</span>)</label>
+                                    <input type="text" class="form-control text-uppercase fw-bold" id="pers-nombres" placeholder="NOMBRES COMPLETOS" required>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">Apellidos (<span class="text-danger">*</span>)</label>
+                                    <input type="text" class="form-control text-uppercase fw-bold" id="pers-apellidos" placeholder="APELLIDOS COMPLETOS" required>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label">Sexo</label>
+                                    <select class="form-select" id="pers-sexo">
+                                        <option value="M" selected>MASCULINO</option>
+                                        <option value="F">FEMENINO</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label">Fec. Nacimiento</label>
+                                    <input type="date" class="form-control" id="pers-fecha-nac">
+                                </div>
+
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Celular / Teléfono</label>
+                                    <input type="text" class="form-control" id="pers-telefono" placeholder="Ej. 999 888 777">
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Correo Electrónico</label>
+                                    <input type="email" class="form-control" id="pers-email" placeholder="correo@ejemplo.com">
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Contacto de Emergencia</label>
+                                    <input type="text" class="form-control" id="pers-contacto-emergencia" placeholder="Nombre (Parentesco) - Celular">
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label">Dirección de Residencia</label>
+                                    <input type="text" class="form-control" id="pers-direccion" placeholder="Av. Principal 123, Urb. Los Álamos, Lima">
                                 </div>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Nombres (<span class="text-danger">*</span>)</label>
-                                <input type="text" class="form-control text-uppercase fw-bold" id="pers-nombres" placeholder="NOMBRES COMPLETOS" required>
-                            </div>
+                        </div>
+                    </div>
 
-                            <div class="col-12 col-md-6">
-                                <label class="form-label">Apellidos (<span class="text-danger">*</span>)</label>
-                                <input type="text" class="form-control text-uppercase fw-bold" id="pers-apellidos" placeholder="APELLIDOS COMPLETOS" required>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label">Sexo</label>
-                                <select class="form-select" id="pers-sexo">
-                                    <option value="M" selected>MASCULINO</option>
-                                    <option value="F">FEMENINO</option>
-                                </select>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label">Fec. Nacimiento</label>
-                                <input type="date" class="form-control" id="pers-fecha-nac">
-                            </div>
+                    <!-- ═════════════════════════════════════════════════════════
+                         PESTAÑA 2: PUESTO & ÁREA
+                         ═════════════════════════════════════════════════════════ -->
+                    <div class="rrhh-tab-pane d-none" id="tab-pers-puesto">
+                        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
+                                <i class="bi bi-diagram-3-fill text-primary"></i> Estructura Organizacional y Ubicación
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Área Operativa (<span class="text-danger">*</span>)</label>
+                                    <select class="form-select fw-bold text-primary" id="pers-area" required onchange="window.rrhhPersonalOnAreaChange(this.value)">
+                                        <option value="OPERACIONES" selected>OPERACIONES</option>
+                                        <option value="FLOTA">FLOTA / TRANSPORTE</option>
+                                        <option value="MANTENIMIENTO">MANTENIMIENTO / TALLER</option>
+                                        <option value="ALMACEN">ALMACÉN / LOGÍSTICA</option>
+                                        <option value="GERENCIA">GERENCIA / ADMINISTRACIÓN</option>
+                                        <option value="COMERCIAL">COMERCIAL / VENTAS</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Categoría / Rol (<span class="text-danger">*</span>)</label>
+                                    <select class="form-select fw-bold" id="pers-rol" required onchange="window.rrhhPersonalToggleRol(this.value)">
+                                        <option value="CONDUCTOR">🚛 CONDUCTOR / OPERADOR</option>
+                                        <option value="MECANICO_TALLER">🔧 MECÁNICO / TALLER</option>
+                                        <option value="ADMINISTRATIVO" selected>🏢 ADMINISTRATIVO / OPERACIONES</option>
+                                        <option value="LIMPIEZA_SERVICIOS">🧹 LIMPIEZA / SERVICIOS GENERALES</option>
+                                        <option value="SEGURIDAD_CONTROL">🛡️ SEGURIDAD / CONTROL</option>
+                                        <option value="OTRO">📝 OTRO</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Cargo / Puesto (<span class="text-danger">*</span>)</label>
+                                    <input type="text" class="form-control text-uppercase fw-bold" id="pers-cargo" placeholder="EJ: CONDUCTOR SEMITRAILER, JEFE TRÁFICO" required>
+                                </div>
 
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Celular / Teléfono</label>
-                                <input type="text" class="form-control" id="pers-telefono" placeholder="Ej. 999 888 777">
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Correo Electrónico</label>
-                                <input type="email" class="form-control" id="pers-email" placeholder="correo@ejemplo.com">
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Contacto de Emergencia</label>
-                                <input type="text" class="form-control" id="pers-contacto-emergencia" placeholder="Nombre (Parentesco) - Celular">
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">Dirección de Residencia</label>
-                                <input type="text" class="form-control" id="pers-direccion" placeholder="Av. Principal 123, Urb. Los Álamos, Lima">
+                                <div class="col-6 col-md-4">
+                                    <label class="form-label">Centro de Costos (<span class="text-danger">*</span>)</label>
+                                    <select class="form-select font-monospace fw-bold" id="pers-centro-costo">
+                                        <option value="CC-100">CC-100 ADMINISTRACIÓN / GERENCIA</option>
+                                        <option value="CC-200">CC-200 COMERCIAL</option>
+                                        <option value="CC-300" selected>CC-300 OPERACIONES / FLOTA</option>
+                                        <option value="CC-400">CC-400 TALLER / MANTENIMIENTO</option>
+                                        <option value="CC-500">CC-500 ALMACÉN / SISTEMAS</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-4">
+                                    <label class="form-label">Sede / Base</label>
+                                    <input type="text" class="form-control text-uppercase" id="pers-sede" placeholder="EJ: BASE PRINCIPAL, CALLAO" value="BASE PRINCIPAL">
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Fecha de Ingreso a la Empresa (<span class="text-danger">*</span>)</label>
+                                    <input type="date" class="form-control" id="pers-fecha-ingreso" required>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ── SECCIÓN 2: CLASIFICACIÓN LABORAL & CARGO ────────────── -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 80; overflow: visible !important;">
-                        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
-                            <i class="bi bi-briefcase-fill text-primary"></i> 2. Clasificación Laboral y Cargo
-                        </h6>
-                        <div class="row g-3">
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Categoría / Rol (<span class="text-danger">*</span>)</label>
-                                <select class="form-select fw-bold text-primary" id="pers-rol" required onchange="window.rrhhPersonalToggleRol(this.value)">
-                                    <option value="CONDUCTOR">🚛 CONDUCTOR / OPERADOR</option>
-                                    <option value="MECANICO_TALLER">🔧 MECÁNICO / TALLER</option>
-                                    <option value="ADMINISTRATIVO" selected>🏢 ADMINISTRATIVO / OPERACIONES</option>
-                                    <option value="LIMPIEZA_SERVICIOS">🧹 LIMPIEZA / SERVICIOS GENERALES</option>
-                                    <option value="SEGURIDAD_CONTROL">🛡️ SEGURIDAD / CONTROL</option>
-                                    <option value="OTRO">📝 OTRO</option>
-                                </select>
+                    <!-- ═════════════════════════════════════════════════════════
+                         PESTAÑA 3: CONTRATO & REMUNERACIÓN
+                         ═════════════════════════════════════════════════════════ -->
+                    <div class="rrhh-tab-pane d-none" id="tab-pers-contrato">
+                        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
+                                <i class="bi bi-file-earmark-ruled text-primary"></i> Contrato Laboral y Duración
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Tipo de Contrato (<span class="text-danger">*</span>)</label>
+                                    <select class="form-select fw-bold" id="pers-tipo-contrato" required onchange="window.rrhhPersonalOnTipoContratoChange(this.value)">
+                                        <option value="PLAZO_FIJO" selected>PLAZO FIJO (SUJETO A MODALIDAD)</option>
+                                        <option value="INDETERMINADO">A PLAZO INDETERMINADO</option>
+                                        <option value="PERIODO_PRUEBA">EN PERIODO DE PRUEBA (3 MESES)</option>
+                                        <option value="LOCACION_SERVICIOS">LOCACIÓN DE SERVICIOS (RxH)</option>
+                                        <option value="PRACTICANTE">CONVENIO DE PRÁCTICAS</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3" id="wrap-pers-meses-contrato">
+                                    <label class="form-label">Duración Contrato</label>
+                                    <select class="form-select" id="pers-meses-duracion" onchange="window.rrhhPersonalRecalcularFechaFin()">
+                                        <option value="1">1 Mes</option>
+                                        <option value="3">3 Meses</option>
+                                        <option value="6" selected>6 Meses</option>
+                                        <option value="12">12 Meses (1 Año)</option>
+                                        <option value="CUSTOM">Otro plazo manual</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-2.5">
+                                    <label class="form-label">Inicio Contrato</label>
+                                    <input type="date" class="form-control" id="pers-inicio-contrato" onchange="window.rrhhPersonalRecalcularFechaFin()">
+                                </div>
+                                <div class="col-12 col-md-2.5">
+                                    <label class="form-label">Fin Contrato (Vencimiento)</label>
+                                    <input type="date" class="form-control font-monospace fw-bold" id="pers-fin-contrato">
+                                </div>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Cargo / Puesto (<span class="text-danger">*</span>)</label>
-                                <input type="text" class="form-control text-uppercase fw-bold" id="pers-cargo" placeholder="EJ: CONDUCTOR SEMITRAILER, JEFE TRÁFICO" required>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Área Operativa</label>
-                                <input type="text" class="form-control text-uppercase" id="pers-area" placeholder="EJ: OPERACIONES, MANTENIMIENTO" value="OPERACIONES">
-                            </div>
+                        </div>
 
-                            <div class="col-6 col-md-4">
-                                <label class="form-label">Sede / Base</label>
-                                <input type="text" class="form-control text-uppercase" id="pers-sede" placeholder="EJ: BASE PRINCIPAL, CALLAO" value="BASE PRINCIPAL">
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label">Centro de Costos</label>
-                                <select class="form-select" id="pers-centro-costo">
-                                    <option value="CC-100">CC-100 ADMINISTRACIÓN</option>
-                                    <option value="CC-200">CC-200 COMERCIAL</option>
-                                    <option value="CC-300" selected>CC-300 OPERACIONES Y RUTA</option>
-                                    <option value="CC-400">CC-400 TALLER Y MANTENIMIENTO</option>
-                                    <option value="CC-500">CC-500 TECNOLOGÍA Y SISTEMAS</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Fecha de Ingreso (<span class="text-danger">*</span>)</label>
-                                <input type="date" class="form-control" id="pers-fecha-ingreso" required>
+                        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
+                                <i class="bi bi-wallet2 text-primary"></i> Sueldo, Beneficios & Cuentas Bancarias
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-6 col-md-4">
+                                    <label class="form-label">Sueldo Básico (S/) (<span class="text-danger">*</span>)</label>
+                                    <input type="number" step="0.01" class="form-control font-monospace fw-bold text-success" id="pers-sueldo" placeholder="0.00" required>
+                                </div>
+                                <div class="col-6 col-md-4">
+                                    <label class="form-label">Bono Fijo / Movilidad (S/)</label>
+                                    <input type="number" step="0.01" class="form-control font-monospace" id="pers-bono" placeholder="0.00">
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Asignación Familiar (Ley 25129)</label>
+                                    <select class="form-select fw-bold" id="pers-asig-familiar">
+                                        <option value="0" selected>NO APLICA (S/ 0.00)</option>
+                                        <option value="1">SÍ APLICA (+ S/ 113.00 — 10% RMV S/ 1,130)</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Régimen Pensionario</label>
+                                    <select class="form-select" id="pers-regimen-pension">
+                                        <option value="ONP">ONP (13%)</option>
+                                        <option value="AFP_INTEGRA" selected>AFP INTEGRA</option>
+                                        <option value="AFP_PRIMA">AFP PRIMA</option>
+                                        <option value="AFP_PROFUTURO">AFP PROFUTURO</option>
+                                        <option value="AFP_HABITAT">AFP HABITAT</option>
+                                        <option value="SIN_REGIMEN">SIN RÉGIMEN / RxH</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">CUSPP (Código AFP)</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control font-monospace" id="pers-cuspp" placeholder="12 dígitos AFP">
+                                        <button class="btn btn-outline-secondary px-2.5" type="button" onclick="window.open('https://servicios.sbs.gob.pe/afiliados/', '_blank')" title="Consultar CUSPP en portal oficial SBS">
+                                            <i class="bi bi-search me-1"></i> SBS
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Banco de Haberes</label>
+                                    <select class="form-select" id="pers-banco-haberes">
+                                        <option value="BCP" selected>BCP (BANCO DE CRÉDITO)</option>
+                                        <option value="BBVA">BBVA PERÚ</option>
+                                        <option value="INTERBANK">INTERBANK</option>
+                                        <option value="SCOTIABANK">SCOTIABANK</option>
+                                        <option value="BANCO DE LA NACIÓN">BANCO DE LA NACIÓN</option>
+                                        <option value="OTRO">OTRO BANCO</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">N° Cuenta Sueldo</label>
+                                    <input type="text" class="form-control font-monospace" id="pers-cuenta-haberes" placeholder="Ej: 191-12345678-0-12">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">Código Interbancario (CCI)</label>
+                                    <input type="text" class="form-control font-monospace" id="pers-cci-haberes" placeholder="Ej: 002-191-001234567801-23">
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ── SECCIÓN 3: CONTRATOS, SUELDO Y RÉGIMEN ───────────────── -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 60; overflow: visible !important;">
-                        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
-                            <i class="bi bi-cash-stack text-primary"></i> 3. Contrato, Remuneración y Cuentas Bancarias
-                        </h6>
-                        <div class="row g-3">
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Tipo de Contrato (<span class="text-danger">*</span>)</label>
-                                <select class="form-select" id="pers-tipo-contrato" required>
-                                    <option value="PLAZO_FIJO" selected>PLAZO FIJO (SUJETO A MODALIDAD)</option>
-                                    <option value="INDETERMINADO">A PLAZO INDETERMINADO</option>
-                                    <option value="PERIODO_PRUEBA">EN PERIODO DE PRUEBA (3 MESES)</option>
-                                    <option value="LOCACION_SERVICIOS">LOCACIÓN DE SERVICIOS (RxH)</option>
-                                    <option value="PRACTICANTE">CONVENIO DE PRÁCTICAS</option>
-                                </select>
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label">Inicio Contrato</label>
-                                <input type="date" class="form-control" id="pers-inicio-contrato">
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label">Fin Contrato (Vencimiento)</label>
-                                <input type="date" class="form-control font-monospace fw-bold" id="pers-fin-contrato">
-                            </div>
+                    <!-- ═════════════════════════════════════════════════════════
+                         PESTAÑA 4: SST, BREVETES & TALLAS EPP
+                         ═════════════════════════════════════════════════════════ -->
+                    <div class="rrhh-tab-pane d-none" id="tab-pers-sst">
+                        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
+                                <i class="bi bi-shield-shaded text-primary"></i> Salud Ocupacional, Brevete & Pólizas
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label">Grupo Sanguíneo</label>
+                                    <select class="form-select fw-bold text-danger" id="pers-grupo-sanguineo">
+                                        <option value="O+" selected>O Rh (+)</option>
+                                        <option value="O-">O Rh (-)</option>
+                                        <option value="A+">A Rh (+)</option>
+                                        <option value="A-">A Rh (-)</option>
+                                        <option value="B+">B Rh (+)</option>
+                                        <option value="B-">B Rh (-)</option>
+                                        <option value="AB+">AB Rh (+)</option>
+                                        <option value="AB-">AB Rh (-)</option>
+                                        <option value="NO_CONOCE">NO CONOCE</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3" id="box-pers-licencia">
+                                    <label class="form-label">Licencia Conducir</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control font-monospace text-uppercase" id="pers-licencia-num" placeholder="Q12345678">
+                                        <button class="btn btn-outline-secondary px-2" type="button" onclick="window.open('https://licencias.mtc.gob.pe/', '_blank')" title="Verificar Récord y Vencimiento en MTC">
+                                            <i class="bi bi-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3" id="box-pers-licencia-cat">
+                                    <label class="form-label">Categoría Brevete</label>
+                                    <select class="form-select font-monospace fw-bold" id="pers-licencia-cat">
+                                        <option value="A-IIIC" selected>A-IIIC (PESADO ESPECIAL)</option>
+                                        <option value="A-IIIB">A-IIIB (PESADO CARGA)</option>
+                                        <option value="A-IIIA">A-IIIA (TRANSPORTE BUS)</option>
+                                        <option value="A-IIB">A-IIB (CAMIONETAS/FURGON)</option>
+                                        <option value="A-I">A-I (PARTICULAR)</option>
+                                        <option value="A-IV">A-IV (ESPECIAL MATPEL)</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3" id="box-pers-licencia-venc">
+                                    <label class="form-label">Vencimiento Brevete</label>
+                                    <input type="date" class="form-control font-monospace" id="pers-licencia-venc">
+                                </div>
 
-                            <div class="col-6 col-md-4">
-                                <label class="form-label">Sueldo Básico (S/) (<span class="text-danger">*</span>)</label>
-                                <input type="number" step="0.01" class="form-control font-monospace fw-bold text-success" id="pers-sueldo" placeholder="0.00" required>
+                                <div class="col-6 col-md-4">
+                                    <label class="form-label">Póliza SCTR Salud</label>
+                                    <select class="form-select fw-bold" id="pers-sctr-salud">
+                                        <option value="1" selected>🟢 ACTIVO / CUBIERTO</option>
+                                        <option value="0">🔴 PENDIENTE / NO COBERTURADO</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-4">
+                                    <label class="form-label">Póliza SCTR Pensión</label>
+                                    <select class="form-select fw-bold" id="pers-sctr-pension">
+                                        <option value="1" selected>🟢 ACTIVO / CUBIERTO</option>
+                                        <option value="0">🔴 PENDIENTE / NO COBERTURADO</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label">Condición EMO (Médico)</label>
+                                    <select class="form-select" id="pers-emo-condicion">
+                                        <option value="APTO" selected>APTO MÉDICO</option>
+                                        <option value="APTO_RESTRICCIONES">APTO CON RESTRICCIONES</option>
+                                        <option value="NO_APTO">NO APTO</option>
+                                        <option value="PENDIENTE">PENDIENTE DE EVALUACIÓN</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label">Bono Fijo / Movilidad (S/)</label>
-                                <input type="number" step="0.01" class="form-control font-monospace" id="pers-bono" placeholder="0.00">
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Asignación Familiar</label>
-                                <select class="form-select" id="pers-asig-familiar">
-                                    <option value="0" selected>NO APLICA</option>
-                                    <option value="1">SÍ APLICA (+ S/ 102.50)</option>
-                                </select>
-                            </div>
+                        </div>
 
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Régimen Pensionario</label>
-                                <select class="form-select" id="pers-regimen-pension">
-                                    <option value="ONP">ONP (13%)</option>
-                                    <option value="AFP_INTEGRA" selected>AFP INTEGRA</option>
-                                    <option value="AFP_PRIMA">AFP PRIMA</option>
-                                    <option value="AFP_PROFUTURO">AFP PROFUTURO</option>
-                                    <option value="AFP_HABITAT">AFP HABITAT</option>
-                                    <option value="SIN_REGIMEN">SIN RÉGIMEN / RxH</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">CUSPP (Código AFP)</label>
-                                <input type="text" class="form-control font-monospace" id="pers-cuspp" placeholder="Ej: 123456ABCDE1">
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Banco de Haberes</label>
-                                <select class="form-select" id="pers-banco-haberes">
-                                    <option value="BCP" selected>BCP (BANCO DE CRÉDITO)</option>
-                                    <option value="BBVA">BBVA PERÚ</option>
-                                    <option value="INTERBANK">INTERBANK</option>
-                                    <option value="SCOTIABANK">SCOTIABANK</option>
-                                    <option value="BANCO DE LA NACIÓN">BANCO DE LA NACIÓN</option>
-                                    <option value="OTRO">OTRO BANCO</option>
-                                </select>
-                            </div>
-
-                            <div class="col-12 col-md-6">
-                                <label class="form-label">N° Cuenta Sueldo</label>
-                                <input type="text" class="form-control font-monospace" id="pers-cuenta-haberes" placeholder="Ej: 191-12345678-0-12">
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label">Código Interbancario (CCI)</label>
-                                <input type="text" class="form-control font-monospace" id="pers-cci-haberes" placeholder="Ej: 002-191-001234567801-23">
+                        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
+                                <i class="bi bi-tag-fill text-primary"></i> Tallas de Indumentaria & Dotación EPP
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label">Talla Polo / Camisa</label>
+                                    <select class="form-select fw-bold" id="pers-talla-polo">
+                                        <option value="S">S (Small)</option>
+                                        <option value="M" selected>M (Medium)</option>
+                                        <option value="L">L (Large)</option>
+                                        <option value="XL">XL (Extra Large)</option>
+                                        <option value="XXL">XXL</option>
+                                        <option value="XXXL">XXXL</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label">Talla Pantalón</label>
+                                    <select class="form-select fw-bold" id="pers-talla-pantalon">
+                                        <option value="28">28</option>
+                                        <option value="30">30</option>
+                                        <option value="32" selected>32</option>
+                                        <option value="34">34</option>
+                                        <option value="36">36</option>
+                                        <option value="38">38</option>
+                                        <option value="40">40</option>
+                                        <option value="42">42</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label">Talla Calzado Seg.</label>
+                                    <select class="form-select fw-bold font-monospace" id="pers-talla-calzado">
+                                        <option value="38">38</option>
+                                        <option value="39">39</option>
+                                        <option value="40">40</option>
+                                        <option value="41" selected>41</option>
+                                        <option value="42">42</option>
+                                        <option value="43">43</option>
+                                        <option value="44">44</option>
+                                        <option value="45">45</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label">Talla Chaleco / Casco</label>
+                                    <select class="form-select fw-bold" id="pers-talla-chaleco">
+                                        <option value="ESTANDAR" selected>ESTÁNDAR</option>
+                                        <option value="S">S</option>
+                                        <option value="M">M</option>
+                                        <option value="L">L</option>
+                                        <option value="XL">XL</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ── SECCIÓN 4: HABILITACIONES OPERATIVAS & SST ───────────── -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 40; overflow: visible !important;">
-                        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
-                            <i class="bi bi-shield-check text-primary"></i> 4. Habilitaciones Operativas, Brevetes & SST
-                        </h6>
+                    <!-- ═════════════════════════════════════════════════════════
+                         PESTAÑA 5: FOTO & FOTOCHECK
+                         ═════════════════════════════════════════════════════════ -->
+                    <div class="rrhh-tab-pane d-none" id="tab-pers-fotocheck">
                         <div class="row g-3">
-                            <div class="col-12 col-md-4" id="box-pers-licencia">
-                                <label class="form-label">Licencia de Conducir (Brevete)</label>
-                                <input type="text" class="form-control font-monospace text-uppercase" id="pers-licencia-num" placeholder="Q12345678">
-                            </div>
-                            <div class="col-6 col-md-4" id="box-pers-licencia-cat">
-                                <label class="form-label">Categoría Brevete</label>
-                                <select class="form-select font-monospace fw-bold" id="pers-licencia-cat">
-                                    <option value="A-IIIC" selected>A-IIIC (PESADO ESPECIAL)</option>
-                                    <option value="A-IIIB">A-IIIB (PESADO CARGA)</option>
-                                    <option value="A-IIIA">A-IIIA (TRANSPORTE BUS)</option>
-                                    <option value="A-IIB">A-IIB (CAMIONETAS/FURGON)</option>
-                                    <option value="A-I">A-I (PARTICULAR)</option>
-                                    <option value="A-IV">A-IV (ESPECIAL MATPEL)</option>
-                                </select>
-                            </div>
-                            <div class="col-6 col-md-4" id="box-pers-licencia-venc">
-                                <label class="form-label">Vencimiento Brevete</label>
-                                <input type="date" class="form-control font-monospace" id="pers-licencia-venc">
+                            <div class="col-12 col-md-6">
+                                <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white h-100" style="border: 1px solid #e2e8f0 !important;">
+                                    <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
+                                        <i class="bi bi-camera-fill text-primary"></i> Fotografía del Colaborador
+                                    </h6>
+                                    <p class="text-muted small mb-3">Suba una foto clara de frente con fondo claro para el fotocheck y legajo digital.</p>
+                                    
+                                    <div class="text-center p-3 border rounded-3 bg-light mb-3">
+                                        <img id="pers-foto-preview" src="https://via.placeholder.com/150?text=Foto" alt="Vista previa" class="rounded-circle shadow-sm border mb-2" style="width:120px;height:120px;object-fit:cover;">
+                                        <input type="file" id="pers-foto-input" class="form-control form-control-sm mt-2" accept="image/*" onchange="window.rrhhPersonalOnFotoSelect(event)">
+                                        <input type="hidden" id="pers-foto-url" value="">
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-outline-primary fw-bold rounded-pill" onclick="window.rrhhPersonalActualizarFotocheckPreview()">
+                                            <i class="bi bi-arrow-repeat me-1"></i> Actualizar Vista Previa de Fotocheck
+                                        </button>
+                                        <button type="button" class="btn btn-primary fw-bold rounded-pill shadow-sm" onclick="window.rrhhPersonalImprimirFotocheck()">
+                                            <i class="bi bi-printer-fill me-1"></i> Imprimir / Descargar Fotocheck Oficial
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="col-6 col-md-4">
-                                <label class="form-label">Póliza SCTR Salud</label>
-                                <select class="form-select fw-bold" id="pers-sctr-salud">
-                                    <option value="1" selected>🟢 ACTIVO / CUBIERTO</option>
-                                    <option value="0">🔴 PENDIENTE / NO COBERTURADO</option>
-                                </select>
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label">Póliza SCTR Pensión</label>
-                                <select class="form-select fw-bold" id="pers-sctr-pension">
-                                    <option value="1" selected>🟢 ACTIVO / CUBIERTO</option>
-                                    <option value="0">🔴 PENDIENTE / NO COBERTURADO</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label">Condición EMO (Médico)</label>
-                                <select class="form-select" id="pers-emo-condicion">
-                                    <option value="APTO" selected>APTO MÉDICO</option>
-                                    <option value="APTO_RESTRICCIONES">APTO CON RESTRICCIONES</option>
-                                    <option value="NO_APTO">NO APTO</option>
-                                    <option value="PENDIENTE">PENDIENTE DE EVALUACIÓN</option>
-                                </select>
+                            <div class="col-12 col-md-6">
+                                <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white h-100 d-flex align-items-center justify-content-center" style="border: 1px solid #e2e8f0 !important;">
+                                    
+                                    <!-- 🪪 CARNET FOTOCHECK EN VIVO -->
+                                    <div class="fotocheck-card" id="fotocheck-card-render">
+                                        <div class="fotocheck-header">
+                                            <img id="fc-logo" src="/img/logo.png" alt="Empresa" class="fotocheck-logo">
+                                            <div id="fc-empresa" class="fotocheck-empresa">EMPRESA</div>
+                                        </div>
+                                        <div class="fotocheck-avatar-wrap">
+                                            <img id="fc-avatar" src="https://via.placeholder.com/110?text=Foto" alt="Colaborador" class="fotocheck-avatar">
+                                        </div>
+                                        <div id="fc-nombre" class="fotocheck-nombre">NOMBRES Y APELLIDOS</div>
+                                        <div id="fc-cargo" class="fotocheck-cargo">CARGO DEL COLABORADOR</div>
+                                        <span id="fc-area" class="fotocheck-badge-area">OPERACIONES</span>
+                                        
+                                        <div class="fotocheck-qr-wrap mt-auto">
+                                            <div id="fc-qrcode"></div>
+                                            <div id="fc-dni" class="fotocheck-dni">DNI: 00000000</div>
+                                        </div>
+                                    </div>
+
+                                </div>
                             </div>
                         </div>
                     </div>
 
                 </div>
 
-                <!-- Modal Footer (1:1 Reporte de Fallas) -->
+                <!-- Modal Footer -->
                 <div class="modal-footer bg-white px-4 py-3 border-top d-flex justify-content-between align-items-center flex-shrink-0">
                     <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-success rounded-pill px-4 py-2.5 fw-bold shadow-sm" id="pers-btn-guardar">
