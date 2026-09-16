@@ -1291,18 +1291,183 @@ window.descargarPlantillaFleetrun = function() {
 };
 
 window.exportarExcelFleetrun = function() {
-    if (!dataGlobalFleetrun || dataGlobalFleetrun.length === 0) {
-        alert("No hay mantenimientos cargados para exportar."); return;
+    const tbody = document.getElementById('cuerpoTablaFleetrun');
+    const ws_data = [[
+        'PLACA',
+        'CLIENTE',
+        'UTS',
+        'FECHA',
+        'MODELO',
+        'TIPO PREVENTIVO',
+        'KM CAMBIO',
+        'KM ACTUAL (GPS)',
+        'CUANTO FALTA',
+        'KM PROXIMO',
+        'FRECUENCIA',
+        'ESTADO',
+        'OBSERVACION',
+        'KM RECORRIDO',
+        'UBICACION'
+    ]];
+
+    const limpiarNum = function(str) {
+        if (str === null || str === undefined) return 0;
+        if (typeof str === 'number') return str;
+        let clean = String(str).replace(/[^\d.-]/g, '').trim();
+        let num = parseFloat(clean);
+        return isNaN(num) ? String(str).trim() : num;
+    };
+
+    const limpiarTxt = function(str) {
+        if (!str) return '';
+        return String(str).replace(/<[^>]*>/g, '').replace(/∟/g, '').trim();
+    };
+
+    // 1. Obtener filtros activos
+    const txt = (document.getElementById('buscadorFleetrun')?.value || '').toLowerCase().trim();
+    const dateF = document.getElementById('buscadorFechaFleetrun')?.value || '';
+    let dateCompare = '';
+    if (dateF) {
+        let p = dateF.split('-');
+        dateCompare = `${p[2]}/${p[1]}/${p[0]}`;
     }
-    const ws_data = [['ID', 'FECHA INGRESO', 'PLACA', 'TIPO MP', 'KM ACTUAL', 'FRECUENCIA', 'KM PROXIMO', 'TECNICO', 'OBSERVACION']];
-    dataGlobalFleetrun.forEach(f => {
-        if (f.estado === 'Eliminada') return;
-        ws_data.push([f[0]||'', f[3]||'', f[4]||'', f[8]||'', f[9]||'', f[10]||'', f[11]||'', f[13]||'', f[14]||'']);
-    });
+    const chkCli = Array.from(document.querySelectorAll('#filtroFleetCliente input:checked')).map(e => e.value);
+    const chkUts = Array.from(document.querySelectorAll('#filtroFleetUts input:checked')).map(e => e.value);
+    const chkEst = Array.from(document.querySelectorAll('#filtroFleetEstado input:checked')).map(e => e.value);
+    const isFiltering = txt !== '' || dateCompare !== '' || chkCli.length > 0 || chkUts.length > 0 || chkEst.length > 0;
+
+    // 2. Extraer filas visibles de la tabla
+    if (tbody) {
+        const headers = tbody.querySelectorAll('tr.group-header');
+        headers.forEach(header => {
+            if (header.style.display === 'none') return;
+
+            const placaRaw = header.getAttribute('data-placa') || '';
+            const classPlaca = normalizarClase(placaRaw);
+            const cli = header.getAttribute('data-cliente') || '';
+            const uts = header.getAttribute('data-uts') || '';
+
+            let childRows = tbody.querySelectorAll(`.child-${classPlaca}.child-row-fleetrun`);
+            childRows.forEach(row => {
+                let rowFecha = row.getAttribute('data-fecha') || '';
+                let kpiFila = row.getAttribute('data-estado-kpi') || '';
+                let textoRow = (row.textContent || '').toLowerCase() + ' ' + placaRaw.toLowerCase();
+
+                let matchTxt = (!txt || textoRow.includes(txt));
+                let matchDate = (!dateCompare || rowFecha === dateCompare);
+                let matchCli = (!chkCli.length || chkCli.includes(cli));
+                let matchUts = (!chkUts.length || chkUts.includes(uts));
+                let matchKpi = (!chkEst.length || chkEst.includes(kpiFila));
+
+                // Si no cumple con los filtros activos o está oculta explícitamente por filtro
+                if (isFiltering && (!matchTxt || !matchDate || !matchCli || !matchUts || !matchKpi)) {
+                    return;
+                }
+
+                const cells = row.cells;
+                if (!cells || cells.length < 12) return;
+
+                // Observación sin el badge de estado
+                let obsBadge = cells[9]?.querySelector('.badge');
+                let obsBadgeTxt = obsBadge ? obsBadge.textContent.trim() : '';
+                let obsText = (cells[9]?.textContent || '').replace(obsBadgeTxt, '').trim();
+
+                let fechaVal = rowFecha || limpiarTxt(cells[1]?.textContent);
+                let modeloVal = limpiarTxt(cells[2]?.textContent);
+                let tipoVal = limpiarTxt(cells[3]?.textContent);
+                let kmCambioVal = limpiarNum(cells[4]?.textContent);
+                let kmGpsVal = limpiarNum(cells[5]?.textContent);
+                let cuantoFaltaVal = limpiarNum(cells[6]?.textContent);
+                let kmProxVal = limpiarNum(cells[7]?.textContent);
+                let frecuenciaVal = limpiarNum(cells[8]?.textContent);
+                let kmRecorridoVal = limpiarNum(cells[10]?.textContent);
+                let ubicacionVal = limpiarTxt(cells[11]?.textContent);
+                if (ubicacionVal === 'Cargando...') ubicacionVal = '';
+
+                ws_data.push([
+                    placaRaw,
+                    cli,
+                    uts,
+                    fechaVal,
+                    modeloVal,
+                    tipoVal,
+                    kmCambioVal,
+                    kmGpsVal,
+                    cuantoFaltaVal,
+                    kmProxVal,
+                    frecuenciaVal,
+                    kpiFila,
+                    obsText,
+                    kmRecorridoVal,
+                    ubicacionVal
+                ]);
+            });
+        });
+    }
+
+    // 3. Fallback en caso de que no haya filas en DOM (ej. vista móvil sin tabla renderizada)
+    if (ws_data.length <= 1 && typeof _filtrarDatosAMostrar === 'function') {
+        const fuenteDatos = isHistorialFleetrun ? (window.dataGlobalFleetrun || []) : (window._fleetrunDatosAMostrar || window.dataGlobalFleetrun || []);
+        const filtrados = _filtrarDatosAMostrar(fuenteDatos);
+        filtrados.forEach(f => {
+            let placa = f[4] || '';
+            let infoP = (window.dataGlobalPlacas || []).find(p => p[0] === placa);
+            let cli = infoP ? infoP[1] : (f[6] || '');
+            let utsRaw = infoP && infoP[19] ? String(infoP[19]).trim() : (f[7] || '');
+            let utsDisp = utsRaw ? (utsRaw.charAt(0).toUpperCase() + utsRaw.slice(1).toLowerCase()) : '-';
+            let modelo = infoP ? (infoP[4] || '-') : '-';
+            let wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placa) : null;
+            let esHoras = (window._metricaMap && window._metricaMap[String(placa).toUpperCase()] === 'horas');
+            let kmGps = wD ? (esHoras ? (wD.horas || 0) : (wD.km || 0)) : (parseFloat(f[14]) || 0);
+            let kmCambio = parseFloat(f[9]) || 0;
+            let frec = parseFloat(f[10]) || 0;
+            let kmProx = parseFloat(f[11]) || 0;
+            let falta = kmProx - kmGps;
+            let estado = (falta <= 0) ? 'VENCIDO' : (falta <= 2000 ? 'PROXIMO' : 'VIGENTE');
+            let kmRec = kmGps - kmCambio;
+            let ubi = wD ? (wD.ubicacion || wD.direccion || '') : '';
+
+            ws_data.push([
+                placa,
+                cli,
+                utsDisp,
+                f[3] || 'Plan Inicial',
+                modelo,
+                f[8] || '',
+                kmCambio,
+                kmGps,
+                falta,
+                kmProx,
+                frec,
+                estado,
+                f[12] || '',
+                kmRec,
+                ubi
+            ]);
+        });
+    }
+
+    if (ws_data.length <= 1) {
+        if (typeof window.mostrarNotificacion === 'function') {
+            window.mostrarNotificacion("No hay mantenimientos en la vista actual para exportar.", "warning");
+        } else {
+            alert("No hay mantenimientos en la vista actual para exportar.");
+        }
+        return;
+    }
+
+    // 4. Crear y descargar el archivo Excel
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Base_Fleetrun");
-    XLSX.writeFile(wb, "Reporte_Fleetrun_Completo.xlsx");
+    const sheetName = isHistorialFleetrun ? "Historial_Preventivo" : "Mantenimiento_Preventivo";
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+    const fechaHoy = new Date().toISOString().slice(0, 10);
+    const nombreArchivo = isHistorialFleetrun 
+        ? `Reporte_Fleetrun_Historial_${fechaHoy}.xlsx` 
+        : `Reporte_Mantenimiento_Preventivo_${fechaHoy}.xlsx`;
+
+    XLSX.writeFile(wb, nombreArchivo);
 };
 
 window.importarExcelFleetrun = function(event) {
