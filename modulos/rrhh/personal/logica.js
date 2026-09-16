@@ -411,7 +411,7 @@ window.rrhhPersonalOnFotoSelect = function(e) {
 
 window.rrhhPersonalActualizarFotocheckPreview = function() {
     var empNombre = (localStorage.getItem('fleet_empresa_nombre') || 'AZKELL TRANSPORTES S.A.C.').toUpperCase();
-    var empLogo = localStorage.getItem('fleet_empresa_logo') || document.getElementById('nav-logo-img')?.src || '/img/logo.png';
+    var empLogo = localStorage.getItem('fleet_empresa_logo') || document.getElementById('nav-logo-img')?.src || '/favicon-2003.png';
 
     var elEmp = document.getElementById('fc-empresa');
     var elLogo = document.getElementById('fc-logo');
@@ -531,7 +531,7 @@ window.rrhhPersonalAbrirModalNuevo = function() {
     if (fIniCont) fIniCont.value = new Date().toISOString().slice(0, 10);
 
     var prevFoto = document.getElementById('pers-foto-preview');
-    if (prevFoto) prevFoto.src = 'https://via.placeholder.com/150?text=Foto';
+    if (prevFoto) prevFoto.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
 
     window.rrhhPersonalSwitchTab('tab-pers-identidad');
     window.rrhhPersonalOnTipoContratoChange('PLAZO_FIJO');
@@ -601,7 +601,7 @@ window.rrhhPersonalAbrirModalEditar = function(id) {
     setVal('pers-talla-chaleco', p.talla_chaleco || 'ESTANDAR');
 
     var prevFoto = document.getElementById('pers-foto-preview');
-    if (prevFoto) prevFoto.src = p.foto_url || 'https://via.placeholder.com/150?text=Foto';
+    if (prevFoto) prevFoto.src = p.foto_url || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
 
     window.rrhhPersonalToggleRol(p.categoria_rol);
     window.rrhhPersonalOnTipoContratoChange(p.tipo_contrato || 'PLAZO_FIJO');
