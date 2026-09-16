@@ -395,62 +395,75 @@
         <!-- ════════════════════════════════════════════════════════ -->
         <div id="cfg-panel-notificaciones" class="config-panel d-none">
             
-            <h2 class="cfg-section-title">Servidor de Correo Saliente (SMTP)</h2>
+            <!-- ── SECCIÓN 1: CONFIGURACIÓN DEL EMISOR ───────────────── -->
+            <h2 class="cfg-section-title">1. ¿Quién enviará los correos? (Emisor)</h2>
             <div class="cfg-group-box">
                 <div class="p-3 border-bottom bg-light bg-opacity-50">
-                    <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div>
-                            <p class="cfg-item-title mb-1"><i class="bi bi-envelope-gear" style="color: #ea580c;"></i> Emisor de Notificaciones</p>
-                            <p class="cfg-item-desc">Configura tu correo (Gmail, Outlook o Correo Corporativo) para enviar reportes PDF y alertas automáticas.</p>
+                            <p class="cfg-item-title mb-1"><i class="bi bi-envelope-at-fill" style="color: #ea580c;"></i> Correo Emisor del Sistema</p>
+                            <p class="cfg-item-desc">Elige qué tipo de correo usará el ERP para enviar reportes y alertas a tu equipo.</p>
                         </div>
                         <span class="badge bg-secondary-subtle text-secondary px-3 py-2 rounded-pill fw-bold" id="cfg-smtp-badge-status" style="font-size:0.75rem;">
                             <i class="bi bi-circle-fill me-1" style="font-size: 0.55rem;"></i> Estado: Verificando...
                         </span>
                     </div>
+
+                    <!-- Botones de 1 Clic para seleccionar proveedor -->
+                    <div class="d-flex flex-wrap gap-2 mt-3 pt-2 border-top">
+                        <span class="small fw-bold text-secondary d-flex align-items-center me-1">Autocompletar en 1 clic:</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-bold px-3 d-flex align-items-center gap-1 shadow-2xs" onclick="window.cfgSetPresetProveedor('gmail')">
+                            <i class="bi bi-google"></i> Gmail
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-bold px-3 d-flex align-items-center gap-1 shadow-2xs" onclick="window.cfgSetPresetProveedor('outlook')">
+                            <i class="bi bi-microsoft"></i> Outlook / Hotmail
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold px-3 d-flex align-items-center gap-1 shadow-2xs" onclick="window.cfgSetPresetProveedor('cpanel')">
+                            <i class="bi bi-globe"></i> Correo de mi Dominio
+                        </button>
+                    </div>
                 </div>
 
                 <div class="p-3">
                     <div class="row g-3">
-                        <div class="col-12 col-md-8">
-                            <label class="form-label small fw-bold text-secondary mb-1">Servidor Host SMTP</label>
-                            <input type="text" class="form-control form-control-sm fw-semibold" id="cfg-smtp-host" placeholder="Ej. smtp.gmail.com o mail.tuempresa.com" style="border-radius:10px;">
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label small fw-bold text-secondary mb-1">Puerto</label>
-                            <input type="number" class="form-control form-control-sm fw-semibold" id="cfg-smtp-port" placeholder="587 ó 465" style="border-radius:10px;">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-dark mb-1">Tu Correo Electrónico (Usuario)</label>
+                            <input type="email" class="form-control form-control-sm fw-semibold" id="cfg-smtp-user" placeholder="ejemplo: gerencia@azkell.com o tuempresa@gmail.com" style="border-radius:10px;">
+                            <div class="form-text small" style="font-size:0.74rem;">Es el correo que aparecerá como remitente de las alertas.</div>
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-secondary mb-1">Correo Emisor (Usuario)</label>
-                            <input type="email" class="form-control form-control-sm fw-semibold" id="cfg-smtp-user" placeholder="tuempresa@gmail.com" style="border-radius:10px;">
-                            <div class="form-text small" style="font-size:0.72rem; color:#64748b;">Correo que emitirá los reportes.</div>
-                        </div>
-
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-secondary mb-1">Contraseña de Aplicación / Password</label>
+                            <label class="form-label small fw-bold text-dark mb-1">Contraseña de Aplicación (16 letras)</label>
                             <div class="input-group input-group-sm">
-                                <input type="password" class="form-control fw-semibold" id="cfg-smtp-pass" placeholder="••••••••••••••••" style="border-top-left-radius:10px; border-bottom-left-radius:10px;">
+                                <input type="password" class="form-control fw-semibold font-monospace" id="cfg-smtp-pass" placeholder="••••••••••••••••" style="border-top-left-radius:10px; border-bottom-left-radius:10px; letter-spacing: 2px;">
                                 <button class="btn btn-outline-secondary" type="button" onclick="window.toggleSmtpPassVisibility()" style="border-top-right-radius:10px; border-bottom-right-radius:10px;">
                                     <i class="bi bi-eye" id="cfg-smtp-pass-icon"></i>
                                 </button>
                             </div>
-                            <div class="form-text small" style="font-size:0.72rem; color:#64748b;">En Gmail usa una <a href="https://myaccount.google.com/apppasswords" target="_blank" class="text-primary text-decoration-none fw-bold">Contraseña de Aplicación (16 dígitos)</a>.</div>
+                            <div class="form-text small" id="cfg-smtp-pass-help" style="font-size:0.74rem;">
+                                En Gmail: <a href="https://myaccount.google.com/apppasswords" target="_blank" class="text-primary fw-bold text-decoration-none">Generar Clave de Aplicación aquí ↗</a>
+                            </div>
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-secondary mb-1">Nombre Visible del Remitente</label>
+                            <label class="form-label small fw-bold text-secondary mb-1">Nombre Visible de la Empresa / Remitente</label>
                             <input type="text" class="form-control form-control-sm fw-semibold" id="cfg-smtp-fromname" placeholder="Ej. Alertas Azkell ERP / Marsisa" style="border-radius:10px;">
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-secondary mb-1">Correo 'Responder a' / From (Opcional)</label>
-                            <input type="email" class="form-control form-control-sm fw-semibold" id="cfg-smtp-fromemail" placeholder="operaciones@tuempresa.com" style="border-radius:10px;">
+                            <label class="form-label small fw-bold text-secondary mb-1">Servidor Host (Técnico)</label>
+                            <input type="text" class="form-control form-control-sm fw-semibold" id="cfg-smtp-host" placeholder="smtp.gmail.com" style="border-radius:10px;">
                         </div>
 
-                        <div class="col-12">
-                            <div class="form-check form-switch mt-1">
+                        <div class="col-6 col-md-4">
+                            <label class="form-label small fw-bold text-secondary mb-1">Puerto (Técnico)</label>
+                            <input type="number" class="form-control form-control-sm fw-semibold" id="cfg-smtp-port" value="587" style="border-radius:10px;">
+                        </div>
+
+                        <div class="col-6 col-md-8 d-flex align-items-center">
+                            <div class="form-check form-switch mt-3">
                                 <input class="form-check-input" type="checkbox" id="cfg-smtp-secure" role="switch">
-                                <label class="form-check-label small fw-bold text-dark" for="cfg-smtp-secure">Usar SSL Directo (Puerto 465). Dejar desactivado para TLS/STARTTLS (Puerto 587).</label>
+                                <label class="form-check-label small text-secondary" for="cfg-smtp-secure">Seguridad SSL Directa (solo para puerto 465)</label>
                             </div>
                         </div>
                     </div>
@@ -458,45 +471,87 @@
                     <!-- Botones de Acción SMTP -->
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-4 pt-3 border-top">
                         <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-2 fw-bold d-flex align-items-center gap-2" onclick="window.abrirModalPruebaSMTP()">
-                            <i class="bi bi-send-check"></i> <span>Enviar Correo de Prueba</span>
+                            <i class="bi bi-send-check"></i> <span>Enviar Correo de Prueba a mi Email</span>
                         </button>
 
                         <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm" onclick="window.guardarConfigSMTP()">
-                            <i class="bi bi-check2-circle fs-6"></i> <span>Guardar Servidor SMTP</span>
+                            <i class="bi bi-check2-circle fs-6"></i> <span>Guardar Emisor</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <h2 class="cfg-section-title">Automatización de Alertas del ERP</h2>
+            <!-- ── SECCIÓN 2: HORARIOS Y FRECUENCIA DE ENVÍO ─────────── -->
+            <h2 class="cfg-section-title">2. ¿Cada cuánto tiempo quieres que se envíen los correos?</h2>
             <div class="cfg-group-box">
-                <div class="cfg-row-item">
-                    <div class="cfg-item-info">
-                        <p class="cfg-item-title"><i class="bi bi-shield-exclamation" style="color: #ef4444;"></i> Alertas por Falla Crítica en Checklist</p>
-                        <p class="cfg-item-desc">Enviar correo inmediato a supervisores si se marca una falla crítica en Motor, Frenos o Dirección.</p>
+                <!-- 1. Reporte Diario de Fallas -->
+                <div class="p-3 border-bottom">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div>
+                            <p class="cfg-item-title mb-0"><i class="bi bi-clipboard2-check-fill" style="color: #0284c7;"></i> Consolidado Diario de Fallas y Mantenimiento (PDF)</p>
+                            <p class="cfg-item-desc">Envía automáticamente el resumen en PDF de todas las fallas reportadas y OTs del día.</p>
+                        </div>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input cfg-switch" type="checkbox" id="cfg-alert-checklist" role="switch" checked>
+                        </div>
                     </div>
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input cfg-switch" type="checkbox" id="cfg-alert-checklist" role="switch" checked>
+                    <div class="row g-2 mt-1 pt-2 border-top align-items-center">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold text-secondary mb-0">Hora de Envío Diario:</label>
+                            <input type="time" class="form-control form-control-sm fw-bold" id="cfg-hora-fallas-diarias" value="18:00" style="border-radius:8px;">
+                        </div>
+                        <div class="col-12 col-md-8">
+                            <label class="form-label small fw-bold text-secondary mb-0">Días de la semana:</label>
+                            <div class="d-flex gap-1">
+                                <span class="badge bg-primary text-white px-2 py-1 rounded-2 cursor-pointer">L</span>
+                                <span class="badge bg-primary text-white px-2 py-1 rounded-2 cursor-pointer">M</span>
+                                <span class="badge bg-primary text-white px-2 py-1 rounded-2 cursor-pointer">M</span>
+                                <span class="badge bg-primary text-white px-2 py-1 rounded-2 cursor-pointer">J</span>
+                                <span class="badge bg-primary text-white px-2 py-1 rounded-2 cursor-pointer">V</span>
+                                <span class="badge bg-primary text-white px-2 py-1 rounded-2 cursor-pointer">S</span>
+                                <span class="badge bg-light text-secondary border px-2 py-1 rounded-2 cursor-pointer">D</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="cfg-row-item">
-                    <div class="cfg-item-info">
-                        <p class="cfg-item-title"><i class="bi bi-calendar-x" style="color: #f59e0b;"></i> Alertas de Vencimiento (Flota y RRHH)</p>
-                        <p class="cfg-item-desc">Avisos automáticos preventivos a 30, 15 y 7 días antes del vencimiento de SOAT, CITV, Licencias y Contratos.</p>
+                <!-- 2. Alertas de Vencimiento de Documentos -->
+                <div class="p-3 border-bottom">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div>
+                            <p class="cfg-item-title mb-0"><i class="bi bi-calendar-event-fill" style="color: #f59e0b;"></i> Alertas de Vencimiento (SOAT, CITV, Licencias y Contratos)</p>
+                            <p class="cfg-item-desc">Avisa con anticipación antes de que venza cualquier documento de unidades o personal.</p>
+                        </div>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input cfg-switch" type="checkbox" id="cfg-alert-vencimientos" role="switch" checked>
+                        </div>
                     </div>
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input cfg-switch" type="checkbox" id="cfg-alert-vencimientos" role="switch" checked>
+                    <div class="row g-2 mt-1 pt-2 border-top align-items-center">
+                        <div class="col-12 col-md-5">
+                            <span class="small fw-bold text-secondary d-block mb-1">Avisar con anticipación de:</span>
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">30 días antes</span>
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">15 días antes</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill">7 días antes</span>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-7">
+                            <span class="small fw-bold text-secondary d-block mb-1">Envío del Reporte Semanal:</span>
+                            <div class="small text-dark fw-semibold"><i class="bi bi-clock me-1 text-primary"></i> Todos los <b>Lunes a las 08:00 AM</b></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="cfg-row-item">
-                    <div class="cfg-item-info">
-                        <p class="cfg-item-title"><i class="bi bi-tools" style="color: #3b82f6;"></i> Alertas de Planes de Mantenimiento Atrasados</p>
-                        <p class="cfg-item-desc">Notificar retrasos (+1, +3 y +7 días) en órdenes y planes de mantenimiento preventivo.</p>
-                    </div>
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input cfg-switch" type="checkbox" id="cfg-alert-planes" role="switch" checked>
+                <!-- 3. Alertas Inmediatas por Falla Crítica -->
+                <div class="p-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="cfg-item-title mb-0"><i class="bi bi-shield-fill-exclamation" style="color: #ef4444;"></i> Alerta Inmediata por Falla Crítica en Ruta</p>
+                            <p class="cfg-item-desc">Si el chofer o mecánico reporta falla grave en <b>Motor, Frenos o Dirección</b>, se envía un correo <b>en el mismo segundo</b>.</p>
+                        </div>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input cfg-switch" type="checkbox" id="cfg-alert-criticas-inmediatas" role="switch" checked>
+                        </div>
                     </div>
                 </div>
             </div>
