@@ -282,6 +282,134 @@
     color: #334155;
     font-family: monospace;
 }
+
+/* ── Ficha Oficial de Registro de Personal (Formato Ficha Documentaria A4) ── */
+.ficha-paper-container {
+    background: #ffffff;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 28px 32px;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    font-family: Arial, Helvetica, sans-serif;
+    color: #0f172a;
+}
+.ficha-doc-header {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 12px;
+}
+.ficha-doc-header td {
+    border: 2px solid #334155;
+    padding: 8px 10px;
+    vertical-align: middle;
+}
+.ficha-doc-title {
+    font-size: 1.15rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    color: #0f172a;
+    line-height: 1.25;
+}
+.ficha-doc-meta-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.ficha-doc-meta-table td {
+    border: 1px solid #64748b !important;
+    padding: 3px 6px !important;
+}
+.ficha-doc-main-sub {
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 12px 0 10px 0;
+    color: #0f172a;
+}
+.ficha-doc-section-head {
+    font-size: 0.86rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #0f172a;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.ficha-doc-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-size: 0.78rem;
+}
+.ficha-doc-table td, .ficha-doc-table th {
+    border: 1.5px solid #475569;
+    padding: 5px 8px;
+    vertical-align: middle;
+}
+.ficha-doc-lbl {
+    background-color: #f1f5f9;
+    font-weight: 800;
+    color: #1e293b;
+    white-space: nowrap;
+    width: 18%;
+}
+.ficha-doc-val {
+    background-color: #ffffff;
+    font-weight: 600;
+    color: #0f172a;
+}
+.ficha-doc-photo-box {
+    width: 120px;
+    height: 150px;
+    border: 2px dashed #94a3b8;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #f8fafc;
+    margin: 0 auto;
+}
+.ficha-doc-photo-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.ficha-sign-line {
+    border-top: 1.5px solid #334155;
+    width: 85%;
+    margin: 45px auto 0 auto;
+    text-align: center;
+    padding-top: 5px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+.ficha-huella-box {
+    width: 70px;
+    height: 90px;
+    border: 1.5px solid #64748b;
+    border-radius: 4px;
+    margin: 10px auto 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    color: #64748b;
+    text-align: center;
+    font-weight: bold;
+}
 </style>
 
 <div class="container-fluid p-3 p-md-4">
@@ -943,23 +1071,31 @@
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════════════
-     MODAL FICHA 360° (LEGAJO DETALLADO)
+     MODAL FICHA DE INGRESO / LEGAJO 360° (FORMATO DOCUMENTARIO OFICIAL)
      ════════════════════════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="modalPersonalFicha" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable rrhh-floating-drawer-dialog">
+    <div class="modal-dialog modal-dialog-scrollable modal-xl rrhh-floating-drawer-dialog" style="max-width: 960px !important;">
         <div class="modal-content border-0 rrhh-floating-drawer-content">
             <div class="modal-header bg-white px-4 py-3 border-bottom d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-3">
                     <div class="table-personal-avatar fs-5 text-white bg-primary" id="ficha-avatar">CO</div>
                     <div>
                         <h5 class="modal-title fw-bold text-dark m-0" id="ficha-nombre">Colaborador</h5>
-                        <small class="text-muted" id="ficha-cargo">Cargo / Rol</small>
+                        <small class="text-muted" id="ficha-cargo">Ficha de Registro de Ingreso de Personal</small>
                     </div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-primary rounded-pill px-3 fw-bold btn-sm shadow-2xs" onclick="window.rrhhPersonalImprimirFicha()">
+                        <i class="bi bi-printer-fill me-1"></i> Imprimir / PDF
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-3 fw-bold btn-sm" id="btn-ficha-editar" onclick="window.rrhhPersonalAbrirModalEditarDesdeFicha()">
+                        <i class="bi bi-pencil-fill me-1"></i> Editar
+                    </button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
             </div>
-            <div class="modal-body p-3 p-md-4 custom-scrollbar overflow-y-auto" id="ficha-body" style="background:#f8fafc;">
-                <!-- Contenido inyectado dinámicamente -->
+            <div class="modal-body p-3 p-md-4 custom-scrollbar overflow-y-auto" id="ficha-body" style="background:#f1f5f9;">
+                <!-- Ficha Oficial inyectada dinámicamente -->
             </div>
         </div>
     </div>
