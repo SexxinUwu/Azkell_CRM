@@ -751,14 +751,17 @@
         }
 
         const modalEl = document.getElementById('cvModalForm');
+        if (modalEl && modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
 
-        // Elevar backdrop sobre ovMonDrawer (z-index 1070)
+        // Elevar backdrop sobre ovMonDrawer (z-index 1075) manteniéndolo debajo del modal (1085)
         setTimeout(() => {
             const backdrops = document.querySelectorAll('.modal-backdrop');
             if (backdrops.length > 0) {
                 const lastBd = backdrops[backdrops.length - 1];
-                lastBd.style.zIndex = '1070';
+                lastBd.style.setProperty('z-index', '1075', 'important');
                 lastBd.style.backgroundColor = 'rgba(15, 23, 42, 0.68)';
                 lastBd.style.opacity = '1';
             }
@@ -839,14 +842,17 @@
         }
 
         const modalEl = document.getElementById('cvModalForm');
+        if (modalEl && modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
 
-        // Elevar backdrop sobre ovMonDrawer (z-index 1070)
+        // Elevar backdrop sobre ovMonDrawer (z-index 1075) manteniéndolo debajo del modal (1085)
         setTimeout(() => {
             const backdrops = document.querySelectorAll('.modal-backdrop');
             if (backdrops.length > 0) {
                 const lastBd = backdrops[backdrops.length - 1];
-                lastBd.style.zIndex = '1070';
+                lastBd.style.setProperty('z-index', '1075', 'important');
                 lastBd.style.backgroundColor = 'rgba(15, 23, 42, 0.68)';
                 lastBd.style.opacity = '1';
             }
