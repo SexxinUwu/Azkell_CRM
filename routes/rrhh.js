@@ -86,11 +86,28 @@ async function ensureTablesRRHH(req) {
                 sctr_pension_vigente TINYINT(1) DEFAULT 1,
                 emo_fecha_vencimiento DATE NULL,
                 emo_condicion ENUM('APTO', 'APTO_RESTRICCIONES', 'NO_APTO', 'PENDIENTE') DEFAULT 'APTO',
+                grupo_sanguineo VARCHAR(10) NULL,
+                talla_polo VARCHAR(10) NULL,
+                talla_pantalon VARCHAR(10) NULL,
+                talla_calzado VARCHAR(10) NULL,
+                talla_chaleco VARCHAR(10) NULL,
                 foto_url TEXT NULL,
                 creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `).catch(() => {});
+
+        // Migración de columnas adicionales en rrhh_personal si la tabla ya existía
+        const colsToAdd = [
+            `ALTER TABLE rrhh_personal ADD COLUMN IF NOT EXISTS grupo_sanguineo VARCHAR(10) NULL AFTER emo_condicion`,
+            `ALTER TABLE rrhh_personal ADD COLUMN IF NOT EXISTS talla_polo VARCHAR(10) NULL AFTER grupo_sanguineo`,
+            `ALTER TABLE rrhh_personal ADD COLUMN IF NOT EXISTS talla_pantalon VARCHAR(10) NULL AFTER talla_polo`,
+            `ALTER TABLE rrhh_personal ADD COLUMN IF NOT EXISTS talla_calzado VARCHAR(10) NULL AFTER talla_pantalon`,
+            `ALTER TABLE rrhh_personal ADD COLUMN IF NOT EXISTS talla_chaleco VARCHAR(10) NULL AFTER talla_calzado`
+        ];
+        for (const sqlCol of colsToAdd) {
+            await tdb.query(sqlCol).catch(() => {});
+        }
 
         await tdb.query(`
             CREATE TABLE IF NOT EXISTS rrhh_tareo (
@@ -273,8 +290,9 @@ router.post('/personal', upload.single('foto'), async (req, res) => {
                 tipo_comision_afp, cuspp, tiene_asignacion_familiar, sueldo_basico, bono_fijo,
                 banco_haberes, cuenta_haberes, cci_haberes, banco_cts, cuenta_cts,
                 licencia_conducir, licencia_categoria, licencia_vencimiento, sctr_salud_vigente,
-                sctr_pension_vigente, emo_fecha_vencimiento, emo_condicion, foto_url
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                sctr_pension_vigente, emo_fecha_vencimiento, emo_condicion, grupo_sanguineo,
+                talla_polo, talla_pantalon, talla_calzado, talla_chaleco, foto_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const params = [
@@ -325,6 +343,11 @@ router.post('/personal', upload.single('foto'), async (req, res) => {
             b.sctr_pension_vigente === '0' || b.sctr_pension_vigente === false ? 0 : 1,
             b.emo_fecha_vencimiento || null,
             b.emo_condicion || 'APTO',
+            b.grupo_sanguineo || null,
+            b.talla_polo || null,
+            b.talla_pantalon || null,
+            b.talla_calzado || null,
+            b.talla_chaleco || null,
             foto_url
         ];
 
@@ -393,7 +416,12 @@ router.put('/personal/:id', upload.single('foto'), async (req, res) => {
             b.sctr_salud_vigente === '0' || b.sctr_salud_vigente === false ? 0 : 1,
             b.sctr_pension_vigente === '0' || b.sctr_pension_vigente === false ? 0 : 1,
             b.emo_fecha_vencimiento || null,
-            b.emo_condicion || 'APTO'
+            b.emo_condicion || 'APTO',
+            b.grupo_sanguineo || null,
+            b.talla_polo || null,
+            b.talla_pantalon || null,
+            b.talla_calzado || null,
+            b.talla_chaleco || null
         ];
 
         if (req.file) {
@@ -414,7 +442,8 @@ router.put('/personal/:id', upload.single('foto'), async (req, res) => {
                 tipo_comision_afp = ?, cuspp = ?, tiene_asignacion_familiar = ?, sueldo_basico = ?, bono_fijo = ?,
                 banco_haberes = ?, cuenta_haberes = ?, cci_haberes = ?, banco_cts = ?, cuenta_cts = ?,
                 licencia_conducir = ?, licencia_categoria = ?, licencia_vencimiento = ?, sctr_salud_vigente = ?,
-                sctr_pension_vigente = ?, emo_fecha_vencimiento = ?, emo_condicion = ?
+                sctr_pension_vigente = ?, emo_fecha_vencimiento = ?, emo_condicion = ?, grupo_sanguineo = ?,
+                talla_polo = ?, talla_pantalon = ?, talla_calzado = ?, talla_chaleco = ?
                 ${fotoClause}
             WHERE id = ?
         `, params);
