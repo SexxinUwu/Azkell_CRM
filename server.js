@@ -1396,7 +1396,6 @@ async function ensureEmailTables(targetDb) {
     if (!conn) return;
     const q = (sql) => new Promise((resolve) => {
         conn.query(sql, (err) => {
-            if (err) console.warn('[EmailTables Init]', err.message);
             resolve();
         });
     });
@@ -1448,6 +1447,25 @@ async function ensureEmailTables(targetDb) {
         ultimo_envio DATETIME NULL,
         creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    // Migraciones columna por columna por si la tabla ya existía en la BD del tenant
+    const migraciones = [
+        "ALTER TABLE destinatarios_alertas ADD COLUMN cargo VARCHAR(100) NULL",
+        "ALTER TABLE destinatarios_alertas ADD COLUMN notif_checklist TINYINT(1) DEFAULT 1",
+        "ALTER TABLE destinatarios_alertas ADD COLUMN notif_vencimientos TINYINT(1) DEFAULT 1",
+        "ALTER TABLE destinatarios_alertas ADD COLUMN notif_1d TINYINT(1) DEFAULT 1",
+        "ALTER TABLE destinatarios_alertas ADD COLUMN notif_3d TINYINT(1) DEFAULT 1",
+        "ALTER TABLE destinatarios_alertas ADD COLUMN notif_7d TINYINT(1) DEFAULT 1",
+        "ALTER TABLE destinatarios_alertas ADD COLUMN activo TINYINT(1) DEFAULT 1",
+        "ALTER TABLE configuracion_email ADD COLUMN from_name VARCHAR(150) NULL DEFAULT 'Azkell ERP Alertas'",
+        "ALTER TABLE configuracion_email ADD COLUMN from_email VARCHAR(150) NULL",
+        "ALTER TABLE configuracion_email ADD COLUMN alertas_checklist TINYINT(1) DEFAULT 1",
+        "ALTER TABLE configuracion_email ADD COLUMN alertas_vencimientos TINYINT(1) DEFAULT 1",
+        "ALTER TABLE configuracion_email ADD COLUMN alertas_planes TINYINT(1) DEFAULT 1"
+    ];
+    for (const sql of migraciones) {
+        await q(sql);
+    }
 }
 
 // Inicializar en BD por defecto al arrancar
