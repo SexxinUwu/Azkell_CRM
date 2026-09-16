@@ -111,6 +111,19 @@ module.exports = function (db, broadcast, logAudit) {
         INDEX idx_motor_confg (motor, confg)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
+    const TABLE_AUDITORIA_SQL = `CREATE TABLE IF NOT EXISTS combustible_auditoria_viajes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        modulo VARCHAR(30) NOT NULL DEFAULT 'operaciones',
+        viaje VARCHAR(60) NOT NULL,
+        estado_auditoria VARCHAR(30) NOT NULL DEFAULT 'PENDIENTE',
+        observacion TEXT NULL,
+        usuario VARCHAR(100) NULL,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_modulo_viaje (modulo, viaje),
+        INDEX idx_viaje (viaje)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+
     async function ensureTables(req) {
         const tenantId = (req && req.tenantId) ? req.tenantId : 'default';
         if (_tenantsInitSet.has(tenantId)) return;
@@ -119,6 +132,7 @@ module.exports = function (db, broadcast, logAudit) {
             if (!tdb) return;
             await tdb.query(TABLE_SQL);
             await tdb.query(TABLE_MATRIZ_SQL);
+            await tdb.query(TABLE_AUDITORIA_SQL);
             
             // Tablas independientes para Operaciones Marsisa y Operaciones Propio
             await tdb.query("CREATE TABLE IF NOT EXISTS marsisa_combustible_vales LIKE combustible_vales");
@@ -1070,6 +1084,25 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             }
 
+            // 3. Consultar auditoría de viajes registrada
+            const moduloAuditoria = valesTable === 'marsisa_combustible_vales' ? 'marsisa' : 'operaciones';
+            const auditoriaMap = new Map();
+            try {
+                const [auditRows] = await tdb.query(
+                    `SELECT viaje, estado_auditoria, observacion, usuario, DATE_FORMAT(actualizado_en, '%Y-%m-%d %H:%i:%s') AS actualizado_en FROM combustible_auditoria_viajes WHERE modulo = ?`,
+                    [moduloAuditoria]
+                );
+                auditRows.forEach(a => {
+                    if (a.viaje) {
+                        const vKey = String(a.viaje).trim();
+                        auditoriaMap.set(vKey, a);
+                        auditoriaMap.set(vKey.replace(/^\d{4}-0*/, ''), a);
+                    }
+                });
+            } catch (eAudit) {
+                // Silencioso si la tabla está vacía o inicializándose
+            }
+
             // Normalizador de ruta compuesta (ej: "LIMA - CHULUCANAS / SULLANA" -> "LIMA - CHULUCANAS")
             const normalizarRutaTramo = (rStr) => {
                 if (!rStr) return '';
@@ -1401,12 +1434,21 @@ module.exports = function (db, broadcast, logAudit) {
                         conductorViaje = vConductor ? String(vConductor.conductor).trim() : '';
                     }
 
+                    const vRawKey = String(t.viaje || '').trim();
+                    const auditObj = auditoriaMap.get(vRawKey) || auditoriaMap.get(vRawKey.replace(/^\d{4}-0*/, '')) || null;
+                    const estadoAuditoria = auditObj ? (auditObj.estado_auditoria || 'PENDIENTE') : 'PENDIENTE';
+                    const observacionAuditoria = auditObj ? (auditObj.observacion || '') : '';
+                    const usuarioAuditoria = auditObj ? (auditObj.usuario || '') : '';
+
                     trips.push({
                         viaje: t.viaje,
                         placa: t.placa,
                         carreta: carretaFinal,
                         conductor: conductorViaje,
                         estado: estadoViaje,
+                        estadoAuditoria,
+                        observacionAuditoria,
+                        usuarioAuditoria,
                         motor: placaMotorMap.get(t.placa) || '',
                         marca: placaMarcaMap.get(t.placa) || '',
                         configuracion: placaConfigMap.get(t.placa) || '',
@@ -2054,6 +2096,45 @@ module.exports = function (db, broadcast, logAudit) {
             res.json({ ok: true, sincronizados, total: rows.length, mensaje: `Se sincronizaron ${sincronizados} proveedores y sus estaciones exitosamente.` });
         } catch (err) {
             console.error('Error sincronizando estaciones de proveedores:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // POST /api/combustible/auditar-viaje
+    router.post('/auditar-viaje', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ ok: false, error: 'Base de datos no disponible' });
+
+            const valesTable = getValesTable(req);
+            const moduloAuditoria = valesTable === 'marsisa_combustible_vales' ? 'marsisa' : 'operaciones';
+            const { viaje, estado_auditoria, observacion } = req.body;
+
+            if (!viaje) {
+                return res.status(400).json({ ok: false, error: 'N° de viaje requerido' });
+            }
+
+            const est = (estado_auditoria || 'PENDIENTE').toUpperCase();
+            const obs = (observacion !== undefined && observacion !== null) ? String(observacion).trim() : '';
+            const usuario = (req.user && (req.user.username || req.user.nombre)) || req.body.usuario || 'Auditor';
+
+            await tdb.query(`
+                INSERT INTO combustible_auditoria_viajes (modulo, viaje, estado_auditoria, observacion, usuario)
+                VALUES (?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    estado_auditoria = VALUES(estado_auditoria),
+                    observacion = VALUES(observacion),
+                    usuario = VALUES(usuario),
+                    actualizado_en = CURRENT_TIMESTAMP
+            `, [moduloAuditoria, String(viaje).trim(), est, obs, usuario]);
+
+            if (typeof logAudit === 'function') {
+                logAudit(req, 'AUDITORIA_COMBUSTIBLE', `Viaje [${viaje}] marcado como [${est}]. Obs: ${obs}`);
+            }
+
+            res.json({ ok: true, viaje, estado_auditoria: est, observacion: obs, usuario });
+        } catch (err) {
+            console.error('Error al guardar auditoría de combustible:', err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });

@@ -8,6 +8,92 @@
     window._caMatrizRendimiento = [];
     window._caPaginaActual = 1;
     window._caLimitePorPagina = 50;
+    window._caShowColObs = false;
+
+    // Toggle para mostrar/ocultar la columna de observaciones de auditoría
+    window.caToggleColObservacion = function() {
+        window._caShowColObs = !window._caShowColObs;
+        const btn = document.getElementById('btn-toggle-col-obs');
+        const icon = document.getElementById('icon-toggle-col-obs');
+        const obsHeaders = document.querySelectorAll('.ca-col-obs-header');
+        const obsCells = document.querySelectorAll('.ca-col-obs-cell');
+
+        if (window._caShowColObs) {
+            obsHeaders.forEach(el => el.classList.remove('d-none'));
+            obsCells.forEach(el => el.classList.remove('d-none'));
+            if (btn) btn.classList.replace('btn-outline-primary', 'btn-primary');
+            if (icon) { icon.classList.remove('bi-plus-lg'); icon.classList.add('bi-dash-lg'); }
+        } else {
+            obsHeaders.forEach(el => el.classList.add('d-none'));
+            obsCells.forEach(el => el.classList.add('d-none'));
+            if (btn) btn.classList.replace('btn-primary', 'btn-outline-primary');
+            if (icon) { icon.classList.remove('bi-dash-lg'); icon.classList.add('bi-plus-lg'); }
+        }
+    };
+
+    // Cambiar estado de auditoría (CONFORME / OBSERVADO / PENDIENTE) y auto-guardar
+    window.caCambiarAuditoria = async function(viaje, estado, globalIdx) {
+        try {
+            const trip = (window._caFilteredTrips && window._caFilteredTrips[globalIdx]) ? window._caFilteredTrips[globalIdx] : null;
+            if (trip) trip.estadoAuditoria = estado;
+
+            const sel = document.getElementById(`ca-audit-select-${globalIdx}`);
+            if (sel) {
+                sel.style.background = estado === 'OBSERVADO' ? '#fff7ed' : (estado === 'CONFORME' ? '#f0fdf4' : '#f8fafc');
+                sel.style.color = estado === 'OBSERVADO' ? '#c2410c' : (estado === 'CONFORME' ? '#15803d' : '#64748b');
+                sel.style.borderColor = estado === 'OBSERVADO' ? '#f97316' : (estado === 'CONFORME' ? '#22c55e' : '#cbd5e1');
+            }
+
+            const obsInput = document.getElementById(`ca-obs-input-${globalIdx}`);
+            if (estado === 'OBSERVADO' && !window._caShowColObs) {
+                window.caToggleColObservacion();
+                setTimeout(() => { if (obsInput) obsInput.focus(); }, 150);
+            }
+
+            const obsVal = obsInput ? obsInput.value : (trip ? (trip.observacionAuditoria || '') : '');
+
+            const moduloParam = (typeof window.moduloActual === 'string' && window.moduloActual.includes('marsisa')) ? 'marsisa' : 'operaciones';
+            await fetch(`/api/combustible/auditar-viaje?modulo=${moduloParam}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ viaje, estado_auditoria: estado, observacion: obsVal })
+            });
+
+            const badgeSaved = document.getElementById(`ca-obs-status-${globalIdx}`);
+            if (badgeSaved) {
+                badgeSaved.style.display = 'inline-flex';
+                setTimeout(() => { badgeSaved.style.display = 'none'; }, 2000);
+            }
+        } catch (e) {
+            console.error('Error guardando auditoría:', e);
+        }
+    };
+
+    // Guardar texto de observación al editar o desenfocar
+    window.caGuardarObservacion = async function(viaje, observacion, globalIdx) {
+        try {
+            const trip = (window._caFilteredTrips && window._caFilteredTrips[globalIdx]) ? window._caFilteredTrips[globalIdx] : null;
+            if (trip) trip.observacionAuditoria = observacion;
+
+            const sel = document.getElementById(`ca-audit-select-${globalIdx}`);
+            const estadoVal = sel ? sel.value : (trip ? (trip.estadoAuditoria || 'PENDIENTE') : 'PENDIENTE');
+
+            const moduloParam = (typeof window.moduloActual === 'string' && window.moduloActual.includes('marsisa')) ? 'marsisa' : 'operaciones';
+            await fetch(`/api/combustible/auditar-viaje?modulo=${moduloParam}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ viaje, estado_auditoria: estadoVal, observacion })
+            });
+
+            const badgeSaved = document.getElementById(`ca-obs-status-${globalIdx}`);
+            if (badgeSaved) {
+                badgeSaved.style.display = 'inline-flex';
+                setTimeout(() => { badgeSaved.style.display = 'none'; }, 2000);
+            }
+        } catch (e) {
+            console.error('Error guardando observación:', e);
+        }
+    };
 
     // Inicializador del módulo
     window.inicializarModuloCombustibleAnalisis = function() {
@@ -1202,6 +1288,34 @@
             html += `
                 <!-- Fila Principal Consolidada -->
                 <tr class="ca-row-main" id="ca-row-${globalIdx}" onclick="window.caToggleDetalleTramo(${globalIdx})">
+                    <!-- Columna Auditoría (Acción: Conforme / Observado) -->
+                    <td class="text-center py-1.5" onclick="event.stopPropagation()" style="min-width: 135px;">
+                        <select class="form-select form-select-sm fw-bold ca-select-audit"
+                                id="ca-audit-select-${globalIdx}"
+                                onchange="window.caCambiarAuditoria('${esc(t.viaje)}', this.value, ${globalIdx})"
+                                style="font-size: 0.74rem; padding-top: 2px; padding-bottom: 2px; border-radius: 6px; cursor: pointer; ${t.estadoAuditoria === 'OBSERVADO' ? 'background:#fff7ed; color:#c2410c; border-color:#f97316;' : (t.estadoAuditoria === 'CONFORME' ? 'background:#f0fdf4; color:#15803d; border-color:#22c55e;' : 'background:#f8fafc; color:#64748b; border-color:#cbd5e1;')}">
+                            <option value="PENDIENTE" ${(!t.estadoAuditoria || t.estadoAuditoria === 'PENDIENTE') ? 'selected' : ''}>⏳ Pendiente</option>
+                            <option value="CONFORME" ${t.estadoAuditoria === 'CONFORME' ? 'selected' : ''}>✅ Conforme</option>
+                            <option value="OBSERVADO" ${t.estadoAuditoria === 'OBSERVADO' ? 'selected' : ''}>⚠️ Observado</option>
+                        </select>
+                    </td>
+
+                    <!-- Columna Observación (Oculta por defecto, desplegable con botón '+') -->
+                    <td class="ca-col-obs-cell ${window._caShowColObs ? '' : 'd-none'}" onclick="event.stopPropagation()" style="min-width: 200px;">
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control form-control-sm ca-input-obs"
+                                   id="ca-obs-input-${globalIdx}"
+                                   placeholder="${t.estadoAuditoria === 'OBSERVADO' ? 'Escribir motivo...' : 'Observación...'}"
+                                   value="${esc(t.observacionAuditoria || '')}"
+                                   onchange="window.caGuardarObservacion('${esc(t.viaje)}', this.value, ${globalIdx})"
+                                   onblur="window.caGuardarObservacion('${esc(t.viaje)}', this.value, ${globalIdx})"
+                                   style="font-size:0.75rem; ${t.estadoAuditoria === 'OBSERVADO' ? 'border-color:#fdba74; background:#fffaf5;' : ''}">
+                            <span class="input-group-text bg-white px-1.5" id="ca-obs-status-${globalIdx}" style="display:none; font-size:0.7rem; border-color:#cbd5e1;" title="Guardado en Base de Datos">
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            </span>
+                        </div>
+                    </td>
+
                     <td class="font-monospace fw-bold text-dark" style="color: #0f172a !important; font-size: 0.84rem;">
                         <i class="bi bi-chevron-right ca-expand-icon text-muted me-1" id="ca-ico-exp-${globalIdx}"></i>#${esc(t.numViaje || t.viaje)}
                     </td>
@@ -1293,6 +1407,8 @@
 
                 <!-- Sub-Fila Desglose: TRAMO IDA -->
                 <tr class="ca-tramo-subrow d-none" id="ca-subrow-ida-${globalIdx}">
+                    <td class="text-center text-muted opacity-50">—</td>
+                    <td class="ca-col-obs-cell ${window._caShowColObs ? '' : 'd-none'} text-center text-muted opacity-50">—</td>
                     <td class="ps-4 font-monospace text-muted small">
                         <span class="ca-tramo-tag ca-tramo-ida"><i class="bi bi-arrow-right-circle-fill"></i> IDA</span>
                     </td>
@@ -1335,6 +1451,8 @@
 
                 <!-- Sub-Fila Desglose: TRAMO RETORNO -->
                 <tr class="ca-tramo-subrow d-none" id="ca-subrow-ret-${globalIdx}">
+                    <td class="text-center text-muted opacity-50">—</td>
+                    <td class="ca-col-obs-cell ${window._caShowColObs ? '' : 'd-none'} text-center text-muted opacity-50">—</td>
                     <td class="ps-4 font-monospace text-muted small">
                         <span class="ca-tramo-tag ca-tramo-retorno"><i class="bi bi-arrow-left-circle-fill"></i> RETORNO</span>
                     </td>
@@ -1431,6 +1549,8 @@
 
             tfoot.innerHTML = `
                 <tr style="background:#f8fafc; border-top: 2px solid #cbd5e1; font-weight: bold;">
+                    <td class="text-center text-muted small">—</td>
+                    <td class="ca-col-obs-cell ${window._caShowColObs ? '' : 'd-none'} text-center text-muted small">—</td>
                     <td class="ps-3 py-3 font-monospace fw-bolder text-dark" style="font-size:0.88rem;">TOTAL</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
@@ -1893,6 +2013,8 @@
             const rendTeoricoTotal = (gTeoricoTotal > 0 && kTeoricoTotal > 0) ? parseFloat((kTeoricoTotal / gTeoricoTotal).toFixed(2)) : '—';
 
             return {
+                "ESTADO AUDITORÍA": t.estadoAuditoria || 'PENDIENTE',
+                "OBSERVACIÓN AUDITORÍA": t.observacionAuditoria || '',
                 "N° VIAJE": t.numViaje || t.viaje || '---',
                 "PLACA": t.placa || '---',
                 "CARRETA": t.carreta || '---',
