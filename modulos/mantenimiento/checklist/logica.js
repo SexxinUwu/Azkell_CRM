@@ -98,22 +98,50 @@ window.init_checklist = function() {
 // ── INTEGRACIÓN ÓRDENES DE VIAJE (OPERACIONES) ───────────────────
 window.dataGlobalOrdenesViaje = [];
 
+window.ckToggleCollapseViaje = function() {
+    const col = document.getElementById('ck_collapse_viaje_asociado');
+    const icon = document.getElementById('ck-icon-btn-vincular-viaje');
+    const lbl = document.getElementById('ck-lbl-btn-vincular-viaje');
+    if (!col) return;
+    const isShown = col.classList.contains('show') || col.style.display === 'block';
+    if (isShown) {
+        col.classList.remove('show');
+        col.style.display = 'none';
+        if (icon) icon.className = 'bi bi-chevron-down';
+        if (lbl) lbl.textContent = 'Vincular Viaje';
+    } else {
+        col.classList.add('show');
+        col.style.display = 'block';
+        if (icon) icon.className = 'bi bi-chevron-up';
+        if (lbl) lbl.textContent = 'Cerrar Viaje';
+        const txtInput = document.getElementById('ck_orden_viaje-txt');
+        if (txtInput) {
+            setTimeout(() => {
+                txtInput.focus();
+                if (typeof window._cbFiltrarViaje === 'function') window._cbFiltrarViaje();
+            }, 60);
+        }
+    }
+};
+
 window.ckCargarOrdenesViaje = async function(forceSync) {
     try {
         let res = await fetch('/api/operaciones/ordenes-viaje?limit=300');
-        let json = await res.json();
-        if (json && json.ok && json.data && json.data.length > 0 && !forceSync) {
-            window.dataGlobalOrdenesViaje = json.data;
-        } else {
-            // Intentar sincronización limpia solo si no hay datos
+        if (res.ok) {
+            let json = await res.json();
+            if (json && json.ok && Array.isArray(json.data)) {
+                window.dataGlobalOrdenesViaje = json.data;
+                return;
+            }
+        }
+        if (forceSync) {
             const syncRes = await fetch('/api/operaciones/ordenes-viaje/sincronizar', { method: 'POST' });
-            const syncJson = await syncRes.json();
-            if (syncJson && syncJson.ok && !syncJson.syncSkipped) {
+            if (syncRes.ok) {
                 const retryRes = await fetch('/api/operaciones/ordenes-viaje?limit=300');
-                const retryJson = await retryRes.json();
-                window.dataGlobalOrdenesViaje = (retryJson && retryJson.data) || [];
-            } else {
-                window.dataGlobalOrdenesViaje = (json && json.data) || [];
+                if (retryRes.ok) {
+                    const retryJson = await retryRes.json();
+                    window.dataGlobalOrdenesViaje = (retryJson && retryJson.data) || [];
+                }
             }
         }
     } catch(err) {
@@ -491,7 +519,7 @@ window.ckGenerarAccordionCardHTML = function(unidad, sysKey, title, iconClass, i
                     <span class="badge bg-secondary rounded-pill ms-2 px-2 py-1 count-badge" id="cnt_${accordionId}">0</span>
                 </button>
             </h2>
-            <div id="${collapseId}" class="accordion-collapse collapse" data-bs-parent="#acc${unidad}Global">
+            <div id="${collapseId}" class="accordion-collapse collapse">
                 <div class="accordion-body p-0 border-top">
                     ${itemsHTML}
                 </div>
@@ -825,9 +853,14 @@ window.abrirModalNuevoChecklist = function() {
     window.poblarConductoresChecklist();
 
     const colViaje = document.getElementById('ck_collapse_viaje_asociado');
-    if (colViaje && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
-        bootstrap.Collapse.getOrCreateInstance(colViaje, { toggle: false }).hide();
+    if (colViaje) {
+        colViaje.classList.remove('show');
+        colViaje.style.display = 'none';
     }
+    const iconViaje = document.getElementById('ck-icon-btn-vincular-viaje');
+    if (iconViaje) iconViaje.className = 'bi bi-chevron-down';
+    const lblViaje = document.getElementById('ck-lbl-btn-vincular-viaje');
+    if (lblViaje) lblViaje.textContent = 'Vincular Viaje';
 
     const modalEl = document.getElementById('modalNuevoChecklist');
     if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
