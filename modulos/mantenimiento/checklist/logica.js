@@ -2135,7 +2135,7 @@ window.abrirDetalleChecklist = async function(id) {
             const signedUrl = signedMap[rawUrl] || rawUrl;
             return `
                 <a href="${signedUrl}" target="_blank" class="border rounded overflow-hidden shadow-2xs d-inline-block" style="width:90px; height:90px;">
-                    <img src="${signedUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://via.placeholder.com/90?text=Error';">
+                    <img src="${signedUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'90\\' height=\\'90\\' viewBox=\\'0 0 24 24\\' fill=\\'%23cbd5e1\\'><path d=\\'M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z\\'/></svg>';">
                 </a>
             `;
         }).join('') + '</div>';
