@@ -1678,80 +1678,110 @@ window.generarPDFFleetrun = function() {
     var fechaEmisionStr = `${dd}/${mm}/${yyyy} ${hh}:${min}`;
     var fechaCorta = `${dd}/${mm}/${yyyy}`;
 
-    // 5. Construir filas de la tabla compacta (1 fila por Placa)
-    let filasCompactasHtml = '';
-    let idxRow = 0;
+    // 5. Construir y ordenar lista de unidades (Nacional arriba, Local abajo -> Vencidos primero, luego Próximos)
+    let unidadesList = Array.from(placasMap.values());
 
-    placasMap.forEach((info, placa) => {
-        idxRow++;
-        let unitTxt = info.esHoras ? ' h' : ' km';
+    unidadesList.forEach(u => {
+        let tieneVencido = u.mantenimientos.some(m => m.estado === 'VENCIDO');
+        u.estadoGlobal = tieneVencido ? 'VENCIDO' : 'PROXIMO';
 
-        // Ordenar mantenimientos de la placa por severidad (vencidos primero, luego por menor km_restante)
-        info.mantenimientos.sort((a, b) => {
+        // Ordenar preventivos internos de la placa
+        u.mantenimientos.sort((a, b) => {
             if (a.estado === 'VENCIDO' && b.estado !== 'VENCIDO') return -1;
             if (a.estado !== 'VENCIDO' && b.estado === 'VENCIDO') return 1;
             return a.km_restante - b.km_restante;
         });
 
-        // Mantenimiento más crítico de la unidad
-        let masCritico = info.mantenimientos[0] || {};
-        let kmFaltanteVal = masCritico.km_restante !== undefined ? masCritico.km_restante : 0;
-        let kmProxVal = masCritico.km_prox || 0;
-        let esCriticoVencido = kmFaltanteVal <= 0;
+        // Mantenimiento más crítico
+        u.masCritico = u.mantenimientos[0] || {};
+        u.kmFaltanteVal = u.masCritico.km_restante !== undefined ? u.masCritico.km_restante : 0;
+        u.kmProxVal = u.masCritico.km_prox || 0;
+    });
 
-        // Lista de preventivos pendientes formateados uno debajo del otro
+    // Ordenar unidades: 1° UTS (Nacional -> Local), 2° Estado (Vencido -> Próximo), 3° Km Faltante (más urgente)
+    unidadesList.sort((a, b) => {
+        let utsA = normalizeStr(a.uts);
+        let utsB = normalizeStr(b.uts);
+        let rankUtsA = utsA === 'NACIONAL' ? 1 : (utsA === 'LOCAL' ? 2 : 3);
+        let rankUtsB = utsB === 'NACIONAL' ? 1 : (utsB === 'LOCAL' ? 2 : 3);
+        if (rankUtsA !== rankUtsB) return rankUtsA - rankUtsB;
+
+        let rankEstA = a.estadoGlobal === 'VENCIDO' ? 1 : 2;
+        let rankEstB = b.estadoGlobal === 'VENCIDO' ? 1 : 2;
+        if (rankEstA !== rankEstB) return rankEstA - rankEstB;
+
+        return a.kmFaltanteVal - b.kmFaltanteVal;
+    });
+
+    let filasCompactasHtml = '';
+    let idxRow = 0;
+
+    unidadesList.forEach(info => {
+        idxRow++;
+        let placa = info.placa;
+        let unitTxt = info.esHoras ? ' h' : ' km';
+        let kmFaltanteVal = info.kmFaltanteVal;
+        let kmProxVal = info.kmProxVal;
+        let esCriticoVencido = info.estadoGlobal === 'VENCIDO';
+
+        // Lista limpia de preventivos pendientes (sin badges dentro del texto)
         let obsListHtml = info.mantenimientos.map(m => {
-            let isV = m.estado === 'VENCIDO';
-            let colorDot = isV ? '#dc2626' : '#d97706';
-            let badgeMini = isV
-                ? `<span style="display:inline-block; background:#dc2626; color:#fff; font-size:6.5px; font-weight:800; padding:1px 4px; border-radius:2px; margin-left:4px;">VENCIDO</span>`
-                : `<span style="display:inline-block; background:#d97706; color:#fff; font-size:6.5px; font-weight:800; padding:1px 4px; border-radius:2px; margin-left:4px;">POR VENCER</span>`;
-            return `<div style="margin-bottom:2px; line-height:1.25; font-size:8px; color:#0f172a; font-weight:700;">
-                <span style="color:${colorDot}; font-weight:900;">•</span> ${_esc(m.tipo_mp)} ${badgeMini}
+            return `<div style="margin:0.5px 0; line-height:1.2; font-size:7.5px; color:#0f172a; font-weight:700;">
+                <span style="color:#0284c7; font-weight:900;">•</span> ${_esc(m.tipo_mp)}
             </div>`;
         }).join('');
+
+        // Badge de Estado
+        let estadoBadge = esCriticoVencido
+            ? `<span style="display:inline-block; background:#dc2626; color:#fff; font-size:7px; font-weight:900; padding:1.5px 5px; border-radius:3px; letter-spacing:0.3px;">VENCIDO</span>`
+            : `<span style="display:inline-block; background:#d97706; color:#fff; font-size:7px; font-weight:900; padding:1.5px 5px; border-radius:3px; letter-spacing:0.3px;">PRÓXIMO</span>`;
 
         let faltanteColor = esCriticoVencido ? '#dc2626' : '#d97706';
         let faltanteBg = esCriticoVencido ? '#fef2f2' : '#fffbeb';
         let faltanteSigno = kmFaltanteVal <= 0 ? '' : '+';
-        let faltanteHtml = `<span style="font-weight:900; font-size:8.5px; color:${faltanteColor}; background:${faltanteBg}; border:1px solid ${faltanteColor}40; padding:2px 6px; border-radius:4px; font-family:monospace;">${faltanteSigno}${Number(kmFaltanteVal).toLocaleString()}${unitTxt}</span>`;
+        let faltanteHtml = `<span style="font-weight:900; font-size:8px; color:${faltanteColor}; background:${faltanteBg}; border:1px solid ${faltanteColor}40; padding:1.5px 5px; border-radius:3px; font-family:monospace;">${faltanteSigno}${Number(kmFaltanteVal).toLocaleString()}${unitTxt}</span>`;
+
+        let utsColor = normalizeStr(info.uts) === 'NACIONAL' ? '#1e40af' : (normalizeStr(info.uts) === 'LOCAL' ? '#0f766e' : '#475569');
 
         filasCompactasHtml += `
         <tr style="background-color: ${idxRow % 2 === 0 ? '#f8fafc' : '#ffffff'};">
-            <td style="text-align:center; font-weight:900; font-size:9.5px; color:#0f172a; letter-spacing:0.3px; padding:6px 4px;">
-                <span style="background:#0f172a; color:#fff; padding:2px 6px; border-radius:3px;">${placa}</span>
+            <td style="text-align:center; font-weight:900; font-size:8.5px; color:#0f172a; padding:3px 3px;">
+                <span style="background:#0f172a; color:#fff; padding:1.5px 5px; border-radius:3px; font-family:monospace;">${placa}</span>
             </td>
-            <td style="text-align:center; font-weight:800; font-size:8px; color:#334155; padding:6px 4px; text-transform:uppercase;">
+            <td style="text-align:center; font-weight:800; font-size:7.5px; color:#334155; padding:3px 3px; text-transform:uppercase;">
                 ${_esc(info.clase)}
             </td>
-            <td style="text-align:center; font-weight:800; font-size:8px; color:#0369a1; padding:6px 4px; text-transform:uppercase;">
+            <td style="text-align:center; font-weight:800; font-size:7.5px; color:#0369a1; padding:3px 3px; text-transform:uppercase;">
                 ${_esc(info.marca)}
             </td>
-            <td style="text-align:center; font-weight:700; font-size:8px; color:#475569; padding:6px 4px;">
+            <td style="text-align:center; font-weight:700; font-size:7.5px; color:#475569; padding:3px 3px;">
                 ${_esc(info.fechaUltimoCambio)}
             </td>
-            <td style="padding:6px 8px; text-align:left; vertical-align:middle;">
+            <td style="text-align:center; padding:3px 3px;">
+                ${estadoBadge}
+            </td>
+            <td style="padding:2.5px 6px; text-align:left; vertical-align:middle;">
                 ${obsListHtml}
             </td>
-            <td style="text-align:right; font-weight:800; font-size:8.5px; font-family:monospace; color:#0284c7; padding:6px 6px;">
+            <td style="text-align:right; font-weight:800; font-size:8px; font-family:monospace; color:#0284c7; padding:3px 5px;">
                 ${Number(info.km_gps).toLocaleString()}${unitTxt}
             </td>
-            <td style="text-align:center; padding:6px 4px;">
+            <td style="text-align:center; padding:3px 3px;">
                 ${faltanteHtml}
             </td>
-            <td style="text-align:right; font-weight:800; font-size:8.5px; font-family:monospace; color:#0f172a; padding:6px 6px;">
+            <td style="text-align:right; font-weight:800; font-size:8px; font-family:monospace; color:#0f172a; padding:3px 5px;">
                 ${Number(kmProxVal).toLocaleString()}${unitTxt}
             </td>
-            <td style="text-align:center; font-weight:800; font-size:8px; color:#475569; padding:6px 4px; text-transform:uppercase;">
+            <td style="text-align:center; font-weight:800; font-size:7.5px; color:${utsColor}; padding:3px 3px; text-transform:uppercase;">
                 ${_esc(info.uts)}
             </td>
-            <td style="font-size:7.5px; font-weight:600; color:#334155; padding:6px 6px; line-height:1.2; max-width:140px;" title="${_esc(info.ubicacion)}">
+            <td style="font-size:7px; font-weight:600; color:#334155; padding:3px 5px; line-height:1.15; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${_esc(info.ubicacion)}">
                 ${_esc(info.ubicacion)}
             </td>
         </tr>`;
     });
 
-    // 6. Generar documento HTML moderno A4 Landscape
+    // 6. Generar documento HTML moderno A4 Landscape en 1 sola hoja
     var htmlDoc = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1767,11 +1797,11 @@ window.generarPDFFleetrun = function() {
         }
         @page {
             size: landscape;
-            margin: 6mm 8mm;
+            margin: 4mm 5mm;
         }
         body {
             margin: 0;
-            padding: 12px;
+            padding: 8px;
             background-color: #f1f5f9;
             font-family: 'Montserrat', 'Inter', sans-serif;
             color: #0f172a;
@@ -1779,15 +1809,15 @@ window.generarPDFFleetrun = function() {
             justify-content: center;
         }
         .page-container {
-            width: 285mm;
-            min-height: 195mm;
+            width: 287mm;
+            max-width: 100%;
             background: #fff;
-            padding: 6mm 8mm;
+            padding: 4mm 6mm;
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            border: 2px solid #0f172a;
+            border: 1.5px solid #0f172a;
             border-radius: 4px;
         }
         /* Header Oficial ISO Moderno */
@@ -1795,23 +1825,23 @@ window.generarPDFFleetrun = function() {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 2px solid #0f172a;
-            padding-bottom: 6px;
-            margin-bottom: 6px;
+            border-bottom: 1.5px solid #0f172a;
+            padding-bottom: 4px;
+            margin-bottom: 4px;
         }
         .header-left {
             display: flex;
             align-items: center;
-            gap: 10px;
-            width: 28%;
+            gap: 8px;
+            width: 27%;
         }
         .company-logo {
-            height: 40px;
-            max-width: 120px;
+            height: 32px;
+            max-width: 110px;
             object-fit: contain;
         }
         .company-name {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 900;
             color: #0f172a;
             line-height: 1.1;
@@ -1822,32 +1852,32 @@ window.generarPDFFleetrun = function() {
             flex: 1;
         }
         .doc-title {
-            font-size: 14px;
+            font-size: 12.5px;
             font-weight: 900;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.05em;
             color: #0f172a;
             margin: 0;
             text-transform: uppercase;
         }
         .doc-subtitle {
-            font-size: 8px;
+            font-size: 7.5px;
             font-weight: 800;
             color: #0284c7;
-            margin-top: 2px;
-            letter-spacing: 0.04em;
+            margin-top: 1px;
+            letter-spacing: 0.03em;
             text-transform: uppercase;
         }
         .header-right {
-            border: 1.5px solid #0f172a;
-            padding: 4px 8px;
-            font-size: 8px;
+            border: 1.2px solid #0f172a;
+            padding: 3px 6px;
+            font-size: 7.5px;
             font-weight: 900;
             color: #0f172a;
             text-align: right;
-            line-height: 1.35;
-            width: 22%;
+            line-height: 1.3;
+            width: 21%;
             background: #f8fafc;
-            border-radius: 4px;
+            border-radius: 3px;
         }
         /* Barra Resumen KPIs */
         .kpi-bar {
@@ -1855,38 +1885,38 @@ window.generarPDFFleetrun = function() {
             align-items: center;
             justify-content: space-between;
             background: #f8fafc;
-            border: 1.5px solid #0f172a;
-            border-radius: 4px;
-            padding: 5px 12px;
-            margin-bottom: 8px;
-            font-size: 8px;
+            border: 1.2px solid #0f172a;
+            border-radius: 3px;
+            padding: 3.5px 10px;
+            margin-bottom: 5px;
+            font-size: 7.5px;
             color: #0f172a;
         }
         .kpi-item {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
             font-weight: 700;
         }
         .kpi-val {
             font-weight: 900;
-            font-size: 9.5px;
+            font-size: 8.5px;
         }
         /* Tabla Principal Compacta */
         .main-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8px;
-            border: 1.5px solid #0f172a;
+            font-size: 7.5px;
+            border: 1.2px solid #0f172a;
         }
         .main-table th {
             background: #0f2b5c;
             color: #ffffff;
-            font-size: 7.5px;
+            font-size: 7px;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.03em;
-            padding: 6px 4px;
+            letter-spacing: 0.02em;
+            padding: 4px 3px;
             border: 1px solid #0f2b5c;
         }
         .main-table td {
@@ -1897,10 +1927,10 @@ window.generarPDFFleetrun = function() {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-top: 1.5px solid #0f172a;
-            padding-top: 5px;
-            margin-top: 8px;
-            font-size: 7.5px;
+            border-top: 1.2px solid #0f172a;
+            padding-top: 3px;
+            margin-top: 5px;
+            font-size: 7px;
             color: #475569;
             font-weight: 700;
         }
@@ -1911,11 +1941,11 @@ window.generarPDFFleetrun = function() {
             background: #0284c7;
             color: #fff;
             border: none;
-            padding: 7px 16px;
+            padding: 6px 14px;
             font-family: 'Montserrat', sans-serif;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 800;
-            border-radius: 6px;
+            border-radius: 5px;
             cursor: pointer;
             box-shadow: 0 4px 14px rgba(2,132,199,0.4);
             display: flex;
@@ -1928,17 +1958,26 @@ window.generarPDFFleetrun = function() {
             background: #0369a1;
         }
         @media print {
-            body {
+            html, body {
                 background: transparent !important;
                 padding: 0 !important;
+                margin: 0 !important;
+                height: 100% !important;
+                overflow: hidden !important;
             }
             .page-container {
                 box-shadow: none !important;
-                border: 2px solid #0f172a !important;
+                border: 1.5px solid #0f172a !important;
                 width: 100% !important;
+                height: auto !important;
                 min-height: auto !important;
                 margin: 0 !important;
-                padding: 4mm 6mm !important;
+                padding: 3mm 4mm !important;
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important;
+            }
+            table, tr, td, th, tbody, thead {
+                page-break-inside: avoid !important;
             }
             #btnPdfPrint {
                 display: none !important;
@@ -1981,18 +2020,18 @@ window.generarPDFFleetrun = function() {
                     <span>EMITIDO POR:</span>
                     <strong style="color:#0f172a;">${_esc(emisorNombre)}</strong>
                 </div>
-                <div style="border-left:1.5px solid #0f172a; height:14px;"></div>
+                <div style="border-left:1.2px solid #0f172a; height:12px;"></div>
                 <div class="kpi-item">
                     <span>TOTAL UNIDADES EN ALERTA:</span>
                     <span class="kpi-val" style="color:#0f172a;">${placasMap.size}</span>
                 </div>
                 <div class="kpi-item">
                     <span>MANTTOS VENCIDOS:</span>
-                    <span class="kpi-val" style="color:#dc2626; background:#fef2f2; border:1px solid #dc2626; padding:1px 6px; border-radius:3px;">${totalVencidosCount}</span>
+                    <span class="kpi-val" style="color:#dc2626; background:#fef2f2; border:1px solid #dc2626; padding:1px 5px; border-radius:3px;">${totalVencidosCount}</span>
                 </div>
                 <div class="kpi-item">
                     <span>PRÓXIMOS A VENCER:</span>
-                    <span class="kpi-val" style="color:#d97706; background:#fffbeb; border:1px solid #d97706; padding:1px 6px; border-radius:3px;">${totalProximosCount}</span>
+                    <span class="kpi-val" style="color:#d97706; background:#fffbeb; border:1px solid #d97706; padding:1px 5px; border-radius:3px;">${totalProximosCount}</span>
                 </div>
             </div>
 
@@ -2000,16 +2039,17 @@ window.generarPDFFleetrun = function() {
             <table class="main-table">
                 <thead>
                     <tr>
-                        <th style="width: 68px; text-align: center;">PLACA</th>
-                        <th style="width: 75px; text-align: center;">CLASE</th>
-                        <th style="width: 80px; text-align: center;">MARCA</th>
-                        <th style="width: 75px; text-align: center;">F. ÚLT. CAMBIO</th>
+                        <th style="width: 60px; text-align: center;">PLACA</th>
+                        <th style="width: 65px; text-align: center;">CLASE</th>
+                        <th style="width: 75px; text-align: center;">MARCA</th>
+                        <th style="width: 68px; text-align: center;">F. ÚLT. CAMBIO</th>
+                        <th style="width: 72px; text-align: center;">ESTADO</th>
                         <th style="text-align: left;">PREVENTIVOS PENDIENTES (OBS)</th>
-                        <th style="width: 78px; text-align: right;">KM REAL</th>
-                        <th style="width: 85px; text-align: center;">KM FALTANTE</th>
-                        <th style="width: 85px; text-align: right;">MANTTO MOTOR</th>
-                        <th style="width: 68px; text-align: center;">UTS</th>
-                        <th style="width: 140px; text-align: left;">UBICACIÓN</th>
+                        <th style="width: 70px; text-align: right;">KM REAL</th>
+                        <th style="width: 78px; text-align: center;">KM FALTANTE</th>
+                        <th style="width: 78px; text-align: right;">MANTTO MOTOR</th>
+                        <th style="width: 62px; text-align: center;">UTS</th>
+                        <th style="width: 125px; text-align: left;">UBICACIÓN</th>
                     </tr>
                 </thead>
                 <tbody>
