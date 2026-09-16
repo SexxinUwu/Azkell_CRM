@@ -1390,69 +1390,78 @@ db.query(
         else   console.log('✅ Tabla placa_auditoria verificada');
     }
 );
-// ── Tablas de Correo y Notificaciones ──────────────────────────────────────────
-db.query(`CREATE TABLE IF NOT EXISTS configuracion_email (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    smtp_host VARCHAR(150) NOT NULL DEFAULT 'smtp.gmail.com',
-    smtp_port INT NOT NULL DEFAULT 587,
-    smtp_secure TINYINT(1) NOT NULL DEFAULT 0,
-    smtp_user VARCHAR(150) NULL,
-    smtp_pass VARCHAR(255) NULL,
-    from_name VARCHAR(150) NULL DEFAULT 'Azkell ERP Alertas',
-    from_email VARCHAR(150) NULL,
-    alertas_checklist TINYINT(1) DEFAULT 1,
-    alertas_vencimientos TINYINT(1) DEFAULT 1,
-    alertas_planes TINYINT(1) DEFAULT 1,
-    actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`, () => {});
+// ── Tablas de Correo y Notificaciones Multi-Tenant ─────────────────────────
+async function ensureEmailTables(targetDb) {
+    const conn = targetDb || db;
+    if (!conn) return;
+    const q = (sql) => new Promise((resolve) => {
+        conn.query(sql, (err) => {
+            if (err) console.warn('[EmailTables Init]', err.message);
+            resolve();
+        });
+    });
 
-db.query(`CREATE TABLE IF NOT EXISTS destinatarios_alertas (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(150) NOT NULL,
-    correo VARCHAR(150) NOT NULL,
-    cargo VARCHAR(100) NULL,
-    notif_checklist TINYINT(1) DEFAULT 1,
-    notif_vencimientos TINYINT(1) DEFAULT 1,
-    notif_1d TINYINT(1) DEFAULT 1,
-    notif_3d TINYINT(1) DEFAULT 1,
-    notif_7d TINYINT(1) DEFAULT 1,
-    activo TINYINT(1) DEFAULT 1,
-    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`, () => {
-    try {
-        db.query("ALTER TABLE destinatarios_alertas ADD COLUMN notif_checklist TINYINT(1) DEFAULT 1, ADD COLUMN notif_vencimientos TINYINT(1) DEFAULT 1, ADD COLUMN cargo VARCHAR(100) NULL", () => {});
-    } catch(e) {}
-});
+    await q(`CREATE TABLE IF NOT EXISTS configuracion_email (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        smtp_host VARCHAR(150) NOT NULL DEFAULT 'smtp.gmail.com',
+        smtp_port INT NOT NULL DEFAULT 587,
+        smtp_secure TINYINT(1) NOT NULL DEFAULT 0,
+        smtp_user VARCHAR(150) NULL,
+        smtp_pass VARCHAR(255) NULL,
+        from_name VARCHAR(150) NULL DEFAULT 'Azkell ERP Alertas',
+        from_email VARCHAR(150) NULL,
+        alertas_checklist TINYINT(1) DEFAULT 1,
+        alertas_vencimientos TINYINT(1) DEFAULT 1,
+        alertas_planes TINYINT(1) DEFAULT 1,
+        actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 
-db.query(`CREATE TABLE IF NOT EXISTS reportes_programaciones_email (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre_reporte VARCHAR(150) NOT NULL,
-    modulo VARCHAR(100) NOT NULL,
-    destinatarios_para TEXT NOT NULL,
-    destinatarios_cc TEXT NULL,
-    destinatarios_cco TEXT NULL,
-    frecuencia VARCHAR(50) NOT NULL DEFAULT 'DIARIO',
-    hora_envio VARCHAR(10) DEFAULT '08:00',
-    dias_semana VARCHAR(50) NULL,
-    asunto_personalizado VARCHAR(255) NULL,
-    mensaje_personalizado TEXT NULL,
-    incluir_pdf TINYINT(1) DEFAULT 1,
-    incluir_excel TINYINT(1) DEFAULT 0,
-    activo TINYINT(1) DEFAULT 1,
-    ultimo_envio DATETIME NULL,
-    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`, () => {});
+    await q(`CREATE TABLE IF NOT EXISTS destinatarios_alertas (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nombre VARCHAR(150) NOT NULL,
+        correo VARCHAR(150) NOT NULL,
+        cargo VARCHAR(100) NULL,
+        notif_checklist TINYINT(1) DEFAULT 1,
+        notif_vencimientos TINYINT(1) DEFAULT 1,
+        notif_1d TINYINT(1) DEFAULT 1,
+        notif_3d TINYINT(1) DEFAULT 1,
+        notif_7d TINYINT(1) DEFAULT 1,
+        activo TINYINT(1) DEFAULT 1,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    await q(`CREATE TABLE IF NOT EXISTS reportes_programaciones_email (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nombre_reporte VARCHAR(150) NOT NULL,
+        modulo VARCHAR(100) NOT NULL,
+        destinatarios_para TEXT NOT NULL,
+        destinatarios_cc TEXT NULL,
+        destinatarios_cco TEXT NULL,
+        frecuencia VARCHAR(50) NOT NULL DEFAULT 'DIARIO',
+        hora_envio VARCHAR(10) DEFAULT '08:00',
+        dias_semana VARCHAR(50) NULL,
+        asunto_personalizado VARCHAR(255) NULL,
+        mensaje_personalizado TEXT NULL,
+        incluir_pdf TINYINT(1) DEFAULT 1,
+        incluir_excel TINYINT(1) DEFAULT 0,
+        activo TINYINT(1) DEFAULT 1,
+        ultimo_envio DATETIME NULL,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+}
+
+// Inicializar en BD por defecto al arrancar
+ensureEmailTables(db).catch(() => {});
 
 // ── Nodemailer: Transporter Dinámico de Correo ─────────────────────────────
-let _dynamicTransporter = null;
-let _currentMailConfig = null;
-
-async function getMailConfig() {
+async function getMailConfig(targetDb) {
+    const conn = targetDb || db;
+    await ensureEmailTables(conn);
     return new Promise((resolve) => {
-        db.query("SELECT * FROM configuracion_email ORDER BY id DESC LIMIT 1", (err, rows) => {
+        conn.query("SELECT * FROM configuracion_email ORDER BY id DESC LIMIT 1", (err, rows) => {
             if (!err && rows && rows.length > 0) {
                 const r = rows[0];
-                _currentMailConfig = {
+                resolve({
                     host: r.smtp_host || process.env.EMAIL_HOST || 'smtp.gmail.com',
                     port: parseInt(r.smtp_port) || parseInt(process.env.EMAIL_PORT_SMTP) || 587,
                     secure: !!r.smtp_secure,
@@ -1463,9 +1472,9 @@ async function getMailConfig() {
                     alertas_checklist: r.alertas_checklist !== 0,
                     alertas_vencimientos: r.alertas_vencimientos !== 0,
                     alertas_planes: r.alertas_planes !== 0
-                };
+                });
             } else {
-                _currentMailConfig = {
+                resolve({
                     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
                     port: parseInt(process.env.EMAIL_PORT_SMTP) || 587,
                     secure: false,
@@ -1476,16 +1485,15 @@ async function getMailConfig() {
                     alertas_checklist: true,
                     alertas_vencimientos: true,
                     alertas_planes: true
-                };
+                });
             }
-            resolve(_currentMailConfig);
         });
     });
 }
 
-async function getTransporterInstance() {
-    const cfg = await getMailConfig();
-    _dynamicTransporter = nodemailer.createTransport({
+async function getTransporterInstance(targetDb) {
+    const cfg = await getMailConfig(targetDb);
+    const transporter = nodemailer.createTransport({
         host: cfg.host,
         port: cfg.port,
         secure: cfg.secure,
@@ -1495,12 +1503,12 @@ async function getTransporterInstance() {
         } : undefined,
         tls: { rejectUnauthorized: false }
     });
-    return { transporter: _dynamicTransporter, config: cfg };
+    return { transporter, config: cfg };
 }
 
 // ── Función Universal de Envío de Correo ─────────────────────────────────────
-async function enviarEmailAlerta(para, asunto, htmlBody, attachments = []) {
-    const { transporter, config } = await getTransporterInstance();
+async function enviarEmailAlerta(para, asunto, htmlBody, attachments = [], targetDb = null) {
+    const { transporter, config } = await getTransporterInstance(targetDb);
     if (!config.user || !config.pass) {
         console.log(`[Email NO CONFIGURADO] Para: ${para} | Asunto: ${asunto}`);
         return { demo: true, warning: 'Credenciales SMTP no configuradas' };
@@ -1963,11 +1971,12 @@ const perfilRoutes = require('./routes/perfil')(db, logAudit);
 app.use('/api', perfilRoutes);
 
 // ============================================================
-// 📬 RUTAS DE CONFIGURACIÓN DE CORREO (SMTP) Y ENVÍO DE REPORTES
+// 📬 RUTAS DE CONFIGURACIÓN DE CORREO (SMTP) Y ENVÍO DE REPORTES (MULTI-TENANT)
 // ============================================================
 app.get('/api/configuracion/email', async (req, res) => {
     try {
-        const cfg = await getMailConfig();
+        const targetDb = req.db || db;
+        const cfg = await getMailConfig(targetDb);
         res.json({
             ok: true,
             data: {
@@ -1990,19 +1999,21 @@ app.get('/api/configuracion/email', async (req, res) => {
 
 app.post('/api/configuracion/email/smtp', async (req, res) => {
     try {
+        const targetDb = req.db || db;
+        await ensureEmailTables(targetDb);
         const { host, port, secure, user, pass, from_name, from_email, alertas_checklist, alertas_vencimientos, alertas_planes } = req.body;
         
         // Obtener configuración anterior para no sobreescribir la contraseña si se envió vacía
-        const prevCfg = await getMailConfig();
+        const prevCfg = await getMailConfig(targetDb);
         const finalPass = (pass && pass.trim()) ? pass.trim() : prevCfg.pass;
 
         const [rows] = await new Promise((resolve, reject) => {
-            db.query("SELECT id FROM configuracion_email ORDER BY id DESC LIMIT 1", (err, r) => err ? reject(err) : resolve([r]));
+            targetDb.query("SELECT id FROM configuracion_email ORDER BY id DESC LIMIT 1", (err, r) => err ? reject(err) : resolve([r]));
         });
 
         if (rows && rows.length > 0) {
             await new Promise((resolve, reject) => {
-                db.query(`UPDATE configuracion_email SET 
+                targetDb.query(`UPDATE configuracion_email SET 
                     smtp_host=?, smtp_port=?, smtp_secure=?, smtp_user=?, smtp_pass=?, from_name=?, from_email=?,
                     alertas_checklist=?, alertas_vencimientos=?, alertas_planes=?
                     WHERE id=?`, 
@@ -2012,7 +2023,7 @@ app.post('/api/configuracion/email/smtp', async (req, res) => {
             });
         } else {
             await new Promise((resolve, reject) => {
-                db.query(`INSERT INTO configuracion_email 
+                targetDb.query(`INSERT INTO configuracion_email 
                     (smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, from_name, from_email, alertas_checklist, alertas_vencimientos, alertas_planes)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [host || 'smtp.gmail.com', parseInt(port) || 587, secure ? 1 : 0, user || '', finalPass || '', from_name || 'Azkell ERP Alertas', from_email || user || '', alertas_checklist ? 1 : 0, alertas_vencimientos ? 1 : 0, alertas_planes ? 1 : 0],
@@ -2020,10 +2031,6 @@ app.post('/api/configuracion/email/smtp', async (req, res) => {
                 );
             });
         }
-
-        // Resetear transporter en memoria
-        _dynamicTransporter = null;
-        _currentMailConfig = null;
 
         res.json({ ok: true, message: 'Configuración SMTP guardada exitosamente.' });
     } catch (err) {
@@ -2034,6 +2041,7 @@ app.post('/api/configuracion/email/smtp', async (req, res) => {
 
 app.post('/api/configuracion/email/test', async (req, res) => {
     try {
+        const targetDb = req.db || db;
         const { test_email, host, port, secure, user, pass, from_name, from_email } = req.body;
         if (!test_email || !test_email.includes('@')) {
             return res.status(400).json({ ok: false, error: 'Debe proporcionar un correo de destino válido para la prueba.' });
@@ -2044,7 +2052,7 @@ app.post('/api/configuracion/email/test', async (req, res) => {
         let senderEmail = from_email || user;
 
         if (host && user) {
-            const prevCfg = await getMailConfig();
+            const prevCfg = await getMailConfig(targetDb);
             const finalPass = (pass && pass.trim()) ? pass.trim() : prevCfg.pass;
             testTransporter = nodemailer.createTransport({
                 host: host,
@@ -2054,7 +2062,7 @@ app.post('/api/configuracion/email/test', async (req, res) => {
                 tls: { rejectUnauthorized: false }
             });
         } else {
-            const inst = await getTransporterInstance();
+            const inst = await getTransporterInstance(targetDb);
             testTransporter = inst.transporter;
             senderName = inst.config.from_name;
             senderEmail = inst.config.from_email;
@@ -2095,13 +2103,14 @@ app.post('/api/configuracion/email/test', async (req, res) => {
 
 app.post('/api/reportes/enviar-correo', async (req, res) => {
     try {
+        const targetDb = req.db || db;
         const { para, cc, cco, asunto, mensaje, nombre_reporte, modulo, adjunto_nombre, adjunto_base64 } = req.body;
         
         if (!para || !String(para).trim()) {
             return res.status(400).json({ ok: false, error: 'Debe especificar al menos un destinatario (Para).' });
         }
 
-        const { transporter, config } = await getTransporterInstance();
+        const { transporter, config } = await getTransporterInstance(targetDb);
         if (!config.user || !config.pass) {
             return res.status(400).json({ ok: false, error: 'El servidor SMTP no está configurado en el sistema. Vaya a Ajustes > Notificaciones para configurarlo.' });
         }
@@ -2170,18 +2179,22 @@ app.post('/api/reportes/enviar-correo', async (req, res) => {
     }
 });
 
-app.get('/api/configuracion/email/destinatarios', (req, res) => {
-    db.query("SELECT * FROM destinatarios_alertas ORDER BY nombre ASC", (err, rows) => {
+app.get('/api/configuracion/email/destinatarios', async (req, res) => {
+    const targetDb = req.db || db;
+    await ensureEmailTables(targetDb);
+    targetDb.query("SELECT * FROM destinatarios_alertas ORDER BY nombre ASC", (err, rows) => {
         if (err) return res.status(500).json({ ok: false, error: err.message });
         res.json({ ok: true, data: rows || [] });
     });
 });
 
-app.post('/api/configuracion/email/destinatarios', (req, res) => {
+app.post('/api/configuracion/email/destinatarios', async (req, res) => {
+    const targetDb = req.db || db;
+    await ensureEmailTables(targetDb);
     const { nombre, correo, cargo, notif_checklist, notif_vencimientos, notif_1d, notif_3d, notif_7d } = req.body;
     if (!nombre || !correo) return res.status(400).json({ ok: false, error: 'Nombre y correo son obligatorios' });
 
-    db.query(
+    targetDb.query(
         `INSERT INTO destinatarios_alertas (nombre, correo, cargo, notif_checklist, notif_vencimientos, notif_1d, notif_3d, notif_7d, activo)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
         [nombre, correo, cargo || '', notif_checklist ? 1 : 0, notif_vencimientos ? 1 : 0, notif_1d ? 1 : 0, notif_3d ? 1 : 0, notif_7d ? 1 : 0],
@@ -2192,28 +2205,34 @@ app.post('/api/configuracion/email/destinatarios', (req, res) => {
     );
 });
 
-app.delete('/api/configuracion/email/destinatarios/:id', (req, res) => {
-    db.query("DELETE FROM destinatarios_alertas WHERE id = ?", [req.params.id], (err) => {
+app.delete('/api/configuracion/email/destinatarios/:id', async (req, res) => {
+    const targetDb = req.db || db;
+    await ensureEmailTables(targetDb);
+    targetDb.query("DELETE FROM destinatarios_alertas WHERE id = ?", [req.params.id], (err) => {
         if (err) return res.status(500).json({ ok: false, error: err.message });
         res.json({ ok: true, message: 'Destinatario eliminado' });
     });
 });
 
-app.get('/api/configuracion/email/programaciones', (req, res) => {
-    db.query("SELECT * FROM reportes_programaciones_email ORDER BY id DESC", (err, rows) => {
+app.get('/api/configuracion/email/programaciones', async (req, res) => {
+    const targetDb = req.db || db;
+    await ensureEmailTables(targetDb);
+    targetDb.query("SELECT * FROM reportes_programaciones_email ORDER BY id DESC", (err, rows) => {
         if (err) return res.status(500).json({ ok: false, error: err.message });
         res.json({ ok: true, data: rows || [] });
     });
 });
 
-app.post('/api/configuracion/email/programaciones', (req, res) => {
+app.post('/api/configuracion/email/programaciones', async (req, res) => {
+    const targetDb = req.db || db;
+    await ensureEmailTables(targetDb);
     const { nombre_reporte, modulo, destinatarios_para, destinatarios_cc, destinatarios_cco, frecuencia, hora_envio, dias_semana, asunto_personalizado, mensaje_personalizado } = req.body;
     
     if (!nombre_reporte || !destinatarios_para) {
         return res.status(400).json({ ok: false, error: 'Nombre de reporte y destinatarios son requeridos' });
     }
 
-    db.query(
+    targetDb.query(
         `INSERT INTO reportes_programaciones_email 
          (nombre_reporte, modulo, destinatarios_para, destinatarios_cc, destinatarios_cco, frecuencia, hora_envio, dias_semana, asunto_personalizado, mensaje_personalizado, activo)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
