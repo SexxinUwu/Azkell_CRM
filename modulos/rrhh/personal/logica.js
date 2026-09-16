@@ -65,7 +65,7 @@ window.rrhhPersonalRenderizarTabla = function(lista) {
     if (!lista || lista.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="text-center py-5 text-muted">
+                <td colspan="38" class="text-center py-5 text-muted">
                     <i class="bi bi-people fs-2 d-block mb-2 text-secondary"></i>
                     No se encontraron colaboradores registrados con los filtros aplicados.
                 </td>
@@ -82,79 +82,83 @@ window.rrhhPersonalRenderizarTabla = function(lista) {
         'SEGURIDAD_CONTROL': 'rol-seguridad'
     };
 
-    var html = lista.map(function(p) {
+    var html = lista.map(function(p, idx) {
         var rolClass = rolClases[p.categoria_rol] || 'bg-light text-dark border';
-        var iniciales = (p.nombres.charAt(0) + (p.apellidos.charAt(0) || '')).toUpperCase();
-        var fotoHtml = p.foto_url 
-            ? `<img src="${p.foto_url}" class="table-personal-avatar border" alt="">`
-            : `<div class="table-personal-avatar border">${iniciales}</div>`;
 
-        // Semáforo de vencimiento de contrato
-        var contratoHtml = `<span class="badge bg-light text-dark border">${p.tipo_contrato}</span>`;
+        // Semáforo de estado de contrato
+        var estContratoBadge = '<span class="badge bg-light text-dark border">VIGENTE</span>';
         if (p.tipo_contrato === 'INDETERMINADO') {
-            contratoHtml += `<div class="text-success fw-bold small mt-1"><i class="bi bi-infinity"></i> Indeterminado</div>`;
+            estContratoBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-infinity"></i> INDETERMINADO</span>';
         } else if (p.fecha_fin_contrato) {
             var fFin = new Date(p.fecha_fin_contrato);
             var hoy = new Date();
             var diffDias = Math.ceil((fFin - hoy) / (1000 * 60 * 60 * 24));
             
             if (diffDias < 0) {
-                contratoHtml += `<div class="text-danger fw-bold small mt-1 font-monospace"><i class="bi bi-exclamation-triangle-fill"></i> Venció (${p.fecha_fin_contrato.slice(0,10)})</div>`;
+                estContratoBadge = `<span class="badge bg-danger text-white">VENCIDO (${Math.abs(diffDias)}d)</span>`;
             } else if (diffDias <= 30) {
-                contratoHtml += `<div class="text-warning fw-bold small mt-1 font-monospace"><i class="bi bi-clock-history"></i> Vence en ${diffDias}d (${p.fecha_fin_contrato.slice(0,10)})</div>`;
+                estContratoBadge = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">VENCE EN ${diffDias}D</span>`;
             } else {
-                contratoHtml += `<div class="text-muted small mt-1 font-monospace">${p.fecha_fin_contrato.slice(0,10)}</div>`;
+                estContratoBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle">VIGENTE</span>`;
             }
         }
 
-        // Semáforo SST / Brevete / EMO
-        var sstHtml = '';
-        if (p.categoria_rol === 'CONDUCTOR') {
-            var breveteTxt = p.licencia_conducir ? `${p.licencia_categoria || 'A-III'} (${p.licencia_conducir})` : 'Sin brevete';
-            var sctrBadge = p.sctr_salud_vigente ? `<span class="badge bg-success-subtle text-success border border-success-subtle py-0.5">SCTR OK</span>` : `<span class="badge bg-danger text-white py-0.5">SIN SCTR</span>`;
-            sstHtml = `<div class="small fw-semibold text-dark mb-0.5 font-monospace">${breveteTxt}</div>${sctrBadge}`;
-        } else {
-            var sctrBadge2 = p.sctr_salud_vigente ? `<span class="badge bg-success-subtle text-success border border-success-subtle py-0.5">SCTR OK</span>` : `<span class="badge bg-secondary-subtle text-secondary py-0.5">N/A</span>`;
-            sstHtml = `<div class="small text-muted mb-0.5">EMO: ${p.emo_condicion || 'APTO'}</div>${sctrBadge2}`;
-        }
-
-        // Estado
+        // Estado general
         var badgeEst = p.estado === 'ACTIVO' 
             ? 'bg-success-subtle text-success border border-success-subtle' 
             : (p.estado === 'VACACIONES' ? 'bg-info-subtle text-info border' : 'bg-secondary-subtle text-secondary border');
 
+        var sctrSaludBadge = p.sctr_salud_vigente ? '<span class="badge bg-success-subtle text-success border border-success-subtle">VIGENTE</span>' : '<span class="badge bg-danger text-white">SIN SCTR</span>';
+        var sctrPensionBadge = p.sctr_pension_vigente ? '<span class="badge bg-success-subtle text-success border border-success-subtle">VIGENTE</span>' : '<span class="badge bg-secondary-subtle text-secondary">N/A</span>';
+        var emoBadge = p.emo_condicion === 'APTO' ? '<span class="badge bg-success-subtle text-success border border-success-subtle">APTO</span>' : `<span class="badge bg-warning-subtle text-warning-emphasis border">${p.emo_condicion || 'PENDIENTE'}</span>`;
+
+        var tallasEpp = `P:${p.talla_polo || 'M'} | Pant:${p.talla_pantalon || '32'} | Calz:${p.talla_calzado || '41'}`;
+        var contactoEmerg = p.contacto_emergencia_nombre ? `${p.contacto_emergencia_nombre} (${p.contacto_emergencia_telefono || '—'})` : '—';
+
         return `
             <tr>
-                <td class="ps-4">
-                    <div class="d-flex align-items-center gap-2.5">
-                        ${fotoHtml}
-                        <div>
-                            <strong class="d-block text-dark">${p.apellidos}, ${p.nombres}</strong>
-                            <small class="text-muted"><i class="bi bi-telephone me-1"></i>${p.telefono || 'Sin teléfono'}</small>
-                        </div>
-                    </div>
-                </td>
-                <td class="font-monospace fw-bold text-secondary">${p.numero_documento}</td>
-                <td>
-                    <span class="rrhh-badge-rol ${rolClass} d-inline-block mb-1">${p.categoria_rol.replace('_', ' ')}</span>
-                    <div class="fw-semibold text-dark small">${p.cargo}</div>
-                </td>
-                <td>
-                    <div class="fw-semibold text-dark small">${p.area || 'OPERACIONES'}</div>
-                    <small class="text-muted font-monospace">${p.centro_costo_codigo || 'CC-100'}</small>
-                </td>
-                <td>${contratoHtml}</td>
-                <td>
-                    <div class="font-monospace fw-bold text-success">S/ ${parseFloat(p.sueldo_basico || 0).toFixed(2)}</div>
-                    <small class="text-muted font-monospace">${p.regimen_pensionario}</small>
-                </td>
-                <td>${sstHtml}</td>
+                <td class="ps-3 text-center text-muted font-monospace">${idx + 1}</td>
+                <td class="sticky-col-1 font-monospace fw-bold text-dark">${p.numero_documento}</td>
+                <td class="sticky-col-2 fw-bold text-primary">${p.apellidos}, ${p.nombres}</td>
+                <td class="font-monospace">${p.telefono || '—'}</td>
+                <td>${p.email || '—'}</td>
+                <td><span class="badge bg-light text-dark border font-monospace">${p.area || 'OPERACIONES'}</span></td>
+                <td><span class="rrhh-badge-rol ${rolClass}">${p.categoria_rol ? p.categoria_rol.replace('_', ' ') : '—'}</span></td>
+                <td class="fw-semibold text-dark">${p.cargo || '—'}</td>
+                <td><span class="badge font-monospace" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">${p.centro_costo_codigo || 'CC-300'}</span></td>
+                <td>${p.sede || 'BASE PRINCIPAL'}</td>
+                <td class="font-monospace">${p.fecha_ingreso ? p.fecha_ingreso.slice(0, 10) : '—'}</td>
+                <td><span class="badge bg-light text-dark border">${p.tipo_contrato || 'PLAZO_FIJO'}</span></td>
+                <td class="font-monospace">${p.fecha_inicio_contrato ? p.fecha_inicio_contrato.slice(0, 10) : '—'}</td>
+                <td class="font-monospace">${p.fecha_fin_contrato ? p.fecha_fin_contrato.slice(0, 10) : (p.tipo_contrato === 'INDETERMINADO' ? 'Indeterminado' : '—')}</td>
+                <td>${estContratoBadge}</td>
+                <td class="font-monospace fw-bold text-success text-end">S/ ${parseFloat(p.sueldo_basico || 0).toFixed(2)}</td>
+                <td class="font-monospace text-end">${p.tiene_asignacion_familiar ? 'S/ 113.00' : 'S/ 0.00'}</td>
+                <td class="font-monospace text-end">S/ ${parseFloat(p.bono_fijo || 0).toFixed(2)}</td>
+                <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace">${p.regimen_pensionario || 'ONP'}</span></td>
+                <td class="font-monospace small">${p.tipo_comision_afp || 'FLUJO'}</td>
+                <td class="font-monospace">${p.cuspp || '—'}</td>
+                <td>${p.banco_haberes || '—'}</td>
+                <td class="font-monospace">${p.cuenta_haberes || '—'}</td>
+                <td class="font-monospace">${p.cci_haberes || '—'}</td>
+                <td>${p.banco_cts || '—'}</td>
+                <td class="font-monospace">${p.cuenta_cts || '—'}</td>
+                <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">${p.grupo_sanguineo || 'O+'}</span></td>
+                <td class="font-monospace fw-bold">${p.licencia_conducir || '—'}</td>
+                <td class="text-center"><span class="badge bg-secondary-subtle text-secondary font-monospace">${p.licencia_categoria || '—'}</span></td>
+                <td class="font-monospace">${p.licencia_vencimiento ? p.licencia_vencimiento.slice(0, 10) : '—'}</td>
+                <td>${sctrSaludBadge}</td>
+                <td>${sctrPensionBadge}</td>
+                <td>${emoBadge}</td>
+                <td class="font-monospace">${p.emo_fecha_vencimiento ? p.emo_fecha_vencimiento.slice(0, 10) : '—'}</td>
+                <td class="font-monospace small">${tallasEpp}</td>
+                <td class="small">${contactoEmerg}</td>
                 <td><span class="badge ${badgeEst} px-2 py-1 rounded-pill" style="font-size:0.68rem;">${p.estado}</span></td>
-                <td class="text-end pe-4">
+                <td class="text-end pe-3 sticky-actions">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-outline-primary rounded-circle me-1" style="width:32px;height:32px;padding:0;" onclick="window.rrhhPersonalVerFicha(${p.id})" title="Ver Ficha 360°"><i class="bi bi-eye-fill"></i></button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle me-1" style="width:32px;height:32px;padding:0;" onclick="window.rrhhPersonalAbrirModalEditar(${p.id})" title="Editar"><i class="bi bi-pencil-fill"></i></button>
-                        <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" style="width:32px;height:32px;padding:0;" onclick="window.rrhhPersonalEliminar(${p.id})" title="Eliminar"><i class="bi bi-trash-fill"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-circle me-1" style="width:30px;height:30px;padding:0;" onclick="window.rrhhPersonalVerFicha(${p.id})" title="Ver Ficha 360°"><i class="bi bi-eye-fill"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle me-1" style="width:30px;height:30px;padding:0;" onclick="window.rrhhPersonalAbrirModalEditar(${p.id})" title="Editar"><i class="bi bi-pencil-fill"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" style="width:30px;height:30px;padding:0;" onclick="window.rrhhPersonalEliminar(${p.id})" title="Eliminar"><i class="bi bi-trash-fill"></i></button>
                     </div>
                 </td>
             </tr>
@@ -732,16 +736,29 @@ window.rrhhPersonalExportarExcel = async function() {
 
     // Cabeceras enriquecidas
     var headers = [
-        'ID', 'TIPO DOC', 'N° DOCUMENTO', 'APELLIDOS', 'NOMBRES', 'SEXO', 'FEC. NACIMIENTO',
-        'TELEFONO', 'EMAIL', 'DIRECCION', 'CONTACTO EMERGENCIA', 'ÁREA OPERATIVA', 'ROL / CATEGORÍA',
-        'CARGO', 'SEDE / BASE', 'CENTRO COSTOS', 'FECHA INGRESO', 'ESTADO', 'TIPO CONTRATO',
-        'INICIO CONTRATO', 'FIN CONTRATO', 'SUELDO BÁSICO', 'BONO FIJO', 'ASIG. FAMILIAR',
-        'RÉGIMEN PENSIÓN', 'CUSPP', 'BANCO SUELDO', 'N° CUENTA', 'CCI', 'GRUPO SANGUÍNEO',
-        'BREVETE MTC', 'CAT. BREVETE', 'VENC. BREVETE', 'SCTR SALUD', 'SCTR PENSIÓN', 'CONDICIÓN EMO',
-        'TALLA POLO', 'TALLA PANTALÓN', 'TALLA CALZADO', 'TALLA CHALECO'
+        'ID', 'TIPO DOC', 'N° DOCUMENTO', 'APELLIDOS', 'NOMBRES', 'GÉNERO', 'FECHA NACIMIENTO',
+        'TELÉFONO', 'CORREO ELECTRÓNICO', 'DIRECCIÓN', 'ÁREA OPERATIVA', 'ROL / CATEGORÍA',
+        'CARGO / PUESTO', 'CENTRO DE COSTOS', 'SEDE / BASE', 'FECHA INGRESO', 'TIPO CONTRATO',
+        'INICIO CONTRATO', 'FIN CONTRATO', 'ESTADO CONTRATO', 'SUELDO BÁSICO (S/)', 'ASIG. FAMILIAR (S/)', 'BONO FIJO (S/)',
+        'RÉGIMEN PENSIÓN', 'COMISIÓN AFP', 'CUSPP', 'BANCO HABERES', 'CUENTA SUELDO', 'CCI HABERES',
+        'BANCO CTS', 'CUENTA CTS', 'GRUPO SANGUÍNEO', 'N° LICENCIA', 'CAT. LICENCIA', 'VENC. LICENCIA',
+        'SCTR SALUD', 'SCTR PENSIÓN', 'CONDICIÓN EMO', 'VENC. EMO', 'TALLA POLO', 'TALLA PANTALÓN',
+        'TALLA CALZADO', 'TALLA CHALECO', 'CONTACTO EMERGENCIA', 'ESTADO'
     ];
 
     var rows = lista.map(function(p) {
+        var estContrato = 'VIGENTE';
+        if (p.tipo_contrato === 'INDETERMINADO') {
+            estContrato = 'INDETERMINADO';
+        } else if (p.fecha_fin_contrato) {
+            var fFin = new Date(p.fecha_fin_contrato);
+            var hoy = new Date();
+            var diffDias = Math.ceil((fFin - hoy) / (1000 * 60 * 60 * 24));
+            if (diffDias < 0) estContrato = `VENCIDO (${Math.abs(diffDias)}d)`;
+            else if (diffDias <= 30) estContrato = `VENCE EN ${diffDias}D`;
+            else estContrato = 'VIGENTE';
+        }
+
         return [
             p.id,
             p.tipo_documento || 'DNI',
@@ -753,25 +770,27 @@ window.rrhhPersonalExportarExcel = async function() {
             p.telefono || '',
             p.email || '',
             p.direccion || '',
-            p.contacto_emergencia_nombre ? `${p.contacto_emergencia_nombre} (${p.contacto_emergencia_telefono || ''})` : '',
             p.area || 'OPERACIONES',
             p.categoria_rol || 'ADMINISTRATIVO',
             p.cargo || '',
-            p.sede || 'BASE PRINCIPAL',
             p.centro_costo_codigo || 'CC-100',
+            p.sede || 'BASE PRINCIPAL',
             p.fecha_ingreso ? p.fecha_ingreso.slice(0, 10) : '',
-            p.estado || 'ACTIVO',
             p.tipo_contrato || 'PLAZO_FIJO',
             p.fecha_inicio_contrato ? p.fecha_inicio_contrato.slice(0, 10) : '',
             p.fecha_fin_contrato ? p.fecha_fin_contrato.slice(0, 10) : '',
+            estContrato,
             parseFloat(p.sueldo_basico || 0),
-            parseFloat(p.bono_fijo || 0),
             p.tiene_asignacion_familiar ? 113.00 : 0.00,
+            parseFloat(p.bono_fijo || 0),
             p.regimen_pensionario || 'ONP',
+            p.tipo_comision_afp || 'FLUJO',
             p.cuspp || '',
             p.banco_haberes || 'BCP',
             p.cuenta_haberes || '',
             p.cci_haberes || '',
+            p.banco_cts || '',
+            p.cuenta_cts || '',
             p.grupo_sanguineo || 'O+',
             p.licencia_conducir || '',
             p.licencia_categoria || '',

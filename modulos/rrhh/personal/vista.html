@@ -27,6 +27,70 @@
     font-size: 1.35rem;
 }
 
+/* ── Estilos de Tabla Sábana de Datos (Tabular Excel / ERP) ── */
+.rrhh-table-scroll {
+    overflow-x: auto !important;
+    position: relative;
+    max-width: 100%;
+    scrollbar-width: thin;
+}
+.rrhh-table-tabular {
+    white-space: nowrap !important;
+    font-size: 0.81rem;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.rrhh-table-tabular thead th {
+    background: #f8fafc !important;
+    color: #475569;
+    font-weight: 800;
+    font-size: 0.71rem;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    padding: 11px 14px;
+    border-bottom: 2px solid #cbd5e1 !important;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.rrhh-table-tabular tbody td {
+    padding: 9px 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: nowrap;
+    background: #ffffff;
+}
+.rrhh-table-tabular tbody tr:hover td {
+    background-color: #f8fafc !important;
+}
+.sticky-col-1 {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 6 !important;
+}
+.sticky-col-2 {
+    position: sticky !important;
+    left: 115px !important;
+    z-index: 6 !important;
+    box-shadow: 4px 0 8px -3px rgba(0,0,0,0.06);
+}
+.rrhh-table-tabular thead th.sticky-col-1,
+.rrhh-table-tabular thead th.sticky-col-2 {
+    background: #f1f5f9 !important;
+    z-index: 16 !important;
+}
+.sticky-actions {
+    position: sticky !important;
+    right: 0 !important;
+    z-index: 6 !important;
+    box-shadow: -4px 0 8px -3px rgba(0,0,0,0.06);
+}
+.rrhh-table-tabular thead th.sticky-actions {
+    background: #f1f5f9 !important;
+    z-index: 16 !important;
+}
+
 /* ── Floating Drawer Modal & Inputs Styling (1:1 Idéntico a Reporte de Fallas) ── */
 .rrhh-floating-drawer-dialog {
     max-width: 880px !important;
@@ -376,26 +440,55 @@
         </div>
     </div>
 
-    <!-- Tabla Principal de Personal -->
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" style="font-size:0.86rem;">
-                <thead class="bg-light text-muted fw-bold" style="font-size:0.75rem; letter-spacing:0.3px;">
+    <!-- Tabla Principal de Personal (Sábana Completa de Datos - Columnas Individuales) -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-4">
+        <div class="table-responsive rrhh-table-scroll">
+            <table class="table table-hover align-middle mb-0 rrhh-table-tabular" id="tabla-personal-main">
+                <thead class="bg-light text-muted fw-bold">
                     <tr>
-                        <th class="ps-4">COLABORADOR</th>
-                        <th>DNI / DOC</th>
-                        <th>ROL / CARGO</th>
-                        <th>ÁREA / SEDE</th>
-                        <th>CONTRATO / VENCIMIENTO</th>
-                        <th>SUELDO / RÉGIMEN</th>
-                        <th>HABILITACIÓN SST</th>
+                        <th class="ps-3 text-center" style="width: 45px;">#</th>
+                        <th class="sticky-col-1 font-monospace">DNI / DOC</th>
+                        <th class="sticky-col-2">APELLIDOS Y NOMBRES</th>
+                        <th>TELÉFONO</th>
+                        <th>CORREO</th>
+                        <th>ÁREA OPERATIVA</th>
+                        <th>ROL / CATEGORÍA</th>
+                        <th>CARGO / PUESTO</th>
+                        <th>CENTRO DE COSTOS</th>
+                        <th>SEDE / BASE</th>
+                        <th>FECHA INGRESO</th>
+                        <th>TIPO CONTRATO</th>
+                        <th>INICIO CONTRATO</th>
+                        <th>FIN CONTRATO</th>
+                        <th>ESTADO CONTRATO</th>
+                        <th>SUELDO BÁSICO</th>
+                        <th>ASIG. FAMILIAR</th>
+                        <th>BONO FIJO</th>
+                        <th>RÉGIMEN PENSIÓN</th>
+                        <th>COMISIÓN AFP</th>
+                        <th>CUSPP</th>
+                        <th>BANCO HABERES</th>
+                        <th>CUENTA SUELDO</th>
+                        <th>CCI HABERES</th>
+                        <th>BANCO CTS</th>
+                        <th>CUENTA CTS</th>
+                        <th>GRUPO SANGUÍNEO</th>
+                        <th>N° LICENCIA</th>
+                        <th>CAT. LICENCIA</th>
+                        <th>VENC. LICENCIA</th>
+                        <th>SCTR SALUD</th>
+                        <th>SCTR PENSIÓN</th>
+                        <th>CONDICIÓN EMO</th>
+                        <th>VENC. EMO</th>
+                        <th>TALLAS EPP</th>
+                        <th>CONTACTO EMERGENCIA</th>
                         <th>ESTADO</th>
-                        <th class="text-end pe-4">ACCIONES</th>
+                        <th class="text-end pe-3 sticky-actions">ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody id="tabla-personal-tbody">
                     <tr>
-                        <td colspan="9" class="text-center py-5 text-muted">
+                        <td colspan="38" class="text-center py-5 text-muted">
                             <span class="spinner-border spinner-border-sm me-2 text-primary"></span> Cargando colaboradores...
                         </td>
                     </tr>
