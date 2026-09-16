@@ -7003,17 +7003,23 @@ async function _murCargarDestinatariosSugeridos() {
         const json = await res.json();
         const items = (json && json.ok && json.data) ? json.data : [];
         if (items.length > 0) {
-            let html = '<span class="small text-muted me-1" style="font-size:0.72rem;">Sugeridos:</span>';
-            items.slice(0, 5).forEach(d => {
+            let html = '<span class="small text-muted me-1 d-flex align-items-center" style="font-size:0.72rem;">Destinatarios Registrados:</span>';
+            items.forEach(d => {
+                const primerNombre = d.nombre.split(' ')[0];
                 html += `
-                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 rounded-pill" style="font-size:0.7rem;" onclick="window._murAgregarCorreo('${d.correo}')">
-                        + ${d.nombre.split(' ')[0]}
-                    </button>
+                    <div class="btn-group btn-group-sm rounded-pill overflow-hidden border shadow-2xs" style="font-size:0.72rem;">
+                        <button type="button" class="btn btn-xs btn-light fw-bold text-dark py-0 px-2" title="Añadir a Para: ${d.correo}" onclick="window._murAgregarCorreo('${d.correo}')">
+                            + ${primerNombre}
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-primary fw-bold py-0 px-1" title="Añadir como Con Copia (CC)" onclick="window._murAgregarCc('${d.correo}')">
+                            CC
+                        </button>
+                    </div>
                 `;
             });
             wrap.innerHTML = html;
         } else {
-            wrap.innerHTML = '';
+            wrap.innerHTML = '<span class="small text-muted" style="font-size:0.7rem;">Puedes registrar supervisores en Ajustes > Destinatarios para agregarlos en 1 clic.</span>';
         }
     } catch(e) {
         wrap.innerHTML = '';
@@ -7029,6 +7035,128 @@ window._murAgregarCorreo = function(correo) {
     } else if (!actual.includes(correo)) {
         input.value = actual + ', ' + correo;
     }
+};
+
+window._murAgregarCc = function(correo) {
+    const box = document.getElementById('mur-box-cc');
+    const lbl = document.getElementById('mur-lbl-toggle-cc');
+    if (box && box.classList.contains('d-none')) {
+        box.classList.remove('d-none');
+        if (lbl) lbl.textContent = '- Ocultar CC / CCO';
+    }
+    const inputCc = document.getElementById('mur-input-cc');
+    if (!inputCc) return;
+    let actual = inputCc.value.trim();
+    if (!actual) {
+        inputCc.value = correo;
+    } else if (!actual.includes(correo)) {
+        inputCc.value = actual + ', ' + correo;
+    }
+    if (typeof window.showToastNotification === 'function') {
+        window.showToastNotification(`Añadido a CC: ${correo}`, 'info');
+    }
+};
+
+window.probarEnvioReporteDemo = async function(tipo) {
+    let titulo = 'Consolidado Diario de Fallas y Mantenimiento';
+    let nombrePdf = 'Reporte_Diario_Fallas.pdf';
+    let asunto = '📑 [Azkell ERP] Consolidado Diario de Fallas y Mantenimiento — Marsisa';
+    let mensaje = 'Estimado equipo,\n\nAdjuntamos el consolidado oficial de inspecciones de flota, fallas reportadas y órdenes de trabajo del día emitido automáticamente por el sistema.\n\nAtentamente,\nGerencia de Operaciones y Mantenimiento\nAzkell ERP.';
+    let modulo = 'mantenimiento';
+
+    if (tipo === 'vencimientos') {
+        titulo = 'Reporte Semanal de Vencimientos de Flota y Personal';
+        nombrePdf = 'Reporte_Vencimientos_Documentos.pdf';
+        asunto = '📅 [Azkell ERP] Alerta Semanal de Vencimientos de Documentos (SOAT / CITV / Brevetes)';
+        mensaje = 'Estimados supervisores,\n\nSe adjunta el reporte consolidado de documentos y licencias con vencimiento próximo en los siguientes 30, 15 y 7 días.\n\nFavor de coordinar las renovaciones con anticipación.\n\nAzkell ERP Alertas.';
+        modulo = 'flota';
+    } else if (tipo === 'critica') {
+        titulo = 'Alerta Inmediata por Falla Crítica en Ruta';
+        nombrePdf = 'Alerta_Falla_Critica_V3B842.pdf';
+        asunto = '🚨 [URGENTE] Falla Crítica Reportada en Ruta — Unidad V3B-842 (Frenos / Motor)';
+        mensaje = 'ATENCIÓN INMEDIATA:\n\nEl conductor ha reportado una falla crítica clasificada como "NO OPERATIVO" durante el viaje en ruta.\n\n• Unidad: V3B-842\n• Sistema Afectado: Sistema de Frenos / Dirección\n• Estado: Requiere auxilio mecánico inmediato.\n\nAzkell ERP Alertas.';
+        modulo = 'mantenimiento';
+    }
+
+    // Generar PDF base64 real de demostración con jsPDF
+    let base64Pdf = null;
+    try {
+        if (window.jspdf && window.jspdf.jsPDF) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            
+            // Encabezado
+            doc.setFillColor(2, 132, 199);
+            doc.rect(0, 0, 210, 26, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('AZKELL ERP — SISTEMA INTEGRADO DE GESTIÓN', 14, 12);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text(titulo.toUpperCase(), 14, 19);
+            doc.text(new Date().toLocaleDateString('es-PE'), 196, 19, { align: 'right' });
+
+            // Cuerpo del documento
+            doc.setTextColor(30, 41, 59);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('RESUMEN EJECUTIVO EMITIDO DESDE EL ERP', 14, 38);
+            
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.5);
+            doc.line(14, 42, 196, 42);
+
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Empresa / Razón Social: Transportes Marsisa / Azkell ERP`, 14, 50);
+            doc.text(`Fecha y Hora de Emisión: ${new Date().toLocaleString('es-PE')}`, 14, 56);
+            doc.text(`Estado del Servicio: Sistema Operativo y Conectado`, 14, 62);
+
+            // Tabla decorativa de ejemplo
+            doc.setFillColor(248, 250, 252);
+            doc.roundedRect(14, 70, 182, 65, 3, 3, 'FD');
+            doc.setFont('helvetica', 'bold');
+            doc.text('Detalle de Registros Incluidos en este Envío:', 20, 78);
+
+            doc.setFont('helvetica', 'normal');
+            doc.text('• Unidad V3B-842: Inspección Pre-Uso completada (Sin observaciones críticas)', 20, 88);
+            doc.text('• Unidad D8X-710: Mantenimiento Preventivo 10,000 KM programado', 20, 96);
+            doc.text('• SOAT V3B-842: Vence el 30/11/2026 (Estado: Vigente)', 20, 104);
+            doc.text('• Conductor Juan Pérez: Licencia A-IIIc vigente al 100%', 20, 112);
+            doc.text('• CITV General: Cobertura activa en todas las unidades operativas', 20, 120);
+            doc.text('• Certificado Fitosanitario / Senasa: Inspección aprobada', 20, 128);
+
+            // Pie de página
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184);
+            doc.text('Documento generado automáticamente por Azkell ERP — No requiere firma manual.', 105, 285, { align: 'center' });
+
+            base64Pdf = doc.output('datauristring');
+        }
+    } catch(e) {
+        console.warn('Error generando PDF demo:', e);
+    }
+
+    // Prefill con los destinatarios registrados si hay alguno
+    let prefillPara = '';
+    try {
+        const resD = await fetch('/api/configuracion/email/destinatarios');
+        const jsonD = await resD.json();
+        if (jsonD && jsonD.ok && jsonD.data && jsonD.data.length > 0) {
+            prefillPara = jsonD.data[0].correo;
+        }
+    } catch(e){}
+
+    window.abrirModalEnviarReporte({
+        titulo: titulo,
+        modulo: modulo,
+        asunto: asunto,
+        mensaje: mensaje,
+        nombre_adjunto: nombrePdf,
+        adjunto_base64: base64Pdf,
+        para: prefillPara
+    });
 };
 
 window._murEjecutarAccion = async function() {

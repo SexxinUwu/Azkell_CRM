@@ -556,6 +556,32 @@
                 </div>
             </div>
 
+            <!-- ── SECCIÓN 3: PROBAR Y ENVIAR REPORTES CON COPIA (CC) ─────────── -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" style="background: linear-gradient(135deg, #f0fdf4, #e0f2fe); border: 1px solid #bae6fd !important;">
+                <div class="card-body p-3 p-md-4">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                        <div>
+                            <h3 class="h6 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                <i class="bi bi-send-check-fill text-primary"></i> Vista Previa y Envío de Reportes con Copia (CC)
+                            </h3>
+                            <p class="small text-secondary mb-0">Prueba en vivo cómo llegan los reportes con diseño ejecutivo y PDF adjunto a tu correo y a otros supervisores con copia.</p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm" onclick="window.probarEnvioReporteDemo('fallas_diarias')">
+                            <i class="bi bi-file-earmark-pdf-fill text-white"></i> Probar Envío: Reporte Diario de Fallas (PDF)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-2 fw-bold d-flex align-items-center gap-2 bg-white" onclick="window.probarEnvioReporteDemo('vencimientos')">
+                            <i class="bi bi-calendar-check-fill text-warning"></i> Probar Envío: Alertas de Vencimientos
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-2 fw-bold d-flex align-items-center gap-2 bg-white" onclick="window.probarEnvioReporteDemo('critica')">
+                            <i class="bi bi-exclamation-octagon-fill text-danger"></i> Probar Envío: Alerta Falla Crítica
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <h2 class="cfg-section-title">Destinatarios de Alertas Automáticas</h2>
             <div class="cfg-group-box p-3">
                 <div class="d-flex align-items-center justify-content-between mb-3">
