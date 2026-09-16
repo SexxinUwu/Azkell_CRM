@@ -85,14 +85,14 @@
     font-size: 0.82rem;
 }
 .ca-table th {
-    background: #0f172a;
-    color: #f8fafc;
+    background: #334155;
+    color: #ffffff;
     font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.6px;
     padding: 0.85rem 0.8rem;
-    border-bottom: 1px solid #1e293b;
+    border-bottom: 2px solid #1e293b;
     white-space: nowrap;
     position: sticky;
     top: 0;
@@ -103,7 +103,7 @@
     transition: background 0.15s;
 }
 .ca-table th.sortable:hover {
-    background: #1e293b;
+    background: #475569;
 }
 .ca-table td {
     padding: 0.75rem 0.8rem;
@@ -516,8 +516,8 @@
                     <tr>
                         <th style="min-width: 145px; text-align: center;">
                             <div class="d-flex align-items-center justify-content-between gap-1">
-                                <span>Auditoría</span>
-                                <button type="button" class="btn btn-outline-primary py-0 px-1.5 rounded-pill shadow-xs" id="btn-toggle-col-obs" onclick="window.caToggleColObservacion()" title="Mostrar/Ocultar columna de Observaciones" style="font-size:0.7rem; line-height: 1.2;">
+                                <span class="text-white fw-bold">Auditoría</span>
+                                <button type="button" class="btn btn-outline-light py-0 px-1.5 rounded-pill shadow-xs" id="btn-toggle-col-obs" onclick="window.caToggleColObservacion()" title="Mostrar/Ocultar columna de Observaciones" style="font-size:0.7rem; line-height: 1.2; border-color: rgba(255,255,255,0.45); color: #ffffff;">
                                     <i class="bi bi-plus-lg" id="icon-toggle-col-obs"></i> Obs
                                 </button>
                             </div>

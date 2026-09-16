@@ -21,12 +21,18 @@
         if (window._caShowColObs) {
             obsHeaders.forEach(el => el.classList.remove('d-none'));
             obsCells.forEach(el => el.classList.remove('d-none'));
-            if (btn) btn.classList.replace('btn-outline-primary', 'btn-primary');
+            if (btn) {
+                btn.classList.remove('btn-outline-light');
+                btn.classList.add('btn-light', 'text-dark');
+            }
             if (icon) { icon.classList.remove('bi-plus-lg'); icon.classList.add('bi-dash-lg'); }
         } else {
             obsHeaders.forEach(el => el.classList.add('d-none'));
             obsCells.forEach(el => el.classList.add('d-none'));
-            if (btn) btn.classList.replace('btn-primary', 'btn-outline-primary');
+            if (btn) {
+                btn.classList.remove('btn-light', 'text-dark');
+                btn.classList.add('btn-outline-light');
+            }
             if (icon) { icon.classList.remove('bi-dash-lg'); icon.classList.add('bi-plus-lg'); }
         }
     };
