@@ -507,7 +507,7 @@ app.post('/api/configuracion', async (req, res) => {
 
 app.get(['/api/proxy/documento', '/api/proxy/sunat'], async (req, res) => {
     let numero = (req.query.numero || req.query.doc || '').trim();
-    if (!numero) return res.status(400).json({error: "Número de documento (RUC o DNI) requerido"});
+    if (!numero) return res.status(400).json({ error: "Número de documento (RUC o DNI) requerido" });
     
     let tipo = req.query.tipo;
     if (!tipo) {
@@ -517,16 +517,34 @@ app.get(['/api/proxy/documento', '/api/proxy/sunat'], async (req, res) => {
     let url = '';
     if (tipo === 'RUC') url = 'https://api.apis.net.pe/v1/ruc?numero=' + numero;
     else if (tipo === 'DNI') url = 'https://api.apis.net.pe/v1/dni?numero=' + numero;
-    else return res.status(400).json({error: "Tipo no valido"});
+    else return res.status(400).json({ error: "Tipo no valido" });
     
     try {
         let fetchCall = global.fetch || require('node-fetch');
-        let response = await fetchCall(url);
-        if (!response.ok) return res.status(response.status).json({error: "Error en API externa SUNAT/RENIEC"});
+        let response = await fetchCall(url, { timeout: 7000 });
+        if (!response.ok) return res.status(response.status).json({ error: "Documento no encontrado en RENIEC/SUNAT" });
         let data = await response.json();
-        res.json(data);
+        
+        let nomComp = '';
+        if (data.nombres) {
+            nomComp = `${data.nombres} ${data.apellidoPaterno || data.apellido_paterno || ''} ${data.apellidoMaterno || data.apellido_materno || ''}`.trim();
+        } else if (data.nombre) {
+            nomComp = data.nombre.trim();
+        }
+
+        res.json({
+            success: true,
+            ...data,
+            nombre: nomComp || data.nombre || data.razonSocial || '',
+            razon_social: data.nombre || data.razonSocial || '',
+            nombres: data.nombres || '',
+            apellido_paterno: data.apellidoPaterno || data.apellido_paterno || '',
+            apellido_materno: data.apellidoMaterno || data.apellido_materno || '',
+            apellidoPaterno: data.apellidoPaterno || data.apellido_paterno || '',
+            apellidoMaterno: data.apellidoMaterno || data.apellido_materno || ''
+        });
     } catch(err) {
-        res.status(500).json({error: err.message});
+        res.status(500).json({ error: err.message });
     }
 });
 

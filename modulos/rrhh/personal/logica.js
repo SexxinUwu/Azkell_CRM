@@ -199,6 +199,102 @@ window.rrhhPersonalToggleRol = function(rol) {
     if (boxVenc) boxVenc.style.opacity = esConductor ? '1' : '0.6';
 };
 
+window.rrhhPersonalOnTipoDocChange = function(tipo) {
+    var docInput = document.getElementById('pers-num-doc');
+    var hint = document.getElementById('pers-doc-hint');
+    var btn = document.getElementById('btn-pers-buscar-dni');
+    if (tipo === 'DNI') {
+        if (docInput) { docInput.maxLength = 8; docInput.placeholder = '12345678'; }
+        if (hint) hint.innerHTML = '<i class="bi bi-magic text-primary me-1"></i> Digite los 8 dígitos para autocompletar nombres desde RENIEC.';
+        if (btn) btn.classList.remove('d-none');
+    } else if (tipo === 'CE') {
+        if (docInput) { docInput.maxLength = 12; docInput.placeholder = '001234567'; }
+        if (hint) hint.innerHTML = '<i class="bi bi-info-circle text-muted me-1"></i> Carnet de Extranjería / Documento especial.';
+    } else {
+        if (docInput) { docInput.maxLength = 15; docInput.placeholder = 'Pasaporte'; }
+        if (hint) hint.innerHTML = '<i class="bi bi-info-circle text-muted me-1"></i> Pasaporte u otro documento de identidad.';
+    }
+};
+
+window._rrhhDniTimeout = null;
+window.rrhhPersonalOnDocInput = function(val) {
+    var tipo = document.getElementById('pers-tipo-doc')?.value || 'DNI';
+    var cleanVal = (val || '').trim();
+    if (tipo === 'DNI' && cleanVal.length === 8 && /^\d{8}$/.test(cleanVal)) {
+        clearTimeout(window._rrhhDniTimeout);
+        window._rrhhDniTimeout = setTimeout(function() {
+            window.rrhhPersonalConsultarDNI();
+        }, 300);
+    }
+};
+
+window.rrhhPersonalConsultarDNI = async function() {
+    var tipo = document.getElementById('pers-tipo-doc')?.value || 'DNI';
+    var numDoc = (document.getElementById('pers-num-doc')?.value || '').trim();
+    
+    if (!numDoc) {
+        if (typeof window.rotToast === 'function') window.rotToast('Ingrese un número de documento', 'bg-warning');
+        return;
+    }
+
+    if (tipo === 'DNI' && numDoc.length !== 8) {
+        if (typeof window.rotToast === 'function') window.rotToast('El DNI debe tener 8 dígitos numéricos', 'bg-warning');
+        return;
+    }
+
+    var icon = document.getElementById('icon-pers-buscar-dni');
+    var btn = document.getElementById('btn-pers-buscar-dni');
+    var hint = document.getElementById('pers-doc-hint');
+    
+    if (icon) icon.className = 'spinner-border spinner-border-sm';
+    if (btn) btn.disabled = true;
+    if (hint) hint.innerHTML = '<span class="spinner-border spinner-border-sm text-primary me-1"></span> Consultando RENIEC / SUNAT...';
+
+    try {
+        var res = await fetch(`/api/proxy/documento?tipo=${tipo}&numero=${numDoc}`);
+        var data = await res.json();
+
+        if (res.ok && data && (data.nombres || data.nombre || data.razonSocial || data.razon_social)) {
+            var nom = data.nombres || '';
+            var ape = '';
+            if (data.apellidoPaterno || data.apellidoMaterno || data.apellido_paterno || data.apellido_materno) {
+                ape = `${data.apellidoPaterno || data.apellido_paterno || ''} ${data.apellidoMaterno || data.apellido_materno || ''}`.trim();
+            } else if (data.apellidos) {
+                ape = data.apellidos.trim();
+            }
+
+            if (!nom && data.nombre) {
+                nom = data.nombre.trim();
+            }
+
+            var elNom = document.getElementById('pers-nombres');
+            var elApe = document.getElementById('pers-apellidos');
+            var elDir = document.getElementById('pers-direccion');
+            var elFec = document.getElementById('pers-fecha-nac');
+
+            if (elNom && nom) elNom.value = nom.toUpperCase();
+            if (elApe && ape) elApe.value = ape.toUpperCase();
+            if (elDir && data.direccion) elDir.value = data.direccion.toUpperCase();
+            if (elFec && (data.fecha_nacimiento || data.fechaNacimiento)) {
+                elFec.value = (data.fecha_nacimiento || data.fechaNacimiento).slice(0, 10);
+            }
+
+            if (hint) hint.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Datos obtenidos de RENIEC exitosamente</span>';
+            if (typeof window.rotToast === 'function') window.rotToast('✨ Datos obtenidos de RENIEC', 'bg-success');
+        } else {
+            if (hint) hint.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i> No se encontraron datos para este DNI</span>';
+            if (typeof window.rotToast === 'function') window.rotToast('No se encontraron datos para este DNI', 'bg-warning');
+        }
+    } catch(err) {
+        console.warn('Error consultando DNI en RRHH:', err);
+        if (hint) hint.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i> Error: ${err.message}</span>`;
+        if (typeof window.rotToast === 'function') window.rotToast('Error al consultar DNI', 'bg-danger');
+    } finally {
+        if (icon) icon.className = 'bi bi-search';
+        if (btn) btn.disabled = false;
+    }
+};
+
 window.rrhhPersonalAbrirModalNuevo = function() {
     var form = document.getElementById('formPersonal');
     if (form) form.reset();
@@ -210,7 +306,10 @@ window.rrhhPersonalAbrirModalNuevo = function() {
     if (lblT) lblT.textContent = 'Nuevo Colaborador';
 
     var lblS = document.getElementById('modalPersonalFormSub');
-    if (lblS) lblS.textContent = 'Registro de ficha de personal y legajo laboral';
+    if (lblS) lblS.textContent = 'Legajo Digital 360°';
+
+    var hint = document.getElementById('pers-doc-hint');
+    if (hint) hint.innerHTML = '<i class="bi bi-magic text-primary me-1"></i> Digite el DNI para autocompletar nombres.';
 
     var fIng = document.getElementById('pers-fecha-ingreso');
     if (fIng) fIng.value = new Date().toISOString().slice(0, 10);
