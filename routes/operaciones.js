@@ -51,6 +51,8 @@ module.exports = function (db, broadcast, logAudit) {
         direccion_llegada VARCHAR(255) NULL,
         escolta VARCHAR(150) NULL,
         observaciones TEXT NULL,
+        configuracion_tracto VARCHAR(50) NULL,
+        configuracion_remolque VARCHAR(50) NULL,
         estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
         fecha_inicio DATETIME NULL,
         fecha_fin DATETIME NULL,
@@ -236,7 +238,7 @@ module.exports = function (db, broadcast, logAudit) {
                 await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN kilometraje_inicial INT NULL AFTER fecha_fin, ADD COLUMN kilometraje_final INT NULL AFTER kilometraje_inicial, ADD COLUMN horas_motor_remolque INT NULL AFTER kilometraje_final");
             } catch (ignore) {}
             try {
-                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN horas_motor_remolque INT NULL AFTER kilometraje_final");
+                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN configuracion_tracto VARCHAR(50) NULL, ADD COLUMN configuracion_remolque VARCHAR(50) NULL");
             } catch (ignore) {}
             try {
                 await tdb.query(`ALTER TABLE operaciones_ordenes_servicio 
@@ -2442,13 +2444,19 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             // Obtener depósitos/cajas de Tesorería asignados a este viaje
-            const [cajas] = await tdb.query(`
-                SELECT id, serie, numero, motivo, sub_motivo, importe_total, tipo_movimiento,
-                       DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, estado, voucher_url
-                FROM tesoreria_caja
-                WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(estado) != 'ANULADO'
-                ORDER BY fecha ASC, id ASC
-            `, [viaje.viaje]);
+            let cajas = [];
+            try {
+                const [cRows] = await tdb.query(`
+                    SELECT id, serie, numero, motivo, sub_motivo, importe_total, tipo_movimiento,
+                           DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, estado, voucher_url
+                    FROM tesoreria_caja
+                    WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(estado) != 'ANULADO'
+                    ORDER BY fecha ASC, id ASC
+                `, [viaje.viaje]);
+                cajas = cRows || [];
+            } catch (errCaja) {
+                cajas = [];
+            }
 
             let totalDepositado = 0;
             let totalDevoluciones = 0;
@@ -2457,16 +2465,23 @@ module.exports = function (db, broadcast, logAudit) {
                 if (c.tipo_movimiento === 'INGRESO') totalDevoluciones += imp;
                 else totalDepositado += imp;
             });
+
             // Obtener gastos rendidos por el conductor con fecha y hora legibles
-            const [gastos] = await tdb.query(`
-                SELECT id, 
-                       DATE_FORMAT(IFNULL(creado_en, fecha), '%d/%m/%Y %H:%i') AS fecha_formateada,
-                       fecha, tipo_gasto, sub_motivo, tipo_comprobante, serie, numero,
-                       proveedor_nombre, detalle, importe, sustento_url, estado
-                FROM tesoreria_liquidaciones_gastos
-                WHERE UPPER(TRIM(orden_viaje)) = UPPER(?)
-                ORDER BY IFNULL(creado_en, fecha) DESC, id DESC
-            `, [viaje.viaje]);
+            let gastos = [];
+            try {
+                const [gRows] = await tdb.query(`
+                    SELECT id, 
+                           DATE_FORMAT(IFNULL(creado_en, fecha), '%d/%m/%Y %H:%i') AS fecha_formateada,
+                           fecha, tipo_gasto, sub_motivo, tipo_comprobante, serie, numero,
+                           proveedor_nombre, detalle, importe, sustento_url, estado
+                    FROM tesoreria_liquidaciones_gastos
+                    WHERE UPPER(TRIM(orden_viaje)) = UPPER(?)
+                    ORDER BY IFNULL(creado_en, fecha) DESC, id DESC
+                `, [viaje.viaje]);
+                gastos = gRows || [];
+            } catch (errGastos) {
+                gastos = [];
+            }
 
             let totalGastado = 0;
             for (let g of gastos) {

@@ -1679,14 +1679,15 @@ setInterval(() => {
     sseClients.forEach(c => {
         try { c.write(': ping\n\n'); } catch(e) { sseClients.delete(c); }
     });
-}, 30000);
+}, 15000);
 
 app.get('/api/eventos', (req, res) => {
     res.set({
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
         'Connection': 'keep-alive',
-        'X-Accel-Buffering': 'no'
+        'X-Accel-Buffering': 'no',
+        'Access-Control-Allow-Origin': '*'
     });
     res.flushHeaders();
     res.write('data: {"tipo":"conectado"}\n\n');

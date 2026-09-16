@@ -557,7 +557,7 @@
           
           <!-- ── SECCIÓN 1: VIAJE ASOCIADO (OPCIONAL - COLAPSABLE) ───────────────── -->
           <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 100; overflow: visible !important;">
-            <div class="d-flex align-items-center justify-content-between cursor-pointer" data-bs-toggle="collapse" data-bs-target="#ck_collapse_viaje_asociado" aria-expanded="false" style="user-select: none;">
+            <div class="d-flex align-items-center justify-content-between cursor-pointer" onclick="window.ckToggleCollapseViaje()" style="user-select: none;">
               <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-diagram-3-fill text-primary fs-5"></i>
                 <div>
@@ -568,12 +568,12 @@
                 </div>
               </div>
               <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-1" style="font-size:0.75rem;">
-                <span>Vincular Viaje</span>
-                <i class="bi bi-chevron-down"></i>
+                <span id="ck-lbl-btn-vincular-viaje">Vincular Viaje</span>
+                <i class="bi bi-chevron-down" id="ck-icon-btn-vincular-viaje"></i>
               </button>
             </div>
             
-            <div class="collapse mt-3 pt-3 border-top" id="ck_collapse_viaje_asociado" style="overflow: visible !important;">
+            <div class="collapse mt-3 pt-3 border-top" id="ck_collapse_viaje_asociado" style="display: none; overflow: visible !important;">
               <p class="text-muted small mb-2" style="font-size:0.8rem;">
                 <i class="bi bi-info-circle text-primary me-1"></i> Selecciona una <b>Orden de Viaje</b> para autocompletar automáticamente Placas, Conductor y Procedencia.
               </p>
