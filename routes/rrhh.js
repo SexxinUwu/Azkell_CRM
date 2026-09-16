@@ -97,13 +97,40 @@ async function ensureTablesRRHH(req) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `).catch(() => {});
 
-        // Migración de columnas adicionales en rrhh_personal si la tabla ya existía
+        // Migración segura de columnas adicionales en rrhh_personal si la tabla ya existía
         const colsToAdd = [
-            `ALTER TABLE rrhh_personal ADD COLUMN IF NOT EXISTS grupo_sanguineo VARCHAR(10) NULL AFTER emo_condicion`,
-            `ALTER TABLE rrhh_personal ADD COLUMN IF NOT EXISTS talla_polo VARCHAR(10) NULL AFTER grupo_sanguineo`,
-            `ALTER TABLE rrhh_personal ADD COLUMN IF NOT EXISTS talla_pantalon VARCHAR(10) NULL AFTER talla_polo`,
-            `ALTER TABLE rrhh_personal ADD COLUMN IF NOT EXISTS talla_calzado VARCHAR(10) NULL AFTER talla_pantalon`,
-            `ALTER TABLE rrhh_personal ADD COLUMN IF NOT EXISTS talla_chaleco VARCHAR(10) NULL AFTER talla_calzado`
+            `ALTER TABLE rrhh_personal ADD COLUMN grupo_sanguineo VARCHAR(10) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN talla_polo VARCHAR(10) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN talla_pantalon VARCHAR(10) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN talla_calzado VARCHAR(10) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN talla_chaleco VARCHAR(10) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN foto_url TEXT NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN contacto_emergencia_nombre VARCHAR(100) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN contacto_emergencia_parentesco VARCHAR(50) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN contacto_emergencia_telefono VARCHAR(30) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN centro_costo_codigo VARCHAR(20) DEFAULT 'CC-100'`,
+            `ALTER TABLE rrhh_personal ADD COLUMN sede VARCHAR(100) DEFAULT 'BASE PRINCIPAL'`,
+            `ALTER TABLE rrhh_personal ADD COLUMN jefe_inmediato VARCHAR(100) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN fecha_inicio_contrato DATE NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN fecha_fin_contrato DATE NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN motivo_cese VARCHAR(255) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN fecha_cese DATE NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN cuspp VARCHAR(30) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN tiene_asignacion_familiar TINYINT(1) DEFAULT 0`,
+            `ALTER TABLE rrhh_personal ADD COLUMN sueldo_basico DECIMAL(12,2) DEFAULT 0.00`,
+            `ALTER TABLE rrhh_personal ADD COLUMN bono_fijo DECIMAL(12,2) DEFAULT 0.00`,
+            `ALTER TABLE rrhh_personal ADD COLUMN banco_haberes VARCHAR(100) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN cuenta_haberes VARCHAR(50) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN cci_haberes VARCHAR(50) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN banco_cts VARCHAR(100) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN cuenta_cts VARCHAR(50) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN licencia_conducir VARCHAR(30) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN licencia_categoria VARCHAR(20) NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN licencia_vencimiento DATE NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN sctr_salud_vigente TINYINT(1) DEFAULT 1`,
+            `ALTER TABLE rrhh_personal ADD COLUMN sctr_pension_vigente TINYINT(1) DEFAULT 1`,
+            `ALTER TABLE rrhh_personal ADD COLUMN emo_fecha_vencimiento DATE NULL`,
+            `ALTER TABLE rrhh_personal ADD COLUMN emo_condicion VARCHAR(30) DEFAULT 'APTO'`
         ];
         for (const sqlCol of colsToAdd) {
             await tdb.query(sqlCol).catch(() => {});
