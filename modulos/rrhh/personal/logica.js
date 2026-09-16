@@ -421,6 +421,30 @@ window.rrhhPersonalOnFotoSelect = function(e) {
     reader.readAsDataURL(file);
 };
 
+window.rrhhPersonalEliminarFoto = function() {
+    window._rrhhFotoBase64 = '';
+    var hid = document.getElementById('pers-foto-url');
+    if (hid) hid.value = '';
+    
+    var inp1 = document.getElementById('pers-foto-input');
+    if (inp1) inp1.value = '';
+    var inp2 = document.getElementById('pers-foto-input-fc');
+    if (inp2) inp2.value = '';
+    
+    var defaultSvg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
+    var prev1 = document.getElementById('pers-foto-preview');
+    var prev2 = document.getElementById('pers-foto-preview-fc');
+    var fcAvatar = document.getElementById('fc-avatar');
+    
+    if (prev1) prev1.src = defaultSvg;
+    if (prev2) prev2.src = defaultSvg;
+    if (fcAvatar) fcAvatar.src = defaultSvg;
+
+    if (typeof window.rotToast === 'function') {
+        window.rotToast('Fotografía removida', 'bg-info');
+    }
+};
+
 window.rrhhPersonalActualizarFotocheckPreview = function() {
     var empNombre = (localStorage.getItem('fleet_empresa_nombre') || 'AZKELL TRANSPORTES S.A.C.').toUpperCase();
     var empLogo = localStorage.getItem('fleet_empresa_logo') || document.getElementById('nav-logo-img')?.src || '/favicon-2003.png';
@@ -544,6 +568,21 @@ window.rrhhPersonalAbrirModalNuevo = function() {
     var hint = document.getElementById('pers-doc-hint');
     if (hint) hint.innerHTML = '<i class="bi bi-magic text-primary me-1"></i> Digite el DNI para autocompletar nombres.';
 
+    var setVal = function(elemId, val) {
+        var el = document.getElementById(elemId);
+        if (el) el.value = val || '';
+    };
+
+    setVal('pers-nacionalidad', 'PERUANA');
+    setVal('pers-estado-civil', 'SOLTERO(A)');
+    setVal('pers-distrito', '');
+    setVal('pers-provincia', '');
+    setVal('pers-estado', 'ACTIVO');
+    setVal('pers-tipo-comision-afp', 'FLUJO');
+    setVal('pers-banco-cts', 'BCP');
+    setVal('pers-cuenta-cts', '');
+    setVal('pers-emo-fecha-venc', '');
+
     var fIng = document.getElementById('pers-fecha-ingreso');
     if (fIng) fIng.value = new Date().toISOString().slice(0, 10);
 
@@ -588,9 +627,13 @@ window.rrhhPersonalAbrirModalEditar = function(id) {
     setVal('pers-apellidos', p.apellidos);
     setVal('pers-sexo', p.sexo || 'M');
     setVal('pers-fecha-nac', p.fecha_nacimiento ? p.fecha_nacimiento.slice(0, 10) : '');
+    setVal('pers-nacionalidad', p.nacionalidad || 'PERUANA');
+    setVal('pers-estado-civil', p.estado_civil || 'SOLTERO(A)');
     setVal('pers-telefono', p.telefono);
     setVal('pers-email', p.email);
     setVal('pers-direccion', p.direccion);
+    setVal('pers-distrito', p.distrito || '');
+    setVal('pers-provincia', p.provincia || '');
     setVal('pers-contacto-emergencia', p.contacto_emergencia_nombre ? `${p.contacto_emergencia_nombre} (${p.contacto_emergencia_parentesco || ''}) ${p.contacto_emergencia_telefono || ''}` : '');
 
     setVal('pers-area', p.area || 'OPERACIONES');
@@ -598,6 +641,7 @@ window.rrhhPersonalAbrirModalEditar = function(id) {
     setVal('pers-cargo', p.cargo);
     setVal('pers-sede', p.sede || 'BASE PRINCIPAL');
     setVal('pers-centro-costo', p.centro_costo_codigo || 'CC-300');
+    setVal('pers-estado', p.estado || 'ACTIVO');
     setVal('pers-fecha-ingreso', p.fecha_ingreso ? p.fecha_ingreso.slice(0, 10) : '');
 
     setVal('pers-tipo-contrato', p.tipo_contrato || 'PLAZO_FIJO');
@@ -607,10 +651,13 @@ window.rrhhPersonalAbrirModalEditar = function(id) {
     setVal('pers-bono', parseFloat(p.bono_fijo || 0).toFixed(2));
     setVal('pers-asig-familiar', p.tiene_asignacion_familiar ? '1' : '0');
     setVal('pers-regimen-pension', p.regimen_pensionario || 'ONP');
+    setVal('pers-tipo-comision-afp', p.tipo_comision_afp || 'FLUJO');
     setVal('pers-cuspp', p.cuspp);
     setVal('pers-banco-haberes', p.banco_haberes || 'BCP');
     setVal('pers-cuenta-haberes', p.cuenta_haberes);
     setVal('pers-cci-haberes', p.cci_haberes);
+    setVal('pers-banco-cts', p.banco_cts || 'BCP');
+    setVal('pers-cuenta-cts', p.cuenta_cts || '');
 
     setVal('pers-grupo-sanguineo', p.grupo_sanguineo || 'O+');
     setVal('pers-licencia-num', p.licencia_conducir);
@@ -619,6 +666,7 @@ window.rrhhPersonalAbrirModalEditar = function(id) {
     setVal('pers-sctr-salud', p.sctr_salud_vigente ? '1' : '0');
     setVal('pers-sctr-pension', p.sctr_pension_vigente ? '1' : '0');
     setVal('pers-emo-condicion', p.emo_condicion || 'APTO');
+    setVal('pers-emo-fecha-venc', p.emo_fecha_vencimiento ? p.emo_fecha_vencimiento.slice(0, 10) : '');
 
     setVal('pers-talla-polo', p.talla_polo || 'M');
     setVal('pers-talla-pantalon', p.talla_pantalon || '32');
@@ -659,6 +707,13 @@ window.rrhhPersonalGuardar = async function(e) {
     var id = (document.getElementById('pers-id')?.value || '').trim();
     var esEdicion = !!id;
 
+    var fotoValue = null;
+    if (window._rrhhFotoBase64 !== null && window._rrhhFotoBase64 !== undefined) {
+        fotoValue = window._rrhhFotoBase64;
+    } else {
+        fotoValue = document.getElementById('pers-foto-url')?.value || null;
+    }
+
     var payload = {
         tipo_documento: document.getElementById('pers-tipo-doc')?.value,
         numero_documento: document.getElementById('pers-num-doc')?.value,
@@ -666,16 +721,21 @@ window.rrhhPersonalGuardar = async function(e) {
         apellidos: document.getElementById('pers-apellidos')?.value,
         sexo: document.getElementById('pers-sexo')?.value,
         fecha_nacimiento: document.getElementById('pers-fecha-nac')?.value || null,
+        nacionalidad: document.getElementById('pers-nacionalidad')?.value || 'PERUANA',
+        estado_civil: document.getElementById('pers-estado-civil')?.value || 'SOLTERO(A)',
         telefono: document.getElementById('pers-telefono')?.value,
         email: document.getElementById('pers-email')?.value,
-        direccion: document.getElementById('pers-direccion')?.value,
         contacto_emergencia_nombre: document.getElementById('pers-contacto-emergencia')?.value,
+        direccion: document.getElementById('pers-direccion')?.value,
+        distrito: document.getElementById('pers-distrito')?.value || null,
+        provincia: document.getElementById('pers-provincia')?.value || null,
         
         area: document.getElementById('pers-area')?.value,
         categoria_rol: document.getElementById('pers-rol')?.value,
         cargo: document.getElementById('pers-cargo')?.value,
         sede: document.getElementById('pers-sede')?.value,
         centro_costo_codigo: document.getElementById('pers-centro-costo')?.value,
+        estado: document.getElementById('pers-estado')?.value || 'ACTIVO',
         fecha_ingreso: document.getElementById('pers-fecha-ingreso')?.value,
         
         tipo_contrato: document.getElementById('pers-tipo-contrato')?.value,
@@ -685,10 +745,13 @@ window.rrhhPersonalGuardar = async function(e) {
         bono_fijo: document.getElementById('pers-bono')?.value || '0',
         tiene_asignacion_familiar: document.getElementById('pers-asig-familiar')?.value,
         regimen_pensionario: document.getElementById('pers-regimen-pension')?.value,
+        tipo_comision_afp: document.getElementById('pers-tipo-comision-afp')?.value || 'FLUJO',
         cuspp: document.getElementById('pers-cuspp')?.value,
         banco_haberes: document.getElementById('pers-banco-haberes')?.value,
         cuenta_haberes: document.getElementById('pers-cuenta-haberes')?.value,
         cci_haberes: document.getElementById('pers-cci-haberes')?.value,
+        banco_cts: document.getElementById('pers-banco-cts')?.value,
+        cuenta_cts: document.getElementById('pers-cuenta-cts')?.value,
         
         grupo_sanguineo: document.getElementById('pers-grupo-sanguineo')?.value,
         licencia_conducir: document.getElementById('pers-licencia-num')?.value,
@@ -697,12 +760,13 @@ window.rrhhPersonalGuardar = async function(e) {
         sctr_salud_vigente: document.getElementById('pers-sctr-salud')?.value,
         sctr_pension_vigente: document.getElementById('pers-sctr-pension')?.value,
         emo_condicion: document.getElementById('pers-emo-condicion')?.value,
+        emo_fecha_vencimiento: document.getElementById('pers-emo-fecha-venc')?.value || null,
         
         talla_polo: document.getElementById('pers-talla-polo')?.value,
         talla_pantalon: document.getElementById('pers-talla-pantalon')?.value,
         talla_calzado: document.getElementById('pers-talla-calzado')?.value,
         talla_chaleco: document.getElementById('pers-talla-chaleco')?.value,
-        foto_url: window._rrhhFotoBase64 || document.getElementById('pers-foto-url')?.value || null
+        foto_url: fotoValue
     };
 
     try {

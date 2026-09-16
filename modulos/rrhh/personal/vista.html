@@ -669,6 +669,7 @@
                                                 <i class="bi bi-magic text-primary me-1"></i> Digite los 8 dígitos para autocompletar nombres.
                                             </div>
                                         </div>
+
                                         <div class="col-12 col-md-6">
                                             <label class="form-label">Nombres (<span class="text-danger">*</span>)</label>
                                             <input type="text" class="form-control text-uppercase fw-bold" id="pers-nombres" placeholder="NOMBRES COMPLETOS" required>
@@ -677,50 +678,78 @@
                                             <label class="form-label">Apellidos (<span class="text-danger">*</span>)</label>
                                             <input type="text" class="form-control text-uppercase fw-bold" id="pers-apellidos" placeholder="APELLIDOS COMPLETOS" required>
                                         </div>
-                                        <div class="col-6 col-md-4">
+
+                                        <div class="col-6 col-md-3">
                                             <label class="form-label">Sexo</label>
                                             <select class="form-select" id="pers-sexo">
                                                 <option value="M" selected>MASCULINO</option>
                                                 <option value="F">FEMENINO</option>
                                             </select>
                                         </div>
-                                        <div class="col-6 col-md-4">
+                                        <div class="col-6 col-md-3">
                                             <label class="form-label">Fec. Nacimiento</label>
                                             <input type="date" class="form-control" id="pers-fecha-nac">
                                         </div>
+                                        <div class="col-6 col-md-3">
+                                            <label class="form-label">Nacionalidad</label>
+                                            <input type="text" class="form-control text-uppercase" id="pers-nacionalidad" placeholder="PERUANA" value="PERUANA">
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <label class="form-label">Estado Civil</label>
+                                            <select class="form-select" id="pers-estado-civil">
+                                                <option value="SOLTERO(A)" selected>SOLTERO(A)</option>
+                                                <option value="CASADO(A)">CASADO(A)</option>
+                                                <option value="CONVIVIENTE">CONVIVIENTE</option>
+                                                <option value="DIVORCIADO(A)">DIVORCIADO(A)</option>
+                                                <option value="VIUDO(A)">VIUDO(A)</option>
+                                            </select>
+                                        </div>
+
                                         <div class="col-12 col-md-4">
                                             <label class="form-label">Celular / Teléfono</label>
                                             <input type="text" class="form-control" id="pers-telefono" placeholder="Ej. 999 888 777">
+                                        </div>
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label">Correo Electrónico</label>
+                                            <input type="email" class="form-control" id="pers-email" placeholder="correo@ejemplo.com">
+                                        </div>
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label">Contacto de Emergencia</label>
+                                            <input type="text" class="form-control" id="pers-contacto-emergencia" placeholder="Nombre (Parentesco) - Celular">
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Dirección de Residencia</label>
+                                            <input type="text" class="form-control" id="pers-direccion" placeholder="Av. Principal 123, Urb. Los Álamos">
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <label class="form-label">Distrito</label>
+                                            <input type="text" class="form-control text-uppercase" id="pers-distrito" placeholder="Ej. CALLAO / LIMA">
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <label class="form-label">Provincia</label>
+                                            <input type="text" class="form-control text-uppercase" id="pers-provincia" placeholder="Ej. LIMA / CALLAO">
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Columna Derecha: Foto Oficial y Carga Inmediata (3 cols) -->
                                 <div class="col-12 col-lg-3">
-                                    <div class="h-100 p-3 rounded-4 border bg-slate-50 d-flex flex-col items-center justify-content-center text-center shadow-xs" style="border: 1.5px dashed #cbd5e1 !important; background: #f8fafc;">
+                                    <div class="h-100 p-3 rounded-4 border bg-slate-50 d-flex flex-column align-items-center justify-content-center text-center shadow-xs" style="border: 1.5px dashed #cbd5e1 !important; background: #f8fafc;">
                                         <label class="form-label fw-bold text-dark mb-2" style="font-size:0.75rem;">
                                             <i class="bi bi-camera-fill text-primary me-1"></i> FOTO OFICIAL
                                         </label>
                                         <div class="position-relative mb-2">
                                             <img id="pers-foto-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='140' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>" alt="Foto Colaborador" class="rounded-3 shadow-xs border bg-white" style="width:115px;height:135px;object-fit:cover;">
                                         </div>
-                                        <input type="file" id="pers-foto-input" class="form-control form-control-sm" accept="image/*" onchange="window.rrhhPersonalOnFotoSelect(event)">
+                                        <input type="file" id="pers-foto-input" class="form-control form-control-sm mb-1.5" accept="image/*" onchange="window.rrhhPersonalOnFotoSelect(event)">
                                         <input type="hidden" id="pers-foto-url" value="">
-                                        <small class="text-muted mt-1" style="font-size:0.68rem;">JPG, PNG o WEBP</small>
+                                        <div class="d-flex items-center gap-1 mt-1">
+                                            <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-2.5 py-0.5" style="font-size:0.72rem;" onclick="window.rrhhPersonalEliminarFoto()" title="Quitar fotografía">
+                                                <i class="bi bi-trash3 me-1"></i> Quitar Foto
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-
-                                <div class="col-12 col-md-4">
-                                    <label class="form-label">Correo Electrónico</label>
-                                    <input type="email" class="form-control" id="pers-email" placeholder="correo@ejemplo.com">
-                                </div>
-                                <div class="col-12 col-md-4">
-                                    <label class="form-label">Contacto de Emergencia</label>
-                                    <input type="text" class="form-control" id="pers-contacto-emergencia" placeholder="Nombre (Parentesco) - Celular">
-                                </div>
-                                <div class="col-12 col-md-4">
-                                    <label class="form-label">Dirección de Residencia</label>
-                                    <input type="text" class="form-control" id="pers-direccion" placeholder="Av. Principal 123, Urb. Los Álamos, Lima">
                                 </div>
                             </div>
                         </div>
@@ -762,7 +791,7 @@
                                     <input type="text" class="form-control text-uppercase fw-bold" id="pers-cargo" placeholder="EJ: CONDUCTOR SEMITRAILER, JEFE TRÁFICO" required>
                                 </div>
 
-                                <div class="col-6 col-md-4">
+                                <div class="col-6 col-md-3">
                                     <label class="form-label">Centro de Costos (<span class="text-danger">*</span>)</label>
                                     <select class="form-select font-monospace fw-bold" id="pers-centro-costo">
                                         <option value="CC-100">CC-100 ADMINISTRACIÓN / GERENCIA</option>
@@ -772,12 +801,21 @@
                                         <option value="CC-500">CC-500 ALMACÉN / SISTEMAS</option>
                                     </select>
                                 </div>
-                                <div class="col-6 col-md-4">
+                                <div class="col-6 col-md-3">
                                     <label class="form-label">Sede / Base</label>
                                     <input type="text" class="form-control text-uppercase" id="pers-sede" placeholder="EJ: BASE PRINCIPAL, CALLAO" value="BASE PRINCIPAL">
                                 </div>
-                                <div class="col-12 col-md-4">
-                                    <label class="form-label">Fecha de Ingreso a la Empresa (<span class="text-danger">*</span>)</label>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label">Estado del Colaborador</label>
+                                    <select class="form-select fw-bold text-success" id="pers-estado">
+                                        <option value="ACTIVO" selected>🟢 ACTIVO</option>
+                                        <option value="VACACIONES">🏖️ VACACIONES</option>
+                                        <option value="SUSPENDIDO">⏸️ SUSPENDIDO</option>
+                                        <option value="CESADO">🔴 CESADO</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label">Fecha de Ingreso (<span class="text-danger">*</span>)</label>
                                     <input type="date" class="form-control" id="pers-fecha-ingreso" required>
                                 </div>
                             </div>
@@ -826,7 +864,7 @@
 
                         <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
                             <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
-                                <i class="bi bi-wallet2 text-primary"></i> Sueldo, Beneficios & Cuentas Bancarias
+                                <i class="bi bi-wallet2 text-primary"></i> Sueldo, Beneficios, AFP & Cuentas Bancarias
                             </h6>
                             <div class="row g-3">
                                 <div class="col-6 col-md-4">
@@ -856,7 +894,14 @@
                                         <option value="SIN_REGIMEN">SIN RÉGIMEN / RxH</option>
                                     </select>
                                 </div>
-                                <div class="col-12 col-md-4">
+                                <div class="col-6 col-md-4">
+                                    <label class="form-label">Tipo Comisión AFP</label>
+                                    <select class="form-select" id="pers-tipo-comision-afp">
+                                        <option value="FLUJO" selected>COMISIÓN SOBRE EL FLUJO (SUELDO)</option>
+                                        <option value="MIXTA">COMISIÓN MIXTA (SALDO + FLUJO)</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-4">
                                     <label class="form-label">CUSPP (Código AFP)</label>
                                     <div class="input-group">
                                         <input type="text" class="form-control font-monospace" id="pers-cuspp" placeholder="12 dígitos AFP">
@@ -865,8 +910,9 @@
                                         </button>
                                     </div>
                                 </div>
+
                                 <div class="col-12 col-md-4">
-                                    <label class="form-label">Banco de Haberes</label>
+                                    <label class="form-label">Banco de Haberes (Sueldo)</label>
                                     <select class="form-select" id="pers-banco-haberes">
                                         <option value="BCP" selected>BCP (BANCO DE CRÉDITO)</option>
                                         <option value="BBVA">BBVA PERÚ</option>
@@ -876,14 +922,31 @@
                                         <option value="OTRO">OTRO BANCO</option>
                                     </select>
                                 </div>
-
-                                <div class="col-12 col-md-6">
+                                <div class="col-12 col-md-4">
                                     <label class="form-label">N° Cuenta Sueldo</label>
                                     <input type="text" class="form-control font-monospace" id="pers-cuenta-haberes" placeholder="Ej: 191-12345678-0-12">
                                 </div>
-                                <div class="col-12 col-md-6">
+                                <div class="col-12 col-md-4">
                                     <label class="form-label">Código Interbancario (CCI)</label>
                                     <input type="text" class="form-control font-monospace" id="pers-cci-haberes" placeholder="Ej: 002-191-001234567801-23">
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">Banco Depósito CTS</label>
+                                    <select class="form-select" id="pers-banco-cts">
+                                        <option value="BCP" selected>BCP (BANCO DE CRÉDITO)</option>
+                                        <option value="BBVA">BBVA PERÚ</option>
+                                        <option value="INTERBANK">INTERBANK</option>
+                                        <option value="SCOTIABANK">SCOTIABANK</option>
+                                        <option value="BANCO DE LA NACIÓN">BANCO DE LA NACIÓN</option>
+                                        <option value="CAJA HUANCAYO">CAJA HUANCAYO</option>
+                                        <option value="CAJA AREQUIPA">CAJA AREQUIPA</option>
+                                        <option value="OTRO">OTRO BANCO / CAJA</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">N° Cuenta CTS</label>
+                                    <input type="text" class="form-control font-monospace" id="pers-cuenta-cts" placeholder="Ej: 191-88776655-0-44">
                                 </div>
                             </div>
                         </div>
@@ -937,21 +1000,21 @@
                                     <input type="date" class="form-control font-monospace" id="pers-licencia-venc">
                                 </div>
 
-                                <div class="col-6 col-md-4">
+                                <div class="col-6 col-md-3">
                                     <label class="form-label">Póliza SCTR Salud</label>
                                     <select class="form-select fw-bold" id="pers-sctr-salud">
                                         <option value="1" selected>🟢 ACTIVO / CUBIERTO</option>
                                         <option value="0">🔴 PENDIENTE / NO COBERTURADO</option>
                                     </select>
                                 </div>
-                                <div class="col-6 col-md-4">
+                                <div class="col-6 col-md-3">
                                     <label class="form-label">Póliza SCTR Pensión</label>
                                     <select class="form-select fw-bold" id="pers-sctr-pension">
                                         <option value="1" selected>🟢 ACTIVO / CUBIERTO</option>
                                         <option value="0">🔴 PENDIENTE / NO COBERTURADO</option>
                                     </select>
                                 </div>
-                                <div class="col-12 col-md-4">
+                                <div class="col-6 col-md-3">
                                     <label class="form-label">Condición EMO (Médico)</label>
                                     <select class="form-select" id="pers-emo-condicion">
                                         <option value="APTO" selected>APTO MÉDICO</option>
@@ -959,6 +1022,10 @@
                                         <option value="NO_APTO">NO APTO</option>
                                         <option value="PENDIENTE">PENDIENTE DE EVALUACIÓN</option>
                                     </select>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label">Vencimiento Examen EMO</label>
+                                    <input type="date" class="form-control font-monospace" id="pers-emo-fecha-venc">
                                 </div>
                             </div>
                         </div>
@@ -1033,7 +1100,10 @@
                                     
                                     <div class="text-center p-3 border rounded-3 bg-light mb-3">
                                         <img id="pers-foto-preview-fc" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>" alt="Vista previa" class="rounded-circle shadow-sm border mb-2" style="width:120px;height:120px;object-fit:cover; background:#f8fafc;">
-                                        <input type="file" id="pers-foto-input-fc" class="form-control form-control-sm mt-2" accept="image/*" onchange="window.rrhhPersonalOnFotoSelect(event)">
+                                        <input type="file" id="pers-foto-input-fc" class="form-control form-control-sm mt-2 mb-2" accept="image/*" onchange="window.rrhhPersonalOnFotoSelect(event)">
+                                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 py-1" onclick="window.rrhhPersonalEliminarFoto()">
+                                            <i class="bi bi-trash3 me-1"></i> Quitar Foto
+                                        </button>
                                     </div>
                                     <div class="d-grid gap-2">
                                         <button type="button" class="btn btn-outline-primary fw-bold rounded-pill" onclick="window.rrhhPersonalActualizarFotocheckPreview()">
