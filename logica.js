@@ -6811,3 +6811,332 @@ window.exportarStatusExcel = function() {
     setTimeout(configurarEnlacesNav, 800);
     setTimeout(configurarEnlacesNav, 2000);
 })();
+
+// ================================================================
+// 📬 MODAL GLOBAL REUTILIZABLE: ENVIAR / PROGRAMAR REPORTE POR EMAIL
+// ================================================================
+window.abrirModalEnviarReporte = async function(opts = {}) {
+    let modalEl = document.getElementById('modalUniversalEnviarReporteEmail');
+    if (!modalEl) {
+        const modalHtml = `
+        <div class="modal fade" id="modalUniversalEnviarReporteEmail" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+            <div class="modal-dialog modal-dialog-centered" style="max-width: 560px;">
+                <div class="modal-content border-0 shadow-2xl rounded-4 overflow-hidden">
+                    <div class="modal-header border-0 bg-primary text-white p-3 px-4 d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-envelope-paper-fill fs-5"></i>
+                            <div>
+                                <h6 class="modal-title fw-bold m-0" id="mur-modal-title" style="font-size:1.05rem;">Enviar Reporte por Correo</h6>
+                                <small class="opacity-75" id="mur-modal-subtitle" style="font-size:0.75rem;">Azkell ERP — Distribución de Documentos</small>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body p-3 p-md-4">
+                        <!-- Segmented Switch: Enviar Ahora vs Programar -->
+                        <div class="d-flex justify-content-center mb-3">
+                            <div class="p-1 bg-light border rounded-pill d-inline-flex gap-1">
+                                <button type="button" class="btn btn-sm rounded-pill fw-bold px-3 btn-primary" id="mur-tab-ahora" onclick="window._murSetModo('ahora')">
+                                    <i class="bi bi-lightning-charge-fill me-1"></i> Enviar Ahora
+                                </button>
+                                <button type="button" class="btn btn-sm rounded-pill fw-bold px-3 btn-light text-secondary border-0" id="mur-tab-programar" onclick="window._murSetModo('programar')">
+                                    <i class="bi bi-calendar2-week me-1"></i> Programar Envío
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Panel de Programación (Oculto por defecto) -->
+                        <div id="mur-panel-programacion" class="p-3 mb-3 border rounded-3 bg-light d-none">
+                            <div class="fw-bold small text-dark mb-2 d-flex align-items-center gap-1">
+                                <i class="bi bi-clock-history text-primary"></i> Configuración de Frecuencia de Envío
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">Frecuencia</label>
+                                    <select class="form-select form-select-sm" id="mur-prog-frecuencia">
+                                        <option value="DIARIO">Todos los Días</option>
+                                        <option value="LABORALES">Lunes a Viernes</option>
+                                        <option value="SEMANAL">Semanal (Lunes)</option>
+                                        <option value="MENSUAL">Fin de Mes</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">Hora de Envío</label>
+                                    <input type="time" class="form-control form-control-sm" id="mur-prog-hora" value="08:00">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campos de Destinatarios -->
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <label class="form-label small fw-bold text-dark m-0">Para (Destinatarios) <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none small text-primary" onclick="window._murToggleCc()">
+                                    <span id="mur-lbl-toggle-cc">+ CC / CCO</span>
+                                </button>
+                            </div>
+                            <input type="text" class="form-control form-control-sm" id="mur-input-para" placeholder="correos separados por coma: gerente@empresa.com, flota@empresa.com" style="border-radius:8px;">
+                            <div class="d-flex flex-wrap gap-1 mt-1" id="mur-chips-sugeridos"></div>
+                        </div>
+
+                        <div id="mur-box-cc" class="mb-3 d-none">
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold text-secondary mb-1">Con Copia (CC)</label>
+                                <input type="text" class="form-control form-control-sm" id="mur-input-cc" placeholder="supervision@empresa.com" style="border-radius:8px;">
+                            </div>
+                            <div>
+                                <label class="form-label small fw-semibold text-secondary mb-1">Copia Oculta (CCO)</label>
+                                <input type="text" class="form-control form-control-sm" id="mur-input-cco" placeholder="auditoria@empresa.com" style="border-radius:8px;">
+                            </div>
+                        </div>
+
+                        <!-- Asunto -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-dark mb-1">Asunto</label>
+                            <input type="text" class="form-control form-control-sm fw-semibold" id="mur-input-asunto" style="border-radius:8px;">
+                        </div>
+
+                        <!-- Mensaje -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-dark mb-1">Mensaje</label>
+                            <textarea class="form-control form-control-sm" id="mur-input-mensaje" rows="3" style="border-radius:8px; font-size:0.85rem;"></textarea>
+                        </div>
+
+                        <!-- Badge de Archivo Adjunto -->
+                        <div class="p-2 border rounded-3 bg-light d-flex align-items-center justify-content-between mb-0" id="mur-box-adjunto">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-file-earmark-pdf-fill text-danger fs-4"></i>
+                                <div>
+                                    <div class="fw-bold text-dark small" id="mur-lbl-nombre-adjunto">Documento.pdf</div>
+                                    <small class="text-muted" style="font-size:0.7rem;">Documento PDF oficial listo para adjuntar</small>
+                                </div>
+                            </div>
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">PDF Adjunto</span>
+                        </div>
+
+                        <div id="mur-alert-status" class="alert d-none small py-2 px-3 mt-3 mb-0 rounded-3"></div>
+                    </div>
+
+                    <div class="modal-footer border-top p-3 bg-light d-flex justify-content-between">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" id="btn-ejecutar-envio-mur" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold d-flex align-items-center gap-2 shadow-sm" onclick="window._murEjecutarAccion()">
+                            <i class="bi bi-send-fill"></i> <span id="mur-lbl-btn-accion">Enviar Reporte</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        modalEl = document.getElementById('modalUniversalEnviarReporteEmail');
+    }
+
+    // Configurar estado
+    window._murCurrentOpts = opts;
+    window._murModo = 'ahora';
+
+    const titleEl = document.getElementById('mur-modal-title');
+    const subtitleEl = document.getElementById('mur-modal-subtitle');
+    const asuntoEl = document.getElementById('mur-input-asunto');
+    const mensajeEl = document.getElementById('mur-input-mensaje');
+    const adjuntoEl = document.getElementById('mur-lbl-nombre-adjunto');
+    const paraEl = document.getElementById('mur-input-para');
+    const statusEl = document.getElementById('mur-alert-status');
+
+    if (titleEl) titleEl.textContent = opts.titulo || 'Enviar Reporte por Correo';
+    if (subtitleEl) subtitleEl.textContent = opts.modulo ? `Módulo: ${opts.modulo.toUpperCase()}` : 'Azkell ERP';
+    if (asuntoEl) asuntoEl.value = opts.asunto || `[Azkell ERP] ${opts.titulo || 'Reporte del Sistema'}`;
+    if (mensajeEl) mensajeEl.value = opts.mensaje || `Estimados,\n\nAdjunto compartimos el ${opts.titulo || 'reporte solicitado'} emitido desde el ERP.\n\nSaludos cordiales,\nEquipo Azkell.`;
+    if (adjuntoEl) adjuntoEl.textContent = opts.nombre_adjunto || 'Reporte.pdf';
+    if (paraEl) paraEl.value = opts.para || '';
+    if (statusEl) statusEl.className = 'alert d-none small py-2 px-3 mt-3 mb-0 rounded-3';
+
+    // Cargar sugeridos
+    _murCargarDestinatariosSugeridos();
+
+    window._murSetModo('ahora');
+
+    if (typeof bootstrap !== 'undefined') {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+};
+
+window._murSetModo = function(modo) {
+    window._murModo = modo;
+    const tabAhora = document.getElementById('mur-tab-ahora');
+    const tabProg = document.getElementById('mur-tab-programar');
+    const panelProg = document.getElementById('mur-panel-programacion');
+    const lblBtn = document.getElementById('mur-lbl-btn-accion');
+
+    if (modo === 'ahora') {
+        if (tabAhora) { tabAhora.className = 'btn btn-sm rounded-pill fw-bold px-3 btn-primary'; }
+        if (tabProg) { tabProg.className = 'btn btn-sm rounded-pill fw-bold px-3 btn-light text-secondary border-0'; }
+        if (panelProg) panelProg.classList.add('d-none');
+        if (lblBtn) lblBtn.textContent = 'Enviar Reporte Ahora';
+    } else {
+        if (tabAhora) { tabAhora.className = 'btn btn-sm rounded-pill fw-bold px-3 btn-light text-secondary border-0'; }
+        if (tabProg) { tabProg.className = 'btn btn-sm rounded-pill fw-bold px-3 btn-primary'; }
+        if (panelProg) panelProg.classList.remove('d-none');
+        if (lblBtn) lblBtn.textContent = 'Guardar Programación';
+    }
+};
+
+window._murToggleCc = function() {
+    const box = document.getElementById('mur-box-cc');
+    const lbl = document.getElementById('mur-lbl-toggle-cc');
+    if (!box) return;
+    if (box.classList.contains('d-none')) {
+        box.classList.remove('d-none');
+        if (lbl) lbl.textContent = '- Ocultar CC / CCO';
+    } else {
+        box.classList.add('d-none');
+        if (lbl) lbl.textContent = '+ CC / CCO';
+    }
+};
+
+async function _murCargarDestinatariosSugeridos() {
+    const wrap = document.getElementById('mur-chips-sugeridos');
+    if (!wrap) return;
+    try {
+        const res = await fetch('/api/configuracion/email/destinatarios');
+        const json = await res.json();
+        const items = (json && json.ok && json.data) ? json.data : [];
+        if (items.length > 0) {
+            let html = '<span class="small text-muted me-1" style="font-size:0.72rem;">Sugeridos:</span>';
+            items.slice(0, 5).forEach(d => {
+                html += `
+                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 rounded-pill" style="font-size:0.7rem;" onclick="window._murAgregarCorreo('${d.correo}')">
+                        + ${d.nombre.split(' ')[0]}
+                    </button>
+                `;
+            });
+            wrap.innerHTML = html;
+        } else {
+            wrap.innerHTML = '';
+        }
+    } catch(e) {
+        wrap.innerHTML = '';
+    }
+}
+
+window._murAgregarCorreo = function(correo) {
+    const input = document.getElementById('mur-input-para');
+    if (!input) return;
+    let actual = input.value.trim();
+    if (!actual) {
+        input.value = correo;
+    } else if (!actual.includes(correo)) {
+        input.value = actual + ', ' + correo;
+    }
+};
+
+window._murEjecutarAccion = async function() {
+    const para = (document.getElementById('mur-input-para') || {}).value || '';
+    const cc = (document.getElementById('mur-input-cc') || {}).value || '';
+    const cco = (document.getElementById('mur-input-cco') || {}).value || '';
+    const asunto = (document.getElementById('mur-input-asunto') || {}).value || '';
+    const mensaje = (document.getElementById('mur-input-mensaje') || {}).value || '';
+    const btn = document.getElementById('btn-ejecutar-envio-mur');
+    const statusEl = document.getElementById('mur-alert-status');
+
+    if (!para || !para.includes('@')) {
+        if (statusEl) {
+            statusEl.className = 'alert alert-danger small py-2 px-3 mt-3 mb-0 rounded-3 d-block';
+            statusEl.textContent = 'Debe indicar al menos un correo de destino válido en "Para".';
+        }
+        return;
+    }
+
+    const opts = window._murCurrentOpts || {};
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Procesando...';
+    }
+    if (statusEl) {
+        statusEl.className = 'alert alert-info small py-2 px-3 mt-3 mb-0 rounded-3 d-block';
+        statusEl.innerHTML = '<i class="bi bi-arrow-repeat-spin me-1"></i> Preparando documento y enviando por correo...';
+    }
+
+    try {
+        if (window._murModo === 'programar') {
+            const frec = (document.getElementById('mur-prog-frecuencia') || {}).value || 'DIARIO';
+            const hora = (document.getElementById('mur-prog-hora') || {}).value || '08:00';
+
+            const res = await fetch('/api/configuracion/email/programaciones', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nombre_reporte: opts.titulo || 'Reporte Programado',
+                    modulo: opts.modulo || 'general',
+                    destinatarios_para: para,
+                    destinatarios_cc: cc,
+                    destinatarios_cco: cco,
+                    frecuencia: frec,
+                    hora_envio: hora,
+                    asunto_personalizado: asunto,
+                    mensaje_personalizado: mensaje
+                })
+            });
+            const json = await res.json();
+            if (json.ok) {
+                if (statusEl) {
+                    statusEl.className = 'alert alert-success small py-2 px-3 mt-3 mb-0 rounded-3 d-block';
+                    statusEl.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Programación guardada con éxito. Se enviará según la regla seleccionada.`;
+                }
+                setTimeout(() => {
+                    const m = document.getElementById('modalUniversalEnviarReporteEmail');
+                    if (m) bootstrap.Modal.getOrCreateInstance(m).hide();
+                }, 1500);
+            } else {
+                throw new Error(json.error || 'Error al guardar programación');
+            }
+        } else {
+            // Envío Inmediato
+            let pdfBase64 = opts.adjunto_base64 || '';
+            if (!pdfBase64 && typeof opts.getAttachmentBase64 === 'function') {
+                pdfBase64 = await opts.getAttachmentBase64();
+            }
+
+            const res = await fetch('/api/reportes/enviar-correo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    para: para.split(',').map(s => s.trim()).filter(Boolean),
+                    cc: cc ? cc.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+                    cco: cco ? cco.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+                    asunto,
+                    mensaje,
+                    nombre_reporte: opts.titulo || 'Reporte del Sistema',
+                    modulo: opts.modulo || 'general',
+                    adjunto_nombre: opts.nombre_adjunto || 'Reporte.pdf',
+                    adjunto_base64: pdfBase64
+                })
+            });
+            const json = await res.json();
+            if (json.ok) {
+                if (statusEl) {
+                    statusEl.className = 'alert alert-success small py-2 px-3 mt-3 mb-0 rounded-3 d-block';
+                    statusEl.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> <b>¡Enviado con éxito!</b> El reporte ha sido entregado a los destinatarios.`;
+                }
+                setTimeout(() => {
+                    const m = document.getElementById('modalUniversalEnviarReporteEmail');
+                    if (m) bootstrap.Modal.getOrCreateInstance(m).hide();
+                }, 1800);
+            } else {
+                throw new Error(json.error || 'Error al enviar correo');
+            }
+        }
+    } catch(err) {
+        if (statusEl) {
+            statusEl.className = 'alert alert-danger small py-2 px-3 mt-3 mb-0 rounded-3 d-block';
+            statusEl.innerHTML = `<i class="bi bi-x-circle-fill me-1"></i> <b>Error:</b> ${err.message}`;
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-send-fill me-1"></i> ' + (window._murModo === 'programar' ? 'Guardar Programación' : 'Enviar Reporte');
+        }
+    }
+};

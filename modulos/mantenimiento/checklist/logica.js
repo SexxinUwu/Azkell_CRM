@@ -1408,6 +1408,11 @@ window.renderizarTablaChecklist = function(lista) {
                                     <i class="bi bi-lightning-charge-fill text-warning fs-6"></i> Generar / Ver OTs
                                 </a>
                             </li>
+                            <li>
+                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.ckEnviarReportePorEmail(${r.id})">
+                                    <i class="bi bi-envelope-at text-warning-emphasis fs-6"></i> Enviar / Programar por Correo
+                                </a>
+                            </li>
                             <li><hr class="dropdown-divider my-1"></li>
                             <li>
                                 <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window.eliminarChecklist(${r.id})">
@@ -1475,6 +1480,11 @@ window.renderizarTablaChecklist = function(lista) {
                         <li>
                             <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalGenerarOTs(${r.id})">
                                 <i class="bi bi-lightning-charge-fill text-warning fs-6"></i> Generar / Ver OTs
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.ckEnviarReportePorEmail(${r.id})">
+                                <i class="bi bi-envelope-at text-warning-emphasis fs-6"></i> Enviar / Programar por Correo
                             </a>
                         </li>
                         <li><hr class="dropdown-divider my-1"></li>
@@ -3507,5 +3517,51 @@ window.ckExportarExcel = async function() {
     } catch(errExport) {
         console.error('Error al exportar a Excel:', errExport);
         alert('Ocurrió un error al generar el archivo Excel: ' + errExport.message);
+    }
+};
+
+// ── ENVIAR / PROGRAMAR REPORTE DE FALLAS POR EMAIL ────────────────
+window.ckEnviarReportePorEmail = async function(id) {
+    let r = (window.dataGlobalChecklist || []).find(item => item.id === id);
+    if (!r) {
+        try {
+            const res = await fetch(`/api/checklist/${id}`);
+            if (res.ok) r = await res.json();
+        } catch(e) {}
+    }
+    if (!r) {
+        alert('No se encontró el reporte seleccionado.');
+        return;
+    }
+
+    const folio = r.numero_folio || r.id;
+    const tracto = r.placa_tracto || 'Tracto';
+    const carreta = r.placa_remolque ? ` / ${r.placa_remolque}` : '';
+
+    if (typeof window.abrirModalEnviarReporte === 'function') {
+        window.abrirModalEnviarReporte({
+            titulo: `Reporte de Fallas N° ${folio} — ${tracto}${carreta}`,
+            modulo: 'checklist',
+            asunto: `[Azkell ERP] Reporte de Fallas Mecánicas N° ${folio} (${tracto})`,
+            mensaje: `Estimados,\n\nAdjunto compartimos el Reporte de Fallas Oficial F-MAN-001 N° ${folio} emitido desde el ERP.\n\n• Unidad Tracto: ${tracto}\n• Semirremolque: ${r.placa_remolque || 'Sin carreta'}\n• Conductor: ${r.conductor || 'No asignado'}\n• Fecha de Emisión: ${r.fecha_reporte || ''}\n• Total Fallas Detectadas: ${r.total_fallas || 0}\n\nSaludos cordiales,\nEquipo de Mantenimiento y Operaciones`,
+            nombre_adjunto: `Reporte_Fallas_${folio}.pdf`
+        });
+    } else {
+        alert('El servicio de correo global no está disponible en este momento.');
+    }
+};
+
+window.ckProgramarEnvioDiarioChecklist = function() {
+    if (typeof window.abrirModalEnviarReporte === 'function') {
+        window.abrirModalEnviarReporte({
+            titulo: 'Consolidado Diario de Fallas y Checklist Mecánico',
+            modulo: 'checklist',
+            asunto: '[Azkell ERP] Consolidado Diario de Reportes de Fallas Flota',
+            mensaje: 'Estimada Gerencia / Supervisión,\n\nSe adjunta el reporte consolidado con las fallas registradas y órdenes de trabajo generadas durante la jornada.\n\nSaludos cordiales,\nSistema de Mantenimiento Azkell ERP',
+            nombre_adjunto: 'Consolidado_Fallas_Diarias.pdf'
+        });
+        setTimeout(() => {
+            if (typeof window._murSetModo === 'function') window._murSetModo('programar');
+        }, 100);
     }
 };
