@@ -37,8 +37,6 @@
 .rrhh-table-tabular {
     white-space: nowrap !important;
     font-size: 0.81rem;
-    border-collapse: separate;
-    border-spacing: 0;
 }
 .rrhh-table-tabular thead th {
     background: #f8fafc !important;
@@ -50,45 +48,15 @@
     padding: 11px 14px;
     border-bottom: 2px solid #cbd5e1 !important;
     white-space: nowrap;
-    position: sticky;
-    top: 0;
-    z-index: 10;
 }
 .rrhh-table-tabular tbody td {
     padding: 9px 14px;
     vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
     white-space: nowrap;
-    background: #ffffff;
 }
 .rrhh-table-tabular tbody tr:hover td {
     background-color: #f8fafc !important;
-}
-.sticky-col-1 {
-    position: sticky !important;
-    left: 0 !important;
-    z-index: 6 !important;
-}
-.sticky-col-2 {
-    position: sticky !important;
-    left: 115px !important;
-    z-index: 6 !important;
-    box-shadow: 4px 0 8px -3px rgba(0,0,0,0.06);
-}
-.rrhh-table-tabular thead th.sticky-col-1,
-.rrhh-table-tabular thead th.sticky-col-2 {
-    background: #f1f5f9 !important;
-    z-index: 16 !important;
-}
-.sticky-actions {
-    position: sticky !important;
-    right: 0 !important;
-    z-index: 6 !important;
-    box-shadow: -4px 0 8px -3px rgba(0,0,0,0.06);
-}
-.rrhh-table-tabular thead th.sticky-actions {
-    background: #f1f5f9 !important;
-    z-index: 16 !important;
 }
 
 /* ── Floating Drawer Modal & Inputs Styling (1:1 Idéntico a Reporte de Fallas) ── */
@@ -447,8 +415,8 @@
                 <thead class="bg-light text-muted fw-bold">
                     <tr>
                         <th class="ps-3 text-center" style="width: 45px;">#</th>
-                        <th class="sticky-col-1 font-monospace">DNI / DOC</th>
-                        <th class="sticky-col-2">APELLIDOS Y NOMBRES</th>
+                        <th class="font-monospace">DNI / DOC</th>
+                        <th>APELLIDOS Y NOMBRES</th>
                         <th>TELÉFONO</th>
                         <th>CORREO</th>
                         <th>ÁREA OPERATIVA</th>
@@ -483,7 +451,7 @@
                         <th>TALLAS EPP</th>
                         <th>CONTACTO EMERGENCIA</th>
                         <th>ESTADO</th>
-                        <th class="text-end pe-3 sticky-actions">ACCIONES</th>
+                        <th class="text-end pe-3">ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody id="tabla-personal-tbody">
