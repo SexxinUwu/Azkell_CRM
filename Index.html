@@ -489,6 +489,11 @@
                             </a>
                         </div>
 
+                        <a id="nav-cfg-notificaciones" class="nav-item" onclick="window.cargarConfigSection('notificaciones')">
+                            <i class="bi bi-envelope-at nav-icon text-warning"></i>
+                            <span class="link-text">Notificaciones & SMTP</span>
+                        </a>
+
                         <a id="nav-cfg-apariencia" class="nav-item" onclick="window.cargarConfigSection('apariencia')">
                             <i class="bi bi-palette2 nav-icon"></i>
                             <span class="link-text" data-i18n="cfg.nav.appearance">Apariencia</span>
@@ -1529,6 +1534,15 @@
                     <div class="bnav-row-content">
                         <p class="bnav-row-title">Empresa</p>
                         <p class="bnav-row-desc">Datos fiscales y logo institucional</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
+
+                <div id="mbnav-cfg-notificaciones" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); window.cargarConfigSection('notificaciones'); setBottomNavActive('bnav-config');">
+                    <div class="bnav-row-icon" style="color: #ea580c;"><i class="bi bi-envelope-at"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Notificaciones & Correo</p>
+                        <p class="bnav-row-desc">Servidor SMTP y alertas automáticas</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
