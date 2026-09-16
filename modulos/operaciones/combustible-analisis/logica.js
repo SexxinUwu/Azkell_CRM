@@ -1226,6 +1226,9 @@
                         <i class="bi bi-geo-alt-fill text-danger me-1 small"></i>
                         <span class="fw-semibold text-dark">${esc(t.ruta)}</span>
                     </td>
+                    <td class="text-truncate" style="max-width: 160px;" title="${esc(t.conductor || '')}">
+                        ${t.conductor ? `<i class="bi bi-person me-1 small text-muted"></i><span class="text-dark">${esc(t.conductor)}</span>` : '<span class="text-muted opacity-50">—</span>'}
+                    </td>
                     <td class="text-end font-monospace fw-bold text-dark">
                         ${(t.pesoMaxTn !== undefined && t.pesoMaxTn > 0) ? `${t.pesoMaxTn.toLocaleString('es-PE', { minimumFractionDigits: 2 })} <span class="small text-muted font-sans" style="font-size:0.72rem;">Tn</span>` : '<span class="text-muted opacity-50">—</span>'}
                     </td>
@@ -1298,6 +1301,7 @@
                     <td class="text-center text-muted opacity-50">—</td>
                     <td class="text-muted small">${esc(t.motor || '—')}</td>
                     <td class="text-muted small"><span class="fw-semibold text-secondary">Ida: ${esc(rutaTramoIda || t.ruta)}</span></td>
+                    <td class="text-center text-muted opacity-50">—</td>
                     <td class="text-end font-monospace fw-bold text-success">
                         ${pesoIdaVal > 0 ? `${pesoIdaVal.toFixed(2)} Tn` : '<span class="text-muted opacity-50">0.00 Tn (Vacío)</span>'}
                     </td>
@@ -1339,6 +1343,7 @@
                     <td class="text-center text-muted opacity-50">—</td>
                     <td class="text-muted small">${esc(t.motor || '—')}</td>
                     <td class="text-muted small"><span class="fw-semibold text-secondary">Retorno: ${esc(rutaTramoRet || 'Sin Retorno')}</span></td>
+                    <td class="text-center text-muted opacity-50">—</td>
                     <td class="text-end font-monospace fw-bold text-primary">
                         ${pesoRetVal > 0 ? `${pesoRetVal.toFixed(2)} Tn` : '<span class="text-muted opacity-50">0.00 Tn (Vacío)</span>'}
                     </td>
@@ -1399,8 +1404,8 @@
                 const gRet = rRet ? obtenerConsumoTeoricoGalones(rRet, 'RETORNO', t.pesoRetorno || 0, t.motor, t.configuracion) : 0;
                 const gBase = (gIda + gRet);
                 const esSinCarreta = !t.carreta || t.carreta === '—' || t.carreta === '-' || (typeof t.carreta === 'string' && (t.carreta.trim() === '' || t.carreta.toUpperCase().includes('SIN CARRETA') || t.carreta.toUpperCase().includes('SOLO TRACTO')));
-                const gFinal = (esSinCarreta && gBase > 0) ? (gBase * 0.75) : gBase;
-                totalSumTeorico += gFinal;
+                const gTotal = (esSinCarreta && gBase > 0) ? (gBase * 0.75) : gBase;
+                totalSumTeorico += gTotal;
 
                 const kIda = obtenerKmTeorico(rIda, 'IDA', t.motor, t.configuracion);
                 const kRet = rRet ? obtenerKmTeorico(rRet, 'RETORNO', t.motor, t.configuracion) : 0;
@@ -1415,7 +1420,7 @@
             const totalSumRendTeorico = (totalSumTeorico > 0 && totalSumKmTeorico > 0) ? (totalSumKmTeorico / totalSumTeorico) : 0;
             const totalSumRendReal = (totalSumVales > 0 && totalSumKmReal > 0) ? (totalSumKmReal / totalSumVales) : 0;
 
-            let difTotalHtml = '—';
+            let difTotalHtml = '<span class="text-muted opacity-50">—</span>';
             if (totalSumTeorico > 0 && totalSumVales > 0) {
                 const diffGal = totalSumVales - totalSumTeorico;
                 const isExceso = diffGal > 0;
@@ -1427,6 +1432,7 @@
             tfoot.innerHTML = `
                 <tr style="background:#f8fafc; border-top: 2px solid #cbd5e1; font-weight: bold;">
                     <td class="ps-3 py-3 font-monospace fw-bolder text-dark" style="font-size:0.88rem;">TOTAL</td>
+                    <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
                     <td class="text-center text-muted small">—</td>
@@ -1893,6 +1899,7 @@
                 "ESTADO": String(t.estado || 'INICIADO').toUpperCase(),
                 "MOTOR": t.motor || '---',
                 "RUTA": t.ruta || '---',
+                "CONDUCTOR": t.conductor || '---',
                 "PESO (Tn)": (t.pesoMaxTn !== undefined && t.pesoMaxTn > 0) ? parseFloat(t.pesoMaxTn.toFixed(2)) : 0,
                 "FECHA INICIO": fInicio || '---',
                 "FECHA FIN": fFin || '---',
