@@ -118,8 +118,8 @@ window.rrhhPersonalRenderizarTabla = function(lista) {
         return `
             <tr>
                 <td class="ps-3 text-center text-muted font-monospace">${idx + 1}</td>
-                <td class="sticky-col-1 font-monospace fw-bold text-dark">${p.numero_documento}</td>
-                <td class="sticky-col-2 fw-bold text-primary">${p.apellidos}, ${p.nombres}</td>
+                <td class="font-monospace fw-bold text-dark">${p.numero_documento}</td>
+                <td class="fw-bold text-primary">${p.apellidos}, ${p.nombres}</td>
                 <td class="font-monospace">${p.telefono || '—'}</td>
                 <td>${p.email || '—'}</td>
                 <td><span class="badge bg-light text-dark border font-monospace">${p.area || 'OPERACIONES'}</span></td>
@@ -154,7 +154,7 @@ window.rrhhPersonalRenderizarTabla = function(lista) {
                 <td class="font-monospace small">${tallasEpp}</td>
                 <td class="small">${contactoEmerg}</td>
                 <td><span class="badge ${badgeEst} px-2 py-1 rounded-pill" style="font-size:0.68rem;">${p.estado}</span></td>
-                <td class="text-end pe-3 sticky-actions">
+                <td class="text-end pe-3">
                     <div class="btn-group">
                         <button type="button" class="btn btn-sm btn-outline-primary rounded-circle me-1" style="width:30px;height:30px;padding:0;" onclick="window.rrhhPersonalVerFicha(${p.id})" title="Ver Ficha 360°"><i class="bi bi-eye-fill"></i></button>
                         <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle me-1" style="width:30px;height:30px;padding:0;" onclick="window.rrhhPersonalAbrirModalEditar(${p.id})" title="Editar"><i class="bi bi-pencil-fill"></i></button>
