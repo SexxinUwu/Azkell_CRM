@@ -514,6 +514,17 @@
             <table class="ca-table">
                 <thead>
                     <tr>
+                        <th style="min-width: 145px; text-align: center;">
+                            <div class="d-flex align-items-center justify-content-between gap-1">
+                                <span>Auditoría</span>
+                                <button type="button" class="btn btn-outline-primary py-0 px-1.5 rounded-pill shadow-xs" id="btn-toggle-col-obs" onclick="window.caToggleColObservacion()" title="Mostrar/Ocultar columna de Observaciones" style="font-size:0.7rem; line-height: 1.2;">
+                                    <i class="bi bi-plus-lg" id="icon-toggle-col-obs"></i> Obs
+                                </button>
+                            </div>
+                        </th>
+                        <th class="ca-col-obs-header d-none" style="min-width: 200px; text-align: left;">
+                            Observación Auditoría
+                        </th>
                         <th class="sortable" onclick="window.caToggleSort('trip')">
                             N° Viaje <i class="bi bi-arrow-down-up text-muted ms-1"></i>
                         </th>
