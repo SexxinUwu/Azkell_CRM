@@ -4164,7 +4164,7 @@ window.cargarConfigSection = function(section) {
 
     document.querySelectorAll('#sidebarMenu .nav-item').forEach(a => a.classList.remove('active'));
     document.querySelectorAll('.nav-section-toggle').forEach(b => b.classList.remove('section-has-active'));
-    const cfgMap = { perfil:'nav-cfg-perfil', apariencia:'nav-cfg-apariencia', accesibilidad:'nav-cfg-accesibilidad', idioma:'nav-cfg-idioma', empresa:'nav-cfg-empresa', usuarios:'nav-cfg-admin', auditoria:'nav-cfg-auditoria' };
+    const cfgMap = { perfil:'nav-cfg-perfil', apariencia:'nav-cfg-apariencia', accesibilidad:'nav-cfg-accesibilidad', idioma:'nav-cfg-idioma', empresa:'nav-cfg-empresa', notificaciones:'nav-cfg-notificaciones', usuarios:'nav-cfg-admin', auditoria:'nav-cfg-auditoria' };
     const el = document.getElementById(cfgMap[sec] || 'nav-cfg-perfil');
     if (el) el.classList.add('active');
     // Marcar sección configuración como activa

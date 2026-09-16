@@ -235,10 +235,13 @@ module.exports = function (db, broadcast, logAudit) {
                 await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN fecha_inicio DATETIME NULL AFTER estado, ADD COLUMN fecha_fin DATETIME NULL AFTER fecha_inicio, ADD COLUMN kilometraje_inicial INT NULL AFTER fecha_fin, ADD COLUMN kilometraje_final INT NULL AFTER kilometraje_inicial, ADD COLUMN horas_motor_remolque INT NULL AFTER kilometraje_final, ADD COLUMN usuario_creacion VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR DEL SISTEMA' AFTER horas_motor_remolque, ADD COLUMN usuario_finalizacion VARCHAR(150) NULL AFTER usuario_creacion");
             } catch (ignore) {}
             try {
-                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN kilometraje_inicial INT NULL AFTER fecha_fin, ADD COLUMN kilometraje_final INT NULL AFTER kilometraje_inicial, ADD COLUMN horas_motor_remolque INT NULL AFTER kilometraje_final");
+                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN configuracion_tracto VARCHAR(50) NULL");
             } catch (ignore) {}
             try {
-                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN configuracion_tracto VARCHAR(50) NULL, ADD COLUMN configuracion_remolque VARCHAR(50) NULL");
+                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN configuracion_remolque VARCHAR(50) NULL");
+            } catch (ignore) {}
+            try {
+                await tdb.query("ALTER TABLE placas ADD COLUMN configuracion VARCHAR(50) NULL");
             } catch (ignore) {}
             try {
                 await tdb.query(`ALTER TABLE operaciones_ordenes_servicio 
@@ -403,10 +406,88 @@ module.exports = function (db, broadcast, logAudit) {
                 params.push(String(placa).trim(), String(placa).trim());
             }
 
-            sql += ` ORDER BY ov.fecha_viaje DESC, ov.id DESC LIMIT ?`;
-            params.push(parseInt(limit, 10) || 1500);
+            let rows = [];
+            try {
+                const [r] = await tdb.query(sql, params);
+                rows = r || [];
+            } catch (errQuery) {
+                console.warn('Advertencia en query principal ordenes-viaje, ejecutando fallback seguro:', errQuery.message);
+                let fallbackSql = `
+                    SELECT 
+                        ov.id,
+                        ov.id_remoto,
+                        ov.viaje,
+                        DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d %H:%i:%s') AS fecha_viaje,
+                        ov.id_conductor,
+                        ov.conductor,
+                        ov.placa_tracto,
+                        ov.placa_remolque,
+                        ov.peso,
+                        ov.ruta,
+                        ov.origen,
+                        ov.destino,
+                        ov.ubigeo_partida,
+                        ov.direccion_partida,
+                        ov.ubigeo_llegada,
+                        ov.direccion_llegada,
+                        ov.escolta,
+                        ov.observaciones,
+                        ov.estado,
+                        DATE_FORMAT(ov.fecha_inicio, '%Y-%m-%d %H:%i:%s') AS fecha_inicio,
+                        DATE_FORMAT(ov.fecha_fin, '%Y-%m-%d %H:%i:%s') AS fecha_fin,
+                        ov.kilometraje_inicial,
+                        ov.kilometraje_final,
+                        ov.horas_motor_remolque,
+                        ov.usuario_creacion,
+                        ov.usuario_finalizacion,
+                        DATE_FORMAT(ov.creado_en, '%Y-%m-%d %H:%i:%s') AS fecha_registro,
+                        COALESCE(r_agg.cant_ordenes, 0) AS cant_ordenes,
+                        COALESCE(r_agg.peso_ida, 0) AS peso_ida,
+                        COALESCE(r_agg.peso_retorno, 0) AS peso_retorno,
+                        COALESCE(r_agg.peso_total_calc, ov.peso, 0) AS peso_total_rutas,
+                        r_agg.ordenes_list,
+                        r_agg.rutas_list,
+                        '' AS configuracion_tracto,
+                        '' AS configuracion_remolque
+                    FROM operaciones_ordenes_viaje ov
+                    LEFT JOIN (
+                        SELECT 
+                            viaje,
+                            COUNT(DISTINCT orden) AS cant_ordenes,
+                            SUM(CASE WHEN es_retorno = 0 THEN peso_total ELSE 0 END) AS peso_ida,
+                            SUM(CASE WHEN es_retorno = 1 THEN peso_total ELSE 0 END) AS peso_retorno,
+                            SUM(peso_total) AS peso_total_calc,
+                            GROUP_CONCAT(DISTINCT orden ORDER BY orden SEPARATOR ', ') AS ordenes_list,
+                            GROUP_CONCAT(DISTINCT CONCAT(CASE WHEN es_retorno=1 THEN '[RETORNO] ' ELSE '[IDA] ' END, ruta) ORDER BY es_retorno ASC SEPARATOR ' | ') AS rutas_list
+                        FROM operaciones_ordenes_viaje_rutas
+                        GROUP BY viaje
+                    ) r_agg ON ov.viaje = r_agg.viaje
+                    WHERE 1=1
+                `;
+                const fallbackParams = [];
+                if (fecha_desde) {
+                    fallbackSql += ` AND DATE(ov.fecha_viaje) >= ?`;
+                    fallbackParams.push(fecha_desde);
+                }
+                if (fecha_hasta) {
+                    fallbackSql += ` AND DATE(ov.fecha_viaje) <= ?`;
+                    fallbackParams.push(fecha_hasta);
+                }
+                if (q && String(q).trim()) {
+                    const search = `%${String(q).trim()}%`;
+                    fallbackSql += ` AND (ov.viaje LIKE ? OR ov.conductor LIKE ? OR ov.placa_tracto LIKE ? OR ov.placa_remolque LIKE ? OR ov.ruta LIKE ? OR r_agg.ordenes_list LIKE ? OR r_agg.rutas_list LIKE ?)`;
+                    fallbackParams.push(search, search, search, search, search, search, search);
+                }
+                if (placa && String(placa).trim()) {
+                    fallbackSql += ` AND (ov.placa_tracto = ? OR ov.placa_remolque = ?)`;
+                    fallbackParams.push(String(placa).trim(), String(placa).trim());
+                }
+                fallbackSql += ` ORDER BY ov.fecha_viaje DESC, ov.id DESC LIMIT ?`;
+                fallbackParams.push(parseInt(limit, 10) || 1500);
 
-            const [rows] = await tdb.query(sql, params);
+                const [fbRows] = await tdb.query(fallbackSql, fallbackParams);
+                rows = fbRows || [];
+            }
 
             // Formatear configuración vehicular conjunta para la vista
             function formatearConfigConjunta(confTracto, confRemolque) {
