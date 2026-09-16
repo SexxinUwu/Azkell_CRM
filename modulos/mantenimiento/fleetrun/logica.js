@@ -1472,7 +1472,7 @@ window.exportarExcelFleetrun = function() {
 
 // ================================================================
 // 📄 REPORTE PDF OFICIAL: MANTENIMIENTOS PREVENTIVOS (F-MAN-006)
-// Unidades Vencidas y Próximas a Vencer
+// Diseño Moderno Ejecutivo — 1 Fila por Placa (Compacto)
 // ================================================================
 window.generarPDFFleetrun = function() {
     if (!window.dataGlobalFleetrun || window.dataGlobalFleetrun.length === 0) {
@@ -1496,7 +1496,7 @@ window.generarPDFFleetrun = function() {
         return new Date(str).getTime() || 0;
     };
 
-    // 1. Obtener datos de la vista actual
+    // 1. Obtener datos activos de la vista
     let _hoy = Date.now();
     let datosOrdenados = [...window.dataGlobalFleetrun].sort((a, b) => {
         let ta = parseFecha(a[3]), tb = parseFecha(b[3]);
@@ -1526,13 +1526,13 @@ window.generarPDFFleetrun = function() {
     });
     let datosAMostrar = Array.from(mapa.values());
 
-    // 2. Filtros activos de la vista (si el usuario buscó por placa o cliente)
+    // 2. Filtros activos de la vista
     const txt = (document.getElementById('buscadorFleetrun')?.value || '').toLowerCase().trim();
     const chkCli = Array.from(document.querySelectorAll('#filtroFleetCliente input:checked')).map(e => e.value);
     const chkUts = Array.from(document.querySelectorAll('#filtroFleetUts input:checked')).map(e => e.value);
 
-    // 3. Procesar y agrupar por placa SOLO los que estén VENCIDOS o PRÓXIMOS A VENCER
-    let placasCriticas = new Map();
+    // 3. Procesar y agrupar por placa
+    let placasMap = new Map();
     let totalVencidosCount = 0;
     let totalProximosCount = 0;
 
@@ -1549,14 +1549,15 @@ window.generarPDFFleetrun = function() {
             km_prox = km_cambio + frecuencia;
         }
 
-        let infoP = (window.dataGlobalPlacas || []).find(p => p[0] === placaRaw);
+        let infoP = (window.dataGlobalPlacas || []).find(p => p[0] === placaRaw || normalizeStr(p[0]) === normalizeStr(placaRaw));
         let cli = infoP ? infoP[1] : (fila[6] || '-');
+        let claseVeh = infoP ? (infoP[5] || infoP[6] || 'CAMIÓN') : 'CAMIÓN';
+        let marcaVeh = infoP ? (infoP[3] || infoP[4] || '-') : '-';
         let utsRaw = (infoP && infoP[19] && String(infoP[19]).trim() !== '') ? infoP[19] : (fila[7] || '-');
         let utsDisplay = (utsRaw === '-' || utsRaw === '') ? '-' : utsRaw.charAt(0).toUpperCase() + utsRaw.slice(1).toLowerCase();
-        let modelo = infoP ? (infoP[4] || '-') : '-';
 
-        // Filtro de texto / cliente si aplica
-        let matchTxt = (!txt || (placaRaw.toLowerCase().includes(txt) || tipo_mp.toLowerCase().includes(txt) || String(cli).toLowerCase().includes(txt)));
+        // Filtro de búsqueda activa
+        let matchTxt = (!txt || (placaRaw.toLowerCase().includes(txt) || tipo_mp.toLowerCase().includes(txt) || String(cli).toLowerCase().includes(txt) || String(marcaVeh).toLowerCase().includes(txt)));
         let matchCli = (!chkCli.length || chkCli.includes(cli));
         let matchUts = (!chkUts.length || chkUts.includes(utsDisplay));
         if (!matchTxt || !matchCli || !matchUts) return;
@@ -1591,45 +1592,63 @@ window.generarPDFFleetrun = function() {
             estadoKpi = 'PROXIMO';
             totalProximosCount++;
         } else {
-            // VIGENTE -> Se omite según el requerimiento (solo vencidos y próximos a vencer)
+            // Vigente -> No es crítico
             return;
         }
 
-        let fechaLimpia = parseDateToDDMMYYYY(fechaStr) || 'Plan Inicial';
         let ubi = wialonData ? (wialonData.ubicacion || wialonData.direccion || '') : '';
         if (!ubi && wialonData && wialonData.lat && window._fleetrunDirCache) {
             let key = wialonData.lat.toFixed(4) + ',' + wialonData.lng.toFixed(4);
             ubi = window._fleetrunDirCache[key] || '';
         }
 
-        if (!placasCriticas.has(placaRaw)) {
-            placasCriticas.set(placaRaw, {
+        if (!placasMap.has(placaRaw)) {
+            // Calcular la fecha más reciente entre MP1 y Filtro Separador de Combustible
+            let mantsDePlaca = (window.dataGlobalFleetrun || []).filter(r => normalizeStr(r[4]) === normalizeStr(placaRaw));
+            let mantsBase = mantsDePlaca.filter(r => {
+                let t = normalizeStr(r[8] || '');
+                return t.includes('MP1') || t.includes('SEPARADOR') || t.includes('SEP COMB') || t.includes('FILTRO SEPARADOR');
+            });
+            mantsBase.sort((a, b) => parseFecha(b[3]) - parseFecha(a[3]));
+
+            let fechaUltimoCambio = 'Plan Inicial';
+            if (mantsBase.length > 0 && mantsBase[0][3]) {
+                fechaUltimoCambio = parseDateToDDMMYYYY(mantsBase[0][3]) || mantsBase[0][3];
+            } else if (mantsDePlaca.length > 0) {
+                let mantsGen = [...mantsDePlaca].sort((a, b) => parseFecha(b[3]) - parseFecha(a[3]));
+                if (mantsGen.length > 0 && mantsGen[0][3]) {
+                    fechaUltimoCambio = parseDateToDDMMYYYY(mantsGen[0][3]) || mantsGen[0][3];
+                }
+            }
+
+            placasMap.set(placaRaw, {
                 placa: placaRaw,
+                clase: claseVeh,
+                marca: marcaVeh,
                 cliente: cli,
                 uts: utsDisplay,
-                modelo: modelo,
+                fechaUltimoCambio: fechaUltimoCambio,
                 km_gps: km_gps,
                 esHoras: esHoras,
-                ubicacion: ubi,
+                ubicacion: ubi || 'En Ruta',
                 mantenimientos: []
             });
         }
 
-        placasCriticas.get(placaRaw).mantenimientos.push({
+        placasMap.get(placaRaw).mantenimientos.push({
             tipo_mp: tipo_mp,
-            fecha: fechaLimpia,
+            fecha: parseDateToDDMMYYYY(fechaStr) || 'Plan Inicial',
             km_cambio: km_cambio,
             km_gps: km_gps,
             km_prox: km_prox,
             km_restante: km_restante,
             frecuencia: frecuencia,
             estado: estadoKpi,
-            obs: obs,
-            esHoras: esHoras
+            obs: obs
         });
     });
 
-    if (placasCriticas.size === 0) {
+    if (placasMap.size === 0) {
         if (typeof window.mostrarNotificacion === 'function') {
             window.mostrarNotificacion("No hay unidades con mantenimientos vencidos o próximos a vencer.", "info");
         } else {
@@ -1659,91 +1678,87 @@ window.generarPDFFleetrun = function() {
     var fechaEmisionStr = `${dd}/${mm}/${yyyy} ${hh}:${min}`;
     var fechaCorta = `${dd}/${mm}/${yyyy}`;
 
-    // 5. Construir HTML de las Tablas por Placa
-    let tablasPlacasHtml = '';
-    placasCriticas.forEach((info, placa) => {
-        let unitTxt = info.esHoras ? ' h' : ' km';
-        let ubiHtml = info.ubicacion ? `<span style="font-size:7.5px; color:#475569; margin-left:8px;"><i style="font-style:normal;">📍</i> ${_esc(info.ubicacion)}</span>` : '';
+    // 5. Construir filas de la tabla compacta (1 fila por Placa)
+    let filasCompactasHtml = '';
+    let idxRow = 0;
 
-        // Ordenar mantenimientos de la placa: primero vencidos, luego por vencer (y por menor km restante)
+    placasMap.forEach((info, placa) => {
+        idxRow++;
+        let unitTxt = info.esHoras ? ' h' : ' km';
+
+        // Ordenar mantenimientos de la placa por severidad (vencidos primero, luego por menor km_restante)
         info.mantenimientos.sort((a, b) => {
             if (a.estado === 'VENCIDO' && b.estado !== 'VENCIDO') return -1;
             if (a.estado !== 'VENCIDO' && b.estado === 'VENCIDO') return 1;
             return a.km_restante - b.km_restante;
         });
 
-        let filasMant = '';
-        info.mantenimientos.forEach(m => {
-            let esVenc = m.estado === 'VENCIDO';
-            let badgeEstado = esVenc
-                ? `<span style="display:inline-block; background:#dc2626; color:#fff; font-weight:800; font-size:7.5px; padding:2px 6px; border-radius:3px; text-transform:uppercase;">VENCIDO</span>`
-                : `<span style="display:inline-block; background:#d97706; color:#fff; font-weight:800; font-size:7.5px; padding:2px 6px; border-radius:3px; text-transform:uppercase;">POR VENCER</span>`;
+        // Mantenimiento más crítico de la unidad
+        let masCritico = info.mantenimientos[0] || {};
+        let kmFaltanteVal = masCritico.km_restante !== undefined ? masCritico.km_restante : 0;
+        let kmProxVal = masCritico.km_prox || 0;
+        let esCriticoVencido = kmFaltanteVal <= 0;
 
-            let faltaSigno = m.km_restante <= 0 ? '' : '+';
-            let faltaColor = esVenc ? '#dc2626' : '#d97706';
-            let faltaBg = esVenc ? '#fef2f2' : '#fffbeb';
-            let faltaHtml = `<span style="font-weight:900; color:${faltaColor}; background:${faltaBg}; border:1px solid ${faltaColor}40; padding:2px 6px; border-radius:4px; font-size:8px;">${faltaSigno}${Number(m.km_restante).toLocaleString()}${unitTxt}</span>`;
+        // Lista de preventivos pendientes formateados uno debajo del otro
+        let obsListHtml = info.mantenimientos.map(m => {
+            let isV = m.estado === 'VENCIDO';
+            let colorDot = isV ? '#dc2626' : '#d97706';
+            let badgeMini = isV
+                ? `<span style="display:inline-block; background:#dc2626; color:#fff; font-size:6.5px; font-weight:800; padding:1px 4px; border-radius:2px; margin-left:4px;">VENCIDO</span>`
+                : `<span style="display:inline-block; background:#d97706; color:#fff; font-size:6.5px; font-weight:800; padding:1px 4px; border-radius:2px; margin-left:4px;">POR VENCER</span>`;
+            return `<div style="margin-bottom:2px; line-height:1.25; font-size:8px; color:#0f172a; font-weight:700;">
+                <span style="color:${colorDot}; font-weight:900;">•</span> ${_esc(m.tipo_mp)} ${badgeMini}
+            </div>`;
+        }).join('');
 
-            filasMant += `
-            <tr>
-                <td style="padding:4px 6px; font-size:8px; font-weight:700; color:#1e293b; text-align:center;">${_esc(m.fecha)}</td>
-                <td style="padding:4px 6px; font-size:8.5px; font-weight:800; color:#0f172a;">${_esc(m.tipo_mp)}</td>
-                <td style="padding:4px 6px; font-size:8px; text-align:right; font-family:monospace; color:#334155;">${Number(m.km_cambio).toLocaleString()}</td>
-                <td style="padding:4px 6px; font-size:8px; text-align:right; font-family:monospace; font-weight:700; color:#0369a1;">${Number(m.km_gps).toLocaleString()}${unitTxt}</td>
-                <td style="padding:4px 6px; font-size:8px; text-align:right; font-family:monospace; font-weight:700; color:#1e293b;">${Number(m.km_prox).toLocaleString()}</td>
-                <td style="padding:4px 6px; text-align:center;">${faltaHtml}</td>
-                <td style="padding:4px 6px; font-size:8px; text-align:right; font-family:monospace; color:#475569;">${Number(m.frecuencia).toLocaleString()}</td>
-                <td style="padding:4px 6px; text-align:center;">${badgeEstado}</td>
-                <td style="padding:4px 6px; font-size:7.5px; color:#475569; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${_esc(m.obs)}">${_esc(m.obs || '—')}</td>
-            </tr>`;
-        });
+        let faltanteColor = esCriticoVencido ? '#dc2626' : '#d97706';
+        let faltanteBg = esCriticoVencido ? '#fef2f2' : '#fffbeb';
+        let faltanteSigno = kmFaltanteVal <= 0 ? '' : '+';
+        let faltanteHtml = `<span style="font-weight:900; font-size:8.5px; color:${faltanteColor}; background:${faltanteBg}; border:1px solid ${faltanteColor}40; padding:2px 6px; border-radius:4px; font-family:monospace;">${faltanteSigno}${Number(kmFaltanteVal).toLocaleString()}${unitTxt}</span>`;
 
-        tablasPlacasHtml += `
-        <div class="placa-card" style="margin-bottom: 8px; break-inside: avoid; border: 1.5px solid #000; border-radius: 4px; overflow: hidden; background: #fff;">
-            <!-- Header Placa -->
-            <div style="background: #f1f5f9; border-bottom: 1.5px solid #000; padding: 4px 8px; display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="background: #000; color: #fff; font-weight: 900; font-size: 9.5px; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.5px;">🚛 ${placa}</span>
-                    <span style="font-size: 8px; font-weight: 700; color: #000;">MODELO: <b style="color:#0f172a;">${_esc(info.modelo)}</b></span>
-                    <span style="font-size: 8px; font-weight: 700; color: #000;">• CLIENTE: <b style="color:#0f172a;">${_esc(info.cliente)}</b></span>
-                    <span style="font-size: 8px; font-weight: 700; color: #000;">• UTS: <b style="color:#0f172a;">${_esc(info.uts)}</b></span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 8px; font-weight: 800; color: #0284c7;">KM ACTUAL (GPS): <b style="font-size:9px; font-family:monospace; color:#0369a1;">${Number(info.km_gps).toLocaleString()}${unitTxt}</b></span>
-                    ${ubiHtml}
-                </div>
-            </div>
-
-            <!-- Tabla de Mantenimientos Críticos de la Placa -->
-            <table class="report-table" style="width: 100%; border-collapse: collapse; font-size: 8px;">
-                <thead>
-                    <tr style="background: #000; color: #fff;">
-                        <th style="padding: 4px 6px; text-align: center; width: 68px; font-weight: 800;">FECHA</th>
-                        <th style="padding: 4px 6px; text-align: left; font-weight: 800;">TIPO DE PREVENTIVO</th>
-                        <th style="padding: 4px 6px; text-align: right; width: 75px; font-weight: 800;">KM CAMBIO</th>
-                        <th style="padding: 4px 6px; text-align: right; width: 78px; font-weight: 800;">KM GPS</th>
-                        <th style="padding: 4px 6px; text-align: right; width: 75px; font-weight: 800;">KM PRÓXIMO</th>
-                        <th style="padding: 4px 6px; text-align: center; width: 85px; font-weight: 800;">CUÁNTO FALTA</th>
-                        <th style="padding: 4px 6px; text-align: right; width: 68px; font-weight: 800;">FRECUENCIA</th>
-                        <th style="padding: 4px 6px; text-align: center; width: 75px; font-weight: 800;">ESTADO</th>
-                        <th style="padding: 4px 6px; text-align: left; width: 140px; font-weight: 800;">OBSERVACIÓN</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${filasMant}
-                </tbody>
-            </table>
-        </div>`;
+        filasCompactasHtml += `
+        <tr style="background-color: ${idxRow % 2 === 0 ? '#f8fafc' : '#ffffff'};">
+            <td style="text-align:center; font-weight:900; font-size:9.5px; color:#0f172a; letter-spacing:0.3px; padding:6px 4px;">
+                <span style="background:#0f172a; color:#fff; padding:2px 6px; border-radius:3px;">${placa}</span>
+            </td>
+            <td style="text-align:center; font-weight:800; font-size:8px; color:#334155; padding:6px 4px; text-transform:uppercase;">
+                ${_esc(info.clase)}
+            </td>
+            <td style="text-align:center; font-weight:800; font-size:8px; color:#0369a1; padding:6px 4px; text-transform:uppercase;">
+                ${_esc(info.marca)}
+            </td>
+            <td style="text-align:center; font-weight:700; font-size:8px; color:#475569; padding:6px 4px;">
+                ${_esc(info.fechaUltimoCambio)}
+            </td>
+            <td style="padding:6px 8px; text-align:left; vertical-align:middle;">
+                ${obsListHtml}
+            </td>
+            <td style="text-align:right; font-weight:800; font-size:8.5px; font-family:monospace; color:#0284c7; padding:6px 6px;">
+                ${Number(info.km_gps).toLocaleString()}${unitTxt}
+            </td>
+            <td style="text-align:center; padding:6px 4px;">
+                ${faltanteHtml}
+            </td>
+            <td style="text-align:right; font-weight:800; font-size:8.5px; font-family:monospace; color:#0f172a; padding:6px 6px;">
+                ${Number(kmProxVal).toLocaleString()}${unitTxt}
+            </td>
+            <td style="text-align:center; font-weight:800; font-size:8px; color:#475569; padding:6px 4px; text-transform:uppercase;">
+                ${_esc(info.uts)}
+            </td>
+            <td style="font-size:7.5px; font-weight:600; color:#334155; padding:6px 6px; line-height:1.2; max-width:140px;" title="${_esc(info.ubicacion)}">
+                ${_esc(info.ubicacion)}
+            </td>
+        </tr>`;
     });
 
-    // 6. Generar HTML completo con diseño ISO Landscape
+    // 6. Generar documento HTML moderno A4 Landscape
     var htmlDoc = `<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estatus de Mantenimientos Preventivos - F-MAN-006</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             box-sizing: border-box;
@@ -1758,8 +1773,8 @@ window.generarPDFFleetrun = function() {
             margin: 0;
             padding: 12px;
             background-color: #f1f5f9;
-            font-family: 'Montserrat', sans-serif;
-            color: #000;
+            font-family: 'Montserrat', 'Inter', sans-serif;
+            color: #0f172a;
             display: flex;
             justify-content: center;
         }
@@ -1768,18 +1783,20 @@ window.generarPDFFleetrun = function() {
             min-height: 195mm;
             background: #fff;
             padding: 6mm 8mm;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            border: 2px solid #000;
+            border: 2px solid #0f172a;
+            border-radius: 4px;
         }
+        /* Header Oficial ISO Moderno */
         .header-box {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 2px solid #000;
-            padding-bottom: 5px;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 6px;
             margin-bottom: 6px;
         }
         .header-left {
@@ -1789,14 +1806,14 @@ window.generarPDFFleetrun = function() {
             width: 28%;
         }
         .company-logo {
-            height: 38px;
+            height: 40px;
             max-width: 120px;
             object-fit: contain;
         }
         .company-name {
             font-size: 11px;
             font-weight: 900;
-            color: #000;
+            color: #0f172a;
             line-height: 1.1;
             text-transform: uppercase;
         }
@@ -1805,76 +1822,86 @@ window.generarPDFFleetrun = function() {
             flex: 1;
         }
         .doc-title {
-            font-size: 13.5px;
+            font-size: 14px;
             font-weight: 900;
-            letter-spacing: 0.05em;
-            color: #000;
+            letter-spacing: 0.06em;
+            color: #0f172a;
             margin: 0;
             text-transform: uppercase;
         }
         .doc-subtitle {
             font-size: 8px;
             font-weight: 800;
-            color: #000;
+            color: #0284c7;
             margin-top: 2px;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
         }
         .header-right {
-            border: 1.5px solid #000;
-            padding: 3px 8px;
+            border: 1.5px solid #0f172a;
+            padding: 4px 8px;
             font-size: 8px;
             font-weight: 900;
-            color: #000;
+            color: #0f172a;
             text-align: right;
-            line-height: 1.3;
+            line-height: 1.35;
             width: 22%;
-            background: #fff;
+            background: #f8fafc;
+            border-radius: 4px;
         }
+        /* Barra Resumen KPIs */
         .kpi-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
             background: #f8fafc;
-            border: 1.5px solid #000;
+            border: 1.5px solid #0f172a;
             border-radius: 4px;
-            padding: 4px 10px;
+            padding: 5px 12px;
             margin-bottom: 8px;
             font-size: 8px;
-            color: #000;
+            color: #0f172a;
         }
         .kpi-item {
             display: flex;
             align-items: center;
             gap: 5px;
-            color: #000;
             font-weight: 700;
         }
         .kpi-val {
             font-weight: 900;
             font-size: 9.5px;
         }
-        .report-table th {
-            border: 1px solid #000;
-            font-size: 7.5px;
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
+        /* Tabla Principal Compacta */
+        .main-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8px;
+            border: 1.5px solid #0f172a;
         }
-        .report-table td {
+        .main-table th {
+            background: #0f2b5c;
+            color: #ffffff;
+            font-size: 7.5px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            padding: 6px 4px;
+            border: 1px solid #0f2b5c;
+        }
+        .main-table td {
             border: 1px solid #cbd5e1;
             vertical-align: middle;
-        }
-        .report-table tbody tr:nth-child(even) {
-            background-color: #f8fafc;
         }
         .footer-box {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-top: 1.5px solid #000;
-            padding-top: 4px;
+            border-top: 1.5px solid #0f172a;
+            padding-top: 5px;
             margin-top: 8px;
             font-size: 7.5px;
-            color: #000;
+            color: #475569;
             font-weight: 700;
         }
         #btnPdfPrint {
@@ -1884,17 +1911,18 @@ window.generarPDFFleetrun = function() {
             background: #0284c7;
             color: #fff;
             border: none;
-            padding: 6px 14px;
+            padding: 7px 16px;
             font-family: 'Montserrat', sans-serif;
-            font-size: 10.5px;
+            font-size: 11px;
             font-weight: 800;
             border-radius: 6px;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(2,132,199,0.35);
+            box-shadow: 0 4px 14px rgba(2,132,199,0.4);
             display: flex;
             align-items: center;
             gap: 6px;
             z-index: 9999;
+            transition: background 0.2s;
         }
         #btnPdfPrint:hover {
             background: #0369a1;
@@ -1906,7 +1934,7 @@ window.generarPDFFleetrun = function() {
             }
             .page-container {
                 box-shadow: none !important;
-                border: 2px solid #000 !important;
+                border: 2px solid #0f172a !important;
                 width: 100% !important;
                 min-height: auto !important;
                 margin: 0 !important;
@@ -1943,42 +1971,58 @@ window.generarPDFFleetrun = function() {
                 </div>
             </div>
 
-            <!-- Barra Resumen KPIs & Metadatos -->
+            <!-- Barra Resumen KPIs -->
             <div class="kpi-bar">
                 <div class="kpi-item">
                     <span>EMISIÓN:</span>
-                    <strong style="color:#000;">${fechaEmisionStr}</strong>
+                    <strong style="color:#0f172a;">${fechaEmisionStr}</strong>
                 </div>
                 <div class="kpi-item">
                     <span>EMITIDO POR:</span>
-                    <strong style="color:#000;">${_esc(emisorNombre)}</strong>
+                    <strong style="color:#0f172a;">${_esc(emisorNombre)}</strong>
                 </div>
-                <div style="border-left:1.5px solid #000; height:14px;"></div>
+                <div style="border-left:1.5px solid #0f172a; height:14px;"></div>
                 <div class="kpi-item">
-                    <span>TOTAL PLACAS EN ALERTA:</span>
-                    <span class="kpi-val" style="color:#000;">${placasCriticas.size}</span>
+                    <span>TOTAL UNIDADES EN ALERTA:</span>
+                    <span class="kpi-val" style="color:#0f172a;">${placasMap.size}</span>
                 </div>
                 <div class="kpi-item">
-                    <span>MANTENIMIENTOS VENCIDOS:</span>
-                    <span class="kpi-val" style="color:#dc2626; background:#fef2f2; border:1px solid #dc2626; padding:1px 5px; border-radius:3px;">${totalVencidosCount}</span>
+                    <span>MANTTOS VENCIDOS:</span>
+                    <span class="kpi-val" style="color:#dc2626; background:#fef2f2; border:1px solid #dc2626; padding:1px 6px; border-radius:3px;">${totalVencidosCount}</span>
                 </div>
                 <div class="kpi-item">
                     <span>PRÓXIMOS A VENCER:</span>
-                    <span class="kpi-val" style="color:#d97706; background:#fffbeb; border:1px solid #d97706; padding:1px 5px; border-radius:3px;">${totalProximosCount}</span>
+                    <span class="kpi-val" style="color:#d97706; background:#fffbeb; border:1px solid #d97706; padding:1px 6px; border-radius:3px;">${totalProximosCount}</span>
                 </div>
             </div>
 
-            <!-- Contenido: Tablas por Placa -->
-            <div class="placas-container">
-                ${tablasPlacasHtml}
-            </div>
+            <!-- Tabla Compacta: 1 Fila por Placa -->
+            <table class="main-table">
+                <thead>
+                    <tr>
+                        <th style="width: 68px; text-align: center;">PLACA</th>
+                        <th style="width: 75px; text-align: center;">CLASE</th>
+                        <th style="width: 80px; text-align: center;">MARCA</th>
+                        <th style="width: 75px; text-align: center;">F. ÚLT. CAMBIO</th>
+                        <th style="text-align: left;">PREVENTIVOS PENDIENTES (OBS)</th>
+                        <th style="width: 78px; text-align: right;">KM REAL</th>
+                        <th style="width: 85px; text-align: center;">KM FALTANTE</th>
+                        <th style="width: 85px; text-align: right;">MANTTO MOTOR</th>
+                        <th style="width: 68px; text-align: center;">UTS</th>
+                        <th style="width: 140px; text-align: left;">UBICACIÓN</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasCompactasHtml}
+                </tbody>
+            </table>
         </div>
 
         <!-- Footer Oficial -->
         <div class="footer-box">
-            <div>ERP AZKELL FLEET &bull; Sistema de Gestión de Flota y Mantenimiento</div>
-            <div>Página 1 / Control Operativo de Taller</div>
-            <div style="font-weight: 800;">DOCUMENTO DE CONTROL INTERNO ISO 9001 / F-MAN-006</div>
+            <div>ERP AZKELL FLEET &bull; Sistema Integrado de Mantenimiento y Gestión de Flota</div>
+            <div>Control Operativo de Mantenimiento Preventivo</div>
+            <div style="font-weight: 800; color:#0f172a;">DOCUMENTO OFICIAL ISO 9001 / F-MAN-006</div>
         </div>
     </div>
 </body>
