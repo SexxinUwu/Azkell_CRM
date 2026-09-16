@@ -646,51 +646,70 @@
                                 <i class="bi bi-person-vcard text-primary"></i> Datos de Identificación y Domicilio
                             </h6>
                             <div class="row g-3">
-                                <div class="col-12 col-md-3">
-                                    <label class="form-label">Tipo Doc (<span class="text-danger">*</span>)</label>
-                                    <select class="form-select" id="pers-tipo-doc" required onchange="window.rrhhPersonalOnTipoDocChange(this.value)">
-                                        <option value="DNI" selected>DNI</option>
-                                        <option value="CE">CARNET EXTRANJERÍA</option>
-                                        <option value="PASAPORTE">PASAPORTE</option>
-                                    </select>
-                                </div>
-                                <div class="col-12 col-md-5">
-                                    <label class="form-label">N° Documento (<span class="text-danger">*</span>)</label>
-                                    <div class="input-group">
-                                        <input type="text" class="form-control font-monospace fw-bold" id="pers-num-doc" placeholder="12345678" maxlength="15" required autocomplete="off" oninput="window.rrhhPersonalOnDocInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();window.rrhhPersonalConsultarDNI();}">
-                                        <button class="btn btn-primary px-3 fw-bold d-flex align-items-center justify-content-center" type="button" id="btn-pers-buscar-dni" onclick="window.rrhhPersonalConsultarDNI()" title="Buscar en RENIEC por DNI">
-                                            <i class="bi bi-search" id="icon-pers-buscar-dni"></i>
-                                        </button>
+                                <!-- Columna Izquierda: Datos Principales (9 cols) -->
+                                <div class="col-12 col-lg-9">
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label">Tipo Doc (<span class="text-danger">*</span>)</label>
+                                            <select class="form-select" id="pers-tipo-doc" required onchange="window.rrhhPersonalOnTipoDocChange(this.value)">
+                                                <option value="DNI" selected>DNI</option>
+                                                <option value="CE">CARNET EXTRANJERÍA</option>
+                                                <option value="PASAPORTE">PASAPORTE</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-8">
+                                            <label class="form-label">N° Documento (<span class="text-danger">*</span>)</label>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control font-monospace fw-bold" id="pers-num-doc" placeholder="12345678" maxlength="15" required autocomplete="off" oninput="window.rrhhPersonalOnDocInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();window.rrhhPersonalConsultarDNI();}">
+                                                <button class="btn btn-primary px-3 fw-bold d-flex align-items-center justify-content-center" type="button" id="btn-pers-buscar-dni" onclick="window.rrhhPersonalConsultarDNI()" title="Buscar en RENIEC por DNI">
+                                                    <i class="bi bi-search" id="icon-pers-buscar-dni"></i>
+                                                </button>
+                                            </div>
+                                            <div class="form-text mt-1 text-muted" style="font-size:0.75rem;" id="pers-doc-hint">
+                                                <i class="bi bi-magic text-primary me-1"></i> Digite los 8 dígitos para autocompletar nombres.
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Nombres (<span class="text-danger">*</span>)</label>
+                                            <input type="text" class="form-control text-uppercase fw-bold" id="pers-nombres" placeholder="NOMBRES COMPLETOS" required>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Apellidos (<span class="text-danger">*</span>)</label>
+                                            <input type="text" class="form-control text-uppercase fw-bold" id="pers-apellidos" placeholder="APELLIDOS COMPLETOS" required>
+                                        </div>
+                                        <div class="col-6 col-md-4">
+                                            <label class="form-label">Sexo</label>
+                                            <select class="form-select" id="pers-sexo">
+                                                <option value="M" selected>MASCULINO</option>
+                                                <option value="F">FEMENINO</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6 col-md-4">
+                                            <label class="form-label">Fec. Nacimiento</label>
+                                            <input type="date" class="form-control" id="pers-fecha-nac">
+                                        </div>
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label">Celular / Teléfono</label>
+                                            <input type="text" class="form-control" id="pers-telefono" placeholder="Ej. 999 888 777">
+                                        </div>
                                     </div>
-                                    <div class="form-text mt-1 text-muted" style="font-size:0.75rem;" id="pers-doc-hint">
-                                        <i class="bi bi-magic text-primary me-1"></i> Digite los 8 dígitos para autocompletar nombres.
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-4">
-                                    <label class="form-label">Nombres (<span class="text-danger">*</span>)</label>
-                                    <input type="text" class="form-control text-uppercase fw-bold" id="pers-nombres" placeholder="NOMBRES COMPLETOS" required>
                                 </div>
 
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label">Apellidos (<span class="text-danger">*</span>)</label>
-                                    <input type="text" class="form-control text-uppercase fw-bold" id="pers-apellidos" placeholder="APELLIDOS COMPLETOS" required>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <label class="form-label">Sexo</label>
-                                    <select class="form-select" id="pers-sexo">
-                                        <option value="M" selected>MASCULINO</option>
-                                        <option value="F">FEMENINO</option>
-                                    </select>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <label class="form-label">Fec. Nacimiento</label>
-                                    <input type="date" class="form-control" id="pers-fecha-nac">
+                                <!-- Columna Derecha: Foto Oficial y Carga Inmediata (3 cols) -->
+                                <div class="col-12 col-lg-3">
+                                    <div class="h-100 p-3 rounded-4 border bg-slate-50 d-flex flex-col items-center justify-content-center text-center shadow-xs" style="border: 1.5px dashed #cbd5e1 !important; background: #f8fafc;">
+                                        <label class="form-label fw-bold text-dark mb-2" style="font-size:0.75rem;">
+                                            <i class="bi bi-camera-fill text-primary me-1"></i> FOTO OFICIAL
+                                        </label>
+                                        <div class="position-relative mb-2">
+                                            <img id="pers-foto-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='140' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>" alt="Foto Colaborador" class="rounded-3 shadow-xs border bg-white" style="width:115px;height:135px;object-fit:cover;">
+                                        </div>
+                                        <input type="file" id="pers-foto-input" class="form-control form-control-sm" accept="image/*" onchange="window.rrhhPersonalOnFotoSelect(event)">
+                                        <input type="hidden" id="pers-foto-url" value="">
+                                        <small class="text-muted mt-1" style="font-size:0.68rem;">JPG, PNG o WEBP</small>
+                                    </div>
                                 </div>
 
-                                <div class="col-12 col-md-4">
-                                    <label class="form-label">Celular / Teléfono</label>
-                                    <input type="text" class="form-control" id="pers-telefono" placeholder="Ej. 999 888 777">
-                                </div>
                                 <div class="col-12 col-md-4">
                                     <label class="form-label">Correo Electrónico</label>
                                     <input type="email" class="form-control" id="pers-email" placeholder="correo@ejemplo.com">
@@ -699,8 +718,7 @@
                                     <label class="form-label">Contacto de Emergencia</label>
                                     <input type="text" class="form-control" id="pers-contacto-emergencia" placeholder="Nombre (Parentesco) - Celular">
                                 </div>
-
-                                <div class="col-12">
+                                <div class="col-12 col-md-4">
                                     <label class="form-label">Dirección de Residencia</label>
                                     <input type="text" class="form-control" id="pers-direccion" placeholder="Av. Principal 123, Urb. Los Álamos, Lima">
                                 </div>
@@ -1014,9 +1032,8 @@
                                     <p class="text-muted small mb-3">Suba una foto clara de frente con fondo claro para el fotocheck y legajo digital.</p>
                                     
                                     <div class="text-center p-3 border rounded-3 bg-light mb-3">
-                                        <img id="pers-foto-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>" alt="Vista previa" class="rounded-circle shadow-sm border mb-2" style="width:120px;height:120px;object-fit:cover; background:#f8fafc;">
-                                        <input type="file" id="pers-foto-input" class="form-control form-control-sm mt-2" accept="image/*" onchange="window.rrhhPersonalOnFotoSelect(event)">
-                                        <input type="hidden" id="pers-foto-url" value="">
+                                        <img id="pers-foto-preview-fc" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>" alt="Vista previa" class="rounded-circle shadow-sm border mb-2" style="width:120px;height:120px;object-fit:cover; background:#f8fafc;">
+                                        <input type="file" id="pers-foto-input-fc" class="form-control form-control-sm mt-2" accept="image/*" onchange="window.rrhhPersonalOnFotoSelect(event)">
                                     </div>
                                     <div class="d-grid gap-2">
                                         <button type="button" class="btn btn-outline-primary fw-bold rounded-pill" onclick="window.rrhhPersonalActualizarFotocheckPreview()">
