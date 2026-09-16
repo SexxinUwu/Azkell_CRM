@@ -333,23 +333,37 @@
         // Activar tab de Orden de Servicio por defecto
         activarTab('tab-os-orden-link');
 
+        // Si se abre desde detalle de viaje, ocultar momentáneamente el drawer para evitar doble cortina oscura
+        if (origen === 'detalle_viaje') {
+            const drawer = document.getElementById('ovMonDrawer');
+            const backdrop = document.getElementById('ovMonDrawerBackdrop');
+            if (drawer) drawer.classList.remove('active');
+            if (backdrop) backdrop.classList.remove('active');
+        }
+
         const modalEl = document.getElementById('modalOsForm');
         if (modalEl && modalEl.parentElement !== document.body) {
             document.body.appendChild(modalEl);
         }
+
+        // Listener de cierre seguro para restaurar drawer de viaje si fue el origen
+        if (modalEl && !modalEl._hasDrawerRestoreListener) {
+            modalEl._hasDrawerRestoreListener = true;
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                if (window._osOrigenApertura === 'detalle_viaje') {
+                    const drawer = document.getElementById('ovMonDrawer');
+                    const backdrop = document.getElementById('ovMonDrawerBackdrop');
+                    if (drawer) drawer.classList.add('active');
+                    if (backdrop) backdrop.classList.add('active');
+                    if (typeof window.ovRecargarMonitoreoActual === 'function') {
+                        window.ovRecargarMonitoreoActual();
+                    }
+                }
+            });
+        }
+
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
-
-        // Elevar backdrop sobre ovMonDrawer (z-index 1075) manteniéndolo debajo del modal (1085)
-        setTimeout(() => {
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            if (backdrops.length > 0) {
-                const lastBd = backdrops[backdrops.length - 1];
-                lastBd.style.setProperty('z-index', '1075', 'important');
-                lastBd.style.backgroundColor = 'rgba(15, 23, 42, 0.68)';
-                lastBd.style.opacity = '1';
-            }
-        }, 15);
     };
 
     // ── Abrir Modal para Editar ─────────────────────────────────────
@@ -465,23 +479,37 @@
             // Pestaña inicial según origen
             activarTab(origen === 'detalle_viaje' ? 'tab-os-orden-link' : 'tab-os-documentos-link');
 
+            // Si se abre desde detalle de viaje, ocultar momentáneamente el drawer para evitar doble cortina oscura
+            if (origen === 'detalle_viaje') {
+                const drawer = document.getElementById('ovMonDrawer');
+                const backdrop = document.getElementById('ovMonDrawerBackdrop');
+                if (drawer) drawer.classList.remove('active');
+                if (backdrop) backdrop.classList.remove('active');
+            }
+
             const modalEl = document.getElementById('modalOsForm');
             if (modalEl && modalEl.parentElement !== document.body) {
                 document.body.appendChild(modalEl);
             }
+
+            // Listener de cierre seguro para restaurar drawer de viaje si fue el origen
+            if (modalEl && !modalEl._hasDrawerRestoreListener) {
+                modalEl._hasDrawerRestoreListener = true;
+                modalEl.addEventListener('hidden.bs.modal', function () {
+                    if (window._osOrigenApertura === 'detalle_viaje') {
+                        const drawer = document.getElementById('ovMonDrawer');
+                        const backdrop = document.getElementById('ovMonDrawerBackdrop');
+                        if (drawer) drawer.classList.add('active');
+                        if (backdrop) backdrop.classList.add('active');
+                        if (typeof window.ovRecargarMonitoreoActual === 'function') {
+                            window.ovRecargarMonitoreoActual();
+                        }
+                    }
+                });
+            }
+
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
-
-            // Elevar backdrop sobre ovMonDrawer (z-index 1075) manteniéndolo debajo del modal (1085)
-            setTimeout(() => {
-                const backdrops = document.querySelectorAll('.modal-backdrop');
-                if (backdrops.length > 0) {
-                    const lastBd = backdrops[backdrops.length - 1];
-                    lastBd.style.setProperty('z-index', '1075', 'important');
-                    lastBd.style.backgroundColor = 'rgba(15, 23, 42, 0.68)';
-                    lastBd.style.opacity = '1';
-                }
-            }, 15);
         } catch (err) {
             console.error("Error al abrir edición:", err);
             alert("Error: " + err.message);

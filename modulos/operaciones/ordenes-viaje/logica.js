@@ -48,6 +48,16 @@ window.init_ordenes_viaje = function() {
     if (inputHasta && !inputHasta.value) inputHasta.value = hoyStr;
 
     window.ovCargarDatos();
+
+    // ⚡ Precargar módulos de OS y Vales en segundo plano para apertura inmediata (0ms lag)
+    setTimeout(() => {
+        if (typeof asegurarModuloOrdenesServicioCargado === 'function') {
+            asegurarModuloOrdenesServicioCargado().catch(() => {});
+        }
+        if (typeof asegurarModuloCombustibleValesCargado === 'function') {
+            asegurarModuloCombustibleValesCargado().catch(() => {});
+        }
+    }, 400);
 };
 
 window.ovCambiarModoVista = function(modo) {
