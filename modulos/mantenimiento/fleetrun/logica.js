@@ -1596,10 +1596,36 @@ window.generarPDFFleetrun = function() {
             return;
         }
 
-        let ubi = wialonData ? (wialonData.ubicacion || wialonData.direccion || '') : '';
+        let ubi = '';
+        // Prioridad 1: Obtener de la tabla renderizada en pantalla si existe
+        let domRow = document.querySelector(`#cuerpoTablaFleetrun tr[data-placa="${placaRaw}"]`) ||
+                     document.querySelector(`#cuerpoTablaFleetrun tr.child-${normalizarClase(placaRaw)}`);
+        if (domRow && domRow.cells && domRow.cells[11]) {
+            let txtCell = (domRow.cells[11].textContent || '').trim();
+            if (txtCell && txtCell !== 'Cargando...' && txtCell !== '-' && !txtCell.includes('(') && !txtCell.includes('Ubicación GPS')) {
+                ubi = txtCell;
+            }
+        }
+
+        // Prioridad 2: Si no está en DOM, buscar en wialonData
+        if (!ubi && wialonData) {
+            let ubiRaw = (wialonData.ubicacion || wialonData.direccion || '').trim();
+            if (ubiRaw && !ubiRaw.includes('(') && !ubiRaw.includes('Ubicación GPS') && ubiRaw !== 'Cargando...') {
+                ubi = ubiRaw;
+            }
+        }
+
+        // Prioridad 3: Geocaché de coordenadas
         if (!ubi && wialonData && wialonData.lat && window._fleetrunDirCache) {
             let key = wialonData.lat.toFixed(4) + ',' + wialonData.lng.toFixed(4);
-            ubi = window._fleetrunDirCache[key] || '';
+            if (window._fleetrunDirCache[key]) {
+                ubi = window._fleetrunDirCache[key];
+            }
+        }
+
+        // Limpieza final: si solo son coordenadas numéricas, poner "En Ruta"
+        if (!ubi || ubi === 'Cargando...' || ubi === '-' || ubi.includes('(') || ubi.includes('Ubicación GPS') || /\d+\.\d+/.test(ubi)) {
+            ubi = 'En Ruta';
         }
 
         if (!placasMap.has(placaRaw)) {
@@ -1680,10 +1706,18 @@ window.generarPDFFleetrun = function() {
 
     // 5. Construir y ordenar lista de unidades (Nacional arriba, Local abajo -> Vencidos primero, luego Próximos)
     let unidadesList = Array.from(placasMap.values());
+    let unidadesVencidasCount = 0;
+    let unidadesProximasCount = 0;
 
     unidadesList.forEach(u => {
         let tieneVencido = u.mantenimientos.some(m => m.estado === 'VENCIDO');
         u.estadoGlobal = tieneVencido ? 'VENCIDO' : 'PROXIMO';
+
+        if (tieneVencido) {
+            unidadesVencidasCount++;
+        } else {
+            unidadesProximasCount++;
+        }
 
         // Ordenar preventivos internos de la placa
         u.mantenimientos.sort((a, b) => {
@@ -1820,7 +1854,7 @@ window.generarPDFFleetrun = function() {
             border: 1.5px solid #0f172a;
             border-radius: 4px;
         }
-        /* Header Oficial ISO Moderno */
+        /* Header Oficial Moderno */
         .header-box {
             display: flex;
             align-items: center;
@@ -1993,7 +2027,7 @@ window.generarPDFFleetrun = function() {
 
     <div class="page-container">
         <div>
-            <!-- Header Oficial ISO -->
+            <!-- Header Oficial -->
             <div class="header-box">
                 <div class="header-left">
                     <img src="${empLogoUrl}" alt="Logo" class="company-logo" onerror="this.style.display='none'">
@@ -2005,12 +2039,12 @@ window.generarPDFFleetrun = function() {
                 </div>
                 <div class="header-right">
                     <div>CÓDIGO: F-MAN-006</div>
-                    <div>VERSIÓN: 0</div>
+                    <div>VERSIÓN: 01</div>
                     <div>F. EMISIÓN: ${fechaCorta}</div>
                 </div>
             </div>
 
-            <!-- Barra Resumen KPIs -->
+            <!-- Barra Resumen KPIs (Calculados por Unidad / Placa) -->
             <div class="kpi-bar">
                 <div class="kpi-item">
                     <span>EMISIÓN:</span>
@@ -2023,15 +2057,15 @@ window.generarPDFFleetrun = function() {
                 <div style="border-left:1.2px solid #0f172a; height:12px;"></div>
                 <div class="kpi-item">
                     <span>TOTAL UNIDADES EN ALERTA:</span>
-                    <span class="kpi-val" style="color:#0f172a;">${placasMap.size}</span>
+                    <span class="kpi-val" style="color:#0f172a;">${unidadesList.length}</span>
                 </div>
                 <div class="kpi-item">
-                    <span>MANTTOS VENCIDOS:</span>
-                    <span class="kpi-val" style="color:#dc2626; background:#fef2f2; border:1px solid #dc2626; padding:1px 5px; border-radius:3px;">${totalVencidosCount}</span>
+                    <span>UNIDADES VENCIDAS:</span>
+                    <span class="kpi-val" style="color:#dc2626; background:#fef2f2; border:1px solid #dc2626; padding:1px 5px; border-radius:3px;">${unidadesVencidasCount}</span>
                 </div>
                 <div class="kpi-item">
-                    <span>PRÓXIMOS A VENCER:</span>
-                    <span class="kpi-val" style="color:#d97706; background:#fffbeb; border:1px solid #d97706; padding:1px 5px; border-radius:3px;">${totalProximosCount}</span>
+                    <span>PRÓXIMAS A VENCER:</span>
+                    <span class="kpi-val" style="color:#d97706; background:#fffbeb; border:1px solid #d97706; padding:1px 5px; border-radius:3px;">${unidadesProximasCount}</span>
                 </div>
             </div>
 
@@ -2062,7 +2096,7 @@ window.generarPDFFleetrun = function() {
         <div class="footer-box">
             <div>ERP AZKELL FLEET &bull; Sistema Integrado de Mantenimiento y Gestión de Flota</div>
             <div>Control Operativo de Mantenimiento Preventivo</div>
-            <div style="font-weight: 800; color:#0f172a;">DOCUMENTO OFICIAL ISO 9001 / F-MAN-006</div>
+            <div style="font-weight: 800; color:#0f172a;">REPORTE DE MANTENIMIENTO PREVENTIVO &bull; F-MAN-006</div>
         </div>
     </div>
 </body>
