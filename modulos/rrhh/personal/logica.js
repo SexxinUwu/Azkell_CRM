@@ -404,11 +404,19 @@ window.rrhhPersonalOnFotoSelect = function(e) {
 
     var reader = new FileReader();
     reader.onload = function(evt) {
-        window._rrhhFotoBase64 = evt.target.result;
-        var prev = document.getElementById('pers-foto-preview');
+        var base64 = evt.target.result;
+        window._rrhhFotoBase64 = base64;
+        
+        var hid = document.getElementById('pers-foto-url');
+        if (hid) hid.value = base64;
+        
+        var prev1 = document.getElementById('pers-foto-preview');
+        var prev2 = document.getElementById('pers-foto-preview-fc');
         var fcAvatar = document.getElementById('fc-avatar');
-        if (prev) prev.src = window._rrhhFotoBase64;
-        if (fcAvatar) fcAvatar.src = window._rrhhFotoBase64;
+        
+        if (prev1) prev1.src = base64;
+        if (prev2) prev2.src = base64;
+        if (fcAvatar) fcAvatar.src = base64;
     };
     reader.readAsDataURL(file);
 };
@@ -519,6 +527,14 @@ window.rrhhPersonalAbrirModalNuevo = function() {
     var idEl = document.getElementById('pers-id');
     if (idEl) idEl.value = '';
 
+    var hidFoto = document.getElementById('pers-foto-url');
+    if (hidFoto) hidFoto.value = '';
+
+    var inpFoto1 = document.getElementById('pers-foto-input');
+    if (inpFoto1) inpFoto1.value = '';
+    var inpFoto2 = document.getElementById('pers-foto-input-fc');
+    if (inpFoto2) inpFoto2.value = '';
+
     var lblT = document.getElementById('modalPersonalFormLabel');
     if (lblT) lblT.textContent = 'Nuevo Colaborador';
 
@@ -534,8 +550,13 @@ window.rrhhPersonalAbrirModalNuevo = function() {
     var fIniCont = document.getElementById('pers-inicio-contrato');
     if (fIniCont) fIniCont.value = new Date().toISOString().slice(0, 10);
 
+    var defaultSvg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
     var prevFoto = document.getElementById('pers-foto-preview');
-    if (prevFoto) prevFoto.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
+    var prevFc = document.getElementById('pers-foto-preview-fc');
+    var fcAvatar = document.getElementById('fc-avatar');
+    if (prevFoto) prevFoto.src = defaultSvg;
+    if (prevFc) prevFc.src = defaultSvg;
+    if (fcAvatar) fcAvatar.src = defaultSvg;
 
     window.rrhhPersonalSwitchTab('tab-pers-identidad');
     window.rrhhPersonalOnTipoContratoChange('PLAZO_FIJO');
@@ -605,13 +626,21 @@ window.rrhhPersonalAbrirModalEditar = function(id) {
     setVal('pers-talla-chaleco', p.talla_chaleco || 'ESTANDAR');
 
     var prevFoto = document.getElementById('pers-foto-preview');
+    var prevFc = document.getElementById('pers-foto-preview-fc');
     var fcAvatar = document.getElementById('fc-avatar');
     window._rrhhFotoBase64 = p.foto_url || null;
-    var fotoVal = p.foto_url || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
+    var defaultSvg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='%23cbd5e1'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
+    var fotoVal = p.foto_url || defaultSvg;
     if (prevFoto) prevFoto.src = fotoVal;
+    if (prevFc) prevFc.src = fotoVal;
     if (fcAvatar) fcAvatar.src = fotoVal;
     var hidFoto = document.getElementById('pers-foto-url');
     if (hidFoto) hidFoto.value = p.foto_url || '';
+
+    var inpFoto1 = document.getElementById('pers-foto-input');
+    if (inpFoto1) inpFoto1.value = '';
+    var inpFoto2 = document.getElementById('pers-foto-input-fc');
+    if (inpFoto2) inpFoto2.value = '';
 
     window.rrhhPersonalToggleRol(p.categoria_rol);
     window.rrhhPersonalOnTipoContratoChange(p.tipo_contrato || 'PLAZO_FIJO');
@@ -833,7 +862,7 @@ window.rrhhPersonalExportarExcel = async function() {
     }
 };
 
-// ── Ficha 360° Visualización Detallada (Estilo Apple / Segmentada en Nueva Pestaña) ───
+// ── Ficha 360° Visualización Detallada (1:1 Idéntico a Checklist Unidades con Blob URL) ───
 window._rrhhColaboradorFichaActual = null;
 
 window.rrhhPersonalVerFicha = async function(id) {
@@ -845,672 +874,394 @@ window.rrhhPersonalVerFicha = async function(id) {
             return;
         }
 
-        var p = json.data;
-        window._rrhhColaboradorFichaActual = p;
+        var rec = json.data;
+        window._rrhhColaboradorFichaActual = rec;
 
         var empNombre = (localStorage.getItem('fleet_empresa_nombre') || 'AZKELL TRANSPORTES S.A.C.').toUpperCase();
-        var empLogo = localStorage.getItem('fleet_empresa_logo') || document.getElementById('nav-logo-img')?.src || '/favicon-2003.png';
-        var fotoSrc = p.foto_url || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 24 24' fill='%2394a3b8'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
+        var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || document.getElementById('nav-logo-img')?.src || '';
+        
+        var fotoSrc = rec.foto_url || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='130' height='155' viewBox='0 0 24 24' fill='%2394a3b8'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
+        var fechaEmision = rec.fecha_ingreso ? rec.fecha_ingreso.slice(0, 10) : new Date().toISOString().slice(0, 10);
+        var rolTexto = (rec.categoria_rol || 'ADMINISTRATIVO').replace(/_/g, ' ');
+        var docId = 'F-RH-' + (String(rec.id).padStart(4, '0'));
 
-        var fechaEmision = p.fecha_ingreso ? p.fecha_ingreso.slice(0, 10) : new Date().toISOString().slice(0, 10);
+        var htmlBody = '';
 
-        var rolNombre = (p.categoria_rol || 'ADMINISTRATIVO').replace(/_/g, ' ');
-        var estContratoBadge = (p.tipo_contrato === 'INDETERMINADO') ? 'INDETERMINADO' : (p.fecha_fin_contrato ? `VENCE: ${p.fecha_fin_contrato.slice(0, 10)}` : 'VIGENTE');
+        // Contenedor principal de la hoja (840px estándar de checklist)
+        htmlBody += '<main class="report-page w-full max-w-[840px] bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-4 sm:p-5 text-slate-900 mx-auto" style="box-sizing:border-box;font-family:\'Inter\',-apple-system,BlinkMacSystemFont,sans-serif;">';
 
-        var win = window.open('', '_blank');
-        if (!win) {
-            alert('El navegador bloqueó la ventana emergente. Por favor, permita las ventanas emergentes para ver la ficha.');
-            return;
+        // 1. ENCABEZADO OFICIAL CON LOGO, TÍTULO Y METADATOS
+        htmlBody += '<header class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2.5" style="border:1.5px solid #0F172A;">';
+        htmlBody += '<div class="grid grid-cols-12 divide-x-[1.5px] divide-slate-900" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));border-bottom:1.5px solid #0F172A;">';
+        
+        // Columna 1: Logo de Empresa
+        htmlBody += '<div class="col-span-3 p-2.5 flex flex-col items-center justify-center bg-white text-center" style="grid-column:span 3 / span 3;border-right:1.5px solid #0F172A;">';
+        if (empLogoUrl) {
+            htmlBody += '<img src="' + empLogoUrl + '" style="max-height:38px;max-width:130px;object-fit:contain;">';
+        } else {
+            htmlBody += '<div class="flex items-center gap-1.5 mb-0.5"><span class="text-sm font-extrabold tracking-tight text-slate-900">' + empNombre + '</span></div>';
         }
+        htmlBody += '<span class="text-[7.5px] font-semibold tracking-wider text-slate-500 uppercase mt-0.5">Transporte & Logística</span>';
+        htmlBody += '</div>';
 
-        win.document.write(`
-            <!DOCTYPE html>
-            <html lang="es">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Ficha Oficial 360° — ${p.apellidos}, ${p.nombres}</title>
-                <link rel="preconnect" href="https://fonts.googleapis.com">
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-                <style>
-                    :root {
-                        --apple-bg: #f8fafc;
-                        --apple-card-bg: rgba(255, 255, 255, 0.92);
-                        --apple-blue: #0071e3;
-                        --apple-blue-hover: #0077ed;
-                        --apple-dark: #0f172a;
-                        --apple-gray: #64748b;
-                        --radius-lg: 22px;
-                        --radius-md: 14px;
-                        --radius-sm: 10px;
-                        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.03);
-                        --shadow-md: 0 10px 28px -6px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02);
-                    }
-                    * { box-sizing: border-box; margin: 0; padding: 0; }
-                    body {
-                        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                        background: var(--apple-bg);
-                        color: var(--apple-dark);
-                        line-height: 1.45;
-                        padding-bottom: 60px;
-                        -webkit-font-smoothing: antialiased;
-                    }
-                    .font-mono { font-family: 'JetBrains Mono', monospace; }
-                    
-                    /* Sticky Apple Topbar */
-                    .apple-topbar {
-                        position: sticky;
-                        top: 0;
-                        z-index: 100;
-                        background: rgba(255, 255, 255, 0.82);
-                        backdrop-filter: blur(20px);
-                        -webkit-backdrop-filter: blur(20px);
-                        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-                        padding: 12px 24px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        box-shadow: 0 1px 4px rgba(0,0,0,0.03);
-                    }
-                    .apple-brand {
-                        display: flex;
-                        align-items: center;
-                        gap: 12px;
-                    }
-                    .apple-brand img {
-                        height: 38px;
-                        max-width: 140px;
-                        object-fit: contain;
-                    }
-                    .apple-brand-title {
-                        font-size: 0.95rem;
-                        font-weight: 800;
-                        color: #0f172a;
-                        letter-spacing: -0.2px;
-                    }
-                    .apple-brand-sub {
-                        font-size: 0.74rem;
-                        font-weight: 600;
-                        color: #64748b;
-                    }
-                    .apple-actions {
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-                    }
-                    .btn-apple-primary {
-                        background: var(--apple-blue);
-                        color: #ffffff;
-                        font-family: inherit;
-                        font-size: 0.86rem;
-                        font-weight: 700;
-                        padding: 8px 20px;
-                        border-radius: 980px;
-                        border: none;
-                        cursor: pointer;
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 6px;
-                        transition: all 0.2s ease;
-                        box-shadow: 0 4px 14px rgba(0, 113, 227, 0.25);
-                    }
-                    .btn-apple-primary:hover {
-                        background: var(--apple-blue-hover);
-                        transform: translateY(-1px);
-                    }
-                    .btn-apple-secondary {
-                        background: #f1f5f9;
-                        color: #334155;
-                        font-family: inherit;
-                        font-size: 0.86rem;
-                        font-weight: 700;
-                        padding: 8px 18px;
-                        border-radius: 980px;
-                        border: 1px solid #e2e8f0;
-                        cursor: pointer;
-                        transition: all 0.2s ease;
-                    }
-                    .btn-apple-secondary:hover {
-                        background: #e2e8f0;
-                    }
+        // Columna 2: Título Central
+        htmlBody += '<div class="col-span-6 p-2 flex flex-col items-center justify-center text-center bg-slate-50/50" style="grid-column:span 6 / span 6;border-right:1.5px solid #0F172A;">';
+        htmlBody += '<h1 class="text-xs font-black text-slate-900 tracking-tight uppercase">FICHA DE REGISTRO DE PERSONAL</h1>';
+        htmlBody += '<p class="text-[8.5px] font-bold text-slate-600 tracking-wider uppercase mt-0.5">CONTROL DE RRHH, PLANILLAS Y LEGAJO DIGITAL 360°</p>';
+        htmlBody += '</div>';
 
-                    /* Main Container */
-                    .doc-container {
-                        max-width: 980px;
-                        margin: 28px auto 0 auto;
-                        padding: 0 20px;
-                    }
+        // Columna 3: Control Documentario
+        htmlBody += '<div class="col-span-3 divide-y-[1.5px] divide-slate-900 text-[8.5px] font-bold" style="grid-column:span 3 / span 3;">';
+        htmlBody += '<div class="px-2 py-0.5 flex justify-between bg-slate-50/70" style="border-bottom:1.5px solid #0F172A;"><span class="text-slate-500 uppercase">CÓDIGO:</span><span class="font-mono text-slate-900">RH-004</span></div>';
+        htmlBody += '<div class="px-2 py-0.5 flex justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="text-slate-500 uppercase">VERSIÓN:</span><span class="font-mono text-slate-900">01</span></div>';
+        htmlBody += '<div class="px-2 py-0.5 flex justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="text-slate-500 uppercase">F. EMISIÓN:</span><span class="font-mono text-slate-900">' + fechaEmision + '</span></div>';
+        htmlBody += '<div class="px-2 py-0.5 flex justify-between bg-white"><span class="text-slate-500 uppercase">PÁGINA:</span><span class="font-mono text-slate-900">1 de 1</span></div>';
+        htmlBody += '</div>';
 
-                    /* Hero Profile Card */
-                    .hero-card {
-                        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 45%, #f5f3ff 100%);
-                        border: 1px solid #bae6fd;
-                        border-radius: var(--radius-lg);
-                        padding: 28px;
-                        box-shadow: var(--shadow-md);
-                        display: flex;
-                        flex-direction: row;
-                        align-items: center;
-                        gap: 24px;
-                        margin-bottom: 22px;
-                        position: relative;
-                        overflow: hidden;
-                    }
-                    .hero-photo-wrap {
-                        flex-shrink: 0;
-                        position: relative;
-                    }
-                    .hero-photo {
-                        width: 135px;
-                        height: 135px;
-                        border-radius: 26px;
-                        object-fit: cover;
-                        background: #ffffff;
-                        border: 4px solid #ffffff;
-                        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
-                    }
-                    .hero-info {
-                        flex-grow: 1;
-                    }
-                    .hero-name {
-                        font-size: 1.6rem;
-                        font-weight: 800;
-                        letter-spacing: -0.5px;
-                        color: #0f172a;
-                        margin-bottom: 4px;
-                    }
-                    .hero-role-title {
-                        font-size: 1.05rem;
-                        font-weight: 700;
-                        color: #0284c7;
-                        margin-bottom: 12px;
-                    }
-                    .hero-tags {
-                        display: flex;
-                        flex-wrap: wrap;
-                        gap: 8px;
-                    }
-                    .hero-badge {
-                        padding: 5px 12px;
-                        border-radius: 980px;
-                        font-size: 0.74rem;
-                        font-weight: 800;
-                        letter-spacing: 0.3px;
-                        text-transform: uppercase;
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 4px;
-                    }
-                    .badge-blue { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-                    .badge-purple { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
-                    .badge-green { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-                    .badge-amber { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
-                    .badge-rose { background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; }
-                    .badge-slate { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+        htmlBody += '</div>';
 
-                    /* Segmented Grid Layout */
-                    .segmented-grid {
-                        display: grid;
-                        grid-template-columns: repeat(2, 1fr);
-                        gap: 18px;
-                        margin-bottom: 18px;
-                    }
-                    @media (max-width: 768px) {
-                        .segmented-grid { grid-template-columns: 1fr; }
-                        .hero-card { flex-direction: column; text-align: center; }
-                    }
+        // Matriz de Metadatos Inferior: 3 Columnas x 3 Filas
+        htmlBody += '<div class="grid grid-cols-3 divide-x-[1.5px] divide-slate-900 text-[10.5px]" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));">';
+        
+        // Columna 1
+        htmlBody += '<div class="divide-y-[1.5px] divide-slate-900" style="border-right:1.5px solid #0F172A;">';
+        htmlBody += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Nº EXPEDIENTE:</span><span class="font-mono font-bold text-[#0284C7] text-[11px]">' + docId + '</span></div>';
+        htmlBody += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">COLABORADOR:</span><span class="font-bold text-slate-900 text-[10.5px] truncate max-w-[145px]">' + rec.apellidos + ', ' + rec.nombres + '</span></div>';
+        htmlBody += '<div class="px-2 py-1 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[9.5px] uppercase">FECHA INGRESO:</span><span class="font-mono font-medium text-slate-900">' + fechaEmision + '</span></div>';
+        htmlBody += '</div>';
 
-                    /* Apple Segmented Card */
-                    .apple-card {
-                        background: #ffffff;
-                        border-radius: var(--radius-lg);
-                        padding: 22px 24px;
-                        box-shadow: var(--shadow-sm);
-                        border: 1px solid #e2e8f0;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: space-between;
-                        transition: transform 0.2s ease;
-                    }
-                    .card-blue { border-color: #bae6fd; background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 50px); }
-                    .card-purple { border-color: #e9d5ff; background: linear-gradient(180deg, #faf5ff 0%, #ffffff 50px); }
-                    .card-green { border-color: #bbf7d0; background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 50px); }
-                    .card-amber { border-color: #fef3c7; background: linear-gradient(180deg, #fffbeb 0%, #ffffff 50px); }
-                    .card-rose { border-color: #fecdd3; background: linear-gradient(180deg, #fff1f2 0%, #ffffff 50px); }
-                    .card-slate { border-color: #e2e8f0; background: linear-gradient(180deg, #f8fafc 0%, #ffffff 50px); }
+        // Columna 2
+        htmlBody += '<div class="divide-y-[1.5px] divide-slate-900" style="border-right:1.5px solid #0F172A;">';
+        htmlBody += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">ROL / CATEGORÍA:</span><span class="font-bold text-slate-900 text-[10.5px] uppercase">' + rolTexto + '</span></div>';
+        htmlBody += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">CARGO:</span><span class="font-bold text-slate-900 uppercase">' + rec.cargo + '</span></div>';
+        htmlBody += '<div class="px-2 py-1 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[9.5px] uppercase">CENTRO COSTOS:</span><span class="font-mono font-bold text-blue-700">' + (rec.centro_costo_codigo || 'CC-100') + '</span></div>';
+        htmlBody += '</div>';
 
-                    .card-header {
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        margin-bottom: 16px;
-                        padding-bottom: 10px;
-                        border-bottom: 1px solid rgba(0,0,0,0.06);
-                    }
-                    .card-title {
-                        font-size: 0.95rem;
-                        font-weight: 800;
-                        color: #0f172a;
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                    }
-                    .card-icon {
-                        width: 28px;
-                        height: 28px;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 0.9rem;
-                    }
+        // Columna 3
+        var estadoBadge = rec.estado === 'ACTIVO'
+            ? '<span class="font-bold text-emerald-600 text-[10.5px] tracking-tight uppercase flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span>ACTIVO</span>'
+            : '<span class="font-bold text-slate-600 text-[10.5px] tracking-tight uppercase flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-500 inline-block"></span>' + (rec.estado || 'INACTIVO') + '</span>';
 
-                    /* Inline Data Rows */
-                    .data-list {
-                        display: flex;
-                        flex-direction: column;
-                        gap: 8px;
-                    }
-                    .data-row {
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        padding: 8px 12px;
-                        background: #f8fafc;
-                        border-radius: var(--radius-sm);
-                        border: 1px solid #f1f5f9;
-                        font-size: 0.83rem;
-                    }
-                    .data-label {
-                        color: #64748b;
-                        font-weight: 600;
-                    }
-                    .data-val {
-                        color: #0f172a;
-                        font-weight: 700;
-                        text-align: right;
-                    }
-                    .data-val-highlight {
-                        color: #0284c7;
-                        font-weight: 800;
-                    }
-                    .data-val-success {
-                        color: #15803d;
-                        font-weight: 800;
-                    }
+        htmlBody += '<div class="divide-y-[1.5px] divide-slate-900">';
+        htmlBody += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">TIPO CONTRATO:</span><span class="font-bold text-slate-900 text-[10.5px] uppercase">' + (rec.tipo_contrato || 'PLAZO_FIJO') + '</span></div>';
+        htmlBody += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">SEDE / BASE:</span><span class="font-bold text-slate-900 truncate max-w-[130px]">' + (rec.sede || 'BASE PRINCIPAL') + '</span></div>';
+        htmlBody += '<div class="px-2 py-1 flex items-center justify-between bg-emerald-50/50"><span class="font-bold text-slate-700 text-[9.5px] uppercase">ESTADO:</span>' + estadoBadge + '</div>';
+        htmlBody += '</div>';
 
-                    /* Signature Zone */
-                    .sign-card {
-                        background: #ffffff;
-                        border: 1px solid #e2e8f0;
-                        border-radius: var(--radius-lg);
-                        padding: 24px;
-                        box-shadow: var(--shadow-sm);
-                        margin-top: 18px;
-                    }
-                    .sign-grid {
-                        display: grid;
-                        grid-template-columns: 1fr 90px 1fr;
-                        gap: 20px;
-                        align-items: end;
-                        margin-top: 30px;
-                    }
-                    .sign-box {
-                        text-align: center;
-                    }
-                    .sign-line {
-                        border-top: 1.5px solid #334155;
-                        padding-top: 6px;
-                        font-size: 0.78rem;
-                        font-weight: 800;
-                        color: #1e293b;
-                    }
-                    .huella-box {
-                        width: 75px;
-                        height: 95px;
-                        border: 1.5px dashed #64748b;
-                        border-radius: 8px;
-                        margin: 0 auto;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 0.65rem;
-                        font-weight: 700;
-                        color: #64748b;
-                        text-align: center;
-                    }
+        htmlBody += '</div>';
+        htmlBody += '</header>';
 
-                    @media print {
-                        body { background: #ffffff; padding: 0; }
-                        .apple-topbar { display: none !important; }
-                        .doc-container { max-width: 100%; margin: 0; padding: 0; }
-                        .hero-card, .apple-card, .sign-card {
-                            box-shadow: none !important;
-                            border: 1px solid #cbd5e1 !important;
-                            page-break-inside: avoid;
-                        }
-                    }
-                </style>
-            </head>
-            <body>
-                
-                <!-- Floating Apple Bar -->
-                <div class="apple-topbar">
-                    <div class="apple-brand">
-                        <img src="${empLogo}" alt="Logo">
-                        <div>
-                            <div class="apple-brand-title">${empNombre}</div>
-                            <div class="apple-brand-sub">Ficha de Registro de Ingreso de Personal &bull; RH-004</div>
-                        </div>
-                    </div>
-                    <div class="apple-actions">
-                        <button type="button" class="btn-apple-primary" onclick="window.print()">
-                            🖨️ Imprimir / Guardar PDF
-                        </button>
-                        <button type="button" class="btn-apple-secondary" onclick="window.close()">
-                            ✕ Cerrar
-                        </button>
-                    </div>
-                </div>
+        // 2. SECCIÓN: DATOS PERSONALES & IDENTIDAD CON FOTO EN LA ESQUINA
+        htmlBody += '<section class="mb-2.5 doc-grid-box rounded-lg overflow-hidden bg-white" style="border:1.5px solid #0F172A;">';
+        htmlBody += '<div class="px-3 py-1 bg-slate-900 text-white flex items-center justify-between" style="background:#0F172A;">';
+        htmlBody += '<div class="flex items-center gap-1.5">';
+        htmlBody += '<svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>';
+        htmlBody += '<h2 class="text-[10.5px] font-bold uppercase tracking-wider text-white">Datos Personales & Identidad del Colaborador</h2>';
+        htmlBody += '</div>';
+        htmlBody += '<span class="text-[8.5px] font-medium text-slate-300 font-mono">LEGAJO PERSONAL 360°</span>';
+        htmlBody += '</div>';
 
-                <div class="doc-container">
+        htmlBody += '<div class="grid grid-cols-12 divide-x-[1.5px] divide-slate-900 text-xs" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));">';
+        
+        // Lado Izquierdo: Lista estructurada de datos personales (Col span 9)
+        htmlBody += '<div class="col-span-9 p-2.5 bg-white divide-y divide-slate-100" style="grid-column:span 9 / span 9;border-right:1.5px solid #0F172A;">';
+        
+        var datosPersonales = [
+            { label: 'Nombre Completo', val: '<strong class="text-slate-900">' + rec.apellidos + ', ' + rec.nombres + '</strong>' },
+            { label: 'DNI / Documento', val: '<span class="font-mono font-bold text-blue-700">' + rec.numero_documento + '</span> (' + (rec.tipo_documento || 'DNI') + ')' },
+            { label: 'Fecha Nacimiento / Edad', val: (rec.fecha_nacimiento ? rec.fecha_nacimiento.slice(0, 10) : '—') + ' &bull; Nacionalidad: ' + (rec.nacionalidad || 'PERUANA') },
+            { label: 'Estado Civil', val: rec.estado_civil || 'SOLTERO(A)' },
+            { label: 'Dirección Domiciliaria', val: rec.direccion || '—' },
+            { label: 'Distrito / Provincia', val: (rec.distrito || '—') + ' / ' + (rec.provincia || '—') },
+            { label: 'Teléfono / Celular', val: '<span class="font-mono">' + (rec.telefono || '—') + '</span>' },
+            { label: 'Correo Electrónico', val: rec.email || '—' },
+            { label: 'Asignación Familiar', val: rec.tiene_asignacion_familiar ? '<span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-800">SÍ (S/ 113.00 ACTIVO)</span>' : '<span class="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-slate-100 text-slate-600">NO APLICA</span>' },
+            { label: 'Contacto de Emergencia', val: (rec.contacto_emergencia_nombre || '—') + ' (' + (rec.contacto_emergencia_parentesco || '—') + ') &bull; Tel: <span class="font-mono font-bold">' + (rec.contacto_emergencia_telefono || '—') + '</span>' }
+        ];
 
-                    <!-- Hero Profile Header -->
-                    <div class="hero-card">
-                        <div class="hero-photo-wrap">
-                            <img src="${fotoSrc}" alt="Foto de ${p.nombres}" class="hero-photo">
-                        </div>
-                        <div class="hero-info">
-                            <div class="hero-name">${p.apellidos}, ${p.nombres}</div>
-                            <div class="hero-role-title">${p.cargo} &bull; ${p.area || 'OPERACIONES'}</div>
-                            <div class="hero-tags">
-                                <span class="hero-badge badge-blue font-mono">DNI ${p.numero_documento}</span>
-                                <span class="hero-badge badge-purple">${rolNombre}</span>
-                                <span class="hero-badge badge-green font-mono">${p.centro_costo_codigo || 'CC-100'}</span>
-                                <span class="hero-badge badge-amber">${p.tipo_contrato || 'PLAZO_FIJO'}</span>
-                                <span class="hero-badge badge-slate">${p.sede || 'BASE PRINCIPAL'}</span>
-                                <span class="hero-badge ${p.estado === 'ACTIVO' ? 'badge-green' : 'badge-slate'}">${p.estado || 'ACTIVO'}</span>
-                            </div>
-                        </div>
-                    </div>
+        datosPersonales.forEach(function(item) {
+            htmlBody += '<div class="py-1 flex items-center justify-between text-[10px]">';
+            htmlBody += '<span class="text-slate-500 font-bold uppercase tracking-tight">' + item.label + ':</span>';
+            htmlBody += '<span class="text-slate-800 text-right">' + item.val + '</span>';
+            htmlBody += '</div>';
+        });
 
-                    <!-- Segmented Grid -->
-                    <div class="segmented-grid">
+        htmlBody += '</div>';
 
-                        <!-- 1. Identidad & Datos Personales -->
-                        <div class="apple-card card-blue">
-                            <div class="card-header">
-                                <div class="card-title">
-                                    <span class="card-icon" style="background:#e0f2fe; color:#0369a1;">👤</span>
-                                    Identidad & Información Personal
-                                </div>
-                                <span class="hero-badge badge-blue">Personal</span>
-                            </div>
-                            <div class="data-list">
-                                <div class="data-row">
-                                    <span class="data-label">Nombre Completo</span>
-                                    <span class="data-val data-val-highlight">${p.apellidos}, ${p.nombres}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Tipo & N° Documento</span>
-                                    <span class="data-val font-mono">${p.tipo_documento || 'DNI'}: ${p.numero_documento}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Fecha de Nacimiento</span>
-                                    <span class="data-val font-mono">${p.fecha_nacimiento ? p.fecha_nacimiento.slice(0, 10) : '—'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Nacionalidad / Estado Civil</span>
-                                    <span class="data-val">${p.nacionalidad || 'PERUANA'} &bull; ${p.estado_civil || 'SOLTERO(A)'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Dirección Domiciliaria</span>
-                                    <span class="data-val">${p.direccion || '—'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Distrito / Provincia</span>
-                                    <span class="data-val">${p.distrito || '—'} / ${p.provincia || '—'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Teléfono / Celular</span>
-                                    <span class="data-val font-mono">${p.telefono || '—'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Correo Electrónico</span>
-                                    <span class="data-val">${p.email || '—'}</span>
-                                </div>
-                            </div>
-                        </div>
+        // Lado Derecho: Foto Oficial en la Esquina (Col span 3)
+        htmlBody += '<div class="col-span-3 p-2.5 bg-slate-50/50 flex flex-col items-center justify-center text-center" style="grid-column:span 3 / span 3;">';
+        htmlBody += '<div class="p-1 bg-white rounded-lg shadow-xs mb-1.5" style="border:1.5px solid #0F172A;">';
+        htmlBody += '<img src="' + fotoSrc + '" alt="Foto de ' + rec.nombres + '" style="width:115px;height:140px;object-fit:cover;border-radius:4px;display:block;">';
+        htmlBody += '</div>';
+        htmlBody += '<span class="px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider bg-slate-900 text-white">FOTO OFICIAL</span>';
+        htmlBody += '</div>';
 
-                        <!-- 2. Puesto, Área & Costos -->
-                        <div class="apple-card card-purple">
-                            <div class="card-header">
-                                <div class="card-title">
-                                    <span class="card-icon" style="background:#f3e8ff; color:#7e22ce;">💼</span>
-                                    Puesto, Área & Centro de Costos
-                                </div>
-                                <span class="hero-badge badge-purple">Laboral</span>
-                            </div>
-                            <div class="data-list">
-                                <div class="data-row">
-                                    <span class="data-label">Cargo Asignado</span>
-                                    <span class="data-val fw-bold" style="color:#7e22ce;">${p.cargo}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Rol Operativo</span>
-                                    <span class="data-val">${rolNombre}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Área Corporativa</span>
-                                    <span class="data-val">${p.area || 'OPERACIONES'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Sede / Base</span>
-                                    <span class="data-val">${p.sede || 'BASE PRINCIPAL'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Centro de Costos</span>
-                                    <span class="data-val font-mono data-val-highlight">${p.centro_costo_codigo || 'CC-100'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Fecha de Ingreso</span>
-                                    <span class="data-val font-mono">${p.fecha_ingreso ? p.fecha_ingreso.slice(0, 10) : '—'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Tipo de Contrato</span>
-                                    <span class="data-val">${p.tipo_contrato || 'PLAZO_FIJO'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Vigencia de Contrato</span>
-                                    <span class="data-val font-mono">${estContratoBadge}</span>
-                                </div>
-                            </div>
-                        </div>
+        htmlBody += '</div>';
+        htmlBody += '</section>';
 
-                        <!-- 3. Planilla & Compensación -->
-                        <div class="apple-card card-green">
-                            <div class="card-header">
-                                <div class="card-title">
-                                    <span class="card-icon" style="background:#dcfce7; color:#15803d;">💰</span>
-                                    Planilla, Sueldos & Compensación
-                                </div>
-                                <span class="hero-badge badge-green">Remuneración</span>
-                            </div>
-                            <div class="data-list">
-                                <div class="data-row">
-                                    <span class="data-label">Sueldo Básico Mensual</span>
-                                    <span class="data-val font-mono data-val-success" style="font-size: 1.05rem;">S/ ${parseFloat(p.sueldo_basico || 0).toFixed(2)}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Asignación Familiar</span>
-                                    <span class="data-val font-mono">${p.tiene_asignacion_familiar ? '<span class="hero-badge badge-green">S/ 113.00 (ACTIVO)</span>' : 'S/ 0.00'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Bono Fijo Mensual</span>
-                                    <span class="data-val font-mono">S/ ${parseFloat(p.bono_fijo || 0).toFixed(2)}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Régimen Pensionario</span>
-                                    <span class="data-val fw-bold">${p.regimen_pensionario || 'ONP'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Tipo de Comisión AFP</span>
-                                    <span class="data-val">${p.tipo_comision_afp || 'FLUJO'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Código CUSPP</span>
-                                    <span class="data-val font-mono">${p.cuspp || '—'}</span>
-                                </div>
-                            </div>
-                        </div>
+        // 3. SECCIÓN: DETALLE DE PLANILLA, BANCOS Y REMUNERACIÓN
+        htmlBody += '<section class="mb-2.5 doc-grid-box rounded-lg overflow-hidden bg-white" style="border:1.5px solid #0F172A;">';
+        htmlBody += '<div class="px-3 py-1 bg-slate-900 text-white flex items-center justify-between" style="background:#0F172A;">';
+        htmlBody += '<div class="flex items-center gap-1.5">';
+        htmlBody += '<svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+        htmlBody += '<h2 class="text-[10.5px] font-bold uppercase tracking-wider text-white">Detalle de Planilla, Bancos y Remuneración</h2>';
+        htmlBody += '</div>';
+        htmlBody += '<span class="text-[8.5px] font-medium text-slate-300 font-mono">HABERES & CTS</span>';
+        htmlBody += '</div>';
 
-                        <!-- 4. Cuentas Bancarias & CTS -->
-                        <div class="apple-card card-amber">
-                            <div class="card-header">
-                                <div class="card-title">
-                                    <span class="card-icon" style="background:#fef3c7; color:#b45309;">🏦</span>
-                                    Cuentas Bancarias & Depósito CTS
-                                </div>
-                                <span class="hero-badge badge-amber">Finanzas</span>
-                            </div>
-                            <div class="data-list">
-                                <div class="data-row">
-                                    <span class="data-label">Banco de Haberes (Sueldo)</span>
-                                    <span class="data-val fw-bold">${p.banco_haberes || 'BCP'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">N° Cuenta Haberes</span>
-                                    <span class="data-val font-mono">${p.cuenta_haberes || '—'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Código Interbancario (CCI)</span>
-                                    <span class="data-val font-mono">${p.cci_haberes || '—'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Banco Depósito CTS</span>
-                                    <span class="data-val fw-bold">${p.banco_cts || '—'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">N° Cuenta Depósito CTS</span>
-                                    <span class="data-val font-mono">${p.cuenta_cts || '—'}</span>
-                                </div>
-                            </div>
-                        </div>
+        htmlBody += '<div class="grid grid-cols-2 divide-x-[1.5px] divide-slate-900 text-xs" style="display:grid;grid-template-columns:1fr 1fr;">';
+        
+        // Columna Izquierda: Sueldo y Régimen de Pensión
+        htmlBody += '<div class="p-2.5 bg-white space-y-1" style="border-right:1.5px solid #0F172A;">';
+        htmlBody += '<div class="flex items-center justify-between p-1 rounded-md bg-emerald-50/60 border border-emerald-200">';
+        htmlBody += '<span class="font-bold text-slate-700 text-[10px] uppercase">Sueldo Básico:</span>';
+        htmlBody += '<span class="font-mono font-extrabold text-emerald-700 text-[12px]">S/ ' + parseFloat(rec.sueldo_basico || 0).toFixed(2) + '</span>';
+        htmlBody += '</div>';
 
-                        <!-- 5. Seguridad SST & Conducción -->
-                        <div class="apple-card card-rose">
-                            <div class="card-header">
-                                <div class="card-title">
-                                    <span class="card-icon" style="background:#ffe4e6; color:#be123c;">🛡️</span>
-                                    Seguridad SST, Brevete & Salud EMO
-                                </div>
-                                <span class="hero-badge badge-rose">SST & Flota</span>
-                            </div>
-                            <div class="data-list">
-                                <div class="data-row">
-                                    <span class="data-label">Grupo Sanguíneo</span>
-                                    <span class="hero-badge badge-rose">${p.grupo_sanguineo || 'O+'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Licencia Conducir MTC</span>
-                                    <span class="data-val font-mono">${p.licencia_conducir || 'N/A'} (Cat: ${p.licencia_categoria || '---'})</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Vencimiento Brevete</span>
-                                    <span class="data-val font-mono">${p.licencia_vencimiento ? p.licencia_vencimiento.slice(0, 10) : '—'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Póliza SCTR Salud</span>
-                                    <span class="data-val">${p.sctr_salud_vigente ? '<span class="hero-badge badge-green">VIGENTE</span>' : '<span class="hero-badge badge-rose">NO CUBIERTO</span>'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Póliza SCTR Pensión</span>
-                                    <span class="data-val">${p.sctr_pension_vigente ? '<span class="hero-badge badge-green">VIGENTE</span>' : '<span class="hero-badge badge-rose">NO CUBIERTO</span>'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Condición Médica EMO</span>
-                                    <span class="data-val fw-bold">${p.emo_condicion || 'APTO'} (${p.emo_fecha_vencimiento ? p.emo_fecha_vencimiento.slice(0, 10) : '—'})</span>
-                                </div>
-                            </div>
-                        </div>
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Bono Fijo Mensual:</span>';
+        htmlBody += '<span class="font-mono font-bold text-slate-800">S/ ' + parseFloat(rec.bono_fijo || 0).toFixed(2) + '</span>';
+        htmlBody += '</div>';
 
-                        <!-- 6. Dotación EPP & Emergencias -->
-                        <div class="apple-card card-slate">
-                            <div class="card-header">
-                                <div class="card-title">
-                                    <span class="card-icon" style="background:#f1f5f9; color:#334155;">🦺</span>
-                                    Dotación EPP & Emergencias
-                                </div>
-                                <span class="hero-badge badge-slate">Logística</span>
-                            </div>
-                            <div class="data-list">
-                                <div class="data-row">
-                                    <span class="data-label">Talla Polo / Camisa</span>
-                                    <span class="data-val font-mono fw-bold">${p.talla_polo || 'M'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Talla Pantalón</span>
-                                    <span class="data-val font-mono fw-bold">${p.talla_pantalon || '32'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Calzado de Seguridad</span>
-                                    <span class="data-val font-mono fw-bold">${p.talla_calzado || '41'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Chaleco Reflectivo</span>
-                                    <span class="data-val font-mono fw-bold">${p.talla_chaleco || 'ESTÁNDAR'}</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Contacto de Emergencia</span>
-                                    <span class="data-val">${p.contacto_emergencia_nombre || '—'} (${p.contacto_emergencia_parentesco || '—'})</span>
-                                </div>
-                                <div class="data-row">
-                                    <span class="data-label">Teléfono de Emergencia</span>
-                                    <span class="data-val font-mono data-val-highlight">${p.contacto_emergencia_telefono || '—'}</span>
-                                </div>
-                            </div>
-                        </div>
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Régimen Pensionario:</span>';
+        htmlBody += '<span class="font-bold text-slate-900">' + (rec.regimen_pensionario || 'ONP') + ' (' + (rec.tipo_comision_afp || 'FLUJO') + ')</span>';
+        htmlBody += '</div>';
 
-                    </div>
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Código CUSPP:</span>';
+        htmlBody += '<span class="font-mono font-bold text-slate-700">' + (rec.cuspp || '—') + '</span>';
+        htmlBody += '</div>';
+        htmlBody += '</div>';
 
-                    <!-- Signatures Card -->
-                    <div class="sign-card">
-                        <p style="font-size: 0.76rem; color: #64748b; text-align: justify; margin-bottom: 20px;">
-                            Declaro bajo juramento que toda la información consignada en la presente Ficha Oficial de Registro de Personal es verídica y autorizo a la empresa a su verificación correspondiente conforme a las normativas laborales vigentes.
-                        </p>
-                        <div class="sign-grid">
-                            <div class="sign-box">
-                                <div class="sign-line">
-                                    FIRMA DEL COLABORADOR<br>
-                                    <span style="font-weight: normal; font-size: 0.72rem; color: #64748b;">DNI: ${p.numero_documento}</span>
-                                </div>
-                            </div>
-                            <div class="sign-box">
-                                <div class="huella-box">
-                                    HUELLA<br>DIGITAL
-                                </div>
-                            </div>
-                            <div class="sign-box">
-                                <div class="sign-line">
-                                    RECURSOS HUMANOS / GERENCIA<br>
-                                    <span style="font-weight: normal; font-size: 0.72rem; color: #64748b;">${empNombre}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        // Columna Derecha: Cuentas Bancarias y CTS
+        htmlBody += '<div class="p-2.5 bg-white space-y-1">';
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Banco Haberes (Sueldo):</span>';
+        htmlBody += '<span class="font-bold text-slate-900">' + (rec.banco_haberes || 'BCP') + '</span>';
+        htmlBody += '</div>';
 
-                </div>
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">N° Cuenta Sueldo:</span>';
+        htmlBody += '<span class="font-mono font-bold text-slate-800">' + (rec.cuenta_haberes || '—') + '</span>';
+        htmlBody += '</div>';
 
-            </body>
-            </html>
-        `);
-        win.document.close();
-        setTimeout(() => { win.focus(); }, 300);
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Código Interbancario (CCI):</span>';
+        htmlBody += '<span class="font-mono text-slate-700">' + (rec.cci_haberes || '—') + '</span>';
+        htmlBody += '</div>';
+
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Banco & Cuenta CTS:</span>';
+        htmlBody += '<span class="font-mono font-bold text-slate-800">' + (rec.banco_cts || '—') + ' / ' + (rec.cuenta_cts || '—') + '</span>';
+        htmlBody += '</div>';
+        htmlBody += '</div>';
+
+        htmlBody += '</div>';
+        htmlBody += '</section>';
+
+        // 4. SECCIÓN: SEGURIDAD SST, BREVETES MTC, SALUD EMO & DOTACIÓN EPP
+        htmlBody += '<section class="mb-2.5 doc-grid-box rounded-lg overflow-hidden bg-white" style="border:1.5px solid #0F172A;">';
+        htmlBody += '<div class="px-3 py-1 bg-slate-900 text-white flex items-center justify-between" style="background:#0F172A;">';
+        htmlBody += '<div class="flex items-center gap-1.5">';
+        htmlBody += '<svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>';
+        htmlBody += '<h2 class="text-[10.5px] font-bold uppercase tracking-wider text-white">Seguridad SST, Brevete MTC, Salud EMO & Dotación EPP</h2>';
+        htmlBody += '</div>';
+        htmlBody += '<span class="text-[8.5px] font-medium text-slate-300 font-mono">SST & OPERACIONES</span>';
+        htmlBody += '</div>';
+
+        htmlBody += '<div class="grid grid-cols-2 divide-x-[1.5px] divide-slate-900 text-xs" style="display:grid;grid-template-columns:1fr 1fr;">';
+        
+        // Columna Izquierda: SST & Brevete
+        htmlBody += '<div class="p-2.5 bg-white space-y-1" style="border-right:1.5px solid #0F172A;">';
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Grupo Sanguíneo:</span>';
+        htmlBody += '<span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-100 text-rose-700 border border-rose-200">' + (rec.grupo_sanguineo || 'O+') + '</span>';
+        htmlBody += '</div>';
+
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Licencia Conducir MTC:</span>';
+        htmlBody += '<span class="font-mono font-bold text-slate-900">' + (rec.licencia_conducir || 'N/A') + ' (Cat: ' + (rec.licencia_categoria || '---') + ')</span>';
+        htmlBody += '</div>';
+
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Vencimiento Brevete:</span>';
+        htmlBody += '<span class="font-mono text-slate-700">' + (rec.licencia_vencimiento ? rec.licencia_vencimiento.slice(0, 10) : '—') + '</span>';
+        htmlBody += '</div>';
+
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Póliza SCTR Salud / Pensión:</span>';
+        htmlBody += '<div class="flex gap-1">' + (rec.sctr_salud_vigente ? '<span class="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-emerald-100 text-emerald-800">SCTR SALUD ✔</span>' : '<span class="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-rose-100 text-rose-800">SIN SCTR SALUD</span>') + '</div>';
+        htmlBody += '</div>';
+
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Examen Médico (EMO):</span>';
+        htmlBody += '<span class="font-bold text-slate-900">' + (rec.emo_condicion || 'APTO') + ' (' + (rec.emo_fecha_vencimiento ? rec.emo_fecha_vencimiento.slice(0, 10) : '—') + ')</span>';
+        htmlBody += '</div>';
+        htmlBody += '</div>';
+
+        // Columna Derecha: Dotación y Tallas EPP
+        htmlBody += '<div class="p-2.5 bg-white space-y-1">';
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Talla Polo / Camisa:</span>';
+        htmlBody += '<span class="font-mono font-bold text-slate-800">' + (rec.talla_polo || 'M') + '</span>';
+        htmlBody += '</div>';
+
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Talla Pantalón:</span>';
+        htmlBody += '<span class="font-mono font-bold text-slate-800">' + (rec.talla_pantalon || '32') + '</span>';
+        htmlBody += '</div>';
+
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Calzado de Seguridad:</span>';
+        htmlBody += '<span class="font-mono font-bold text-slate-800">' + (rec.talla_calzado || '41') + '</span>';
+        htmlBody += '</div>';
+
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Chaleco Reflectivo:</span>';
+        htmlBody += '<span class="font-mono font-bold text-slate-800">' + (rec.talla_chaleco || 'ESTÁNDAR') + '</span>';
+        htmlBody += '</div>';
+
+        htmlBody += '<div class="flex items-center justify-between p-1 text-[10px]">';
+        htmlBody += '<span class="text-slate-500 font-bold uppercase">Vigencia de Contrato:</span>';
+        htmlBody += '<span class="font-mono font-bold text-slate-700">' + (rec.fecha_inicio_contrato ? rec.fecha_inicio_contrato.slice(0, 10) : '—') + ' al ' + (rec.fecha_fin_contrato ? rec.fecha_fin_contrato.slice(0, 10) : (rec.tipo_contrato === 'INDETERMINADO' ? 'INDETERMINADO' : '—')) + '</span>';
+        htmlBody += '</div>';
+        htmlBody += '</div>';
+
+        htmlBody += '</div>';
+        htmlBody += '</section>';
+
+        // 5. OBSERVACIONES & DECLARACIÓN
+        htmlBody += '<div class="doc-grid-box rounded-lg px-3 py-1.5 mb-2.5 bg-white flex items-center justify-between text-[10.5px]" style="border:1.5px solid #0F172A;">';
+        htmlBody += '<div class="flex items-center gap-2">';
+        htmlBody += '<span class="font-extrabold text-slate-800 uppercase text-[10px]">DECLARACIÓN:</span>';
+        htmlBody += '<span class="font-bold text-slate-700 uppercase tracking-tight text-[9.5px]">Declaro bajo juramento que los datos consignados en esta ficha son verídicos.</span>';
+        htmlBody += '</div>';
+        htmlBody += '<span class="text-[9px] font-mono text-slate-400">RRHH CONFORME</span>';
+        htmlBody += '</div>';
+
+        // 6. SECCIÓN DE FIRMAS DIGITALES
+        htmlBody += '<footer class="doc-grid-box rounded-lg p-2.5 bg-white" style="border:1.5px solid #0F172A;">';
+        htmlBody += '<div class="flex items-center gap-1.5 mb-2 pb-1 border-b border-slate-200" style="border-bottom:1px solid #E2E8F0;">';
+        htmlBody += '<svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>';
+        htmlBody += '<span class="text-[9.5px] font-extrabold uppercase tracking-wider text-slate-700">Firmas Digitales & Huella de Conformidad</span>';
+        htmlBody += '</div>';
+
+        htmlBody += '<div class="grid grid-cols-12 gap-2.5 items-end" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px;">';
+        
+        // Firma Colaborador (Col span 5)
+        htmlBody += '<div class="col-span-5 p-2 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col items-center justify-between text-center min-h-[75px]" style="grid-column:span 5 / span 5;border:1px solid #E2E8F0;background:#F8FAFC;">';
+        htmlBody += '<div class="h-8 flex items-center justify-center">';
+        htmlBody += '<svg class="w-32 h-6 text-slate-900 stroke-current fill-none stroke-[1.8]" viewBox="0 0 140 40"><path d="M15 28 Q 35 4 55 18 T 95 24 T 125 12"/><path d="M45 22 L 75 8" stroke-width="1.2"/></svg>';
+        htmlBody += '</div>';
+        htmlBody += '<div class="w-full pt-1 border-t border-slate-200" style="border-top:1px solid #E2E8F0;">';
+        htmlBody += '<span class="text-[10px] font-extrabold text-slate-900 block uppercase tracking-tight">Firma del Colaborador</span>';
+        htmlBody += '<span class="text-[9px] text-slate-500 font-medium block truncate max-w-[200px] mx-auto">DNI: ' + rec.numero_documento + '</span>';
+        htmlBody += '</div>';
+        htmlBody += '</div>';
+
+        // Huella Digital (Col span 2)
+        htmlBody += '<div class="col-span-2 p-1 rounded-xl border border-slate-300 bg-white flex flex-col items-center justify-center text-center min-h-[75px]" style="grid-column:span 2 / span 2;border:1.5px dashed #64748B;">';
+        htmlBody += '<span class="text-[7.5px] font-extrabold text-slate-400 block uppercase leading-tight">HUELLA<br>DIGITAL</span>';
+        htmlBody += '</div>';
+
+        // VoBo RRHH / Gerencia (Col span 5)
+        htmlBody += '<div class="col-span-5 p-2 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col items-center justify-between text-center min-h-[75px]" style="grid-column:span 5 / span 5;border:1px solid #E2E8F0;background:#F8FAFC;">';
+        htmlBody += '<div class="h-8 flex items-center justify-center">';
+        htmlBody += '<svg class="w-32 h-6 text-slate-900 stroke-current fill-none stroke-[1.8]" viewBox="0 0 140 40"><path d="M20 30 Q 40 4 60 14 T 90 28 T 120 10"/><path d="M50 30 L 115 26" stroke-width="1.2"/></svg>';
+        htmlBody += '</div>';
+        htmlBody += '<div class="w-full pt-1 border-t border-slate-200" style="border-top:1px solid #E2E8F0;">';
+        htmlBody += '<span class="text-[10px] font-extrabold text-slate-900 block uppercase tracking-tight">Recursos Humanos / Gerencia</span>';
+        htmlBody += '<span class="text-[9px] text-slate-500 font-medium block">VoBo CONTROL Y REGISTRO</span>';
+        htmlBody += '</div>';
+        htmlBody += '</div>';
+
+        htmlBody += '</div>';
+        htmlBody += '</footer>';
+
+        htmlBody += '</main>';
+
+        // Documento final con Tailwind CSS y barra superior idéntica a checklist
+        var finalHtml = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n'
+            + '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+            + '<title>Ficha de Registro de Personal • ' + rec.apellidos + ', ' + rec.nombres + '</title>\n'
+            + '<script src="https://cdn.tailwindcss.com"></script>\n'
+            + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+            + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+            + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
+            + '<style>\n'
+            + 'body {\n'
+            + '  background-color: #F1F5F9;\n'
+            + '  color: #0F172A;\n'
+            + '  -webkit-font-smoothing: antialiased;\n'
+            + '  -moz-osx-font-smoothing: grayscale;\n'
+            + '}\n'
+            + '.doc-grid-box { border: 1.5px solid #0F172A; }\n'
+            + '.btn-action { transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); }\n'
+            + '.btn-action:hover { transform: translateY(-1px); }\n'
+            + '.btn-action:active { transform: scale(0.98); }\n'
+            + '@media print {\n'
+            + '  @page {\n'
+            + '    size: A4 portrait;\n'
+            + '    margin: 4mm 5mm;\n'
+            + '  }\n'
+            + '  body {\n'
+            + '    background: #FFFFFF !important;\n'
+            + '    padding: 0 !important;\n'
+            + '    margin: 0 !important;\n'
+            + '    -webkit-print-color-adjust: exact !important;\n'
+            + '    print-color-adjust: exact !important;\n'
+            + '  }\n'
+            + '  .no-print {\n'
+            + '    display: none !important;\n'
+            + '  }\n'
+            + '  .report-page {\n'
+            + '    box-shadow: none !important;\n'
+            + '    border: none !important;\n'
+            + '    border-radius: 0 !important;\n'
+            + '    padding: 0 !important;\n'
+            + '    margin: 0 !important;\n'
+            + '    width: 100% !important;\n'
+            + '    max-width: 100% !important;\n'
+            + '  }\n'
+            + '}\n'
+            + '</style>\n</head>\n<body class="py-4 md:py-6 px-2 sm:px-4 flex flex-col items-center min-h-screen">\n'
+            + '  <!-- TOP APP TOOLBAR (1:1 IDÉNTICO A CHECKLIST) -->\n'
+            + '  <nav class="no-print w-full max-w-[840px] mb-4 flex flex-wrap items-center justify-between gap-3 bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-xs">\n'
+            + '    <div class="flex items-center gap-3">\n'
+            + '      <button onclick="window.close()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">\n'
+            + '        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>\n'
+            + '        <span>Cerrar Vista</span>\n'
+            + '      </button>\n'
+            + '      <div class="h-4 w-px bg-slate-200"></div>\n'
+            + '      <div class="flex items-center gap-2">\n'
+            + '        <span class="text-xs font-bold text-slate-900 font-mono uppercase">' + rec.apellidos + ', ' + rec.nombres + '</span>\n'
+            + '        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase">' + docId + '</span>\n'
+            + '      </div>\n'
+            + '    </div>\n'
+            + '    <div class="flex items-center gap-2">\n'
+            + '      <button onclick="window.print()" class="btn-action inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-medium rounded-xl shadow-xs transition">\n'
+            + '        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>\n'
+            + '        <span>Guardar / Descargar PDF (Vectorial HD)</span>\n'
+            + '      </button>\n'
+            + '    </div>\n'
+            + '  </nav>\n'
+            + '  <!-- MAIN CONTENT ROOT -->\n'
+            + '  <div id="rrhh-pdf-root" class="w-full flex flex-col items-center">\n'
+            + htmlBody
+            + '\n  </div>\n'
+            + '  <aside class="no-print mt-3 text-center text-[10px] text-slate-400">\n'
+            + '    Azkell ERP • Documento oficial de Legajo Digital de Personal 2026\n'
+            + '  </aside>\n'
+            + '</body>\n</html>';
+
+        var blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
 
     } catch(err) {
-        console.error('Error abriendo Ficha en nueva pestaña:', err);
-        alert('Error al abrir la ficha: ' + err.message);
+        console.error('Error generando Ficha PDF:', err);
+        alert('Error al generar la ficha: ' + err.message);
     }
 };
 
