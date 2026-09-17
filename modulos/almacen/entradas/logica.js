@@ -1448,74 +1448,165 @@ window._entRender = function() {
 
 window._entIrPag = function(n) { window._entPagActual = n; window._entRender(); };
 
-// ── Panel detalle ──────────────────────────────────────────────────
+// ── Panel detalle modal centrado / bottom sheet ────────────────────
 window._entAbrirDetalle = function(id) {
+    if (!id) return;
     window._entDetalleId = id;
     window._entRender();
 
     var d = (window._entData || []).find(function(e) { return e.id === id; });
     if (!d) return;
 
+    var bd = document.getElementById('ent-det-backdrop');
+    if (bd) bd.classList.add('open');
+
     var titulo = document.getElementById('ent-detalle-titulo');
-    if (titulo) titulo.textContent = 'Entrada ' + id;
+    if (titulo) titulo.textContent = 'Orden ' + id;
 
     var fecha = d.fecha ? String(d.fecha).split('T')[0] : '—';
     var tp = parseFloat(d.total_pen || 0);
     var monSim = d.moneda === 'USD' ? 'USD' : 'PEN';
     var items = d.items || [];
+    var totalCant = items.reduce(function(acc, it){ return acc + (parseFloat(it.cantidad)||0); }, 0);
 
-    var html = '';
-    html += '<div style="font-size:1.2rem; font-weight:800; color:var(--text); margin-bottom:0.25rem;">' + _entEsc(id) + '</div>';
-    html += '<div style="font-size:0.82rem; color:var(--subtext); margin-bottom:1rem;">' + fecha + '</div>';
-
-    html += '<div class="ent-sec">';
-    html += '<div class="ent-sec-hd">Información General</div>';
-    html += '<div class="ent-field"><div class="ent-field-lbl">Placa</div><div class="ent-field-val">' + _entEsc(d.placa || '-') + '</div></div>';
-    html += '<div class="ent-field"><div class="ent-field-lbl">Motivo</div><div class="ent-field-val">' + _entEsc(d.motivo_entrada || '-') + '</div></div>';
-    html += '<div class="ent-field"><div class="ent-field-lbl">Proveedor</div><div class="ent-field-val">' + _entEsc(d.proveedor_nombre || '-') + '</div></div>';
-    html += '<div class="ent-field"><div class="ent-field-lbl">Nº Factura</div><div class="ent-field-val">' + _entEsc(d.documento_referencia || '-') + '</div></div>';
-    html += '<div class="ent-field"><div class="ent-field-lbl">Tipo de Orden</div><div class="ent-field-val">' + _entEsc(d.tipo_orden || 'Orden de compra') + '</div></div>';
-    html += '<div class="ent-field"><div class="ent-field-lbl">Condición de Pago</div><div class="ent-field-val">' + _entEsc(d.condicion_pago || 'Al contado') + (d.condicion_pago === 'A crédito' ? ' (' + (d.dias_credito || 30) + ' días)' : '') + '</div></div>';
-    html += '<div class="ent-field"><div class="ent-field-lbl">Moneda</div><div class="ent-field-val">' + monSim + (d.moneda === 'USD' && d.tipo_cambio ? ' (T/C: ' + parseFloat(d.tipo_cambio).toFixed(3) + ')' : '') + '</div></div>';
-    html += '<div class="ent-field"><div class="ent-field-lbl">Total PEN</div><div class="ent-field-val"><span style="font-size:1.05rem; color:#16a34a; font-weight:800;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span></div></div>';
-    // Desglose IGV
     var igvMode = d.tipo_igv || 'sin_igv';
     var igvLabel = igvMode === 'incluido' ? 'Incluido IGV' : igvMode === 'mas_igv' ? '+ IGV 18%' : 'Sin IGV';
-    html += '<div class="ent-field"><div class="ent-field-lbl">Tipo IGV</div><div class="ent-field-val"><span style="font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:99px;background:' + (igvMode==='sin_igv'?'#f1f5f9;color:#64748b':'#fef3c7;color:#92400e') + ';">' + igvLabel + '</span></div></div>';
-    if (igvMode !== 'sin_igv') {
-        var gravado = tp / 1.18;
-        var igvMonto = tp - gravado;
-        html += '<div class="ent-field" style="background:#fffbeb;"><div class="ent-field-lbl" style="color:#92400e;">Gravado</div><div class="ent-field-val" style="color:#92400e;font-weight:700;">S/ ' + gravado.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div></div>';
-        html += '<div class="ent-field" style="background:#fffbeb;"><div class="ent-field-lbl" style="color:#92400e;">IGV 18%</div><div class="ent-field-val" style="color:#d97706;font-weight:700;">S/ ' + igvMonto.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div></div>';
-    }
-    if (d.observaciones) {
-        html += '<div class="ent-field"><div class="ent-field-lbl">Observaciones</div><div class="ent-field-val" style="font-size:0.78rem; white-space:normal;">' + _entEsc(d.observaciones) + '</div></div>';
-    }
-    if (d.creado_por) {
-        html += '<div class="ent-field"><div class="ent-field-lbl">Registrado por</div><div class="ent-field-val" style="font-size:0.75rem;">' + _entEsc(d.creado_por) + '</div></div>';
-    }
-    html += '</div>';
+
+    var html = `
+    <!-- Card 1: Bento Card Cabecera & Info General -->
+    <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+        <div class="d-flex align-items-center justify-content-between mb-2.5 pb-2 border-bottom">
+            <div>
+                <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.65rem; letter-spacing: 0.5px;">Folio de Orden de Compra</span>
+                <span class="fw-bolder text-primary" style="font-size: 1.15rem; letter-spacing: -0.02em;">${_entEsc(id)}</span>
+            </div>
+            <div>
+                <span class="badge bg-primary text-white rounded-pill px-2.5 py-1" style="font-size: 0.75rem; font-weight: 800;">
+                    ${_entEsc(d.tipo_orden || 'ORDEN DE COMPRA')}
+                </span>
+            </div>
+        </div>
+
+        <div class="row g-2">
+            <div class="col-6 col-md-4">
+                <div class="p-2 rounded-3" style="background: #f8fafc; border: 1px solid #f1f5f9;">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">Proveedor</span>
+                    <div class="d-flex align-items-center gap-1 mt-0.5">
+                        <i class="bi bi-building text-primary" style="font-size: 0.75rem;"></i>
+                        <span class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;">${_entEsc(d.proveedor_nombre || '—')}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4">
+                <div class="p-2 rounded-3" style="background: #f8fafc; border: 1px solid #f1f5f9;">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">Placa Asignada</span>
+                    <div class="d-flex align-items-center gap-1 mt-0.5">
+                        <i class="bi bi-truck text-secondary" style="font-size: 0.75rem;"></i>
+                        <span class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;">${_entEsc(d.placa || '—')}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <div class="p-2 rounded-3" style="background: #f8fafc; border: 1px solid #f1f5f9;">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">Fecha</span>
+                    <div class="d-flex align-items-center gap-1 mt-0.5">
+                        <i class="bi bi-calendar3 text-muted" style="font-size: 0.75rem;"></i>
+                        <span class="fw-semibold text-dark" style="font-size: 0.8rem;">${fecha}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="p-2 rounded-3" style="background: #f8fafc; border: 1px solid #f1f5f9;">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">Nº Documento / Factura</span>
+                    <div class="d-flex align-items-center gap-1 mt-0.5">
+                        <i class="bi bi-receipt text-muted" style="font-size: 0.75rem;"></i>
+                        <span class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;">${_entEsc(d.documento_referencia || '—')}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="p-2 rounded-3" style="background: #f8fafc; border: 1px solid #f1f5f9;">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">Condición de Pago</span>
+                    <div class="d-flex align-items-center gap-1 mt-0.5">
+                        <i class="bi bi-credit-card text-muted" style="font-size: 0.75rem;"></i>
+                        <span class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;">${_entEsc(d.condicion_pago || 'Al contado')}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        ${d.observaciones ? `
+        <div class="mt-2.5 p-2 rounded-3" style="background: #f1f5f9;">
+            <span class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.62rem;"><i class="bi bi-chat-left-text me-1"></i>Observaciones / Motivo</span>
+            <div class="text-dark fw-medium" style="font-size: 0.8rem;">${_entEsc(d.observaciones)}</div>
+        </div>
+        ` : ''}
+    </div>
+
+    <!-- Card 2: Lista de Artículos Comprados -->
+    <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+        <div class="d-flex align-items-center justify-content-between mb-2.5 pb-2 border-bottom">
+            <div class="d-flex align-items-center gap-1.5 fw-bold text-dark" style="font-size: 0.82rem; text-transform: uppercase;">
+                <i class="bi bi-box-seam-fill text-primary"></i> Artículos Registrados (${items.length})
+            </div>
+            <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" style="font-size: 0.7rem; font-weight: 700;">
+                ${totalCant.toLocaleString('es-PE', {maximumFractionDigits:3})} Unidades
+            </span>
+        </div>
+
+        <div class="d-flex flex-column gap-2">
+    `;
 
     if (items.length) {
-        html += '<div class="ent-sec" style="margin-top:1rem;">';
-        html += '<div class="ent-sec-hd">Artículos (' + items.length + ')</div>';
         items.forEach(function(it) {
             var cant = parseFloat(it.cantidad || 0);
             var cu   = parseFloat(it.costo_unitario || 0);
             var imp  = parseFloat(it.importe || cant * cu || 0);
             var mon  = d.moneda === 'USD' ? '$' : 'S/';
-            html += '<div class="ent-field" style="flex-direction:column; gap:2px;">';
-            html += '<div style="display:flex; justify-content:space-between;">';
-            html += '<span style="font-size:0.8rem; font-weight:700; color:var(--text);">' + _entEsc(it.descripcion || it.inventario_id || '—') + '</span>';
-            html += '<span style="font-size:0.78rem; font-weight:800; color:#16a34a;">' + mon + ' ' + imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>';
-            html += '</div>';
-            if (it.inventario_id) {
-                html += '<span style="font-size:0.65rem; color:var(--subtext);">' + _entEsc(it.inventario_id) + ' — ' + cant.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + ' × ' + mon + ' ' + cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + '</span>';
-            }
-            html += '</div>';
+
+            html += `
+            <div class="p-2.5 rounded-3 d-flex align-items-center justify-content-between gap-2" style="background: #f8fafc; border: 1px solid #f1f5f9;">
+                <div class="d-flex align-items-center gap-2.5" style="min-width: 0;">
+                    <div class="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0" style="width: 36px; height: 36px; background: #e0f2fe; color: #0284c7;">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <div style="min-width: 0;">
+                        <div class="fw-bold text-dark text-truncate" style="font-size: 0.85rem;" title="${_entEsc(it.descripcion || it.inventario_id || '—')}">
+                            ${_entEsc(it.descripcion || it.inventario_id || '—')}
+                        </div>
+                        <div class="text-secondary small d-flex align-items-center gap-1.5 flex-wrap" style="font-size: 0.72rem;">
+                            ${it.inventario_id ? `<span class="badge bg-white text-muted border rounded-1 px-1.5 py-0.5" style="font-size:0.65rem;">${_entEsc(it.inventario_id)}</span>` : ''}
+                            <span>${cant.toLocaleString('es-PE', {maximumFractionDigits:3})} u.</span>
+                            <span class="text-muted">·</span>
+                            <span>${mon} ${cu.toFixed(2)} c/u</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-end flex-shrink-0">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">Subtotal</span>
+                    <span class="fw-bolder text-dark" style="font-size: 0.88rem;">${mon} ${imp.toFixed(2)}</span>
+                </div>
+            </div>
+            `;
         });
-        html += '</div>';
+    } else {
+        html += '<div class="text-center py-3 text-muted small">No hay ítems registrados en esta orden.</div>';
     }
+
+    html += `
+        </div>
+
+        <!-- Total General -->
+        <div class="d-flex align-items-center justify-content-between mt-3 pt-2.5 border-top">
+            <span class="fw-bold text-dark" style="font-size: 0.9rem;">Monto Total:</span>
+            <span class="fw-bolder text-success" style="font-size: 1.25rem;">S/ ${tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+    </div>
+    `;
 
     var scroll = document.getElementById('ent-detalle-scroll');
     if (scroll) scroll.innerHTML = html;
@@ -1523,26 +1614,52 @@ window._entAbrirDetalle = function(id) {
     var footer = document.getElementById('ent-detalle-footer');
     if (footer) {
         footer.style.display = 'flex';
-        footer.innerHTML =
-            '<button class="btn btn-sm btn-outline-secondary flex-fill" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(id) + '\')" style="display:none;">' +
-            '<i class="bi bi-eye me-1"></i>Ver</button>' +
-            '<button class="btn btn-sm btn-outline-primary flex-fill" onclick="window.generarComprobanteEntrada(\'' + _entEsc(id) + '\')" style="display:none;">' +
-            '<i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>' +
-            '<button class="btn btn-sm btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(id) + '\')">' +
-            '<i class="bi bi-trash"></i></button>';
+        var eId = _entEsc(id);
+
+        var btnPdfPrincipal = `
+            <button type="button" class="btn w-100 fw-bold d-flex align-items-center justify-content-center gap-2"
+                    style="border-radius: 9999px; height: 50px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #fff; font-size: 0.95rem; border: none; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);"
+                    onclick="window.generarComprobanteEntrada('${eId}')">
+                <i class="bi bi-file-earmark-pdf-fill fs-6"></i> Descargar Documento PDF
+            </button>
+        `;
+
+        var btnVer = `
+            <button type="button" class="btn flex-fill fw-bold d-flex align-items-center justify-content-center gap-1.5"
+                    style="border-radius: 9999px; height: 46px; background: #ffffff; color: #1e293b; border: 1.5px solid #e2e8f0; font-size: 0.88rem; box-shadow: 0 2px 6px rgba(0,0,0,0.03);"
+                    onclick="window.previsualizarComprobanteEntrada('${eId}')">
+                <i class="bi bi-eye-fill text-primary"></i> Vista Previa
+            </button>
+        `;
+
+        var btnEliminar = `
+            <button type="button" class="btn flex-fill fw-bold d-flex align-items-center justify-content-center gap-1.5"
+                    style="border-radius: 9999px; height: 46px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; font-size: 0.88rem;"
+                    onclick="window.eliminarEntrada('${eId}')">
+                <i class="bi bi-trash"></i> Eliminar
+            </button>
+        `;
+
+        footer.innerHTML = `
+            <div class="d-flex flex-column gap-2 w-100">
+                ${btnPdfPrincipal}
+                <div class="d-flex align-items-center gap-2 w-100">
+                    ${btnVer}
+                    ${btnEliminar}
+                </div>
+            </div>
+        `;
     }
 
     var panel = document.getElementById('ent-panel-detalle');
     if (panel) panel.classList.add('open');
-    var bd = document.getElementById('ent-det-backdrop');
-    if (bd && window.innerWidth < 768) bd.style.display = 'block';
 };
 
 window._entCerrarDetalle = function() {
     var panel = document.getElementById('ent-panel-detalle');
     if (panel) panel.classList.remove('open');
     var bd = document.getElementById('ent-det-backdrop');
-    if (bd) bd.style.display = 'none';
+    if (bd) bd.classList.remove('open');
     window._entDetalleId = null;
     window._entRender();
 };

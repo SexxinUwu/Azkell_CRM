@@ -513,49 +513,160 @@ window.salRenderTabla = function() {
     }
 };
 
-// ── Detalle lateral ───────────────────────────────────────────
+// ── Detalle modal centrado / bottom sheet ──────────────────────
 function salAbrirDetalle(m) {
+    if (!m) return;
     window.salDetalleId = m.id;
     salRenderTabla();
+    
     var bd = document.getElementById('sal-det-backdrop');
-    if (bd && window.innerWidth < 768) bd.style.display = 'block';
+    if (bd) bd.classList.add('open');
 
     var titulo = document.getElementById('sal-detalle-titulo');
     if (titulo) titulo.textContent = 'Salida ' + (m.id || '');
 
-    var html = '';
-    html += '<div style="font-size:1.2rem; font-weight:800; color:var(--text); margin-bottom:0.3rem;">' + salEsc(m.id || '—') + '</div>';
-    html += '<div style="font-size:0.83rem; color:var(--subtext); margin-bottom:1rem;">OT: <strong>' + salEsc(m.ticket_ot || '—') + '</strong></div>';
+    var items = m.items || [];
+    var totalCant = items.reduce(function(acc, it){ return acc + (parseFloat(it.cantidad)||0); }, 0);
 
-    html += '<div class="sal-sec">';
-    html += '<div class="sal-sec-hd">Cabecera</div>';
-    html += '<div class="sal-field"><div class="sal-field-lbl">Estado</div><div class="sal-field-val">' + salBadge(m.estado) + '</div></div>';
-    html += '<div class="sal-field"><div class="sal-field-lbl">Fecha</div><div class="sal-field-val">' + salFmtDate(m.fecha, m.created_at) + '</div></div>';
-    html += '<div class="sal-field"><div class="sal-field-lbl">Placa</div><div class="sal-field-val"><strong>' + salEsc(m.placa || '—') + '</strong></div></div>';
-    html += '<div class="sal-field"><div class="sal-field-lbl">Responsable</div><div class="sal-field-val">' + salEsc(m.responsable || '—') + '</div></div>';
-    html += '<div class="sal-field"><div class="sal-field-lbl">Solicitante</div><div class="sal-field-val"><strong>' + salEsc(_salFmtSolicitante(m.creado_por)) + '</strong></div></div>';
-    if (m.observaciones) html += '<div class="sal-field"><div class="sal-field-lbl">Observaciones</div><div class="sal-field-val" style="white-space:normal;font-size:0.78rem;">' + salEsc(m.observaciones) + '</div></div>';
-    if (m.estado === 'Anulado' && m.motivo_anulacion) {
-        html += '<div class="sal-field" style="background:rgba(220,38,38,0.04);"><div class="sal-field-lbl" style="color:#dc2626;">Motivo anulación</div><div class="sal-field-val" style="color:#dc2626;white-space:normal;font-size:0.78rem;">' + salEsc(m.motivo_anulacion) + '</div></div>';
-    }
-    html += '</div>';
+    var html = `
+    <!-- Card 1: Bento Card Cabecera & Info General -->
+    <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+        <div class="d-flex align-items-center justify-content-between mb-2.5 pb-2 border-bottom">
+            <div>
+                <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.65rem; letter-spacing: 0.5px;">Folio de Salida</span>
+                <span class="fw-bolder text-primary" style="font-size: 1.15rem; letter-spacing: -0.02em;">${salEsc(m.id || '—')}</span>
+            </div>
+            <div>
+                ${salBadge(m.estado)}
+            </div>
+        </div>
 
-    if (m.items && m.items.length) {
-        html += '<div class="sal-sec">';
-        html += '<div class="sal-sec-hd">Artículos</div>';
-        m.items.forEach(function(it) {
-            var imp = parseFloat(it.importe) || (parseFloat(it.cantidad) * parseFloat(it.costo_unitario));
-            html += '<div class="sal-field" style="display:block;">'
-                + '<div style="font-weight:700;color:var(--text);font-size:0.82rem;">' + salEsc(it.descripcion || it.inventario_id || '—') + '</div>'
-                + '<div style="font-size:0.78rem;color:var(--subtext);">'
-                + parseFloat(it.cantidad || 0).toLocaleString('es-PE', {maximumFractionDigits:3}) + ' u. · S/.' + parseFloat(it.costo_unitario || 0).toFixed(2) + ' c/u'
-                + ' = <strong style="color:var(--text);">S/.' + imp.toFixed(2) + '</strong>'
-                + '</div>'
-                + '</div>';
+        <div class="row g-2">
+            <div class="col-6 col-md-4">
+                <div class="p-2 rounded-3" style="background: #f8fafc; border: 1px solid #f1f5f9;">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">N° OT</span>
+                    <div class="d-flex align-items-center gap-1 mt-0.5">
+                        <i class="bi bi-tools text-primary" style="font-size: 0.75rem;"></i>
+                        <span class="fw-bold text-dark" style="font-size: 0.82rem;">${salEsc(m.ticket_ot || '—')}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4">
+                <div class="p-2 rounded-3" style="background: #f8fafc; border: 1px solid #f1f5f9;">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">Placa / Destino</span>
+                    <div class="d-flex align-items-center gap-1 mt-0.5">
+                        <i class="bi bi-truck text-secondary" style="font-size: 0.75rem;"></i>
+                        <span class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;">${salEsc(m.placa || '—')}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <div class="p-2 rounded-3" style="background: #f8fafc; border: 1px solid #f1f5f9;">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">Fecha de Registro</span>
+                    <div class="d-flex align-items-center gap-1 mt-0.5">
+                        <i class="bi bi-calendar3 text-muted" style="font-size: 0.75rem;"></i>
+                        <span class="fw-semibold text-dark" style="font-size: 0.8rem;">${salFmtDate(m.fecha, m.created_at)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="p-2 rounded-3" style="background: #f8fafc; border: 1px solid #f1f5f9;">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">Responsable</span>
+                    <div class="d-flex align-items-center gap-1 mt-0.5">
+                        <i class="bi bi-person-fill text-muted" style="font-size: 0.75rem;"></i>
+                        <span class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;">${salEsc(m.responsable || '—')}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="p-2 rounded-3" style="background: #f8fafc; border: 1px solid #f1f5f9;">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">Solicitante</span>
+                    <div class="d-flex align-items-center gap-1 mt-0.5">
+                        <i class="bi bi-person-badge text-muted" style="font-size: 0.75rem;"></i>
+                        <span class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;">${salEsc(_salFmtSolicitante(m.creado_por))}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        ${m.observaciones ? `
+        <div class="mt-2.5 p-2 rounded-3" style="background: #f1f5f9;">
+            <span class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.62rem;"><i class="bi bi-chat-left-text me-1"></i>Observaciones / Motivo</span>
+            <div class="text-dark fw-medium" style="font-size: 0.8rem;">${salEsc(m.observaciones)}</div>
+        </div>
+        ` : ''}
+
+        ${(m.estado === 'Anulado' && m.motivo_anulacion) ? `
+        <div class="mt-2.5 p-2 rounded-3" style="background: #fef2f2; border: 1px solid #fecaca;">
+            <span class="text-danger text-uppercase fw-bold d-block mb-1" style="font-size: 0.62rem;"><i class="bi bi-exclamation-octagon me-1"></i>Motivo de Anulación</span>
+            <div class="text-danger fw-semibold" style="font-size: 0.8rem;">${salEsc(m.motivo_anulacion)}</div>
+        </div>
+        ` : ''}
+    </div>
+
+    <!-- Card 2: Lista de Artículos / Repuestos Despachados -->
+    <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+        <div class="d-flex align-items-center justify-content-between mb-2.5 pb-2 border-bottom">
+            <div class="d-flex align-items-center gap-1.5 fw-bold text-dark" style="font-size: 0.82rem; text-transform: uppercase;">
+                <i class="bi bi-box-seam-fill text-primary"></i> Artículos Despachados (${items.length})
+            </div>
+            <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" style="font-size: 0.7rem; font-weight: 700;">
+                ${totalCant.toLocaleString('es-PE', {maximumFractionDigits:3})} Unidades
+            </span>
+        </div>
+
+        <div class="d-flex flex-column gap-2">
+    `;
+
+    if (items.length) {
+        items.forEach(function(it) {
+            var cant = parseFloat(it.cantidad || 0);
+            var cu = parseFloat(it.costo_unitario || 0);
+            var imp = parseFloat(it.importe) || (cant * cu);
+
+            html += `
+            <div class="p-2.5 rounded-3 d-flex align-items-center justify-content-between gap-2" style="background: #f8fafc; border: 1px solid #f1f5f9;">
+                <div class="d-flex align-items-center gap-2.5" style="min-width: 0;">
+                    <div class="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0" style="width: 36px; height: 36px; background: #e0f2fe; color: #0284c7;">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <div style="min-width: 0;">
+                        <div class="fw-bold text-dark text-truncate" style="font-size: 0.85rem;" title="${salEsc(it.descripcion || it.inventario_id || '—')}">
+                            ${salEsc(it.descripcion || it.inventario_id || '—')}
+                        </div>
+                        <div class="text-secondary small d-flex align-items-center gap-1.5 flex-wrap" style="font-size: 0.72rem;">
+                            ${it.inventario_id ? `<span class="badge bg-white text-muted border rounded-1 px-1.5 py-0.5" style="font-size:0.65rem;">${salEsc(it.inventario_id)}</span>` : ''}
+                            <span>${cant.toLocaleString('es-PE', {maximumFractionDigits:3})} u.</span>
+                            <span class="text-muted">·</span>
+                            <span>S/. ${cu.toFixed(2)} c/u</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-end flex-shrink-0">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">Subtotal</span>
+                    <span class="fw-bolder text-dark" style="font-size: 0.88rem;">S/. ${imp.toFixed(2)}</span>
+                </div>
+            </div>
+            `;
         });
-        html += '<div style="padding:8px 12px;font-weight:800;text-align:right;color:#16a34a;">Total: ' + salFmtMoney(m.total_pen) + '</div>';
-        html += '</div>';
+    } else {
+        html += '<div class="text-center py-3 text-muted small">No hay ítems registrados en esta salida.</div>';
     }
+
+    html += `
+        </div>
+
+        <!-- Total General -->
+        <div class="d-flex align-items-center justify-content-between mt-3 pt-2.5 border-top">
+            <span class="fw-bold text-dark" style="font-size: 0.9rem;">Monto Total:</span>
+            <span class="fw-bolder text-success" style="font-size: 1.25rem;">${salFmtMoney(m.total_pen)}</span>
+        </div>
+    </div>
+    `;
 
     var scroll = document.getElementById('sal-detalle-scroll');
     if (scroll) scroll.innerHTML = html;
@@ -566,23 +677,63 @@ function salAbrirDetalle(m) {
         var eId = salEsc(m.id);
         var puedeEditar   = window.checkPerm('sal_inv', 'e');
         var puedeEliminar = window.checkPerm('sal_inv', 'd');
+
         var btnDespachar = (puedeEditar && m.estado !== 'Despachado' && m.estado !== 'Anulado')
-            ? '<button class="btn btn-sm btn-success flex-fill fw-bold ms-1" onclick="window.salDespachar(\'' + eId + '\')"><i class="bi bi-box-seam me-1"></i>Despachar</button>'
-            : '';
+            ? `
+            <button type="button" class="btn w-100 fw-bold d-flex align-items-center justify-content-center gap-2"
+                    style="border-radius: 9999px; height: 50px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; font-size: 0.95rem; border: none; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);"
+                    onclick="window.salDespachar('${eId}')">
+                <i class="bi bi-box-seam-fill fs-6"></i> Despachar Salida
+            </button>
+            ` : '';
+
+        var btnPdfPrincipal = `
+            <button type="button" class="btn w-100 fw-bold d-flex align-items-center justify-content-center gap-2"
+                    style="border-radius: 9999px; height: 50px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #fff; font-size: 0.95rem; border: none; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);"
+                    onclick="window.salGenerarPDF(window.salData.find(function(x){return x.id==='${eId}';}))">
+                <i class="bi bi-file-earmark-pdf-fill fs-6"></i> Descargar Documento PDF
+            </button>
+        `;
+
+        var btnVer = `
+            <button type="button" class="btn flex-fill fw-bold d-flex align-items-center justify-content-center gap-1.5"
+                    style="border-radius: 9999px; height: 46px; background: #ffffff; color: #1e293b; border: 1.5px solid #e2e8f0; font-size: 0.88rem; box-shadow: 0 2px 6px rgba(0,0,0,0.03);"
+                    onclick="window.salVerPDF(window.salData.find(function(x){return x.id==='${eId}';}))">
+                <i class="bi bi-eye-fill text-primary"></i> Vista Previa
+            </button>
+        `;
+
+        var btnEditar = puedeEditar
+            ? `
+            <button type="button" class="btn flex-fill fw-bold d-flex align-items-center justify-content-center gap-1.5"
+                    style="border-radius: 9999px; height: 46px; background: #fefce8; color: #a16207; border: 1.5px solid #fef08a; font-size: 0.88rem;"
+                    onclick="window.salEditarSalida('${eId}')">
+                <i class="bi bi-pencil-square"></i> Editar
+            </button>
+            ` : '';
+
         var btnAnular = puedeEliminar
             ? (m.estado !== 'Anulado'
-                ? '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.salAnular(\'' + eId + '\')"><i class="bi bi-slash-circle me-1"></i>Anular</button>'
-                : '<span class="sal-badge badge-anulado ms-auto" style="font-size:0.72rem;padding:5px 10px;">Anulada</span>')
-            : (m.estado === 'Anulado' ? '<span class="sal-badge badge-anulado ms-auto" style="font-size:0.72rem;padding:5px 10px;">Anulada</span>' : '');
-        var btnEditar = puedeEditar
-            ? '<button class="btn btn-sm btn-outline-warning ms-1 fw-bold" onclick="window.salEditarSalida(\'' + eId + '\')"><i class="bi bi-pencil-square me-1"></i>Editar</button>'
+                ? `
+                <button type="button" class="btn flex-fill fw-bold d-flex align-items-center justify-content-center gap-1.5"
+                        style="border-radius: 9999px; height: 46px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; font-size: 0.88rem;"
+                        onclick="window.salAnular('${eId}')">
+                    <i class="bi bi-slash-circle"></i> Anular
+                </button>
+                `
+                : '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill py-2 px-3 fw-bold flex-fill text-center" style="font-size:0.8rem;">Salida Anulada</span>')
             : '';
-        footer.innerHTML =
-            '<button class="btn btn-sm btn-outline-secondary" onclick="window.salVerPDF(window.salData.find(function(x){return x.id===\'' + eId + '\';}))" style="min-width:70px;"><i class="bi bi-eye me-1"></i>Ver</button>'
-          + '<button class="btn btn-sm btn-outline-primary ms-1" onclick="window.salGenerarPDF(window.salData.find(function(x){return x.id===\'' + eId + '\';}))" style="min-width:70px;"><i class="bi bi-filetype-pdf me-1"></i>PDF</button>'
-          + btnEditar
-          + (btnDespachar ? btnDespachar : '')
-          + btnAnular;
+
+        footer.innerHTML = `
+            <div class="d-flex flex-column gap-2 w-100">
+                ${btnDespachar ? btnDespachar : btnPdfPrincipal}
+                <div class="d-flex align-items-center gap-2 w-100">
+                    ${btnVer}
+                    ${btnEditar}
+                    ${btnAnular}
+                </div>
+            </div>
+        `;
     }
 
     var panel = document.getElementById('sal-panel-detalle');
@@ -593,7 +744,7 @@ window.salCerrarDetalle = function() {
     var panel = document.getElementById('sal-panel-detalle');
     if (panel) panel.classList.remove('open');
     var bd = document.getElementById('sal-det-backdrop');
-    if (bd) bd.style.display = 'none';
+    if (bd) bd.classList.remove('open');
     window.salDetalleId = null;
     salRenderTabla();
 };
