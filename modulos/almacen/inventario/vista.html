@@ -414,7 +414,7 @@
 <div class="ck-app-container d-flex flex-column h-100" id="mod-inventario" style="background:transparent; min-height:100vh;">
 
     <!-- ── PORTAL DE BIENVENIDA MULTI-ALMACÉN (VISTA DEFAULT) ─────────── -->
-    <div id="inv-portal-almacenes" class="flex-grow-1" style="display:none; padding: 0.5rem 0 100px 0;">
+    <div id="inv-portal-almacenes" class="flex-grow-1" style="display:block; padding: 0.5rem 0 100px 0;">
         <!-- Hero Header -->
         <div class="inv-portal-hero">
             <div class="d-flex align-items-center gap-3">
@@ -427,7 +427,7 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-primary fw-bold rounded-pill px-4 py-2 shadow-sm d-flex align-items-center gap-2" onclick="window._invSeleccionarAlmacen('ALL', 'TODOS LOS ALMACENES')" style="background: #0284c7; border-color: #0284c7;">
+                <button class="btn btn-primary fw-bold rounded-pill px-4 py-2 shadow-sm d-flex align-items-center gap-2" onclick="window._invSeleccionarAlmacenPortal('TODOS')" style="background: #0284c7; border-color: #0284c7;">
                     <i class="bi bi-grid-fill"></i> <span>Ver Inventario Global</span>
                 </button>
             </div>
@@ -442,7 +442,7 @@
     </div>
 
     <!-- ── VISTA PRINCIPAL DE INVENTARIO (FILTRADA POR ALMACÉN O GLOBAL) ─ -->
-    <div id="inv-vista-principal" class="flex-grow-1 d-flex flex-column" style="display:none;">
+    <div id="inv-vista-principal" class="flex-grow-1 flex-column" style="display:none !important;">
 
         <!-- ── 1. HEADER MODERNO CON CONTROLES DESKTOP ───────────────────── -->
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
@@ -537,11 +537,14 @@
 
     <!-- ── 3. BARRA DE BÚSQUEDA Y TABS SEGMENTADOS ───────────────────── -->
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 380px;">
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 420px;">
             <div class="position-relative flex-grow-1">
                 <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
                 <input type="text" id="inv-buscar" class="ck-apple-search" placeholder="Código, descripción, marca..." oninput="window.filtrarInventario()">
             </div>
+            <button type="button" onclick="window._invAbrirScanner('search')" class="btn btn-sm" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="Escanear Código de Barras / QR">
+                <i class="bi bi-qr-code-scan" style="font-size: 1.05rem;"></i>
+            </button>
             <button onclick="window.abrirFiltrosInventario()" class="btn bg-white border rounded-3 px-3 py-2 text-secondary d-flex align-items-center gap-2 fw-semibold" title="Filtros avanzados">
                 <i class="bi bi-funnel"></i>
                 <span class="d-none d-md-inline">Filtros</span>
