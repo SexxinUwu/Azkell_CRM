@@ -2116,8 +2116,8 @@ window.abrirDetalleChecklist = async function(id) {
                 <div class="col-12 col-md-6"><strong>Procedencia:</strong> ${r.procedencia || '-'}</div>
                 <div class="col-12 col-md-6"><strong>Orden de Viaje:</strong> ${r.orden_viaje || '-'}</div>
                 <div class="col-12 col-md-6"><strong>Orden de Servicio:</strong> ${r.orden_servicio || '-'}</div>
-                <div class="col-12 col-md-6"><strong>Kilometraje (Tracto):</strong> ${r.km_inicial || '-'}</div>
-                <div class="col-12 col-md-6"><strong>Horas de Motor (Remolque):</strong> ${r.horas_motor || '-'}</div>
+                <div class="col-12 col-md-6"><strong>Kilometraje (Tracto):</strong> ${(r.km_inicial && Number(r.km_inicial) > 0) ? Number(r.km_inicial).toLocaleString('en-US') + ' km' : ((r.km_final && Number(r.km_final) > 0) ? Number(r.km_final).toLocaleString('en-US') + ' km' : '-')}</div>
+                <div class="col-12 col-md-6"><strong>Horas de Motor (Remolque):</strong> ${r.horas_motor ? (r.horas_motor + ' hrs') : '-'}</div>
             </div>
         </div>
     `;
@@ -2133,6 +2133,38 @@ window.abrirDetalleChecklist = async function(id) {
     // TRACTO
     html += `<div class="fw-bold text-dark small mb-2"><i class="bi bi-truck me-1 text-primary"></i> TRACTO (Placa Principal)</div>`;
     html += `<div class="row g-2 mb-3">`;
+
+    // Helper para emparejar ítems reportados (normalizando números, tildes y palabras clave)
+    const matchItemFalla = (itemTxt, sysKey, fallasList) => {
+        if (!Array.isArray(fallasList) || fallasList.length === 0) return null;
+        const clean = (s) => (s || '')
+            .toString()
+            .toLowerCase()
+            .replace(/^\d+\s*[-.]*\s*/, '')
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const normItem = clean(itemTxt);
+        const itemWords = normItem.split(' ').filter(w => w.length > 2);
+
+        return fallasList.find(f => {
+            const normFItem = clean(f.item);
+            const normFObs = clean(f.obs);
+            const normFSys = clean(f.sistema);
+            const normSysKey = clean(sysKey);
+
+            if (normFItem && (normFItem.includes(normItem) || normItem.includes(normFItem))) return true;
+            if (normFSys && (normFSys === normSysKey || normFSys.includes(normSysKey) || normSysKey.includes(normFSys))) {
+                if (itemWords.length > 0 && itemWords.some(w => normFItem.includes(w) || normFObs.includes(w))) {
+                    return true;
+                }
+            }
+            if (normFObs && normFObs.includes(normItem)) return true;
+            return false;
+        });
+    };
 
     const configT = [
         { key: 'MOTOR', items: SISTEMAS_TRACTO.motor },
@@ -2150,19 +2182,9 @@ window.abrirDetalleChecklist = async function(id) {
                     <div class="list-group list-group-flush small">
         `;
         sys.items.forEach(itemTxt => {
-            const fallaMatch = fallasT.find(f => (f.item || '').toUpperCase().includes(itemTxt.toUpperCase()) || ((f.sistema || '').toUpperCase() === sys.key && (f.obs || '').toUpperCase().includes(itemTxt.toUpperCase())));
+            const fallaMatch = matchItemFalla(itemTxt, sys.key, fallasT);
             if (fallaMatch) {
-                const obsTxt = (fallaMatch.obs && fallaMatch.obs.trim() && fallaMatch.obs.trim().toUpperCase() !== itemTxt.toUpperCase()) ? fallaMatch.obs.trim() : '';
-                html += `
-                    <div class="list-group-item py-2 px-3 bg-danger bg-opacity-10 border-start border-3 border-danger">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <span class="text-danger fw-bold">❌ ${itemTxt}</span>
-                            <span class="badge bg-danger text-uppercase px-2 py-1" style="font-size:0.65rem;">OBSERVADO</span>
-                        </div>
-                        ${obsTxt ? `<div class="small text-dark fw-semibold mt-1 ps-2 border-start border-2 border-danger-subtle" style="font-size:0.78rem;">Obs: ${obsTxt}</div>` : ''}
-                        ${fallaMatch.fecha ? `<div class="text-muted mt-1" style="font-size:0.7rem;"><i class="bi bi-clock-history me-1 text-primary"></i>Reportado el: <b>${fallaMatch.fecha}</b></div>` : ''}
-                    </div>
-                `;
+                html += `<div class="list-group-item py-2 px-3 text-danger fw-bold">✕ ${itemTxt}</div>`;
             } else {
                 html += `<div class="list-group-item py-2 px-3 text-secondary">✓ ${itemTxt}</div>`;
             }
@@ -2194,19 +2216,9 @@ window.abrirDetalleChecklist = async function(id) {
                         <div class="list-group list-group-flush small">
             `;
             sys.items.forEach(itemTxt => {
-                const fallaMatch = fallasR.find(f => (f.item || '').toUpperCase().includes(itemTxt.toUpperCase()) || ((f.sistema || '').toUpperCase() === sys.key && (f.obs || '').toUpperCase().includes(itemTxt.toUpperCase())));
+                const fallaMatch = matchItemFalla(itemTxt, sys.key, fallasR);
                 if (fallaMatch) {
-                    const obsTxt = (fallaMatch.obs && fallaMatch.obs.trim() && fallaMatch.obs.trim().toUpperCase() !== itemTxt.toUpperCase()) ? fallaMatch.obs.trim() : '';
-                    html += `
-                        <div class="list-group-item py-2 px-3 bg-danger bg-opacity-10 border-start border-3 border-danger">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="text-danger fw-bold">❌ ${itemTxt}</span>
-                                <span class="badge bg-danger text-uppercase px-2 py-1" style="font-size:0.65rem;">OBSERVADO</span>
-                            </div>
-                            ${obsTxt ? `<div class="small text-dark fw-semibold mt-1 ps-2 border-start border-2 border-danger-subtle" style="font-size:0.78rem;">Obs: ${obsTxt}</div>` : ''}
-                            ${fallaMatch.fecha ? `<div class="text-muted mt-1" style="font-size:0.7rem;"><i class="bi bi-clock-history me-1 text-primary"></i>Reportado el: <b>${fallaMatch.fecha}</b></div>` : ''}
-                        </div>
-                    `;
+                    html += `<div class="list-group-item py-2 px-3 text-danger fw-bold">✕ ${itemTxt}</div>`;
                 } else {
                     html += `<div class="list-group-item py-2 px-3 text-secondary">✓ ${itemTxt}</div>`;
                 }
@@ -3171,37 +3183,82 @@ window.generarPDF_Checklist = async function(id) {
     if (!Array.isArray(fallasT)) fallasT = [];
     if (!Array.isArray(fallasR)) fallasR = [];
 
-    // Helper para verificar si un ítem tiene falla
-    function esFallaTracto(numOTexto) {
-        return fallasT.find(f => {
-            const it = (f.item || '').toUpperCase();
-            const ob = (f.obs || '').toUpperCase();
-            const search = numOTexto.toUpperCase();
-            return it.includes(search) || ob.includes(search);
+    // Helper para emparejar ítems reportados (normalizando números, tildes y palabras clave)
+    const matchItemFalla = (itemTxt, sysKey, fallasList) => {
+        if (!Array.isArray(fallasList) || fallasList.length === 0) return null;
+        const clean = (s) => (s || '')
+            .toString()
+            .toLowerCase()
+            .replace(/^\d+\s*[-.]*\s*/, '')
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const normItem = clean(itemTxt);
+        const itemWords = normItem.split(' ').filter(w => w.length > 2);
+
+        return fallasList.find(f => {
+            const normFItem = clean(f.item);
+            const normFObs = clean(f.obs);
+            const normFSys = clean(f.sistema);
+            const normSysKey = clean(sysKey);
+
+            if (normFItem && (normFItem.includes(normItem) || normItem.includes(normFItem))) return true;
+            if (normFSys && (normFSys === normSysKey || normFSys.includes(normSysKey) || normSysKey.includes(normFSys))) {
+                if (itemWords.length > 0 && itemWords.some(w => normFItem.includes(w) || normFObs.includes(w))) {
+                    return true;
+                }
+            }
+            if (normFObs && normFObs.includes(normItem)) return true;
+            return false;
         });
+    };
+
+    // Helper para extraer el NÚMERO exacto del ítem (ej: "03", "01", "14") para la columna Nº
+    function extraerNumeroItem(falla, esTracto) {
+        if (!falla) return '';
+        const rawItem = (falla.item || '').trim();
+
+        // 1. Si el nombre ya trae el número al inicio
+        const mDirecto = rawItem.match(/^(\d{1,2})\b/);
+        if (mDirecto) return mDirecto[1].padStart(2, '0');
+
+        // 2. Si es manual
+        if (falla.sistema === 'MANUAL' || rawItem.includes('Falla Manual')) {
+            return 'MAN';
+        }
+
+        // 3. Buscar en el catálogo oficial de checklist
+        const sistemas = esTracto ? SISTEMAS_TRACTO : SISTEMAS_REMOLQUE;
+        const keys = Object.keys(sistemas);
+        for (const k of keys) {
+            const itemsList = sistemas[k] || [];
+            for (const it of itemsList) {
+                if (matchItemFalla(it, k, [falla])) {
+                    const m = it.match(/^(\d{1,2})\b/);
+                    if (m) return m[1].padStart(2, '0');
+                }
+            }
+        }
+
+        // 4. Fallback si contiene dígitos
+        const mAny = rawItem.match(/\d+/);
+        return mAny ? mAny[0].padStart(2, '0') : '—';
     }
 
-    function esFallaRemolque(numOTexto) {
-        return fallasR.find(f => {
-            const it = (f.item || '').toUpperCase();
-            const ob = (f.obs || '').toUpperCase();
-            const search = numOTexto.toUpperCase();
-            return it.includes(search) || ob.includes(search);
-        });
-    }
-
-    function renderItemT(itemTxt) {
-        const match = esFallaTracto(itemTxt);
+    function renderItemT(itemTxt, sysKey) {
+        const match = matchItemFalla(itemTxt, sysKey, fallasT);
         if (match) {
-            return `<div class="chk-item item-falla"><span class="box-x">[ ✕ ]</span> <b class="text-danger">${itemTxt}</b></div>`;
+            return `<div class="chk-item"><span class="box-x">[ ✕ ]</span> <span class="text-danger font-bold">${itemTxt}</span></div>`;
         }
         return `<div class="chk-item"><span class="box-v">[ ✓ ]</span> <span>${itemTxt}</span></div>`;
     }
 
-    function renderItemR(itemTxt) {
-        const match = esFallaRemolque(itemTxt);
+    function renderItemR(itemTxt, sysKey) {
+        const match = matchItemFalla(itemTxt, sysKey, fallasR);
         if (match) {
-            return `<div class="chk-item item-falla"><span class="box-x">[ ✕ ]</span> <b class="text-danger">${itemTxt}</b></div>`;
+            return `<div class="chk-item"><span class="box-x">[ ✕ ]</span> <span class="text-danger font-bold">${itemTxt}</span></div>`;
         }
         return `<div class="chk-item"><span class="box-v">[ ✓ ]</span> <span>${itemTxt}</span></div>`;
     }
@@ -3210,6 +3267,11 @@ window.generarPDF_Checklist = async function(id) {
     const fechaFmt = r.fecha_reporte ? new Date(r.fecha_reporte).toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
     const folioStr = r.folio || ('F-' + String(r.id).padStart(5, '0'));
 
+    // Kilometrajes formateados
+    const kmIniTxt = (r.km_inicial && Number(r.km_inicial) > 0) ? Number(r.km_inicial).toLocaleString('es-PE') : '—';
+    const kmFinTxt = (r.km_final && Number(r.km_final) > 0) ? Number(r.km_final).toLocaleString('es-PE') : (kmIniTxt !== '—' ? kmIniTxt : '—');
+    const horasMotorTxt = r.horas_motor ? String(r.horas_motor) : '—';
+
     // Filas para la tabla "DETALLE DE FALLA DE TRACTO" (7 filas A y B)
     let detalleTractoRows = '';
     const maxFilasT = Math.max(7, Math.ceil(fallasT.length / 2));
@@ -3217,17 +3279,17 @@ window.generarPDF_Checklist = async function(id) {
         const fA = fallasT[i];
         const fB = fallasT[i + maxFilasT];
 
-        const numA = fA ? (fA.item.split(' ')[0] || (i + 1)) : '';
+        const numA = fA ? extraerNumeroItem(fA, true) : '';
         const descA = fA ? (fA.obs || fA.item) : '';
-        const numB = fB ? (fB.item.split(' ')[0] || (i + maxFilasT + 1)) : '';
+        const numB = fB ? extraerNumeroItem(fB, true) : '';
         const descB = fB ? (fB.obs || fB.item) : '';
 
         detalleTractoRows += `
             <tr>
-                <td class="text-center font-bold" style="width:5%;">${numA}</td>
-                <td style="width:45%;">${descA}</td>
-                <td class="text-center font-bold" style="width:5%;">${numB}</td>
-                <td style="width:45%;">${descB}</td>
+                <td class="text-center font-bold text-danger" style="width:6%; font-size:10px;">${numA}</td>
+                <td style="width:44%;">${descA}</td>
+                <td class="text-center font-bold text-danger" style="width:6%; font-size:10px;">${numB}</td>
+                <td style="width:44%;">${descB}</td>
             </tr>
         `;
     }
@@ -3239,21 +3301,21 @@ window.generarPDF_Checklist = async function(id) {
         const fA = fallasR[i];
         const fB = fallasR[i + maxFilasR];
 
-        const numA = fA ? (fA.item.split(' ')[0] || (i + 1)) : '';
+        const numA = fA ? extraerNumeroItem(fA, false) : '';
         const descA = fA ? (fA.obs || fA.item) : '';
-        const numB = fB ? (fB.item.split(' ')[0] || (i + maxFilasR + 1)) : '';
+        const numB = fB ? extraerNumeroItem(fB, false) : '';
         const descB = fB ? (fB.obs || fB.item) : '';
 
         detalleRemolqueRows += `
             <tr>
                 <td class="text-center" style="width:3%;">${fA ? ' ' : ''}</td>
                 <td class="text-center" style="width:3%;">${fA ? 'S' : ''}</td>
-                <td class="text-center font-bold" style="width:5%;">${numA}</td>
-                <td style="width:39%;">${descA}</td>
+                <td class="text-center font-bold text-danger" style="width:6%; font-size:10px;">${numA}</td>
+                <td style="width:38%;">${descA}</td>
                 <td class="text-center" style="width:3%;">${fB ? ' ' : ''}</td>
                 <td class="text-center" style="width:3%;">${fB ? 'S' : ''}</td>
-                <td class="text-center font-bold" style="width:5%;">${numB}</td>
-                <td style="width:39%;">${descB}</td>
+                <td class="text-center font-bold text-danger" style="width:6%; font-size:10px;">${numB}</td>
+                <td style="width:38%;">${descB}</td>
             </tr>
         `;
     }
@@ -3331,7 +3393,7 @@ window.generarPDF_Checklist = async function(id) {
     .bg-light-blue { background-color: #eaf2fc; font-weight: 700; }
     .text-center { text-align: center; }
     .font-bold { font-weight: 700; }
-    .text-danger { color: #b91c1c !important; }
+    .text-danger { color: #dc2626 !important; }
 
     /* Grillas de 4 columnas para ítems */
     .checklist-4col {
@@ -3370,9 +3432,8 @@ window.generarPDF_Checklist = async function(id) {
         gap: 3px;
         padding: 0.5px 0;
     }
-    .box-v { color: #64748b; font-size: 8px; font-weight: bold; }
-    .box-x { color: #dc2626; font-size: 9px; font-weight: 900; }
-    .item-falla { background-color: #fee2e2; border-radius: 2px; padding: 0 1px; }
+    .box-v { color: #475569; font-size: 8px; font-weight: bold; }
+    .box-x { color: #dc2626; font-size: 8.5px; font-weight: 900; }
 
     /* Tablas de detalle de falla */
     .table-fallas { width: 100%; border-collapse: collapse; border: 1.5px solid #0056b3; margin-bottom: 2px; }
@@ -3397,6 +3458,175 @@ window.generarPDF_Checklist = async function(id) {
     }
     .sign-col:last-child { border-right: none; }
     .sign-img-area { height: 48px; display: flex; align-items: center; justify-content: center; }
+    .sign-img-area img { max-height: 44px; max-width: 170px; object-fit: contain; }
+    .sign-footer-text { background-color: #eaf2fc; font-size: 9px; font-weight: 700; padding: 2.5px 0; color: #0056b3; border-top: 1px solid #93c5fd; }
+</style>
+</head>
+<body>
+
+<button id="btnPrint" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+
+<div class="page-a4">
+    <!-- ENCABEZADO ISO -->
+    <div>
+        <table class="iso-header">
+            <tr>
+                <td class="logo-cell" rowspan="3">
+                    <img src="${empLogoUrl}" alt="Logo" style="max-width: 100%; max-height: 44px; object-fit: contain;">
+                </td>
+                <td class="title-cell" rowspan="3">
+                    REPORTE DE FALLAS FLOTA PESADA
+                </td>
+                <td class="qms-item"><b>CÓDIGO:</b> F-MAN-001</td>
+            </tr>
+            <tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>
+            <tr><td class="qms-item"><b>EMISIÓN:</b> 10/11/2025</td></tr>
+        </table>
+        <div class="folio-banner">
+            Nº ${folioStr}
+        </div>
+    </div>
+
+    <!-- SECCIÓN 1: DATOS DE TRACTO Y CONDUCTOR -->
+    <div>
+        <div class="blue-bar">
+            <span>DATOS DE TRACTO Y CONDUCTOR</span>
+            <span>O.S. ${r.orden_servicio || '—'}</span>
+        </div>
+        <table class="table-grid">
+            <tr>
+                <td class="bg-light-blue" style="width:14%;">PROCEDENCIA:</td>
+                <td style="width:36%;">${r.procedencia || '—'}</td>
+                <td class="bg-light-blue text-center" style="width:16%;">DATOS UNIDAD</td>
+                <td class="bg-light-blue text-center" style="width:11%;">PLACA</td>
+                <td class="bg-light-blue text-center" style="width:11%;">KM INICIAL</td>
+                <td class="bg-light-blue text-center" style="width:12%;">KM FINAL / HRS</td>
+            </tr>
+            <tr>
+                <td class="bg-light-blue">CONDUCTOR:</td>
+                <td class="font-bold">${r.conductor || '—'}</td>
+                <td class="text-center font-bold">TRACTO</td>
+                <td class="text-center font-bold" style="color:#0056b3; font-size:11px;">${r.placa_tracto || '—'}</td>
+                <td class="text-center font-bold">${kmIniTxt}</td>
+                <td class="text-center font-bold">${kmFinTxt}</td>
+            </tr>
+            <tr>
+                <td class="bg-light-blue">FECHA:</td>
+                <td>${fechaFmt}</td>
+                <td class="text-center font-bold">REMOLQUE</td>
+                <td class="text-center font-bold" style="color:#0056b3; font-size:11px;">${r.placa_remolque || '—'}</td>
+                <td class="text-center">${horasMotorTxt !== '—' ? 'HRS: ' + horasMotorTxt : '—'}</td>
+                <td class="text-center">—</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- SECCIÓN 2: TRACTO (SISTEMAS Y DETALLE DE FALLAS) -->
+    <div>
+        <div class="sub-instructions">
+            1.- MARQUE CON "✓" SI SE ENCUENTRA EN BUEN ESTADO, MARQUE CON "X" SI SE PRESENTA OBSERVACIÓN, LUEGO DETALLE LA OCURRENCIA EN EL RECUADRO COLOCANDO EL NÚMERO DEL ÍTEM OBSERVADO.
+        </div>
+        <div class="checklist-4col">
+            <!-- Col 1: MOTOR -->
+            <div class="col-sys">
+                <div class="sys-title">MOTOR</div>
+                ${(SISTEMAS_TRACTO.motor || []).map(it => renderItemT(it, 'MOTOR')).join('')}
+            </div>
+            <!-- Col 2: CAJA - CORONAS -->
+            <div class="col-sys">
+                <div class="sys-title">CAJA - CORONAS</div>
+                ${(SISTEMAS_TRACTO.caja || []).map(it => renderItemT(it, 'CAJA-CORONAS')).join('')}
+            </div>
+            <!-- Col 3: REFRIGERACIÓN & DIRECCIÓN -->
+            <div class="col-sys">
+                <div class="sys-title">REFRIGERACIÓN</div>
+                ${(SISTEMAS_TRACTO.refri || []).map(it => renderItemT(it, 'REFRIGERACION')).join('')}
+                <div class="sys-title" style="margin-top:2px;">DIRECCIÓN</div>
+                ${(SISTEMAS_TRACTO.direccion || []).map(it => renderItemT(it, 'DIRECCION')).join('')}
+            </div>
+            <!-- Col 4: CABINA Y CHASIS -->
+            <div class="col-sys">
+                <div class="sys-title">CABINA Y CHASIS</div>
+                ${(SISTEMAS_TRACTO.cabina || []).map(it => renderItemT(it, 'CABINA Y CHASIS')).join('')}
+            </div>
+        </div>
+
+        <table class="table-fallas">
+            <thead>
+                <tr>
+                    <th style="width:6%;">Nº</th>
+                    <th style="width:44%;">DETALLE DE FALLA DE TRACTO</th>
+                    <th style="width:6%;">Nº</th>
+                    <th style="width:44%;">DETALLE DE FALLA DE TRACTO</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${detalleTractoRows}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- SECCIÓN 3: SEMIRREMOLQUE / CARRETA (SISTEMAS Y DETALLE DE FALLAS) -->
+    <div>
+        <div class="sub-instructions">
+            2.- MARQUE CON "✓" SI SE ENCUENTRA EN BUEN ESTADO, MARQUE CON "X" SI SE PRESENTA OBSERVACIÓN, LUEGO DETALLE LA OCURRENCIA EN EL RECUADRO MARCANDO "T" O "S" SI LA OBSERVACIÓN CORRESPONDE AL TRACTO O SEMIRREMOLQUE.
+        </div>
+        <div class="checklist-4col">
+            <!-- Col 1: FRENOS & CARRETA -->
+            <div class="col-sys">
+                <div class="sys-title">FRENOS</div>
+                ${(SISTEMAS_REMOLQUE.frenos || []).map(it => renderItemR(it, 'FRENOS')).join('')}
+                <div class="sys-title" style="margin-top:2px;">CARRETA</div>
+                ${(SISTEMAS_REMOLQUE.carreta || []).map(it => renderItemR(it, 'CARRETA')).join('')}
+            </div>
+            <!-- Col 2: SISTEMA ELÉCTRICO -->
+            <div class="col-sys">
+                <div class="sys-title">SISTEMA ELÉCTRICO</div>
+                ${(SISTEMAS_REMOLQUE.electrico || []).map(it => renderItemR(it, 'SISTEMA ELECTRICO')).join('')}
+            </div>
+            <!-- Col 3: SUSPENSIÓN & FURGÓN -->
+            <div class="col-sys">
+                <div class="sys-title">SUSPENSIÓN</div>
+                ${(SISTEMAS_REMOLQUE.suspension || []).map(it => renderItemR(it, 'SUSPENSION')).join('')}
+                <div class="sys-title" style="margin-top:2px;">FURGÓN</div>
+                ${(SISTEMAS_REMOLQUE.furgon || []).map(it => renderItemR(it, 'FURGON')).join('')}
+            </div>
+            <!-- Col 4: LLANTAS & TERMOKING -->
+            <div class="col-sys">
+                <div class="sys-title">LLANTAS & ACCESORIOS</div>
+                ${(SISTEMAS_REMOLQUE.llantas || []).slice(0, 8).map(it => renderItemR(it, 'LLANTAS')).join('')}
+                <div class="sys-title" style="margin-top:2px;">TERMOKING / OTROS</div>
+                ${(SISTEMAS_REMOLQUE.termoking || []).slice(0, 7).map(it => renderItemR(it, 'TERMOKING')).join('')}
+            </div>
+        </div>
+
+        <table class="table-fallas">
+            <thead>
+                <tr>
+                    <th style="width:3%;">T</th>
+                    <th style="width:3%;">S</th>
+                    <th style="width:6%;">Nº</th>
+                    <th style="width:38%;">FALLAS CARRETA</th>
+                    <th style="width:3%;">T</th>
+                    <th style="width:3%;">S</th>
+                    <th style="width:6%;">Nº</th>
+                    <th style="width:38%;">FALLAS CARRETA</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${detalleRemolqueRows}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- SECCIÓN 4: CONFORMIDAD DEL REPORTE -->
+    <div>
+        <div class="blue-bar">
+            <span>3.- CONFORMIDAD DEL REPORTE</span>
+        </div>
+        <div class="conformidad-box">
+            <div class="sign-col">
+                <div class="sign-img-area">
     .sign-img-area img { max-height: 44px; max-width: 170px; object-fit: contain; }
     .sign-footer-text { background-color: #eaf2fc; font-size: 9px; font-weight: 700; padding: 2.5px 0; color: #0056b3; border-top: 1px solid #93c5fd; }
 </style>

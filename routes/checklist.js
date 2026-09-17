@@ -242,6 +242,25 @@ module.exports = function (db, broadcast, logAudit) {
         } = req.body;
 
         const ordenViajeClean = (orden_viaje || '').trim();
+        let kmInicialNum = parseInt(km_inicial, 10) || 0;
+        let kmFinalNum = parseInt(km_final, 10) || 0;
+
+        // Si km no fue ingresado, consultar el kilometraje actual del tracto automáticamente
+        if (!kmInicialNum && placa_tracto) {
+            try {
+                const pLimpia = String(placa_tracto).trim().toUpperCase().replace(/[^A-Z0-9]/ig, '');
+                const [flotaRows] = await tdb.promise().query(
+                    `SELECT km_actual, kilometraje, km FROM disponibilidad_flota WHERE REPLACE(placa, '-', '') = ? OR placa LIKE ? LIMIT 1`,
+                    [pLimpia, `%${pLimpia}%`]
+                );
+                if (flotaRows && flotaRows.length > 0) {
+                    kmInicialNum = parseInt(flotaRows[0].km_actual || flotaRows[0].kilometraje || flotaRows[0].km, 10) || 0;
+                }
+            } catch (eKm) {}
+        }
+        if (!kmFinalNum && kmInicialNum) {
+            kmFinalNum = kmInicialNum;
+        }
 
         // Si se solicita anexar por viaje existente y hay orden de viaje:
         if (anexar_si_existe && ordenViajeClean) {
@@ -311,6 +330,7 @@ module.exports = function (db, broadcast, logAudit) {
                                 fallas_tracto_json = ?,
                                 fallas_remolque_json = ?,
                                 fotos_json = ?,
+                                km_inicial = CASE WHEN COALESCE(km_inicial, 0) = 0 THEN ? ELSE km_inicial END,
                                 km_final = GREATEST(COALESCE(km_final, 0), ?),
                                 firma_conductor = COALESCE(?, firma_conductor)
                             WHERE id = ?
@@ -322,7 +342,8 @@ module.exports = function (db, broadcast, logAudit) {
                                 JSON.stringify(mergedFallasT),
                                 JSON.stringify(mergedFallasR),
                                 JSON.stringify(fotosUrls),
-                                parseInt(km_inicial || km_final, 10) || 0,
+                                kmInicialNum,
+                                kmFinalNum || kmInicialNum,
                                 firma_conductor || null,
                                 repExistente.id
                             ],
@@ -398,8 +419,8 @@ module.exports = function (db, broadcast, logAudit) {
                     (orden_viaje || '').trim() || null,
                     (placa_tracto || '').trim().toUpperCase(),
                     (placa_remolque || '').trim().toUpperCase(),
-                    parseInt(km_inicial, 10) || 0,
-                    parseInt(km_final, 10) || 0,
+                    kmInicialNum,
+                    kmFinalNum || kmInicialNum,
                     (req.body.horas_motor || '').trim() || null,
                     (conductor || '').trim(),
                     (procedencia || '').trim(),

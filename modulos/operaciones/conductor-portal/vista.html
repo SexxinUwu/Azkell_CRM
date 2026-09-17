@@ -244,6 +244,58 @@
     border-color: #1e293b;
 }
 
+/* ── Segmented Tabs & Activity Feed ─────────────────────────────── */
+.cond-segmented-tabs {
+    background: #f1f5f9;
+    border-radius: 12px;
+}
+.cond-tab-btn {
+    border: none;
+    background: transparent;
+    padding: 7px 10px;
+    border-radius: 9px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.cond-tab-btn:hover {
+    color: #1e293b;
+}
+.cond-tab-btn.active {
+    background: #ffffff;
+    color: #0284c7;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.cond-falla-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.65rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+.cond-falla-item:hover {
+    background: #f8fafc;
+    transform: translateY(-1px);
+}
+.cond-vale-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.65rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+.cond-vale-item:hover {
+    background: #f8fafc;
+    transform: translateY(-1px);
+}
+
 /* ── Floating Drawer Modal & Inputs Styling (1:1 Idéntico a Reporte de Fallas) ── */
 .cond-floating-drawer-dialog {
     max-width: 740px !important;
@@ -453,18 +505,55 @@
         </button>
     </div>
 
-    <!-- Sección Rápida de Comprobantes Subidos en Este Viaje -->
-    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+    <!-- ── Sección: Historial de Actividad del Viaje (Gastos, Fallas y Combustible) ── -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2.5">
             <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
-                <i class="bi bi-journal-check text-primary fs-5"></i> Comprobantes que ya subiste
+                <i class="bi bi-clock-history text-primary fs-5"></i> Actividad de tu Viaje
             </h6>
-            <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" id="cond-badge-total-gastos">0 registrados</span>
+            <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" id="cond-badge-actividad-total">0 registros</span>
         </div>
-        <div id="cond-lista-gastos">
-            <div class="text-center py-4 text-muted small">
-                <i class="bi bi-inbox fs-4 d-block mb-1 text-secondary"></i>
-                Aún no has registrado gastos en este viaje. Pulsa "Rendir Gastos" para empezar.
+
+        <!-- Apple Segmented Tab Bar -->
+        <div class="cond-segmented-tabs d-flex gap-1 p-1 bg-light rounded-3 mb-3 border">
+            <button type="button" class="cond-tab-btn active flex-grow-1" id="btn-tab-gastos" onclick="window.condCambiarTabHistorial('gastos', this)">
+                <i class="bi bi-receipt-cutoff me-1"></i> Gastos (<span id="cond-cnt-gastos">0</span>)
+            </button>
+            <button type="button" class="cond-tab-btn flex-grow-1" id="btn-tab-fallas" onclick="window.condCambiarTabHistorial('fallas', this)">
+                <i class="bi bi-tools me-1"></i> Fallas (<span id="cond-cnt-fallas">0</span>)
+            </button>
+            <button type="button" class="cond-tab-btn flex-grow-1" id="btn-tab-combustible" onclick="window.condCambiarTabHistorial('combustible', this)">
+                <i class="bi bi-fuel-pump-fill me-1"></i> Vales (<span id="cond-cnt-combustible">0</span>)
+            </button>
+        </div>
+
+        <!-- Contenedor 1: Lista de Gastos Rendidos -->
+        <div id="cond-tab-content-gastos" class="cond-tab-panel">
+            <div id="cond-lista-gastos">
+                <div class="text-center py-4 text-muted small">
+                    <i class="bi bi-inbox fs-4 d-block mb-1 text-secondary"></i>
+                    Aún no has registrado gastos en este viaje. Pulsa "Rendir Gastos" para empezar.
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenedor 2: Lista de Fallas Reportadas -->
+        <div id="cond-tab-content-fallas" class="cond-tab-panel d-none">
+            <div id="cond-lista-fallas">
+                <div class="text-center py-4 text-muted small">
+                    <i class="bi bi-shield-check fs-4 d-block mb-1 text-success"></i>
+                    No has reportado fallas mecánicas en este viaje.
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenedor 3: Lista de Vales de Combustible -->
+        <div id="cond-tab-content-combustible" class="cond-tab-panel d-none">
+            <div id="cond-lista-combustible">
+                <div class="text-center py-4 text-muted small">
+                    <i class="bi bi-fuel-pump fs-4 d-block mb-1 text-warning"></i>
+                    Sin vales de combustible registrados para este viaje.
+                </div>
             </div>
         </div>
     </div>

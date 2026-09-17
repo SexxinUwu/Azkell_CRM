@@ -156,89 +156,293 @@ window.condCargarPortal = async function() {
 
         // Renderizar lista de gastos
         var containerGastos = document.getElementById('cond-lista-gastos');
-        var badgeTotal = document.getElementById('cond-badge-total-gastos');
-        if (badgeTotal) badgeTotal.textContent = `${gastos.length} registrados`;
+        var cntGastosEl = document.getElementById('cond-cnt-gastos');
+        if (cntGastosEl) cntGastosEl.textContent = gastos.length;
 
-        if (!containerGastos) return;
+        if (containerGastos) {
+            if (gastos.length === 0) {
+                containerGastos.innerHTML = `
+                    <div class="text-center py-4 text-muted small">
+                        <i class="bi bi-inbox fs-4 d-block mb-1 text-secondary"></i>
+                        Aún no has registrado gastos en este viaje. Pulsa "Rendir Gastos" para empezar.
+                    </div>
+                `;
+            } else {
+                // Función para limpiar y mostrar fecha amigable
+                function formatearFechaHoraGasto(g) {
+                    if (g.fecha_formateada) return g.fecha_formateada;
+                    var raw = g.creado_en || g.fecha;
+                    if (!raw) return '';
+                    var str = String(raw).replace('T', ' ').replace('.000Z', '').trim();
+                    if (str.length >= 16) {
+                        var partes = str.slice(0, 10).split('-');
+                        if (partes.length === 3) {
+                            var hora = str.slice(11, 16);
+                            return `${partes[2]}/${partes[1]}/${partes[0]} ${hora}`;
+                        }
+                    }
+                    if (str.length === 10) {
+                        var partes2 = str.split('-');
+                        if (partes2.length === 3) {
+                            return `${partes2[2]}/${partes2[1]}/${partes2[0]}`;
+                        }
+                    }
+                    return str;
+                }
 
-        if (gastos.length === 0) {
-            containerGastos.innerHTML = `
-                <div class="text-center py-4 text-muted small">
-                    <i class="bi bi-inbox fs-4 d-block mb-1 text-secondary"></i>
-                    Aún no has registrado gastos en este viaje. Pulsa "Rendir Gastos" para empezar.
-                </div>
-            `;
-            return;
+                containerGastos.innerHTML = gastos.map(g => {
+                    var sUrl = g.sustento_url;
+                    var linkFoto = sUrl ? `<a href="${sUrl}" target="_blank" rel="noopener noreferrer" class="cond-icon-btn btn-view-photo" title="Ver Comprobante"><i class="bi bi-eye-fill"></i></a>` : '';
+                    var btnEditar = `<button type="button" onclick="window.condAbrirModalEditarGasto(${g.id})" class="cond-icon-btn btn-edit-item" title="Editar Comprobante"><i class="bi bi-pencil-square"></i></button>`;
+                    var fechaTexto = formatearFechaHoraGasto(g);
+                    var idGastoStr = `G-${String(g.id).padStart(4, '0')}`;
+                    var subMotivoStr = g.sub_motivo || g.tipo_gasto || 'Gasto de ruta';
+
+                    return `
+                        <div class="cond-gasto-item">
+                            <div class="flex-grow-1 overflow-hidden me-2">
+                                <div class="d-flex flex-wrap align-items-center gap-1.5 mb-1">
+                                    <span class="badge bg-dark font-monospace text-white fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.70rem;">${idGastoStr}</span>
+                                    <span class="badge bg-light text-dark border fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.72rem;">🧾 ${subMotivoStr}</span>
+                                    <span class="text-muted font-monospace fw-semibold" style="font-size:0.75rem;"><i class="bi bi-clock me-1 text-secondary"></i>${fechaTexto}</span>
+                                </div>
+                                <div class="text-secondary fw-semibold text-truncate small" title="${g.detalle || subMotivoStr}">
+                                    ${g.detalle || subMotivoStr}
+                                </div>
+                            </div>
+                            <div class="text-end flex-shrink-0 d-flex flex-column align-items-end justify-content-between">
+                                <span class="font-monospace fw-bold text-dark fs-6 mb-1.5">S/ ${parseFloat(g.importe || 0).toFixed(2)}</span>
+                                <div class="d-flex align-items-center gap-1.5">
+                                    ${btnEditar}
+                                    ${linkFoto}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
         }
 
-        // Función para limpiar y mostrar fecha amigable
-        function formatearFechaHoraGasto(g) {
-            if (g.fecha_formateada) return g.fecha_formateada;
-            var raw = g.creado_en || g.fecha;
-            if (!raw) return '';
-            var str = String(raw).replace('T', ' ').replace('.000Z', '').trim();
-            if (str.length >= 16) {
-                var partes = str.slice(0, 10).split('-');
-                if (partes.length === 3) {
-                    var hora = str.slice(11, 16);
-                    return `${partes[2]}/${partes[1]}/${partes[0]} ${hora}`;
-                }
-            }
-            if (str.length === 10) {
-                var partes2 = str.split('-');
-                if (partes2.length === 3) {
-                    return `${partes2[2]}/${partes2[1]}/${partes2[0]}`;
-                }
-            }
-            return str;
+        // Cargar historial de Fallas y Combustible en paralelo
+        var cntFallas = 0;
+        var cntComb = 0;
+        if (viaje) {
+            cntFallas = await condCargarFallasHistorial(viaje);
+            cntComb = await condCargarCombustibleHistorial(viaje);
+        } else {
+            condRenderFallasHistorial([]);
+            condRenderCombustibleHistorial([]);
         }
 
-        // Mapeo de colores e iconos para conceptos
-        var tipoIconos = {
-            'COCHERA': '🅿️',
-            'PEAJES': '🛣️',
-            'VIATICOS': '🍽️',
-            'PERNOCTE': '🏨',
-            'LLANTAS': '🛞',
-            'MANTENIMIENTO': '🔧',
-            'OTROS': '📝'
-        };
-
-        containerGastos.innerHTML = gastos.map(g => {
-            var sUrl = g.sustento_url;
-            var linkFoto = sUrl ? `<a href="${sUrl}" target="_blank" rel="noopener noreferrer" class="cond-icon-btn btn-view-photo" title="Ver Comprobante"><i class="bi bi-eye-fill"></i></a>` : '';
-            var btnEditar = `<button type="button" onclick="window.condAbrirModalEditarGasto(${g.id})" class="cond-icon-btn btn-edit-item" title="Editar Comprobante"><i class="bi bi-pencil-square"></i></button>`;
-            var fechaTexto = formatearFechaHoraGasto(g);
-            var idGastoStr = `G-${String(g.id).padStart(4, '0')}`;
-            var subMotivoStr = g.sub_motivo || g.tipo_gasto || 'Gasto de ruta';
-
-            return `
-                <div class="cond-gasto-item">
-                    <div class="flex-grow-1 overflow-hidden me-2">
-                        <div class="d-flex flex-wrap align-items-center gap-1.5 mb-1">
-                            <span class="badge bg-dark font-monospace text-white fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.70rem;">${idGastoStr}</span>
-                            <span class="badge bg-light text-dark border fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.72rem;">🧾 ${subMotivoStr}</span>
-                            <span class="text-muted font-monospace fw-semibold" style="font-size:0.75rem;"><i class="bi bi-clock me-1 text-secondary"></i>${fechaTexto}</span>
-                        </div>
-                        <div class="text-secondary fw-semibold text-truncate small" title="${g.detalle || subMotivoStr}">
-                            ${g.detalle || subMotivoStr}
-                        </div>
-                    </div>
-                    <div class="text-end flex-shrink-0 d-flex flex-column align-items-end justify-content-between">
-                        <span class="font-monospace fw-bold text-dark fs-6 mb-1.5">S/ ${parseFloat(g.importe || 0).toFixed(2)}</span>
-                        <div class="d-flex align-items-center gap-1.5">
-                            ${btnEditar}
-                            ${linkFoto}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        var totalAct = (gastos ? gastos.length : 0) + cntFallas + cntComb;
+        var badgeAct = document.getElementById('cond-badge-actividad-total');
+        if (badgeAct) badgeAct.textContent = `${totalAct} registro${totalAct !== 1 ? 's' : ''}`;
 
     } catch (err) {
         console.error('Error cargando portal de conductor:', err);
     }
 };
+
+// Cambiar de pestaña de actividad
+window.condCambiarTabHistorial = function(tabName, btnEl) {
+    document.querySelectorAll('.cond-tab-btn').forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+
+    var pGastos = document.getElementById('cond-tab-content-gastos');
+    var pFallas = document.getElementById('cond-tab-content-fallas');
+    var pComb = document.getElementById('cond-tab-content-combustible');
+
+    if (pGastos) pGastos.classList.toggle('d-none', tabName !== 'gastos');
+    if (pFallas) pFallas.classList.toggle('d-none', tabName !== 'fallas');
+    if (pComb) pComb.classList.toggle('d-none', tabName !== 'combustible');
+};
+
+// Cargar historial de fallas mecánicas reportadas en el viaje
+async function condCargarFallasHistorial(viaje) {
+    var contFallas = document.getElementById('cond-lista-fallas');
+    var cntEl = document.getElementById('cond-cnt-fallas');
+    if (!viaje || !viaje.codigo) {
+        if (cntEl) cntEl.textContent = '0';
+        return 0;
+    }
+
+    try {
+        var res = await fetch('/api/checklist');
+        if (!res.ok) return 0;
+        var data = await res.json();
+        var reportes = Array.isArray(data) ? data : (data.data || []);
+
+        var vCod = String(viaje.codigo).trim().toUpperCase();
+        var repFiltrados = reportes.filter(r => {
+            var ordV = String(r.orden_viaje || '').trim().toUpperCase();
+            return ordV === vCod || (ordV && vCod.includes(ordV)) || (ordV && ordV.includes(vCod));
+        });
+
+        // Extraer todas las fallas reportadas de esos reportes
+        var fallas = [];
+        repFiltrados.forEach(r => {
+            var fT = [];
+            var fR = [];
+            try { fT = typeof r.fallas_tracto_json === 'string' ? JSON.parse(r.fallas_tracto_json) : (r.fallas_tracto_json || []); } catch(e){}
+            try { fR = typeof r.fallas_remolque_json === 'string' ? JSON.parse(r.fallas_remolque_json) : (r.fallas_remolque_json || []); } catch(e){}
+            
+            var fotos = [];
+            try { fotos = typeof r.fotos_json === 'string' ? JSON.parse(r.fotos_json) : (r.fotos_json || []); } catch(e){}
+
+            fT.forEach(f => {
+                fallas.push({ ...f, unidad: r.placa_tracto || 'TRACTO', folio: r.folio, estado: r.estado || 'Pendiente', fechaReporte: r.fecha_reporte, fotos: fotos });
+            });
+            fR.forEach(f => {
+                fallas.push({ ...f, unidad: r.placa_remolque || 'CARRETA', folio: r.folio, estado: r.estado || 'Pendiente', fechaReporte: r.fecha_reporte, fotos: fotos });
+            });
+        });
+
+        if (cntEl) cntEl.textContent = fallas.length;
+        condRenderFallasHistorial(fallas);
+        return fallas.length;
+    } catch(e) {
+        console.warn('Error cargando historial de fallas:', e);
+        if (cntEl) cntEl.textContent = '0';
+        return 0;
+    }
+}
+
+function condRenderFallasHistorial(fallas) {
+    var cont = document.getElementById('cond-lista-fallas');
+    if (!cont) return;
+
+    if (!fallas || fallas.length === 0) {
+        cont.innerHTML = `
+            <div class="text-center py-4 text-muted small">
+                <i class="bi bi-shield-check fs-4 d-block mb-1 text-success"></i>
+                No has reportado fallas mecánicas en este viaje.
+            </div>
+        `;
+        return;
+    }
+
+    cont.innerHTML = fallas.map(f => {
+        var estadoBadge = '<span class="badge bg-warning text-dark font-monospace px-2 py-0.5" style="font-size:0.68rem;">PENDIENTE</span>';
+        if (f.estado === 'En Proceso') {
+            estadoBadge = '<span class="badge bg-primary text-white font-monospace px-2 py-0.5" style="font-size:0.68rem;">EN TALLER</span>';
+        } else if (f.estado === 'Finalizado') {
+            estadoBadge = '<span class="badge bg-success text-white font-monospace px-2 py-0.5" style="font-size:0.68rem;">ATENDIDO</span>';
+        }
+
+        var fecTxt = f.fecha || (f.fechaReporte ? new Date(f.fechaReporte).toLocaleString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—');
+        var esTracto = (f.unidad || '').includes('TRACTO') || !f.unidad;
+        var tagUnidad = `<span class="badge ${esTracto ? 'bg-primary' : 'bg-warning text-dark'} text-uppercase px-2 py-0.5" style="font-size:0.65rem;">${f.unidad || 'TRACTO'}</span>`;
+
+        var fotosHTML = '';
+        if (Array.isArray(f.fotos) && f.fotos.length > 0) {
+            fotosHTML = `
+                <div class="d-flex align-items-center gap-1.5 mt-2">
+                    ${f.fotos.map(url => `
+                        <a href="${url}" target="_blank" rel="noopener noreferrer" class="rounded overflow-hidden border d-inline-block shadow-2xs" style="width:36px; height:36px;">
+                            <img src="${url}" style="width:100%; height:100%; object-fit:cover;">
+                        </a>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        return `
+            <div class="cond-falla-item border-start border-3 ${f.estado === 'Finalizado' ? 'border-success' : 'border-danger'}">
+                <div class="d-flex align-items-center justify-content-between mb-1.5">
+                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                        ${tagUnidad}
+                        <span class="badge bg-light text-dark border font-monospace fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.70rem;">${f.folio || 'REPORTE'}</span>
+                        <span class="text-muted font-monospace small" style="font-size:0.74rem;"><i class="bi bi-clock me-1 text-secondary"></i>${fecTxt}</span>
+                    </div>
+                    <div>${estadoBadge}</div>
+                </div>
+                <div class="fw-bold text-dark small mb-0.5">
+                    <span class="text-primary font-monospace" style="font-size:0.75rem;">[${f.sistema || 'GENERAL'}]</span>
+                    <span class="text-danger">${f.item || 'Falla Observada'}</span>
+                </div>
+                <div class="text-secondary small fw-medium" style="font-size:0.80rem;">
+                    ${f.obs && f.obs !== f.item ? f.obs : 'Observación registrada en ruta.'}
+                </div>
+                ${fotosHTML}
+            </div>
+        `;
+    }).join('');
+}
+
+// Cargar historial de combustible
+async function condCargarCombustibleHistorial(viaje) {
+    var cont = document.getElementById('cond-lista-combustible');
+    var cntEl = document.getElementById('cond-cnt-combustible');
+    if (!viaje || !viaje.codigo) {
+        if (cntEl) cntEl.textContent = '0';
+        return 0;
+    }
+
+    try {
+        var res = await fetch(`/api/combustible/vales?viaje=${encodeURIComponent(viaje.codigo)}`);
+        if (!res.ok) {
+            res = await fetch('/api/combustible/vales');
+        }
+        if (!res.ok) return 0;
+
+        var data = await res.json();
+        var vales = Array.isArray(data) ? data : (data.data || []);
+        var vCod = String(viaje.codigo).trim().toUpperCase();
+        var valesFiltrados = vales.filter(v => {
+            var ov = String(v.viaje || v.orden_viaje || '').trim().toUpperCase();
+            return ov === vCod || (ov && vCod.includes(ov)) || (ov && ov.includes(vCod));
+        });
+
+        if (cntEl) cntEl.textContent = valesFiltrados.length;
+        condRenderCombustibleHistorial(valesFiltrados);
+        return valesFiltrados.length;
+    } catch(e) {
+        console.warn('Error cargando historial combustible:', e);
+        if (cntEl) cntEl.textContent = '0';
+        return 0;
+    }
+}
+
+function condRenderCombustibleHistorial(vales) {
+    var cont = document.getElementById('cond-lista-combustible');
+    if (!cont) return;
+
+    if (!vales || vales.length === 0) {
+        cont.innerHTML = `
+            <div class="text-center py-4 text-muted small">
+                <i class="bi bi-fuel-pump fs-4 d-block mb-1 text-warning"></i>
+                Sin vales de combustible registrados para este viaje.
+            </div>
+        `;
+        return;
+    }
+
+    cont.innerHTML = vales.map(v => {
+        var galones = parseFloat(v.galones || v.cantidad || 0).toFixed(2);
+        var grifo = v.grifo || v.estacion || 'Estación de Ruta';
+        var fec = v.fecha ? String(v.fecha).slice(0, 10) : '—';
+        var tipo = (v.tipo || 'DIESEL D2').toUpperCase();
+        var sUrl = v.foto_url || v.sustento_url;
+        var linkFoto = sUrl ? `<a href="${sUrl}" target="_blank" rel="noopener noreferrer" class="cond-icon-btn btn-view-photo" title="Ver Vale"><i class="bi bi-eye-fill"></i></a>` : '';
+
+        return `
+            <div class="cond-vale-item d-flex align-items-center justify-content-between gap-2">
+                <div class="flex-grow-1 overflow-hidden">
+                    <div class="d-flex align-items-center gap-1.5 mb-1">
+                        <span class="badge bg-warning text-dark font-monospace fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.70rem;">⛽ ${tipo}</span>
+                        <span class="text-muted font-monospace small" style="font-size:0.74rem;">${fec}</span>
+                    </div>
+                    <div class="fw-bold text-dark text-truncate small">${grifo}</div>
+                    <div class="text-secondary small font-monospace" style="font-size:0.75rem;">Km: ${v.km_odometro || v.kilometraje || '---'}</div>
+                </div>
+                <div class="text-end flex-shrink-0 d-flex flex-column align-items-end justify-content-between">
+                    <span class="font-monospace fw-bold text-dark fs-6 mb-1">${galones} Gl</span>
+                    ${linkFoto}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
 window.condCambiarDni = function() {
     var val = (document.getElementById('cond-input-dni')?.value || '').trim();
@@ -978,6 +1182,7 @@ window.condGuardarReporteFallas = async function(e) {
 
             var modal = bootstrap.Modal.getInstance(document.getElementById('condModalReporteFallas'));
             if (modal) modal.hide();
+            window.condCargarPortal();
         } else {
             alert(json.error || 'No se pudo guardar el reporte de fallas.');
         }
