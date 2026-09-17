@@ -3053,8 +3053,8 @@ window.rotAgregarSalida = function(idOt) {
     var fecEl = document.getElementById('rot-mat-fecha'); if (fecEl) fecEl.value = fechaHoy;
 
     // Pre-llenar placa desde la OT activa
-    var placaEl = document.getElementById('rot-mat-placa'); if (placaEl) placaEl.value = placa;
-    if (typeof window._cbSet === 'function') { window._cbSet('rot-mat-placa', placa.toUpperCase(), placa.toUpperCase()); }
+    var placaEl = document.getElementById('rot-mat-placa'); if (placaEl) placaEl.value = (placa || '').toUpperCase();
+    var placaTxt = document.getElementById('rot-mat-placa-txt'); if (placaTxt) placaTxt.value = (placa || '').toUpperCase();
 
     var tipoEl = document.getElementById('rot-mat-tipo'); if (tipoEl) tipoEl.value = 'Vehiculo';
     var solic = document.getElementById('rot-mat-solicitante'); if (solic) solic.value = '';
@@ -3066,7 +3066,7 @@ window.rotAgregarSalida = function(idOt) {
     var tot = document.getElementById('rot-mat-items-total'); if (tot) tot.textContent = 'S/. 0.00';
     _rotAgregarItemMat();
 
-    // Cargar inventario y placas si no están cargados
+    // Cargar inventario y conductores si no están cargados
     if (!window._rotInvData.length) {
         fetch('/api/almacen/inventario')
             .then(function(r) { return r.json(); })
@@ -3079,13 +3079,6 @@ window.rotAgregarSalida = function(idOt) {
             })
             .catch(function() {});
     }
-    fetch('/api/placas-lista')
-        .then(function(r) { return r.ok ? r.json() : []; })
-        .then(function(d) {
-            var lista = (Array.isArray(d) ? d : []).map(function(p){ return (p.placa || String(p) || '').toUpperCase(); }).filter(Boolean).sort();
-            if (window._cbInit) window._cbInit('rot-mat-placa', lista);
-        })
-        .catch(function() {});
     fetch('/api/conductores-lista')
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(d) {
