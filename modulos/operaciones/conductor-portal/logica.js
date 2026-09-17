@@ -761,8 +761,18 @@ window.condAbrirModalReporteFallas = async function() {
     var rRuta = document.getElementById('cond-rf-ruta-txt');
     if (rRuta) rRuta.textContent = viaje.ruta || viaje.origen || viaje.procedencia || 'Ruta no especificada';
 
-    var rKm = document.getElementById('cond-rf-km-txt');
-    if (rKm) rKm.textContent = viaje.kilometraje ? `${viaje.kilometraje} km` : 'Km en ruta';
+    // Inputs de Kilometraje y Horas Motor
+    var inpKm = document.getElementById('cond_rf_km');
+    var inpHoras = document.getElementById('cond_rf_horas_motor');
+    if (inpKm) inpKm.value = viaje.kilometraje || viaje.km_inicial || viaje.km || '';
+    if (inpHoras) inpHoras.value = viaje.horas_motor || '';
+
+    // Consultar Telemetría / Odómetro GPS si no viene en el viaje
+    var pT = (viaje.placa_tracto || viaje.placa || '').trim();
+    var pR = (viaje.placa_remolque || viaje.remolque || '').trim();
+    if (pT || pR) {
+        condConsultarGpsVehiculo(pT, pR);
+    }
 
     // Resetear buscador y alertas de búsqueda
     var inpSearch = document.getElementById('cond_buscador_items');
@@ -779,12 +789,12 @@ window.condAbrirModalReporteFallas = async function() {
     condRenderAcordeonSistemas('condAccTracto', COND_SISTEMAS_TRACTO, 'Tracto');
     condRenderAcordeonSistemas('condAccRemolque', COND_SISTEMAS_REMOLQUE, 'Remolque');
 
-    // Limpiar contenedor de manuales, chips y fotos
+    // Limpiar contenedor de manuales, tabla resumen y fotos
     var contManuales = document.getElementById('cond-contenedor-fallas-manuales');
     if (contManuales) contManuales.innerHTML = '';
     window._condFotosFallaBase64 = [];
     condRenderPreviewFotosFalla();
-    window.condActualizarChipsFallas();
+    window.condActualizarTablaResumenFallas();
     window.condActualizarContadores();
 
     // Resetear botón
@@ -800,6 +810,39 @@ window.condAbrirModalReporteFallas = async function() {
         modal.show();
     }
 };
+
+// Consultar Telemetría / Odómetro / Horómetro desde flota o GPS
+async function condConsultarGpsVehiculo(placaTracto, placaRemolque) {
+    try {
+        var inpKm = document.getElementById('cond_rf_km');
+        var inpHoras = document.getElementById('cond_rf_horas_motor');
+        
+        var res = await fetch('/api/vehiculos-flota?t=' + Date.now());
+        if (res.ok) {
+            var list = await res.json();
+            if (Array.isArray(list)) {
+                if (placaTracto) {
+                    var pTLimpia = placaTracto.replace(/[^A-Z0-9]/ig, '').toUpperCase();
+                    var vehT = list.find(v => (v.placa || '').replace(/[^A-Z0-9]/ig, '').toUpperCase() === pTLimpia);
+                    if (vehT && inpKm && (!inpKm.value || inpKm.value === '0')) {
+                        var kmVal = vehT.km || vehT.kilometraje || vehT.km_actual || vehT.odometro || 0;
+                        if (kmVal > 0) inpKm.value = Math.round(kmVal);
+                    }
+                }
+                if (placaRemolque) {
+                    var pRLimpia = placaRemolque.replace(/[^A-Z0-9]/ig, '').toUpperCase();
+                    var vehR = list.find(v => (v.placa || '').replace(/[^A-Z0-9]/ig, '').toUpperCase() === pRLimpia);
+                    if (vehR && inpHoras && (!inpHoras.value || inpHoras.value === '0')) {
+                        var hrsVal = vehR.horas_motor || vehR.horas || vehR.horometro || 0;
+                        if (hrsVal > 0) inpHoras.value = Math.round(hrsVal);
+                    }
+                }
+            }
+        }
+    } catch(e) {
+        console.warn('Telemetría GPS no disponible en portal conductor:', e);
+    }
+}
 
 // Renderizar acordeón dinámico con checkboxes táctiles para el móvil
 function condRenderAcordeonSistemas(contenedorId, sistemasDict, prefijo) {
@@ -844,7 +887,7 @@ function condRenderAcordeonSistemas(contenedorId, sistemasDict, prefijo) {
                         </label>
                     </div>
                     <div id="box_${txtId}" class="mt-2 d-none">
-                        <input type="text" id="${txtId}" class="form-control form-control-sm border-secondary-subtle" placeholder="Detalle adicional opcional de la falla..." oninput="window.condActualizarChipsFallas()">
+                        <input type="text" id="${txtId}" class="form-control form-control-sm border-secondary-subtle" placeholder="Detalle adicional de la falla..." oninput="window.condActualizarTablaResumenFallas()">
                     </div>
                 </div>
             `;
@@ -908,21 +951,6 @@ window.condFiltrarItemsLive = function(query) {
     if (emptyR) emptyR.style.display = (q && matchesRemolque === 0) ? 'block' : 'none';
 };
 
-// Expandir o colapsar todos los acordeones
-window.condExpandirTodosAccordeones = function(expand = true) {
-    document.querySelectorAll('.cond-accordion-group').forEach(group => {
-        group.style.display = 'block';
-        var collapseEl = group.querySelector('.accordion-collapse');
-        var items = group.querySelectorAll('.cond-item-row');
-        items.forEach(r => r.style.display = 'block');
-
-        if (collapseEl && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
-            var inst = bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
-            if (expand) inst.show(); else inst.hide();
-        }
-    });
-};
-
 // Alternar selección de falla
 window.condToggleFallaItem = function(chkId, txtId) {
     var chk = document.getElementById(chkId);
@@ -943,7 +971,7 @@ window.condToggleFallaItem = function(chkId, txtId) {
     }
 
     window.condActualizarContadores();
-    window.condActualizarChipsFallas();
+    window.condActualizarTablaResumenFallas();
 };
 
 // Actualizar contadores totales y por sistema
@@ -972,53 +1000,101 @@ window.condActualizarContadores = function() {
         counterBtn.textContent = `${totalMarcadas} falla${totalMarcadas !== 1 ? 's' : ''} marcada${totalMarcadas !== 1 ? 's' : ''}`;
         counterBtn.className = totalMarcadas > 0 ? 'badge bg-primary px-3 py-2 fs-6 rounded-pill' : 'badge bg-secondary px-3 py-2 fs-6 rounded-pill';
     }
+
+    var badgeTotal = document.getElementById('cond_resumen_badge_total');
+    if (badgeTotal) {
+        badgeTotal.textContent = `${totalMarcadas} falla${totalMarcadas !== 1 ? 's' : ''}`;
+        badgeTotal.className = totalMarcadas > 0 ? 'badge bg-primary rounded-pill px-2.5 py-1' : 'badge bg-secondary rounded-pill px-2.5 py-1';
+    }
 };
 
-// Actualizar chips visuales de fallas marcadas
-window.condActualizarChipsFallas = function() {
-    var wrapChips = document.getElementById('cond_chips_fallas_marcadas');
-    if (!wrapChips) return;
+// Actualizar Tabla Resumen de Fallas Reportadas al final del formulario
+window.condActualizarTablaResumenFallas = function() {
+    var tbody = document.getElementById('cond_tabla_resumen_fallas_body');
+    if (!tbody) return;
 
     var viajeData = window._condViajeActivoData || {};
     var viaje = viajeData.viaje || {};
-    var pTracto = viaje.placa_tracto || viaje.placa || '';
-    var pRemolque = viaje.placa_remolque || viaje.remolque || '';
+    var pTracto = viaje.placa_tracto || viaje.placa || 'TRACTO';
+    var pRemolque = viaje.placa_remolque || viaje.remolque || 'CARRETA';
 
-    var chipsHTML = '';
+    var rowsHTML = '';
+    var total = 0;
 
+    // 1. Fallas desde checkboxes del checklist
     document.querySelectorAll('.cond-chk-item:checked').forEach(chk => {
         var chkId = chk.id;
         var txtId = chkId.replace('cond_chk_', 'cond_txt_');
         var prefijo = chk.dataset.prefijo || 'Tracto';
-        var itemNom = chk.dataset.item || 'Falla';
+        var sistema = chk.dataset.sistema || 'GENERAL';
+        var itemNom = chk.dataset.item || 'Falla Observada';
         var txtEl = document.getElementById(txtId);
-        var desc = txtEl && txtEl.value.trim() ? txtEl.value.trim() : '(marcado)';
+        var desc = txtEl && txtEl.value.trim() ? txtEl.value.trim() : '(Sin observación adicional)';
 
         var isTracto = prefijo.toLowerCase().includes('tracto');
         var unitBadge = isTracto
-            ? `<span class="badge bg-primary text-white text-uppercase px-2 py-0.5" style="font-size:0.65rem;"><i class="bi bi-truck me-1"></i>TRACTO ${pTracto ? '('+pTracto+')' : ''}</span>`
-            : `<span class="badge bg-warning text-dark text-uppercase px-2 py-0.5" style="font-size:0.65rem;"><i class="bi bi-truck-flatbed me-1"></i>CARRETA ${pRemolque ? '('+pRemolque+')' : ''}</span>`;
-        var cardBorder = isTracto ? 'border: 1px solid #93c5fd; background: #eff6ff;' : 'border: 1px solid #fde68a; background: #fffbeb;';
+            ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;"><i class="bi bi-truck me-1"></i>${pTracto}</span>`
+            : `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;"><i class="bi bi-truck-flatbed me-1"></i>${pRemolque}</span>`;
 
-        chipsHTML += `
-            <span class="d-inline-flex align-items-center gap-2 px-2.5 py-1.5 rounded-3 shadow-2xs" style="${cardBorder}">
-                ${unitBadge}
-                <span class="fw-bold text-dark" style="font-size:0.8rem;">${itemNom}:</span>
-                <span class="text-secondary small" style="font-size:0.76rem; max-width: 220px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${desc}</span>
-                <i class="bi bi-x-circle-fill text-danger cursor-pointer ms-1 fs-6" title="Quitar falla" onclick="document.getElementById('${chkId}').checked = false; window.condToggleFallaItem('${chkId}', '${txtId}');"></i>
-            </span>
+        rowsHTML += `
+            <tr>
+                <td>${unitBadge}</td>
+                <td><span class="badge bg-light text-dark border px-2 py-0.5 font-monospace" style="font-size:0.72rem;">${sistema}</span></td>
+                <td><span class="text-danger fw-bold">${itemNom}</span></td>
+                <td class="text-dark">${desc}</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-outline-danger btn-sm p-0 px-1.5 rounded-circle" title="Quitar falla" onclick="document.getElementById('${chkId}').checked = false; window.condToggleFallaItem('${chkId}', '${txtId}');">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </td>
+            </tr>
         `;
+        total++;
     });
 
-    if (chipsHTML) {
-        wrapChips.style.display = 'flex';
-        wrapChips.style.setProperty('display', 'flex', 'important');
-        wrapChips.innerHTML = chipsHTML;
+    // 2. Fallas manuales
+    document.querySelectorAll('.cond-manual-falla-row').forEach(row => {
+        var selUnidad = row.querySelector('.cond-man-unidad')?.value || 'TRACTO';
+        var desc = row.querySelector('.cond-man-desc')?.value.trim() || '';
+        var rowId = row.id;
+
+        var isTracto = selUnidad === 'TRACTO';
+        var unitBadge = isTracto
+            ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;"><i class="bi bi-truck me-1"></i>${pTracto}</span>`
+            : `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;"><i class="bi bi-truck-flatbed me-1"></i>${pRemolque}</span>`;
+
+        rowsHTML += `
+            <tr>
+                <td>${unitBadge}</td>
+                <td><span class="badge bg-secondary-subtle text-secondary border px-2 py-0.5" style="font-size:0.72rem;">MANUAL</span></td>
+                <td><span class="text-danger fw-bold">Falla Manual</span></td>
+                <td class="text-dark fw-semibold">${desc || '<em class="text-muted small">Por especificar</em>'}</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-outline-danger btn-sm p-0 px-1.5 rounded-circle" title="Quitar fila manual" onclick="document.getElementById('${rowId}').remove(); window.condActualizarContadores(); window.condActualizarTablaResumenFallas();">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        total++;
+    });
+
+    if (total > 0) {
+        tbody.innerHTML = rowsHTML;
     } else {
-        wrapChips.style.display = 'none';
-        wrapChips.style.setProperty('display', 'none', 'important');
-        wrapChips.innerHTML = '';
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-muted py-3">
+                    <i class="bi bi-info-circle me-1"></i> No has marcado ninguna falla aún.
+                </td>
+            </tr>
+        `;
     }
+};
+
+// Retrocompatibilidad con función anterior
+window.condActualizarChipsFallas = function() {
+    window.condActualizarTablaResumenFallas();
 };
 
 // Agregar fila manual de falla no listada
@@ -1037,20 +1113,21 @@ window.condAgregarFallaManual = function() {
     div.className = 'p-2 rounded-3 border bg-white shadow-2xs d-flex flex-column gap-2 cond-manual-falla-row';
     div.innerHTML = `
         <div class="d-flex align-items-center justify-content-between gap-2">
-            <select class="form-select form-select-sm fw-bold cond-man-unidad" style="max-width: 170px;">
+            <select class="form-select form-select-sm fw-bold cond-man-unidad" style="max-width: 170px;" onchange="window.condActualizarTablaResumenFallas()">
                 <option value="TRACTO">Tracto (${pTracto})</option>
                 <option value="REMOLQUE">Carreta (${pRemolque})</option>
             </select>
-            <button type="button" class="btn btn-outline-danger btn-sm p-1 px-2 rounded-pill" onclick="document.getElementById('${rowId}').remove(); window.condActualizarContadores();" title="Eliminar fila">
+            <button type="button" class="btn btn-outline-danger btn-sm p-1 px-2 rounded-pill" onclick="document.getElementById('${rowId}').remove(); window.condActualizarContadores(); window.condActualizarTablaResumenFallas();" title="Eliminar fila">
                 <i class="bi bi-trash3-fill"></i>
             </button>
         </div>
-        <input type="text" class="form-control form-control-sm cond-man-desc fw-semibold border-secondary-subtle" placeholder="Escribe aquí la falla observada (Ej: Fuga de aire en manguera 2)..." required oninput="window.condActualizarContadores()">
+        <input type="text" class="form-control form-control-sm cond-man-desc fw-semibold border-secondary-subtle" placeholder="Escribe aquí la falla observada (Ej: Fuga de aire en manguera 2)..." required oninput="window.condActualizarContadores(); window.condActualizarTablaResumenFallas();">
     `;
     cont.appendChild(div);
     var inp = div.querySelector('.cond-man-desc');
     if (inp) inp.focus();
     window.condActualizarContadores();
+    window.condActualizarTablaResumenFallas();
 };
 
 // Procesamiento de fotos de evidencia
@@ -1122,6 +1199,17 @@ window.condGuardarReporteFallas = async function(e) {
         return;
     }
 
+    var inpKm = document.getElementById('cond_rf_km');
+    var inpHoras = document.getElementById('cond_rf_horas_motor');
+    var kmVal = inpKm && inpKm.value ? parseInt(inpKm.value, 10) : (viaje.kilometraje || 0);
+    var horasMotorVal = inpHoras && inpHoras.value ? parseInt(inpHoras.value, 10) : (viaje.horas_motor || null);
+
+    if (!kmVal || kmVal <= 0) {
+        alert('⚠️ Por favor ingresa el Kilometraje actual del tracto para guardar el reporte.');
+        if (inpKm) inpKm.focus();
+        return;
+    }
+
     var btn = document.getElementById('cond-btn-enviar-falla');
     var btnTxt = document.getElementById('cond-btn-enviar-falla-txt');
     var origTxt = btnTxt ? btnTxt.textContent : 'Enviar Reporte de Fallas';
@@ -1178,8 +1266,10 @@ window.condGuardarReporteFallas = async function(e) {
             orden_viaje: (viaje.codigo || viaje.id || '').trim(),
             placa_tracto: (viaje.placa_tracto || viaje.placa || '').trim().toUpperCase(),
             placa_remolque: (viaje.placa_remolque || viaje.remolque || '').trim().toUpperCase(),
-            km_inicial: viaje.kilometraje || 0,
-            km_final: viaje.kilometraje || 0,
+            kilometraje: kmVal,
+            km_inicial: kmVal,
+            km_final: kmVal,
+            horas_motor: horasMotorVal,
             conductor: cond.nombre || viaje.conductor || window.usuarioLogueado || 'Conductor',
             procedencia: viaje.ruta || viaje.origen || viaje.procedencia || '',
             fallas_tracto: fallasTracto,

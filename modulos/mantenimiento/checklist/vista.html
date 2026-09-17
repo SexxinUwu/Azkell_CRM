@@ -770,16 +770,14 @@
               Marca solo lo que esté fallando: al hacer click se abre el espacio para describirlo. Lo que está en buen estado, ni lo toques.
             </p>
 
-            <!-- Barra de Búsqueda de Ítems en Vivo y Acciones -->
+            <!-- Barra de Búsqueda de Ítems en Vivo y Contador -->
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
               <div class="flex-grow-1 position-relative" style="min-width: 220px;">
                 <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-primary" style="z-index: 5; pointer-events: none; font-size: 0.95rem;"></i>
-                <input type="text" id="ck_buscador_items" class="form-control text-uppercase fw-semibold border-secondary-subtle" style="padding-left: 2.75rem !important;" placeholder="BUSCAR ÍTEM POR NOMBRE... (EJ: FRENO, LUCES, ACEITE)" oninput="window.ckFiltrarItemsLive(this.value)">
+                <input type="text" id="ck_buscador_items" class="form-control fw-semibold border-secondary-subtle" style="padding-left: 2.75rem !important;" placeholder="Buscar por sistema o ítem..." oninput="window.ckFiltrarItemsLive(this.value)">
               </div>
               <div class="d-flex align-items-center gap-2 ms-auto">
                 <span class="badge bg-secondary px-3 py-2 fs-6 rounded-pill" id="ck_counter_fallas">0 fallas marcadas</span>
-                <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" onclick="window.ckExpandirTodosAccordeones(true)">Expandir todo</button>
-                <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" onclick="window.ckExpandirTodosAccordeones(false)">Colapsar todo</button>
               </div>
             </div>
 
@@ -787,11 +785,11 @@
             <div id="ck_chips_fallas_marcadas" class="d-flex flex-wrap gap-2 mb-3" style="display:none!important;"></div>
 
             <!-- ACORDEÓN TRACTO (Placa Principal) -->
-            <div class="p-2 mb-2 rounded-3 bg-primary bg-opacity-10 border border-primary-subtle d-flex align-items-center justify-content-between" id="ck_header_tracto_card">
+            <div class="p-2.5 px-3 mb-2 rounded-3 bg-primary bg-opacity-10 border border-primary-subtle d-flex align-items-center justify-content-between" id="ck_header_tracto_card">
               <div class="fw-bold text-primary small d-flex align-items-center gap-2" id="ck_header_tracto_placa">
-                <i class="bi bi-truck fs-6"></i> <span>TRACTO (Placa Principal)</span>
+                <i class="bi bi-truck fs-5 me-1"></i> <span>TRACTO (Placa Principal)</span>
               </div>
-              <span class="badge bg-primary text-uppercase px-2 py-1" style="font-size:0.65rem;">Unidad Principal</span>
+              <span class="badge bg-primary text-uppercase px-2.5 py-1" style="font-size:0.65rem;">Unidad Principal</span>
             </div>
             <div id="ck_empty_search_tracto" class="alert alert-light border text-muted small py-2 px-3 mb-2 rounded-3 text-center" style="display:none;">
               <i class="bi bi-info-circle me-1"></i> Sin coincidencias para la búsqueda en sistemas de Tracto.
@@ -801,11 +799,11 @@
             </div>
 
             <!-- ACORDEÓN SEMIRREMOLQUE / CARRETA (Placa Secundaria) -->
-            <div class="p-2 mb-2 rounded-3 bg-warning bg-opacity-10 border border-warning-subtle d-flex align-items-center justify-content-between" id="ck_header_remolque_card">
+            <div class="p-2.5 px-3 mb-2 rounded-3 bg-warning bg-opacity-10 border border-warning-subtle d-flex align-items-center justify-content-between" id="ck_header_remolque_card">
               <div class="fw-bold text-warning-emphasis small d-flex align-items-center gap-2" id="ck_header_remolque_placa">
-                <i class="bi bi-truck-flatbed fs-6"></i> <span>SEMIRREMOLQUE / CARRETA (Placa Secundaria)</span>
+                <i class="bi bi-truck-flatbed fs-5 me-1"></i> <span>SEMIRREMOLQUE / CARRETA (Placa Secundaria)</span>
               </div>
-              <span class="badge bg-warning text-dark text-uppercase px-2 py-1" style="font-size:0.65rem;">Carreta / Semirremolque</span>
+              <span class="badge bg-warning text-dark text-uppercase px-2.5 py-1" style="font-size:0.65rem;">Carreta / Semirremolque</span>
             </div>
             <div id="ck_empty_search_remolque" class="alert alert-light border text-muted small py-2 px-3 mb-2 rounded-3 text-center" style="display:none;">
               <i class="bi bi-info-circle me-1"></i> Sin coincidencias para la búsqueda en sistemas de Remolque.
