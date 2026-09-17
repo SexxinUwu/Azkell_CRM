@@ -347,7 +347,7 @@ function condRenderFallasHistorial(fallas) {
         }
 
         return `
-            <div class="cond-falla-item border-start border-3 ${f.estado === 'Finalizado' ? 'border-success' : 'border-danger'}">
+            <div class="cond-falla-item ${f.estado === 'Finalizado' ? 'falla-finalizada' : ''}">
                 <div class="d-flex align-items-center justify-content-between mb-1.5">
                     <div class="d-flex align-items-center gap-1.5 flex-wrap">
                         ${tagUnidad}
