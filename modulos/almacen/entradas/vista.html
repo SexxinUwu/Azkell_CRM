@@ -1,32 +1,132 @@
-<!-- Módulo Almacén / Entradas — Azkell Fleet v2 (Bento UI) -->
+<!-- Módulo Almacén / Entradas — Azkell Fleet v2 (Bento UI & Apple Native Cards) -->
 <style>
-/* ─── Entradas: Panel fullscreen (slide desde abajo estilo Drawer Amplio) ────────── */
-.ent-panel-full {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%) translateY(100%);
-    width: 100%;
-    max-width: 780px;
-    height: 94vh;
-    background: #f8fafc;
-    border-radius: 28px 28px 0 0;
-    z-index: 1059;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    transition: transform .28s ease;
-    box-shadow: 0 -12px 48px rgba(0,0,0,.25);
-}
-.ent-panel-full.open {
-    transform: translateX(-50%) translateY(0);
-}
-@media (max-width: 767.98px) {
-    .ent-panel-full { width: 100%; max-width: 100%; left: 0; transform: translateY(100%); border-radius: 24px 24px 0 0; height: 95vh; }
-    .ent-panel-full.open { transform: translateY(0); }
+/* ── Reset root-dinamico padding for full-bleed ─────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
 }
 
-/* Modal Form Inputs: Enlarge & Beautify (Grosor y Legibilidad Premium tipo Reporte de Fallas) */
+/* ── UI Tokens & Layout (Idéntico a Reporte de Fallas) ──── */
+.ent-app-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem 1.25rem 2.5rem 1.25rem !important;
+    background: transparent;
+    min-height: 100%;
+}
+
+/* KPIs Cards */
+.ent-app-container .ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 18px !important;
+    padding: 1rem 1.25rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+.ent-app-container .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08) !important;
+}
+.ent-app-container .ck-kpi-icon {
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.3rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* Control Bar (Search + Apple Search) */
+.ent-app-container .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 14px 8px 38px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+.ent-app-container .ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+
+/* Universal Modern Card (Mobile) */
+.ent-mobile-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 14px rgba(15, 23, 42, 0.03);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ent-mobile-card:active {
+    transform: scale(0.99);
+}
+
+/* Desktop Table Styling */
+.ent-table-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
+    min-height: 320px;
+    overflow-x: auto;
+}
+#moduloEntradas table { width: 100%; min-width: 1200px; border-collapse: collapse; font-size: 0.85rem; }
+#moduloEntradas thead th {
+    background: #f8fafc; color: #475569;
+    font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 10px 12px;
+    border-bottom: 2px solid #e2e8f0;
+    position: sticky; top: 0; z-index: 2; white-space: nowrap;
+}
+#moduloEntradas tbody tr { border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background .12s; }
+#moduloEntradas tbody tr:hover { background: #f8fafc; }
+#moduloEntradas tbody td { padding: 8px 12px; color: #1e293b; white-space: nowrap; vertical-align: middle; }
+
+/* ── Mobile View Adaptations (@media max-width: 768px) ─────────────── */
+@media (max-width: 768px) {
+    .ent-app-container {
+        padding: 0.5rem 0.5rem 120px 0.5rem !important;
+        background: transparent !important;
+    }
+    .ent-app-container .ck-kpi-card {
+        padding: 0.75rem 0.85rem !important;
+        border-radius: 14px !important;
+    }
+    .ent-app-container .ck-kpi-card h2 {
+        font-size: 1.35rem !important;
+    }
+    .ent-app-container .ck-kpi-icon {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1rem !important;
+        border-radius: 10px !important;
+    }
+    #ent-panel-detalle {
+        position: fixed !important; bottom: -100vh !important; left: 0 !important;
+        right: 0 !important; width: 100vw !important; max-width: 100vw !important;
+        height: 88vh !important; border-radius: 22px 22px 0 0 !important;
+        border-left: none !important; border-top: 1px solid #e2e8f0 !important;
+        transition: bottom .35s cubic-bezier(.4,0,.2,1) !important;
+        box-shadow: 0 -12px 48px rgba(0,0,0,.2) !important; z-index: 1055 !important;
+    }
+    #ent-panel-detalle.open { bottom: 0 !important; width: 100% !important; }
+}
+
+/* Modal Form Inputs */
 #modal-entrada .form-control,
 #modal-entrada .form-select {
     min-height: 42px !important;
@@ -73,7 +173,7 @@
     overflow-y: auto !important;
 }
 
-/* ─── Item cards ─────────────────────────────────────────────── */
+/* Item cards */
 .ent-item-card {
     background: #fff;
     border-radius: 20px;
@@ -86,7 +186,7 @@
 .ent-item-card.price-up   { border-color: #ef4444; border-left-width: 4px; }
 .ent-item-card.price-down { border-color: #22c55e; border-left-width: 4px; }
 
-/* ─── Doc card (header del form) ────────────────────────────── */
+/* Doc card */
 .ent-doc-card {
     background: #fff;
     border-radius: 24px;
@@ -118,231 +218,29 @@
 }
 .ent-input-sm:focus { border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
 
-/* ─── Mobile-First ──────────────────────────────────────── */
-@media (max-width: 767.98px) {
-    .topbar { display: none !important; }
-    #root-dinamico, .main-area { 
-        padding: 0 !important; 
-        overflow: hidden !important; 
-        display: flex !important;
-        flex-direction: column !important;
-    }
-    #moduloEntradas { flex: 1 1 0; }
-    #ent-desktop-header { display: none !important; }
-    #ent-m-header   { display: flex !important; }
-    #ent-search-compact { display: flex !important; }
-    #ent-kpi-row {
-        display: flex !important; flex-wrap: nowrap !important;
-        overflow-x: auto; gap: .55rem;
-        padding: .25rem 1rem .6rem !important;
-        scrollbar-width: none; -webkit-overflow-scrolling: touch;
-    }
-    #ent-kpi-row::-webkit-scrollbar { display: none; }
-    .bento-kpi { min-width: 130px; flex-shrink: 0; }
-    #moduloEntradas { padding-bottom: 0px; }
-    #ent-fab-wrap { display: flex !important; }
-    /* Ocultar barra de controles del escritorio */
-    .ent-controls, .ent-filters { display: none !important; }
-    /* Panel detalle: bottom sheet en mobile */
-    #ent-panel-detalle {
-        position: fixed !important; bottom: -100vh !important; left: 0 !important;
-        right: 0 !important; width: 100vw !important; max-width: 100vw !important;
-        height: 88vh !important; border-radius: 22px 22px 0 0 !important;
-        border-left: none !important; border-top: 1px solid var(--border) !important;
-        transition: bottom .35s cubic-bezier(.4,0,.2,1) !important;
-        box-shadow: 0 -12px 48px rgba(0,0,0,.2) !important; z-index: 1055 !important;
-    }
-    #ent-panel-detalle.open { bottom: 0 !important; width: 100% !important; }
-    /* Tabla: tipografía más pequeña para caber en pantalla */
-    #moduloEntradas table { font-size: .75rem; }
-    #moduloEntradas thead th,
-    #moduloEntradas tbody td { padding: 8px 8px; }
-    /* Ocultar columnas secundarias en mobile */
-    #moduloEntradas .col-hide-mob { display: none !important; }
-    #moduloEntradas .ent-table-wrap {
-        border-radius: 20px;
-        margin: 0 12px 12px 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        display: flex;
-        flex-direction: column;
-        flex: 1 1 0;
-    }
-}
-
-/* ─── Tabla moderna ─────────────────────────────────────── */
-#moduloEntradas {
-    display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; overflow: hidden;
-}
-.ent-controls {
-    display: flex; align-items: center; gap: 8px;
-    padding: 0.6rem 1.25rem; background: var(--surface);
-    border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
-}
-.ent-filters {
-    display: flex; align-items: center; gap: 8px;
-    padding: 0.45rem 1.25rem; background: var(--surface);
-    border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
-}
-#moduloEntradas .ent-table-wrap { flex: 1 1 0; overflow: auto; -webkit-overflow-scrolling: touch; background: var(--surface); }
-#moduloEntradas table { width: 100%; min-width: 700px; border-collapse: collapse; font-size: 0.80rem; }
-#moduloEntradas th.col-articulo,
-#moduloEntradas td.col-articulo {
-    min-width: 250px;
-    white-space: normal;
-    word-break: break-word;
-}
-#moduloEntradas thead th {
-    background: var(--bg); color: var(--subtext);
-    font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
-    letter-spacing: 0.06em; padding: 6px 10px;
-    border-bottom: 2px solid var(--border);
-    position: sticky; top: 0; z-index: 2; white-space: nowrap;
-}
-#moduloEntradas tbody tr {
-    border-bottom: 1px solid var(--border); cursor: pointer;
-    transition: background 0.12s;
-}
-#moduloEntradas tbody tr:hover { background: var(--bg); }
-#moduloEntradas tbody tr.ent-row-active { background: rgba(22,163,74,.06); border-left: 3px solid #16a34a; }
-#moduloEntradas tbody td { padding: 5px 10px; color: var(--text); }
-#moduloEntradas tbody tr.ent-item-sub { border-bottom: 1px dashed var(--border); }
-#moduloEntradas tbody tr.ent-item-sub td { padding-top: 6px; padding-bottom: 6px; background: rgba(0,0,0,.012); }
-#moduloEntradas tbody tr.ent-item-last { border-bottom: 2px solid var(--border); }
-#moduloEntradas .td-placeholder { text-align:center; color:var(--subtext); font-size:0.82rem; padding:2rem; }
-
-/* Wrapper Desktop para bordes redondeados */
-@media (min-width: 768px) {
-    .ent-desktop-card {
-        display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
-        background: var(--surface);
-        border-radius: 20px;
-        border: 1px solid var(--border);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-        overflow: hidden;
-    }
-}
-@media (max-width: 767.98px) {
-    .ent-desktop-card {
-        display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
-    }
-}
-
-/* Panel detalle desktop */
+/* Panel detalle lateral (Desktop) */
 #moduloEntradas .ent-detail-panel {
     width: 0; flex-shrink: 0; overflow: hidden;
-    background: var(--surface); border-left: 1px solid var(--border);
+    background: #ffffff; border-left: 1px solid #e2e8f0;
     display: flex; flex-direction: column; transition: width 0.25s; max-width: 380px;
 }
 #moduloEntradas .ent-detail-panel.open { width: 380px; }
 #moduloEntradas .ent-detail-scroll { flex:1; overflow-y:auto; padding:1.25rem; }
 #moduloEntradas .ent-detail-footer {
-    padding:.75rem 1rem; border-top:1px solid var(--border);
+    padding:.75rem 1rem; border-top:1px solid #e2e8f0;
     display:flex; gap:.5rem; flex-wrap:wrap;
 }
-#moduloEntradas .ent-sec { border:1px solid var(--border); border-radius:18px; margin-top:1rem; overflow:hidden; }
+#moduloEntradas .ent-sec { border:1px solid #e2e8f0; border-radius:18px; margin-top:1rem; overflow:hidden; }
 #moduloEntradas .ent-sec-hd {
-    background:var(--bg); padding:8px 12px; font-size:.72rem; font-weight:800;
-    text-transform:uppercase; letter-spacing:.06em; color:var(--subtext);
-    border-bottom:1px solid var(--border);
+    background:#f8fafc; padding:8px 12px; font-size:.72rem; font-weight:800;
+    text-transform:uppercase; letter-spacing:.06em; color:#475569;
+    border-bottom:1px solid #e2e8f0;
 }
-#moduloEntradas .ent-field { display:flex; padding:8px 12px; border-bottom:1px solid var(--border); font-size:.82rem; }
+#moduloEntradas .ent-field { display:flex; padding:8px 12px; border-bottom:1px solid #e2e8f0; font-size:.82rem; }
 #moduloEntradas .ent-field:last-child { border-bottom:none; }
-#moduloEntradas .ent-field-lbl { width:40%; color:var(--subtext); font-weight:600; font-size:.78rem; }
-#moduloEntradas .ent-field-val { width:60%; color:var(--text); font-weight:600; word-break:break-word; }
+#moduloEntradas .ent-field-lbl { width:40%; color:#64748b; font-weight:600; font-size:.78rem; }
+#moduloEntradas .ent-field-val { width:60%; color:#0f172a; font-weight:600; word-break:break-word; }
 
-#moduloEntradas .ent-file-upload {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border: 1.5px dashed var(--border);
-    border-radius: 12px;
-    padding: 12px 10px;
-    background: var(--bg);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
-    height: 100%;
-}
-#moduloEntradas .ent-file-upload:hover {
-    border-color: #3b82f6;
-    background: rgba(59, 130, 246, 0.05);
-}
-
-/* ── Reset root-dinamico padding for full-bleed ─────────── */
-#root-dinamico, .main-area {
-    padding: 0 !important;
-}
-
-/* ── Reglas Generales de Entradas / Órdenes de Compra ─────────────── */
-#moduloEntradas {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 1rem 1.25rem 3rem 1.25rem !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 0;
-    min-height: 0;
-}
-
-@media (max-width: 768px) {
-    #moduloEntradas {
-        padding: 0.5rem 0.5rem 100px 0.5rem !important;
-    }
-}
-
-/* ── KPIs Apple Compact Bento Cards ─────────────── */
-#moduloEntradas .ck-kpi-card {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 14px !important;
-    padding: 0.55rem 0.85rem !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 0.75rem !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
-    cursor: pointer;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
-    user-select: none;
-    min-height: 56px !important;
-}
-#moduloEntradas .ck-kpi-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
-}
-#moduloEntradas .ck-kpi-icon {
-    width: 38px !important;
-    height: 38px !important;
-    border-radius: 10px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 1.15rem !important;
-    flex-shrink: 0 !important;
-}
-
-/* ── Control Bar & Apple Search ──────────────────── */
-#moduloEntradas .ck-apple-search {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 9px 14px 9px 38px;
-    font-size: 0.88rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    color: #1e293b;
-    width: 100%;
-}
-#moduloEntradas .ck-apple-search:focus {
-    background: #ffffff;
-    border-color: #0284c7;
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-    outline: none;
-}
 /* Botón de código de OC estilo ERP con ícono */
 .btn-oc-code {
     background: #f1f5f9;
@@ -369,26 +267,33 @@
 }
 </style>
 
-<div id="moduloEntradas" class="modulo-wrapper d-flex flex-column h-100">
+<!-- Backdrop panel detalle (mobile) -->
+<div id="ent-det-backdrop" onclick="window._entCerrarDetalle()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);
+            backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:1054;"></div>
 
-    <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        <div class="d-flex align-items-center gap-3">
-            <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
-                <i class="bi bi-cart-check-fill"></i>
+<div class="ent-app-container d-flex flex-column" id="moduloEntradas">
+
+    <!-- ── 1. ENCABEZADO PRINCIPAL (RESPONSIVE) ───────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2 gap-md-3">
+            <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                <i class="bi bi-cart-check-fill text-primary fs-5"></i>
             </div>
             <div>
-                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Órdenes de Compra</h4>
-                <span class="text-secondary small">Gestión de compras, abastecimiento de repuestos y recepción de mercancía</span>
+                <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+                    Órdenes de Compra
+                </h4>
+                <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">Gestión de compras, abastecimiento de repuestos y recepción de mercancía</small>
             </div>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.cargarEntradas()" title="Actualizar">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.cargarEntradas()" title="Actualizar">
                 <i class="bi bi-arrow-clockwise fs-6"></i>
             </button>
             <div class="dropdown d-inline-block">
                 <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-file-earmark-excel text-success"></i> Excel
+                    <i class="bi bi-file-earmark-excel text-success"></i> <span class="d-none d-sm-inline">Excel</span>
                 </button>
                 <ul class="dropdown-menu shadow border" style="border-radius:10px;">
                     <li><a class="dropdown-item py-2 fw-semibold" href="#" onclick="window.exportarEntradasExcel();return false;"><i class="bi bi-download me-2 text-success"></i>Exportar</a></li>
@@ -402,141 +307,140 @@
                     </li>
                 </ul>
             </div>
-            <div id="col-picker-ent" class="d-none d-md-flex"></div>
-            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-inline-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalEntrada()" style="background: #0284c7; border-color: #0284c7;">
+            <!-- Botón Nueva Orden (Desktop) -->
+            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalEntrada()" style="background: #0284c7; border-color: #0284c7;">
                 <i class="bi bi-plus-lg fs-6"></i> <span>Nueva Orden de Compra</span>
             </button>
         </div>
     </div>
 
-    <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO) ─────────────── -->
-    <div class="row g-2 mb-3">
+    <!-- ── 2. BENTO KPIS ROW ─────────────────────────────────────────── -->
+    <div class="row g-2 g-md-3 mb-3">
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" id="ent-kpi-total-card">
-                <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
-                    <i class="bi bi-arrow-down-circle-fill"></i>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Total O.C.</span>
+                    <h2 id="kpi-ent-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
                 </div>
-                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Total O.C.</span>
-                    <h2 id="kpi-ent-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
+                <div class="ck-kpi-icon" style="background: #eff6ff; color: #2563eb;">
+                    <i class="bi bi-arrow-down-circle-fill"></i>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" id="ent-kpi-monto-card">
-                <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
-                    <i class="bi bi-cash-stack"></i>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Monto Total</span>
+                    <h2 id="kpi-ent-monto" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">S/ 0.00</h2>
                 </div>
-                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Monto Total</span>
-                    <h2 id="kpi-ent-monto" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">S/ 0.00</h2>
+                <div class="ck-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
+                    <i class="bi bi-cash-stack"></i>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" id="ent-kpi-provs-card">
-                <div class="ck-kpi-icon" style="background:#f5f3ff; color:#7c3aed;">
-                    <i class="bi bi-truck"></i>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Proveedores</span>
+                    <h2 id="kpi-ent-provs" class="fw-bolder m-0 text-primary" style="font-size: 1.6rem;">0</h2>
                 </div>
-                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Proveedores</span>
-                    <h2 id="kpi-ent-provs" class="fw-bolder m-0 text-primary lh-1" style="font-size: 1.35rem;">0</h2>
+                <div class="ck-kpi-icon" style="background: #f5f3ff; color: #7c3aed;">
+                    <i class="bi bi-truck"></i>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" id="ent-kpi-items-card">
-                <div class="ck-kpi-icon" style="background:#fefce8; color:#ca8a04;">
-                    <i class="bi bi-box-seam"></i>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Items Recibidos</span>
+                    <h2 id="kpi-ent-items" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem;">0</h2>
                 </div>
-                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Items Recibidos</span>
-                    <h2 id="kpi-ent-items" class="fw-bolder m-0 text-warning lh-1" style="font-size: 1.35rem;">0</h2>
+                <div class="ck-kpi-icon" style="background: #fefce8; color: #ca8a04;">
+                    <i class="bi bi-box-seam"></i>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS RÁPIDOS ────────────────────── -->
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <div class="position-relative flex-grow-1" style="min-width: 240px; max-width: 380px;">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="position-relative flex-grow-1" style="max-width: 380px;">
             <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
             <input type="text" id="ent-buscar" class="ck-apple-search" placeholder="Código, proveedor, documento..." oninput="window.filtrarEntradas()">
         </div>
         <div class="d-flex align-items-center gap-2">
-            <input type="date" id="ent-fil-desde" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:140px; height:38px;" title="Desde" onchange="window.filtrarEntradas()">
-            <input type="date" id="ent-fil-hasta" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:140px; height:38px;" title="Hasta" onchange="window.filtrarEntradas()">
+            <input type="date" id="ent-fil-desde" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:130px; height:38px;" title="Desde" onchange="window.filtrarEntradas()">
+            <input type="date" id="ent-fil-hasta" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:130px; height:38px;" title="Hasta" onchange="window.filtrarEntradas()">
             <button onclick="window._entLimpiarFechas()" class="btn btn-light bg-white border text-secondary rounded-3" style="height:38px; width:38px; display:flex; align-items:center; justify-content:center;" title="Limpiar fechas">
                 <i class="bi bi-x-lg"></i>
             </button>
+            <span id="ent-contador" class="text-secondary small fw-bold ms-1"></span>
         </div>
-        <span id="ent-contador" class="text-secondary small fw-bold ms-auto"></span>
     </div>
 
-  <!-- ═══ CONTENEDOR PRINCIPAL ═════════════════════════════════════ -->
-  <div style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;">
-
-    <!-- TABLA -->
-    <div class="ent-table-wrap">
-      <table id="tabla-entradas">
-        <thead>
-          <tr>
-            <th>ORDEN COMPRA</th>
-              <th>Tipo Orden</th>
-            <th>Fecha</th>
-            <th class="text-center" style="font-size:0.65rem;">ESTADO</th>
-            <th style="min-width: 130px;">Usuario Aprobación</th>
-            <th>Placa</th>
-            <th style="min-width: 180px;">Motivo</th>
-            <th style="min-width: 300px;">Proveedor</th>
-            <th class="col-hide-mob" style="font-size:0.65rem;">Cód. Art.</th>
-            <th class="col-articulo">Artículo</th>
-            <th class="text-end">Cant.</th>
-            <th class="text-end col-hide-mob">Costo Unit.</th>
-            <th class="text-end col-hide-mob">Total</th>
-            <th class="text-center col-hide-mob" style="font-size:0.65rem;">VOUCHER</th>
-            <th class="text-center col-hide-mob" style="font-size:0.65rem;">COTIZACIÓN</th>
-            <th class="text-center col-hide-mob" style="font-size:0.65rem;">FACTURA</th>
-            <th style="width:80px;"></th>
-          </tr>
-        </thead>
-        <tbody id="tbody-entradas">
-          <tr><td colspan="9" class="td-placeholder"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
-        </tbody>
-      </table>
-      <div id="ent-paginacion" class="d-flex align-items-center gap-2 py-2 px-3"></div>
+    <!-- ── 4. VISTA MÓVIL NATIVA (CARDS) ──────────────────────────────── -->
+    <div id="entCardContainer" class="d-md-none">
+        <div class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando órdenes de compra...
+        </div>
     </div>
 
-    <!-- PANEL DETALLE LATERAL -->
+    <!-- ── 5. VISTA ESCRITORIO (TABLA FLUIDA) ─────────────────────────── -->
+    <div class="ent-table-wrap d-none d-md-block flex-grow-1" id="ent-tabla-wrap">
+        <div class="custom-scrollbar overflow-x-auto" style="overflow-y: visible; min-height: 320px;">
+            <table class="table table-hover align-middle m-0" id="tabla-entradas">
+                <thead class="bg-light sticky-top shadow-2xs border-bottom">
+                    <tr>
+                        <th class="ps-3" style="min-width:120px;">ORDEN COMPRA</th>
+                        <th style="min-width:140px;">Tipo Orden</th>
+                        <th style="min-width:135px;">Fecha</th>
+                        <th class="text-center" style="min-width:100px; font-size:0.68rem;">ESTADO</th>
+                        <th style="min-width:130px;">Usuario Aprobación</th>
+                        <th style="min-width:100px;">Placa</th>
+                        <th style="min-width:160px;">Motivo</th>
+                        <th style="min-width:220px;">Proveedor</th>
+                        <th style="min-width:85px; font-size:0.65rem;">Cód. Art.</th>
+                        <th style="min-width:220px;">Artículo</th>
+                        <th class="text-end" style="min-width:70px;">Cant.</th>
+                        <th class="text-end" style="min-width:95px;">Costo Unit.</th>
+                        <th class="text-end" style="min-width:100px;">Total</th>
+                        <th class="text-center" style="min-width:85px; font-size:0.65rem;">VOUCHER</th>
+                        <th class="text-center" style="min-width:85px; font-size:0.65rem;">COTIZACIÓN</th>
+                        <th class="text-center" style="min-width:85px; font-size:0.65rem;">FACTURA</th>
+                        <th class="pe-3 text-center" style="width:80px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-entradas">
+                    <tr><td colspan="17" class="td-placeholder"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="ent-paginacion" class="d-flex align-items-center gap-2 py-2 px-3"></div>
+    </div>
+
+    <!-- PANEL DETALLE LATERAL (DESKTOP) -->
     <div class="ent-detail-panel" id="ent-panel-detalle">
-      <div style="display:flex;align-items:center;justify-content:space-between;
-                  padding:0 1rem;height:48px;border-bottom:1px solid var(--border);flex-shrink:0;">
-        <span style="font-size:.88rem;font-weight:800;color:var(--text);" id="ent-detalle-titulo">Detalle Entrada</span>
-        <button class="btn btn-sm" onclick="window._entCerrarDetalle()" style="color:var(--subtext);">
-          <i class="bi bi-x-lg"></i>
-        </button>
-      </div>
-      <div class="ent-detail-scroll" id="ent-detalle-scroll"></div>
-      <div class="ent-detail-footer" id="ent-detalle-footer" style="display:none;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 1rem;height:48px;border-bottom:1px solid #e2e8f0;flex-shrink:0;">
+            <span style="font-size:.88rem;font-weight:800;color:#0f172a;" id="ent-detalle-titulo">Detalle Entrada</span>
+            <button class="btn btn-sm" onclick="window._entCerrarDetalle()" style="color:#64748b;">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="ent-detail-scroll" id="ent-detalle-scroll"></div>
+        <div class="ent-detail-footer" id="ent-detalle-footer" style="display:none;"></div>
     </div>
 
-  </div>
-  </div> <!-- Cierre del ent-desktop-card -->
+    <!-- ── 6. BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
+    <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1045;">
+        <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+                onclick="window.abrirModalEntrada()"
+                style="width: 58px; height: 58px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.6rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;"
+                title="Nueva Orden de Compra">
+            <i class="bi bi-plus-lg text-white"></i>
+        </button>
+    </div>
 
 </div>
-
-<!-- Backdrop panel detalle (mobile) -->
-<div id="ent-det-backdrop" onclick="window._entCerrarDetalle()"
-     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);
-            z-index:1054;"></div>
-
-<!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
-<button class="btn btn-primary rounded-circle shadow-lg d-flex d-md-none align-items-center justify-content-center position-fixed"
-        style="width: 54px; height: 54px; bottom: 85px; right: 20px; z-index: 1040; background: #0284c7; border: none; box-shadow: 0 8px 24px rgba(2,132,199,0.4) !important;"
-        onclick="window.abrirModalEntrada()"
-        title="Nueva Orden de Compra">
-    <i class="bi bi-plus-lg fs-4 text-white"></i>
-</button>
 
 <!-- Backdrop nueva entrada -->
 <div id="ent-entrada-bd" onclick="window._entCerrarModal()"

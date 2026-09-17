@@ -1206,17 +1206,22 @@ window._entRender = function() {
     if (cont) cont.textContent = total + ' registro' + (total !== 1 ? 's' : '');
 
     var tbody = document.getElementById('tbody-entradas');
+    var cardContainer = document.getElementById('entCardContainer');
     if (!tbody) return;
     if (!pagina.length) {
-        tbody.innerHTML = '<tr><td colspan="9" class="td-placeholder"><i class="bi bi-inbox" style="font-size:1.5rem;opacity:0.3"></i><br>Sin entradas encontradas</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="17" class="td-placeholder"><i class="bi bi-inbox" style="font-size:1.5rem;opacity:0.3"></i><br>Sin órdenes encontradas</td></tr>';
+        if (cardContainer) cardContainer.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>No se encontraron órdenes registradas.</div>';
         var paginEl2 = document.getElementById('ent-paginacion');
         if (paginEl2) paginEl2.innerHTML = '';
         return;
     }
 
     tbody.innerHTML = '';
+    var htmlCards = '';
+
     pagina.forEach(function(d) {
         var fecha = _entFmtFechaHora(d.fecha, d.created_at);
+        var fechaCorta = d.fecha ? new Date(String(d.fecha).replace(' ', 'T')).toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
         var isAnulado = d.estado === 'Anulado';
         var dCreated = d.created_at ? String(d.created_at).split('T')[0] : fecha;
         var estadoLimpio = String(d.estado || 'Registrado').toLowerCase().trim();
@@ -1251,6 +1256,8 @@ window._entRender = function() {
         var fHTML = d.url_factura_presigned ? '<a href="'+_entEsc(d.url_factura_presigned)+'" target="_blank" class="text-success text-decoration-none fw-bold" style="font-size:0.75rem;"><i class="bi bi-file-earmark-check"></i> Ver Factura</a>' : '<a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\');" class="text-secondary text-decoration-none small opacity-75" title="Subir Factura"><i class="bi bi-upload"></i> Subir</a>';
 
         var items = d.items || [];
+        var countItems = items.length;
+        var totalCant = items.reduce(function(acc, it) { return acc + (parseFloat(it.cantidad) || 0); }, 0);
         var isActive = d.id === window._entDetalleId;
         var activeCls = isActive ? ' ent-row-active' : '';
         if (isAnulado) activeCls += ' text-muted opacity-75';
@@ -1259,27 +1266,105 @@ window._entRender = function() {
         var aprobadorVal = d.aprobador_nombre || d.aprobado_por;
         var aprobadorHtml = aprobadorVal ? '<span class="text-dark fw-bold text-nowrap" style="font-size:0.78rem;"><i class="bi bi-person-check-fill text-success me-1"></i>' + _entEsc(aprobadorVal) + '</span>' : '<span class="text-muted small">—</span>';
 
+        // Construir Card Móvil
+        htmlCards += `
+        <div class="ent-mobile-card">
+            <!-- Header Card: N° OC + Fecha + Estado -->
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bolder text-primary font-monospace" style="font-size:0.95rem;">${_entEsc(codLimpio)}</span>
+                    <span class="text-muted small" style="font-size:0.75rem;">• ${fechaCorta}</span>
+                </div>
+                <div>${estadoHtml}</div>
+            </div>
+
+            <!-- Proveedor y Placa -->
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                ${d.proveedor_nombre ? `<span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🏢 ${_entEsc(d.proveedor_nombre)}</span>` : ''}
+                ${d.placa ? `<span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🚛 ${_entEsc(d.placa)}</span>` : ''}
+                <span class="badge bg-secondary-subtle text-secondary border fw-semibold px-2 py-1" style="font-size:0.72rem; border-radius:6px;">${tipoOrdText}</span>
+            </div>
+
+            <!-- Motivo y Aprobación -->
+            <div class="mb-2">
+                ${d.motivo_entrada ? `<div class="fw-bold text-dark" style="font-size:0.88rem;">${_entEsc(d.motivo_entrada)}</div>` : ''}
+                ${aprobadorVal ? `<div class="text-muted small" style="font-size:0.75rem;"><i class="bi bi-person-check-fill text-success me-1"></i>Aprobado: <strong>${_entEsc(aprobadorVal)}</strong></div>` : ''}
+                ${d.documento_referencia ? `<div class="text-muted small mt-1" style="font-size:0.75rem;"><i class="bi bi-file-text me-1"></i>Doc: ${_entEsc(d.documento_referencia)}</div>` : ''}
+            </div>
+
+            <!-- Resumen de Artículos & Importe -->
+            <div class="d-flex align-items-center justify-content-between pt-2 border-top mb-3">
+                <span class="badge bg-light text-dark border fw-semibold" style="font-size:0.75rem; border-radius:6px;">
+                    <i class="bi bi-box-seam me-1 text-primary"></i>${countItems} ${countItems === 1 ? 'Ítem' : 'Ítems'} (${totalCant.toLocaleString('es-PE', {maximumFractionDigits:2})} u.)
+                </span>
+                <span class="fw-bold text-success font-monospace" style="font-size:0.95rem;">${(d.moneda === 'USD' ? '$ ' : 'S/ ') + tp.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+            </div>
+
+            <!-- Botones de Acción Móvil -->
+            <div class="d-flex align-items-center justify-content-between gap-1 pt-2 border-top">
+                <button type="button" class="btn btn-sm btn-outline-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.abrirModalDetalleOC('${_entEsc(d.id)}')" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-eye"></i> Detalle
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-3 py-1 d-flex align-items-center gap-1" onclick="window.generarComprobanteEntrada('${_entEsc(d.id)}')" title="PDF" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="border-radius:8px;">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
+                        <li>
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalDetalleOC('${_entEsc(d.id)}')">
+                                <i class="bi bi-eye text-primary fs-6"></i> Ver Detalle
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalSubirArchivos('${_entEsc(d.id)}')">
+                                <i class="bi bi-paperclip text-info fs-6"></i> Adjuntos / Sustentos
+                            </a>
+                        </li>
+                        ${canEditRow ? `
+                        <li>
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalEditarEntrada('${_entEsc(d.id)}')">
+                                <i class="bi bi-pencil text-warning fs-6"></i> Editar Orden
+                            </a>
+                        </li>
+                        ` : ''}
+                        ${canDelete ? `
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window.eliminarEntrada('${_entEsc(d.id)}')">
+                                <i class="bi bi-trash text-danger fs-6"></i> Eliminar
+                            </a>
+                        </li>
+                        ` : ''}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        `;
+
         if (!items.length) {
             var tr0 = document.createElement('tr');
             tr0.className = activeCls.trim();
             tr0.innerHTML =
-                '<td class="text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.abrirModalDetalleOC(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(codLimpio) + '</span></td>' +
+                '<td class="ps-3 text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.abrirModalDetalleOC(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(codLimpio) + '</span></td>' +
                 '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
-                '<td class="text-center col-hide-mob">' + estadoHtml + '</td>' +
-                '<td class="col-hide-mob">' + aprobadorHtml + '</td>' +
-                '<td class="col-hide-mob">' + placaHtml + '</td>' +
-                '<td class="col-hide-mob">' + motivoHtml + '</td>' +
-                '<td class="col-hide-mob">' + (d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
-                '<td class="col-hide-mob text-dark font-monospace fw-bold" style="font-size:.75rem;white-space:nowrap;"></td>' +
+                '<td class="text-center">' + estadoHtml + '</td>' +
+                '<td>' + aprobadorHtml + '</td>' +
+                '<td>' + placaHtml + '</td>' +
+                '<td>' + motivoHtml + '</td>' +
+                '<td>' + (d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
+                '<td class="text-dark font-monospace fw-bold" style="font-size:.75rem;white-space:nowrap;"></td>' +
                 '<td class="col-articulo text-muted fw-semibold" style="font-size:.78rem;">Sin artículos</td>' +
                 '<td class="text-end"></td>' +
-                '<td class="text-end col-hide-mob"></td>' +
-                '<td class="text-end col-hide-mob" style="white-space:nowrap;">' + totalFmt + '</td>' +
-                '<td class="text-center col-hide-mob">' + vHTML + '</td>' +
-                '<td class="text-center col-hide-mob">' + cHTML + '</td>' +
-                '<td class="text-center col-hide-mob">' + fHTML + '</td>' +
-                '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
+                '<td class="text-end"></td>' +
+                '<td class="text-end" style="white-space:nowrap;">' + totalFmt + '</td>' +
+                '<td class="text-center">' + vHTML + '</td>' +
+                '<td class="text-center">' + cHTML + '</td>' +
+                '<td class="text-center">' + fHTML + '</td>' +
+                '<td class="pe-3 text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
                     '<div class="d-flex gap-1 justify-content-center">' +
                         '<button class="btn btn-xs btn-outline-info" onclick="event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\')" title="Subir / Adjuntar Archivos"><i class="bi bi-paperclip"></i></button>' +
                         '<button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver PDF"><i class="bi bi-eye"></i></button>' +
@@ -1287,12 +1372,10 @@ window._entRender = function() {
                         (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-trash"></i></button>') +
                     '</div>' +
                 '</td>';
-            // Fila de entrada
             tbody.appendChild(tr0);
             return;
         }
 
-        // Si la búsqueda no coincide con la cabecera, filtrar solo los items que coincidan
         var buscar = ((document.getElementById('ent-buscar') || {}).value || '').toLowerCase().trim();
         var itemsFiltrados = items;
         if (buscar) {
@@ -1320,23 +1403,23 @@ window._entRender = function() {
             var provHtml = d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>';
 
             tr.innerHTML =
-                 '<td class="text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.abrirModalDetalleOC(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(codLimpio) + '</span></td>' +
+                '<td class="ps-3 text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.abrirModalDetalleOC(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(codLimpio) + '</span></td>' +
                 '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
-                '<td class="col-hide-mob">' + aprobadorHtml + '</td>' +
+                '<td>' + aprobadorHtml + '</td>' +
                 '<td>' + placaHtml + '</td>' +
                 '<td>' + motivoHtml + '</td>' +
                 '<td>' + provHtml + '</td>' +
-                '<td class="col-hide-mob text-dark font-monospace fw-bold" style="font-size:.75rem;white-space:nowrap;">' + invId + '</td>' +
+                '<td class="text-dark font-monospace fw-bold" style="font-size:.75rem;white-space:nowrap;">' + invId + '</td>' +
                 '<td class="col-articulo text-dark fw-semibold" style="font-size:.80rem;">' + nombre + '</td>' +
                 '<td class="text-end text-dark fw-bold" style="font-size:.80rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
-                '<td class="text-end col-hide-mob text-dark fw-semibold" style="font-size:.80rem;">' + (d.moneda === 'USD' ? '$ ' : 'S/ ') + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
-                '<td class="text-end col-hide-mob" style="white-space:nowrap;">' + (isFirst ? totalFmt : '') + '</td>' +
-                '<td class="text-center col-hide-mob">' + (isFirst ? vHTML : '') + '</td>' +
-                '<td class="text-center col-hide-mob">' + (isFirst ? cHTML : '') + '</td>' +
-                '<td class="text-center col-hide-mob">' + (isFirst ? fHTML : '') + '</td>' +
-                '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
+                '<td class="text-end text-dark fw-semibold" style="font-size:.80rem;">' + (d.moneda === 'USD' ? '$ ' : 'S/ ') + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
+                '<td class="text-end" style="white-space:nowrap;">' + (isFirst ? totalFmt : '') + '</td>' +
+                '<td class="text-center">' + (isFirst ? vHTML : '') + '</td>' +
+                '<td class="text-center">' + (isFirst ? cHTML : '') + '</td>' +
+                '<td class="text-center">' + (isFirst ? fHTML : '') + '</td>' +
+                '<td class="pe-3 text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
                     (isFirst ?
                         '<div class="d-flex gap-1 justify-content-center">' +
                             '<button class="btn btn-xs btn-outline-info" onclick="event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\')" title="Subir / Adjuntar Archivos"><i class="bi bi-paperclip"></i></button>' +
@@ -1349,6 +1432,8 @@ window._entRender = function() {
             tbody.appendChild(tr);
         });
     });
+
+    if (cardContainer) cardContainer.innerHTML = htmlCards;
 
     var paginEl = document.getElementById('ent-paginacion');
     if (paginEl) {

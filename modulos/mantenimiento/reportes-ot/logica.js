@@ -3118,18 +3118,14 @@ window._rotAgregarItemMat = function() {
             </div>
             <input type="hidden" class="rot-mat-item-inv-id" data-idx="${idx}">
             <input type="hidden" class="rot-mat-item-stock" data-idx="${idx}" value="">
-            <div class="rot-mat-item-stock-lbl" data-idx="${idx}" style="font-size:0.71rem;margin-top:2px;display:none;"></div>
+            <input type="hidden" class="rot-mat-item-cu" data-idx="${idx}" value="0">
+            <input type="hidden" class="rot-mat-item-imp" data-idx="${idx}" value="0">
+            <div class="rot-mat-item-stock-lbl" data-idx="${idx}" style="font-size:0.75rem;margin-top:4px;display:none;"></div>
         </td>
-        <td style="padding:6px 8px; width:75px;">
-            <input type="number" class="form-control form-control-sm rot-mat-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="1" min="0.001" step="0.001" oninput="window._rotCalcItemMat(${idx})" style="border-radius:8px; font-size:0.8rem;">
+        <td style="padding:6px 8px; width:120px; text-align:center;">
+            <input type="number" class="form-control form-control-sm rot-mat-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="1" min="0.001" step="0.001" oninput="window._rotCalcItemMat(${idx})" style="border-radius:8px; font-size:0.82rem;">
         </td>
-        <td style="padding:6px 8px; width:105px;">
-            <input type="number" class="form-control form-control-sm rot-mat-item-cu bg-white fw-semibold" data-idx="${idx}" value="0" min="0" step="0.01" oninput="window._rotCalcItemMat(${idx})" style="border-radius:8px; font-size:0.8rem;">
-        </td>
-        <td style="padding:6px 8px; width:100px;">
-            <input type="number" class="form-control form-control-sm rot-mat-item-imp bg-light fw-bold text-success" data-idx="${idx}" value="0" readonly style="border-radius:8px; font-size:0.8rem;">
-        </td>
-        <td style="padding:6px 8px; width:38px; text-align:center;">
+        <td style="padding:6px 8px; width:44px; text-align:center;">
             <button type="button" class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1" onclick="window._rotQuitarItemMat(${idx})" title="Eliminar fila">
                 <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>
             </button>
@@ -3166,15 +3162,19 @@ window._rotSeleccionarItemPorQR = function(valor, idx) {
     var cuEl   = document.querySelector('.rot-mat-item-cu[data-idx="' + idx + '"]');
     if (descEl) descEl.value = item.id + ' — ' + (item.descripcion || '');
     if (hidEl) hidEl.value = item.id;
-    if (cuEl && item.costo) cuEl.value = item.costo;
+    if (cuEl) cuEl.value = item.costo || item.costo_referencial || 0;
     
+    var stock = parseFloat(item.stock_actual != null ? item.stock_actual : (item.stock != null ? item.stock : 0));
     var stockEl = document.querySelector('.rot-mat-item-stock[data-idx="' + idx + '"]');
     var lblEl   = document.querySelector('.rot-mat-item-stock-lbl[data-idx="' + idx + '"]');
-    if (stockEl) stockEl.value = item.stock || 0;
+    if (stockEl) stockEl.value = stock;
     if (lblEl) {
-        lblEl.textContent = 'Stock: ' + (item.stock || 0);
         lblEl.style.display = 'block';
-        lblEl.style.color = (item.stock > 0) ? '#16a34a' : '#dc2626';
+        if (stock <= 0) {
+            lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock disponible</span>';
+        } else {
+            lblEl.innerHTML = '<span style="color:#16a34a;"><i class="bi bi-check-circle-fill me-1"></i>Stock disponible: <strong>' + stock + '</strong> ' + (item.unidad || 'und') + '</span>';
+        }
     }
     
     window._rotCalcItemMat(idx);
@@ -3191,15 +3191,15 @@ window._rotBuscarArtMat = function(input, idx) {
         var hidEl = document.querySelector('.rot-mat-item-inv-id[data-idx="' + idx + '"]');
         if (hidEl) hidEl.value = item.id;
         var cuEl = document.querySelector('.rot-mat-item-cu[data-idx="' + idx + '"]');
-        if (cuEl) { cuEl.value = parseFloat(item.costo_referencial || 0).toFixed(2); window._rotCalcItemMat(idx); }
+        if (cuEl) { cuEl.value = parseFloat(item.costo_referencial || item.costo || 0).toFixed(2); window._rotCalcItemMat(idx); }
         var stock = parseFloat(item.stock_actual != null ? item.stock_actual : -1);
         if (stockEl) stockEl.value = stock;
         if (lblEl) {
-            lblEl.style.display = '';
+            lblEl.style.display = 'block';
             if (stock <= 0) {
-                lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;">âš  Sin stock disponible</span>';
+                lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock disponible</span>';
             } else {
-                lblEl.innerHTML = '<span style="color:#16a34a;">Stock disponible: <strong>' + stock + '</strong> ' + (item.unidad || 'und') + '</span>';
+                lblEl.innerHTML = '<span style="color:#16a34a;"><i class="bi bi-check-circle-fill me-1"></i>Stock disponible: <strong>' + stock + '</strong> ' + (item.unidad || 'und') + '</span>';
             }
         }
     } else {
@@ -3250,8 +3250,8 @@ window.rotGuardarMaterial = function() {
         var desc = descs[i] ? descs[i].value.trim() : '';
         if (!desc) continue;
         var cant = parseFloat(cants[i].value) || 0;
-        var cu   = parseFloat(cus[i].value)   || 0;
-        var imp  = parseFloat(imps[i].value)  || cant * cu;
+        var cu   = parseFloat(cus[i] ? cus[i].value : 0) || 0;
+        var imp  = parseFloat(imps[i] ? imps[i].value : 0) || cant * cu;
         var invId = (invIds[i] && invIds[i].value) ? invIds[i].value : null;
         if (cant <= 0) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Cantidad inválida en fila ' + (i+1), 'danger'); return; }
         items.push({ inventario_id: invId, descripcion: desc, cantidad: cant, costo_unitario: cu, importe: imp });
@@ -3263,7 +3263,6 @@ window.rotGuardarMaterial = function() {
     items.forEach(function(it) {
         var invIds = document.querySelectorAll('.rot-mat-item-inv-id');
         var descs  = document.querySelectorAll('.rot-mat-item-desc');
-        // buscar el inv-id que corresponde a este item por descripcion
         var invId = '';
         for (var j = 0; j < descs.length; j++) {
             if ((descs[j].value || '').trim() === it.descripcion) {
@@ -3283,7 +3282,7 @@ window.rotGuardarMaterial = function() {
     });
     if (sinStock.length) {
         if (typeof window.mostrarAlerta === 'function') {
-            window.mostrarAlerta('Stock insuficiente:\nâ€¢ ' + sinStock.join('\nâ€¢ '), 'danger');
+            window.mostrarAlerta('Stock insuficiente:\n• ' + sinStock.join('\n• '), 'danger');
         }
         return;
     }

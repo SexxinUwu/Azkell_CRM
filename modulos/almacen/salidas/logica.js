@@ -348,14 +348,99 @@ window.salRenderTabla = function() {
         var msg = window.salTabActiva === 'pend' ? 'Sin solicitudes pendientes'
                 : window.salTabActiva === 'anulado' ? 'Sin salidas anuladas'
                 : 'Sin salidas registradas';
-        tbody.innerHTML = '<tr><td colspan="11" class="sal-td-placeholder" style="text-align:center"><i class="bi bi-box" style="font-size:1.5rem; opacity:0.3"></i><br>' + msg + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" class="sal-td-placeholder" style="text-align:center"><i class="bi bi-box" style="font-size:1.5rem; opacity:0.3"></i><br>' + msg + '</td></tr>';
+        var cardContainer = document.getElementById('salCardContainer');
+        if (cardContainer) cardContainer.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>' + msg + '</div>';
         if (paginEl) paginEl.innerHTML = '';
         return;
     }
 
     tbody.innerHTML = '';
+    var cardContainer = document.getElementById('salCardContainer');
+    var htmlCards = '';
+
     datosPag.forEach(function(m) {
         var items = m.items || [];
+        var fechaCorta = m.fecha ? new Date(String(m.fecha).replace(' ', 'T')).toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
+        var countItems = items.length;
+        var totalCant = items.reduce(function(acc, it) { return acc + (parseFloat(it.cantidad) || 0); }, 0);
+        
+        var badgeEstadoMobile = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">Pendiente</span>';
+        if (m.estado === 'Despachado') {
+            badgeEstadoMobile = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">Despachado</span>';
+        } else if (m.estado === 'Anulado') {
+            badgeEstadoMobile = '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">Anulado</span>';
+        }
+
+        htmlCards += `
+        <div class="sal-mobile-card">
+            <!-- Header Card: ID Solicitud + Fecha + Estado -->
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bolder text-primary font-monospace" style="font-size:0.95rem;">${salEsc(m.id || '—')}</span>
+                    <span class="text-muted small" style="font-size:0.75rem;">• ${fechaCorta}</span>
+                </div>
+                <div>${badgeEstadoMobile}</div>
+            </div>
+
+            <!-- Placa y OT -->
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                ${m.placa ? `<span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🚛 ${salEsc(m.placa)}</span>` : ''}
+                ${m.ticket_ot ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold px-2 py-1" style="font-size:0.75rem; border-radius:6px;"><i class="bi bi-card-checklist me-1"></i>${salEsc(m.ticket_ot)}</span>` : ''}
+                <span class="badge bg-secondary-subtle text-secondary border fw-semibold px-2 py-1" style="font-size:0.72rem; border-radius:6px;">${salEsc(m.tipo_orden || 'Salida')}</span>
+            </div>
+
+            <!-- Solicitante y Responsable -->
+            <div class="mb-2">
+                <div class="fw-bold text-dark" style="font-size:0.88rem;">${salEsc(m.responsable || 'Sin Responsable')}</div>
+                <div class="text-muted small" style="font-size:0.75rem;"><i class="bi bi-person-fill text-primary me-1"></i>Solicitante: <strong>${salEsc(_salFmtSolicitante(m.creado_por))}</strong></div>
+                ${m.observaciones ? `<div class="text-muted small mt-1 text-truncate" style="font-size:0.75rem;"><i class="bi bi-chat-left-text me-1"></i>${salEsc(m.observaciones)}</div>` : ''}
+            </div>
+
+            <!-- Resumen de Artículos & Importe -->
+            <div class="d-flex align-items-center justify-content-between pt-2 border-top mb-3">
+                <span class="badge bg-light text-dark border fw-semibold" style="font-size:0.75rem; border-radius:6px;">
+                    <i class="bi bi-box-seam me-1 text-primary"></i>${countItems} ${countItems === 1 ? 'Artículo' : 'Artículos'} (${totalCant.toLocaleString('es-PE', {maximumFractionDigits:2})} u.)
+                </span>
+                <span class="fw-bold text-success font-monospace" style="font-size:0.9rem;">${salFmtMoney(m.total_pen)}</span>
+            </div>
+
+            <!-- Botones de Acción Móvil -->
+            <div class="d-flex align-items-center justify-content-between gap-1 pt-2 border-top">
+                <button type="button" class="btn btn-sm btn-outline-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="salAbrirDetalle(window.salData.find(function(x){return x.id==='${salEsc(m.id)}';}))" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-eye"></i> Detalle
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-3 py-1 d-flex align-items-center gap-1" onclick="window.salVerPDF(window.salData.find(function(x){return x.id==='${salEsc(m.id)}';}))" title="PDF" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="border-radius:8px;">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
+                        <li>
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="salAbrirDetalle(window.salData.find(function(x){return x.id==='${salEsc(m.id)}';}))">
+                                <i class="bi bi-eye text-primary fs-6"></i> Ver Detalle
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.salGenerarPDF(window.salData.find(function(x){return x.id==='${salEsc(m.id)}';}))">
+                                <i class="bi bi-download text-success fs-6"></i> Descargar PDF
+                            </a>
+                        </li>
+                        ${m.estado === 'Pendiente' ? `
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="salAnular('${salEsc(m.id)}')">
+                                <i class="bi bi-slash-circle text-danger fs-6"></i> Anular Salida
+                            </a>
+                        </li>
+                        ` : ''}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        `;
 
         var filteredItems = items;
         if (f.search) {
@@ -371,17 +456,17 @@ window.salRenderTabla = function() {
             var tr = document.createElement('tr');
             if (m.id === window.salDetalleId) tr.classList.add('sal-row-active');
             tr.innerHTML =
-                '<td class="text-center"><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + salEsc(m.id || '—') + '</span></td>'
-                + '<td style="white-space:nowrap;font-weight:600;">' + salFmtDate(m.fecha, m.created_at) + '</td>'
-                + '<td class="col-hide-mob" style="vertical-align:middle;">' + _salTipoOrdenBadge(m.tipo_orden) + '</td>'
-                + '<td class="col-hide-mob"><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
+                '<td class="ps-3 fw-bold text-primary font-monospace" style="font-size:0.85rem;">' + salEsc(m.id || '—') + '</td>'
+                + '<td style="white-space:nowrap;font-weight:600;font-size:0.82rem;">' + salFmtDate(m.fecha, m.created_at) + '</td>'
+                + '<td style="vertical-align:middle;">' + _salTipoOrdenBadge(m.tipo_orden) + '</td>'
+                + '<td><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
                 + '<td>' + salEsc(m.placa || '—') + '</td>'
-                + '<td class="col-hide-mob">' + salEsc(m.responsable || '—') + '</td>'
-                + '<td class="col-hide-mob"><span style="font-size:0.78rem;font-weight:600;color:var(--text);">' + salEsc(_salFmtSolicitante(m.creado_por)) + '</span></td>'
+                + '<td>' + salEsc(m.responsable || '—') + '</td>'
+                + '<td><span style="font-size:0.78rem;font-weight:600;color:var(--text);">' + salEsc(_salFmtSolicitante(m.creado_por)) + '</span></td>'
                 + '<td colspan="3" style="color:var(--subtext);font-size:0.78rem;">Sin artículos</td>'
-                + '<td class="col-hide-mob"></td>'
-                + '<td class="col-hide-mob"></td>'
-                + '<td>' + salBadge(m.estado) + '</td>';
+                + '<td></td>'
+                + '<td></td>'
+                + '<td class="pe-3">' + salBadge(m.estado) + '</td>';
             tr.onclick = (function(row) { return function() { salAbrirDetalle(row); }; })(m);
             tbody.appendChild(tr);
             return;
@@ -398,23 +483,25 @@ window.salRenderTabla = function() {
             var cant   = parseFloat(it.cantidad || 0);
             var cu     = parseFloat(it.costo_unitario || 0);
             tr.innerHTML =
-                '<td class="text-center"><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + salEsc(m.id || '—') + '</span></td>'
-                + '<td style="white-space:nowrap;font-weight:600;">' + salFmtDate(m.fecha, m.created_at) + '</td>'
-                + '<td class="col-hide-mob" style="vertical-align:middle;">' + _salTipoOrdenBadge(m.tipo_orden) + '</td>'
-                + '<td class="col-hide-mob"><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
+                '<td class="ps-3 fw-bold text-primary font-monospace" style="font-size:0.85rem;">' + salEsc(m.id || '—') + '</td>'
+                + '<td style="white-space:nowrap;font-weight:600;font-size:0.82rem;">' + salFmtDate(m.fecha, m.created_at) + '</td>'
+                + '<td style="vertical-align:middle;">' + _salTipoOrdenBadge(m.tipo_orden) + '</td>'
+                + '<td><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
                 + '<td>' + salEsc(m.placa || '—') + '</td>'
-                + '<td class="col-hide-mob">' + salEsc(m.responsable || '—') + '</td>'
-                + '<td class="col-hide-mob"><span style="font-size:0.78rem;font-weight:600;color:var(--text);">' + salEsc(_salFmtSolicitante(m.creado_por)) + '</span></td>'
-                + '<td class="col-hide-mob" style="font-size:0.75rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + salEsc(it.inventario_id || '—') + '</td>'
+                + '<td>' + salEsc(m.responsable || '—') + '</td>'
+                + '<td><span style="font-size:0.78rem;font-weight:600;color:var(--text);">' + salEsc(_salFmtSolicitante(m.creado_por)) + '</span></td>'
+                + '<td style="font-size:0.75rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + salEsc(it.inventario_id || '—') + '</td>'
                 + '<td class="col-articulo" style="font-size:0.82rem;">' + salEsc(nombre) + '</td>'
                 + '<td class="text-end" style="font-size:0.82rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>'
-                + '<td class="text-end col-hide-mob" style="font-size:0.82rem;">' + salFmtMoney(cu) + '</td>'
-                + '<td class="text-end col-hide-mob">' + (isFirst ? '<strong style="color:#16a34a;">' + salFmtMoney(m.total_pen) + '</strong>' : '') + '</td>'
-                + '<td>' + (isFirst ? salBadge(m.estado) : '') + '</td>';
+                + '<td class="text-end" style="font-size:0.82rem;">' + salFmtMoney(cu) + '</td>'
+                + '<td class="text-end">' + (isFirst ? '<strong style="color:#16a34a;">' + salFmtMoney(m.total_pen) + '</strong>' : '') + '</td>'
+                + '<td class="pe-3">' + (isFirst ? salBadge(m.estado) : '') + '</td>';
             tr.onclick = (function(row) { return function() { salAbrirDetalle(row); }; })(m);
             tbody.appendChild(tr);
         });
     });
+
+    if (cardContainer) cardContainer.innerHTML = htmlCards;
 
     if (paginEl) {
         if (totalPag <= 1) { paginEl.innerHTML = ''; return; }

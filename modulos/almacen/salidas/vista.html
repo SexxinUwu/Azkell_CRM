@@ -1,201 +1,187 @@
-<!-- Módulo Almacén / Salidas — Azkell Fleet v2 (Bento UI) -->
+<!-- Módulo Almacén / Salidas — Azkell Fleet v2 (Bento UI & Apple Native Cards) -->
 <style>
 /* ── Reset root-dinamico padding for full-bleed ─────────── */
 #root-dinamico, .main-area {
     padding: 0 !important;
 }
 
-/* ─── Mobile-First ──────────────────────────────────────── */
-@media (max-width: 767.98px) {
-    .topbar { display: none !important; }
-    #moduloSalidas {
-        flex: 1 1 0;
-        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+/* ── UI Tokens & Layout (Idéntico a Reporte de Fallas) ──── */
+.sal-app-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem 1.25rem 2.5rem 1.25rem !important;
+    background: transparent;
+    min-height: 100%;
+}
+
+/* KPIs Cards */
+.sal-app-container .ck-kpi-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 18px !important;
+    padding: 1rem 1.25rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+.sal-app-container .ck-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08) !important;
+}
+.sal-app-container .ck-kpi-icon {
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.3rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* Control Bar (Search + Apple Segmented Pill) */
+.sal-app-container .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 14px 8px 38px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+.sal-app-container .ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+.sal-app-container .ck-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+.sal-app-container .ck-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 16px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+.sal-app-container .ck-segment-item:hover { color: #0f172a; }
+.sal-app-container .ck-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Universal Modern Card (Mobile) */
+.sal-mobile-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 14px rgba(15, 23, 42, 0.03);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sal-mobile-card:active {
+    transform: scale(0.99);
+}
+
+/* Desktop Table Styling */
+.sal-table-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
+    min-height: 320px;
+    overflow-x: auto;
+}
+#moduloSalidas table { width: 100%; min-width: 1100px; border-collapse: collapse; font-size: 0.85rem; }
+#moduloSalidas thead th {
+    background: #f8fafc; color: #475569;
+    font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 10px 12px;
+    border-bottom: 2px solid #e2e8f0;
+    position: sticky; top: 0; z-index: 2; white-space: nowrap;
+}
+#moduloSalidas tbody tr { border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background .12s; }
+#moduloSalidas tbody tr:hover { background: #f8fafc; }
+#moduloSalidas tbody td { padding: 8px 12px; color: #1e293b; white-space: nowrap; vertical-align: middle; }
+
+/* ── Mobile View Adaptations (@media max-width: 768px) ─────────────── */
+@media (max-width: 768px) {
+    .sal-app-container {
+        padding: 0.5rem 0.5rem 120px 0.5rem !important;
+        background: transparent !important;
     }
-    #sal-desktop-header { display: none !important; }
-    #sal-m-header { display: flex !important; }
-    #sal-search-compact { display: flex !important; }
-    #sal-kpi-row {
-        display: flex !important; flex-wrap: nowrap !important;
-        overflow-x: auto; gap: .55rem;
-        padding: .25rem 1rem .6rem !important;
-        scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    .sal-app-container .ck-kpi-card {
+        padding: 0.75rem 0.85rem !important;
+        border-radius: 14px !important;
     }
-    #sal-kpi-row::-webkit-scrollbar { display: none; }
-    .bento-kpi { min-width: 130px; flex-shrink: 0; }
-    #sal-fab-wrap { display: flex !important; }
-    .sal-controls, .sal-filters { display: none !important; }
-    /* Tabs: segmented control en mobile centradas */
-    #btn-group-sal-tabs {
+    .sal-app-container .ck-kpi-card h2 {
+        font-size: 1.35rem !important;
+    }
+    .sal-app-container .ck-kpi-icon {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1rem !important;
+        border-radius: 10px !important;
+    }
+    .sal-app-container .ck-apple-segmented {
         width: 100% !important;
         display: flex !important;
         justify-content: space-between !important;
-        margin: 0 auto !important;
     }
-    #btn-group-sal-tabs .ck-segment-item {
+    .sal-app-container .ck-segment-item {
         flex: 1 !important;
         text-align: center !important;
         padding: 6px 4px !important;
-        font-size: 0.72rem !important;
+        font-size: 0.75rem !important;
     }
-    #sal-m-tabs .sal-m-tab.active {
-        background: var(--surface, #fff);
-        color: #5865F2;
-        box-shadow: 0 2px 8px rgba(0,0,0,.1);
-    }
-    /* Panel detalle: bottom sheet en mobile */
     #sal-panel-detalle {
         position: fixed !important; bottom: -100vh !important; left: 0 !important;
         right: 0 !important; width: 100vw !important; max-width: 100vw !important;
         height: 88vh !important; border-radius: 22px 22px 0 0 !important;
-        border-left: none !important; border-top: 1px solid var(--border) !important;
+        border-left: none !important; border-top: 1px solid #e2e8f0 !important;
         transition: bottom .35s cubic-bezier(.4,0,.2,1) !important;
         box-shadow: 0 -12px 48px rgba(0,0,0,.2) !important; z-index: 1055 !important;
     }
     #sal-panel-detalle.open { bottom: 0 !important; width: 100% !important; }
-    /* Tabla mobile */
-    #moduloSalidas table { font-size: .75rem; }
-    #moduloSalidas thead th,
-    #moduloSalidas tbody td { padding: 8px 8px; }
-    #moduloSalidas .col-hide-mob { display: none !important; }
-    /* Drawer full-screen en mobile */
-    #moduloSalidas .sal-drawer {
-        width: 100vw !important; max-width: 100vw !important;
-        height: 92vh !important;
-        border-radius: 22px 22px 0 0 !important;
-    }
-    #moduloSalidas .sal-table-wrap {
-        border-radius: 20px;
-        margin: 0 12px 12px 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        display: flex;
-        flex-direction: column;
-        flex: 1 1 0;
-    }
 }
 
-/* ─── Base ────────────────────────────────────────────────── */
-#moduloSalidas {
-    display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; overflow: hidden;
-}
-
-/* Tabs desktop */
-#moduloSalidas .sal-tabs {
-    display: flex; gap: 1.5rem;
-    padding: 0 1.25rem; border-bottom: 1px solid var(--border);
-    background: var(--surface); flex-shrink: 0;
-}
-#moduloSalidas .sal-tab {
-    padding: 12px 0; font-size: .83rem; font-weight: 700;
-    color: var(--subtext); cursor: pointer;
-    border-bottom: 2px solid transparent;
-    text-transform: uppercase; letter-spacing: .04em;
-    transition: color .15s; white-space: nowrap;
-}
-#moduloSalidas .sal-tab:hover { color: var(--text); }
-#moduloSalidas .sal-tab.active { color: #5865F2; border-bottom-color: #5865F2; }
-#moduloSalidas .sal-tab-badge {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-width: 18px; height: 18px;
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 9px; font-size: .68rem; font-weight: 800;
-    margin-left: 5px; color: var(--subtext); padding: 0 4px;
-}
-#moduloSalidas .sal-tab.active .sal-tab-badge {
-    background: rgba(88,101,242,.12); border-color: rgba(88,101,242,.3); color: #5865F2;
-}
-
-/* Controles */
-#moduloSalidas .sal-controls {
-    display: flex; align-items: center; gap: 8px;
-    padding: 0.6rem 1.25rem; background: var(--surface);
-    border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
-}
-#moduloSalidas .sal-filters {
-    display: flex; align-items: center; gap: 8px;
-    padding: 0.45rem 1.25rem; background: var(--surface);
-    border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
-}
-
-/* Tabla */
-#moduloSalidas .sal-table-wrap { flex: 1 1 0; overflow: auto; -webkit-overflow-scrolling: touch; background: var(--surface); }
-#moduloSalidas table { width: 100%; min-width: 1400px; border-collapse: collapse; font-size: 0.80rem; }
-#moduloSalidas th.col-articulo,
-#moduloSalidas td.col-articulo {
-    min-width: 260px;
-    white-space: normal;
-    word-break: break-word;
-}
-#moduloSalidas thead th {
-    background: var(--bg); color: var(--subtext);
-    font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
-    letter-spacing: 0.06em; padding: 6px 10px;
-    border-bottom: 2px solid var(--border);
-    position: sticky; top: 0; z-index: 2; white-space: nowrap;
-}
-#moduloSalidas tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background .12s; }
-#moduloSalidas tbody tr:hover { background: var(--bg); }
-#moduloSalidas tbody tr.sal-row-active { background: rgba(88,101,242,.06); border-left: 3px solid #5865F2; }
-#moduloSalidas tbody td { padding: 6px 10px; color: var(--text); white-space: nowrap; }
-#moduloSalidas tbody tr.sal-item-sub { border-bottom: 1px dashed var(--border); }
-#moduloSalidas tbody tr.sal-item-sub td { padding-top: 6px; padding-bottom: 6px; background: rgba(0,0,0,.012); }
-#moduloSalidas tbody tr.sal-item-last { border-bottom: 2px solid var(--border); }
-#moduloSalidas .td-placeholder { text-align:center; color:var(--subtext); font-size:.82rem; padding:2rem; }
-
-/* Wrapper Desktop para bordes redondeados */
-@media (min-width: 768px) {
-    .sal-desktop-card {
-        display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
-        background: var(--surface);
-        border-radius: 20px;
-        border: 1px solid var(--border);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-        overflow: hidden;
-    }
-}
-@media (max-width: 767.98px) {
-    .sal-desktop-card {
-        display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
-    }
-}
-
-/* Badges */
-#moduloSalidas .sal-badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 3px 9px; border-radius: 20px; font-size: .7rem; font-weight: 700; white-space: nowrap;
-}
-#moduloSalidas .sal-badge::before { content:''; width:5px; height:5px; border-radius:50%; background:currentColor; opacity:.8; }
-#moduloSalidas .badge-pendiente  { background: rgba(217,119,6,.12); color: #d97706; }
-#moduloSalidas .badge-despachado { background: rgba(22,163,74,.12);  color: #16a34a; }
-#moduloSalidas .badge-anulado    { background: rgba(220,38,38,.1);   color: #dc2626; }
-
-/* Panel lateral */
-#moduloSalidas .sal-detail-panel {
+/* Panel detalle lateral (Desktop) */
+#sal-panel-detalle {
     width: 0; flex-shrink: 0; overflow: hidden;
-    background: var(--surface); border-left: 1px solid var(--border);
+    background: #ffffff; border-left: 1px solid #e2e8f0;
     display: flex; flex-direction: column; transition: width .25s; max-width: 380px;
 }
-#moduloSalidas .sal-detail-panel.open { width: 380px; }
-#moduloSalidas .sal-detail-scroll { flex:1; overflow-y:auto; padding:1.25rem; }
-#moduloSalidas .sal-detail-footer {
-    padding:.75rem 1rem; border-top:1px solid var(--border);
+#sal-panel-detalle.open { width: 380px; }
+#sal-panel-detalle .sal-detail-scroll { flex:1; overflow-y:auto; padding:1.25rem; }
+#sal-panel-detalle .sal-detail-footer {
+    padding:.75rem 1rem; border-top:1px solid #e2e8f0;
     display:flex; gap:.5rem; flex-wrap:wrap;
 }
-#moduloSalidas .sal-sec { border:1px solid var(--border); border-radius:18px; margin-top:1rem; overflow:hidden; }
-#moduloSalidas .sal-sec-hd {
-    background:var(--bg); padding:8px 12px; font-size:.72rem; font-weight:800;
-    text-transform:uppercase; letter-spacing:.06em; color:var(--subtext);
-    border-bottom:1px solid var(--border);
-}
-#moduloSalidas .sal-field { display:flex; padding:8px 12px; border-bottom:1px solid var(--border); font-size:.82rem; }
-#moduloSalidas .sal-field:last-child { border-bottom:none; }
-#moduloSalidas .sal-field-lbl { width:40%; color:var(--subtext); font-weight:600; font-size:.78rem; }
-#moduloSalidas .sal-field-val { width:60%; color:var(--text); font-weight:600; word-break:break-word; }
 
-/* Drawer */
+/* Drawer Nueva Salida */
 #salNuevoBackdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45) !important; z-index:1089 !important; backdrop-filter: blur(2px); }
 #salNuevoBackdrop.open { display:block !important; }
-.sal-drawer, #moduloSalidas .sal-drawer {
+.sal-drawer {
     position: fixed !important;
     bottom: 0 !important;
     left: 50% !important;
@@ -203,11 +189,11 @@
     right: auto !important;
     transform: translateX(-50%) translateY(100%) !important;
     width: 100% !important;
-    max-width: 700px !important;
-    height: 92vh !important;
-    max-height: 92vh !important;
-    background: var(--surface, #ffffff) !important;
-    border: 1px solid var(--border, #e2e8f0) !important;
+    max-width: 740px !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
     border-bottom: none !important;
     border-radius: 28px 28px 0 0 !important;
     box-shadow: 0 -16px 56px rgba(0,0,0,.35) !important;
@@ -219,422 +205,328 @@
     visibility: hidden !important;
     margin: 0 !important;
 }
-.sal-drawer.open, #moduloSalidas .sal-drawer.open {
+.sal-drawer.open {
     transform: translateX(-50%) translateY(0) !important;
     visibility: visible !important;
     display: flex !important;
 }
-@media (max-width: 767.98px) {
-    .sal-drawer, #moduloSalidas .sal-drawer {
-        max-width: 100% !important;
+@media (max-width: 768px) {
+    .sal-drawer {
+        max-width: 100vw !important;
+        width: 100vw !important;
         left: 0 !important;
         transform: translateY(100%) !important;
-        border-radius: 28px 28px 0 0 !important;
+        border-radius: 24px 24px 0 0 !important;
     }
-    .sal-drawer.open, #moduloSalidas .sal-drawer.open {
+    .sal-drawer.open {
         transform: translateY(0) !important;
     }
 }
-.sal-drawer-hd {
-    flex-shrink: 0;
-}
-
-/* ── KPIs Apple Compact Bento Cards ─────────────── */
-#moduloSalidas .ck-kpi-card {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 14px !important;
-    padding: 0.55rem 0.85rem !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 0.75rem !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
-    cursor: pointer;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
-    user-select: none;
-    min-height: 56px !important;
-}
-#moduloSalidas .ck-kpi-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
-}
-#moduloSalidas .ck-kpi-card.active {
-    border-color: #0284c7 !important;
-    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
-    background: #f8fafc !important;
-}
-#moduloSalidas .ck-kpi-icon {
-    width: 38px !important;
-    height: 38px !important;
-    border-radius: 10px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 1.15rem !important;
-    flex-shrink: 0 !important;
-}
-
-/* ── Control Bar & Apple Search ──────────────────── */
-#moduloSalidas .ck-apple-search {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 9px 14px 9px 38px;
-    font-size: 0.88rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    color: #1e293b;
-    width: 100%;
-}
-#moduloSalidas .ck-apple-search:focus {
-    background: #ffffff;
-    border-color: #0284c7;
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-    outline: none;
-}
-#moduloSalidas .ck-apple-segmented {
-    background: #e2e8f0 !important;
-    padding: 4px !important;
-    border-radius: 14px !important;
-    display: inline-flex !important;
-    gap: 3px !important;
-    border: 1px solid #cbd5e1 !important;
-}
-#moduloSalidas .ck-segment-item {
-    border: none;
-    background: transparent;
-    padding: 6px 14px;
-    border-radius: 10px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #64748b;
-    transition: all 0.18s ease;
-    cursor: pointer;
-    user-select: none;
-    white-space: nowrap;
-}
-#moduloSalidas .ck-segment-item:hover { color: #0f172a; }
-#moduloSalidas .ck-segment-item.active {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    font-weight: 700 !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
-}
 </style>
 
-<!-- Backdrop -->
+<!-- Backdrop Modal -->
 <div id="salNuevoBackdrop" onclick="window.salCerrarNuevo()"></div>
 <!-- Backdrop panel detalle mobile -->
 <div id="sal-det-backdrop" onclick="window.salCerrarDetalle()"
      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);
             backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:1054;"></div>
 
-<div id="moduloSalidas" class="modulo-wrapper d-flex flex-column h-100">
+<div class="sal-app-container d-flex flex-column" id="moduloSalidas">
 
-    <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        <div class="d-flex align-items-center gap-3">
-            <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
-                <i class="bi bi-box-arrow-up-right"></i>
+    <!-- ── 1. ENCABEZADO PRINCIPAL (RESPONSIVE) ───────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2 gap-md-3">
+            <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                <i class="bi bi-box-arrow-up-right text-primary fs-5"></i>
             </div>
             <div>
-                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Órdenes de Salida</h4>
-                <span class="text-secondary small">Despacho de artículos, entrega de repuestos a OTs y control de egresos</span>
+                <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+                    Órdenes de Salida
+                </h4>
+                <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">Despacho de artículos, entrega de repuestos a OTs y control de egresos</small>
             </div>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window.salCargar()" title="Actualizar">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.salCargar()" title="Actualizar">
                 <i class="bi bi-arrow-clockwise fs-6"></i>
             </button>
-            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.salExportar()" title="Exportar Excel">
-                <i class="bi bi-file-earmark-excel text-success"></i> <span class="d-none d-md-inline">Excel</span>
+            <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.salExportar()" title="Exportar a Excel">
+                <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
             </button>
-            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-inline-flex align-items-center gap-2 rounded-3" onclick="window.salAbrirNuevo()" style="background: #0284c7; border-color: #0284c7;">
+            <!-- Botón Nueva Solicitud (Desktop) -->
+            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-flex align-items-center gap-2 rounded-3" onclick="window.salAbrirNuevo()" style="background: #0284c7; border-color: #0284c7;">
                 <i class="bi bi-plus-lg fs-6"></i> <span>Nueva Solicitud</span>
             </button>
         </div>
     </div>
 
-    <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO) ─────────────── -->
-    <div class="row g-2 mb-3">
+    <!-- ── 2. BENTO KPIS ROW ─────────────────────────────────────────── -->
+    <div class="row g-2 g-md-3 mb-3">
         <div class="col-6 col-md-3">
-            <div class="ck-kpi-card active" id="sal-kpi-total-card" onclick="window.salCambiarTab('desp')">
-                <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
-                    <i class="bi bi-arrow-up-circle-fill"></i>
+            <div class="ck-kpi-card" id="sal-kpi-total-card" onclick="window.salCambiarTab('desp')">
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Total Despachos</span>
+                    <h2 id="kpi-sal-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
                 </div>
-                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Total Despachos</span>
-                    <h2 id="kpi-sal-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
+                <div class="ck-kpi-icon" style="background: #eff6ff; color: #2563eb;">
+                    <i class="bi bi-arrow-up-circle-fill"></i>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" id="sal-kpi-pendientes-card" onclick="window.salCambiarTab('pend')">
-                <div class="ck-kpi-icon" style="background:#fefce8; color:#ca8a04;">
-                    <i class="bi bi-hourglass-split"></i>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Pendientes</span>
+                    <h2 id="kpi-sal-pendientes" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem;">0</h2>
                 </div>
-                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Pendientes</span>
-                    <h2 id="kpi-sal-pendientes" class="fw-bolder m-0 text-warning lh-1" style="font-size: 1.35rem;">0</h2>
+                <div class="ck-kpi-icon" style="background: #fefce8; color: #ca8a04;">
+                    <i class="bi bi-hourglass-split"></i>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" id="sal-kpi-despachadas-card" onclick="window.salCambiarTab('desp')">
-                <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
-                    <i class="bi bi-check2-circle"></i>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Despachadas</span>
+                    <h2 id="kpi-sal-despachadas" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">0</h2>
                 </div>
-                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Despachadas</span>
-                    <h2 id="kpi-sal-despachadas" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">0</h2>
+                <div class="ck-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
+                    <i class="bi bi-check2-circle"></i>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" id="sal-kpi-ots-card" onclick="window.salCambiarTab('desp')">
-                <div class="ck-kpi-icon" style="background:#f5f3ff; color:#7c3aed;">
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">OTs Atendidas</span>
+                    <h2 id="kpi-sal-ots" class="fw-bolder m-0 text-primary" style="font-size: 1.6rem;">0</h2>
+                </div>
+                <div class="ck-kpi-icon" style="background: #f5f3ff; color: #7c3aed;">
                     <i class="bi bi-tools"></i>
                 </div>
-                <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                    <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">OTs Atendidas</span>
-                    <h2 id="kpi-sal-ots" class="fw-bolder m-0 text-primary lh-1" style="font-size: 1.35rem;">0</h2>
-                </div>
             </div>
         </div>
     </div>
 
-    <!-- ── 3. BARRA DE BÚSQUEDA Y TABS SEGMENTADOS ───────────────────── -->
+    <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS SEGMENTED (FULL-BLEED) ──────── -->
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 500px;">
-            <div class="position-relative flex-grow-1">
-                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
-                <input type="text" id="sal-search" class="ck-apple-search" placeholder="Artículo, N° OT, Placa..." oninput="window.salFiltrar()">
-            </div>
-            <input type="text" id="sal-fil-ot" placeholder="N° OT" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:100px; height:38px;" oninput="window.salFiltrar()">
-            <input type="text" id="sal-fil-placa" placeholder="PLACA" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:100px; height:38px; text-transform:uppercase" oninput="this.value=this.value.toUpperCase();window.salFiltrar()">
+        <div class="position-relative flex-grow-1" style="max-width: 380px;">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+            <input type="text" id="sal-search" class="ck-apple-search" placeholder="Buscar folio, placa, responsable, artículo..." oninput="window.salFiltrar()">
         </div>
-
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <div class="ck-apple-segmented" id="btn-group-sal-tabs">
-                <button type="button" class="ck-segment-item active" id="sal-tab-pend" onclick="window.salCambiarTab('pend');">
-                    Pendientes <span class="badge bg-warning text-dark ms-1 rounded-pill" id="sal-badge-pend">0</span>
-                </button>
-                <button type="button" class="ck-segment-item" id="sal-tab-desp" onclick="window.salCambiarTab('desp');">
-                    Despachadas <span class="badge bg-success ms-1 rounded-pill" id="sal-badge-desp">0</span>
-                </button>
-                <button type="button" class="ck-segment-item" id="sal-tab-anulado" onclick="window.salCambiarTab('anulado');">
-                    Anuladas <span class="badge bg-secondary ms-1 rounded-pill" id="sal-badge-anulado">0</span>
-                </button>
-            </div>
-            <div class="d-flex align-items-center gap-1">
-                <input type="date" id="sal-fil-desde" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:130px; height:38px;" title="Desde" onchange="window.salFiltrar()">
-                <input type="date" id="sal-fil-hasta" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:130px; height:38px;" title="Hasta" onchange="window.salFiltrar()">
-                <button onclick="(function(){['sal-fil-ot','sal-fil-placa','sal-fil-desde','sal-fil-hasta'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});window.salFiltrar();})()" class="btn btn-light bg-white border text-secondary rounded-3" style="height:38px; width:38px; display:flex; align-items:center; justify-content:center;" title="Limpiar filtros">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
-            <select id="sal-fil-estado" onchange="window.salFiltrar()" style="display:none;">
-                <option value="">Todos</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Despachado">Despachado</option>
-                <option value="Anulado">Anulado</option>
-            </select>
-            <input type="month" id="sal-fil-mes" style="display:none;" onchange="window.salFiltrar()">
-            <span id="sal-contador" class="text-secondary small fw-bold"></span>
+        <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-sal-tabs">
+            <button type="button" class="ck-segment-item active" id="sal-tab-pend" onclick="window.salCambiarTab('pend');">
+                Pendientes <span class="badge bg-warning text-dark ms-1 rounded-pill" id="sal-badge-pend">0</span>
+            </button>
+            <button type="button" class="ck-segment-item" id="sal-tab-desp" onclick="window.salCambiarTab('desp');">
+                Despachadas <span class="badge bg-success ms-1 rounded-pill" id="sal-badge-desp">0</span>
+            </button>
+            <button type="button" class="ck-segment-item" id="sal-tab-anulado" onclick="window.salCambiarTab('anulado');">
+                Anuladas <span class="badge bg-secondary ms-1 rounded-pill" id="sal-badge-anulado">0</span>
+            </button>
         </div>
     </div>
 
-  <!-- ═══ CONTENEDOR PRINCIPAL ═════════════════════════════════════ -->
-  <div style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;">
-
-    <!-- TABLA -->
-    <div class="sal-table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th style="min-width:140px;">ID Solicitud</th>
-            <th style="min-width:160px;">Fecha</th>
-            <th class="col-hide-mob" style="min-width:150px;">Tipo Orden</th>
-            <th class="col-hide-mob" style="min-width:110px;">N° OT</th>
-            <th style="min-width:130px;">Placa</th>
-            <th class="col-hide-mob" style="min-width:180px;">Responsable</th>
-            <th class="col-hide-mob" style="min-width:160px;">Solicitante</th>
-            <th class="col-hide-mob" style="min-width:90px;font-size:0.65rem;">Cód. Art.</th>
-            <th class="col-articulo">Artículo</th>
-            <th class="text-end" style="min-width:70px;">Cant.</th>
-            <th class="text-end col-hide-mob" style="min-width:95px;">Costo Unit.</th>
-            <th class="text-end col-hide-mob" style="min-width:100px;">Total</th>
-            <th class="text-center" style="min-width:110px;">Estado</th>
-          </tr>
-        </thead>
-        <tbody id="sal-tbody"></tbody>
-      </table>
-      <div id="sal-paginacion" class="d-flex align-items-center gap-2 py-2 px-3"></div>
+    <!-- ── 4. VISTA MÓVIL NATIVA (CARDS) ──────────────────────────────── -->
+    <div id="salCardContainer" class="d-md-none">
+        <div class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando solicitudes de salida...
+        </div>
     </div>
 
-    <!-- PANEL DETALLE LATERAL -->
+    <!-- ── 5. VISTA ESCRITORIO (TABLA FLUIDA) ─────────────────────────── -->
+    <div class="sal-table-wrap d-none d-md-block flex-grow-1" id="sal-tabla-wrap">
+        <div class="custom-scrollbar overflow-x-auto" style="overflow-y: visible; min-height: 320px;">
+            <table class="table table-hover align-middle m-0" id="tablaSalidas">
+                <thead class="bg-light sticky-top shadow-2xs border-bottom">
+                    <tr>
+                        <th style="min-width:130px;" class="ps-3">ID Solicitud</th>
+                        <th style="min-width:145px;">Fecha</th>
+                        <th style="min-width:140px;">Tipo Orden</th>
+                        <th style="min-width:120px;">N° OT</th>
+                        <th style="min-width:110px;">Placa</th>
+                        <th style="min-width:160px;">Responsable</th>
+                        <th style="min-width:150px;">Solicitante</th>
+                        <th style="min-width:90px;font-size:0.65rem;">Cód. Art.</th>
+                        <th style="min-width:240px;">Artículo</th>
+                        <th class="text-end" style="min-width:70px;">Cant.</th>
+                        <th class="text-end" style="min-width:95px;">Costo Unit.</th>
+                        <th class="text-end" style="min-width:100px;">Total</th>
+                        <th class="text-center pe-3" style="min-width:110px;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="sal-tbody">
+                    <tr>
+                        <td colspan="13" class="text-center py-5 text-muted">
+                            <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando solicitudes...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="sal-paginacion" class="d-flex align-items-center gap-2 py-2 px-3"></div>
+    </div>
+
+    <!-- PANEL DETALLE LATERAL (DESKTOP) -->
     <div class="sal-detail-panel" id="sal-panel-detalle">
-      <div style="display:flex;align-items:center;justify-content:space-between;
-                  padding:0 1rem;height:48px;border-bottom:1px solid var(--border);flex-shrink:0;">
-        <span style="font-size:.88rem;font-weight:800;color:var(--text);" id="sal-detalle-titulo">Detalle Solicitud</span>
-        <button class="btn btn-sm" onclick="window.salCerrarDetalle()" style="color:var(--subtext);">
-          <i class="bi bi-x-lg"></i>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 1rem;height:48px;border-bottom:1px solid #e2e8f0;flex-shrink:0;">
+            <span style="font-size:.88rem;font-weight:800;color:#0f172a;" id="sal-detalle-titulo">Detalle Solicitud</span>
+            <button class="btn btn-sm" onclick="window.salCerrarDetalle()" style="color:#64748b;">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="sal-detail-scroll" id="sal-detalle-scroll"></div>
+        <div class="sal-detail-footer" id="sal-detalle-footer" style="display:none;"></div>
+    </div>
+
+    <!-- ── 6. BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
+    <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1045;">
+        <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+                onclick="window.salAbrirNuevo()"
+                style="width: 58px; height: 58px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.6rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;"
+                title="Nueva Solicitud de Salida">
+            <i class="bi bi-plus-lg text-white"></i>
         </button>
-      </div>
-      <div class="sal-detail-scroll" id="sal-detalle-scroll"></div>
-      <div class="sal-detail-footer" id="sal-detalle-footer" style="display:none;"></div>
     </div>
-
-  </div>
-
-  <!-- DRAWER: Nueva Solicitud (MODERNO BENTO) -->
-  <div class="sal-drawer" id="sal-drawer-nuevo">
-    <div class="sal-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
-      <div class="d-flex align-items-center gap-2">
-        <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
-                onclick="window.salCerrarNuevo()" 
-                title="Volver" 
-                style="width: 34px; height: 34px; color: var(--subtext);">
-          <i class="bi bi-arrow-left"></i>
-        </button>
-        <div>
-          <span class="sal-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
-            <i class="bi bi-box-seam-fill text-success"></i> Nueva Solicitud de Salida
-          </span>
-          <small class="text-muted d-block" style="font-size: 0.72rem;">Despacho de piezas y repuestos del almacén</small>
-        </div>
-      </div>
-      <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.salCerrarNuevo()" style="color:var(--subtext);">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </div>
-
-    <div class="sal-drawer-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc;">
-      <!-- Card 1: Datos de la Solicitud -->
-      <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
-        <div class="row g-2 mb-1">
-          <div class="col-6" id="sal-col-ot">
-            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">N° OT</label>
-            <div class="position-relative">
-              <input type="text" id="sal-f-ot-txt" class="form-control form-control-sm bg-white fw-bold"
-                     placeholder="BUSCAR N° OT O PLACA…" autocomplete="off"
-                     style="border-radius: 8px; min-height: 40px; text-transform: uppercase; font-size: 0.82rem;"
-                     oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sal-f-ot')"
-                     onfocus="window._cbFiltrar('sal-f-ot')"
-                     onblur="window._cbHide('sal-f-ot')">
-              <input type="hidden" id="sal-f-ot" name="sal-f-ot">
-              <div id="sal-f-ot-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
-            </div>
-          </div>
-          <div class="col-6">
-            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Fecha de Salida (*)</label>
-            <input type="date" class="form-control form-control-sm bg-white" id="sal-f-fecha"
-                   style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
-          </div>
-          <div class="col-6">
-            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Orden (*)</label>
-            <select class="form-select form-select-sm fw-bold bg-white" id="sal-f-tipo-orden" onchange="window.salToggleTipoOrden()"
-                    style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
-              <option value="Orden de Salida">Orden de Salida (Normal)</option>
-              <option value="Ajuste de Inventario (Resta)">Ajuste de Inventario (Resta)</option>
-            </select>
-          </div>
-          <div class="col-6" id="sal-col-tipo-destino">
-            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo Destino</label>
-            <select class="form-select form-select-sm fw-bold bg-white" id="sal-f-tipo" onchange="window.salToggleTipo()"
-                    style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
-              <option value="Vehiculo">Vehículo / Unidad</option>
-              <option value="Personal">Personal / Taller</option>
-            </select>
-          </div>
-          <div class="col-6" id="sal-row-placa">
-            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Placa Destino</label>
-            <div class="position-relative">
-              <input type="text" id="sal-f-placa-txt" class="form-control form-control-sm text-uppercase fw-bold bg-white"
-                     placeholder="BUSCAR PLACA…" autocomplete="off"
-                     style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;"
-                     oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sal-f-placa')"
-                     onfocus="window._cbFiltrar('sal-f-placa')"
-                     onblur="window._cbHide('sal-f-placa')">
-              <input type="hidden" id="sal-f-placa" name="sal-f-placa">
-              <div id="sal-f-placa-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
-            </div>
-          </div>
-          <div class="col-6">
-            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Solicitante / Responsable</label>
-            <div class="position-relative">
-              <input type="text" id="sal-f-responsable-txt" class="form-control form-control-sm bg-white"
-                     placeholder="NOMBRE DEL SOLICITANTE..."
-                     autocomplete="off" style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;"
-                     oninput="window._cbFiltrar('sal-f-responsable')"
-                     onfocus="window._cbFiltrar('sal-f-responsable')"
-                     onblur="window._cbHide('sal-f-responsable')">
-              <input type="hidden" id="sal-f-responsable">
-              <div id="sal-f-responsable-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
-            </div>
-          </div>
-          <div class="col-12">
-            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Observaciones / Motivo</label>
-            <input type="text" class="form-control form-control-sm bg-white" id="sal-f-obs"
-                   placeholder="Motivo, referencia, notas…"
-                   style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 2: Artículos y Materiales -->
-      <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
-        <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
-          <span class="fw-bold d-flex align-items-center gap-1" style="font-size: 0.76rem; color: #475569; text-transform: uppercase;">
-            <i class="bi bi-list-check text-success"></i> Lista de Artículos / Repuestos:
-          </span>
-          <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold" style="font-size: 0.72rem;" onclick="window._salAgregarItem()">
-            <i class="bi bi-plus-lg me-1"></i> Agregar Ítem
-          </button>
-        </div>
-        <div class="table-responsive rounded-3 border">
-          <table class="table table-sm align-middle mb-0" style="font-size: 0.8rem; min-width: 480px;">
-            <thead style="background: #f8fafc;">
-              <tr>
-                <th style="min-width:200px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Artículo</th>
-                <th style="width:75px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Cant.</th>
-                <th style="width:105px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">P. Unit</th>
-                <th style="width:100px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Importe</th>
-                <th style="width:38px;"></th>
-              </tr>
-            </thead>
-            <tbody id="sal-items-tbody"></tbody>
-            <tfoot style="background: #f8fafc;">
-              <tr>
-                <td colspan="3" style="text-align:right; font-weight:700; padding:8px 10px; font-size:.82rem; color:#64748b;">Total Solicitud:</td>
-                <td style="font-weight:800; color:#16a34a; font-size:.9rem; padding:8px 10px;" id="sal-items-total">S/. 0.00</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        <datalist id="sal-inv-list"></datalist>
-      </div>
-    </div>
-
-    <div class="sal-drawer-footer bg-white border-top px-3 py-2 d-flex justify-content-end gap-2">
-      <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" onclick="window.salCerrarNuevo()">
-        Cancelar
-      </button>
-      <button type="button" class="btn btn-success fw-bold rounded-3 px-4 py-2 shadow-2xs" onclick="window.salGuardarNuevo()">
-        <i class="bi bi-check-lg me-1"></i> Guardar Solicitud
-      </button>
-    </div>
-  </div>
 
 </div>
 
-<!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
-<button class="btn btn-primary rounded-circle shadow-lg d-flex d-md-none align-items-center justify-content-center position-fixed"
-        style="width: 54px; height: 54px; bottom: 85px; right: 20px; z-index: 1040; background: #0284c7; border: none; box-shadow: 0 8px 24px rgba(2,132,199,0.4) !important;"
-        onclick="window.salAbrirNuevo()"
-        title="Nueva Solicitud de Salida">
-    <i class="bi bi-plus-lg fs-4 text-white"></i>
-</button>
+<!-- DRAWER: Nueva Solicitud (MODERNO BENTO) -->
+<div class="sal-drawer" id="sal-drawer-nuevo">
+    <div class="sal-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
+                    onclick="window.salCerrarNuevo()" 
+                    title="Volver" 
+                    style="width: 34px; height: 34px; color: #64748b;">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <div>
+                <span class="sal-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+                    <i class="bi bi-box-seam-fill text-success"></i> Nueva Solicitud de Salida
+                </span>
+                <small class="text-muted d-block" style="font-size: 0.72rem;">Despacho de piezas y repuestos del almacén</small>
+            </div>
+        </div>
+        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.salCerrarNuevo()" style="color:#64748b;">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    <div class="sal-drawer-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc;">
+        <!-- Card 1: Datos de la Solicitud -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="row g-2 mb-1">
+                <div class="col-6" id="sal-col-ot">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">N° OT</label>
+                    <div class="position-relative">
+                        <input type="text" id="sal-f-ot-txt" class="form-control form-control-sm bg-white fw-bold"
+                               placeholder="BUSCAR N° OT O PLACA…" autocomplete="off"
+                               style="border-radius: 8px; min-height: 40px; text-transform: uppercase; font-size: 0.82rem;"
+                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sal-f-ot')"
+                               onfocus="window._cbFiltrar('sal-f-ot')"
+                               onblur="window._cbHide('sal-f-ot')">
+                        <input type="hidden" id="sal-f-ot" name="sal-f-ot">
+                        <div id="sal-f-ot-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Fecha de Salida (*)</label>
+                    <input type="date" class="form-control form-control-sm bg-white" id="sal-f-fecha"
+                           style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Orden (*)</label>
+                    <select class="form-select form-select-sm fw-bold bg-white" id="sal-f-tipo-orden" onchange="window.salToggleTipoOrden()"
+                            style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
+                        <option value="Orden de Salida">Orden de Salida (Normal)</option>
+                        <option value="Ajuste de Inventario (Resta)">Ajuste de Inventario (Resta)</option>
+                    </select>
+                </div>
+                <div class="col-6" id="sal-col-tipo-destino">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo Destino</label>
+                    <select class="form-select form-select-sm fw-bold bg-white" id="sal-f-tipo" onchange="window.salToggleTipo()"
+                            style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
+                        <option value="Vehiculo">Vehículo / Unidad</option>
+                        <option value="Personal">Personal / Taller</option>
+                    </select>
+                </div>
+                <div class="col-6" id="sal-row-placa">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Placa Destino</label>
+                    <div class="position-relative">
+                        <input type="text" id="sal-f-placa-txt" class="form-control form-control-sm text-uppercase fw-bold bg-white"
+                               placeholder="BUSCAR PLACA…" autocomplete="off"
+                               style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;"
+                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sal-f-placa')"
+                               onfocus="window._cbFiltrar('sal-f-placa')"
+                               onblur="window._cbHide('sal-f-placa')">
+                        <input type="hidden" id="sal-f-placa" name="sal-f-placa">
+                        <div id="sal-f-placa-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Solicitante / Responsable</label>
+                    <div class="position-relative">
+                        <input type="text" id="sal-f-responsable-txt" class="form-control form-control-sm bg-white"
+                               placeholder="NOMBRE DEL SOLICITANTE..."
+                               autocomplete="off" style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;"
+                               oninput="window._cbFiltrar('sal-f-responsable')"
+                               onfocus="window._cbFiltrar('sal-f-responsable')"
+                               onblur="window._cbHide('sal-f-responsable')">
+                        <input type="hidden" id="sal-f-responsable">
+                        <div id="sal-f-responsable-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Observaciones / Motivo</label>
+                    <input type="text" class="form-control form-control-sm bg-white" id="sal-f-obs"
+                           placeholder="Motivo, referencia, notas…"
+                           style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Artículos y Materiales -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                <span class="fw-bold d-flex align-items-center gap-1" style="font-size: 0.76rem; color: #475569; text-transform: uppercase;">
+                    <i class="bi bi-list-check text-success"></i> Lista de Artículos / Repuestos:
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold" style="font-size: 0.72rem;" onclick="window._salAgregarItem()">
+                    <i class="bi bi-plus-lg me-1"></i> Agregar Ítem
+                </button>
+            </div>
+            <div class="table-responsive rounded-3 border">
+                <table class="table table-sm align-middle mb-0" style="font-size: 0.8rem; min-width: 480px;">
+                    <thead style="background: #f8fafc;">
+                        <tr>
+                            <th style="min-width:200px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Artículo</th>
+                            <th style="width:75px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Cant.</th>
+                            <th style="width:105px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">P. Unit</th>
+                            <th style="width:100px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Importe</th>
+                            <th style="width:38px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="sal-items-tbody"></tbody>
+                    <tfoot style="background: #f8fafc;">
+                        <tr>
+                            <td colspan="3" style="text-align:right; font-weight:700; padding:8px 10px; font-size:.82rem; color:#64748b;">Total Solicitud:</td>
+                            <td style="font-weight:800; color:#16a34a; font-size:.9rem; padding:8px 10px;" id="sal-items-total">S/. 0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <datalist id="sal-inv-list"></datalist>
+        </div>
+    </div>
+
+    <div class="sal-drawer-footer bg-white border-top px-3 py-2 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" onclick="window.salCerrarNuevo()">
+            Cancelar
+        </button>
+        <button type="button" class="btn btn-success fw-bold rounded-3 px-4 py-2 shadow-2xs" onclick="window.salGuardarNuevo()">
+            <i class="bi bi-check-lg me-1"></i> Guardar Solicitud
+        </button>
+    </div>
+</div>

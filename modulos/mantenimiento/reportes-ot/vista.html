@@ -658,22 +658,22 @@
             <div class="row g-2 mb-1">
                 <div class="col-6">
                     <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">N° OT (*)</label>
-                    <input type="text" class="form-control form-control-sm fw-bold bg-light" id="rot-mat-ot-vis" readonly style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
+                    <input type="text" class="form-control form-control-sm fw-bold" id="rot-mat-ot-vis" readonly tabindex="-1" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem; background-color: #f1f5f9; cursor: not-allowed; pointer-events: none;">
                 </div>
                 <div class="col-6">
                     <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Fecha de Salida (*)</label>
-                    <input type="date" class="form-control form-control-sm bg-white" id="rot-mat-fecha" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
+                    <input type="date" class="form-control form-control-sm fw-semibold" id="rot-mat-fecha" readonly tabindex="-1" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem; background-color: #f1f5f9; cursor: not-allowed;">
                 </div>
                 <div class="col-6">
                     <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Orden (*)</label>
-                    <select class="form-select form-select-sm fw-bold bg-white" id="rot-mat-tipo-orden" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
+                    <select class="form-select form-select-sm fw-bold" id="rot-mat-tipo-orden" disabled tabindex="-1" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem; background-color: #f1f5f9; cursor: not-allowed;">
                         <option value="Orden de Salida">Orden de Salida (Normal)</option>
                         <option value="Ajuste de Inventario (Resta)">Ajuste de Inventario (Resta)</option>
                     </select>
                 </div>
                 <div class="col-6">
                     <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo Destino</label>
-                    <select class="form-select form-select-sm fw-bold bg-white" id="rot-mat-tipo" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
+                    <select class="form-select form-select-sm fw-bold" id="rot-mat-tipo" disabled tabindex="-1" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem; background-color: #f1f5f9; cursor: not-allowed;">
                         <option value="Vehiculo">Vehículo / Unidad</option>
                         <option value="Personal">Personal / Taller</option>
                     </select>
@@ -681,19 +681,16 @@
                 <div class="col-6">
                     <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Placa Destino</label>
                     <div class="position-relative">
-                        <input type="text" id="rot-mat-placa-txt" class="form-control form-control-sm text-uppercase fw-bold bg-white"
-                               placeholder="BUSCAR PLACA…" autocomplete="off"
-                               style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;"
-                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('rot-mat-placa')"
-                               onfocus="window._cbFiltrar('rot-mat-placa')"
-                               onblur="window._cbHide('rot-mat-placa')">
+                        <input type="text" id="rot-mat-placa-txt" class="form-control form-control-sm text-uppercase fw-bold"
+                               placeholder="PLACA DESTINO" readonly tabindex="-1"
+                               style="min-height: 40px; border-radius: 8px; font-size: 0.82rem; background-color: #f1f5f9; cursor: not-allowed; pointer-events: none;">
                         <input type="hidden" id="rot-mat-placa" name="rot-mat-placa">
-                        <div id="rot-mat-placa-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
+                        <div id="rot-mat-placa-dd" class="cb-dropdown shadow-sm" style="display:none;"></div>
                     </div>
                 </div>
                 <div class="col-6">
                     <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Solicitante / Responsable</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="rot-mat-solicitante" placeholder="Nombre del solicitante..." list="rot-mat-list-personal" autocomplete="off" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
+                    <input type="text" class="form-control form-control-sm bg-white fw-semibold" id="rot-mat-solicitante" placeholder="Nombre del solicitante..." list="rot-mat-list-personal" autocomplete="off" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
                     <datalist id="rot-mat-list-personal"></datalist>
                 </div>
                 <div class="col-12">
@@ -714,24 +711,15 @@
                 </button>
             </div>
             <div class="table-responsive rounded-3 border">
-                <table class="table table-sm align-middle mb-0" style="font-size: 0.8rem; min-width: 480px;">
+                <table class="table table-sm align-middle mb-0" style="font-size: 0.8rem; min-width: 380px;">
                     <thead style="background: #f8fafc;">
                         <tr>
-                            <th style="min-width:200px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Artículo</th>
-                            <th style="width:75px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Cant.</th>
-                            <th style="width:105px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">P. Unit</th>
-                            <th style="width:100px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Importe</th>
-                            <th style="width:38px;"></th>
+                            <th style="padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569;">Artículo / Repuesto a Solicitar</th>
+                            <th style="width:120px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">Cant.</th>
+                            <th style="width:44px; text-align:center;"></th>
                         </tr>
                     </thead>
                     <tbody id="rot-mat-items-tbody"></tbody>
-                    <tfoot style="background: #f8fafc;">
-                        <tr>
-                            <td colspan="3" style="text-align:right; font-weight:700; padding:8px 10px; font-size:.82rem; color:#64748b;">Total Solicitud:</td>
-                            <td style="font-weight:800; color:#16a34a; font-size:.9rem; padding:8px 10px;" id="rot-mat-items-total">S/. 0.00</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
                 </table>
             </div>
             <datalist id="rot-mat-inv-list"></datalist>
