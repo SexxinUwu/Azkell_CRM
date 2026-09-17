@@ -306,7 +306,7 @@
 
 /* ── Floating Drawer Modal & Inputs Styling (1:1 Idéntico a Reporte de Fallas) ── */
 .cond-floating-drawer-dialog {
-    max-width: 740px !important;
+    max-width: 840px !important;
     width: 100% !important;
     height: 94vh !important;
     max-height: 94vh !important;
@@ -331,10 +331,11 @@
     flex-direction: column;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 991px) {
     .modal-dialog.cond-floating-drawer-dialog,
     .modal.show .modal-dialog.cond-floating-drawer-dialog,
     #condModalSubirGasto .modal-dialog.cond-floating-drawer-dialog,
+    #condModalReporteFallas .modal-dialog.cond-floating-drawer-dialog,
     .cond-floating-drawer-dialog {
         max-width: 100vw !important;
         width: 100vw !important;
@@ -351,7 +352,8 @@
         border-radius: 24px 24px 0 0 !important;
     }
     .cond-floating-drawer-content,
-    #condModalSubirGasto .cond-floating-drawer-content {
+    #condModalSubirGasto .cond-floating-drawer-content,
+    #condModalReporteFallas .cond-floating-drawer-content {
         width: 100vw !important;
         min-width: 100vw !important;
         height: 100% !important;
@@ -360,10 +362,12 @@
         border: none !important;
         margin: 0 !important;
     }
-    #condModalSubirGasto .modal-body {
-        padding: 0.85rem 0.75rem !important;
+    #condModalSubirGasto .modal-body,
+    #condModalReporteFallas .modal-body {
+        padding: 0.75rem 0.65rem !important;
     }
-    #condModalSubirGasto .card {
+    #condModalSubirGasto .card,
+    #condModalReporteFallas .card {
         padding: 0.95rem 0.85rem !important;
         margin-bottom: 0.75rem !important;
         border-radius: 16px !important;
@@ -372,7 +376,9 @@
 
 /* Modal Form Inputs: Enlarge & Beautify (1:1 Idéntico a Reporte de Fallas) */
 #condModalSubirGasto .form-control,
-#condModalSubirGasto .form-select {
+#condModalSubirGasto .form-select,
+#condModalReporteFallas .form-control,
+#condModalReporteFallas .form-select {
     min-height: 48px !important;
     border-radius: 12px !important;
     font-size: 0.95rem !important;
@@ -675,33 +681,44 @@
             </div>
 
             <form id="condFormReporteFalla" onsubmit="window.condGuardarReporteFallas(event)" class="d-flex flex-column flex-grow-1 overflow-hidden m-0">
-                <div class="modal-body p-3 p-md-4 custom-scrollbar overflow-y-auto" style="background:#f8fafc;">
+                <div class="modal-body p-2.5 p-sm-3 p-md-4 custom-scrollbar overflow-y-auto" style="background:#f8fafc;">
                     
-                    <!-- ── Resumen de Unidades Asignadas ── -->
+                    <!-- ── 1. Resumen de Unidades Asignadas y Lecturas ── -->
                     <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
-                        <div class="row g-2">
+                        <div class="row g-2 mb-2">
                             <div class="col-6">
                                 <div class="p-2 rounded-3 bg-light border">
-                                    <small class="text-muted d-block text-uppercase fw-bold" style="font-size:0.65rem;">TRACTO</small>
-                                    <span class="fw-bold text-primary font-monospace" id="cond-rf-placa-tracto" style="font-size:0.9rem;">---</span>
+                                    <small class="text-muted d-block text-uppercase fw-bold" style="font-size:0.65rem;">TRACTO (PLACA PRINCIPAL)</small>
+                                    <span class="fw-bold text-primary font-monospace" id="cond-rf-placa-tracto" style="font-size:0.95rem;">---</span>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="p-2 rounded-3 bg-light border">
                                     <small class="text-muted d-block text-uppercase fw-bold" style="font-size:0.65rem;">CARRETA / REMOLQUE</small>
-                                    <span class="fw-bold text-warning font-monospace" id="cond-rf-placa-remolque" style="font-size:0.9rem;">---</span>
+                                    <span class="fw-bold text-warning-emphasis font-monospace" id="cond-rf-placa-remolque" style="font-size:0.95rem;">---</span>
                                 </div>
                             </div>
-                            <div class="col-12 mt-2">
-                                <div class="d-flex align-items-center justify-content-between text-muted small px-1">
-                                    <span><i class="bi bi-geo-alt-fill text-danger me-1"></i><span id="cond-rf-ruta-txt">Ruta Asignada</span></span>
-                                    <span><i class="bi bi-speedometer2 text-primary me-1"></i><span id="cond-rf-km-txt">Km actual</span></span>
-                                </div>
+                        </div>
+                        <div class="d-flex align-items-center text-muted small px-1 mb-2">
+                            <i class="bi bi-geo-alt-fill text-danger me-1"></i> <span>Ruta: <b id="cond-rf-ruta-txt" class="text-dark">---</b></span>
+                        </div>
+                        <div class="row g-2 pt-2 border-top">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-bold text-secondary small mb-1">
+                                    <i class="bi bi-speedometer2 text-primary me-1"></i> Kilometraje (Tracto) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control form-control-sm fw-bold border-secondary-subtle" id="cond_rf_km" name="kilometraje" placeholder="Ej: 118067" required oninput="window.condActualizarTablaResumenFallas()">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-bold text-secondary small mb-1">
+                                    <i class="bi bi-snow text-info me-1"></i> Horas de Motor (Remolque / Termoking)
+                                </label>
+                                <input type="number" class="form-control form-control-sm fw-bold border-secondary-subtle" id="cond_rf_horas_motor" name="horas_motor" placeholder="Ej: 1250">
                             </div>
                         </div>
                     </div>
 
-                    <!-- ── SECCIÓN: FALLAS ENCONTRADAS (CHECKLIST COMPLETO CON BUSCADOR EN VIVO) ── -->
+                    <!-- ── 2. SECCIÓN: FALLAS ENCONTRADAS (CHECKLIST COMPLETO) ── -->
                     <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
                         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-1" style="font-size:1rem;">
                             <i class="bi bi-card-checklist text-primary"></i> Fallas Encontradas
@@ -710,28 +727,26 @@
                             Marca solo lo que esté fallando: al hacer click se abre el espacio para describirlo. Lo que está en buen estado, ni lo toques.
                         </p>
 
-                        <!-- Barra de Búsqueda de Ítems en Vivo y Acciones -->
+                        <!-- Barra de Búsqueda de Ítems en Vivo y Contador -->
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                             <div class="flex-grow-1 position-relative" style="min-width: 220px;">
                                 <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-primary" style="z-index: 5; pointer-events: none; font-size: 0.95rem;"></i>
-                                <input type="text" id="cond_buscador_items" class="form-control text-uppercase fw-semibold border-secondary-subtle" style="padding-left: 2.75rem !important;" placeholder="BUSCAR ÍTEM POR NOMBRE... (EJ: FRENO, LUCES, ACEITE)" oninput="window.condFiltrarItemsLive(this.value)">
+                                <input type="text" id="cond_buscador_items" class="form-control fw-semibold border-secondary-subtle" style="padding-left: 2.75rem !important;" placeholder="Buscar por sistema o ítem..." oninput="window.condFiltrarItemsLive(this.value)">
                             </div>
                             <div class="d-flex align-items-center gap-2 ms-auto">
                                 <span class="badge bg-secondary px-3 py-2 fs-6 rounded-pill" id="cond_counter_fallas">0 fallas marcadas</span>
-                                <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" onclick="window.condExpandirTodosAccordeones(true)">Expandir todo</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" onclick="window.condExpandirTodosAccordeones(false)">Colapsar todo</button>
                             </div>
                         </div>
 
-                        <!-- Tags / Chips de Fallas Marcadas -->
-                        <div id="cond_chips_fallas_marcadas" class="d-flex flex-wrap gap-2 mb-3" style="display:none!important;"></div>
+                        <!-- Tags / Chips (ocultos por solicitud para usar la tabla resumen) -->
+                        <div id="cond_chips_fallas_marcadas" class="d-none"></div>
 
-                        <!-- ── 1. TRACTO (Placa Principal) ── -->
-                        <div class="p-2.5 mb-2 rounded-3 bg-primary bg-opacity-10 border border-primary-subtle d-flex align-items-center justify-content-between" id="cond_header_tracto_card">
+                        <!-- ── A. TRACTO (Placa Principal) ── -->
+                        <div class="p-2.5 px-3 mb-2 rounded-3 bg-primary bg-opacity-10 border border-primary-subtle d-flex align-items-center justify-content-between" id="cond_header_tracto_card">
                             <div class="fw-bold text-primary small d-flex align-items-center gap-2" id="cond_header_tracto_placa">
-                                <i class="bi bi-truck fs-5"></i> <span>TRACTO (Placa Principal)</span>
+                                <i class="bi bi-truck fs-5 me-1"></i> <span>TRACTO (Placa Principal)</span>
                             </div>
-                            <span class="badge bg-primary text-uppercase px-2 py-1" style="font-size:0.65rem;">Unidad Principal</span>
+                            <span class="badge bg-primary text-uppercase px-2.5 py-1" style="font-size:0.65rem;">Unidad Principal</span>
                         </div>
                         <div id="cond_empty_search_tracto" class="alert alert-light border text-muted small py-2 px-3 mb-2 rounded-3 text-center" style="display:none;">
                             <i class="bi bi-info-circle me-1"></i> Sin coincidencias para la búsqueda en sistemas de Tracto.
@@ -740,12 +755,12 @@
                             <!-- Renderizado dinámico desde JS -->
                         </div>
 
-                        <!-- ── 2. SEMIRREMOLQUE / CARRETA (Placa Secundaria) ── -->
-                        <div class="p-2.5 mb-2 rounded-3 bg-warning bg-opacity-10 border border-warning-subtle d-flex align-items-center justify-content-between" id="cond_header_remolque_card">
+                        <!-- ── B. SEMIRREMOLQUE / CARRETA (Placa Secundaria) ── -->
+                        <div class="p-2.5 px-3 mb-2 rounded-3 bg-warning bg-opacity-10 border border-warning-subtle d-flex align-items-center justify-content-between" id="cond_header_remolque_card">
                             <div class="fw-bold text-warning-emphasis small d-flex align-items-center gap-2" id="cond_header_remolque_placa">
-                                <i class="bi bi-truck-flatbed fs-5"></i> <span>SEMIRREMOLQUE / CARRETA</span>
+                                <i class="bi bi-truck-flatbed fs-5 me-1"></i> <span>SEMIRREMOLQUE / CARRETA</span>
                             </div>
-                            <span class="badge bg-warning text-dark text-uppercase px-2 py-1" style="font-size:0.65rem;">Carreta / Semirremolque</span>
+                            <span class="badge bg-warning text-dark text-uppercase px-2.5 py-1" style="font-size:0.65rem;">Carreta / Semirremolque</span>
                         </div>
                         <div id="cond_empty_search_remolque" class="alert alert-light border text-muted small py-2 px-3 mb-2 rounded-3 text-center" style="display:none;">
                             <i class="bi bi-info-circle me-1"></i> Sin coincidencias para la búsqueda en sistemas de Remolque.
@@ -754,13 +769,43 @@
                             <!-- Renderizado dinámico desde JS -->
                         </div>
 
-                        <!-- ── 3. FALLA MANUAL / ÍTEM PERSONALIZADO ── -->
+                        <!-- ── C. FALLA MANUAL / ÍTEM PERSONALIZADO ── -->
                         <div class="border rounded-3 p-3 bg-light">
                             <div class="fw-bold text-dark small mb-2">¿No encuentras el ítem? agrégalo aquí manualmente:</div>
                             <div id="cond-contenedor-fallas-manuales" class="d-flex flex-column gap-2 mb-2"></div>
                             <button type="button" class="btn btn-outline-primary btn-sm rounded-pill fw-bold" onclick="window.condAgregarFallaManual()">
                                 <i class="bi bi-plus-lg me-1"></i> Agregar otra falla
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- ── 3. DETALLE DE FALLAS REPORTADAS (TABLA RESUMEN) ── -->
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;" id="cond-card-resumen-fallas">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 m-0" style="font-size:0.95rem;">
+                                <i class="bi bi-tools text-primary"></i> Detalle de Fallas Reportadas
+                            </h6>
+                            <span class="badge bg-secondary rounded-pill px-2.5 py-1" id="cond_resumen_badge_total">0 fallas</span>
+                        </div>
+                        <div class="table-responsive rounded-3 border">
+                            <table class="table table-sm table-hover align-middle m-0" style="font-size: 0.82rem;">
+                                <thead class="table-light">
+                                    <tr class="text-secondary fw-bold" style="font-size: 0.72rem; text-transform: uppercase;">
+                                        <th style="width: 100px;">Unidad</th>
+                                        <th style="width: 120px;">Sistema</th>
+                                        <th style="width: 180px;">Ítem</th>
+                                        <th>Descripción / Observación</th>
+                                        <th style="width: 40px;" class="text-center"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cond_tabla_resumen_fallas_body">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-3">
+                                            <i class="bi bi-info-circle me-1"></i> No has marcado ninguna falla aún.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 

@@ -2,10 +2,10 @@
 /* ─── AJUSTES MOBILE & TABLET (DISEÑO INTEGRADO TRANSPARENTE) ─── */
 #moduloAjustes { 
     background: transparent !important; 
-    min-height: 100vh; 
+    min-height: auto; 
     display: flex; 
     flex-direction: column; 
-    padding-bottom: 6rem;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 20px));
     margin: 0 !important;
     padding-left: 1rem;
     padding-right: 1rem;
@@ -193,9 +193,14 @@
     border-radius: 20px;
     border: 1px solid var(--border, #e2e8f0);
     overflow: hidden;
-    margin-top: 0.5rem;
-    margin-bottom: 2rem;
+    margin-top: 0.75rem;
+    margin-bottom: calc(105px + env(safe-area-inset-bottom, 24px));
     box-shadow: 0 3px 12px rgba(0,0,0,0.02);
+}
+@media (min-width: 1025px) {
+    .ajustes-logout-box {
+        margin-bottom: 2.5rem;
+    }
 }
 .ajustes-logout-btn {
     display: flex;
