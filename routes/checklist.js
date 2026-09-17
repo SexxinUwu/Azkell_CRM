@@ -40,13 +40,30 @@ module.exports = function (db, broadcast, logAudit) {
         `;
         tdb.query(createTableSql, (err) => {
             if (err) console.warn('⚠️ Error inicializando tabla reportes_fallas:', err.message);
-            // Asegurar columnas adicionales en bases de datos existentes
-            tdb.query("SHOW COLUMNS FROM reportes_fallas LIKE 'orden_viaje'", (errCol, rowsCol) => {
-                if (!errCol && (!rowsCol || rowsCol.length === 0)) {
-                    tdb.query("ALTER TABLE reportes_fallas ADD COLUMN orden_viaje VARCHAR(60) DEFAULT NULL AFTER folio", () => next());
-                } else {
-                    next();
-                }
+
+            const createConfigTableSql = `
+            CREATE TABLE IF NOT EXISTS checklist_config_sistemas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                unidad VARCHAR(20) NOT NULL,
+                sistema_key VARCHAR(60) NOT NULL,
+                titulo VARCHAR(120) NOT NULL,
+                icono VARCHAR(60) DEFAULT 'bi-gear',
+                orden INT DEFAULT 0,
+                items_json LONGTEXT NOT NULL,
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uk_unidad_sys (unidad, sistema_key)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            `;
+            tdb.query(createConfigTableSql, () => {
+                // Asegurar columnas adicionales en bases de datos existentes
+                tdb.query("SHOW COLUMNS FROM reportes_fallas LIKE 'orden_viaje'", (errCol, rowsCol) => {
+                    if (!errCol && (!rowsCol || rowsCol.length === 0)) {
+                        tdb.query("ALTER TABLE reportes_fallas ADD COLUMN orden_viaje VARCHAR(60) DEFAULT NULL AFTER folio", () => next());
+                    } else {
+                        next();
+                    }
+                });
             });
         });
     });
@@ -791,6 +808,268 @@ module.exports = function (db, broadcast, logAudit) {
             if (typeof broadcast === 'function') broadcast('checklist', 'eliminar');
             res.json({ ok: true });
         });
+    });
+
+    // ── PLANTILLAS PREDETERMINADAS DE SISTEMAS Y FALLAS (ISO F-MAN-001) ──
+    const DEFAULT_CONFIG_TRACTO = [
+        {
+            key: 'motor',
+            title: 'MOTOR',
+            icon: 'bi-gear-fill',
+            items: [
+                '01 Nivel de aceite motor', '02 Fugas de fluidos', '03 Filtro de aire', '04 Pérdida de potencia',
+                '05 Compresora de aire', '06 Fajas, poleas, templadores', '07 Turbo', '08 Múltiple de escape',
+                '09 Silenciador', '10 Cañerías de combustible'
+            ]
+        },
+        {
+            key: 'caja',
+            title: 'CAJA - CORONAS',
+            icon: 'bi-gear-wide-connected',
+            items: [
+                '11 Embrague', '12 Palanca de cambios', '13 Freno de Motor', '14 Ruido en la caja de cambios',
+                '15 Ruido en las coronas', '16 Retenes de Corona', '17 Templadores, soportes', '18 Cardan y crucetas'
+            ]
+        },
+        {
+            key: 'refri',
+            title: 'REFRIGERACION',
+            icon: 'bi-thermometer-half',
+            items: [
+                '19 Nivel de refrigerante', '20 Fugas de refrigerante', '21 Tanque de expansión', '22 Temperatura elevada',
+                '23 Radiador, intercooler', '24 Bomba de agua'
+            ]
+        },
+        {
+            key: 'direccion',
+            title: 'DIRECCION',
+            icon: 'bi-compass',
+            items: [
+                '25 Alineamiento y balanceo', '26 Servo, Sist. hidráulico', '27 Caja de dirección', '28 Barras y terminales'
+            ]
+        },
+        {
+            key: 'cabina',
+            title: 'CABINA Y CHASIS',
+            icon: 'bi-truck-front',
+            items: [
+                '29 Tablero', '30 Lunas y parabrisas', '31 Suspensión de asiento', '32 Cinturones de seguridad',
+                '33 Tablero e instrumentos', '34 Amortiguadores', '35 Tanques de combustible', '36 Puertas y manijas',
+                '37 Timón', '38 Espejos laterales', '39 Soportes de cabina', '40 Control veloc. Crucero',
+                '41 Accesorios en general', '42 Autoradio y antenas', '43 Quinta rueda', '44 OTROS'
+            ]
+        }
+    ];
+
+    const DEFAULT_CONFIG_REMOLQUE = [
+        {
+            key: 'frenos',
+            title: 'FRENOS',
+            icon: 'bi-hand-index-thumb',
+            items: [
+                '39 Revisar Zapatos', '40 Pulpo de Freno', '41 Tanque de Aire, líneas de aire', '42 Fugas de aire',
+                '43 Secador de aire', '44 Rachet de Freno'
+            ]
+        },
+        {
+            key: 'carreta',
+            title: 'CARRETA',
+            icon: 'bi-truck-flatbed',
+            items: [
+                '45 Estado de triplay', '46 Estado de gebes de Puerta', '47 Filtración de Agua', '48 Pisos sin Oxido',
+                '49 Tiro de Remolque', '50 Templadores, Muelles y Soporte'
+            ]
+        },
+        {
+            key: 'electrico',
+            title: 'SISTEMA ELECTRICO',
+            icon: 'bi-lightning-charge',
+            items: [
+                '51 Luces en general', '52 Faros delanteros', '53 Neblineros', '54 Claxon, alarma de retroceso',
+                '55 Trico y plumillas', '56 Baterías y bornes', '57 Testigos check engine', '58 Testigos ABS',
+                '59 Aire acondicionado', '60 Calefacción', '61 Cortador de corriente', '62 Circulina', '63 Faro pirata'
+            ]
+        },
+        {
+            key: 'suspension',
+            title: 'SUSPENSION',
+            icon: 'bi-arrows-expand',
+            items: [
+                '64 Amortiguadores', '65 Bolsas de aire', '66 Reg. de bolsas de aire', '67 Muelles y grilletes',
+                '68 Abrazaderas y bujes', '69 Templador, balancines'
+            ]
+        },
+        {
+            key: 'furgon',
+            title: 'FURGON',
+            icon: 'bi-box-seam',
+            items: [
+                '70 Remaches de Triplay', '71 Filtraciones de Agua', '72 Gebes de Puerta', '73 Piso sin oxido', '74 Bisagras de puerta'
+            ]
+        },
+        {
+            key: 'llantas',
+            title: 'LLANTAS',
+            icon: 'bi-vinyl',
+            items: [
+                '75 Reparación de Llantas', '76 Tuercas flojas', '77 Pernos rotos', '78 Rueda frenada',
+                '79 Llantas bajas', '80 Desgaste irregular'
+            ]
+        },
+        {
+            key: 'termoking',
+            title: 'TERMOKING',
+            icon: 'bi-snow',
+            items: [
+                '81 Encendido / Batería', '82 Nivel de aceite motor diésel', '83 Temperatura programada / Setpoint',
+                '84 Correas y poleas', '85 Fugas de refrigerante / combustible', '86 Alarmas en panel de control'
+            ]
+        }
+    ];
+
+    // ── GET /api/checklist/config-sistemas — Obtener sistemas y fallas configurados ────
+    router.get('/config-sistemas', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ ok: false, error: 'Base de datos no disponible' });
+
+            const [rows] = await tdb.promise().query(
+                `SELECT * FROM checklist_config_sistemas ORDER BY unidad ASC, orden ASC, id ASC`
+            );
+
+            if (!rows || rows.length === 0) {
+                return res.json({
+                    ok: true,
+                    personalizado: false,
+                    tracto: DEFAULT_CONFIG_TRACTO,
+                    remolque: DEFAULT_CONFIG_REMOLQUE
+                });
+            }
+
+            const tracto = [];
+            const remolque = [];
+
+            rows.forEach(r => {
+                let parsedItems = [];
+                try {
+                    parsedItems = typeof r.items_json === 'string' ? JSON.parse(r.items_json) : (r.items_json || []);
+                } catch(e) {
+                    parsedItems = [];
+                }
+                const obj = {
+                    key: r.sistema_key,
+                    title: r.titulo,
+                    icon: r.icono || 'bi-gear-fill',
+                    items: Array.isArray(parsedItems) ? parsedItems : []
+                };
+
+                if (r.unidad === 'remolque') {
+                    remolque.push(obj);
+                } else {
+                    tracto.push(obj);
+                }
+            });
+
+            res.json({
+                ok: true,
+                personalizado: true,
+                tracto: tracto.length > 0 ? tracto : DEFAULT_CONFIG_TRACTO,
+                remolque: remolque.length > 0 ? remolque : DEFAULT_CONFIG_REMOLQUE
+            });
+        } catch (err) {
+            console.error('Error al obtener config sistemas checklist:', err);
+            res.status(500).json({ ok: false, error: err.message, tracto: DEFAULT_CONFIG_TRACTO, remolque: DEFAULT_CONFIG_REMOLQUE });
+        }
+    });
+
+    // ── POST /api/checklist/config-sistemas — Guardar configuración personalizada ────
+    router.post('/config-sistemas', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ ok: false, error: 'Base de datos no disponible' });
+
+            const { tracto, remolque } = req.body;
+            if (!Array.isArray(tracto) && !Array.isArray(remolque)) {
+                return res.status(400).json({ ok: false, error: 'Se requieren las listas de sistemas para tracto o remolque.' });
+            }
+
+            // Limpiar configuración previa y re-insertar
+            await tdb.promise().query(`DELETE FROM checklist_config_sistemas`);
+
+            const insertSql = `
+                INSERT INTO checklist_config_sistemas (unidad, sistema_key, titulo, icono, orden, items_json)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `;
+
+            if (Array.isArray(tracto)) {
+                for (let i = 0; i < tracto.length; i++) {
+                    const s = tracto[i];
+                    if (!s || !s.title) continue;
+                    const sysKey = (s.key || s.title.toLowerCase().replace(/[^a-z0-9]/g, '_')).slice(0, 50);
+                    const itemsArr = Array.isArray(s.items) ? s.items.filter(it => it && String(it).trim()) : [];
+                    await tdb.promise().query(insertSql, [
+                        'tracto',
+                        sysKey,
+                        String(s.title).trim().toUpperCase(),
+                        s.icon || 'bi-gear-fill',
+                        i,
+                        JSON.stringify(itemsArr)
+                    ]);
+                }
+            }
+
+            if (Array.isArray(remolque)) {
+                for (let i = 0; i < remolque.length; i++) {
+                    const s = remolque[i];
+                    if (!s || !s.title) continue;
+                    const sysKey = (s.key || s.title.toLowerCase().replace(/[^a-z0-9]/g, '_')).slice(0, 50);
+                    const itemsArr = Array.isArray(s.items) ? s.items.filter(it => it && String(it).trim()) : [];
+                    await tdb.promise().query(insertSql, [
+                        'remolque',
+                        sysKey,
+                        String(s.title).trim().toUpperCase(),
+                        s.icon || 'bi-gear-fill',
+                        i,
+                        JSON.stringify(itemsArr)
+                    ]);
+                }
+            }
+
+            if (typeof logAudit === 'function') {
+                logAudit(req, 'CONFIG_CHECKLIST_SISTEMAS', 'Actualización de sistemas y fallas del Checklist');
+            }
+            if (typeof broadcast === 'function') broadcast('checklist', 'config_actualizada');
+
+            res.json({ ok: true, mensaje: 'Configuración de sistemas y fallas guardada exitosamente.' });
+        } catch (err) {
+            console.error('Error al guardar config sistemas checklist:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // ── POST /api/checklist/config-sistemas/restaurar — Restaurar a valores predeterminados ────
+    router.post('/config-sistemas/restaurar', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ ok: false, error: 'Base de datos no disponible' });
+
+            await tdb.promise().query(`DELETE FROM checklist_config_sistemas`);
+
+            if (typeof logAudit === 'function') {
+                logAudit(req, 'CONFIG_CHECKLIST_RESTAURAR', 'Restauración de sistemas y fallas predeterminados');
+            }
+            if (typeof broadcast === 'function') broadcast('checklist', 'config_actualizada');
+
+            res.json({
+                ok: true,
+                mensaje: 'Configuración restaurada a los valores predeterminados de fábrica.',
+                tracto: DEFAULT_CONFIG_TRACTO,
+                remolque: DEFAULT_CONFIG_REMOLQUE
+            });
+        } catch (err) {
+            console.error('Error al restaurar config sistemas checklist:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
     });
 
     return router;

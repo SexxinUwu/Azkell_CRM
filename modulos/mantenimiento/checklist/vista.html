@@ -416,6 +416,9 @@
       <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.cargarTablaChecklist(true)" title="Recargar">
         <i class="bi bi-arrow-clockwise fs-6"></i>
       </button>
+      <button class="btn btn-light bg-white border shadow-2xs text-dark rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5" onclick="window.ckAbrirModalConfigSistemas()" title="Configurar Sistemas y Fallas">
+        <i class="bi bi-gear-fill text-warning fs-6"></i> <span class="d-none d-sm-inline">Configurar Sistemas</span>
+      </button>
       <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" onclick="window.ckExportarExcel()" title="Exportar a Excel">
         <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
       </button>
@@ -1076,4 +1079,69 @@
 
     </div>
   </div>
+</div>
+
+<!-- Modal: Configurar Sistemas y Fallas de Checklist -->
+<div class="modal fade" id="modalConfigChecklistSistemas" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content shadow-lg border-0" style="background-color: #f8fafc; border-radius: 24px; overflow: hidden;">
+            <div class="modal-header text-white px-4 py-3" style="background: linear-gradient(135deg, #0f172a, #1e293b);">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 rounded-3 bg-white bg-opacity-10">
+                        <i class="bi bi-sliders text-warning fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold m-0" style="font-size: 1.15rem;">Configurador de Sistemas y Fallas</h5>
+                        <small class="text-white-50" style="font-size: 0.75rem;">Personaliza los sistemas mecánicos e ítems de falla para Tracto y Carreta</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-light btn-sm fw-semibold shadow-sm rounded-pill px-3" onclick="window.ckRestaurarConfigSistemas()" title="Restablecer a valores de fábrica">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Restaurar Predeterminados
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm fw-bold shadow-sm rounded-pill px-3" onclick="window.ckGuardarConfigSistemas()">
+                        <i class="bi bi-floppy-fill me-1"></i> Guardar Cambios
+                    </button>
+                    <button type="button" class="btn-close btn-close-white ms-1" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Selector de Unidad: Tracto vs Semirremolque -->
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4 bg-white p-2 rounded-4 border shadow-2xs">
+                    <ul class="nav nav-pills gap-2" id="ck-pills-config-unidad" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active fw-bold px-4 py-2 rounded-pill d-flex align-items-center gap-2 shadow-2xs" id="ck-tab-cfg-tracto" onclick="window.ckCambiarTabConfigUnidad('tracto')">
+                                <i class="bi bi-truck fs-5"></i>
+                                <span>TRACTO (Placa Principal)</span>
+                                <span class="badge bg-white text-primary rounded-pill px-2" id="ck-cnt-cfg-tracto">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link fw-bold px-4 py-2 rounded-pill d-flex align-items-center gap-2 text-secondary" id="ck-tab-cfg-remolque" onclick="window.ckCambiarTabConfigUnidad('remolque')">
+                                <i class="bi bi-truck-flatbed fs-5"></i>
+                                <span>SEMIRREMOLQUE / CARRETA</span>
+                                <span class="badge bg-secondary-subtle text-dark rounded-pill px-2" id="ck-cnt-cfg-remolque">0</span>
+                            </button>
+                        </li>
+                    </ul>
+                    <button class="btn btn-primary fw-bold rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-1.5" onclick="window.ckAgregarNuevoSistema()">
+                        <i class="bi bi-plus-circle-fill fs-6"></i>
+                        <span>Nuevo Sistema</span>
+                    </button>
+                </div>
+
+                <div class="alert alert-info border-0 shadow-2xs rounded-3 d-flex align-items-center gap-3 py-2.5 px-3 mb-3" style="background:#eff6ff; color:#1e40af;">
+                    <i class="bi bi-info-circle-fill fs-5 flex-shrink-0 text-primary"></i>
+                    <div style="font-size:0.83rem;">
+                        <strong>Gestión Dinámica:</strong> Agrega o renombra sistemas y define los ítems de falla que aparecerán en los formularios de Mantenimiento, Conductor Portal y en el PDF.
+                    </div>
+                </div>
+
+                <!-- Contenedor Dinámico de Tarjetas por Sistema -->
+                <div id="ck-config-sistemas-container" class="d-flex flex-column gap-3">
+                    <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Cargando sistemas...</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

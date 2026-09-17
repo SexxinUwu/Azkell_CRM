@@ -11,72 +11,166 @@ var canvasFirmaChecklist = null;
 var ctxFirmaChecklist = null;
 var estaFirmandoChecklist = false;
 
-// ── DEFINICIÓN COMPLETA DE ÍTEMS F-MAN-001 SEGUNDO FORMATO FÍSICO ─────
-window.SISTEMAS_TRACTO = {
-    motor: [
-        '01 Nivel de aceite motor', '02 Fugas de fluidos', '03 Filtro de aire', '04 Pérdida de potencia',
-        '05 Compresora de aire', '06 Fajas, poleas, templadores', '07 Turbo', '08 Múltiple de escape',
-        '09 Silenciador', '10 Cañerías de combustible'
-    ],
-    caja: [
-        '11 Embrague', '12 Palanca de cambios', '13 Freno de Motor', '14 Ruido en la caja de cambios',
-        '15 Ruido en las coronas', '16 Retenes de Corona', '17 Templadores, soportes', '18 Cardan y crucetas'
-    ],
-    refri: [
-        '19 Nivel de refrigerante', '20 Fugas de refrigerante', '21 Tanque de expansión', '22 Temperatura elevada',
-        '23 Radiador, intercooler', '24 Bomba de agua'
-    ],
-    direccion: [
-        '25 Alineamiento y balanceo', '26 Servo, Sist. hidráulico', '27 Caja de dirección', '28 Barras y terminales'
-    ],
-    cabina: [
-        '29 Tablero', '30 Lunas y parabrisas', '31 Suspensión de asiento', '32 Cinturones de seguridad',
-        '33 Tablero e instrumentos', '34 Amortiguadores', '35 Tanques de combustible', '36 Puertas y manijas',
-        '37 Timón', '38 Espejos laterales', '39 Soportes de cabina', '40 Control veloc. Crucero',
-        '41 Accesorios en general', '42 Autoradio y antenas', '43 Quinta rueda', '44 OTROS'
-    ]
-};
-var SISTEMAS_TRACTO = window.SISTEMAS_TRACTO;
+// ── DEFINICIÓN COMPLETA DE ÍTEMS F-MAN-001 (CONFIGURABLE DINÁMICAMENTE) ─────
+window.SISTEMAS_TRACTO_CONFIG = [
+    {
+        key: 'motor',
+        title: 'MOTOR',
+        icon: 'bi-gear-fill',
+        items: [
+            '01 Nivel de aceite motor', '02 Fugas de fluidos', '03 Filtro de aire', '04 Pérdida de potencia',
+            '05 Compresora de aire', '06 Fajas, poleas, templadores', '07 Turbo', '08 Múltiple de escape',
+            '09 Silenciador', '10 Cañerías de combustible'
+        ]
+    },
+    {
+        key: 'caja',
+        title: 'CAJA - CORONAS',
+        icon: 'bi-gear-wide-connected',
+        items: [
+            '11 Embrague', '12 Palanca de cambios', '13 Freno de Motor', '14 Ruido en la caja de cambios',
+            '15 Ruido en las coronas', '16 Retenes de Corona', '17 Templadores, soportes', '18 Cardan y crucetas'
+        ]
+    },
+    {
+        key: 'refri',
+        title: 'REFRIGERACION',
+        icon: 'bi-thermometer-half',
+        items: [
+            '19 Nivel de refrigerante', '20 Fugas de refrigerante', '21 Tanque de expansión', '22 Temperatura elevada',
+            '23 Radiador, intercooler', '24 Bomba de agua'
+        ]
+    },
+    {
+        key: 'direccion',
+        title: 'DIRECCION',
+        icon: 'bi-compass',
+        items: [
+            '25 Alineamiento y balanceo', '26 Servo, Sist. hidráulico', '27 Caja de dirección', '28 Barras y terminales'
+        ]
+    },
+    {
+        key: 'cabina',
+        title: 'CABINA Y CHASIS',
+        icon: 'bi-truck-front',
+        items: [
+            '29 Tablero', '30 Lunas y parabrisas', '31 Suspensión de asiento', '32 Cinturones de seguridad',
+            '33 Tablero e instrumentos', '34 Amortiguadores', '35 Tanques de combustible', '36 Puertas y manijas',
+            '37 Timón', '38 Espejos laterales', '39 Soportes de cabina', '40 Control veloc. Crucero',
+            '41 Accesorios en general', '42 Autoradio y antenas', '43 Quinta rueda', '44 OTROS'
+        ]
+    }
+];
 
-window.SISTEMAS_REMOLQUE = {
-    frenos: [
-        '39 Revisar Zapatos', '40 Pulpo de Freno', '41 Tanque de Aire, líneas de aire', '42 Fugas de aire',
-        '43 Secador de aire', '44 Rachet de Freno'
-    ],
-    carreta: [
-        '45 Estado de triplay', '46 Estado de gebes de Puerta', '47 Filtración de Agua', '48 Pisos sin Oxido',
-        '49 Tiro de Remolque', '50 Templadores, Muelles y Soporte'
-    ],
-    electrico: [
-        '51 Luces en general', '52 Faros delanteros', '53 Neblineros', '54 Claxon, alarma de retroceso',
-        '55 Trico y plumillas', '56 Baterías y bornes', '57 Testigos check engine', '58 Testigos ABS',
-        '59 Aire acondicionado', '60 Calefacción', '61 Cortador de corriente', '62 Circulina', '63 Faro pirata'
-    ],
-    suspension: [
-        '64 Amortiguadores', '65 Bolsas de aire', '66 Reg. de bolsas de aire', '67 Muelles y grilletes',
-        '68 Abrazaderas y bujes', '69 Templador, balancines'
-    ],
-    furgon: [
-        '70 Remaches de Triplay', '71 Filtraciones de Agua', '72 Gebes de Puerta', '73 Piso sin oxido', '74 Bisagras de puerta'
-    ],
-    llantas: [
-        '75 Reparación de llantas', '76 Cambio de llantas', '77 Rotación de llantas', '78 Presión de aire',
-        '79 Seguro de tuercas', '80 Llanta de repuesto', '81 Parachoques', '82 Tapabarros', '83 Escarpoint',
-        '84 Nivel de Gas en el Visor', '85 Bocamazas y rodamientos', '86 Lubricación, engrase',
-        '87 Aros, espárragos y tuercas', '88 Chasis'
-    ],
-    termoking: [
-        '89 Porta conos', '90 Porta tacos', '91 Placas de rodaje', '92 Barra antiempotramiento',
-        '93 Porta llantas', '94 Porta extintores', '95 Fajas de Ventilador', '96 OTROS'
-    ]
+window.SISTEMAS_REMOLQUE_CONFIG = [
+    {
+        key: 'frenos',
+        title: 'FRENOS',
+        icon: 'bi-hand-index-thumb',
+        items: [
+            '39 Revisar Zapatos', '40 Pulpo de Freno', '41 Tanque de Aire, líneas de aire', '42 Fugas de aire',
+            '43 Secador de aire', '44 Rachet de Freno'
+        ]
+    },
+    {
+        key: 'carreta',
+        title: 'CARRETA',
+        icon: 'bi-truck-flatbed',
+        items: [
+            '45 Estado de triplay', '46 Estado de gebes de Puerta', '47 Filtración de Agua', '48 Pisos sin Oxido',
+            '49 Tiro de Remolque', '50 Templadores, Muelles y Soporte'
+        ]
+    },
+    {
+        key: 'electrico',
+        title: 'SISTEMA ELECTRICO',
+        icon: 'bi-lightning-charge',
+        items: [
+            '51 Luces en general', '52 Faros delanteros', '53 Neblineros', '54 Claxon, alarma de retroceso',
+            '55 Trico y plumillas', '56 Baterías y bornes', '57 Testigos check engine', '58 Testigos ABS',
+            '59 Aire acondicionado', '60 Calefacción', '61 Cortador de corriente', '62 Circulina', '63 Faro pirata'
+        ]
+    },
+    {
+        key: 'suspension',
+        title: 'SUSPENSION',
+        icon: 'bi-arrows-expand',
+        items: [
+            '64 Amortiguadores', '65 Bolsas de aire', '66 Reg. de bolsas de aire', '67 Muelles y grilletes',
+            '68 Abrazaderas y bujes', '69 Templador, balancines'
+        ]
+    },
+    {
+        key: 'furgon',
+        title: 'FURGON',
+        icon: 'bi-box-seam',
+        items: [
+            '70 Remaches de Triplay', '71 Filtraciones de Agua', '72 Gebes de Puerta', '73 Piso sin oxido', '74 Bisagras de puerta'
+        ]
+    },
+    {
+        key: 'llantas',
+        title: 'LLANTAS',
+        icon: 'bi-vinyl',
+        items: [
+            '75 Reparación de llantas', '76 Cambio de llantas', '77 Rotación de llantas', '78 Presión de aire',
+            '79 Seguro de tuercas', '80 Llanta de repuesto', '81 Parachoques', '82 Tapabarros', '83 Escarpoint',
+            '84 Nivel de Gas en el Visor', '85 Bocamazas y rodamientos', '86 Lubricación, engrase',
+            '87 Aros, espárragos y tuercas', '88 Chasis'
+        ]
+    },
+    {
+        key: 'termoking',
+        title: 'TERMOKING',
+        icon: 'bi-snow',
+        items: [
+            '89 Porta conos', '90 Porta tacos', '91 Placas de rodaje', '92 Barra antiempotramiento',
+            '93 Porta llantas', '94 Porta extintores', '95 Fajas de Ventilador', '96 OTROS'
+        ]
+    }
+];
+
+window.ckActualizarSistemasObjetos = function() {
+    window.SISTEMAS_TRACTO = {};
+    (window.SISTEMAS_TRACTO_CONFIG || []).forEach(s => {
+        window.SISTEMAS_TRACTO[s.key] = s.items || [];
+    });
+    window.SISTEMAS_REMOLQUE = {};
+    (window.SISTEMAS_REMOLQUE_CONFIG || []).forEach(s => {
+        window.SISTEMAS_REMOLQUE[s.key] = s.items || [];
+    });
 };
-var SISTEMAS_REMOLQUE = window.SISTEMAS_REMOLQUE;
+window.ckActualizarSistemasObjetos();
+
+window.ckCargarConfigSistemasDesdeBackend = async function() {
+    try {
+        const res = await fetch('/api/checklist/config-sistemas');
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.ok) {
+                if (Array.isArray(data.tracto) && data.tracto.length > 0) {
+                    window.SISTEMAS_TRACTO_CONFIG = data.tracto;
+                }
+                if (Array.isArray(data.remolque) && data.remolque.length > 0) {
+                    window.SISTEMAS_REMOLQUE_CONFIG = data.remolque;
+                }
+                window.ckActualizarSistemasObjetos();
+            }
+        }
+    } catch (e) {
+        console.warn('Advertencia cargando config sistemas checklist:', e);
+    }
+};
 
 // ── FUNCIÓN DE ARRANQUE DEL MÓDULO ──────────────────────────────
-window.init_checklist = function() {
-    if (!window.checkPerm('checklist', 'l')) {
-        var wrap = document.getElementById('checklist-app') || document.querySelector('.container-fluid');
-        if (wrap) window.showNoPermMsg(wrap);
+window.inicializarModuloChecklist = async function() {
+    if (typeof window.limpiarContenedorModalDinamico === 'function') {
+        window.limpiarContenedorModalDinamico();
+    }
+
+    const cont = document.getElementById('checklist-app');
+    if (!cont) {
+        console.warn('No se encontró #checklist-app en el DOM.');
         return;
     }
 
@@ -85,7 +179,8 @@ window.init_checklist = function() {
     window.poblarConductoresChecklist();
     window.ckCargarOrdenesViaje();
 
-    // Renderizar acordeones completos
+    // Cargar config de sistemas personalizada y renderizar acordeones
+    await window.ckCargarConfigSistemasDesdeBackend();
     window.ckRenderizarTodosAcordeones();
 
     // Inicializar firma digital
@@ -108,6 +203,7 @@ window.init_checklist = function() {
         }
     }, 400);
 };
+window.init_checklist = window.inicializarModuloChecklist;
 
 // ── INTEGRACIÓN ÓRDENES DE VIAJE (OPERACIONES) ───────────────────
 window.dataGlobalOrdenesViaje = [];
@@ -531,36 +627,292 @@ window.ckRenderizarTodosAcordeones = function() {
 
     if (accTracto) {
         let htmlT = '';
-        const configT = [
-            { key: 'motor', title: 'MOTOR', icon: 'bi-gear-fill', items: SISTEMAS_TRACTO.motor },
-            { key: 'caja', title: 'CAJA-CORONAS', icon: 'bi-gear-wide-connected', items: SISTEMAS_TRACTO.caja },
-            { key: 'refri', title: 'REFRIGERACION', icon: 'bi-thermometer-half', items: SISTEMAS_TRACTO.refri },
-            { key: 'direccion', title: 'DIRECCION', icon: 'bi-compass', items: SISTEMAS_TRACTO.direccion },
-            { key: 'cabina', title: 'CABINA Y CHASIS', icon: 'bi-truck-front', items: SISTEMAS_TRACTO.cabina }
-        ];
+        const configT = Array.isArray(window.SISTEMAS_TRACTO_CONFIG) && window.SISTEMAS_TRACTO_CONFIG.length > 0
+            ? window.SISTEMAS_TRACTO_CONFIG
+            : [
+                { key: 'motor', title: 'MOTOR', icon: 'bi-gear-fill', items: (window.SISTEMAS_TRACTO || {}).motor || [] },
+                { key: 'caja', title: 'CAJA - CORONAS', icon: 'bi-gear-wide-connected', items: (window.SISTEMAS_TRACTO || {}).caja || [] },
+                { key: 'refri', title: 'REFRIGERACION', icon: 'bi-thermometer-half', items: (window.SISTEMAS_TRACTO || {}).refri || [] },
+                { key: 'direccion', title: 'DIRECCION', icon: 'bi-compass', items: (window.SISTEMAS_TRACTO || {}).direccion || [] },
+                { key: 'cabina', title: 'CABINA Y CHASIS', icon: 'bi-truck-front', items: (window.SISTEMAS_TRACTO || {}).cabina || [] }
+            ];
 
         configT.forEach(c => {
-            htmlT += window.ckGenerarAccordionCardHTML('Tracto', c.key, c.title, c.icon, c.items);
+            htmlT += window.ckGenerarAccordionCardHTML('Tracto', c.key, c.title, c.icon || 'bi-gear-fill', c.items || []);
         });
         accTracto.innerHTML = htmlT;
     }
 
     if (accRemolque) {
         let htmlR = '';
-        const configR = [
-            { key: 'frenos', title: 'FRENOS', icon: 'bi-hand-index-thumb', items: SISTEMAS_REMOLQUE.frenos },
-            { key: 'carreta', title: 'CARRETA', icon: 'bi-truck-flatbed', items: SISTEMAS_REMOLQUE.carreta },
-            { key: 'electrico', title: 'SISTEMA ELECTRICO', icon: 'bi-lightning-charge', items: SISTEMAS_REMOLQUE.electrico },
-            { key: 'suspension', title: 'SUSPENSION', icon: 'bi-arrows-expand', items: SISTEMAS_REMOLQUE.suspension },
-            { key: 'furgon', title: 'FURGON', icon: 'bi-box-seam', items: SISTEMAS_REMOLQUE.furgon },
-            { key: 'llantas', title: 'LLANTAS', icon: 'bi-vinyl', items: SISTEMAS_REMOLQUE.llantas },
-            { key: 'termoking', title: 'TERMOKING', icon: 'bi-snow', items: SISTEMAS_REMOLQUE.termoking }
-        ];
+        const configR = Array.isArray(window.SISTEMAS_REMOLQUE_CONFIG) && window.SISTEMAS_REMOLQUE_CONFIG.length > 0
+            ? window.SISTEMAS_REMOLQUE_CONFIG
+            : [
+                { key: 'frenos', title: 'FRENOS', icon: 'bi-hand-index-thumb', items: (window.SISTEMAS_REMOLQUE || {}).frenos || [] },
+                { key: 'carreta', title: 'CARRETA', icon: 'bi-truck-flatbed', items: (window.SISTEMAS_REMOLQUE || {}).carreta || [] },
+                { key: 'electrico', title: 'SISTEMA ELECTRICO', icon: 'bi-lightning-charge', items: (window.SISTEMAS_REMOLQUE || {}).electrico || [] },
+                { key: 'suspension', title: 'SUSPENSION', icon: 'bi-arrows-expand', items: (window.SISTEMAS_REMOLQUE || {}).suspension || [] },
+                { key: 'furgon', title: 'FURGON', icon: 'bi-box-seam', items: (window.SISTEMAS_REMOLQUE || {}).furgon || [] },
+                { key: 'llantas', title: 'LLANTAS', icon: 'bi-vinyl', items: (window.SISTEMAS_REMOLQUE || {}).llantas || [] },
+                { key: 'termoking', title: 'TERMOKING', icon: 'bi-snow', items: (window.SISTEMAS_REMOLQUE || {}).termoking || [] }
+            ];
 
         configR.forEach(c => {
-            htmlR += window.ckGenerarAccordionCardHTML('Remolque', c.key, c.title, c.icon, c.items);
+            htmlR += window.ckGenerarAccordionCardHTML('Remolque', c.key, c.title, c.icon || 'bi-gear-fill', c.items || []);
         });
         accRemolque.innerHTML = htmlR;
+    }
+};
+
+// ── CONFIGURADOR DINÁMICO DE SISTEMAS Y FALLAS (MODAL) ───────────
+window._ckConfigTabActiva = 'tracto';
+window._ckConfigTemp = { tracto: [], remolque: [] };
+
+window.ckAbrirModalConfigSistemas = async function() {
+    await window.ckCargarConfigSistemasDesdeBackend();
+
+    // Clonar esquemas para edición temporal
+    window._ckConfigTemp = {
+        tracto: JSON.parse(JSON.stringify(window.SISTEMAS_TRACTO_CONFIG || [])),
+        remolque: JSON.parse(JSON.stringify(window.SISTEMAS_REMOLQUE_CONFIG || []))
+    };
+
+    window._ckConfigTabActiva = 'tracto';
+    window.ckActualizarBadgesTabsConfig();
+    window.ckRenderizarConfigSistemas();
+
+    const modalEl = document.getElementById('modalConfigChecklistSistemas');
+    if (modalEl) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+};
+
+window.ckActualizarBadgesTabsConfig = function() {
+    const cntT = document.getElementById('ck-cnt-cfg-tracto');
+    const cntR = document.getElementById('ck-cnt-cfg-remolque');
+    if (cntT) cntT.textContent = (window._ckConfigTemp.tracto || []).length;
+    if (cntR) cntR.textContent = (window._ckConfigTemp.remolque || []).length;
+};
+
+window.ckCambiarTabConfigUnidad = function(unidad) {
+    window._ckConfigTabActiva = unidad;
+    const btnT = document.getElementById('ck-tab-cfg-tracto');
+    const btnR = document.getElementById('ck-tab-cfg-remolque');
+
+    if (btnT && btnR) {
+        if (unidad === 'tracto') {
+            btnT.className = 'nav-link active fw-bold px-4 py-2 rounded-pill d-flex align-items-center gap-2 shadow-2xs';
+            btnR.className = 'nav-link fw-bold px-4 py-2 rounded-pill d-flex align-items-center gap-2 text-secondary';
+        } else {
+            btnT.className = 'nav-link fw-bold px-4 py-2 rounded-pill d-flex align-items-center gap-2 text-secondary';
+            btnR.className = 'nav-link active fw-bold px-4 py-2 rounded-pill d-flex align-items-center gap-2 shadow-2xs';
+        }
+    }
+    window.ckRenderizarConfigSistemas();
+};
+
+window.ckRenderizarConfigSistemas = function() {
+    const container = document.getElementById('ck-config-sistemas-container');
+    if (!container) return;
+
+    const unidad = window._ckConfigTabActiva || 'tracto';
+    const sistemas = window._ckConfigTemp[unidad] || [];
+    window.ckActualizarBadgesTabsConfig();
+
+    if (sistemas.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5 text-muted bg-white rounded-4 border shadow-2xs">
+                <i class="bi bi-folder2-open fs-1 text-secondary d-block mb-2"></i>
+                <div class="fw-bold">No hay sistemas configurados para ${unidad.toUpperCase()}.</div>
+                <small class="text-secondary">Haz clic en "+ Nuevo Sistema" para comenzar.</small>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    sistemas.forEach((sys, sysIdx) => {
+        const title = sys.title || 'SISTEMA SIN NOMBRE';
+        const icon = sys.icon || 'bi-gear-fill';
+        const items = Array.isArray(sys.items) ? sys.items : [];
+
+        let itemsHtml = '';
+        items.forEach((itTxt, itemIdx) => {
+            itemsHtml += `
+                <div class="d-flex align-items-center gap-2 mb-2 bg-white p-2 rounded-3 border shadow-2xs">
+                    <span class="badge bg-light text-secondary border font-monospace" style="font-size:0.75rem; min-width: 28px;">${itemIdx + 1}</span>
+                    <input type="text" class="form-control form-control-sm fw-semibold text-dark border-0 bg-transparent flex-grow-1" style="font-size:0.86rem; box-shadow:none;" value="${itTxt.replace(/"/g, '&quot;')}" oninput="window.ckActualizarTextoItemFalla(${sysIdx}, ${itemIdx}, this.value)" placeholder="Descripción de la falla o componente...">
+                    <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;" onclick="window.ckEliminarItemFalla(${sysIdx}, ${itemIdx})" title="Eliminar ítem">
+                        <i class="bi bi-trash3-fill" style="font-size:0.8rem;"></i>
+                    </button>
+                </div>
+            `;
+        });
+
+        if (items.length === 0) {
+            itemsHtml = `<div class="text-center py-3 text-muted small fst-italic">Sin ítems de falla. Agrega uno usando el botón inferior.</div>`;
+        }
+
+        html += `
+            <div class="card border-0 shadow-2xs rounded-4 overflow-hidden bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
+                <div class="card-header py-3 px-3.5 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 80%;">
+                        <span class="p-2 rounded-3 bg-white border text-primary shadow-2xs">
+                            <i class="bi ${icon} fs-5"></i>
+                        </span>
+                        <input type="text" class="form-control fw-bold border-0 bg-transparent text-dark flex-grow-1" style="font-size:1.05rem; box-shadow:none;" value="${title.replace(/"/g, '&quot;')}" oninput="window.ckActualizarTituloSistema(${sysIdx}, this.value)" placeholder="Nombre del Sistema (Ej: MOTOR, FRENOS...)">
+                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1" style="font-size:0.75rem;">${items.length} fallas</span>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold shadow-2xs" onclick="window.ckEliminarSistema(${sysIdx})">
+                            <i class="bi bi-trash3 me-1"></i> Eliminar Sistema
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-3 bg-light bg-opacity-50">
+                    <div class="d-flex flex-column gap-1 mb-2">
+                        ${itemsHtml}
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm fw-bold w-100 rounded-3 py-2 shadow-2xs d-flex align-items-center justify-content-center gap-1.5" onclick="window.ckAgregarItemFalla(${sysIdx})" style="border-style: dashed; background: #ffffff;">
+                        <i class="bi bi-plus-lg"></i>
+                        <span>Agregar Ítem de Falla a ${title}</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+};
+
+window.ckAgregarNuevoSistema = function() {
+    const unidad = window._ckConfigTabActiva || 'tracto';
+    if (!window._ckConfigTemp[unidad]) window._ckConfigTemp[unidad] = [];
+
+    const nuevoIdx = window._ckConfigTemp[unidad].length + 1;
+    const padded = String(nuevoIdx).padStart(2, '0');
+    window._ckConfigTemp[unidad].push({
+        key: 'sys_' + Date.now(),
+        title: `NUEVO SISTEMA ${padded}`,
+        icon: unidad === 'tracto' ? 'bi-truck' : 'bi-truck-flatbed',
+        items: [`01 Falla o componente de prueba`]
+    });
+
+    window.ckRenderizarConfigSistemas();
+};
+
+window.ckEliminarSistema = function(sysIdx) {
+    const unidad = window._ckConfigTabActiva || 'tracto';
+    const sys = window._ckConfigTemp[unidad][sysIdx];
+    const nombre = sys ? sys.title : 'este sistema';
+
+    if (confirm(`¿Estás seguro de eliminar el sistema "${nombre}" y todas sus fallas asociadas?`)) {
+        window._ckConfigTemp[unidad].splice(sysIdx, 1);
+        window.ckRenderizarConfigSistemas();
+    }
+};
+
+window.ckActualizarTituloSistema = function(sysIdx, val) {
+    const unidad = window._ckConfigTabActiva || 'tracto';
+    if (window._ckConfigTemp[unidad] && window._ckConfigTemp[unidad][sysIdx]) {
+        window._ckConfigTemp[unidad][sysIdx].title = (val || '').toUpperCase();
+    }
+};
+
+window.ckAgregarItemFalla = function(sysIdx) {
+    const unidad = window._ckConfigTabActiva || 'tracto';
+    const sys = window._ckConfigTemp[unidad][sysIdx];
+    if (!sys) return;
+    if (!Array.isArray(sys.items)) sys.items = [];
+
+    const itemNum = sys.items.length + 1;
+    sys.items.push(`Falla / Componente ${itemNum}`);
+    window.ckRenderizarConfigSistemas();
+};
+
+window.ckEliminarItemFalla = function(sysIdx, itemIdx) {
+    const unidad = window._ckConfigTabActiva || 'tracto';
+    const sys = window._ckConfigTemp[unidad][sysIdx];
+    if (sys && Array.isArray(sys.items)) {
+        sys.items.splice(itemIdx, 1);
+        window.ckRenderizarConfigSistemas();
+    }
+};
+
+window.ckActualizarTextoItemFalla = function(sysIdx, itemIdx, val) {
+    const unidad = window._ckConfigTabActiva || 'tracto';
+    const sys = window._ckConfigTemp[unidad][sysIdx];
+    if (sys && Array.isArray(sys.items) && sys.items[itemIdx] !== undefined) {
+        sys.items[itemIdx] = val;
+    }
+};
+
+window.ckGuardarConfigSistemas = async function() {
+    try {
+        const payload = {
+            tracto: window._ckConfigTemp.tracto || [],
+            remolque: window._ckConfigTemp.remolque || []
+        };
+
+        const res = await fetch('/api/checklist/config-sistemas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+
+        if (json && json.ok) {
+            window.SISTEMAS_TRACTO_CONFIG = payload.tracto;
+            window.SISTEMAS_REMOLQUE_CONFIG = payload.remolque;
+            window.ckActualizarSistemasObjetos();
+            window.ckRenderizarTodosAcordeones();
+
+            const modalEl = document.getElementById('modalConfigChecklistSistemas');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+
+            if (typeof window.showToastNotification === 'function') {
+                window.showToastNotification('✅ Configuración de sistemas y fallas guardada exitosamente.', 'success');
+            } else {
+                alert('✅ Configuración de sistemas y fallas guardada exitosamente.');
+            }
+        } else {
+            alert('Error guardando configuración: ' + (json.error || 'Error desconocido'));
+        }
+    } catch (err) {
+        console.error('Error guardando config sistemas:', err);
+        alert('Error de conexión al guardar configuración.');
+    }
+};
+
+window.ckRestaurarConfigSistemas = async function() {
+    if (!confirm('¿Deseas restaurar todos los sistemas y fallas a la plantilla estándar predeterminada (ISO)?')) return;
+
+    try {
+        const res = await fetch('/api/checklist/config-sistemas/restaurar', { method: 'POST' });
+        const json = await res.json();
+        if (json && json.ok) {
+            window.SISTEMAS_TRACTO_CONFIG = json.tracto;
+            window.SISTEMAS_REMOLQUE_CONFIG = json.remolque;
+            window._ckConfigTemp = {
+                tracto: JSON.parse(JSON.stringify(json.tracto)),
+                remolque: JSON.parse(JSON.stringify(json.remolque))
+            };
+            window.ckActualizarSistemasObjetos();
+            window.ckRenderizarTodosAcordeones();
+            window.ckRenderizarConfigSistemas();
+
+            if (typeof window.showToastNotification === 'function') {
+                window.showToastNotification('✅ Sistemas restaurados a los valores de fábrica.', 'success');
+            } else {
+                alert('✅ Sistemas restaurados a los valores de fábrica.');
+            }
+        }
+    } catch (e) {
+        console.error('Error restaurando sistemas:', e);
     }
 };
 
