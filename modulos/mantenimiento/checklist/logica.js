@@ -93,6 +93,20 @@ window.init_checklist = function() {
 
     // Cargar tabla principal
     window.cargarTablaChecklist(true);
+
+    // Precargar datos telemétricos Wialon en segundo plano para auto-completar KM y Horas en 0ms
+    setTimeout(() => {
+        if (typeof fetch === 'function') {
+            fetch('/api/script/obtenerDatosWialon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+                .then(r => r.json())
+                .then(r => {
+                    if (r && Array.isArray(r.data) && r.data.length > 0) {
+                        if (typeof CACHE !== 'undefined') CACHE.wialon = r.data;
+                        window._wialonDataChecklist = r.data;
+                    }
+                }).catch(() => {});
+        }
+    }, 400);
 };
 
 // ── INTEGRACIÓN ÓRDENES DE VIAJE (OPERACIONES) ───────────────────
@@ -126,7 +140,7 @@ window.ckToggleCollapseViaje = function() {
 
 window.ckCargarOrdenesViaje = async function(forceSync) {
     try {
-        let res = await fetch('/api/operaciones/ordenes-viaje?limit=300');
+        let res = await fetch('/api/checklist/buscar-viajes?limit=50');
         if (res.ok) {
             let json = await res.json();
             if (json && json.ok && Array.isArray(json.data)) {
@@ -134,18 +148,75 @@ window.ckCargarOrdenesViaje = async function(forceSync) {
                 return;
             }
         }
-        if (forceSync) {
-            const syncRes = await fetch('/api/operaciones/ordenes-viaje/sincronizar', { method: 'POST' });
-            if (syncRes.ok) {
-                const retryRes = await fetch('/api/operaciones/ordenes-viaje?limit=300');
-                if (retryRes.ok) {
-                    const retryJson = await retryRes.json();
-                    window.dataGlobalOrdenesViaje = (retryJson && retryJson.data) || [];
-                }
-            }
-        }
     } catch(err) {
         console.warn('Error cargando ordenes de viaje:', err);
+    }
+};
+
+window.ckConsultarViajeActualPorPlaca = async function(placa) {
+    if (!placa) return;
+    const pStr = placa.toString().trim().toUpperCase();
+    if (pStr.length < 5) return;
+
+    try {
+        const res = await fetch(`/api/checklist/buscar-viajes?placa=${encodeURIComponent(pStr)}&limit=3`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const viajes = (json && json.data) || [];
+        window._ckUltimosViajesPlaca = viajes;
+        if (viajes.length > 0) {
+            // El primero de todos es el más reciente (actual)
+            const viajeActual = viajes[0];
+
+            // 1. Vincular orden de viaje
+            const inputHidden = document.getElementById('ck_orden_viaje');
+            const inputTxt = document.getElementById('ck_orden_viaje-txt');
+            const btnClear = document.getElementById('ck_btn_clear_viaje');
+            if (inputHidden) inputHidden.value = viajeActual.viaje;
+            if (inputTxt) inputTxt.value = viajeActual.viaje;
+            if (btnClear) btnClear.classList.remove('d-none');
+
+            // 2. Autocompletar Carreta si el viaje la tiene y no se ha seleccionado otra
+            if (viajeActual.placa_remolque) {
+                const prHidden = document.getElementById('ck_placa_remolque');
+                const prTxt = document.getElementById('ck_placa_remolque-txt');
+                if (prHidden && (!prHidden.value || prHidden.value !== viajeActual.placa_remolque)) {
+                    prHidden.value = viajeActual.placa_remolque;
+                    if (prTxt) prTxt.value = viajeActual.placa_remolque;
+                    if (typeof window.ckSyncPlacaRemolque === 'function') window.ckSyncPlacaRemolque();
+                }
+            }
+
+            // 3. Autocompletar Conductor
+            if (viajeActual.conductor) {
+                const condHidden = document.getElementById('ck_conductor');
+                const condTxt = document.getElementById('ck_conductor-txt');
+                if (condHidden) condHidden.value = viajeActual.conductor;
+                if (condTxt) condTxt.value = viajeActual.conductor;
+                if (typeof window._cbSet === 'function') {
+                    window._cbSet('ck_conductor', viajeActual.conductor, viajeActual.conductor);
+                }
+            }
+
+            // 4. Autocompletar Procedencia / Ruta
+            if (viajeActual.ruta || viajeActual.origen) {
+                const procInput = document.getElementById('ck_procedencia');
+                if (procInput) procInput.value = viajeActual.ruta || viajeActual.origen;
+            }
+
+            // 5. Mostrar panel de Viaje Vinculado
+            const infoBox = document.getElementById('ck_viaje_seleccionado_info');
+            const lblNum = document.getElementById('ck_lbl_viaje_num');
+            const lblDet = document.getElementById('ck_lbl_viaje_detalles');
+            if (infoBox) infoBox.classList.remove('d-none');
+            if (lblNum) lblNum.textContent = viajeActual.viaje;
+            if (lblDet) {
+                const rTxt = viajeActual.ruta ? ` | Ruta: ${viajeActual.ruta}` : '';
+                lblDet.textContent = `Tracto: ${viajeActual.placa_tracto || pStr} | Carreta: ${viajeActual.placa_remolque || 'Ninguna'} | Conductor: ${viajeActual.conductor || '---'}${rTxt}`;
+            }
+        }
+    } catch (e) {
+        console.warn('Error consultando viajes por placa:', e);
     }
 };
 
@@ -185,74 +256,86 @@ window.ckSincronizarViajes = async function(e) {
     }
 };
 
-window._cbFiltrarViaje = function() {
+window._cbFiltrarViaje = async function() {
     const input = document.getElementById('ck_orden_viaje-txt');
     const dd = document.getElementById('ck_orden_viaje-dd');
     const btnClear = document.getElementById('ck_btn_clear_viaje');
     if (!input || !dd) return;
 
-    const val = input.value || '';
+    const val = (input.value || '').trim().toUpperCase();
     if (btnClear) {
-        if (val.trim()) btnClear.classList.remove('d-none');
+        if (val) btnClear.classList.remove('d-none');
         else btnClear.classList.add('d-none');
     }
 
     // Si el usuario vació el texto manualmente, desvincular todo
-    if (!val.trim()) {
+    if (!val) {
         const inputHidden = document.getElementById('ck_orden_viaje');
         if (inputHidden && inputHidden.value) {
             window.ckLimpiarViajeVinculado(false);
         }
     }
 
-    const q = val.trim().toUpperCase();
-    const viajes = window.dataGlobalOrdenesViaje || [];
+    const tractoActual = (document.getElementById('ck_placa_tracto') || {}).value || '';
+    const remolqueActual = (document.getElementById('ck_placa_remolque') || {}).value || '';
+    const placaFiltro = tractoActual || remolqueActual || '';
 
-    let filtrados = viajes;
-    if (q) {
-        filtrados = viajes.filter(v => {
-            const num = (v.viaje || '').toUpperCase();
-            const tracto = (v.placa_tracto || '').toUpperCase();
-            const carreta = (v.placa_remolque || '').toUpperCase();
-            const cond = (v.conductor || '').toUpperCase();
-            const ruta = (v.ruta || '').toUpperCase();
-            return num.includes(q) || tracto.includes(q) || carreta.includes(q) || cond.includes(q) || ruta.includes(q);
+    let url = `/api/checklist/buscar-viajes?limit=3`;
+    if (val) {
+        url += `&q=${encodeURIComponent(val)}`;
+    } else if (placaFiltro) {
+        url += `&placa=${encodeURIComponent(placaFiltro)}`;
+    }
+
+    try {
+        const r = await fetch(url);
+        const j = await r.json();
+        const filtrados = (j && j.data) || [];
+
+        if (filtrados.length === 0) {
+            dd.innerHTML = '<div class="p-3 text-center text-muted small"><i class="bi bi-search me-1"></i>No se encontraron órdenes de viaje coincidentes.<br><button type="button" class="btn btn-xs btn-outline-primary mt-2 rounded-pill" onclick="window.ckSincronizarViajes()">Sincronizar ahora</button></div>';
+            dd.style.display = 'block';
+            return;
+        }
+
+        let html = '';
+        filtrados.forEach((v, idx) => {
+            const fechaFmt = v.fecha_viaje_fmt || v.fecha_viaje || '';
+            const carretaTxt = v.placa_remolque 
+                ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1">${v.placa_remolque}</span>` 
+                : '<span class="text-muted fst-italic ms-1">Sin carreta</span>';
+            
+            const esActual = idx === 0;
+            const badgeStatus = esActual 
+                ? `<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold" style="font-size:0.68rem;"><i class="bi bi-clock-history me-1"></i>ACTUAL (MÁS RECIENTE)</span>`
+                : `<span class="badge bg-secondary-subtle text-secondary" style="font-size:0.68rem;">ANTERIOR #${idx + 1}</span>`;
+
+            const dataJson = JSON.stringify(v).replace(/"/g, '&quot;');
+
+            html += `
+                <div class="p-2 border-bottom cursor-pointer cb-item-viaje ${esActual ? 'bg-light bg-opacity-50' : ''}" style="transition:background 0.15s ease;" onmousedown="window.ckSeleccionarViaje(${dataJson})" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${esActual ? '#f8fafc' : '#ffffff'}'">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold text-primary" style="font-size:0.88rem;"><i class="bi bi-diagram-3-fill me-1"></i>Viaje: ${v.viaje}</span>
+                            ${badgeStatus}
+                        </div>
+                        <span class="text-muted small" style="font-size:0.72rem;">${fechaFmt}</span>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-1 mb-1" style="font-size:0.75rem;">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">${v.placa_tracto || 'TRACTO'}</span>
+                        ${carretaTxt}
+                        <span class="text-secondary fw-semibold text-truncate ms-1" style="max-width:220px;"><i class="bi bi-person-fill me-1"></i>${v.conductor || '---'}</span>
+                    </div>
+                    ${v.ruta ? `<div class="text-truncate mt-1" style="font-size:0.72rem; color:#475569;"><i class="bi bi-signpost-2-fill text-primary me-1"></i><b>Ruta:</b> ${v.ruta}</div>` : ''}
+                </div>
+            `;
         });
-    }
 
-    filtrados = filtrados.slice(0, 50);
-
-    if (filtrados.length === 0) {
-        dd.innerHTML = '<div class="p-3 text-center text-muted small"><i class="bi bi-search me-1"></i>No se encontraron órdenes de viaje coincidentes.<br><button type="button" class="btn btn-xs btn-outline-primary mt-2 rounded-pill" onclick="window.ckSincronizarViajes()">Sincronizar ahora</button></div>';
+        dd.innerHTML = html;
         dd.style.display = 'block';
-        return;
+    } catch(e) {
+        console.warn('Error filtrando viajes:', e);
     }
-
-    let html = '';
-    filtrados.forEach(v => {
-        const fechaFmt = v.fecha_viaje ? new Date(v.fecha_viaje).toLocaleDateString('es-PE') : '';
-        const carretaTxt = v.placa_remolque ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1">${v.placa_remolque}</span>` : '<span class="text-muted fst-italic ms-1">Sin carreta</span>';
-        
-        const dataJson = JSON.stringify(v).replace(/"/g, '&quot;');
-
-        html += `
-            <div class="p-2 border-bottom cursor-pointer cb-item-viaje" style="transition:background 0.15s ease;" onmousedown="window.ckSeleccionarViaje(${dataJson})" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#ffffff'">
-                <div class="d-flex align-items-center justify-content-between mb-1">
-                    <span class="fw-bold text-primary" style="font-size:0.88rem;"><i class="bi bi-diagram-3-fill me-1"></i>Viaje: ${v.viaje}</span>
-                    <span class="badge bg-secondary-subtle text-secondary" style="font-size:0.7rem;">${fechaFmt}</span>
-                </div>
-                <div class="d-flex flex-wrap align-items-center gap-1 mb-1" style="font-size:0.75rem;">
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">${v.placa_tracto || 'TRACTO'}</span>
-                    ${carretaTxt}
-                    <span class="text-secondary fw-semibold text-truncate ms-1" style="max-width:200px;"><i class="bi bi-person-fill me-1"></i>${v.conductor || '---'}</span>
-                </div>
-                ${v.ruta ? `<div class="text-truncate mt-1" style="font-size:0.72rem; color:#475569;"><i class="bi bi-signpost-2-fill text-primary me-1"></i><b>Ruta:</b> ${v.ruta}</div>` : ''}
-            </div>
-        `;
-    });
-
-    dd.innerHTML = html;
-    dd.style.display = 'block';
 };
 
 window._cbHideViaje = function() {
@@ -900,22 +983,52 @@ window.calcularEstadoDoc = function(rawDate) {
 window.ckObtenerTelemetryGPS = async function(placa) {
     if (!placa) return { km: 0, horas: 0 };
     const pStr = placa.toString().trim().toUpperCase();
+    const pLimpia = pStr.replace(/[^A-Z0-9]/ig, '');
 
-    // 1. Probar CACHE.wialon local
-    if (typeof buscarWialonPorPlaca === 'function') {
-        const w = buscarWialonPorPlaca(pStr);
-        if (w && (w.km > 0 || w.horas > 0)) {
-            return { km: w.km || 0, horas: w.horas || 0 };
+    // 1. Probar en memoria local / CACHE.wialon o consultar en vivo a /api/script/obtenerDatosWialon
+    let wialonList = (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0)
+        ? CACHE.wialon : (window._wialonDataChecklist || []);
+
+    if (!wialonList.length) {
+        try {
+            const rW = await fetch('/api/script/obtenerDatosWialon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) });
+            if (rW.ok) {
+                const jW = await rW.json();
+                if (jW && Array.isArray(jW.data)) {
+                    wialonList = jW.data;
+                    if (typeof CACHE !== 'undefined') CACHE.wialon = wialonList;
+                    window._wialonDataChecklist = wialonList;
+                }
+            }
+        } catch(eW) {}
+    }
+
+    if (wialonList && wialonList.length > 0) {
+        // Buscar coincidencia por placa limpia o nombre wialon
+        const match = wialonList.find(w => {
+            const wPlaca = (w.placa || '').replace(/[^A-Z0-9]/ig, '').toUpperCase();
+            const wNom = (w.nombre_wialon || '').replace(/[^A-Z0-9]/ig, '').toUpperCase();
+            return (wPlaca && (wPlaca.includes(pLimpia) || pLimpia.includes(wPlaca))) ||
+                   (wNom && (wNom.includes(pLimpia) || pLimpia.includes(wNom)));
+        });
+        if (match) {
+            return {
+                km: parseFloat(match.km || 0),
+                horas: parseFloat(match.horas || 0)
+            };
         }
     }
 
-    // 2. Fetch /api/disponibilidad-flota
+    // 2. Respaldo: /api/disponibilidad-flota
     try {
         const r = await fetch('/api/disponibilidad-flota');
         if (r.ok) {
             const data = await r.json();
             const list = Array.isArray(data) ? data : (data.data || []);
-            const match = list.find(v => (v.placa || '').toString().trim().toUpperCase() === pStr);
+            const match = list.find(v => {
+                const vP = (v.placa || '').toString().replace(/[^A-Z0-9]/ig, '').toUpperCase();
+                return vP === pLimpia || vP.includes(pLimpia) || pLimpia.includes(vP);
+            });
             if (match) {
                 return {
                     km: parseFloat(match.km || match.kilometraje || match.km_wialon || 0),
@@ -925,13 +1038,16 @@ window.ckObtenerTelemetryGPS = async function(placa) {
         }
     } catch(e) {}
 
-    // 3. Fetch /api/vehiculos-flota
+    // 3. Respaldo: /api/vehiculos-flota
     try {
         const r2 = await fetch('/api/vehiculos-flota');
         if (r2.ok) {
             const data2 = await r2.json();
             const list2 = Array.isArray(data2) ? data2 : [];
-            const match2 = list2.find(v => (v.placa || '').toString().trim().toUpperCase() === pStr);
+            const match2 = list2.find(v => {
+                const vP = (v.placa || '').toString().replace(/[^A-Z0-9]/ig, '').toUpperCase();
+                return vP === pLimpia;
+            });
             if (match2) {
                 return {
                     km: parseFloat(match2.km || match2.kilometraje || match2.km_inicial || 0),
@@ -1087,6 +1203,11 @@ window.ckSyncPlacaTracto = async function() {
     if (inputKm && tele && tele.km > 0) {
         inputKm.value = Math.round(tele.km);
     }
+
+    // 3. Consultar Orden de Viaje actual y autocompletar carreta, conductor y ruta
+    if (typeof window.ckConsultarViajeActualPorPlaca === 'function') {
+        window.ckConsultarViajeActualPorPlaca(visibleText);
+    }
 };
 
 window.ckSyncPlacaRemolque = async function() {
@@ -1149,6 +1270,12 @@ window.ckSyncPlacaRemolque = async function() {
     const tele = await window.ckObtenerTelemetryGPS(visibleText);
     if (inputHoras && tele && tele.horas > 0) {
         inputHoras.value = Math.round(tele.horas);
+    }
+
+    // 3. Si no hay tracto aún, consultar orden de viaje por la placa del remolque
+    const tractoVal = (document.getElementById('ck_placa_tracto') || {}).value || '';
+    if (!tractoVal && typeof window.ckConsultarViajeActualPorPlaca === 'function') {
+        window.ckConsultarViajeActualPorPlaca(visibleText);
     }
 };
 
@@ -2274,11 +2401,43 @@ window.abrirModalGenerarOTs = async function(id) {
     const remolqueTxt = document.getElementById('gen_remolque_txt');
     if (remolqueTxt) remolqueTxt.value = r.placa_remolque || '—';
 
+    // Inicializar valores de telemática (con respaldo de reporte y consulta en vivo inmediata)
+    window._genOT_LiveKm = r.km_inicial ? Number(r.km_inicial) : null;
+    window._genOT_LiveHoras = r.horas_motor ? Number(r.horas_motor) : null;
+
     const kmTxt = document.getElementById('gen_km_txt');
-    if (kmTxt) kmTxt.value = r.km_inicial ? Number(r.km_inicial).toLocaleString() + ' KM' : '—';
+    if (kmTxt) kmTxt.value = window._genOT_LiveKm ? Number(window._genOT_LiveKm).toLocaleString() + ' KM' : '—';
 
     const horasTxt = document.getElementById('gen_horas_txt');
-    if (horasTxt) horasTxt.value = r.horas_motor ? r.horas_motor + ' Hrs' : '—';
+    if (horasTxt) horasTxt.value = window._genOT_LiveHoras ? window._genOT_LiveHoras + ' Hrs' : '—';
+
+    // Consultar telemática en vivo (KM actual del Tracto y Horas actuales del Termoking/Remolque)
+    (async () => {
+        let updated = false;
+        if (r.placa_tracto) {
+            try {
+                const teleT = await window.ckObtenerTelemetryGPS(r.placa_tracto);
+                if (teleT && teleT.km > 0) {
+                    window._genOT_LiveKm = Math.round(teleT.km);
+                    if (kmTxt) kmTxt.value = Number(window._genOT_LiveKm).toLocaleString() + ' KM';
+                    updated = true;
+                }
+            } catch(e) {}
+        }
+        if (r.placa_remolque) {
+            try {
+                const teleR = await window.ckObtenerTelemetryGPS(r.placa_remolque);
+                if (teleR && teleR.horas > 0) {
+                    window._genOT_LiveHoras = Math.round(teleR.horas);
+                    if (horasTxt) horasTxt.value = window._genOT_LiveHoras + ' Hrs';
+                    updated = true;
+                }
+            } catch(e) {}
+        }
+        if (updated && typeof window.ckRenderTarjetasOT === 'function') {
+            window.ckRenderTarjetasOT();
+        }
+    })();
 
     const rutaTxt = document.getElementById('gen_ruta_txt');
     if (rutaTxt) rutaTxt.value = r.procedencia || r.ruta || '—';
@@ -2506,10 +2665,12 @@ window.ckRenderTarjetasOT = function() {
         const iconCls = isTracto ? 'bi-truck' : 'bi-truck-flatbed';
         const unidadNombre = isTracto ? 'Tracto' : 'Carreta / Remolque';
         
-        // Medición específica según la placa seleccionada
+        // Medición específica según la placa seleccionada (en vivo o reporte)
+        const liveKmVal = window._genOT_LiveKm || (r.km_inicial ? Number(r.km_inicial) : null);
+        const liveHorasVal = window._genOT_LiveHoras || (r.horas_motor ? Number(r.horas_motor) : null);
         const metricaBadge = isTracto 
-            ? `<span class="badge bg-white text-primary border border-primary-subtle fw-bold shadow-2xs"><i class="bi bi-speedometer2 me-1"></i> ${r.km_inicial ? Number(r.km_inicial).toLocaleString() + ' KM' : 'Sin KM'}</span>`
-            : `<span class="badge bg-white text-warning-emphasis border border-warning-subtle fw-bold shadow-2xs"><i class="bi bi-clock-history me-1"></i> ${r.horas_motor ? r.horas_motor + ' Hrs' : 'Sin Horas'}</span>`;
+            ? `<span class="badge bg-white text-primary border border-primary-subtle fw-bold shadow-2xs"><i class="bi bi-speedometer2 me-1"></i> ${liveKmVal ? Number(liveKmVal).toLocaleString() + ' KM' : 'Sin KM'}</span>`
+            : `<span class="badge bg-white text-warning-emphasis border border-warning-subtle fw-bold shadow-2xs"><i class="bi bi-clock-history me-1"></i> ${liveHorasVal ? Number(liveHorasVal).toLocaleString() + ' Hrs' : 'Sin Horas'}</span>`;
 
         const tipos = ['Correctivo', 'Preventivo', 'Predictivo', 'Proactivo', 'Servicio'];
         const currentTipo = card.tipo_ot || 'Correctivo';
@@ -2897,11 +3058,14 @@ window.enviarGeneracionOTs = function(e) {
         // Lista de técnicos únicos seleccionados para esta OT
         const tecnicosUnicos = Array.from(new Set(motivosArray.map(m => m.tecnico).filter(Boolean)));
 
+        const otKm = c.unidad === 'Tracto' ? (window._genOT_LiveKm !== undefined && window._genOT_LiveKm !== null ? window._genOT_LiveKm : (r.km_inicial || 0)) : 0;
+        const otHoras = (c.unidad === 'Remolque' || c.unidad === 'Carreta') ? (window._genOT_LiveHoras !== undefined && window._genOT_LiveHoras !== null ? window._genOT_LiveHoras : (r.horas_motor || null)) : null;
+
         otsPayload.push({
             unidad: c.unidad,
             placa: c.placa,
-            km: c.unidad === 'Tracto' ? (r.km_inicial || 0) : 0,
-            horas_motor: (c.unidad === 'Remolque' || c.unidad === 'Carreta') ? (r.horas_motor || null) : null,
+            km: otKm,
+            horas_motor: otHoras,
             tipo_ot: c.tipo_ot || 'Correctivo',
             subtipo_ot: c.subtipo_ot || 'Falla',
             supervisor: supVal,
