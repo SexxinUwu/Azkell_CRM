@@ -7,7 +7,7 @@ module.exports = function globalRBAC(req, res, next) {
         '/cambiar-password', '/conductores', '/conductores-lista', '/placas-lista', 
         '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/notificaciones',
         '/script/obtener', '/script/buscar', '/integraciones', '/catalogos_taller',
-        '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read',
+        '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read', '/checklist/presign-read',
         '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos'
     ];
     if (ignoredPaths.some(ip => path === ip || path.startsWith(ip)) || path.endsWith('/presign-read') || path.endsWith('/presigned')) return next();
@@ -59,7 +59,8 @@ module.exports = function globalRBAC(req, res, next) {
         '/seguridad/recursos',
         '/seguridad/template',
         '/seguridad/entrega-vehiculos',
-        '/vehiculos-flota'
+        '/vehiculos-flota',
+        '/tesoreria/motivos-gastos'
     ];
     if (req.method === 'GET' && globalReferenceGets.some(p => path === p || path.startsWith(p))) {
         return next();
@@ -130,7 +131,13 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/taller/trabajos') || path.startsWith('/ot-trabajos')) mod = ['trabajos_ot', 'ot', 'status_rampa'];
     else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/repuestos')) mod = ['ot', 'trabajos_ot', 'status_rampa', 'sal_inv', 'inv'];
     else if (path.startsWith('/taller/historial')) mod = ['ot'];
-    else if (path.startsWith('/checklist')) mod = ['checklist', 'ot', 'insp', 'status_rampa'];
+    else if (path.startsWith('/checklist')) {
+        if (req.user && req.user.rol && req.user.rol.toLowerCase().includes('conductor')) {
+            return next();
+        }
+        mod = ['checklist', 'ot', 'insp', 'status_rampa', 'cond', 'conductores', 'op_conductor', 'conductor_portal'];
+    }
+    else if (path.startsWith('/tesoreria')) mod = ['tesoreria', 'tes_motivos', 'liquidaciones_gastos', 'cond', 'conductores'];
     else if (path.startsWith('/inspecciones') || path.startsWith('/mantenimiento/inspecciones')) mod = ['insp'];
     else if (path.startsWith('/planificacion')) mod = ['plan'];
     else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica')) mod = ['cfg_mant'];
