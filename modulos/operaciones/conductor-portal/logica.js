@@ -449,3 +449,387 @@ window.condGuardarGasto = async function(e) {
 window.condAvisoCombustibleProximamente = function() {
     alert('⛽ Módulo de Vales de Combustible para Conductor:\n\nEsta función estará disponible muy pronto para que registres tus cargas de Diésel y Urea en ruta de manera directa.');
 };
+
+// ═══════════════════════════════════════════════════════════════════
+// 🛠️ SECCIÓN: REPORTE DE FALLAS DESDE EL PORTAL DEL CONDUCTOR
+// ═══════════════════════════════════════════════════════════════════
+
+const COND_SISTEMAS_TRACTO = {
+    'MOTOR': [
+        'Nivel y fugas de aceite de motor', 'Nivel y fugas de refrigerante',
+        'Filtro de aire y admisión', 'Correas y poleas de accesorios',
+        'Sistema de inyección y combustible', 'Ruidos anormales en motor / escape',
+        'Turbocompresor e intercooler'
+    ],
+    'CAJA-CORONAS': [
+        'Nivel y fugas de aceite de caja', 'Acople y pedal de embrague',
+        'Palanca y varillaje de cambios', 'Diferenciales / Coronas y fugas',
+        'Crucetas y cardán de transmisión'
+    ],
+    'REFRIGERACION': [
+        'Mangueras y abrazaderas de agua', 'Termostato y tapa de radiador',
+        'Ventilador y embrague viscoso', 'Limpieza del panal de radiador'
+    ],
+    'DIRECCION': [
+        'Bomba y líquido de dirección', 'Caja de dirección y sector',
+        'Terminales y barras de dirección', 'Alineación y juego del volante'
+    ],
+    'CABINA Y CHASIS': [
+        'Luces delanteras y posteriores', 'Tablero e instrumentos de medición',
+        'Bocina y limpiaparabrisas', 'Cinturones de seguridad y asientos',
+        'Espejos retrovisores y lunas', 'Chasis, pernos y soportes'
+    ]
+};
+
+const COND_SISTEMAS_REMOLQUE = {
+    'FRENOS': [
+        'Tambores, zapatas y pastillas', 'Pulmones de freno y mangueras',
+        'Válvula repartidora / Relay', 'Manómetros y acoples de aire'
+    ],
+    'CARRETA': [
+        'Quinta rueda y perno rey (King Pin)', 'Pines y bocinas de articulación',
+        'Patas de apoyo y manivela', 'Chasis y estructura de carreta'
+    ],
+    'SISTEMA ELECTRICO': [
+        'Luces laterales y de freno', 'Conector 7 vías (espiral)',
+        'Cables y arneses eléctricos', 'Faros piratas y de retroceso'
+    ],
+    'SUSPENSION': [
+        'Bolsas de aire / Pulmones', 'Muelles y paquetes de resortes',
+        'Bujes y templadores de eje', 'Amortiguadores y soportes'
+    ],
+    'FURGON': [
+        'Puertas posteriores y bisagras', 'Cerraduras y barras de seguridad',
+        'Piso y paneles interiores', 'Techo y lonas herméticas'
+    ],
+    'LLANTAS': [
+        'Presión y cocada de neumáticos', 'Tuercas y espárragos de rueda',
+        'Aros y pestañas de fijación', 'Llanta de repuesto y soporte'
+    ],
+    'TERMOKING': [
+        'Nivel de aceite de motor diésel', 'Temperatura y pantalla de control',
+        'Batería y arranque del equipo', 'Correas y evaporador interior'
+    ]
+};
+
+window._condFotosFallaBase64 = [];
+
+// Abrir modal de Reporte de Fallas precargado con el viaje activo
+window.condAbrirModalReporteFallas = function() {
+    var viajeData = window._condViajeActivoData || {};
+    var viaje = viajeData.viaje;
+    var cond = viajeData.conductor || {};
+
+    if (!viaje) {
+        alert('⚠️ No cuentas con una Orden de Viaje activa asignada en este momento.\n\nPuedes contactar al área de Operaciones para asignarte un viaje.');
+        return;
+    }
+
+    var subTxt = document.getElementById('cond-rf-subtitulo');
+    if (subTxt) subTxt.textContent = `Viaje Activo: ${viaje.codigo || '—'}`;
+
+    var pTracto = document.getElementById('cond-rf-placa-tracto');
+    if (pTracto) pTracto.textContent = viaje.placa_tracto || viaje.placa || '---';
+
+    var pRemolque = document.getElementById('cond-rf-placa-remolque');
+    if (pRemolque) pRemolque.textContent = viaje.placa_remolque || viaje.remolque || '---';
+
+    var rRuta = document.getElementById('cond-rf-ruta-txt');
+    if (rRuta) rRuta.textContent = viaje.ruta || viaje.origen || viaje.procedencia || 'Ruta no especificada';
+
+    var rKm = document.getElementById('cond-rf-km-txt');
+    if (rKm) rKm.textContent = viaje.kilometraje ? `${viaje.kilometraje} km` : 'Km en ruta';
+
+    // Renderizar acordeones
+    condRenderAcordeonSistemas('condAccTracto', COND_SISTEMAS_TRACTO, 'Tracto');
+    condRenderAcordeonSistemas('condAccRemolque', COND_SISTEMAS_REMOLQUE, 'Remolque');
+
+    // Limpiar contenedor de manuales y fotos
+    var contManuales = document.getElementById('cond-contenedor-fallas-manuales');
+    if (contManuales) contManuales.innerHTML = '';
+    window._condFotosFallaBase64 = [];
+    condRenderPreviewFotosFalla();
+
+    // Resetear botón
+    var btn = document.getElementById('cond-btn-enviar-falla');
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send-fill me-1"></i> <span id="cond-btn-enviar-falla-txt">Enviar Reporte de Fallas</span>';
+    }
+
+    var modalEl = document.getElementById('condModalReporteFallas');
+    if (modalEl) {
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+};
+
+// Renderizar acordeón dinámico con checkboxes táctiles para el móvil
+function condRenderAcordeonSistemas(contenedorId, sistemasDict, prefijo) {
+    var cont = document.getElementById(contenedorId);
+    if (!cont) return;
+
+    var html = '';
+    var keys = Object.keys(sistemasDict);
+
+    keys.forEach((sysKey, idx) => {
+        var accId = `cond_acc_${prefijo}_${idx}`;
+        var items = sistemasDict[sysKey];
+
+        html += `
+            <div class="accordion-item border rounded-3 mb-2 overflow-hidden shadow-2xs">
+                <h2 class="accordion-header" id="heading_${accId}">
+                    <button class="accordion-button collapsed py-2.5 px-3 bg-light text-dark fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_${accId}" style="font-size:0.86rem;">
+                        <span class="d-flex align-items-center gap-2">
+                            <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-0.5" style="font-size:0.65rem;">${items.length}</span>
+                            <span>${sysKey}</span>
+                        </span>
+                    </button>
+                </h2>
+                <div id="collapse_${accId}" class="accordion-collapse collapse" data-bs-parent="#${contenedorId}">
+                    <div class="accordion-body p-2 bg-white">
+                        <div class="d-flex flex-column gap-1.5">
+        `;
+
+        items.forEach((it, itIdx) => {
+            var chkId = `cond_chk_${prefijo}_${idx}_${itIdx}`;
+            var txtId = `cond_txt_${prefijo}_${idx}_${itIdx}`;
+            var safeName = it.replace(/"/g, '&quot;');
+
+            html += `
+                <div class="p-2 rounded-2 border bg-light bg-opacity-50">
+                    <div class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                        <input class="form-check-input cond-chk-item flex-shrink-0" type="checkbox" id="${chkId}" data-prefijo="${prefijo}" data-sistema="${sysKey}" data-item="${safeName}" onchange="window.condToggleFallaItem('${chkId}', '${txtId}')" style="width: 1.25rem; height: 1.25rem; cursor: pointer;">
+                        <label class="form-check-label text-dark fw-semibold small flex-grow-1 cursor-pointer" for="${chkId}">
+                            ${it}
+                        </label>
+                    </div>
+                    <div id="box_${txtId}" class="mt-2 d-none">
+                        <input type="text" id="${txtId}" class="form-control form-control-sm border-secondary-subtle" placeholder="Detalle adicional opcional de la falla...">
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    cont.innerHTML = html;
+}
+
+window.condToggleFallaItem = function(chkId, txtId) {
+    var chk = document.getElementById(chkId);
+    var box = document.getElementById(`box_${txtId}`);
+    if (!chk || !box) return;
+
+    if (chk.checked) {
+        box.classList.remove('d-none');
+        var input = document.getElementById(txtId);
+        if (input) input.focus();
+    } else {
+        box.classList.add('d-none');
+        var input2 = document.getElementById(txtId);
+        if (input2) input2.value = '';
+    }
+};
+
+// Agregar fila manual de falla no listada
+window.condAgregarFallaManual = function() {
+    var cont = document.getElementById('cond-contenedor-fallas-manuales');
+    if (!cont) return;
+
+    var viajeData = window._condViajeActivoData || {};
+    var viaje = viajeData.viaje || {};
+    var pTracto = viaje.placa_tracto || viaje.placa || 'TRACTO';
+    var pRemolque = viaje.placa_remolque || viaje.remolque || 'CARRETA';
+
+    var rowId = 'cond_man_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+    var div = document.createElement('div');
+    div.id = rowId;
+    div.className = 'p-2 rounded-3 border bg-white shadow-2xs d-flex flex-column gap-2 cond-manual-falla-row';
+    div.innerHTML = `
+        <div class="d-flex align-items-center justify-content-between gap-2">
+            <select class="form-select form-select-sm fw-bold cond-man-unidad" style="max-width: 170px;">
+                <option value="TRACTO">Tracto (${pTracto})</option>
+                <option value="REMOLQUE">Carreta (${pRemolque})</option>
+            </select>
+            <button type="button" class="btn btn-outline-danger btn-sm p-1 px-2 rounded-pill" onclick="document.getElementById('${rowId}').remove()" title="Eliminar fila">
+                <i class="bi bi-trash3-fill"></i>
+            </button>
+        </div>
+        <input type="text" class="form-control form-control-sm cond-man-desc fw-semibold border-secondary-subtle" placeholder="Escribe aquí la falla observada (Ej: Fuga de aire en manguera 2)..." required>
+    `;
+    cont.appendChild(div);
+    var inp = div.querySelector('.cond-man-desc');
+    if (inp) inp.focus();
+};
+
+// Procesamiento de fotos de evidencia
+window.condProcesarFotosFalla = function(input) {
+    if (!input || !input.files || input.files.length === 0) return;
+
+    Array.from(input.files).forEach(file => {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var img = new Image();
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                var maxDim = 1200;
+                var w = img.width;
+                var h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                    else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                }
+                canvas.width = w;
+                canvas.height = h;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                var base64 = canvas.toDataURL('image/jpeg', 0.82);
+                window._condFotosFallaBase64.push(base64);
+                condRenderPreviewFotosFalla();
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+    input.value = '';
+};
+
+function condRenderPreviewFotosFalla() {
+    var prev = document.getElementById('cond_rf_preview_fotos');
+    if (!prev) return;
+
+    if (!window._condFotosFallaBase64 || window._condFotosFallaBase64.length === 0) {
+        prev.innerHTML = '';
+        return;
+    }
+
+    prev.innerHTML = window._condFotosFallaBase64.map((b64, idx) => `
+        <div class="position-relative border rounded overflow-hidden shadow-2xs" style="width: 76px; height: 76px;">
+            <img src="${b64}" style="width: 100%; height: 100%; object-fit: cover;">
+            <button type="button" class="btn btn-danger position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center" onclick="window.condEliminarFotoFalla(${idx})" style="width: 20px; height: 20px; font-size: 0.7rem; border-radius: 0 0 0 6px;">✕</button>
+        </div>
+    `).join('');
+}
+
+window.condEliminarFotoFalla = function(idx) {
+    if (window._condFotosFallaBase64) {
+        window._condFotosFallaBase64.splice(idx, 1);
+        condRenderPreviewFotosFalla();
+    }
+};
+
+// Guardar/Enviar el Reporte de Fallas desde el Conductor
+window.condGuardarReporteFallas = async function(e) {
+    if (e) e.preventDefault();
+
+    var viajeData = window._condViajeActivoData || {};
+    var viaje = viajeData.viaje;
+    var cond = viajeData.conductor || {};
+
+    if (!viaje) {
+        alert('No tienes un viaje activo asignado.');
+        return;
+    }
+
+    var btn = document.getElementById('cond-btn-enviar-falla');
+    var btnTxt = document.getElementById('cond-btn-enviar-falla-txt');
+    var origTxt = btnTxt ? btnTxt.textContent : 'Enviar Reporte de Fallas';
+
+    // Timestamp actual para las fallas reportadas en este momento
+    var nowFmt = new Date().toLocaleString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+    var fallasTracto = [];
+    var fallasRemolque = [];
+
+    // 1. Recolectar checkboxes marcados
+    document.querySelectorAll('.cond-chk-item:checked').forEach(chk => {
+        var prefijo = chk.dataset.prefijo || 'Tracto';
+        var sistema = chk.dataset.sistema || 'GENERAL';
+        var itemNom = chk.dataset.item || 'Falla Observada';
+        var txtEl = document.getElementById(chk.id.replace('cond_chk_', 'cond_txt_'));
+        var obsTxt = txtEl && txtEl.value.trim() ? txtEl.value.trim() : itemNom;
+
+        var obj = { sistema: sistema.toUpperCase(), item: itemNom, obs: obsTxt, fecha: nowFmt };
+        if (prefijo.toLowerCase().includes('remolque')) {
+            fallasRemolque.push(obj);
+        } else {
+            fallasTracto.push(obj);
+        }
+    });
+
+    // 2. Recolectar fallas manuales
+    document.querySelectorAll('.cond-manual-falla-row').forEach(row => {
+        var selUnidad = row.querySelector('.cond-man-unidad')?.value || 'TRACTO';
+        var desc = row.querySelector('.cond-man-desc')?.value.trim() || '';
+
+        if (desc) {
+            var obj = { sistema: 'MANUAL', item: 'Falla Manual', obs: desc, fecha: nowFmt };
+            if (selUnidad === 'REMOLQUE') {
+                fallasRemolque.push(obj);
+            } else {
+                fallasTracto.push(obj);
+            }
+        }
+    });
+
+    if (fallasTracto.length === 0 && fallasRemolque.length === 0) {
+        alert('⚠️ Por favor marca al menos una falla en los acordeones o agrega una falla manual para poder enviar el reporte.');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Enviando reporte...`;
+    }
+
+    try {
+        var payload = {
+            orden_viaje: (viaje.codigo || viaje.id || '').trim(),
+            placa_tracto: (viaje.placa_tracto || viaje.placa || '').trim().toUpperCase(),
+            placa_remolque: (viaje.placa_remolque || viaje.remolque || '').trim().toUpperCase(),
+            km_inicial: viaje.kilometraje || 0,
+            km_final: viaje.kilometraje || 0,
+            conductor: cond.nombre || viaje.conductor || window.usuarioLogueado || 'Conductor',
+            procedencia: viaje.ruta || viaje.origen || viaje.procedencia || '',
+            fallas_tracto: fallasTracto,
+            fallas_remolque: fallasRemolque,
+            fallas_libres_text: '',
+            fotos_base64: window._condFotosFallaBase64 || [],
+            creado_por: cond.nombre ? `${cond.nombre} (Conductor)` : (window.usuarioLogueado || 'Conductor'),
+            anexar_si_existe: true
+        };
+
+        var res = await fetch('/api/checklist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        var json = await res.json();
+
+        if (json && json.ok) {
+            var msg = json.anexado 
+                ? `✅ ¡Fallas anexadas exitosamente al reporte de tu viaje activo!\n\nFolio: ${json.folio || 'Registrado'}` 
+                : `✅ ¡Reporte de fallas generado y enviado exitosamente!\n\nFolio: ${json.folio || 'Registrado'}`;
+            alert(msg);
+
+            var modal = bootstrap.Modal.getInstance(document.getElementById('condModalReporteFallas'));
+            if (modal) modal.hide();
+        } else {
+            alert(json.error || 'No se pudo guardar el reporte de fallas.');
+        }
+    } catch(err) {
+        alert('Error al enviar el reporte de fallas: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="bi bi-send-fill me-1"></i> <span id="cond-btn-enviar-falla-txt">${origTxt}</span>`;
+        }
+    }
+};

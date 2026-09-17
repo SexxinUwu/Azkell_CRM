@@ -158,6 +158,13 @@
     border-color: #a7f3d0;
     background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
 }
+.cond-action-btn.btn-active-danger {
+    border-color: #fecdd3;
+    background: linear-gradient(180deg, #ffffff 0%, #fff1f2 100%);
+}
+.cond-action-btn.btn-active-danger:hover {
+    border-color: #f43f5e;
+}
 .cond-action-btn.btn-disabled {
     background: #f8fafc;
     border-color: #e2e8f0;
@@ -418,7 +425,19 @@
             <i class="bi bi-chevron-right text-success ms-auto fs-5"></i>
         </button>
 
-        <!-- Botón 2: Vales de Combustible (Próximamente) -->
+        <!-- Botón 2: Reporte de Fallas de la Unidad -->
+        <button type="button" class="cond-action-btn btn-active-danger" onclick="window.condAbrirModalReporteFallas()">
+            <div class="cond-btn-icon bg-danger bg-opacity-10 text-danger">
+                <i class="bi bi-tools"></i>
+            </div>
+            <div>
+                <strong class="d-block text-dark fs-6 mb-0.5">Reporte de Fallas</strong>
+                <small class="text-muted d-block" style="font-size:0.78rem;">Reporta averías de tu tracto y carreta en ruta.</small>
+            </div>
+            <i class="bi bi-chevron-right text-danger ms-auto fs-5"></i>
+        </button>
+
+        <!-- Botón 3: Vales de Combustible (Próximamente) -->
         <button type="button" class="cond-action-btn btn-disabled" onclick="window.condAvisoCombustibleProximamente()">
             <div class="cond-btn-icon bg-warning bg-opacity-10 text-warning">
                 <i class="bi bi-fuel-pump-fill"></i>
@@ -539,3 +558,124 @@
         </div>
     </div>
 </div>
+
+<!-- ================================================================= -->
+<!-- 🛠️ MODAL REPORTE DE FALLAS PARA CONDUCTOR (FLOTANTE DESDE ABAJO)   -->
+<!-- ================================================================= -->
+<div class="modal fade" id="condModalReporteFallas" tabindex="-1" data-bs-backdrop="static" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-scrollable cond-floating-drawer-dialog">
+        <div class="modal-content border-0 cond-floating-drawer-content">
+            
+            <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="modal-title fw-bolder text-danger d-flex align-items-center gap-2 m-0" style="font-size: 1.15rem;">
+                        <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+                        <span>Reportar Falla en Ruta</span>
+                    </h5>
+                    <small class="text-muted fw-normal" id="cond-rf-subtitulo">Viaje: 2026-00000001</small>
+                </div>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <form id="condFormReporteFalla" onsubmit="window.condGuardarReporteFallas(event)" class="d-flex flex-column flex-grow-1 overflow-hidden m-0">
+                <div class="modal-body p-3 p-md-4 custom-scrollbar overflow-y-auto" style="background:#f8fafc;">
+                    
+                    <!-- ── Resumen de Unidades Asignadas ── -->
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="p-2 rounded-3 bg-light border">
+                                    <small class="text-muted d-block text-uppercase fw-bold" style="font-size:0.65rem;">TRACTO</small>
+                                    <span class="fw-bold text-primary font-monospace" id="cond-rf-placa-tracto" style="font-size:0.9rem;">---</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 rounded-3 bg-light border">
+                                    <small class="text-muted d-block text-uppercase fw-bold" style="font-size:0.65rem;">CARRETA / REMOLQUE</small>
+                                    <span class="fw-bold text-warning font-monospace" id="cond-rf-placa-remolque" style="font-size:0.9rem;">---</span>
+                                </div>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <div class="d-flex align-items-center justify-content-between text-muted small px-1">
+                                    <span><i class="bi bi-geo-alt-fill text-danger me-1"></i><span id="cond-rf-ruta-txt">Ruta Asignada</span></span>
+                                    <span><i class="bi bi-speedometer2 text-primary me-1"></i><span id="cond-rf-km-txt">Km actual</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── 1. TRACTO (Placa Principal) ── -->
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="p-2.5 mb-2 rounded-3 bg-primary bg-opacity-10 border border-primary-subtle d-flex align-items-center justify-content-between">
+                            <div class="fw-bold text-primary small d-flex align-items-center gap-2">
+                                <i class="bi bi-truck fs-5"></i> <span>TRACTO (Placa Principal)</span>
+                            </div>
+                            <span class="badge bg-primary text-uppercase px-2 py-1" style="font-size:0.65rem;">Unidad Principal</span>
+                        </div>
+                        <p class="text-muted small mb-2" style="font-size:0.75rem;">
+                            Marca solo lo que esté fallando en el tracto. Al tocar se abre el campo para notas.
+                        </p>
+                        <div class="accordion" id="condAccTracto">
+                            <!-- Renderizado dinámico desde JS -->
+                        </div>
+                    </div>
+
+                    <!-- ── 2. SEMIRREMOLQUE / CARRETA (Placa Secundaria) ── -->
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="p-2.5 mb-2 rounded-3 bg-warning bg-opacity-10 border border-warning-subtle d-flex align-items-center justify-content-between">
+                            <div class="fw-bold text-warning-emphasis small d-flex align-items-center gap-2">
+                                <i class="bi bi-truck-flatbed fs-5"></i> <span>SEMIRREMOLQUE / CARRETA</span>
+                            </div>
+                            <span class="badge bg-warning text-dark text-uppercase px-2 py-1" style="font-size:0.65rem;">Carreta / Semirremolque</span>
+                        </div>
+                        <p class="text-muted small mb-2" style="font-size:0.75rem;">
+                            Marca solo lo que esté fallando en la carreta / semirremolque.
+                        </p>
+                        <div class="accordion" id="condAccRemolque">
+                            <!-- Renderizado dinámico desde JS -->
+                        </div>
+                    </div>
+
+                    <!-- ── 3. FALLA MANUAL / ÍTEM PERSONALIZADO ── -->
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                        <h6 class="fw-bold text-dark mb-2" style="font-size:0.88rem;">
+                            ¿No encuentras el ítem? agrégalo aquí manualmente:
+                        </h6>
+                        <div id="cond-contenedor-fallas-manuales" class="d-flex flex-column gap-2 mb-2"></div>
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill fw-bold" onclick="window.condAgregarFallaManual()">
+                            <i class="bi bi-plus-circle-fill me-1"></i> Agregar otra falla manual
+                        </button>
+                    </div>
+
+                    <!-- ── 4. EVIDENCIA FOTOGRÁFICA (FOTOS) ── -->
+                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-2 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-2" style="font-size:0.95rem;">
+                            <i class="bi bi-camera-fill text-primary"></i> Evidencia Fotográfica (Opcional)
+                        </h6>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <input type="file" id="cond_rf_camara" class="d-none" accept="image/*" capture="environment" onchange="window.condProcesarFotosFalla(this)">
+                            <input type="file" id="cond_rf_galeria" class="d-none" accept="image/*" multiple onchange="window.condProcesarFotosFalla(this)">
+                            
+                            <button type="button" class="btn btn-primary btn-sm fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2 shadow-sm" onclick="document.getElementById('cond_rf_camara').click()" style="background:#0284c7; border-color:#0284c7;">
+                                <i class="bi bi-camera-fill"></i> <span>Tomar Foto</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" onclick="document.getElementById('cond_rf_galeria').click()">
+                                <i class="bi bi-images"></i> <span>Galería</span>
+                            </button>
+                        </div>
+                        <div id="cond_rf_preview_fotos" class="d-flex flex-wrap gap-2 mt-2"></div>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer border-top bg-white px-4 py-3 d-flex justify-content-between align-items-center flex-shrink-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 py-2.5 fw-bold shadow-sm flex-grow-1 ms-2" id="cond-btn-enviar-falla">
+                        <i class="bi bi-send-fill me-1"></i> <span id="cond-btn-enviar-falla-txt">Enviar Reporte de Fallas</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

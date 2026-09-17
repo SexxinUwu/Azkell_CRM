@@ -230,31 +230,135 @@ module.exports = function (db, broadcast, logAudit) {
         });
     });
 
-    // ── POST /api/checklist — Crear nuevo reporte de fallas ────────────
+    // ── POST /api/checklist — Crear o Anexar reporte de fallas ────────────
     router.post('/', async (req, res) => {
         const tdb = getDb(req);
         const {
             orden_viaje, placa_tracto, placa_remolque, km_inicial, km_final,
             conductor, procedencia, ubicacion_gps,
             fallas_tracto, fallas_remolque, fallas_libres_text,
-            fotos_base64, firma_conductor, creado_por
+            fotos_base64, firma_conductor, creado_por,
+            anexar_si_existe
         } = req.body;
 
-        // Generar folio correlativo (F-YYYY-0001)
-        const anio = new Date().getFullYear();
-        const prefix = `F-${anio}-`;
+        const ordenViajeClean = (orden_viaje || '').trim();
 
-        tdb.query(
-            `SELECT folio FROM reportes_fallas WHERE folio LIKE ? ORDER BY id DESC LIMIT 1`,
-            [`${prefix}%`],
-            async (errFolio, rowsFolio) => {
-                let seq = 1;
-                if (!errFolio && rowsFolio.length) {
-                    const lastId = rowsFolio[0].folio;
-                    const lastSeq = parseInt(lastId.split('-').pop(), 10);
-                    if (!isNaN(lastSeq)) seq = lastSeq + 1;
+        // Si se solicita anexar por viaje existente y hay orden de viaje:
+        if (anexar_si_existe && ordenViajeClean) {
+            tdb.query(
+                `SELECT * FROM reportes_fallas WHERE orden_viaje = ? AND estado != 'Finalizado' ORDER BY id DESC LIMIT 1`,
+                [ordenViajeClean],
+                async (errFind, rowsFind) => {
+                    if (!errFind && rowsFind && rowsFind.length > 0) {
+                        const repExistente = rowsFind[0];
+                        const folio = repExistente.folio;
+
+                        // Combinar fallas de tracto
+                        let exFallasT = [];
+                        try {
+                            if (repExistente.fallas_tracto_json) {
+                                exFallasT = typeof repExistente.fallas_tracto_json === 'string' ? JSON.parse(repExistente.fallas_tracto_json) : repExistente.fallas_tracto_json;
+                            }
+                        } catch(e) {}
+                        if (!Array.isArray(exFallasT)) exFallasT = [];
+                        const nuevasFallasT = Array.isArray(fallas_tracto) ? fallas_tracto : [];
+                        const mergedFallasT = [...exFallasT, ...nuevasFallasT];
+
+                        // Combinar fallas de remolque
+                        let exFallasR = [];
+                        try {
+                            if (repExistente.fallas_remolque_json) {
+                                exFallasR = typeof repExistente.fallas_remolque_json === 'string' ? JSON.parse(repExistente.fallas_remolque_json) : repExistente.fallas_remolque_json;
+                            }
+                        } catch(e) {}
+                        if (!Array.isArray(exFallasR)) exFallasR = [];
+                        const nuevasFallasR = Array.isArray(fallas_remolque) ? fallas_remolque : [];
+                        const mergedFallasR = [...exFallasR, ...nuevasFallasR];
+
+                        // Combinar fotos
+                        let fotosUrls = [];
+                        try {
+                            if (repExistente.fotos_json) {
+                                const parsed = JSON.parse(repExistente.fotos_json);
+                                if (Array.isArray(parsed)) fotosUrls = parsed;
+                            }
+                        } catch(e) {}
+
+                        if (Array.isArray(fotos_base64) && fotos_base64.length > 0) {
+                            for (let i = 0; i < fotos_base64.length; i++) {
+                                const item = fotos_base64[i];
+                                if (typeof item === 'string' && item.startsWith('data:image')) {
+                                    try {
+                                        const matches = item.match(/^data:(image\/\w+);base64,(.+)$/);
+                                        if (matches) {
+                                            const buffer = Buffer.from(matches[2], 'base64');
+                                            const ext = matches[1].split('/')[1] || 'jpg';
+                                            const key = `checklist/${folio}_foto_${Date.now()}_${i}.${ext}`;
+                                            const s3Url = await uploadToS3(buffer, key, matches[1]);
+                                            fotosUrls.push(s3Url);
+                                        }
+                                    } catch (eS3) {
+                                        console.error('⚠️ Error subiendo foto S3 al anexar:', eS3.message);
+                                    }
+                                } else if (typeof item === 'string' && item.startsWith('http') && !fotosUrls.includes(item)) {
+                                    fotosUrls.push(item);
+                                }
+                            }
+                        }
+
+                        const updateSql = `
+                            UPDATE reportes_fallas SET
+                                fallas_tracto_json = ?,
+                                fallas_remolque_json = ?,
+                                fotos_json = ?,
+                                km_final = GREATEST(COALESCE(km_final, 0), ?),
+                                firma_conductor = COALESCE(?, firma_conductor)
+                            WHERE id = ?
+                        `;
+
+                        tdb.query(
+                            updateSql,
+                            [
+                                JSON.stringify(mergedFallasT),
+                                JSON.stringify(mergedFallasR),
+                                JSON.stringify(fotosUrls),
+                                parseInt(km_inicial || km_final, 10) || 0,
+                                firma_conductor || null,
+                                repExistente.id
+                            ],
+                            (errUpd) => {
+                                if (errUpd) return res.status(500).json({ error: errUpd.message });
+                                if (typeof broadcast === 'function') broadcast('checklist', 'actualizar');
+                                return res.json({ ok: true, id: repExistente.id, folio, anexado: true, fotos: fotosUrls });
+                            }
+                        );
+                        return;
+                    }
+                    // Si no existe reporte previo, proceder a crearlo abajo
+                    procederCrearNuevoReporte();
                 }
-                const folio = `${prefix}${String(seq).padStart(4, '0')}`;
+            );
+            return;
+        }
+
+        procederCrearNuevoReporte();
+
+        function procederCrearNuevoReporte() {
+            // Generar folio correlativo (F-YYYY-0001)
+            const anio = new Date().getFullYear();
+            const prefix = `F-${anio}-`;
+
+            tdb.query(
+                `SELECT folio FROM reportes_fallas WHERE folio LIKE ? ORDER BY id DESC LIMIT 1`,
+                [`${prefix}%`],
+                async (errFolio, rowsFolio) => {
+                    let seq = 1;
+                    if (!errFolio && rowsFolio.length) {
+                        const lastId = rowsFolio[0].folio;
+                        const lastSeq = parseInt(lastId.split('-').pop(), 10);
+                        if (!isNaN(lastSeq)) seq = lastSeq + 1;
+                    }
+                    const folio = `${prefix}${String(seq).padStart(4, '0')}`;
 
                 // Subir fotos a S3 si vienen en base64
                 let fotosUrls = [];
@@ -316,7 +420,8 @@ module.exports = function (db, broadcast, logAudit) {
                 });
             }
         );
-    });
+    }
+});
 
     // ── POST /api/checklist/:id/generar-ots — Generar OTs e integrar con Status Rampa ──
     const handleGenerarOTs = (req, res) => {

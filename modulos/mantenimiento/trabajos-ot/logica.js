@@ -652,64 +652,93 @@ document.removeEventListener('click', window._totMsOutsideClick);
 document.addEventListener('click', window._totMsOutsideClick);
 
 
+// ── Formato de Fecha/Hora para Excel ──────────────────────────────
+function totFmtDateTimeExcel(v) {
+    if (!v) return '';
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return String(v);
+    var yyyy = d.getFullYear();
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    var hh = String(d.getHours()).padStart(2, '0');
+    var min = String(d.getMinutes()).padStart(2, '0');
+    var ss = String(d.getSeconds()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd + ' ' + hh + ':' + min + ':' + ss;
+}
+
 // ── Exportar a Excel ──────────────────────────────────────────────
 window.totExportar = function() {
     var datos = window.totDatosFil.length > 0 ? window.totDatosFil : window.totData;
-    if (datos.length === 0) {
+    if (!datos || datos.length === 0) {
         if (typeof window.mostrarAlerta === 'function') {
             window.mostrarAlerta('No hay datos para exportar', 'warning');
         }
         return;
     }
 
-    if (typeof window.descargarExcelDinamico === 'function') {
-        var tmpId = 'tot-export-tmp';
-        var existing = document.getElementById(tmpId);
-        if (existing) existing.remove();
+    var headers = ['ID Trabajo', 'N° OT', 'Placa', 'Kilometraje', 'Trabajador(es)', 'Descripción', 'F/H Inicio', 'F/H Fin', 'Horas', 'Costo', 'Estado'];
+    var rows = [headers];
 
-        var tbl = document.createElement('table');
-        tbl.id = tmpId;
-        tbl.style.display = 'none';
-        var thead = '<thead><tr><th>ID Trabajo</th><th>N° OT</th><th>Placa</th><th>Kilometraje</th><th>Trabajador(es)</th><th>Descripción</th><th>F/H Inicio</th><th>F/H Fin</th><th>Costo</th><th>Estado</th></tr></thead>';
-        var tbody = '<tbody>' + datos.map(function(t) {
-            var det = totParseDetalles(t);
-            return '<tr>'
-                + '<td>' + (t.ticket_visita || '') + '</td>'
-                + '<td>' + (t.id_ot || '') + '</td>'
-                + '<td>' + (t.placa || '') + '</td>'
-                + '<td>' + totFmtKm(t) + '</td>'
-                + '<td>' + (det.personal || t.tecnico || '') + '</td>'
-                + '<td>' + (t.trabajo_realizado || '') + '</td>'
-                + '<td>' + totFmtDateTime(t.fecha_trabajo) + '</td>'
-                + '<td>' + totFmtDateTime(t.fecha_salida) + '</td>'
-                + '<td>' + totFmtMoney(det.costo) + '</td>'
-                + '<td>' + (t.estado || '') + '</td>'
-                + '</tr>';
-        }).join('') + '</tbody>';
-        tbl.innerHTML = thead + tbody;
-        document.body.appendChild(tbl);
-        window.descargarExcelDinamico(tmpId, 'Trabajos_OT');
-        setTimeout(function() { var el = document.getElementById(tmpId); if (el) el.remove(); }, 1000);
+    datos.forEach(function(t) {
+        var det = totParseDetalles(t);
+        var placaVal = t.placa || (det && det.placa) || '';
+        var otVal = t.ot_id || t.id_ot || t.ticket_visita || '';
+        
+        // Calcular horas numéricas puras
+        var hrsNum = 0;
+        if (t.fecha_trabajo && t.fecha_salida) {
+            var tIni = new Date(t.fecha_trabajo).getTime();
+            var tFin = new Date(t.fecha_salida).getTime();
+            if (!isNaN(tIni) && !isNaN(tFin) && tFin > tIni) {
+                hrsNum = parseFloat(((tFin - tIni) / 3600000).toFixed(2));
+            }
+        } else if (t.total_horas || (det && det.horas)) {
+            hrsNum = parseFloat(parseFloat(t.total_horas || det.horas || 0).toFixed(2)) || 0;
+        }
+
+        var costoNum = parseFloat(det.costo || 0) || 0;
+        var kmNum = parseInt(t.kilometraje || (det && det.kilometraje), 10) || 0;
+
+        rows.push([
+            totGetId(t) || t.ticket_visita || '',
+            otVal,
+            placaVal,
+            kmNum > 0 ? kmNum : (totFmtKm(t) || ''),
+            det.personal || t.tecnico || '',
+            t.trabajo_realizado || '',
+            totFmtDateTimeExcel(t.fecha_trabajo),
+            totFmtDateTimeExcel(t.fecha_salida),
+            hrsNum,
+            costoNum,
+            t.estado || ''
+        ]);
+    });
+
+    if (typeof XLSX !== 'undefined') {
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [
+            { wch: 14 }, // ID Trabajo
+            { wch: 16 }, // N° OT
+            { wch: 12 }, // Placa
+            { wch: 14 }, // Kilometraje
+            { wch: 30 }, // Trabajador(es)
+            { wch: 38 }, // Descripción
+            { wch: 20 }, // F/H Inicio
+            { wch: 20 }, // F/H Fin
+            { wch: 10 }, // Horas
+            { wch: 12 }, // Costo
+            { wch: 14 }  // Estado
+        ];
+        XLSX.utils.book_append_sheet(wb, ws, 'Trabajos_OT');
+        XLSX.writeFile(wb, 'Trabajos_OT.xlsx');
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('Archivo Excel exportado exitosamente', 'success');
+        }
         return;
     }
 
     // Fallback CSV
-    var rows = [['ID Trabajo','N° OT','Placa','Kilometraje','Trabajador(es)','Descripción','F/H Inicio','F/H Fin','Costo','Estado']];
-    datos.forEach(function(t) {
-        var det = totParseDetalles(t);
-        rows.push([
-            t.ticket_visita || '',
-            t.id_ot || '',
-            t.placa || '',
-            totFmtKm(t),
-            det.personal || t.tecnico || '',
-            t.trabajo_realizado || '',
-            totFmtDateTime(t.fecha_trabajo),
-            totFmtDateTime(t.fecha_salida),
-            totFmtMoney(det.costo),
-            t.estado || ''
-        ]);
-    });
     var csv = rows.map(function(r) { return r.map(function(c){ return '"' + String(c).replace(/"/g,'""') + '"'; }).join(','); }).join('\n');
     var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     var url = URL.createObjectURL(blob);
