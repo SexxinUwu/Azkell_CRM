@@ -1060,155 +1060,608 @@ window._invEliminarMasivo = function() {
 };
 function _invEsc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-// ── Modal Detalle (Vista Rápida) ──────────────────────────────────
+// ── Helper para determinar formato de código de barras ───────────
+function _invObtenerFormatoCodigoBarra(cod) {
+    if (!cod) return 'CODE128';
+    var clean = String(cod).trim();
+    if (/^\d{12,13}$/.test(clean)) {
+        return 'EAN13';
+    }
+    return 'CODE128';
+}
+
+function _invRenderJsBarcode(svgElementId, rawCode, options) {
+    if (typeof JsBarcode === 'undefined') {
+        console.warn('JsBarcode no está disponible');
+        return;
+    }
+    var code = String(rawCode || '').trim();
+    if (!code) code = '000000';
+    var format = _invObtenerFormatoCodigoBarra(code);
+    
+    // Si es EAN-13 pero no tiene 13 dígitos exactos, rellenar o pasar a CODE128
+    if (format === 'EAN13' && code.length === 12) {
+        // JsBarcode calcula el checksum si tiene 12
+    } else if (format === 'EAN13' && code.length !== 13 && code.length !== 12) {
+        format = 'CODE128';
+    }
+
+    try {
+        var el = typeof svgElementId === 'string' ? document.getElementById(svgElementId) : svgElementId;
+        if (!el) return;
+        JsBarcode(el, code, Object.assign({
+            format: format,
+            width: 1.8,
+            height: 52,
+            displayValue: true,
+            fontSize: 13,
+            fontOptions: 'bold',
+            font: 'monospace',
+            textMargin: 3,
+            margin: 8,
+            background: 'transparent',
+            lineColor: '#0f172a'
+        }, options || {}));
+    } catch (e) {
+        // Fallback a CODE128 si el formato específico falla
+        try {
+            var elFallback = typeof svgElementId === 'string' ? document.getElementById(svgElementId) : svgElementId;
+            if (elFallback) {
+                JsBarcode(elFallback, code, Object.assign({
+                    format: 'CODE128',
+                    width: 1.8,
+                    height: 52,
+                    displayValue: true,
+                    fontSize: 13,
+                    fontOptions: 'bold',
+                    font: 'monospace',
+                    margin: 8,
+                    background: 'transparent',
+                    lineColor: '#0f172a'
+                }, options || {}));
+            }
+        } catch (err) {
+            console.error('Error renderizando código de barras:', err);
+        }
+    }
+}
+
+// ── Modal Detalle (Centrado tipo Reporte de Fallas) ─────────────────
+window._invItemDetalleActual = null;
+
 window.abrirDetalleInv = function(id) {
     var item = (window._invData || []).find(function(d) { return d.id === id; });
     if (!item) return;
-    var drawer = document.getElementById('inv-det-drawer');
-    var bd     = document.getElementById('inv-det-backdrop');
-    if (!drawer) return;
+    window._invItemDetalleActual = item;
+
+    var modalEl = document.getElementById('modalDetalleInventario');
+    if (!modalEl) return;
 
     var isService = item.tipo === 'Servicio' || (item.id || '').toUpperCase().startsWith('SERV');
 
-    // Header
-    var elCod  = document.getElementById('inv-det-codigo');
-    var elNom  = document.getElementById('inv-det-nombre');
-    if (elCod) elCod.textContent = item.id || '';
-    if (elNom) elNom.textContent = item.descripcion || '';
+    // Header del modal
+    var elTitulo = document.getElementById('inv-det-modal-titulo');
+    var elSub    = document.getElementById('inv-det-modal-sub');
+    if (elTitulo) elTitulo.textContent = item.descripcion || item.articulo || 'Detalle de Artículo';
+    if (elSub)    elSub.textContent = (item.id || '') + (item.codigo_barras ? ' • CB: ' + item.codigo_barras : '');
 
-    // Botones
-    var btnEditar = document.getElementById('inv-det-btn-editar');
-    var btnReg    = document.getElementById('inv-det-btn-reg');
-    if (btnEditar) btnEditar.onclick = function() {
-        window._invCerrarDetalle();
-        setTimeout(function() { window.abrirModalInventario(id); }, 320);
-    };
+    // Botones de acción en Header
+    var btnEditar = document.getElementById('inv-det-btn-editar-modal');
+    var btnReg    = document.getElementById('inv-det-btn-reg-modal');
+    var btnPrintTop = document.getElementById('inv-det-btn-imprimir-top');
+
+    if (btnEditar) {
+        btnEditar.onclick = function() {
+            window._invCerrarDetalle();
+            setTimeout(function() { window.abrirModalInventario(id); }, 300);
+        };
+    }
     if (btnReg) {
         if (isService) {
             btnReg.style.display = 'none';
         } else {
-            btnReg.style.display = '';
+            btnReg.style.display = 'inline-flex';
             btnReg.onclick = function() {
                 window._invCerrarDetalle();
-                setTimeout(function() { window.abrirRegularizarStock(id); }, 320);
+                setTimeout(function() { window.abrirRegularizarStock(id); }, 300);
             };
         }
     }
+    if (btnPrintTop) {
+        btnPrintTop.style.display = isService ? 'none' : 'inline-flex';
+    }
 
-    // Datos
-    var hasImg  = item.imagen_url && item.imagen_url.length > 0;
-    var stock   = parseFloat(item.stock_actual != null ? item.stock_actual : 0);
+    // Datos y métricas
+    var hasImg   = item.imagen_url && item.imagen_url.length > 0;
+    var stock    = parseFloat(item.stock_actual != null ? item.stock_actual : 0);
     var stockMin = parseFloat(item.stock_min || 0);
     var stockMax = parseFloat(item.stock_max || 0);
-    var pct     = stockMax > 0 ? Math.min(100, Math.round((stock / stockMax) * 100)) : 0;
-    var isCrit  = stockMin > 0 && stock < stockMin;
-    var isWarn  = !isCrit && stockMin > 0 && stock < stockMax;
-    var stockColor = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : '#22c55e');
+    var pct      = stockMax > 0 ? Math.min(100, Math.round((stock / stockMax) * 100)) : 0;
+    var isCrit   = stockMin > 0 && stock < stockMin;
+    var isWarn   = !isCrit && stockMin > 0 && stock < stockMax;
+    var stockColor = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : '#16a34a');
     var stockBg    = isCrit ? '#fef2f2' : (isWarn ? '#fffbeb' : '#f0fdf4');
-    var barColor   = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : '#22c55e');
+    var barColor   = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : '#16a34a');
+    var badgeTexto = isCrit ? '¡REPONER STOCK CRÍTICO!' : (isWarn ? 'STOCK BAJO' : (stock <= 0 ? 'SIN STOCK' : 'STOCK ÓPTIMO'));
 
-    var body = document.getElementById('inv-det-body');
+    var body = document.getElementById('inv-det-modal-body');
     if (!body) return;
 
-    // Imagen — solo si existe
-    var imgHtml = hasImg
-        ? '<img src="' + _invEsc(item.imagen_url) + '" style="width:100%;max-height:200px;object-fit:contain;border-radius:16px;margin-bottom:1.25rem;">'
-        : '';
+    var moneda = (item.moneda || 'PEN').toUpperCase();
+    var costoRef = parseFloat(item.costo_referencial || 0);
+    var costoSoles = parseFloat(item.costo_soles != null ? item.costo_soles : costoRef);
+    var tc = parseFloat(item.tipo_cambio || 0);
 
-    // Función fila moderna
-    function row(lbl, val, full) {
-        if (!val || val === '—' || val === '' || val === 'undefined') return '';
-        if (full) {
-            return '<div style="padding:.6rem 0;border-bottom:1px solid var(--border);">' +
-                   '<div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--subtext);margin-bottom:.3rem;">' + lbl + '</div>' +
-                   '<div style="font-size:.85rem;font-weight:600;color:var(--text);">' + val + '</div>' +
-                   '</div>';
+    var costoHtml = (function() {
+        if (moneda === 'USD' || tc > 0) {
+            return '$ ' + costoRef.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) +
+                   (tc ? ' <span class="text-muted small fw-normal">(T/C: ' + tc.toFixed(4) + ')</span>' : '') +
+                   '<br><span class="fw-bold text-success" style="font-size:0.92rem;">= S/ ' +
+                   costoSoles.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>';
         }
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.55rem 0;border-bottom:1px solid var(--border);">' +
-               '<span style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);">' + lbl + '</span>' +
-               '<span style="font-size:.88rem;font-weight:700;color:var(--text);text-align:right;max-width:60%;">' + val + '</span>' +
+        return 'S/ ' + costoSoles.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    })();
+
+    var codigoParaBarra = (item.codigo_barras && item.codigo_barras.trim()) ? item.codigo_barras.trim() : (item.id || '').trim();
+
+    // Render Bento Cards
+    var html = '';
+
+    // 1. Bento Row Superior: Foto + Indicador de Stock
+    html += '<div class="row g-3 mb-3">';
+    
+    // Columna Foto (o icono grande)
+    html += '<div class="col-12 col-md-' + (hasImg ? '5' : '4') + '">';
+    html += '  <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white h-100 d-flex flex-column align-items-center justify-content-center text-center" style="border:1px solid #e2e8f0!important; min-height:160px;">';
+    if (hasImg) {
+        html += '    <div style="width:100%; height:160px; border-radius:14px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#f8fafc;">';
+        html += '      <img src="' + _invEsc(item.imagen_url) + '" alt="' + _invEsc(item.descripcion) + '" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:12px; transition:transform 0.2s;" onmouseover="this.style.transform=\'scale(1.05)\'" onmouseout="this.style.transform=\'scale(1)\'">';
+        html += '    </div>';
+        html += '    <small class="text-muted fw-semibold mt-2" style="font-size:0.7rem;"><i class="bi bi-image me-1"></i>Foto del producto</small>';
+    } else {
+        html += '    <div style="width:64px; height:64px; border-radius:18px; background:#eff6ff; color:#0284c7; display:flex; align-items:center; justify-content:center; font-size:1.8rem; margin-bottom:0.5rem;">';
+        html += '      <i class="bi bi-box-seam"></i>';
+        html += '    </div>';
+        html += '    <span class="text-muted small fw-semibold">Sin imagen cargada</span>';
+    }
+    html += '  </div>';
+    html += '</div>';
+
+    // Columna Stock Actual / Tarifario
+    html += '<div class="col-12 col-md-' + (hasImg ? '7' : '8') + '">';
+    if (!isService) {
+        html += '  <div class="card border-0 shadow-2xs rounded-4 p-3 h-100 d-flex flex-column justify-content-between" style="background:' + stockBg + '; border:1.5px solid ' + stockColor + '30!important;">';
+        html += '    <div>';
+        html += '      <div class="d-flex align-items-center justify-content-between mb-1">';
+        html += '        <span style="font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:' + stockColor + ';">Stock Físico Actual</span>';
+        html += '        <span class="badge rounded-pill fw-bold" style="background:' + stockColor + '; color:#fff; font-size:0.68rem; padding:4px 10px;">' + badgeTexto + '</span>';
+        html += '      </div>';
+        html += '      <div class="d-flex align-items-baseline gap-2 mt-1">';
+        html += '        <h2 class="fw-bolder m-0" style="color:' + stockColor + '; font-size:2.3rem; letter-spacing:-0.5px;">' + stock.toLocaleString('es-PE', { minimumFractionDigits: 2 }) + '</h2>';
+        html += '        <span class="fw-bold" style="color:' + stockColor + '; font-size:1rem; opacity:0.85;">' + _invEsc(item.unidad || 'ud.') + '</span>';
+        html += '      </div>';
+        html += '    </div>';
+        
+        if (stockMax > 0) {
+            html += '    <div class="mt-3">';
+            html += '      <div class="d-flex justify-content-between small fw-bold mb-1" style="color:' + stockColor + '; font-size:0.72rem;">';
+            html += '        <span>Capacidad de Almacén</span>';
+            html += '        <span>' + pct + '% (' + stock + ' / ' + stockMax + ')</span>';
+            html += '      </div>';
+            html += '      <div class="progress" style="height:8px; border-radius:99px; background:rgba(0,0,0,0.08);">';
+            html += '        <div class="progress-bar" role="progressbar" style="width:' + pct + '%; background-color:' + barColor + '; border-radius:99px;"></div>';
+            html += '      </div>';
+            html += '    </div>';
+        }
+        html += '  </div>';
+    } else {
+        html += '  <div class="card border-0 shadow-2xs rounded-4 p-3 h-100 d-flex flex-column justify-content-between" style="background:#fffbeb; border:1.5px solid #f59e0b40!important;">';
+        html += '    <div>';
+        html += '      <span style="font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:#b45309;">Tarifario / Costo de Servicio</span>';
+        html += '      <div class="mt-2" style="font-size:1.6rem; font-weight:800; color:#b45309; line-height:1.2;">' + costoHtml + '</div>';
+        html += '    </div>';
+        html += '    <small class="text-muted fw-semibold mt-3"><i class="bi bi-info-circle me-1"></i>Ítem catalogado como mano de obra / servicio</small>';
+        html += '  </div>';
+    }
+    html += '</div>';
+    html += '</div>';
+
+    // 2. Bento Card: Generador de Código de Barras & SKU
+    if (!isService) {
+        html += '<div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border:1px solid #e2e8f0!important;">';
+        html += '  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2 border-bottom">';
+        html += '    <div class="d-flex align-items-center gap-2">';
+        html += '      <i class="bi bi-upc-scan text-primary fs-5"></i>';
+        html += '      <div>';
+        html += '        <h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;">Código de Barras & SKU</h6>';
+        html += '        <small class="text-muted" style="font-size:0.72rem;">Generación de etiqueta adhesiva lista para escaneo</small>';
+        html += '      </div>';
+        html += '    </div>';
+        html += '    <button type="button" class="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-2xs d-flex align-items-center gap-1.5" onclick="window.invImprimirEtiquetaIndividual(\'' + id + '\')" style="background:#0284c7; border-color:#0284c7; font-size:0.78rem;">';
+        html += '      <i class="bi bi-printer-fill"></i> <span>Imprimir Etiqueta</span>';
+        html += '    </button>';
+        html += '  </div>';
+        
+        html += '  <div class="p-3 rounded-3 bg-light text-center d-flex flex-column align-items-center justify-content-center" style="border:1px dashed #cbd5e1; min-height:100px;">';
+        html += '    <svg id="inv-barcode-svg" style="max-width:100%; height:auto;"></svg>';
+        html += '    <div class="d-flex align-items-center gap-3 mt-1 small text-muted font-monospace fw-bold" style="font-size:0.75rem;">';
+        html += '      <span>SKU: <b class="text-dark">' + _invEsc(item.id) + '</b></span>';
+        if (item.codigo_barras) {
+            html += '      <span>• CB Oficial: <b class="text-primary">' + _invEsc(item.codigo_barras) + '</b></span>';
+        }
+        html += '    </div>';
+        html += '  </div>';
+        html += '</div>';
+    }
+
+    // 3. Bento Card: Ficha Técnica y Especificaciones
+    html += '<div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border:1px solid #e2e8f0!important;">';
+    html += '  <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:0.95rem;">';
+    html += '    <i class="bi bi-card-text text-primary"></i> Ficha Técnica & Almacenamiento';
+    html += '  </h6>';
+    html += '  <div class="row g-2">';
+
+    function techItem(colSize, label, val, isBadge, badgeColor) {
+        if (!val || val === '—' || val === '' || val === 'undefined') return '';
+        var displayVal = _invEsc(val);
+        if (isBadge) {
+            displayVal = '<span class="badge rounded-pill fw-bold" style="background:' + (badgeColor || '#e0f2fe') + '; color:' + (badgeColor ? '#fff' : '#0369a1') + '; font-size:0.72rem; padding:4px 10px;">' + displayVal + '</span>';
+        }
+        return '<div class="col-' + colSize + '">' +
+               '  <div class="p-2.5 rounded-3 bg-light border border-light-subtle h-100">' +
+               '    <span class="text-muted d-block fw-bold" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:2px;">' + label + '</span>' +
+               '    <div class="fw-bold text-dark text-truncate" style="font-size:0.86rem;">' + displayVal + '</div>' +
+               '  </div>' +
                '</div>';
     }
 
-    var costoHtml = (function() {
-        var moneda = (item.moneda || 'PEN').toUpperCase();
-        var costoRef  = parseFloat(item.costo_referencial || 0);
-        var costoSoles = parseFloat(item.costo_soles != null ? item.costo_soles : costoRef);
-        var tc = parseFloat(item.tipo_cambio || 0);
-        if (moneda === 'USD' || tc > 0) {
-            return '$ ' + costoRef.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:4}) +
-                   (tc ? ' &nbsp;<span style="color:var(--subtext);font-size:.78rem">(T/C: ' + tc.toFixed(4) + ')</span>' : '') +
-                   '<br><span style="font-size:.82rem;color:#16a34a;font-weight:800">= S/ ' +
-                   costoSoles.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>';
-        }
-        return 'S/ ' + costoSoles.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
-    })();
-
-    var topCardHtml = '';
+    html += techItem('6 col-md-3', 'Código Interno', item.id);
+    html += techItem('6 col-md-3', 'Código de Barra', item.codigo_barras || item.id);
+    html += techItem('6 col-md-3', 'Familia', item.familia);
+    html += techItem('6 col-md-3', 'Almacén', item.almacen || 'Central');
+    html += techItem('6 col-md-3', 'Ubicación / Pasillo', item.ubicacion);
+    html += techItem('6 col-md-3', 'Anaquel / Fila', item.anaquel ? 'Anaquel ' + item.anaquel : '');
+    html += techItem('6 col-md-3', 'Unidad de Medida', item.unidad);
+    html += techItem('6 col-md-3', 'Estado', item.estado_art || 'Activo', true, item.estado_art === 'Inactivo' ? '#ef4444' : '#16a34a');
+    
     if (!isService) {
-        topCardHtml =
-            '<div style="background:' + stockBg + ';border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:1.1rem;border:1.5px solid ' + stockColor + '20;">' +
-                '<div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:' + stockColor + ';margin-bottom:.4rem;">Stock Actual</div>' +
-                '<div style="font-size:2.4rem;font-weight:900;color:' + stockColor + ';line-height:1;">' +
-                    stock.toLocaleString('es-PE', {minimumFractionDigits: 2}) +
-                    '<span style="font-size:.9rem;font-weight:700;margin-left:.4rem;opacity:.75;">' + _invEsc(item.unidad || '') + '</span>' +
-                '</div>' +
-                (stockMax > 0 ? '<div style="height:6px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden;margin-top:.65rem;">' +
-                    '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:99px;"></div>' +
-                '</div>' +
-                '<div style="font-size:.65rem;font-weight:700;color:' + stockColor + ';opacity:.8;margin-top:.3rem;">' + pct + '% de capacidad</div>' : '') +
+        html += techItem('6 col-md-3', 'Stock Mínimo', parseFloat(item.stock_min || 0) + ' ' + (item.unidad || ''));
+        html += techItem('6 col-md-3', 'Stock Máximo', parseFloat(item.stock_max || 0) + ' ' + (item.unidad || ''));
+    }
+    
+    html += '<div class="col-12 col-md-6">' +
+            '  <div class="p-2.5 rounded-3 bg-light border border-light-subtle h-100">' +
+            '    <span class="text-muted d-block fw-bold" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:2px;">Costo Referencial (Moneda & T/C)</span>' +
+            '    <div class="fw-bold text-dark" style="font-size:0.86rem;">' + costoHtml + '</div>' +
+            '  </div>' +
             '</div>';
-    } else {
-        topCardHtml =
-            '<div style="background:#fffbeb;border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:1.1rem;border:1.5px solid #f59e0b30;">' +
-                '<div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#b45309;margin-bottom:.4rem;">Tarifario / Costo Referencial</div>' +
-                '<div style="font-size:1.8rem;font-weight:900;color:#b45309;line-height:1;">' +
-                    costoHtml +
-                '</div>' +
-            '</div>';
+
+    html += '  </div>';
+    html += '</div>';
+
+    // 4. Observaciones & Historial
+    if (item.observaciones) {
+        html += '<div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border:1px solid #e2e8f0!important;">';
+        html += '  <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-2" style="font-size:0.95rem;">';
+        html += '    <i class="bi bi-chat-left-dots text-primary"></i> Observaciones & Historial';
+        html += '  </h6>';
+        
+        var escaped = _invEsc(item.observaciones);
+        var parts = escaped.split(/(?=\[REG \d{4}-\d{2}-\d{2}\])/);
+        if (parts.length > 1) {
+            html += '<div class="d-flex flex-column gap-2 mt-2">';
+            parts.forEach(function(p) {
+                if (p.trim()) {
+                    html += '<div class="p-2.5 rounded-3 bg-light border text-secondary" style="font-size:0.8rem; line-height:1.4;">' + p.trim() + '</div>';
+                }
+            });
+            html += '</div>';
+        } else {
+            html += '<p class="text-secondary small mb-0 p-2 rounded-3 bg-light border" style="line-height:1.4;">' + escaped + '</p>';
+        }
+        html += '</div>';
     }
 
-    body.innerHTML =
-        imgHtml +
-        topCardHtml +
+    body.innerHTML = html;
 
-        // Filas de datos
-        '<div style="margin-bottom:.5rem;">' +
-            row('Código', '<span style="background:#f1f5f9;color:#475569;font-size:.72rem;font-weight:800;padding:.2rem .6rem;border-radius:8px;font-family:monospace;">' + _invEsc(item.id) + '</span>') +
-            row('Familia', item.familia) +
-            row('Almacén', item.almacen) +
-            row('Ubicación', item.ubicacion) +
-            (!isService ? row('Unidad', item.unidad) : '') +
-            row('Costo', costoHtml) +
-            (!isService ? row('Stock Min / Max', stockMin + ' / ' + stockMax + (item.unidad ? ' ' + _invEsc(item.unidad) : '')) : '') +
-            row('Estado', '<span style="background:' + (item.estado_art === 'Inactivo' ? '#fee2e2' : '#dcfce7') + ';color:' + (item.estado_art === 'Inactivo' ? '#dc2626' : '#16a34a') + ';font-size:.7rem;font-weight:800;padding:.2rem .65rem;border-radius:99px;">' + _invEsc(item.estado_art || 'Activo') + '</span>') +
-            (function() {
-                if (!item.observaciones) return '';
-                var escaped = _invEsc(item.observaciones);
-                var parts = escaped.split(/(?=\[REG \d{4}-\d{2}-\d{2}\])/);
-                var formatted = escaped;
-                if (parts.length > 1) {
-                    formatted = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">' +
-                        parts.map(function(p) { 
-                            return p.trim() ? '<div style="background:rgba(0,0,0,0.02); padding:8px 12px; border-radius:8px; border:1px solid var(--border); font-size:0.8rem; line-height:1.4;">' + p.trim() + '</div>' : ''; 
-                        }).join('') +
-                        '</div>';
-                }
-                return row('Observaciones', formatted, true);
-            })() +
-        '</div>';
+    // Renderizar Barcode en vivo en el modal
+    if (!isService) {
+        setTimeout(function() {
+            _invRenderJsBarcode('inv-barcode-svg', codigoParaBarra);
+        }, 50);
+    }
 
-    // Abrir
-    drawer.classList.add('open');
-    if (bd) bd.style.display = 'block';
+    // Mostrar modal con Bootstrap 5
+    var modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modalInst.show();
 };
 
 window._invCerrarDetalle = function() {
-    var drawer = document.getElementById('inv-det-drawer');
-    var bd     = document.getElementById('inv-det-backdrop');
-    if (drawer) drawer.classList.remove('open');
-    if (bd) bd.style.display = 'none';
+    var modalEl = document.getElementById('modalDetalleInventario');
+    if (modalEl) {
+        var inst = bootstrap.Modal.getInstance(modalEl);
+        if (inst) inst.hide();
+    }
 };
+
+// ── Impresión de Etiquetas Individual & Masiva ────────────────────
+
+window.invImprimirEtiquetaActual = function() {
+    if (window._invItemDetalleActual) {
+        window.invImprimirEtiquetaIndividual(window._invItemDetalleActual.id);
+    }
+};
+
+window.invImprimirEtiquetaIndividual = function(id) {
+    var item = (window._invData || []).find(function(d) { return d.id === id; });
+    if (!item) return;
+
+    var cod = (item.codigo_barras && item.codigo_barras.trim()) ? item.codigo_barras.trim() : (item.id || '').trim();
+    var desc = item.descripcion || item.articulo || '';
+    var sku = item.id || '';
+    var alm = item.almacen || 'CENTRAL';
+    var ubi = (item.ubicacion || '') + (item.anaquel ? ' Anq: ' + item.anaquel : '');
+
+    var printWin = window.open('', '_blank', 'width=600,height=500');
+    if (!printWin) {
+        alert('Por favor habilita las ventanas emergentes en tu navegador para imprimir la etiqueta.');
+        return;
+    }
+
+    var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Etiqueta ' + _invEsc(sku) + '</title>' +
+        '<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>' +
+        '<style>' +
+        '@page { size: 55mm 35mm; margin: 0; }' +
+        'body { margin: 0; padding: 3mm; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; color: #000; box-sizing: border-box; }' +
+        '.label-card { width: 49mm; height: 29mm; border: 1px dashed #999; padding: 2mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; page-break-inside: avoid; }' +
+        '.lbl-header { font-size: 7.5pt; font-weight: 800; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.1; }' +
+        '.lbl-desc { font-size: 6.5pt; font-weight: 600; color: #333; max-height: 14pt; overflow: hidden; line-height: 1.1; margin: 1mm 0; }' +
+        '.lbl-barcode-wrap { text-align: center; flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }' +
+        '.lbl-barcode-wrap svg { max-width: 100%; height: 14mm; }' +
+        '.lbl-footer { display: flex; justify-content: space-between; font-size: 6pt; font-weight: 700; color: #444; border-top: 0.5px solid #ccc; padding-top: 0.5mm; }' +
+        '@media print { .label-card { border: none; } }' +
+        '</style></head><body>' +
+        '<div class="label-card">' +
+        '  <div class="lbl-header">MARSISA FLEET ERP</div>' +
+        '  <div class="lbl-desc">' + _invEsc(desc) + '</div>' +
+        '  <div class="lbl-barcode-wrap"><svg id="p-barcode"></svg></div>' +
+        '  <div class="lbl-footer">' +
+        '    <span>SKU: ' + _invEsc(sku) + '</span>' +
+        '    <span>' + _invEsc(ubi || alm) + '</span>' +
+        '  </div>' +
+        '</div>' +
+        '<script>' +
+        'window.onload = function() {' +
+        '  try {' +
+        '    var code = "' + cod.replace(/"/g, '\\"') + '";' +
+        '    var fmt = (/^\\d{12,13}$/.test(code)) ? "EAN13" : "CODE128";' +
+        '    JsBarcode("#p-barcode", code, { format: fmt, width: 1.5, height: 40, displayValue: true, fontSize: 10, font: "monospace", margin: 2 });' +
+        '  } catch(e) {' +
+        '    try { JsBarcode("#p-barcode", code, { format: "CODE128", width: 1.5, height: 40, displayValue: true, fontSize: 10 }); } catch(err){}' +
+        '  }' +
+        '  setTimeout(function() { window.print(); window.close(); }, 300);' +
+        '};' +
+        '<\/script></body></html>';
+
+    printWin.document.open();
+    printWin.document.write(html);
+    printWin.document.close();
+};
+
+// ── Modal Masivo de Códigos de Barra ─────────────────────────────
+window._invCodigosMasivosSeleccionados = new Set();
+
+window.invAbrirModalCodigosMasivo = function() {
+    var modalEl = document.getElementById('modalCodigosBarraMasivo');
+    if (!modalEl) return;
+
+    // Poblar Familias en el select
+    var selFam = document.getElementById('cb-masivo-familia');
+    if (selFam) {
+        var familias = Array.from(new Set((window._invData || []).map(function(d) { return (d.familia || '').trim(); }).filter(Boolean))).sort();
+        selFam.innerHTML = '<option value="">Todas las Familias (' + (window._invData || []).length + ')</option>' +
+            familias.map(function(f) { return '<option value="' + _invEsc(f) + '">' + _invEsc(f) + '</option>'; }).join('');
+    }
+
+    // Por defecto seleccionar todos los artículos físicos activos
+    window._invCodigosMasivosSeleccionados = new Set();
+    (window._invData || []).forEach(function(d) {
+        if (d.tipo !== 'Servicio') {
+            window._invCodigosMasivosSeleccionados.add(d.id);
+        }
+    });
+
+    var txtBusq = document.getElementById('cb-masivo-buscar');
+    if (txtBusq) txtBusq.value = '';
+
+    window.invFiltrarCodigosMasivos();
+
+    var modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modalInst.show();
+};
+
+window.invFiltrarCodigosMasivos = function() {
+    var query = ((document.getElementById('cb-masivo-buscar') || {}).value || '').toLowerCase().trim();
+    var fam   = ((document.getElementById('cb-masivo-familia') || {}).value || '').trim();
+
+    var filtrados = (window._invData || []).filter(function(d) {
+        if (d.tipo === 'Servicio') return false;
+        if (fam && (d.familia || '').trim() !== fam) return false;
+        if (!query) return true;
+        return (d.id || '').toLowerCase().includes(query) ||
+               (d.descripcion || '').toLowerCase().includes(query) ||
+               (d.codigo_barras || '').toLowerCase().includes(query) ||
+               (d.marca || '').toLowerCase().includes(query);
+    });
+
+    window.invRenderizarListaCodigosMasivos(filtrados);
+};
+
+window.invToggleSeleccionarTodosCodigos = function() {
+    var query = ((document.getElementById('cb-masivo-buscar') || {}).value || '').toLowerCase().trim();
+    var fam   = ((document.getElementById('cb-masivo-familia') || {}).value || '').trim();
+
+    var filtrados = (window._invData || []).filter(function(d) {
+        if (d.tipo === 'Servicio') return false;
+        if (fam && (d.familia || '').trim() !== fam) return false;
+        if (!query) return true;
+        return (d.id || '').toLowerCase().includes(query) ||
+               (d.descripcion || '').toLowerCase().includes(query) ||
+               (d.codigo_barras || '').toLowerCase().includes(query);
+    });
+
+    var todosMarcados = filtrados.length > 0 && filtrados.every(function(d) {
+        return window._invCodigosMasivosSeleccionados.has(d.id);
+    });
+
+    filtrados.forEach(function(d) {
+        if (todosMarcados) {
+            window._invCodigosMasivosSeleccionados.delete(d.id);
+        } else {
+            window._invCodigosMasivosSeleccionados.add(d.id);
+        }
+    });
+
+    window.invRenderizarListaCodigosMasivos(filtrados);
+};
+
+window.invToggleItemCodigoMasivo = function(id, checked) {
+    if (checked) {
+        window._invCodigosMasivosSeleccionados.add(id);
+    } else {
+        window._invCodigosMasivosSeleccionados.delete(id);
+    }
+    window._invActualizarContadorCodigosMasivos();
+};
+
+window._invActualizarContadorCodigosMasivos = function() {
+    var cnt = window._invCodigosMasivosSeleccionados.size;
+    var lbl = document.getElementById('lbl-cb-contador-seleccionados');
+    if (lbl) lbl.textContent = cnt + ' artículos seleccionados';
+
+    var btnImprimir = document.getElementById('btn-cb-imprimir-lote');
+    if (btnImprimir) {
+        btnImprimir.disabled = cnt === 0;
+        btnImprimir.innerHTML = '<i class="bi bi-printer-fill fs-6"></i> <span>Imprimir ' + cnt + ' Etiquetas</span>';
+    }
+};
+
+window.invRenderizarListaCodigosMasivos = function(items) {
+    var cont = document.getElementById('cb-masivo-contenedor-items');
+    if (!cont) return;
+
+    if (!items || !items.length) {
+        cont.innerHTML = '<div class="alert alert-light border text-center py-4 text-muted">' +
+            '<i class="bi bi-search me-1"></i> No se encontraron artículos para los filtros aplicados.</div>';
+        window._invActualizarContadorCodigosMasivos();
+        return;
+    }
+
+    var html = '';
+    items.forEach(function(d) {
+        var isChecked = window._invCodigosMasivosSeleccionados.has(d.id);
+        var codBarra = (d.codigo_barras && d.codigo_barras.trim()) ? d.codigo_barras.trim() : d.id;
+        var hasImg = d.imagen_url && d.imagen_url.length > 0;
+        var stock = parseFloat(d.stock_actual || 0);
+
+        html += '<div class="p-2.5 rounded-3 bg-white border d-flex align-items-center gap-3" style="border-color:' + (isChecked ? '#0284c7' : '#e2e8f0') + '!important; background:' + (isChecked ? '#f0f9ff' : '#ffffff') + ';">' +
+            '  <input type="checkbox" class="form-check-input mt-0 cursor-pointer" style="width:20px; height:20px;" ' + (isChecked ? 'checked' : '') + ' onchange="window.invToggleItemCodigoMasivo(\'' + d.id + '\', this.checked)">' +
+            '  <div style="width:40px; height:40px; border-radius:10px; background:#f8fafc; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">' +
+            (hasImg ? '    <img src="' + _invEsc(d.imagen_url) + '" style="max-width:100%; max-height:100%; object-fit:contain;">' : '    <i class="bi bi-box-seam text-secondary"></i>') +
+            '  </div>' +
+            '  <div class="flex-grow-1 min-w-0">' +
+            '    <div class="fw-bold text-dark text-truncate" style="font-size:0.88rem;">' + _invEsc(d.descripcion || d.articulo) + '</div>' +
+            '    <div class="d-flex align-items-center gap-2 small text-muted font-monospace" style="font-size:0.73rem;">' +
+            '      <span>SKU: <b>' + _invEsc(d.id) + '</b></span>' +
+            '      <span>• CB: <b>' + _invEsc(codBarra) + '</b></span>' +
+            '      <span class="d-none d-md-inline">• Fam: ' + _invEsc(d.familia || '—') + '</span>' +
+            '    </div>' +
+            '  </div>' +
+            '  <div class="text-end flex-shrink-0">' +
+            '    <span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.75rem;">' + stock + ' ' + _invEsc(d.unidad || '') + '</span>' +
+            '  </div>' +
+            '</div>';
+    });
+
+    cont.innerHTML = html;
+    window._invActualizarContadorCodigosMasivos();
+};
+
+window.invImprimirEtiquetasMasivas = function() {
+    var ids = Array.from(window._invCodigosMasivosSeleccionados);
+    if (!ids.length) {
+        alert('Por favor selecciona al menos un artículo para imprimir etiquetas.');
+        return;
+    }
+
+    var formato = ((document.getElementById('cb-masivo-formato') || {}).value) || 'termica';
+    var itemsParaImprimir = (window._invData || []).filter(function(d) {
+        return window._invCodigosMasivosSeleccionados.has(d.id);
+    });
+
+    var printWin = window.open('', '_blank', 'width=900,height=700');
+    if (!printWin) {
+        alert('Por favor habilita las ventanas emergentes para generar el lote de etiquetas.');
+        return;
+    }
+
+    var isTermica = formato === 'termica';
+
+    var cssTermica = '@page { size: 55mm 35mm; margin: 0; }' +
+        'body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; color: #000; }' +
+        '.label-item { width: 55mm; height: 35mm; padding: 2.5mm 3mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; page-break-inside: avoid; }';
+
+    var cssA4Grid = '@page { size: A4 portrait; margin: 10mm 8mm; }' +
+        'body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; color: #000; }' +
+        '.grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm 3mm; width: 100%; box-sizing: border-box; }' +
+        '.label-item { border: 1px dashed #cbd5e1; border-radius: 6px; padding: 2.5mm 3mm; height: 34mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid; }' +
+        '@media print { .label-item { border: 0.5px solid #e2e8f0; } }';
+
+    var labelsHtml = itemsParaImprimir.map(function(item, idx) {
+        var cod = (item.codigo_barras && item.codigo_barras.trim()) ? item.codigo_barras.trim() : (item.id || '').trim();
+        var desc = item.descripcion || item.articulo || '';
+        var sku = item.id || '';
+        var alm = item.almacen || 'CENTRAL';
+        var ubi = (item.ubicacion || '') + (item.anaquel ? ' Anq: ' + item.anaquel : '');
+
+        return '<div class="label-item">' +
+            '  <div style="font-size:7.5pt; font-weight:800; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1;">MARSISA FLEET ERP</div>' +
+            '  <div style="font-size:6.5pt; font-weight:600; color:#222; max-height:14pt; overflow:hidden; line-height:1.1; margin:1mm 0;">' + _invEsc(desc) + '</div>' +
+            '  <div style="text-align:center; flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden;"><svg id="barcode-batch-' + idx + '" data-code="' + _invEsc(cod) + '"></svg></div>' +
+            '  <div style="display:flex; justify-content:space-between; font-size:6pt; font-weight:700; color:#444; border-top:0.5px solid #ccc; padding-top:0.5mm;">' +
+            '    <span>SKU: ' + _invEsc(sku) + '</span>' +
+            '    <span>' + _invEsc(ubi || alm) + '</span>' +
+            '  </div>' +
+            '</div>';
+    }).join('');
+
+    var fullHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Impresión de Etiquetas (' + itemsParaImprimir.length + ')</title>' +
+        '<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>' +
+        '<style>' +
+        (isTermica ? cssTermica : cssA4Grid) +
+        '</style></head><body>' +
+        (isTermica ? labelsHtml : '<div class="grid-container">' + labelsHtml + '</div>') +
+        '<script>' +
+        'window.onload = function() {' +
+        '  var svgs = document.querySelectorAll("svg[id^=\'barcode-batch-\']");' +
+        '  svgs.forEach(function(el) {' +
+        '    var code = el.getAttribute("data-code") || "";' +
+        '    var fmt = (/^\\d{12,13}$/.test(code)) ? "EAN13" : "CODE128";' +
+        '    try {' +
+        '      JsBarcode(el, code, { format: fmt, width: 1.4, height: 38, displayValue: true, fontSize: 10, font: "monospace", margin: 2 });' +
+        '    } catch(e) {' +
+        '      try { JsBarcode(el, code, { format: "CODE128", width: 1.4, height: 38, displayValue: true, fontSize: 10 }); } catch(err){}' +
+        '    }' +
+        '  });' +
+        '  setTimeout(function() { window.print(); }, 400);' +
+        '};' +
+        '<\/script></body></html>';
+
+    printWin.document.open();
+    printWin.document.write(fullHtml);
+    printWin.document.close();
+};
+
 
 // ── Modal Add / Edit ─────────────────────────────────────────────
 window.abrirModalInventario = function(id) {

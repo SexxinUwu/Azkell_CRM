@@ -318,9 +318,8 @@ async function condCargarFallasHistorial(viaje) {
             }
         }
 
-        // 3. Extraer todas las fallas reportadas de esos reportes con sus fotos firmadas
-        var fallas = [];
-        repFiltrados.forEach(r => {
+        // 3. Extraer los reportes con sus fallas y sus fotos firmadas
+        var reportesFallas = repFiltrados.map(r => {
             var fT = [];
             var fR = [];
             try { fT = typeof r.fallas_tracto_json === 'string' ? JSON.parse(r.fallas_tracto_json) : (r.fallas_tracto_json || []); } catch(e){}
@@ -333,17 +332,29 @@ async function condCargarFallasHistorial(viaje) {
                 return signedMap[rawU] || rawU;
             }).filter(Boolean);
 
+            var listaFallas = [];
             fT.forEach(f => {
-                fallas.push({ ...f, unidad: r.placa_tracto || 'TRACTO', folio: r.folio, estado: r.estado || 'Pendiente', fechaReporte: r.fecha_reporte, fotos: fotosSigned });
+                listaFallas.push({ ...f, unidadTag: r.placa_tracto || 'TRACTO', tipo: 'Tracto' });
             });
             fR.forEach(f => {
-                fallas.push({ ...f, unidad: r.placa_remolque || 'CARRETA', folio: r.folio, estado: r.estado || 'Pendiente', fechaReporte: r.fecha_reporte, fotos: fotosSigned });
+                listaFallas.push({ ...f, unidadTag: r.placa_remolque || 'CARRETA', tipo: 'Remolque' });
             });
+
+            return {
+                id: r.id,
+                folio: r.folio,
+                placaTracto: r.placa_tracto,
+                placaRemolque: r.placa_remolque,
+                estado: r.estado || 'Pendiente',
+                fechaReporte: r.fecha_reporte || r.created_at,
+                fallas: listaFallas,
+                fotos: fotosSigned
+            };
         });
 
-        if (cntEl) cntEl.textContent = fallas.length;
-        condRenderFallasHistorial(fallas);
-        return fallas.length;
+        if (cntEl) cntEl.textContent = reportesFallas.length;
+        condRenderFallasHistorial(reportesFallas);
+        return reportesFallas.length;
     } catch(e) {
         console.warn('Error cargando historial de fallas:', e);
         if (cntEl) cntEl.textContent = '0';
@@ -351,11 +362,11 @@ async function condCargarFallasHistorial(viaje) {
     }
 }
 
-function condRenderFallasHistorial(fallas) {
+function condRenderFallasHistorial(reportes) {
     var cont = document.getElementById('cond-lista-fallas');
     if (!cont) return;
 
-    if (!fallas || fallas.length === 0) {
+    if (!reportes || reportes.length === 0) {
         cont.innerHTML = `
             <div class="text-center py-4 text-muted small">
                 <i class="bi bi-shield-check fs-4 d-block mb-1 text-success"></i>
@@ -365,24 +376,40 @@ function condRenderFallasHistorial(fallas) {
         return;
     }
 
-    cont.innerHTML = fallas.map(f => {
+    cont.innerHTML = reportes.map(rep => {
         var estadoBadge = '<span class="badge bg-warning text-dark font-monospace px-2 py-0.5" style="font-size:0.68rem;">PENDIENTE</span>';
-        if (f.estado === 'En Proceso' || f.estado === 'En Taller') {
+        if (rep.estado === 'En Proceso' || rep.estado === 'En Taller') {
             estadoBadge = '<span class="badge bg-primary text-white font-monospace px-2 py-0.5" style="font-size:0.68rem;">EN TALLER</span>';
-        } else if (f.estado === 'Finalizado' || f.estado === 'Atendido') {
+        } else if (rep.estado === 'Finalizado' || rep.estado === 'Atendido') {
             estadoBadge = '<span class="badge bg-success text-white font-monospace px-2 py-0.5" style="font-size:0.68rem;">ATENDIDO</span>';
         }
 
-        var fecTxt = f.fecha || (f.fechaReporte ? new Date(f.fechaReporte).toLocaleString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—');
-        var esTracto = (f.unidad || '').includes('TRACTO') || !f.unidad;
-        var tagUnidad = `<span class="badge ${esTracto ? 'bg-primary' : 'bg-warning text-dark'} text-uppercase px-2 py-0.5" style="font-size:0.65rem;">${f.unidad || 'TRACTO'}</span>`;
+        var fecTxt = rep.fechaReporte ? new Date(rep.fechaReporte).toLocaleString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+
+        var fallasHTML = '';
+        if (Array.isArray(rep.fallas) && rep.fallas.length > 0) {
+            fallasHTML = rep.fallas.map((f, idx) => `
+                <div class="${idx > 0 ? 'mt-2 pt-2 border-top' : ''}">
+                    <div class="fw-bold text-dark small mb-0.5 d-flex align-items-center gap-1.5 flex-wrap">
+                        <span class="badge bg-secondary-subtle text-secondary px-1.5 py-0.5 font-monospace" style="font-size:0.65rem;">${f.unidadTag || 'TRACTO'}</span>
+                        <span class="text-primary font-monospace" style="font-size:0.75rem;">[${f.sistema || 'GENERAL'}]</span>
+                        <span class="text-danger">${f.item || 'Falla Observada'}</span>
+                    </div>
+                    <div class="text-secondary small fw-medium" style="font-size:0.80rem;">
+                        ${f.obs && f.obs !== f.item ? f.obs : 'Observación registrada en ruta.'}
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            fallasHTML = '<div class="text-muted small">Sin fallas específicas detalladas.</div>';
+        }
 
         var fotosHTML = '';
-        if (Array.isArray(f.fotos) && f.fotos.length > 0) {
+        if (Array.isArray(rep.fotos) && rep.fotos.length > 0) {
             fotosHTML = `
-                <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
-                    ${f.fotos.map(url => `
-                        <a href="${url}" target="_blank" rel="noopener noreferrer" class="rounded-3 overflow-hidden border d-inline-block shadow-2xs" style="width:46px; height:46px; background:#f8fafc; border-color:#e2e8f0 !important;">
+                <div class="d-flex align-items-center gap-2 mt-2 pt-2 border-top flex-wrap">
+                    ${rep.fotos.map(url => `
+                        <a href="${url}" target="_blank" rel="noopener noreferrer" class="rounded-3 overflow-hidden border d-inline-block shadow-2xs" style="width:48px; height:48px; background:#f8fafc; border-color:#e2e8f0 !important;">
                             <img src="${url}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.parentElement.style.opacity='0.5';">
                         </a>
                     `).join('')}
@@ -391,22 +418,16 @@ function condRenderFallasHistorial(fallas) {
         }
 
         return `
-            <div class="cond-falla-item ${f.estado === 'Finalizado' ? 'falla-finalizada' : ''}">
-                <div class="d-flex align-items-center justify-content-between mb-1.5">
+            <div class="cond-falla-item ${rep.estado === 'Finalizado' ? 'falla-finalizada' : ''}">
+                <div class="d-flex align-items-center justify-content-between mb-2">
                     <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                        ${tagUnidad}
-                        <span class="badge bg-light text-dark border font-monospace fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.70rem;">${f.folio || 'REPORTE'}</span>
+                        <span class="badge bg-warning text-dark text-uppercase px-2 py-0.5 font-monospace fw-bold" style="font-size:0.68rem;">${rep.placaTracto || 'UNIDAD'}</span>
+                        <span class="badge bg-light text-dark border font-monospace fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.70rem;">${rep.folio || 'REPORTE'}</span>
                         <span class="text-muted font-monospace small" style="font-size:0.74rem;"><i class="bi bi-clock me-1 text-secondary"></i>${fecTxt}</span>
                     </div>
                     <div>${estadoBadge}</div>
                 </div>
-                <div class="fw-bold text-dark small mb-0.5">
-                    <span class="text-primary font-monospace" style="font-size:0.75rem;">[${f.sistema || 'GENERAL'}]</span>
-                    <span class="text-danger">${f.item || 'Falla Observada'}</span>
-                </div>
-                <div class="text-secondary small fw-medium" style="font-size:0.80rem;">
-                    ${f.obs && f.obs !== f.item ? f.obs : 'Observación registrada en ruta.'}
-                </div>
+                ${fallasHTML}
                 ${fotosHTML}
             </div>
         `;
