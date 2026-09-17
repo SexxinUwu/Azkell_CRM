@@ -43,6 +43,13 @@
             const trip = (window._caFilteredTrips && window._caFilteredTrips[globalIdx]) ? window._caFilteredTrips[globalIdx] : null;
             if (trip) trip.estadoAuditoria = estado;
 
+            // Sincronizar en el arreglo maestro _caTripGroups
+            if (Array.isArray(window._caTripGroups)) {
+                const rawV = String(viaje || '').trim();
+                const mTrip = window._caTripGroups.find(t => String(t.viaje || '').trim() === rawV || String(t.viaje || '').replace(/^#/, '') === rawV.replace(/^#/, ''));
+                if (mTrip) mTrip.estadoAuditoria = estado;
+            }
+
             const sel = document.getElementById(`ca-audit-select-${globalIdx}`);
             if (sel) {
                 sel.style.background = estado === 'OBSERVADO' ? '#fff7ed' : (estado === 'CONFORME' ? '#f0fdf4' : '#f8fafc');
@@ -80,6 +87,12 @@
         try {
             const trip = (window._caFilteredTrips && window._caFilteredTrips[globalIdx]) ? window._caFilteredTrips[globalIdx] : null;
             if (trip) trip.observacionAuditoria = observacion;
+
+            if (Array.isArray(window._caTripGroups)) {
+                const rawV = String(viaje || '').trim();
+                const mTrip = window._caTripGroups.find(t => String(t.viaje || '').trim() === rawV || String(t.viaje || '').replace(/^#/, '') === rawV.replace(/^#/, ''));
+                if (mTrip) mTrip.observacionAuditoria = observacion;
+            }
 
             const sel = document.getElementById(`ca-audit-select-${globalIdx}`);
             const estadoVal = sel ? sel.value : (trip ? (trip.estadoAuditoria || 'PENDIENTE') : 'PENDIENTE');
@@ -135,7 +148,8 @@
         }
 
         try {
-            const res = await fetch('/api/combustible/analisis-viajes');
+            const moduloParam = (typeof window.moduloActual === 'string' && window.moduloActual.includes('marsisa')) ? 'marsisa' : 'operaciones';
+            const res = await fetch(`/api/combustible/analisis-viajes?modulo=${moduloParam}`);
             const data = await res.json();
 
             if (data.ok && Array.isArray(data.trips)) {

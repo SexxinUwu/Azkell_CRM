@@ -657,8 +657,7 @@ window.condAvisoCombustibleProximamente = function() {
 // ═══════════════════════════════════════════════════════════════════
 // 🛠️ SECCIÓN: REPORTE DE FALLAS DESDE EL PORTAL DEL CONDUCTOR
 // ═══════════════════════════════════════════════════════════════════
-
-const COND_SISTEMAS_TRACTO = {
+let COND_SISTEMAS_TRACTO = {
     'MOTOR': [
         '01 Nivel de aceite motor', '02 Fugas de fluidos', '03 Filtro de aire', '04 Pérdida de potencia',
         '05 Compresora de aire', '06 Fajas, poleas, templadores', '07 Turbo', '08 Múltiple de escape',
@@ -683,7 +682,7 @@ const COND_SISTEMAS_TRACTO = {
     ]
 };
 
-const COND_SISTEMAS_REMOLQUE = {
+let COND_SISTEMAS_REMOLQUE = {
     'FRENOS': [
         '39 Revisar Zapatos', '40 Pulpo de Freno', '41 Tanque de Aire, líneas de aire', '42 Fugas de aire',
         '43 Secador de aire', '44 Rachet de Freno'
@@ -714,10 +713,33 @@ const COND_SISTEMAS_REMOLQUE = {
     ]
 };
 
+async function condCargarConfigSistemasDesdeBackend() {
+    try {
+        var res = await fetch('/api/checklist/config-sistemas');
+        if (res.ok) {
+            var data = await res.json();
+            if (data.tracto && data.remolque) {
+                var newTracto = {};
+                (data.tracto || []).forEach(s => {
+                    newTracto[s.titulo] = s.items || [];
+                });
+                var newRemolque = {};
+                (data.remolque || []).forEach(s => {
+                    newRemolque[s.titulo] = s.items || [];
+                });
+                COND_SISTEMAS_TRACTO = newTracto;
+                COND_SISTEMAS_REMOLQUE = newRemolque;
+            }
+        }
+    } catch (err) {
+        console.warn('Usando configuración por defecto de fallas en portal conductor:', err);
+    }
+}
+
 window._condFotosFallaBase64 = [];
 
 // Abrir modal de Reporte de Fallas precargado con el viaje activo
-window.condAbrirModalReporteFallas = function() {
+window.condAbrirModalReporteFallas = async function() {
     var viajeData = window._condViajeActivoData || {};
     var viaje = viajeData.viaje;
     var cond = viajeData.conductor || {};
@@ -749,6 +771,9 @@ window.condAbrirModalReporteFallas = function() {
     if (emptyT) emptyT.style.display = 'none';
     var emptyR = document.getElementById('cond_empty_search_remolque');
     if (emptyR) emptyR.style.display = 'none';
+
+    // Cargar config dinámica si es posible
+    await condCargarConfigSistemasDesdeBackend();
 
     // Renderizar acordeones
     condRenderAcordeonSistemas('condAccTracto', COND_SISTEMAS_TRACTO, 'Tracto');

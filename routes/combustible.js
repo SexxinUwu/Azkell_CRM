@@ -1089,14 +1089,22 @@ module.exports = function (db, broadcast, logAudit) {
             const auditoriaMap = new Map();
             try {
                 const [auditRows] = await tdb.query(
-                    `SELECT viaje, estado_auditoria, observacion, usuario, DATE_FORMAT(actualizado_en, '%Y-%m-%d %H:%i:%s') AS actualizado_en FROM combustible_auditoria_viajes WHERE modulo = ?`,
-                    [moduloAuditoria]
+                    `SELECT modulo, viaje, estado_auditoria, observacion, usuario, DATE_FORMAT(actualizado_en, '%Y-%m-%d %H:%i:%s') AS actualizado_en FROM combustible_auditoria_viajes`
                 );
                 auditRows.forEach(a => {
                     if (a.viaje) {
                         const vKey = String(a.viaje).trim();
-                        auditoriaMap.set(vKey, a);
-                        auditoriaMap.set(vKey.replace(/^\d{4}-0*/, ''), a);
+                        const vClean = vKey.replace(/^#/, '').trim();
+                        const vNum = vClean.replace(/^\d{4}-0*/, '');
+                        const vPadded = vClean.replace(/^(\d{4})-(\d+)/, (m, y, n) => y + '-' + n.padStart(8, '0'));
+
+                        [vKey, `#${vKey}`, vClean, `#${vClean}`, vNum, vPadded, `#${vPadded}`].forEach(k => {
+                            if (k) {
+                                if (a.modulo === moduloAuditoria || !auditoriaMap.has(k)) {
+                                    auditoriaMap.set(k, a);
+                                }
+                            }
+                        });
                     }
                 });
             } catch (eAudit) {
@@ -1435,7 +1443,15 @@ module.exports = function (db, broadcast, logAudit) {
                     }
 
                     const vRawKey = String(t.viaje || '').trim();
-                    const auditObj = auditoriaMap.get(vRawKey) || auditoriaMap.get(vRawKey.replace(/^\d{4}-0*/, '')) || null;
+                    const vCleanKey = vRawKey.replace(/^#/, '').trim();
+                    const vNumKey = vCleanKey.replace(/^\d{4}-0*/, '');
+                    const vPaddedKey = vCleanKey.replace(/^(\d{4})-(\d+)/, (m, y, n) => y + '-' + n.padStart(8, '0'));
+
+                    const auditObj = auditoriaMap.get(vRawKey) || 
+                                     auditoriaMap.get(vCleanKey) || 
+                                     auditoriaMap.get(`#${vCleanKey}`) || 
+                                     auditoriaMap.get(vPaddedKey) || 
+                                     auditoriaMap.get(vNumKey) || null;
                     const estadoAuditoria = auditObj ? (auditObj.estado_auditoria || 'PENDIENTE') : 'PENDIENTE';
                     const observacionAuditoria = auditObj ? (auditObj.observacion || '') : '';
                     const usuarioAuditoria = auditObj ? (auditObj.usuario || '') : '';
@@ -2114,11 +2130,13 @@ module.exports = function (db, broadcast, logAudit) {
                 return res.status(400).json({ ok: false, error: 'N° de viaje requerido' });
             }
 
+            const rawViaje = String(viaje).trim();
+            const cleanViaje = rawViaje.replace(/^#/, '').trim();
             const est = (estado_auditoria || 'PENDIENTE').toUpperCase();
             const obs = (observacion !== undefined && observacion !== null) ? String(observacion).trim() : '';
             const usuario = (req.user && (req.user.username || req.user.nombre)) || req.body.usuario || 'Auditor';
 
-            await tdb.query(`
+            const sqlAudit = `
                 INSERT INTO combustible_auditoria_viajes (modulo, viaje, estado_auditoria, observacion, usuario)
                 VALUES (?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
@@ -2126,13 +2144,18 @@ module.exports = function (db, broadcast, logAudit) {
                     observacion = VALUES(observacion),
                     usuario = VALUES(usuario),
                     actualizado_en = CURRENT_TIMESTAMP
-            `, [moduloAuditoria, String(viaje).trim(), est, obs, usuario]);
+            `;
 
-            if (typeof logAudit === 'function') {
-                logAudit(req, 'AUDITORIA_COMBUSTIBLE', `Viaje [${viaje}] marcado como [${est}]. Obs: ${obs}`);
+            await tdb.query(sqlAudit, [moduloAuditoria, rawViaje, est, obs, usuario]);
+            if (cleanViaje && cleanViaje !== rawViaje) {
+                await tdb.query(sqlAudit, [moduloAuditoria, cleanViaje, est, obs, usuario]);
             }
 
-            res.json({ ok: true, viaje, estado_auditoria: est, observacion: obs, usuario });
+            if (typeof logAudit === 'function') {
+                logAudit(req, 'AUDITORIA_COMBUSTIBLE', `Viaje [${rawViaje}] marcado como [${est}]. Obs: ${obs}`);
+            }
+
+            res.json({ ok: true, viaje: rawViaje, estado_auditoria: est, observacion: obs, usuario });
         } catch (err) {
             console.error('Error al guardar auditoría de combustible:', err);
             res.status(500).json({ ok: false, error: err.message });
