@@ -3694,6 +3694,7 @@ function actualizarBottomNavActivo(ruta) {
     document.querySelectorAll('.bottom-nav-item').forEach(function(el) { el.classList.remove('active'); });
     var id = '';
     if (ruta === 'dashboard') id = 'bnav-dashboard';
+    else if (ruta === 'operaciones/conductor-portal' || ruta.startsWith('operaciones/conductor')) id = 'bnav-conductor';
     else if (ruta.startsWith('operaciones/')) id = 'bnav-operaciones';
     else if (ruta.startsWith('flota/')) id = 'bnav-flota';
     else if (ruta.startsWith('mantenimiento/')) id = 'bnav-mantenimiento';

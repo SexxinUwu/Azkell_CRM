@@ -2069,8 +2069,16 @@ window.abrirDetalleChecklist = async function(id) {
     if (!Array.isArray(fallasR)) fallasR = [];
 
     const todasFallas = [
-        ...fallasT.map(f => ({ ...f, unidad: 'TRACTO ' + (r.placa_tracto ? '(' + r.placa_tracto + ')' : '') })),
-        ...fallasR.map(f => ({ ...f, unidad: 'REMOLQUE ' + (r.placa_remolque ? '(' + r.placa_remolque + ')' : '') }))
+        ...fallasT.map(f => ({
+            ...f,
+            placaDisplay: r.placa_tracto || 'TRACTO',
+            sistemaDisplay: (f.sistema && f.sistema !== 'MANUAL' && f.sistema !== 'GENERAL') ? f.sistema : (f.item === 'Falla Manual' || f.sistema === 'MANUAL' ? 'MANUAL' : (f.sistema || 'MANUAL'))
+        })),
+        ...fallasR.map(f => ({
+            ...f,
+            placaDisplay: r.placa_remolque || 'REMOLQUE',
+            sistemaDisplay: (f.sistema && f.sistema !== 'MANUAL' && f.sistema !== 'GENERAL') ? f.sistema : (f.item === 'Falla Manual' || f.sistema === 'MANUAL' ? 'MANUAL' : (f.sistema || 'MANUAL'))
+        }))
     ];
 
     // Badge Estado
@@ -2220,10 +2228,10 @@ window.abrirDetalleChecklist = async function(id) {
                 <table class="table table-hover align-middle m-0 small">
                     <thead class="table-light sticky-top">
                         <tr>
-                            <th class="py-2 ps-3" style="width: 140px;">FECHA REPORTE</th>
-                            <th class="py-2">UNIDAD</th>
-                            <th class="py-2">CATEGORÍA</th>
-                            <th class="py-2">ÍTEM</th>
+                            <th class="py-2 ps-3" style="min-width: 170px; white-space: nowrap;">FECHA REPORTE</th>
+                            <th class="py-2" style="white-space: nowrap;">UNIDAD</th>
+                            <th class="py-2" style="white-space: nowrap;">SISTEMA</th>
+                            <th class="py-2" style="white-space: nowrap;">ÍTEM</th>
                             <th class="py-2 pe-3">DESCRIPCIÓN DE LA FALLA</th>
                         </tr>
                     </thead>
@@ -2234,13 +2242,19 @@ window.abrirDetalleChecklist = async function(id) {
         html += `<tr><td colspan="5" class="text-center py-3 text-muted">Sin fallas observadas registradas.</td></tr>`;
     } else {
         todasFallas.forEach(f => {
+            const sistTxt = f.sistemaDisplay || 'MANUAL';
+            const badgeClass = sistTxt === 'MANUAL' ? 'badge bg-secondary-subtle text-secondary' : 'badge bg-primary-subtle text-primary';
             html += `
                 <tr>
-                    <td class="ps-3 fw-bold text-secondary font-monospace" style="font-size:0.78rem;">
+                    <td class="ps-3 fw-bold text-secondary font-monospace" style="font-size:0.78rem; white-space: nowrap;">
                         <i class="bi bi-clock-history me-1 text-primary"></i>${f.fecha || fechaFmt}
                     </td>
-                    <td class="fw-bold text-primary">${f.unidad || 'TRACTO'}</td>
-                    <td class="fw-semibold text-dark">${f.sistema || 'GENERAL'}</td>
+                    <td class="fw-bold text-primary" style="white-space: nowrap;">
+                        <span class="badge bg-light border text-primary fw-bolder px-2 py-1">${f.placaDisplay || f.unidad || '-'}</span>
+                    </td>
+                    <td class="fw-semibold text-dark" style="white-space: nowrap;">
+                        <span class="${badgeClass} fw-bold px-2 py-1 text-uppercase" style="font-size:0.72rem;">${sistTxt}</span>
+                    </td>
                     <td class="fw-bold text-danger">${f.item || '—'}</td>
                     <td class="pe-3 fw-semibold text-dark">${f.obs || 'SIN DESCRIPCIÓN'}</td>
                 </tr>
