@@ -64,7 +64,7 @@ window.init_inventario = function() {
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(cfg){ if (cfg && cfg.tipo_cambio) window._invTC = parseFloat(cfg.tipo_cambio) || 3.70; })
         .catch(function(){});
-    window._invAlmacenActivo = window._invAlmacenActivo || null; // null = Portal | 'ALM CENTRAL' etc. | 'TODOS'
+    window._invAlmacenActivo = null; // null = Portal de Almacenes por defecto
     window.cargarInventario();
     window._invRenderPortalAlmacenes();
     window._invCargarMarcasPlacas();
@@ -223,28 +223,29 @@ window._invRenderPortalAlmacenes = function() {
 };
 
 window._invSeleccionarAlmacenPortal = function(almacenId) {
-    window._invAlmacenActivo = almacenId;
+    window._invAlmacenActivo = (almacenId === 'ALL' || almacenId === 'TODOS') ? 'TODOS' : almacenId;
     var portal = document.getElementById('inv-portal-almacenes');
-    var articulos = document.getElementById('inv-vista-articulos');
+    var articulos = document.getElementById('inv-vista-principal');
     var badgeAlm = document.getElementById('inv-almacen-badge-activo');
 
-    if (portal) portal.style.display = 'none';
-    if (articulos) articulos.style.display = 'block';
+    if (portal) portal.style.setProperty('display', 'none', 'important');
+    if (articulos) articulos.style.setProperty('display', 'flex', 'important');
 
     if (badgeAlm) {
-        badgeAlm.innerText = (almacenId === 'TODOS') ? 'TODOS LOS ALMACENES' : almacenId;
+        badgeAlm.innerText = (window._invAlmacenActivo === 'TODOS') ? 'TODOS LOS ALMACENES' : window._invAlmacenActivo.toUpperCase();
     }
 
     window.filtrarInventario();
 };
+window._invSeleccionarAlmacen = window._invSeleccionarAlmacenPortal;
 
 window._invVolverAPortalAlmacenes = function() {
     window._invAlmacenActivo = null;
     var portal = document.getElementById('inv-portal-almacenes');
-    var articulos = document.getElementById('inv-vista-articulos');
+    var articulos = document.getElementById('inv-vista-principal');
 
-    if (portal) portal.style.display = 'block';
-    if (articulos) articulos.style.display = 'none';
+    if (portal) portal.style.setProperty('display', 'block', 'important');
+    if (articulos) articulos.style.setProperty('display', 'none', 'important');
 
     window._invRenderPortalAlmacenes();
 };
@@ -261,7 +262,11 @@ window.cargarInventario = function() {
             window._invPoblarFiltros(data);
             window._invRenderKPIs(data);
             window._invRenderPortalAlmacenes();
-            window.filtrarInventario();
+            if (window._invAlmacenActivo) {
+                window._invSeleccionarAlmacenPortal(window._invAlmacenActivo);
+            } else {
+                window._invVolverAPortalAlmacenes();
+            }
         })
         .catch(function(err) {
             var g = document.getElementById('inv-grid');
@@ -2415,6 +2420,8 @@ window._invAbrirScanner = function(target) {
 };
 
 window._invOnScanResult = function(valor) {
+    if (!valor) return;
+    valor = String(valor).trim();
     if (window._invScannerTarget === 'form') {
         // En el formulario: solo rellenar el campo de código de barras
         var campo = document.getElementById('inv-f-codigo-barras');
@@ -2422,37 +2429,32 @@ window._invOnScanResult = function(valor) {
         return;
     }
 
-    // En la lista: buscar artículo por ID o código de barras
+    // En la barra de búsqueda del catálogo:
+    var inv = document.getElementById('inv-buscar');
+    if (inv) {
+        inv.value = valor;
+        inv.dispatchEvent(new Event('input'));
+    }
+    window.filtrarInventario();
+
     var found = (window._invData || []).find(function(d) {
-        return String(d.id).trim() === valor ||
-               (d.codigo_barras && d.codigo_barras.trim() === valor);
+        var v = String(valor).trim().toUpperCase();
+        return String(d.id || '').trim().toUpperCase() === v ||
+               (d.codigo_barras && String(d.codigo_barras).trim().toUpperCase() === v) ||
+               (d.codigo_item && String(d.codigo_item).trim().toUpperCase() === v);
     });
 
     if (found) {
-        // Abrir directamente el detalle del artículo encontrado
-        window.abrirDetalleInv(found.id);
-        // Toast breve con el nombre
-        if (typeof window.mostrarToast === 'function') window.mostrarToast('Artículo: ' + (found.descripcion || found.articulo || found.id), 'success');
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast('Artículo encontrado: ' + (found.descripcion || found.articulo || found.id), 'success');
+        }
     } else {
-        // Intentar búsqueda parcial en el buscador por si el código es parcial
-        var inv     = document.getElementById('inv-buscar');
-        var mob     = document.getElementById('inv-m-buscar');
-        var compact = document.getElementById('inv-search-input');
-        if (inv)     inv.value     = valor;
-        if (mob)     mob.value     = valor;
-        if (compact) compact.value = valor;
-        window.filtrarInventario();
-
-        // Si tras filtrar no hay resultados, mostrar mensaje
-        setTimeout(function() {
-            if (!(window._invFiltrados || []).length) {
-                if (typeof window.mostrarToast === 'function') window.mostrarToast('Código no encontrado: ' + valor, 'danger');
-            }
-        }, 100);
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast('Búsqueda aplicada para: ' + valor, 'info');
+        }
     }
 };
 
-// Alias de compatibilidad (se llama desde MutationObserver al desmontar módulo)
 window._invCerrarScanner = function() {
     window._cerrarEscaner();
 };
