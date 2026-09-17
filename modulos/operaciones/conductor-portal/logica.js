@@ -278,7 +278,47 @@ async function condCargarFallasHistorial(viaje) {
             return ordV === vCod || (ordV && vCod.includes(ordV)) || (ordV && ordV.includes(vCod));
         });
 
-        // Extraer todas las fallas reportadas de esos reportes
+        // 1. Recopilar todas las URLs de fotos para presignar en lote
+        var s3Urls = [];
+        repFiltrados.forEach(r => {
+            var fList = [];
+            try { fList = typeof r.fotos_json === 'string' ? JSON.parse(r.fotos_json) : (r.fotos_json || []); } catch(e){}
+            if (Array.isArray(fList)) {
+                fList.forEach(u => {
+                    var strU = (typeof u === 'string') ? u : (u && u.url ? u.url : '');
+                    if (strU && (strU.startsWith('http') || strU.includes('s3') || strU.includes('amazonaws.com'))) {
+                        s3Urls.push(strU);
+                    }
+                });
+            }
+        });
+
+        // 2. Presignar URLs mediante la API
+        var signedMap = {};
+        if (s3Urls.length > 0) {
+            try {
+                var reqPresign = await fetch('/api/checklist/presign-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ urls: s3Urls })
+                });
+                if (!reqPresign.ok) {
+                    reqPresign = await fetch('/api/documentos-flota/presign-read', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ urls: s3Urls })
+                    });
+                }
+                if (reqPresign.ok) {
+                    var resPresign = await reqPresign.json();
+                    signedMap = resPresign.signed || resPresign || {};
+                }
+            } catch(eP) {
+                console.warn('Error presignando fotos de fallas:', eP);
+            }
+        }
+
+        // 3. Extraer todas las fallas reportadas de esos reportes con sus fotos firmadas
         var fallas = [];
         repFiltrados.forEach(r => {
             var fT = [];
@@ -286,14 +326,18 @@ async function condCargarFallasHistorial(viaje) {
             try { fT = typeof r.fallas_tracto_json === 'string' ? JSON.parse(r.fallas_tracto_json) : (r.fallas_tracto_json || []); } catch(e){}
             try { fR = typeof r.fallas_remolque_json === 'string' ? JSON.parse(r.fallas_remolque_json) : (r.fallas_remolque_json || []); } catch(e){}
             
-            var fotos = [];
-            try { fotos = typeof r.fotos_json === 'string' ? JSON.parse(r.fotos_json) : (r.fotos_json || []); } catch(e){}
+            var fotosRaw = [];
+            try { fotosRaw = typeof r.fotos_json === 'string' ? JSON.parse(r.fotos_json) : (r.fotos_json || []); } catch(e){}
+            var fotosSigned = (Array.isArray(fotosRaw) ? fotosRaw : []).map(u => {
+                var rawU = (typeof u === 'string') ? u : (u && u.url ? u.url : '');
+                return signedMap[rawU] || rawU;
+            }).filter(Boolean);
 
             fT.forEach(f => {
-                fallas.push({ ...f, unidad: r.placa_tracto || 'TRACTO', folio: r.folio, estado: r.estado || 'Pendiente', fechaReporte: r.fecha_reporte, fotos: fotos });
+                fallas.push({ ...f, unidad: r.placa_tracto || 'TRACTO', folio: r.folio, estado: r.estado || 'Pendiente', fechaReporte: r.fecha_reporte, fotos: fotosSigned });
             });
             fR.forEach(f => {
-                fallas.push({ ...f, unidad: r.placa_remolque || 'CARRETA', folio: r.folio, estado: r.estado || 'Pendiente', fechaReporte: r.fecha_reporte, fotos: fotos });
+                fallas.push({ ...f, unidad: r.placa_remolque || 'CARRETA', folio: r.folio, estado: r.estado || 'Pendiente', fechaReporte: r.fecha_reporte, fotos: fotosSigned });
             });
         });
 
@@ -323,9 +367,9 @@ function condRenderFallasHistorial(fallas) {
 
     cont.innerHTML = fallas.map(f => {
         var estadoBadge = '<span class="badge bg-warning text-dark font-monospace px-2 py-0.5" style="font-size:0.68rem;">PENDIENTE</span>';
-        if (f.estado === 'En Proceso') {
+        if (f.estado === 'En Proceso' || f.estado === 'En Taller') {
             estadoBadge = '<span class="badge bg-primary text-white font-monospace px-2 py-0.5" style="font-size:0.68rem;">EN TALLER</span>';
-        } else if (f.estado === 'Finalizado') {
+        } else if (f.estado === 'Finalizado' || f.estado === 'Atendido') {
             estadoBadge = '<span class="badge bg-success text-white font-monospace px-2 py-0.5" style="font-size:0.68rem;">ATENDIDO</span>';
         }
 
@@ -336,10 +380,10 @@ function condRenderFallasHistorial(fallas) {
         var fotosHTML = '';
         if (Array.isArray(f.fotos) && f.fotos.length > 0) {
             fotosHTML = `
-                <div class="d-flex align-items-center gap-1.5 mt-2">
+                <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
                     ${f.fotos.map(url => `
-                        <a href="${url}" target="_blank" rel="noopener noreferrer" class="rounded overflow-hidden border d-inline-block shadow-2xs" style="width:36px; height:36px;">
-                            <img src="${url}" style="width:100%; height:100%; object-fit:cover;">
+                        <a href="${url}" target="_blank" rel="noopener noreferrer" class="rounded-3 overflow-hidden border d-inline-block shadow-2xs" style="width:46px; height:46px; background:#f8fafc; border-color:#e2e8f0 !important;">
+                            <img src="${url}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.parentElement.style.opacity='0.5';">
                         </a>
                     `).join('')}
                 </div>
@@ -767,11 +811,11 @@ window.condAbrirModalReporteFallas = async function() {
     if (inpKm) inpKm.value = viaje.kilometraje || viaje.km_inicial || viaje.km || '';
     if (inpHoras) inpHoras.value = viaje.horas_motor || '';
 
-    // Consultar Telemetría / Odómetro GPS si no viene en el viaje
+    // Consultar Telemetría / Odómetro GPS en tiempo real
     var pT = (viaje.placa_tracto || viaje.placa || '').trim();
     var pR = (viaje.placa_remolque || viaje.remolque || '').trim();
     if (pT || pR) {
-        condConsultarGpsVehiculo(pT, pR);
+        await condConsultarGpsVehiculo(pT, pR);
     }
 
     // Resetear buscador y alertas de búsqueda
@@ -811,33 +855,106 @@ window.condAbrirModalReporteFallas = async function() {
     }
 };
 
-// Consultar Telemetría / Odómetro / Horómetro desde flota o GPS
+// Consultar Telemetría / Odómetro / Horómetro desde Wialon GPS o Flota
 async function condConsultarGpsVehiculo(placaTracto, placaRemolque) {
     try {
         var inpKm = document.getElementById('cond_rf_km');
         var inpHoras = document.getElementById('cond_rf_horas_motor');
         
-        var res = await fetch('/api/vehiculos-flota?t=' + Date.now());
-        if (res.ok) {
-            var list = await res.json();
-            if (Array.isArray(list)) {
-                if (placaTracto) {
-                    var pTLimpia = placaTracto.replace(/[^A-Z0-9]/ig, '').toUpperCase();
-                    var vehT = list.find(v => (v.placa || '').replace(/[^A-Z0-9]/ig, '').toUpperCase() === pTLimpia);
-                    if (vehT && inpKm && (!inpKm.value || inpKm.value === '0')) {
-                        var kmVal = vehT.km || vehT.kilometraje || vehT.km_actual || vehT.odometro || 0;
-                        if (kmVal > 0) inpKm.value = Math.round(kmVal);
+        var pTLimpia = (placaTracto || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/ig, '');
+        var pRLimpia = (placaRemolque || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/ig, '');
+
+        // 1. Probar Wialon GPS en vivo (obtenerDatosWialon o CACHE.wialon)
+        var wialonList = (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0) ? CACHE.wialon : [];
+        if (!wialonList.length) {
+            try {
+                var rW = await fetch('/api/script/obtenerDatosWialon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ args: [] })
+                });
+                if (rW.ok) {
+                    var jW = await rW.json();
+                    if (jW && Array.isArray(jW.data)) {
+                        wialonList = jW.data;
+                        if (typeof CACHE !== 'undefined') CACHE.wialon = wialonList;
                     }
                 }
-                if (placaRemolque) {
-                    var pRLimpia = placaRemolque.replace(/[^A-Z0-9]/ig, '').toUpperCase();
-                    var vehR = list.find(v => (v.placa || '').replace(/[^A-Z0-9]/ig, '').toUpperCase() === pRLimpia);
-                    if (vehR && inpHoras && (!inpHoras.value || inpHoras.value === '0')) {
-                        var hrsVal = vehR.horas_motor || vehR.horas || vehR.horometro || 0;
-                        if (hrsVal > 0) inpHoras.value = Math.round(hrsVal);
-                    }
+            } catch(eW) {}
+        }
+
+        if (wialonList && wialonList.length > 0) {
+            if (pTLimpia) {
+                var wT = wialonList.find(w => {
+                    var wPlaca = (w.placa || '').replace(/[^A-Z0-9]/ig, '').toUpperCase();
+                    var wNom = (w.nombre_wialon || '').replace(/[^A-Z0-9]/ig, '').toUpperCase();
+                    return (wPlaca && (wPlaca.includes(pTLimpia) || pTLimpia.includes(wPlaca))) ||
+                           (wNom && (wNom.includes(pTLimpia) || pTLimpia.includes(wNom)));
+                });
+                if (wT && inpKm && parseFloat(wT.km) > 0) {
+                    inpKm.value = Math.round(parseFloat(wT.km));
                 }
             }
+            if (pRLimpia) {
+                var wR = wialonList.find(w => {
+                    var wPlaca = (w.placa || '').replace(/[^A-Z0-9]/ig, '').toUpperCase();
+                    var wNom = (w.nombre_wialon || '').replace(/[^A-Z0-9]/ig, '').toUpperCase();
+                    return (wPlaca && (wPlaca.includes(pRLimpia) || pRLimpia.includes(wPlaca))) ||
+                           (wNom && (wNom.includes(pRLimpia) || pRLimpia.includes(wNom)));
+                });
+                if (wR && inpHoras && parseFloat(wR.horas) > 0) {
+                    inpHoras.value = Math.round(parseFloat(wR.horas));
+                }
+            }
+        }
+
+        // 2. Respaldo: /api/disponibilidad-flota
+        if ((!inpKm || !inpKm.value || inpKm.value === '0') || (!inpHoras || !inpHoras.value || inpHoras.value === '0')) {
+            try {
+                var rD = await fetch('/api/disponibilidad-flota');
+                if (rD.ok) {
+                    var jD = await rD.json();
+                    var listD = Array.isArray(jD) ? jD : (jD.data || []);
+                    if (pTLimpia && inpKm && (!inpKm.value || inpKm.value === '0')) {
+                        var vT = listD.find(v => {
+                            var vp = (v.placa || '').replace(/[^A-Z0-9]/ig, '').toUpperCase();
+                            return vp === pTLimpia || vp.includes(pTLimpia) || pTLimpia.includes(vp);
+                        });
+                        if (vT) {
+                            var kmD = parseFloat(vT.km || vT.kilometraje || vT.km_wialon || 0);
+                            if (kmD > 0) inpKm.value = Math.round(kmD);
+                        }
+                    }
+                    if (pRLimpia && inpHoras && (!inpHoras.value || inpHoras.value === '0')) {
+                        var vR = listD.find(v => {
+                            var vp = (v.placa || '').replace(/[^A-Z0-9]/ig, '').toUpperCase();
+                            return vp === pRLimpia || vp.includes(pRLimpia) || pRLimpia.includes(vp);
+                        });
+                        if (vR) {
+                            var hrsD = parseFloat(vR.horas_motor || vR.horas_wialon || vR.horas || 0);
+                            if (hrsD > 0) inpHoras.value = Math.round(hrsD);
+                        }
+                    }
+                }
+            } catch(eD) {}
+        }
+
+        // 3. Respaldo adicional: /api/flota/placas
+        if ((!inpKm || !inpKm.value || inpKm.value === '0') || (!inpHoras || !inpHoras.value || inpHoras.value === '0')) {
+            try {
+                var rP = await fetch('/api/flota/placas');
+                if (rP.ok) {
+                    var jP = await rP.json();
+                    var listP = Array.isArray(jP) ? jP : (jP.data || []);
+                    if (pTLimpia && inpKm && (!inpKm.value || inpKm.value === '0')) {
+                        var pMatch = listP.find(p => (p.placa || '').replace(/[^A-Z0-9]/ig, '').toUpperCase() === pTLimpia);
+                        if (pMatch) {
+                            var kmP = parseFloat(pMatch.odometro || pMatch.km_inicial || pMatch.km_actual || 0);
+                            if (kmP > 0) inpKm.value = Math.round(kmP);
+                        }
+                    }
+                }
+            } catch(eP) {}
         }
     } catch(e) {
         console.warn('Telemetría GPS no disponible en portal conductor:', e);

@@ -1163,8 +1163,8 @@ window.ckActualizarEncabezadosPlacas = function() {
     const elT = document.getElementById('ck_header_tracto_placa');
     const elR = document.getElementById('ck_header_remolque_placa');
 
-    if (elT) elT.innerHTML = `<i class="bi bi-truck fs-6 me-1"></i> <span>TRACTO ${p.placaTracto ? `(${p.placaTracto})` : '(Placa Principal)'}</span>`;
-    if (elR) elR.innerHTML = `<i class="bi bi-truck-flatbed fs-6 me-1"></i> <span>SEMIRREMOLQUE / CARRETA ${p.placaRemolque ? `(${p.placaRemolque})` : '(Placa Secundaria)'}</span>`;
+    if (elT) elT.innerHTML = `<i class="bi bi-truck fs-5 me-1"></i> <span>TRACTO ${p.placaTracto ? `(${p.placaTracto})` : '(Placa Principal)'}</span>`;
+    if (elR) elR.innerHTML = `<i class="bi bi-truck-flatbed fs-5 me-1"></i> <span>SEMIRREMOLQUE / CARRETA ${p.placaRemolque ? `(${p.placaRemolque})` : '(Placa Secundaria)'}</span>`;
 
     document.querySelectorAll('.ck-manual-falla-row').forEach(row => {
         const select = row.querySelector('.ck-manual-sistema');
