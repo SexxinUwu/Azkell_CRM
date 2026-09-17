@@ -154,28 +154,62 @@
         padding: 6px 4px !important;
         font-size: 0.75rem !important;
     }
-    #sal-panel-detalle {
-        position: fixed !important; bottom: -100vh !important; left: 0 !important;
-        right: 0 !important; width: 100vw !important; max-width: 100vw !important;
-        height: 88vh !important; border-radius: 22px 22px 0 0 !important;
-        border-left: none !important; border-top: 1px solid #e2e8f0 !important;
-        transition: bottom .35s cubic-bezier(.4,0,.2,1) !important;
-        box-shadow: 0 -12px 48px rgba(0,0,0,.2) !important; z-index: 1055 !important;
-    }
-    #sal-panel-detalle.open { bottom: 0 !important; width: 100% !important; }
 }
 
-/* Panel detalle lateral (Desktop) */
-#sal-panel-detalle {
-    width: 0; flex-shrink: 0; overflow: hidden;
-    background: #ffffff; border-left: 1px solid #e2e8f0;
-    display: flex; flex-direction: column; transition: width .25s; max-width: 380px;
+/* ─── Panel Detalle Drawer (Centrado y animado de abajo hacia arriba) ─ */
+#sal-det-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45) !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 1088 !important;
+    transition: opacity .25s ease;
 }
-#sal-panel-detalle.open { width: 380px; }
-#sal-panel-detalle .sal-detail-scroll { flex:1; overflow-y:auto; padding:1.25rem; }
-#sal-panel-detalle .sal-detail-footer {
-    padding:.75rem 1rem; border-top:1px solid #e2e8f0;
-    display:flex; gap:.5rem; flex-wrap:wrap;
+#sal-det-backdrop.open { display: block !important; }
+
+#sal-panel-detalle {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    top: auto !important;
+    right: auto !important;
+    transform: translateX(-50%) translateY(100%) !important;
+    width: 100% !important;
+    max-width: 680px !important;
+    height: 90vh !important;
+    max-height: 90vh !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-bottom: none !important;
+    border-radius: 28px 28px 0 0 !important;
+    box-shadow: 0 -16px 56px rgba(0,0,0,.35) !important;
+    transition: transform .28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    z-index: 1089 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+    margin: 0 !important;
+}
+#sal-panel-detalle.open {
+    transform: translateX(-50%) translateY(0) !important;
+    visibility: visible !important;
+    display: flex !important;
+}
+
+@media (max-width: 768px) {
+    #sal-panel-detalle {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        left: 0 !important;
+        transform: translateY(100%) !important;
+        border-radius: 24px 24px 0 0 !important;
+    }
+    #sal-panel-detalle.open {
+        transform: translateY(0) !important;
+    }
 }
 
 /* Drawer Nueva Salida */
@@ -226,10 +260,8 @@
 
 <!-- Backdrop Modal -->
 <div id="salNuevoBackdrop" onclick="window.salCerrarNuevo()"></div>
-<!-- Backdrop panel detalle mobile -->
-<div id="sal-det-backdrop" onclick="window.salCerrarDetalle()"
-     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);
-            backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:1054;"></div>
+<!-- Backdrop panel detalle -->
+<div id="sal-det-backdrop" onclick="window.salCerrarDetalle()"></div>
 
 <div class="sal-app-container d-flex flex-column" id="moduloSalidas">
 
@@ -367,18 +399,6 @@
         <div id="sal-paginacion" class="d-flex align-items-center gap-2 py-2 px-3"></div>
     </div>
 
-    <!-- PANEL DETALLE LATERAL (DESKTOP) -->
-    <div class="sal-detail-panel" id="sal-panel-detalle">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 1rem;height:48px;border-bottom:1px solid #e2e8f0;flex-shrink:0;">
-            <span style="font-size:.88rem;font-weight:800;color:#0f172a;" id="sal-detalle-titulo">Detalle Solicitud</span>
-            <button class="btn btn-sm" onclick="window.salCerrarDetalle()" style="color:#64748b;">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-        <div class="sal-detail-scroll" id="sal-detalle-scroll"></div>
-        <div class="sal-detail-footer" id="sal-detalle-footer" style="display:none;"></div>
-    </div>
-
     <!-- ── 6. BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
     <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1045;">
         <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
@@ -389,6 +409,30 @@
         </button>
     </div>
 
+</div>
+
+<!-- ── PANEL DETALLE DRAWER (MODERNO BENTO CENTRADO / BOTTOM-SHEET) ── -->
+<div class="sal-detail-drawer" id="sal-panel-detalle">
+    <div class="d-flex align-items-center justify-content-between px-3 py-2.5 bg-white border-bottom flex-shrink-0" style="min-height: 56px;">
+        <div class="d-flex align-items-center gap-2.5">
+            <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 38px; height: 38px; background: #eff6ff; color: #0284c7;">
+                <i class="bi bi-box-arrow-up-right fs-6"></i>
+            </div>
+            <div>
+                <div class="fw-bold text-dark lh-1" style="font-size: 0.98rem;" id="sal-detalle-titulo">Detalle de Solicitud</div>
+                <small class="text-muted" style="font-size: 0.72rem;">Gestión de despacho y control de existencias</small>
+            </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-light border-0 rounded-circle p-1 d-flex align-items-center justify-content-center" onclick="window.salCerrarDetalle()" style="width:34px; height:34px; color:#64748b; background:#f1f5f9;">
+            <i class="bi bi-x-lg fs-6"></i>
+        </button>
+    </div>
+
+    <!-- Scrollable Body (Segmentado Bento) -->
+    <div class="sal-detail-scroll p-3 flex-grow-1 overflow-auto custom-scrollbar" id="sal-detalle-scroll" style="background: #f8fafc;"></div>
+
+    <!-- Footer Fijo de Acciones (Estilo Pills Nativos) -->
+    <div class="sal-detail-footer bg-white border-top p-3 flex-shrink-0" id="sal-detalle-footer" style="display:none; box-shadow: 0 -4px 16px rgba(0,0,0,0.04);"></div>
 </div>
 
 <!-- DRAWER: Nueva Solicitud (MODERNO BENTO) -->
