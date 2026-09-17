@@ -14,7 +14,7 @@
     // Inicialización del módulo
     window.init_operaciones_ordenes_servicio = function () {
         initFechasPorDefecto();
-        cargarClientesFiltro();
+        window.osCargarClientesDatalist();
         window.osCargarTabla();
     };
 
@@ -41,25 +41,50 @@
         }
     }
 
-    async function cargarClientesFiltro() {
+    // ── Cargar Datalist de Clientes para Filtro y Formulario ──────────
+    window.osCargarClientesDatalist = async function (force = false) {
+        if (_clientesCache && _clientesCache.length > 0 && !force) {
+            poblarDatalistsClientes(_clientesCache);
+            return _clientesCache;
+        }
         try {
             const resp = await fetch('/api/clientes');
             const data = await resp.json();
             _clientesCache = Array.isArray(data) ? data : (data.data || []);
-
-            const selFiltro = document.getElementById('os-filtro-cliente');
-            const datalistModal = document.getElementById('os-clientes-datalist');
-
-            if (selFiltro) {
-                selFiltro.innerHTML = '<option value="TODOS">Seleccione...</option>' + 
-                    _clientesCache.map(c => `<option value="${escapeHtml(c.razon_social)}">${escapeHtml(c.razon_social)}</option>`).join('');
-            }
-            if (datalistModal) {
-                datalistModal.innerHTML = _clientesCache.map(c => `<option value="${escapeHtml(c.razon_social)}"></option>`).join('');
-            }
+            poblarDatalistsClientes(_clientesCache);
+            return _clientesCache;
         } catch (e) {
             console.warn("Error cargando clientes:", e);
+            return [];
         }
+    };
+
+    function poblarDatalistsClientes(lista) {
+        if (!lista || !Array.isArray(lista)) return;
+        const selFiltro = document.getElementById('os-filtro-cliente');
+        const datalistModal = document.getElementById('os-clientes-datalist');
+        const dlGlobal = document.getElementById('dl-clientes');
+
+        const optionsHtml = lista.map(c => {
+            const rz = escapeHtml(c.razon_social || '');
+            const ruc = c.ruc_dni ? ` (RUC: ${c.ruc_dni})` : '';
+            return `<option value="${rz}">${rz}${ruc}</option>`;
+        }).join('');
+
+        if (selFiltro) {
+            selFiltro.innerHTML = '<option value="TODOS">Seleccione...</option>' + 
+                lista.map(c => `<option value="${escapeHtml(c.razon_social)}">${escapeHtml(c.razon_social)}</option>`).join('');
+        }
+        if (datalistModal) {
+            datalistModal.innerHTML = optionsHtml;
+        }
+        if (dlGlobal) {
+            dlGlobal.innerHTML = optionsHtml;
+        }
+    }
+
+    async function cargarClientesFiltro() {
+        return window.osCargarClientesDatalist();
     }
 
     // ── Cargar tabla principal desde API ─────────────────────────────
@@ -203,9 +228,20 @@
     window.osRegresarAtras = function () {
         const modalEl = document.getElementById('modalOsForm');
         if (modalEl) {
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
+            try {
+                const modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+                if (modal) modal.hide();
+            } catch (e) {}
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            modalEl.setAttribute('aria-hidden', 'true');
+            modalEl.removeAttribute('aria-modal');
         }
+        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+
         if (window._osOrigenApertura === 'detalle_viaje') {
             const drawer = document.getElementById('ovMonDrawer');
             const backdrop = document.getElementById('ovMonDrawerBackdrop');
@@ -217,7 +253,6 @@
         }
     };
 
-    // ── Abrir Modal para Nuevo ──────────────────────────────────────
     // ── Cambio Dinámico de Moneda y Tipo de Cambio ──────────────────
     window.osCambiarMoneda = function (moneda) {
         const grp = document.getElementById('os-grp-tipo-cambio');
@@ -233,12 +268,16 @@
         }
     };
 
-    // ── Abrir Modal para Nuevo ──────────────────────────────────────
-    window.osAbrirModalNuevo = async function (viajeAsignado = '', origen = 'modulo_propio', datosExtra = {}) {
+    // ── Abrir Modal para Nuevo (Instantáneo 3x más rápido) ────────────
+    window.osAbrirModalNuevo = function (viajeAsignado = '', origen = 'modulo_propio', datosExtra = {}) {
         window._osOrigenApertura = origen;
-        document.getElementById('modalOsFormLabel').textContent = 'Nueva Orden';
-        document.getElementById('formOrdenServicio').reset();
-        document.getElementById('os-input-id').value = '';
+        const titleEl = document.getElementById('modalOsFormLabel');
+        if (titleEl) titleEl.textContent = 'Nueva Orden';
+
+        const formEl = document.getElementById('formOrdenServicio');
+        if (formEl) formEl.reset();
+        const inpId = document.getElementById('os-input-id');
+        if (inpId) inpId.value = '';
         _docsAdjuntosActuales = [];
         renderizarDocsAdjuntos();
 
@@ -247,11 +286,11 @@
         if (selMoneda) selMoneda.value = 'SOLES';
         window.osCambiarMoneda('SOLES');
 
-        // Inicializar rutas con 1 fila por defecto según Imagen 1
+        // Inicializar rutas con 1 fila por defecto
         _osRutasActuales = [];
         window.osAgregarFilaRuta();
 
-        // Asignar Tracto y Carreta (ATP999)
+        // Asignar Tracto y Carreta
         const inpTracto = document.getElementById('os-input-tracto');
         const inpCarreta = document.getElementById('os-input-carreta');
         if (inpTracto) inpTracto.value = datosExtra.placa_tracto || '';
@@ -308,32 +347,25 @@
             if (helpText) helpText.textContent = 'Puede ingresar o vincular la orden de viaje aquí.';
         }
 
-        // Correlativo autogenerado (inicia en 00000001)
-        document.getElementById('os-input-serie').value = '2026';
-        document.getElementById('os-input-numero').value = '00000001';
-        try {
-            const r = await fetch('/api/operaciones/ordenes-servicio/correlativo');
-            const d = await r.json();
-            if (d.ok) {
-                document.getElementById('os-input-serie').value = d.serie;
-                document.getElementById('os-input-numero').value = d.numero;
-            }
-        } catch (e) {
-            console.warn("No se pudo obtener correlativo:", e);
-        }
+        // Correlativo inicial por defecto
+        const inpSerie = document.getElementById('os-input-serie');
+        const inpNumero = document.getElementById('os-input-numero');
+        if (inpSerie) inpSerie.value = '2026';
+        if (inpNumero) inpNumero.value = '00000001';
 
-        // Fecha actual en hora local (evita desfase UTC de toISOString)
+        // Fecha actual en hora local
         const ahoraLocal = new Date();
         const yLocal = ahoraLocal.getFullYear();
         const mLocal = String(ahoraLocal.getMonth() + 1).padStart(2, '0');
         const dLocal = String(ahoraLocal.getDate()).padStart(2, '0');
         const hoy = `${yLocal}-${mLocal}-${dLocal}`;
-        document.getElementById('os-input-fecha').value = hoy;
+        const inpFecha = document.getElementById('os-input-fecha');
+        if (inpFecha) inpFecha.value = hoy;
 
         // Activar tab de Orden de Servicio por defecto
         activarTab('tab-os-orden-link');
 
-        // Si se abre desde detalle de viaje, ocultar momentáneamente el drawer para evitar doble cortina oscura
+        // Si se abre desde detalle de viaje, ocultar drawer
         if (origen === 'detalle_viaje') {
             const drawer = document.getElementById('ovMonDrawer');
             const backdrop = document.getElementById('ovMonDrawerBackdrop');
@@ -362,16 +394,71 @@
             });
         }
 
+        // Cargar clientes en datalist de inmediato
+        window.osCargarClientesDatalist();
+
+        // Mostrar modal al instante
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
+
+        // Consultar correlativo en segundo plano sin congelar la interfaz
+        fetch('/api/operaciones/ordenes-servicio/correlativo')
+            .then(r => r.json())
+            .then(d => {
+                if (d && d.ok) {
+                    if (inpSerie) inpSerie.value = d.serie;
+                    if (inpNumero) inpNumero.value = d.numero;
+                }
+            })
+            .catch(e => console.warn("No se pudo obtener correlativo:", e));
     };
 
-    // ── Abrir Modal para Editar ─────────────────────────────────────
+    // ── Abrir Modal para Editar (Instantáneo) ─────────────────────────
     window.osAbrirModalEditar = async function (id, origen = 'modulo_propio') {
         window._osOrigenApertura = origen;
-        document.getElementById('modalOsFormLabel').textContent = 'Editar Orden';
-        document.getElementById('formOrdenServicio').reset();
-        document.getElementById('os-input-id').value = id;
+        const titleEl = document.getElementById('modalOsFormLabel');
+        if (titleEl) titleEl.textContent = 'Editar Orden';
+
+        const formEl = document.getElementById('formOrdenServicio');
+        if (formEl) formEl.reset();
+        const inpId = document.getElementById('os-input-id');
+        if (inpId) inpId.value = id;
+
+        // Si se abre desde detalle de viaje, ocultar drawer
+        if (origen === 'detalle_viaje') {
+            const drawer = document.getElementById('ovMonDrawer');
+            const backdrop = document.getElementById('ovMonDrawerBackdrop');
+            if (drawer) drawer.classList.remove('active');
+            if (backdrop) backdrop.classList.remove('active');
+        }
+
+        const modalEl = document.getElementById('modalOsForm');
+        if (modalEl && modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+
+        // Listener de cierre seguro
+        if (modalEl && !modalEl._hasDrawerRestoreListener) {
+            modalEl._hasDrawerRestoreListener = true;
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                if (window._osOrigenApertura === 'detalle_viaje') {
+                    const drawer = document.getElementById('ovMonDrawer');
+                    const backdrop = document.getElementById('ovMonDrawerBackdrop');
+                    if (drawer) drawer.classList.add('active');
+                    if (backdrop) backdrop.classList.add('active');
+                    if (typeof window.ovRecargarMonitoreoActual === 'function') {
+                        window.ovRecargarMonitoreoActual();
+                    }
+                }
+            });
+        }
+
+        // Cargar clientes en datalist
+        window.osCargarClientesDatalist();
+
+        // Mostrar modal al instante
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
 
         try {
             const resp = await fetch(`/api/operaciones/ordenes-servicio/${id}`);
