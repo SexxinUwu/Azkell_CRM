@@ -707,6 +707,9 @@ window.verificarSesionGuardada = function() {
             'directorio/clientes': 'clientes',
             'operaciones/marsisa-ordenes-viaje': 'op_guias_remision',
             'operaciones/marsisa-combustible-vales': 'combustible_vales',
+            'operaciones/marsisa-combustible-matriz': 'combustible_matriz',
+            'operaciones/marsisa-combustible-analisis': 'combustible_analisis',
+            'operaciones/marsisa-urea-analisis': 'urea_analisis',
             'operaciones/programacion': 'op_programacion',
             'operaciones/ordenes-viaje': 'op_guias_remision',
             'operaciones/ordenes-servicio': 'op_guias_remision',
@@ -3888,6 +3891,9 @@ const TITULOS_MODULOS = {
     'operaciones/reporte-viajes':       'Reporte de Viajes',
     'operaciones/marsisa-ordenes-viaje': 'Órdenes de Viaje (Marsisa)',
     'operaciones/marsisa-combustible-vales': 'Vales de Combustible (Marsisa)',
+    'operaciones/marsisa-combustible-matriz': 'Matriz de Combustible (D2) (Marsisa)',
+    'operaciones/marsisa-combustible-analisis': 'Análisis de Combustible (D2) (Marsisa)',
+    'operaciones/marsisa-urea-analisis': 'Análisis de Urea (Marsisa)',
     'tesoreria/caja':                   'Caja',
     'tesoreria/caja-chica':             'Caja',
     'tesoreria/cuentas':                'Cuentas por Cobrar y Pagar',
@@ -3909,6 +3915,9 @@ const MENU_IDS = {
     'operaciones/combustible-matriz':   'nav-combustible-matriz',
     'operaciones/marsisa-ordenes-viaje': 'nav-marsisa-ordenes-viaje',
     'operaciones/marsisa-combustible-vales': 'nav-marsisa-combustible-vales',
+    'operaciones/marsisa-combustible-matriz': 'nav-marsisa-combustible-matriz',
+    'operaciones/marsisa-combustible-analisis': 'nav-marsisa-combustible-analisis',
+    'operaciones/marsisa-urea-analisis': 'nav-marsisa-urea-analisis',
     'mantenimiento/inspecciones':  'nav-inspecciones',
     'flota/placas':       'nav-placas',
     'mantenimiento/fleetrun':      'nav-fleetrun',
@@ -4019,6 +4028,9 @@ const MENU_SECTION = {
     'operaciones/marsisa-ordenes-viaje': 'operaciones-marsisa',
     'operaciones/guias-remision':  'operaciones-marsisa',
     'operaciones/marsisa-combustible-vales': 'operaciones-marsisa',
+    'operaciones/marsisa-combustible-matriz': 'operaciones-marsisa',
+    'operaciones/marsisa-combustible-analisis': 'operaciones-marsisa',
+    'operaciones/marsisa-urea-analisis': 'operaciones-marsisa',
     'tesoreria/caja':              'tesoreria',
     'tesoreria/caja-chica':        'tesoreria',
     'tesoreria/cuentas':           'tesoreria',
@@ -4045,6 +4057,9 @@ const BREADCRUMB_MAP = {
     'operaciones/marsisa-ordenes-viaje': ['Operaciones Marsisa','Órdenes de Viaje'],
     'operaciones/guias-remision':  ['Operaciones Marsisa','Guías de Remisión'],
     'operaciones/marsisa-combustible-vales': ['Operaciones Marsisa','Vales Combustible'],
+    'operaciones/marsisa-combustible-matriz': ['Operaciones Marsisa','Combustible','Matriz (D2)'],
+    'operaciones/marsisa-combustible-analisis': ['Operaciones Marsisa','Combustible','Análisis D2'],
+    'operaciones/marsisa-urea-analisis': ['Operaciones Marsisa','Combustible','Análisis Urea'],
     'mantenimiento/inspecciones': ['Mantenimiento','Inspecciones'],
     'flota/placas':       ['Flota','Placas'],
     'mantenimiento/fleetrun':     ['Mantenimiento','Fleetrun'],
@@ -4304,7 +4319,14 @@ window.cargarModuloAislado = async function(rutaModulo) {
     }
 
     // Ruta en disco — todo minúsculas (compatible con Linux/Render)
-    const _rutaDisco = '/modulos/' + rutaModulo;
+    let _rutaDisco = '/modulos/' + rutaModulo;
+    if (rutaModulo === 'operaciones/marsisa-combustible-analisis') {
+        _rutaDisco = '/modulos/operaciones/combustible-analisis';
+    } else if (rutaModulo === 'operaciones/marsisa-combustible-matriz') {
+        _rutaDisco = '/modulos/operaciones/combustible-matriz';
+    } else if (rutaModulo === 'operaciones/marsisa-urea-analisis') {
+        _rutaDisco = '/modulos/operaciones/urea-analisis';
+    }
 
     try {
         // 3. Traer el diseño (HTML) desde la carpeta específica

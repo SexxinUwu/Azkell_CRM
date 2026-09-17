@@ -702,15 +702,30 @@ window.ckCambiarTabConfigUnidad = function(unidad) {
 
     if (btnT && btnR) {
         if (unidad === 'tracto') {
-            btnT.className = 'nav-link active fw-bold px-4 py-2 rounded-pill d-flex align-items-center gap-2 shadow-2xs';
-            btnR.className = 'nav-link fw-bold px-4 py-2 rounded-pill d-flex align-items-center gap-2 text-secondary';
+            btnT.classList.add('active');
+            btnR.classList.remove('active');
         } else {
-            btnT.className = 'nav-link fw-bold px-4 py-2 rounded-pill d-flex align-items-center gap-2 text-secondary';
-            btnR.className = 'nav-link active fw-bold px-4 py-2 rounded-pill d-flex align-items-center gap-2 shadow-2xs';
+            btnT.classList.remove('active');
+            btnR.classList.add('active');
         }
     }
     window.ckRenderizarConfigSistemas();
 };
+
+function ckParseCodigoTexto(itStr, fallbackIdx) {
+    const raw = String(itStr || '').trim();
+    const m = raw.match(/^(\d+)\s*[-.)]?\s*(.*)$/);
+    if (m) {
+        return {
+            codigo: m[1].padStart(2, '0'),
+            texto: m[2].trim()
+        };
+    }
+    return {
+        codigo: String(fallbackIdx + 1).padStart(2, '0'),
+        texto: raw
+    };
+}
 
 window.ckRenderizarConfigSistemas = function() {
     const container = document.getElementById('ck-config-sistemas-container');
@@ -739,12 +754,25 @@ window.ckRenderizarConfigSistemas = function() {
 
         let itemsHtml = '';
         items.forEach((itTxt, itemIdx) => {
+            const parsed = ckParseCodigoTexto(itTxt, itemIdx);
             itemsHtml += `
-                <div class="d-flex align-items-center gap-2 mb-2 bg-white p-2 rounded-3 border shadow-2xs">
-                    <span class="badge bg-light text-secondary border font-monospace" style="font-size:0.75rem; min-width: 28px;">${itemIdx + 1}</span>
-                    <input type="text" class="form-control form-control-sm fw-semibold text-dark border-0 bg-transparent flex-grow-1" style="font-size:0.86rem; box-shadow:none;" value="${itTxt.replace(/"/g, '&quot;')}" oninput="window.ckActualizarTextoItemFalla(${sysIdx}, ${itemIdx}, this.value)" placeholder="Descripción de la falla o componente...">
-                    <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;" onclick="window.ckEliminarItemFalla(${sysIdx}, ${itemIdx})" title="Eliminar ítem">
-                        <i class="bi bi-trash3-fill" style="font-size:0.8rem;"></i>
+                <div class="d-flex align-items-center gap-2 mb-2 bg-white p-1.5 px-2 rounded-3 border shadow-2xs">
+                    <input type="text" class="form-control form-control-sm text-center fw-bold text-primary bg-light border" 
+                        style="width: 52px; min-height: 36px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; box-shadow:none;" 
+                        value="${parsed.codigo}" 
+                        placeholder="N°"
+                        title="Código numérico de falla (ej: 01, 02)"
+                        oninput="window.ckActualizarItemFallaCompuesto(${sysIdx}, ${itemIdx}, this.value, null)">
+                    <input type="text" class="form-control form-control-sm fw-semibold text-dark border-0 bg-transparent flex-grow-1" 
+                        style="min-height: 36px; font-size:0.88rem; box-shadow:none;" 
+                        value="${parsed.texto.replace(/"/g, '&quot;')}" 
+                        placeholder="Descripción de la falla o componente..." 
+                        oninput="window.ckActualizarItemFallaCompuesto(${sysIdx}, ${itemIdx}, null, this.value)">
+                    <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1 d-flex align-items-center justify-content-center" 
+                        style="width: 28px; height: 28px; border-color: transparent;" 
+                        onclick="window.ckEliminarItemFalla(${sysIdx}, ${itemIdx})" 
+                        title="Eliminar ítem">
+                        <i class="bi bi-trash3-fill" style="font-size:0.82rem;"></i>
                     </button>
                 </div>
             `;
@@ -756,12 +784,12 @@ window.ckRenderizarConfigSistemas = function() {
 
         html += `
             <div class="card border-0 shadow-2xs rounded-4 overflow-hidden bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
-                <div class="card-header py-3 px-3.5 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                <div class="card-header py-2.5 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                     <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 80%;">
                         <span class="p-2 rounded-3 bg-white border text-primary shadow-2xs">
                             <i class="bi ${icon} fs-5"></i>
                         </span>
-                        <input type="text" class="form-control fw-bold border-0 bg-transparent text-dark flex-grow-1" style="font-size:1.05rem; box-shadow:none;" value="${title.replace(/"/g, '&quot;')}" oninput="window.ckActualizarTituloSistema(${sysIdx}, this.value)" placeholder="Nombre del Sistema (Ej: MOTOR, FRENOS...)">
+                        <input type="text" class="form-control fw-bold border-0 bg-transparent text-dark flex-grow-1" style="font-size:1.02rem; box-shadow:none;" value="${title.replace(/"/g, '&quot;')}" oninput="window.ckActualizarTituloSistema(${sysIdx}, this.value)" placeholder="Nombre del Sistema (Ej: MOTOR, FRENOS...)">
                         <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1" style="font-size:0.75rem;">${items.length} fallas</span>
                     </div>
                     <div>
@@ -796,7 +824,7 @@ window.ckAgregarNuevoSistema = function() {
         key: 'sys_' + Date.now(),
         title: `NUEVO SISTEMA ${padded}`,
         icon: unidad === 'tracto' ? 'bi-truck' : 'bi-truck-flatbed',
-        items: [`01 Falla o componente de prueba`]
+        items: [`01 Falla / componente de prueba`]
     });
 
     window.ckRenderizarConfigSistemas();
@@ -826,8 +854,8 @@ window.ckAgregarItemFalla = function(sysIdx) {
     if (!sys) return;
     if (!Array.isArray(sys.items)) sys.items = [];
 
-    const itemNum = sys.items.length + 1;
-    sys.items.push(`Falla / Componente ${itemNum}`);
+    const nextNum = String(sys.items.length + 1).padStart(2, '0');
+    sys.items.push(`${nextNum} Falla / componente`);
     window.ckRenderizarConfigSistemas();
 };
 
@@ -840,11 +868,14 @@ window.ckEliminarItemFalla = function(sysIdx, itemIdx) {
     }
 };
 
-window.ckActualizarTextoItemFalla = function(sysIdx, itemIdx, val) {
+window.ckActualizarItemFallaCompuesto = function(sysIdx, itemIdx, newCodigo, newTexto) {
     const unidad = window._ckConfigTabActiva || 'tracto';
     const sys = window._ckConfigTemp[unidad][sysIdx];
     if (sys && Array.isArray(sys.items) && sys.items[itemIdx] !== undefined) {
-        sys.items[itemIdx] = val;
+        const current = ckParseCodigoTexto(sys.items[itemIdx], itemIdx);
+        const cod = (newCodigo !== null && newCodigo !== undefined) ? newCodigo.trim() : current.codigo;
+        const txt = (newTexto !== null && newTexto !== undefined) ? newTexto.trim() : current.texto;
+        sys.items[itemIdx] = cod ? `${cod} ${txt}` : txt;
     }
 };
 
