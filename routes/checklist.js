@@ -68,6 +68,68 @@ module.exports = function (db, broadcast, logAudit) {
         res.json({ ok: true, signed });
     });
 
+    // ── GET /api/checklist/buscar-viajes — Búsqueda ágil de órdenes de viaje (Marsisa / Genérico) ────
+    router.get('/buscar-viajes', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ ok: false, error: 'Base de datos no disponible' });
+
+            const { placa, q, limit } = req.query;
+            const maxLimit = parseInt(limit, 10) || (placa ? 3 : 20);
+
+            // Determinar si la empresa actual usa marsisa_ordenes_viaje o operaciones_ordenes_viaje
+            let tablaViajes = 'operaciones_ordenes_viaje';
+            try {
+                const [mCheck] = await tdb.promise().query("SELECT COUNT(*) as c FROM marsisa_ordenes_viaje LIMIT 1");
+                if (mCheck && mCheck[0] && mCheck[0].c > 0) {
+                    tablaViajes = 'marsisa_ordenes_viaje';
+                }
+            } catch (eM) {
+                tablaViajes = 'operaciones_ordenes_viaje';
+            }
+
+            let sql = `
+                SELECT 
+                    id,
+                    viaje,
+                    DATE_FORMAT(fecha_viaje, '%Y-%m-%d %H:%i') AS fecha_viaje,
+                    DATE_FORMAT(fecha_viaje, '%d/%m/%Y %H:%i') AS fecha_viaje_fmt,
+                    id_conductor,
+                    conductor,
+                    placa_tracto,
+                    placa_remolque,
+                    ruta,
+                    origen,
+                    destino,
+                    estado
+                FROM ${tablaViajes}
+                WHERE 1=1
+            `;
+            const params = [];
+
+            if (placa && String(placa).trim()) {
+                const pLimpia = String(placa).trim().toUpperCase().replace(/[^A-Z0-9]/ig, '');
+                sql += ` AND (REPLACE(placa_tracto, '-', '') = ? OR REPLACE(placa_remolque, '-', '') = ? OR placa_tracto LIKE ? OR placa_remolque LIKE ?)`;
+                params.push(pLimpia, pLimpia, `%${pLimpia}%`, `%${pLimpia}%`);
+            }
+
+            if (q && String(q).trim()) {
+                const search = `%${String(q).trim()}%`;
+                sql += ` AND (viaje LIKE ? OR conductor LIKE ? OR placa_tracto LIKE ? OR placa_remolque LIKE ? OR ruta LIKE ? OR origen LIKE ? OR destino LIKE ?)`;
+                params.push(search, search, search, search, search, search, search);
+            }
+
+            sql += ` ORDER BY fecha_viaje DESC, id DESC LIMIT ?`;
+            params.push(maxLimit);
+
+            const [rows] = await tdb.promise().query(sql, params);
+            return res.json({ ok: true, tabla: tablaViajes, data: rows || [] });
+        } catch (err) {
+            console.error('Error buscando viajes para checklist:', err);
+            return res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     // ── GET /api/checklist — Listar reportes de fallas ──────────────────
     router.get('/', (req, res) => {
         const tdb = getDb(req);
@@ -339,8 +401,8 @@ module.exports = function (db, broadcast, logAudit) {
                     }
                 } catch(ePl) {}
 
-                const kmVal = item.unidad === 'Tracto' ? (rep.km_inicial || 0) : 0;
-                const horasMotorVal = item.horas_motor || ((item.unidad === 'Remolque' || item.unidad === 'Carreta') ? rep.horas_motor : null) || null;
+                const kmVal = (item.km !== undefined && item.km !== null && item.km !== '') ? Number(item.km) : (item.unidad === 'Tracto' ? (rep.km_inicial || 0) : 0);
+                const horasMotorVal = (item.horas_motor !== undefined && item.horas_motor !== null && item.horas_motor !== '') ? item.horas_motor : ((item.unidad === 'Remolque' || item.unidad === 'Carreta') ? rep.horas_motor : null) || null;
 
                 const motivosArray = Array.isArray(item.motivos_array) ? item.motivos_array : [];
 
