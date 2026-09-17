@@ -8,7 +8,7 @@ module.exports = function globalRBAC(req, res, next) {
         '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/notificaciones',
         '/script/obtener', '/script/buscar', '/integraciones', '/catalogos_taller',
         '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read', '/checklist/presign-read',
-        '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos'
+        '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos', '/combustible/vales'
     ];
     if (ignoredPaths.some(ip => path === ip || path.startsWith(ip)) || path.endsWith('/presign-read') || path.endsWith('/presigned')) return next();
 
@@ -55,6 +55,7 @@ module.exports = function globalRBAC(req, res, next) {
         '/combustible/catalogos',
         '/combustible/rendimiento-teorico',
         '/combustible/matriz',
+        '/combustible/vales',
         '/operaciones/reporte-viajes',
         '/seguridad/recursos',
         '/seguridad/template',
@@ -117,6 +118,9 @@ module.exports = function globalRBAC(req, res, next) {
         mod = ['neumaticos', 'insp', 'ot', 'fleetrun'];
     }
     else if (path.startsWith('/combustible') || path.includes('combustible')) {
+        if (req.user && req.user.rol && req.user.rol.toLowerCase().includes('conductor')) {
+            return next();
+        }
         mod = ['combustible', 'combustible_vales', 'combustible_analisis', 'urea_analisis', 'combustible_matriz', 'fleet', 'fleetrun'];
     }
     else if (path.startsWith('/operaciones') || path.includes('ordenes-viaje') || path.includes('guias-remision') || path.includes('viajes') || path.includes('programacion')) {
