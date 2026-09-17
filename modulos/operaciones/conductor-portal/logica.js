@@ -540,15 +540,25 @@ window.condAbrirModalReporteFallas = function() {
     var rKm = document.getElementById('cond-rf-km-txt');
     if (rKm) rKm.textContent = viaje.kilometraje ? `${viaje.kilometraje} km` : 'Km en ruta';
 
+    // Resetear buscador y alertas de búsqueda
+    var inpSearch = document.getElementById('cond_buscador_items');
+    if (inpSearch) inpSearch.value = '';
+    var emptyT = document.getElementById('cond_empty_search_tracto');
+    if (emptyT) emptyT.style.display = 'none';
+    var emptyR = document.getElementById('cond_empty_search_remolque');
+    if (emptyR) emptyR.style.display = 'none';
+
     // Renderizar acordeones
     condRenderAcordeonSistemas('condAccTracto', COND_SISTEMAS_TRACTO, 'Tracto');
     condRenderAcordeonSistemas('condAccRemolque', COND_SISTEMAS_REMOLQUE, 'Remolque');
 
-    // Limpiar contenedor de manuales y fotos
+    // Limpiar contenedor de manuales, chips y fotos
     var contManuales = document.getElementById('cond-contenedor-fallas-manuales');
     if (contManuales) contManuales.innerHTML = '';
     window._condFotosFallaBase64 = [];
     condRenderPreviewFotosFalla();
+    window.condActualizarChipsFallas();
+    window.condActualizarContadores();
 
     // Resetear botón
     var btn = document.getElementById('cond-btn-enviar-falla');
@@ -577,16 +587,17 @@ function condRenderAcordeonSistemas(contenedorId, sistemasDict, prefijo) {
         var items = sistemasDict[sysKey];
 
         html += `
-            <div class="accordion-item border rounded-3 mb-2 overflow-hidden shadow-2xs">
+            <div class="accordion-item border rounded-3 mb-2 overflow-hidden shadow-2xs cond-accordion-group" id="cond_group_${accId}">
                 <h2 class="accordion-header" id="heading_${accId}">
-                    <button class="accordion-button collapsed py-2.5 px-3 bg-light text-dark fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_${accId}" style="font-size:0.86rem;">
-                        <span class="d-flex align-items-center gap-2">
+                    <button class="accordion-button collapsed py-2.5 px-3 ${prefijo === 'Tracto' ? 'bg-light' : 'bg-warning-subtle bg-opacity-25'} text-dark fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_${accId}" style="font-size:0.86rem;">
+                        <span class="d-flex align-items-center gap-2 flex-grow-1">
                             <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-0.5" style="font-size:0.65rem;">${items.length}</span>
                             <span>${sysKey}</span>
                         </span>
+                        <span class="badge bg-secondary rounded-pill px-2 py-0.5 count-badge me-2" id="cnt_${accId}">0</span>
                     </button>
                 </h2>
-                <div id="collapse_${accId}" class="accordion-collapse collapse" data-bs-parent="#${contenedorId}">
+                <div id="collapse_${accId}" class="accordion-collapse collapse">
                     <div class="accordion-body p-2 bg-white">
                         <div class="d-flex flex-column gap-1.5">
         `;
@@ -595,17 +606,18 @@ function condRenderAcordeonSistemas(contenedorId, sistemasDict, prefijo) {
             var chkId = `cond_chk_${prefijo}_${idx}_${itIdx}`;
             var txtId = `cond_txt_${prefijo}_${idx}_${itIdx}`;
             var safeName = it.replace(/"/g, '&quot;');
+            var upperTxt = it.toUpperCase();
 
             html += `
-                <div class="p-2 rounded-2 border bg-light bg-opacity-50">
+                <div class="p-2 rounded-2 border bg-light bg-opacity-50 cond-item-row" data-item-text="${upperTxt}" id="cond_row_${chkId}">
                     <div class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
                         <input class="form-check-input cond-chk-item flex-shrink-0" type="checkbox" id="${chkId}" data-prefijo="${prefijo}" data-sistema="${sysKey}" data-item="${safeName}" onchange="window.condToggleFallaItem('${chkId}', '${txtId}')" style="width: 1.25rem; height: 1.25rem; cursor: pointer;">
-                        <label class="form-check-label text-dark fw-semibold small flex-grow-1 cursor-pointer" for="${chkId}">
+                        <label class="form-check-label text-dark fw-semibold small flex-grow-1 cursor-pointer" for="${chkId}" id="cond_lbl_${chkId}">
                             ${it}
                         </label>
                     </div>
                     <div id="box_${txtId}" class="mt-2 d-none">
-                        <input type="text" id="${txtId}" class="form-control form-control-sm border-secondary-subtle" placeholder="Detalle adicional opcional de la falla...">
+                        <input type="text" id="${txtId}" class="form-control form-control-sm border-secondary-subtle" placeholder="Detalle adicional opcional de la falla..." oninput="window.condActualizarChipsFallas()">
                     </div>
                 </div>
             `;
@@ -622,19 +634,163 @@ function condRenderAcordeonSistemas(contenedorId, sistemasDict, prefijo) {
     cont.innerHTML = html;
 }
 
+// Búsqueda en vivo por palabras clave para el conductor
+window.condFiltrarItemsLive = function(query) {
+    var q = (query || '').toUpperCase().trim();
+    var matchesTracto = 0;
+    var matchesRemolque = 0;
+
+    document.querySelectorAll('.cond-accordion-group').forEach(group => {
+        var matchCountInGroup = 0;
+        var items = group.querySelectorAll('.cond-item-row');
+        var collapseEl = group.querySelector('.accordion-collapse');
+        var isTractoGroup = group.id.includes('_Tracto_');
+
+        items.forEach(row => {
+            var text = row.getAttribute('data-item-text') || row.innerText.toUpperCase();
+            if (!q || text.includes(q)) {
+                row.style.display = 'block';
+                matchCountInGroup++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (q) {
+            if (matchCountInGroup > 0) {
+                group.style.display = 'block';
+                if (isTractoGroup) matchesTracto += matchCountInGroup;
+                else matchesRemolque += matchCountInGroup;
+                if (collapseEl && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                    bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).show();
+                }
+            } else {
+                group.style.display = 'none';
+            }
+        } else {
+            group.style.display = 'block';
+            if (collapseEl && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).hide();
+            }
+        }
+    });
+
+    var emptyT = document.getElementById('cond_empty_search_tracto');
+    var emptyR = document.getElementById('cond_empty_search_remolque');
+    if (emptyT) emptyT.style.display = (q && matchesTracto === 0) ? 'block' : 'none';
+    if (emptyR) emptyR.style.display = (q && matchesRemolque === 0) ? 'block' : 'none';
+};
+
+// Expandir o colapsar todos los acordeones
+window.condExpandirTodosAccordeones = function(expand = true) {
+    document.querySelectorAll('.cond-accordion-group').forEach(group => {
+        group.style.display = 'block';
+        var collapseEl = group.querySelector('.accordion-collapse');
+        var items = group.querySelectorAll('.cond-item-row');
+        items.forEach(r => r.style.display = 'block');
+
+        if (collapseEl && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+            var inst = bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
+            if (expand) inst.show(); else inst.hide();
+        }
+    });
+};
+
+// Alternar selección de falla
 window.condToggleFallaItem = function(chkId, txtId) {
     var chk = document.getElementById(chkId);
     var box = document.getElementById(`box_${txtId}`);
+    var row = document.getElementById(`cond_row_${chkId}`);
     if (!chk || !box) return;
 
     if (chk.checked) {
         box.classList.remove('d-none');
+        if (row) row.classList.add('bg-warning', 'bg-opacity-15', 'border-warning');
         var input = document.getElementById(txtId);
         if (input) input.focus();
     } else {
         box.classList.add('d-none');
+        if (row) row.classList.remove('bg-warning', 'bg-opacity-15', 'border-warning');
         var input2 = document.getElementById(txtId);
         if (input2) input2.value = '';
+    }
+
+    window.condActualizarContadores();
+    window.condActualizarChipsFallas();
+};
+
+// Actualizar contadores totales y por sistema
+window.condActualizarContadores = function() {
+    var totalMarcadas = 0;
+
+    document.querySelectorAll('.cond-accordion-group').forEach(group => {
+        var checkedInGroup = group.querySelectorAll('.cond-chk-item:checked').length;
+        var cntBadge = group.querySelector('.count-badge');
+        if (cntBadge) {
+            cntBadge.textContent = checkedInGroup;
+            if (checkedInGroup > 0) {
+                cntBadge.className = 'badge bg-primary rounded-pill px-2 py-0.5 count-badge me-2';
+            } else {
+                cntBadge.className = 'badge bg-secondary rounded-pill px-2 py-0.5 count-badge me-2';
+            }
+        }
+        totalMarcadas += checkedInGroup;
+    });
+
+    var cntManuales = document.querySelectorAll('.cond-manual-falla-row').length;
+    totalMarcadas += cntManuales;
+
+    var counterBtn = document.getElementById('cond_counter_fallas');
+    if (counterBtn) {
+        counterBtn.textContent = `${totalMarcadas} falla${totalMarcadas !== 1 ? 's' : ''} marcada${totalMarcadas !== 1 ? 's' : ''}`;
+        counterBtn.className = totalMarcadas > 0 ? 'badge bg-primary px-3 py-2 fs-6 rounded-pill' : 'badge bg-secondary px-3 py-2 fs-6 rounded-pill';
+    }
+};
+
+// Actualizar chips visuales de fallas marcadas
+window.condActualizarChipsFallas = function() {
+    var wrapChips = document.getElementById('cond_chips_fallas_marcadas');
+    if (!wrapChips) return;
+
+    var viajeData = window._condViajeActivoData || {};
+    var viaje = viajeData.viaje || {};
+    var pTracto = viaje.placa_tracto || viaje.placa || '';
+    var pRemolque = viaje.placa_remolque || viaje.remolque || '';
+
+    var chipsHTML = '';
+
+    document.querySelectorAll('.cond-chk-item:checked').forEach(chk => {
+        var chkId = chk.id;
+        var txtId = chkId.replace('cond_chk_', 'cond_txt_');
+        var prefijo = chk.dataset.prefijo || 'Tracto';
+        var itemNom = chk.dataset.item || 'Falla';
+        var txtEl = document.getElementById(txtId);
+        var desc = txtEl && txtEl.value.trim() ? txtEl.value.trim() : '(marcado)';
+
+        var isTracto = prefijo.toLowerCase().includes('tracto');
+        var unitBadge = isTracto
+            ? `<span class="badge bg-primary text-white text-uppercase px-2 py-0.5" style="font-size:0.65rem;"><i class="bi bi-truck me-1"></i>TRACTO ${pTracto ? '('+pTracto+')' : ''}</span>`
+            : `<span class="badge bg-warning text-dark text-uppercase px-2 py-0.5" style="font-size:0.65rem;"><i class="bi bi-truck-flatbed me-1"></i>CARRETA ${pRemolque ? '('+pRemolque+')' : ''}</span>`;
+        var cardBorder = isTracto ? 'border: 1px solid #93c5fd; background: #eff6ff;' : 'border: 1px solid #fde68a; background: #fffbeb;';
+
+        chipsHTML += `
+            <span class="d-inline-flex align-items-center gap-2 px-2.5 py-1.5 rounded-3 shadow-2xs" style="${cardBorder}">
+                ${unitBadge}
+                <span class="fw-bold text-dark" style="font-size:0.8rem;">${itemNom}:</span>
+                <span class="text-secondary small" style="font-size:0.76rem; max-width: 220px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${desc}</span>
+                <i class="bi bi-x-circle-fill text-danger cursor-pointer ms-1 fs-6" title="Quitar falla" onclick="document.getElementById('${chkId}').checked = false; window.condToggleFallaItem('${chkId}', '${txtId}');"></i>
+            </span>
+        `;
+    });
+
+    if (chipsHTML) {
+        wrapChips.style.display = 'flex';
+        wrapChips.style.setProperty('display', 'flex', 'important');
+        wrapChips.innerHTML = chipsHTML;
+    } else {
+        wrapChips.style.display = 'none';
+        wrapChips.style.setProperty('display', 'none', 'important');
+        wrapChips.innerHTML = '';
     }
 };
 
@@ -658,15 +814,16 @@ window.condAgregarFallaManual = function() {
                 <option value="TRACTO">Tracto (${pTracto})</option>
                 <option value="REMOLQUE">Carreta (${pRemolque})</option>
             </select>
-            <button type="button" class="btn btn-outline-danger btn-sm p-1 px-2 rounded-pill" onclick="document.getElementById('${rowId}').remove()" title="Eliminar fila">
+            <button type="button" class="btn btn-outline-danger btn-sm p-1 px-2 rounded-pill" onclick="document.getElementById('${rowId}').remove(); window.condActualizarContadores();" title="Eliminar fila">
                 <i class="bi bi-trash3-fill"></i>
             </button>
         </div>
-        <input type="text" class="form-control form-control-sm cond-man-desc fw-semibold border-secondary-subtle" placeholder="Escribe aquí la falla observada (Ej: Fuga de aire en manguera 2)..." required>
+        <input type="text" class="form-control form-control-sm cond-man-desc fw-semibold border-secondary-subtle" placeholder="Escribe aquí la falla observada (Ej: Fuga de aire en manguera 2)..." required oninput="window.condActualizarContadores()">
     `;
     cont.appendChild(div);
     var inp = div.querySelector('.cond-man-desc');
     if (inp) inp.focus();
+    window.condActualizarContadores();
 };
 
 // Procesamiento de fotos de evidencia
