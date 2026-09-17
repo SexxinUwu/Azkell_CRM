@@ -2137,6 +2137,10 @@ window.abrirDetalleChecklist = async function(id) {
     // Helper para emparejar ítems reportados (normalizando números, tildes y palabras clave)
     const matchItemFalla = (itemTxt, sysKey, fallasList) => {
         if (!Array.isArray(fallasList) || fallasList.length === 0) return null;
+
+        const numItemMatch = (itemTxt || '').match(/^(\d{1,2})\b/);
+        const numItem = numItemMatch ? numItemMatch[1].padStart(2, '0') : null;
+
         const clean = (s) => (s || '')
             .toString()
             .toLowerCase()
@@ -2147,21 +2151,43 @@ window.abrirDetalleChecklist = async function(id) {
             .trim();
 
         const normItem = clean(itemTxt);
-        const itemWords = normItem.split(' ').filter(w => w.length > 2);
+        const normSysKey = clean(sysKey);
 
         return fallasList.find(f => {
-            const normFItem = clean(f.item);
+            if (!f) return false;
+            const rawFItem = (f.item || '').trim();
+            const numFMatch = rawFItem.match(/^(\d{1,2})\b/);
+            const numF = numFMatch ? numFMatch[1].padStart(2, '0') : null;
+
+            // 1. Coincidencia exacta por número correlativo
+            if (numItem && numF && numItem === numF) return true;
+
+            const normFItem = clean(rawFItem);
             const normFObs = clean(f.obs);
             const normFSys = clean(f.sistema);
-            const normSysKey = clean(sysKey);
 
-            if (normFItem && (normFItem.includes(normItem) || normItem.includes(normFItem))) return true;
+            // 2. Coincidencia exacta de texto
+            if (normItem && normFItem && normItem === normFItem) return true;
+
+            // 3. Contención sustancial de texto del ítem
+            if (normItem && normFItem) {
+                if (normFItem.startsWith(normItem) || normItem.startsWith(normFItem)) return true;
+                if (normItem.length >= 7 && normFItem.includes(normItem)) return true;
+                if (normFItem.length >= 7 && normItem.includes(normFItem)) return true;
+            }
+
+            // 4. Mismo sistema con palabras clave no genéricas (excluyendo stop-words como "aire", "motor", "fugas")
             if (normFSys && (normFSys === normSysKey || normFSys.includes(normSysKey) || normSysKey.includes(normFSys))) {
-                if (itemWords.length > 0 && itemWords.some(w => normFItem.includes(w) || normFObs.includes(w))) {
-                    return true;
+                const stopWords = new Set(['de', 'la', 'el', 'en', 'los', 'las', 'un', 'una', 'y', 'o', 'con', 'sin', 'por', 'para', 'aire', 'motor', 'fuga', 'fugas', 'nivel', 'sistema', 'general']);
+                const wordsItem = normItem.split(' ').filter(w => w.length >= 3 && !stopWords.has(w));
+                const wordsFItem = normFItem.split(' ').filter(w => w.length >= 3 && !stopWords.has(w));
+
+                if (wordsItem.length > 0 && wordsFItem.length > 0) {
+                    const keyMatch = wordsItem.some(w => wordsFItem.includes(w));
+                    if (keyMatch) return true;
                 }
             }
-            if (normFObs && normFObs.includes(normItem)) return true;
+
             return false;
         });
     };
@@ -3186,6 +3212,10 @@ window.generarPDF_Checklist = async function(id) {
     // Helper para emparejar ítems reportados (normalizando números, tildes y palabras clave)
     const matchItemFalla = (itemTxt, sysKey, fallasList) => {
         if (!Array.isArray(fallasList) || fallasList.length === 0) return null;
+
+        const numItemMatch = (itemTxt || '').match(/^(\d{1,2})\b/);
+        const numItem = numItemMatch ? numItemMatch[1].padStart(2, '0') : null;
+
         const clean = (s) => (s || '')
             .toString()
             .toLowerCase()
@@ -3196,21 +3226,43 @@ window.generarPDF_Checklist = async function(id) {
             .trim();
 
         const normItem = clean(itemTxt);
-        const itemWords = normItem.split(' ').filter(w => w.length > 2);
+        const normSysKey = clean(sysKey);
 
         return fallasList.find(f => {
-            const normFItem = clean(f.item);
+            if (!f) return false;
+            const rawFItem = (f.item || '').trim();
+            const numFMatch = rawFItem.match(/^(\d{1,2})\b/);
+            const numF = numFMatch ? numFMatch[1].padStart(2, '0') : null;
+
+            // 1. Coincidencia exacta por número correlativo
+            if (numItem && numF && numItem === numF) return true;
+
+            const normFItem = clean(rawFItem);
             const normFObs = clean(f.obs);
             const normFSys = clean(f.sistema);
-            const normSysKey = clean(sysKey);
 
-            if (normFItem && (normFItem.includes(normItem) || normItem.includes(normFItem))) return true;
+            // 2. Coincidencia exacta de texto
+            if (normItem && normFItem && normItem === normFItem) return true;
+
+            // 3. Contención sustancial de texto del ítem
+            if (normItem && normFItem) {
+                if (normFItem.startsWith(normItem) || normItem.startsWith(normFItem)) return true;
+                if (normItem.length >= 7 && normFItem.includes(normItem)) return true;
+                if (normFItem.length >= 7 && normItem.includes(normFItem)) return true;
+            }
+
+            // 4. Mismo sistema con palabras clave no genéricas (excluyendo stop-words como "aire", "motor", "fugas")
             if (normFSys && (normFSys === normSysKey || normFSys.includes(normSysKey) || normSysKey.includes(normFSys))) {
-                if (itemWords.length > 0 && itemWords.some(w => normFItem.includes(w) || normFObs.includes(w))) {
-                    return true;
+                const stopWords = new Set(['de', 'la', 'el', 'en', 'los', 'las', 'un', 'una', 'y', 'o', 'con', 'sin', 'por', 'para', 'aire', 'motor', 'fuga', 'fugas', 'nivel', 'sistema', 'general']);
+                const wordsItem = normItem.split(' ').filter(w => w.length >= 3 && !stopWords.has(w));
+                const wordsFItem = normFItem.split(' ').filter(w => w.length >= 3 && !stopWords.has(w));
+
+                if (wordsItem.length > 0 && wordsFItem.length > 0) {
+                    const keyMatch = wordsItem.some(w => wordsFItem.includes(w));
+                    if (keyMatch) return true;
                 }
             }
-            if (normFObs && normFObs.includes(normItem)) return true;
+
             return false;
         });
     };

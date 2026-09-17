@@ -660,59 +660,57 @@ window.condAvisoCombustibleProximamente = function() {
 
 const COND_SISTEMAS_TRACTO = {
     'MOTOR': [
-        'Nivel y fugas de aceite de motor', 'Nivel y fugas de refrigerante',
-        'Filtro de aire y admisión', 'Correas y poleas de accesorios',
-        'Sistema de inyección y combustible', 'Ruidos anormales en motor / escape',
-        'Turbocompresor e intercooler'
+        '01 Nivel de aceite motor', '02 Fugas de fluidos', '03 Filtro de aire', '04 Pérdida de potencia',
+        '05 Compresora de aire', '06 Fajas, poleas, templadores', '07 Turbo', '08 Múltiple de escape',
+        '09 Silenciador', '10 Cañerías de combustible'
     ],
     'CAJA-CORONAS': [
-        'Nivel y fugas de aceite de caja', 'Acople y pedal de embrague',
-        'Palanca y varillaje de cambios', 'Diferenciales / Coronas y fugas',
-        'Crucetas y cardán de transmisión'
+        '11 Embrague', '12 Palanca de cambios', '13 Freno de Motor', '14 Ruido en la caja de cambios',
+        '15 Ruido en las coronas', '16 Retenes de Corona', '17 Templadores, soportes', '18 Cardan y crucetas'
     ],
     'REFRIGERACION': [
-        'Mangueras y abrazaderas de agua', 'Termostato y tapa de radiador',
-        'Ventilador y embrague viscoso', 'Limpieza del panal de radiador'
+        '19 Nivel de refrigerante', '20 Fugas de refrigerante', '21 Tanque de expansión', '22 Temperatura elevada',
+        '23 Radiador, intercooler', '24 Bomba de agua'
     ],
     'DIRECCION': [
-        'Bomba y líquido de dirección', 'Caja de dirección y sector',
-        'Terminales y barras de dirección', 'Alineación y juego del volante'
+        '25 Alineamiento y balanceo', '26 Servo, Sist. hidráulico', '27 Caja de dirección', '28 Barras y terminales'
     ],
     'CABINA Y CHASIS': [
-        'Luces delanteras y posteriores', 'Tablero e instrumentos de medición',
-        'Bocina y limpiaparabrisas', 'Cinturones de seguridad y asientos',
-        'Espejos retrovisores y lunas', 'Chasis, pernos y soportes'
+        '29 Tablero', '30 Lunas y parabrisas', '31 Suspensión de asiento', '32 Cinturones de seguridad',
+        '33 Tablero e instrumentos', '34 Amortiguadores', '35 Tanques de combustible', '36 Puertas y manijas',
+        '37 Timón', '38 Espejos laterales', '39 Soportes de cabina', '40 Control veloc. Crucero',
+        '41 Accesorios en general', '42 Autoradio y antenas', '43 Quinta rueda', '44 OTROS'
     ]
 };
 
 const COND_SISTEMAS_REMOLQUE = {
     'FRENOS': [
-        'Tambores, zapatas y pastillas', 'Pulmones de freno y mangueras',
-        'Válvula repartidora / Relay', 'Manómetros y acoples de aire'
+        '39 Revisar Zapatos', '40 Pulpo de Freno', '41 Tanque de Aire, líneas de aire', '42 Fugas de aire',
+        '43 Secador de aire', '44 Rachet de Freno'
     ],
     'CARRETA': [
-        'Quinta rueda y perno rey (King Pin)', 'Pines y bocinas de articulación',
-        'Patas de apoyo y manivela', 'Chasis y estructura de carreta'
+        '45 Estado de triplay', '46 Estado de gebes de Puerta', '47 Filtración de Agua', '48 Pisos sin Oxido',
+        '49 Tiro de Remolque', '50 Templadores, Muelles y Soporte'
     ],
     'SISTEMA ELECTRICO': [
-        'Luces laterales y de freno', 'Conector 7 vías (espiral)',
-        'Cables y arneses eléctricos', 'Faros piratas y de retroceso'
+        '51 Luces en general', '52 Faros delanteros', '53 Neblineros', '54 Claxon, alarma de retroceso',
+        '55 Trico y plumillas', '56 Baterías y bornes', '57 Testigos check engine', '58 Testigos ABS',
+        '59 Aire acondicionado', '60 Calefacción', '61 Cortador de corriente', '62 Circulina', '63 Faro pirata'
     ],
     'SUSPENSION': [
-        'Bolsas de aire / Pulmones', 'Muelles y paquetes de resortes',
-        'Bujes y templadores de eje', 'Amortiguadores y soportes'
+        '64 Amortiguadores', '65 Bolsas de aire', '66 Reg. de bolsas de aire', '67 Muelles y grilletes',
+        '68 Abrazaderas y bujes', '69 Templador, balancines'
     ],
     'FURGON': [
-        'Puertas posteriores y bisagras', 'Cerraduras y barras de seguridad',
-        'Piso y paneles interiores', 'Techo y lonas herméticas'
+        '70 Remaches de Triplay', '71 Filtraciones de Agua', '72 Gebes de Puerta', '73 Piso sin oxido', '74 Bisagras de puerta'
     ],
     'LLANTAS': [
-        'Presión y cocada de neumáticos', 'Tuercas y espárragos de rueda',
-        'Aros y pestañas de fijación', 'Llanta de repuesto y soporte'
+        '75 Reparación de Llantas', '76 Tuercas flojas', '77 Pernos rotos', '78 Rueda frenada',
+        '79 Llantas bajas', '80 Desgaste irregular'
     ],
     'TERMOKING': [
-        'Nivel de aceite de motor diésel', 'Temperatura y pantalla de control',
-        'Batería y arranque del equipo', 'Correas y evaporador interior'
+        '81 Encendido / Batería', '82 Nivel de aceite motor diésel', '83 Temperatura programada / Setpoint',
+        '84 Correas y poleas', '85 Fugas de refrigerante / combustible', '86 Alarmas en panel de control'
     ]
 };
 
