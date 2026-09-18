@@ -97,6 +97,12 @@ module.exports = function globalRBAC(req, res, next) {
     
     // ALMACEN & CONFIGURACION
     else if (path.startsWith('/perfil')) return next();
+    else if (path.startsWith('/almacen/almacenes-lista') || path.startsWith('/almacen/almacenes')) {
+        mod = (req.method === 'GET') ? ['inv', 'ent_inv', 'sal_inv', 'kardex', 'cfg_almacen', 'almacenes'] : ['cfg_almacen', 'almacenes', 'inv'];
+    }
+    else if (path.startsWith('/almacen/recepciones-oc') || path.startsWith('/almacen/reset-recepciones')) {
+        mod = ['ent_inv', 'inv', 'cfg_almacen'];
+    }
     else if (path.startsWith('/almacen/inventario')) mod = ['inv'];
     else if (path.startsWith('/clientes')) mod = ['clientes', 'placas'];
     else if (path.startsWith('/almacen/entradas')) mod = ['ent_inv'];
