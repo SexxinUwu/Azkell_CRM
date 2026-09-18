@@ -4253,6 +4253,10 @@ window.cargarModuloAislado = async function(rutaModulo) {
     // ⏳ PROGRESS BAR
     window._navProgress.start();
 
+    // 🏷️ Guardar módulo actual globalmente para consumo de submódulos (ej: Marsisa vs Operaciones)
+    window.moduloActual = rutaModulo;
+    window._moduloActual = rutaModulo;
+
     // 1. Ocultar TODOS los módulos antiguos que siguen en el Index.html
     document.querySelectorAll('.modulo-wrapper, .container-fluid').forEach(el => {
         if(el.id && el.id.startsWith('modulo')) el.style.display = 'none';
