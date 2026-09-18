@@ -594,18 +594,11 @@ function _sguRecordPerteneceAEmpresa(rec, empresaActiva) {
         return true;
     }
 
-    // 2. Por placa de tracto
+    // 2. La titularidad de la salida operativa la define EXCLUSIVAMENTE el Tracto / Camión (placa_tracto).
+    // (Las carretas son recursos compartidos que pueden acoplarse a tractos de cualquier empresa).
     if (rec.placa_tracto) {
         var empTracto = _sguGetEmpresaDePlaca(rec.placa_tracto);
         if (empTracto && _sguEmpresaMatches(empTracto, empresaActiva)) {
-            return true;
-        }
-    }
-
-    // 3. Por placa de carreta
-    if (rec.placa_carreta) {
-        var empCarreta = _sguGetEmpresaDePlaca(rec.placa_carreta);
-        if (empCarreta && _sguEmpresaMatches(empCarreta, empresaActiva)) {
             return true;
         }
     }
