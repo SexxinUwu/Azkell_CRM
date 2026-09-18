@@ -1025,6 +1025,69 @@
     border: 1px solid #ddd6fe !important;
     font-weight: 800;
 }
+
+/* ── Banner Dinámico Bento para Tipo de Salida (Bordes y Fondos Pastel) ── */
+.sgu-tipo-banner {
+    border-radius: 20px !important;
+    padding: 1rem 1.35rem !important;
+    margin-bottom: 1.25rem !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Modo RUTA (Pastel Azul) */
+.sgu-tipo-banner.banner-ruta {
+    background: #f0f9ff !important;
+    border: 1.5px solid #bae6fd !important;
+}
+.sgu-tipo-banner.banner-ruta .sgu-banner-btn-change {
+    background: #ffffff !important;
+    color: #0284c7 !important;
+    border: 1.5px solid #bae6fd !important;
+    transition: all 0.16s ease !important;
+}
+.sgu-tipo-banner.banner-ruta .sgu-banner-btn-change:hover {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+    border-color: #0284c7 !important;
+    transform: translateY(-1px);
+}
+
+/* Modo COMPRAS (Pastel Ámbar / Naranja Suave) */
+.sgu-tipo-banner.banner-compras {
+    background: #fffbeb !important;
+    border: 1.5px solid #fde68a !important;
+}
+.sgu-tipo-banner.banner-compras .sgu-banner-btn-change {
+    background: #ffffff !important;
+    color: #d97706 !important;
+    border: 1.5px solid #fde68a !important;
+    transition: all 0.16s ease !important;
+}
+.sgu-tipo-banner.banner-compras .sgu-banner-btn-change:hover {
+    background: #d97706 !important;
+    color: #ffffff !important;
+    border-color: #d97706 !important;
+    transform: translateY(-1px);
+}
+
+/* Modo TALLER (Pastel Púrpura / Violeta Suave) */
+.sgu-tipo-banner.banner-taller {
+    background: #f5f3ff !important;
+    border: 1.5px solid #ddd6fe !important;
+}
+.sgu-tipo-banner.banner-taller .sgu-banner-btn-change {
+    background: #ffffff !important;
+    color: #7c3aed !important;
+    border: 1.5px solid #ddd6fe !important;
+    transition: all 0.16s ease !important;
+}
+.sgu-tipo-banner.banner-taller .sgu-banner-btn-change:hover {
+    background: #7c3aed !important;
+    color: #ffffff !important;
+    border-color: #7c3aed !important;
+    transform: translateY(-1px);
+}
 </style>
 
 <div id="moduloSegUnidades" class="modulo-wrapper d-flex flex-column h-100">
@@ -1318,21 +1381,21 @@
         </div>
 
         <!-- ── BANNER INFORMATIVO DE TIPO DE SALIDA ────────────────────────── -->
-        <div id="sgu-form-tipo-banner" class="alert border-0 rounded-4 p-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: #f0f9ff; border: 1.5px solid #bae6fd !important;">
+        <div id="sgu-form-tipo-banner" class="sgu-tipo-banner banner-ruta d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center gap-3">
-                <div id="sgu-tipo-banner-icon" style="width: 42px; height: 42px; border-radius: 12px; background: #0284c7; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">
+                <div id="sgu-tipo-banner-icon" style="width: 44px; height: 44px; border-radius: 14px; background: #0284c7; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
                     <i class="bi bi-geo-alt-fill"></i>
                 </div>
                 <div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary text-uppercase px-2 py-0.5 rounded-pill" id="sgu-tipo-banner-badge" style="font-size: 0.68rem; font-weight: 800;">RUTA</span>
-                        <h6 class="fw-bold text-dark m-0" id="sgu-tipo-banner-title" style="font-size: 0.95rem;">Salida a Ruta de Operación</h6>
+                    <div class="d-flex align-items-center gap-2 mb-0.5">
+                        <span class="badge bg-primary text-uppercase px-2.5 py-1 rounded-pill" id="sgu-tipo-banner-badge" style="font-size: 0.68rem; font-weight: 800; letter-spacing: 0.04em;">RUTA</span>
+                        <h6 class="fw-bold text-dark m-0" id="sgu-tipo-banner-title" style="font-size: 0.98rem; letter-spacing: -0.01em;">Salida a Ruta de Operación</h6>
                     </div>
-                    <small class="text-secondary" id="sgu-tipo-banner-desc" style="font-size: 0.78rem;">Formulario con checklist técnico, fotos de evidencia y firmas digitales.</small>
+                    <small class="text-secondary" id="sgu-tipo-banner-desc" style="font-size: 0.8rem;">Formulario con checklist técnico, fotos de evidencia y firmas digitales.</small>
                 </div>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" style="font-size: 0.75rem;" onclick="window._sguAbrirSelectorTipoSalida()">
-                <i class="bi bi-arrow-repeat me-1"></i> Cambiar
+            <button type="button" class="btn btn-sm sgu-banner-btn-change rounded-pill px-3 py-1.5 fw-bold d-flex align-items-center gap-1.5" style="font-size: 0.78rem;" onclick="window._sguAbrirSelectorTipoSalida()">
+                <i class="bi bi-arrow-repeat"></i> Cambiar
             </button>
         </div>
 
