@@ -256,6 +256,22 @@ function formatearFechaVista(fechaIso) {
     return `${day}/${month}/${d.getUTCFullYear()}`;
 }
 
+function formatearFechaInput(val) {
+    if (!val) return '';
+    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+    if (typeof val === 'string' && val.includes('T')) return val.split('T')[0];
+    try {
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return '';
+        const y = d.getUTCFullYear();
+        const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    } catch(e) {
+        return '';
+    }
+}
+
 function calcularMetadatos(v) {
     let docs = [
         calcularEstado(v.tc_vencimiento),
@@ -306,15 +322,15 @@ function actualizarTiposDocumentosSelect() {
     const currentVal = sel.value;
     const tiposEstandar = [
         { value: '', label: 'Seleccione...' },
-        { value: 'TARJETA_PROPIEDAD', label: 'Tarjeta de Propiedad / Circulación' },
-        { value: 'SOAT', label: 'SOAT' },
-        { value: 'MATPEL', label: 'Tarjeta de Circulación MATPEL' },
-        { value: 'REV_TECNICA', label: 'Revisión Técnica (CITV)' },
-        { value: 'BONIFICACION', label: 'Bonificación / Suspensión Neumática' },
-        { value: 'SEG_VEHICULAR', label: 'Seguro / Póliza Vehicular' },
-        { value: 'SEG_CARRETA', label: 'Seguro Carreta' },
-        { value: 'FUMIGACION', label: 'Certificado de Fumigación' },
-        { value: 'EXTINTOR', label: 'Inspección Extintor' }
+        { value: 'TARJETA_PROPIEDAD', label: 'Tarjeta Única de Circulación (TUC / MTC)' },
+        { value: 'SOAT', label: 'SOAT (Seguro Obligatorio de Accidentes)' },
+        { value: 'MATPEL', label: 'Autorización de Circulación MATPEL (MTC)' },
+        { value: 'REV_TECNICA', label: 'Inspección Técnica Vehicular (CITV)' },
+        { value: 'BONIFICACION', label: 'Bonificación / Suspensión Neumática (MTC)' },
+        { value: 'SEG_VEHICULAR', label: 'Póliza de Seguro Vehicular' },
+        { value: 'SEG_CARRETA', label: 'Póliza de Seguro Carreta' },
+        { value: 'FUMIGACION', label: 'Certificado de Fumigación y Desinfección' },
+        { value: 'EXTINTOR', label: 'Inspección de Extintores' }
     ];
 
     const customTiposSet = new Set();
@@ -546,15 +562,15 @@ window.calSetFiltroTipo = function(tipo) {
 
 // Definición de tipos de documentos disponibles con metadatos
 const DOC_KEYS_CONFIG = [
+    { key: 'tc', label: 'TUC / Circulación', title: 'TARJ. CIRCULACIÓN (TUC)', field: 'tc_vencimiento', icon: 'bi-card-heading', bgClass: 'bg-c1', num: 1, tipoKey: 'TARJETA_PROPIEDAD' },
     { key: 'soat', label: 'SOAT', title: 'SOAT', field: 'soat_vencimiento', icon: 'bi-shield-check', bgClass: 'bg-c2', num: 2, tipoKey: 'SOAT' },
-    { key: 'rt', label: 'Rev. Técnica', title: 'REV. TÉCNICA', field: 'rt_vencimiento', icon: 'bi-wrench-adjustable', bgClass: 'bg-c4', num: 4, tipoKey: 'REV_TECNICA' },
-    { key: 'tc', label: 'Tarj. Circulación', title: 'TARJETA DE PROPIEDAD', field: 'tc_vencimiento', icon: 'bi-card-heading', bgClass: 'bg-c1', num: 1, tipoKey: 'TARJETA_PROPIEDAD' },
-    { key: 'matpel', label: 'MATPEL', title: 'TARJ. MATPEL', field: 'matpel_vencimiento', icon: 'bi-box-seam', bgClass: 'bg-c3', num: 3, tipoKey: 'MATPEL' },
-    { key: 'boni', label: 'Bonificación', title: 'BONIFICACIÓN', field: 'boni_vencimiento', icon: 'bi-file-earmark-check', bgClass: 'bg-c5', num: 5, tipoKey: 'BONIFICACION' },
-    { key: 'sv', label: 'Seg. Vehicular', title: 'SEG. VEHICULAR', field: 'sv_vencimiento', icon: 'bi-shield-shaded', bgClass: 'bg-c6', num: 6, tipoKey: 'SEG_VEHICULAR' },
-    { key: 'sc', label: 'Seg. Carreta', title: 'SEG. CARRETA', field: 'sc_vencimiento', icon: 'bi-truck', bgClass: 'bg-c7', num: 7, tipoKey: 'SEG_CARRETA' },
-    { key: 'fum', label: 'Fumigación', title: 'FUMIGACIÓN', field: 'fum_vencimiento', icon: 'bi-bug', bgClass: 'bg-c8', num: 8, tipoKey: 'FUMIGACION' },
-    { key: 'ext', label: 'Extintor', title: 'EXTINTOR', field: 'ext_vencimiento', icon: 'bi-fire', bgClass: 'bg-c9', num: 9, tipoKey: 'EXTINTOR' }
+    { key: 'matpel', label: 'MATPEL', title: 'AUTORIZACIÓN MATPEL', field: 'matpel_vencimiento', icon: 'bi-box-seam', bgClass: 'bg-c3', num: 3, tipoKey: 'MATPEL' },
+    { key: 'rt', label: 'CITV', title: 'INSPECCIÓN TÉCNICA (CITV)', field: 'rt_vencimiento', icon: 'bi-wrench-adjustable', bgClass: 'bg-c4', num: 4, tipoKey: 'REV_TECNICA' },
+    { key: 'boni', label: 'Bonificación', title: 'BONIFICACIÓN (MTC)', field: 'boni_vencimiento', icon: 'bi-file-earmark-check', bgClass: 'bg-c5', num: 5, tipoKey: 'BONIFICACION' },
+    { key: 'sv', label: 'Póliza Vehicular', title: 'PÓLIZA VEHICULAR', field: 'sv_vencimiento', icon: 'bi-shield-shaded', bgClass: 'bg-c6', num: 6, tipoKey: 'SEG_VEHICULAR' },
+    { key: 'sc', label: 'Póliza Carreta', title: 'PÓLIZA CARRETA', field: 'sc_vencimiento', icon: 'bi-truck', bgClass: 'bg-c7', num: 7, tipoKey: 'SEG_CARRETA' },
+    { key: 'fum', label: 'Fumigación', title: 'CERT. FUMIGACIÓN', field: 'fum_vencimiento', icon: 'bi-bug', bgClass: 'bg-c8', num: 8, tipoKey: 'FUMIGACION' },
+    { key: 'ext', label: 'Extintores', title: 'INSP. EXTINTORES', field: 'ext_vencimiento', icon: 'bi-fire', bgClass: 'bg-c9', num: 9, tipoKey: 'EXTINTOR' }
 ];
 
 window.renderizarCalendario = function() {
@@ -1158,7 +1174,7 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
     const defDocs = [
         {
             tipo: 'TARJETA_PROPIEDAD',
-            title: 'TARJ. CIRCULACIÓN',
+            title: 'TARJ. CIRCULACIÓN (TUC)',
             num: 1,
             bgClass: 'bg-c1',
             est: calcularEstado(v.tc_vencimiento),
@@ -1185,7 +1201,7 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
         },
         {
             tipo: 'MATPEL',
-            title: 'MATPEL',
+            title: 'AUTORIZACIÓN MATPEL',
             num: 3,
             bgClass: 'bg-c3',
             est: calcularEstado(v.matpel_vencimiento),
@@ -1198,7 +1214,7 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
         },
         {
             tipo: 'REV_TECNICA',
-            title: 'REV. TÉCNICA',
+            title: 'REVISIÓN TÉCNICA (CITV)',
             num: 4,
             bgClass: 'bg-c4',
             est: calcularEstado(v.rt_vencimiento),
@@ -1211,7 +1227,7 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
         },
         {
             tipo: 'BONIFICACION',
-            title: 'BONIFICACIÓN',
+            title: 'BONIFICACIÓN (MTC)',
             num: 5,
             bgClass: 'bg-c5',
             est: calcularEstado(v.boni_vencimiento),
@@ -1224,7 +1240,7 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
         },
         {
             tipo: 'SEG_VEHICULAR',
-            title: 'SEG. VEHICULAR',
+            title: 'PÓLIZA VEHICULAR',
             num: 6,
             bgClass: 'bg-c6',
             est: calcularEstado(v.sv_vencimiento),
@@ -1238,7 +1254,7 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
         },
         {
             tipo: 'SEG_CARRETA',
-            title: 'SEG. CARRETA',
+            title: 'PÓLIZA CARRETA',
             num: 7,
             bgClass: 'bg-c7',
             est: calcularEstado(v.sc_vencimiento),
@@ -1252,7 +1268,7 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
         },
         {
             tipo: 'FUMIGACION',
-            title: 'FUMIGACIÓN',
+            title: 'CERT. FUMIGACIÓN',
             num: 8,
             bgClass: 'bg-c8',
             est: calcularEstado(v.fum_vencimiento),
@@ -1265,7 +1281,7 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
         },
         {
             tipo: 'EXTINTOR',
-            title: 'EXTINTOR',
+            title: 'INSP. EXTINTORES',
             num: 9,
             bgClass: 'bg-c9',
             est: calcularEstado(v.ext_vencimiento),
@@ -1322,7 +1338,10 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
             </div>
         `;
     } else {
-        docsConDatos.forEach(doc => {
+        docsConDatos.forEach((doc, idx) => {
+            const seqNum = idx + 1;
+            const bgClass = 'bg-c' + ((idx % 9) + 1);
+
             let rowsHtml = '';
             doc.rows.forEach(r => {
                 let val = r.val || '---';
@@ -1362,7 +1381,7 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
             gridHtml += `
                 <div class="doc-card" style="${borderStyle} ${shadowStyle} cursor: pointer;" onclick="window.abrirDocModal('${doc.title}', ${JSON.stringify(doc.rows).replace(/"/g, '&quot;')}, ${JSON.stringify(doc.est).replace(/"/g, '&quot;')}, '${doc.url || ''}', '${doc.tipo}')">
                     <div class="doc-card-header">
-                        <div class="num-circle ${doc.bgClass}">${doc.num}</div>
+                        <div class="num-circle ${bgClass}">${seqNum}</div>
                         ${doc.title}
                     </div>
                     <div class="doc-card-body">
@@ -1509,12 +1528,17 @@ function abrirModalEdicion(placa, tipoDoc) {
         placa = currentPlaca;
     }
     actualizarDatalistPlacas();
+    actualizarTiposDocumentosSelect();
 
     const f = document.getElementById('formVehiculoFlota');
     if (f) f.reset();
     if (typeof window.ndLimpiarArchivo === 'function') {
         window.ndLimpiarArchivo();
     }
+    
+    // Guardar el tipo y placa originales que se están editando para limpiar si el usuario cambia el tipo
+    window._editingDocTipoOriginal = tipoDoc || null;
+    window._editingDocPlacaOriginal = placa || null;
     
     if (placa) {
         if (typeof window._cbSet === 'function') {
@@ -1533,6 +1557,82 @@ function abrirModalEdicion(placa, tipoDoc) {
     
     if (tipoDoc && document.getElementById('nd_tipo_documento')) {
         document.getElementById('nd_tipo_documento').value = tipoDoc;
+    }
+
+    // Pre-completar los datos existentes del documento seleccionado
+    if (placa && tipoDoc && Array.isArray(vehiculosFlota)) {
+        const v = vehiculosFlota.find(x => (x.placa || '').toUpperCase() === placa.toUpperCase());
+        if (v) {
+            let docConstancia = '';
+            let docEmision = '';
+            let docVencimiento = '';
+            let docCosto = '';
+            let docUrl = '';
+
+            if (tipoDoc === 'TARJETA_PROPIEDAD') {
+                docConstancia = v.tc_constancia || '';
+                docVencimiento = formatearFechaInput(v.tc_vencimiento);
+                docUrl = v.tc_url || '';
+            } else if (tipoDoc === 'SOAT') {
+                docConstancia = v.soat_entidad || '';
+                docCosto = v.soat_pago || '';
+                docVencimiento = formatearFechaInput(v.soat_vencimiento);
+                docUrl = v.soat_url || '';
+            } else if (tipoDoc === 'MATPEL') {
+                docConstancia = v.matpel_constancia || '';
+                docVencimiento = formatearFechaInput(v.matpel_vencimiento);
+                docUrl = v.matpel_url || '';
+            } else if (tipoDoc === 'REV_TECNICA') {
+                docEmision = formatearFechaInput(v.rt_emision);
+                docVencimiento = formatearFechaInput(v.rt_vencimiento);
+                docUrl = v.rt_url || '';
+            } else if (tipoDoc === 'BONIFICACION') {
+                docEmision = formatearFechaInput(v.boni_emision);
+                docVencimiento = formatearFechaInput(v.boni_vencimiento);
+                docUrl = v.boni_url || '';
+            } else if (tipoDoc === 'SEG_VEHICULAR') {
+                docConstancia = v.sv_entidad || '';
+                docVencimiento = formatearFechaInput(v.sv_vencimiento);
+                docUrl = v.sv_url || '';
+            } else if (tipoDoc === 'SEG_CARRETA') {
+                docConstancia = v.sc_entidad || '';
+                docVencimiento = formatearFechaInput(v.sc_vencimiento);
+                docUrl = v.sc_url || '';
+            } else if (tipoDoc === 'FUMIGACION') {
+                docEmision = formatearFechaInput(v.fum_emision);
+                docVencimiento = formatearFechaInput(v.fum_vencimiento);
+                docUrl = v.fum_url || '';
+            } else if (tipoDoc === 'EXTINTOR') {
+                docEmision = formatearFechaInput(v.ext_emision);
+                docVencimiento = formatearFechaInput(v.ext_vencimiento);
+                docUrl = v.ext_url || '';
+            } else if (Array.isArray(v.docs_personalizados)) {
+                const cd = v.docs_personalizados.find(d => (d.tipo || '').toUpperCase() === tipoDoc.toUpperCase() || (d.title || '').toUpperCase() === tipoDoc.toUpperCase());
+                if (cd) {
+                    docConstancia = cd.constancia || '';
+                    docEmision = formatearFechaInput(cd.emision);
+                    docVencimiento = formatearFechaInput(cd.vencimiento);
+                    docCosto = cd.pago ? String(cd.pago).replace(/[^0-9.]/g, '') : '';
+                    docUrl = cd.url || '';
+                }
+            }
+
+            if (document.getElementById('nd_constancia')) document.getElementById('nd_constancia').value = docConstancia;
+            if (document.getElementById('nd_fecha_emision')) document.getElementById('nd_fecha_emision').value = docEmision;
+            if (document.getElementById('nd_fecha_vencimiento')) document.getElementById('nd_fecha_vencimiento').value = docVencimiento;
+            if (document.getElementById('nd_costo')) document.getElementById('nd_costo').value = docCosto;
+            if (document.getElementById('nd_archivo_url')) document.getElementById('nd_archivo_url').value = docUrl;
+
+            if (docUrl) {
+                const nameEl = document.getElementById('nd_archivo_name');
+                if (nameEl) {
+                    const cleanName = docUrl.split('/').pop() || 'Archivo adjunto existente';
+                    nameEl.innerHTML = `<i class="bi bi-file-earmark-check text-success me-1"></i> <span style="color:#0f172a; font-weight:600;">${cleanName}</span>`;
+                }
+                const btnClear = document.getElementById('nd_archivo_btn_clear');
+                if (btnClear) btnClear.classList.remove('d-none');
+            }
+        }
     }
     
     const grp = document.getElementById('grp_nuevo_tipo');
@@ -1571,6 +1671,8 @@ window.ndLimpiarArchivo = function() {
 };
 
 function cerrarModalEdicion() {
+    window._editingDocTipoOriginal = null;
+    window._editingDocPlacaOriginal = null;
     const m = document.getElementById('modalEdicionVehiculo');
     if (m) {
         if (window.bootstrap && bootstrap.Modal) {
@@ -1614,6 +1716,24 @@ async function guardarVehiculo() {
     const targetVehicle = vehiculosFlota.find(x => x.placa === placa.toUpperCase()) || { placa: placa.toUpperCase() };
 
     try {
+        // Si estábamos editando un tipo previo y se seleccionó un tipo diferente, limpiar el anterior para no duplicar
+        if (window._editingDocTipoOriginal && window._editingDocTipoOriginal !== tipoVal && window._editingDocTipoOriginal !== tipoNombre) {
+            try {
+                await fetch('/api/documentos-flota/eliminar-documento', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') },
+                    body: JSON.stringify({
+                        placa: placa.toUpperCase(),
+                        tipoDocKey: window._editingDocTipoOriginal
+                    })
+                });
+            } catch (cleanErr) {
+                console.warn('Advertencia al limpiar tipo previo:', cleanErr);
+            }
+        }
+        window._editingDocTipoOriginal = null;
+        window._editingDocPlacaOriginal = null;
+
         // 1. Guardar en historial de documentos
         const resHist = await fetch('/api/documentos-flota/guardar-historial', {
             method: 'POST',
