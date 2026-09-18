@@ -3187,7 +3187,62 @@ app.get('/api/vehiculos-flota', (req, res) => {
             });
             return;
         }
-        res.json(rows);
+
+        const vehiculos = Array.isArray(rows) ? rows : [];
+        tdb.query('SELECT * FROM documentos_flota ORDER BY fecha_vencimiento DESC, creado_en DESC', (errDocs, docRows) => {
+            const docsByPlaca = {};
+            if (!errDocs && Array.isArray(docRows)) {
+                docRows.forEach(doc => {
+                    const pl = (doc.placa || '').toUpperCase().trim();
+                    if (!pl) return;
+                    if (!docsByPlaca[pl]) docsByPlaca[pl] = {};
+                    
+                    const tNorm = (doc.tipo_documento || '').toUpperCase().trim();
+                    if (!docsByPlaca[pl][tNorm]) {
+                        docsByPlaca[pl][tNorm] = doc;
+                    }
+                });
+            }
+
+            const standardAliases = [
+                'SOAT', 'REVISIÓN TÉCNICA (CITV)', 'REV_TECNICA', 'REVISION TECNICA', 'CITV', 'REVISIÓN TÉCNICA', 'REVISION TECNICA (CITV)',
+                'TARJETA DE PROPIEDAD / CIRCULACIÓN', 'TARJETA_PROPIEDAD', 'TARJ. CIRCULACIÓN', 'TARJETA DE PROPIEDAD', 'TARJETA DE CIRCULACIÓN', 'TARJ. CIRCULACION',
+                'TARJETA DE CIRCULACIÓN MATPEL', 'MATPEL', 'TARJETA DE CIRCULACION MATPEL',
+                'BONIFICACIÓN / SUSPENSIÓN NEUMÁTICA', 'BONIFICACION', 'BONIFICACION / SUSPENSION NEUMATICA', 'BONIFICACIÓN',
+                'SEGURO / PÓLIZA VEHICULAR', 'SEG_VEHICULAR', 'SEGURO VEHICULAR', 'POLIZA VEHICULAR', 'PÓLIZA VEHICULAR',
+                'SEGURO CARRETA', 'SEG_CARRETA',
+                'CERTIFICADO DE FUMIGACIÓN', 'FUMIGACION', 'FUMIGACIÓN', 'CERTIFICADO DE FUMIGACION',
+                'INSPECCIÓN EXTINTOR', 'EXTINTOR', 'INSPECCION EXTINTOR'
+            ];
+
+            vehiculos.forEach(r => {
+                const pl = (r.placa || '').toUpperCase().trim();
+                const vDocs = docsByPlaca[pl] || {};
+                const customDocs = [];
+
+                Object.keys(vDocs).forEach(tKey => {
+                    const docObj = vDocs[tKey];
+                    const isStandard = standardAliases.some(alias => alias.toUpperCase() === tKey.toUpperCase());
+                    if (!isStandard) {
+                        customDocs.push({
+                            id: docObj.id,
+                            tipo: docObj.tipo_documento,
+                            title: docObj.tipo_documento.toUpperCase(),
+                            constancia: docObj.nro_constancia || docObj.entidad,
+                            emision: docObj.fecha_emision,
+                            vencimiento: docObj.fecha_vencimiento,
+                            pago: docObj.pago,
+                            url: docObj.observaciones,
+                            creado_en: docObj.creado_en
+                        });
+                    }
+                });
+
+                r.docs_personalizados = customDocs;
+            });
+
+            res.json(vehiculos);
+        });
     });
 });
 
