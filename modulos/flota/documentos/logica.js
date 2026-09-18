@@ -1425,6 +1425,9 @@ window.onTipoDocumentoChange = function(val) {
 };
 
 function abrirModalEdicion(placa, tipoDoc) {
+    if (!placa && currentPlaca) {
+        placa = currentPlaca;
+    }
     actualizarDatalistPlacas();
 
     const f = document.getElementById('formVehiculoFlota');
@@ -1439,6 +1442,8 @@ function abrirModalEdicion(placa, tipoDoc) {
         } else {
             const selV = document.getElementById('nd_vehiculo');
             if (selV) selV.value = placa.toUpperCase();
+            const txtV = document.getElementById('nd_vehiculo-txt');
+            if (txtV) txtV.value = placa.toUpperCase();
         }
     } else {
         if (typeof window._cbSet === 'function') {
@@ -1856,18 +1861,33 @@ window.abrirDocModal = function(title, contentRows, est, docUrl, tipoDocKey) {
     
     const btnVer = document.getElementById('dm-btn-ver');
     const btnDescargar = document.getElementById('dm-btn-descargar');
+    const btnWhatsApp = document.getElementById('dm-btn-whatsapp');
     
-    if (btnVer && btnDescargar) {
-        if (docUrl) {
+    if (docUrl) {
+        if (btnVer) {
             btnVer.style.setProperty('display', 'flex', 'important');
-            btnDescargar.style.setProperty('display', 'flex', 'important');
             btnVer.onclick = () => window.procesarDocumento(docUrl, 'ver');
+        }
+        if (btnDescargar) {
+            btnDescargar.style.setProperty('display', 'flex', 'important');
             btnDescargar.onclick = () => window.procesarDocumento(docUrl, 'descargar');
-        } else {
+        }
+        if (btnWhatsApp) {
+            btnWhatsApp.style.setProperty('display', 'flex', 'important');
+            btnWhatsApp.onclick = () => window.compartirDocWhatsApp(docUrl, title);
+        }
+    } else {
+        if (btnVer) {
             btnVer.style.setProperty('display', 'none', 'important');
-            btnDescargar.style.setProperty('display', 'none', 'important');
             btnVer.onclick = null;
+        }
+        if (btnDescargar) {
+            btnDescargar.style.setProperty('display', 'none', 'important');
             btnDescargar.onclick = null;
+        }
+        if (btnWhatsApp) {
+            btnWhatsApp.style.setProperty('display', 'none', 'important');
+            btnWhatsApp.onclick = null;
         }
     }
 
@@ -1982,6 +2002,77 @@ window.procesarDocumento = function(docUrl, accion) {
         console.error('Error presigning document:', e);
         alert('Ocurrió un error al intentar acceder al documento.');
     });
+};
+
+window.compartirDocWhatsApp = async function(docUrl, docTitle) {
+    if (!docUrl) return;
+    const placa = currentPlaca || 'FLOTA';
+    const titulo = docTitle || window._lastDocTitle || 'Documento';
+    const btn = document.getElementById('dm-btn-whatsapp');
+    const oldHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enviando...';
+        btn.style.pointerEvents = 'none';
+    }
+
+    try {
+        // 1. Obtener URL prefirmada
+        const resp = await fetch('/api/documentos-flota/presign-read', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+            },
+            body: JSON.stringify({ urls: [docUrl] })
+        });
+        const data = await resp.json();
+        const presigned = data[docUrl];
+        if (!presigned || presigned.error) {
+            throw new Error('No se pudo obtener el archivo del documento.');
+        }
+
+        // Determinar extensión y tipo MIME
+        const cleanUrl = docUrl.split('?')[0];
+        const ext = cleanUrl.split('.').pop().toLowerCase() || 'pdf';
+        const mimeType = ext === 'pdf' ? 'application/pdf' : (ext === 'png' ? 'image/png' : (ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'application/octet-stream'));
+        const filename = `${placa} - ${titulo}.${ext}`;
+
+        // 2. Descargar como Blob para compartir el archivo directamente
+        try {
+            const blobResp = await fetch(presigned);
+            const blob = await blobResp.blob();
+            const file = new File([blob], filename, { type: mimeType });
+
+            // Compartir nativo con archivo adjunto (WhatsApp directo en móvil / Capacitor)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: filename,
+                    text: `📄 Documento: *${titulo}*\n🚗 Placa: *${placa}*`
+                });
+                return;
+            }
+        } catch (shareFetchErr) {
+            console.warn('No se pudo adjuntar blob directo, usando fallback de enlace WhatsApp:', shareFetchErr);
+        }
+
+        // 3. Fallback: Abrir WhatsApp con datos y enlace de acceso directo
+        const textoWa = `📄 *DOCUMENTO DE FLOTA*\n🚗 *Placa:* ${placa}\n📑 *Documento:* ${titulo}\n🔗 *Ver/Descargar archivo:* ${presigned}`;
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isMobile) {
+            window.location.href = `whatsapp://send?text=${encodeURIComponent(textoWa)}`;
+        } else {
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(textoWa)}`, '_blank');
+        }
+    } catch (err) {
+        console.error('Error al compartir por WhatsApp:', err);
+        alert('Error al preparar el documento para WhatsApp: ' + (err.message || err));
+    } finally {
+        if (btn) {
+            btn.innerHTML = oldHtml || '<i class="bi bi-whatsapp" style="margin-right:0.5rem;"></i> WhatsApp';
+            btn.style.pointerEvents = 'auto';
+        }
+    }
 };
 
 window.confirmarEliminarDocActual = async function() {
