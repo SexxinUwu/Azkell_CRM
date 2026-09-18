@@ -1053,6 +1053,111 @@
         </div>
     </div>
 
+    <!-- ═══ VISTA: SELECTOR DE TIPO DE SALIDA (PANTALLA COMPLETA BENTO ERP) ═══════════════ -->
+    <div id="sgu-selector-tipo" class="sgu-view" style="display: none;">
+        <!-- Hero Bento ERP -->
+        <div class="sgu-portal-hero">
+            <div class="d-flex align-items-center gap-3">
+                <div class="sgu-portal-avatar" style="background: linear-gradient(135deg, #0284c7, #0ea5e9);">
+                    <i class="bi bi-signpost-2-fill"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge bg-primary px-2 py-1 rounded-pill" style="font-size:0.68rem;font-weight:800;letter-spacing:0.04em;">MÓDULO SEGURIDAD</span>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">¿A qué destino sale la unidad hoy?</h3>
+                    <p class="text-secondary mb-0" style="font-size:0.88rem;">Selecciona la modalidad de salida para habilitar el registro correspondiente de la flota</p>
+                </div>
+            </div>
+            <div>
+                <button class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-semibold d-flex align-items-center gap-1.5" style="font-size:0.82rem;" onclick="window._sguNav('list')">
+                    <i class="bi bi-arrow-left"></i> Volver a la Lista
+                </button>
+            </div>
+        </div>
+
+        <!-- Bento Grid de 3 Cards de Pantalla Completa (Estilo Imagen 2) -->
+        <div class="row g-3 mb-4">
+            <!-- 1. RUTA (OPERACIÓN / VIAJE) -->
+            <div class="col-12 col-md-4">
+                <div class="sgu-company-card" onclick="window._sguSeleccionarTipoSalida('RUTA')">
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="sgu-company-icon" style="background:#eff6ff;color:#0284c7;">
+                                <i class="bi bi-geo-alt-fill"></i>
+                            </div>
+                            <span class="badge bg-primary text-uppercase px-2 py-1 rounded-pill" style="font-size:0.68rem;font-weight:800;">OPERACIÓN</span>
+                        </div>
+                        <h4 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">RUTA / VIAJE</h4>
+                        <p class="text-secondary small mb-3">Salida regular de transporte con vinculación de viaje, checklist 2 en 1, fotos de evidencia y firmas digitales.</p>
+                    </div>
+
+                    <!-- Mini resumen -->
+                    <div class="d-flex align-items-center justify-content-between p-2.5 rounded-3 mb-3" style="background:#f8fafc;border:1px solid #f1f5f9;">
+                        <div class="text-center flex-fill border-end"><div class="fw-bold text-primary" style="font-size:0.95rem;">Checklist</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">2 en 1 + Fotos</span></div>
+                        <div class="text-center flex-fill"><div class="fw-bold text-success" style="font-size:0.95rem;">Firmas</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Digitales</span></div>
+                    </div>
+
+                    <button class="btn btn-primary w-100 rounded-3 fw-bold py-2 shadow-2xs" style="font-size:0.85rem;">
+                        <i class="bi bi-truck me-1"></i> Seleccionar Ruta ➜
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. COMPRAS LOCALES -->
+            <div class="col-12 col-md-4">
+                <div class="sgu-company-card" onclick="window._sguSeleccionarTipoSalida('COMPRAS')">
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="sgu-company-icon" style="background:#fffbeb;color:#d97706;">
+                                <i class="bi bi-cart3"></i>
+                            </div>
+                            <span class="badge bg-warning text-dark text-uppercase px-2 py-1 rounded-pill" style="font-size:0.68rem;font-weight:800;">LOCAL</span>
+                        </div>
+                        <h4 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">COMPRAS LOCALES</h4>
+                        <p class="text-secondary small mb-3">Salida express para compras locales de repuestos o suministros de la empresa. Registro ágil directo.</p>
+                    </div>
+
+                    <!-- Mini resumen -->
+                    <div class="d-flex align-items-center justify-content-between p-2.5 rounded-3 mb-3" style="background:#f8fafc;border:1px solid #f1f5f9;">
+                        <div class="text-center flex-fill border-end"><div class="fw-bold text-warning" style="font-size:0.95rem;">Express</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">5 Campos</span></div>
+                        <div class="text-center flex-fill"><div class="fw-bold text-secondary" style="font-size:0.95rem;">Odómetro</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Sin Checklist</span></div>
+                    </div>
+
+                    <button class="btn btn-warning w-100 rounded-3 fw-bold py-2 shadow-2xs text-dark" style="font-size:0.85rem;">
+                        <i class="bi bi-cart3 me-1"></i> Seleccionar Compras ➜
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. TALLER TERCERO -->
+            <div class="col-12 col-md-4">
+                <div class="sgu-company-card" onclick="window._sguSeleccionarTipoSalida('TALLER')">
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="sgu-company-icon" style="background:#f5f3ff;color:#7c3aed;">
+                                <i class="bi bi-tools"></i>
+                            </div>
+                            <span class="badge text-white text-uppercase px-2 py-1 rounded-pill" style="background:#7c3aed;font-size:0.68rem;font-weight:800;">EXTERNO</span>
+                        </div>
+                        <h4 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">TALLER TERCERO</h4>
+                        <p class="text-secondary small mb-3">Salida a mantenimiento externo, tornería, concesionario o proveedor técnico con cierre directo.</p>
+                    </div>
+
+                    <!-- Mini resumen -->
+                    <div class="d-flex align-items-center justify-content-between p-2.5 rounded-3 mb-3" style="background:#f8fafc;border:1px solid #f1f5f9;">
+                        <div class="text-center flex-fill border-end"><div class="fw-bold text-purple" style="color:#7c3aed;font-size:0.95rem;">Taller</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Mantenimiento</span></div>
+                        <div class="text-center flex-fill"><div class="fw-bold text-secondary" style="font-size:0.95rem;">Odómetro</div><span class="text-muted" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;">Sin Checklist</span></div>
+                    </div>
+
+                    <button class="btn w-100 rounded-3 fw-bold py-2 shadow-2xs text-white" style="background:#7c3aed;font-size:0.85rem;">
+                        <i class="bi bi-tools me-1"></i> Seleccionar Taller ➜
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ VISTA PRINCIPAL: LISTA / DASHBOARD ═════════════════════ -->
     <div id="sgu-list" class="sgu-view" style="display: none;">
 
@@ -1618,108 +1723,7 @@
     </div>
 </div>
 
-<!-- ═══ MODAL SELECTOR DE TIPO DE SALIDA (3 CARDS BENTO APPLE) ═════ -->
-<div class="modal fade" id="sgu-modal-tipo-salida" tabindex="-1" aria-hidden="true" style="backdrop-filter: blur(4px);">
-    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 820px; width: 92%;">
-        <div class="modal-content border-0 shadow-2xl rounded-4 overflow-hidden" style="background: #ffffff; border: 1px solid #e2e8f0 !important;">
-            <!-- Header Modal -->
-            <div class="p-3.5 px-4 d-flex align-items-center justify-content-between border-bottom" style="background: #f8fafc;">
-                <div class="d-flex align-items-center gap-2.5">
-                    <div style="width: 36px; height: 36px; border-radius: 10px; background: #eff6ff; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.15rem;">
-                        <i class="bi bi-compass-fill"></i>
-                    </div>
-                    <div>
-                        <h5 class="fw-bold mb-0 text-dark" style="font-size: 1.1rem; letter-spacing: -0.02em;">¿A qué destino sale la unidad?</h5>
-                        <small class="text-secondary" style="font-size: 0.78rem;">Seleccione una opción para cargar el formulario correspondiente</small>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
 
-            <!-- Body con 3 Bento Cards -->
-            <div class="p-4">
-                <div class="row g-3">
-                    <!-- CARD 1: RUTA -->
-                    <div class="col-12 col-md-4">
-                        <div class="sgu-tipo-salida-card card-ruta" onclick="window._sguSeleccionarTipoSalida('RUTA')">
-                            <div>
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <div class="sgu-tipo-salida-icon" style="background: #eff6ff; color: #0284c7;">
-                                        <i class="bi bi-geo-alt-fill"></i>
-                                    </div>
-                                    <span class="badge bg-primary text-uppercase px-2 py-0.5 rounded-pill" style="font-size: 0.65rem; font-weight: 800;">OPERACIÓN</span>
-                                </div>
-                                <h5 class="fw-bold text-dark mb-1" style="font-size: 1.12rem;">Ruta</h5>
-                                <p class="text-secondary mb-3" style="font-size: 0.8rem; line-height: 1.45;">
-                                    Salida regular de transporte. Requiere checklist técnico completo, fotos de evidencias y firmas digitales.
-                                </p>
-                            </div>
-                            <div>
-                                <div class="btn btn-outline-primary w-100 rounded-3 py-2 fw-bold d-flex align-items-center justify-content-center gap-1" style="font-size: 0.82rem;">
-                                    <span>Seleccionar Ruta</span>
-                                    <i class="bi bi-arrow-right"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- CARD 2: COMPRAS -->
-                    <div class="col-12 col-md-4">
-                        <div class="sgu-tipo-salida-card card-compras" onclick="window._sguSeleccionarTipoSalida('COMPRAS')">
-                            <div>
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <div class="sgu-tipo-salida-icon" style="background: #fffbeb; color: #d97706;">
-                                        <i class="bi bi-cart3"></i>
-                                    </div>
-                                    <span class="badge bg-warning text-dark text-uppercase px-2 py-0.5 rounded-pill" style="font-size: 0.65rem; font-weight: 800;">LOCAL</span>
-                                </div>
-                                <h5 class="fw-bold text-dark mb-1" style="font-size: 1.12rem;">Compras</h5>
-                                <p class="text-secondary mb-3" style="font-size: 0.8rem; line-height: 1.45;">
-                                    Salida express de compras locales de repuestos o insumos. Solo solicita datos esenciales y odómetro.
-                                </p>
-                            </div>
-                            <div>
-                                <div class="btn btn-outline-warning w-100 rounded-3 py-2 fw-bold d-flex align-items-center justify-content-center gap-1 text-dark" style="font-size: 0.82rem;">
-                                    <span>Seleccionar Compras</span>
-                                    <i class="bi bi-arrow-right"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- CARD 3: TALLER TERCERO -->
-                    <div class="col-12 col-md-4">
-                        <div class="sgu-tipo-salida-card card-taller" onclick="window._sguSeleccionarTipoSalida('TALLER')">
-                            <div>
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <div class="sgu-tipo-salida-icon" style="background: #f5f3ff; color: #7c3aed;">
-                                        <i class="bi bi-tools"></i>
-                                    </div>
-                                    <span class="badge bg-purple text-white text-uppercase px-2 py-0.5 rounded-pill" style="background: #7c3aed; font-size: 0.65rem; font-weight: 800;">EXTERNO</span>
-                                </div>
-                                <h5 class="fw-bold text-dark mb-1" style="font-size: 1.12rem;">Taller Tercero</h5>
-                                <p class="text-secondary mb-3" style="font-size: 0.8rem; line-height: 1.45;">
-                                    Salida a mantenimiento o rectificación con terceros. Registro ágil sin checklist obligatorio.
-                                </p>
-                            </div>
-                            <div>
-                                <div class="btn btn-outline-secondary w-100 rounded-3 py-2 fw-bold d-flex align-items-center justify-content-center gap-1" style="border-color: #8b5cf6; color: #7c3aed; font-size: 0.82rem;">
-                                    <span>Seleccionar Taller</span>
-                                    <i class="bi bi-arrow-right"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer Informativo -->
-            <div class="p-3 px-4 border-top text-center" style="background: #f8fafc; font-size: 0.78rem; color: #64748b;">
-                <i class="bi bi-shield-check text-primary me-1"></i> Control de Seguridad y Flota Vehicular • Azkell ERP
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- ═══ WIDGET FLOTANTE: PROGRESO DE SUBIDA EN 2DO PLANO ════════════ -->
 <div id="sgu-upload-progress-card">
