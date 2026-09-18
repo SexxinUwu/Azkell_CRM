@@ -681,6 +681,325 @@ module.exports = (db, logAudit) => {
         });
     });
 
+    // ── GET /seguridad/unidades-base/panorama-en-vivo — Panorama 360° en Vivo ──
+    router.get('/seguridad/unidades-base/panorama-en-vivo', (req, res) => {
+        const tdb = getDb(req);
+        const fechaTarget = req.query.fecha || new Date().toISOString().split('T')[0];
+        const corteTarget = req.query.corte || 'ALL';
+
+        // 1. Obtener todas las placas maestras del sistema
+        tdb.query('SELECT placa, cliente, marca, modelo, tipo, tipo_unidad, motora FROM placas ORDER BY placa ASC', (errP, placasRows) => {
+            if (errP) return res.status(500).json({ error: errP.message });
+
+            // 2. Obtener todas las unidades en ruta desde el módulo de Checklist
+            tdb.query(`
+                SELECT id, placa_tracto, placa_carreta, conductor, destino, salida_fecha, salida_hora, salida_km,
+                       orden_viaje, estado, salida_has_alert, salida_observaciones
+                FROM seg_unidades_registros
+                WHERE estado = 'en_ruta'
+            `, (errR, rutaRows) => {
+                if (errR) return res.status(500).json({ error: errR.message });
+
+                // 3. Obtener los registros de permanencia en base guardados para la fecha
+                let sqlBase = 'SELECT * FROM seg_unidades_base WHERE fecha = ?';
+                const paramsBase = [fechaTarget];
+                if (corteTarget && corteTarget !== 'ALL') {
+                    sqlBase += ' AND corte = ?';
+                    paramsBase.push(corteTarget);
+                }
+                sqlBase += ' ORDER BY id DESC';
+
+                tdb.query(sqlBase, paramsBase, (errB, baseRows) => {
+                    if (errB) return res.status(500).json({ error: errB.message });
+
+                    // Mapear unidades en ruta por placa limpia
+                    const rutaMap = {};
+                    (rutaRows || []).forEach(r => {
+                        const cleanP = (r.placa_tracto || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        if (cleanP) rutaMap[cleanP] = r;
+                    });
+
+                    // Mapear registros de base guardados (el más reciente por placa)
+                    const baseMap = {};
+                    (baseRows || []).forEach(b => {
+                        const cleanP = (b.placa_camion || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        if (cleanP && !baseMap[cleanP]) baseMap[cleanP] = b;
+                    });
+
+                    const panorama = [];
+                    const empresasSet = new Set();
+                    const statsPorEmpresa = {};
+
+                    function getEmpresaStatsObj(empName) {
+                        if (!statsPorEmpresa[empName]) {
+                            statsPorEmpresa[empName] = {
+                                empresa: empName,
+                                total_flota: 0,
+                                en_base: 0,
+                                en_ruta: 0,
+                                en_taller: 0,
+                                en_lavado: 0,
+                                con_alerta: 0
+                            };
+                        }
+                        return statsPorEmpresa[empName];
+                    }
+
+                    const globalStats = {
+                        empresa: 'TODAS',
+                        total_flota: 0,
+                        en_base: 0,
+                        en_ruta: 0,
+                        en_taller: 0,
+                        en_lavado: 0,
+                        con_alerta: 0
+                    };
+
+                    (placasRows || []).forEach(p => {
+                        const pUpper = (p.placa || '').toUpperCase().trim();
+                        const cleanP = pUpper.replace(/[^A-Z0-9]/g, '');
+                        if (!cleanP) return;
+
+                        const motoraStr = String(p.motora || '').toUpperCase().trim();
+                        const tipoUpper = (p.tipo || p.tipo_unidad || '').toUpperCase().trim();
+
+                        const isNoMotora = motoraStr.includes('NO') || 
+                                           motoraStr === '0' ||
+                                           tipoUpper.includes('SEMIREMOLQUE') || 
+                                           tipoUpper.includes('SEMIRREMOLQUE') || 
+                                           tipoUpper.includes('CARRETA') || 
+                                           tipoUpper.includes('FURGON') || 
+                                           tipoUpper.includes('PLATAFORMA') || 
+                                           tipoUpper.includes('TANQUE') || 
+                                           tipoUpper.includes('TOLVA') ||
+                                           tipoUpper.includes('BATEA') ||
+                                           tipoUpper.includes('CAMA');
+
+                        // Solo evaluamos tractos y camiones como unidades motora titulares
+                        if (isNoMotora) return;
+
+                        const emp = (p.cliente || 'MARSISA').toUpperCase().trim();
+                        if (emp && emp !== 'NULL') empresasSet.add(emp);
+
+                        const empStat = getEmpresaStatsObj(emp);
+                        globalStats.total_flota++;
+                        empStat.total_flota++;
+
+                        const rutaActiva = rutaMap[cleanP];
+                        const baseRecord = baseMap[cleanP];
+
+                        let statusOp = 'EN BASE';
+                        let ubicacion = 'Base';
+                        let conductor = 'Sin asignar';
+                        let placaCarreta = '—';
+                        let estadoCarga = 'Disponible';
+                        let observacion = '';
+                        let fechaSalida = null;
+                        let horaSalida = null;
+                        let kmSalida = null;
+                        let ordenViaje = null;
+                        let hasAlert = false;
+                        let baseId = null;
+                        let corte = corteTarget !== 'ALL' ? corteTarget : 'Corte 1';
+
+                        if (rutaActiva) {
+                            hasAlert = !!(rutaActiva.salida_has_alert);
+                            conductor = rutaActiva.conductor || 'Sin conductor';
+                            placaCarreta = rutaActiva.placa_carreta || '—';
+                            fechaSalida = rutaActiva.salida_fecha;
+                            horaSalida = rutaActiva.salida_hora;
+                            kmSalida = rutaActiva.salida_km;
+                            ordenViaje = rutaActiva.orden_viaje;
+                            observacion = rutaActiva.salida_observaciones || '';
+
+                            const destUpper = String(rutaActiva.destino || '').toUpperCase();
+                            if (destUpper.includes('COMPRA')) {
+                                statusOp = 'EN COMPRAS';
+                                ubicacion = 'Compras Locales';
+                            } else if (destUpper.includes('TALLER') || destUpper.includes('MANTENIMIENTO')) {
+                                statusOp = 'EN TALLER';
+                                ubicacion = 'Taller Tercero';
+                            } else {
+                                statusOp = 'EN RUTA';
+                                ubicacion = rutaActiva.destino ? `En Ruta (${rutaActiva.destino})` : 'En Ruta';
+                            }
+                            estadoCarga = 'En Operación';
+
+                            if (statusOp === 'EN TALLER') {
+                                globalStats.en_taller++;
+                                empStat.en_taller++;
+                            } else {
+                                globalStats.en_ruta++;
+                                empStat.en_ruta++;
+                            }
+                        } else {
+                            // Está físicamente en base
+                            if (baseRecord) {
+                                baseId = baseRecord.id;
+                                corte = baseRecord.corte || corte;
+                                ubicacion = baseRecord.zona || 'Base';
+                                estadoCarga = baseRecord.estado || 'Cargado';
+                                conductor = baseRecord.conductor || 'Sin asignar';
+                                placaCarreta = baseRecord.placa_carreta || '—';
+                                observacion = baseRecord.observacion || '';
+
+                                const zonaUpper = String(baseRecord.zona || '').toUpperCase();
+                                if (zonaUpper.includes('MANTENIMIENTO') || zonaUpper.includes('TALLER')) {
+                                    statusOp = 'EN MANTENIMIENTO';
+                                    globalStats.en_taller++;
+                                    empStat.en_taller++;
+                                } else if (zonaUpper.includes('LAVADO')) {
+                                    statusOp = 'EN LAVADO';
+                                    globalStats.en_lavado++;
+                                    empStat.en_lavado++;
+                                } else {
+                                    statusOp = 'EN BASE';
+                                    globalStats.en_base++;
+                                    empStat.en_base++;
+                                }
+                            } else {
+                                statusOp = 'EN BASE';
+                                ubicacion = 'Base';
+                                estadoCarga = 'Disponible';
+                                globalStats.en_base++;
+                                empStat.en_base++;
+                            }
+                        }
+
+                        if (hasAlert) {
+                            globalStats.con_alerta++;
+                            empStat.con_alerta++;
+                        }
+
+                        panorama.push({
+                            placa: pUpper,
+                            empresa: emp,
+                            marca: p.marca || '',
+                            modelo: p.modelo || '',
+                            tipo: p.tipo || p.tipo_unidad || 'TRACTO / CAMIÓN',
+                            status_operativo: statusOp,
+                            ubicacion: ubicacion,
+                            conductor: conductor,
+                            placa_carreta: placaCarreta,
+                            estado_carga: estadoCarga,
+                            observacion: observacion,
+                            corte: corte,
+                            fecha_salida: fechaSalida,
+                            hora_salida: horaSalida,
+                            km_salida: kmSalida,
+                            orden_viaje: ordenViaje,
+                            has_alert: hasAlert,
+                            base_id: baseId,
+                            en_ruta_raw: !!rutaActiva,
+                            checklist_id: rutaActiva ? rutaActiva.id : null
+                        });
+                    });
+
+                    res.json({
+                        ok: true,
+                        fecha: fechaTarget,
+                        corte: corteTarget,
+                        global: globalStats,
+                        empresas: Object.values(statsPorEmpresa),
+                        lista_empresas: Array.from(empresasSet),
+                        panorama: panorama
+                    });
+                });
+            });
+        });
+    });
+
+    // ── POST /seguridad/unidades-base/sincronizar-corte — Auto-poblar unidades en base ──
+    router.post('/seguridad/unidades-base/sincronizar-corte', (req, res) => {
+        const tdb = getDb(req);
+        const { fecha, corte, empresa } = req.body;
+        if (!fecha || !corte) {
+            return res.status(400).json({ error: 'Fecha y corte son requeridos.' });
+        }
+
+        const usuario = (req.user && (req.user.nombre || req.user.usuario)) || req.body.usuario || 'Seguridad';
+
+        // 1. Obtener todas las placas no-motoras descartadas (solo tractos/camiones)
+        tdb.query('SELECT placa, cliente, tipo, tipo_unidad, motora FROM placas', (errP, placasRows) => {
+            if (errP) return res.status(500).json({ error: errP.message });
+
+            // 2. Obtener placas actualmente en ruta
+            tdb.query("SELECT placa_tracto FROM seg_unidades_registros WHERE estado = 'en_ruta'", (errR, rutaRows) => {
+                if (errR) return res.status(500).json({ error: errR.message });
+
+                const enRutaSet = new Set((rutaRows || []).map(r => (r.placa_tracto || '').toUpperCase().replace(/[^A-Z0-9]/g, '')));
+
+                // 3. Obtener registros existentes para esa fecha y corte
+                tdb.query('SELECT placa_camion FROM seg_unidades_base WHERE fecha = ? AND corte = ?', [fecha, corte], (errB, baseRows) => {
+                    if (errB) return res.status(500).json({ error: errB.message });
+
+                    const yaEnBaseSet = new Set((baseRows || []).map(b => (b.placa_camion || '').toUpperCase().replace(/[^A-Z0-9]/g, '')));
+
+                    const inserts = [];
+                    (placasRows || []).forEach(p => {
+                        const cleanP = (p.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        if (!cleanP) return;
+
+                        const motoraStr = String(p.motora || '').toUpperCase().trim();
+                        const tipoUpper = (p.tipo || p.tipo_unidad || '').toUpperCase().trim();
+
+                        const isNoMotora = motoraStr.includes('NO') || 
+                                           motoraStr === '0' ||
+                                           tipoUpper.includes('SEMIREMOLQUE') || 
+                                           tipoUpper.includes('SEMIRREMOLQUE') || 
+                                           tipoUpper.includes('CARRETA') || 
+                                           tipoUpper.includes('FURGON') || 
+                                           tipoUpper.includes('PLATAFORMA') || 
+                                           tipoUpper.includes('TANQUE') || 
+                                           tipoUpper.includes('TOLVA') ||
+                                           tipoUpper.includes('BATEA') ||
+                                           tipoUpper.includes('CAMA');
+
+                        if (isNoMotora) return;
+
+                        // Filtro de empresa si se especificó
+                        if (empresa && empresa !== 'TODAS') {
+                            const empRaw = (p.cliente || '').toUpperCase().trim();
+                            if (empRaw !== empresa.toUpperCase().trim() && !empRaw.includes(empresa.toUpperCase().trim())) {
+                                return;
+                            }
+                        }
+
+                        // Si NO está en ruta y NO está ya registrado en este corte
+                        if (!enRutaSet.has(cleanP) && !yaEnBaseSet.has(cleanP)) {
+                            inserts.push([
+                                fecha,
+                                corte,
+                                p.placa.trim().toUpperCase(),
+                                null,
+                                'Sin asignar',
+                                'Base',
+                                'Vacío',
+                                'Sincronizado automáticamente por sistema',
+                                usuario
+                            ]);
+                        }
+                    });
+
+                    if (inserts.length === 0) {
+                        return res.json({ ok: true, mensaje: 'Todas las unidades ya están sincronizadas para este corte.', insertados: 0 });
+                    }
+
+                    const sqlInsert = `
+                        INSERT INTO seg_unidades_base 
+                        (fecha, corte, placa_camion, placa_carreta, conductor, zona, estado, observacion, usuario)
+                        VALUES ?
+                    `;
+
+                    tdb.query(sqlInsert, [inserts], (errIns, resIns) => {
+                        if (errIns) return res.status(500).json({ error: errIns.message });
+                        res.json({ ok: true, mensaje: `Se sincronizaron ${inserts.length} unidades en base exitosamente.`, insertados: inserts.length });
+                    });
+                });
+            });
+        });
+    });
+
     // ── Listar Unidades en Base (Con Filtros por Fecha, Corte y Búsqueda) ──
     router.get('/seguridad/unidades-base', (req, res) => {
         let sql = 'SELECT * FROM seg_unidades_base WHERE 1=1';

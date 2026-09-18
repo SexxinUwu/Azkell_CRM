@@ -1,12 +1,16 @@
 // ============================================================
-// 🏢 MÓDULO: STATUS "UNIDADES EN BASE" (SEGURIDAD)
+// 🏢 MÓDULO: STATUS "UNIDADES EN BASE" & PANORAMA 360° (SEGURIDAD)
 // Cargado dinámicamente por cargarModuloAislado('seguridad/unidades-base')
 // ============================================================
 
 (function() {
+    window._subPanoramaData = window._subPanoramaData || { items: [], kpis: {} };
     window._subData = window._subData || [];
     window._subCatalogo = window._subCatalogo || { tractos: [], carretas: [], todas: [], conductores: [] };
+    window._subEmpresaActiva = window._subEmpresaActiva || 'TODAS';
     window._subCorteActivo = window._subCorteActivo || 'ALL';
+    window._subVistaActiva = window._subVistaActiva || 'TABLA';
+    window._subEstadoFiltroVista = window._subEstadoFiltroVista || 'ALL';
     let _subDebounceTimeout = null;
 
     // ── Obtener Corte Automático según la Hora Actual ─────────────
@@ -27,7 +31,7 @@
 
     // ── Inicialización Principal del Módulo ───────────────────────
     window.init_unidades_base = function() {
-        console.log('🏢 Módulo Status Unidades en Base inicializado');
+        console.log('🏢 Módulo Status Unidades en Base (Panorama 360°) inicializado');
         
         // Configurar fecha de hoy por defecto si está vacío
         const filterFecha = document.getElementById('sub-filter-fecha');
@@ -61,7 +65,6 @@
     // ── Cargar Catálogo de Placas y Conductores ───────────────────
     window.subCargarCatalogo = async function() {
         try {
-            // Intentar primero con el endpoint consolidado de recursos de seguridad
             const data = await _subFetch('/api/seguridad/recursos').catch(() => null);
             if (data && (data.placas || data.conductores)) {
                 let tractos = [];
@@ -84,7 +87,6 @@
                 return;
             }
 
-            // Respaldo con endpoint de unidades-base
             const dataAlt = await _subFetch('/api/seguridad/unidades-base/catalogo-placas');
             if (dataAlt) {
                 window._subCatalogo = {
@@ -99,23 +101,21 @@
         }
     };
 
-    // ── Autocomplete Flotante Moderno (Exacto a Checklist de Unidades) ──
+    // ── Autocomplete Flotante ─────────────────────────────────────
     window._subHandleAutoInput = async function(input, type) {
         var allLists = document.querySelectorAll('.sub-autocomplete-list');
         allLists.forEach(function(l) {
             if (l !== input.nextElementSibling) l.classList.remove('show');
         });
 
-        // Asegurar que la card padre tenga prioridad de elevación sobre las de abajo
-        document.querySelectorAll('#modalSubUnidad .card').forEach(c => c.style.zIndex = '1');
-        var parentCard = input.closest('.card');
+        document.querySelectorAll('#modalSubUnidad .card, #modalSubUnidad .sub-form-card').forEach(c => c.style.zIndex = '1');
+        var parentCard = input.closest('.sub-form-card');
         if (parentCard) parentCard.style.zIndex = '1050';
 
         var val = (input.value || '').toLowerCase().trim();
         var listEl = input.nextElementSibling;
         if (!listEl || !listEl.classList.contains('sub-autocomplete-list')) return;
 
-        // Si el catálogo aún no cargó, intentar cargarlo de inmediato
         if (!window._subCatalogo || (!window._subCatalogo.tractos?.length && !window._subCatalogo.conductores?.length)) {
             await window.subCargarCatalogo();
         }
@@ -159,8 +159,7 @@
             var listEl = input.nextElementSibling;
             if (listEl) listEl.classList.remove('show');
         }
-        // Restablecer z-index de las cards
-        document.querySelectorAll('#modalSubUnidad .card').forEach(c => c.style.zIndex = '1');
+        document.querySelectorAll('#modalSubUnidad .card, #modalSubUnidad .sub-form-card').forEach(c => c.style.zIndex = '1');
     };
 
     // Cerrar listas de autocomplete al hacer clic fuera
@@ -168,18 +167,18 @@
         if (!e.target.closest('.sub-autocomplete-wrap')) {
             var lists = document.querySelectorAll('.sub-autocomplete-list');
             lists.forEach(function(l) { l.classList.remove('show'); });
-            document.querySelectorAll('#modalSubUnidad .card').forEach(c => c.style.zIndex = '1');
+            document.querySelectorAll('#modalSubUnidad .card, #modalSubUnidad .sub-form-card').forEach(c => c.style.zIndex = '1');
         }
     });
 
-    // ── Cargar Datos de la Tabla ──────────────────────────────────
+    // ── Cargar Panorama en Vivo 360° ──────────────────────────────
     window.subCargarDatos = async function() {
         const tbody = document.getElementById('sub-tbody');
-        if (tbody) {
+        if (tbody && window._subVistaActiva === 'TABLA') {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="9" class="text-center py-4 text-secondary">
-                        <div class="spinner-border spinner-border-sm text-primary me-2"></div> Cargando unidades en base...
+                        <div class="spinner-border spinner-border-sm text-primary me-2"></div> Sincronizando panorama en vivo 360°...
                     </td>
                 </tr>
             `;
@@ -189,60 +188,97 @@
         const corte = window._subCorteActivo || 'ALL';
         const estado = document.getElementById('sub-filter-estado')?.value || 'ALL';
         const search = document.getElementById('sub-filter-search')?.value || '';
+        const empresa = window._subEmpresaActiva || 'TODAS';
 
         const params = new URLSearchParams();
         if (fecha) params.append('fecha', fecha);
         if (corte && corte !== 'ALL') params.append('corte', corte);
         if (estado && estado !== 'ALL') params.append('estado', estado);
         if (search) params.append('search', search);
+        if (empresa && empresa !== 'TODAS') params.append('empresa', empresa);
 
         try {
-            const data = await _subFetch(`/api/seguridad/unidades-base?${params.toString()}`);
+            const data = await _subFetch(`/api/seguridad/unidades-base/panorama-en-vivo?${params.toString()}`);
             if (data.ok) {
-                window._subData = data.data || [];
-                window.subRenderTabla(window._subData);
-                window.subCalcularKPIs(window._subData);
+                window._subPanoramaData = data;
+                window._subData = data.items || [];
+                window.subActualizarKPIs(data.kpis);
+                window.subRenderVistaActual();
             } else {
                 if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Error: ${data.error || 'No se pudieron obtener los datos'}</td></tr>`;
             }
         } catch(err) {
-            console.error('Error cargando unidades en base:', err);
+            console.error('Error cargando panorama de unidades:', err);
             if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Error de conexión con el servidor.</td></tr>`;
         }
     };
 
-    // ── Debounce de Búsqueda ──────────────────────────────────────
-    window.subDebounceBusqueda = function() {
-        clearTimeout(_subDebounceTimeout);
-        _subDebounceTimeout = setTimeout(() => {
-            window.subCargarDatos();
-        }, 300);
+    // ── Actualizar KPIs Bento ─────────────────────────────────────
+    window.subActualizarKPIs = function(kpis = {}) {
+        const elTotal = document.getElementById('sub-kpi-total');
+        const elBase = document.getElementById('sub-kpi-base');
+        const elRuta = document.getElementById('sub-kpi-ruta');
+        const elTaller = document.getElementById('sub-kpi-taller');
+        const elSubTotal = document.getElementById('sub-kpi-sub-total');
+
+        if (elTotal) elTotal.textContent = kpis.totalFlota ?? 0;
+        if (elBase) elBase.textContent = kpis.enBase ?? 0;
+        if (elRuta) elRuta.textContent = kpis.enRuta ?? 0;
+        if (elTaller) elTaller.textContent = kpis.enTaller ?? 0;
+
+        if (elSubTotal) {
+            const empNombre = window._subEmpresaActiva === 'TODAS' ? 'Flota Consolidada' : window._subEmpresaActiva;
+            elSubTotal.textContent = `${empNombre} (${kpis.totalFlota ?? 0})`;
+        }
     };
 
-    // ── Clasificar Registro por Tipo de Configuración y Zona ─────────
-    window.subDeterminarTipo = function(r) {
-        const zona = (r.zona || 'Base').trim().toUpperCase();
+    // ── Renderizar Vista Actual (Tabla o Kanban) ──────────────────
+    window.subRenderVistaActual = function() {
+        let items = window._subData || [];
 
-        // 1. Si está en Mantenimiento, se agrupa directamente en Mantenimiento
-        if (zona.includes('MANTENIMIENTO') || zona.includes('TALLER')) {
-            return 'EN MANTENIMIENTO';
+        // Filtrar por estado rápido si se hizo clic en un KPI
+        if (window._subEstadoFiltroVista && window._subEstadoFiltroVista !== 'ALL') {
+            if (window._subEstadoFiltroVista === 'BASE') {
+                items = items.filter(r => r.esRuta !== true && !String(r.zona || '').toUpperCase().includes('MANTENIMIENTO') && !String(r.zona || '').toUpperCase().includes('TALLER') && !String(r.zona || '').toUpperCase().includes('LAVADO'));
+            } else if (window._subEstadoFiltroVista === 'RUTA') {
+                items = items.filter(r => r.esRuta === true);
+            } else if (window._subEstadoFiltroVista === 'TALLER') {
+                items = items.filter(r => String(r.zona || '').toUpperCase().includes('MANTENIMIENTO') || String(r.zona || '').toUpperCase().includes('TALLER') || String(r.zona || '').toUpperCase().includes('LAVADO'));
+            }
         }
 
-        // 2. Si está en Lavado, se agrupa directamente en Lavado
+        if (window._subVistaActiva === 'KANBAN') {
+            window.subRenderKanban(items);
+        } else {
+            window.subRenderTabla(items);
+        }
+    };
+
+    // ── Clasificar Registro por Grupo de Tabla ─────────────────────
+    window.subDeterminarTipo = function(r) {
+        if (r.esRuta === true) {
+            return 'EN RUTA (EN OPERACIÓN)';
+        }
+
+        const zona = (r.zona || 'Base').trim().toUpperCase();
+
+        if (zona.includes('MANTENIMIENTO') || zona.includes('TALLER')) {
+            return 'EN MANTENIMIENTO / TALLER';
+        }
+
         if (zona.includes('LAVADO')) {
             return 'EN LAVADO';
         }
 
-        // 3. Si está en Base (patio regular), se clasifica por su composición
         const tieneCamion = Boolean(r.placa_camion && r.placa_camion.trim() && r.placa_camion.trim() !== '—');
         const tieneCarreta = Boolean(r.placa_carreta && r.placa_carreta.trim() && r.placa_carreta.trim() !== '—');
 
-        if (tieneCamion && tieneCarreta) return 'CAMIÓN - CARRETA';
-        if (tieneCamion && !tieneCarreta) return 'SOLO CAMIÓN / TRACTO';
-        return 'SOLO CARRETA / REMOLQUE';
+        if (tieneCamion && tieneCarreta) return 'EN BASE (CAMIÓN - CARRETA)';
+        if (tieneCamion && !tieneCarreta) return 'EN BASE (SOLO CAMIÓN / TRACTO)';
+        return 'EN BASE (SOLO CARRETA / REMOLQUE)';
     };
 
-    // ── Renderizar Tabla Segmentada por Tipo y Zona ──────────────────
+    // ── Renderizar Tabla Segmentada ───────────────────────────────
     window.subRenderTabla = function(items = []) {
         const tbody = document.getElementById('sub-tbody');
         if (!tbody) return;
@@ -252,35 +288,36 @@
                 <tr>
                     <td colspan="9" class="text-center py-5 text-secondary">
                         <i class="bi bi-inbox fs-3 d-block mb-2 text-muted"></i>
-                        No se encontraron unidades registradas en base con los filtros seleccionados.
+                        No se encontraron unidades registradas con los filtros seleccionados.
                     </td>
                 </tr>
             `;
             return;
         }
 
-        // Agrupar por segmento
         const grupos = {
-            'CAMIÓN - CARRETA': [],
-            'SOLO CAMIÓN / TRACTO': [],
-            'SOLO CARRETA / REMOLQUE': [],
-            'EN MANTENIMIENTO': [],
+            'EN BASE (CAMIÓN - CARRETA)': [],
+            'EN BASE (SOLO CAMIÓN / TRACTO)': [],
+            'EN BASE (SOLO CARRETA / REMOLQUE)': [],
+            'EN RUTA (EN OPERACIÓN)': [],
+            'EN MANTENIMIENTO / TALLER': [],
             'EN LAVADO': []
         };
 
         items.forEach(r => {
             const t = window.subDeterminarTipo(r);
             if (grupos[t]) grupos[t].push(r);
-            else grupos['CAMIÓN - CARRETA'].push(r);
+            else grupos['EN BASE (CAMIÓN - CARRETA)'].push(r);
         });
 
         let html = '';
 
         const ordenGrupos = [
-            { key: 'CAMIÓN - CARRETA', icon: 'bi-truck-flatbed', color: '#0284c7' },
-            { key: 'SOLO CAMIÓN / TRACTO', icon: 'bi-truck-front-fill', color: '#16a34a' },
-            { key: 'SOLO CARRETA / REMOLQUE', icon: 'bi-box-seam-fill', color: '#d97706' },
-            { key: 'EN MANTENIMIENTO', icon: 'bi-tools', color: '#dc2626' },
+            { key: 'EN BASE (CAMIÓN - CARRETA)', icon: 'bi-truck-flatbed', color: '#0284c7' },
+            { key: 'EN BASE (SOLO CAMIÓN / TRACTO)', icon: 'bi-truck-front-fill', color: '#16a34a' },
+            { key: 'EN BASE (SOLO CARRETA / REMOLQUE)', icon: 'bi-box-seam-fill', color: '#d97706' },
+            { key: 'EN RUTA (EN OPERACIÓN)', icon: 'bi-signpost-2-fill', color: '#2563eb' },
+            { key: 'EN MANTENIMIENTO / TALLER', icon: 'bi-tools', color: '#dc2626' },
             { key: 'EN LAVADO', icon: 'bi-droplet-fill', color: '#0891b2' }
         ];
 
@@ -288,7 +325,6 @@
             const list = grupos[g.key];
             if (!list || list.length === 0) return;
 
-            // Fila de encabezado de grupo
             html += `
                 <tr class="sub-section-divider">
                     <td colspan="9">
@@ -299,15 +335,19 @@
             `;
 
             list.forEach(r => {
-                // Badge Corte
+                // Badge Corte o Badge Ruta
                 let badgeCorte = `<span class="badge-corte-1">${r.corte || 'Corte 1'}</span>`;
                 if (r.corte === 'Corte 2') badgeCorte = `<span class="badge-corte-2">Corte 2</span>`;
                 if (r.corte === 'Corte 3') badgeCorte = `<span class="badge-corte-3">Corte 3</span>`;
+                if (r.esRuta) {
+                    badgeCorte = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold" style="font-size:0.72rem;"><i class="bi bi-broadcast me-1"></i>En Ruta</span>`;
+                }
 
-                // Badge Estado (Cargado, Con Devolución, Vacío)
+                // Badge Estado
                 let badgeEstado = `<span class="badge-estado-cargado">Cargado</span>`;
                 if (r.estado === 'Con Devolución') badgeEstado = `<span class="badge-estado-devolucion">Con Devolución</span>`;
                 if (r.estado === 'Vacío') badgeEstado = `<span class="badge-estado-vacio">Vacío</span>`;
+                if (r.esRuta) badgeEstado = `<span class="badge-estado-ruta"><i class="bi bi-geo-alt-fill me-1"></i>En Tránsito</span>`;
 
                 const placaCamionHtml = (r.placa_camion && r.placa_camion.trim())
                     ? `<span class="fw-bold text-dark font-monospace" style="font-size:0.9rem;">${r.placa_camion}</span>`
@@ -321,24 +361,43 @@
                     ? `<span class="fw-semibold text-dark">${r.conductor}</span>`
                     : `<span class="text-muted small">—</span>`;
 
+                const empresaTitular = r.empresaTitular || '—';
+                const ubicacionHtml = r.esRuta 
+                    ? `<span class="text-primary fw-bold"><i class="bi bi-geo-alt-fill me-1"></i>${r.zona || 'En Ruta'}</span>`
+                    : `<span class="fw-semibold text-dark">${r.zona || 'Base'}</span>`;
+
+                // Acciones
+                let accionesHtml = '';
+                if (!r.esRuta && r.id) {
+                    accionesHtml = `
+                        <button class="sub-btn-edit-cell me-1" title="Editar" onclick='window.subAbrirModalEditar(${JSON.stringify(r)})'>
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button class="sub-btn-del-cell" title="Eliminar" onclick="window.subEliminar(${r.id})">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
+                    `;
+                } else if (r.esRuta) {
+                    accionesHtml = `<span class="badge bg-light text-secondary border fw-normal" style="font-size:0.72rem;">Checklist Activo</span>`;
+                } else {
+                    accionesHtml = `
+                        <button class="btn btn-xs btn-outline-primary py-0 px-2 fw-bold" style="font-size:0.72rem;" onclick="window.subAbrirModalNuevoConPlaca('${r.placa_camion || ''}')">
+                            <i class="bi bi-plus"></i> Registrar
+                        </button>
+                    `;
+                }
+
                 html += `
                     <tr>
                         <td>${badgeCorte}</td>
                         <td>${placaCamionHtml}</td>
                         <td>${placaCarretaHtml}</td>
                         <td>${conductorHtml}</td>
-                        <td class="fw-semibold text-dark">${r.zona || 'Base'}</td>
+                        <td><span class="badge bg-light text-dark border fw-semibold" style="font-size:0.74rem;">${empresaTitular}</span></td>
+                        <td>${ubicacionHtml}</td>
                         <td>${badgeEstado}</td>
-                        <td class="text-secondary small" style="max-width:260px; word-break:break-word;">${r.observacion || '—'}</td>
-                        <td class="text-secondary small">${r.usuario || 'Seguridad'}</td>
-                        <td class="text-end text-nowrap">
-                            <button class="sub-btn-edit-cell me-1" title="Editar" onclick='window.subAbrirModalEditar(${JSON.stringify(r)})'>
-                                <i class="bi bi-pencil-fill"></i>
-                            </button>
-                            <button class="sub-btn-del-cell" title="Eliminar" onclick="window.subEliminar(${r.id})">
-                                <i class="bi bi-trash3-fill"></i>
-                            </button>
-                        </td>
+                        <td class="text-secondary small" style="max-width:240px; word-break:break-word;">${r.observacion || '—'}</td>
+                        <td class="text-end text-nowrap">${accionesHtml}</td>
                     </tr>
                 `;
             });
@@ -347,48 +406,133 @@
         tbody.innerHTML = html;
     };
 
-    // ── Calcular KPIs Bento ───────────────────────────────────────
-    window.subCalcularKPIs = function(items = []) {
-        const elTotal = document.getElementById('sub-kpi-total');
-        const elC1 = document.getElementById('sub-kpi-c1');
-        const elC2 = document.getElementById('sub-kpi-c2');
-        const elC3 = document.getElementById('sub-kpi-c3');
+    // ── Renderizar Patio Kanban Visual ────────────────────────────
+    window.subRenderKanban = function(items = []) {
+        const cardsBase = document.getElementById('kanban-cards-base');
+        const cardsRuta = document.getElementById('kanban-cards-ruta');
+        const cardsTaller = document.getElementById('kanban-cards-taller');
+        const cardsLavado = document.getElementById('kanban-cards-lavado');
 
-        let c1 = 0, c2 = 0, c3 = 0;
-        items.forEach(it => {
-            if (it.corte === 'Corte 1') c1++;
-            else if (it.corte === 'Corte 2') c2++;
-            else if (it.corte === 'Corte 3') c3++;
+        if (!cardsBase || !cardsRuta || !cardsTaller || !cardsLavado) return;
+
+        cardsBase.innerHTML = '';
+        cardsRuta.innerHTML = '';
+        cardsTaller.innerHTML = '';
+        cardsLavado.innerHTML = '';
+
+        let countBase = 0, countRuta = 0, countTaller = 0, countLavado = 0;
+
+        items.forEach(r => {
+            const isRuta = r.esRuta === true;
+            const zona = String(r.zona || 'Base').toUpperCase();
+
+            let targetCol = cardsBase;
+            if (isRuta) {
+                targetCol = cardsRuta;
+                countRuta++;
+            } else if (zona.includes('MANTENIMIENTO') || zona.includes('TALLER')) {
+                targetCol = cardsTaller;
+                countTaller++;
+            } else if (zona.includes('LAVADO')) {
+                targetCol = cardsLavado;
+                countLavado++;
+            } else {
+                targetCol = cardsBase;
+                countBase++;
+            }
+
+            const card = document.createElement('div');
+            card.className = 'sub-patio-unit-card';
+            card.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bolder font-monospace text-dark" style="font-size:0.95rem;">
+                        ${r.placa_camion || 'CARRETA'}
+                    </span>
+                    <span class="badge bg-light text-dark border fw-bold" style="font-size:0.68rem;">
+                        ${r.empresaTitular || 'FLOTA'}
+                    </span>
+                </div>
+                ${r.placa_carreta ? `<div class="text-secondary small font-monospace mb-1"><i class="bi bi-box-seam me-1"></i>Carreta: <b>${r.placa_carreta}</b></div>` : ''}
+                <div class="text-dark small fw-semibold mb-1 text-truncate">
+                    <i class="bi bi-person-fill text-muted me-1"></i>${r.conductor || 'Sin conductor asignado'}
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top">
+                    <span class="badge ${r.esRuta ? 'bg-primary-subtle text-primary' : 'bg-light text-dark'} border" style="font-size:0.68rem;">
+                        ${r.zona || 'Base'}
+                    </span>
+                    <span class="badge ${r.estado === 'Cargado' ? 'bg-success-subtle text-success' : (r.estado === 'Con Devolución' ? 'bg-warning-subtle text-warning' : 'bg-secondary-subtle text-secondary')} border" style="font-size:0.68rem;">
+                        ${r.estado || 'Vacío'}
+                    </span>
+                </div>
+            `;
+            targetCol.appendChild(card);
         });
 
-        if (elTotal) elTotal.textContent = items.length;
-        if (elC1) elC1.textContent = c1;
-        if (elC2) elC2.textContent = c2;
-        if (elC3) elC3.textContent = c3;
+        document.getElementById('kanban-count-base').textContent = countBase;
+        document.getElementById('kanban-count-ruta').textContent = countRuta;
+        document.getElementById('kanban-count-taller').textContent = countTaller;
+        document.getElementById('kanban-count-lavado').textContent = countLavado;
     };
 
-    // ── Filtrar haciendo clic en los Cards Bento de KPI ──────────
-    window.subFiltrarCorteKPI = function(corte) {
-        window._subCorteActivo = corte || 'ALL';
-        
-        // Actualizar active state en cards
-        document.querySelectorAll('.sub-kpi-card').forEach(c => c.classList.remove('active'));
-        if (corte === 'ALL') document.getElementById('kpi-card-total')?.classList.add('active');
-        else if (corte === 'Corte 1') document.getElementById('kpi-card-corte1')?.classList.add('active');
-        else if (corte === 'Corte 2') document.getElementById('kpi-card-corte2')?.classList.add('active');
-        else if (corte === 'Corte 3') document.getElementById('kpi-card-corte3')?.classList.add('active');
+    // ── Alternar Vista (Tabla vs Kanban) ──────────────────────────
+    window.subAlternarVista = function(vista) {
+        window._subVistaActiva = vista;
+        const tablaWrap = document.getElementById('sub-tabla-wrap');
+        const kanbanWrap = document.getElementById('sub-kanban-wrap');
+        const btnTabla = document.getElementById('btn-vista-tabla');
+        const btnKanban = document.getElementById('btn-vista-kanban');
 
-        // Actualizar active state en segmented buttons
-        document.querySelectorAll('#sub-segmented-cortes .sub-segment-item').forEach(btn => {
-            btn.classList.toggle('active', btn.getAttribute('data-corte') === window._subCorteActivo);
+        if (vista === 'KANBAN') {
+            if (tablaWrap) tablaWrap.style.display = 'none';
+            if (kanbanWrap) kanbanWrap.style.display = 'grid';
+            btnKanban?.classList.add('active');
+            btnTabla?.classList.remove('active');
+        } else {
+            if (tablaWrap) tablaWrap.style.display = 'block';
+            if (kanbanWrap) kanbanWrap.style.display = 'none';
+            btnTabla?.classList.add('active');
+            btnKanban?.classList.remove('active');
+        }
+        window.subRenderVistaActual();
+    };
+
+    // ── Cambiar Filtro de Empresa Bento ───────────────────────────
+    window.subCambiarEmpresa = function(empresa) {
+        window._subEmpresaActiva = empresa || 'TODAS';
+        document.querySelectorAll('#sub-empresa-segmented .sub-empresa-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-empresa') === window._subEmpresaActiva);
         });
-
         window.subCargarDatos();
     };
 
-    // ── Filtrar haciendo clic en el Segmented Apple Pill ──────────
+    // ── Filtrar Estado Rápido desde los Cards de KPI ─────────────
+    window.subFiltrarEstadoVista = function(estado) {
+        window._subEstadoFiltroVista = estado;
+        document.querySelectorAll('.sub-kpi-card').forEach(c => c.classList.remove('active'));
+        
+        if (estado === 'ALL') document.getElementById('kpi-card-total')?.classList.add('active');
+        else if (estado === 'BASE') document.getElementById('kpi-card-base')?.classList.add('active');
+        else if (estado === 'RUTA') document.getElementById('kpi-card-ruta')?.classList.add('active');
+        else if (estado === 'TALLER') document.getElementById('kpi-card-taller')?.classList.add('active');
+
+        window.subRenderVistaActual();
+    };
+
+    // ── Filtrar por Segmented Pill de Cortes Horarios ─────────────
     window.subFiltrarCorteSegmented = function(corte) {
-        window.subFiltrarCorteKPI(corte);
+        window._subCorteActivo = corte || 'ALL';
+        document.querySelectorAll('#sub-segmented-cortes .sub-segment-item').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-corte') === window._subCorteActivo);
+        });
+        window.subCargarDatos();
+    };
+
+    // ── Debounce de Búsqueda ──────────────────────────────────────
+    window.subDebounceBusqueda = function() {
+        clearTimeout(_subDebounceTimeout);
+        _subDebounceTimeout = setTimeout(() => {
+            window.subCargarDatos();
+        }, 300);
     };
 
     // ── Abrir Modal en Modo Nuevo ─────────────────────────────────
@@ -398,7 +542,6 @@
         document.getElementById('modalSubTitulo').textContent = 'Nuevo Registro de Unidad en Base';
         document.getElementById('modalSubSubtitulo').textContent = 'Control de permanencia vehicular';
 
-        // Auto-llenar fecha actual y corte según la hora
         const hoy = new Date().toISOString().split('T')[0];
         const corteAuto = window.subObtenerCorteActual();
 
@@ -414,6 +557,12 @@
 
         const modalEl = document.getElementById('modalSubUnidad');
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    };
+
+    window.subAbrirModalNuevoConPlaca = function(placa) {
+        window.subAbrirModalNuevo();
+        const inputPlaca = document.getElementById('sub-form-placa-camion');
+        if (inputPlaca) inputPlaca.value = placa;
     };
 
     // ── Abrir Modal en Modo Editar ────────────────────────────────
@@ -488,7 +637,7 @@
         }
     };
 
-    // ── Eliminar Registro (Modal Diseño B Oficial ERP) ───────────
+    // ── Eliminar Registro (Modal Diseño B) ────────────────────────
     let _subIdParaEliminar = null;
 
     window.subEliminar = function(id) {
@@ -520,7 +669,108 @@
         }
     };
 
-    // ── Exportador a PDF Oficial Segmentado (Hoja A4 Centrada, F-SEG-0010) ──
+    // ── Sincronizar Turno / Corte Automático ──────────────────────
+    window.subAbrirModalSincronizar = function() {
+        const hoy = new Date().toISOString().split('T')[0];
+        const corteAuto = window.subObtenerCorteActual();
+
+        const inputFecha = document.getElementById('sub-sync-fecha');
+        const inputCorte = document.getElementById('sub-sync-corte');
+
+        if (inputFecha) inputFecha.value = hoy;
+        if (inputCorte) inputCorte.value = corteAuto;
+
+        const modalEl = document.getElementById('modalSincronizarTurno');
+        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    };
+
+    window.subEjecutarSincronizacion = async function() {
+        const fecha = document.getElementById('sub-sync-fecha')?.value;
+        const corte = document.getElementById('sub-sync-corte')?.value;
+        const btn = document.getElementById('btnEjecutarSync');
+
+        if (!fecha || !corte) {
+            window.mostrarToast('Selecciona fecha y corte', 'warning');
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sincronizando...';
+        }
+
+        try {
+            const data = await _subFetch('/api/seguridad/unidades-base/sincronizar-corte', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fecha, corte })
+            });
+
+            if (data.ok) {
+                window.mostrarToast(`¡Sincronización completada! ${data.insertadas || 0} unidades agregadas a ${corte}`, 'success');
+                const modalEl = document.getElementById('modalSincronizarTurno');
+                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+                window.subCargarDatos();
+            } else {
+                window.mostrarToast(data.error || 'Error al sincronizar corte', 'danger');
+            }
+        } catch(e) {
+            console.error('Error al sincronizar corte:', e);
+            window.mostrarToast('Error de conexión al sincronizar turno', 'danger');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-lightning-charge-fill me-1"></i> Sincronizar Ahora';
+            }
+        }
+    };
+
+    // ── Compartir Reporte Ejecutivo por WhatsApp ─────────────────
+    window.subCompartirWhatsApp = function() {
+        const fecha = document.getElementById('sub-filter-fecha')?.value || new Date().toISOString().split('T')[0];
+        const empresa = window._subEmpresaActiva === 'TODAS' ? 'TODAS LAS EMPRESAS' : window._subEmpresaActiva;
+        const kpis = window._subPanoramaData.kpis || {};
+        const items = window._subData || [];
+
+        let texto = `*📊 STATUS DE UNIDADES EN BASE Y OPERACIÓN*\n`;
+        texto += `📅 *Fecha:* ${fecha}\n`;
+        texto += `🏢 *Empresa:* ${empresa}\n\n`;
+        texto += `*📈 RESUMEN EJECUTIVO:*\n`;
+        texto += `• Total Flota: *${kpis.totalFlota || 0}*\n`;
+        texto += `• En Base / Patio: *${kpis.enBase || 0}*\n`;
+        texto += `• En Ruta (Operando): *${kpis.enRuta || 0}*\n`;
+        texto += `• Mantenimiento / Taller: *${kpis.enTaller || 0}*\n\n`;
+
+        // Detalle de unidades en base
+        const enBase = items.filter(r => !r.esRuta);
+        if (enBase.length > 0) {
+            texto += `*📍 UNIDADES EN BASE (${enBase.length}):*\n`;
+            enBase.slice(0, 25).forEach((r, idx) => {
+                texto += `${idx + 1}. *${r.placa_camion || '---'}* ${r.placa_carreta ? `+ ${r.placa_carreta}` : ''} | ${r.zona || 'Base'} | ${r.estado || 'Vacío'}\n`;
+            });
+            if (enBase.length > 25) {
+                texto += `_... y ${enBase.length - 25} unidades más en base._\n`;
+            }
+            texto += `\n`;
+        }
+
+        // Detalle de unidades en ruta
+        const enRuta = items.filter(r => r.esRuta);
+        if (enRuta.length > 0) {
+            texto += `*🛣️ UNIDADES EN RUTA (${enRuta.length}):*\n`;
+            enRuta.slice(0, 15).forEach((r, idx) => {
+                texto += `${idx + 1}. *${r.placa_camion || '---'}* | Chofer: ${r.conductor || '---'} | Destino: ${r.zona || 'Ruta'}\n`;
+            });
+            if (enRuta.length > 15) {
+                texto += `_... y ${enRuta.length - 15} unidades más en ruta._\n`;
+            }
+        }
+
+        const urlWhatsApp = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+        window.open(urlWhatsApp, '_blank');
+    };
+
+    // ── Exportador a PDF Oficial (Hoja A4 Centrada, F-SEG-0010) ────
     window.subExportarPDF = function() {
         const fechaFiltro = document.getElementById('sub-filter-fecha')?.value || new Date().toISOString().split('T')[0];
         const corteFiltro = window._subCorteActivo || 'ALL';
@@ -541,29 +791,30 @@
 
         const empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
 
-        // Agrupar por tipo para el PDF
         const grupos = {
-            'CAMIÓN - CARRETA': [],
-            'SOLO CAMIÓN / TRACTO': [],
-            'SOLO CARRETA / REMOLQUE': [],
-            'EN MANTENIMIENTO': [],
+            'EN BASE (CAMIÓN - CARRETA)': [],
+            'EN BASE (SOLO CAMIÓN / TRACTO)': [],
+            'EN BASE (SOLO CARRETA / REMOLQUE)': [],
+            'EN RUTA (EN OPERACIÓN)': [],
+            'EN MANTENIMIENTO / TALLER': [],
             'EN LAVADO': []
         };
 
         items.forEach(r => {
             const t = window.subDeterminarTipo(r);
             if (grupos[t]) grupos[t].push(r);
-            else grupos['CAMIÓN - CARRETA'].push(r);
+            else grupos['EN BASE (CAMIÓN - CARRETA)'].push(r);
         });
 
         let filasHtml = '';
         let itemIndex = 1;
 
         const ordenGrupos = [
-            'CAMIÓN - CARRETA',
-            'SOLO CAMIÓN / TRACTO',
-            'SOLO CARRETA / REMOLQUE',
-            'EN MANTENIMIENTO',
+            'EN BASE (CAMIÓN - CARRETA)',
+            'EN BASE (SOLO CAMIÓN / TRACTO)',
+            'EN BASE (SOLO CARRETA / REMOLQUE)',
+            'EN RUTA (EN OPERACIÓN)',
+            'EN MANTENIMIENTO / TALLER',
             'EN LAVADO'
         ];
 
@@ -571,7 +822,6 @@
             const list = grupos[gKey];
             if (!list || list.length === 0) return;
 
-            // Fila de encabezado de sección en PDF
             filasHtml += `
                 <tr style="background:#e2e8f0; font-weight:bold;">
                     <td colspan="8" style="padding: 4px 6px; font-weight:800; font-size:9.5px; text-transform:uppercase; letter-spacing:0.5px; border: 1.5px solid #000;">
@@ -584,7 +834,7 @@
                 filasHtml += `
                     <tr>
                         <td style="text-align:center; font-weight:bold; width:26px;">${itemIndex++}</td>
-                        <td style="text-align:center; font-weight:bold; color:#0f172a; width:60px;">${r.corte || 'Corte 1'}</td>
+                        <td style="text-align:center; font-weight:bold; color:#0f172a; width:60px;">${r.esRuta ? 'En Ruta' : (r.corte || 'Corte 1')}</td>
                         <td style="text-align:center; font-family:monospace; font-weight:bold; font-size:10.5px; width:80px;">${r.placa_camion || '---'}</td>
                         <td style="text-align:center; font-family:monospace; font-size:10.5px; width:80px;">${r.placa_carreta || '---'}</td>
                         <td style="width:140px; font-size:9.5px;">${r.conductor || '---'}</td>
@@ -635,8 +885,6 @@
                     .btn-print-fixed:hover {
                         background: #1f2937;
                     }
-                    
-                    /* Hoja A4 Centrada */
                     .page-a4 {
                         width: 210mm;
                         min-height: 297mm;
@@ -649,21 +897,15 @@
                         display: flex;
                         flex-direction: column;
                     }
-
-                    /* ENCABEZADO NORMATIVA ISO OFICIAL */
                     .iso-header { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 6px; table-layout: fixed; }
                     .iso-header td { border: 1px solid #000; text-align: center; vertical-align: middle; }
                     .logo-cell { width: 22%; padding: 4px; }
                     .title-cell { width: 54%; font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 700; line-height: 1.1; text-transform: uppercase; color: #000; }
                     .title-cell .sub-title { font-size: 10px; font-weight: 500; color: #333; letter-spacing: 0.5px; display: block; margin-top: 3px; }
                     .qms-item { width: 24%; font-family: 'Oswald', sans-serif; font-size: 9.5px; text-align: left !important; padding: 2px 6px; height: 17px; }
-                    
-                    /* Barra de Información del Reporte */
                     .info-bar { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 6px; font-size: 10.5px; font-weight: bold; }
                     .info-bar td { border: 1px solid #000; padding: 4px 6px; vertical-align: middle; }
                     .val-text { font-weight: normal; margin-left: 4px; }
-
-                    /* TABLA DE CONTENIDO */
                     .content-table { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 8px; font-size: 9.5px; }
                     .content-table th { 
                         background-color: #333333 !important; 
@@ -678,25 +920,12 @@
                         text-transform: uppercase; 
                     }
                     .content-table td { border: 1px solid #000; padding: 3px 5px; vertical-align: middle; }
-
-                    /* Footer */
                     .footer-box { margin-top: auto; border-top: 1px solid #000; padding-top: 6px; display: flex; justify-content: space-between; font-size: 9px; color: #333; }
-
                     @media print {
-                        * {
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
-                            color-adjust: exact !important;
-                        }
+                        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
                         body { background: #ffffff !important; padding: 0 !important; }
                         .btn-print-fixed { display: none !important; }
                         .page-a4 { width: 100% !important; min-height: auto !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
-                        .content-table th { 
-                            background-color: #333333 !important; 
-                            color: #ffffff !important; 
-                            -webkit-print-color-adjust: exact !important; 
-                            print-color-adjust: exact !important; 
-                        }
                         @page { size: A4 portrait; margin: 8mm; }
                     }
                 </style>
@@ -705,9 +934,7 @@
                 <button class="btn-print-fixed" onclick="window.print()">
                     🖨️ Imprimir / Guardar PDF
                 </button>
-
                 <div class="page-a4">
-                    <!-- Encabezado ISO Solicitado -->
                     <table class="iso-header">
                         <tr>
                             <td class="logo-cell" rowspan="3">
@@ -722,17 +949,13 @@
                         <tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>
                         <tr><td class="qms-item"><b>F. EMISIÓN:</b> ${fechaFormateada}</td></tr>
                     </table>
-
-                    <!-- Barra de Metadatos -->
                     <table class="info-bar">
                         <tr>
-                            <td style="width: 35%;">FECHA: <span class="val-text">${fechaFormateada}</span></td>
-                            <td style="width: 35%;">FILTRO DE CORTE: <span class="val-text">${corteFiltro === 'ALL' ? 'Todos los Cortes' : corteFiltro}</span></td>
-                            <td style="width: 30%;">TOTAL UNIDADES: <span class="val-text" style="font-weight:bold; color:#0284c7;">${items.length}</span></td>
+                            <td style="width: 30%;">FECHA: <span class="val-text">${fechaFormateada}</span></td>
+                            <td style="width: 35%;">EMPRESA: <span class="val-text">${window._subEmpresaActiva}</span></td>
+                            <td style="width: 35%;">TOTAL FLOTA REGISTRADA: <span class="val-text" style="font-weight:bold; color:#0284c7;">${items.length}</span></td>
                         </tr>
                     </table>
-
-                    <!-- Tabla de Unidades Segmentada -->
                     <table class="content-table">
                         <thead>
                             <tr>
@@ -750,14 +973,11 @@
                             ${filasHtml}
                         </tbody>
                     </table>
-
-                    <!-- Footer -->
                     <div class="footer-box">
                         <div><b>ERP Azkell Fleet</b> — Módulo de Seguridad y Control Patrimonial</div>
                         <div>Generado el: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}</div>
                     </div>
                 </div>
-
                 <script>
                     window.onload = function() {
                         setTimeout(function() { window.print(); }, 500);
