@@ -686,9 +686,10 @@ module.exports = (db, logAudit) => {
         const tdb = getDb(req);
         const fechaTarget = req.query.fecha || new Date().toISOString().split('T')[0];
         const corteTarget = req.query.corte || 'ALL';
+        const empresaTarget = (req.query.empresa || 'TODAS').toUpperCase().trim();
 
-        // 1. Obtener todas las placas maestras del sistema
-        tdb.query('SELECT placa, cliente, marca, modelo, tipo, tipo_unidad, motora FROM placas ORDER BY placa ASC', (errP, placasRows) => {
+        // 1. Obtener todas las placas maestras del sistema (excluyendo modelo que no existe en tabla placas)
+        tdb.query('SELECT placa, cliente, marca, tipo, tipo_unidad, motora FROM placas ORDER BY placa ASC', (errP, placasRows) => {
             if (errP) return res.status(500).json({ error: errP.message });
 
             // 2. Obtener todas las unidades en ruta desde el módulo de Checklist
@@ -778,7 +779,11 @@ module.exports = (db, logAudit) => {
                         // Solo evaluamos tractos y camiones como unidades motora titulares
                         if (isNoMotora) return;
 
-                        const emp = (p.cliente || 'MARSISA').toUpperCase().trim();
+                        let emp = (p.cliente || 'MARSISA').toUpperCase().trim();
+                        if (emp.includes('MARSISA')) emp = 'MARSISA';
+                        else if (emp.includes('TRAHESA')) emp = 'TRAHESA';
+                        else if (emp.includes('ROSYMAR')) emp = 'ROSYMAR';
+
                         if (emp && emp !== 'NULL') empresasSet.add(emp);
 
                         const empStat = getEmpresaStatsObj(emp);
@@ -871,37 +876,65 @@ module.exports = (db, logAudit) => {
                             empStat.con_alerta++;
                         }
 
+                        // Si hay filtro de empresa específico, comprobar
+                        if (empresaTarget !== 'TODAS' && !emp.includes(empresaTarget)) {
+                            return;
+                        }
+
                         panorama.push({
+                            id: baseId,
+                            base_id: baseId,
                             placa: pUpper,
+                            placa_camion: pUpper,
+                            placa_carreta: placaCarreta,
+                            conductor: conductor,
                             empresa: emp,
+                            empresaTitular: emp,
                             marca: p.marca || '',
-                            modelo: p.modelo || '',
                             tipo: p.tipo || p.tipo_unidad || 'TRACTO / CAMIÓN',
                             status_operativo: statusOp,
                             ubicacion: ubicacion,
-                            conductor: conductor,
-                            placa_carreta: placaCarreta,
+                            zona: ubicacion,
+                            estado: estadoCarga,
                             estado_carga: estadoCarga,
                             observacion: observacion,
                             corte: corte,
+                            esRuta: !!rutaActiva,
+                            en_ruta_raw: !!rutaActiva,
                             fecha_salida: fechaSalida,
                             hora_salida: horaSalida,
                             km_salida: kmSalida,
                             orden_viaje: ordenViaje,
                             has_alert: hasAlert,
-                            base_id: baseId,
-                            en_ruta_raw: !!rutaActiva,
                             checklist_id: rutaActiva ? rutaActiva.id : null
                         });
                     });
+
+                    // KPIs según empresa seleccionada o global
+                    let activeStats = globalStats;
+                    if (empresaTarget !== 'TODAS' && statsPorEmpresa[empresaTarget]) {
+                        activeStats = statsPorEmpresa[empresaTarget];
+                    }
+
+                    const kpisResponse = {
+                        totalFlota: activeStats.total_flota,
+                        enBase: activeStats.en_base,
+                        enRuta: activeStats.en_ruta,
+                        enTaller: activeStats.en_taller + activeStats.en_lavado,
+                        enLavado: activeStats.en_lavado,
+                        conAlerta: activeStats.con_alerta
+                    };
 
                     res.json({
                         ok: true,
                         fecha: fechaTarget,
                         corte: corteTarget,
+                        empresa: empresaTarget,
+                        kpis: kpisResponse,
                         global: globalStats,
-                        empresas: Object.values(statsPorEmpresa),
+                        empresas_stats: statsPorEmpresa,
                         lista_empresas: Array.from(empresasSet),
+                        items: panorama,
                         panorama: panorama
                     });
                 });
