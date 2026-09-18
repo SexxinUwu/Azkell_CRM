@@ -779,10 +779,12 @@ module.exports = (db, logAudit) => {
                         // Solo evaluamos tractos y camiones como unidades motora titulares
                         if (isNoMotora) return;
 
-                        let emp = (p.cliente || 'MARSISA').toUpperCase().trim();
-                        if (emp.includes('MARSISA')) emp = 'MARSISA';
-                        else if (emp.includes('TRAHESA')) emp = 'TRAHESA';
-                        else if (emp.includes('ROSYMAR')) emp = 'ROSYMAR';
+                        let rawCliente = String(p.cliente || '').toUpperCase().trim();
+                        let emp = 'MARSISA'; // Default si está vacío para tractos históricos sin cliente
+                        if (rawCliente.includes('MARSISA')) emp = 'MARSISA';
+                        else if (rawCliente.includes('TRAHESA')) emp = 'TRAHESA';
+                        else if (rawCliente.includes('ROSYMAR')) emp = 'ROSYMAR';
+                        else if (rawCliente) emp = rawCliente;
 
                         if (emp && emp !== 'NULL') empresasSet.add(emp);
 
@@ -877,7 +879,7 @@ module.exports = (db, logAudit) => {
                         }
 
                         // Si hay filtro de empresa específico, comprobar
-                        if (empresaTarget !== 'TODAS' && !emp.includes(empresaTarget)) {
+                        if (empresaTarget !== 'TODAS' && emp !== empresaTarget && !emp.includes(empresaTarget)) {
                             return;
                         }
 
@@ -912,17 +914,25 @@ module.exports = (db, logAudit) => {
 
                     // KPIs según empresa seleccionada o global
                     let activeStats = globalStats;
-                    if (empresaTarget !== 'TODAS' && statsPorEmpresa[empresaTarget]) {
-                        activeStats = statsPorEmpresa[empresaTarget];
+                    if (empresaTarget !== 'TODAS') {
+                        activeStats = statsPorEmpresa[empresaTarget] || {
+                            empresa: empresaTarget,
+                            total_flota: 0,
+                            en_base: 0,
+                            en_ruta: 0,
+                            en_taller: 0,
+                            en_lavado: 0,
+                            con_alerta: 0
+                        };
                     }
 
                     const kpisResponse = {
-                        totalFlota: activeStats.total_flota,
-                        enBase: activeStats.en_base,
-                        enRuta: activeStats.en_ruta,
-                        enTaller: activeStats.en_taller + activeStats.en_lavado,
-                        enLavado: activeStats.en_lavado,
-                        conAlerta: activeStats.con_alerta
+                        totalFlota: activeStats.total_flota || 0,
+                        enBase: activeStats.en_base || 0,
+                        enRuta: activeStats.en_ruta || 0,
+                        enTaller: (activeStats.en_taller || 0) + (activeStats.en_lavado || 0),
+                        enLavado: activeStats.en_lavado || 0,
+                        conAlerta: activeStats.con_alerta || 0
                     };
 
                     res.json({
