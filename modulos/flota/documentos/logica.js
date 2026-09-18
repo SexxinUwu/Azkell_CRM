@@ -227,15 +227,20 @@ window.actualizarBadgeGlobalFiltrosDoc = function() {
     }
 };
 
-function calcularEstado(fechaVencimiento) {
-    if (!fechaVencimiento) return { text: 'Permanente', class: 's-green', color: '#10b981', bgClass: 'bg-green', bdgClass: 'bdg-green', score: 3, diff: null };
+function calcularEstado(fechaVencimiento, isPermanente = false) {
+    if (isPermanente) {
+        return { text: 'Permanente', class: 's-green', color: '#10b981', bgClass: 'bg-green', bdgClass: 'bdg-green', score: 3, diff: null };
+    }
+    if (!fechaVencimiento) {
+        return { text: 'Sin Info', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', bdgClass: 'bdg-gray', score: -1, diff: null };
+    }
     
     const hoy = new Date();
     hoy.setHours(0,0,0,0);
     const ven = new Date(fechaVencimiento);
     ven.setHours(0,0,0,0);
     
-    if(isNaN(ven.getTime())) return { text: 'Permanente', class: 's-green', color: '#10b981', bgClass: 'bg-green', bdgClass: 'bdg-green', score: 3, diff: null };
+    if(isNaN(ven.getTime())) return { text: 'Sin Info', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', bdgClass: 'bdg-gray', score: -1, diff: null };
 
     const diffTime = ven.getTime() - hoy.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -273,22 +278,43 @@ function formatearFechaInput(val) {
 }
 
 function calcularMetadatos(v) {
-    let docs = [
-        calcularEstado(v.tc_vencimiento),
-        calcularEstado(v.soat_vencimiento),
-        calcularEstado(v.matpel_vencimiento),
-        calcularEstado(v.rt_vencimiento),
-        calcularEstado(v.boni_vencimiento),
-        calcularEstado(v.sv_vencimiento),
-        calcularEstado(v.sc_vencimiento),
-        calcularEstado(v.fum_vencimiento),
-        calcularEstado(v.ext_vencimiento)
-    ];
+    let docs = [];
+
+    // Evaluar únicamente los documentos que realmente han sido cargados/registrados para esta unidad
+    if (v.tc_vencimiento || (v.tc_constancia && v.tc_constancia.trim() && v.tc_constancia !== '---') || v.tc_url) {
+        docs.push(calcularEstado(v.tc_vencimiento));
+    }
+    if (v.soat_vencimiento || (v.soat_entidad && v.soat_entidad.trim() && v.soat_entidad !== '---') || v.soat_url) {
+        docs.push(calcularEstado(v.soat_vencimiento));
+    }
+    if (v.matpel_vencimiento || (v.matpel_constancia && v.matpel_constancia.trim() && v.matpel_constancia !== '---') || v.matpel_url) {
+        docs.push(calcularEstado(v.matpel_vencimiento));
+    }
+    if (v.rt_vencimiento || v.rt_emision || v.rt_url) {
+        docs.push(calcularEstado(v.rt_vencimiento));
+    }
+    if (v.boni_vencimiento || v.boni_emision || v.boni_url) {
+        docs.push(calcularEstado(v.boni_vencimiento));
+    }
+    if (v.sv_vencimiento || (v.sv_entidad && v.sv_entidad.trim() && v.sv_entidad !== '---') || v.sv_url) {
+        docs.push(calcularEstado(v.sv_vencimiento));
+    }
+    if (v.sc_vencimiento || (v.sc_entidad && v.sc_entidad.trim() && v.sc_entidad !== '---') || v.sc_url) {
+        docs.push(calcularEstado(v.sc_vencimiento));
+    }
+    if (v.fum_vencimiento || v.fum_emision || v.fum_url) {
+        docs.push(calcularEstado(v.fum_vencimiento));
+    }
+    if (v.ext_vencimiento || v.ext_emision || v.ext_url) {
+        docs.push(calcularEstado(v.ext_vencimiento));
+    }
 
     if (Array.isArray(v.docs_personalizados)) {
         v.docs_personalizados.forEach(cd => {
-            if (cd.vencimiento) {
-                docs.push(calcularEstado(cd.vencimiento));
+            const hasData = Boolean(cd.vencimiento || cd.constancia || cd.url || cd.emision);
+            if (hasData) {
+                const isPerm = !cd.vencimiento || (cd.tipo && cd.tipo.toUpperCase().includes('TIVE'));
+                docs.push(calcularEstado(cd.vencimiento, isPerm));
             }
         });
     }
@@ -296,7 +322,7 @@ function calcularMetadatos(v) {
     let docsRegistrados = 0;
     let docsVerdes = 0;
     let peorScore = 99;
-    let peorEstado = { text: 'Ok', class: 's-green', color: '#10b981', bgClass: 'bg-green' };
+    let peorEstado = { text: 'Sin Documentos', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', score: -1 };
 
     docs.forEach(est => {
         if (est.score !== -1) {
@@ -310,7 +336,9 @@ function calcularMetadatos(v) {
     });
 
     let salud = docsRegistrados === 0 ? 0 : Math.round((docsVerdes / docsRegistrados) * 100);
-    if(docsRegistrados === 0) peorEstado = { text: 'Sin Info', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', score: -1 };
+    if (docsRegistrados === 0) {
+        peorEstado = { text: 'Sin Documentos', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', score: -1 };
+    }
 
     return { salud, peorEstado, docs, docsRegistrados };
 }
@@ -1149,16 +1177,16 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
     setTxt('ft-anio', v.anio || '---');
     setTxt('ft-chasis', v.chasis || '---');
     
-    const saludVal = (v._meta && typeof v._meta.salud !== 'undefined') ? v._meta.salud : 100;
+    const saludVal = (v._meta && typeof v._meta.salud !== 'undefined') ? v._meta.salud : 0;
     const healthBar = document.getElementById('ft-health-bar') || document.getElementById('ft-salud-bar');
     if (healthBar) healthBar.style.width = `${saludVal}%`;
     const healthTxt = document.getElementById('ft-health-txt') || document.getElementById('ft-salud-val');
     if (healthTxt) healthTxt.innerText = `${saludVal}%`;
     
-    const peorEst = (v._meta && v._meta.peorEstado) ? v._meta.peorEstado : { score: 3 };
-    let detEstTexto = (peorEst.score === 3) ? 'VIGENTE' : (peorEst.score === 0 ? 'VENCIDO' : 'ALERTA');
-    let detEstColor = (peorEst.score === 3) ? '#10b981' : (peorEst.score === 0 ? '#ef4444' : '#f59e0b');
-    let detEstBg = (peorEst.score === 3) ? '#f0fdf4' : (peorEst.score === 0 ? '#fef2f2' : '#fffbeb');
+    const peorEst = (v._meta && v._meta.peorEstado) ? v._meta.peorEstado : { score: -1 };
+    let detEstTexto = (peorEst.score === 3) ? 'VIGENTE' : (peorEst.score === 0 ? 'VENCIDO' : (peorEst.score === 1 || peorEst.score === 2 ? 'ALERTA' : 'SIN DOCS'));
+    let detEstColor = (peorEst.score === 3) ? '#10b981' : (peorEst.score === 0 ? '#ef4444' : (peorEst.score === 1 || peorEst.score === 2 ? '#f59e0b' : '#94a3b8'));
+    let detEstBg = (peorEst.score === 3) ? '#f0fdf4' : (peorEst.score === 0 ? '#fef2f2' : (peorEst.score === 1 || peorEst.score === 2 ? '#fffbeb' : '#f1f5f9'));
     
     const placaMovil = document.getElementById('ft-placa-movil');
     if (placaMovil) {
