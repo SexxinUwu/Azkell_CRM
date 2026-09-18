@@ -3,6 +3,10 @@ const router = express.Router();
 
 module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
+    function getDb(req) {
+        return (req && req.db) ? req.db : db;
+    }
+
 // ── Helper: sumar total_pen de detalle (convierte USD con tipo_cambio) ───
 function _calcularTotalPen(detalles, tc) {
     return detalles.reduce((acc, d) => {
@@ -722,8 +726,8 @@ router.delete('/sistemas/:id', (req, res) => {
 // ============================================================
 // ALMACÉN — Almacenes / Sucursales
 // ============================================================
-const _asegurarAlmacenPrincipal = (cb) => {
-    db.query(`CREATE TABLE IF NOT EXISTS almacen_almacenes (
+const _asegurarAlmacenPrincipal = (tdb, cb) => {
+    tdb.query(`CREATE TABLE IF NOT EXISTS almacen_almacenes (
         id          INT AUTO_INCREMENT PRIMARY KEY,
         nombre      VARCHAR(100) NOT NULL UNIQUE,
         descripcion VARCHAR(255) NULL,
@@ -733,7 +737,7 @@ const _asegurarAlmacenPrincipal = (cb) => {
         created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )`, () => {
-        db.query(`INSERT IGNORE INTO almacen_almacenes (nombre, descripcion, es_sistema, activo, orden) 
+        tdb.query(`INSERT IGNORE INTO almacen_almacenes (nombre, descripcion, es_sistema, activo, orden) 
                   VALUES ('Principal', 'Almacén Principal Central del ERP', 1, 1, 1)`, () => {
             if (typeof cb === 'function') cb();
         });
@@ -741,8 +745,9 @@ const _asegurarAlmacenPrincipal = (cb) => {
 };
 
 router.get('/almacenes-lista', (req, res) => {
-    _asegurarAlmacenPrincipal(() => {
-        db.query(`SELECT * FROM almacen_almacenes WHERE activo=1 ORDER BY orden, id`, (err, rows) => {
+    const tdb = getDb(req);
+    _asegurarAlmacenPrincipal(tdb, () => {
+        tdb.query(`SELECT * FROM almacen_almacenes WHERE activo=1 ORDER BY orden, id`, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -750,8 +755,9 @@ router.get('/almacenes-lista', (req, res) => {
 });
 
 router.get('/almacenes', (req, res) => {
-    _asegurarAlmacenPrincipal(() => {
-        db.query(`SELECT * FROM almacen_almacenes ORDER BY orden, id`, (err, rows) => {
+    const tdb = getDb(req);
+    _asegurarAlmacenPrincipal(tdb, () => {
+        tdb.query(`SELECT * FROM almacen_almacenes ORDER BY orden, id`, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -759,10 +765,11 @@ router.get('/almacenes', (req, res) => {
 });
 
 router.post('/almacenes', (req, res) => {
+    const tdb = getDb(req);
     const { nombre, descripcion, activo, orden } = req.body;
     if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
     const nomLimpio = nombre.trim();
-    db.query('INSERT INTO almacen_almacenes (nombre, descripcion, activo, orden, es_sistema) VALUES (?,?,?,?,0)',
+    tdb.query('INSERT INTO almacen_almacenes (nombre, descripcion, activo, orden, es_sistema) VALUES (?,?,?,?,0)',
         [nomLimpio, descripcion || null, activo != null ? activo : 1, orden || 0],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
@@ -772,14 +779,15 @@ router.post('/almacenes', (req, res) => {
 });
 
 router.put('/almacenes/:id', (req, res) => {
+    const tdb = getDb(req);
     const { id } = req.params;
     const { nombre, descripcion, activo, orden } = req.body;
-    db.query('SELECT es_sistema, nombre FROM almacen_almacenes WHERE id=?', [id], (errC, rowsC) => {
+    tdb.query('SELECT es_sistema, nombre FROM almacen_almacenes WHERE id=?', [id], (errC, rowsC) => {
         if (errC) return res.status(500).json({ error: errC.message });
         const esSistema = rowsC[0]?.es_sistema;
         const nombreFinal = esSistema ? rowsC[0].nombre : (nombre ? nombre.trim() : rowsC[0].nombre);
 
-        db.query('UPDATE almacen_almacenes SET nombre=?, descripcion=?, activo=?, orden=? WHERE id=?',
+        tdb.query('UPDATE almacen_almacenes SET nombre=?, descripcion=?, activo=?, orden=? WHERE id=?',
             [nombreFinal, descripcion || null, activo != null ? activo : 1, orden || 0, id],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
@@ -790,13 +798,14 @@ router.put('/almacenes/:id', (req, res) => {
 });
 
 router.delete('/almacenes/:id', (req, res) => {
+    const tdb = getDb(req);
     const { id } = req.params;
-    db.query('SELECT es_sistema, nombre FROM almacen_almacenes WHERE id=?', [id], (errC, rowsC) => {
+    tdb.query('SELECT es_sistema, nombre FROM almacen_almacenes WHERE id=?', [id], (errC, rowsC) => {
         if (errC) return res.status(500).json({ error: errC.message });
         if (rowsC[0]?.es_sistema) {
             return res.status(400).json({ error: 'No se puede eliminar el almacén Principal del sistema' });
         }
-        db.query('DELETE FROM almacen_almacenes WHERE id=?', [id], (err) => {
+        tdb.query('DELETE FROM almacen_almacenes WHERE id=?', [id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
             res.json({ ok: true });
