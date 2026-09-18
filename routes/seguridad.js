@@ -491,6 +491,8 @@ module.exports = (db, logAudit) => {
         const recursos = { 
             placas: [], 
             tractosPorEmpresa: {}, 
+            placasPorEmpresa: {},
+            placaToEmpresa: {},
             carretasGlobales: [], 
             conductores: [],
             empresas: []
@@ -505,6 +507,13 @@ module.exports = (db, logAudit) => {
                 rowsP.forEach(r => {
                     const empRaw = (r.cliente || 'GENERAL').toUpperCase().trim();
                     if (empRaw && empRaw !== 'NULL') empresasSet.add(empRaw);
+
+                    const cleanP = (r.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    if (cleanP && empRaw && empRaw !== 'NULL') {
+                        recursos.placaToEmpresa[cleanP] = empRaw;
+                        if (!recursos.placasPorEmpresa[empRaw]) recursos.placasPorEmpresa[empRaw] = [];
+                        recursos.placasPorEmpresa[empRaw].push(r.placa);
+                    }
 
                     const motoraStr = String(r.motora || '').toUpperCase().trim();
                     const tipoUpper = (r.tipo || '').toUpperCase().trim();

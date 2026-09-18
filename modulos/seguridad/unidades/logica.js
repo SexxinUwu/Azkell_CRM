@@ -542,10 +542,84 @@ function _sguLoadStats(cb) {
     }).catch(function(){ if (cb) cb(); });
 }
 
+// ── HELPERS MULTI-EMPRESA (NORMALIZACIÓN Y FILTRADO EXACTO) ────────
+function _sguNormalizeEmpresa(str) {
+    if (!str) return '';
+    return String(str)
+        .toUpperCase()
+        .replace(/S\.A\.C\.|SAC|S\.A\.|SA|E\.I\.R\.L\.|EIRL|S\.R\.L\.|SRL/gi, '')
+        .replace(/[^A-Z0-9]/g, '')
+        .trim();
+}
+
+function _sguEmpresaMatches(emp1, emp2) {
+    if (!emp1 || !emp2) return false;
+    var n1 = _sguNormalizeEmpresa(emp1);
+    var n2 = _sguNormalizeEmpresa(emp2);
+    if (!n1 || !n2) return false;
+    return n1 === n2 || n1.indexOf(n2) >= 0 || n2.indexOf(n1) >= 0;
+}
+
+function _sguGetEmpresaDePlaca(placa) {
+    if (!placa) return '';
+    var cleanP = String(placa).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (_sguRecursos.placaToEmpresa && _sguRecursos.placaToEmpresa[cleanP]) {
+        return _sguRecursos.placaToEmpresa[cleanP];
+    }
+    if (_sguRecursos.placasPorEmpresa) {
+        for (var emp in _sguRecursos.placasPorEmpresa) {
+            var list = _sguRecursos.placasPorEmpresa[emp] || [];
+            if (list.some(function(p){ return String(p).toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanP; })) {
+                return emp;
+            }
+        }
+    }
+    if (_sguRecursos.tractosPorEmpresa) {
+        for (var empT in _sguRecursos.tractosPorEmpresa) {
+            var listT = _sguRecursos.tractosPorEmpresa[empT] || [];
+            if (listT.some(function(p){ return String(p).toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanP; })) {
+                return empT;
+            }
+        }
+    }
+    return '';
+}
+
+function _sguRecordPerteneceAEmpresa(rec, empresaActiva) {
+    if (!empresaActiva || empresaActiva === 'TODAS') return true;
+    if (!rec) return false;
+
+    // 1. Si el registro tiene empresa explícita guardada
+    if (rec.empresa && _sguEmpresaMatches(rec.empresa, empresaActiva)) {
+        return true;
+    }
+
+    // 2. Por placa de tracto
+    if (rec.placa_tracto) {
+        var empTracto = _sguGetEmpresaDePlaca(rec.placa_tracto);
+        if (empTracto && _sguEmpresaMatches(empTracto, empresaActiva)) {
+            return true;
+        }
+    }
+
+    // 3. Por placa de carreta
+    if (rec.placa_carreta) {
+        var empCarreta = _sguGetEmpresaDePlaca(rec.placa_carreta);
+        if (empCarreta && _sguEmpresaMatches(empCarreta, empresaActiva)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function _sguLoadResources() {
     _sguFetch('/api/seguridad/recursos').then(function(data) {
+        if (!data) return;
         if (data.placas) _sguRecursos.placas = data.placas;
         if (data.tractosPorEmpresa) _sguRecursos.tractosPorEmpresa = data.tractosPorEmpresa;
+        if (data.placasPorEmpresa) _sguRecursos.placasPorEmpresa = data.placasPorEmpresa;
+        if (data.placaToEmpresa) _sguRecursos.placaToEmpresa = data.placaToEmpresa;
         if (data.carretasGlobales) _sguRecursos.carretasGlobales = data.carretasGlobales;
         if (data.conductores) _sguRecursos.conductores = data.conductores;
         if (data.empresas) _sguRecursos.empresas = data.empresas;
@@ -616,12 +690,26 @@ window._sguHandleAutoInput = function(input, type) {
     var items = [];
 
     if (type === 'placas') {
-        // Si es placa tracto y hay empresa activa (ej. MARSISA, TRAHESA), sugerir solo tractos/camiones de esa empresa
-        if (_sguEmpresaActiva && _sguEmpresaActiva !== 'TODAS' && _sguRecursos.tractosPorEmpresa) {
-            var empKey = Object.keys(_sguRecursos.tractosPorEmpresa).find(function(k) {
-                return k.toUpperCase().includes(_sguEmpresaActiva.toUpperCase()) || _sguEmpresaActiva.toUpperCase().includes(k.toUpperCase());
-            });
-            items = (empKey && _sguRecursos.tractosPorEmpresa[empKey]) ? _sguRecursos.tractosPorEmpresa[empKey] : (_sguRecursos.placas || []);
+        // Si es placa tracto y hay empresa activa (ej. MARSISA, TRAHESA, ROSYMAR PERU), sugerir solo tractos/camiones de esa empresa
+        if (_sguEmpresaActiva && _sguEmpresaActiva !== 'TODAS') {
+            var matchingPlacas = [];
+            if (_sguRecursos.tractosPorEmpresa) {
+                var empKey = Object.keys(_sguRecursos.tractosPorEmpresa).find(function(k) {
+                    return _sguEmpresaMatches(k, _sguEmpresaActiva);
+                });
+                if (empKey && _sguRecursos.tractosPorEmpresa[empKey]) {
+                    matchingPlacas = _sguRecursos.tractosPorEmpresa[empKey];
+                }
+            }
+            if (!matchingPlacas.length && _sguRecursos.placasPorEmpresa) {
+                var empKey2 = Object.keys(_sguRecursos.placasPorEmpresa).find(function(k) {
+                    return _sguEmpresaMatches(k, _sguEmpresaActiva);
+                });
+                if (empKey2 && _sguRecursos.placasPorEmpresa[empKey2]) {
+                    matchingPlacas = _sguRecursos.placasPorEmpresa[empKey2];
+                }
+            }
+            items = matchingPlacas.length ? matchingPlacas : (_sguRecursos.placas || []);
         } else {
             items = _sguRecursos.placas || [];
         }
@@ -787,21 +875,29 @@ function _sguRenderList() {
     var search = (document.getElementById('sgu-search') || {}).value || '';
     search = search.toLowerCase().trim();
 
-    // Placas de la empresa activa si no es TODAS
-    var tractosEmpresaActiva = (_sguEmpresaActiva && _sguEmpresaActiva !== 'TODAS' && _sguRecursos.tractosPorEmpresa)
-        ? (_sguRecursos.tractosPorEmpresa[_sguEmpresaActiva] || [])
-        : null;
+    // 1. Filtrar registros por la Empresa Activa seleccionada
+    var companyRecords = _sguRecords.filter(function(r) {
+        return _sguRecordPerteneceAEmpresa(r, _sguEmpresaActiva);
+    });
 
-    var filtered = _sguRecords.filter(function(r) {
-        // Filtro por empresa activa (si no es TODAS)
-        if (tractosEmpresaActiva && tractosEmpresaActiva.length > 0) {
-            var pT = (r.placa_tracto || '').toUpperCase().trim();
-            var matchesCompany = tractosEmpresaActiva.some(function(tp) {
-                return tp.replace(/[^A-Z0-9]/g, '') === pT.replace(/[^A-Z0-9]/g, '');
-            });
-            if (!matchesCompany) return false;
-        }
+    // 2. Calcular KPIs exactos de la empresa activa
+    var countTotal = companyRecords.length;
+    var countRuta = companyRecords.filter(function(r) { return r.estado === 'en_ruta'; }).length;
+    var countComp = companyRecords.filter(function(r) { return r.estado === 'completado'; }).length;
+    var countAlert = companyRecords.filter(function(r) { return r.salida_has_alert || r.retorno_has_alert; }).length;
 
+    var elTotal = document.getElementById('sgu-kpi-val-total');
+    var elRuta = document.getElementById('sgu-kpi-val-ruta');
+    var elComp = document.getElementById('sgu-kpi-val-completados');
+    var elAlert = document.getElementById('sgu-kpi-val-alertas');
+
+    if (elTotal) elTotal.textContent = countTotal;
+    if (elRuta) elRuta.textContent = countRuta;
+    if (elComp) elComp.textContent = countComp;
+    if (elAlert) elAlert.textContent = countAlert;
+
+    // 3. Filtrar por Tab activo (En Ruta, Completados, Todos, Alertas) y buscador
+    var filtered = companyRecords.filter(function(r) {
         if (_sguActiveTab === 'activos' && r.estado !== 'en_ruta') return false;
         if (_sguActiveTab === 'historial' && r.estado !== 'completado') return false;
         if (_sguActiveTab === 'alertas' && !(r.salida_has_alert || r.retorno_has_alert)) return false;
@@ -814,27 +910,16 @@ function _sguRenderList() {
                (r.destino || '').toLowerCase().indexOf(search) >= 0;
     });
 
-    var countTotal = filtered.length;
-    var countRuta = filtered.filter(function(r) { return r.estado === 'en_ruta'; }).length;
-    var countComp = filtered.filter(function(r) { return r.estado === 'completado'; }).length;
-    var countAlert = filtered.filter(function(r) { return r.salida_has_alert || r.retorno_has_alert; }).length;
-
-    var elTotal = document.getElementById('sgu-kpi-val-total');
-    var elRuta = document.getElementById('sgu-kpi-val-ruta');
-    var elComp = document.getElementById('sgu-kpi-val-completados');
-    var elAlert = document.getElementById('sgu-kpi-val-alertas');
-
-    if (elTotal) elTotal.textContent = countTotal;
-    if (elRuta) elRuta.textContent = countRuta;
-    if (elComp) elComp.textContent = countComp;
-    if (elAlert) elAlert.textContent = countAlert;
-
     if (!filtered.length) {
+        var nombreEmp = (_sguEmpresaActiva && _sguEmpresaActiva !== 'TODAS') ? (' de ' + _sguEmpresaActiva) : '';
+        var emptyMsg = _sguActiveTab === 'activos'
+            ? ('No hay unidades' + nombreEmp + ' en ruta actualmente.')
+            : ('No se encontraron registros coincidentes' + nombreEmp + '.');
         var emptyHtml = '<tr><td colspan="8" class="text-center py-5 text-secondary">' +
-            '<i class="bi bi-inbox fs-2 d-block mb-2 text-muted"></i> No se encontraron registros coincidentes.' +
+            '<i class="bi bi-inbox fs-2 d-block mb-2 text-muted"></i> ' + emptyMsg +
             '</td></tr>';
         if (tableBody) tableBody.innerHTML = emptyHtml;
-        if (mobileContainer) mobileContainer.innerHTML = '<div class="text-center py-4 text-secondary"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No hay registros para mostrar.</div>';
+        if (mobileContainer) mobileContainer.innerHTML = '<div class="text-center py-4 text-secondary"><i class="bi bi-inbox fs-3 d-block mb-2"></i>' + emptyMsg + '</div>';
         return;
     }
 
@@ -932,8 +1017,12 @@ function _sguRenderList() {
 
 // ── EXPORTACIÓN A EXCEL ──────────────────────────────────────────
 window._sguExportarExcel = function() {
-    if (!_sguRecords || !_sguRecords.length) {
-        _sguToast('No hay datos para exportar', 'bi-exclamation-triangle');
+    var recordsAExportar = _sguRecords.filter(function(r) {
+        return _sguRecordPerteneceAEmpresa(r, _sguEmpresaActiva);
+    });
+
+    if (!recordsAExportar || !recordsAExportar.length) {
+        _sguToast('No hay datos de ' + _sguEmpresaActiva + ' para exportar', 'bi-exclamation-triangle');
         return;
     }
     _sguToast('Generando archivo Excel...', 'bi-hourglass-split');
@@ -942,7 +1031,7 @@ window._sguExportarExcel = function() {
         ['Folio ID', 'Placa Tracto', 'Placa Carreta', 'Conductor', 'Destino', 'Salida Fecha', 'Salida Hora', 'Salida Km', 'Retorno Fecha', 'Retorno Hora', 'Retorno Km', 'Estado', 'Tiene Novedad']
     ];
 
-    _sguRecords.forEach(function(r) {
+    recordsAExportar.forEach(function(r) {
         rows.push([
             r.id || '',
             r.placa_tracto || '',
