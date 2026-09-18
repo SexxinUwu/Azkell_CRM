@@ -829,8 +829,11 @@ window.verificarSesionGuardada = function() {
         'dashboard': 1, 'operaciones/programacion': 1, 'operaciones/ordenes-viaje': 1,
         'operaciones/ordenes-servicio': 1, 'operaciones/reporte-viajes': 1, 'operaciones/guias-remision': 1,
         'operaciones/combustible-vales': 1, 'operaciones/combustible-estaciones': 1, 'operaciones/combustible-analisis': 1,
-        'operaciones/urea-analisis': 1, 'operaciones/combustible-matriz': 1, 'operaciones/marsisa-ordenes-viaje': 1,
-        'operaciones/marsisa-combustible-vales': 1, 'mantenimiento/inspecciones': 1, 'flota/placas': 1,
+        'operaciones/urea-analisis': 1, 'operaciones/combustible-matriz': 1,
+        'operaciones/marsisa-ordenes-viaje': 1, 'operaciones/marsisa-combustible-vales': 1,
+        'operaciones/marsisa-combustible-matriz': 1, 'operaciones/marsisa-combustible-analisis': 1,
+        'operaciones/marsisa-urea-analisis': 1,
+        'mantenimiento/inspecciones': 1, 'flota/placas': 1,
         'mantenimiento/fleetrun': 1, 'mantenimiento/otros': 1, 'mantenimiento/checklist': 1,
         'mantenimiento/status-rampa': 1, 'mantenimiento/reportes-ot': 1, 'mantenimiento/trabajos-ot': 1,
         'mantenimiento/neumaticos-analisis': 1, 'mantenimiento/neumaticos-ultimas': 1, 'mantenimiento/incidencias-ruta': 1,
@@ -847,7 +850,7 @@ window.verificarSesionGuardada = function() {
     try {
         let h = (window.location.hash || '').replace(/^#\/?/, '').trim();
         if (h) {
-            if (MAPA_RUTAS_VALIDAS[h]) {
+            if (MAPA_RUTAS_VALIDAS[h] || (typeof window.esRutaValidaYPermitida === 'function' && window.esRutaValidaYPermitida(h))) {
                 rutaHash = h;
             } else {
                 for (let r in MAPA_RUTAS_VALIDAS) {
@@ -859,9 +862,9 @@ window.verificarSesionGuardada = function() {
             }
             if (!rutaHash) {
                 let rSlash = h.replace(/-/g, '/');
-                if (MAPA_RUTAS_VALIDAS[rSlash] || window.esRutaValidaYPermitida(rSlash)) {
+                if (MAPA_RUTAS_VALIDAS[rSlash] || (typeof window.esRutaValidaYPermitida === 'function' && window.esRutaValidaYPermitida(rSlash))) {
                     rutaHash = rSlash;
-                } else if (window.esRutaValidaYPermitida(h)) {
+                } else if (typeof window.esRutaValidaYPermitida === 'function' && window.esRutaValidaYPermitida(h)) {
                     rutaHash = h;
                 }
             }
@@ -4154,6 +4157,26 @@ function marcarMenuActivo(ruta) {
         if (subGuias) {
             subGuias.classList.remove('d-none');
             if (chevGuias) chevGuias.style.transform = 'rotate(180deg)';
+        }
+    }
+
+    // Auto-expandir submenú de Combustible Marsisa en el sidebar
+    if (ruta && (ruta.startsWith('operaciones/marsisa-combustible-') || ruta === 'operaciones/marsisa-urea-analisis')) {
+        const subMarsisaComb = document.getElementById('submenu-marsisa-combustible');
+        const chevMarsisaComb = document.getElementById('chev-marsisa-combustible');
+        if (subMarsisaComb) {
+            subMarsisaComb.classList.remove('d-none');
+            if (chevMarsisaComb) chevMarsisaComb.style.transform = 'rotate(180deg)';
+        }
+    }
+
+    // Auto-expandir submenú de Combustible General en el sidebar
+    if (ruta && (ruta.startsWith('operaciones/combustible-') || ruta === 'operaciones/urea-analisis')) {
+        const subComb = document.getElementById('submenu-combustible');
+        const chevComb = document.getElementById('chev-combustible');
+        if (subComb) {
+            subComb.classList.remove('d-none');
+            if (chevComb) chevComb.style.transform = 'rotate(180deg)';
         }
     }
 
