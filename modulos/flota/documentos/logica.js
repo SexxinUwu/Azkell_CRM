@@ -235,17 +235,38 @@ function calcularEstado(fechaVencimiento, isPermanente = false) {
         return { text: 'Sin Info', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', bdgClass: 'bdg-gray', score: -1, diff: null };
     }
     
-    const hoy = new Date();
-    hoy.setHours(0,0,0,0);
-    const ven = new Date(fechaVencimiento);
-    ven.setHours(0,0,0,0);
-    
-    if(isNaN(ven.getTime())) return { text: 'Sin Info', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', bdgClass: 'bdg-gray', score: -1, diff: null };
+    // Extraer año, mes, día sin desfase de zona horaria UTC
+    let vy, vm, vd;
+    if (typeof fechaVencimiento === 'string' && fechaVencimiento.includes('T')) {
+        const parts = fechaVencimiento.split('T')[0].split('-');
+        vy = parseInt(parts[0], 10);
+        vm = parseInt(parts[1], 10) - 1;
+        vd = parseInt(parts[2], 10);
+    } else if (typeof fechaVencimiento === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaVencimiento)) {
+        const parts = fechaVencimiento.split('-');
+        vy = parseInt(parts[0], 10);
+        vm = parseInt(parts[1], 10) - 1;
+        vd = parseInt(parts[2], 10);
+    } else {
+        const dObj = new Date(fechaVencimiento);
+        if (isNaN(dObj.getTime())) return { text: 'Sin Info', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', bdgClass: 'bdg-gray', score: -1, diff: null };
+        vy = dObj.getUTCFullYear();
+        vm = dObj.getUTCMonth();
+        vd = dObj.getUTCDate();
+    }
 
-    const diffTime = ven.getTime() - hoy.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (isNaN(vy) || isNaN(vm) || isNaN(vd)) {
+        return { text: 'Sin Info', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', bdgClass: 'bdg-gray', score: -1, diff: null };
+    }
+
+    const hoy = new Date();
+    const hoyUtc = Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const venUtc = Date.UTC(vy, vm, vd);
+
+    const diffDays = Math.round((venUtc - hoyUtc) / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) return { text: 'Vencido', class: 's-red', color: '#ef4444', bgClass: 'bg-red', bdgClass: 'bdg-red', score: 0, diff: diffDays };
+    if (diffDays === 0) return { text: 'Vence hoy', class: 's-orange', color: '#ea580c', bgClass: 'bg-orange', bdgClass: 'bdg-red', score: 1, diff: 0 };
     if (diffDays <= 15) return { text: 'Crítico', class: 's-orange', color: '#ea580c', bgClass: 'bg-orange', bdgClass: 'bdg-red', score: 1, diff: diffDays };
     if (diffDays <= 30) return { text: 'Alerta', class: 's-yellow', color: '#f59e0b', bgClass: 'bg-yellow', bdgClass: 'bdg-red', score: 2, diff: diffDays };
     return { text: 'Vigente', class: 's-green', color: '#10b981', bgClass: 'bg-green', bdgClass: 'bdg-green', score: 3, diff: diffDays };
@@ -350,7 +371,7 @@ function actualizarTiposDocumentosSelect() {
     const currentVal = sel.value;
     const tiposEstandar = [
         { value: '', label: 'Seleccione...' },
-        { value: 'TIVE', label: 'Tarjeta de Identificación Vehicular (TIVe / SUNARP)' },
+        { value: 'TIVE', label: 'Tarjeta de Propiedad (TIVe / SUNARP)' },
         { value: 'TARJETA_PROPIEDAD', label: 'Tarjeta Única de Circulación (TUC / MTC)' },
         { value: 'SOAT', label: 'SOAT (Seguro Obligatorio de Accidentes)' },
         { value: 'MATPEL', label: 'Autorización de Circulación MATPEL (MTC)' },
@@ -1329,16 +1350,26 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
         v.docs_personalizados.forEach(cd => {
             const numCustom = defDocs.length + 1;
             const bgClassCustom = `bg-c${((numCustom - 1) % 9) + 1}`;
-            const estCustom = calcularEstado(cd.vencimiento);
+            let customTitle = cd.title || (cd.tipo ? cd.tipo.toUpperCase() : 'DOCUMENTO');
+            const isTive = Boolean(cd.tipo && (cd.tipo.toUpperCase() === 'TIVE' || cd.tipo.toUpperCase().includes('TIVE') || cd.tipo.toUpperCase().includes('PROPIEDAD')));
+            if (isTive) {
+                customTitle = 'TARJETA DE PROPIEDAD (TIVe)';
+            }
+
+            const estCustom = calcularEstado(cd.vencimiento, isTive && !cd.vencimiento);
             const rowsCustom = [];
             if (cd.constancia) rowsCustom.push({ label: 'N° / Entidad', val: cd.constancia });
             if (cd.emision) rowsCustom.push({ label: 'Emisión', val: formatearFechaVista(cd.emision) });
-            if (cd.vencimiento) rowsCustom.push({ label: 'Vencimiento', val: formatearFechaVista(cd.vencimiento) });
+            if (cd.vencimiento) {
+                rowsCustom.push({ label: 'Vencimiento', val: formatearFechaVista(cd.vencimiento) });
+            } else if (isTive) {
+                rowsCustom.push({ label: 'Vencimiento', val: 'Permanente (No vence)' });
+            }
             if (cd.pago) rowsCustom.push({ label: 'Costo', val: `S/ ${cd.pago}` });
 
             defDocs.push({
                 tipo: cd.tipo,
-                title: cd.title || cd.tipo.toUpperCase(),
+                title: customTitle,
                 num: numCustom,
                 bgClass: bgClassCustom,
                 est: estCustom,
@@ -1391,7 +1422,7 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
                 else labelText = `Faltan ${est.diff} días (${est.text})`;
                 estHtml += `<span class="footer-status ${est.class}">${labelText}</span>`;
             } else {
-                estHtml += `<span class="footer-status" style="color:#94a3b8;">-</span>`;
+                estHtml += `<span class="footer-status s-green" style="color:#10b981; font-weight:700;">Permanente (Vigente)</span>`;
             }
 
             let borderStyle = 'border: 1px solid #e2e8f0;';
