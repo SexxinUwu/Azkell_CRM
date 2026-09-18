@@ -385,10 +385,10 @@
             <button type="button" class="sub-btn-square" onclick="window.subCargarDatos()" title="Recargar panorama">
                 <i class="bi bi-arrow-clockwise text-primary"></i>
             </button>
-            <button type="button" class="sub-btn-square" onclick="window.subAbrirModalSincronizar()" title="Sincronizar turno automáticamente">
+            <button type="button" class="sub-btn-square" id="sub-btn-sync-quick" onclick="window.subSincronizarTurnoDirecto()" title="Sincronizar turno actual automáticamente">
                 <i class="bi bi-lightning-charge-fill text-warning"></i>
             </button>
-            <button type="button" class="sub-btn-square" onclick="window.subCompartirWhatsApp()" title="Enviar resumen por WhatsApp">
+            <button type="button" class="sub-btn-square" id="sub-btn-share-pdf" onclick="window.subCompartirWhatsAppPDF()" title="Compartir reporte PDF por WhatsApp">
                 <i class="bi bi-whatsapp text-success"></i>
             </button>
             <button type="button" class="sub-btn-square" onclick="window.subExportarPDF()" title="Exportar reporte PDF (F-SEG-0010)">
@@ -645,46 +645,6 @@
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════════
-     MODAL: SINCRONIZAR TURNO
-═══════════════════════════════════════════════════════════════════ -->
-<div class="modal fade" id="modalSincronizarTurno" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
-        <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
-            <div class="modal-header bg-primary text-white px-4 py-3 border-0" style="background:#0284c7 !important;">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-lightning-charge-fill fs-5"></i>
-                    <h5 class="modal-title fw-bold fs-6 m-0">Sincronizar Turno en Patio</h5>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4 bg-white">
-                <p class="text-secondary small mb-3" style="line-height: 1.45;">
-                    Esta acción registrará automáticamente como presentes en Base a todas las unidades que <b>no estén en ruta</b> para el corte seleccionado:
-                </p>
-                <div class="mb-3">
-                    <label class="sub-form-label">Fecha</label>
-                    <input type="date" id="sub-sync-fecha" class="sub-form-input-clean">
-                </div>
-                <div class="mb-3">
-                    <label class="sub-form-label">Corte Horario</label>
-                    <select id="sub-sync-corte" class="sub-form-select-clean">
-                        <option value="Corte 1">Corte 1 (05:00 - 11:59)</option>
-                        <option value="Corte 2">Corte 2 (12:00 - 16:59)</option>
-                        <option value="Corte 3">Corte 3 (17:00 - 04:59)</option>
-                    </select>
-                </div>
-                <div class="d-flex justify-content-end gap-2 pt-2">
-                    <button type="button" class="btn btn-light border px-3 fw-semibold rounded-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" id="btnEjecutarSync" class="btn btn-primary px-4 fw-bold rounded-3" style="background:#0284c7; border-color:#0284c7;" onclick="window.subEjecutarSincronizacion()">
-                        <i class="bi bi-lightning-charge-fill me-1"></i> Sincronizar Ahora
-                    </button>
-                </div>
             </div>
         </div>
     </div>

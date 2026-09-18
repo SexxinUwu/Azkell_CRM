@@ -254,7 +254,6 @@
         const tbody = document.getElementById('sub-tbody');
         if (!tbody) return;
 
-        // Filtrado por KPI rápido
         let filteredItems = items;
         if (window._subEstadoFiltroVista && window._subEstadoFiltroVista !== 'ALL') {
             if (window._subEstadoFiltroVista === 'BASE') {
@@ -426,6 +425,41 @@
         }, 300);
     };
 
+    // ── ⚡ Sincronización Automática 1-Click (Sin modales innecesarios) ──
+    window.subSincronizarTurnoDirecto = async function() {
+        const hoy = new Date().toISOString().split('T')[0];
+        const corteAuto = window.subObtenerCorteActual();
+        const btn = document.getElementById('sub-btn-sync-quick');
+
+        if (btn) {
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm text-warning"></span>';
+            btn.style.pointerEvents = 'none';
+        }
+
+        try {
+            const data = await _subFetch('/api/seguridad/unidades-base/sincronizar-corte', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fecha: hoy, corte: corteAuto })
+            });
+
+            if (data.ok) {
+                window.mostrarToast(`¡Sincronizado con éxito! (${corteAuto})`, 'success');
+                window.subCargarDatos();
+            } else {
+                window.mostrarToast(data.error || 'No se pudo sincronizar el turno', 'danger');
+            }
+        } catch(e) {
+            console.error('Error al sincronizar turno:', e);
+            window.mostrarToast('Error al conectar con el servidor', 'danger');
+        } finally {
+            if (btn) {
+                btn.innerHTML = '<i class="bi bi-lightning-charge-fill text-warning"></i>';
+                btn.style.pointerEvents = 'auto';
+            }
+        }
+    };
+
     // ── Abrir Modal Nuevo ─────────────────────────────────────────
     window.subAbrirModalNuevo = function() {
         document.getElementById('formSubUnidad')?.reset();
@@ -560,124 +594,14 @@
         }
     };
 
-    // ── Sincronizar Turno Automático ──────────────────────────────
-    window.subAbrirModalSincronizar = function() {
-        const hoy = new Date().toISOString().split('T')[0];
-        const corteAuto = window.subObtenerCorteActual();
-
-        const inputFecha = document.getElementById('sub-sync-fecha');
-        const inputCorte = document.getElementById('sub-sync-corte');
-
-        if (inputFecha) inputFecha.value = hoy;
-        if (inputCorte) inputCorte.value = corteAuto;
-
-        const modalEl = document.getElementById('modalSincronizarTurno');
-        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
-    };
-
-    window.subEjecutarSincronizacion = async function() {
-        const fecha = document.getElementById('sub-sync-fecha')?.value;
-        const corte = document.getElementById('sub-sync-corte')?.value;
-        const btn = document.getElementById('btnEjecutarSync');
-
-        if (!fecha || !corte) {
-            window.mostrarToast('Selecciona fecha y corte', 'warning');
-            return;
-        }
-
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sincronizando...';
-        }
-
-        try {
-            const data = await _subFetch('/api/seguridad/unidades-base/sincronizar-corte', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fecha, corte })
-            });
-
-            if (data.ok) {
-                window.mostrarToast(`¡Sincronización completada! ${data.insertadas || 0} unidades agregadas a ${corte}`, 'success');
-                const modalEl = document.getElementById('modalSincronizarTurno');
-                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
-                window.subCargarDatos();
-            } else {
-                window.mostrarToast(data.error || 'Error al sincronizar corte', 'danger');
-            }
-        } catch(e) {
-            console.error('Error al sincronizar corte:', e);
-            window.mostrarToast('Error de conexión al sincronizar turno', 'danger');
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-lightning-charge-fill me-1"></i> Sincronizar Ahora';
-            }
-        }
-    };
-
-    // ── Compartir WhatsApp ────────────────────────────────────────
-    window.subCompartirWhatsApp = function() {
-        const fecha = document.getElementById('sub-filter-fecha')?.value || new Date().toISOString().split('T')[0];
-        const empresa = window._subEmpresaActiva === 'TODAS' ? 'TODAS LAS EMPRESAS' : window._subEmpresaActiva;
-        const kpis = window._subPanoramaData.kpis || {};
-        const items = window._subData || [];
-
-        let texto = `*📊 STATUS DE UNIDADES EN BASE Y OPERACIÓN*\n`;
-        texto += `📅 *Fecha:* ${fecha}\n`;
-        texto += `🏢 *Empresa:* ${empresa}\n\n`;
-        texto += `*📈 RESUMEN EJECUTIVO:*\n`;
-        texto += `• Total Flota: *${kpis.totalFlota || 0}*\n`;
-        texto += `• En Base / Patio: *${kpis.enBase || 0}*\n`;
-        texto += `• En Ruta (Operando): *${kpis.enRuta || 0}*\n`;
-        texto += `• Mantenimiento / Taller: *${kpis.enTaller || 0}*\n\n`;
-
-        const enBase = items.filter(r => !r.esRuta);
-        if (enBase.length > 0) {
-            texto += `*📍 UNIDADES EN BASE (${enBase.length}):*\n`;
-            enBase.slice(0, 25).forEach((r, idx) => {
-                texto += `${idx + 1}. *${r.placa_camion || '---'}* ${r.placa_carreta ? `+ ${r.placa_carreta}` : ''} | ${r.zona || 'Base'} | ${r.estado || 'Vacío'}\n`;
-            });
-            if (enBase.length > 25) {
-                texto += `_... y ${enBase.length - 25} unidades más en base._\n`;
-            }
-            texto += `\n`;
-        }
-
-        const enRuta = items.filter(r => r.esRuta);
-        if (enRuta.length > 0) {
-            texto += `*🛣️ UNIDADES EN RUTA (${enRuta.length}):*\n`;
-            enRuta.slice(0, 15).forEach((r, idx) => {
-                texto += `${idx + 1}. *${r.placa_camion || '---'}* | Chofer: ${r.conductor || '---'} | Destino: ${r.zona || 'Ruta'}\n`;
-            });
-            if (enRuta.length > 15) {
-                texto += `_... y ${enRuta.length - 15} unidades más en ruta._\n`;
-            }
-        }
-
-        const urlWhatsApp = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
-        window.open(urlWhatsApp, '_blank');
-    };
-
-    // ── Exportador a PDF Oficial (F-SEG-0010) ──────────────────────
-    window.subExportarPDF = function() {
+    // ── Construir HTML del Documento PDF A4 Oficial (F-SEG-0010) ───
+    function _subBuildPdfHtml() {
         const fechaFiltro = document.getElementById('sub-filter-fecha')?.value || new Date().toISOString().split('T')[0];
         const corteFiltro = window._subCorteActivo || 'ALL';
         const fParts = fechaFiltro.split('-');
         const fechaFormateada = fParts.length === 3 ? `${fParts[2]}/${fParts[1]}/${fParts[0]}` : fechaFiltro;
 
         const items = window._subData || [];
-        if (items.length === 0) {
-            window.mostrarToast('No hay registros para exportar en esta fecha', 'warning');
-            return;
-        }
-
-        const ventana = window.open('', '_blank');
-        if (!ventana) {
-            alert('Por favor, permite las ventanas emergentes para generar el PDF.');
-            return;
-        }
-
         const empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
 
         const grupos = {
@@ -735,13 +659,222 @@
             });
         });
 
+        return `
+            <div style="width:210mm; min-height:297mm; background:#ffffff; padding:10mm 12mm; margin:0 auto; box-sizing:border-box; font-family:'Inter', sans-serif; color:#000000; display:flex; flex-direction:column;">
+                <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:6px; table-layout:fixed;">
+                    <tr>
+                        <td style="width:22%; padding:4px; border:1px solid #000; text-align:center; vertical-align:middle;" rowspan="3">
+                            <img src="${empLogoUrl}" alt="Logo Empresa" style="max-height:46px; max-width:100%; object-fit:contain;">
+                        </td>
+                        <td style="width:54%; border:1px solid #000; text-align:center; vertical-align:middle; font-size:18px; font-weight:700; line-height:1.1; text-transform:uppercase;" rowspan="3">
+                            STATUS "UNIDADES EN BASE"<br>
+                            <span style="font-size:10px; font-weight:500; color:#333; letter-spacing:0.5px; display:block; margin-top:3px;">CONTROL Y SEGURIDAD PATRIMONIAL</span>
+                        </td>
+                        <td style="width:24%; border:1px solid #000; font-size:9.5px; text-align:left; padding:2px 6px; height:17px;"><b>CÓDIGO:</b> F-SEG-0010</td>
+                    </tr>
+                    <tr><td style="border:1px solid #000; font-size:9.5px; text-align:left; padding:2px 6px; height:17px;"><b>VERSIÓN:</b> 0</td></tr>
+                    <tr><td style="border:1px solid #000; font-size:9.5px; text-align:left; padding:2px 6px; height:17px;"><b>F. EMISIÓN:</b> ${fechaFormateada}</td></tr>
+                </table>
+
+                <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:6px; font-size:10.5px; font-weight:bold;">
+                    <tr>
+                        <td style="width:30%; border:1px solid #000; padding:4px 6px;">FECHA: <span style="font-weight:normal; margin-left:4px;">${fechaFormateada}</span></td>
+                        <td style="width:35%; border:1px solid #000; padding:4px 6px;">EMPRESA: <span style="font-weight:normal; margin-left:4px;">${window._subEmpresaActiva}</span></td>
+                        <td style="width:35%; border:1px solid #000; padding:4px 6px;">TOTAL REGISTRADAS: <span style="font-weight:bold; color:#0284c7; margin-left:4px;">${items.length}</span></td>
+                    </tr>
+                </table>
+
+                <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:8px; font-size:9.5px;">
+                    <thead>
+                        <tr style="background-color:#333333; color:#ffffff;">
+                            <th style="width:26px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">#</th>
+                            <th style="width:60px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">CORTE</th>
+                            <th style="width:80px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">PLACA CAMIÓN</th>
+                            <th style="width:80px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">PLACA CARRETA</th>
+                            <th style="width:140px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">CONDUCTOR</th>
+                            <th style="width:80px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">ZONA</th>
+                            <th style="width:80px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">ESTADO</th>
+                            <th style="text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">OBSERVACIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filasHtml}
+                    </tbody>
+                </table>
+
+                <div style="margin-top:auto; border-top:1px solid #000; padding-top:6px; display:flex; justify-content:space-between; font-size:9px; color:#333;">
+                    <div><b>ERP Azkell Fleet</b> — Módulo de Seguridad y Control Patrimonial</div>
+                    <div>Generado el: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ── Motor de Generación de Blob PDF en Iframe Oculto ───────────
+    async function _subRenderPdfBlob(htmlBody, filename) {
+        return new Promise(function(resolve, reject) {
+            var iframe = document.createElement('iframe');
+            iframe.style.cssText = 'position:fixed; top:-10000px; left:-10000px; width:840px; height:1200px; border:none; z-index:-999;';
+            document.body.appendChild(iframe);
+
+            var doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write('<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n'
+                + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+                + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">\n'
+                + '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></scr' + 'ipt>\n'
+                + '<style>\n'
+                + 'body { background-color:#FFFFFF; color:#0F172A; margin:0; padding:0; font-family:"Inter", sans-serif; }\n'
+                + '</style>\n</head>\n<body>\n'
+                + '<div id="sub-pdf-render-root">' + htmlBody + '</div>\n'
+                + '</body>\n</html>');
+            doc.close();
+
+            iframe.onload = async function() {
+                try {
+                    await new Promise(function(r) { setTimeout(r, 400); });
+                    var targetEl = doc.getElementById('sub-pdf-render-root');
+                    var opt = {
+                        margin:       0,
+                        filename:     filename,
+                        image:        { type: 'jpeg', quality: 0.98 },
+                        html2canvas:  { scale: 2.2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 840 },
+                        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    };
+
+                    var pdfBlob = await iframe.contentWindow.html2pdf().set(opt).from(targetEl).outputPdf('blob');
+                    iframe.remove();
+                    resolve(pdfBlob);
+                } catch(e) {
+                    iframe.remove();
+                    reject(e);
+                }
+            };
+        });
+    }
+
+    // ── 📲 COMPARTIR PDF POR WHATSAPP (1:1 Checklist de Unidades) ──
+    window.subCompartirWhatsAppPDF = async function() {
+        const fechaFiltro = document.getElementById('sub-filter-fecha')?.value || new Date().toISOString().split('T')[0];
+        const fParts = fechaFiltro.split('-');
+        const fechaFormateada = fParts.length === 3 ? `${fParts[2]}-${fParts[1]}-${fParts[0]}` : fechaFiltro;
+        const filename = `${fechaFormateada} - Status Unidades en Base.pdf`;
+
+        const btn = document.getElementById('sub-btn-share-pdf');
+        if (btn) {
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm text-success"></span>';
+            btn.style.pointerEvents = 'none';
+        }
+
+        window.mostrarToast('Preparando PDF para WhatsApp...', 'info');
+
+        try {
+            const htmlFinal = _subBuildPdfHtml();
+            const pdfBlob = await _subRenderPdfBlob(htmlFinal, filename);
+            const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+            // 1. Compartir nativo (Abre el diálogo del sistema para elegir la app de WhatsApp con el PDF adjunto)
+            if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                try {
+                    await navigator.share({
+                        files: [pdfFile],
+                        title: filename
+                    });
+                    return;
+                } catch (shareErr) {
+                    if (shareErr.name === 'AbortError') return; // Cancelado por el usuario
+                    console.warn('Error en navigator.share:', shareErr);
+
+                    if (shareErr.name === 'NotAllowedError') {
+                        window._subPendingPdfFile = pdfFile;
+                        window._subPendingPdfFilename = filename;
+                        _subMostrarBotonReintentarShare();
+                        return;
+                    }
+                }
+            }
+
+            // 2. Si el dispositivo no soporta navigator.share con archivos:
+            window.location.href = 'whatsapp://';
+            window.mostrarToast('Abriendo aplicación WhatsApp...', 'success');
+        } catch(err) {
+            console.error('Error al compartir PDF por WhatsApp:', err);
+            window.mostrarToast('Error al generar PDF: ' + err.message, 'danger');
+        } finally {
+            if (btn) {
+                btn.innerHTML = '<i class="bi bi-whatsapp text-success"></i>';
+                btn.style.pointerEvents = 'auto';
+            }
+        }
+    };
+
+    // ── Helper para reintentar compartir con gesto directo si el navegador lo bloqueó ──
+    function _subMostrarBotonReintentarShare() {
+        var existing = document.getElementById('sub-reintentar-share-overlay');
+        if (existing) existing.remove();
+
+        var div = document.createElement('div');
+        div.id = 'sub-reintentar-share-overlay';
+        div.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);';
+        div.innerHTML = '<div style="background:#fff;border-radius:24px;padding:26px 20px;text-align:center;max-width:320px;width:88%;box-shadow:0 20px 40px rgba(0,0,0,0.25);">' +
+            '<div style="width:58px;height:58px;background:#25D366;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px;">' +
+            '<i class="bi bi-whatsapp"></i>' +
+            '</div>' +
+            '<h5 style="font-weight:800;color:#0f172a;margin-bottom:8px;font-size:1.1rem;">PDF Listo</h5>' +
+            '<p style="color:#64748b;font-size:0.83rem;margin-bottom:20px;">Toca el botón para abrir WhatsApp y seleccionar el chat.</p>' +
+            '<button id="sub-btn-touch-share" style="background:#25D366;color:#fff;font-weight:700;border:none;padding:12px 24px;border-radius:14px;width:100%;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(37,211,102,0.35);">' +
+            '<i class="bi bi-share-fill"></i> Enviar por WhatsApp' +
+            '</button>' +
+            '<button onclick="document.getElementById(\'sub-reintentar-share-overlay\').remove()" style="background:transparent;color:#94a3b8;font-weight:600;border:none;margin-top:12px;font-size:0.8rem;cursor:pointer;">Cancelar</button>' +
+            '</div>';
+        document.body.appendChild(div);
+
+        document.getElementById('sub-btn-touch-share').onclick = async function() {
+            div.remove();
+            if (window._subPendingPdfFile && navigator.canShare && navigator.canShare({ files: [window._subPendingPdfFile] })) {
+                try {
+                    await navigator.share({
+                        files: [window._subPendingPdfFile],
+                        title: window._subPendingPdfFilename || 'Status Unidades en Base.pdf'
+                    });
+                } catch(e) {
+                    if (e.name !== 'AbortError') {
+                        window.location.href = 'whatsapp://';
+                    }
+                }
+            } else {
+                window.location.href = 'whatsapp://';
+            }
+        };
+    }
+
+    // ── Exportador a PDF Oficial (F-SEG-0010) ──────────────────────
+    window.subExportarPDF = function() {
+        const fechaFiltro = document.getElementById('sub-filter-fecha')?.value || new Date().toISOString().split('T')[0];
+        const fParts = fechaFiltro.split('-');
+        const fechaFormateada = fParts.length === 3 ? `${fParts[2]}/${fParts[1]}/${fParts[0]}` : fechaFiltro;
+
+        const items = window._subData || [];
+        if (items.length === 0) {
+            window.mostrarToast('No hay registros para exportar en esta fecha', 'warning');
+            return;
+        }
+
+        const ventana = window.open('', '_blank');
+        if (!ventana) {
+            alert('Por favor, permite las ventanas emergentes para generar el PDF.');
+            return;
+        }
+
+        const htmlFinal = _subBuildPdfHtml();
+
         ventana.document.write(`
             <!DOCTYPE html>
             <html lang="es">
             <head>
                 <meta charset="UTF-8">
                 <title>Status Unidades en Base — F-SEG-0010</title>
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
                 <style>
                     * { box-sizing: border-box; }
                     body {
@@ -772,47 +905,10 @@
                         gap: 6px;
                     }
                     .btn-print-fixed:hover { background: #1f2937; }
-                    .page-a4 {
-                        width: 210mm;
-                        min-height: 297mm;
-                        background: #ffffff;
-                        padding: 10mm 12mm;
-                        margin: 0 auto;
-                        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4);
-                        box-sizing: border-box;
-                        position: relative;
-                        display: flex;
-                        flex-direction: column;
-                    }
-                    .iso-header { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 6px; table-layout: fixed; }
-                    .iso-header td { border: 1px solid #000; text-align: center; vertical-align: middle; }
-                    .logo-cell { width: 22%; padding: 4px; }
-                    .title-cell { width: 54%; font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 700; line-height: 1.1; text-transform: uppercase; color: #000; }
-                    .title-cell .sub-title { font-size: 10px; font-weight: 500; color: #333; letter-spacing: 0.5px; display: block; margin-top: 3px; }
-                    .qms-item { width: 24%; font-family: 'Oswald', sans-serif; font-size: 9.5px; text-align: left !important; padding: 2px 6px; height: 17px; }
-                    .info-bar { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 6px; font-size: 10.5px; font-weight: bold; }
-                    .info-bar td { border: 1px solid #000; padding: 4px 6px; vertical-align: middle; }
-                    .val-text { font-weight: normal; margin-left: 4px; }
-                    .content-table { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 8px; font-size: 9.5px; }
-                    .content-table th { 
-                        background-color: #333333 !important; 
-                        -webkit-print-color-adjust: exact !important; 
-                        print-color-adjust: exact !important; 
-                        color: #ffffff !important; 
-                        text-align: center; 
-                        padding: 5px 3px; 
-                        border: 1px solid #000; 
-                        font-weight: 700; 
-                        font-size: 9px; 
-                        text-transform: uppercase; 
-                    }
-                    .content-table td { border: 1px solid #000; padding: 3px 5px; vertical-align: middle; }
-                    .footer-box { margin-top: auto; border-top: 1px solid #000; padding-top: 6px; display: flex; justify-content: space-between; font-size: 9px; color: #333; }
                     @media print {
                         * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
                         body { background: #ffffff !important; padding: 0 !important; }
                         .btn-print-fixed { display: none !important; }
-                        .page-a4 { width: 100% !important; min-height: auto !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
                         @page { size: A4 portrait; margin: 8mm; }
                     }
                 </style>
@@ -821,49 +917,8 @@
                 <button class="btn-print-fixed" onclick="window.print()">
                     🖨️ Imprimir / Guardar PDF
                 </button>
-                <div class="page-a4">
-                    <table class="iso-header">
-                        <tr>
-                            <td class="logo-cell" rowspan="3">
-                                <img src="${empLogoUrl}" alt="Logo Empresa" style="max-height: 46px; max-width: 100%; object-fit: contain;">
-                            </td>
-                            <td class="title-cell" rowspan="3">
-                                STATUS "UNIDADES EN BASE"<br>
-                                <span class="sub-title">CONTROL Y SEGURIDAD PATRIMONIAL</span>
-                            </td>
-                            <td class="qms-item"><b>CÓDIGO:</b> F-SEG-0010</td>
-                        </tr>
-                        <tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>
-                        <tr><td class="qms-item"><b>F. EMISIÓN:</b> ${fechaFormateada}</td></tr>
-                    </table>
-                    <table class="info-bar">
-                        <tr>
-                            <td style="width: 30%;">FECHA: <span class="val-text">${fechaFormateada}</span></td>
-                            <td style="width: 35%;">EMPRESA: <span class="val-text">${window._subEmpresaActiva}</span></td>
-                            <td style="width: 35%;">TOTAL REGISTRADAS: <span class="val-text" style="font-weight:bold; color:#0284c7;">${items.length}</span></td>
-                        </tr>
-                    </table>
-                    <table class="content-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 26px;">#</th>
-                                <th style="width: 60px;">CORTE</th>
-                                <th style="width: 80px;">PLACA CAMIÓN</th>
-                                <th style="width: 80px;">PLACA CARRETA</th>
-                                <th style="width: 140px;">CONDUCTOR</th>
-                                <th style="width: 80px;">ZONA</th>
-                                <th style="width: 80px;">ESTADO</th>
-                                <th>OBSERVACIONES</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${filasHtml}
-                        </tbody>
-                    </table>
-                    <div class="footer-box">
-                        <div><b>ERP Azkell Fleet</b> — Módulo de Seguridad y Control Patrimonial</div>
-                        <div>Generado el: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}</div>
-                    </div>
+                <div style="background:#ffffff; box-shadow:0 4px 25px rgba(0,0,0,0.4);">
+                    ${htmlFinal}
                 </div>
                 <script>
                     window.onload = function() {
