@@ -1432,16 +1432,16 @@ function _sguInitForm() {
     if (_sguTipoSalida === 'COMPRAS') {
         if (formTitle) formTitle.textContent = 'Registrar Salida de Compras';
         if (bannerEl) {
-            bannerEl.style.background = '#fffbeb';
-            bannerEl.style.borderColor = '#fde68a';
+            bannerEl.className = 'sgu-tipo-banner banner-compras d-flex align-items-center justify-content-between flex-wrap gap-2';
         }
         if (bannerIcon) {
             bannerIcon.style.background = '#d97706';
+            bannerIcon.style.boxShadow = '0 4px 12px rgba(217, 119, 6, 0.25)';
             bannerIcon.innerHTML = '<i class="bi bi-cart3"></i>';
         }
         if (bannerBadge) {
             bannerBadge.textContent = 'COMPRAS';
-            bannerBadge.className = 'badge bg-warning text-dark text-uppercase px-2 py-0.5 rounded-pill';
+            bannerBadge.className = 'badge bg-warning text-dark text-uppercase px-2.5 py-1 rounded-pill';
             bannerBadge.style.background = '';
         }
         if (bannerTitle) bannerTitle.textContent = 'Salida Express de Compras Locales';
@@ -1470,16 +1470,16 @@ function _sguInitForm() {
     } else if (_sguTipoSalida === 'TALLER') {
         if (formTitle) formTitle.textContent = 'Registrar Salida a Taller Tercero';
         if (bannerEl) {
-            bannerEl.style.background = '#f5f3ff';
-            bannerEl.style.borderColor = '#ddd6fe';
+            bannerEl.className = 'sgu-tipo-banner banner-taller d-flex align-items-center justify-content-between flex-wrap gap-2';
         }
         if (bannerIcon) {
             bannerIcon.style.background = '#7c3aed';
+            bannerIcon.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.25)';
             bannerIcon.innerHTML = '<i class="bi bi-tools"></i>';
         }
         if (bannerBadge) {
             bannerBadge.textContent = 'TALLER TERCERO';
-            bannerBadge.className = 'badge text-white text-uppercase px-2 py-0.5 rounded-pill';
+            bannerBadge.className = 'badge text-white text-uppercase px-2.5 py-1 rounded-pill';
             bannerBadge.style.background = '#7c3aed';
         }
         if (bannerTitle) bannerTitle.textContent = 'Salida a Taller Tercero / Externo';
@@ -1509,16 +1509,16 @@ function _sguInitForm() {
         // Modo RUTA normal
         if (formTitle) formTitle.textContent = 'Registrar Salida de Unidad';
         if (bannerEl) {
-            bannerEl.style.background = '#f0f9ff';
-            bannerEl.style.borderColor = '#bae6fd';
+            bannerEl.className = 'sgu-tipo-banner banner-ruta d-flex align-items-center justify-content-between flex-wrap gap-2';
         }
         if (bannerIcon) {
             bannerIcon.style.background = '#0284c7';
+            bannerIcon.style.boxShadow = '0 4px 12px rgba(2, 132, 199, 0.25)';
             bannerIcon.innerHTML = '<i class="bi bi-geo-alt-fill"></i>';
         }
         if (bannerBadge) {
             bannerBadge.textContent = 'RUTA';
-            bannerBadge.className = 'badge bg-primary text-uppercase px-2 py-0.5 rounded-pill';
+            bannerBadge.className = 'badge bg-primary text-uppercase px-2.5 py-1 rounded-pill';
             bannerBadge.style.background = '';
         }
         if (bannerTitle) bannerTitle.textContent = 'Salida a Ruta de Operación';
