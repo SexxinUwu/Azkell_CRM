@@ -228,14 +228,14 @@ window.actualizarBadgeGlobalFiltrosDoc = function() {
 };
 
 function calcularEstado(fechaVencimiento) {
-    if (!fechaVencimiento) return { text: 'Indefinido', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', bdgClass: 'bdg-gray', score: -1, diff: null };
+    if (!fechaVencimiento) return { text: 'Permanente', class: 's-green', color: '#10b981', bgClass: 'bg-green', bdgClass: 'bdg-green', score: 3, diff: null };
     
     const hoy = new Date();
     hoy.setHours(0,0,0,0);
     const ven = new Date(fechaVencimiento);
     ven.setHours(0,0,0,0);
     
-    if(isNaN(ven.getTime())) return { text: 'Indefinido', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', bdgClass: 'bdg-gray', score: -1, diff: null };
+    if(isNaN(ven.getTime())) return { text: 'Permanente', class: 's-green', color: '#10b981', bgClass: 'bg-green', bdgClass: 'bdg-green', score: 3, diff: null };
 
     const diffTime = ven.getTime() - hoy.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -2058,6 +2058,8 @@ window.abrirDocModal = function(title, contentRows, est, docUrl, tipoDocKey) {
         else if(est.class === 's-red') color = '#ef4444';
 
         html += `<div class="doc-modal-row" style="margin-top:0.5rem;"><span class="doc-modal-label">Estado Actual:</span><span class="doc-modal-val" style="color:${color}; font-weight:700;">${labelText}</span></div>`;
+    } else {
+        html += `<div class="doc-modal-row" style="margin-top:0.5rem;"><span class="doc-modal-label">Estado Actual:</span><span class="doc-modal-val" style="color:#10b981; font-weight:700;">Permanente (Vigente)</span></div>`;
     }
     
     document.getElementById('dm-data').innerHTML = html;
