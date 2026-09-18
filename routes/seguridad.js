@@ -636,7 +636,7 @@ module.exports = (db, logAudit) => {
     // ── Catálogo de Placas y Conductores para Selección ───────────
     router.get('/seguridad/unidades-base/catalogo-placas', (req, res) => {
         const sqlPlacas = `
-            SELECT DISTINCT placa, marca, tipo, tipo_unidad, motora 
+            SELECT DISTINCT placa, marca, tipo, motora 
             FROM placas 
             ORDER BY placa ASC
         `;
@@ -649,9 +649,9 @@ module.exports = (db, logAudit) => {
                 rows.forEach(r => {
                     const p = (r.placa || '').trim().toUpperCase();
                     if (!p) return;
-                    todas.push({ placa: p, marca: r.marca || '', tipo: r.tipo || r.tipo_unidad || '' });
+                    todas.push({ placa: p, marca: r.marca || '', tipo: r.tipo || '' });
 
-                    const tipo = (r.tipo || r.tipo_unidad || '').toUpperCase();
+                    const tipo = (r.tipo || '').toUpperCase();
                     const motora = String(r.motora || '').toUpperCase();
 
                     // Carreta / Remolque: no motora, o tipo contiene REMOLQUE, CARRETA, FURGON, CISTERNA, SEMI, PLATAFORMA
@@ -666,9 +666,9 @@ module.exports = (db, logAudit) => {
                         tipo.includes('TOLVA');
 
                     if (esCarreta) {
-                        carretas.push({ placa: p, marca: r.marca || '', tipo: r.tipo || r.tipo_unidad || 'Carreta' });
+                        carretas.push({ placa: p, marca: r.marca || '', tipo: r.tipo || 'Carreta' });
                     } else {
-                        tractos.push({ placa: p, marca: r.marca || '', tipo: r.tipo || r.tipo_unidad || 'Tracto / Camión' });
+                        tractos.push({ placa: p, marca: r.marca || '', tipo: r.tipo || 'Tracto / Camión' });
                     }
                 });
             }
@@ -688,8 +688,8 @@ module.exports = (db, logAudit) => {
         const corteTarget = req.query.corte || 'ALL';
         const empresaTarget = (req.query.empresa || 'TODAS').toUpperCase().trim();
 
-        // 1. Obtener todas las placas maestras del sistema (excluyendo modelo que no existe en tabla placas)
-        tdb.query('SELECT placa, cliente, marca, tipo, tipo_unidad, motora FROM placas ORDER BY placa ASC', (errP, placasRows) => {
+        // 1. Obtener todas las placas maestras del sistema (excluyendo modelo y tipo_unidad que no existen en tabla placas)
+        tdb.query('SELECT placa, cliente, marca, tipo, motora FROM placas ORDER BY placa ASC', (errP, placasRows) => {
             if (errP) return res.status(500).json({ error: errP.message });
 
             // 2. Obtener todas las unidades en ruta desde el módulo de Checklist
@@ -762,7 +762,7 @@ module.exports = (db, logAudit) => {
                         if (!cleanP) return;
 
                         const motoraStr = String(p.motora || '').toUpperCase().trim();
-                        const tipoUpper = (p.tipo || p.tipo_unidad || '').toUpperCase().trim();
+                        const tipoUpper = String(p.tipo || '').toUpperCase().trim();
 
                         const isNoMotora = motoraStr.includes('NO') || 
                                            motoraStr === '0' ||
@@ -891,7 +891,7 @@ module.exports = (db, logAudit) => {
                             empresa: emp,
                             empresaTitular: emp,
                             marca: p.marca || '',
-                            tipo: p.tipo || p.tipo_unidad || 'TRACTO / CAMIÓN',
+                            tipo: p.tipo || 'TRACTO / CAMIÓN',
                             status_operativo: statusOp,
                             ubicacion: ubicacion,
                             zona: ubicacion,
@@ -953,7 +953,7 @@ module.exports = (db, logAudit) => {
         const usuario = (req.user && (req.user.nombre || req.user.usuario)) || req.body.usuario || 'Seguridad';
 
         // 1. Obtener todas las placas no-motoras descartadas (solo tractos/camiones)
-        tdb.query('SELECT placa, cliente, tipo, tipo_unidad, motora FROM placas', (errP, placasRows) => {
+        tdb.query('SELECT placa, cliente, tipo, motora FROM placas', (errP, placasRows) => {
             if (errP) return res.status(500).json({ error: errP.message });
 
             // 2. Obtener placas actualmente en ruta
@@ -974,7 +974,7 @@ module.exports = (db, logAudit) => {
                         if (!cleanP) return;
 
                         const motoraStr = String(p.motora || '').toUpperCase().trim();
-                        const tipoUpper = (p.tipo || p.tipo_unidad || '').toUpperCase().trim();
+                        const tipoUpper = String(p.tipo || '').toUpperCase().trim();
 
                         const isNoMotora = motoraStr.includes('NO') || 
                                            motoraStr === '0' ||
