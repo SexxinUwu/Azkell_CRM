@@ -71,15 +71,33 @@
 
             const sel = document.getElementById(`ca-audit-select-${globalIdx}`);
             if (sel) {
-                sel.style.background = estado === 'OBSERVADO' ? '#fff7ed' : (estado === 'CONFORME' ? '#f0fdf4' : '#f8fafc');
-                sel.style.color = estado === 'OBSERVADO' ? '#c2410c' : (estado === 'CONFORME' ? '#15803d' : '#64748b');
-                sel.style.borderColor = estado === 'OBSERVADO' ? '#f97316' : (estado === 'CONFORME' ? '#22c55e' : '#cbd5e1');
+                if (estado === 'CONFORME') {
+                    // Bloquear permanentemente el elemento para que no se pueda editar
+                    const parentTd = sel.parentElement;
+                    if (parentTd) {
+                        parentTd.innerHTML = `
+                            <div class="d-inline-flex align-items-center justify-content-center gap-1.5 w-100 py-1 px-2 fw-bold text-nowrap"
+                                 style="font-size: 0.74rem; border-radius: 6px; background: #f0fdf4; color: #15803d; border: 1px solid #86efac;"
+                                 title="Auditoría Conforme (Bloqueado)">
+                                <i class="bi bi-check-circle-fill text-success" style="font-size: 0.82rem;"></i> Conforme
+                            </div>
+                        `;
+                    }
+                } else {
+                    sel.style.background = estado === 'OBSERVADO' ? '#fff7ed' : '#f8fafc';
+                    sel.style.color = estado === 'OBSERVADO' ? '#c2410c' : '#64748b';
+                    sel.style.borderColor = estado === 'OBSERVADO' ? '#f97316' : '#cbd5e1';
+                }
             }
 
             const obsInput = document.getElementById(`ca-obs-input-${globalIdx}`);
             if (estado === 'OBSERVADO' && !window._caShowColObs) {
                 window.caToggleColObservacion();
                 setTimeout(() => { if (obsInput) obsInput.focus(); }, 150);
+            } else if (estado === 'CONFORME' && obsInput) {
+                obsInput.readOnly = true;
+                obsInput.style.background = '#f8fafc';
+                obsInput.style.cursor = 'not-allowed';
             }
 
             const obsVal = obsInput ? obsInput.value : (trip ? (trip.observacionAuditoria || '') : '');
@@ -1329,14 +1347,22 @@
                 <tr class="ca-row-main" id="ca-row-${globalIdx}" onclick="window.caToggleDetalleTramo(${globalIdx})">
                     <!-- Columna Auditoría (Acción: Conforme / Observado) -->
                     <td class="text-center py-1.5" onclick="event.stopPropagation()" style="min-width: 135px;">
-                        <select class="form-select form-select-sm fw-bold ca-select-audit"
-                                id="ca-audit-select-${globalIdx}"
-                                onchange="window.caCambiarAuditoria('${esc(t.viaje)}', this.value, ${globalIdx})"
-                                style="font-size: 0.74rem; padding-top: 2px; padding-bottom: 2px; border-radius: 6px; cursor: pointer; ${t.estadoAuditoria === 'OBSERVADO' ? 'background:#fff7ed; color:#c2410c; border-color:#f97316;' : (t.estadoAuditoria === 'CONFORME' ? 'background:#f0fdf4; color:#15803d; border-color:#22c55e;' : 'background:#f8fafc; color:#64748b; border-color:#cbd5e1;')}">
-                            <option value="PENDIENTE" ${(!t.estadoAuditoria || t.estadoAuditoria === 'PENDIENTE') ? 'selected' : ''}>⏳ Pendiente</option>
-                            <option value="CONFORME" ${t.estadoAuditoria === 'CONFORME' ? 'selected' : ''}>✅ Conforme</option>
-                            <option value="OBSERVADO" ${t.estadoAuditoria === 'OBSERVADO' ? 'selected' : ''}>⚠️ Observado</option>
-                        </select>
+                        ${t.estadoAuditoria === 'CONFORME' ? `
+                            <div class="d-inline-flex align-items-center justify-content-center gap-1.5 w-100 py-1 px-2 fw-bold text-nowrap"
+                                 style="font-size: 0.74rem; border-radius: 6px; background: #f0fdf4; color: #15803d; border: 1px solid #86efac;"
+                                 title="Auditoría Conforme (Bloqueado)">
+                                <i class="bi bi-check-circle-fill text-success" style="font-size: 0.82rem;"></i> Conforme
+                            </div>
+                        ` : `
+                            <select class="form-select form-select-sm fw-bold ca-select-audit"
+                                    id="ca-audit-select-${globalIdx}"
+                                    onchange="window.caCambiarAuditoria('${esc(t.viaje)}', this.value, ${globalIdx})"
+                                    style="font-size: 0.74rem; padding-top: 2px; padding-bottom: 2px; border-radius: 6px; cursor: pointer; ${t.estadoAuditoria === 'OBSERVADO' ? 'background:#fff7ed; color:#c2410c; border-color:#f97316;' : 'background:#f8fafc; color:#64748b; border-color:#cbd5e1;'}">
+                                <option value="PENDIENTE" ${(!t.estadoAuditoria || t.estadoAuditoria === 'PENDIENTE') ? 'selected' : ''}>⏳ Pendiente</option>
+                                <option value="CONFORME">✅ Conforme</option>
+                                <option value="OBSERVADO" ${t.estadoAuditoria === 'OBSERVADO' ? 'selected' : ''}>⚠️ Observado</option>
+                            </select>
+                        `}
                     </td>
 
                     <!-- Columna Observación (Oculta por defecto, desplegable con botón '+') -->
@@ -1346,9 +1372,7 @@
                                    id="ca-obs-input-${globalIdx}"
                                    placeholder="${t.estadoAuditoria === 'OBSERVADO' ? 'Escribir motivo...' : 'Observación...'}"
                                    value="${esc(t.observacionAuditoria || '')}"
-                                   onchange="window.caGuardarObservacion('${esc(t.viaje)}', this.value, ${globalIdx})"
-                                   onblur="window.caGuardarObservacion('${esc(t.viaje)}', this.value, ${globalIdx})"
-                                   style="font-size:0.75rem; ${t.estadoAuditoria === 'OBSERVADO' ? 'border-color:#fdba74; background:#fffaf5;' : ''}">
+                                   ${t.estadoAuditoria === 'CONFORME' ? 'readonly style="font-size:0.75rem; background:#f8fafc; cursor:not-allowed;"' : `onchange="window.caGuardarObservacion('${esc(t.viaje)}', this.value, ${globalIdx})" onblur="window.caGuardarObservacion('${esc(t.viaje)}', this.value, ${globalIdx})" style="font-size:0.75rem; ${t.estadoAuditoria === 'OBSERVADO' ? 'border-color:#fdba74; background:#fffaf5;' : ''}"`}>
                             <span class="input-group-text bg-white px-1.5" id="ca-obs-status-${globalIdx}" style="display:none; font-size:0.7rem; border-color:#cbd5e1;" title="Guardado en Base de Datos">
                                 <i class="bi bi-check-circle-fill text-success"></i>
                             </span>
