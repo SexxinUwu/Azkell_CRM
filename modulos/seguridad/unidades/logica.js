@@ -10,12 +10,27 @@ var _sguGlobalTemplate = [];
 var _sguChecklist = {};
 var _sguPhotos = { salida: [], retorno: [] };
 var _sguEditMode = 'salida';
+var _sguTipoSalida = 'RUTA'; // 'RUTA' | 'COMPRAS' | 'TALLER'
 var _sguActiveTab = 'activos';
 var _sguLoadedAll = false;
 var _sguLoadingAll = false;
 var _sguStats = { total: 0, en_ruta: 0, completados: 0, alertas: 0 };
 var _sguRecursos = { placas: [], conductores: [] };
 var _sguVehiculosCache = null;
+
+function _sguGetTipoSalida(rec) {
+    if (!rec) return 'RUTA';
+    if (rec.tipo_salida) {
+        var ts = String(rec.tipo_salida).toUpperCase();
+        if (ts.includes('COMPRA')) return 'COMPRAS';
+        if (ts.includes('TALLER') || ts.includes('MANTENIMIENTO')) return 'TALLER';
+        return 'RUTA';
+    }
+    var dest = String(rec.destino || '').toUpperCase();
+    if (dest.includes('COMPRA')) return 'COMPRAS';
+    if (dest.includes('TALLER') || dest.includes('MANTENIMIENTO') || dest.includes('MAESTRANZA')) return 'TALLER';
+    return 'RUTA';
+}
 
 // ── HELPERS ──────────────────────────────────────────────────────
 function _sguIsAdmin() {
@@ -662,8 +677,29 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// ── NAVEGACIÓN ───────────────────────────────────────────────────
+// ── NAVEGACIÓN Y SELECTOR DE TIPO DE SALIDA ────────────────────────
 window._sguNav = function(view, id) { window._sguShowView(view, id); };
+
+window._sguAbrirSelectorTipoSalida = function() {
+    var modalEl = document.getElementById('sgu-modal-tipo-salida');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalInstance.show();
+    } else {
+        // Fallback si no está el modal
+        window._sguNav('form');
+    }
+};
+
+window._sguSeleccionarTipoSalida = function(tipo) {
+    _sguTipoSalida = tipo || 'RUTA';
+    var modalEl = document.getElementById('sgu-modal-tipo-salida');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        var modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+    }
+    window._sguNav('form');
+};
 
 window._sguOpenScanner = function() {
     if (typeof window._abrirEscaner === 'function') {
@@ -821,10 +857,20 @@ function _sguRenderList() {
     filtered.forEach(function(rec) {
         var isEnRuta = rec.estado === 'en_ruta';
         var hasAlert = rec.salida_has_alert || rec.retorno_has_alert;
+        var tipoS = _sguGetTipoSalida(rec);
 
-        var statusBadge = isEnRuta
-            ? '<span class="sgu-badge sgu-badge-en-ruta"><i class="bi bi-truck"></i> EN RUTA</span>'
-            : '<span class="sgu-badge sgu-badge-completado"><i class="bi bi-check-circle-fill"></i> COMPLETADO</span>';
+        var statusBadge = '';
+        if (isEnRuta) {
+            if (tipoS === 'COMPRAS') {
+                statusBadge = '<span class="sgu-badge sgu-badge-compras"><i class="bi bi-cart3"></i> EN COMPRAS</span>';
+            } else if (tipoS === 'TALLER') {
+                statusBadge = '<span class="sgu-badge sgu-badge-taller"><i class="bi bi-tools"></i> EN TALLER</span>';
+            } else {
+                statusBadge = '<span class="sgu-badge sgu-badge-en-ruta"><i class="bi bi-truck"></i> EN RUTA</span>';
+            }
+        } else {
+            statusBadge = '<span class="sgu-badge sgu-badge-completado"><i class="bi bi-check-circle-fill"></i> COMPLETADO</span>';
+        }
 
         var alertBadge = hasAlert
             ? '<span class="sgu-badge sgu-badge-alerta" title="Presentó observaciones"><i class="bi bi-exclamation-triangle-fill"></i> CON NOVEDAD</span>'
@@ -1280,11 +1326,13 @@ function _sguInitForm() {
 
     window._sguLimpiarViajeVinculado(true);
 
-    document.getElementById('sgu-f-placa').value = '';
-    document.getElementById('sgu-f-carreta').value = '';
-    document.getElementById('sgu-f-conductor').value = '';
-    document.getElementById('sgu-f-destino').value = '';
-    document.getElementById('sgu-f-km').value = '';
+    var fPlaca = document.getElementById('sgu-f-placa'); if (fPlaca) fPlaca.value = '';
+    var fCarreta = document.getElementById('sgu-f-carreta'); if (fCarreta) fCarreta.value = '';
+    var fCond = document.getElementById('sgu-f-conductor'); if (fCond) fCond.value = '';
+    var fDest = document.getElementById('sgu-f-destino'); if (fDest) fDest.value = '';
+    var fKm = document.getElementById('sgu-f-km'); if (fKm) fKm.value = '';
+    var fObs = document.getElementById('sgu-f-observaciones'); if (fObs) fObs.value = '';
+
     var hintEl = document.getElementById('sgu-f-km-hint');
     if (hintEl) {
         hintEl.textContent = '';
@@ -1296,16 +1344,143 @@ function _sguInitForm() {
     if (bT) bT.style.display = 'none';
     if (bC) bC.style.display = 'none';
 
-    _sguRenderChecklist();
-    window._sguCheckFormReady();
+    // Configuración visual según _sguTipoSalida ('RUTA', 'COMPRAS', 'TALLER')
+    var bannerEl = document.getElementById('sgu-form-tipo-banner');
+    var bannerIcon = document.getElementById('sgu-tipo-banner-icon');
+    var bannerBadge = document.getElementById('sgu-tipo-banner-badge');
+    var bannerTitle = document.getElementById('sgu-tipo-banner-title');
+    var bannerDesc = document.getElementById('sgu-tipo-banner-desc');
+    var formTitle = document.getElementById('sgu-form-title');
+    var cardLeftTitle = document.getElementById('sgu-card-left-title');
 
-    // Inicializar Canvas de Firmas de Salida
-    setTimeout(function() {
-        window._sguSetupSignatureCanvas('sgu-sig-salida-conductor');
-        window._sguSetupSignatureCanvas('sgu-sig-salida-vigilancia');
-        window._sguClearSignature('sgu-sig-salida-conductor');
-        window._sguClearSignature('sgu-sig-salida-vigilancia');
-    }, 120);
+    var secViaje = document.getElementById('sgu-sec-viaje');
+    var colLeft = document.getElementById('sgu-col-form-left');
+    var colRight = document.getElementById('sgu-col-form-right');
+    var btnExpressWrap = document.getElementById('sgu-btn-save-express-wrap');
+    var btnExpress = document.getElementById('sgu-btn-save-express');
+
+    if (_sguTipoSalida === 'COMPRAS') {
+        if (formTitle) formTitle.textContent = 'Registrar Salida de Compras';
+        if (bannerEl) {
+            bannerEl.style.background = '#fffbeb';
+            bannerEl.style.borderColor = '#fde68a';
+        }
+        if (bannerIcon) {
+            bannerIcon.style.background = '#d97706';
+            bannerIcon.innerHTML = '<i class="bi bi-cart3"></i>';
+        }
+        if (bannerBadge) {
+            bannerBadge.textContent = 'COMPRAS';
+            bannerBadge.className = 'badge bg-warning text-dark text-uppercase px-2 py-0.5 rounded-pill';
+            bannerBadge.style.background = '';
+        }
+        if (bannerTitle) bannerTitle.textContent = 'Salida Express de Compras Locales';
+        if (bannerDesc) bannerDesc.textContent = 'Solo complete los datos de asignación de unidad y odómetro. No requiere checklist ni firmas obligatorias.';
+        if (cardLeftTitle) cardLeftTitle.innerHTML = '<i class="bi bi-cart3 text-warning me-1"></i> Asignación de Unidad y Destino de Compras';
+
+        if (secViaje) secViaje.classList.add('d-none');
+        if (colLeft) {
+            colLeft.className = 'col-12 col-lg-8 mx-auto';
+        }
+        if (colRight) colRight.classList.add('d-none');
+        if (btnExpressWrap) btnExpressWrap.classList.remove('d-none');
+        if (btnExpress) {
+            btnExpress.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Registrar Salida de Compras';
+            btnExpress.className = 'btn btn-warning text-dark w-100 py-3 rounded-3 fw-bold shadow-sm';
+            btnExpress.style.background = '';
+        }
+
+        if (fDest) {
+            fDest.value = 'COMPRAS LOCALES';
+            fDest.placeholder = 'Ej. COMPRAS LOCALES / TIENDA / FERRETERÍA';
+        }
+        if (fObs) {
+            fObs.placeholder = 'Detalles opcionales de las compras o repuestos a adquirir...';
+        }
+    } else if (_sguTipoSalida === 'TALLER') {
+        if (formTitle) formTitle.textContent = 'Registrar Salida a Taller Tercero';
+        if (bannerEl) {
+            bannerEl.style.background = '#f5f3ff';
+            bannerEl.style.borderColor = '#ddd6fe';
+        }
+        if (bannerIcon) {
+            bannerIcon.style.background = '#7c3aed';
+            bannerIcon.innerHTML = '<i class="bi bi-tools"></i>';
+        }
+        if (bannerBadge) {
+            bannerBadge.textContent = 'TALLER TERCERO';
+            bannerBadge.className = 'badge text-white text-uppercase px-2 py-0.5 rounded-pill';
+            bannerBadge.style.background = '#7c3aed';
+        }
+        if (bannerTitle) bannerTitle.textContent = 'Salida a Taller Tercero / Externo';
+        if (bannerDesc) bannerDesc.textContent = 'Registro express de traslado a taller o mantenimiento externo con terceros.';
+        if (cardLeftTitle) cardLeftTitle.innerHTML = '<i class="bi bi-tools text-purple me-1" style="color:#7c3aed;"></i> Asignación de Unidad y Taller Tercero';
+
+        if (secViaje) secViaje.classList.add('d-none');
+        if (colLeft) {
+            colLeft.className = 'col-12 col-lg-8 mx-auto';
+        }
+        if (colRight) colRight.classList.add('d-none');
+        if (btnExpressWrap) btnExpressWrap.classList.remove('d-none');
+        if (btnExpress) {
+            btnExpress.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Registrar Salida a Taller Tercero';
+            btnExpress.className = 'btn w-100 py-3 rounded-3 fw-bold shadow-sm text-white';
+            btnExpress.style.background = '#7c3aed';
+        }
+
+        if (fDest) {
+            fDest.value = 'TALLER TERCERO / MANTENIMIENTO';
+            fDest.placeholder = 'Ej. TALLER TERCERO / CONCESIONARIO / MAESTRANZA';
+        }
+        if (fObs) {
+            fObs.placeholder = 'Detalles opcionales del trabajo o servicio a realizar en el taller...';
+        }
+    } else {
+        // Modo RUTA normal
+        if (formTitle) formTitle.textContent = 'Registrar Salida de Unidad';
+        if (bannerEl) {
+            bannerEl.style.background = '#f0f9ff';
+            bannerEl.style.borderColor = '#bae6fd';
+        }
+        if (bannerIcon) {
+            bannerIcon.style.background = '#0284c7';
+            bannerIcon.innerHTML = '<i class="bi bi-geo-alt-fill"></i>';
+        }
+        if (bannerBadge) {
+            bannerBadge.textContent = 'RUTA';
+            bannerBadge.className = 'badge bg-primary text-uppercase px-2 py-0.5 rounded-pill';
+            bannerBadge.style.background = '';
+        }
+        if (bannerTitle) bannerTitle.textContent = 'Salida a Ruta de Operación';
+        if (bannerDesc) bannerDesc.textContent = 'Formulario con checklist técnico, fotos de evidencia y firmas digitales.';
+        if (cardLeftTitle) cardLeftTitle.innerHTML = '<i class="bi bi-truck text-primary me-1"></i> Asignación de Unidad y Ruta';
+
+        if (secViaje) secViaje.classList.remove('d-none');
+        if (colLeft) {
+            colLeft.className = 'col-12 col-lg-7';
+        }
+        if (colRight) colRight.classList.remove('d-none');
+        if (btnExpressWrap) btnExpressWrap.classList.add('d-none');
+
+        if (fDest) {
+            fDest.value = '';
+            fDest.placeholder = 'Ej. LIMA - CUSCO';
+        }
+        if (fObs) {
+            fObs.placeholder = 'Detalles de salida, novedades de unidad o conductor (si no escribe nada saldrá \'SIN OBSERVACIONES\')...';
+        }
+
+        _sguRenderChecklist();
+        // Inicializar Canvas de Firmas de Salida
+        setTimeout(function() {
+            window._sguSetupSignatureCanvas('sgu-sig-salida-conductor');
+            window._sguSetupSignatureCanvas('sgu-sig-salida-vigilancia');
+            window._sguClearSignature('sgu-sig-salida-conductor');
+            window._sguClearSignature('sgu-sig-salida-vigilancia');
+        }, 120);
+    }
+
+    window._sguCheckFormReady();
 }
 
 window._sguCheckFormReady = function() {
@@ -1495,12 +1670,22 @@ async function _sguRenderDetail(recordId) {
     if (placaEl) placaEl.textContent = rec.placa_tracto + (rec.placa_carreta ? ' / ' + rec.placa_carreta : '');
     if (condEl)  condEl.textContent = (rec.conductor || 'Sin conductor') + ' • Destino: ' + (rec.destino || '---');
 
+    var tipoS = _sguGetTipoSalida(rec);
+
     if (badgeEl) {
         if (isEnRuta) {
-            badgeEl.textContent = 'EN RUTA';
-            badgeEl.className = 'sgu-badge sgu-badge-en-ruta';
+            if (tipoS === 'COMPRAS') {
+                badgeEl.innerHTML = '<i class="bi bi-cart3 me-1"></i> EN COMPRAS';
+                badgeEl.className = 'sgu-badge sgu-badge-compras';
+            } else if (tipoS === 'TALLER') {
+                badgeEl.innerHTML = '<i class="bi bi-tools me-1"></i> EN TALLER TERCERO';
+                badgeEl.className = 'sgu-badge sgu-badge-taller';
+            } else {
+                badgeEl.innerHTML = '<i class="bi bi-truck me-1"></i> EN RUTA';
+                badgeEl.className = 'sgu-badge sgu-badge-en-ruta';
+            }
         } else {
-            badgeEl.textContent = 'COMPLETADO';
+            badgeEl.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> COMPLETADO';
             badgeEl.className = 'sgu-badge sgu-badge-completado';
         }
     }
@@ -2042,11 +2227,16 @@ window._sguQueueBackgroundUpload = async function(registroId, tipo, fotosPendien
 
 // ── GUARDAR SALIDA / RETORNO (OPTIMISTIC UI: 0 MS DE ESPERA) ─────
 window._sguSaveRecord = function() {
-    var p = document.getElementById('sgu-f-placa').value.toUpperCase().trim();
-    var c = document.getElementById('sgu-f-carreta').value.toUpperCase().trim();
-    var cond = document.getElementById('sgu-f-conductor').value.trim();
-    var dest = document.getElementById('sgu-f-destino').value.trim();
-    var km = document.getElementById('sgu-f-km').value.trim();
+    var p = (document.getElementById('sgu-f-placa') || {}).value || '';
+    p = p.toUpperCase().trim();
+    var c = (document.getElementById('sgu-f-carreta') || {}).value || '';
+    c = c.toUpperCase().trim();
+    var cond = (document.getElementById('sgu-f-conductor') || {}).value || '';
+    cond = cond.trim();
+    var dest = (document.getElementById('sgu-f-destino') || {}).value || '';
+    dest = dest.trim();
+    var km = (document.getElementById('sgu-f-km') || {}).value || '';
+    km = km.trim();
     var ordenViaje = ((document.getElementById('sgu_orden_viaje') || {}).value || '').trim();
 
     if (!p) {
@@ -2059,11 +2249,18 @@ window._sguSaveRecord = function() {
         document.getElementById('sgu-f-conductor').focus();
         return;
     }
+
+    // Si es express y el destino estaba vacío, asignar el valor por defecto
     if (!dest) {
-        _sguToast('Por favor, ingresa el Destino / Ruta', 'bi-exclamation-triangle');
-        document.getElementById('sgu-f-destino').focus();
-        return;
+        if (_sguTipoSalida === 'COMPRAS') dest = 'COMPRAS LOCALES';
+        else if (_sguTipoSalida === 'TALLER') dest = 'TALLER TERCERO / MANTENIMIENTO';
+        else {
+            _sguToast('Por favor, ingresa el Destino / Ruta', 'bi-exclamation-triangle');
+            document.getElementById('sgu-f-destino').focus();
+            return;
+        }
     }
+
     if (!km || isNaN(km) || Number(km) <= 0) {
         _sguToast('El Kilometraje de Salida es OBLIGATORIO', 'bi-exclamation-triangle');
         var elKm = document.getElementById('sgu-f-km');
@@ -2091,9 +2288,14 @@ window._sguSaveRecord = function() {
     var ts = _sguTimestamp();
     _sguToast('Guardando registro de salida...');
     var btn = document.getElementById('sgu-btn-save');
+    var btnExp = document.getElementById('sgu-btn-save-express');
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Guardando...';
+    }
+    if (btnExp) {
+        btnExp.disabled = true;
+        btnExp.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Guardando...';
     }
 
     var sigConductor = window._sguGetSignatureBase64('sgu-sig-salida-conductor');
@@ -2106,6 +2308,7 @@ window._sguSaveRecord = function() {
         placa_carreta: c,
         conductor: cond,
         destino: dest,
+        tipo_salida: _sguTipoSalida || 'RUTA',
         orden_viaje: ordenViaje || null,
         salida_fecha: ts.date,
         salida_hora: ts.time,
@@ -2134,17 +2337,20 @@ window._sguSaveRecord = function() {
         if (fObs) fObs.value = '';
         _sguLoadRecords(false, function() { window._sguShowView('list'); });
         
-        // 2. Subir fotos en segundo plano
+        // 2. Subir fotos en segundo plano si hubiera
         if (fotosParaSubir.length > 0) {
             window._sguQueueBackgroundUpload(data.id, 'salida', fotosParaSubir);
         }
     })
     .catch(function(e) {
         _sguToast('Error: ' + e.message, 'bi-exclamation-circle');
-        var btn = document.getElementById('sgu-btn-save');
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-check2-circle"></i> Registrar Salida Definitiva';
+        }
+        if (btnExp) {
+            btnExp.disabled = false;
+            btnExp.innerHTML = '<i class="bi bi-check2-circle"></i> Registrar Salida Definitiva';
         }
     });
 };
