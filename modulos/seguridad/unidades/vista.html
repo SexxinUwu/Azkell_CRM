@@ -9,7 +9,7 @@
 
 #moduloSegUnidades {
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
-    padding: 1rem 1.25rem 140px 1.25rem !important;
+    padding: 1rem 1.25rem 220px 1.25rem !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box;
@@ -17,29 +17,31 @@
     flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
+    overflow-y: visible !important;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 991px) {
     #moduloSegUnidades {
-        padding: 0.5rem 0.5rem 160px 0.5rem !important;
+        padding: 0.65rem 0.65rem 260px 0.65rem !important;
     }
-    #sgu-delete-modal .modal-dialog {
-        max-width: 330px !important;
-        width: 88% !important;
-        margin: auto !important;
-        position: relative !important;
-        top: auto !important;
-        bottom: auto !important;
-        transform: none !important;
-        border-radius: 28px !important;
-        height: auto !important;
-        max-height: none !important;
-    }
-    #sgu-delete-modal .modal-content {
-        border-radius: 28px !important;
-        border: none !important;
-        overflow: hidden;
-    }
+}
+
+#sgu-delete-modal .modal-dialog {
+    max-width: 330px !important;
+    width: 88% !important;
+    margin: auto !important;
+    position: relative !important;
+    top: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    border-radius: 28px !important;
+    height: auto !important;
+    max-height: none !important;
+}
+#sgu-delete-modal .modal-content {
+    border-radius: 28px !important;
+    border: none !important;
+    overflow: hidden;
 }
 
 /* ── Modal Confirmación Eliminación (Diseño B - Ultra Optimizado) ─── */
@@ -170,11 +172,17 @@
 }
 
 .sgu-bottom-spacer {
-    height: 120px;
-    width: 100%;
-    flex-shrink: 0;
-    pointer-events: none;
-    display: block;
+    height: 180px !important;
+    width: 100% !important;
+    flex-shrink: 0 !important;
+    pointer-events: none !important;
+    display: block !important;
+}
+
+@media (max-width: 991px) {
+    .sgu-bottom-spacer {
+        height: 280px !important;
+    }
 }
 
 /* ── Vistas y Transiciones ─────────────────────────────────────── */
@@ -1051,6 +1059,7 @@
                 <i class="bi bi-arrow-repeat spin fs-4 d-block mb-2"></i> Cargando empresas disponibles...
             </div>
         </div>
+        <div class="sgu-bottom-spacer"></div>
     </div>
 
     <!-- ═══ VISTA: SELECTOR DE TIPO DE SALIDA (PANTALLA COMPLETA BENTO ERP) ═══════════════ -->
@@ -1156,6 +1165,7 @@
                 </div>
             </div>
         </div>
+        <div class="sgu-bottom-spacer"></div>
     </div>
 
     <!-- ═══ VISTA PRINCIPAL: LISTA / DASHBOARD ═════════════════════ -->
@@ -1285,6 +1295,7 @@
             <!-- Mobile cards render here -->
         </div>
 
+        <div class="sgu-bottom-spacer"></div>
     </div>
 
     <!-- ═══ VISTA: FORMULARIO REGISTRAR SALIDA ═════════════════════ -->
@@ -1606,6 +1617,8 @@
         <button class="sgu-btn-top w-100 py-3 rounded-3 fw-bold mb-4 justify-content-center" onclick="window._sguAddSettingsCat()" style="border:2px dashed #cbd5e1;background:#f8fafc;">
             <i class="bi bi-plus-lg"></i> Añadir Nueva Categoría
         </button>
+
+        <div class="sgu-bottom-spacer"></div>
     </div>
 
 </div>
