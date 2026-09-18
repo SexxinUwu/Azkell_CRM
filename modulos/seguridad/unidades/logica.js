@@ -681,24 +681,12 @@ document.addEventListener('click', function(e) {
 window._sguNav = function(view, id) { window._sguShowView(view, id); };
 
 window._sguAbrirSelectorTipoSalida = function() {
-    var modalEl = document.getElementById('sgu-modal-tipo-salida');
-    if (modalEl && typeof bootstrap !== 'undefined') {
-        var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modalInstance.show();
-    } else {
-        // Fallback si no está el modal
-        window._sguNav('form');
-    }
+    window._sguShowView('selector-tipo');
 };
 
 window._sguSeleccionarTipoSalida = function(tipo) {
     _sguTipoSalida = tipo || 'RUTA';
-    var modalEl = document.getElementById('sgu-modal-tipo-salida');
-    if (modalEl && typeof bootstrap !== 'undefined') {
-        var modalInstance = bootstrap.Modal.getInstance(modalEl);
-        if (modalInstance) modalInstance.hide();
-    }
-    window._sguNav('form');
+    window._sguShowView('form');
 };
 
 window._sguOpenScanner = function() {
@@ -719,7 +707,7 @@ window._sguOpenScanner = function() {
 window._sguShowView = function(view, id) {
     _sguView = view;
     if (id) _sguDetailId = id;
-    ['sgu-portal', 'sgu-list', 'sgu-form', 'sgu-detail', 'sgu-settings'].forEach(function(v) {
+    ['sgu-portal', 'sgu-list', 'sgu-selector-tipo', 'sgu-form', 'sgu-detail', 'sgu-settings'].forEach(function(v) {
         var el = document.getElementById(v);
         if (el) {
             el.style.display = 'none';
