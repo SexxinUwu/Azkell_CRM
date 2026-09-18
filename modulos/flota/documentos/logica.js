@@ -322,6 +322,7 @@ function actualizarTiposDocumentosSelect() {
     const currentVal = sel.value;
     const tiposEstandar = [
         { value: '', label: 'Seleccione...' },
+        { value: 'TIVE', label: 'Tarjeta de Identificación Vehicular (TIVe / SUNARP)' },
         { value: 'TARJETA_PROPIEDAD', label: 'Tarjeta Única de Circulación (TUC / MTC)' },
         { value: 'SOAT', label: 'SOAT (Seguro Obligatorio de Accidentes)' },
         { value: 'MATPEL', label: 'Autorización de Circulación MATPEL (MTC)' },
