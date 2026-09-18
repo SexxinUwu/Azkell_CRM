@@ -10,6 +10,25 @@
     window._caLimitePorPagina = 50;
     window._caShowColObs = false;
 
+    function _caGetModuloParam() {
+        const mod = typeof window.moduloActual === 'string' ? window.moduloActual.toLowerCase() : '';
+        if (mod.includes('marsisa')) return 'marsisa';
+        if (mod === 'operaciones/combustible-analisis' || mod === 'operaciones/combustible-vales') return 'operaciones';
+
+        const navMarsisa = document.getElementById('nav-marsisa-combustible-analisis');
+        const navMbMarsisa = document.getElementById('mbnav-marsisa-combustible-analisis');
+        if ((navMarsisa && navMarsisa.classList.contains('active')) || (navMbMarsisa && navMbMarsisa.classList.contains('active'))) {
+            return 'marsisa';
+        }
+
+        const tenantSlug = (localStorage.getItem('tenant_slug') || '').toLowerCase();
+        const hostname = (window.location.hostname || '').toLowerCase();
+        if (tenantSlug.includes('marsisa') || hostname.includes('marsisa')) {
+            return 'marsisa';
+        }
+        return 'operaciones';
+    }
+
     // Toggle para mostrar/ocultar la columna de observaciones de auditoría
     window.caToggleColObservacion = function() {
         window._caShowColObs = !window._caShowColObs;
@@ -65,7 +84,7 @@
 
             const obsVal = obsInput ? obsInput.value : (trip ? (trip.observacionAuditoria || '') : '');
 
-            const moduloParam = (typeof window.moduloActual === 'string' && window.moduloActual.includes('marsisa')) ? 'marsisa' : 'operaciones';
+            const moduloParam = _caGetModuloParam();
             await fetch(`/api/combustible/auditar-viaje?modulo=${moduloParam}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -97,7 +116,7 @@
             const sel = document.getElementById(`ca-audit-select-${globalIdx}`);
             const estadoVal = sel ? sel.value : (trip ? (trip.estadoAuditoria || 'PENDIENTE') : 'PENDIENTE');
 
-            const moduloParam = (typeof window.moduloActual === 'string' && window.moduloActual.includes('marsisa')) ? 'marsisa' : 'operaciones';
+            const moduloParam = _caGetModuloParam();
             await fetch(`/api/combustible/auditar-viaje?modulo=${moduloParam}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -148,7 +167,7 @@
         }
 
         try {
-            const moduloParam = (typeof window.moduloActual === 'string' && window.moduloActual.includes('marsisa')) ? 'marsisa' : 'operaciones';
+            const moduloParam = _caGetModuloParam();
             const res = await fetch(`/api/combustible/analisis-viajes?modulo=${moduloParam}`);
             const data = await res.json();
 
@@ -2161,6 +2180,20 @@
         XLSX.writeFile(wb, `Analisis_Combustible_CAN_${new Date().toISOString().slice(0, 10)}.xlsx`);
     };
 
-    // Auto-inicializar
+    // Exponer inicializadores para el cargador de módulos SPA
+    window.init_marsisa_combustible_analisis = function() {
+        window.inicializarModuloCombustibleAnalisis();
+    };
+    window.init_operaciones_marsisa_combustible_analisis = function() {
+        window.inicializarModuloCombustibleAnalisis();
+    };
+    window.init_combustible_analisis = function() {
+        window.inicializarModuloCombustibleAnalisis();
+    };
+    window.init_operaciones_combustible_analisis = function() {
+        window.inicializarModuloCombustibleAnalisis();
+    };
+
+    // Auto-inicializar al cargar script
     window.inicializarModuloCombustibleAnalisis();
 })();

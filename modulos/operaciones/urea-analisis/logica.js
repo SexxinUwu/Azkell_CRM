@@ -9,6 +9,25 @@
     window._caPaginaActual = 1;
     window._caLimitePorPagina = 50;
 
+    function _caGetModuloParam() {
+        const mod = typeof window.moduloActual === 'string' ? window.moduloActual.toLowerCase() : '';
+        if (mod.includes('marsisa')) return 'marsisa';
+        if (mod === 'operaciones/urea-analisis') return 'operaciones';
+
+        const navMarsisa = document.getElementById('nav-marsisa-urea-analisis');
+        const navMbMarsisa = document.getElementById('mbnav-marsisa-urea-analisis');
+        if ((navMarsisa && navMarsisa.classList.contains('active')) || (navMbMarsisa && navMbMarsisa.classList.contains('active'))) {
+            return 'marsisa';
+        }
+
+        const tenantSlug = (localStorage.getItem('tenant_slug') || '').toLowerCase();
+        const hostname = (window.location.hostname || '').toLowerCase();
+        if (tenantSlug.includes('marsisa') || hostname.includes('marsisa')) {
+            return 'marsisa';
+        }
+        return 'operaciones';
+    }
+
     // Inicializador del módulo
     window.inicializarModuloCombustibleAnalisis = function() {
         window.caCargarMatrizRendimiento();
@@ -43,7 +62,8 @@
         }
 
         try {
-            const res = await fetch('/api/combustible/analisis-viajes');
+            const moduloParam = _caGetModuloParam();
+            const res = await fetch(`/api/combustible/analisis-viajes?modulo=${moduloParam}`);
             const data = await res.json();
 
             if (data.ok && Array.isArray(data.trips)) {
@@ -1047,6 +1067,20 @@
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Consolidado_Urea");
         XLSX.writeFile(wb, `Analisis_Urea_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
+
+    // Exponer inicializadores para el cargador de módulos SPA
+    window.init_marsisa_urea_analisis = function() {
+        window.inicializarModuloCombustibleAnalisis();
+    };
+    window.init_operaciones_marsisa_urea_analisis = function() {
+        window.inicializarModuloCombustibleAnalisis();
+    };
+    window.init_urea_analisis = function() {
+        window.inicializarModuloCombustibleAnalisis();
+    };
+    window.init_operaciones_urea_analisis = function() {
+        window.inicializarModuloCombustibleAnalisis();
     };
 
     // Auto-inicializar
