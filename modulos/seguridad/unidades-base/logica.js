@@ -225,6 +225,23 @@
         if (elTaller) elTaller.textContent = kpis.enTaller ?? 0;
     };
 
+    // ── Helper: Formatear Nombre de Conductor a Title Case (Mayúsculas y Minúsculas) ──
+    function _subFormatNombreConductor(nombre) {
+        if (!nombre || !nombre.trim() || nombre.trim() === '---' || nombre.trim() === '—') return '---';
+        const trimmed = nombre.trim();
+        if (trimmed.toLowerCase() === 'sin asignar' || trimmed.toLowerCase() === 'sin conductor') return 'Sin asignar';
+
+        const minusculas = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'o', 'u', 'da', 'do', 'dos', 'das']);
+        const palabras = trimmed.toLowerCase().split(/\s+/);
+        return palabras.map((palabra, idx) => {
+            if (!palabra) return '';
+            if (idx > 0 && minusculas.has(palabra)) {
+                return palabra;
+            }
+            return palabra.charAt(0).toUpperCase() + palabra.slice(1);
+        }).join(' ');
+    }
+
     // ── Clasificar Registro por Grupo ─────────────────────────────
     window.subDeterminarTipo = function(r) {
         if (r.esRuta === true) {
@@ -241,8 +258,8 @@
             return 'EN LAVADO';
         }
 
-        const tieneCamion = Boolean(r.placa_camion && r.placa_camion.trim() && r.placa_camion.trim() !== '—');
-        const tieneCarreta = Boolean(r.placa_carreta && r.placa_carreta.trim() && r.placa_carreta.trim() !== '—');
+        const tieneCamion = Boolean(r.placa_camion && r.placa_camion.trim() && r.placa_camion.trim() !== '—' && r.placa_camion.trim() !== '---');
+        const tieneCarreta = Boolean(r.placa_carreta && r.placa_carreta.trim() && r.placa_carreta.trim() !== '—' && r.placa_carreta.trim() !== '---');
 
         if (tieneCamion && tieneCarreta) return 'EN BASE (CAMIÓN - CARRETA)';
         if (tieneCamion && !tieneCarreta) return 'EN BASE (SOLO CAMIÓN / TRACTO)';
@@ -328,17 +345,18 @@
                 let badgeEstado = `<span class="badge-estado-cargado">Cargado</span>`;
                 if (r.estado === 'Con Devolución') badgeEstado = `<span class="badge-estado-devolucion">Con Devolución</span>`;
                 if (r.estado === 'Vacío') badgeEstado = `<span class="badge-estado-vacio">Vacío</span>`;
+                if (r.estado === 'Disponible') badgeEstado = `<span class="badge-estado-cargado">Disponible</span>`;
                 if (r.esRuta) badgeEstado = `<span class="badge-estado-ruta"><i class="bi bi-geo-alt-fill me-1"></i>En Tránsito</span>`;
 
-                const placaCamionHtml = (r.placa_camion && r.placa_camion.trim())
+                const placaCamionHtml = (r.placa_camion && r.placa_camion.trim() && r.placa_camion.trim() !== '—' && r.placa_camion.trim() !== '---')
                     ? `<span class="fw-bold text-dark font-monospace" style="font-size:0.9rem;">${r.placa_camion}</span>`
                     : `<span class="text-muted small">—</span>`;
 
-                const placaCarretaHtml = (r.placa_carreta && r.placa_carreta.trim()) 
+                const placaCarretaHtml = (r.placa_carreta && r.placa_carreta.trim() && r.placa_carreta.trim() !== '—' && r.placa_carreta.trim() !== '---') 
                     ? `<span class="fw-bold text-dark font-monospace" style="font-size:0.9rem;">${r.placa_carreta}</span>` 
                     : `<span class="text-muted small">—</span>`;
 
-                const conductorHtml = (r.conductor && r.conductor.trim())
+                const conductorHtml = (r.conductor && r.conductor.trim() && r.conductor.trim() !== '—' && r.conductor.trim() !== '---')
                     ? `<span class="fw-semibold text-dark">${r.conductor}</span>`
                     : `<span class="text-muted small">—</span>`;
 
@@ -360,8 +378,10 @@
                 } else if (r.esRuta) {
                     accionesHtml = `<span class="badge bg-light text-secondary border fw-normal" style="font-size:0.72rem;">Checklist Activo</span>`;
                 } else {
+                    const isCarreta = (!r.placa_camion || r.placa_camion === '—' || r.placa_camion === '---') && Boolean(r.placa_carreta && r.placa_carreta !== '—');
+                    const targetPlaca = isCarreta ? (r.placa_carreta || '') : (r.placa_camion || '');
                     accionesHtml = `
-                        <button class="btn btn-xs btn-outline-primary py-0 px-2 fw-bold" style="font-size:0.72rem;" onclick="window.subAbrirModalNuevoConPlaca('${r.placa_camion || ''}')">
+                        <button class="btn btn-xs btn-outline-primary py-0 px-2 fw-bold" style="font-size:0.72rem;" onclick="window.subAbrirModalNuevoConPlaca('${targetPlaca}', ${isCarreta})">
                             <i class="bi bi-plus"></i> Registrar
                         </button>
                     `;
@@ -484,25 +504,31 @@
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
 
-    window.subAbrirModalNuevoConPlaca = function(placa) {
+    window.subAbrirModalNuevoConPlaca = function(placa, esCarreta = false) {
         window.subAbrirModalNuevo();
-        const inputPlaca = document.getElementById('sub-form-placa-camion');
-        if (inputPlaca) inputPlaca.value = placa;
+        if (esCarreta) {
+            const inputCarreta = document.getElementById('sub-form-placa-carreta');
+            if (inputCarreta) inputCarreta.value = placa;
+        } else {
+            const inputPlaca = document.getElementById('sub-form-placa-camion');
+            if (inputPlaca) inputPlaca.value = placa;
+        }
     };
 
     // ── Abrir Modal Editar ────────────────────────────────────────
     window.subAbrirModalEditar = function(r) {
         if (!r) return;
         document.getElementById('sub-form-id').value = r.id || '';
+        const tituloPlaca = (r.placa_camion && r.placa_camion !== '—') ? r.placa_camion : (r.placa_carreta || 'Unidad');
         document.getElementById('modalSubTitulo').textContent = 'Editar Registro de Unidad';
-        document.getElementById('modalSubSubtitulo').textContent = `Placa: ${r.placa_camion}`;
+        document.getElementById('modalSubSubtitulo').textContent = `Placa: ${tituloPlaca}`;
 
         let f = r.fecha ? r.fecha.split('T')[0] : new Date().toISOString().split('T')[0];
         document.getElementById('sub-form-fecha').value = f;
         document.getElementById('sub-form-corte').value = r.corte || 'Corte 1';
-        document.getElementById('sub-form-placa-camion').value = r.placa_camion || '';
-        document.getElementById('sub-form-placa-carreta').value = r.placa_carreta || '';
-        document.getElementById('sub-form-conductor').value = r.conductor || '';
+        document.getElementById('sub-form-placa-camion').value = (r.placa_camion && r.placa_camion !== '—' && r.placa_camion !== '---') ? r.placa_camion : '';
+        document.getElementById('sub-form-placa-carreta').value = (r.placa_carreta && r.placa_carreta !== '—' && r.placa_carreta !== '---') ? r.placa_carreta : '';
+        document.getElementById('sub-form-conductor').value = (r.conductor && r.conductor !== '—' && r.conductor !== '---' && r.conductor !== 'Sin asignar') ? r.conductor : '';
         document.getElementById('sub-form-zona').value = r.zona || 'Base';
         document.getElementById('sub-form-estado').value = r.estado || 'Cargado';
         document.getElementById('sub-form-obs').value = r.observacion || '';
@@ -523,8 +549,8 @@
         const estado = document.getElementById('sub-form-estado').value;
         const observacion = document.getElementById('sub-form-obs').value;
 
-        if (!fecha || !corte || !placaCamion) {
-            window.mostrarToast('Por favor completa la fecha, corte y placa del camión', 'warning');
+        if (!fecha || !corte || (!placaCamion && !placaCarreta)) {
+            window.mostrarToast('Por favor completa la fecha, corte y al menos la placa del camión o carreta', 'warning');
             return;
         }
 
@@ -637,23 +663,27 @@
 
             filasHtml += `
                 <tr style="background:#e2e8f0; font-weight:bold;">
-                    <td colspan="8" style="padding: 4px 6px; font-weight:800; font-size:9.5px; text-transform:uppercase; letter-spacing:0.5px; border: 1.5px solid #000;">
+                    <td colspan="7" style="padding: 4px 6px; font-weight:800; font-size:9.5px; text-transform:uppercase; letter-spacing:0.5px; border: 1.5px solid #000;">
                         ■ ${gKey} (${list.length} ${list.length === 1 ? 'UNIDAD' : 'UNIDADES'})
                     </td>
                 </tr>
             `;
 
             list.forEach(r => {
+                const camionStr = (r.placa_camion && r.placa_camion.trim() && r.placa_camion.trim() !== '—' && r.placa_camion.trim() !== '---') ? r.placa_camion : '—';
+                const carretaStr = (r.placa_carreta && r.placa_carreta.trim() && r.placa_carreta.trim() !== '—' && r.placa_carreta.trim() !== '---') ? r.placa_carreta : '—';
+                const conductorFormateado = _subFormatNombreConductor(r.conductor);
+                const zonaStr = r.zona || 'Base';
+
                 filasHtml += `
                     <tr>
-                        <td style="text-align:center; font-weight:bold; width:26px;">${itemIndex++}</td>
-                        <td style="text-align:center; font-weight:bold; color:#0f172a; width:60px;">${r.esRuta ? 'En Ruta' : (r.corte || 'Corte 1')}</td>
-                        <td style="text-align:center; font-family:monospace; font-weight:bold; font-size:10.5px; width:80px;">${r.placa_camion || '---'}</td>
-                        <td style="text-align:center; font-family:monospace; font-size:10.5px; width:80px;">${r.placa_carreta || '---'}</td>
-                        <td style="width:140px; font-size:9.5px;">${r.conductor || '---'}</td>
-                        <td style="text-align:center; font-weight:600; width:80px;">${r.zona || 'Base'}</td>
-                        <td style="text-align:center; font-weight:700; width:80px;">${r.estado || 'Cargado'}</td>
-                        <td style="font-size:9px; word-break:break-word;">${r.observacion || ''}</td>
+                        <td style="text-align:center; font-weight:bold; width:28px; padding:3px 2px; border:1px solid #000; font-size:9px;">${itemIndex++}</td>
+                        <td style="text-align:center; font-weight:bold; color:#0f172a; width:58px; padding:3px 2px; border:1px solid #000; font-size:9px;">${r.esRuta ? 'En Ruta' : (r.corte || 'Corte 1')}</td>
+                        <td style="text-align:center; font-family:monospace; font-weight:bold; font-size:10px; width:82px; padding:3px 2px; border:1px solid #000;">${camionStr}</td>
+                        <td style="text-align:center; font-family:monospace; font-size:10px; width:80px; padding:3px 2px; border:1px solid #000;">${carretaStr}</td>
+                        <td style="width:175px; font-size:9.5px; padding:3px 6px; border:1px solid #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${conductorFormateado}</td>
+                        <td style="text-align:center; font-weight:600; width:115px; font-size:9.5px; padding:3px 4px; border:1px solid #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${zonaStr}</td>
+                        <td style="font-size:9px; word-break:break-word; padding:3px 4px; border:1px solid #000;">${r.observacion || ''}</td>
                     </tr>
                 `;
             });
@@ -684,17 +714,16 @@
                     </tr>
                 </table>
 
-                <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:8px; font-size:9.5px;">
+                <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:8px; font-size:9.5px; table-layout:fixed;">
                     <thead>
                         <tr style="background-color:#333333; color:#ffffff;">
-                            <th style="width:26px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">#</th>
-                            <th style="width:60px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">CORTE</th>
-                            <th style="width:80px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">PLACA CAMIÓN</th>
-                            <th style="width:80px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">PLACA CARRETA</th>
-                            <th style="width:140px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">CONDUCTOR</th>
-                            <th style="width:80px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">ZONA</th>
-                            <th style="width:80px; text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">ESTADO</th>
-                            <th style="text-align:center; padding:5px 3px; border:1px solid #000; font-size:9px;">OBSERVACIONES</th>
+                            <th style="width:28px; text-align:center; padding:5px 2px; border:1px solid #000; font-size:9px;">#</th>
+                            <th style="width:58px; text-align:center; padding:5px 2px; border:1px solid #000; font-size:9px;">CORTE</th>
+                            <th style="width:82px; text-align:center; padding:5px 2px; border:1px solid #000; font-size:9px;">SOLO CAMIÓN</th>
+                            <th style="width:80px; text-align:center; padding:5px 2px; border:1px solid #000; font-size:9px;">CARRETA</th>
+                            <th style="width:175px; text-align:center; padding:5px 4px; border:1px solid #000; font-size:9px;">CONDUCTOR</th>
+                            <th style="width:115px; text-align:center; padding:5px 4px; border:1px solid #000; font-size:9px;">ZONA</th>
+                            <th style="text-align:center; padding:5px 4px; border:1px solid #000; font-size:9px;">OBSERVACIONES</th>
                         </tr>
                     </thead>
                     <tbody>

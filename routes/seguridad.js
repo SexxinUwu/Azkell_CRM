@@ -688,7 +688,7 @@ module.exports = (db, logAudit) => {
         const corteTarget = req.query.corte || 'ALL';
         const empresaTarget = (req.query.empresa || 'TODAS').toUpperCase().trim();
 
-        // 1. Obtener todas las placas maestras del sistema (excluyendo modelo y tipo_unidad que no existen en tabla placas)
+        // 1. Obtener todas las placas maestras del sistema
         tdb.query('SELECT placa, cliente, marca, tipo, motora FROM placas ORDER BY placa ASC', (errP, placasRows) => {
             if (errP) return res.status(500).json({ error: errP.message });
 
@@ -713,18 +713,29 @@ module.exports = (db, logAudit) => {
                 tdb.query(sqlBase, paramsBase, (errB, baseRows) => {
                     if (errB) return res.status(500).json({ error: errB.message });
 
-                    // Mapear unidades en ruta por placa limpia
+                    const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+                    // Mapear unidades en ruta
                     const rutaMap = {};
+                    const carretasEnRutaSet = new Set();
                     (rutaRows || []).forEach(r => {
-                        const cleanP = (r.placa_tracto || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                        if (cleanP) rutaMap[cleanP] = r;
+                        const cleanT = clean(r.placa_tracto);
+                        if (cleanT) rutaMap[cleanT] = r;
+                        const cleanC = clean(r.placa_carreta);
+                        if (cleanC) carretasEnRutaSet.add(cleanC);
                     });
 
-                    // Mapear registros de base guardados (el más reciente por placa)
-                    const baseMap = {};
+                    // Mapear registros de base guardados
+                    const baseCamionMap = {};
+                    const baseCarretaMap = {};
+                    const carretasAcopladasEnBaseSet = new Set();
+
                     (baseRows || []).forEach(b => {
-                        const cleanP = (b.placa_camion || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                        if (cleanP && !baseMap[cleanP]) baseMap[cleanP] = b;
+                        const cleanCamion = clean(b.placa_camion);
+                        const cleanCarreta = clean(b.placa_carreta);
+                        if (cleanCamion && !baseCamionMap[cleanCamion]) baseCamionMap[cleanCamion] = b;
+                        if (cleanCarreta && !baseCarretaMap[cleanCarreta]) baseCarretaMap[cleanCarreta] = b;
+                        if (cleanCamion && cleanCarreta) carretasAcopladasEnBaseSet.add(cleanCarreta);
                     });
 
                     const panorama = [];
@@ -756,14 +767,17 @@ module.exports = (db, logAudit) => {
                         con_alerta: 0
                     };
 
-                    (placasRows || []).forEach(p => {
-                        const pUpper = (p.placa || '').toUpperCase().trim();
-                        const cleanP = pUpper.replace(/[^A-Z0-9]/g, '');
-                        if (!cleanP) return;
+                    const validPlacas = (placasRows || []).filter(p => {
+                        const pU = (p.placa || '').toUpperCase().trim();
+                        return pU && !pU.includes('CONSUMO') && !pU.includes('ENTREGA') && pU.length <= 10;
+                    });
 
+                    const motoras = [];
+                    const noMotoras = [];
+
+                    validPlacas.forEach(p => {
                         const motoraStr = String(p.motora || '').toUpperCase().trim();
                         const tipoUpper = String(p.tipo || '').toUpperCase().trim();
-
                         const isNoMotora = motoraStr.includes('NO') || 
                                            motoraStr === '0' ||
                                            tipoUpper.includes('SEMIREMOLQUE') || 
@@ -776,11 +790,18 @@ module.exports = (db, logAudit) => {
                                            tipoUpper.includes('BATEA') ||
                                            tipoUpper.includes('CAMA');
 
-                        // Solo evaluamos tractos y camiones como unidades motora titulares
-                        if (isNoMotora) return;
+                        if (isNoMotora) noMotoras.push(p);
+                        else motoras.push(p);
+                    });
+
+                    // ── 1. Procesar Unidades Motoras (Tractos / Camiones) ───────────
+                    motoras.forEach(p => {
+                        const pUpper = (p.placa || '').toUpperCase().trim();
+                        const cleanP = clean(pUpper);
+                        if (!cleanP) return;
 
                         let rawCliente = String(p.cliente || '').toUpperCase().trim();
-                        let emp = 'MARSISA'; // Default si está vacío para tractos históricos sin cliente
+                        let emp = 'MARSISA';
                         if (rawCliente.includes('MARSISA')) emp = 'MARSISA';
                         else if (rawCliente.includes('TRAHESA')) emp = 'TRAHESA';
                         else if (rawCliente.includes('ROSYMAR')) emp = 'ROSYMAR';
@@ -793,7 +814,7 @@ module.exports = (db, logAudit) => {
                         empStat.total_flota++;
 
                         const rutaActiva = rutaMap[cleanP];
-                        const baseRecord = baseMap[cleanP];
+                        const baseRecord = baseCamionMap[cleanP];
 
                         let statusOp = 'EN BASE';
                         let ubicacion = 'Base';
@@ -840,7 +861,6 @@ module.exports = (db, logAudit) => {
                                 empStat.en_ruta++;
                             }
                         } else {
-                            // Está físicamente en base
                             if (baseRecord) {
                                 baseId = baseRecord.id;
                                 corte = baseRecord.corte || corte;
@@ -878,7 +898,6 @@ module.exports = (db, logAudit) => {
                             empStat.con_alerta++;
                         }
 
-                        // Si hay filtro de empresa específico, comprobar
                         if (empresaTarget !== 'TODAS' && emp !== empresaTarget && !emp.includes(empresaTarget)) {
                             return;
                         }
@@ -909,6 +928,104 @@ module.exports = (db, logAudit) => {
                             orden_viaje: ordenViaje,
                             has_alert: hasAlert,
                             checklist_id: rutaActiva ? rutaActiva.id : null
+                        });
+                    });
+
+                    // ── 2. Procesar Unidades No-Motoras (Carretas / Semirremolques en Base) ──
+                    noMotoras.forEach(p => {
+                        const pUpper = (p.placa || '').toUpperCase().trim();
+                        const cleanP = clean(pUpper);
+                        if (!cleanP) return;
+
+                        // Si ya está asignada en una ruta activa acoplada a un tracto
+                        if (carretasEnRutaSet.has(cleanP)) return;
+
+                        // Si ya está acoplada a un camión registrado en base para este corte/fecha
+                        if (carretasAcopladasEnBaseSet.has(cleanP)) return;
+
+                        let rawCliente = String(p.cliente || '').toUpperCase().trim();
+                        let emp = 'MARSISA';
+                        if (rawCliente.includes('MARSISA')) emp = 'MARSISA';
+                        else if (rawCliente.includes('TRAHESA')) emp = 'TRAHESA';
+                        else if (rawCliente.includes('ROSYMAR')) emp = 'ROSYMAR';
+                        else if (rawCliente) emp = rawCliente;
+
+                        if (emp && emp !== 'NULL') empresasSet.add(emp);
+
+                        const empStat = getEmpresaStatsObj(emp);
+                        globalStats.total_flota++;
+                        empStat.total_flota++;
+
+                        const baseRecord = baseCarretaMap[cleanP];
+
+                        let statusOp = 'EN BASE';
+                        let ubicacion = 'Base';
+                        let conductor = 'Sin asignar';
+                        let estadoCarga = 'Disponible';
+                        let observacion = '';
+                        let baseId = null;
+                        let corte = corteTarget !== 'ALL' ? corteTarget : 'Corte 1';
+
+                        if (baseRecord) {
+                            baseId = baseRecord.id;
+                            corte = baseRecord.corte || corte;
+                            ubicacion = baseRecord.zona || 'Base';
+                            estadoCarga = baseRecord.estado || 'Disponible';
+                            conductor = baseRecord.conductor || 'Sin asignar';
+                            observacion = baseRecord.observacion || '';
+
+                            const zonaUpper = String(baseRecord.zona || '').toUpperCase();
+                            if (zonaUpper.includes('MANTENIMIENTO') || zonaUpper.includes('TALLER')) {
+                                statusOp = 'EN MANTENIMIENTO';
+                                globalStats.en_taller++;
+                                empStat.en_taller++;
+                            } else if (zonaUpper.includes('LAVADO')) {
+                                statusOp = 'EN LAVADO';
+                                globalStats.en_lavado++;
+                                empStat.en_lavado++;
+                            } else {
+                                statusOp = 'EN BASE';
+                                globalStats.en_base++;
+                                empStat.en_base++;
+                            }
+                        } else {
+                            statusOp = 'EN BASE';
+                            ubicacion = 'Base';
+                            estadoCarga = 'Disponible';
+                            globalStats.en_base++;
+                            empStat.en_base++;
+                        }
+
+                        if (empresaTarget !== 'TODAS' && emp !== empresaTarget && !emp.includes(empresaTarget)) {
+                            return;
+                        }
+
+                        panorama.push({
+                            id: baseId,
+                            base_id: baseId,
+                            placa: pUpper,
+                            placa_camion: '—',
+                            placa_carreta: pUpper,
+                            conductor: conductor,
+                            empresa: emp,
+                            empresaTitular: emp,
+                            marca: p.marca || '',
+                            tipo: p.tipo || 'CARRETA / SEMIRREMOLQUE',
+                            status_operativo: statusOp,
+                            ubicacion: ubicacion,
+                            zona: ubicacion,
+                            estado: estadoCarga,
+                            estado_carga: estadoCarga,
+                            observacion: observacion,
+                            corte: corte,
+                            esRuta: false,
+                            en_ruta_raw: false,
+                            fecha_salida: null,
+                            hora_salida: null,
+                            km_salida: null,
+                            orden_viaje: null,
+                            has_alert: false,
+                            checklist_id: null
                         });
                     });
 
@@ -962,26 +1079,27 @@ module.exports = (db, logAudit) => {
 
         const usuario = (req.user && (req.user.nombre || req.user.usuario)) || req.body.usuario || 'Seguridad';
 
-        // 1. Obtener todas las placas no-motoras descartadas (solo tractos/camiones)
         tdb.query('SELECT placa, cliente, tipo, motora FROM placas', (errP, placasRows) => {
             if (errP) return res.status(500).json({ error: errP.message });
 
-            // 2. Obtener placas actualmente en ruta
-            tdb.query("SELECT placa_tracto FROM seg_unidades_registros WHERE estado = 'en_ruta'", (errR, rutaRows) => {
+            tdb.query("SELECT placa_tracto, placa_carreta FROM seg_unidades_registros WHERE estado = 'en_ruta'", (errR, rutaRows) => {
                 if (errR) return res.status(500).json({ error: errR.message });
 
-                const enRutaSet = new Set((rutaRows || []).map(r => (r.placa_tracto || '').toUpperCase().replace(/[^A-Z0-9]/g, '')));
+                const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-                // 3. Obtener registros existentes para esa fecha y corte
-                tdb.query('SELECT placa_camion FROM seg_unidades_base WHERE fecha = ? AND corte = ?', [fecha, corte], (errB, baseRows) => {
+                const enRutaTractosSet = new Set((rutaRows || []).map(r => clean(r.placa_tracto)).filter(Boolean));
+                const enRutaCarretasSet = new Set((rutaRows || []).map(r => clean(r.placa_carreta)).filter(Boolean));
+
+                tdb.query('SELECT placa_camion, placa_carreta FROM seg_unidades_base WHERE fecha = ? AND corte = ?', [fecha, corte], (errB, baseRows) => {
                     if (errB) return res.status(500).json({ error: errB.message });
 
-                    const yaEnBaseSet = new Set((baseRows || []).map(b => (b.placa_camion || '').toUpperCase().replace(/[^A-Z0-9]/g, '')));
+                    const yaEnBaseCamionSet = new Set((baseRows || []).map(b => clean(b.placa_camion)).filter(Boolean));
+                    const yaEnBaseCarretaSet = new Set((baseRows || []).map(b => clean(b.placa_carreta)).filter(Boolean));
 
                     const inserts = [];
                     (placasRows || []).forEach(p => {
-                        const cleanP = (p.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                        if (!cleanP) return;
+                        const cleanP = clean(p.placa);
+                        if (!cleanP || cleanP.includes('CONSUMO') || cleanP.includes('ENTREGA') || cleanP.length > 10) return;
 
                         const motoraStr = String(p.motora || '').toUpperCase().trim();
                         const tipoUpper = String(p.tipo || '').toUpperCase().trim();
@@ -998,8 +1116,6 @@ module.exports = (db, logAudit) => {
                                            tipoUpper.includes('BATEA') ||
                                            tipoUpper.includes('CAMA');
 
-                        if (isNoMotora) return;
-
                         // Filtro de empresa si se especificó
                         if (empresa && empresa !== 'TODAS') {
                             const empRaw = (p.cliente || '').toUpperCase().trim();
@@ -1008,19 +1124,36 @@ module.exports = (db, logAudit) => {
                             }
                         }
 
-                        // Si NO está en ruta y NO está ya registrado en este corte
-                        if (!enRutaSet.has(cleanP) && !yaEnBaseSet.has(cleanP)) {
-                            inserts.push([
-                                fecha,
-                                corte,
-                                p.placa.trim().toUpperCase(),
-                                null,
-                                'Sin asignar',
-                                'Base',
-                                'Vacío',
-                                'Sincronizado automáticamente por sistema',
-                                usuario
-                            ]);
+                        if (!isNoMotora) {
+                            // Camión / Tracto
+                            if (!enRutaTractosSet.has(cleanP) && !yaEnBaseCamionSet.has(cleanP)) {
+                                inserts.push([
+                                    fecha,
+                                    corte,
+                                    p.placa.trim().toUpperCase(),
+                                    null,
+                                    'Sin asignar',
+                                    'Base',
+                                    'Vacío',
+                                    'Sincronizado automáticamente por sistema',
+                                    usuario
+                                ]);
+                            }
+                        } else {
+                            // Carreta / Semirremolque
+                            if (!enRutaCarretasSet.has(cleanP) && !yaEnBaseCarretaSet.has(cleanP)) {
+                                inserts.push([
+                                    fecha,
+                                    corte,
+                                    null,
+                                    p.placa.trim().toUpperCase(),
+                                    'Sin asignar',
+                                    'Base',
+                                    'Disponible',
+                                    'Sincronizado automáticamente por sistema',
+                                    usuario
+                                ]);
+                            }
                         }
                     });
 
@@ -1080,8 +1213,11 @@ module.exports = (db, logAudit) => {
     // ── Crear Registro de Unidad en Base ──────────────────────────
     router.post('/seguridad/unidades-base', (req, res) => {
         const { fecha, corte, placa_camion, placa_carreta, conductor, zona, estado, observacion } = req.body;
-        if (!fecha || !corte || !placa_camion) {
-            return res.status(400).json({ error: 'Fecha, Corte y Placa Camión son obligatorios.' });
+        const pCamion = (placa_camion || '').trim().toUpperCase();
+        const pCarreta = (placa_carreta || '').trim().toUpperCase();
+
+        if (!fecha || !corte || (!pCamion && !pCarreta)) {
+            return res.status(400).json({ error: 'Fecha, Corte y al menos una Placa (Camión o Carreta) son obligatorios.' });
         }
 
         const usuario = (req.user && (req.user.nombre || req.user.usuario)) || req.body.usuario || 'Seguridad';
@@ -1094,8 +1230,8 @@ module.exports = (db, logAudit) => {
         const params = [
             fecha,
             corte,
-            placa_camion.trim().toUpperCase(),
-            (placa_carreta || '').trim().toUpperCase() || null,
+            pCamion || null,
+            pCarreta || null,
             (conductor || '').trim() || null,
             (zona || 'Base').trim(),
             (estado || 'Cargado').trim(),
@@ -1113,8 +1249,11 @@ module.exports = (db, logAudit) => {
     router.put('/seguridad/unidades-base/:id', (req, res) => {
         const id = req.params.id;
         const { fecha, corte, placa_camion, placa_carreta, conductor, zona, estado, observacion } = req.body;
-        if (!fecha || !corte || !placa_camion) {
-            return res.status(400).json({ error: 'Fecha, Corte y Placa Camión son obligatorios.' });
+        const pCamion = (placa_camion || '').trim().toUpperCase();
+        const pCarreta = (placa_carreta || '').trim().toUpperCase();
+
+        if (!fecha || !corte || (!pCamion && !pCarreta)) {
+            return res.status(400).json({ error: 'Fecha, Corte y al menos una Placa (Camión o Carreta) son obligatorios.' });
         }
 
         const usuario = (req.user && (req.user.nombre || req.user.usuario)) || req.body.usuario || 'Seguridad';
@@ -1127,8 +1266,8 @@ module.exports = (db, logAudit) => {
         const params = [
             fecha,
             corte,
-            placa_camion.trim().toUpperCase(),
-            (placa_carreta || '').trim().toUpperCase() || null,
+            pCamion || null,
+            pCarreta || null,
             (conductor || '').trim() || null,
             (zona || 'Base').trim(),
             (estado || 'Cargado').trim(),
