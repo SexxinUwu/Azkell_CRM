@@ -257,9 +257,18 @@
     margin: 0 !important;
 }
 #modalConfigChecklistSistemas .modal-body {
-    padding: 1rem 1.25rem !important;
+    padding: 1.25rem 1.5rem !important;
     overflow-y: auto !important;
     flex: 1 1 auto !important;
+}
+.ck-btn-trash-item {
+    color: #94a3b8 !important;
+    transition: all 0.2s ease !important;
+    border-radius: 6px !important;
+}
+.ck-btn-trash-item:hover {
+    color: #ef4444 !important;
+    background: #fef2f2 !important;
 }
 
 /* Modal Form Inputs: Enlarge & Beautify for maximum legibility */
@@ -1126,58 +1135,56 @@
   </div>
 </div>
 
-<!-- Modal: Configurar Sistemas y Fallas de Checklist -->
+<!-- Modal: Configurar Sistemas e Inspección -->
 <div class="modal fade" id="modalConfigChecklistSistemas" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-scrollable ck-fullscreen-config-dialog">
         <div class="modal-content border-0 ck-fullscreen-config-content">
             
             <!-- Modal Header -->
-            <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                    <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2 m-0" style="font-size: 1.2rem;">
-                        <i class="bi bi-gear-wide-connected text-primary"></i>
-                        <span>Configurar Sistemas y Fallas</span>
-                    </h5>
+            <div class="modal-header border-0 bg-white px-4 py-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="d-flex align-items-center justify-content-center rounded-3 text-primary flex-shrink-0" style="width: 38px; height: 38px; background: #e0f2fe; color: #0284c7;">
+                        <i class="bi bi-sliders2 fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark m-0" style="font-size: 1.15rem; line-height: 1.2;">Sistemas e Inspección</h5>
+                        <div class="text-muted" style="font-size: 0.78rem;">Configuración de catálogo técnico</div>
+                    </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-outline-secondary btn-sm fw-semibold rounded-pill px-3 shadow-2xs" onclick="window.ckRestaurarConfigSistemas()" title="Restablecer a valores de fábrica">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i> <span class="d-none d-sm-inline">Restaurar</span>
+                    <button type="button" class="btn btn-light bg-white border shadow-2xs rounded-circle p-2 text-secondary d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;" onclick="window.ckRestaurarConfigSistemas()" title="Restablecer a valores de fábrica">
+                        <i class="bi bi-arrow-counterclockwise fs-6"></i>
                     </button>
-                    <button type="button" class="btn btn-primary btn-sm fw-bold rounded-pill px-3 shadow-2xs" onclick="window.ckGuardarConfigSistemas()">
-                        <i class="bi bi-floppy-fill me-1"></i> <span class="d-none d-sm-inline">Guardar Cambios</span><span class="d-sm-none">Guardar</span>
+                    <button type="button" class="btn btn-primary fw-bold rounded-pill px-3.5 py-1.5 shadow-2xs d-flex align-items-center gap-1.5" style="background: #0d6efd; font-size: 0.88rem;" onclick="window.ckGuardarConfigSistemas()">
+                        <i class="bi bi-check2 fs-5"></i> <span>Guardar</span>
                     </button>
                     <button type="button" class="btn-close ms-1" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
             </div>
 
-            <div class="modal-body p-3 p-md-4 custom-scrollbar" style="font-family: inherit;">
-                <!-- Segmentación Superior: Camión vs Carreta + Botón Nuevo Sistema en una sola línea -->
-                <div class="card border-0 shadow-2xs rounded-4 p-2 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex align-items-center justify-content-between gap-2 flex-nowrap" style="overflow-x: auto;">
-                        <div class="ck-apple-segmented flex-shrink-0" style="background: #f1f5f9 !important; border: 1px solid #e2e8f0 !important; border-radius: 12px !important; padding: 4px !important;">
-                            <button type="button" class="ck-segment-item active" id="ck-tab-cfg-tracto" onclick="window.ckCambiarTabConfigUnidad('tracto')">
-                                <i class="bi bi-truck me-1"></i> Camión <span class="badge bg-primary text-white rounded-pill ms-1 px-2" id="ck-cnt-cfg-tracto">0</span>
-                            </button>
-                            <button type="button" class="ck-segment-item" id="ck-tab-cfg-remolque" onclick="window.ckCambiarTabConfigUnidad('remolque')">
-                                <i class="bi bi-truck-flatbed me-1"></i> Carreta <span class="badge bg-secondary text-white rounded-pill ms-1 px-2" id="ck-cnt-cfg-remolque">0</span>
-                            </button>
-                        </div>
-                        <button type="button" class="btn btn-primary btn-sm fw-bold rounded-pill px-3 py-1.5 shadow-2xs d-flex align-items-center gap-1.5 text-nowrap flex-shrink-0" onclick="window.ckAgregarNuevoSistema()">
-                            <i class="bi bi-plus-circle-fill"></i>
-                            <span>Nuevo Sistema</span>
+            <div class="modal-body p-3 p-md-4 custom-scrollbar" style="font-family: inherit; background: #f8fafc;">
+                <!-- Segmentación Superior: Camión vs Carreta + Botón Nuevo Sistema -->
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                    <div class="p-1 rounded-pill d-flex align-items-center flex-grow-1" style="background: #eef2f6;">
+                        <button type="button" class="btn w-50 rounded-pill py-1.5 fw-bold d-flex align-items-center justify-content-center gap-2 border-0 active" id="ck-tab-cfg-tracto" onclick="window.ckCambiarTabConfigUnidad('tracto')" style="background: #ffffff; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-size: 0.9rem;">
+                            <i class="bi bi-truck text-primary fs-6"></i>
+                            <span>Camión</span>
+                            <span class="badge rounded-pill px-2" style="background: #e0f2fe; color: #0284c7; font-size: 0.75rem;" id="ck-cnt-cfg-tracto">0</span>
+                        </button>
+                        <button type="button" class="btn w-50 rounded-pill py-1.5 fw-semibold d-flex align-items-center justify-content-center gap-2 border-0 text-secondary" id="ck-tab-cfg-remolque" onclick="window.ckCambiarTabConfigUnidad('remolque')" style="background: transparent; font-size: 0.9rem;">
+                            <i class="bi bi-box-seam fs-6"></i>
+                            <span>Carreta</span>
+                            <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2" style="font-size: 0.75rem;" id="ck-cnt-cfg-remolque">0</span>
                         </button>
                     </div>
-                </div>
-
-                <div class="alert alert-info border-0 shadow-2xs rounded-3 d-none d-md-flex align-items-center gap-3 py-2 px-3 mb-3" style="background:#eff6ff; color:#1e40af; font-size:0.82rem;">
-                    <i class="bi bi-info-circle-fill fs-5 flex-shrink-0 text-primary"></i>
-                    <div>
-                        <strong>Gestión Dinámica:</strong> Personaliza los códigos numéricos y nombres de cada falla. Aparecerán actualizados en Mantenimiento, Conductor Portal y en el PDF.
-                    </div>
+                    <button type="button" class="btn btn-primary btn-sm fw-bold rounded-pill px-3 py-2 shadow-2xs d-flex align-items-center gap-1.5 text-nowrap flex-shrink-0" onclick="window.ckAgregarNuevoSistema()" style="font-size: 0.85rem;">
+                        <i class="bi bi-plus-lg"></i>
+                        <span class="d-none d-sm-inline">Nuevo Sistema</span>
+                    </button>
                 </div>
 
                 <!-- Contenedor Dinámico de Tarjetas por Sistema -->
-                <div id="ck-config-sistemas-container" class="d-flex flex-column gap-3">
+                <div id="ck-config-sistemas-container" class="d-flex flex-column gap-1">
                     <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Cargando sistemas...</div>
                 </div>
             </div>
