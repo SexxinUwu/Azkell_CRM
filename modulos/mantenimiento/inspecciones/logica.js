@@ -367,7 +367,7 @@ window.filtrarInspSemaforoSegment = function(tipo, btn) {
 window.filtrarTablaPorSemaforo = window.filtrarInspSemaforoSegment;
 
 // ── Cache y Helper de Ubicación (Unidades en Base vs Telemetría GPS) ──
-window._cacheUnidadesEnBase = window._cacheUnidadesEnBase || [];
+window._cacheUnidadesPanorama = window._cacheUnidadesPanorama || [];
 window._unidadesBaseMap = window._unidadesBaseMap || new Map();
 window._acoplamientoCarretaMap = window._acoplamientoCarretaMap || new Map();
 
@@ -375,36 +375,35 @@ window.cargarDatosUnidadesBase = async function() {
     try {
         const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
         
-        // Cargar registros de unidades en base y acoplamientos de checklist en paralelo
-        const [resBase, resRegs] = await Promise.allSettled([
-            fetch('/api/seguridad/unidades-base').then(r => r.json()),
-            fetch('/api/seguridad/unidades?limit=500').then(r => r.json())
-        ]);
+        // Consultar el Panorama 360° en Vivo de Seguridad (fuente de verdad de Unidades en Base y en Ruta)
+        const res = await fetch('/api/seguridad/unidades-base/panorama-en-vivo');
+        const json = await res.json();
         
         const baseMap = new Map();
         const acoplMap = new Map();
 
-        // 1. Mapear Unidades en Base
-        if (resBase.status === 'fulfilled' && resBase.value && resBase.value.ok && Array.isArray(resBase.value.data)) {
-            window._cacheUnidadesEnBase = resBase.value.data;
-            resBase.value.data.forEach(r => {
-                const cCamion = clean(r.placa_camion);
-                const cCarreta = clean(r.placa_carreta);
-                if (cCamion && !baseMap.has(cCamion)) baseMap.set(cCamion, r);
-                if (cCarreta && !baseMap.has(cCarreta)) baseMap.set(cCarreta, r);
-                if (cCarreta && cCamion && !acoplMap.has(cCarreta)) {
+        if (json && json.ok && Array.isArray(json.items || json.panorama)) {
+            const list = json.items || json.panorama || [];
+            window._cacheUnidadesPanorama = list;
+            
+            list.forEach(item => {
+                const cPlaca = clean(item.placa);
+                const cCamion = clean(item.placa_camion);
+                const cCarreta = clean(item.placa_carreta);
+                
+                // Mapear si la carreta está acoplada a un camión
+                if (cCarreta && cCamion && cCarreta !== '—' && cCamion !== '—' && cCarreta !== cCamion) {
                     acoplMap.set(cCarreta, cCamion);
                 }
-            });
-        }
 
-        // 2. Mapear Acoplamiento de Carretas a Camiones / Tractos desde Checklist de Ruta
-        if (resRegs.status === 'fulfilled' && resRegs.value && resRegs.value.data && Array.isArray(resRegs.value.data)) {
-            resRegs.value.data.forEach(r => {
-                const cTracto = clean(r.placa_tracto);
-                const cCarreta = clean(r.placa_carreta);
-                if (cCarreta && cTracto && !acoplMap.has(cCarreta)) {
-                    acoplMap.set(cCarreta, cTracto);
+                // Determinar si la unidad está en base según Seguridad (Status Operativo)
+                const statusOp = String(item.status_operativo || '').toUpperCase().trim();
+                const esEnBase = statusOp === 'EN BASE' || statusOp.includes('BASE') || item.esRuta === false;
+
+                if (esEnBase) {
+                    if (cPlaca && cPlaca !== '—') baseMap.set(cPlaca, item);
+                    if (cCamion && cCamion !== '—') baseMap.set(cCamion, item);
+                    if (cCarreta && cCarreta !== '—') baseMap.set(cCarreta, item);
                 }
             });
         }
@@ -412,7 +411,7 @@ window.cargarDatosUnidadesBase = async function() {
         window._unidadesBaseMap = baseMap;
         window._acoplamientoCarretaMap = acoplMap;
     } catch(e) {
-        console.warn('No se pudo cargar unidades en base:', e);
+        console.warn('No se pudo cargar panorama de unidades en base:', e);
     }
 };
 
@@ -431,7 +430,7 @@ function obtenerUbicacionUnidad(placa) {
     const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     const pClean = clean(placa);
     
-    // 1. Si está registrada en Base según Status de Seguridad (Unidades en Base)
+    // 1. Si está registrada en Base según Status de Seguridad (Panorama 360° en Vivo)
     if (window._unidadesBaseMap && window._unidadesBaseMap.has(pClean)) {
         return {
             tipo: 'base',
@@ -442,13 +441,6 @@ function obtenerUbicacionUnidad(placa) {
     }
     
     // 2. Si no está en base -> Está en operación / En Ruta (Camión o Carreta vinculada a su camión con GPS)
-    let placaGps = pClean;
-    if (window._acoplamientoCarretaMap && window._acoplamientoCarretaMap.has(pClean)) {
-        placaGps = window._acoplamientoCarretaMap.get(pClean);
-    }
-
-    let wialonData = typeof buscarWialonPorPlaca === 'function' ? (buscarWialonPorPlaca(placaGps) || buscarWialonPorPlaca(placa)) : null;
-
     return {
         tipo: 'ruta',
         texto: 'En Ruta',
