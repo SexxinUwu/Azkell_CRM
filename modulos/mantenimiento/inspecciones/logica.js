@@ -369,23 +369,48 @@ window.filtrarTablaPorSemaforo = window.filtrarInspSemaforoSegment;
 // ── Cache y Helper de Ubicación (Unidades en Base vs Telemetría GPS) ──
 window._cacheUnidadesEnBase = window._cacheUnidadesEnBase || [];
 window._unidadesBaseMap = window._unidadesBaseMap || new Map();
+window._acoplamientoCarretaMap = window._acoplamientoCarretaMap || new Map();
 
 window.cargarDatosUnidadesBase = async function() {
     try {
-        const res = await fetch('/api/seguridad/unidades-base');
-        const json = await res.json();
-        if (json && json.ok && Array.isArray(json.data)) {
-            window._cacheUnidadesEnBase = json.data;
-            const map = new Map();
-            const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-            json.data.forEach(r => {
+        const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        
+        // Cargar registros de unidades en base y acoplamientos de checklist en paralelo
+        const [resBase, resRegs] = await Promise.allSettled([
+            fetch('/api/seguridad/unidades-base').then(r => r.json()),
+            fetch('/api/seguridad/unidades?limit=500').then(r => r.json())
+        ]);
+        
+        const baseMap = new Map();
+        const acoplMap = new Map();
+
+        // 1. Mapear Unidades en Base
+        if (resBase.status === 'fulfilled' && resBase.value && resBase.value.ok && Array.isArray(resBase.value.data)) {
+            window._cacheUnidadesEnBase = resBase.value.data;
+            resBase.value.data.forEach(r => {
                 const cCamion = clean(r.placa_camion);
                 const cCarreta = clean(r.placa_carreta);
-                if (cCamion && !map.has(cCamion)) map.set(cCamion, r);
-                if (cCarreta && !map.has(cCarreta)) map.set(cCarreta, r);
+                if (cCamion && !baseMap.has(cCamion)) baseMap.set(cCamion, r);
+                if (cCarreta && !baseMap.has(cCarreta)) baseMap.set(cCarreta, r);
+                if (cCarreta && cCamion && !acoplMap.has(cCarreta)) {
+                    acoplMap.set(cCarreta, cCamion);
+                }
             });
-            window._unidadesBaseMap = map;
         }
+
+        // 2. Mapear Acoplamiento de Carretas a Camiones / Tractos desde Checklist de Ruta
+        if (resRegs.status === 'fulfilled' && resRegs.value && resRegs.value.data && Array.isArray(resRegs.value.data)) {
+            resRegs.value.data.forEach(r => {
+                const cTracto = clean(r.placa_tracto);
+                const cCarreta = clean(r.placa_carreta);
+                if (cCarreta && cTracto && !acoplMap.has(cCarreta)) {
+                    acoplMap.set(cCarreta, cTracto);
+                }
+            });
+        }
+
+        window._unidadesBaseMap = baseMap;
+        window._acoplamientoCarretaMap = acoplMap;
     } catch(e) {
         console.warn('No se pudo cargar unidades en base:', e);
     }
@@ -416,23 +441,19 @@ function obtenerUbicacionUnidad(placa) {
         };
     }
     
-    // 2. Si no está en base, mostrar estado por telemetría GPS (solo texto/badge, sin abrir mapa)
-    let wialonData = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placa) : null;
-    if (wialonData && wialonData.lat && wialonData.lat !== 0) {
-        return {
-            tipo: 'gps',
-            texto: 'En Ruta',
-            badgeHtml: `<span class="badge rounded-pill fw-semibold px-2.5 py-1 text-nowrap" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.73rem;"><i class="bi bi-geo-alt-fill me-1 text-success"></i>En Ruta</span>`,
-            badgeMobile: `<span class="badge rounded-pill fw-semibold px-2 py-0.5 text-nowrap" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.72rem;"><i class="bi bi-geo-alt-fill me-1 text-success"></i>En Ruta</span>`
-        };
+    // 2. Si no está en base -> Está en operación / En Ruta (Camión o Carreta vinculada a su camión con GPS)
+    let placaGps = pClean;
+    if (window._acoplamientoCarretaMap && window._acoplamientoCarretaMap.has(pClean)) {
+        placaGps = window._acoplamientoCarretaMap.get(pClean);
     }
-    
-    // 3. Sin base y sin señal GPS
+
+    let wialonData = typeof buscarWialonPorPlaca === 'function' ? (buscarWialonPorPlaca(placaGps) || buscarWialonPorPlaca(placa)) : null;
+
     return {
-        tipo: 'na',
-        texto: 'N/A',
-        badgeHtml: `<span class="text-muted small" style="font-size: 0.74rem;"><i class="bi bi-geo-alt"></i> N/A</span>`,
-        badgeMobile: `<span class="text-muted small" style="font-size: 0.72rem;"><i class="bi bi-geo-alt"></i> N/A</span>`
+        tipo: 'ruta',
+        texto: 'En Ruta',
+        badgeHtml: `<span class="badge rounded-pill fw-semibold px-2.5 py-1 text-nowrap" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.73rem;"><i class="bi bi-geo-alt-fill me-1 text-success"></i>En Ruta</span>`,
+        badgeMobile: `<span class="badge rounded-pill fw-semibold px-2 py-0.5 text-nowrap" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.72rem;"><i class="bi bi-geo-alt-fill me-1 text-success"></i>En Ruta</span>`
     };
 }
 
@@ -623,7 +644,7 @@ function mostrarStatusInspecciones(inspecciones) {
 
             // 1. Desktop Row (Compact & Modern)
             htmlTable += `
-            <tr class="clickable-row data-row-status" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}">
+            <tr class="clickable-row data-row-status" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" data-ubicacion="${ubicacionInfo.tipo}">
                 <td class="ps-3 py-1.5 fw-bold text-dark">
                     <div class="d-flex align-items-center gap-1.5">
                         ${checkHtml}
@@ -668,7 +689,7 @@ function mostrarStatusInspecciones(inspecciones) {
 
             // 2. Mobile Native Card (1:1 Layout with Location and Report Mileage)
             htmlCards += `
-            <div class="ck-mobile-card data-card-insp" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}">
+            <div class="ck-mobile-card data-card-insp" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" data-ubicacion="${ubicacionInfo.tipo}">
                 <!-- Header Card: Folio/ID + Fecha + Estado -->
                 <div class="d-flex align-items-center justify-content-between mb-1.5">
                     <div class="d-flex align-items-center gap-2">
@@ -818,7 +839,10 @@ function filtrarStatusAvanzado() {
 
         let matchTxt = (!txt || textoFila.includes(txt));
         let matchSem = true;
-        if (filtroSem === 'verde') {
+        let ubi = (row.getAttribute('data-ubicacion') || '').toLowerCase();
+        if (filtroSem === 'base') {
+            matchSem = ubi === 'base' || textoFila.includes('en base');
+        } else if (filtroSem === 'verde') {
             matchSem = dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
         } else if (filtroSem === 'amarillo') {
             matchSem = (dias >= 0 && dias <= 7) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo');
@@ -848,12 +872,15 @@ function filtrarStatusAvanzado() {
     const cards = document.querySelectorAll('#inspCardContainer .data-card-insp');
     cards.forEach(card => {
         let est = (card.getAttribute('data-estado-v2') || '').toLowerCase();
+        let ubi = (card.getAttribute('data-ubicacion') || '').toLowerCase();
         let textoCard = card.textContent.toLowerCase();
         let dias = parseInt(card.getAttribute('data-dias'));
 
         let matchTxt = (!txt || textoCard.includes(txt));
         let matchSem = true;
-        if (filtroSem === 'verde') {
+        if (filtroSem === 'base') {
+            matchSem = ubi === 'base' || textoCard.includes('en base');
+        } else if (filtroSem === 'verde') {
             matchSem = dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
         } else if (filtroSem === 'amarillo') {
             matchSem = (dias >= 0 && dias <= 7) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo');
