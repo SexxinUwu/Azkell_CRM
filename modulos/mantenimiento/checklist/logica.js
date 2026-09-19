@@ -683,6 +683,7 @@ window.ckAbrirModalConfigSistemas = async function() {
 
     const modalEl = document.getElementById('modalConfigChecklistSistemas');
     if (modalEl) {
+        if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
     }
