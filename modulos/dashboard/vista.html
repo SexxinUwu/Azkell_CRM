@@ -195,7 +195,7 @@
     <!-- ── KPI METRIC CARDS ─────────────────────────────── -->
     <div class="row g-3 mb-4" id="kpi-metrics-row">
         <div class="col-6 col-md-3">
-            <div class="kpi-metric-card">
+            <div class="kpi-metric-card" style="cursor:pointer;" title="Ver todas las inspecciones" onclick="localStorage.setItem('fleet_insp_nav_filter','ALL');cargarModuloAislado('mantenimiento/inspecciones')">
                 <div class="kpi-metric-top">
                     <div class="kpi-metric-icon-wrap primary"><i class="bi bi-truck-front"></i></div>
                     <div class="kpi-metric-trend-wrap" id="kpi-trend-flota"></div>
