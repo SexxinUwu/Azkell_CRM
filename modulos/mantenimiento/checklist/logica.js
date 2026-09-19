@@ -700,14 +700,38 @@ window.ckCambiarTabConfigUnidad = function(unidad) {
     window._ckConfigTabActiva = unidad;
     const btnT = document.getElementById('ck-tab-cfg-tracto');
     const btnR = document.getElementById('ck-tab-cfg-remolque');
+    const cntT = document.getElementById('ck-cnt-cfg-tracto');
+    const cntR = document.getElementById('ck-cnt-cfg-remolque');
 
     if (btnT && btnR) {
         if (unidad === 'tracto') {
-            btnT.classList.add('active');
-            btnR.classList.remove('active');
+            btnT.classList.add('active', 'fw-bold');
+            btnT.classList.remove('text-secondary', 'fw-semibold');
+            btnT.style.background = '#ffffff';
+            btnT.style.color = '#0f172a';
+            btnT.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
+            if (cntT) { cntT.style.background = '#e0f2fe'; cntT.style.color = '#0284c7'; }
+
+            btnR.classList.remove('active', 'fw-bold');
+            btnR.classList.add('text-secondary', 'fw-semibold');
+            btnR.style.background = 'transparent';
+            btnR.style.color = '#64748b';
+            btnR.style.boxShadow = 'none';
+            if (cntR) { cntR.style.background = ''; cntR.style.color = ''; }
         } else {
-            btnT.classList.remove('active');
-            btnR.classList.add('active');
+            btnR.classList.add('active', 'fw-bold');
+            btnR.classList.remove('text-secondary', 'fw-semibold');
+            btnR.style.background = '#ffffff';
+            btnR.style.color = '#0f172a';
+            btnR.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
+            if (cntR) { cntR.style.background = '#e0f2fe'; cntR.style.color = '#0284c7'; }
+
+            btnT.classList.remove('active', 'fw-bold');
+            btnT.classList.add('text-secondary', 'fw-semibold');
+            btnT.style.background = 'transparent';
+            btnT.style.color = '#64748b';
+            btnT.style.boxShadow = 'none';
+            if (cntT) { cntT.style.background = ''; cntT.style.color = ''; }
         }
     }
     window.ckRenderizarConfigSistemas();
@@ -749,70 +773,92 @@ window.ckRenderizarConfigSistemas = function() {
 
     let html = '';
     sistemas.forEach((sys, sysIdx) => {
-        const title = sys.title || 'SISTEMA SIN NOMBRE';
-        const icon = sys.icon || 'bi-gear-fill';
+        const title = (sys.title || 'SISTEMA').toUpperCase();
+        const icon = sys.icon || (unidad === 'tracto' ? (title.includes('LLANTA') ? 'bi-disc' : (title.includes('MOTOR') ? 'bi-gear' : 'bi-sliders')) : 'bi-truck-flatbed');
         const items = Array.isArray(sys.items) ? sys.items : [];
 
         let itemsHtml = '';
         items.forEach((itTxt, itemIdx) => {
             const parsed = ckParseCodigoTexto(itTxt, itemIdx);
             itemsHtml += `
-                <div class="d-flex align-items-center gap-2 mb-2 bg-white p-1.5 px-2 rounded-3 border shadow-2xs">
-                    <input type="text" class="form-control form-control-sm text-center fw-bold text-primary bg-light border" 
-                        style="width: 52px; min-height: 36px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; box-shadow:none;" 
-                        value="${parsed.codigo}" 
-                        placeholder="N°"
-                        title="Código numérico de falla (ej: 01, 02)"
-                        oninput="window.ckActualizarItemFallaCompuesto(${sysIdx}, ${itemIdx}, this.value, null)">
-                    <input type="text" class="form-control form-control-sm fw-semibold text-dark border-0 bg-transparent flex-grow-1" 
-                        style="min-height: 36px; font-size:0.88rem; box-shadow:none;" 
+                <div class="d-flex align-items-center gap-3 p-2.5 px-3 bg-white" style="border-bottom: 1px solid #f1f5f9;">
+                    <span class="text-muted fw-bold" style="font-family: monospace; font-size: 0.85rem; width: 24px; min-width: 24px; color: #94a3b8;">${parsed.codigo}</span>
+                    <input type="text" class="form-control form-control-sm fw-medium text-dark border-0 bg-transparent p-0 flex-grow-1" 
+                        style="font-size: 0.9rem; box-shadow: none;" 
                         value="${parsed.texto.replace(/"/g, '&quot;')}" 
-                        placeholder="Descripción de la falla o componente..." 
+                        placeholder="Descripción del componente..." 
                         oninput="window.ckActualizarItemFallaCompuesto(${sysIdx}, ${itemIdx}, null, this.value)">
-                    <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1 d-flex align-items-center justify-content-center" 
-                        style="width: 28px; height: 28px; border-color: transparent;" 
-                        onclick="window.ckEliminarItemFalla(${sysIdx}, ${itemIdx})" 
-                        title="Eliminar ítem">
-                        <i class="bi bi-trash3-fill" style="font-size:0.82rem;"></i>
+                    <button type="button" class="btn btn-link text-muted p-1 text-decoration-none ck-btn-trash-item" onclick="window.ckEliminarItemFalla(${sysIdx}, ${itemIdx})" title="Eliminar ítem">
+                        <i class="bi bi-trash3 fs-6"></i>
                     </button>
                 </div>
             `;
         });
 
-        if (items.length === 0) {
-            itemsHtml = `<div class="text-center py-3 text-muted small fst-italic">Sin ítems de falla. Agrega uno usando el botón inferior.</div>`;
-        }
-
         html += `
-            <div class="card border-0 shadow-2xs rounded-4 overflow-hidden bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
-                <div class="card-header py-2.5 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 80%;">
-                        <span class="p-2 rounded-3 bg-white border text-primary shadow-2xs">
-                            <i class="bi ${icon} fs-5"></i>
+            <div class="mb-4">
+                <!-- Encabezado del Sistema -->
+                <div class="d-flex align-items-center justify-content-between px-2 mb-2">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 85%;">
+                        <div class="d-flex align-items-center justify-content-center rounded-circle text-secondary flex-shrink-0" style="width: 28px; height: 28px; background: #e2e8f0;">
+                            <i class="bi ${icon}" style="font-size: 0.85rem;"></i>
+                        </div>
+                        <input type="text" class="form-control form-control-sm text-dark border-0 bg-transparent p-0 fw-bold" 
+                            style="font-size: 0.95rem; letter-spacing: 0.02em; font-weight: 800 !important; box-shadow: none;" 
+                            value="${title.replace(/"/g, '&quot;')}" 
+                            oninput="window.ckActualizarTituloSistema(${sysIdx}, this.value)"
+                            placeholder="NOMBRE SISTEMA">
+                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 fw-normal flex-shrink-0" style="font-size: 0.72rem;">
+                            ${items.length} ítems
                         </span>
-                        <input type="text" class="form-control fw-bold border-0 bg-transparent text-dark flex-grow-1" style="font-size:1.02rem; box-shadow:none;" value="${title.replace(/"/g, '&quot;')}" oninput="window.ckActualizarTituloSistema(${sysIdx}, this.value)" placeholder="Nombre del Sistema (Ej: MOTOR, FRENOS...)">
-                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1" style="font-size:0.75rem;">${items.length} fallas</span>
                     </div>
-                    <div>
-                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold shadow-2xs" onclick="window.ckEliminarSistema(${sysIdx})">
-                            <i class="bi bi-trash3 me-1"></i> Eliminar Sistema
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body p-3 bg-light bg-opacity-50">
-                    <div class="d-flex flex-column gap-1 mb-2">
-                        ${itemsHtml}
-                    </div>
-                    <button type="button" class="btn btn-outline-primary btn-sm fw-bold w-100 rounded-3 py-2 shadow-2xs d-flex align-items-center justify-content-center gap-1.5" onclick="window.ckAgregarItemFalla(${sysIdx})" style="border-style: dashed; background: #ffffff;">
-                        <i class="bi bi-plus-lg"></i>
-                        <span>Agregar Ítem de Falla a ${title}</span>
+                    <button type="button" class="btn btn-link text-muted p-1 text-decoration-none" onclick="window.ckEliminarSistema(${sysIdx})" title="Eliminar sistema">
+                        <i class="bi bi-trash3 fs-6"></i>
                     </button>
+                </div>
+
+                <!-- Tarjeta con Ítems -->
+                <div class="card border-0 rounded-4 shadow-2xs overflow-hidden bg-white" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex flex-column">
+                        ${itemsHtml}
+                        
+                        <!-- Barra para añadir ítem -->
+                        <div class="d-flex align-items-center gap-2 p-2.5 px-3 bg-white" style="border-top: ${items.length > 0 ? '1px solid #f1f5f9' : 'none'};">
+                            <i class="bi bi-plus text-primary fs-5"></i>
+                            <input type="text" class="form-control form-control-sm border-0 bg-transparent text-dark p-0 flex-grow-1" 
+                                id="ck-new-item-input-${sysIdx}" 
+                                style="font-size: 0.88rem; box-shadow: none;" 
+                                placeholder="Añadir ítem a ${title} (presiona Enter)..." 
+                                onkeydown="if(event.key==='Enter'){ event.preventDefault(); window.ckAgregarItemDesdeInput(${sysIdx}); }">
+                            <button type="button" class="btn btn-link text-primary fw-bold text-decoration-none p-0 px-2 flex-shrink-0" style="font-size: 0.85rem;" onclick="window.ckAgregarItemDesdeInput(${sysIdx})">
+                                Añadir
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
     });
 
     container.innerHTML = html;
+};
+
+window.ckAgregarItemDesdeInput = function(sysIdx) {
+    const unidad = window._ckConfigTabActiva || 'tracto';
+    const input = document.getElementById(`ck-new-item-input-${sysIdx}`);
+    if (!input) return;
+    const txt = (input.value || '').trim();
+    if (!txt) return;
+
+    const sys = window._ckConfigTemp[unidad][sysIdx];
+    if (!sys) return;
+    if (!Array.isArray(sys.items)) sys.items = [];
+
+    const nextNum = sys.items.length + 1;
+    const padded = String(nextNum).padStart(2, '0');
+    sys.items.push(`${padded} ${txt}`);
+    input.value = '';
+    window.ckRenderizarConfigSistemas();
 };
 
 window.ckAgregarNuevoSistema = function() {
@@ -824,8 +870,8 @@ window.ckAgregarNuevoSistema = function() {
     window._ckConfigTemp[unidad].push({
         key: 'sys_' + Date.now(),
         title: `NUEVO SISTEMA ${padded}`,
-        icon: unidad === 'tracto' ? 'bi-truck' : 'bi-truck-flatbed',
-        items: [`01 Falla / componente de prueba`]
+        icon: unidad === 'tracto' ? 'bi-gear' : 'bi-truck-flatbed',
+        items: []
     });
 
     window.ckRenderizarConfigSistemas();
@@ -847,17 +893,6 @@ window.ckActualizarTituloSistema = function(sysIdx, val) {
     if (window._ckConfigTemp[unidad] && window._ckConfigTemp[unidad][sysIdx]) {
         window._ckConfigTemp[unidad][sysIdx].title = (val || '').toUpperCase();
     }
-};
-
-window.ckAgregarItemFalla = function(sysIdx) {
-    const unidad = window._ckConfigTabActiva || 'tracto';
-    const sys = window._ckConfigTemp[unidad][sysIdx];
-    if (!sys) return;
-    if (!Array.isArray(sys.items)) sys.items = [];
-
-    const nextNum = String(sys.items.length + 1).padStart(2, '0');
-    sys.items.push(`${nextNum} Falla / componente`);
-    window.ckRenderizarConfigSistemas();
 };
 
 window.ckEliminarItemFalla = function(sysIdx, itemIdx) {

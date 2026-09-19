@@ -248,14 +248,18 @@ window.verFotoEvidencia = function (fotoOrIndex, titulo = '') {
 // 🔥 MÓDULO ANÁLISIS DE INSPECCIONES (STATUS) 🔥
 // ==========================================
 window.cambiarInspTab = function(tab) {
-    var btnGen = document.getElementById('insp-general-tab');
-    var btnFre = document.getElementById('insp-frenos-tab');
+    var btnFre = document.getElementById('btnToggleFrenos');
     var paneGen = document.getElementById('insp-general');
     var paneFre = document.getElementById('insp-frenos');
+    var kpisGen = document.getElementById('panelKPIsGenerales');
+    var toolsGen = document.getElementById('panelHerramientasStatus');
+    var graficosPanel = document.getElementById('panelGraficosStatus');
 
     if (tab === 'frenos') {
-        if (btnGen) btnGen.classList.remove('active');
-        if (btnFre) btnFre.classList.add('active');
+        if (btnFre) {
+            btnFre.classList.add('active', 'border-danger', 'bg-danger-subtle', 'text-danger');
+            btnFre.classList.remove('bg-white', 'text-secondary');
+        }
         if (paneGen) {
             paneGen.classList.remove('show', 'active');
             paneGen.style.display = 'none';
@@ -264,12 +268,18 @@ window.cambiarInspTab = function(tab) {
             paneFre.classList.add('show', 'active');
             paneFre.style.display = 'flex';
         }
+        if (kpisGen) kpisGen.style.display = 'none';
+        if (toolsGen) toolsGen.style.display = 'none';
+        if (graficosPanel) graficosPanel.style.display = 'none';
+
         if (typeof window.renderTablaFrenos === 'function') {
-            window.renderTablaFrenos(dataGlobalInspecciones);
+            window.renderTablaFrenos(dataGlobalInspecciones || window.dataGlobalInspecciones || []);
         }
     } else {
-        if (btnFre) btnFre.classList.remove('active');
-        if (btnGen) btnGen.classList.add('active');
+        if (btnFre) {
+            btnFre.classList.remove('active', 'border-danger', 'bg-danger-subtle', 'text-danger');
+            btnFre.classList.add('bg-white', 'text-secondary');
+        }
         if (paneFre) {
             paneFre.classList.remove('show', 'active');
             paneFre.style.display = 'none';
@@ -278,6 +288,8 @@ window.cambiarInspTab = function(tab) {
             paneGen.classList.add('show', 'active');
             paneGen.style.display = 'flex';
         }
+        if (kpisGen) kpisGen.style.display = '';
+        if (toolsGen) toolsGen.style.display = '';
     }
     if (typeof window.actualizarVistaGraficos === 'function') {
         window.actualizarVistaGraficos();
@@ -353,6 +365,76 @@ window.filtrarInspSemaforoSegment = function(tipo, btn) {
     filtrarStatusAvanzado();
 };
 window.filtrarTablaPorSemaforo = window.filtrarInspSemaforoSegment;
+
+// ── Cache y Helper de Ubicación (Unidades en Base vs Telemetría GPS) ──
+window._cacheUnidadesEnBase = window._cacheUnidadesEnBase || [];
+window._unidadesBaseMap = window._unidadesBaseMap || new Map();
+
+window.cargarDatosUnidadesBase = async function() {
+    try {
+        const res = await fetch('/api/seguridad/unidades-base');
+        const json = await res.json();
+        if (json && json.ok && Array.isArray(json.data)) {
+            window._cacheUnidadesEnBase = json.data;
+            const map = new Map();
+            const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            json.data.forEach(r => {
+                const cCamion = clean(r.placa_camion);
+                const cCarreta = clean(r.placa_carreta);
+                if (cCamion && !map.has(cCamion)) map.set(cCamion, r);
+                if (cCarreta && !map.has(cCarreta)) map.set(cCarreta, r);
+            });
+            window._unidadesBaseMap = map;
+        }
+    } catch(e) {
+        console.warn('No se pudo cargar unidades en base:', e);
+    }
+};
+
+window.asegurarWialonCache = async function() {
+    if (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0) return;
+    try {
+        const r = await fetch('/api/script/obtenerDatosWialon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) });
+        const res = await r.json();
+        if (res && res.data && Array.isArray(res.data)) {
+            if (typeof CACHE !== 'undefined') CACHE.wialon = res.data;
+        }
+    } catch(e) {}
+};
+
+function obtenerUbicacionUnidad(placa) {
+    const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const pClean = clean(placa);
+    
+    // 1. Si está registrada en Base según Status de Seguridad (Unidades en Base)
+    if (window._unidadesBaseMap && window._unidadesBaseMap.has(pClean)) {
+        return {
+            tipo: 'base',
+            texto: 'En Base',
+            badgeHtml: `<span class="badge rounded-pill fw-semibold px-2.5 py-1 text-nowrap" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.73rem;"><i class="bi bi-buildings-fill me-1 text-primary"></i>En Base</span>`,
+            badgeMobile: `<span class="badge rounded-pill fw-semibold px-2 py-0.5 text-nowrap" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.72rem;"><i class="bi bi-buildings-fill me-1 text-primary"></i>En Base</span>`
+        };
+    }
+    
+    // 2. Si no está en base, mostrar estado por telemetría GPS (solo texto/badge, sin abrir mapa)
+    let wialonData = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placa) : null;
+    if (wialonData && wialonData.lat && wialonData.lat !== 0) {
+        return {
+            tipo: 'gps',
+            texto: 'En Ruta',
+            badgeHtml: `<span class="badge rounded-pill fw-semibold px-2.5 py-1 text-nowrap" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.73rem;"><i class="bi bi-geo-alt-fill me-1 text-success"></i>En Ruta</span>`,
+            badgeMobile: `<span class="badge rounded-pill fw-semibold px-2 py-0.5 text-nowrap" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.72rem;"><i class="bi bi-geo-alt-fill me-1 text-success"></i>En Ruta</span>`
+        };
+    }
+    
+    // 3. Sin base y sin señal GPS
+    return {
+        tipo: 'na',
+        texto: 'N/A',
+        badgeHtml: `<span class="text-muted small" style="font-size: 0.74rem;"><i class="bi bi-geo-alt"></i> N/A</span>`,
+        badgeMobile: `<span class="text-muted small" style="font-size: 0.72rem;"><i class="bi bi-geo-alt"></i> N/A</span>`
+    };
+}
 
 function mostrarStatusInspecciones(inspecciones) {
     if (procesadorErroresCuota(inspecciones, 'cuerpoTablaStatus')) return;
@@ -493,20 +575,17 @@ function mostrarStatusInspecciones(inspecciones) {
                 : `<span class="badge fw-bold" style="background-color: ${colorFalta}20; color: ${colorFalta}; font-size:0.75rem; border: 1px solid ${colorFalta}40;">${txtEstado}</span>`;
 
             let checkHtml = (window.modoSeleccion && window.modoSeleccion['statusMant'] && insp && insp.id)
-                ? `<input type="checkbox" class="form-check-input chk-bulk-statusMant me-2" value="${insp.id}" style="transform: scale(1.1);">`
+                ? `<input type="checkbox" class="form-check-input chk-bulk-statusMant me-2" value="${insp.id}" style="transform: scale(1.05);">`
                 : '';
 
-            let ubicacionHtml = '<span class="text-muted small"><i class="bi bi-geo-alt"></i> N/A</span>';
-            let wialonData = buscarWialonPorPlaca(placa);
-            if (wialonData && wialonData.lat !== 0) {
-                ubicacionHtml = `
-                <div class="text-start">
-                    <button class="badge bg-primary text-white border-0 me-1" onclick="abrirMapaFlotante('${placa}', ${wialonData.lat}, ${wialonData.lng})"><i class="bi bi-map-fill"></i> Mapa</button>
-                    <span style="font-size: 0.75rem; color: #475569; font-weight: bold;"><i class="bi bi-speedometer2"></i> ${wialonData.km.toLocaleString()} km</span>
-                </div>`;
-            }
+            // Obtener ubicación (En Base vs Telemetría GPS)
+            let ubicacionInfo = obtenerUbicacionUnidad(placa);
 
-            let txtKmReact = (wialonData && wialonData.lat !== 0) ? `${wialonData.km.toLocaleString()} km` : "N/A";
+            // Obtener kilometraje del reporte de la inspección
+            let kmInspNum = insp ? (insp.km_tablero || insp.kilometraje || insp.km || '') : '';
+            let txtKmInsp = (kmInspNum !== '' && !isNaN(Number(kmInspNum))) 
+                ? `${Number(kmInspNum).toLocaleString()} km` 
+                : '—';
 
             let daysOverdueHTML = '';
             if (!insp || !insp.id) {
@@ -542,25 +621,26 @@ function mostrarStatusInspecciones(inspecciones) {
                 badgeEstadoMobile = `<span class="badge bg-success-subtle text-success fw-semibold" style="font-size:0.72rem; border-radius:6px;">CONFORME</span>`;
             }
 
-            // 1. Desktop Row
+            // 1. Desktop Row (Compact & Modern)
             htmlTable += `
             <tr class="clickable-row data-row-status" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}">
-                <td class="ps-4 py-3 fw-bold text-dark">
-                    <div class="d-flex align-items-center gap-2">
+                <td class="ps-3 py-1.5 fw-bold text-dark">
+                    <div class="d-flex align-items-center gap-1.5">
                         ${checkHtml}
                         <div>
-                            <span class="font-monospace fw-bold text-primary" style="font-size:0.92rem;">${placa}</span>
-                            <span class="d-block text-muted" style="font-size:0.75rem;">${cli}</span>
+                            <span class="font-monospace fw-bold text-primary" style="font-size:0.86rem;">${placa}</span>
+                            <span class="d-block text-muted" style="font-size:0.7rem; line-height:1.1;">${cli}</span>
                         </div>
                     </div>
                 </td>
-                <td class="py-3 text-secondary fw-medium">${mod}</td>
-                <td class="py-3 text-dark fw-semibold text-truncate" style="max-width: 130px;">${tecnico}</td>
-                <td class="py-3 text-secondary">${fIngresoBonita}</td>
-                <td class="py-3">${badgeProx}</td>
-                <td class="py-3 text-center">${badgeEst}</td>
-                <td class="py-3">${ubicacionHtml}</td>
-                <td class="pe-4 py-3 text-end">
+                <td class="py-1.5 text-secondary fw-medium" style="font-size:0.82rem;">${mod}</td>
+                <td class="py-1.5 text-dark fw-semibold text-truncate" style="max-width: 120px; font-size:0.82rem;">${tecnico}</td>
+                <td class="py-1.5 text-secondary" style="font-size:0.82rem;">${fIngresoBonita}</td>
+                <td class="py-1.5" style="font-size:0.82rem;">${badgeProx}</td>
+                <td class="py-1.5 text-center">${badgeEst}</td>
+                <td class="py-1.5">${ubicacionInfo.badgeHtml}</td>
+                <td class="py-1.5 text-end font-monospace fw-bold text-dark" style="font-size:0.82rem;">${txtKmInsp}</td>
+                <td class="pe-3 py-1.5 text-end">
                     <div class="d-inline-flex align-items-center gap-1">
                         ${insp && insp.id ? `
                             <button type="button" class="ck-action-btn ck-btn-view" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', false)" title="Ver Detalle">
@@ -578,7 +658,7 @@ function mostrarStatusInspecciones(inspecciones) {
                                 <i class="bi bi-trash3"></i>
                             </button>` : ''}
                         ` : `
-                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-2 py-1" onclick="event.stopPropagation(); window.abrirModalNuevaInspeccion('${placa}')" style="font-size:0.78rem; border-radius:8px;">
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-2 py-0.5" onclick="event.stopPropagation(); window.abrirModalNuevaInspeccion('${placa}')" style="font-size:0.75rem; border-radius:6px;">
                                 <i class="bi bi-plus-lg"></i> Registrar
                             </button>
                         `}
@@ -586,33 +666,43 @@ function mostrarStatusInspecciones(inspecciones) {
                 </td>
             </tr>`;
 
-            // 2. Mobile Native Card (1:1 Copy of Reporte de Fallas Design)
+            // 2. Mobile Native Card (1:1 Layout with Location and Report Mileage)
             htmlCards += `
             <div class="ck-mobile-card data-card-insp" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}">
                 <!-- Header Card: Folio/ID + Fecha + Estado -->
-                <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center justify-content-between mb-1.5">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bolder text-primary font-monospace" style="font-size:0.95rem;">${insp && insp.id ? insp.id : 'SIN REGISTRO'}</span>
-                        <span class="text-muted small" style="font-size:0.75rem;">• ${fIngresoBonita}</span>
+                        <span class="fw-bolder text-primary font-monospace" style="font-size:0.92rem;">${insp && insp.id ? insp.id : 'SIN REGISTRO'}</span>
+                        <span class="text-muted small" style="font-size:0.73rem;">• ${fIngresoBonita}</span>
                     </div>
                     <div>${badgeEstadoMobile}</div>
                 </div>
 
                 <!-- Placa y Modelo/Tipo -->
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🚛 ${placa}</span>
-                    ${mod && mod !== '-' ? `<span class="badge bg-light text-secondary border fw-medium px-2 py-1" style="font-size:0.8rem; border-radius:6px;">${mod}</span>` : ''}
+                <div class="d-flex align-items-center gap-1.5 mb-2">
+                    <span class="badge bg-light text-dark border fw-bold px-2 py-0.5" style="font-size:0.78rem; border-radius:6px;">🚛 ${placa}</span>
+                    ${mod && mod !== '-' ? `<span class="badge bg-light text-secondary border fw-medium px-2 py-0.5" style="font-size:0.75rem; border-radius:6px;">${mod}</span>` : ''}
                 </div>
 
-                <div class="mb-2">
-                    <div class="fw-bold text-dark" style="font-size:0.88rem;">${cli !== '-' ? cli : 'Sin cliente asignado'}</div>
-                    <div class="text-muted small" style="font-size:0.75rem;"><i class="bi bi-person-fill text-secondary me-1"></i>${tecnico !== '-' ? tecnico : 'Sin técnico asignado'}</div>
+                <!-- Cliente/Técnico y Ubicación (Esquina Superior Derecha) -->
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size:0.85rem;">${cli !== '-' ? cli : 'Sin cliente asignado'}</div>
+                        <div class="text-muted small" style="font-size:0.73rem;"><i class="bi bi-person-fill text-secondary me-1"></i>${tecnico !== '-' ? tecnico : 'Sin técnico asignado'}</div>
+                    </div>
+                    <div class="text-end flex-shrink-0 ms-2">
+                        ${ubicacionInfo.badgeMobile}
+                    </div>
                 </div>
 
-                <!-- Semáforo / Días restantes & GPS KM -->
-                <div class="d-flex align-items-center justify-content-between pt-2 border-top mb-3">
-                    ${daysOverdueHTML}
-                    <span class="text-muted small font-monospace" style="font-size:0.75rem;"><i class="bi bi-speedometer2 me-1"></i>${txtKmReact}</span>
+                <!-- Semáforo / Días restantes & Kilometraje del Reporte (Esquina Inferior Derecha) -->
+                <div class="d-flex align-items-center justify-content-between pt-2 border-top mb-2.5">
+                    <div>${daysOverdueHTML}</div>
+                    <div class="text-end">
+                        <span class="text-dark fw-bold font-monospace" style="font-size:0.78rem;">
+                            <i class="bi bi-speedometer2 text-secondary me-1"></i>${txtKmInsp}
+                        </span>
+                    </div>
                 </div>
 
                 <!-- Botones de Acción Móvil -->
@@ -929,131 +1019,285 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
     });
 
     let htmlChecklistPDF = "";
+    
+    // Agrupar ítems por categorías / sistemas de forma dinámica
+    let categoriasMap = new Map();
+    detallesArray.forEach(d => {
+        if (!d || !d.categoria || d.categoria === "FIRMAS_EXTRA") return;
+        let catName = d.categoria.replace(/^\d+[\.\-\)]\s*/, '').trim().toUpperCase();
+        if (!categoriasMap.has(catName)) {
+            categoriasMap.set(catName, []);
+        }
+        categoriasMap.get(catName).push(d);
+    });
+
+    // Extraer fallas detectadas
+    let fallasDetectadas = detallesArray.filter(d => {
+        if (!d || d.categoria === "FIRMAS_EXTRA") return false;
+        let est = (d.estado || '').toUpperCase();
+        return est === "FALLA" || est === "MAL" || (d.observacion && d.observacion.trim().length > 0 && est !== "OK" && est !== "SIN DATOS");
+    });
+
+    let totalItemsEvaluados = 0;
+    categoriasMap.forEach(arr => totalItemsEvaluados += arr.length);
+
+    // Badge estado semáforo
+    let fProx = parseDateToDDMMYYYY(insp.proxima_inspeccion);
+    let badgeSemaforo = '<span class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#dcfce7; color:#15803d; font-size:0.82rem;"><i class="bi bi-check-circle-fill me-1"></i> CONFORME</span>';
+    if (countFallas > 0) {
+        badgeSemaforo = `<span class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#fee2e2; color:#b91c1c; font-size:0.82rem;"><i class="bi bi-x-circle-fill me-1"></i> ${countFallas} FALLA(S)</span>`;
+    }
+
+    // ── 1. CARD: DATOS GENERALES (BENTO GRID) ──
     let htmlUI = `
-    <div class="p-0 p-md-4" style="background-color: #f8fafc; min-height: 100%;">
-        <div class="d-flex flex-wrap gap-3 gap-md-4 mb-3 p-3 bg-white rounded-0 rounded-md shadow-sm" style="border: 1px solid #e2e8f0; border-left: 0; border-right: 0;">
-            <div class="flex-grow-1">
-                <span class="text-uppercase" style="font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Nº Reporte</span>
-                <div style="font-size: 15px; font-weight: 800; color: #0284c7;">${insp.id || '-'}</div>
+        <!-- 1. DATOS DE LA INSPECCIÓN -->
+        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="p-2 rounded-3 text-primary d-flex align-items-center justify-content-center" style="background:#e0f2fe; width:36px; height:36px;">
+                        <i class="bi bi-file-earmark-text-fill fs-5"></i>
+                    </span>
+                    <div>
+                        <h6 class="fw-bold text-dark m-0" style="font-size:1.02rem;">Datos de la Inspección</h6>
+                        <small class="text-muted" style="font-size:0.75rem;">Diagnóstico técnico y control vehicular</small>
+                    </div>
+                </div>
+                <div>
+                    ${badgeSemaforo}
+                </div>
             </div>
-            <div>
-                <span class="text-uppercase" style="font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Vehículo</span>
-                <div style="font-size: 15px; font-weight: 700; color: #0f172a;">${insp.placa || '-'}</div>
-            </div>
-            <div>
-                <span class="text-uppercase" style="font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Fecha</span>
-                <div style="font-size: 14px; font-weight: 600; color: #334155;">${fIng || '-'}</div>
-            </div>
-            <div>
-                <span class="text-uppercase" style="font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Técnico</span>
-                <div style="font-size: 14px; font-weight: 600; color: #334155;">${insp.tecnico || '-'}</div>
-            </div>
-            <div>
-                <span class="text-uppercase" style="font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Kilometraje</span>
-                <div style="font-size: 14px; font-weight: 600; color: #334155;">${insp.km_tablero || '-'}</div>
+            <div class="row g-2 g-md-3">
+                <div class="col-6 col-md-3">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size:0.72rem; letter-spacing:0.5px;">Nº Reporte</span>
+                    <span class="fw-bolder text-primary" style="font-size:0.95rem;">${insp.id || '-'}</span>
+                </div>
+                <div class="col-6 col-md-3">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size:0.72rem; letter-spacing:0.5px;">Vehículo / Placa</span>
+                    <span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-1" style="font-size:0.9rem; letter-spacing:0.5px;">${insp.placa || '-'}</span>
+                </div>
+                <div class="col-6 col-md-3">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size:0.72rem; letter-spacing:0.5px;">Fecha Inspección</span>
+                    <span class="fw-bold text-dark" style="font-size:0.88rem;">${fIng || '-'}</span>
+                </div>
+                <div class="col-6 col-md-3">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size:0.72rem; letter-spacing:0.5px;">Próxima Inspección</span>
+                    <span class="fw-bold text-secondary" style="font-size:0.88rem;">${fProx || '-'}</span>
+                </div>
+                <div class="col-6 col-md-3">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size:0.72rem; letter-spacing:0.5px;">Tipo de Inspección</span>
+                    <span class="fw-semibold text-dark" style="font-size:0.88rem;">${insp.tipo_inspeccion || 'General'}</span>
+                </div>
+                <div class="col-6 col-md-3">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size:0.72rem; letter-spacing:0.5px;">Técnico Inspector</span>
+                    <span class="fw-semibold text-dark" style="font-size:0.88rem;">${insp.tecnico || '-'}</span>
+                </div>
+                <div class="col-6 col-md-3">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size:0.72rem; letter-spacing:0.5px;">Kilometraje Tablero</span>
+                    <span class="fw-bold text-dark" style="font-size:0.88rem;">${insp.km_tablero ? (insp.km_tablero + ' km') : '-'}</span>
+                </div>
+                <div class="col-6 col-md-3">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size:0.72rem; letter-spacing:0.5px;">Diagnóstico Global</span>
+                    <span class="fw-bold ${countFallas > 0 ? 'text-danger' : 'text-success'}" style="font-size:0.88rem;">
+                        ${countFallas > 0 ? `<i class="bi bi-exclamation-octagon-fill me-1"></i> ${countFallas} Falla(s)` : `<i class="bi bi-check-circle-fill me-1"></i> 100% Conforme`}
+                    </span>
+                </div>
             </div>
         </div>
-        <div class="bg-white rounded-0 rounded-md shadow-sm p-0 p-md-4 pb-4" style="border: 1px solid #e2e8f0; border-left: 0; border-right: 0;">
     `;
-    const romanos = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
 
-    htmlUI += `<div class="table-responsive">
-        <table class="table table-borderless align-middle mb-0" style="min-width: 500px;">
-            <thead style="border-bottom: 2px solid #cbd5e1;">
-                <tr>
-                    <th class="text-uppercase px-3" style="font-size: 11px; color: #64748b; width: 40%; border-right: 1px solid #e2e8f0;">Criterio</th>
-                    <th class="text-uppercase text-center" style="font-size: 11px; color: #64748b; width: 20%; border-right: 1px solid #e2e8f0;">Estado</th>
-                    <th class="text-uppercase px-3" style="font-size: 11px; color: #64748b; width: 40%;">Observación</th>
+    // ── 2. CARD: FALLAS DETECTADAS (SI EXISTEN) ──
+    if (fallasDetectadas.length > 0) {
+        let fallasRowsHtml = '';
+        fallasDetectadas.forEach(f => {
+            fallasRowsHtml += `
+                <tr class="align-middle bg-white border-bottom">
+                    <td class="ps-3 py-2.5 fw-bold text-secondary" style="font-size:0.82rem; white-space:nowrap;">
+                        <span class="badge bg-light text-dark border px-2 py-1">${f.categoria || 'GENERAL'}</span>
+                    </td>
+                    <td class="py-2.5 fw-bold text-dark" style="font-size:0.88rem;">${f.item}</td>
+                    <td class="py-2.5 text-center" style="width:110px;">
+                        <span class="badge rounded-pill fw-bold px-2.5 py-1" style="background:#fee2e2; color:#b91c1c; font-size:0.75rem;">
+                            <i class="bi bi-x-circle-fill me-1"></i> ${f.estado || 'FALLA'}
+                        </span>
+                    </td>
+                    <td class="pe-3 py-2.5 text-danger fw-semibold" style="font-size:0.84rem;">
+                        ${f.observacion || 'Sin observación especificada'}
+                    </td>
                 </tr>
-            </thead>
-            <tbody>`;
-
-    if (window.DYNAMIC_INSP_SCHEMA && window.DYNAMIC_INSP_SCHEMA.length > 0) {
-        window.DYNAMIC_INSP_SCHEMA.forEach((sec, idxCat) => {
-            htmlChecklistPDF += `<tr class="sec-row"><td colspan="4">${romanos[idxCat] || (idxCat+1)}. ${sec.tab.toUpperCase()}</td></tr>`;
-            let catUI = '';
-            let hasItems = false;
-            if (sec.items) {
-                sec.items.forEach((item, idxItem) => {
-                    let lbl = typeof item === 'string' ? item : item.label;
-                    let secTabNorm = normalizeStr(sec.tab);
-                    let match = detallesArray.find(d => {
-                        if (!d.item || !d.categoria) return false;
-                        let catNorm = normalizeStr(d.categoria.replace(/^\d+\.\s*/, ''));
-                        return normalizeStr(d.item) === normalizeStr(lbl) && catNorm === secTabNorm;
-                    });
-                    let obs = (match && match.observacion) ? match.observacion : "";
-                    
-                    let rowspan = sec.items.length;
-                    let allObs = sec.items.map(i => {
-                        let lbl2 = typeof i === 'string' ? i : i.label;
-                        let secTabNorm2 = normalizeStr(sec.tab);
-                        let m = detallesArray.find(d => {
-                            if (!d.item || !d.categoria) return false;
-                            let catNorm2 = normalizeStr(d.categoria.replace(/^\d+\.\s*/, ''));
-                            return normalizeStr(d.item) === normalizeStr(lbl2) && catNorm2 === secTabNorm2;
-                        });
-                        return (m && m.observacion) ? m.observacion : "";
-                    }).filter(x => x).join('<br>');
-                    let obsTd = (idxItem === 0) ? `<td class="w-obs" rowspan="${rowspan}" style="vertical-align:top; border-left: 1px solid #000; padding: 4px;">${allObs}</td>` : '';
-                    htmlChecklistPDF += `<tr>
-                        <td class="w-crit">${idxItem + 1}. ${lbl}</td>
-                        <td class="w-chk th-center"><span class="chk-icon ${match && match.estado === 'OK' ? 'chk-green' : ''}" style="${match && match.estado !== 'OK' && match.estado !== 'FALLA' && match.estado !== 'SIN DATOS' ? 'font-size:10px;font-family:sans-serif;font-weight:bold;color:#2563eb;' : ''}">${match && match.estado === 'OK' ? '✓' : (match && match.estado !== 'FALLA' && match.estado !== 'SIN DATOS' ? match.estado : '')}</span></td>
-                        <td class="w-chk th-center"><span class="chk-icon ${match && match.estado === 'FALLA' ? 'chk-red' : ''}">${match && match.estado === 'FALLA' ? '✗' : ''}</span></td>
-                        ${obsTd}
-                    </tr>`;
-
-                    if (match && match.estado && match.estado !== "SIN DATOS") {
-                        hasItems = true;
-                        let badgeHtml;
-                        if (match.estado === 'OK') {
-                            badgeHtml = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">OK</span>`;
-                        } else if (match.estado === 'FALLA') {
-                            badgeHtml = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">MAL</span>`;
-                        } else {
-                            badgeHtml = `<span class="badge bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-pill px-3 py-1" style="color: #1e40af !important; font-weight: 700;">${match.estado}</span>`;
-                        }
-                        
-                        let obsHtml = obs ? `<span style="font-size: 13px; color: #000; font-weight: bold;">${obs}</span>` : '';
-
-                        catUI += `<tr style="border-bottom: 1px solid #f1f5f9;">
-                            <td class="px-3 py-2" style="font-size: 13px; color: #475569; border-right: 1px solid #e2e8f0;">${lbl}</td>
-                            <td class="text-center py-2" style="border-right: 1px solid #e2e8f0; width: 120px;">${badgeHtml}</td>
-                            <td class="px-3 py-2" style="font-size: 13px; color: #000;">${obsHtml}</td>
-                        </tr>`;
-                    }
-                });
-            }
-            if (hasItems) {
-                htmlUI += `<tr><td colspan="3" class="fw-bold px-3" style="background-color: #f8fafc; font-size: 13px; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-top: 16px; padding-bottom: 8px;">${romanos[idxCat] || (idxCat+1)}. ${sec.tab}</td></tr>`;
-                htmlUI += catUI;
-            }
+            `;
         });
+
+        htmlUI += `
+            <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #fee2e2 !important; background:#fffcfc !important;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="fw-bold text-danger m-0 d-flex align-items-center gap-2" style="font-size:0.95rem;">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Detalle de Fallas Detectadas (${fallasDetectadas.length})
+                    </h6>
+                </div>
+                <div class="table-responsive rounded-3 border bg-white overflow-hidden">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light border-bottom">
+                            <tr class="text-secondary" style="font-size:0.72rem; letter-spacing:0.5px; text-transform:uppercase;">
+                                <th class="ps-3 py-2">Sistema</th>
+                                <th class="py-2">Ítem / Componente</th>
+                                <th class="py-2 text-center">Estado</th>
+                                <th class="pe-3 py-2">Observación del Técnico</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${fallasRowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
     }
 
-    htmlUI += `</tbody></table></div>`;
+    // ── 3. CARD: CHECKLIST COMPLETO SEGMENTADO POR SISTEMAS ──
+    let sistemasHtml = '';
+    categoriasMap.forEach((items, catName) => {
+        let itemsHtml = '';
+        items.forEach(d => {
+            let est = (d.estado || '').toUpperCase().trim();
+            let badgeItem = '';
+            if (est === 'OK' || est === 'BUENO' || est === 'CONFORME') {
+                badgeItem = `<span class="badge rounded-pill fw-bold px-3 py-1 shadow-2xs" style="background:#dcfce7; color:#15803d; font-size:0.75rem;"><i class="bi bi-check-lg me-1"></i>OK</span>`;
+            } else if (est === 'FALLA' || est === 'MAL' || est === 'CRITICO') {
+                badgeItem = `<span class="badge rounded-pill fw-bold px-3 py-1 shadow-2xs" style="background:#fee2e2; color:#b91c1c; font-size:0.75rem;"><i class="bi bi-x-lg me-1"></i>FALLA</span>`;
+            } else if (est !== '' && est !== 'SIN DATOS') {
+                badgeItem = `<span class="badge rounded-pill fw-bold px-2.5 py-1 shadow-2xs" style="background:#e0f2fe; color:#0369a1; font-size:0.75rem;">${d.estado}</span>`;
+            } else {
+                badgeItem = `<span class="text-muted small">—</span>`;
+            }
 
+            itemsHtml += `
+                <div class="d-flex align-items-center justify-content-between p-2.5 px-3 border-bottom bg-white" style="font-size:0.86rem;">
+                    <div class="d-flex align-items-start gap-2 flex-grow-1 me-3">
+                        <i class="bi ${est === 'FALLA' || est === 'MAL' ? 'bi-exclamation-circle text-danger' : 'bi-check2 text-muted'} mt-0.5"></i>
+                        <div>
+                            <span class="fw-semibold text-dark">${d.item}</span>
+                            ${d.observacion ? `<div class="text-danger small mt-0.5 fw-semibold"><i class="bi bi-info-circle me-1"></i>${d.observacion}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0">
+                        ${badgeItem}
+                    </div>
+                </div>
+            `;
+        });
+
+        sistemasHtml += `
+            <div class="border rounded-4 overflow-hidden mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+                <div class="px-3 py-2.5 bg-light d-flex align-items-center justify-content-between border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="d-flex align-items-center justify-content-center rounded-circle text-primary" style="width:24px; height:24px; background:#eff6ff;">
+                            <i class="bi bi-folder2-open" style="font-size:0.8rem;"></i>
+                        </span>
+                        <span class="fw-bolder text-dark" style="font-size:0.88rem; letter-spacing:0.5px;">${catName}</span>
+                    </div>
+                    <span class="badge bg-white border text-secondary rounded-pill px-2.5 py-1" style="font-size:0.72rem;">${items.length} ítems</span>
+                </div>
+                <div class="d-flex flex-column">
+                    ${itemsHtml}
+                </div>
+            </div>
+        `;
+    });
+
+    htmlUI += `
+        <!-- 3. CHECKLIST POR SISTEMAS -->
+        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="p-2 rounded-3 text-primary d-flex align-items-center justify-content-center" style="background:#eff6ff; width:36px; height:36px;">
+                        <i class="bi bi-card-checklist fs-5"></i>
+                    </span>
+                    <div>
+                        <h6 class="fw-bold text-dark m-0" style="font-size:1.02rem;">Checklist y Criterios Evaluados</h6>
+                        <small class="text-muted" style="font-size:0.75rem;">Detalle por sistema y estado</small>
+                    </div>
+                </div>
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1" style="font-size:0.75rem;">${totalItemsEvaluados} Criterios</span>
+            </div>
+            <div class="d-flex flex-column">
+                ${sistemasHtml}
+            </div>
+        </div>
+    `;
+
+    // ── 4. CARD: EVIDENCIAS FOTOGRÁFICAS ──
     if (contEvidencias > 1) {
-        htmlUI += `<div class="mt-4 pt-2">
-            <h6 style="font-size: 13px; font-weight: bold; color: #1e293b; margin-bottom: 12px;">Evidencias Fotográficas (${contEvidencias - 1})</h6>
-            <div class="d-flex gap-2 overflow-auto pb-2" style="scrollbar-width: thin;">${htmlEvidenciasUI}</div>
-        </div>`;
+        htmlUI += `
+            <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size:0.95rem;">
+                        <i class="bi bi-camera-fill text-primary"></i> Evidencias Fotográficas (${contEvidencias - 1})
+                    </h6>
+                </div>
+                <div class="d-flex gap-2.5 overflow-auto pb-2 custom-scrollbar">
+                    ${htmlEvidenciasUI}
+                </div>
+            </div>
+        `;
     }
 
+    // ── 5. CARD: ÓRDENES DE TRABAJO (SI TIENE) ──
+    if (insp.id_ot) {
+        htmlUI += `
+            <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e0f2fe !important; background:#f8fafc !important;">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="p-2 rounded-3 text-primary d-flex align-items-center justify-content-center" style="background:#e0f2fe; width:36px; height:36px;">
+                            <i class="bi bi-tools fs-5"></i>
+                        </span>
+                        <div>
+                            <h6 class="fw-bold text-dark m-0" style="font-size:0.95rem;">Órdenes de Trabajo Generadas</h6>
+                            <small class="text-muted" style="font-size:0.75rem;">Mantenimiento y corrección en taller</small>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary fs-6 px-3 py-1.5 fw-bold rounded-pill">OT-${insp.id_ot}</span>
+                        <button type="button" class="btn btn-primary btn-sm fw-bold rounded-pill px-3 shadow-2xs" onclick="bootstrap.Modal.getInstance(document.getElementById('modalResumenInspeccion')).hide(); if(typeof window.rotAbrirDetalle === 'function'){ window.rotAbrirDetalle('${insp.id_ot}'); } else { if(typeof window.cargarModuloAislado === 'function') window.cargarModuloAislado('mantenimiento/reportes-ot'); setTimeout(()=> { if(typeof window.rotAbrirDetalle === 'function') window.rotAbrirDetalle('${insp.id_ot}'); }, 800); }">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> Abrir OT
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ── 6. CARD: FIRMA DIGITAL ──
     let firmaPrincipalReal = signedMap[insp.url_firma] || insp.url_firma;
     let firmasHtmlUI = "";
     if (firmaPrincipalReal && firmaPrincipalReal.length > 100) {
-        firmasHtmlUI += `<div class="text-center"><img src="${firmaPrincipalReal}" style="max-height: 120px; max-width: 250px; object-fit: contain; display: block; margin: 0 auto; border-bottom: 2px solid #ccc;"><span style="font-size: 14px; font-weight: bold;">Técnico Inspector</span><br><span style="font-size: 12px;">${insp.tecnico || '-'}</span></div>`;
+        firmasHtmlUI += `
+            <div class="text-center p-2 rounded-3 bg-light border">
+                <img src="${firmaPrincipalReal}" style="max-height: 100px; max-width: 220px; object-fit: contain; display: block; margin: 0 auto;">
+                <div class="border-top pt-1 mt-1">
+                    <span class="fw-bold text-dark" style="font-size: 0.85rem;">Técnico Inspector</span><br>
+                    <span class="text-secondary small">${insp.tecnico || '-'}</span>
+                </div>
+            </div>
+        `;
     }
-
     if (firmasHtmlUI !== "") {
-        htmlUI += `<div class="mt-4 pt-3 border-top d-flex justify-content-around flex-wrap gap-3">${firmasHtmlUI}</div>`;
+        htmlUI += `
+            <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size:0.95rem;">
+                    <i class="bi bi-pen-fill text-primary"></i> Firma y Validación
+                </h6>
+                <div class="d-flex justify-content-around flex-wrap gap-3">
+                    ${firmasHtmlUI}
+                </div>
+            </div>
+        `;
     }
 
-    htmlUI += `</div></div>`; // Close cards
+    const folioTitleEl = document.getElementById('lbl-resumen-insp-folio');
+    if (folioTitleEl) folioTitleEl.textContent = `Resumen de Inspección ${insp.id || ''}`;
 
     if (!autoDescargarPDF) {
-        let modalBody = document.querySelector('#modalResumenInspeccion .modal-body');
+        let modalBody = document.getElementById('det-insp-full-body') || document.querySelector('#modalResumenInspeccion .modal-body');
         if (modalBody) {
             modalBody.innerHTML = htmlUI;
         }
@@ -1062,24 +1306,10 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
     let btnIrOtContainer = document.getElementById('btn-ir-ot-container');
     if (btnIrOtContainer) {
         if (insp.id_ot) {
-            btnIrOtContainer.innerHTML = `<button type="button" class="btn btn-outline-info btn-sm fw-bold" onclick="bootstrap.Modal.getInstance(document.getElementById('modalResumenInspeccion')).hide(); if(typeof window.rotAbrirDetalle === 'function'){ window.rotAbrirDetalle('${insp.id_ot}'); } else { if(typeof window.cargarModuloAislado === 'function') window.cargarModuloAislado('mantenimiento/reportes-ot'); setTimeout(()=> { if(typeof window.rotAbrirDetalle === 'function') window.rotAbrirDetalle('${insp.id_ot}'); }, 800); }"><i class="bi bi-box-arrow-up-right"></i> Ir a OT</button>`;
+            btnIrOtContainer.innerHTML = `<button type="button" class="btn btn-outline-primary btn-sm fw-bold rounded-pill px-3 shadow-2xs" onclick="bootstrap.Modal.getInstance(document.getElementById('modalResumenInspeccion')).hide(); if(typeof window.rotAbrirDetalle === 'function'){ window.rotAbrirDetalle('${insp.id_ot}'); } else { if(typeof window.cargarModuloAislado === 'function') window.cargarModuloAislado('mantenimiento/reportes-ot'); setTimeout(()=> { if(typeof window.rotAbrirDetalle === 'function') window.rotAbrirDetalle('${insp.id_ot}'); }, 800); }"><i class="bi bi-box-arrow-up-right me-1"></i> Ir a OT</button>`;
         } else {
             btnIrOtContainer.innerHTML = '';
         }
-    }
-
-    // Se ha eliminado la inyección del HTML del PDF en el modal, ahora usamos la vista UI limpia.
-
-    let modalDialog = document.querySelector('#modalResumenInspeccion .modal-dialog');
-    if(modalDialog) {
-        modalDialog.classList.remove('modal-lg');
-        modalDialog.classList.add('modal-xl', 'modal-fullscreen-lg-down');
-    }
-    
-    let modalBody = document.querySelector('#modalResumenInspeccion .modal-body');
-    if(modalBody) {
-        modalBody.classList.remove('p-4');
-        modalBody.classList.add('p-0', 'p-md-4');
     }
 
     if (autoDescargarPDF) {
@@ -2344,23 +2574,21 @@ window.init_inspecciones = function () {
         if (btn) btn.innerHTML = '<i class="bi bi-eye-fill"></i> <span data-i18n="common.charts">Gráficos</span>';
     }
 
-    // Asegurar que las placas estén en memoria antes de filtrar
+    // Asegurar que las placas, inspecciones, unidades en base y telemetría estén en memoria
     const asegurarPlacasEInsp = async () => {
-        if (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0) {
-            try {
-                const rP = await fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) });
-                const jP = await rP.json();
-                window.dataGlobalPlacas = jP.data || [];
-                dataGlobalPlacas = window.dataGlobalPlacas;
-            } catch(e) {}
-        }
-        if (!window.dataGlobalInspecciones || window.dataGlobalInspecciones.length === 0) {
-            try {
-                const rI = await fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) });
-                const jI = await rI.json();
-                window.dataGlobalInspecciones = jI.data || [];
-                dataGlobalInspecciones = window.dataGlobalInspecciones;
-            } catch(e) {}
+        try {
+            await Promise.allSettled([
+                (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0) ? 
+                    fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+                        .then(r => r.json()).then(j => { window.dataGlobalPlacas = j.data || []; dataGlobalPlacas = window.dataGlobalPlacas; }) : Promise.resolve(),
+                (!window.dataGlobalInspecciones || window.dataGlobalInspecciones.length === 0) ?
+                    fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+                        .then(r => r.json()).then(j => { window.dataGlobalInspecciones = j.data || []; dataGlobalInspecciones = window.dataGlobalInspecciones; }) : Promise.resolve(),
+                window.cargarDatosUnidadesBase(),
+                window.asegurarWialonCache()
+            ]);
+        } catch(e) {
+            console.warn("Error cargando dependencias de inspecciones:", e);
         }
         mostrarStatusInspecciones(window.dataGlobalInspecciones || []);
     };
@@ -2371,15 +2599,17 @@ window.init_inspecciones = function () {
 // Alias global para recargarModulo (main logica.js)
 window.recargarInspecciones = function () {
     dataGlobalInspecciones = null;
-    fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
-        .then(function (r) { return r.json(); })
-        .then(function (r) {
-            // Guardar en variable local Y en window para acceso externo
-            dataGlobalInspecciones = r.data || [];
-            window._dataGlobalInspeccionesRaw = dataGlobalInspecciones;
-            mostrarStatusInspecciones(dataGlobalInspecciones);
-        })
-        .catch(function () { mostrarStatusInspecciones([]); });
+    Promise.allSettled([
+        fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+            .then(r => r.json()).then(r => {
+                dataGlobalInspecciones = r.data || [];
+                window._dataGlobalInspeccionesRaw = dataGlobalInspecciones;
+            }),
+        window.cargarDatosUnidadesBase(),
+        window.asegurarWialonCache()
+    ]).finally(function() {
+        mostrarStatusInspecciones(dataGlobalInspecciones || []);
+    });
 };
 
 
@@ -2488,14 +2718,38 @@ window.ckCambiarTabConfigUnidadInsp = function(unidad) {
     window._inspConfigTabActiva = unidad;
     const btnT = document.getElementById('insp-tab-cfg-tracto');
     const btnR = document.getElementById('insp-tab-cfg-remolque');
+    const cntT = document.getElementById('insp-cnt-cfg-tracto');
+    const cntR = document.getElementById('insp-cnt-cfg-remolque');
 
     if (btnT && btnR) {
         if (unidad === 'tracto') {
-            btnT.classList.add('active');
-            btnR.classList.remove('active');
+            btnT.classList.add('active', 'fw-bold');
+            btnT.classList.remove('text-secondary', 'fw-semibold');
+            btnT.style.background = '#ffffff';
+            btnT.style.color = '#0f172a';
+            btnT.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
+            if (cntT) { cntT.style.background = '#e0f2fe'; cntT.style.color = '#0284c7'; }
+
+            btnR.classList.remove('active', 'fw-bold');
+            btnR.classList.add('text-secondary', 'fw-semibold');
+            btnR.style.background = 'transparent';
+            btnR.style.color = '#64748b';
+            btnR.style.boxShadow = 'none';
+            if (cntR) { cntR.style.background = ''; cntR.style.color = ''; }
         } else {
-            btnT.classList.remove('active');
-            btnR.classList.add('active');
+            btnR.classList.add('active', 'fw-bold');
+            btnR.classList.remove('text-secondary', 'fw-semibold');
+            btnR.style.background = '#ffffff';
+            btnR.style.color = '#0f172a';
+            btnR.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
+            if (cntR) { cntR.style.background = '#e0f2fe'; cntR.style.color = '#0284c7'; }
+
+            btnT.classList.remove('active', 'fw-bold');
+            btnT.classList.add('text-secondary', 'fw-semibold');
+            btnT.style.background = 'transparent';
+            btnT.style.color = '#64748b';
+            btnT.style.boxShadow = 'none';
+            if (cntT) { cntT.style.background = ''; cntT.style.color = ''; }
         }
     }
     window.ckRenderizarConfigSistemasInsp();
@@ -2522,70 +2776,92 @@ window.ckRenderizarConfigSistemasInsp = function() {
 
     let html = '';
     sistemas.forEach((sys, sysIdx) => {
-        const title = sys.title || 'SISTEMA SIN NOMBRE';
-        const icon = sys.icon || (unidad === 'tracto' ? 'bi-gear-fill' : 'bi-truck-flatbed');
+        const title = (sys.title || 'SISTEMA').toUpperCase();
+        const icon = sys.icon || (unidad === 'tracto' ? (title.includes('LLANTA') ? 'bi-disc' : (title.includes('MOTOR') ? 'bi-gear' : 'bi-sliders')) : 'bi-truck-flatbed');
         const items = Array.isArray(sys.items) ? sys.items : [];
 
         let itemsHtml = '';
         items.forEach((itTxt, itemIdx) => {
             const parsed = parseCodigoTextoInsp(itTxt, itemIdx);
             itemsHtml += `
-                <div class="d-flex align-items-center gap-2 mb-2 bg-white p-1.5 px-2 rounded-3 border shadow-2xs">
-                    <input type="text" class="form-control form-control-sm text-center fw-bold text-primary bg-light border" 
-                        style="width: 52px; min-height: 36px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; box-shadow:none;" 
-                        value="${parsed.codigo}" 
-                        placeholder="N°"
-                        title="Código numérico de falla (ej: 01, 02)"
-                        oninput="window.ckActualizarItemFallaCompuestoInsp(${sysIdx}, ${itemIdx}, this.value, null)">
-                    <input type="text" class="form-control form-control-sm fw-semibold text-dark border-0 bg-transparent flex-grow-1" 
-                        style="min-height: 36px; font-size:0.88rem; box-shadow:none;" 
+                <div class="d-flex align-items-center gap-3 p-2.5 px-3 bg-white" style="border-bottom: 1px solid #f1f5f9;">
+                    <span class="text-muted fw-bold" style="font-family: monospace; font-size: 0.85rem; width: 24px; min-width: 24px; color: #94a3b8;">${parsed.codigo}</span>
+                    <input type="text" class="form-control form-control-sm fw-medium text-dark border-0 bg-transparent p-0 flex-grow-1" 
+                        style="font-size: 0.9rem; box-shadow: none;" 
                         value="${parsed.texto.replace(/"/g, '&quot;')}" 
-                        placeholder="Descripción del ítem de inspección o componente..." 
+                        placeholder="Descripción del ítem..." 
                         oninput="window.ckActualizarItemFallaCompuestoInsp(${sysIdx}, ${itemIdx}, null, this.value)">
-                    <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1 d-flex align-items-center justify-content-center" 
-                        style="width: 28px; height: 28px; border-color: transparent;" 
-                        onclick="window.ckEliminarItemFallaInsp(${sysIdx}, ${itemIdx})" 
-                        title="Eliminar ítem">
-                        <i class="bi bi-trash3-fill" style="font-size:0.82rem;"></i>
+                    <button type="button" class="btn btn-link text-muted p-1 text-decoration-none ck-btn-trash-item" onclick="window.ckEliminarItemFallaInsp(${sysIdx}, ${itemIdx})" title="Eliminar ítem">
+                        <i class="bi bi-trash3 fs-6"></i>
                     </button>
                 </div>
             `;
         });
 
-        if (items.length === 0) {
-            itemsHtml = `<div class="text-center py-3 text-muted small fst-italic">Sin ítems configurados. Agrega uno usando el botón inferior.</div>`;
-        }
-
         html += `
-            <div class="card border-0 shadow-2xs rounded-4 overflow-hidden bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
-                <div class="card-header py-2.5 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 80%;">
-                        <span class="p-2 rounded-3 bg-white border text-primary shadow-2xs">
-                            <i class="bi ${icon} fs-5"></i>
+            <div class="mb-4">
+                <!-- Encabezado del Sistema -->
+                <div class="d-flex align-items-center justify-content-between px-2 mb-2">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 85%;">
+                        <div class="d-flex align-items-center justify-content-center rounded-circle text-secondary flex-shrink-0" style="width: 28px; height: 28px; background: #e2e8f0;">
+                            <i class="bi ${icon}" style="font-size: 0.85rem;"></i>
+                        </div>
+                        <input type="text" class="form-control form-control-sm text-dark border-0 bg-transparent p-0 fw-bold" 
+                            style="font-size: 0.95rem; letter-spacing: 0.02em; font-weight: 800 !important; box-shadow: none;" 
+                            value="${title.replace(/"/g, '&quot;')}" 
+                            oninput="window.ckActualizarTituloSistemaInsp(${sysIdx}, this.value)"
+                            placeholder="NOMBRE SISTEMA">
+                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 fw-normal flex-shrink-0" style="font-size: 0.72rem;">
+                            ${items.length} ítems
                         </span>
-                        <input type="text" class="form-control fw-bold border-0 bg-transparent text-dark flex-grow-1" style="font-size:1.02rem; box-shadow:none;" value="${title.replace(/"/g, '&quot;')}" oninput="window.ckActualizarTituloSistemaInsp(${sysIdx}, this.value)" placeholder="Nombre del Sistema (Ej: MOTOR, FRENOS...)">
-                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1" style="font-size:0.75rem;">${items.length} ítems</span>
                     </div>
-                    <div>
-                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold shadow-2xs" onclick="window.ckEliminarSistemaInsp(${sysIdx})">
-                            <i class="bi bi-trash3 me-1"></i> Eliminar Sistema
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body p-3 bg-light bg-opacity-50">
-                    <div class="d-flex flex-column gap-1 mb-2">
-                        ${itemsHtml}
-                    </div>
-                    <button type="button" class="btn btn-outline-primary btn-sm fw-bold w-100 rounded-3 py-2 shadow-2xs d-flex align-items-center justify-content-center gap-1.5" onclick="window.ckAgregarItemFallaInsp(${sysIdx})" style="border-style: dashed; background: #ffffff;">
-                        <i class="bi bi-plus-lg"></i>
-                        <span>Agregar Ítem a ${title}</span>
+                    <button type="button" class="btn btn-link text-muted p-1 text-decoration-none" onclick="window.ckEliminarSistemaInsp(${sysIdx})" title="Eliminar sistema">
+                        <i class="bi bi-trash3 fs-6"></i>
                     </button>
+                </div>
+
+                <!-- Tarjeta con Ítems -->
+                <div class="card border-0 rounded-4 shadow-2xs overflow-hidden bg-white" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex flex-column">
+                        ${itemsHtml}
+                        
+                        <!-- Barra para añadir ítem -->
+                        <div class="d-flex align-items-center gap-2 p-2.5 px-3 bg-white" style="border-top: ${items.length > 0 ? '1px solid #f1f5f9' : 'none'};">
+                            <i class="bi bi-plus text-primary fs-5"></i>
+                            <input type="text" class="form-control form-control-sm border-0 bg-transparent text-dark p-0 flex-grow-1" 
+                                id="insp-new-item-input-${sysIdx}" 
+                                style="font-size: 0.88rem; box-shadow: none;" 
+                                placeholder="Añadir ítem a ${title} (presiona Enter)..." 
+                                onkeydown="if(event.key==='Enter'){ event.preventDefault(); window.ckAgregarItemDesdeInputInsp(${sysIdx}); }">
+                            <button type="button" class="btn btn-link text-primary fw-bold text-decoration-none p-0 px-2 flex-shrink-0" style="font-size: 0.85rem;" onclick="window.ckAgregarItemDesdeInputInsp(${sysIdx})">
+                                Añadir
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
     });
 
     container.innerHTML = html;
+};
+
+window.ckAgregarItemDesdeInputInsp = function(sysIdx) {
+    const unidad = window._inspConfigTabActiva || 'tracto';
+    const input = document.getElementById(`insp-new-item-input-${sysIdx}`);
+    if (!input) return;
+    const txt = (input.value || '').trim();
+    if (!txt) return;
+
+    const sys = window._inspConfigTemp[unidad][sysIdx];
+    if (!sys) return;
+    if (!Array.isArray(sys.items)) sys.items = [];
+
+    const nextNum = sys.items.length + 1;
+    const padded = String(nextNum).padStart(2, '0');
+    sys.items.push(`${padded} ${txt}`);
+    input.value = '';
+    window.ckRenderizarConfigSistemasInsp();
 };
 
 window.ckAgregarNuevoSistemaInsp = function() {
@@ -2597,8 +2873,8 @@ window.ckAgregarNuevoSistemaInsp = function() {
     window._inspConfigTemp[unidad].push({
         key: 'sys_' + Date.now(),
         title: `NUEVO SISTEMA ${padded}`,
-        icon: unidad === 'tracto' ? 'bi-gear-fill' : 'bi-truck-flatbed',
-        items: [`01 Ítem de inspección inicial`]
+        icon: unidad === 'tracto' ? 'bi-gear' : 'bi-truck-flatbed',
+        items: []
     });
 
     window.ckRenderizarConfigSistemasInsp();
@@ -2620,17 +2896,6 @@ window.ckActualizarTituloSistemaInsp = function(sysIdx, val) {
     if (window._inspConfigTemp[unidad] && window._inspConfigTemp[unidad][sysIdx]) {
         window._inspConfigTemp[unidad][sysIdx].title = (val || '').toUpperCase();
     }
-};
-
-window.ckAgregarItemFallaInsp = function(sysIdx) {
-    const unidad = window._inspConfigTabActiva || 'tracto';
-    const sys = window._inspConfigTemp[unidad][sysIdx];
-    if (!sys) return;
-    if (!Array.isArray(sys.items)) sys.items = [];
-
-    const nextNum = String(sys.items.length + 1).padStart(2, '0');
-    sys.items.push(`${nextNum} Ítem de inspección`);
-    window.ckRenderizarConfigSistemasInsp();
 };
 
 window.ckEliminarItemFallaInsp = function(sysIdx, itemIdx) {
