@@ -534,8 +534,10 @@ window.filtrarFleetrunAvanzado = function() {
     const chkCli = Array.from(document.querySelectorAll('#filtroFleetCliente input:checked')).map(e=>e.value);
     const chkUts = Array.from(document.querySelectorAll('#filtroFleetUts input:checked')).map(e=>e.value);
     const chkEst = Array.from(document.querySelectorAll('#filtroFleetEstado input:checked')).map(e=>e.value);
+    const activeSegment = document.querySelector('#btn-group-estados-fleetrun .fl-segment-item.active')?.getAttribute('data-filter') || '';
+    const filterEstList = chkEst.length > 0 ? chkEst : (activeSegment ? [activeSegment] : []);
 
-    let isFiltering = txt !== '' || dateCompare !== '' || chkCli.length > 0 || chkUts.length > 0 || chkEst.length > 0;
+    let isFiltering = txt !== '' || dateCompare !== '' || chkCli.length > 0 || chkUts.length > 0 || filterEstList.length > 0;
     let cntVigente = 0, cntProximo = 0, cntVencido = 0;
     let placasMostradas = new Set();
     let estadoPrio = { 'VIGENTE': 0, 'PROXIMO': 1, 'VENCIDO': 2 };
@@ -555,7 +557,7 @@ window.filtrarFleetrunAvanzado = function() {
                 let kpiFila = row.getAttribute('data-estado-kpi');
                 let matchTxt = (!txt || textoRow.includes(txt));
                 let matchDate = (!dateCompare || rowFecha === dateCompare);
-                let matchKpi = (!chkEst.length || chkEst.includes(kpiFila));
+                let matchKpi = (!filterEstList.length || filterEstList.includes(kpiFila));
                 if(matchTxt && matchDate && matchKpi) {
                     row.style.display = isFiltering ? '' : (expandAllState ? '' : 'none');
                     hasVisibleChild = true;
@@ -603,9 +605,12 @@ function _filtrarDatosAMostrar(datos) {
     var chkCli = Array.from(document.querySelectorAll('#filtroFleetCliente input:checked')).map(function(e){return e.value;});
     var chkUts = Array.from(document.querySelectorAll('#filtroFleetUts input:checked')).map(function(e){return e.value;});
     var chkEst = Array.from(document.querySelectorAll('#filtroFleetEstado input:checked')).map(function(e){return e.value;});
+    var activeSegment = document.querySelector('#btn-group-estados-fleetrun .fl-segment-item.active')?.getAttribute('data-filter') || '';
+    var filterEstList = chkEst.length > 0 ? chkEst : (activeSegment ? [activeSegment] : []);
 
     return datos.filter(function(fila) {
         var placaRaw = (fila[4] || '').toLowerCase();
+        var placaUpper = (fila[4] || '').toUpperCase();
         var tipo     = (fila[1] || '').toLowerCase();
         var dueno    = (fila[6] || '').toLowerCase();
         var fechaFila = fila[3] || '';
@@ -616,13 +621,12 @@ function _filtrarDatosAMostrar(datos) {
 
         // Cálculo estado KPI
         var km_prox   = parseFloat(fila[11]) || 0;
-        var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placaRaw) : null;
-        var esHoras = (window._metricaMap[String(placaRaw||'').toUpperCase()] === 'horas');
+        var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placaUpper) : null;
+        var esHoras = (window._metricaMap[placaUpper] === 'horas');
         var km_gps = wD ? (esHoras ? (wD.horas || 0) : (wD.km || 0)) : (parseFloat(fila[14]) || 0);
         var falta_km  = km_prox - km_gps;
         var estado;
         var utsUmbral = 2000;
-        var esHoras = (window._metricaMap[String(placaRaw||'').toUpperCase()] === 'horas');
         var metricSuffix = esHoras ? '_HORAS' : '_KM';
         var combinedKey = utsDisp.toUpperCase() + metricSuffix;
         if (window._fleetrun_umbrales_uts && Object.keys(window._fleetrun_umbrales_uts).length > 0) {
@@ -647,7 +651,7 @@ function _filtrarDatosAMostrar(datos) {
         if (dateCompare && fechaFila !== dateCompare) return false;
         if (chkCli.length && !chkCli.includes(cli)) return false;
         if (chkUts.length && !chkUts.includes(utsDisp)) return false;
-        if (chkEst.length && !chkEst.includes(estado)) return false;
+        if (filterEstList.length && !filterEstList.includes(estado)) return false;
         return true;
     });
 }

@@ -333,8 +333,26 @@ function toggleVistaStatus() {
     expandStatusMap = {}; 
     mostrarStatusInspecciones(dataGlobalInspecciones); 
 }
-function toggleGroupRowStatus(classTipo) { expandStatusMap[classTipo] = !expandStatusMap[classTipo]; filtrarStatusAvanzado(); }
-function toggleAllStatusGroups() { expandAllStatusState = !expandAllStatusState; for (let key in expandStatusMap) { expandStatusMap[key] = expandAllStatusState; } const headers = document.querySelectorAll('#cuerpoTablaStatus tr.group-header'); headers.forEach(header => { let matchIcon = header.querySelector('i').className.match(/toggle-icon-(\w+)/); if (matchIcon) expandStatusMap[matchIcon[1]] = expandAllStatusState; }); filtrarStatusAvanzado(); }
+window.filtrarInspSemaforoSegment = function(tipo, btn) {
+    window._inspFiltroSemaforo = tipo || 'total';
+    document.querySelectorAll('#btn-group-estados-insp .ck-segment-item').forEach(function(b) {
+        b.classList.remove('active');
+    });
+    if (btn) {
+        btn.classList.add('active');
+    } else {
+        var targetBtn = document.querySelector('#btn-group-estados-insp button[data-filter="' + (tipo || 'total') + '"]');
+        if (targetBtn) targetBtn.classList.add('active');
+    }
+
+    document.querySelectorAll('#moduloStatus .ck-kpi-card').forEach(function(el) {
+        var cardId = 'insp-kpi-' + (tipo === 'verde' ? 'conformes' : (tipo === 'amarillo' ? 'alerta' : (tipo === 'rojo' ? 'criticas' : 'total')));
+        el.classList.toggle('active', el.id === cardId);
+    });
+
+    filtrarStatusAvanzado();
+};
+window.filtrarTablaPorSemaforo = window.filtrarInspSemaforoSegment;
 
 function mostrarStatusInspecciones(inspecciones) {
     if (procesadorErroresCuota(inspecciones, 'cuerpoTablaStatus')) return;
@@ -344,7 +362,6 @@ function mostrarStatusInspecciones(inspecciones) {
         if (!id) return 0;
         let parts = id.split('-');
         if (parts.length > 2 && parts[1].length === 4) {
-            // format INSP-2026-06-0001
             return parseInt(parts[1] + parts[2] + parts[3]) || 0;
         }
         return parseInt(parts[1]) || 0;
@@ -398,348 +415,293 @@ function mostrarStatusInspecciones(inspecciones) {
         });
     }
 
-    // — Guardar referencia global de todos los registros para filtrado y paginación
     window.dataFinalInspGlobal = dataFinal;
 
-    let mapTipos = new Map(); let setClis = new Set(), setMarcas = new Set(), setEstadosStatus = new Set();
-    dataFinal.forEach(item => {
-        let tipoRaw = item.infoPlaca[5] ? item.infoPlaca[5].toString().trim().toUpperCase() : "SIN TIPO";
-        let tipoDisplay = tipoRaw === "SIN TIPO" || tipoRaw === "" ? "SIN TIPO" : tipoRaw.charAt(0).toUpperCase() + tipoRaw.slice(1).toLowerCase();
-        if (!mapTipos.has(tipoDisplay)) mapTipos.set(tipoDisplay, []);
-        mapTipos.get(tipoDisplay).push(item);
-    });
+    let htmlTable = '';
+    let htmlCards = '';
 
-    let html = '';
-    if (dataFinal.length === 0) { html = '<tr><td colspan="10" class="text-center py-4">No hay datos para analizar.</td></tr>'; }
-    else {
-        mapTipos.forEach((registros, tipoDisplay) => {
-            let classTipo = normalizarClase(tipoDisplay);
-            if (expandStatusMap[classTipo] === undefined) expandStatusMap[classTipo] = false;
+    if (dataFinal.length === 0) {
+        htmlTable = '<tr><td colspan="8" class="text-center py-5 text-muted">No hay datos de inspecciones para mostrar.</td></tr>';
+        htmlCards = '<div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>No hay registros disponibles.</div>';
+    } else {
+        dataFinal.forEach((item) => {
+            let p = item.infoPlaca;
+            let insp = item.insp;
+            let placa = p[0];
+            let cli = p[1] || "-";
+            let mar = p[3] || "-";
+            let mod = p[5] || "-";
+            let motora = p[20] || p[11] || "-";
 
-            html += `<tr class="group-header data-row-status" style="cursor:pointer;" onclick="toggleGroupRowStatus('${classTipo}')">
-              <td colspan="10" class="d-none d-md-table-cell fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;">
-                  <i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}"></i>
-                  <span style="display:inline-block; min-width:80px;"><i class="bi bi-tag text-secondary"></i> <span class="text-uppercase">${tipoDisplay}</span></span>
-                  <span class="badge bg-warning text-dark float-end span-conteo-${classTipo}">${registros.length} Unidades</span>
-              </td>
-              <td colspan="10" class="d-block d-md-none p-0 border-0 bg-white">
-                  <div class="d-flex align-items-center justify-content-between p-3 border-bottom" style="background-color: #ffffff;">
-                      <div class="d-flex align-items-center gap-3">
-                          <i class="bi bi-truck" style="color: #f59e0b;"></i>
-                          <span class="fw-bold text-dark" style="font-size: 14px;">${tipoDisplay}</span>
-                          <span class="badge bg-light text-secondary rounded-pill span-conteo-${classTipo}" style="font-size: 10px; border: 1px solid #e2e8f0;">${registros.length}</span>
-                      </div>
-                      <i class="bi bi-chevron-down text-secondary toggle-icon-${classTipo}"></i>
-                  </div>
-              </td></tr>`;
-
-            registros.forEach((item) => {
-                let p = item.infoPlaca; let insp = item.insp;
-                let placa = p[0];
-                let cli = p[1] || "-";
-                let mar = p[3] || "-";
-                let mod = p[5] || "-";
-                let motora = p[20] || p[11] || "-";
-
-                if (cli !== "-") setClis.add(cli); if (mar !== "-") setMarcas.add(mar);
-
-                // Determinar si es la última inspección (la más reciente) de esta placa
-                let esUltimaInsp = false;
-                if (insp && insp.id) {
-                    let pClean = cleanPlaca(placa);
-                    let ultimaInspPlaca = inspeccionesGeneral.find(i => cleanPlaca(i.placa) === pClean);
-                    if (ultimaInspPlaca && ultimaInspPlaca.id === insp.id) {
-                        esUltimaInsp = true;
-                    }
-                } else if (!insp) {
+            let esUltimaInsp = false;
+            if (insp && insp.id) {
+                let pClean = cleanPlaca(placa);
+                let ultimaInspPlaca = inspeccionesGeneral.find(i => cleanPlaca(i.placa) === pClean);
+                if (ultimaInspPlaca && ultimaInspPlaca.id === insp.id) {
                     esUltimaInsp = true;
                 }
+            } else if (!insp) {
+                esUltimaInsp = true;
+            }
 
-                let fIngresoBonita = "-"; let diasRestantes = -9999; let tecnico = "-"; let colorFalta = ""; let txtEstado = ""; let estadoVigente2 = "";
+            let fIngresoBonita = "-";
+            let diasRestantes = -9999;
+            let tecnico = "-";
+            let colorFalta = "";
+            let txtEstado = "";
+            let estadoVigente2 = "";
 
-                if (insp && insp.fecha_ingreso) {
-                    fIngresoBonita = parseDateToDDMMYYYY(insp.fecha_ingreso); tecnico = insp.tecnico;
-                    let fIngreso;
-                    if (insp.fecha_ingreso.includes('/')) {
-                        let px = insp.fecha_ingreso.split('/'); fIngreso = new Date(px[2], px[1] - 1, px[0]);
-                    } else {
-                        let ds = insp.fecha_ingreso.split('T')[0].split('-');
-                        fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1]) - 1, parseInt(ds[2])) : new Date(insp.fecha_ingreso);
-                    }
-
-                    let dProp = parseInt(insp.dias_propuestos) || 30;
-                    let fProx = new Date(fIngreso.getTime()); fProx.setDate(fProx.getDate() + dProp);
-                    diasRestantes = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
+            if (insp && insp.fecha_ingreso) {
+                fIngresoBonita = parseDateToDDMMYYYY(insp.fecha_ingreso);
+                tecnico = insp.tecnico || '-';
+                let fIngreso;
+                if (insp.fecha_ingreso.includes('/')) {
+                    let px = insp.fecha_ingreso.split('/'); fIngreso = new Date(px[2], px[1] - 1, px[0]);
+                } else {
+                    let ds = insp.fecha_ingreso.split('T')[0].split('-');
+                    fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1]) - 1, parseInt(ds[2])) : new Date(insp.fecha_ingreso);
                 }
 
-                let textoBadgeProx = "";
+                let dProp = parseInt(insp.dias_propuestos) || 30;
+                let fProx = new Date(fIngreso.getTime());
+                fProx.setDate(fProx.getDate() + dProp);
+                diasRestantes = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
+            }
+
+            let textoBadgeProx = "";
+            if (diasRestantes < 0 && diasRestantes !== -9999) {
+                colorFalta = "#dc2626"; txtEstado = "NO VIGENTE"; estadoVigente2 = "NO VIGENTE";
+                textoBadgeProx = `Vencido hace ${Math.abs(diasRestantes)} días`;
+            } else if (diasRestantes >= 0 && diasRestantes <= 7) {
+                colorFalta = "#eab308"; txtEstado = "PRÓXIMO A VENCER"; estadoVigente2 = "PRÓXIMO A VENCER";
+                textoBadgeProx = `Faltan ${diasRestantes} días`;
+            } else if (diasRestantes > 7) {
+                colorFalta = "#16a34a"; txtEstado = "VIGENTE"; estadoVigente2 = "VIGENTE";
+                textoBadgeProx = `Faltan ${diasRestantes} días`;
+            } else {
+                colorFalta = "#dc2626"; txtEstado = "NO VIGENTE"; estadoVigente2 = "NO VIGENTE";
+            }
+
+            let badgeProx = (diasRestantes === -9999)
+                ? `<span class="badge bg-secondary-subtle text-secondary border fw-medium px-2 py-1 rounded-pill" style="font-size:0.75rem;">Sin Registro</span>`
+                : ((isHistorialStatus && !esUltimaInsp)
+                    ? `<span class="badge bg-light text-secondary border fw-semibold px-2 py-1 rounded-pill" style="font-size:0.75rem;">REGISTRADO</span>`
+                    : `<span class="badge fw-bold px-2 py-1 rounded-pill text-white" style="background-color: ${colorFalta}; font-size:0.75rem;">${textoBadgeProx}</span>`);
+
+            let badgeEst = (isHistorialStatus && !esUltimaInsp)
+                ? `<span class="badge bg-light text-secondary border fw-semibold" style="font-size:0.75rem;">REGISTRADO</span>`
+                : `<span class="badge fw-bold" style="background-color: ${colorFalta}20; color: ${colorFalta}; font-size:0.75rem; border: 1px solid ${colorFalta}40;">${txtEstado}</span>`;
+
+            let checkHtml = (window.modoSeleccion && window.modoSeleccion['statusMant'] && insp && insp.id)
+                ? `<input type="checkbox" class="form-check-input chk-bulk-statusMant me-2" value="${insp.id}" style="transform: scale(1.1);">`
+                : '';
+
+            let ubicacionHtml = '<span class="text-muted small"><i class="bi bi-geo-alt"></i> N/A</span>';
+            let wialonData = buscarWialonPorPlaca(placa);
+            if (wialonData && wialonData.lat !== 0) {
+                ubicacionHtml = `
+                <div class="text-start">
+                    <button class="badge bg-primary text-white border-0 me-1" onclick="abrirMapaFlotante('${placa}', ${wialonData.lat}, ${wialonData.lng})"><i class="bi bi-map-fill"></i> Mapa</button>
+                    <span style="font-size: 0.75rem; color: #475569; font-weight: bold;"><i class="bi bi-speedometer2"></i> ${wialonData.km.toLocaleString()} km</span>
+                </div>`;
+            }
+
+            let txtKmReact = (wialonData && wialonData.lat !== 0) ? `${wialonData.km.toLocaleString()} km` : "N/A";
+
+            let daysOverdueHTML = '';
+            if (!insp || !insp.id) {
+                daysOverdueHTML = `<span class="badge bg-light text-secondary border fw-bold" style="font-size: 0.72rem; border-radius: 6px;"><i class="bi bi-dash-circle me-1"></i> SIN REGISTRO</span>`;
+            } else if (isHistorialStatus && !esUltimaInsp) {
+                daysOverdueHTML = `<span class="badge bg-light text-secondary border fw-bold" style="font-size: 0.72rem; border-radius: 6px;"><i class="bi bi-archive-fill me-1"></i> REGISTRADO</span>`;
+            } else {
                 if (diasRestantes < 0 && diasRestantes !== -9999) {
-                    colorFalta = "#dc2626"; txtEstado = "NO VIGENTE"; estadoVigente2 = "NO VIGENTE";
-                    textoBadgeProx = `Vencido hace ${Math.abs(diasRestantes)} días`;
-                } else if (diasRestantes >= 0 && diasRestantes <= 7) {
-                    colorFalta = "#eab308"; txtEstado = "PRÓXIMO A VENCER"; estadoVigente2 = "PRÓXIMO A VENCER";
-                    textoBadgeProx = `Faltan ${diasRestantes} días`;
+                    let cantD = Math.abs(diasRestantes);
+                    let lblD = cantD === 1 ? 'Venció hace 1 día' : `Venció hace ${cantD} días`;
+                    daysOverdueHTML = `<span class="badge bg-danger-subtle text-danger fw-semibold" style="font-size: 0.72rem; border-radius: 6px;"><i class="bi bi-exclamation-circle-fill me-1"></i> ${lblD}</span>`;
+                } else if (diasRestantes >= 0 && diasRestantes <= 7 && diasRestantes !== -9999) {
+                    let cantD = diasRestantes;
+                    let lblD = cantD === 1 ? 'Falta 1 día' : (cantD === 0 ? 'Vence hoy' : `Faltan ${cantD} días`);
+                    daysOverdueHTML = `<span class="badge bg-warning-subtle text-warning-emphasis fw-semibold" style="font-size: 0.72rem; border-radius: 6px;"><i class="bi bi-clock-history me-1"></i> ${lblD}</span>`;
                 } else if (diasRestantes > 7) {
-                    colorFalta = "#16a34a"; txtEstado = "VIGENTE"; estadoVigente2 = "VIGENTE";
-                    textoBadgeProx = `Faltan ${diasRestantes} días`;
-                } else {
-                    colorFalta = "#dc2626"; txtEstado = "NO VIGENTE"; estadoVigente2 = "NO VIGENTE";
+                    let cantD = diasRestantes;
+                    let lblD = cantD === 1 ? 'Falta 1 día' : `Faltan ${cantD} días`;
+                    daysOverdueHTML = `<span class="badge bg-success-subtle text-success fw-semibold" style="font-size: 0.72rem; border-radius: 6px;"><i class="bi bi-check-circle-fill me-1"></i> ${lblD}</span>`;
                 }
+            }
 
-                if (estadoVigente2 !== "") setEstadosStatus.add(estadoVigente2);
+            let badgeEstadoMobile = '';
+            if (!insp || !insp.id) {
+                badgeEstadoMobile = `<span class="badge bg-secondary-subtle text-secondary fw-semibold" style="font-size:0.72rem; border-radius:6px;">SIN REGISTRO</span>`;
+            } else if (isHistorialStatus && !esUltimaInsp) {
+                badgeEstadoMobile = `<span class="badge bg-light text-secondary border fw-semibold" style="font-size:0.72rem; border-radius:6px;">REGISTRADO</span>`;
+            } else if (diasRestantes < 0) {
+                badgeEstadoMobile = `<span class="badge bg-danger-subtle text-danger fw-semibold" style="font-size:0.72rem; border-radius:6px;">NO VIGENTE</span>`;
+            } else if (diasRestantes <= 7) {
+                badgeEstadoMobile = `<span class="badge bg-warning-subtle text-warning-emphasis fw-semibold" style="font-size:0.72rem; border-radius:6px;">EN ALERTA</span>`;
+            } else {
+                badgeEstadoMobile = `<span class="badge bg-success-subtle text-success fw-semibold" style="font-size:0.72rem; border-radius:6px;">CONFORME</span>`;
+            }
 
-                let badgeProx = (diasRestantes === -9999)
-                    ? `<span class="badge bg-secondary shadow-sm">Sin Registro</span>`
-                    : ((isHistorialStatus && !esUltimaInsp)
-                        ? `<span class="badge bg-light text-secondary border shadow-2xs">REGISTRADO</span>`
-                        : `<span class="badge p-1 px-2 shadow-sm text-white" style="background-color: ${colorFalta};">${textoBadgeProx}</span>`);
+            // 1. Desktop Row
+            htmlTable += `
+            <tr class="clickable-row data-row-status" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}">
+                <td class="ps-4 py-3 fw-bold text-dark">
+                    <div class="d-flex align-items-center gap-2">
+                        ${checkHtml}
+                        <div>
+                            <span class="font-monospace fw-bold text-primary" style="font-size:0.92rem;">${placa}</span>
+                            <span class="d-block text-muted" style="font-size:0.75rem;">${cli}</span>
+                        </div>
+                    </div>
+                </td>
+                <td class="py-3 text-secondary fw-medium">${mod}</td>
+                <td class="py-3 text-dark fw-semibold text-truncate" style="max-width: 130px;">${tecnico}</td>
+                <td class="py-3 text-secondary">${fIngresoBonita}</td>
+                <td class="py-3">${badgeProx}</td>
+                <td class="py-3 text-center">${badgeEst}</td>
+                <td class="py-3">${ubicacionHtml}</td>
+                <td class="pe-4 py-3 text-end">
+                    <div class="d-inline-flex align-items-center gap-1">
+                        ${insp && insp.id ? `
+                            <button type="button" class="ck-action-btn ck-btn-view" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', false)" title="Ver Detalle">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button type="button" class="ck-action-btn ck-btn-pdf" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', true)" title="Exportar PDF">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                            </button>
+                            ${window.checkPerm && window.checkPerm('insp', 'e') ? `
+                            <button type="button" class="ck-action-btn ck-btn-edit" onclick="event.stopPropagation(); window.abrirModalEditarInspeccion('${insp.id}')" title="Editar / Re-firmar">
+                                <i class="bi bi-pencil"></i>
+                            </button>` : ''}
+                            ${window.checkPerm && window.checkPerm('insp', 'd') ? `
+                            <button type="button" class="ck-action-btn ck-btn-delete" onclick="event.stopPropagation(); window.eliminarRegistro('${insp.id}', 'Inspecciones')" title="Eliminar">
+                                <i class="bi bi-trash3"></i>
+                            </button>` : ''}
+                        ` : `
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-2 py-1" onclick="event.stopPropagation(); window.abrirModalNuevaInspeccion('${placa}')" style="font-size:0.78rem; border-radius:8px;">
+                                <i class="bi bi-plus-lg"></i> Registrar
+                            </button>
+                        `}
+                    </div>
+                </td>
+            </tr>`;
 
-                let badgeEst = (isHistorialStatus && !esUltimaInsp)
-                    ? `<span style="color: #64748b; font-weight: bold; font-size: 0.8rem;">REGISTRADO</span>`
-                    : `<span style="color: ${colorFalta}; font-weight: bold; font-size: 0.8rem;">${txtEstado}</span>`;
+            // 2. Mobile Native Card (1:1 Copy of Reporte de Fallas Design)
+            htmlCards += `
+            <div class="ck-mobile-card data-card-insp" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}">
+                <!-- Header Card: Folio/ID + Fecha + Estado -->
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bolder text-primary font-monospace" style="font-size:0.95rem;">${insp && insp.id ? insp.id : 'SIN REGISTRO'}</span>
+                        <span class="text-muted small" style="font-size:0.75rem;">• ${fIngresoBonita}</span>
+                    </div>
+                    <div>${badgeEstadoMobile}</div>
+                </div>
 
-                let subCli = `<br><span class="text-muted" style="font-size: 0.75rem;">${cli}</span>`;
+                <!-- Placa y Modelo/Tipo -->
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🚛 ${placa}</span>
+                    ${mod && mod !== '-' ? `<span class="badge bg-light text-secondary border fw-medium px-2 py-1" style="font-size:0.8rem; border-radius:6px;">${mod}</span>` : ''}
+                </div>
 
-                let checkHtml = (window.modoSeleccion && window.modoSeleccion['statusMant'] && insp && insp.id)
-                    ? `<input type="checkbox" class="form-check-input chk-bulk-statusMant" value="${insp.id}" style="pointer-events: none; transform: scale(1.2); margin-right: 8px;">`
-                    : '';
+                <div class="mb-2">
+                    <div class="fw-bold text-dark" style="font-size:0.88rem;">${cli !== '-' ? cli : 'Sin cliente asignado'}</div>
+                    <div class="text-muted small" style="font-size:0.75rem;"><i class="bi bi-person-fill text-secondary me-1"></i>${tecnico !== '-' ? tecnico : 'Sin técnico asignado'}</div>
+                </div>
 
-                let ubicacionHtml = '<span class="text-muted" style="font-size: 0.8rem;"><i class="bi bi-geo-alt-fill"></i> N/A</span>';
-                let wialonData = buscarWialonPorPlaca(placa);
-                if (wialonData && wialonData.lat !== 0) {
-                    ubicacionHtml = `
-                  <div class="text-start">
-                      <button class="badge bg-primary text-white shadow-sm mb-1 border-0" onclick="abrirMapaFlotante('${placa}', ${wialonData.lat}, ${wialonData.lng})"><i class="bi bi-map-fill"></i> Mapa</button>
-                      <button class="badge bg-secondary text-white shadow-sm mb-1 border-0" onclick="obtenerDireccion(${wialonData.lat}, ${wialonData.lng}, this)"><i class="bi bi-signpost-2"></i> Calle</button><br>
-                      <span style="font-size: 0.75rem; color: var(--text); font-weight: bold;"><i class="bi bi-speedometer"></i> ${wialonData.km.toLocaleString()} km</span>
-                  </div>`;
-                }
+                <!-- Semáforo / Días restantes & GPS KM -->
+                <div class="d-flex align-items-center justify-content-between pt-2 border-top mb-3">
+                    ${daysOverdueHTML}
+                    <span class="text-muted small font-monospace" style="font-size:0.75rem;"><i class="bi bi-speedometer2 me-1"></i>${txtKmReact}</span>
+                </div>
 
-                let menuAcciones = '';
-                if (insp && insp.id) {
-                    let items = `<li><a class="dropdown-item fw-bold" href="javascript:void(0)" onclick="verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Resumen</a></li>`;
-                    items += `<li><a class="dropdown-item fw-bold" href="javascript:void(0)" onclick="verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-pdf text-danger"></i> Exportar a PDF</a></li>`;
-                    if (window.checkPerm('insp', 'e')) {
-                        items += `<li><hr class="dropdown-divider"></li>`;
-                        items += `<li><a class="dropdown-item" href="javascript:void(0)" onclick="abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-warning"></i> Editar / Re-Firmar</a></li>`;
-                    }
-                    if (window.checkPerm('insp', 'd')) {
-                        items += `<li><a class="dropdown-item text-danger fw-bold" href="javascript:void(0)" onclick="eliminarRegistro('${insp.id}', 'Inspecciones')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>`;
-                    }
-                    menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
-                } else {
-                    if (window.checkPerm && window.checkPerm('insp', 'c')) {
-                        menuAcciones = `<button class="btn btn-sm btn-outline-primary fw-bold" onclick="abrirModalNuevaInspeccion('${placa}')" title="Registrar primera inspección"><i class="bi bi-plus-lg"></i> Registrar</button>`;
-                    } else {
-                        menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>';
-                    }
-                }
-
-                let txtBadgeReact = diasRestantes === -9999 ? "SIN REGISTRO" : "REGISTRADO";
-                let txtKmReact = (wialonData && wialonData.lat !== 0) ? `${wialonData.km.toLocaleString()} km` : "N/A";
-
-                let btnRegistrar = '';
-                if (!insp || !insp.id) {
-                    btnRegistrar = `<span class="text-muted" style="font-size:12px;">Sin registro</span>`;
-                } else {
-                    btnRegistrar = `<button class="btn btn-sm d-flex align-items-center gap-1 shadow-sm" style="color: #059669; background-color: #d1fae5; border: 1px solid #a7f3d0; font-size: 13px; font-weight: bold; padding: 0.375rem 0.75rem; border-radius: 8px;" onclick="event.stopPropagation(); verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye"></i> Ver</button>`;
-                }
-
-                let daysOverdueHTML = '';
-                let colorBanda = '#94a3b8';
-
-                if (!insp || !insp.id) {
-                    daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 9999px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 4px;"><i class="bi bi-dash-circle"></i> SIN REGISTRO</span>`;
-                    colorBanda = '#94a3b8';
-                } else if (isHistorialStatus && !esUltimaInsp) {
-                    daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 9999px; border: 1px solid #cbd5e1; display: flex; align-items: center; gap: 4px;"><i class="bi bi-archive-fill"></i> REGISTRADO</span>`;
-                    colorBanda = '#94a3b8';
-                } else {
-                    if (diasRestantes < 0 && diasRestantes !== -9999) {
-                        let cantD = Math.abs(diasRestantes);
-                        let lblD = cantD === 1 ? 'Venció hace 1 día' : `Venció hace ${cantD} días`;
-                        daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 9999px; border: 1px solid #fecaca; display: flex; align-items: center; gap: 4px;"><i class="bi bi-exclamation-circle-fill"></i> ${lblD}</span>`;
-                        colorBanda = '#dc2626';
-                    } else if (diasRestantes >= 0 && diasRestantes <= 7 && diasRestantes !== -9999) {
-                        let cantD = diasRestantes;
-                        let lblD = cantD === 1 ? 'Falta 1 día' : (cantD === 0 ? 'Vence hoy' : `Faltan ${cantD} días`);
-                        daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 9999px; border: 1px solid #fde68a; display: flex; align-items: center; gap: 4px;"><i class="bi bi-clock-history"></i> ${lblD}</span>`;
-                        colorBanda = '#f59e0b';
-                    } else if (diasRestantes > 7) {
-                        let cantD = diasRestantes;
-                        let lblD = cantD === 1 ? 'Falta 1 día' : `Faltan ${cantD} días`;
-                        daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 9999px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 4px;"><i class="bi bi-check-circle-fill"></i> ${lblD}</span>`;
-                        colorBanda = '#10b981';
-                    }
-                }
-
-                html += `<tr class="child-st-${classTipo} clickable-row data-row-status child-row-status" style="display:none;" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" onclick="seleccionarFilaInspeccion(event, this)">
-              <td class="d-none d-md-table-cell fw-bold text-primary" data-value="${placa}">${checkHtml}${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td class="d-none d-md-table-cell">${mod}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width: 100px;">${tecnico}</td><td class="d-none d-md-table-cell">${fIngresoBonita}</td><td class="d-none d-md-table-cell" data-value="${diasRestantes}">${badgeProx}</td>
-              <td class="d-none d-md-table-cell" data-value="${txtEstado}">${badgeEst}</td><td class="d-none" data-value="${estadoVigente2}">${estadoVigente2}</td>
-              <td class="d-none d-md-table-cell">${ubicacionHtml}</td><td class="d-none d-md-table-cell">${menuAcciones}</td>
-              <td class="d-block d-md-none p-2 border-0 bg-transparent">
-                  <div class="insp-mob-card p-3 rounded-4 shadow-sm border bg-white mb-2" style="position: relative; overflow: hidden; border-left: 5px solid ${colorBanda} !important;">
-                      <div class="d-flex justify-content-between align-items-center mb-2">
-                          <div class="d-flex align-items-center gap-2 flex-wrap">
-                              <span class="bg-light border text-dark font-monospace fw-bold px-2 py-1 rounded shadow-2xs" style="font-size: 13px; letter-spacing: 1px;">${placa}</span>
-                              ${daysOverdueHTML}
-                          </div>
-                          ${insp && insp.id ? `
-                              <button class="btn btn-sm btn-light border fw-bold text-primary px-3 shadow-2xs rounded-pill" onclick="event.stopPropagation(); verDetalleInspeccion('${insp.id}', false)">
-                                  <i class="bi bi-eye-fill"></i> Ver
-                              </button>
-                          ` : btnRegistrar}
-                      </div>
-
-                      <div class="d-flex justify-content-between align-items-center py-2 px-2 my-2 rounded-3" style="background: rgba(0,0,0,0.025); font-size: 0.8rem;">
-                          <div class="d-flex align-items-center gap-2 text-muted fw-semibold">
-                              <i class="bi bi-building text-secondary"></i>
-                              <span class="text-dark text-truncate" style="max-width: 140px;">${cli}</span>
-                              <span>•</span>
-                              <span>${mod}</span>
-                          </div>
-                          ${insp && insp.id ? `<span class="badge bg-secondary text-white font-monospace" style="font-size: 0.7rem;">${insp.id}</span>` : ''}
-                      </div>
-
-                      <div class="d-flex justify-content-between align-items-center mt-2 pt-1" style="font-size: 0.78rem; color: var(--subtext);">
-                          <div class="d-flex align-items-center gap-2">
-                              <span class="fw-semibold"><i class="bi bi-person text-secondary me-1"></i>${tecnico}</span>
-                              <span>•</span>
-                              <span><i class="bi bi-calendar text-secondary me-1"></i>${fIngresoBonita}</span>
-                          </div>
-                          <div class="d-flex align-items-center gap-1 font-monospace fw-bold text-dark">
-                              <i class="bi bi-speedometer text-primary"></i> ${txtKmReact}
-                          </div>
-                      </div>
-                  </div>
-              </td></tr>`;
-            });
+                <!-- Botones de Acción Móvil -->
+                <div class="d-flex align-items-center justify-content-between gap-1 pt-2 border-top">
+                    ${insp && insp.id ? `
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.verDetalleInspeccion('${insp.id}', false)" style="border-radius:8px; font-size:0.78rem;">
+                            <i class="bi bi-eye"></i> Detalle
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-3 py-1 d-flex align-items-center gap-1" onclick="window.verDetalleInspeccion('${insp.id}', true)" title="PDF" style="border-radius:8px; font-size:0.78rem;">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </button>
+                    ` : `
+                        <button type="button" class="btn btn-sm btn-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.abrirModalNuevaInspeccion('${placa}')" style="border-radius:8px; font-size:0.78rem; background: #0284c7; border-color: #0284c7;">
+                            <i class="bi bi-plus-lg"></i> Registrar Inspección
+                        </button>
+                    `}
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="border-radius:8px;">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
+                            ${insp && insp.id ? `
+                                <li>
+                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.verDetalleInspeccion('${insp.id}', false)">
+                                        <i class="bi bi-eye text-primary fs-6"></i> Ver Resumen
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.verDetalleInspeccion('${insp.id}', true)">
+                                        <i class="bi bi-file-pdf text-danger fs-6"></i> Exportar a PDF
+                                    </a>
+                                </li>
+                                ${window.checkPerm && window.checkPerm('insp', 'e') ? `
+                                <li>
+                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalEditarInspeccion('${insp.id}')">
+                                        <i class="bi bi-pencil text-secondary fs-6"></i> Editar / Re-firmar
+                                    </a>
+                                </li>` : ''}
+                                ${window.checkPerm && window.checkPerm('insp', 'd') ? `
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window.eliminarRegistro('${insp.id}', 'Inspecciones')">
+                                        <i class="bi bi-trash3 text-danger fs-6"></i> Eliminar
+                                    </a>
+                                </li>` : ''}
+                            ` : `
+                                <li>
+                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-primary" href="javascript:void(0)" onclick="window.abrirModalNuevaInspeccion('${placa}')">
+                                        <i class="bi bi-plus-lg fs-6"></i> Registrar Inspección
+                                    </a>
+                                </li>
+                            `}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            `;
         });
-        rellenarFiltroCheck('filtroStatusCliente', setClis, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusMarca', setMarcas, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusEstado', setEstadosStatus, 'filtrarStatusAvanzado');
     }
+
     const _tablaBody = document.getElementById('cuerpoTablaStatus');
-    if (!_tablaBody) return;
-    _tablaBody.innerHTML = html;
+    const _cardCont = document.getElementById('inspCardContainer');
+    if (_tablaBody) _tablaBody.innerHTML = htmlTable;
+    if (_cardCont) _cardCont.innerHTML = htmlCards;
+
     filtrarStatusAvanzado();
-    _renderInspPaginacion(window.dataFinalInspGlobal.length);
+
     // Aplicar filtro pendiente desde navegación (ej: click en card del dashboard)
     if (window._pendingInspFilter) {
-        var _pf = window._pendingInspFilter;
+        var _pf = String(window._pendingInspFilter).toUpperCase();
         window._pendingInspFilter = null;
-        var _chks = document.querySelectorAll('#filtroStatusEstado input[type="checkbox"]');
-        if (_chks.length > 0) {
-            _chks.forEach(function (c) { c.checked = (c.value === _pf); });
-            filtrarStatusAvanzado();
-            // Mostrar badge visual de filtro activo
-            var _buscador = document.getElementById('buscadorStatus');
-            if (_buscador) _buscador.placeholder = 'Filtrado: ' + _pf;
-        }
-    }
-    if (typeof window.initColPicker === 'function') {
-        window.initColPicker('col-picker-insp', 'tablaStatus', [
-            { label: 'Tipo', idx: 2, visible: true },
-            { label: 'Técnico', idx: 3, visible: true },
-            { label: 'Fecha Insp.', idx: 4, visible: true },
-            { label: 'Prox. Insp.', idx: 5, visible: true },
-            { label: 'Semáforo', idx: 6, visible: true },
-            { label: 'Ubicación GPS', idx: 8, visible: true }
-        ], 'fleet_cols_insp');
+        var targetSem = 'total';
+        if (_pf.includes('VIGENTE') || _pf.includes('CONFORME') || _pf === 'VERDE') targetSem = 'verde';
+        else if (_pf.includes('PROXIMO') || _pf.includes('PRÓXIMO') || _pf.includes('ALERTA') || _pf === 'AMARILLO') targetSem = 'amarillo';
+        else if (_pf.includes('NO VIGENTE') || _pf.includes('VENCID') || _pf.includes('CRIT') || _pf === 'ROJO') targetSem = 'rojo';
+        else targetSem = 'total';
+
+        window.filtrarInspSemaforoSegment(targetSem);
     }
     
-    // Renderizar tabla de frenos — usar variable local dataGlobalInspecciones
-    // (window.dataGlobalInspecciones no existe; la variable es local al módulo)
+    // Renderizar tabla de frenos
     if (typeof renderTablaFrenos === 'function') {
         renderTablaFrenos(dataGlobalInspecciones);
     }
 }
-window.toggleMobileFiltrosSheet = function() {
-    var b = document.querySelector('#btnFiltrosInsp');
-    var m = b ? b.nextElementSibling : null;
-    var ov = document.getElementById('mobFiltOverlay');
-    if (!ov) {
-        ov = document.createElement('div');
-        ov.id = 'mobFiltOverlay';
-        ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:9999;display:none;backdrop-filter:blur(4px);transition:opacity 0.25s ease;';
-        ov.onclick = function() {
-            if (m) m.classList.remove('show');
-            ov.style.display = 'none';
-        };
-        document.body.appendChild(ov);
-    }
-    window._mobFiltOverlay = ov;
-    if (m) {
-        var isShown = m.classList.contains('show');
-        if (isShown) {
-            m.classList.remove('show');
-            ov.style.display = 'none';
-        } else {
-            m.classList.add('show');
-            ov.style.display = 'block';
-        }
-    }
-};
-
-function _renderInspPaginacion(total) {
-    var info = document.getElementById('insp-info-paginacion');
-    var ctrls = document.getElementById('insp-controles-paginacion');
-    var sel = document.getElementById('sel-insp-ppp');
-    var row = document.getElementById('insp-paginacion-row');
-    if (!info || !ctrls) return;
-    if (sel) sel.value = String(window.inspPorPagina || 50);
-    var ppp = window.inspPorPagina;
-    var totalPag = ppp > 0 ? Math.ceil(total / ppp) : 1;
-    var pag = window.inspPaginaActual;
-    var ini = ppp > 0 ? (pag - 1) * ppp + 1 : 1;
-    var fin = ppp > 0 ? Math.min(pag * ppp, total) : total;
-    info.textContent = total === 0 ? 'Sin resultados' : 'Mostrando ' + ini + '–' + fin + ' de ' + total;
-    if (row) row.style.display = totalPag <= 1 ? 'none' : '';
-    var btns = '';
-    btns += '<button class="btn-pag-nav" onclick="cambiarPaginaInsp(-1)" ' + (pag <= 1 ? 'disabled' : '') + '><i class="bi bi-chevron-left"></i></button>';
-    for (var i = 1; i <= totalPag; i++) {
-        if (totalPag > 7 && Math.abs(i - pag) > 2 && i !== 1 && i !== totalPag) {
-            if (i === 2 || i === totalPag - 1) { btns += '<span class="btn-pag-nav" style="pointer-events:none">…</span>'; }
-            continue;
-        }
-        btns += '<button class="btn-pag-nav' + (i === pag ? ' active' : '') + '" onclick="cambiarPaginaInsp(' + i + ', true)">' + i + '</button>';
-    }
-    btns += '<button class="btn-pag-nav" onclick="cambiarPaginaInsp(1)" ' + (pag >= totalPag ? 'disabled' : '') + '><i class="bi bi-chevron-right"></i></button>';
-    ctrls.innerHTML = btns;
-}
-
-window.cambiarPaginaInsp = function (val, absoluto) {
-    var ppp = window.inspPorPagina;
-    var total = window.dataFinalInspGlobal.length;
-    var totalPag = ppp > 0 ? Math.ceil(total / ppp) : 1;
-    window.inspPaginaActual = absoluto ? val : Math.max(1, Math.min(window.inspPaginaActual + val, totalPag));
-    mostrarStatusInspecciones(dataGlobalInspecciones);
-};
-
-window.cambiarInspPorPagina = function (val) {
-    window.inspPorPagina = parseInt(val) || 0;
-    localStorage.setItem('fleet_insp_ppp', window.inspPorPagina);
-    window.inspPaginaActual = 1;
-    mostrarStatusInspecciones(dataGlobalInspecciones);
-};
-
-window._inspFiltroSemaforo = window._inspFiltroSemaforo || 'total';
-
-window.filtrarTablaPorSemaforo = function(tipo, btn) {
-    window._inspFiltroSemaforo = tipo || 'total';
-    document.querySelectorAll('#moduloStatus .ck-kpi-card').forEach(function(el) {
-        var cardId = 'insp-kpi-' + (tipo === 'verde' ? 'conformes' : (tipo === 'amarillo' ? 'alerta' : (tipo === 'rojo' ? 'criticas' : 'total')));
-        el.classList.toggle('active', el.id === cardId);
-    });
-    filtrarStatusAvanzado();
-};
 
 function filtrarStatusAvanzado() {
-    const txt = document.getElementById('buscadorStatus')?.value.toLowerCase() || '';
-    const chkCli = Array.from(document.querySelectorAll('#filtroStatusCliente input:checked')).map(e => e.value);
-    const chkMar = Array.from(document.querySelectorAll('#filtroStatusMarca input:checked')).map(e => e.value);
-    const chkEst = Array.from(document.querySelectorAll('#filtroStatusEstado input:checked')).map(e => e.value);
+    const txt = (document.getElementById('buscadorStatus')?.value || '').toLowerCase().trim();
     const filtroSem = window._inspFiltroSemaforo || 'total';
-    let isFiltering = txt !== '' || chkCli.length > 0 || chkMar.length > 0 || chkEst.length > 0 || filtroSem !== 'total';
 
     let cntTotalVig = 0, cntTotalNoVig = 0;
     let cntMotVig = 0, cntMotNoVig = 0;
@@ -747,86 +709,77 @@ function filtrarStatusAvanzado() {
 
     let kpiTotal = 0, kpiConformes = 0, kpiAlerta = 0, kpiCriticas = 0;
 
-    const headers = document.querySelectorAll('#cuerpoTablaStatus tr.group-header');
-    let totalVisiblesMob = 0;
-    headers.forEach(header => {
-        let matchIcon = header.querySelector('i').className.match(/toggle-icon-(\w+)/);
-        if (!matchIcon) return;
-        let classTipo = matchIcon[1];
-        let childRows = document.querySelectorAll(`.child-st-${classTipo}`);
-        let visibleCount = 0;
+    // 1. Filtrar filas de tabla escritorio
+    const rows = document.querySelectorAll('#cuerpoTablaStatus tr.data-row-status');
+    rows.forEach(row => {
+        let est = (row.getAttribute('data-estado-v2') || '').toLowerCase();
+        let textoFila = row.textContent.toLowerCase();
+        let dias = parseInt(row.getAttribute('data-dias'));
 
-        childRows.forEach(row => {
-            let cli = row.getAttribute('data-cliente');
-            let mar = row.getAttribute('data-marca');
-            let est = (row.getAttribute('data-estado-v2') || '').toLowerCase();
-            let textoFila = row.textContent.toLowerCase();
-            let dias = parseInt(row.getAttribute('data-dias'));
-
-            // Clasificar estado semafórico para KPI
-            kpiTotal++;
-            if (isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente')) {
-                kpiCriticas++;
-            } else if (dias <= 7 || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo')) {
-                kpiAlerta++;
-            } else {
-                kpiConformes++;
-            }
-
-            let matchCli = (!chkCli.length || chkCli.includes(cli));
-            let matchMar = (!chkMar.length || chkMar.includes(mar));
-            let matchEst = (!chkEst.length || chkEst.includes(est));
-            let matchTxt = (!txt || textoFila.includes(txt));
-
-            let matchSem = true;
-            if (filtroSem === 'verde') {
-                matchSem = dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
-            } else if (filtroSem === 'amarillo') {
-                matchSem = (dias >= 0 && dias <= 7) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo');
-            } else if (filtroSem === 'rojo') {
-                matchSem = isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente');
-            }
-
-            if (matchCli && matchMar && matchEst && matchTxt && matchSem) {
-                visibleCount++;
-                row.style.display = (isFiltering || expandStatusMap[classTipo]) ? '' : 'none';
-
-                if (!isHistorialStatus) {
-                    let mot = row.getAttribute('data-motor') || '';
-                    let esMotora = mot.toUpperCase().trim() === 'MOTORA';
-
-                    if (dias >= 0) {
-                        cntTotalVig++;
-                        if (esMotora) cntMotVig++; else cntNoMotVig++;
-                    } else {
-                        cntTotalNoVig++;
-                        if (esMotora) cntMotNoVig++; else cntNoMotNoVig++;
-                    }
-                }
-            } else {
-                row.style.display = 'none';
-            }
-        });
-
-        let icon = header.querySelector('i'); let spanConteo = header.querySelector(`.span-conteo-${classTipo}`);
-        if (visibleCount > 0) {
-            totalVisiblesMob += visibleCount;
-            header.style.display = '';
-            if (spanConteo) spanConteo.innerText = visibleCount + " Unidades";
-            if (icon) icon.className = (isFiltering || expandStatusMap[classTipo]) ? `bi bi-chevron-down ms-1 me-2 text-warning toggle-icon-${classTipo}` : `bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}`;
+        // Clasificar estado semafórico para KPI
+        kpiTotal++;
+        if (isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente')) {
+            kpiCriticas++;
+        } else if (dias <= 7 || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo')) {
+            kpiAlerta++;
         } else {
-            header.style.display = 'none';
+            kpiConformes++;
+        }
+
+        let matchTxt = (!txt || textoFila.includes(txt));
+        let matchSem = true;
+        if (filtroSem === 'verde') {
+            matchSem = dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
+        } else if (filtroSem === 'amarillo') {
+            matchSem = (dias >= 0 && dias <= 7) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo');
+        } else if (filtroSem === 'rojo') {
+            matchSem = isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente');
+        }
+
+        if (matchTxt && matchSem) {
+            row.style.display = '';
+            if (!isHistorialStatus) {
+                let mot = row.getAttribute('data-motor') || '';
+                let esMotora = mot.toUpperCase().trim() === 'MOTORA';
+                if (dias >= 0) {
+                    cntTotalVig++;
+                    if (esMotora) cntMotVig++; else cntNoMotVig++;
+                } else {
+                    cntTotalNoVig++;
+                    if (esMotora) cntMotNoVig++; else cntNoMotNoVig++;
+                }
+            }
+        } else {
+            row.style.display = 'none';
         }
     });
 
+    // 2. Filtrar cards móviles
+    const cards = document.querySelectorAll('#inspCardContainer .data-card-insp');
+    cards.forEach(card => {
+        let est = (card.getAttribute('data-estado-v2') || '').toLowerCase();
+        let textoCard = card.textContent.toLowerCase();
+        let dias = parseInt(card.getAttribute('data-dias'));
+
+        let matchTxt = (!txt || textoCard.includes(txt));
+        let matchSem = true;
+        if (filtroSem === 'verde') {
+            matchSem = dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
+        } else if (filtroSem === 'amarillo') {
+            matchSem = (dias >= 0 && dias <= 7) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo');
+        } else if (filtroSem === 'rojo') {
+            matchSem = isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente');
+        }
+
+        card.style.display = (matchTxt && matchSem) ? '' : 'none';
+    });
+
+    // 3. Actualizar KPIs Bento
     const setKpi = (id, v) => { var el = document.getElementById(id); if (el) el.textContent = v; };
     setKpi('kpi-insp-total', kpiTotal);
     setKpi('kpi-insp-conformes', kpiConformes);
     setKpi('kpi-insp-alerta', kpiAlerta);
     setKpi('kpi-insp-criticas', kpiCriticas);
-
-    var mobCnt = document.getElementById('insp-mob-mode-count');
-    if (mobCnt) mobCnt.textContent = totalVisiblesMob + (totalVisiblesMob === 1 ? ' registro' : ' registros');
 
     if (!isHistorialStatus) {
         try { updateGraficosEnVivo(cntTotalVig, cntTotalNoVig, cntMotVig, cntMotNoVig, cntNoMotVig, cntNoMotNoVig); } catch(e) { }
