@@ -276,7 +276,7 @@ const _stockSQL = `
       FROM detalle_entradas_inv d
       JOIN entradas_inv e ON e.id = d.entrada_id
       JOIN inventario inv ON inv.id = d.inventario_id
-      WHERE (inv.fecha_regularizacion IS NULL OR DATE(e.created_at) >= DATE(inv.fecha_regularizacion))
+      WHERE (inv.fecha_regularizacion IS NULL OR COALESCE(e.created_at, e.fecha) > inv.fecha_regularizacion)
         AND (e.estado IS NULL OR e.estado != 'Anulado')
         AND (e.tipo_orden = 'Entrada directa' OR e.tipo_orden = 'Ajuste')
       GROUP BY d.inventario_id
@@ -288,7 +288,7 @@ const _stockSQL = `
       FROM detalle_recepciones_oc dr
       JOIN recepciones_oc r ON r.id = dr.recepcion_id
       JOIN inventario inv ON inv.id = dr.inventario_id
-      WHERE (inv.fecha_regularizacion IS NULL OR DATE(r.created_at) >= DATE(inv.fecha_regularizacion))
+      WHERE (inv.fecha_regularizacion IS NULL OR COALESCE(r.created_at, r.fecha_recepcion) > inv.fecha_regularizacion)
       GROUP BY dr.inventario_id
   ) rec ON rec.inventario_id = i.id
   LEFT JOIN (
@@ -299,13 +299,14 @@ const _stockSQL = `
       JOIN salidas_inv s ON s.id = d.salida_id
       JOIN inventario inv ON (d.inventario_id = inv.id OR (d.inventario_id IS NULL AND SUBSTRING_INDEX(d.descripcion, ' - ', 1) = inv.id))
       WHERE s.estado = 'Despachado'
-        AND (inv.fecha_regularizacion IS NULL OR DATE(s.created_at) >= DATE(inv.fecha_regularizacion))
+        AND (inv.fecha_regularizacion IS NULL OR COALESCE(s.created_at, s.fecha) > inv.fecha_regularizacion)
       GROUP BY inv.id
   ) sal ON sal.mapped_id = i.id
   WHERE i.activo=1
   ORDER BY i.id`;
 
 router.get('/notificaciones/resumen', (req, res) => {
+    const targetDb = getDb(req);
     const qInspVencidas = `
         SELECT COUNT(*) AS cnt FROM inspecciones
         WHERE estado IS NULL OR estado != 'Eliminada'
@@ -339,7 +340,7 @@ router.get('/notificaciones/resumen', (req, res) => {
         AND stock_actual <= stock_min
     `;
     const runQ = (sql) => new Promise((resolve) => {
-        db.query(sql, (err, rows) => {
+        targetDb.query(sql, (err, rows) => {
             resolve(err ? 0 : (rows[0] && rows[0].cnt != null ? parseInt(rows[0].cnt) : 0));
         });
     });
@@ -354,7 +355,8 @@ router.get('/notificaciones/resumen', (req, res) => {
 });
 
 router.get('/inventario', (req, res) => {
-    db.query(_stockSQL, async (err, rows) => {
+    const targetDb = getDb(req);
+    targetDb.query(_stockSQL, async (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
         const signedRows = await Promise.all(rows.map(async (row) => {
@@ -478,10 +480,67 @@ router.post('/inventario/bulk-delete', (req, res) => {
     const { ids } = req.body;
     if (!ids || !ids.length) return res.status(400).json({ error: 'Sin IDs' });
     const placeholders = ids.map(() => '?').join(',');
-    db.query(`UPDATE inventario SET activo=0 WHERE id IN (${placeholders})`, ids, (err) => {
+    const targetDb = getDb(req);
+    targetDb.query(`UPDATE inventario SET activo=0 WHERE id IN (${placeholders})`, ids, (err) => {
         if (err) return res.status(500).json({ error: err.message });
         if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, eliminados: ids.length });
     });
+});
+
+// ── Regularizar Stock de un Artículo Individual ──────────────────
+router.post('/inventario/:id/regularizar', (req, res) => {
+    const targetDb = getDb(req);
+    const id = req.params.id;
+    const stockFisico = parseFloat(req.body.stock_fisico);
+    const motivo = (req.body.motivo || '').trim();
+    const usuario = req.body.usuario || 'sistema';
+
+    if (isNaN(stockFisico) || stockFisico < 0) {
+        return res.status(400).json({ error: 'Stock físico inválido' });
+    }
+
+    targetDb.query(
+        'UPDATE inventario SET stock_regularizado = ?, fecha_regularizacion = NOW() WHERE id = ?',
+        [stockFisico, id],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (result.affectedRows === 0) return res.status(404).json({ error: 'Artículo no encontrado' });
+
+            if (typeof logAudit === 'function') {
+                logAudit(usuario, 'almacen', 'REGULARIZÓ', `Stock ajustado a ${stockFisico} (Motivo: ${motivo || 'Regularización física'}) para ${id}`);
+            }
+
+            res.json({
+                ok: true,
+                stock_regularizado: stockFisico,
+                fecha_regularizacion: new Date().toISOString()
+            });
+        }
+    );
+});
+
+// ── Regularización Masiva de Todo el Inventario a Cero ───────────
+router.post('/inventario/regularizar-todo-cero', (req, res) => {
+    const targetDb = getDb(req);
+    const usuario = req.body.usuario || 'sistema';
+    const motivo = (req.body.motivo || 'Reinicio general de stock físico a cero').trim();
+
+    targetDb.query(
+        'UPDATE inventario SET stock_regularizado = 0, fecha_regularizacion = NOW() WHERE activo = 1',
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            if (typeof logAudit === 'function') {
+                logAudit(usuario, 'almacen', 'REGULARIZÓ_TODO', `Reinicio masivo de stock a 0 para ${result.affectedRows} artículos. Motivo: ${motivo}`);
+            }
+
+            res.json({
+                ok: true,
+                total_regularizados: result.affectedRows,
+                fecha_regularizacion: new Date().toISOString()
+            });
+        }
+    );
 });
 
 // Upload imagen de artículo → AWS S3
@@ -1450,13 +1509,14 @@ router.delete('/salidas/:id', (req, res) => {
 // ============================================================
 router.get('/kardex/:inventario_id', (req, res) => {
     const id = req.params.inventario_id;
+    const targetDb = getDb(req);
 
-    db.query('SELECT stock_regularizado, fecha_regularizacion FROM inventario WHERE id=?', [id], (e2, inv) => {
+    targetDb.query('SELECT stock_regularizado, fecha_regularizacion FROM inventario WHERE id=?', [id], (e2, inv) => {
         if (e2) return res.status(500).json({ error: e2.message });
         const base    = parseFloat(inv[0]?.stock_regularizado || 0);
         const regDate = inv[0]?.fecha_regularizacion || null;
 
-        db.query(`
+        targetDb.query(`
             SELECT 'Entrada' AS tipo, e.fecha, e.created_at, e.id AS doc_id, e.proveedor_nombre AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
             FROM detalle_entradas_inv d JOIN entradas_inv e ON e.id=d.entrada_id
             WHERE d.inventario_id=? AND (e.estado IS NULL OR e.estado != 'Anulado') AND (e.tipo_orden = 'Entrada directa' OR e.tipo_orden = 'Ajuste')
