@@ -487,6 +487,23 @@ router.post('/inventario/bulk-delete', (req, res) => {
     });
 });
 
+function _getPeruNowString() {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Lima',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+    const parts = formatter.formatToParts(new Date());
+    const p = {};
+    parts.forEach(part => { p[part.type] = part.value; });
+    return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
+}
+
 // ── Regularizar Stock de un Artículo Individual ──────────────────
 router.post('/inventario/:id/regularizar', (req, res) => {
     const targetDb = getDb(req);
@@ -494,14 +511,15 @@ router.post('/inventario/:id/regularizar', (req, res) => {
     const stockFisico = parseFloat(req.body.stock_fisico);
     const motivo = (req.body.motivo || '').trim();
     const usuario = req.body.usuario || 'sistema';
+    const peruNow = _getPeruNowString();
 
     if (isNaN(stockFisico) || stockFisico < 0) {
         return res.status(400).json({ error: 'Stock físico inválido' });
     }
 
     targetDb.query(
-        'UPDATE inventario SET stock_regularizado = ?, fecha_regularizacion = NOW() WHERE id = ?',
-        [stockFisico, id],
+        'UPDATE inventario SET stock_regularizado = ?, fecha_regularizacion = ? WHERE id = ?',
+        [stockFisico, peruNow, id],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             if (result.affectedRows === 0) return res.status(404).json({ error: 'Artículo no encontrado' });
@@ -513,7 +531,7 @@ router.post('/inventario/:id/regularizar', (req, res) => {
             res.json({
                 ok: true,
                 stock_regularizado: stockFisico,
-                fecha_regularizacion: new Date().toISOString()
+                fecha_regularizacion: peruNow
             });
         }
     );
@@ -524,9 +542,11 @@ router.post('/inventario/regularizar-todo-cero', (req, res) => {
     const targetDb = getDb(req);
     const usuario = req.body.usuario || 'sistema';
     const motivo = (req.body.motivo || 'Reinicio general de stock físico a cero').trim();
+    const peruNow = _getPeruNowString();
 
     targetDb.query(
-        'UPDATE inventario SET stock_regularizado = 0, fecha_regularizacion = NOW() WHERE activo = 1',
+        'UPDATE inventario SET stock_regularizado = 0, fecha_regularizacion = ? WHERE activo = 1',
+        [peruNow],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
 
@@ -537,7 +557,7 @@ router.post('/inventario/regularizar-todo-cero', (req, res) => {
             res.json({
                 ok: true,
                 total_regularizados: result.affectedRows,
-                fecha_regularizacion: new Date().toISOString()
+                fecha_regularizacion: peruNow
             });
         }
     );
