@@ -335,10 +335,10 @@
     </div>
   </div>
 
-  <!-- ── 2. BENTO KPIS ROW ─────────────────────────────────────────── -->
+  <!-- ── 2. BENTO KPIS ROW (CLICKABLE APPLE CARDS) ────────────────── -->
   <div class="row g-2 g-md-3 mb-3">
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card">
+      <div class="ck-kpi-card active" id="disp-kpi-card-total" onclick="window.dispFiltrarPorCard('TODOS', this)" style="cursor: pointer;">
         <div>
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Total Flota</span>
           <h2 id="disp-kpi-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
@@ -349,7 +349,7 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card">
+      <div class="ck-kpi-card" id="disp-kpi-card-base" onclick="window.dispFiltrarPorCard('En Base', this)" style="cursor: pointer;">
         <div>
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">En Base</span>
           <h2 id="disp-kpi-base" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">0</h2>
@@ -360,7 +360,7 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card">
+      <div class="ck-kpi-card" id="disp-kpi-card-ruta" onclick="window.dispFiltrarPorCard('En Ruta', this)" style="cursor: pointer;">
         <div>
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">En Ruta</span>
           <h2 id="disp-kpi-ruta" class="fw-bolder m-0 text-primary" style="font-size: 1.6rem;">0</h2>
@@ -371,7 +371,7 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card">
+      <div class="ck-kpi-card" id="disp-kpi-card-mant" onclick="window.dispFiltrarPorCard('En Mantenimiento', this)" style="cursor: pointer;">
         <div>
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">En Mantenimiento</span>
           <h2 id="disp-kpi-mant" class="fw-bolder m-0 text-danger" style="font-size: 1.6rem;">0</h2>
@@ -383,17 +383,14 @@
     </div>
   </div>
 
-  <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS SEGMENTED (FULL-BLEED) ──────── -->
+  <!-- ── 3. BARRA DE BÚSQUEDA Y FILTRO SEGMENTADO DE EMPRESAS ───────── -->
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
     <div class="position-relative flex-grow-1" style="max-width: 380px;">
       <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
       <input type="text" id="dispBuscador" class="ck-apple-search" placeholder="Buscar por camión, carreta, conductor, marca..." oninput="window.dispFiltrar()">
     </div>
-    <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-estados-disp">
-      <button type="button" class="ck-segment-item active" onclick="window.dispFiltrarPorEstado('TODOS', this)">Todos</button>
-      <button type="button" class="ck-segment-item" onclick="window.dispFiltrarPorEstado('En Base', this)">En Base</button>
-      <button type="button" class="ck-segment-item" onclick="window.dispFiltrarPorEstado('En Ruta', this)">En Ruta</button>
-      <button type="button" class="ck-segment-item" onclick="window.dispFiltrarPorEstado('En Mantenimiento', this)">En Mantenimiento</button>
+    <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-empresas-disp">
+      <button type="button" class="ck-segment-item active" data-empresa="TODAS" onclick="window.dispFiltrarPorEmpresa('TODAS', this)">Todas</button>
     </div>
   </div>
 
