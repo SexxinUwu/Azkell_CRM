@@ -318,7 +318,7 @@
   <!-- ── 2. BENTO KPIS ROW (INTERACTIVO APPLE CARDS) ────────────────── -->
   <div class="row g-2 g-md-3 mb-3" id="panelKPIsGenerales">
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card active" id="insp-kpi-total" onclick="window.filtrarInspSemaforoSegment('total', this)">
+      <div class="ck-kpi-card active" id="insp-kpi-total" onclick="window.filtrarInspCard('total', this)" style="cursor: pointer;">
         <div>
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Flota Inspeccionada</span>
           <h2 id="kpi-insp-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
@@ -329,7 +329,7 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card" id="insp-kpi-conformes" onclick="window.filtrarInspSemaforoSegment('verde', this)">
+      <div class="ck-kpi-card" id="insp-kpi-conformes" onclick="window.filtrarInspCard('verde', this)" style="cursor: pointer;">
         <div>
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Conformes / Verde</span>
           <h2 id="kpi-insp-conformes" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">0</h2>
@@ -340,7 +340,7 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card" id="insp-kpi-alerta" onclick="window.filtrarInspSemaforoSegment('amarillo', this)">
+      <div class="ck-kpi-card" id="insp-kpi-alerta" onclick="window.filtrarInspCard('amarillo', this)" style="cursor: pointer;">
         <div>
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">En Alerta / Amarillo</span>
           <h2 id="kpi-insp-alerta" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem;">0</h2>
@@ -351,7 +351,7 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card" id="insp-kpi-criticas" onclick="window.filtrarInspSemaforoSegment('rojo', this)">
+      <div class="ck-kpi-card" id="insp-kpi-criticas" onclick="window.filtrarInspCard('rojo', this)" style="cursor: pointer;">
         <div>
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Críticas / Rojo</span>
           <h2 id="kpi-insp-criticas" class="fw-bolder m-0 text-danger" style="font-size: 1.6rem;">0</h2>
@@ -407,11 +407,8 @@
       <input type="text" id="buscadorStatus" class="ck-apple-search" placeholder="Buscar folio, placa, técnico, cliente..." oninput="window.filtrarStatusAvanzado()">
     </div>
     <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-estados-insp">
-      <button type="button" class="ck-segment-item active" data-filter="total" onclick="window.filtrarInspSemaforoSegment('total', this)">Todos</button>
-      <button type="button" class="ck-segment-item" data-filter="base" onclick="window.filtrarInspSemaforoSegment('base', this)">En Base</button>
-      <button type="button" class="ck-segment-item" data-filter="verde" onclick="window.filtrarInspSemaforoSegment('verde', this)">Conformes</button>
-      <button type="button" class="ck-segment-item" data-filter="amarillo" onclick="window.filtrarInspSemaforoSegment('amarillo', this)">En Alerta</button>
-      <button type="button" class="ck-segment-item" data-filter="rojo" onclick="window.filtrarInspSemaforoSegment('rojo', this)">Críticas</button>
+      <button type="button" class="ck-segment-item active" data-ubicacion="todos" onclick="window.filtrarInspUbicacion('todos', this)">Todos</button>
+      <button type="button" class="ck-segment-item" data-ubicacion="base" onclick="window.filtrarInspUbicacion('base', this)">En Base</button>
     </div>
   </div>
 
