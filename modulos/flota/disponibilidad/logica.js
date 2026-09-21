@@ -91,7 +91,9 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
     const placas = [];
 
     (lista || []).forEach(d => {
-        // 1. Unidad Motora (Camión / Tracto)
+        const empPrincipal = (d.empresa || d.cliente || '').trim();
+
+        // 1. Unidad Motora (Camión / Tracto) - Es la que manda la empresa
         if (d.placa_camion) {
             const pCamion = {
                 placa: d.placa_camion,
@@ -99,7 +101,7 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
                 tipo_unidad: d.tipo_unidad || 'Camión',
                 sub_tipo: d.sub_tipo || d.tipo_unidad || 'Camión',
                 estado: d.estado || 'En Base',
-                empresa: (d.empresa || d.cliente || '').trim(),
+                empresa: empPrincipal,
                 marca: d.marca || '',
                 conductor: d.conductor_asignado || '',
                 observaciones: d.observaciones || '',
@@ -122,7 +124,7 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
             if (include) placas.push(pCamion);
         }
 
-        // 2. Unidad Carreta / Remolque (Tanto acoplada como suelta)
+        // 2. Unidad Carreta / Remolque (Hereda la empresa de la unidad motora a la que pertenece)
         if (d.placa_carreta) {
             const pCarreta = {
                 placa: d.placa_carreta,
@@ -130,7 +132,7 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
                 tipo_unidad: d.tipo_unidad_carreta || 'Carreta',
                 sub_tipo: d.sub_tipo_carreta || d.sub_tipo || 'Carreta',
                 estado: d.estado_carreta || d.estado || 'En Base',
-                empresa: (d.empresa_carreta || d.empresa || d.cliente || '').trim(),
+                empresa: empPrincipal, // La motora es la que manda
                 marca: d.marca_carreta || d.marca || '',
                 conductor: d.conductor_asignado || '',
                 observaciones: d.observaciones || '',
@@ -157,17 +159,18 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
     return placas;
 }
 
-// ── Renderizar Botones Segmentados de Empresas Dinámicamente ──────
+// ── Renderizar Botones Segmentados de Empresas Dinámicamente (Solo Unidades Motoras) ──
 window.dispRenderizarSegmentedEmpresas = function () {
     const container = document.getElementById('btn-group-empresas-disp');
     if (!container) return;
 
     const empresasSet = new Set();
     (window.dispDatos || []).forEach(d => {
-        const emp1 = (d.empresa || d.cliente || '').trim();
-        if (emp1) empresasSet.add(emp1);
-        const emp2 = (d.empresa_carreta || '').trim();
-        if (emp2) empresasSet.add(emp2);
+        // Solo extraer empresas de unidades motoras (Camión / Tracto)
+        if (d.placa_camion) {
+            const emp = (d.empresa || d.cliente || '').trim();
+            if (emp) empresasSet.add(emp);
+        }
     });
 
     const empresas = Array.from(empresasSet).sort();
@@ -400,14 +403,11 @@ window.dispFiltrar = function () {
             if (filtroCard === 'En Mantenimiento' && item.estado !== 'En Mantenimiento') return false;
         }
 
-        // Filtro 2: Empresa Segmentada (Aplica si la empresa de la motora o carreta coincide)
+        // Filtro 2: Empresa Segmentada (Aplica exclusivamente sobre la empresa de la unidad motora)
         if (filtroEmp !== 'TODAS') {
             const itemEmp = (item.empresa || item.cliente || '').trim().toUpperCase();
-            const itemEmpCarreta = (item.empresa_carreta || '').trim().toUpperCase();
             const empTarget = filtroEmp.toUpperCase();
-            const match1 = itemEmp === empTarget || itemEmp.includes(empTarget);
-            const match2 = itemEmpCarreta === empTarget || itemEmpCarreta.includes(empTarget);
-            if (!match1 && !match2) return false;
+            if (itemEmp !== empTarget && !itemEmp.includes(empTarget)) return false;
         }
 
         // Filtro 3: Buscador Universal
