@@ -8,7 +8,7 @@
 .ck-app-container {
     width: 100% !important;
     max-width: 100% !important;
-    padding: 1rem 1.25rem 2.5rem 1.25rem !important;
+    padding: 1rem 1.25rem 3.5rem 1.25rem !important;
     background: transparent;
     min-height: 100%;
 }
@@ -205,9 +205,17 @@
 
 /* ── Mobile View Adaptations (@media max-width: 768px) ─────────────── */
 @media (max-width: 768px) {
-    .ck-app-container {
-        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+    .ck-app-container,
+    #disponibilidad-app {
+        padding: 0.5rem 0.5rem calc(130px + env(safe-area-inset-bottom, 24px)) 0.5rem !important;
         background: transparent !important;
+    }
+    #disp-vista-graficos {
+        padding-bottom: calc(110px + env(safe-area-inset-bottom, 24px)) !important;
+    }
+    #disp-vista-tablero,
+    #dispCardContainer {
+        padding-bottom: calc(110px + env(safe-area-inset-bottom, 24px)) !important;
     }
     #disp-kpi-row {
         display: none !important;
@@ -486,11 +494,6 @@
     </div>
   </div>
 
-  <!-- ── 4. CARDS DE SUB TIPOS (MÓVIL AL TOPE ESTILO APPLE / DESKTOP EN 1 SOLA LÍNEA) ── -->
-  <div class="disp-subtipos-flex-row" id="disp-subtipos-cards-container">
-    <!-- Render dinámico con conteos de Sub Tipos -->
-  </div>
-
   <!-- ================================================================= -->
   <!-- ── VISTA 1: TABLERO (TABLA FLUIDA + MÓVIL CARDS) ──────────────── -->
   <!-- ================================================================= -->
@@ -545,6 +548,11 @@
         </h5>
       </div>
       <small class="text-muted fw-semibold d-none d-md-inline">Distribución operativa en tiempo real por Sub Tipo de Unidad</small>
+    </div>
+
+    <!-- CARDS DE SUB TIPOS (MÓVIL AL TOPE ESTILO APPLE / DESKTOP EN 1 SOLA LÍNEA) -->
+    <div class="disp-subtipos-flex-row" id="disp-subtipos-cards-container">
+      <!-- Render dinámico con conteos de Sub Tipos -->
     </div>
 
     <!-- Gráfico Principal de Barras por Sub Tipo y Estado Operativo -->
