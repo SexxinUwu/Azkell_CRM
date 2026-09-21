@@ -1,213 +1,111 @@
 <!-- MÓDULO: DISPONIBILIDAD DE FLOTA -->
 <style>
-/* ── Reset root-dinamico padding for 100% full-bleed (1:1 Reporte de Fallas) ── */
-#root-dinamico, .main-area {
-    padding: 0 !important;
-}
-
 /* Estilos Específicos del Módulo Disponibilidad */
 .disp-container {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 1rem 1.25rem 2.5rem 1.25rem !important;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif !important;
+    padding: 1.25rem 1.5rem !important;
     width: 100% !important;
-    max-width: 100% !important;
     box-sizing: border-box;
-    background: transparent;
-    min-height: 100%;
 }
 
-@media (max-width: 768px) {
-    .disp-container {
-        padding: 0.5rem 0.5rem 100px 0.5rem !important;
-    }
-}
-
-/* Action Buttons Modernos (1:1 Reporte de Fallas) */
-.ck-action-btn {
-    width: 32px;
-    height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9px;
-    border: 1px solid transparent;
-    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-    font-size: 0.88rem;
-    text-decoration: none;
-}
-.ck-btn-edit { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
-.ck-btn-edit:hover { background: #0f172a; color: #ffffff; border-color: #0f172a; transform: translateY(-1px); }
-.ck-btn-delete { background: transparent; color: #94a3b8; }
-.ck-btn-delete:hover { background: #fee2e2; color: #ef4444; transform: translateY(-1px); }
-
-/* ── Modal Confirmación Eliminación (Diseño Circular B) ─── */
-.ck-delete-dialog {
-    max-width: 350px !important;
-    width: 90% !important;
-    margin: 1.75rem auto !important;
-}
-.ck-delete-card {
-    background: #ffffff !important;
-    border-radius: 28px !important;
-    border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12) !important;
-    padding: 2.2rem 1.6rem 1.8rem 1.6rem !important;
-    text-align: center;
-    transform: translateZ(0);
-}
-.ck-delete-badge-icon {
-    font-size: 3.2rem;
-    color: #e11d48;
-    line-height: 1;
-    margin-bottom: 0.85rem;
-    display: inline-block;
-}
-.ck-btn-circle {
-    width: 54px;
-    height: 54px;
-    border-radius: 50% !important;
-    border: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.35rem;
-    cursor: pointer;
-    transition: transform 0.15s ease, background-color 0.15s ease;
-    outline: none;
-    will-change: transform;
-}
-.ck-btn-cancel-circle {
-    background: #18181b !important;
-    color: #ffffff !important;
-}
-.ck-btn-cancel-circle:hover {
-    background: #09090b !important;
-    transform: scale(1.06);
-    color: #ffffff !important;
-}
-.ck-btn-cancel-circle:active {
-    transform: scale(0.95);
-}
-.ck-btn-delete-circle {
-    background: #e11d48 !important;
-    color: #ffffff !important;
-}
-.ck-btn-delete-circle:hover {
-    background: #be123c !important;
-    transform: scale(1.06);
-    color: #ffffff !important;
-}
-.ck-btn-delete-circle:active {
-    transform: scale(0.95);
-}
-/* ── Tarjetas Estilo Marsisa (1:1 Imagen 2) ────────────────────────── */
-.disp-subtipo-banner-card {
-    border-radius: 22px !important;
-    padding: 1.1rem 1.4rem !important;
-    color: #ffffff !important;
-    position: relative;
-    overflow: hidden;
+/* ── Bento KPI Card Principal ─────────────── */
+.disp-kpi-main-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1rem 1.5rem;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    min-height: 115px;
-    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.14) !important;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    border: none !important;
-}
-.disp-subtipo-banner-card:hover {
-    transform: translateY(-3px) scale(1.01);
-    box-shadow: 0 14px 32px -4px rgba(0, 0, 0, 0.22) !important;
-}
-.disp-subtipo-num {
-    font-size: 3.2rem !important;
-    font-weight: 900 !important;
-    line-height: 1 !important;
-    letter-spacing: -1.5px;
-    color: #ffffff !important;
-}
-.disp-subtipo-lbl {
-    font-size: 0.88rem !important;
-    font-weight: 800 !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: rgba(255, 255, 255, 0.95);
-}
-.disp-subtipo-icon-wrap {
-    font-size: 3.4rem;
-    line-height: 1;
-    opacity: 0.95;
-    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25));
-}
-.disp-kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 0.5rem;
-    margin-bottom: 0.85rem;
-}
-.disp-kpi-card {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 14px !important;
-    padding: 0.55rem 0.85rem !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 0.75rem !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
-    cursor: pointer;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
-    user-select: none;
-    min-height: 56px !important;
-}
-.disp-kpi-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
-}
-.disp-kpi-card.active-kpi {
-    border-color: #0284c7 !important;
-    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
-    background: #f8fafc !important;
-}
-.disp-kpi-icon {
-    width: 38px !important;
-    height: 38px !important;
-    border-radius: 10px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 1.15rem !important;
-    flex-shrink: 0 !important;
-}
-.disp-kpi-val {
-    font-size: 1.35rem !important;
-    font-weight: 800 !important;
-    line-height: 1 !important;
-    color: #0f172a;
-}
-.disp-kpi-lbl {
-    font-size: 0.68rem !important;
-    font-weight: 700 !important;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 2px;
-    line-height: 1 !important;
-    white-space: nowrap;
+    gap: 1.25rem;
+    box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.05);
+    margin-bottom: 1.25rem;
 }
 
-/* Tabla de Disponibilidad */
+.disp-kpi-header-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.disp-kpi-main-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+.disp-kpi-main-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-bottom: 0.15rem;
+}
+
+.disp-kpi-main-val {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1;
+}
+
+.disp-kpi-pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.disp-kpi-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    border: 1.5px solid transparent;
+}
+
+.disp-kpi-pill:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.disp-kpi-pill.active {
+    box-shadow: 0 0 0 2px #2563eb;
+}
+
+.disp-pill-camiones { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.disp-pill-carretas { background: #fefce8; color: #854d0e; border-color: #fef08a; }
+.disp-pill-base     { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.disp-pill-ruta     { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+.disp-pill-mant     { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+/* ── Contenedor de Tabla ──────────────────── */
 .disp-table-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 1rem;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+    border-radius: 18px;
+    box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.04);
     overflow: hidden;
 }
+
 .disp-table-header {
-    padding: 1rem 1.25rem;
+    padding: 0.85rem 1.25rem;
     background: #ffffff;
     border-bottom: 1px solid #f1f5f9;
     display: flex;
@@ -216,124 +114,133 @@
     justify-content: space-between;
     gap: 0.75rem;
 }
-.disp-table {
-    width: 100%;
-    margin-bottom: 0;
-    border-collapse: collapse;
-    font-size: 0.84rem;
-}
-.disp-table th {
-    background: #f8fafc;
-    color: #475569;
-    font-size: 0.73rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    padding: 0.75rem 0.85rem;
-    border-bottom: 1px solid #e2e8f0;
-    white-space: nowrap;
-    vertical-align: middle;
-}
-.disp-table td {
-    padding: 0.75rem 0.85rem;
-    border-bottom: 1px solid #f1f5f9;
-    vertical-align: middle;
-    color: #1e293b;
-}
-.disp-table tr:hover td {
-    background: #f8fafc;
-}
 
-/* Badges de Estados */
-.badge-disp {
+/* ── Badges de Placas y Estados ──────────── */
+.disp-placa-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 9px;
-    border-radius: 20px;
-    font-size: 0.73rem;
-    font-weight: 700;
-    letter-spacing: 0.2px;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+    font-weight: 800;
+    font-size: 0.84rem;
+    letter-spacing: 0.5px;
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
     white-space: nowrap;
 }
-.badge-disp-dot {
+
+.disp-placa-carreta {
+    background: #fefce8 !important;
+    color: #854d0e !important;
+    border-color: #fef08a !important;
+}
+
+.disp-badge-estado {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.disp-badge-base {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+}
+
+.disp-badge-ruta {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+}
+
+.disp-badge-mant {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+}
+
+.disp-dot {
     width: 7px;
     height: 7px;
     border-radius: 50%;
     display: inline-block;
 }
 
-/* Placa Badges */
-.disp-placa-badge {
+.disp-badge-base .disp-dot { background: #16a34a; box-shadow: 0 0 6px #16a34a; }
+.disp-badge-ruta .disp-dot { background: #2563eb; box-shadow: 0 0 6px #2563eb; }
+.disp-badge-mant .disp-dot { background: #dc2626; box-shadow: 0 0 6px #dc2626; }
+
+/* ── Estructura de Tabla ─────────────────── */
+.disp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+}
+
+.disp-table thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 800;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.75rem 1rem;
+    border-bottom: 1.5px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.disp-table tbody td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #1e293b;
+}
+
+.disp-table tbody tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* ── Botones de Acción ───────────────────── */
+.disp-act-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 3px 8px;
-    background: #f1f5f9;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-family: monospace;
-    font-weight: 800;
+    justify-content: center;
     font-size: 0.85rem;
-    color: #0f172a;
-}
-.disp-placa-carreta {
-    background: #fffbeb;
-    border-color: #fde68a;
-    color: #92400e;
-}
-
-/* Combos y Dropdowns */
-.disp-combo-wrap {
-    position: relative;
-    z-index: 60;
-}
-.disp-combo-wrap:focus-within {
-    z-index: 100 !important;
-}
-.disp-combo-panel {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    right: 0;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 12px;
-    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.22);
-    max-height: 220px;
-    overflow-y: auto;
-    z-index: 9999 !important;
-    display: none;
-}
-.disp-combo-panel.show {
-    display: block;
-}
-.disp-combo-opt {
-    padding: 8px 12px;
-    cursor: pointer;
-    font-size: 0.82rem;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex;
-    flex-direction: column;
-}
-.disp-combo-opt:last-child {
-    border-bottom: none;
-}
-.disp-combo-opt:hover {
-    background: #eff6ff;
-    color: #1d4ed8;
-}
-.disp-combo-sub {
-    font-size: 0.72rem;
     color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s;
 }
 
-/* ── Estilo Idéntico a Reporte de Fallas (Drawer Modal 94vh) ─── */
+.disp-act-btn:hover {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+
+.disp-act-btn.delete:hover {
+    background: #fef2f2;
+    color: #ef4444;
+    border-color: #fecaca;
+}
+
+/* ── Drawer & Floating Dialog ────────────── */
 .ck-floating-drawer-dialog {
-    max-width: 740px !important;
-    width: 100% !important;
-    height: 94vh !important;
-    max-height: 94vh !important;
+    max-width: 680px !important;
     margin: 0 auto !important;
     position: fixed !important;
     bottom: 0 !important;
@@ -341,64 +248,45 @@
     transform: translateX(-50%) !important;
     top: auto !important;
 }
+
 .ck-floating-drawer-content {
-    height: 100% !important;
-    max-height: 94vh !important;
-    border-radius: 28px 28px 0 0 !important;
-    border-bottom: none !important;
-    box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.25) !important;
-    overflow: visible !important;
+    border-radius: 24px 24px 0 0 !important;
+    box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.2) !important;
+    overflow: hidden !important;
     background: #f8fafc !important;
 }
 
-#modalDisponibilidad .form-control,
-#modalDisponibilidad .form-select {
-    min-height: 44px !important;
-    border-radius: 12px !important;
-    font-size: 0.92rem !important;
-    font-weight: 600 !important;
-    border-color: #cbd5e1 !important;
-    padding: 0.55rem 0.9rem !important;
-    background-color: #ffffff;
-    transition: all 0.2s ease;
-}
-#modalDisponibilidad .form-control:focus,
-#modalDisponibilidad .form-select:focus {
-    border-color: #0284c7 !important;
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
-}
-#modalDisponibilidad .form-label {
-    font-size: 0.74rem !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.4px !important;
-    color: #475569 !important;
-    margin-bottom: 0.35rem !important;
-}
-#modalDisponibilidad .card {
-    border-radius: 18px !important;
-    border: 1px solid #e2e8f0 !important;
-    background: #ffffff !important;
-    overflow: visible !important;
+.disp-combo-wrap {
     position: relative;
 }
-#modalDisponibilidad .card:focus-within,
-#modalDisponibilidad .card:hover {
-    z-index: 50 !important;
+
+.disp-combo-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1060;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+    max-height: 220px;
+    overflow-y: auto;
+    display: none;
+    margin-top: 4px;
 }
 
-@media (max-width: 768px) {
-    .modal-dialog.ck-floating-drawer-dialog,
-    #modalDisponibilidad .modal-dialog.ck-floating-drawer-dialog,
-    .ck-floating-drawer-dialog {
-        max-width: 100vw !important;
-        width: 100vw !important;
-        min-width: 100vw !important;
-        height: 96vh !important;
-        max-height: 96vh !important;
-        margin: 0 !important;
-        border-radius: 20px 20px 0 0 !important;
-    }
+.disp-combo-item {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.disp-combo-item:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
 }
 </style>
 
@@ -410,7 +298,7 @@
                 <i class="bi bi-truck text-primary me-2"></i>Disponibilidad de Flota
             </h4>
             <div class="text-muted" style="font-size:0.83rem;">
-                Control de asignación de tractos, carretas, conductores, estados y ubicación GPS en tiempo real.
+                Control y asignación de flota sincronizado en vivo con Seguridad (Unidades en Base / Ruta) y Mantenimiento.
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -426,51 +314,42 @@
         </div>
     </div>
 
-    <!-- Tarjetas de KPIs Interactivas -->
-    <div class="disp-kpi-grid">
-        <div class="disp-kpi-card active-kpi" id="card-kpi-total" onclick="window.dispFiltrarPorKPI('total')">
-            <div class="disp-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+    <!-- ── CARD PRINCIPAL: TOTAL FLOTA CON CONTEOS DINÁMICOS ─────────── -->
+    <div class="disp-kpi-main-card">
+        <div class="disp-kpi-header-group">
+            <div class="disp-kpi-main-icon">
                 <i class="bi bi-truck"></i>
             </div>
-            <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                <div class="disp-kpi-lbl">Total Flota</div>
-                <div class="disp-kpi-val" id="disp-kpi-total">0</div>
+            <div>
+                <div class="disp-kpi-main-title">Total Flota Activa</div>
+                <div class="disp-kpi-main-val" id="disp-kpi-total">0</div>
             </div>
         </div>
-        <div class="disp-kpi-card" id="card-kpi-operativos" onclick="window.dispFiltrarPorKPI('operativos')">
-            <div class="disp-kpi-icon" style="background:#ecfdf5; color:#10b981;">
-                <i class="bi bi-check-circle-fill"></i>
+
+        <div class="disp-kpi-pill-group">
+            <div class="disp-kpi-pill disp-pill-camiones active" id="pill-filtro-todos" onclick="window.dispFiltrarPorEstado('TODOS', this)">
+                <i class="bi bi-collection-fill"></i>
+                <span>Todas: <strong id="disp-kpi-todas-count">0</strong></span>
             </div>
-            <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                <div class="disp-kpi-lbl">Operativos / Disp.</div>
-                <div class="disp-kpi-val text-success" id="disp-kpi-operativos">0</div>
+            <div class="disp-kpi-pill disp-pill-camiones" onclick="window.dispFiltrarPorTipo('CAMION', this)">
+                <i class="bi bi-truck"></i>
+                <span>Camiones / Tractos: <strong id="disp-kpi-camiones">0</strong></span>
             </div>
-        </div>
-        <div class="disp-kpi-card" id="card-kpi-mantenimiento" onclick="window.dispFiltrarPorKPI('mantenimiento')">
-            <div class="disp-kpi-icon" style="background:#fef2f2; color:#ef4444;">
-                <i class="bi bi-tools"></i>
+            <div class="disp-kpi-pill disp-pill-carretas" onclick="window.dispFiltrarPorTipo('CARRETA', this)">
+                <i class="bi bi-link-45deg"></i>
+                <span>Carretas / Remolques: <strong id="disp-kpi-carretas">0</strong></span>
             </div>
-            <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                <div class="disp-kpi-lbl">En Taller / Mant.</div>
-                <div class="disp-kpi-val text-danger" id="disp-kpi-mantenimiento">0</div>
+            <div class="disp-kpi-pill disp-pill-base" onclick="window.dispFiltrarPorEstado('En Base', this)">
+                <span class="disp-dot" style="background:#16a34a;"></span>
+                <span>En Base: <strong id="disp-kpi-base">0</strong></span>
             </div>
-        </div>
-        <div class="disp-kpi-card" id="card-kpi-cond-disp" onclick="window.dispFiltrarPorKPI('cond-disp')">
-            <div class="disp-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
-                <i class="bi bi-person-check-fill"></i>
+            <div class="disp-kpi-pill disp-pill-ruta" onclick="window.dispFiltrarPorEstado('En Ruta', this)">
+                <span class="disp-dot" style="background:#2563eb;"></span>
+                <span>En Ruta: <strong id="disp-kpi-ruta">0</strong></span>
             </div>
-            <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                <div class="disp-kpi-lbl">Cond. Disponibles</div>
-                <div class="disp-kpi-val text-success" id="disp-kpi-cond-disp">0</div>
-            </div>
-        </div>
-        <div class="disp-kpi-card" id="card-kpi-cond-nodisp" onclick="window.dispFiltrarPorKPI('cond-nodisp')">
-            <div class="disp-kpi-icon" style="background:#fffbeb; color:#f59e0b;">
-                <i class="bi bi-person-x-fill"></i>
-            </div>
-            <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-                <div class="disp-kpi-lbl">Descanso / Vac.</div>
-                <div class="disp-kpi-val text-warning" id="disp-kpi-cond-nodisp">0</div>
+            <div class="disp-kpi-pill disp-pill-mant" onclick="window.dispFiltrarPorEstado('En Mantenimiento', this)">
+                <span class="disp-dot" style="background:#dc2626;"></span>
+                <span>En Mantenimiento: <strong id="disp-kpi-mant">0</strong></span>
             </div>
         </div>
     </div>
@@ -480,83 +359,41 @@
         <!-- Filtros y Búsqueda -->
         <div class="disp-table-header">
             <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-                <!-- Buscador Avanzado Multicolumna (Diseño Equilibrado Amplio) -->
-                <div class="position-relative flex-grow-1" style="min-width: 280px; max-width: 440px;">
-                    <i class="bi bi-search position-absolute" style="left: 12px; top: 9px; color: #94a3b8; font-size: 0.85rem;"></i>
-                    <input type="text" id="disp-filtro-search" class="form-control form-control-sm ps-5 rounded-3 border-secondary-subtle" placeholder="Buscar por placa, chofer, marca, carreta, observaciones, ubicación..." oninput="window.dispFiltrar()">
+                <!-- Buscador Rápido Universal -->
+                <div class="position-relative flex-grow-1" style="min-width: 280px; max-width: 460px;">
+                    <i class="bi bi-search position-absolute" style="left: 14px; top: 10px; color: #94a3b8; font-size: 0.85rem;"></i>
+                    <input type="text" id="disp-filtro-search" class="form-control form-control-sm ps-5 rounded-3 border-secondary-subtle" placeholder="Buscar por placa camión, carreta, chofer, marca, tipo, estado..." oninput="window.dispFiltrar()">
                 </div>
-
-                <!-- Filtro Estado Unidad -->
-                <select id="disp-filtro-est-uni" class="form-select form-select-sm rounded-3 border-secondary-subtle" style="width: auto; min-width: 160px;" onchange="window.dispFiltrar()">
-                    <option value="">Todos los Estados Unidad</option>
-                    <option value="Disponible">Disponible</option>
-                    <option value="Operativo">Operativo</option>
-                    <option value="Mantenimiento">Mantenimiento</option>
-                    <option value="Programado">Programado</option>
-                    <option value="Tránsito">Tránsito</option>
-                    <option value="Solo Placa">Solo Placa</option>
-                    <option value="Alquilado">Alquilado</option>
-                    <option value="Siniestro">Siniestro</option>
-                    <option value="Modificación">Modificación</option>
-                    <option value="En Proyecto">En Proyecto</option>
-                </select>
-
-                <!-- Filtro Estado Conductor -->
-                <select id="disp-filtro-est-con" class="form-select form-select-sm rounded-3 border-secondary-subtle" style="width: auto; min-width: 160px;" onchange="window.dispFiltrar()">
-                    <option value="">Todos los Estados Conductor</option>
-                    <option value="Disponible">Disponible</option>
-                    <option value="Sin Conductor">Sin Conductor</option>
-                    <option value="Día Libre">Día Libre</option>
-                    <option value="Entra UTS">Entra UTS</option>
-                    <option value="Vacaciones">Vacaciones</option>
-                    <option value="Vacante">Vacante</option>
-                    <option value="Faltó">Faltó</option>
-                </select>
-
-                <!-- Filtro Categoría -->
-                <select id="disp-filtro-categoria" class="form-select form-select-sm rounded-3 border-secondary-subtle" style="width: auto; min-width: 130px;" onchange="window.dispFiltrar()">
-                    <option value="">Todas Categorías</option>
-                    <option value="Local">Local</option>
-                    <option value="Nacional">Nacional</option>
-                </select>
-
-                <!-- Botón Toggle Conductor Eventual -->
-                <button id="btn-toggle-eventual" class="btn btn-sm btn-outline-secondary rounded-3 px-3" onclick="window.dispToggleColumnaEventual()" title="Mostrar u ocultar columna Conductor Eventual">
-                    <i class="bi bi-eye-slash me-1"></i>Cond. Eventual
-                </button>
+                <span id="disp-contador-registros" class="text-secondary small fw-bold ms-2"></span>
             </div>
 
             <div>
-                <button class="btn btn-sm btn-light border rounded-3 text-muted px-3" onclick="window.dispCargarDatos()" title="Refrescar datos">
-                    <i class="bi bi-arrow-clockwise"></i>
+                <button class="btn btn-sm btn-light border rounded-3 text-muted px-3" onclick="window.dispCargarDatos()" title="Refrescar datos en vivo">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Refrescar
                 </button>
             </div>
         </div>
 
-        <!-- Tabla -->
+        <!-- Tabla Reordenada -->
         <div class="table-responsive">
             <table class="disp-table" id="disp-main-table">
                 <thead>
                     <tr>
                         <th style="width: 40px; text-align: center;">#</th>
-                        <th>CONDUCTOR ASIGNADO</th>
-                        <th id="th-cond-eventual" style="display: none;">CONDUCTOR EVENTUAL</th>
                         <th>PLACA CAMIÓN</th>
                         <th>PLACA CARRETA</th>
-                        <th>CAPACIDAD TANQUE</th>
+                        <th>CONDUCTOR</th>
+                        <th style="text-align: center;">ESTADO</th>
                         <th>MARCA</th>
-                        <th>CATEGORÍA</th>
+                        <th>CAPACIDAD DE TANQUE</th>
                         <th>TIPO UNIDAD</th>
-                        <th>ESTADO CONDUCTOR</th>
-                        <th>ESTADO UNIDAD</th>
-                        <th style="min-width: 180px;">UBICACIÓN</th>
-                        <th style="min-width: 160px;">OBSERVACIONES</th>
-                        <th style="width: 70px; text-align: center;">ACCIONES</th>
+                        <th style="min-width: 180px;">OBSERVACIONES</th>
+                        <th style="width: 80px; text-align: center;">ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody id="disp-table-body">
                     <tr>
-                        <td colspan="14" class="text-center py-4 text-muted">
+                        <td colspan="10" class="text-center py-4 text-muted">
                             <div class="spinner-border spinner-border-sm text-primary me-2"></div>
                             Cargando disponibilidad de flota...
                         </td>
@@ -567,7 +404,7 @@
     </div>
 </div>
 
-<!-- Modal Drawer Idéntico 1:1 a Reporte de Fallas -->
+<!-- Modal Drawer — Registrar / Editar Unidad -->
 <div class="modal fade" id="modalDisponibilidad" tabindex="-1" aria-labelledby="modalDisponibilidadLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-scrollable ck-floating-drawer-dialog">
         <div class="modal-content border-0 ck-floating-drawer-content">
@@ -581,12 +418,12 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <!-- Modal Body con Tarjetas Bento (Igual a Reporte de Fallas) -->
+            <!-- Modal Body -->
             <div class="modal-body p-3 p-md-4 custom-scrollbar" style="background:#f8fafc;">
                 <form id="disp-form" onsubmit="window.guardarFormularioDisponibilidad(event)">
                     <input type="hidden" id="disp-f-id">
 
-                    <!-- SECCIÓN 1: DATOS DE LAS PLACAS -->
+                    <!-- SECCIÓN 1: ASIGNACIÓN DE PLACAS -->
                     <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
                         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:0.95rem;">
                             <i class="bi bi-card-heading text-primary"></i> Asignación de Placas
@@ -595,7 +432,7 @@
                         <div class="row g-2 mb-3">
                             <!-- PLACA CAMIÓN -->
                             <div class="col-12 col-md-6">
-                                <label class="form-label fw-semibold text-secondary small mb-1">Placa Camión / Tracto <span class="text-muted font-normal">(Opcional si es Carreta)</span></label>
+                                <label class="form-label fw-semibold text-secondary small mb-1">Placa Camión / Tracto</label>
                                 <div class="disp-combo-wrap">
                                     <input type="text" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" id="disp-f-placa-camion" placeholder="BUSCAR PLACA..." autocomplete="off" oninput="window.dispBuscarPlacaCamion(this.value)" onfocus="window.dispBuscarPlacaCamion(this.value)">
                                     <div class="disp-combo-panel" id="disp-panel-camion"></div>
@@ -612,104 +449,54 @@
                             </div>
                         </div>
 
-                        <!-- DATOS CALCULADOS DE LA UNIDAD -->
+                        <!-- DATOS DE LA UNIDAD -->
                         <div class="p-3 rounded-3" style="background:#f8fafc; border:1px solid #e2e8f0;">
                             <div class="fw-bold text-muted mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px;">
-                                <i class="bi bi-cpu me-1"></i>Datos Calculados de la Unidad
+                                <i class="bi bi-cpu me-1"></i>Especificaciones Técnicas
                             </div>
                             <div class="row g-2 align-items-end">
-                                <div class="col-6 col-md-3">
-                                    <label class="form-label fw-semibold text-secondary small mb-1 text-truncate d-block" style="font-size:0.7rem;" title="Marca (Auto)">Marca (Auto)</label>
-                                    <input type="text" class="form-control form-control-sm bg-white border-secondary-subtle" id="disp-f-marca" readonly placeholder="Auto">
+                                <div class="col-6 col-md-4">
+                                    <label class="form-label fw-semibold text-secondary small mb-1" style="font-size:0.7rem;">Marca</label>
+                                    <input type="text" class="form-control form-control-sm bg-white border-secondary-subtle" id="disp-f-marca" placeholder="Marca">
                                 </div>
-                                <div class="col-6 col-md-3">
-                                    <label class="form-label fw-semibold text-secondary small mb-1 text-truncate d-block" style="font-size:0.7rem;" title="Capacidad Tanque">Capacidad Tanque <span id="disp-f-capacidad-unit" class="text-primary fw-bold ms-1">(Gln)</span></label>
-                                    <input type="text" class="form-control form-control-sm bg-white border-secondary-subtle" id="disp-f-capacidad" placeholder="0">
+                                <div class="col-6 col-md-4">
+                                    <label class="form-label fw-semibold text-secondary small mb-1" style="font-size:0.7rem;">Capacidad Tanque</label>
+                                    <input type="text" class="form-control form-control-sm bg-white border-secondary-subtle" id="disp-f-capacidad" placeholder="Ej: 260 Gln">
                                 </div>
-                                <div class="col-6 col-md-3">
-                                    <label class="form-label fw-semibold text-secondary small mb-1 text-truncate d-block" style="font-size:0.7rem;" title="Categoría Conductor">Categoría Conductor</label>
-                                    <select class="form-select form-select-sm bg-white border-secondary-subtle" id="disp-f-categoria">
-                                        <option value="Local">Local</option>
-                                        <option value="Nacional">Nacional</option>
-                                    </select>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <label class="form-label fw-semibold text-secondary small mb-1 text-truncate d-block" style="font-size:0.7rem;" title="Tipo de Unidad">Tipo de Unidad</label>
-                                    <input type="text" class="form-control form-control-sm bg-white border-secondary-subtle" id="disp-f-tipo-unidad" placeholder="Auto">
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label fw-semibold text-secondary small mb-1" style="font-size:0.7rem;">Tipo de Unidad</label>
+                                    <input type="text" class="form-control form-control-sm bg-white border-secondary-subtle" id="disp-f-tipo-unidad" placeholder="Tracto, Carreta, etc.">
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- SECCIÓN 2: CONDUCTORES -->
+                    <!-- SECCIÓN 2: CONDUCTOR Y ESTADO -->
                     <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
                         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:0.95rem;">
-                            <i class="bi bi-people-fill text-primary"></i> Conductores Asignados
+                            <i class="bi bi-person-badge text-primary"></i> Conductor y Estado
                         </h6>
-                        <div class="row g-2">
-                            <div class="col-12 col-md-6">
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-md-7">
                                 <label class="form-label fw-semibold text-secondary small mb-1">Conductor Asignado</label>
                                 <div class="disp-combo-wrap">
-                                    <input type="text" class="form-control form-control-sm border-secondary-subtle" id="disp-f-conductor-asignado" placeholder="Buscar conductor..." autocomplete="off" oninput="window.dispBuscarConductor(this.value, 'asignado')" onfocus="window.dispBuscarConductor(this.value, 'asignado')">
+                                    <input type="text" class="form-control form-control-sm border-secondary-subtle" id="disp-f-conductor-asignado" placeholder="Buscar conductor..." autocomplete="off" oninput="window.dispBuscarConductor(this.value)" onfocus="window.dispBuscarConductor(this.value)">
                                     <div class="disp-combo-panel" id="disp-panel-cond-asignado"></div>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label fw-semibold text-secondary small mb-1">Conductor Eventual</label>
-                                <div class="disp-combo-wrap">
-                                    <input type="text" class="form-control form-control-sm border-secondary-subtle" id="disp-f-conductor-eventual" placeholder="Buscar conductor..." autocomplete="off" oninput="window.dispBuscarConductor(this.value, 'eventual')" onfocus="window.dispBuscarConductor(this.value, 'eventual')">
-                                    <div class="disp-combo-panel" id="disp-panel-cond-eventual"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SECCIÓN 3: ESTADOS Y UBICACIÓN -->
-                    <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
-                        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:0.95rem;">
-                            <i class="bi bi-geo-alt-fill text-primary"></i> Estados y Ubicación
-                        </h6>
-                        <div class="row g-2 mb-3">
-                            <div class="col-12 col-md-6">
-                                <label class="form-label fw-semibold text-secondary small mb-1">Estado de Conductor (<span class="text-danger">*</span>)</label>
-                                <select class="form-select form-select-sm border-secondary-subtle fw-bold" id="disp-f-estado-conductor" required>
-                                    <option value="Disponible">🟢 Disponible</option>
-                                    <option value="Sin Conductor">⚪ Sin Conductor</option>
-                                    <option value="Día Libre">🔵 Día Libre</option>
-                                    <option value="Entra UTS">🟣 Entra UTS</option>
-                                    <option value="Vacaciones">🟡 Vacaciones</option>
-                                    <option value="Vacante">⚪ Vacante</option>
-                                    <option value="Faltó">🔴 Faltó</option>
+                            <div class="col-12 col-md-5">
+                                <label class="form-label fw-semibold text-secondary small mb-1">Estado</label>
+                                <select class="form-select form-select-sm border-secondary-subtle fw-bold" id="disp-f-estado">
+                                    <option value="En Base">🟢 En Base</option>
+                                    <option value="En Ruta">🔵 En Ruta</option>
+                                    <option value="En Mantenimiento">🔴 En Mantenimiento</option>
                                 </select>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label fw-semibold text-secondary small mb-1">Estado de Unidad (<span class="text-danger">*</span>)</label>
-                                <select class="form-select form-select-sm border-secondary-subtle fw-bold" id="disp-f-estado-unidad" required>
-                                    <option value="Disponible">🟢 Disponible</option>
-                                    <option value="Operativo">🔵 Operativo</option>
-                                    <option value="Mantenimiento">🔴 Mantenimiento</option>
-                                    <option value="Programado">🟣 Programado</option>
-                                    <option value="Tránsito">🟡 Tránsito</option>
-                                    <option value="Solo Placa">⚪ Solo Placa</option>
-                                    <option value="Alquilado">🟤 Alquilado</option>
-                                    <option value="Siniestro">⛔ Siniestro</option>
-                                    <option value="Modificación">🔧 Modificación</option>
-                                    <option value="En Proyecto">📋 En Proyecto</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-secondary small mb-1">Ubicación Actual / Dirección GPS</label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-light border-secondary-subtle"><i class="bi bi-geo-alt-fill text-danger"></i></span>
-                                <input type="text" class="form-control border-secondary-subtle" id="disp-f-ubicacion" placeholder="Dirección GPS o referencia manual...">
                             </div>
                         </div>
 
                         <div>
-                            <label class="form-label fw-semibold text-secondary small mb-1">Observaciones Adicionales</label>
-                            <textarea class="form-control form-control-sm border-secondary-subtle" id="disp-f-observaciones" rows="2" placeholder="Notas de ruta, cliente o observaciones de estado..."></textarea>
+                            <label class="form-label fw-semibold text-secondary small mb-1">Observaciones</label>
+                            <textarea class="form-control form-control-sm border-secondary-subtle" id="disp-f-observaciones" rows="2" placeholder="Notas de destino, estado u observaciones generales..."></textarea>
                         </div>
                     </div>
 
@@ -726,113 +513,43 @@
     </div>
 </div>
 
-<!-- Modal: Confirmación de Eliminación (1:1 Reporte de Fallas - Diseño Circular B) -->
+<!-- Modal: Confirmar Eliminar -->
 <div class="modal fade" id="modalEliminarDisponibilidadConfirm" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
-  <div class="modal-dialog modal-dialog-centered ck-delete-dialog">
-    <div class="modal-content ck-delete-card border-0">
-      
-      <!-- Icono Alerta Rojo -->
-      <div class="ck-delete-badge-icon">
-        <i class="bi bi-exclamation-triangle-fill"></i>
-      </div>
-
-      <!-- Título -->
-      <h4 class="fw-bolder text-dark mb-2" style="font-size: 1.25rem; letter-spacing: -0.3px;">
-        ¿Eliminar esta unidad?
-      </h4>
-
-      <!-- Descripción -->
-      <p class="text-secondary mb-4 px-2" style="font-size: 0.84rem; line-height: 1.45; font-weight: 500;">
-        Esta acción no se puede deshacer. La unidad <strong id="disp-del-placa-txt" class="text-dark"></strong> será eliminada permanentemente del sistema.
-      </p>
-
-      <!-- Botones de Acción (Diseño Circular B) -->
-      <div class="d-flex align-items-center justify-content-center gap-4">
-        <!-- Cancelar (X negro) -->
-        <button type="button" class="ck-btn-circle ck-btn-cancel-circle" data-bs-dismiss="modal" title="Cancelar">
-          <i class="bi bi-x-lg"></i>
-        </button>
-
-        <!-- Eliminar (Papelera rojo) -->
-        <button type="button" class="ck-btn-circle ck-btn-delete-circle" id="btnEjecutarEliminarDisponibilidad" onclick="window._ejecutarEliminarDisponibilidadConfirmado()" title="Eliminar registro">
-          <i class="bi bi-trash3-fill"></i>
-        </button>
-      </div>
-
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden text-center p-4">
+            <div class="mx-auto mb-3" style="width: 56px; height: 56px; border-radius: 50%; background: #fee2e2; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-trash3-fill text-danger fs-3"></i>
+            </div>
+            <h5 class="fw-bold text-dark mb-1">¿Eliminar Registro?</h5>
+            <p class="text-muted small mb-4">¿Estás seguro de quitar la unidad <strong id="disp-eliminar-nombre" class="text-dark"></strong> de disponibilidad?</p>
+            <div class="d-flex gap-2 justify-content-center">
+                <button type="button" class="btn btn-light rounded-pill px-3 fw-semibold flex-fill" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger rounded-pill px-3 fw-semibold flex-fill" id="btnEjecutarEliminarDisponibilidad" onclick="window._ejecutarEliminarDisponibilidadConfirmado()">
+                    Eliminar
+                </button>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
-<!-- Modal: Cuadro Resumen de Disponibilidad de Flota (Estilo Marsisa) -->
-<div class="modal fade" id="modalCuadroTiposUnidad" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content rounded-4 border-0 shadow-2xl" style="background:#f8fafc;">
-            <div class="modal-header border-bottom px-4 py-3 bg-white rounded-top-4 d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="bg-primary-subtle text-primary p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width:44px; height:44px;">
-                        <i class="bi bi-grid-3x3-gap-fill fs-4"></i>
+<!-- Modal: Cuadro Resumen de Disponibilidad de Flota -->
+<div class="modal fade" id="modalDisponibilidadCuadro" tabindex="-1" aria-labelledby="modalDisponibilidadCuadroLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom px-4 py-3 bg-white">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:38px;height:38px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;color:#2563eb;">
+                        <i class="bi bi-grid-3x3-gap-fill fs-5"></i>
                     </div>
                     <div>
-                        <h4 class="modal-title fw-bolder text-dark mb-0" style="letter-spacing: -0.5px;">DISPONIBILIDAD DE FLOTA MARSISA</h4>
-                        <div class="text-secondary small fw-semibold">Resumen por Subtipo de Unidad y Distribución de Estados Operativos</div>
+                        <h5 class="modal-title fw-bolder text-dark mb-0">CUADRO RESUMEN DE DISPONIBILIDAD DE FLOTA</h5>
+                        <small class="text-muted fw-semibold">Desglose de unidades por tipo y estado operativo</small>
                     </div>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-dark text-white px-3 py-2 rounded-pill fw-bold" id="disp-cuadro-total-badge">43 Unidades</span>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4" style="max-height: 82vh; overflow-y: auto;">
-                
-                <!-- 1. Tarjetas Superiores de Subtipos de Unidades (1:1 Imagen Marsisa) -->
-                <div class="row g-3 mb-4" id="disp-cuadro-subtipos-cards">
-                    <!-- Inyectado dinámicamente con estilo colorido y fotos/iconos 3D -->
-                </div>
-
-                <!-- 2. Gráfico de Distribución por Estados y Subtipos -->
-                <div class="card border-0 rounded-4 shadow-sm bg-white p-3 p-md-4 mb-4" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-bar-chart-fill text-primary fs-5"></i>
-                            <h6 class="fw-bold text-dark mb-0" style="font-size:0.95rem;">Distribución de Unidades por Estado Operativo</h6>
-                        </div>
-                        <span class="text-muted small">Conteo agrupado por Subtipo y Estado</span>
-                    </div>
-
-                    <div style="position: relative; height: 320px; width: 100%;">
-                        <canvas id="chartDispSubtipos"></canvas>
-                    </div>
-                </div>
-
-                <!-- 3. Matriz / Tabla Desglosada con Ubicaciones -->
-                <div class="card border-0 rounded-4 shadow-sm bg-white p-3 p-md-4" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex align-items-center gap-2 mb-3">
-                        <i class="bi bi-geo-alt-fill text-danger fs-5"></i>
-                        <h6 class="fw-bold text-dark mb-0" style="font-size:0.95rem;">Resumen de Ubicación y Estado por Subtipo</h6>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.8rem;">
-                            <thead class="bg-light text-secondary">
-                                <tr>
-                                    <th>SUBTIPO</th>
-                                    <th class="text-center">TOTAL</th>
-                                    <th class="text-center">OPERATIVOS</th>
-                                    <th class="text-center">EN TRÁNSITO</th>
-                                    <th class="text-center">PROGRAMADOS</th>
-                                    <th class="text-center">EN MANTENIMIENTO</th>
-                                    <th class="text-center">ALQUILADOS / OTROS</th>
-                                </tr>
-                            </thead>
-                            <tbody id="disp-cuadro-matriz-body">
-                                <!-- Inyectado dinámicamente -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </div>
-            <div class="modal-footer border-top px-4 py-3 bg-white rounded-bottom-4">
-                <button type="button" class="btn btn-secondary rounded-pill fw-bold px-4" data-bs-dismiss="modal">Cerrar</button>
+            <div class="modal-body p-4" id="disp-cuadro-body">
+                <!-- Render dinámico -->
             </div>
         </div>
     </div>

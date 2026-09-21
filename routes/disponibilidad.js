@@ -12,6 +12,7 @@ module.exports = function (db, logAudit) {
             logAudit(user, 'Disponibilidad Flota', accion, String(detalle || ''));
         }
     }
+
     // Asegurar tabla una sola vez al cargar el módulo
     const sqlCreateTable = `
         CREATE TABLE IF NOT EXISTS flota_disponibilidad (
@@ -41,32 +42,209 @@ module.exports = function (db, logAudit) {
         if (err) console.warn('[Disponibilidad] Error asegurando tabla:', err.message);
     });
 
-    // ── GET /api/disponibilidad-flota (Listado general) ────────────────────────
+    // ── GET /api/disponibilidad-flota (Listado general consolidado en tiempo real) ──
     router.get('/', (req, res) => {
         const tdb = getDb(req);
-        const sql = `
-            SELECT 
-                d.*,
-                COALESCE(NULLIF(d.capacidad_tanque, '0'), NULLIF(p.capacidad_tanque, ''), '0') AS capacidad_tanque,
-                p.capacidad_tanque AS placa_capacidad_tanque,
-                p.combustible AS placa_combustible,
-                p.modelo_uts AS placa_modelo_uts,
-                p.tipo AS placa_tipo_camion,
-                p.sub_tipo AS placa_sub_tipo_camion,
-                p.uts AS placa_uts,
-                p2.tipo AS carreta_tipo,
-                p2.sub_tipo AS carreta_sub_tipo
-            FROM flota_disponibilidad d
-            LEFT JOIN placas p ON p.placa = d.placa_camion
-            LEFT JOIN placas p2 ON p2.placa = d.placa_carreta
-            ORDER BY COALESCE(NULLIF(d.placa_camion, ''), d.placa_carreta) ASC
+        const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+        // 1. Placas maestras
+        const sqlPlacas = `
+            SELECT placa, cliente, marca, tipo, sub_tipo, combustible, uts, carga_util, capacidad_tanque, motora 
+            FROM placas 
+            WHERE (estado = 'Activa' OR estado IS NULL OR estado = '')
+            ORDER BY placa ASC
         `;
-        tdb.query(sql, (err, rows) => {
-            if (err) {
-                console.error('Error al obtener disponibilidad de flota:', err);
-                return res.status(500).json({ error: 'Error al consultar disponibilidad de flota', detalle: err.message });
-            }
-            res.json(rows || []);
+
+        // 2. Unidades en ruta desde Checklist / Seguridad
+        const sqlEnRuta = `
+            SELECT id, placa_tracto, placa_carreta, conductor, destino, salida_fecha, salida_hora, estado, salida_observaciones
+            FROM seg_unidades_registros
+            WHERE estado = 'en_ruta'
+        `;
+
+        // 3. OTs activas en taller / mantenimiento
+        const sqlOTs = `
+            SELECT placa, id_ot, ticket_entrada, estado, fecha_ingreso
+            FROM ordenes_trabajo
+            WHERE estado NOT IN ('Finalizado', 'Finalizada', 'Anulado', 'Anulada', 'Cerrado', 'Cerrada')
+        `;
+
+        // 4. Últimos registros en Base desde Seguridad
+        const sqlBase = `
+            SELECT placa_camion, placa_carreta, conductor, observacion
+            FROM seg_unidades_base
+            ORDER BY fecha DESC, id DESC
+        `;
+
+        // 5. Registros guardados en flota_disponibilidad
+        const sqlDisp = `SELECT * FROM flota_disponibilidad`;
+
+        tdb.query(sqlPlacas, (errP, placas) => {
+            if (errP) return res.status(500).json({ error: 'Error consultando placas', detalle: errP.message });
+
+            tdb.query(sqlEnRuta, (errR, enRutaRows) => {
+                if (errR) return res.status(500).json({ error: 'Error consultando unidades en ruta', detalle: errR.message });
+
+                tdb.query(sqlOTs, (errOT, otRows) => {
+                    if (errOT) return res.status(500).json({ error: 'Error consultando OTs de mantenimiento', detalle: errOT.message });
+
+                    tdb.query(sqlBase, (errB, baseRows) => {
+                        if (errB) return res.status(500).json({ error: 'Error consultando unidades en base', detalle: errB.message });
+
+                        tdb.query(sqlDisp, (errD, dispRows) => {
+                            if (errD) return res.status(500).json({ error: 'Error consultando disponibilidad', detalle: errD.message });
+
+                            // Indexar OTs activas por placa limpia
+                            const otSet = new Set();
+                            (otRows || []).forEach(ot => {
+                                const p = clean(ot.placa);
+                                if (p) otSet.add(p);
+                            });
+
+                            // Indexar unidades en ruta
+                            const rutaCamionMap = {};
+                            const rutaCarretaSet = new Set();
+                            (enRutaRows || []).forEach(r => {
+                                const pt = clean(r.placa_tracto);
+                                const pc = clean(r.placa_carreta);
+                                if (pt) rutaCamionMap[pt] = r;
+                                if (pc) rutaCarretaSet.add(pc);
+                            });
+
+                            // Indexar base
+                            const baseCamionMap = {};
+                            const baseCarretaSet = new Set();
+                            (baseRows || []).forEach(b => {
+                                const pc = clean(b.placa_camion);
+                                const pcar = clean(b.placa_carreta);
+                                if (pc && !baseCamionMap[pc]) baseCamionMap[pc] = b;
+                                if (pcar) baseCarretaSet.add(pcar);
+                            });
+
+                            // Indexar disponibilidad manual
+                            const dispMap = {};
+                            (dispRows || []).forEach(d => {
+                                const pc = clean(d.placa_camion);
+                                const pcar = clean(d.placa_carreta);
+                                if (pc) dispMap[pc] = d;
+                                else if (pcar) dispMap[pcar] = d;
+                            });
+
+                            const resultado = [];
+                            const carretasAcopladas = new Set();
+
+                            const motoras = [];
+                            const remolques = [];
+
+                            (placas || []).forEach(p => {
+                                const tipoUpper = (p.tipo || '').toUpperCase();
+                                const isMotora = p.motora === '1' || p.motora === 1 || 
+                                    ['CAMION', 'TRACTO', 'TRACTOCAMION', 'VOLQUETE', 'FURGON', 'CISTERNA', 'CAMIONETA', 'TRACTO CAMION'].some(t => tipoUpper.includes(t));
+                                
+                                if (isMotora) motoras.push(p);
+                                else remolques.push(p);
+                            });
+
+                            // Procesar motoras (Camiones / Tractos)
+                            motoras.forEach(p => {
+                                const cPlaca = clean(p.placa);
+                                const enRuta = rutaCamionMap[cPlaca];
+                                const enBase = baseCamionMap[cPlaca];
+                                const disp = dispMap[cPlaca];
+                                const hasOT = otSet.has(cPlaca);
+
+                                let carreta = '';
+                                let conductor = '';
+                                let estado = 'En Base';
+                                let observaciones = '';
+
+                                if (hasOT) {
+                                    estado = 'En Mantenimiento';
+                                    if (disp) {
+                                        carreta = disp.placa_carreta || '';
+                                        conductor = disp.conductor_asignado || '';
+                                        observaciones = disp.observaciones || 'En Taller / OT Activa';
+                                    } else {
+                                        observaciones = 'En Taller / OT Activa';
+                                    }
+                                } else if (enRuta) {
+                                    estado = 'En Ruta';
+                                    carreta = enRuta.placa_carreta || (disp ? disp.placa_carreta : '') || '';
+                                    conductor = enRuta.conductor || (disp ? disp.conductor_asignado : '') || '';
+                                    observaciones = enRuta.destino ? `Destino: ${enRuta.destino}` : (enRuta.salida_observaciones || (disp ? disp.observaciones : ''));
+                                } else if (enBase) {
+                                    estado = 'En Base';
+                                    carreta = enBase.placa_carreta || (disp ? disp.placa_carreta : '') || '';
+                                    conductor = enBase.conductor || (disp ? disp.conductor_asignado : '') || '';
+                                    observaciones = enBase.observacion || (disp ? disp.observaciones : '');
+                                } else if (disp) {
+                                    carreta = disp.placa_carreta || '';
+                                    conductor = disp.conductor_asignado || '';
+                                    observaciones = disp.observaciones || '';
+                                }
+
+                                if (carreta) carretasAcopladas.add(clean(carreta));
+
+                                let capTanque = p.capacidad_tanque || (disp ? disp.capacidad_tanque : '') || '0';
+                                if (capTanque && !String(capTanque).toUpperCase().includes('GLN') && !String(capTanque).toUpperCase().includes('M³') && capTanque !== '0') {
+                                    capTanque = capTanque + ' Gln';
+                                }
+
+                                resultado.push({
+                                    id: disp ? disp.id : null,
+                                    placa_camion: p.placa,
+                                    placa_carreta: carreta,
+                                    conductor_asignado: conductor,
+                                    estado: estado,
+                                    marca: p.marca || (disp ? disp.marca : '') || '',
+                                    capacidad_tanque: capTanque,
+                                    tipo_unidad: p.tipo || 'Tracto Camión',
+                                    observaciones: observaciones,
+                                    is_motora: true
+                                });
+                            });
+
+                            // Procesar carretas/remolques que no están acopladas
+                            remolques.forEach(p => {
+                                const cPlaca = clean(p.placa);
+                                if (carretasAcopladas.has(cPlaca)) return; // Ya está emparejada con un camión
+
+                                const disp = dispMap[cPlaca];
+                                const hasOT = otSet.has(cPlaca);
+                                const enRuta = rutaCarretaSet.has(cPlaca);
+
+                                let estado = 'En Base';
+                                if (hasOT) estado = 'En Mantenimiento';
+                                else if (enRuta) estado = 'En Ruta';
+
+                                resultado.push({
+                                    id: disp ? disp.id : null,
+                                    placa_camion: '',
+                                    placa_carreta: p.placa,
+                                    conductor_asignado: disp ? disp.conductor_asignado : '',
+                                    estado: estado,
+                                    marca: p.marca || (disp ? disp.marca : '') || '',
+                                    capacidad_tanque: '—',
+                                    tipo_unidad: p.tipo || 'Carreta / Remolque',
+                                    observaciones: disp ? disp.observaciones : '',
+                                    is_motora: false
+                                });
+                            });
+
+                            const stats = {
+                                total_flota: resultado.length,
+                                total_camiones: motoras.length,
+                                total_carretas: resultado.filter(r => !r.is_motora || r.placa_carreta).length,
+                                en_base: resultado.filter(r => r.estado === 'En Base').length,
+                                en_ruta: resultado.filter(r => r.estado === 'En Ruta').length,
+                                en_mantenimiento: resultado.filter(r => r.estado === 'En Mantenimiento').length
+                            };
+
+                            res.json(resultado);
+                        });
+                    });
+                });
+            });
         });
     });
 
@@ -74,17 +252,13 @@ module.exports = function (db, logAudit) {
     router.post('/', (req, res) => {
         const tdb = getDb(req);
         const {
-            conductor_eventual,
             conductor_asignado,
             placa_camion,
             placa_carreta,
             capacidad_tanque,
             marca,
-            categoria_conductor,
             tipo_unidad,
-            estado_conductor,
-            estado_unidad,
-            ubicacion_manual,
+            estado,
             observaciones,
             creado_por
         } = req.body;
@@ -96,7 +270,6 @@ module.exports = function (db, logAudit) {
             return res.status(400).json({ error: 'Debe ingresar al menos la Placa de Camión o la Placa de Carreta' });
         }
 
-        // Buscar registro existente por placa_camion (o placa_carreta si no hay camion)
         let checkSql = `SELECT id FROM flota_disponibilidad WHERE placa_camion = ? AND placa_camion != ''`;
         let checkParams = [cam];
 
@@ -110,24 +283,20 @@ module.exports = function (db, logAudit) {
                 const existId = existingRows[0].id;
                 const updateSql = `
                     UPDATE flota_disponibilidad SET
-                        conductor_eventual = ?, conductor_asignado = ?, placa_camion = ?, placa_carreta = ?,
-                        capacidad_tanque = ?, marca = ?, categoria_conductor = ?, tipo_unidad = ?,
-                        estado_conductor = ?, estado_unidad = ?, ubicacion_manual = ?, observaciones = ?,
+                        conductor_asignado = ?, placa_camion = ?, placa_carreta = ?,
+                        capacidad_tanque = ?, marca = ?, tipo_unidad = ?,
+                        estado_unidad = ?, observaciones = ?,
                         actualizado_por = ?, fecha_actualizacion = CURRENT_TIMESTAMP
                     WHERE id = ?
                 `;
                 const updateParams = [
-                    (conductor_eventual || '').trim(),
                     (conductor_asignado || '').trim(),
                     cam,
                     car,
                     (capacidad_tanque || '').trim(),
                     (marca || '').trim().toUpperCase(),
-                    (categoria_conductor || '').trim(),
                     (tipo_unidad || '').trim(),
-                    (estado_conductor || 'Disponible').trim(),
-                    (estado_unidad || 'Disponible').trim(),
-                    (ubicacion_manual || '').trim(),
+                    (estado || 'Disponible').trim(),
                     (observaciones || '').trim(),
                     (creado_por || '').trim(),
                     existId
@@ -140,23 +309,18 @@ module.exports = function (db, logAudit) {
             } else {
                 const insertSql = `
                     INSERT INTO flota_disponibilidad (
-                        conductor_eventual, conductor_asignado, placa_camion, placa_carreta,
-                        capacidad_tanque, marca, categoria_conductor, tipo_unidad, estado_conductor,
-                        estado_unidad, ubicacion_manual, observaciones, creado_por, actualizado_por
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        conductor_asignado, placa_camion, placa_carreta,
+                        capacidad_tanque, marca, tipo_unidad, estado_unidad, observaciones, creado_por, actualizado_por
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `;
                 const insertParams = [
-                    (conductor_eventual || '').trim(),
                     (conductor_asignado || '').trim(),
                     cam,
                     car,
                     (capacidad_tanque || '').trim(),
                     (marca || '').trim().toUpperCase(),
-                    (categoria_conductor || '').trim(),
                     (tipo_unidad || '').trim(),
-                    (estado_conductor || 'Disponible').trim(),
-                    (estado_unidad || 'Disponible').trim(),
-                    (ubicacion_manual || '').trim(),
+                    (estado || 'Disponible').trim(),
                     (observaciones || '').trim(),
                     (creado_por || '').trim(),
                     (creado_por || '').trim()
@@ -180,9 +344,9 @@ module.exports = function (db, logAudit) {
         const values = [];
 
         const allowedFields = [
-            'conductor_eventual', 'conductor_asignado', 'placa_camion',
-            'placa_carreta', 'capacidad_tanque', 'marca', 'categoria_conductor',
-            'tipo_unidad', 'estado_conductor', 'estado_unidad', 'ubicacion_manual',
+            'conductor_asignado', 'placa_camion',
+            'placa_carreta', 'capacidad_tanque', 'marca',
+            'tipo_unidad', 'estado_unidad',
             'observaciones', 'actualizado_por'
         ];
 
@@ -222,73 +386,6 @@ module.exports = function (db, logAudit) {
             }
             auditar(req, 'ELIMINAR', `Eliminada disponibilidad ID: ${id}`);
             res.json({ success: true, message: 'Registro eliminado correctamente' });
-        });
-    });
-
-    // ── POST /api/disponibilidad-flota/sincronizar (Poblar desde placas activas) ──
-    router.post('/sincronizar', (req, res) => {
-        const tdb = getDb(req);
-        const { usuario } = req.body;
-
-        const sqlPlacas = `
-            SELECT placa, cliente, marca, tipo, combustible, uts, carga_util
-            FROM placas 
-            WHERE estado = 'Activa' AND (motora = '1' OR tipo IN ('Camion', 'Tracto', 'Volquete', 'Furgon', 'Cisterna', 'Camioneta', 'Tractocamion'))
-        `;
-
-        tdb.query(sqlPlacas, (err, placas) => {
-            if (err || !placas) {
-                console.error('Error obteniendo placas para sincronizar:', err);
-                return res.status(500).json({ error: 'Error al obtener placas para sincronización' });
-            }
-
-            if (placas.length === 0) {
-                return res.json({ success: true, message: 'No se encontraron placas activas para sincronizar', insertados: 0 });
-            }
-
-            let insertados = 0;
-            let procesados = 0;
-
-            placas.forEach(p => {
-                let capStr = '';
-                if (p.combustible) {
-                    const combUpper = p.combustible.toUpperCase();
-                    if (combUpper.includes('GAS') || combUpper.includes('GNV') || combUpper.includes('GLP')) {
-                        capStr = p.carga_util ? `${p.carga_util} m³` : 'm³';
-                    } else {
-                        capStr = p.carga_util ? `${p.carga_util} Gln` : 'Gln';
-                    }
-                }
-
-                const utsUpper = (p.uts || '').toUpperCase();
-                const catConductor = utsUpper.includes('LOCAL') ? 'Local' : (utsUpper.includes('NACIONAL') ? 'Nacional' : (utsUpper || 'Nacional'));
-
-                const sqlInsert = `
-                    INSERT IGNORE INTO flota_disponibilidad (
-                        placa_camion, marca, categoria_conductor, tipo_unidad, capacidad_tanque, estado_conductor, estado_unidad, creado_por
-                    ) VALUES (?, ?, ?, ?, '0', 'Disponible', 'Disponible', ?)
-                `;
-
-                tdb.query(sqlInsert, [
-                    p.placa,
-                    p.marca || '',
-                    catConductor,
-                    p.tipo || '',
-                    usuario || 'Sincronizador'
-                ], (errIns, resIns) => {
-                    procesados++;
-                    if (!errIns && resIns && resIns.affectedRows > 0) insertados++;
-
-                    if (procesados === placas.length) {
-                        auditar(req, 'SINCRONIZAR', `Sincronizadas ${insertados} placas a disponibilidad`);
-                        return res.json({
-                            success: true,
-                            message: `Sincronización completada. ${insertados} unidades agregadas a disponibilidad.`,
-                            insertados
-                        });
-                    }
-                });
-            });
         });
     });
 
