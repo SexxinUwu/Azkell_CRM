@@ -249,6 +249,66 @@ window.ckCargarOrdenesViaje = async function(forceSync) {
     }
 };
 
+window.ckConsultarUltimoIngresoSeguridad = async function(placa) {
+    if (!placa) return;
+    const pStr = placa.toString().trim().toUpperCase();
+    if (pStr.length < 5) return;
+
+    try {
+        const res = await fetch(`/api/checklist/ultimo-ingreso-seguridad?placa=${encodeURIComponent(pStr)}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const data = json && json.data;
+        if (!data) return;
+
+        // 1. Mantener Orden de Viaje VACÍA por defecto al ingresar placa (a menos que el usuario la seleccione manualmente)
+        const inputHidden = document.getElementById('ck_orden_viaje');
+        const inputTxt = document.getElementById('ck_orden_viaje-txt');
+        const btnClear = document.getElementById('ck_btn_clear_viaje');
+        const infoBox = document.getElementById('ck_viaje_seleccionado_info');
+        
+        // Si no se ha vinculado un viaje explícitamente, asegurar que quede limpio
+        if (inputHidden && inputHidden.dataset.manuallySelected !== 'true') {
+            inputHidden.value = '';
+            if (inputTxt) inputTxt.value = '';
+            if (btnClear) btnClear.classList.add('d-none');
+            if (infoBox) infoBox.classList.add('d-none');
+        }
+
+        // 2. Autocompletar Carreta si el ingreso de seguridad la tiene y no se ha modificado manualmente
+        if (data.placa_carreta) {
+            const prHidden = document.getElementById('ck_placa_remolque');
+            const prTxt = document.getElementById('ck_placa_remolque-txt');
+            if (prHidden && (!prHidden.value || prHidden.value !== data.placa_carreta)) {
+                prHidden.value = data.placa_carreta;
+                if (prTxt) prTxt.value = data.placa_carreta;
+                if (typeof window.ckSyncPlacaRemolque === 'function') window.ckSyncPlacaRemolque();
+            }
+        }
+
+        // 3. Autocompletar Conductor con el último que ingresó la unidad a base
+        if (data.conductor) {
+            const condHidden = document.getElementById('ck_conductor');
+            const condTxt = document.getElementById('ck_conductor-txt');
+            if (condHidden) condHidden.value = data.conductor;
+            if (condTxt) condTxt.value = data.conductor;
+            if (typeof window._cbSet === 'function') {
+                window._cbSet('ck_conductor', data.conductor, data.conductor);
+            }
+        }
+
+        // 4. Autocompletar Procedencia / Origen / Zona si el campo está vacío
+        if (data.procedencia || data.destino || data.zona) {
+            const procInput = document.getElementById('ck_procedencia');
+            if (procInput && !procInput.value) {
+                procInput.value = data.procedencia || data.destino || data.zona;
+            }
+        }
+    } catch (e) {
+        console.warn('Error consultando último ingreso de seguridad por placa:', e);
+    }
+};
+
 window.ckConsultarViajeActualPorPlaca = async function(placa) {
     if (!placa) return;
     const pStr = placa.toString().trim().toUpperCase();
@@ -446,7 +506,10 @@ window.ckSeleccionarViaje = function(v) {
     const inputHidden = document.getElementById('ck_orden_viaje');
     const inputTxt = document.getElementById('ck_orden_viaje-txt');
     const btnClear = document.getElementById('ck_btn_clear_viaje');
-    if (inputHidden) inputHidden.value = v.viaje || '';
+    if (inputHidden) {
+        inputHidden.value = v.viaje || '';
+        inputHidden.dataset.manuallySelected = 'true';
+    }
     if (inputTxt) inputTxt.value = v.viaje || '';
     if (btnClear) btnClear.classList.remove('d-none');
 
@@ -506,47 +569,16 @@ window.ckSeleccionarViaje = function(v) {
     }
 };
 
-window.ckLimpiarViajeVinculado = function(showToast) {
+window.ckLimpiarViajeVinculado = function(showToast, limpiarVehiculo = false) {
     const inputHidden = document.getElementById('ck_orden_viaje');
     const inputTxt = document.getElementById('ck_orden_viaje-txt');
     const btnClear = document.getElementById('ck_btn_clear_viaje');
-    if (inputHidden) inputHidden.value = '';
+    if (inputHidden) {
+        inputHidden.value = '';
+        delete inputHidden.dataset.manuallySelected;
+    }
     if (inputTxt) inputTxt.value = '';
     if (btnClear) btnClear.classList.add('d-none');
-
-    // Vaciar Placa Tracto
-    const ptHidden = document.getElementById('ck_placa_tracto');
-    const ptTxt = document.getElementById('ck_placa_tracto-txt');
-    if (ptHidden) ptHidden.value = '';
-    if (ptTxt) ptTxt.value = '';
-
-    // Vaciar Placa Remolque
-    const prHidden = document.getElementById('ck_placa_remolque');
-    const prTxt = document.getElementById('ck_placa_remolque-txt');
-    if (prHidden) prHidden.value = '';
-    if (prTxt) prTxt.value = '';
-
-    // Vaciar Conductor
-    const condHidden = document.getElementById('ck_conductor');
-    const condTxt = document.getElementById('ck_conductor-txt');
-    if (condHidden) condHidden.value = '';
-    if (condTxt) condTxt.value = '';
-
-    // Vaciar Procedencia
-    const procInput = document.getElementById('ck_procedencia');
-    if (procInput) procInput.value = '';
-
-    // Vaciar Kilometraje y Horómetro
-    const kmInput = document.getElementById('ck_kilometraje');
-    if (kmInput) kmInput.value = '';
-    const horoInput = document.getElementById('ck_horometro');
-    if (horoInput) horoInput.value = '';
-
-    // Ocultar tarjetas de documentos informativos
-    const docTracto = document.getElementById('ck-doc-box-tracto');
-    if (docTracto) docTracto.style.display = 'none';
-    const docRemolque = document.getElementById('ck-doc-box-remolque');
-    if (docRemolque) docRemolque.style.display = 'none';
 
     // Ocultar panel informativo de viaje vinculado
     const infoBox = document.getElementById('ck_viaje_seleccionado_info');
@@ -555,8 +587,44 @@ window.ckLimpiarViajeVinculado = function(showToast) {
     const dd = document.getElementById('ck_orden_viaje-dd');
     if (dd) dd.style.display = 'none';
 
+    if (limpiarVehiculo) {
+        // Vaciar Placa Tracto
+        const ptHidden = document.getElementById('ck_placa_tracto');
+        const ptTxt = document.getElementById('ck_placa_tracto-txt');
+        if (ptHidden) ptHidden.value = '';
+        if (ptTxt) ptTxt.value = '';
+
+        // Vaciar Placa Remolque
+        const prHidden = document.getElementById('ck_placa_remolque');
+        const prTxt = document.getElementById('ck_placa_remolque-txt');
+        if (prHidden) prHidden.value = '';
+        if (prTxt) prTxt.value = '';
+
+        // Vaciar Conductor
+        const condHidden = document.getElementById('ck_conductor');
+        const condTxt = document.getElementById('ck_conductor-txt');
+        if (condHidden) condHidden.value = '';
+        if (condTxt) condTxt.value = '';
+
+        // Vaciar Procedencia
+        const procInput = document.getElementById('ck_procedencia');
+        if (procInput) procInput.value = '';
+
+        // Vaciar Kilometraje y Horómetro
+        const kmInput = document.getElementById('ck_kilometraje');
+        if (kmInput) kmInput.value = '';
+        const horoInput = document.getElementById('ck_horometro');
+        if (horoInput) horoInput.value = '';
+
+        // Ocultar tarjetas de documentos informativos
+        const docTracto = document.getElementById('ck-doc-box-tracto');
+        if (docTracto) docTracto.style.display = 'none';
+        const docRemolque = document.getElementById('ck-doc-box-remolque');
+        if (docRemolque) docRemolque.style.display = 'none';
+    }
+
     if (showToast && typeof window.showToastNotification === 'function') {
-        window.showToastNotification('Se quitó la orden de viaje y se vaciaron los campos dependientes.', 'info');
+        window.showToastNotification('Se quitó la orden de viaje.', 'info');
     }
 };
 
@@ -1623,9 +1691,9 @@ window.ckSyncPlacaTracto = async function() {
         inputKm.value = Math.round(tele.km);
     }
 
-    // 3. Consultar Orden de Viaje actual y autocompletar carreta, conductor y ruta
-    if (typeof window.ckConsultarViajeActualPorPlaca === 'function') {
-        window.ckConsultarViajeActualPorPlaca(visibleText);
+    // 3. Consultar último ingreso en seguridad y autocompletar carreta, conductor y procedencia
+    if (typeof window.ckConsultarUltimoIngresoSeguridad === 'function') {
+        window.ckConsultarUltimoIngresoSeguridad(visibleText);
     }
 };
 
@@ -1691,10 +1759,10 @@ window.ckSyncPlacaRemolque = async function() {
         inputHoras.value = Math.round(tele.horas);
     }
 
-    // 3. Si no hay tracto aún, consultar orden de viaje por la placa del remolque
+    // 3. Si no hay tracto aún, consultar último ingreso por la placa del remolque
     const tractoVal = (document.getElementById('ck_placa_tracto') || {}).value || '';
-    if (!tractoVal && typeof window.ckConsultarViajeActualPorPlaca === 'function') {
-        window.ckConsultarViajeActualPorPlaca(visibleText);
+    if (!tractoVal && typeof window.ckConsultarUltimoIngresoSeguridad === 'function') {
+        window.ckConsultarUltimoIngresoSeguridad(visibleText);
     }
 };
 
