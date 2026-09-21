@@ -130,7 +130,7 @@
 /* Sub Tipo Bento Cards (Dashboard Analítico) */
 .disp-subtipo-card {
     border-radius: 18px;
-    padding: 1.1rem 1.25rem;
+    padding: 1rem 1.15rem;
     color: #ffffff;
     display: flex;
     align-items: center;
@@ -139,6 +139,9 @@
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     user-select: none;
+    min-height: 84px;
+    position: relative;
+    overflow: hidden;
 }
 .disp-subtipo-card:hover {
     transform: translateY(-3px);
@@ -146,6 +149,15 @@
 }
 .disp-subtipo-card.active {
     box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px #0284c7 !important;
+}
+.disp-subtipo-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+}
+.disp-subtipo-card:hover .disp-subtipo-icon-wrapper {
+    transform: scale(1.08);
 }
 
 /* Dropdowns / Combo Panels */
@@ -342,9 +354,6 @@
     <div class="d-flex align-items-center gap-2">
       <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.dispCargarDatos(true)" title="Recargar">
         <i class="bi bi-arrow-clockwise fs-6"></i>
-      </button>
-      <button class="btn btn-light bg-white border shadow-2xs text-dark rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5" onclick="window.dispAbrirModalCuadro()" title="Ver Cuadro Resumen">
-        <i class="bi bi-grid-3x3-gap-fill text-primary fs-6"></i> <span class="d-none d-sm-inline">Resumen Flota</span>
       </button>
       <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" onclick="window.dispExportarExcel()" title="Exportar a Excel">
         <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
@@ -677,27 +686,4 @@
   </div>
 </div>
 
-<!-- ================================================================= -->
-<!-- 📊 MODAL CUADRO RESUMEN DE FLOTA -->
-<!-- ================================================================= -->
-<div class="modal fade" id="modalDisponibilidadCuadro" tabindex="-1" aria-labelledby="modalDisponibilidadCuadroLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-scrollable">
-    <div class="modal-content border-0 shadow-lg rounded-4">
-      <div class="modal-header border-bottom px-4 py-3 bg-white">
-        <div class="d-flex align-items-center gap-2">
-          <div style="width:38px;height:38px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;color:#2563eb;">
-            <i class="bi bi-grid-3x3-gap-fill fs-5"></i>
-          </div>
-          <div>
-            <h5 class="modal-title fw-bolder text-dark mb-0">CUADRO RESUMEN DE DISPONIBILIDAD DE FLOTA</h5>
-            <small class="text-muted fw-semibold">Desglose de unidades por tipo y estado operativo</small>
-          </div>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body p-4" id="disp-cuadro-body">
-        <!-- Render dinámico -->
-      </div>
-    </div>
-  </div>
-</div>
+

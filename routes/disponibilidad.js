@@ -158,6 +158,11 @@ module.exports = function (db, logAudit) {
                                     else if (pcar) dispMap[pcar] = d;
                                 });
 
+                                const placasMap = {};
+                                (placas || []).forEach(p => {
+                                    placasMap[clean(p.placa)] = p;
+                                });
+
                                 const motoras = [];
                                 const remolques = [];
                                 const carretasAcopladas = new Set();
@@ -229,6 +234,22 @@ module.exports = function (db, logAudit) {
                                         capTanque = capTanque + ' Gln';
                                     }
 
+                                    // Obtener metadata exacta de la carreta acoplada desde el maestro de placas
+                                    let subTipoCarreta = '';
+                                    let empresaCarreta = '';
+                                    let marcaCarreta = '';
+                                    let estadoCarreta = estado;
+
+                                    if (carreta) {
+                                        const pCarretaData = placasMap[clean(carreta)];
+                                        subTipoCarreta = pCarretaData ? (pCarretaData.sub_tipo || pCarretaData.tipo || 'Carreta') : 'Carreta';
+                                        empresaCarreta = pCarretaData ? (pCarretaData.cliente || p.cliente || '').trim() : (p.cliente || '').trim();
+                                        marcaCarreta = pCarretaData ? (pCarretaData.marca || '') : '';
+                                        if (otSet.has(clean(carreta)) || fallasRemolqueSet.has(clean(carreta))) {
+                                            estadoCarreta = 'En Mantenimiento';
+                                        }
+                                    }
+
                                     resultado.push({
                                         id: disp ? disp.id : null,
                                         placa_camion: p.placa,
@@ -241,6 +262,11 @@ module.exports = function (db, logAudit) {
                                         capacidad_tanque: capTanque,
                                         tipo_unidad: p.tipo || 'Camión',
                                         sub_tipo: p.sub_tipo || p.tipo || 'Camión',
+                                        // Datos enriquecidos de la carreta acoplada
+                                        sub_tipo_carreta: subTipoCarreta,
+                                        empresa_carreta: empresaCarreta,
+                                        marca_carreta: marcaCarreta,
+                                        estado_carreta: estadoCarreta,
                                         observaciones: observaciones,
                                         is_motora: true
                                     });
@@ -259,18 +285,25 @@ module.exports = function (db, logAudit) {
                                     if (hasOT) estado = 'En Mantenimiento';
                                     else if (enRuta) estado = 'En Ruta';
 
+                                    const stCarreta = p.sub_tipo || p.tipo || 'Carreta';
+                                    const empCarreta = (p.cliente || (disp ? disp.flota : '') || '').trim();
+
                                     resultado.push({
                                         id: disp ? disp.id : null,
                                         placa_camion: '',
                                         placa_carreta: p.placa,
                                         conductor_asignado: disp ? disp.conductor_asignado : '',
                                         estado: estado,
-                                        empresa: (p.cliente || (disp ? disp.flota : '') || '').trim(),
-                                        cliente: (p.cliente || (disp ? disp.flota : '') || '').trim(),
+                                        empresa: empCarreta,
+                                        cliente: empCarreta,
                                         marca: p.marca || (disp ? disp.marca : '') || '',
                                         capacidad_tanque: '—',
                                         tipo_unidad: p.tipo || 'Carreta',
-                                        sub_tipo: p.sub_tipo || p.tipo || 'Carreta',
+                                        sub_tipo: stCarreta,
+                                        sub_tipo_carreta: stCarreta,
+                                        empresa_carreta: empCarreta,
+                                        marca_carreta: p.marca || '',
+                                        estado_carreta: estado,
                                         observaciones: disp ? disp.observaciones : (hasOT ? 'En Taller / OT Activa' : ''),
                                         is_motora: false
                                     });

@@ -82,6 +82,81 @@ window.dispCargarDatos = async function (forzarRefresh = false) {
     }
 };
 
+// ── Helper: Extraer Placas Individuales (Consolidación Real de Flota) ────
+function _dispExtraerPlacas(lista, aplicarFiltros = false) {
+    const q = (document.getElementById('dispBuscador')?.value || '').toLowerCase().trim();
+    const filtroCard = window._dispFiltroCard || 'TODOS';
+    const filtroEmp = window._dispFiltroEmpresa || 'TODAS';
+
+    const placas = [];
+
+    (lista || []).forEach(d => {
+        // 1. Unidad Motora (Camión / Tracto)
+        if (d.placa_camion) {
+            const pCamion = {
+                placa: d.placa_camion,
+                es_motora: true,
+                tipo_unidad: d.tipo_unidad || 'Camión',
+                sub_tipo: d.sub_tipo || d.tipo_unidad || 'Camión',
+                estado: d.estado || 'En Base',
+                empresa: (d.empresa || d.cliente || '').trim(),
+                marca: d.marca || '',
+                conductor: d.conductor_asignado || '',
+                observaciones: d.observaciones || '',
+                capacidad_tanque: d.capacidad_tanque || ''
+            };
+
+            let include = true;
+            if (aplicarFiltros) {
+                if (filtroCard !== 'TODOS' && pCamion.estado !== filtroCard) include = false;
+                if (filtroEmp !== 'TODAS') {
+                    const empU = pCamion.empresa.toUpperCase();
+                    if (empU !== filtroEmp.toUpperCase() && !empU.includes(filtroEmp.toUpperCase())) include = false;
+                }
+                if (q) {
+                    const matches = [pCamion.placa, pCamion.sub_tipo, pCamion.conductor, pCamion.marca, pCamion.empresa, pCamion.estado, pCamion.observaciones]
+                        .some(v => String(v).toLowerCase().includes(q));
+                    if (!matches) include = false;
+                }
+            }
+            if (include) placas.push(pCamion);
+        }
+
+        // 2. Unidad Carreta / Remolque (Tanto acoplada como suelta)
+        if (d.placa_carreta) {
+            const pCarreta = {
+                placa: d.placa_carreta,
+                es_motora: false,
+                tipo_unidad: d.tipo_unidad_carreta || 'Carreta',
+                sub_tipo: d.sub_tipo_carreta || d.sub_tipo || 'Carreta',
+                estado: d.estado_carreta || d.estado || 'En Base',
+                empresa: (d.empresa_carreta || d.empresa || d.cliente || '').trim(),
+                marca: d.marca_carreta || d.marca || '',
+                conductor: d.conductor_asignado || '',
+                observaciones: d.observaciones || '',
+                capacidad_tanque: '—'
+            };
+
+            let include = true;
+            if (aplicarFiltros) {
+                if (filtroCard !== 'TODOS' && pCarreta.estado !== filtroCard) include = false;
+                if (filtroEmp !== 'TODAS') {
+                    const empU = pCarreta.empresa.toUpperCase();
+                    if (empU !== filtroEmp.toUpperCase() && !empU.includes(filtroEmp.toUpperCase())) include = false;
+                }
+                if (q) {
+                    const matches = [pCarreta.placa, pCarreta.sub_tipo, pCarreta.conductor, pCarreta.marca, pCarreta.empresa, pCarreta.estado, pCarreta.observaciones]
+                        .some(v => String(v).toLowerCase().includes(q));
+                    if (!matches) include = false;
+                }
+            }
+            if (include) placas.push(pCarreta);
+        }
+    });
+
+    return placas;
+}
+
 // ── Renderizar Botones Segmentados de Empresas Dinámicamente ──────
 window.dispRenderizarSegmentedEmpresas = function () {
     const container = document.getElementById('btn-group-empresas-disp');
@@ -89,8 +164,10 @@ window.dispRenderizarSegmentedEmpresas = function () {
 
     const empresasSet = new Set();
     (window.dispDatos || []).forEach(d => {
-        const emp = (d.empresa || d.cliente || '').trim();
-        if (emp) empresasSet.add(emp);
+        const emp1 = (d.empresa || d.cliente || '').trim();
+        if (emp1) empresasSet.add(emp1);
+        const emp2 = (d.empresa_carreta || '').trim();
+        if (emp2) empresasSet.add(emp2);
     });
 
     const empresas = Array.from(empresasSet).sort();
@@ -107,17 +184,17 @@ window.dispRenderizarSegmentedEmpresas = function () {
     container.innerHTML = html;
 };
 
-// ── Actualizar Métricas Superiores (Bento KPIs) ───────────────────
+// ── Actualizar Métricas Superiores (Bento KPIs de Flota Real) ─────
 window.dispActualizarKPIs = function () {
-    const datos = window.dispDatos || [];
-    const total = datos.length;
+    const todasLasPlacas = _dispExtraerPlacas(window.dispDatos || [], false);
+    const total = todasLasPlacas.length;
 
     let enBase = 0;
     let enRuta = 0;
     let enMant = 0;
 
-    datos.forEach(d => {
-        const est = (d.estado || 'En Base').toLowerCase();
+    todasLasPlacas.forEach(p => {
+        const est = (p.estado || 'En Base').toLowerCase();
         if (est.includes('mant') || est.includes('taller')) enMant++;
         else if (est.includes('ruta')) enRuta++;
         else enBase++;
@@ -137,7 +214,6 @@ window.dispActualizarKPIs = function () {
 // ── Filtro Nivel 1: Click en Cards Superiores (Estado) ─────────────
 window.dispFiltrarPorCard = function (estado, el) {
     window._dispFiltroCard = estado || 'TODOS';
-    // Al seleccionar cualquier card, el filtro inferior de empresas se resetea a "Todas" por defecto
     window._dispFiltroEmpresa = 'TODAS';
 
     // Actualizar clase activa en cards superiores
@@ -200,16 +276,91 @@ window.dispCambiarVista = function (vista, btn) {
     }
 };
 
-// ── Configuración de Colores e Iconos por Sub Tipo (Imagen 3) ─────
+// ── Configuración de Colores e Iconos Vectoriales por Sub Tipo ─────
 window._dispSubTipoConfigs = {
-    'Camión':     { bg: 'linear-gradient(135deg, #0284c7, #0369a1)', color: '#0284c7', icon: 'bi-truck' },
-    'Carreta':    { bg: 'linear-gradient(135deg, #9333ea, #7e22ce)', color: '#9333ea', icon: 'bi-link-45deg' },
-    'Remolque':   { bg: 'linear-gradient(135deg, #15803d, #166534)', color: '#15803d', icon: 'bi-box-seam-fill' },
-    'Tracto':     { bg: 'linear-gradient(135deg, #ea580c, #c2410c)', color: '#ea580c', icon: 'bi-truck-flatbed' },
-    'Thermo King':{ bg: 'linear-gradient(135deg, #0891b2, #0e7490)', color: '#0891b2', icon: 'bi-snow2' },
-    'Furgón':     { bg: 'linear-gradient(135deg, #4f46e5, #4338ca)', color: '#4f46e5', icon: 'bi-box-fill' },
-    'Contenedor': { bg: 'linear-gradient(135deg, #0d9488, #115e59)', color: '#0d9488', icon: 'bi-archive-fill' },
-    'PLATAFORMA': { bg: 'linear-gradient(135deg, #d97706, #b45309)', color: '#d97706', icon: 'bi-layers-fill' }
+    'Camión': {
+        bg: 'linear-gradient(135deg, #0284c7, #0369a1)',
+        color: '#0284c7',
+        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
+            <rect x="3" y="5" width="34" height="22" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" />
+            <path d="M37 12 h14 l6 7 v8 h-20 z" fill="rgba(255,255,255,0.4)" stroke="#ffffff" stroke-width="2.2" />
+            <path d="M41 15 h9 l4 4 h-13 z" fill="#ffffff" opacity="0.9" />
+            <circle cx="14" cy="27" r="4.5" fill="#ffffff" stroke="#0284c7" stroke-width="2" />
+            <circle cx="48" cy="27" r="4.5" fill="#ffffff" stroke="#0284c7" stroke-width="2" />
+        </svg>`
+    },
+    'Carreta': {
+        bg: 'linear-gradient(135deg, #9333ea, #7e22ce)',
+        color: '#9333ea',
+        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
+            <path d="M5 8 h52 v18 h-52 z" fill="rgba(255,255,255,0.25)" stroke="#ffffff" stroke-width="2.2" />
+            <path d="M5 8 h52 v6 h-52 z" fill="rgba(255,255,255,0.65)" stroke="#ffffff" stroke-width="1.5" />
+            <line x1="5" y1="20" x2="57" y2="20" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="3,2" />
+            <circle cx="38" cy="27" r="4.5" fill="#ffffff" stroke="#9333ea" stroke-width="2" />
+            <circle cx="49" cy="27" r="4.5" fill="#ffffff" stroke="#9333ea" stroke-width="2" />
+            <path d="M12 26 v4 M16 26 v4" stroke="#ffffff" stroke-width="2" />
+        </svg>`
+    },
+    'Tracto': {
+        bg: 'linear-gradient(135deg, #ea580c, #c2410c)',
+        color: '#ea580c',
+        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
+            <path d="M10 6 h20 v8 h16 l9 9 v6 h-45 z" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" />
+            <path d="M30 14 h13 l6 7 h-19 z" fill="#ffffff" opacity="0.9" />
+            <circle cx="18" cy="28" r="4.5" fill="#ffffff" stroke="#ea580c" stroke-width="2" />
+            <circle cx="46" cy="28" r="4.5" fill="#ffffff" stroke="#ea580c" stroke-width="2" />
+            <line x1="10" y1="18" x2="28" y2="18" stroke="#ffffff" stroke-width="1.8" />
+        </svg>`
+    },
+    'Remolque': {
+        bg: 'linear-gradient(135deg, #15803d, #166534)',
+        color: '#15803d',
+        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
+            <rect x="5" y="6" width="52" height="21" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" />
+            <line x1="57" y1="6" x2="57" y2="27" stroke="#ffffff" stroke-width="3" />
+            <circle cx="38" cy="28" r="4.5" fill="#ffffff" stroke="#15803d" stroke-width="2" />
+            <circle cx="49" cy="28" r="4.5" fill="#ffffff" stroke="#15803d" stroke-width="2" />
+            <path d="M12 27 v4 M16 27 v4" stroke="#ffffff" stroke-width="2" />
+        </svg>`
+    },
+    'Thermo King': {
+        bg: 'linear-gradient(135deg, #0891b2, #0e7490)',
+        color: '#0891b2',
+        iconHtml: `<i class="bi bi-snow2" style="font-size: 2.1rem; color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);"></i>`
+    },
+    'Furgón': {
+        bg: 'linear-gradient(135deg, #4f46e5, #4338ca)',
+        color: '#4f46e5',
+        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
+            <rect x="5" y="6" width="52" height="21" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" />
+            <line x1="28" y1="6" x2="28" y2="27" stroke="#ffffff" stroke-width="1.8" stroke-dasharray="3,2" />
+            <circle cx="38" cy="28" r="4.5" fill="#ffffff" stroke="#4f46e5" stroke-width="2" />
+            <circle cx="49" cy="28" r="4.5" fill="#ffffff" stroke="#4f46e5" stroke-width="2" />
+            <path d="M12 27 v4 M16 27 v4" stroke="#ffffff" stroke-width="2" />
+        </svg>`
+    },
+    'PLATAFORMA': {
+        bg: 'linear-gradient(135deg, #d97706, #b45309)',
+        color: '#d97706',
+        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
+            <rect x="4" y="18" width="54" height="6" rx="1" fill="rgba(255,255,255,0.4)" stroke="#ffffff" stroke-width="2.2" />
+            <circle cx="38" cy="27" r="4.5" fill="#ffffff" stroke="#d97706" stroke-width="2" />
+            <circle cx="49" cy="27" r="4.5" fill="#ffffff" stroke="#d97706" stroke-width="2" />
+            <path d="M12 24 v5 M16 24 v5" stroke="#ffffff" stroke-width="2" />
+            <path d="M4 18 l4 -6 h4" stroke="#ffffff" stroke-width="2" />
+        </svg>`
+    },
+    'Contenedor': {
+        bg: 'linear-gradient(135deg, #0d9488, #115e59)',
+        color: '#0d9488',
+        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
+            <rect x="5" y="8" width="54" height="18" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" />
+            <line x1="16" y1="8" x2="16" y2="26" stroke="#ffffff" stroke-width="1.8" />
+            <line x1="27" y1="8" x2="27" y2="26" stroke="#ffffff" stroke-width="1.8" />
+            <line x1="38" y1="8" x2="38" y2="26" stroke="#ffffff" stroke-width="1.8" />
+            <line x1="49" y1="8" x2="49" y2="26" stroke="#ffffff" stroke-width="1.8" />
+        </svg>`
+    }
 };
 
 function getSubTipoStyle(st) {
@@ -224,7 +375,12 @@ function getSubTipoStyle(st) {
     if (normUpper.includes('FURGON')) return window._dispSubTipoConfigs['Furgón'];
     if (normUpper.includes('CONTENEDOR')) return window._dispSubTipoConfigs['Contenedor'];
     if (normUpper.includes('PLATAFORMA')) return window._dispSubTipoConfigs['PLATAFORMA'];
-    return { bg: 'linear-gradient(135deg, #64748b, #475569)', color: '#64748b', icon: 'bi-truck' };
+    
+    return {
+        bg: 'linear-gradient(135deg, #64748b, #475569)',
+        color: '#64748b',
+        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="54" height="18" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2" /><circle cx="38" cy="27" r="4" fill="#ffffff" /><circle cx="49" cy="27" r="4" fill="#ffffff" /></svg>`
+    };
 }
 
 // ── Filtro por Sub Tipo en Vista Gráficos ─────────────────────────
@@ -257,12 +413,14 @@ window.dispFiltrar = function () {
             if (filtroCard === 'En Mantenimiento' && item.estado !== 'En Mantenimiento') return false;
         }
 
-        // Filtro 2: Empresa Segmentada
+        // Filtro 2: Empresa Segmentada (Aplica si la empresa de la motora o carreta coincide)
         if (filtroEmp !== 'TODAS') {
             const itemEmp = (item.empresa || item.cliente || '').trim().toUpperCase();
-            if (itemEmp !== filtroEmp.toUpperCase() && !itemEmp.includes(filtroEmp.toUpperCase())) {
-                return false;
-            }
+            const itemEmpCarreta = (item.empresa_carreta || '').trim().toUpperCase();
+            const empTarget = filtroEmp.toUpperCase();
+            const match1 = itemEmp === empTarget || itemEmp.includes(empTarget);
+            const match2 = itemEmpCarreta === empTarget || itemEmpCarreta.includes(empTarget);
+            if (!match1 && !match2) return false;
         }
 
         // Filtro 3: Buscador Universal
@@ -274,6 +432,7 @@ window.dispFiltrar = function () {
                 item.marca || '',
                 item.tipo_unidad || '',
                 item.sub_tipo || '',
+                item.sub_tipo_carreta || '',
                 item.estado || '',
                 item.empresa || '',
                 item.cliente || '',
@@ -302,28 +461,30 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
     const vistaGraficos = document.getElementById('disp-vista-graficos');
     if (!vistaGraficos || vistaGraficos.style.display === 'none') return;
 
-    const baseList = datosFiltrados || (window.dispDatos || []);
+    // Extraer placas individuales respetando los filtros activos (empresa, buscador, etc.)
+    const placasList = _dispExtraerPlacas(window.dispDatos || [], true);
     const subTiposMap = {};
 
-    // Agrupar unidades por sub_tipo
-    baseList.forEach(d => {
-        const st = (d.sub_tipo || d.tipo_unidad || 'General').trim();
+    // Agrupar placas por sub_tipo
+    placasList.forEach(p => {
+        const st = (p.sub_tipo || p.tipo_unidad || 'General').trim();
         if (!subTiposMap[st]) subTiposMap[st] = { total: 0, base: 0, ruta: 0, mant: 0 };
         subTiposMap[st].total++;
-        if (d.estado === 'En Mantenimiento') subTiposMap[st].mant++;
-        else if (d.estado === 'En Ruta') subTiposMap[st].ruta++;
+        const est = (p.estado || 'En Base').toLowerCase();
+        if (est.includes('mant') || est.includes('taller')) subTiposMap[st].mant++;
+        else if (est.includes('ruta')) subTiposMap[st].ruta++;
         else subTiposMap[st].base++;
     });
 
     const subTipos = Object.keys(subTiposMap).sort((a, b) => subTiposMap[b].total - subTiposMap[a].total);
 
-    // Actualizar Título con la Empresa Activa
+    // Actualizar Título con la Empresa Activa y Total Placas
     const tituloEmp = document.getElementById('disp-graficos-empresa-titulo');
     if (tituloEmp) {
         tituloEmp.innerText = window._dispFiltroEmpresa === 'TODAS' ? 'TOTAL FLOTA' : window._dispFiltroEmpresa;
     }
 
-    // 1. Render Sub Tipos Bento Cards (Imagen 3)
+    // 1. Render Sub Tipos Bento Cards (Imagen 3 con siluetas SVGs y Thermo King copo de nieve)
     const cardsCont = document.getElementById('disp-subtipos-cards-container');
     if (cardsCont) {
         if (!subTipos.length) {
@@ -337,11 +498,11 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
                     <div class="col-6 col-sm-4 col-md-3 col-lg-2">
                         <div class="disp-subtipo-card ${isActive}" style="background: ${cfg.bg};" onclick="window.dispFiltrarPorSubTipo('${_dispEsc(st)}', this)" title="Filtrar por ${st}">
                             <div>
-                                <h2 class="fw-bolder m-0 text-white" style="font-size: 1.85rem; line-height: 1;">${item.total}</h2>
-                                <span class="fw-bold text-white text-uppercase d-block mt-1 text-truncate" style="font-size:0.73rem; letter-spacing:0.4px; max-width: 110px;">${_dispEsc(st)}</span>
+                                <h2 class="fw-bolder m-0 text-white" style="font-size: 1.85rem; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.25);">${item.total}</h2>
+                                <span class="fw-bold text-white text-uppercase d-block mt-1 text-truncate" style="font-size:0.75rem; letter-spacing:0.4px; max-width: 110px;">${_dispEsc(st)}</span>
                             </div>
-                            <div style="font-size: 2.1rem; opacity: 0.88; line-height: 1;">
-                                <i class="bi ${cfg.icon}"></i>
+                            <div class="disp-subtipo-icon-wrapper" style="line-height: 1; opacity: 0.95;">
+                                ${cfg.iconHtml}
                             </div>
                         </div>
                     </div>
@@ -366,11 +527,13 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
                 <tr>
                     <td class="fw-bold ps-3">
                         <span class="d-inline-flex align-items-center gap-2">
-                            <span class="p-1 rounded-2 text-white" style="background:${cfg.color}; font-size:0.75rem;"><i class="bi ${cfg.icon}"></i></span>
+                            <span class="p-1 rounded-2 text-white" style="background:${cfg.color}; font-size:0.75rem; min-width:24px; text-align:center;">
+                                <i class="bi bi-truck"></i>
+                            </span>
                             ${_dispEsc(st)}
                         </span>
                     </td>
-                    <td class="text-center fw-bolder" style="font-size:0.88rem;">${item.total}</td>
+                    <td class="text-center fw-bolder text-dark" style="font-size:0.92rem;">${item.total}</td>
                     <td class="text-center text-success fw-bold">${item.base}</td>
                     <td class="text-center text-primary fw-bold">${item.ruta}</td>
                     <td class="text-center text-danger fw-bold">${item.mant}</td>
@@ -381,7 +544,7 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
             htmlMatriz += `
                 <tr class="table-light border-top border-2">
                     <td class="fw-bolder ps-3 text-dark">TOTAL GENERAL</td>
-                    <td class="text-center fw-bolder text-dark" style="font-size:0.95rem;">${totGeneral}</td>
+                    <td class="text-center fw-bolder text-dark" style="font-size:1rem;">${totGeneral}</td>
                     <td class="text-center text-success fw-bolder">${totBase}</td>
                     <td class="text-center text-primary fw-bolder">${totRuta}</td>
                     <td class="text-center text-danger fw-bolder">${totMant}</td>
@@ -391,7 +554,7 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
         tbodyMatriz.innerHTML = htmlMatriz;
     }
 
-    // 3. Render Chart.js Grouped Bar Chart
+    // 3. Render Chart.js Grouped Bar Chart (Sub Tipos en Eje X, Números en Blanco)
     const canvas = document.getElementById('dispChartSubTipos');
     if (canvas && typeof Chart !== 'undefined') {
         if (window._dispChartInstance) {
@@ -399,42 +562,102 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
             window._dispChartInstance = null;
         }
 
-        const labels = ['En Base', 'En Ruta', 'En Mantenimiento'];
         const displaySubTipos = window._dispFiltroSubTipo !== 'TODOS' 
             ? subTipos.filter(st => st === window._dispFiltroSubTipo)
             : subTipos;
 
-        const datasets = displaySubTipos.map(st => {
-            const item = subTiposMap[st];
-            const cfg = getSubTipoStyle(st);
-            return {
-                label: st,
-                data: [item.base, item.ruta, item.mant],
-                backgroundColor: cfg.color,
-                borderColor: cfg.color,
-                borderWidth: 1,
-                borderRadius: 8,
-                barPercentage: 0.75,
-                categoryPercentage: 0.7
-            };
-        });
+        const baseData = displaySubTipos.map(st => subTiposMap[st]?.base || 0);
+        const rutaData = displaySubTipos.map(st => subTiposMap[st]?.ruta || 0);
+        const mantData = displaySubTipos.map(st => subTiposMap[st]?.mant || 0);
+
+        // Plugin inline para dibujar los números en color blanco (#ffffff) dentro de las barras
+        const customDataLabelsPlugin = {
+            id: 'dispCustomDataLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                chart.data.datasets.forEach((dataset, datasetIndex) => {
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    if (meta.hidden) return;
+                    meta.data.forEach((bar, index) => {
+                        const val = dataset.data[index];
+                        if (val > 0) {
+                            ctx.save();
+                            const barHeight = Math.abs(bar.base - bar.y);
+                            if (barHeight >= 22) {
+                                ctx.font = 'bold 12px Inter, system-ui, sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillStyle = '#ffffff';
+                                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+                                ctx.shadowBlur = 4;
+                                ctx.shadowOffsetX = 0;
+                                ctx.shadowOffsetY = 1;
+                                ctx.fillText(val, bar.x, bar.y + (barHeight / 2));
+                            } else {
+                                ctx.font = '800 11px Inter, system-ui, sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillStyle = '#0f172a';
+                                ctx.shadowBlur = 0;
+                                ctx.fillText(val, bar.x, bar.y - 4);
+                            }
+                            ctx.restore();
+                        }
+                    });
+                });
+            }
+        };
 
         window._dispChartInstance = new Chart(canvas.getContext('2d'), {
             type: 'bar',
             data: {
-                labels: labels,
-                datasets: datasets
+                labels: displaySubTipos,
+                datasets: [
+                    {
+                        label: 'En Base',
+                        data: baseData,
+                        backgroundColor: '#16a34a',
+                        borderColor: '#15803d',
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        barPercentage: 0.85,
+                        categoryPercentage: 0.75
+                    },
+                    {
+                        label: 'En Ruta',
+                        data: rutaData,
+                        backgroundColor: '#0284c7',
+                        borderColor: '#0369a1',
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        barPercentage: 0.85,
+                        categoryPercentage: 0.75
+                    },
+                    {
+                        label: 'En Mantenimiento',
+                        data: mantData,
+                        backgroundColor: '#ef4444',
+                        borderColor: '#dc2626',
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        barPercentage: 0.85,
+                        categoryPercentage: 0.75
+                    }
+                ]
             },
+            plugins: [customDataLabelsPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
+                        display: true,
                         position: 'top',
                         labels: {
-                            font: { family: 'inherit', size: 12, weight: 'bold' },
+                            font: { family: 'inherit', size: 13, weight: 'bold' },
                             usePointStyle: true,
-                            boxWidth: 8
+                            boxWidth: 10,
+                            padding: 18
                         }
                     },
                     tooltip: {
@@ -448,12 +671,19 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
                 scales: {
                     x: {
                         grid: { display: false },
-                        ticks: { font: { weight: 'bold', size: 12 }, color: '#334155' }
+                        ticks: {
+                            font: { family: 'inherit', size: 12, weight: 'bold' },
+                            color: '#334155'
+                        }
                     },
                     y: {
                         beginAtZero: true,
-                        ticks: { stepSize: 1, precision: 0, font: { size: 11 }, color: '#64748b' },
-                        grid: { color: '#f1f5f9' }
+                        ticks: {
+                            precision: 0,
+                            font: { family: 'inherit', size: 11 },
+                            color: '#64748b'
+                        },
+                        grid: { color: 'rgba(226, 232, 240, 0.8)' }
                     }
                 }
             }
