@@ -85,6 +85,142 @@ module.exports = function (db, broadcast, logAudit) {
         res.json({ ok: true, signed });
     });
 
+    // ── GET /api/checklist/ultimo-ingreso-seguridad — Obtener último ingreso de garita / seguridad ──
+    router.get('/ultimo-ingreso-seguridad', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ ok: false, error: 'Base de datos no disponible' });
+
+            const placa = (req.query.placa || '').toString().trim().toUpperCase();
+            const pLimpia = placa.replace(/[^A-Z0-9]/ig, '');
+
+            if (!pLimpia) {
+                return res.json({ ok: true, data: null });
+            }
+
+            let dataResult = null;
+
+            // 1. Prioridad: Buscar en seg_unidades_registros (último retorno o salida de seguridad)
+            try {
+                const sqlReg = `
+                    SELECT 
+                        id,
+                        placa_tracto,
+                        placa_carreta,
+                        conductor,
+                        destino,
+                        retorno_km,
+                        salida_km,
+                        retorno_fecha,
+                        salida_fecha,
+                        retorno_hora,
+                        salida_hora,
+                        estado,
+                        created_at,
+                        updated_at
+                    FROM seg_unidades_registros
+                    WHERE (REPLACE(REPLACE(placa_tracto, '-', ''), ' ', '') = ? 
+                       OR REPLACE(REPLACE(placa_carreta, '-', ''), ' ', '') = ?)
+                    ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
+                    LIMIT 1
+                `;
+                const [rowsReg] = await tdb.promise().query(sqlReg, [pLimpia, pLimpia]);
+                if (rowsReg && rowsReg.length > 0) {
+                    const r = rowsReg[0];
+                    dataResult = {
+                        placa_tracto: r.placa_tracto || null,
+                        placa_carreta: r.placa_carreta || null,
+                        conductor: r.conductor || null,
+                        destino: r.destino || null,
+                        procedencia: r.destino || null,
+                        km: Number(r.retorno_km) || Number(r.salida_km) || null,
+                        fecha: r.retorno_fecha || r.salida_fecha || null,
+                        hora: r.retorno_hora || r.salida_hora || null,
+                        fuente: 'seg_unidades_registros'
+                    };
+                }
+            } catch (eReg) {
+                console.warn('Error consultando seg_unidades_registros:', eReg.message);
+            }
+
+            // 2. Si no se encontró en seg_unidades_registros o faltan datos, chequear seg_unidades_base
+            try {
+                const sqlBase = `
+                    SELECT 
+                        id,
+                        fecha,
+                        corte,
+                        placa_camion,
+                        placa_carreta,
+                        conductor,
+                        zona,
+                        estado,
+                        observacion
+                    FROM seg_unidades_base
+                    WHERE (REPLACE(REPLACE(placa_camion, '-', ''), ' ', '') = ? 
+                       OR REPLACE(REPLACE(placa_carreta, '-', ''), ' ', '') = ?)
+                    ORDER BY fecha DESC, id DESC
+                    LIMIT 1
+                `;
+                const [rowsBase] = await tdb.promise().query(sqlBase, [pLimpia, pLimpia]);
+                if (rowsBase && rowsBase.length > 0) {
+                    const b = rowsBase[0];
+                    if (!dataResult) {
+                        dataResult = {
+                            placa_tracto: b.placa_camion || null,
+                            placa_carreta: b.placa_carreta || null,
+                            conductor: b.conductor || null,
+                            zona: b.zona || null,
+                            procedencia: b.zona || null,
+                            km: null,
+                            fecha: b.fecha || null,
+                            fuente: 'seg_unidades_base'
+                        };
+                    } else {
+                        if (!dataResult.placa_carreta && b.placa_carreta) dataResult.placa_carreta = b.placa_carreta;
+                        if (!dataResult.conductor && b.conductor) dataResult.conductor = b.conductor;
+                        if (!dataResult.procedencia && b.zona) dataResult.procedencia = b.zona;
+                    }
+                }
+            } catch (eBase) {
+                console.warn('Error consultando seg_unidades_base:', eBase.message);
+            }
+
+            // 3. Fallback adicional: Si aún no hay datos, consultar el último checklist registrado
+            if (!dataResult) {
+                try {
+                    const sqlCk = `
+                        SELECT placa_tracto, placa_carreta, conductor, procedencia, km_final, km_inicial
+                        FROM reportes_fallas
+                        WHERE (REPLACE(REPLACE(placa_tracto, '-', ''), ' ', '') = ?
+                           OR REPLACE(REPLACE(placa_carreta, '-', ''), ' ', '') = ?)
+                        ORDER BY fecha_reporte DESC, id DESC
+                        LIMIT 1
+                    `;
+                    const [rowsCk] = await tdb.promise().query(sqlCk, [pLimpia, pLimpia]);
+                    if (rowsCk && rowsCk.length > 0) {
+                        const c = rowsCk[0];
+                        dataResult = {
+                            placa_tracto: c.placa_tracto || null,
+                            placa_carreta: c.placa_carreta || null,
+                            conductor: c.conductor || null,
+                            procedencia: c.procedencia || null,
+                            km: Number(c.km_final) || Number(c.km_inicial) || null,
+                            fuente: 'reportes_fallas'
+                        };
+                    }
+                } catch (eCk) {
+                    console.warn('Error consultando reportes_fallas fallback:', eCk.message);
+                }
+            }
+
+            return res.json({ ok: true, data: dataResult });
+        } catch (err) {
+            console.error('Error obteniendo último ingreso de seguridad:', err);
+            return res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     // ── GET /api/checklist/buscar-viajes — Búsqueda ágil de órdenes de viaje (Marsisa / Genérico) ────
     router.get('/buscar-viajes', async (req, res) => {
         try {
