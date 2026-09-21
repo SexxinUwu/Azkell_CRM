@@ -262,6 +262,7 @@ router.post('/proveedores/bulk-delete', (req, res) => {
 // ============================================================
 const _stockSQL = `
   SELECT i.*,
+    DATE_FORMAT(i.fecha_regularizacion, '%Y-%m-%d %H:%i:%s') AS fecha_regularizacion,
     ROUND(
       COALESCE(i.stock_regularizado, 0)
       + COALESCE(ent.total_entradas, 0)
@@ -1531,7 +1532,7 @@ router.get('/kardex/:inventario_id', (req, res) => {
     const id = req.params.inventario_id;
     const targetDb = getDb(req);
 
-    targetDb.query('SELECT stock_regularizado, fecha_regularizacion FROM inventario WHERE id=?', [id], (e2, inv) => {
+    targetDb.query("SELECT stock_regularizado, DATE_FORMAT(fecha_regularizacion, '%Y-%m-%d %H:%i:%s') AS fecha_regularizacion FROM inventario WHERE id=?", [id], (e2, inv) => {
         if (e2) return res.status(500).json({ error: e2.message });
         const base    = parseFloat(inv[0]?.stock_regularizado || 0);
         const regDate = inv[0]?.fecha_regularizacion || null;
