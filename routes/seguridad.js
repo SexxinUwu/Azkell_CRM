@@ -1052,6 +1052,46 @@ module.exports = (db, logAudit) => {
                         conAlerta: activeStats.con_alerta || 0
                     };
 
+                    let itemsResultado = panorama;
+                    const searchTarget = (req.query.search || '').trim().toUpperCase();
+                    const estadoTarget = (req.query.estado || 'ALL').trim().toUpperCase();
+
+                    if (estadoTarget && estadoTarget !== 'ALL') {
+                        if (estadoTarget === 'EN RUTA') {
+                            itemsResultado = itemsResultado.filter(it => it.esRuta === true);
+                        } else {
+                            itemsResultado = itemsResultado.filter(it => {
+                                const st = String(it.estado || it.estado_carga || '').toUpperCase();
+                                return st.includes(estadoTarget);
+                            });
+                        }
+                    }
+
+                    if (searchTarget) {
+                        const cleanQ = clean(searchTarget);
+                        itemsResultado = itemsResultado.filter(it => {
+                            const cPlaca = clean(it.placa);
+                            const cCamion = clean(it.placa_camion);
+                            const cCarreta = clean(it.placa_carreta);
+                            const cCond = clean(it.conductor);
+                            const cUbic = clean(it.ubicacion || it.zona);
+                            const cDest = clean(it.destino);
+                            const cViaje = clean(it.orden_viaje);
+                            const cObs = clean(it.observacion);
+                            const cMarca = clean(it.marca);
+
+                            return (cPlaca && cPlaca.includes(cleanQ)) ||
+                                   (cCamion && cCamion.includes(cleanQ)) ||
+                                   (cCarreta && cCarreta.includes(cleanQ)) ||
+                                   (cCond && cCond.includes(cleanQ)) ||
+                                   (cUbic && cUbic.includes(cleanQ)) ||
+                                   (cDest && cDest.includes(cleanQ)) ||
+                                   (cViaje && cViaje.includes(cleanQ)) ||
+                                   (cObs && cObs.includes(cleanQ)) ||
+                                   (cMarca && cMarca.includes(cleanQ));
+                        });
+                    }
+
                     res.json({
                         ok: true,
                         fecha: fechaTarget,
@@ -1061,8 +1101,8 @@ module.exports = (db, logAudit) => {
                         global: globalStats,
                         empresas_stats: statsPorEmpresa,
                         lista_empresas: Array.from(empresasSet),
-                        items: panorama,
-                        panorama: panorama
+                        items: itemsResultado,
+                        panorama: itemsResultado
                     });
                 });
             });

@@ -173,7 +173,8 @@
     // ── Cargar Datos en Vivo ──────────────────────────────────────
     window.subCargarDatos = async function() {
         const tbody = document.getElementById('sub-tbody');
-        if (tbody) {
+        const search = document.getElementById('sub-filter-search')?.value || '';
+        if (tbody && !search && (!window._subData || window._subData.length === 0)) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="9" class="text-center py-5 text-secondary">
@@ -186,7 +187,6 @@
         const fecha = document.getElementById('sub-filter-fecha')?.value || '';
         const corte = window._subCorteActivo || 'ALL';
         const estado = document.getElementById('sub-filter-estado')?.value || 'ALL';
-        const search = document.getElementById('sub-filter-search')?.value || '';
         const empresa = window._subEmpresaActiva || 'TODAS';
 
         const params = new URLSearchParams();
@@ -271,7 +271,52 @@
         const tbody = document.getElementById('sub-tbody');
         if (!tbody) return;
 
-        let filteredItems = items;
+        let filteredItems = items || [];
+
+        // 1. Filtro por Búsqueda (Texto en vivo)
+        const searchInput = document.getElementById('sub-filter-search');
+        const searchVal = (searchInput ? searchInput.value : '').trim().toUpperCase();
+        const clean = str => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+        if (searchVal) {
+            const cleanQ = clean(searchVal);
+            filteredItems = filteredItems.filter(it => {
+                const cPlaca = clean(it.placa);
+                const cCamion = clean(it.placa_camion);
+                const cCarreta = clean(it.placa_carreta);
+                const cCond = clean(it.conductor);
+                const cUbic = clean(it.ubicacion || it.zona);
+                const cDest = clean(it.destino);
+                const cViaje = clean(it.orden_viaje);
+                const cObs = clean(it.observacion);
+                const cMarca = clean(it.marca);
+
+                return (cPlaca && cPlaca.includes(cleanQ)) ||
+                       (cCamion && cCamion.includes(cleanQ)) ||
+                       (cCarreta && cCarreta.includes(cleanQ)) ||
+                       (cCond && cCond.includes(cleanQ)) ||
+                       (cUbic && cUbic.includes(cleanQ)) ||
+                       (cDest && cDest.includes(cleanQ)) ||
+                       (cViaje && cViaje.includes(cleanQ)) ||
+                       (cObs && cObs.includes(cleanQ)) ||
+                       (cMarca && cMarca.includes(cleanQ));
+            });
+        }
+
+        // 2. Filtro por Estado Dropdown
+        const estadoSel = document.getElementById('sub-filter-estado')?.value || 'ALL';
+        if (estadoSel && estadoSel !== 'ALL') {
+            if (estadoSel === 'En Ruta') {
+                filteredItems = filteredItems.filter(r => r.esRuta === true);
+            } else {
+                filteredItems = filteredItems.filter(r => {
+                    const st = String(r.estado || r.estado_carga || '').toUpperCase();
+                    return st.includes(estadoSel.toUpperCase());
+                });
+            }
+        }
+
+        // 3. Filtro por KPI Card seleccionado
         if (window._subEstadoFiltroVista && window._subEstadoFiltroVista !== 'ALL') {
             if (window._subEstadoFiltroVista === 'BASE') {
                 filteredItems = filteredItems.filter(r => r.esRuta !== true && !String(r.zona || '').toUpperCase().includes('MANTENIMIENTO') && !String(r.zona || '').toUpperCase().includes('TALLER') && !String(r.zona || '').toUpperCase().includes('LAVADO'));
@@ -439,10 +484,14 @@
 
     // ── Debounce de Búsqueda ──────────────────────────────────────
     window.subDebounceBusqueda = function() {
+        // Filtrado instantáneo en caliente en 0ms
+        if (window._subData && Array.isArray(window._subData)) {
+            window.subRenderTabla(window._subData);
+        }
         clearTimeout(_subDebounceTimeout);
         _subDebounceTimeout = setTimeout(() => {
             window.subCargarDatos();
-        }, 300);
+        }, 350);
     };
 
     // ── ⚡ Sincronización Automática 1-Click (Sin modales innecesarios) ──
