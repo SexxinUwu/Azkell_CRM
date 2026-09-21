@@ -397,9 +397,23 @@ function _kdxFmtFecha(f) {
         var s = String(f);
         var d;
         if (s.includes('T') || s.includes(' ')) {
-            d = new Date(s.replace(' ', 'T'));
+            var clean = s.replace('Z', '').replace(/\.\d+/, '').replace('T', ' ');
+            var parts = clean.split(' ');
+            var ymd = parts[0].split('-');
+            var his = (parts[1] || '00:00:00').split(':');
+            if (ymd.length === 3) {
+                d = new Date(parseInt(ymd[0], 10), parseInt(ymd[1], 10) - 1, parseInt(ymd[2], 10),
+                             parseInt(his[0] || 0, 10), parseInt(his[1] || 0, 10), parseInt(his[2] || 0, 10));
+            } else {
+                d = new Date(s);
+            }
         } else {
-            d = new Date(s + 'T00:00:00');
+            var ymd = s.split('-');
+            if (ymd.length === 3) {
+                d = new Date(parseInt(ymd[0], 10), parseInt(ymd[1], 10) - 1, parseInt(ymd[2], 10));
+            } else {
+                d = new Date(s + 'T00:00:00');
+            }
         }
         if (isNaN(d.getTime())) return String(f);
         var dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
