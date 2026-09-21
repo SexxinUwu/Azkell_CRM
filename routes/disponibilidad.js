@@ -42,10 +42,11 @@ module.exports = function (db, logAudit) {
         if (err) console.warn('[Disponibilidad] Error asegurando tabla:', err.message);
     });
 
-    // ── GET /api/disponibilidad-flota (Listado general consolidado en tiempo real) ──
+    // ── GET /api/disponibilidad-flota (Listado general consolidado en vivo) ───────
     router.get('/', (req, res) => {
         const tdb = getDb(req);
         const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const norm = str => (str || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
         // 1. Placas maestras
         const sqlPlacas = `
@@ -55,192 +56,222 @@ module.exports = function (db, logAudit) {
             ORDER BY placa ASC
         `;
 
-        // 2. Unidades en ruta desde Checklist / Seguridad
-        const sqlEnRuta = `
-            SELECT id, placa_tracto, placa_carreta, conductor, destino, salida_fecha, salida_hora, estado, salida_observaciones
-            FROM seg_unidades_registros
-            WHERE estado = 'en_ruta'
+        // 2. Reportes de fallas activos (En Taller / En Proceso / Pendiente)
+        const sqlFallas = `
+            SELECT id, folio, fecha_reporte, placa_tracto, placa_remolque, conductor, estado, ots_generadas_json
+            FROM reportes_fallas
+            WHERE estado != 'Finalizado'
+            ORDER BY id DESC
         `;
 
-        // 3. OTs activas en taller / mantenimiento
+        // 3. OTs activas directas en ordenes_trabajo
         const sqlOTs = `
             SELECT placa, id_ot, ticket_entrada, estado, fecha_ingreso
             FROM ordenes_trabajo
             WHERE estado NOT IN ('Finalizado', 'Finalizada', 'Anulado', 'Anulada', 'Cerrado', 'Cerrada')
         `;
 
-        // 4. Últimos registros en Base desde Seguridad
+        // 4. Unidades en ruta desde Checklist / Seguridad
+        const sqlEnRuta = `
+            SELECT id, placa_tracto, placa_carreta, conductor, destino, salida_fecha, salida_hora, estado, salida_observaciones
+            FROM seg_unidades_registros
+            WHERE estado = 'en_ruta'
+            ORDER BY id DESC
+        `;
+
+        // 5. Últimos registros en Base desde Seguridad
         const sqlBase = `
             SELECT placa_camion, placa_carreta, conductor, observacion
             FROM seg_unidades_base
             ORDER BY fecha DESC, id DESC
         `;
 
-        // 5. Registros guardados en flota_disponibilidad
+        // 6. Disponibilidad manual guardada
         const sqlDisp = `SELECT * FROM flota_disponibilidad`;
 
         tdb.query(sqlPlacas, (errP, placas) => {
             if (errP) return res.status(500).json({ error: 'Error consultando placas', detalle: errP.message });
 
-            tdb.query(sqlEnRuta, (errR, enRutaRows) => {
-                if (errR) return res.status(500).json({ error: 'Error consultando unidades en ruta', detalle: errR.message });
+            tdb.query(sqlFallas, (errF, fallasRows) => {
+                if (errF) return res.status(500).json({ error: 'Error consultando reportes de fallas', detalle: errF.message });
 
                 tdb.query(sqlOTs, (errOT, otRows) => {
-                    if (errOT) return res.status(500).json({ error: 'Error consultando OTs de mantenimiento', detalle: errOT.message });
+                    if (errOT) return res.status(500).json({ error: 'Error consultando OTs', detalle: errOT.message });
 
-                    tdb.query(sqlBase, (errB, baseRows) => {
-                        if (errB) return res.status(500).json({ error: 'Error consultando unidades en base', detalle: errB.message });
+                    tdb.query(sqlEnRuta, (errR, enRutaRows) => {
+                        if (errR) return res.status(500).json({ error: 'Error consultando unidades en ruta', detalle: errR.message });
 
-                        tdb.query(sqlDisp, (errD, dispRows) => {
-                            if (errD) return res.status(500).json({ error: 'Error consultando disponibilidad', detalle: errD.message });
+                        tdb.query(sqlBase, (errB, baseRows) => {
+                            if (errB) return res.status(500).json({ error: 'Error consultando unidades en base', detalle: errB.message });
 
-                            // Indexar OTs activas por placa limpia
-                            const otSet = new Set();
-                            (otRows || []).forEach(ot => {
-                                const p = clean(ot.placa);
-                                if (p) otSet.add(p);
-                            });
+                            tdb.query(sqlDisp, (errD, dispRows) => {
+                                if (errD) return res.status(500).json({ error: 'Error consultando disponibilidad', detalle: errD.message });
 
-                            // Indexar unidades en ruta
-                            const rutaCamionMap = {};
-                            const rutaCarretaSet = new Set();
-                            (enRutaRows || []).forEach(r => {
-                                const pt = clean(r.placa_tracto);
-                                const pc = clean(r.placa_carreta);
-                                if (pt) rutaCamionMap[pt] = r;
-                                if (pc) rutaCarretaSet.add(pc);
-                            });
+                                const otSet = new Set();
+                                (otRows || []).forEach(ot => {
+                                    const p = clean(ot.placa);
+                                    if (p) otSet.add(p);
+                                });
 
-                            // Indexar base
-                            const baseCamionMap = {};
-                            const baseCarretaSet = new Set();
-                            (baseRows || []).forEach(b => {
-                                const pc = clean(b.placa_camion);
-                                const pcar = clean(b.placa_carreta);
-                                if (pc && !baseCamionMap[pc]) baseCamionMap[pc] = b;
-                                if (pcar) baseCarretaSet.add(pcar);
-                            });
+                                // Mapeo de fallas activas (Taller)
+                                const fallasTractoMap = {};
+                                const fallasRemolqueSet = new Set();
+                                (fallasRows || []).forEach(f => {
+                                    const pt = clean(f.placa_tracto);
+                                    const pr = clean(f.placa_remolque);
+                                    if (pt && !fallasTractoMap[pt]) {
+                                        fallasTractoMap[pt] = f;
+                                        if (pr) fallasRemolqueSet.add(pr);
+                                    }
+                                });
 
-                            // Indexar disponibilidad manual
-                            const dispMap = {};
-                            (dispRows || []).forEach(d => {
-                                const pc = clean(d.placa_camion);
-                                const pcar = clean(d.placa_carreta);
-                                if (pc) dispMap[pc] = d;
-                                else if (pcar) dispMap[pcar] = d;
-                            });
+                                // Mapeo de unidades en ruta
+                                const rutaCamionMap = {};
+                                const rutaCarretaSet = new Set();
+                                (enRutaRows || []).forEach(r => {
+                                    const pt = clean(r.placa_tracto);
+                                    const pc = clean(r.placa_carreta);
+                                    if (pt && !rutaCamionMap[pt]) {
+                                        rutaCamionMap[pt] = r;
+                                        if (pc) rutaCarretaSet.add(pc);
+                                    }
+                                });
 
-                            const resultado = [];
-                            const carretasAcopladas = new Set();
+                                // Mapeo de base
+                                const baseCamionMap = {};
+                                const baseCarretaSet = new Set();
+                                (baseRows || []).forEach(b => {
+                                    const pc = clean(b.placa_camion);
+                                    const pcar = clean(b.placa_carreta);
+                                    if (pc && !baseCamionMap[pc]) {
+                                        baseCamionMap[pc] = b;
+                                        if (pcar) baseCarretaSet.add(pcar);
+                                    }
+                                });
 
-                            const motoras = [];
-                            const remolques = [];
+                                // Mapeo de disponibilidad manual
+                                const dispMap = {};
+                                (dispRows || []).forEach(d => {
+                                    const pc = clean(d.placa_camion);
+                                    const pcar = clean(d.placa_carreta);
+                                    if (pc) dispMap[pc] = d;
+                                    else if (pcar) dispMap[pcar] = d;
+                                });
 
-                            (placas || []).forEach(p => {
-                                const tipoUpper = (p.tipo || '').toUpperCase();
-                                const isMotora = p.motora === '1' || p.motora === 1 || 
-                                    ['CAMION', 'TRACTO', 'TRACTOCAMION', 'VOLQUETE', 'FURGON', 'CISTERNA', 'CAMIONETA', 'TRACTO CAMION'].some(t => tipoUpper.includes(t));
-                                
-                                if (isMotora) motoras.push(p);
-                                else remolques.push(p);
-                            });
+                                const motoras = [];
+                                const remolques = [];
+                                const carretasAcopladas = new Set();
 
-                            // Procesar motoras (Camiones / Tractos)
-                            motoras.forEach(p => {
-                                const cPlaca = clean(p.placa);
-                                const enRuta = rutaCamionMap[cPlaca];
-                                const enBase = baseCamionMap[cPlaca];
-                                const disp = dispMap[cPlaca];
-                                const hasOT = otSet.has(cPlaca);
+                                (placas || []).forEach(p => {
+                                    const tipoNorm = norm(p.tipo);
+                                    const subTipoNorm = norm(p.sub_tipo);
+                                    const motoraNorm = norm(p.motora);
 
-                                let carreta = '';
-                                let conductor = '';
-                                let estado = 'En Base';
-                                let observaciones = '';
+                                    const isMotora = (motoraNorm.includes('MOTORA') && !motoraNorm.includes('NO')) ||
+                                        p.motora === '1' || p.motora === 1 || 
+                                        ['CAMION', 'TRACTO', 'VOLQUETE', 'FURGON', 'CISTERNA', 'CAMIONETA', 'TRACTOCAMION'].some(t => tipoNorm.includes(t)) ||
+                                        (subTipoNorm && (subTipoNorm.includes('TRACTO') || subTipoNorm.includes('CAMION')));
+                                    
+                                    if (isMotora) {
+                                        motoras.push(p);
+                                    } else {
+                                        remolques.push(p);
+                                    }
+                                });
 
-                                if (hasOT) {
-                                    estado = 'En Mantenimiento';
-                                    if (disp) {
+                                const resultado = [];
+
+                                // Procesar motoras (Camiones / Tractos)
+                                motoras.forEach(p => {
+                                    const cPlaca = clean(p.placa);
+                                    const falla = fallasTractoMap[cPlaca];
+                                    const enRuta = rutaCamionMap[cPlaca];
+                                    const enBase = baseCamionMap[cPlaca];
+                                    const disp = dispMap[cPlaca];
+                                    const hasDirectOT = otSet.has(cPlaca);
+
+                                    let carreta = '';
+                                    let conductor = '';
+                                    let estado = 'En Base';
+                                    let observaciones = '';
+
+                                    if (falla || hasDirectOT) {
+                                        estado = 'En Mantenimiento';
+                                        if (falla) {
+                                            carreta = falla.placa_remolque || (disp ? disp.placa_carreta : '') || '';
+                                            conductor = falla.conductor || (disp ? disp.conductor_asignado : '') || '';
+                                            observaciones = `En Taller / Folio ${falla.folio || ''}`;
+                                        } else {
+                                            carreta = (disp ? disp.placa_carreta : '') || '';
+                                            conductor = (disp ? disp.conductor_asignado : '') || '';
+                                            observaciones = 'En Taller / OT Activa';
+                                        }
+                                    } else if (enRuta) {
+                                        estado = 'En Ruta';
+                                        carreta = enRuta.placa_carreta || (disp ? disp.placa_carreta : '') || '';
+                                        conductor = enRuta.conductor || (disp ? disp.conductor_asignado : '') || '';
+                                        observaciones = enRuta.destino ? `Destino: ${enRuta.destino}` : (enRuta.salida_observaciones || (disp ? disp.observaciones : ''));
+                                    } else if (enBase) {
+                                        estado = 'En Base';
+                                        carreta = enBase.placa_carreta || (disp ? disp.placa_carreta : '') || '';
+                                        conductor = enBase.conductor || (disp ? disp.conductor_asignado : '') || '';
+                                        observaciones = enBase.observacion || (disp ? disp.observaciones : '');
+                                    } else if (disp) {
                                         carreta = disp.placa_carreta || '';
                                         conductor = disp.conductor_asignado || '';
-                                        observaciones = disp.observaciones || 'En Taller / OT Activa';
-                                    } else {
-                                        observaciones = 'En Taller / OT Activa';
+                                        observaciones = disp.observaciones || '';
                                     }
-                                } else if (enRuta) {
-                                    estado = 'En Ruta';
-                                    carreta = enRuta.placa_carreta || (disp ? disp.placa_carreta : '') || '';
-                                    conductor = enRuta.conductor || (disp ? disp.conductor_asignado : '') || '';
-                                    observaciones = enRuta.destino ? `Destino: ${enRuta.destino}` : (enRuta.salida_observaciones || (disp ? disp.observaciones : ''));
-                                } else if (enBase) {
-                                    estado = 'En Base';
-                                    carreta = enBase.placa_carreta || (disp ? disp.placa_carreta : '') || '';
-                                    conductor = enBase.conductor || (disp ? disp.conductor_asignado : '') || '';
-                                    observaciones = enBase.observacion || (disp ? disp.observaciones : '');
-                                } else if (disp) {
-                                    carreta = disp.placa_carreta || '';
-                                    conductor = disp.conductor_asignado || '';
-                                    observaciones = disp.observaciones || '';
-                                }
 
-                                if (carreta) carretasAcopladas.add(clean(carreta));
+                                    if (carreta) carretasAcopladas.add(clean(carreta));
 
-                                let capTanque = p.capacidad_tanque || (disp ? disp.capacidad_tanque : '') || '0';
-                                if (capTanque && !String(capTanque).toUpperCase().includes('GLN') && !String(capTanque).toUpperCase().includes('M³') && capTanque !== '0') {
-                                    capTanque = capTanque + ' Gln';
-                                }
+                                    let capTanque = p.capacidad_tanque || (disp ? disp.capacidad_tanque : '') || '0';
+                                    if (capTanque && !String(capTanque).toUpperCase().includes('GLN') && !String(capTanque).toUpperCase().includes('M³') && capTanque !== '0') {
+                                        capTanque = capTanque + ' Gln';
+                                    }
 
-                                resultado.push({
-                                    id: disp ? disp.id : null,
-                                    placa_camion: p.placa,
-                                    placa_carreta: carreta,
-                                    conductor_asignado: conductor,
-                                    estado: estado,
-                                    marca: p.marca || (disp ? disp.marca : '') || '',
-                                    capacidad_tanque: capTanque,
-                                    tipo_unidad: p.tipo || 'Tracto Camión',
-                                    observaciones: observaciones,
-                                    is_motora: true
+                                    resultado.push({
+                                        id: disp ? disp.id : null,
+                                        placa_camion: p.placa,
+                                        placa_carreta: carreta,
+                                        conductor_asignado: conductor,
+                                        estado: estado,
+                                        marca: p.marca || (disp ? disp.marca : '') || '',
+                                        capacidad_tanque: capTanque,
+                                        tipo_unidad: p.tipo || 'Camión',
+                                        observaciones: observaciones,
+                                        is_motora: true
+                                    });
                                 });
-                            });
 
-                            // Procesar carretas/remolques que no están acopladas
-                            remolques.forEach(p => {
-                                const cPlaca = clean(p.placa);
-                                if (carretasAcopladas.has(cPlaca)) return; // Ya está emparejada con un camión
+                                // Procesar remolques/carretas sueltas
+                                remolques.forEach(p => {
+                                    const cPlaca = clean(p.placa);
+                                    if (carretasAcopladas.has(cPlaca)) return; // Ya acoplada a un camión
 
-                                const disp = dispMap[cPlaca];
-                                const hasOT = otSet.has(cPlaca);
-                                const enRuta = rutaCarretaSet.has(cPlaca);
+                                    const disp = dispMap[cPlaca];
+                                    const hasOT = otSet.has(cPlaca) || fallasRemolqueSet.has(cPlaca);
+                                    const enRuta = rutaCarretaSet.has(cPlaca);
 
-                                let estado = 'En Base';
-                                if (hasOT) estado = 'En Mantenimiento';
-                                else if (enRuta) estado = 'En Ruta';
+                                    let estado = 'En Base';
+                                    if (hasOT) estado = 'En Mantenimiento';
+                                    else if (enRuta) estado = 'En Ruta';
 
-                                resultado.push({
-                                    id: disp ? disp.id : null,
-                                    placa_camion: '',
-                                    placa_carreta: p.placa,
-                                    conductor_asignado: disp ? disp.conductor_asignado : '',
-                                    estado: estado,
-                                    marca: p.marca || (disp ? disp.marca : '') || '',
-                                    capacidad_tanque: '—',
-                                    tipo_unidad: p.tipo || 'Carreta / Remolque',
-                                    observaciones: disp ? disp.observaciones : '',
-                                    is_motora: false
+                                    resultado.push({
+                                        id: disp ? disp.id : null,
+                                        placa_camion: '',
+                                        placa_carreta: p.placa,
+                                        conductor_asignado: disp ? disp.conductor_asignado : '',
+                                        estado: estado,
+                                        marca: p.marca || (disp ? disp.marca : '') || '',
+                                        capacidad_tanque: '—',
+                                        tipo_unidad: p.tipo || 'Carreta',
+                                        observaciones: disp ? disp.observaciones : (hasOT ? 'En Taller / OT Activa' : ''),
+                                        is_motora: false
+                                    });
                                 });
+
+                                res.json(resultado);
                             });
-
-                            const stats = {
-                                total_flota: resultado.length,
-                                total_camiones: motoras.length,
-                                total_carretas: resultado.filter(r => !r.is_motora || r.placa_carreta).length,
-                                en_base: resultado.filter(r => r.estado === 'En Base').length,
-                                en_ruta: resultado.filter(r => r.estado === 'En Ruta').length,
-                                en_mantenimiento: resultado.filter(r => r.estado === 'En Mantenimiento').length
-                            };
-
-                            res.json(resultado);
                         });
                     });
                 });
@@ -267,7 +298,7 @@ module.exports = function (db, logAudit) {
         const car = (placa_carreta || '').trim().toUpperCase();
 
         if (!cam && !car) {
-            return res.status(400).json({ error: 'Debe ingresar al menos la Placa de Camión o la Placa de Carreta' });
+            return res.status(400).json({ error: 'Debe ingresar al menos el Camión o la Carreta' });
         }
 
         let checkSql = `SELECT id FROM flota_disponibilidad WHERE placa_camion = ? AND placa_camion != ''`;
@@ -296,7 +327,7 @@ module.exports = function (db, logAudit) {
                     (capacidad_tanque || '').trim(),
                     (marca || '').trim().toUpperCase(),
                     (tipo_unidad || '').trim(),
-                    (estado || 'Disponible').trim(),
+                    (estado || 'En Base').trim(),
                     (observaciones || '').trim(),
                     (creado_por || '').trim(),
                     existId
@@ -320,7 +351,7 @@ module.exports = function (db, logAudit) {
                     (capacidad_tanque || '').trim(),
                     (marca || '').trim().toUpperCase(),
                     (tipo_unidad || '').trim(),
-                    (estado || 'Disponible').trim(),
+                    (estado || 'En Base').trim(),
                     (observaciones || '').trim(),
                     (creado_por || '').trim(),
                     (creado_por || '').trim()

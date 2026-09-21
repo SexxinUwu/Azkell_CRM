@@ -6,11 +6,10 @@ window.dispDatos = [];
 window.dispPlacas = [];
 window.dispConductores = [];
 window._dispFiltroEstadoActivo = 'TODOS';
-window._dispFiltroTipoActivo = 'TODOS';
 window._dispItemEliminarId = null;
 
 // ── Cargar Datos del Servidor ─────────────────────────────────────
-window.dispCargarDatos = async function () {
+window.dispCargarDatos = async function (forzarRefresh = false) {
     if (typeof window.checkPerm === 'function' && !window.checkPerm('disponibilidad', 'l')) {
         const tbody = document.getElementById('disp-table-body');
         if (tbody) {
@@ -27,14 +26,23 @@ window.dispCargarDatos = async function () {
     }
 
     const tbody = document.getElementById('disp-table-body');
+    const cardContainer = document.getElementById('dispCardContainer');
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center py-4 text-muted">
-                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                <td colspan="10" class="text-center py-5 text-muted">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
                     Cargando disponibilidad de flota...
                 </td>
             </tr>
+        `;
+    }
+    if (cardContainer) {
+        cardContainer.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                Cargando unidades...
+            </div>
         `;
     }
 
@@ -62,24 +70,26 @@ window.dispCargarDatos = async function () {
                 </tr>
             `;
         }
+        if (cardContainer) {
+            cardContainer.innerHTML = `
+                <div class="text-center py-4 text-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Error al cargar datos.
+                </div>
+            `;
+        }
     }
 };
 
-// ── Actualizar Métricas Superiores ────────────────────────────────
+// ── Actualizar Métricas Superiores (Bento KPIs) ───────────────────
 window.dispActualizarKPIs = function () {
     const datos = window.dispDatos || [];
     const total = datos.length;
 
-    let camiones = 0;
-    let carretas = 0;
     let enBase = 0;
     let enRuta = 0;
     let enMant = 0;
 
     datos.forEach(d => {
-        if (d.is_motora || (d.placa_camion && d.placa_camion.trim())) camiones++;
-        if (!d.is_motora || (d.placa_carreta && d.placa_carreta.trim())) carretas++;
-
         const est = (d.estado || 'En Base').toLowerCase();
         if (est.includes('mant') || est.includes('taller')) enMant++;
         else if (est.includes('ruta')) enRuta++;
@@ -92,36 +102,23 @@ window.dispActualizarKPIs = function () {
     };
 
     setKpi('disp-kpi-total', total);
-    setKpi('disp-kpi-todas-count', total);
-    setKpi('disp-kpi-camiones', camiones);
-    setKpi('disp-kpi-carretas', carretas);
     setKpi('disp-kpi-base', enBase);
     setKpi('disp-kpi-ruta', enRuta);
     setKpi('disp-kpi-mant', enMant);
 };
 
-// ── Filtros por Pill / Estado / Tipo ──────────────────────────────
+// ── Filtros por Segmented Pill ────────────────────────────────────
 window.dispFiltrarPorEstado = function (estado, el) {
     window._dispFiltroEstadoActivo = estado;
-    window._dispFiltroTipoActivo = 'TODOS';
-    document.querySelectorAll('.disp-kpi-pill').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('#btn-group-estados-disp .ck-segment-item').forEach(p => p.classList.remove('active'));
     if (el) el.classList.add('active');
     window.dispFiltrar();
 };
 
-window.dispFiltrarPorTipo = function (tipo, el) {
-    window._dispFiltroTipoActivo = tipo;
-    window._dispFiltroEstadoActivo = 'TODOS';
-    document.querySelectorAll('.disp-kpi-pill').forEach(p => p.classList.remove('active'));
-    if (el) el.classList.add('active');
-    window.dispFiltrar();
-};
-
-// ── Filtrado y Render de Tabla ────────────────────────────────────
+// ── Filtrado y Render (Desktop + Móvil) ───────────────────────────
 window.dispFiltrar = function () {
-    const q = (document.getElementById('disp-filtro-search')?.value || '').toLowerCase().trim();
+    const q = (document.getElementById('dispBuscador')?.value || '').toLowerCase().trim();
     const filtroEstado = window._dispFiltroEstadoActivo;
-    const filtroTipo = window._dispFiltroTipoActivo;
 
     const filtrados = (window.dispDatos || []).filter(item => {
         // Filtro por Estado
@@ -129,12 +126,6 @@ window.dispFiltrar = function () {
             if (filtroEstado === 'En Base' && item.estado !== 'En Base') return false;
             if (filtroEstado === 'En Ruta' && item.estado !== 'En Ruta') return false;
             if (filtroEstado === 'En Mantenimiento' && item.estado !== 'En Mantenimiento') return false;
-        }
-
-        // Filtro por Tipo
-        if (filtroTipo !== 'TODOS') {
-            if (filtroTipo === 'CAMION' && !item.is_motora && !item.placa_camion) return false;
-            if (filtroTipo === 'CARRETA' && item.is_motora && !item.placa_carreta) return false;
         }
 
         // Filtro de Búsqueda
@@ -156,15 +147,11 @@ window.dispFiltrar = function () {
         return true;
     });
 
-    const contadorEl = document.getElementById('disp-contador-registros');
-    if (contadorEl) {
-        contadorEl.innerText = `${filtrados.length} de ${window.dispDatos.length} unidades`;
-    }
-
     window.dispRenderizarTabla(filtrados);
+    window.dispRenderizarCardsMobile(filtrados);
 };
 
-// ── Renderizar Filas de la Tabla ──────────────────────────────────
+// ── Renderizar Filas de la Tabla (Desktop) ────────────────────────
 window.dispRenderizarTabla = function (datos) {
     const tbody = document.getElementById('disp-table-body');
     if (!tbody) return;
@@ -173,8 +160,8 @@ window.dispRenderizarTabla = function (datos) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="10" class="text-center py-5 text-muted">
-                    <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-                    No se encontraron unidades con los filtros seleccionados.
+                    <i class="bi bi-inbox fs-3 d-block mb-2 text-secondary"></i>
+                    No se encontraron unidades registradas con los filtros seleccionados.
                 </td>
             </tr>
         `;
@@ -186,13 +173,11 @@ window.dispRenderizarTabla = function (datos) {
         const num = index + 1;
         const est = item.estado || 'En Base';
 
-        let estadoBadge = '';
+        let estadoBadge = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">En Base</span>';
         if (est === 'En Mantenimiento') {
-            estadoBadge = `<span class="disp-badge-estado disp-badge-mant"><span class="disp-dot"></span>En Mantenimiento</span>`;
+            estadoBadge = '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">En Mantenimiento</span>';
         } else if (est === 'En Ruta') {
-            estadoBadge = `<span class="disp-badge-estado disp-badge-ruta"><span class="disp-dot"></span>En Ruta</span>`;
-        } else {
-            estadoBadge = `<span class="disp-badge-estado disp-badge-base"><span class="disp-dot"></span>En Base</span>`;
+            estadoBadge = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">En Ruta</span>';
         }
 
         const capTanque = item.capacidad_tanque || '—';
@@ -201,57 +186,57 @@ window.dispRenderizarTabla = function (datos) {
 
         html += `
             <tr data-disp-id="${item.id || ''}">
-                <td class="text-center fw-bold text-muted" style="font-size:0.75rem;">${num}</td>
-                <td>
+                <td class="ps-4 text-center fw-bold text-muted" style="font-size:0.78rem;">${num}</td>
+                <td style="min-width: 110px;">
                     ${item.placa_camion ? `
-                        <span class="disp-placa-badge">
-                            <i class="bi bi-truck text-primary"></i> ${_dispEsc(item.placa_camion)}
+                        <span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-2 text-center font-monospace" style="min-width: 80px; font-size: 0.82rem; border-radius: 8px; letter-spacing: 0.5px;">
+                            ${_dispEsc(item.placa_camion)}
                         </span>
-                    ` : '<span class="text-muted fw-bold">—</span>'}
+                    ` : '<span class="text-muted small">—</span>'}
                 </td>
-                <td>
+                <td style="min-width: 110px;">
                     ${item.placa_carreta ? `
-                        <span class="disp-placa-badge disp-placa-carreta">
-                            <i class="bi bi-link-45deg text-warning"></i> ${_dispEsc(item.placa_carreta)}
+                        <span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-2 text-center font-monospace" style="min-width: 80px; font-size: 0.82rem; border-radius: 8px; letter-spacing: 0.5px;">
+                            ${_dispEsc(item.placa_carreta)}
                         </span>
-                    ` : '<span class="text-muted fw-bold">—</span>'}
+                    ` : '<span class="text-muted small">—</span>'}
                 </td>
-                <td>
-                    <div class="fw-bold text-dark" style="font-size:0.82rem;">
+                <td style="min-width: 180px; white-space: nowrap;">
+                    <div class="fw-bold text-dark" style="font-size: 0.86rem; white-space: nowrap;">
                         ${conductor}
                     </div>
                 </td>
-                <td class="text-center">
+                <td class="text-center" style="min-width: 130px;">
                     ${estadoBadge}
                 </td>
-                <td>
+                <td style="min-width: 110px;">
                     <span class="fw-bold text-uppercase" style="font-size:0.8rem; color:#334155;">
                         ${_dispEsc(item.marca || '—')}
                     </span>
                 </td>
-                <td>
+                <td style="min-width: 130px;">
                     <span class="fw-bold" style="font-size:0.8rem; color:#0369a1;">
                         ${_dispEsc(capTanque)}
                     </span>
                 </td>
-                <td>
+                <td style="min-width: 120px;">
                     <span class="text-secondary fw-semibold" style="font-size:0.8rem;">
                         ${_dispEsc(item.tipo_unidad || '—')}
                     </span>
                 </td>
-                <td>
-                    <span class="text-truncate d-inline-block" style="max-width:260px; font-size:0.78rem; color:#64748b;" title="${_dispEsc(item.observaciones || '')}">
+                <td style="min-width: 160px;">
+                    <span class="text-truncate d-inline-block" style="max-width:220px; font-size:0.78rem; color:#64748b;" title="${_dispEsc(item.observaciones || '')}">
                         ${obs}
                     </span>
                 </td>
-                <td class="text-center">
-                    <div class="d-flex align-items-center justify-content-center gap-1">
-                        <button class="disp-act-btn" onclick="window.dispEditarFila(${index})" title="Editar registro">
-                            <i class="bi bi-pencil-square"></i>
+                <td class="pe-4 text-end" style="min-width: 90px;">
+                    <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                        <button type="button" class="ck-action-btn ck-btn-edit" onclick="window.dispEditarFila(${index})" title="Editar registro">
+                            <i class="bi bi-pencil"></i>
                         </button>
                         ${item.id ? `
-                            <button class="disp-act-btn delete" onclick="window.dispAbrirModalEliminar(${item.id}, '${_dispEsc(item.placa_camion || item.placa_carreta || 'Unidad')}')" title="Eliminar registro">
-                                <i class="bi bi-trash3-fill"></i>
+                            <button type="button" class="ck-action-btn ck-btn-delete" onclick="window.dispAbrirModalEliminar(${item.id}, '${_dispEsc(item.placa_camion || item.placa_carreta || 'Unidad')}')" title="Eliminar registro">
+                                <i class="bi bi-trash3 text-danger"></i>
                             </button>
                         ` : ''}
                     </div>
@@ -261,6 +246,78 @@ window.dispRenderizarTabla = function (datos) {
     });
 
     tbody.innerHTML = html;
+};
+
+// ── Renderizar Cards (Vista Móvil) ────────────────────────────────
+window.dispRenderizarCardsMobile = function (datos) {
+    const cardContainer = document.getElementById('dispCardContainer');
+    if (!cardContainer) return;
+
+    if (!datos || datos.length === 0) {
+        cardContainer.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                No se encontraron unidades registradas.
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    datos.forEach((item, index) => {
+        const est = item.estado || 'En Base';
+
+        let badgeEstadoMobile = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">En Base</span>';
+        if (est === 'En Mantenimiento') {
+            badgeEstadoMobile = '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">En Mantenimiento</span>';
+        } else if (est === 'En Ruta') {
+            badgeEstadoMobile = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">En Ruta</span>';
+        }
+
+        html += `
+            <div class="ck-mobile-card">
+                <!-- Header Card: Placas + Estado -->
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        ${item.placa_camion ? `<span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-1 font-monospace" style="font-size:0.82rem; border-radius:6px;">🚛 ${item.placa_camion}</span>` : ''}
+                        ${item.placa_carreta ? `<span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-1 font-monospace" style="font-size:0.82rem; border-radius:6px;">🔗 ${item.placa_carreta}</span>` : ''}
+                        ${!item.placa_camion && !item.placa_carreta ? `<span class="text-muted small">Sin Placa</span>` : ''}
+                    </div>
+                    <div>${badgeEstadoMobile}</div>
+                </div>
+
+                <!-- Conductor -->
+                <div class="mb-2">
+                    <div class="fw-bold text-dark" style="font-size:0.88rem;">${item.conductor_asignado || 'Sin Conductor Asignado'}</div>
+                    <div class="text-muted small" style="font-size:0.75rem;">
+                        ${item.marca ? `<span>${item.marca}</span>` : ''} 
+                        ${item.tipo_unidad ? `<span>• ${item.tipo_unidad}</span>` : ''}
+                        ${item.capacidad_tanque ? `<span>• Tanque: ${item.capacidad_tanque}</span>` : ''}
+                    </div>
+                </div>
+
+                ${item.observaciones ? `
+                    <div class="p-2 bg-light rounded-3 text-secondary small mb-2" style="font-size:0.75rem;">
+                        <i class="bi bi-chat-left-text me-1"></i>${_dispEsc(item.observaciones)}
+                    </div>
+                ` : ''}
+
+                <!-- Botones de Acción Móvil -->
+                <div class="d-flex align-items-center justify-content-end gap-2 pt-2 border-top">
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-bold px-3 py-1 d-flex align-items-center gap-1" onclick="window.dispEditarFila(${index})" style="border-radius:8px; font-size:0.78rem;">
+                        <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    ${item.id ? `
+                        <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-2 py-1 d-flex align-items-center gap-1" onclick="window.dispAbrirModalEliminar(${item.id}, '${_dispEsc(item.placa_camion || item.placa_carreta || 'Unidad')}')" style="border-radius:8px; font-size:0.78rem;">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    });
+
+    cardContainer.innerHTML = html;
 };
 
 // ── Modal Formulario (Nuevo / Editar) ─────────────────────────────
@@ -353,7 +410,7 @@ window.guardarFormularioDisponibilidad = async function (e) {
             alert('✅ Registro guardado correctamente');
         }
 
-        await window.dispCargarDatos();
+        await window.dispCargarDatos(true);
     } catch (err) {
         alert('Error al guardar: ' + err.message);
     } finally {
@@ -384,7 +441,7 @@ window._ejecutarEliminarDisponibilidadConfirmado = async function () {
         if (typeof window.mostrarToast === 'function') {
             window.mostrarToast('Registro eliminado', 'info');
         }
-        await window.dispCargarDatos();
+        await window.dispCargarDatos(true);
     } catch (err) {
         alert('Error al eliminar: ' + err.message);
     }
@@ -398,8 +455,11 @@ window.dispBuscarPlacaCamion = function (val) {
     const q = (val || '').toUpperCase().trim();
     const matches = (window.dispPlacas || []).filter(p => {
         const pl = (p.placa || '').toUpperCase();
-        const tipo = (p.tipo || '').toUpperCase();
-        const isMotora = p.motora === '1' || p.motora === 1 || ['CAMION', 'TRACTO', 'VOLQUETE', 'FURGON', 'CISTERNA'].some(t => tipo.includes(t));
+        const motoraStr = String(p.motora || '').toLowerCase();
+        const tipoNorm = String(p.tipo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+        
+        const isMotora = motoraStr === 'motora' || motoraStr === '1' || motoraStr === 'true' ||
+            ['CAMION', 'TRACTO', 'VOLQUETE', 'FURGON', 'CISTERNA'].some(t => tipoNorm.includes(t));
         return isMotora && (!q || pl.includes(q));
     }).slice(0, 15);
 
@@ -438,8 +498,11 @@ window.dispBuscarPlacaCarreta = function (val) {
     const q = (val || '').toUpperCase().trim();
     const matches = (window.dispPlacas || []).filter(p => {
         const pl = (p.placa || '').toUpperCase();
-        const tipo = (p.tipo || '').toUpperCase();
-        const isCarreta = !p.motora && (tipo.includes('CARRETA') || tipo.includes('REMOLQUE') || tipo.includes('SEMI'));
+        const motoraStr = String(p.motora || '').toLowerCase();
+        const tipoNorm = String(p.tipo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+        
+        const isCarreta = motoraStr === 'no motora' || motoraStr === '0' || motoraStr === 'false' ||
+            tipoNorm.includes('CARRETA') || tipoNorm.includes('REMOLQUE') || tipoNorm.includes('SEMI');
         return isCarreta && (!q || pl.includes(q));
     }).slice(0, 15);
 
@@ -507,12 +570,12 @@ window.dispExportarExcel = function () {
 
     const rows = (window.dispDatos || []).map((d, i) => ({
         '#': i + 1,
-        'PLACA CAMIÓN': d.placa_camion || '—',
-        'PLACA CARRETA': d.placa_carreta || '—',
+        'CAMIÓN': d.placa_camion || '—',
+        'CARRETA': d.placa_carreta || '—',
         'CONDUCTOR': d.conductor_asignado || '—',
         'ESTADO': d.estado || 'En Base',
         'MARCA': d.marca || '—',
-        'CAPACIDAD TANQUE': d.capacidad_tanque || '—',
+        'CAPACIDAD DE TANQUE': d.capacidad_tanque || '—',
         'TIPO UNIDAD': d.tipo_unidad || '—',
         'OBSERVACIONES': d.observaciones || '—'
     }));
@@ -592,5 +655,5 @@ function _dispEsc(str) {
 
 // ── Inicializador del Módulo ──────────────────────────────────────
 window.init_disponibilidad = function () {
-    window.dispCargarDatos();
+    window.dispCargarDatos(true);
 };
