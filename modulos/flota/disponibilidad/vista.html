@@ -127,25 +127,40 @@
     transform: scale(0.99);
 }
 
-/* Sub Tipo Bento Cards (Dashboard Analítico) */
+/* ── Sub Tipos Container (Desktop: 1 Single Row | Móvil: 2-Col Apple Grid) ── */
+.disp-subtipos-flex-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    margin-bottom: 1.25rem;
+}
+.disp-subtipo-item-col {
+    flex: 1 1 0;
+    min-width: 120px;
+}
+
+/* Desktop Bento Card (1 Single Horizontal Row) */
 .disp-subtipo-card {
-    border-radius: 18px;
-    padding: 1rem 1.15rem;
+    border-radius: 16px;
+    padding: 0.75rem 0.9rem;
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     user-select: none;
-    min-height: 84px;
+    min-height: 72px;
     position: relative;
     overflow: hidden;
 }
 .disp-subtipo-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
 }
 .disp-subtipo-card.active {
     box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px #0284c7 !important;
@@ -194,24 +209,58 @@
         padding: 0.5rem 0.5rem 100px 0.5rem !important;
         background: transparent !important;
     }
+    #disp-kpi-row {
+        display: none !important;
+    }
     #disp-tabla-wrap {
         display: none !important;
     }
     #dispCardContainer {
         display: block !important;
     }
-    .ck-kpi-card {
+    .disp-subtipos-flex-row {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        overflow-x: visible !important;
+        padding-bottom: 0 !important;
+        margin-bottom: 1rem !important;
+    }
+    .disp-subtipo-item-col {
+        flex: none !important;
+        min-width: auto !important;
+        width: 100% !important;
+    }
+    .disp-subtipo-card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04) !important;
         padding: 0.75rem 0.85rem !important;
-        border-radius: 14px !important;
+        min-height: 68px !important;
+        border-radius: 16px !important;
     }
-    .ck-kpi-card h2 {
-        font-size: 1.35rem !important;
+    .disp-subtipo-card .disp-card-num {
+        color: #0f172a !important;
+        font-size: 1.45rem !important;
+        text-shadow: none !important;
     }
-    .ck-kpi-icon {
-        width: 36px !important;
-        height: 36px !important;
-        font-size: 1rem !important;
-        border-radius: 10px !important;
+    .disp-subtipo-card .disp-card-lbl {
+        color: #64748b !important;
+        font-size: 0.68rem !important;
+        font-weight: 700 !important;
+    }
+    .disp-subtipo-card .disp-subtipo-icon-wrapper {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .disp-subtipo-card.active {
+        border-color: #0284c7 !important;
+        box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.3) !important;
+        background: #f8fafc !important;
     }
     .ck-apple-segmented {
         width: 100% !important;
@@ -365,8 +414,8 @@
     </div>
   </div>
 
-  <!-- ── 2. BENTO KPIS ROW (CLICKABLE APPLE CARDS) ────────────────── -->
-  <div class="row g-2 g-md-3 mb-3">
+  <!-- ── 2. BENTO KPIS ROW (CLICKABLE APPLE CARDS - SOLO DESKTOP) ─── -->
+  <div class="row g-2 g-md-3 mb-3 d-none d-md-flex" id="disp-kpi-row">
     <div class="col-6 col-md-3">
       <div class="ck-kpi-card active" id="disp-kpi-card-total" onclick="window.dispFiltrarPorCard('TODOS', this)" style="cursor: pointer;">
         <div>
@@ -437,6 +486,11 @@
     </div>
   </div>
 
+  <!-- ── 4. CARDS DE SUB TIPOS (MÓVIL AL TOPE ESTILO APPLE / DESKTOP EN 1 SOLA LÍNEA) ── -->
+  <div class="disp-subtipos-flex-row" id="disp-subtipos-cards-container">
+    <!-- Render dinámico con conteos de Sub Tipos -->
+  </div>
+
   <!-- ================================================================= -->
   <!-- ── VISTA 1: TABLERO (TABLA FLUIDA + MÓVIL CARDS) ──────────────── -->
   <!-- ================================================================= -->
@@ -493,11 +547,6 @@
       <small class="text-muted fw-semibold d-none d-md-inline">Distribución operativa en tiempo real por Sub Tipo de Unidad</small>
     </div>
 
-    <!-- Fila de Cards de Sub Tipos de Unidades (Inspirado en la Imagen 3) -->
-    <div class="row g-2 g-md-3 mb-4" id="disp-subtipos-cards-container">
-      <!-- Inyectado dinámicamente con las cantidades y colores de cada Sub Tipo -->
-    </div>
-
     <!-- Gráfico Principal de Barras por Sub Tipo y Estado Operativo -->
     <div class="card border-0 shadow-2xs rounded-4 p-3 p-md-4 bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
@@ -513,7 +562,7 @@
         </div>
       </div>
       
-      <div style="position: relative; height: 350px; width: 100%;">
+      <div style="position: relative; min-height: 340px; width: 100%;" id="disp-chart-container-wrapper">
         <canvas id="dispChartSubTipos"></canvas>
       </div>
     </div>

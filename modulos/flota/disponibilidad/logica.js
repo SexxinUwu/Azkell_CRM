@@ -264,14 +264,26 @@ window.dispCambiarVista = function (vista, btn) {
 
     const vistaTablero = document.getElementById('disp-vista-tablero');
     const vistaGraficos = document.getElementById('disp-vista-graficos');
+    const kpiRow = document.getElementById('disp-kpi-row');
+    const subtiposContainer = document.getElementById('disp-subtipos-cards-container');
+    const isMobile = window.innerWidth < 768;
 
     if (vista === 'graficos') {
         if (vistaTablero) vistaTablero.style.setProperty('display', 'none', 'important');
         if (vistaGraficos) vistaGraficos.style.setProperty('display', 'flex', 'important');
+        if (kpiRow) kpiRow.style.setProperty('display', 'none', 'important');
+        if (subtiposContainer) subtiposContainer.style.removeProperty('display');
         window.dispFiltrar();
     } else {
         if (vistaGraficos) vistaGraficos.style.setProperty('display', 'none', 'important');
         if (vistaTablero) vistaTablero.style.setProperty('display', 'flex', 'important');
+        if (!isMobile) {
+            if (kpiRow) kpiRow.style.setProperty('display', 'flex', 'important');
+            if (subtiposContainer) subtiposContainer.style.setProperty('display', 'none', 'important');
+        } else {
+            if (kpiRow) kpiRow.style.setProperty('display', 'none', 'important');
+            if (subtiposContainer) subtiposContainer.style.removeProperty('display');
+        }
         window.dispFiltrar();
     }
 };
@@ -281,85 +293,58 @@ window._dispSubTipoConfigs = {
     'Camión': {
         bg: 'linear-gradient(135deg, #0284c7, #0369a1)',
         color: '#0284c7',
-        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
-            <rect x="3" y="5" width="34" height="22" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" />
-            <path d="M37 12 h14 l6 7 v8 h-20 z" fill="rgba(255,255,255,0.4)" stroke="#ffffff" stroke-width="2.2" />
-            <path d="M41 15 h9 l4 4 h-13 z" fill="#ffffff" opacity="0.9" />
-            <circle cx="14" cy="27" r="4.5" fill="#ffffff" stroke="#0284c7" stroke-width="2" />
-            <circle cx="48" cy="27" r="4.5" fill="#ffffff" stroke="#0284c7" stroke-width="2" />
-        </svg>`
+        lightBg: '#eff6ff',
+        iconDesktop: `<svg viewBox="0 0 64 36" width="38" height="22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));"><rect x="3" y="5" width="34" height="22" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" /><path d="M37 12 h14 l6 7 v8 h-20 z" fill="rgba(255,255,255,0.4)" stroke="#ffffff" stroke-width="2.2" /><path d="M41 15 h9 l4 4 h-13 z" fill="#ffffff" opacity="0.9" /><circle cx="14" cy="27" r="4.5" fill="#ffffff" stroke="#0284c7" stroke-width="2" /><circle cx="48" cy="27" r="4.5" fill="#ffffff" stroke="#0284c7" stroke-width="2" /></svg>`,
+        iconMobile: `<i class="bi bi-truck fs-5" style="color: #0284c7;"></i>`
     },
     'Carreta': {
         bg: 'linear-gradient(135deg, #9333ea, #7e22ce)',
         color: '#9333ea',
-        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
-            <path d="M5 8 h52 v18 h-52 z" fill="rgba(255,255,255,0.25)" stroke="#ffffff" stroke-width="2.2" />
-            <path d="M5 8 h52 v6 h-52 z" fill="rgba(255,255,255,0.65)" stroke="#ffffff" stroke-width="1.5" />
-            <line x1="5" y1="20" x2="57" y2="20" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="3,2" />
-            <circle cx="38" cy="27" r="4.5" fill="#ffffff" stroke="#9333ea" stroke-width="2" />
-            <circle cx="49" cy="27" r="4.5" fill="#ffffff" stroke="#9333ea" stroke-width="2" />
-            <path d="M12 26 v4 M16 26 v4" stroke="#ffffff" stroke-width="2" />
-        </svg>`
+        lightBg: '#faf5ff',
+        iconDesktop: `<svg viewBox="0 0 64 36" width="38" height="22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));"><path d="M5 8 h52 v18 h-52 z" fill="rgba(255,255,255,0.25)" stroke="#ffffff" stroke-width="2.2" /><path d="M5 8 h52 v6 h-52 z" fill="rgba(255,255,255,0.65)" stroke="#ffffff" stroke-width="1.5" /><line x1="5" y1="20" x2="57" y2="20" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="3,2" /><circle cx="38" cy="27" r="4.5" fill="#ffffff" stroke="#9333ea" stroke-width="2" /><circle cx="49" cy="27" r="4.5" fill="#ffffff" stroke="#9333ea" stroke-width="2" /><path d="M12 26 v4 M16 26 v4" stroke="#ffffff" stroke-width="2" /></svg>`,
+        iconMobile: `<i class="bi bi-link-45deg fs-4" style="color: #9333ea;"></i>`
     },
     'Tracto': {
         bg: 'linear-gradient(135deg, #ea580c, #c2410c)',
         color: '#ea580c',
-        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
-            <path d="M10 6 h20 v8 h16 l9 9 v6 h-45 z" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" />
-            <path d="M30 14 h13 l6 7 h-19 z" fill="#ffffff" opacity="0.9" />
-            <circle cx="18" cy="28" r="4.5" fill="#ffffff" stroke="#ea580c" stroke-width="2" />
-            <circle cx="46" cy="28" r="4.5" fill="#ffffff" stroke="#ea580c" stroke-width="2" />
-            <line x1="10" y1="18" x2="28" y2="18" stroke="#ffffff" stroke-width="1.8" />
-        </svg>`
+        lightBg: '#fff7ed',
+        iconDesktop: `<svg viewBox="0 0 64 36" width="38" height="22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));"><path d="M10 6 h20 v8 h16 l9 9 v6 h-45 z" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" /><path d="M30 14 h13 l6 7 h-19 z" fill="#ffffff" opacity="0.9" /><circle cx="18" cy="28" r="4.5" fill="#ffffff" stroke="#ea580c" stroke-width="2" /><circle cx="46" cy="28" r="4.5" fill="#ffffff" stroke="#ea580c" stroke-width="2" /><line x1="10" y1="18" x2="28" y2="18" stroke="#ffffff" stroke-width="1.8" /></svg>`,
+        iconMobile: `<i class="bi bi-truck-flatbed fs-5" style="color: #ea580c;"></i>`
     },
     'Remolque': {
         bg: 'linear-gradient(135deg, #15803d, #166534)',
         color: '#15803d',
-        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
-            <rect x="5" y="6" width="52" height="21" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" />
-            <line x1="57" y1="6" x2="57" y2="27" stroke="#ffffff" stroke-width="3" />
-            <circle cx="38" cy="28" r="4.5" fill="#ffffff" stroke="#15803d" stroke-width="2" />
-            <circle cx="49" cy="28" r="4.5" fill="#ffffff" stroke="#15803d" stroke-width="2" />
-            <path d="M12 27 v4 M16 27 v4" stroke="#ffffff" stroke-width="2" />
-        </svg>`
+        lightBg: '#f0fdf4',
+        iconDesktop: `<svg viewBox="0 0 64 36" width="38" height="22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));"><rect x="5" y="6" width="52" height="21" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" /><line x1="57" y1="6" x2="57" y2="27" stroke="#ffffff" stroke-width="3" /><circle cx="38" cy="28" r="4.5" fill="#ffffff" stroke="#15803d" stroke-width="2" /><circle cx="49" cy="28" r="4.5" fill="#ffffff" stroke="#15803d" stroke-width="2" /><path d="M12 27 v4 M16 27 v4" stroke="#ffffff" stroke-width="2" /></svg>`,
+        iconMobile: `<i class="bi bi-box-seam-fill fs-5" style="color: #15803d;"></i>`
     },
     'Thermo King': {
         bg: 'linear-gradient(135deg, #0891b2, #0e7490)',
         color: '#0891b2',
-        iconHtml: `<i class="bi bi-snow2" style="font-size: 2.1rem; color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);"></i>`
+        lightBg: '#ecfeff',
+        iconDesktop: `<i class="bi bi-snow2" style="font-size: 1.85rem; color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);"></i>`,
+        iconMobile: `<i class="bi bi-snow2 fs-5" style="color: #0891b2;"></i>`
     },
     'Furgón': {
         bg: 'linear-gradient(135deg, #4f46e5, #4338ca)',
         color: '#4f46e5',
-        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
-            <rect x="5" y="6" width="52" height="21" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" />
-            <line x1="28" y1="6" x2="28" y2="27" stroke="#ffffff" stroke-width="1.8" stroke-dasharray="3,2" />
-            <circle cx="38" cy="28" r="4.5" fill="#ffffff" stroke="#4f46e5" stroke-width="2" />
-            <circle cx="49" cy="28" r="4.5" fill="#ffffff" stroke="#4f46e5" stroke-width="2" />
-            <path d="M12 27 v4 M16 27 v4" stroke="#ffffff" stroke-width="2" />
-        </svg>`
+        lightBg: '#eef2ff',
+        iconDesktop: `<svg viewBox="0 0 64 36" width="38" height="22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));"><rect x="5" y="6" width="52" height="21" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" /><line x1="28" y1="6" x2="28" y2="27" stroke="#ffffff" stroke-width="1.8" stroke-dasharray="3,2" /><circle cx="38" cy="28" r="4.5" fill="#ffffff" stroke="#4f46e5" stroke-width="2" /><circle cx="49" cy="28" r="4.5" fill="#ffffff" stroke="#4f46e5" stroke-width="2" /><path d="M12 27 v4 M16 27 v4" stroke="#ffffff" stroke-width="2" /></svg>`,
+        iconMobile: `<i class="bi bi-box-fill fs-5" style="color: #4f46e5;"></i>`
     },
     'PLATAFORMA': {
         bg: 'linear-gradient(135deg, #d97706, #b45309)',
         color: '#d97706',
-        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
-            <rect x="4" y="18" width="54" height="6" rx="1" fill="rgba(255,255,255,0.4)" stroke="#ffffff" stroke-width="2.2" />
-            <circle cx="38" cy="27" r="4.5" fill="#ffffff" stroke="#d97706" stroke-width="2" />
-            <circle cx="49" cy="27" r="4.5" fill="#ffffff" stroke="#d97706" stroke-width="2" />
-            <path d="M12 24 v5 M16 24 v5" stroke="#ffffff" stroke-width="2" />
-            <path d="M4 18 l4 -6 h4" stroke="#ffffff" stroke-width="2" />
-        </svg>`
+        lightBg: '#fffbeb',
+        iconDesktop: `<svg viewBox="0 0 64 36" width="38" height="22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));"><rect x="4" y="18" width="54" height="6" rx="1" fill="rgba(255,255,255,0.4)" stroke="#ffffff" stroke-width="2.2" /><circle cx="38" cy="27" r="4.5" fill="#ffffff" stroke="#d97706" stroke-width="2" /><circle cx="49" cy="27" r="4.5" fill="#ffffff" stroke="#d97706" stroke-width="2" /><path d="M12 24 v5 M16 24 v5" stroke="#ffffff" stroke-width="2" /><path d="M4 18 l4 -6 h4" stroke="#ffffff" stroke-width="2" /></svg>`,
+        iconMobile: `<i class="bi bi-layers-fill fs-5" style="color: #d97706;"></i>`
     },
     'Contenedor': {
         bg: 'linear-gradient(135deg, #0d9488, #115e59)',
         color: '#0d9488',
-        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
-            <rect x="5" y="8" width="54" height="18" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" />
-            <line x1="16" y1="8" x2="16" y2="26" stroke="#ffffff" stroke-width="1.8" />
-            <line x1="27" y1="8" x2="27" y2="26" stroke="#ffffff" stroke-width="1.8" />
-            <line x1="38" y1="8" x2="38" y2="26" stroke="#ffffff" stroke-width="1.8" />
-            <line x1="49" y1="8" x2="49" y2="26" stroke="#ffffff" stroke-width="1.8" />
-        </svg>`
+        lightBg: '#f0fdfa',
+        iconDesktop: `<svg viewBox="0 0 64 36" width="38" height="22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));"><rect x="5" y="8" width="54" height="18" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2.2" /><line x1="16" y1="8" x2="16" y2="26" stroke="#ffffff" stroke-width="1.8" /><line x1="27" y1="8" x2="27" y2="26" stroke="#ffffff" stroke-width="1.8" /><line x1="38" y1="8" x2="38" y2="26" stroke="#ffffff" stroke-width="1.8" /><line x1="49" y1="8" x2="49" y2="26" stroke="#ffffff" stroke-width="1.8" /></svg>`,
+        iconMobile: `<i class="bi bi-archive-fill fs-5" style="color: #0d9488;"></i>`
     }
 };
 
@@ -379,7 +364,9 @@ function getSubTipoStyle(st) {
     return {
         bg: 'linear-gradient(135deg, #64748b, #475569)',
         color: '#64748b',
-        iconHtml: `<svg viewBox="0 0 64 36" width="46" height="28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="54" height="18" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2" /><circle cx="38" cy="27" r="4" fill="#ffffff" /><circle cx="49" cy="27" r="4" fill="#ffffff" /></svg>`
+        lightBg: '#f1f5f9',
+        iconDesktop: `<svg viewBox="0 0 64 36" width="38" height="22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="54" height="18" rx="2" fill="rgba(255,255,255,0.3)" stroke="#ffffff" stroke-width="2" /><circle cx="38" cy="27" r="4" fill="#ffffff" /><circle cx="49" cy="27" r="4" fill="#ffffff" /></svg>`,
+        iconMobile: `<i class="bi bi-truck fs-5" style="color: #64748b;"></i>`
     };
 }
 
@@ -451,15 +438,12 @@ window.dispFiltrar = function () {
     window.dispRenderizarCardsMobile(filtrados);
 
     // Renderizar Gráficos y Cards por Sub Tipo
-    if (window._dispVistaActiva === 'graficos') {
-        window.dispRenderizarGraficosSubTipos(filtrados);
-    }
+    window.dispRenderizarGraficosSubTipos(filtrados);
 };
 
 // ── Renderizar Gráficos y Métricas por Sub Tipo (Imagen 3) ────────
 window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
-    const vistaGraficos = document.getElementById('disp-vista-graficos');
-    if (!vistaGraficos || vistaGraficos.style.display === 'none') return;
+    const isMobile = window.innerWidth < 768;
 
     // Extraer placas individuales respetando los filtros activos (empresa, buscador, etc.)
     const placasList = _dispExtraerPlacas(window.dispDatos || [], true);
@@ -484,7 +468,7 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
         tituloEmp.innerText = window._dispFiltroEmpresa === 'TODAS' ? 'TOTAL FLOTA' : window._dispFiltroEmpresa;
     }
 
-    // 1. Render Sub Tipos Bento Cards (Imagen 3 con siluetas SVGs y Thermo King copo de nieve)
+    // 1. Render Sub Tipos Cards (Desktop: 1 Single Row | Móvil: 2-Col Apple Grid)
     const cardsCont = document.getElementById('disp-subtipos-cards-container');
     if (cardsCont) {
         if (!subTipos.length) {
@@ -494,19 +478,36 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
                 const item = subTiposMap[st];
                 const cfg = getSubTipoStyle(st);
                 const isActive = window._dispFiltroSubTipo === st ? 'active' : '';
-                return `
-                    <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-                        <div class="disp-subtipo-card ${isActive}" style="background: ${cfg.bg};" onclick="window.dispFiltrarPorSubTipo('${_dispEsc(st)}', this)" title="Filtrar por ${st}">
-                            <div>
-                                <h2 class="fw-bolder m-0 text-white" style="font-size: 1.85rem; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.25);">${item.total}</h2>
-                                <span class="fw-bold text-white text-uppercase d-block mt-1 text-truncate" style="font-size:0.75rem; letter-spacing:0.4px; max-width: 110px;">${_dispEsc(st)}</span>
-                            </div>
-                            <div class="disp-subtipo-icon-wrapper" style="line-height: 1; opacity: 0.95;">
-                                ${cfg.iconHtml}
+
+                if (isMobile) {
+                    return `
+                        <div class="disp-subtipo-item-col">
+                            <div class="disp-subtipo-card ${isActive}" onclick="window.dispFiltrarPorSubTipo('${_dispEsc(st)}', this)" title="Filtrar por ${st}">
+                                <div>
+                                    <span class="disp-card-lbl">${_dispEsc(st)}</span>
+                                    <h2 class="disp-card-num">${item.total}</h2>
+                                </div>
+                                <div class="disp-subtipo-icon-wrapper" style="background: ${cfg.lightBg};">
+                                    ${cfg.iconMobile}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                } else {
+                    return `
+                        <div class="disp-subtipo-item-col">
+                            <div class="disp-subtipo-card ${isActive}" style="background: ${cfg.bg};" onclick="window.dispFiltrarPorSubTipo('${_dispEsc(st)}', this)" title="Filtrar por ${st}">
+                                <div>
+                                    <h2 class="disp-card-num fw-bolder m-0 text-white" style="font-size: 1.55rem; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.25);">${item.total}</h2>
+                                    <span class="disp-card-lbl fw-bold text-white text-uppercase d-block mt-1 text-truncate" style="font-size:0.68rem; letter-spacing:0.4px;">${_dispEsc(st)}</span>
+                                </div>
+                                <div class="disp-subtipo-icon-wrapper" style="line-height: 1; opacity: 0.95;">
+                                    ${cfg.iconDesktop}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
             }).join('');
         }
     }
@@ -554,12 +555,17 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
         tbodyMatriz.innerHTML = htmlMatriz;
     }
 
-    // 3. Render Chart.js Grouped Bar Chart (Sub Tipos en Eje X, Números en Blanco)
+    // 3. Render Chart.js Grouped Bar Chart (Horizontal en Móvil para legibilidad perfecta | Vertical en Desktop)
     const canvas = document.getElementById('dispChartSubTipos');
     if (canvas && typeof Chart !== 'undefined') {
         if (window._dispChartInstance) {
             window._dispChartInstance.destroy();
             window._dispChartInstance = null;
+        }
+
+        const chartWrapper = document.getElementById('disp-chart-container-wrapper');
+        if (chartWrapper) {
+            chartWrapper.style.minHeight = isMobile ? '400px' : '340px';
         }
 
         const displaySubTipos = window._dispFiltroSubTipo !== 'TODOS' 
@@ -570,7 +576,7 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
         const rutaData = displaySubTipos.map(st => subTiposMap[st]?.ruta || 0);
         const mantData = displaySubTipos.map(st => subTiposMap[st]?.mant || 0);
 
-        // Plugin inline para dibujar los números en color blanco (#ffffff) dentro de las barras
+        // Plugin inline para dibujar los números con contraste óptimo en cada barra
         const customDataLabelsPlugin = {
             id: 'dispCustomDataLabels',
             afterDatasetsDraw(chart) {
@@ -582,24 +588,46 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
                         const val = dataset.data[index];
                         if (val > 0) {
                             ctx.save();
-                            const barHeight = Math.abs(bar.base - bar.y);
-                            if (barHeight >= 22) {
-                                ctx.font = 'bold 12px Inter, system-ui, sans-serif';
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'middle';
-                                ctx.fillStyle = '#ffffff';
-                                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-                                ctx.shadowBlur = 4;
-                                ctx.shadowOffsetX = 0;
-                                ctx.shadowOffsetY = 1;
-                                ctx.fillText(val, bar.x, bar.y + (barHeight / 2));
+                            if (isMobile) {
+                                // Horizontal Mode (Móvil)
+                                const barWidth = Math.abs(bar.x - bar.base);
+                                if (barWidth >= 22) {
+                                    ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillStyle = '#ffffff';
+                                    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+                                    ctx.shadowBlur = 3;
+                                    ctx.fillText(val, bar.base + (barWidth / 2), bar.y);
+                                } else {
+                                    ctx.font = '800 11px Inter, system-ui, sans-serif';
+                                    ctx.textAlign = 'left';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillStyle = '#0f172a';
+                                    ctx.shadowBlur = 0;
+                                    ctx.fillText(val, bar.x + 4, bar.y);
+                                }
                             } else {
-                                ctx.font = '800 11px Inter, system-ui, sans-serif';
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'bottom';
-                                ctx.fillStyle = '#0f172a';
-                                ctx.shadowBlur = 0;
-                                ctx.fillText(val, bar.x, bar.y - 4);
+                                // Vertical Mode (Desktop)
+                                const barHeight = Math.abs(bar.base - bar.y);
+                                if (barHeight >= 22) {
+                                    ctx.font = 'bold 12px Inter, system-ui, sans-serif';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillStyle = '#ffffff';
+                                    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+                                    ctx.shadowBlur = 4;
+                                    ctx.shadowOffsetX = 0;
+                                    ctx.shadowOffsetY = 1;
+                                    ctx.fillText(val, bar.x, bar.y + (barHeight / 2));
+                                } else {
+                                    ctx.font = '800 11px Inter, system-ui, sans-serif';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'bottom';
+                                    ctx.fillStyle = '#0f172a';
+                                    ctx.shadowBlur = 0;
+                                    ctx.fillText(val, bar.x, bar.y - 4);
+                                }
                             }
                             ctx.restore();
                         }
@@ -619,9 +647,9 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
                         backgroundColor: '#16a34a',
                         borderColor: '#15803d',
                         borderWidth: 1,
-                        borderRadius: 6,
-                        barPercentage: 0.85,
-                        categoryPercentage: 0.75
+                        borderRadius: 5,
+                        barPercentage: isMobile ? 0.85 : 0.85,
+                        categoryPercentage: isMobile ? 0.8 : 0.75
                     },
                     {
                         label: 'En Ruta',
@@ -629,9 +657,9 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
                         backgroundColor: '#0284c7',
                         borderColor: '#0369a1',
                         borderWidth: 1,
-                        borderRadius: 6,
-                        barPercentage: 0.85,
-                        categoryPercentage: 0.75
+                        borderRadius: 5,
+                        barPercentage: isMobile ? 0.85 : 0.85,
+                        categoryPercentage: isMobile ? 0.8 : 0.75
                     },
                     {
                         label: 'En Mantenimiento',
@@ -639,14 +667,15 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
                         backgroundColor: '#ef4444',
                         borderColor: '#dc2626',
                         borderWidth: 1,
-                        borderRadius: 6,
-                        barPercentage: 0.85,
-                        categoryPercentage: 0.75
+                        borderRadius: 5,
+                        barPercentage: isMobile ? 0.85 : 0.85,
+                        categoryPercentage: isMobile ? 0.8 : 0.75
                     }
                 ]
             },
             plugins: [customDataLabelsPlugin],
             options: {
+                indexAxis: isMobile ? 'y' : 'x',
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
@@ -654,10 +683,10 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
                         display: true,
                         position: 'top',
                         labels: {
-                            font: { family: 'inherit', size: 13, weight: 'bold' },
+                            font: { family: 'inherit', size: isMobile ? 11 : 13, weight: 'bold' },
                             usePointStyle: true,
-                            boxWidth: 10,
-                            padding: 18
+                            boxWidth: 8,
+                            padding: isMobile ? 12 : 18
                         }
                     },
                     tooltip: {
@@ -670,20 +699,21 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
                 },
                 scales: {
                     x: {
-                        grid: { display: false },
+                        grid: { display: isMobile, color: 'rgba(226, 232, 240, 0.8)' },
                         ticks: {
-                            font: { family: 'inherit', size: 12, weight: 'bold' },
-                            color: '#334155'
+                            font: { family: 'inherit', size: isMobile ? 11 : 12, weight: isMobile ? 'normal' : 'bold' },
+                            color: '#334155',
+                            precision: 0
                         }
                     },
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            precision: 0,
-                            font: { family: 'inherit', size: 11 },
-                            color: '#64748b'
+                            font: { family: 'inherit', size: isMobile ? 11 : 11, weight: isMobile ? 'bold' : 'normal' },
+                            color: '#334155',
+                            precision: 0
                         },
-                        grid: { color: 'rgba(226, 232, 240, 0.8)' }
+                        grid: { display: !isMobile, color: 'rgba(226, 232, 240, 0.8)' }
                     }
                 }
             }
@@ -1196,4 +1226,18 @@ function _dispEsc(str) {
 // ── Inicializador del Módulo ──────────────────────────────────────
 window.init_disponibilidad = function () {
     window.dispCargarDatos(true);
+
+    // Listener reactivo a cambios de tamaño de pantalla (Móvil vs Desktop)
+    if (!window._dispResizeListenerAttached) {
+        window._dispResizeListenerAttached = true;
+        let resizeTimer = null;
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () {
+                if (window._dispVistaActiva === 'graficos') {
+                    window.dispFiltrar();
+                }
+            }, 250);
+        });
+    }
 };
