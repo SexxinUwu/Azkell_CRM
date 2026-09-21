@@ -282,7 +282,7 @@
         pesos: new Set(),
         combustible: 'D2',
         anio: 'ALL',
-        orden: 'date_desc'
+        orden: 'trip_desc'
     };
 
     // Cambiar filtro por año rápido
@@ -325,7 +325,7 @@
 
     // Alternar Ordenamiento
     window.caToggleSort = function(col) {
-        let cur = window._caFiltrosState.orden || 'date_desc';
+        let cur = window._caFiltrosState.orden || 'trip_desc';
         if (col === 'trip') {
             window._caFiltrosState.orden = cur === 'trip_desc' ? 'trip_asc' : 'trip_desc';
         } else if (col === 'date_start') {
@@ -417,10 +417,10 @@
                 isActivo = fState.anio !== 'ALL';
             } else if (cat.key === 'orden') {
                 const mapOrd = {
+                    trip_desc: 'N° Viaje Reciente ▼',
+                    trip_asc: 'N° Viaje Antiguo ▲',
                     date_desc: 'Fecha Reciente ▼',
                     date_asc: 'Fecha Antigua ▲',
-                    trip_desc: 'N° Viaje Mayor ▼',
-                    trip_asc: 'N° Viaje Menor ▲',
                     gal_desc: 'Mayor Galones ▼',
                     cost_desc: 'Mayor Gasto ▼'
                 };
@@ -571,12 +571,12 @@
             }).join('');
         } else if (catKey === 'orden') {
             if (quickActions) quickActions.style.setProperty('display', 'none', 'important');
-            const curOrd = fState.orden || 'date_desc';
+            const curOrd = fState.orden || 'trip_desc';
             const ords = [
-                { val: 'date_desc', label: 'Fecha ▼ (Más Recientes Primero)' },
-                { val: 'date_asc', label: 'Fecha ▲ (Más Antiguos Primero)' },
-                { val: 'trip_desc', label: 'N° Viaje ▼ (Mayor a Menor)' },
-                { val: 'trip_asc', label: 'N° Viaje ▲ (Menor a Mayor)' },
+                { val: 'trip_desc', label: 'N° Viaje ▼ (Más Recientes Primero)' },
+                { val: 'trip_asc', label: 'N° Viaje ▲ (Más Antiguos Primero)' },
+                { val: 'date_desc', label: 'Fecha ▼ (Mayor Fecha Cierre)' },
+                { val: 'date_asc', label: 'Fecha ▲ (Menor Fecha Inicio)' },
                 { val: 'gal_desc', label: 'Galones ▼ (Mayor Consumo)' },
                 { val: 'cost_desc', label: 'Gasto ▼ (Mayor Costo S/)' }
             ];
@@ -732,7 +732,7 @@
         if (window._caFiltrosState[catKey] instanceof Set) {
             window._caFiltrosState[catKey].clear();
         } else {
-            window._caFiltrosState[catKey] = (catKey === 'orden' ? 'date_desc' : 'ALL');
+            window._caFiltrosState[catKey] = (catKey === 'orden' ? 'trip_desc' : 'ALL');
         }
 
         document.querySelectorAll('.opt-ca-filtro-item').forEach(item => {
@@ -812,7 +812,7 @@
             pesos: new Set(),
             combustible: 'D2',
             anio: 'ALL',
-            orden: 'date_desc'
+            orden: 'trip_desc'
         };
         window.caRenderListaCategoriasFiltro();
         window.caActualizarContadorPreviaFiltros();
@@ -829,7 +829,7 @@
             pesos: new Set(),
             combustible: 'D2',
             anio: 'ALL',
-            orden: 'date_desc'
+            orden: 'trip_desc'
         };
         const searchInput = document.getElementById('ca-search-input');
         if (searchInput) searchInput.value = '';
@@ -978,7 +978,7 @@
         });
 
         // Ordenamiento
-        const sortBy = fState.orden || 'date_desc';
+        const sortBy = fState.orden || 'trip_desc';
         window._caFilteredTrips.sort((a, b) => {
             switch (sortBy) {
                 case 'trip_asc': {

@@ -1270,12 +1270,15 @@ module.exports = function (db, broadcast, logAudit) {
 
             Object.keys(vehiculoMap).forEach(vehKey => {
                 const tripsObj = vehiculoMap[vehKey];
-                // Convertir a array de viajes del vehículo y ordenar cronológicamente
+                // Convertir a array de viajes del vehículo y ordenar por N° de Orden de Viaje ASC
                 const vehTrips = Object.values(tripsObj).map(t => {
                     t.vouchers.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '') || (a.id - b.id));
-                    const earliestDate = t.vouchers[0]?.fecha || '';
-                    return { ...t, earliestDate };
-                }).sort((a, b) => a.earliestDate.localeCompare(b.earliestDate));
+                    return t;
+                }).sort((a, b) => {
+                    if (a.viaje === 'SIN-VIAJE') return 1;
+                    if (b.viaje === 'SIN-VIAJE') return -1;
+                    return (a.viaje || '').localeCompare(b.viaje || '', undefined, { numeric: true });
+                });
 
                 // Rastrear el último voucher general y por combustible en esta placa
                 let lastVoucherGeneral = null;
@@ -1360,7 +1363,7 @@ module.exports = function (db, broadcast, logAudit) {
                         const lastVFuel = fuelVouchers[fuelVouchers.length - 1] || {};
                         const prevVFuel = lastVoucherByFuel[fuelType];
 
-                        const validPrevFuel = (prevVFuel && prevVFuel.fecha <= (firstVFuel.fecha || ''));
+                        const validPrevFuel = Boolean(prevVFuel);
                         const fKmFin = lastVFuel.odometro || 0;
                         const fFechaFin = lastVFuel.fecha || 'N/D';
                         const fKmInicio = validPrevFuel ? (prevVFuel.odometro || 0) : (firstVFuel.odometro || 0);
@@ -1395,7 +1398,7 @@ module.exports = function (db, broadcast, logAudit) {
                     });
 
                     // Punto de partida general (el último vale del viaje anterior para esta placa)
-                    const validPrevGen = (lastVoucherGeneral && lastVoucherGeneral.fecha <= (firstVCurrent.fecha || ''));
+                    const validPrevGen = Boolean(lastVoucherGeneral);
                     const kmInicio = validPrevGen ? (lastVoucherGeneral.odometro || 0) : (firstVCurrent.odometro || 0);
                     const fechaInicio = validPrevGen ? (lastVoucherGeneral.fecha || 'N/D') : (firstVCurrent.fecha || 'N/D');
                     const recorridoKm = (kmFin > kmInicio && kmInicio > 0) ? (kmFin - kmInicio) : 0;
@@ -1495,8 +1498,12 @@ module.exports = function (db, broadcast, logAudit) {
                 });
             });
 
-            // Ordenar viajes por Fecha Fin DESC por defecto (los más recientes en el tiempo primero)
-            trips.sort((a, b) => (b.fechaFin || '').localeCompare(a.fechaFin || '') || (b.viaje || '').localeCompare(a.viaje || ''));
+            // Ordenar viajes por N° de Orden de Viaje DESC por defecto (los más recientes primero)
+            trips.sort((a, b) => {
+                if (a.viaje === 'SIN-VIAJE') return 1;
+                if (b.viaje === 'SIN-VIAJE') return -1;
+                return (b.viaje || '').localeCompare(a.viaje || '', undefined, { numeric: true });
+            });
 
             const totalViajes = trips.length;
             const totalGalones = trips.reduce((s, t) => s + t.totalGalones, 0);

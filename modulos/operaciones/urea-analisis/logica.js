@@ -217,7 +217,7 @@
         const fuelFilter = document.getElementById('ca-filter-fuel')?.value || 'UREA';
         const plateFilter = document.getElementById('ca-filter-plate')?.value || 'ALL';
         const searchVal = (document.getElementById('ca-search-input')?.value || '').toLowerCase().trim();
-        const sortBy = document.getElementById('ca-sort-by')?.value || 'date_desc';
+        const sortBy = document.getElementById('ca-sort-by')?.value || 'trip_desc';
 
         window._caFilteredTrips = window._caTripGroups.filter(t => {
             // Filtro Rango de Fechas (Solapamiento con período del viaje)
