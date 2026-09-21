@@ -345,13 +345,7 @@ window.dispCambiarVista = function (vista, btn) {
     } else {
         if (vistaGraficos) vistaGraficos.style.setProperty('display', 'none', 'important');
         if (vistaTablero) vistaTablero.style.setProperty('display', 'flex', 'important');
-        if (kpiRow) {
-            if (!isMobile) {
-                kpiRow.style.setProperty('display', 'flex', 'important');
-            } else {
-                kpiRow.style.setProperty('display', 'none', 'important');
-            }
-        }
+        if (kpiRow) kpiRow.style.setProperty('display', 'flex', 'important');
         window.dispFiltrar();
     }
 };

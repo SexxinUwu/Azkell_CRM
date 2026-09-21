@@ -217,8 +217,19 @@
     #dispCardContainer {
         padding-bottom: calc(110px + env(safe-area-inset-bottom, 24px)) !important;
     }
-    #disp-kpi-row {
-        display: none !important;
+    .ck-kpi-card {
+        padding: 0.75rem 0.85rem !important;
+        border-radius: 16px !important;
+        min-height: 66px !important;
+    }
+    .ck-kpi-card h2 {
+        font-size: 1.45rem !important;
+    }
+    .ck-kpi-icon {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 12px !important;
+        font-size: 1.1rem !important;
     }
     #disp-tabla-wrap {
         display: none !important;
@@ -422,8 +433,8 @@
     </div>
   </div>
 
-  <!-- ── 2. BENTO KPIS ROW (CLICKABLE APPLE CARDS - SOLO DESKTOP) ─── -->
-  <div class="row g-2 g-md-3 mb-3 d-none d-md-flex" id="disp-kpi-row">
+  <!-- ── 2. BENTO KPIS ROW (CLICKABLE APPLE CARDS) ────────────────── -->
+  <div class="row g-2 g-md-3 mb-3 d-flex" id="disp-kpi-row">
     <div class="col-6 col-md-3">
       <div class="ck-kpi-card active" id="disp-kpi-card-total" onclick="window.dispFiltrarPorCard('TODOS', this)" style="cursor: pointer;">
         <div>
