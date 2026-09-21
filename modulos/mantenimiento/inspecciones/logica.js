@@ -345,26 +345,44 @@ function toggleVistaStatus() {
     expandStatusMap = {}; 
     mostrarStatusInspecciones(dataGlobalInspecciones); 
 }
-window.filtrarInspSemaforoSegment = function(tipo, btn) {
-    window._inspFiltroSemaforo = tipo || 'total';
-    document.querySelectorAll('#btn-group-estados-insp .ck-segment-item').forEach(function(b) {
-        b.classList.remove('active');
-    });
-    if (btn) {
-        btn.classList.add('active');
-    } else {
-        var targetBtn = document.querySelector('#btn-group-estados-insp button[data-filter="' + (tipo || 'total') + '"]');
-        if (targetBtn) targetBtn.classList.add('active');
-    }
 
+window._inspFiltroCard = 'total';
+window._inspFiltroUbicacion = 'todos';
+
+window.filtrarInspCard = function(tipo, cardEl) {
+    window._inspFiltroCard = tipo || 'total';
+    // Al seleccionar cualquier card, el filtro inferior de ubicación se marca en "todos" por defecto
+    window._inspFiltroUbicacion = 'todos';
+
+    // Actualizar clase activa en cards superiores
     document.querySelectorAll('#moduloStatus .ck-kpi-card').forEach(function(el) {
         var cardId = 'insp-kpi-' + (tipo === 'verde' ? 'conformes' : (tipo === 'amarillo' ? 'alerta' : (tipo === 'rojo' ? 'criticas' : 'total')));
         el.classList.toggle('active', el.id === cardId);
     });
 
+    // Resetear segmented control inferior a "todos"
+    document.querySelectorAll('#btn-group-estados-insp .ck-segment-item').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-ubicacion') === 'todos');
+    });
+
     filtrarStatusAvanzado();
 };
-window.filtrarTablaPorSemaforo = window.filtrarInspSemaforoSegment;
+
+window.filtrarInspUbicacion = function(ubi, btn) {
+    window._inspFiltroUbicacion = ubi || 'todos';
+
+    // Actualizar clase activa en segmented control inferior
+    document.querySelectorAll('#btn-group-estados-insp .ck-segment-item').forEach(function(b) {
+        b.classList.toggle('active', b === btn || b.getAttribute('data-ubicacion') === ubi);
+    });
+
+    filtrarStatusAvanzado();
+};
+
+window.filtrarInspSemaforoSegment = function(tipo, btn) {
+    window.filtrarInspCard(tipo);
+};
+window.filtrarTablaPorSemaforo = window.filtrarInspCard;
 
 // ── Cache y Helper de Ubicación (Unidades en Base vs Telemetría GPS) ──
 window._cacheUnidadesPanorama = window._cacheUnidadesPanorama || [];
@@ -804,7 +822,8 @@ function mostrarStatusInspecciones(inspecciones) {
 
 function filtrarStatusAvanzado() {
     const txt = (document.getElementById('buscadorStatus')?.value || '').toLowerCase().trim();
-    const filtroSem = window._inspFiltroSemaforo || 'total';
+    const filtroCard = window._inspFiltroCard || 'total';
+    const filtroUbi = window._inspFiltroUbicacion || 'todos';
 
     let cntTotalVig = 0, cntTotalNoVig = 0;
     let cntMotVig = 0, cntMotNoVig = 0;
@@ -818,10 +837,11 @@ function filtrarStatusAvanzado() {
         let est = (row.getAttribute('data-estado-v2') || '').toLowerCase();
         let textoFila = row.textContent.toLowerCase();
         let dias = parseInt(row.getAttribute('data-dias'));
+        let ubi = (row.getAttribute('data-ubicacion') || '').toLowerCase();
 
-        // Clasificar estado semafórico para KPI
+        // Clasificar estado semafórico para conteo de KPIs
         kpiTotal++;
-        if (isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente')) {
+        if (isNaN(dias) || dias < 0 || dias === -9999 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente')) {
             kpiCriticas++;
         } else if (dias <= 7 || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo')) {
             kpiAlerta++;
@@ -829,25 +849,31 @@ function filtrarStatusAvanzado() {
             kpiConformes++;
         }
 
+        // A. Filtro de Texto
         let matchTxt = (!txt || textoFila.includes(txt));
-        let matchSem = true;
-        let ubi = (row.getAttribute('data-ubicacion') || '').toLowerCase();
-        if (filtroSem === 'base') {
-            matchSem = ubi === 'base' || textoFila.includes('en base');
-        } else if (filtroSem === 'verde') {
-            matchSem = dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
-        } else if (filtroSem === 'amarillo') {
-            matchSem = (dias >= 0 && dias <= 7) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo');
-        } else if (filtroSem === 'rojo') {
-            matchSem = isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente');
+
+        // B. Filtro Card (Semáforo)
+        let matchCard = true;
+        if (filtroCard === 'verde') {
+            matchCard = dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente') && dias !== -9999;
+        } else if (filtroCard === 'amarillo') {
+            matchCard = (dias >= 0 && dias <= 7 && dias !== -9999) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo');
+        } else if (filtroCard === 'rojo') {
+            matchCard = isNaN(dias) || dias < 0 || dias === -9999 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente');
         }
 
-        if (matchTxt && matchSem) {
+        // C. Filtro Ubicación (Todos vs En Base)
+        let matchUbi = true;
+        if (filtroUbi === 'base') {
+            matchUbi = ubi === 'base' || textoFila.includes('en base');
+        }
+
+        if (matchTxt && matchCard && matchUbi) {
             row.style.display = '';
             if (!isHistorialStatus) {
                 let mot = row.getAttribute('data-motor') || '';
                 let esMotora = mot.toUpperCase().trim() === 'MOTORA';
-                if (dias >= 0) {
+                if (dias >= 0 && dias !== -9999) {
                     cntTotalVig++;
                     if (esMotora) cntMotVig++; else cntNoMotVig++;
                 } else {
@@ -869,18 +895,22 @@ function filtrarStatusAvanzado() {
         let dias = parseInt(card.getAttribute('data-dias'));
 
         let matchTxt = (!txt || textoCard.includes(txt));
-        let matchSem = true;
-        if (filtroSem === 'base') {
-            matchSem = ubi === 'base' || textoCard.includes('en base');
-        } else if (filtroSem === 'verde') {
-            matchSem = dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
-        } else if (filtroSem === 'amarillo') {
-            matchSem = (dias >= 0 && dias <= 7) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo');
-        } else if (filtroSem === 'rojo') {
-            matchSem = isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente');
+
+        let matchCard = true;
+        if (filtroCard === 'verde') {
+            matchCard = dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente') && dias !== -9999;
+        } else if (filtroCard === 'amarillo') {
+            matchCard = (dias >= 0 && dias <= 7 && dias !== -9999) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo');
+        } else if (filtroCard === 'rojo') {
+            matchCard = isNaN(dias) || dias < 0 || dias === -9999 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente');
         }
 
-        card.style.display = (matchTxt && matchSem) ? '' : 'none';
+        let matchUbi = true;
+        if (filtroUbi === 'base') {
+            matchUbi = ubi === 'base' || textoCard.includes('en base');
+        }
+
+        card.style.display = (matchTxt && matchCard && matchUbi) ? '' : 'none';
     });
 
     // 3. Actualizar KPIs Bento
