@@ -187,16 +187,72 @@ window.dispRenderizarSegmentedEmpresas = function () {
     container.innerHTML = html;
 };
 
-// ── Actualizar Métricas Superiores (Bento KPIs de Flota Real) ─────
+// ── Actualizar Métricas Superiores (Bento KPIs de Flota Real Dinámicos) ──
 window.dispActualizarKPIs = function () {
-    const todasLasPlacas = _dispExtraerPlacas(window.dispDatos || [], false);
-    const total = todasLasPlacas.length;
+    const filtroEmp = window._dispFiltroEmpresa || 'TODAS';
+    const q = (document.getElementById('dispBuscador')?.value || '').toLowerCase().trim();
 
+    const placas = [];
+    (window.dispDatos || []).forEach(d => {
+        const empPrincipal = (d.empresa || d.cliente || '').trim();
+
+        // 1. Unidad Motora
+        if (d.placa_camion) {
+            const pCamion = {
+                placa: d.placa_camion,
+                es_motora: true,
+                estado: d.estado || 'En Base',
+                empresa: empPrincipal,
+                marca: d.marca || '',
+                conductor: d.conductor_asignado || '',
+                observaciones: d.observaciones || '',
+                sub_tipo: d.sub_tipo || d.tipo_unidad || 'Camión'
+            };
+            let include = true;
+            if (filtroEmp !== 'TODAS') {
+                const empU = pCamion.empresa.toUpperCase();
+                if (empU !== filtroEmp.toUpperCase() && !empU.includes(filtroEmp.toUpperCase())) include = false;
+            }
+            if (q) {
+                const matches = [pCamion.placa, pCamion.sub_tipo, pCamion.conductor, pCamion.marca, pCamion.empresa, pCamion.estado, pCamion.observaciones]
+                    .some(v => String(v).toLowerCase().includes(q));
+                if (!matches) include = false;
+            }
+            if (include) placas.push(pCamion);
+        }
+
+        // 2. Unidad Carreta / Remolque (hereda la empresa de la unidad motora)
+        if (d.placa_carreta) {
+            const pCarreta = {
+                placa: d.placa_carreta,
+                es_motora: false,
+                estado: d.estado_carreta || d.estado || 'En Base',
+                empresa: empPrincipal,
+                marca: d.marca_carreta || d.marca || '',
+                conductor: d.conductor_asignado || '',
+                observaciones: d.observaciones || '',
+                sub_tipo: d.sub_tipo_carreta || d.sub_tipo || 'Carreta'
+            };
+            let include = true;
+            if (filtroEmp !== 'TODAS') {
+                const empU = pCarreta.empresa.toUpperCase();
+                if (empU !== filtroEmp.toUpperCase() && !empU.includes(filtroEmp.toUpperCase())) include = false;
+            }
+            if (q) {
+                const matches = [pCarreta.placa, pCarreta.sub_tipo, pCarreta.conductor, pCarreta.marca, pCarreta.empresa, pCarreta.estado, pCarreta.observaciones]
+                    .some(v => String(v).toLowerCase().includes(q));
+                if (!matches) include = false;
+            }
+            if (include) placas.push(pCarreta);
+        }
+    });
+
+    const total = placas.length;
     let enBase = 0;
     let enRuta = 0;
     let enMant = 0;
 
-    todasLasPlacas.forEach(p => {
+    placas.forEach(p => {
         const est = (p.estado || 'En Base').toLowerCase();
         if (est.includes('mant') || est.includes('taller')) enMant++;
         else if (est.includes('ruta')) enRuta++;
@@ -441,6 +497,9 @@ window.dispFiltrar = function () {
 
         return true;
     });
+
+    // Actualizar dinámicamente los KPIs superiores según empresa y filtros
+    window.dispActualizarKPIs();
 
     // Renderizar Tablero (Tabla + Mobile Cards)
     window.dispRenderizarTabla(filtrados);
