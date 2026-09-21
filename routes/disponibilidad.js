@@ -240,6 +240,7 @@ module.exports = function (db, logAudit) {
                                         marca: p.marca || (disp ? disp.marca : '') || '',
                                         capacidad_tanque: capTanque,
                                         tipo_unidad: p.tipo || 'Camión',
+                                        sub_tipo: p.sub_tipo || p.tipo || 'Camión',
                                         observaciones: observaciones,
                                         is_motora: true
                                     });
@@ -269,6 +270,7 @@ module.exports = function (db, logAudit) {
                                         marca: p.marca || (disp ? disp.marca : '') || '',
                                         capacidad_tanque: '—',
                                         tipo_unidad: p.tipo || 'Carreta',
+                                        sub_tipo: p.sub_tipo || p.tipo || 'Carreta',
                                         observaciones: disp ? disp.observaciones : (hasOT ? 'En Taller / OT Activa' : ''),
                                         is_motora: false
                                     });
