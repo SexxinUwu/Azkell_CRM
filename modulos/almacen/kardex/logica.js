@@ -184,16 +184,16 @@ window._kdxRenderKardex = function(res, item) {
     var movs      = res.movimientos || [];
     var stockBase = parseFloat(res.stock_base || 0);
     var fechaReg  = res.fecha_regularizacion || null;
-    var fechaRegStr = fechaReg ? _kdxFmtISO(fechaReg) : null;
+    var fechaRegTs = fechaReg ? new Date(fechaReg).getTime() : null;
 
-    // Separar pre y post regularización usando la fecha del movimiento
-    var movsPreReg  = fechaRegStr ? movs.filter(function(m) {
-        var mFecha = _kdxFmtISO(m.fecha);
-        return mFecha < fechaRegStr;
+    // Separar pre y post regularización usando la fecha/hora exacta del movimiento
+    var movsPreReg  = fechaRegTs ? movs.filter(function(m) {
+        var mTs = new Date(m.created_at || m.fecha).getTime();
+        return mTs < fechaRegTs;
     }) : [];
-    var movsPostReg = fechaRegStr ? movs.filter(function(m) {
-        var mFecha = _kdxFmtISO(m.fecha);
-        return mFecha >= fechaRegStr;
+    var movsPostReg = fechaRegTs ? movs.filter(function(m) {
+        var mTs = new Date(m.created_at || m.fecha).getTime();
+        return mTs >= fechaRegTs;
     }) : movs;
 
     // KPIs: solo movimientos post-regularización (o todos si no hay reg)
