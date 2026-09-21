@@ -268,24 +268,33 @@ window.dispCambiarVista = function (vista, btn) {
     const vistaTablero = document.getElementById('disp-vista-tablero');
     const vistaGraficos = document.getElementById('disp-vista-graficos');
     const kpiRow = document.getElementById('disp-kpi-row');
-    const subtiposContainer = document.getElementById('disp-subtipos-cards-container');
     const isMobile = window.innerWidth < 768;
 
     if (vista === 'graficos') {
         if (vistaTablero) vistaTablero.style.setProperty('display', 'none', 'important');
         if (vistaGraficos) vistaGraficos.style.setProperty('display', 'flex', 'important');
         if (kpiRow) kpiRow.style.setProperty('display', 'none', 'important');
-        if (subtiposContainer) subtiposContainer.style.removeProperty('display');
-        window.dispFiltrar();
+
+        const triggerRender = function() {
+            window.dispFiltrar();
+        };
+
+        if (typeof Chart === 'undefined' && typeof window.loadCharts === 'function') {
+            window.loadCharts().then(function() {
+                setTimeout(triggerRender, 30);
+            });
+        } else {
+            setTimeout(triggerRender, 30);
+        }
     } else {
         if (vistaGraficos) vistaGraficos.style.setProperty('display', 'none', 'important');
         if (vistaTablero) vistaTablero.style.setProperty('display', 'flex', 'important');
-        if (!isMobile) {
-            if (kpiRow) kpiRow.style.setProperty('display', 'flex', 'important');
-            if (subtiposContainer) subtiposContainer.style.setProperty('display', 'none', 'important');
-        } else {
-            if (kpiRow) kpiRow.style.setProperty('display', 'none', 'important');
-            if (subtiposContainer) subtiposContainer.style.removeProperty('display');
+        if (kpiRow) {
+            if (!isMobile) {
+                kpiRow.style.setProperty('display', 'flex', 'important');
+            } else {
+                kpiRow.style.setProperty('display', 'none', 'important');
+            }
         }
         window.dispFiltrar();
     }
@@ -437,12 +446,15 @@ window.dispFiltrar = function () {
     window.dispRenderizarTabla(filtrados);
     window.dispRenderizarCardsMobile(filtrados);
 
-    // Renderizar Gráficos y Cards por Sub Tipo
-    window.dispRenderizarGraficosSubTipos(filtrados);
+    // Renderizar Gráficos y Cards por Sub Tipo (solo cuando la vista activa es Gráficos)
+    if (window._dispVistaActiva === 'graficos') {
+        window.dispRenderizarGraficosSubTipos(filtrados);
+    }
 };
 
 // ── Renderizar Gráficos y Métricas por Sub Tipo (Imagen 3) ────────
 window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
+    if (window._dispVistaActiva !== 'graficos') return;
     const isMobile = window.innerWidth < 768;
 
     // Extraer placas individuales respetando los filtros activos (empresa, buscador, etc.)
@@ -557,16 +569,28 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
 
     // 3. Render Chart.js Grouped Bar Chart (Horizontal en Móvil para legibilidad perfecta | Vertical en Desktop)
     const canvas = document.getElementById('dispChartSubTipos');
-    if (canvas && typeof Chart !== 'undefined') {
-        if (window._dispChartInstance) {
-            window._dispChartInstance.destroy();
-            window._dispChartInstance = null;
-        }
+    if (!canvas) return;
 
-        const chartWrapper = document.getElementById('disp-chart-container-wrapper');
-        if (chartWrapper) {
-            chartWrapper.style.minHeight = isMobile ? '400px' : '340px';
+    if (typeof Chart === 'undefined') {
+        if (typeof window.loadCharts === 'function') {
+            window.loadCharts().then(function() {
+                if (window._dispVistaActiva === 'graficos') {
+                    window.dispRenderizarGraficosSubTipos(datosFiltrados);
+                }
+            });
         }
+        return;
+    }
+
+    if (window._dispChartInstance) {
+        window._dispChartInstance.destroy();
+        window._dispChartInstance = null;
+    }
+
+    const chartWrapper = document.getElementById('disp-chart-container-wrapper');
+    if (chartWrapper) {
+        chartWrapper.style.minHeight = isMobile ? '400px' : '340px';
+    }
 
         const displaySubTipos = window._dispFiltroSubTipo !== 'TODOS' 
             ? subTipos.filter(st => st === window._dispFiltroSubTipo)
@@ -718,7 +742,6 @@ window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
                 }
             }
         });
-    }
 };
 
 // ── Renderizar Filas de la Tabla (Desktop) ────────────────────────
