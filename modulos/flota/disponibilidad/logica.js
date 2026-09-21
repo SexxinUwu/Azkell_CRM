@@ -5,7 +5,8 @@
 window.dispDatos = [];
 window.dispPlacas = [];
 window.dispConductores = [];
-window._dispFiltroEstadoActivo = 'TODOS';
+window._dispFiltroCard = 'TODOS';
+window._dispFiltroEmpresa = 'TODAS';
 window._dispItemEliminarId = null;
 
 // ── Cargar Datos del Servidor ─────────────────────────────────────
@@ -57,6 +58,7 @@ window.dispCargarDatos = async function (forzarRefresh = false) {
         window.dispPlacas = Array.isArray(resPlacas) ? resPlacas : (resPlacas.data || []);
         window.dispConductores = Array.isArray(resCond) ? resCond : (resCond.data || []);
 
+        window.dispRenderizarSegmentedEmpresas();
         window.dispActualizarKPIs();
         window.dispFiltrar();
     } catch (err) {
@@ -78,6 +80,31 @@ window.dispCargarDatos = async function (forzarRefresh = false) {
             `;
         }
     }
+};
+
+// ── Renderizar Botones Segmentados de Empresas Dinámicamente ──────
+window.dispRenderizarSegmentedEmpresas = function () {
+    const container = document.getElementById('btn-group-empresas-disp');
+    if (!container) return;
+
+    const empresasSet = new Set();
+    (window.dispDatos || []).forEach(d => {
+        const emp = (d.empresa || d.cliente || '').trim();
+        if (emp) empresasSet.add(emp);
+    });
+
+    const empresas = Array.from(empresasSet).sort();
+
+    let html = `<button type="button" class="ck-segment-item ${window._dispFiltroEmpresa === 'TODAS' ? 'active' : ''}" data-empresa="TODAS" onclick="window.dispFiltrarPorEmpresa('TODAS', this)">Todas</button>`;
+
+    empresas.forEach(emp => {
+        let shortName = emp.replace(/S\.A\.C\.?/i, '').replace(/S\.A\.?/i, '').trim();
+        if (!shortName) shortName = emp;
+        const isActive = window._dispFiltroEmpresa === emp ? 'active' : '';
+        html += `<button type="button" class="ck-segment-item ${isActive}" data-empresa="${_dispEsc(emp)}" onclick="window.dispFiltrarPorEmpresa('${_dispEsc(emp)}', this)">${_dispEsc(shortName)}</button>`;
+    });
+
+    container.innerHTML = html;
 };
 
 // ── Actualizar Métricas Superiores (Bento KPIs) ───────────────────
@@ -107,28 +134,63 @@ window.dispActualizarKPIs = function () {
     setKpi('disp-kpi-mant', enMant);
 };
 
-// ── Filtros por Segmented Pill ────────────────────────────────────
-window.dispFiltrarPorEstado = function (estado, el) {
-    window._dispFiltroEstadoActivo = estado;
-    document.querySelectorAll('#btn-group-estados-disp .ck-segment-item').forEach(p => p.classList.remove('active'));
-    if (el) el.classList.add('active');
+// ── Filtro Nivel 1: Click en Cards Superiores (Estado) ─────────────
+window.dispFiltrarPorCard = function (estado, el) {
+    window._dispFiltroCard = estado || 'TODOS';
+    // Al seleccionar cualquier card, el filtro inferior de empresas se resetea a "Todas" por defecto
+    window._dispFiltroEmpresa = 'TODAS';
+
+    // Actualizar clase activa en cards superiores
+    document.querySelectorAll('#disponibilidad-app .ck-kpi-card').forEach(function(card) {
+        var cardId = 'disp-kpi-card-' + (estado === 'En Base' ? 'base' : (estado === 'En Ruta' ? 'ruta' : (estado === 'En Mantenimiento' ? 'mant' : 'total')));
+        card.classList.toggle('active', card.id === cardId);
+    });
+
+    // Resetear segmented control inferior a "Todas"
+    document.querySelectorAll('#btn-group-empresas-disp .ck-segment-item').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-empresa') === 'TODAS');
+    });
+
+    window.dispFiltrar();
+};
+
+window.dispFiltrarPorEstado = window.dispFiltrarPorCard;
+
+// ── Filtro Nivel 2: Click en Botones Segmentados (Empresa) ────────
+window.dispFiltrarPorEmpresa = function (empresa, btn) {
+    window._dispFiltroEmpresa = empresa || 'TODAS';
+
+    // Actualizar clase activa en segmented control inferior
+    document.querySelectorAll('#btn-group-empresas-disp .ck-segment-item').forEach(function(b) {
+        b.classList.toggle('active', b === btn || b.getAttribute('data-empresa') === empresa);
+    });
+
     window.dispFiltrar();
 };
 
 // ── Filtrado y Render (Desktop + Móvil) ───────────────────────────
 window.dispFiltrar = function () {
     const q = (document.getElementById('dispBuscador')?.value || '').toLowerCase().trim();
-    const filtroEstado = window._dispFiltroEstadoActivo;
+    const filtroCard = window._dispFiltroCard || 'TODOS';
+    const filtroEmp = window._dispFiltroEmpresa || 'TODAS';
 
     const filtrados = (window.dispDatos || []).filter(item => {
-        // Filtro por Estado
-        if (filtroEstado !== 'TODOS') {
-            if (filtroEstado === 'En Base' && item.estado !== 'En Base') return false;
-            if (filtroEstado === 'En Ruta' && item.estado !== 'En Ruta') return false;
-            if (filtroEstado === 'En Mantenimiento' && item.estado !== 'En Mantenimiento') return false;
+        // Filtro 1: Card Superior (Estado)
+        if (filtroCard !== 'TODOS') {
+            if (filtroCard === 'En Base' && item.estado !== 'En Base') return false;
+            if (filtroCard === 'En Ruta' && item.estado !== 'En Ruta') return false;
+            if (filtroCard === 'En Mantenimiento' && item.estado !== 'En Mantenimiento') return false;
         }
 
-        // Filtro de Búsqueda
+        // Filtro 2: Empresa Segmentada
+        if (filtroEmp !== 'TODAS') {
+            const itemEmp = (item.empresa || item.cliente || '').trim().toUpperCase();
+            if (itemEmp !== filtroEmp.toUpperCase() && !itemEmp.includes(filtroEmp.toUpperCase())) {
+                return false;
+            }
+        }
+
+        // Filtro 3: Buscador Universal
         if (q) {
             const matches = [
                 item.placa_camion || '',
@@ -137,6 +199,8 @@ window.dispFiltrar = function () {
                 item.marca || '',
                 item.tipo_unidad || '',
                 item.estado || '',
+                item.empresa || '',
+                item.cliente || '',
                 item.observaciones || '',
                 item.capacidad_tanque || ''
             ].some(val => String(val).toLowerCase().includes(q));

@@ -2,14 +2,17 @@
 
 ## 1. Diseño 1:1 Replicado de Reporte de Fallas
 - **Encabezado y Acciones**: Icono en contenedor blanco con sombra suave, tipografía limpia, botones de acción (`[Recargar]`, `[Resumen Flota]`, `[Exportar Excel]`, `[+ Registrar Unidad]`).
-- **4 Cards Bento KPIs**:
-  - `TOTAL FLOTA` (Azul / Collection)
-  - `EN BASE` (Verde / Geo-alt)
-  - `EN RUTA` (Azul claro / Cursor)
-  - `EN MANTENIMIENTO` (Rojo / Tools)
-- **Buscador & Apple Segmented Control**:
+- **4 Cards Bento KPIs (Clickeables)**:
+  - `TOTAL FLOTA` (Azul / Collection) -> Muestra todas las unidades
+  - `EN BASE` (Verde / Geo-alt) -> Filtra unidades en base
+  - `EN RUTA` (Azul claro / Cursor) -> Filtra unidades en ruta
+  - `EN MANTENIMIENTO` (Rojo / Tools) -> Filtra unidades en mantenimiento / taller
+- **Buscador & Apple Segmented Control por Empresas**:
   - Buscador universal `.ck-apple-search`.
-  - Filtro segmentado estilo Apple: `[Todos] [En Base] [En Ruta] [En Mantenimiento]`.
+  - Control segmentado dinámico con las empresas de la flota: `[Todas] [MARSISA] [ROSYMAR] [TRAHESA] ...`.
+- **Doble Nivel de Filtrado Interactivo**:
+  - **Nivel 1 (Cards Bento)**: Al hacer clic en un card (ej. *En Base*, *En Ruta*, *En Mantenimiento*), se filtra el estado y el botón inferior se resetea automáticamente a `[ Todas ]`.
+  - **Nivel 2 (Empresas)**: Al seleccionar una empresa específica (ej. *MARSISA*), actúa como un sub-filtro mostrando solo las unidades de esa empresa bajo el estado seleccionado.
 - **Tabla Desktop**:
   - Encabezado `bg-light sticky-top shadow-2xs border-bottom`.
   - Columnas exactas en orden: `#`, `CAMIÓN`, `CARRETA`, `CONDUCTOR`, `ESTADO`, `MARCA`, `CAPACIDAD DE TANQUE`, `TIPO UNIDAD`, `OBSERVACIONES`, `ACCIONES`.
@@ -21,11 +24,3 @@
   - Botón Flotante **FAB (+)** en la esquina inferior derecha en vista móvil.
 - **Formulario Modal Drawer Flotante**:
   - Formulario que sube desde abajo (`ck-floating-drawer-dialog`) idéntico a Reporte de Fallas, con tarjetas interiores blancas, etiquetas estilizadas y autocompletado inteligente.
-
-## 2. Lógica de Acoplamiento y Mantenimiento
-- Las columnas ahora se llaman estrictamente **CAMIÓN** y **CARRETA**.
-- **En CAMIÓN**: Solo unidades motoras (Tractos, Camiones, Volquetes, Furgones, Cisternas).
-- **En CARRETA**: Solo unidades no motoras (Semirremolques, Carretas, Plataformas, Tanques).
-- **Acoplamiento en Taller / OTs**:
-  - Si un camión y una carreta ingresaron juntos a taller con OTs (ejemplo: `BDJ729` con `BHV971` y conductor `JUAN BENIGNO CAMARA GOMEZ`), aparecen **juntos acoplados en la misma fila** con estado `En Mantenimiento`.
-  - Si solo una unidad ingresó a taller, únicamente esa unidad figura en `En Mantenimiento`, manteniéndose la otra de forma independiente en su estado correspondiente.
