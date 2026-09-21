@@ -127,6 +127,27 @@
     transform: scale(0.99);
 }
 
+/* Sub Tipo Bento Cards (Dashboard Analítico) */
+.disp-subtipo-card {
+    border-radius: 18px;
+    padding: 1.1rem 1.25rem;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    user-select: none;
+}
+.disp-subtipo-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+.disp-subtipo-card.active {
+    box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px #0284c7 !important;
+}
+
 /* Dropdowns / Combo Panels */
 .disp-combo-panel {
     position: absolute;
@@ -383,50 +404,132 @@
     </div>
   </div>
 
-  <!-- ── 3. BARRA DE BÚSQUEDA Y FILTRO SEGMENTADO DE EMPRESAS ───────── -->
+  <!-- ── 3. BARRA DE BÚSQUEDA, CONMUTADOR DE VISTA Y FILTRO DE EMPRESAS ── -->
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-    <div class="position-relative flex-grow-1" style="max-width: 380px;">
+    <!-- Izquierda: Buscador Universal -->
+    <div class="position-relative flex-grow-1" style="max-width: 320px; min-width: 220px;">
       <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
-      <input type="text" id="dispBuscador" class="ck-apple-search" placeholder="Buscar por camión, carreta, conductor, marca..." oninput="window.dispFiltrar()">
+      <input type="text" id="dispBuscador" class="ck-apple-search" placeholder="Buscar camión, carreta, chofer..." oninput="window.dispFiltrar()">
     </div>
+
+    <!-- Centro: Conmutador Tablero / Gráficos (Estilo Taller) -->
+    <div class="ck-apple-segmented flex-shrink-0" id="disp-view-switcher">
+      <button type="button" class="ck-segment-item active" id="disp-tab-tablero" onclick="window.dispCambiarVista('tablero', this)">
+        <i class="bi bi-grid-fill me-1 text-primary"></i> Tablero
+      </button>
+      <button type="button" class="ck-segment-item" id="disp-tab-graficos" onclick="window.dispCambiarVista('graficos', this)">
+        <i class="bi bi-bar-chart-fill me-1 text-secondary"></i> Gráficos
+      </button>
+    </div>
+
+    <!-- Derecha: Filtro Segmentado de Empresas -->
     <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-empresas-disp">
       <button type="button" class="ck-segment-item active" data-empresa="TODAS" onclick="window.dispFiltrarPorEmpresa('TODAS', this)">Todas</button>
     </div>
   </div>
 
-  <!-- ── 4. VISTA MÓVIL NATIVA (CARDS) ──────────────────────────────── -->
-  <div id="dispCardContainer" class="d-md-none">
-    <div class="text-center py-5 text-muted">
-      <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando unidades...
+  <!-- ================================================================= -->
+  <!-- ── VISTA 1: TABLERO (TABLA FLUIDA + MÓVIL CARDS) ──────────────── -->
+  <!-- ================================================================= -->
+  <div id="disp-vista-tablero" class="d-flex flex-column flex-grow-1">
+    <!-- 4.1 VISTA MÓVIL NATIVA (CARDS) -->
+    <div id="dispCardContainer" class="d-md-none">
+      <div class="text-center py-5 text-muted">
+        <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando unidades...
+      </div>
+    </div>
+
+    <!-- 4.2 VISTA ESCRITORIO (TABLA FLUIDA) -->
+    <div id="disp-tabla-wrap" class="flex-grow-1 d-none d-md-block" style="min-height: 320px;">
+      <div class="custom-scrollbar overflow-x-auto" style="overflow-y: visible; min-height: 320px;">
+        <table class="table table-hover align-middle m-0" id="tablaDisponibilidad" style="font-size: 0.88rem;">
+          <thead class="bg-light sticky-top shadow-2xs border-bottom">
+            <tr class="text-secondary" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+              <th class="ps-4 py-3" style="width: 45px; white-space: nowrap;">#</th>
+              <th class="py-3" style="min-width: 110px; white-space: nowrap;">CAMIÓN</th>
+              <th class="py-3" style="min-width: 110px; white-space: nowrap;">CARRETA</th>
+              <th class="py-3" style="min-width: 180px; white-space: nowrap;">CONDUCTOR</th>
+              <th class="py-3 text-center" style="min-width: 130px; white-space: nowrap;">ESTADO</th>
+              <th class="py-3" style="min-width: 110px; white-space: nowrap;">MARCA</th>
+              <th class="py-3" style="min-width: 130px; white-space: nowrap;">CAPACIDAD DE TANQUE</th>
+              <th class="py-3" style="min-width: 120px; white-space: nowrap;">TIPO UNIDAD</th>
+              <th class="py-3" style="min-width: 160px; white-space: nowrap;">OBSERVACIONES</th>
+              <th class="pe-4 py-3 text-end" style="min-width: 90px; white-space: nowrap;">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody id="disp-table-body">
+            <tr>
+              <td colspan="10" class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2 text-primary" role="status"></div> Cargando disponibilidad de flota...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
-  <!-- ── 5. VISTA ESCRITORIO (TABLA FLUIDA) ─────────────────────────── -->
-  <div id="disp-tabla-wrap" class="flex-grow-1 d-none d-md-block" style="min-height: 320px;">
-    <div class="custom-scrollbar overflow-x-auto" style="overflow-y: visible; min-height: 320px;">
-      <table class="table table-hover align-middle m-0" id="tablaDisponibilidad" style="font-size: 0.88rem;">
-        <thead class="bg-light sticky-top shadow-2xs border-bottom">
-          <tr class="text-secondary" style="font-size: 0.75rem; letter-spacing: 0.5px;">
-            <th class="ps-4 py-3" style="width: 45px; white-space: nowrap;">#</th>
-            <th class="py-3" style="min-width: 110px; white-space: nowrap;">CAMIÓN</th>
-            <th class="py-3" style="min-width: 110px; white-space: nowrap;">CARRETA</th>
-            <th class="py-3" style="min-width: 180px; white-space: nowrap;">CONDUCTOR</th>
-            <th class="py-3 text-center" style="min-width: 130px; white-space: nowrap;">ESTADO</th>
-            <th class="py-3" style="min-width: 110px; white-space: nowrap;">MARCA</th>
-            <th class="py-3" style="min-width: 130px; white-space: nowrap;">CAPACIDAD DE TANQUE</th>
-            <th class="py-3" style="min-width: 120px; white-space: nowrap;">TIPO UNIDAD</th>
-            <th class="py-3" style="min-width: 160px; white-space: nowrap;">OBSERVACIONES</th>
-            <th class="pe-4 py-3 text-end" style="min-width: 90px; white-space: nowrap;">ACCIONES</th>
-          </tr>
-        </thead>
-        <tbody id="disp-table-body">
-          <tr>
-            <td colspan="10" class="text-center py-5 text-muted">
-              <div class="spinner-border spinner-border-sm me-2 text-primary" role="status"></div> Cargando disponibilidad de flota...
-            </td>
-          </tr>
-        </tbody>
-      </table>
+  <!-- ================================================================= -->
+  <!-- ── VISTA 2: GRÁFICOS & DASHBOARD ANALÍTICO (POR SUB TIPO) ─────── -->
+  <!-- ================================================================= -->
+  <div id="disp-vista-graficos" class="d-flex flex-column flex-grow-1" style="display: none !important;">
+    <!-- Título Header del Dashboard -->
+    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-primary-subtle text-primary fw-bold text-uppercase px-2.5 py-1" style="font-size:0.75rem; letter-spacing:0.5px;">Analytics Flota</span>
+        <h5 class="fw-bolder m-0 text-dark" style="letter-spacing: -0.2px;">
+          DISPONIBILIDAD DE FLOTA <span id="disp-graficos-empresa-titulo" class="text-primary">MARSISA</span>
+        </h5>
+      </div>
+      <small class="text-muted fw-semibold d-none d-md-inline">Distribución operativa en tiempo real por Sub Tipo de Unidad</small>
+    </div>
+
+    <!-- Fila de Cards de Sub Tipos de Unidades (Inspirado en la Imagen 3) -->
+    <div class="row g-2 g-md-3 mb-4" id="disp-subtipos-cards-container">
+      <!-- Inyectado dinámicamente con las cantidades y colores de cada Sub Tipo -->
+    </div>
+
+    <!-- Gráfico Principal de Barras por Sub Tipo y Estado Operativo -->
+    <div class="card border-0 shadow-2xs rounded-4 p-3 p-md-4 bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div>
+          <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+            <i class="bi bi-bar-chart-steps text-primary fs-5"></i>
+            Estado Operativo por Sub Tipo de Unidad
+          </h6>
+          <small class="text-muted" style="font-size:0.75rem;">Comparativa de unidades en Base, en Ruta y en Mantenimiento</small>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-light text-secondary border fw-bold px-2 py-1" style="font-size:0.75rem;" id="disp-graficos-subtipo-filtro-badge">Todos los Subtipos</span>
+        </div>
+      </div>
+      
+      <div style="position: relative; height: 350px; width: 100%;">
+        <canvas id="dispChartSubTipos"></canvas>
+      </div>
+    </div>
+
+    <!-- Tabla Resumen Matricial de Sub Tipos -->
+    <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+      <h6 class="fw-bold text-dark mb-2 small text-uppercase" style="letter-spacing:0.5px;">
+        <i class="bi bi-table text-primary me-1"></i> Resumen Numérico por Sub Tipo y Estado
+      </h6>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle m-0" id="disp-tabla-matriz-subtipos" style="font-size: 0.82rem;">
+          <thead class="table-light">
+            <tr>
+              <th class="fw-bold ps-3">SUB TIPO DE UNIDAD</th>
+              <th class="text-center fw-bold">TOTAL</th>
+              <th class="text-center fw-bold text-success">EN BASE</th>
+              <th class="text-center fw-bold text-primary">EN RUTA</th>
+              <th class="text-center fw-bold text-danger">EN MANTENIMIENTO</th>
+            </tr>
+          </thead>
+          <tbody id="disp-cuerpo-matriz-subtipos">
+            <!-- Render dinámico -->
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 

@@ -168,7 +168,82 @@ window.dispFiltrarPorEmpresa = function (empresa, btn) {
     window.dispFiltrar();
 };
 
-// ── Filtrado y Render (Desktop + Móvil) ───────────────────────────
+window._dispVistaActiva = 'tablero';
+window._dispFiltroSubTipo = 'TODOS';
+window._dispChartInstance = null;
+
+// ── Conmutador de Vista (Tablero vs Gráficos) ─────────────────────
+window.dispCambiarVista = function (vista, btn) {
+    window._dispVistaActiva = vista || 'tablero';
+
+    // Actualizar botones segmentados
+    document.querySelectorAll('#disp-view-switcher .ck-segment-item').forEach(function(b) {
+        b.classList.remove('active');
+    });
+    if (btn) btn.classList.add('active');
+    else {
+        const targetBtn = document.getElementById(vista === 'graficos' ? 'disp-tab-graficos' : 'disp-tab-tablero');
+        if (targetBtn) targetBtn.classList.add('active');
+    }
+
+    const vistaTablero = document.getElementById('disp-vista-tablero');
+    const vistaGraficos = document.getElementById('disp-vista-graficos');
+
+    if (vista === 'graficos') {
+        if (vistaTablero) vistaTablero.style.setProperty('display', 'none', 'important');
+        if (vistaGraficos) vistaGraficos.style.setProperty('display', 'flex', 'important');
+        window.dispFiltrar();
+    } else {
+        if (vistaGraficos) vistaGraficos.style.setProperty('display', 'none', 'important');
+        if (vistaTablero) vistaTablero.style.setProperty('display', 'flex', 'important');
+        window.dispFiltrar();
+    }
+};
+
+// ── Configuración de Colores e Iconos por Sub Tipo (Imagen 3) ─────
+window._dispSubTipoConfigs = {
+    'Camión':     { bg: 'linear-gradient(135deg, #0284c7, #0369a1)', color: '#0284c7', icon: 'bi-truck' },
+    'Carreta':    { bg: 'linear-gradient(135deg, #9333ea, #7e22ce)', color: '#9333ea', icon: 'bi-link-45deg' },
+    'Remolque':   { bg: 'linear-gradient(135deg, #15803d, #166534)', color: '#15803d', icon: 'bi-box-seam-fill' },
+    'Tracto':     { bg: 'linear-gradient(135deg, #ea580c, #c2410c)', color: '#ea580c', icon: 'bi-truck-flatbed' },
+    'Thermo King':{ bg: 'linear-gradient(135deg, #0891b2, #0e7490)', color: '#0891b2', icon: 'bi-snow2' },
+    'Furgón':     { bg: 'linear-gradient(135deg, #4f46e5, #4338ca)', color: '#4f46e5', icon: 'bi-box-fill' },
+    'Contenedor': { bg: 'linear-gradient(135deg, #0d9488, #115e59)', color: '#0d9488', icon: 'bi-archive-fill' },
+    'PLATAFORMA': { bg: 'linear-gradient(135deg, #d97706, #b45309)', color: '#d97706', icon: 'bi-layers-fill' }
+};
+
+function getSubTipoStyle(st) {
+    const norm = String(st || '').trim();
+    if (window._dispSubTipoConfigs[norm]) return window._dispSubTipoConfigs[norm];
+    const normUpper = norm.toUpperCase();
+    if (normUpper.includes('THERMO')) return window._dispSubTipoConfigs['Thermo King'];
+    if (normUpper.includes('TRACTO')) return window._dispSubTipoConfigs['Tracto'];
+    if (normUpper.includes('CAMION')) return window._dispSubTipoConfigs['Camión'];
+    if (normUpper.includes('CARRETA')) return window._dispSubTipoConfigs['Carreta'];
+    if (normUpper.includes('REMOLQUE')) return window._dispSubTipoConfigs['Remolque'];
+    if (normUpper.includes('FURGON')) return window._dispSubTipoConfigs['Furgón'];
+    if (normUpper.includes('CONTENEDOR')) return window._dispSubTipoConfigs['Contenedor'];
+    if (normUpper.includes('PLATAFORMA')) return window._dispSubTipoConfigs['PLATAFORMA'];
+    return { bg: 'linear-gradient(135deg, #64748b, #475569)', color: '#64748b', icon: 'bi-truck' };
+}
+
+// ── Filtro por Sub Tipo en Vista Gráficos ─────────────────────────
+window.dispFiltrarPorSubTipo = function (subtipo, el) {
+    if (window._dispFiltroSubTipo === subtipo) {
+        window._dispFiltroSubTipo = 'TODOS';
+    } else {
+        window._dispFiltroSubTipo = subtipo;
+    }
+
+    const badgeFiltro = document.getElementById('disp-graficos-subtipo-filtro-badge');
+    if (badgeFiltro) {
+        badgeFiltro.innerText = window._dispFiltroSubTipo === 'TODOS' ? 'Todos los Subtipos' : `Subtipo: ${window._dispFiltroSubTipo}`;
+    }
+
+    window.dispFiltrar();
+};
+
+// ── Filtrado y Render (Desktop + Móvil + Gráficos) ────────────────
 window.dispFiltrar = function () {
     const q = (document.getElementById('dispBuscador')?.value || '').toLowerCase().trim();
     const filtroCard = window._dispFiltroCard || 'TODOS';
@@ -198,6 +273,7 @@ window.dispFiltrar = function () {
                 item.conductor_asignado || '',
                 item.marca || '',
                 item.tipo_unidad || '',
+                item.sub_tipo || '',
                 item.estado || '',
                 item.empresa || '',
                 item.cliente || '',
@@ -211,8 +287,178 @@ window.dispFiltrar = function () {
         return true;
     });
 
+    // Renderizar Tablero (Tabla + Mobile Cards)
     window.dispRenderizarTabla(filtrados);
     window.dispRenderizarCardsMobile(filtrados);
+
+    // Renderizar Gráficos y Cards por Sub Tipo
+    if (window._dispVistaActiva === 'graficos') {
+        window.dispRenderizarGraficosSubTipos(filtrados);
+    }
+};
+
+// ── Renderizar Gráficos y Métricas por Sub Tipo (Imagen 3) ────────
+window.dispRenderizarGraficosSubTipos = function (datosFiltrados) {
+    const vistaGraficos = document.getElementById('disp-vista-graficos');
+    if (!vistaGraficos || vistaGraficos.style.display === 'none') return;
+
+    const baseList = datosFiltrados || (window.dispDatos || []);
+    const subTiposMap = {};
+
+    // Agrupar unidades por sub_tipo
+    baseList.forEach(d => {
+        const st = (d.sub_tipo || d.tipo_unidad || 'General').trim();
+        if (!subTiposMap[st]) subTiposMap[st] = { total: 0, base: 0, ruta: 0, mant: 0 };
+        subTiposMap[st].total++;
+        if (d.estado === 'En Mantenimiento') subTiposMap[st].mant++;
+        else if (d.estado === 'En Ruta') subTiposMap[st].ruta++;
+        else subTiposMap[st].base++;
+    });
+
+    const subTipos = Object.keys(subTiposMap).sort((a, b) => subTiposMap[b].total - subTiposMap[a].total);
+
+    // Actualizar Título con la Empresa Activa
+    const tituloEmp = document.getElementById('disp-graficos-empresa-titulo');
+    if (tituloEmp) {
+        tituloEmp.innerText = window._dispFiltroEmpresa === 'TODAS' ? 'TOTAL FLOTA' : window._dispFiltroEmpresa;
+    }
+
+    // 1. Render Sub Tipos Bento Cards (Imagen 3)
+    const cardsCont = document.getElementById('disp-subtipos-cards-container');
+    if (cardsCont) {
+        if (!subTipos.length) {
+            cardsCont.innerHTML = '<div class="col-12 text-center text-muted py-4"><i class="bi bi-inbox fs-2 d-block mb-1 text-secondary"></i>No hay sub tipos disponibles para los filtros seleccionados.</div>';
+        } else {
+            cardsCont.innerHTML = subTipos.map(st => {
+                const item = subTiposMap[st];
+                const cfg = getSubTipoStyle(st);
+                const isActive = window._dispFiltroSubTipo === st ? 'active' : '';
+                return `
+                    <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="disp-subtipo-card ${isActive}" style="background: ${cfg.bg};" onclick="window.dispFiltrarPorSubTipo('${_dispEsc(st)}', this)" title="Filtrar por ${st}">
+                            <div>
+                                <h2 class="fw-bolder m-0 text-white" style="font-size: 1.85rem; line-height: 1;">${item.total}</h2>
+                                <span class="fw-bold text-white text-uppercase d-block mt-1 text-truncate" style="font-size:0.73rem; letter-spacing:0.4px; max-width: 110px;">${_dispEsc(st)}</span>
+                            </div>
+                            <div style="font-size: 2.1rem; opacity: 0.88; line-height: 1;">
+                                <i class="bi ${cfg.icon}"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    // 2. Render Tabla Matriz Resumen
+    const tbodyMatriz = document.getElementById('disp-cuerpo-matriz-subtipos');
+    if (tbodyMatriz) {
+        let totGeneral = 0, totBase = 0, totRuta = 0, totMant = 0;
+        let htmlMatriz = '';
+        subTipos.forEach(st => {
+            const item = subTiposMap[st];
+            const cfg = getSubTipoStyle(st);
+            totGeneral += item.total;
+            totBase += item.base;
+            totRuta += item.ruta;
+            totMant += item.mant;
+            htmlMatriz += `
+                <tr>
+                    <td class="fw-bold ps-3">
+                        <span class="d-inline-flex align-items-center gap-2">
+                            <span class="p-1 rounded-2 text-white" style="background:${cfg.color}; font-size:0.75rem;"><i class="bi ${cfg.icon}"></i></span>
+                            ${_dispEsc(st)}
+                        </span>
+                    </td>
+                    <td class="text-center fw-bolder" style="font-size:0.88rem;">${item.total}</td>
+                    <td class="text-center text-success fw-bold">${item.base}</td>
+                    <td class="text-center text-primary fw-bold">${item.ruta}</td>
+                    <td class="text-center text-danger fw-bold">${item.mant}</td>
+                </tr>
+            `;
+        });
+        if (subTipos.length > 0) {
+            htmlMatriz += `
+                <tr class="table-light border-top border-2">
+                    <td class="fw-bolder ps-3 text-dark">TOTAL GENERAL</td>
+                    <td class="text-center fw-bolder text-dark" style="font-size:0.95rem;">${totGeneral}</td>
+                    <td class="text-center text-success fw-bolder">${totBase}</td>
+                    <td class="text-center text-primary fw-bolder">${totRuta}</td>
+                    <td class="text-center text-danger fw-bolder">${totMant}</td>
+                </tr>
+            `;
+        }
+        tbodyMatriz.innerHTML = htmlMatriz;
+    }
+
+    // 3. Render Chart.js Grouped Bar Chart
+    const canvas = document.getElementById('dispChartSubTipos');
+    if (canvas && typeof Chart !== 'undefined') {
+        if (window._dispChartInstance) {
+            window._dispChartInstance.destroy();
+            window._dispChartInstance = null;
+        }
+
+        const labels = ['En Base', 'En Ruta', 'En Mantenimiento'];
+        const displaySubTipos = window._dispFiltroSubTipo !== 'TODOS' 
+            ? subTipos.filter(st => st === window._dispFiltroSubTipo)
+            : subTipos;
+
+        const datasets = displaySubTipos.map(st => {
+            const item = subTiposMap[st];
+            const cfg = getSubTipoStyle(st);
+            return {
+                label: st,
+                data: [item.base, item.ruta, item.mant],
+                backgroundColor: cfg.color,
+                borderColor: cfg.color,
+                borderWidth: 1,
+                borderRadius: 8,
+                barPercentage: 0.75,
+                categoryPercentage: 0.7
+            };
+        });
+
+        window._dispChartInstance = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            font: { family: 'inherit', size: 12, weight: 'bold' },
+                            usePointStyle: true,
+                            boxWidth: 8
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleFont: { size: 13, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        padding: 10,
+                        cornerRadius: 8
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { weight: 'bold', size: 12 }, color: '#334155' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, precision: 0, font: { size: 11 }, color: '#64748b' },
+                        grid: { color: '#f1f5f9' }
+                    }
+                }
+            }
+        });
+    }
 };
 
 // ── Renderizar Filas de la Tabla (Desktop) ────────────────────────
