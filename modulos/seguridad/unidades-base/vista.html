@@ -487,12 +487,11 @@
                 <button type="button" class="sub-segment-item" data-empresa="ROSYMAR" onclick="window.subCambiarEmpresa('ROSYMAR')">Rosymar</button>
             </div>
 
-            <!-- Píldoras Cortes (Compacto para evitar desborde) -->
+            <!-- Píldoras Cortes (2 Cortes Oficiales: Día y Noche) -->
             <div class="sub-apple-segmented" id="sub-segmented-cortes">
                 <button type="button" class="sub-segment-item active" data-corte="ALL" onclick="window.subFiltrarCorteSegmented('ALL')">Todos</button>
-                <button type="button" class="sub-segment-item" data-corte="Corte 1" onclick="window.subFiltrarCorteSegmented('Corte 1')">Corte 1</button>
-                <button type="button" class="sub-segment-item" data-corte="Corte 2" onclick="window.subFiltrarCorteSegmented('Corte 2')">Corte 2</button>
-                <button type="button" class="sub-segment-item" data-corte="Corte 3" onclick="window.subFiltrarCorteSegmented('Corte 3')">Corte 3</button>
+                <button type="button" class="sub-segment-item" data-corte="Corte 1" onclick="window.subFiltrarCorteSegmented('Corte 1')">Corte 1 (05:00 - 16:59)</button>
+                <button type="button" class="sub-segment-item" data-corte="Corte 2" onclick="window.subFiltrarCorteSegmented('Corte 2')">Corte 2 (17:00 - 04:59)</button>
             </div>
         </div>
     </div>
@@ -566,9 +565,8 @@
                             <div class="col-12 col-md-6">
                                 <label class="sub-form-label">Corte Horario (*)</label>
                                 <select id="sub-form-corte" class="sub-form-select-clean" required>
-                                    <option value="Corte 1">Corte 1 (05:00 - 11:59)</option>
-                                    <option value="Corte 2">Corte 2 (12:00 - 16:59)</option>
-                                    <option value="Corte 3">Corte 3 (17:00 - 04:59)</option>
+                                    <option value="Corte 1">Corte 1 (05:00 a. m. – 04:59 p. m.)</option>
+                                    <option value="Corte 2">Corte 2 (05:00 p. m. – 04:59 a. m.)</option>
                                 </select>
                             </div>
                         </div>

@@ -95,7 +95,8 @@ module.exports = (db, logAudit) => {
 
     // ── POST /seguridad/unidades — Crear registro de salida ───────
     router.post('/seguridad/unidades', (req, res) => {
-        const { placa_tracto, placa_carreta, conductor, destino, orden_viaje,
+        const tdb = getDb(req);
+        const { placa_tracto, placa_carreta, conductor, destino, orden_viaje, tipo_salida,
                 salida_fecha, salida_hora, salida_km,
                 salida_template_json, salida_checklist_json, salida_has_alert,
                 salida_observaciones,
@@ -105,56 +106,79 @@ module.exports = (db, logAudit) => {
             return res.status(400).json({ error: 'placa_tracto y conductor son requeridos' });
         }
 
-        // Generar ID secuencial: CHECK-YYYY-NNNN
-        const year = new Date().getFullYear();
-        const prefix = `CHECK-${year}-`;
-        db.query(
-            `SELECT id FROM seg_unidades_registros WHERE id LIKE ? ORDER BY id DESC LIMIT 1`,
-            [prefix + '%'],
-            (errSeq, seqRows) => {
-                let nextNum = 1;
-                if (!errSeq && seqRows && seqRows.length) {
-                    // Extraer el número del último ID (ej: CHECK-2026-0003 → 3)
-                    const lastId = seqRows[0].id;
-                    const parts = lastId.split('-');
-                    const lastNum = parseInt(parts[parts.length - 1], 10);
-                    if (!isNaN(lastNum)) nextNum = lastNum + 1;
-                }
-                const regId = prefix + String(nextNum).padStart(4, '0');
+        const cleanT = (placa_tracto || '').trim().toUpperCase();
+        const cleanC = (placa_carreta || '').trim().toUpperCase();
 
-                const templateStr  = typeof salida_template_json  === 'string' ? salida_template_json  : JSON.stringify(salida_template_json  || null);
-                const checklistStr = typeof salida_checklist_json  === 'string' ? salida_checklist_json  : JSON.stringify(salida_checklist_json  || null);
+        // 1. Validar que la unidad no se encuentre actualmente EN RUTA
+        let checkSql = "SELECT id, placa_tracto, placa_carreta, conductor, salida_fecha, salida_hora FROM seg_unidades_registros WHERE estado = 'en_ruta' AND (placa_tracto = ?";
+        const checkParams = [cleanT];
+        if (cleanC) {
+            checkSql += " OR placa_carreta = ? OR placa_tracto = ?";
+            checkParams.push(cleanC, cleanC);
+        }
+        checkSql += ") LIMIT 1";
 
-                const userSalida = (req.user && req.user.nombre) || (req.user && req.user.email) || req.body.creado_por || 'Seguridad';
-
-                db.query(
-                    `INSERT INTO seg_unidades_registros
-                     (id, placa_tracto, placa_carreta, conductor, destino, orden_viaje, estado,
-                      salida_fecha, salida_hora, salida_km,
-                      salida_template_json, salida_checklist_json, salida_has_alert,
-                      salida_observaciones,
-                      firma_salida_conductor, firma_salida_vigilancia, creado_por)
-                     VALUES (?, ?, ?, ?, ?, ?, 'en_ruta', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [regId, placa_tracto.toUpperCase(), (placa_carreta || '').toUpperCase() || null,
-                     conductor, destino || null, orden_viaje || null,
-                     salida_fecha || null, salida_hora || null, salida_km || null,
-                     templateStr, checklistStr, salida_has_alert ? 1 : 0,
-                     salida_observaciones || null,
-                     firma_salida_conductor || null, firma_salida_vigilancia || null,
-                     userSalida],
-                    (err) => {
-                        if (err) return res.status(500).json({ error: err.message });
-                        if (typeof logAudit === 'function') logAudit(userSalida, 'seguridad', 'CREÓ', 'Registro unidad ' + regId);
-                        res.json({ ok: true, id: regId });
-                    }
-                );
+        tdb.query(checkSql, checkParams, (errDup, dupRows) => {
+            if (errDup) return res.status(500).json({ error: errDup.message });
+            if (dupRows && dupRows.length > 0) {
+                const dup = dupRows[0];
+                return res.status(400).json({
+                    error: `La unidad ya se encuentra EN RUTA con un viaje pendiente de retorno (Folio: ${dup.id}, Conductor: ${dup.conductor || 'N/A'}, Salida: ${dup.salida_fecha || ''} ${dup.salida_hora || ''}). Debe registrarse su retorno antes de iniciar una nueva salida.`
+                });
             }
-        );
+
+            // 2. Generar ID secuencial: CHECK-YYYY-NNNN
+            const year = new Date().getFullYear();
+            const prefix = `CHECK-${year}-`;
+            tdb.query(
+                `SELECT id FROM seg_unidades_registros WHERE id LIKE ? ORDER BY id DESC LIMIT 1`,
+                [prefix + '%'],
+                (errSeq, seqRows) => {
+                    let nextNum = 1;
+                    if (!errSeq && seqRows && seqRows.length) {
+                        const lastId = seqRows[0].id;
+                        const parts = lastId.split('-');
+                        const lastNum = parseInt(parts[parts.length - 1], 10);
+                        if (!isNaN(lastNum)) nextNum = lastNum + 1;
+                    }
+                    const regId = prefix + String(nextNum).padStart(4, '0');
+
+                    const templateStr  = typeof salida_template_json  === 'string' ? salida_template_json  : JSON.stringify(salida_template_json  || null);
+                    const checklistStr = typeof salida_checklist_json  === 'string' ? salida_checklist_json  : JSON.stringify(salida_checklist_json  || null);
+
+                    const userSalida = (req.user && req.user.nombre) || (req.user && req.user.email) || req.body.creado_por || 'Seguridad';
+
+                    tdb.query(
+                        `INSERT INTO seg_unidades_registros
+                         (id, placa_tracto, placa_carreta, conductor, destino, tipo_salida, orden_viaje, estado,
+                          salida_fecha, salida_hora, salida_km,
+                          salida_template_json, salida_checklist_json, salida_has_alert,
+                          salida_observaciones,
+                          firma_salida_conductor, firma_salida_vigilancia, creado_por)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, 'en_ruta', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [regId, cleanT, cleanC || null,
+                         conductor, destino || null, tipo_salida || 'RUTA', orden_viaje || null,
+                         salida_fecha || null, salida_hora || null, salida_km || null,
+                         templateStr, checklistStr, salida_has_alert ? 1 : 0,
+                         salida_observaciones || null,
+                         firma_salida_conductor || null, firma_salida_vigilancia || null,
+                         userSalida],
+                        (err) => {
+                            if (err) return res.status(500).json({ error: err.message });
+                            if (typeof logAudit === 'function') logAudit(userSalida, 'seguridad', 'CREÓ', 'Registro unidad ' + regId);
+                            res.json({ ok: true, id: regId });
+                        }
+                    );
+                }
+            );
+        });
     });
 
     // ── PUT /seguridad/unidades/:id — Actualizar (registrar retorno) ──
     router.put('/seguridad/unidades/:id', (req, res) => {
+        const tdb = getDb(req);
         const { retorno_fecha, retorno_hora, retorno_km,
+                retorno_conductor, retorno_placa_carreta,
                 retorno_template_json, retorno_checklist_json, retorno_has_alert,
                 salida_observaciones, retorno_observaciones,
                 firma_salida_conductor, firma_salida_vigilancia,
@@ -170,6 +194,8 @@ module.exports = (db, logAudit) => {
         if (retorno_fecha !== undefined)           { sets.push('retorno_fecha = ?');           params.push(retorno_fecha); }
         if (retorno_hora !== undefined)            { sets.push('retorno_hora = ?');            params.push(retorno_hora); }
         if (retorno_km !== undefined)              { sets.push('retorno_km = ?');              params.push(retorno_km); }
+        if (retorno_conductor !== undefined)       { sets.push('retorno_conductor = ?');       params.push(retorno_conductor || null); }
+        if (retorno_placa_carreta !== undefined)   { sets.push('retorno_placa_carreta = ?');   params.push((retorno_placa_carreta || '').toUpperCase().trim() || null); }
         if (retorno_template_json !== undefined)   {
             sets.push('retorno_template_json = ?');
             params.push(typeof retorno_template_json === 'string' ? retorno_template_json : JSON.stringify(retorno_template_json));
@@ -195,7 +221,7 @@ module.exports = (db, logAudit) => {
         if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
 
         params.push(req.params.id);
-        db.query('UPDATE seg_unidades_registros SET ' + sets.join(', ') + ' WHERE id = ?', params, (err, result) => {
+        tdb.query('UPDATE seg_unidades_registros SET ' + sets.join(', ') + ' WHERE id = ?', params, (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!result.affectedRows) return res.status(404).json({ error: 'Registro no encontrado' });
             if (typeof logAudit === 'function') logAudit(userRetorno, 'seguridad', 'MODIFICÓ', 'Unidad retorno ' + req.params.id);
@@ -351,9 +377,10 @@ module.exports = (db, logAudit) => {
 
     // ── GET /seguridad/template — Obtener plantilla ───────────────
     router.get('/seguridad/template', (req, res) => {
-        db.query('SELECT * FROM seg_checklist_templates WHERE activo = 1 ORDER BY orden ASC', (err, rows) => {
+        const tdb = getDb(req);
+        tdb.query('SELECT * FROM seg_checklist_templates WHERE activo = 1 ORDER BY orden ASC', (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            // Convertir a formato que espera el frontend: [{id, titulo, items:[{id,label}]}]
+            // Convertir a formato que espera el frontend: [{id, titulo, items:[{id, label, tiene_cantidad}]}]
             const template = rows.map(r => {
                 let items = [];
                 try { items = typeof r.items_json === 'string' ? JSON.parse(r.items_json) : (r.items_json || []); } catch(e) {}
@@ -365,11 +392,12 @@ module.exports = (db, logAudit) => {
 
     // ── PUT /seguridad/template — Guardar plantilla completa ──────
     router.put('/seguridad/template', (req, res) => {
-        const { template } = req.body; // Array de {id, titulo, items:[{id,label}]}
+        const tdb = getDb(req);
+        const { template } = req.body; // Array de {id, titulo, items:[{id,label,tiene_cantidad}]}
         if (!Array.isArray(template)) return res.status(400).json({ error: 'template debe ser un array' });
 
         // Estrategia: desactivar todo y re-insertar (upsert)
-        db.query('UPDATE seg_checklist_templates SET activo = 0', (err) => {
+        tdb.query('UPDATE seg_checklist_templates SET activo = 0', (err) => {
             if (err) return res.status(500).json({ error: err.message });
 
             if (!template.length) return res.json({ ok: true });
@@ -382,7 +410,7 @@ module.exports = (db, logAudit) => {
                 1 // activo
             ]);
 
-            db.query(
+            tdb.query(
                 `INSERT INTO seg_checklist_templates (template_id, titulo, items_json, orden, activo)
                  VALUES ?
                  ON DUPLICATE KEY UPDATE titulo = VALUES(titulo), items_json = VALUES(items_json), orden = VALUES(orden), activo = 1`,
@@ -1118,6 +1146,7 @@ module.exports = (db, logAudit) => {
         }
 
         const usuario = (req.user && (req.user.nombre || req.user.usuario)) || req.body.usuario || 'Seguridad';
+        const horaActual = new Date().toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
         tdb.query('SELECT placa, cliente, tipo, motora FROM placas', (errP, placasRows) => {
             if (errP) return res.status(500).json({ error: errP.message });
@@ -1170,6 +1199,7 @@ module.exports = (db, logAudit) => {
                                 inserts.push([
                                     fecha,
                                     corte,
+                                    horaActual,
                                     p.placa.trim().toUpperCase(),
                                     null,
                                     'Sin asignar',
@@ -1185,6 +1215,7 @@ module.exports = (db, logAudit) => {
                                 inserts.push([
                                     fecha,
                                     corte,
+                                    horaActual,
                                     null,
                                     p.placa.trim().toUpperCase(),
                                     'Sin asignar',
@@ -1198,18 +1229,18 @@ module.exports = (db, logAudit) => {
                     });
 
                     if (inserts.length === 0) {
-                        return res.json({ ok: true, mensaje: 'Todas las unidades ya están sincronizadas para este corte.', insertados: 0 });
+                        return res.json({ ok: true, mensaje: 'Todas las unidades ya están sincronizadas para este corte.', insertados: 0, hora: horaActual });
                     }
 
                     const sqlInsert = `
                         INSERT INTO seg_unidades_base 
-                        (fecha, corte, placa_camion, placa_carreta, conductor, zona, estado, observacion, usuario)
+                        (fecha, corte, corte_hora, placa_camion, placa_carreta, conductor, zona, estado, observacion, usuario)
                         VALUES ?
                     `;
 
                     tdb.query(sqlInsert, [inserts], (errIns, resIns) => {
                         if (errIns) return res.status(500).json({ error: errIns.message });
-                        res.json({ ok: true, mensaje: `Se sincronizaron ${inserts.length} unidades en base exitosamente.`, insertados: inserts.length });
+                        res.json({ ok: true, mensaje: `Se sincronizaron ${inserts.length} unidades en base exitosamente.`, insertados: inserts.length, hora: horaActual });
                     });
                 });
             });
@@ -1218,6 +1249,7 @@ module.exports = (db, logAudit) => {
 
     // ── Listar Unidades en Base (Con Filtros por Fecha, Corte y Búsqueda) ──
     router.get('/seguridad/unidades-base', (req, res) => {
+        const tdb = getDb(req);
         let sql = 'SELECT * FROM seg_unidades_base WHERE 1=1';
         const params = [];
 
@@ -1244,7 +1276,7 @@ module.exports = (db, logAudit) => {
 
         sql += ' ORDER BY id DESC';
 
-        db.query(sql, params, (err, rows) => {
+        tdb.query(sql, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true, data: rows || [] });
         });
@@ -1252,7 +1284,8 @@ module.exports = (db, logAudit) => {
 
     // ── Crear Registro de Unidad en Base ──────────────────────────
     router.post('/seguridad/unidades-base', (req, res) => {
-        const { fecha, corte, placa_camion, placa_carreta, conductor, zona, estado, observacion } = req.body;
+        const tdb = getDb(req);
+        const { fecha, corte, corte_hora, placa_camion, placa_carreta, conductor, zona, estado, observacion } = req.body;
         const pCamion = (placa_camion || '').trim().toUpperCase();
         const pCarreta = (placa_carreta || '').trim().toUpperCase();
 
@@ -1261,15 +1294,17 @@ module.exports = (db, logAudit) => {
         }
 
         const usuario = (req.user && (req.user.nombre || req.user.usuario)) || req.body.usuario || 'Seguridad';
+        const horaExacta = corte_hora || new Date().toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
         const sql = `
             INSERT INTO seg_unidades_base 
-            (fecha, corte, placa_camion, placa_carreta, conductor, zona, estado, observacion, usuario)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (fecha, corte, corte_hora, placa_camion, placa_carreta, conductor, zona, estado, observacion, usuario)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const params = [
             fecha,
             corte,
+            horaExacta,
             pCamion || null,
             pCarreta || null,
             (conductor || '').trim() || null,
@@ -1279,7 +1314,7 @@ module.exports = (db, logAudit) => {
             usuario
         ];
 
-        db.query(sql, params, (err, result) => {
+        tdb.query(sql, params, (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true, id: result.insertId, message: 'Registro guardado exitosamente.' });
         });
@@ -1287,38 +1322,45 @@ module.exports = (db, logAudit) => {
 
     // ── Actualizar Registro de Unidad en Base ─────────────────────
     router.put('/seguridad/unidades-base/:id', (req, res) => {
+        const tdb = getDb(req);
         const id = req.params.id;
-        const { fecha, corte, placa_camion, placa_carreta, conductor, zona, estado, observacion } = req.body;
+        const { fecha, corte, corte_hora, placa_camion, placa_carreta, conductor, zona, estado, observacion } = req.body;
         const pCamion = (placa_camion || '').trim().toUpperCase();
         const pCarreta = (placa_carreta || '').trim().toUpperCase();
 
-        if (!fecha || !corte || (!pCamion && !pCarreta)) {
-            return res.status(400).json({ error: 'Fecha, Corte y al menos una Placa (Camión o Carreta) son obligatorios.' });
-        }
+        const sets = [];
+        const params = [];
 
-        const usuario = (req.user && (req.user.nombre || req.user.usuario)) || req.body.usuario || 'Seguridad';
+        if (fecha !== undefined) { sets.push('fecha = ?'); params.push(fecha); }
+        if (corte !== undefined) { sets.push('corte = ?'); params.push(corte); }
+        if (corte_hora !== undefined) { sets.push('corte_hora = ?'); params.push(corte_hora); }
+        if (placa_camion !== undefined) { sets.push('placa_camion = ?'); params.push(pCamion || null); }
+        if (placa_carreta !== undefined) { sets.push('placa_carreta = ?'); params.push(pCarreta || null); }
+        if (conductor !== undefined) { sets.push('conductor = ?'); params.push((conductor || '').trim() || null); }
+        if (zona !== undefined) { sets.push('zona = ?'); params.push((zona || 'Base').trim()); }
+        if (estado !== undefined) { sets.push('estado = ?'); params.push((estado || 'Cargado').trim()); }
+        if (observacion !== undefined) { sets.push('observacion = ?'); params.push((observacion || '').trim() || null); }
 
-        const sql = `
-            UPDATE seg_unidades_base 
-            SET fecha = ?, corte = ?, placa_camion = ?, placa_carreta = ?, conductor = ?, zona = ?, estado = ?, observacion = ?, usuario = ?
-            WHERE id = ?
-        `;
-        const params = [
-            fecha,
-            corte,
-            pCamion || null,
-            pCarreta || null,
-            (conductor || '').trim() || null,
-            (zona || 'Base').trim(),
-            (estado || 'Cargado').trim(),
-            (observacion || '').trim() || null,
-            usuario,
-            id
-        ];
+        if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
 
-        db.query(sql, params, (err, result) => {
+        params.push(id);
+        const sql = `UPDATE seg_unidades_base SET ${sets.join(', ')} WHERE id = ?`;
+
+        tdb.query(sql, params, (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
+            if (!result.affectedRows) return res.status(404).json({ error: 'Registro no encontrado' });
             res.json({ ok: true, message: 'Registro actualizado exitosamente.' });
+        });
+    });
+
+    // ── Eliminar Registro de Unidad en Base ───────────────────────
+    router.delete('/seguridad/unidades-base/:id', (req, res) => {
+        const tdb = getDb(req);
+        const id = req.params.id;
+        tdb.query('DELETE FROM seg_unidades_base WHERE id = ?', [id], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!result.affectedRows) return res.status(404).json({ error: 'Registro no encontrado' });
+            res.json({ ok: true, message: 'Registro eliminado exitosamente.' });
         });
     });
 
