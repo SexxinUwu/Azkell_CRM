@@ -13,18 +13,15 @@
     let _subDebounceTimeout = null;
 
     // ── Obtener Corte Automático según la Hora Actual ─────────────
-    // Corte 1: 05:00 a 11:59 (5am en adelante)
-    // Corte 2: 12:00 a 16:59 (medio día hasta las 5pm)
-    // Corte 3: 17:00 a 04:59 (5pm en adelante hasta las 5am)
+    // Corte 1 (Turno Día): 05:00 a 16:59 (5:00 am a 4:59 pm)
+    // Corte 2 (Turno Noche): 17:00 a 04:59 (5:00 pm a 4:59 am)
     window.subObtenerCorteActual = function() {
         const ahora = new Date();
         const hora = ahora.getHours();
-        if (hora >= 5 && hora < 12) {
+        if (hora >= 5 && hora < 17) {
             return 'Corte 1';
-        } else if (hora >= 12 && hora < 17) {
-            return 'Corte 2';
         } else {
-            return 'Corte 3';
+            return 'Corte 2';
         }
     };
 
@@ -380,9 +377,12 @@
             `;
 
             list.forEach(r => {
-                let badgeCorte = `<span class="badge-corte-1">${r.corte || 'Corte 1'}</span>`;
-                if (r.corte === 'Corte 2') badgeCorte = `<span class="badge-corte-2">Corte 2</span>`;
-                if (r.corte === 'Corte 3') badgeCorte = `<span class="badge-corte-3">Corte 3</span>`;
+                let textoCorte = r.corte || 'Corte 1';
+                if (r.corte_hora) {
+                    textoCorte += ` • ${r.corte_hora.substring(0, 5)}`;
+                }
+                let badgeCorte = `<span class="badge-corte-1">${textoCorte}</span>`;
+                if (r.corte === 'Corte 2') badgeCorte = `<span class="badge-corte-2">${textoCorte}</span>`;
                 if (r.esRuta) {
                     badgeCorte = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold" style="font-size:0.72rem;"><i class="bi bi-broadcast me-1"></i>En Ruta</span>`;
                 }

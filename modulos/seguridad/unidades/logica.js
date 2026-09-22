@@ -1445,20 +1445,15 @@ function _sguInitForm() {
             bannerBadge.style.background = '';
         }
         if (bannerTitle) bannerTitle.textContent = 'Salida Express de Compras Locales';
-        if (bannerDesc) bannerDesc.textContent = 'Solo complete los datos de asignación de unidad y odómetro. No requiere checklist ni firmas obligatorias.';
+        if (bannerDesc) bannerDesc.textContent = 'Complete los datos de la unidad, odómetro y fotos/evidencias si corresponde.';
         if (cardLeftTitle) cardLeftTitle.innerHTML = '<i class="bi bi-cart3 text-warning me-1"></i> Asignación de Unidad y Destino de Compras';
 
         if (secViaje) secViaje.classList.add('d-none');
         if (colLeft) {
-            colLeft.className = 'col-12 col-lg-8 mx-auto';
+            colLeft.className = 'col-12 col-lg-7';
         }
-        if (colRight) colRight.classList.add('d-none');
-        if (btnExpressWrap) btnExpressWrap.classList.remove('d-none');
-        if (btnExpress) {
-            btnExpress.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Registrar Salida de Compras';
-            btnExpress.className = 'btn btn-warning text-dark w-100 py-3 rounded-3 fw-bold shadow-sm';
-            btnExpress.style.background = '';
-        }
+        if (colRight) colRight.classList.remove('d-none');
+        if (btnExpressWrap) btnExpressWrap.classList.add('d-none');
 
         if (fDest) {
             fDest.value = 'COMPRAS LOCALES';
@@ -1483,20 +1478,15 @@ function _sguInitForm() {
             bannerBadge.style.background = '#7c3aed';
         }
         if (bannerTitle) bannerTitle.textContent = 'Salida a Taller Tercero / Externo';
-        if (bannerDesc) bannerDesc.textContent = 'Registro express de traslado a taller o mantenimiento externo con terceros.';
+        if (bannerDesc) bannerDesc.textContent = 'Registro de traslado a taller o mantenimiento externo con evidencias fotográficas.';
         if (cardLeftTitle) cardLeftTitle.innerHTML = '<i class="bi bi-tools text-purple me-1" style="color:#7c3aed;"></i> Asignación de Unidad y Taller Tercero';
 
         if (secViaje) secViaje.classList.add('d-none');
         if (colLeft) {
-            colLeft.className = 'col-12 col-lg-8 mx-auto';
+            colLeft.className = 'col-12 col-lg-7';
         }
-        if (colRight) colRight.classList.add('d-none');
-        if (btnExpressWrap) btnExpressWrap.classList.remove('d-none');
-        if (btnExpress) {
-            btnExpress.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Registrar Salida a Taller Tercero';
-            btnExpress.className = 'btn w-100 py-3 rounded-3 fw-bold shadow-sm text-white';
-            btnExpress.style.background = '#7c3aed';
-        }
+        if (colRight) colRight.classList.remove('d-none');
+        if (btnExpressWrap) btnExpressWrap.classList.add('d-none');
 
         if (fDest) {
             fDest.value = 'TALLER TERCERO / MANTENIMIENTO';
@@ -1550,8 +1540,26 @@ function _sguInitForm() {
         }, 120);
     }
 
+    _sguRenderChecklist();
     window._sguCheckFormReady();
 }
+
+window._sguVerificarUnidadEnRuta = function(placaTracto, placaCarreta) {
+    var pT = (placaTracto || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    var pC = (placaCarreta || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!pT && !pC) return null;
+
+    var enRuta = (_sguRecords || []).find(function(r) {
+        if (r.estado !== 'en_ruta') return false;
+        var rT = (r.placa_tracto || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        var rC = (r.placa_carreta || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (pT && (rT === pT || rC === pT)) return true;
+        if (pC && (rT === pC || rC === pC)) return true;
+        return false;
+    });
+
+    return enRuta || null;
+};
 
 window._sguCheckFormReady = function() {
     if (_sguView === 'detail' && _sguEditMode === 'retorno') {
@@ -1561,7 +1569,7 @@ window._sguCheckFormReady = function() {
 
     var tipo = _sguEditMode || 'salida';
     var photosList = _sguPhotos[tipo] || [];
-    var chkCount = Object.keys(_sguChecklist).length;
+    var chkCount = Object.keys(_sguChecklist).filter(function(k){ return !k.endsWith('_cant'); }).length;
     var totalItems = 0;
     (_sguGlobalTemplate || []).forEach(function(cat) { totalItems += (cat.items || []).length; });
 
@@ -1574,7 +1582,7 @@ window._sguCheckFormReady = function() {
             btnInsp.classList.add('done');
             if (descInsp) descInsp.textContent = 'Checklist OK & ' + photosList.length + ' foto(s) adjunta(s)';
         } else if (chkCount > 0 || photosList.length > 0) {
-            btnInsp.innerHTML = chkCount + ' ítems / ' + photosList.length + ' fotos';
+            btnInsp.innerHTML = (chkCount > 0 ? chkCount + ' ítems' : '') + (chkCount > 0 && photosList.length > 0 ? ' / ' : '') + (photosList.length > 0 ? photosList.length + ' fotos' : '');
             btnInsp.classList.add('done');
             if (descInsp) descInsp.textContent = chkCount + ' ítems marcados & ' + photosList.length + ' foto(s)';
         } else {
@@ -1584,9 +1592,59 @@ window._sguCheckFormReady = function() {
         }
     }
 
+    // Validación de Unidad En Ruta
+    var pInput = ((document.getElementById('sgu-f-placa') || {}).value || '').trim();
+    var cInput = ((document.getElementById('sgu-f-carreta') || {}).value || '').trim();
+    var recEnRuta = window._sguVerificarUnidadEnRuta(pInput, cInput);
+
+    var alertWrap = document.getElementById('sgu-alerta-en-ruta');
     var btnSave = document.getElementById('sgu-btn-save');
-    if (btnSave) {
-        btnSave.disabled = false;
+    var btnExp = document.getElementById('sgu-btn-save-express');
+
+    if (recEnRuta) {
+        var placaConflictiva = (recEnRuta.placa_tracto || pInput);
+        if (!alertWrap) {
+            var colLeft = document.getElementById('sgu-col-form-left');
+            if (colLeft) {
+                var div = document.createElement('div');
+                div.id = 'sgu-alerta-en-ruta';
+                div.className = 'alert alert-danger border-0 rounded-4 shadow-sm mb-3 d-flex align-items-center gap-3 p-3';
+                div.style.background = '#fef2f2';
+                div.style.color = '#991b1b';
+                div.innerHTML = '<i class="bi bi-exclamation-octagon-fill fs-3 text-danger shrink-0"></i>' +
+                    '<div>' +
+                    '<strong class="d-block mb-1" style="font-size:0.92rem;">⚠️ UNIDAD ACTUALMENTE EN RUTA</strong>' +
+                    '<div id="sgu-en-ruta-msg" style="font-size:0.84rem;line-height:1.4;"></div>' +
+                    '</div>';
+                colLeft.insertBefore(div, colLeft.firstChild);
+                alertWrap = div;
+            }
+        }
+        if (alertWrap) {
+            alertWrap.style.display = 'flex';
+            var msgEl = document.getElementById('sgu-en-ruta-msg');
+            if (msgEl) {
+                msgEl.innerHTML = 'La unidad <strong>' + placaConflictiva + '</strong> tiene una salida activa en ruta registrada el <strong>' + (recEnRuta.salida_fecha || '') + ' ' + (recEnRuta.salida_hora || '') + '</strong> con conductor <strong>' + (recEnRuta.conductor || '---') + '</strong> hacia <strong>' + (recEnRuta.destino || '---') + '</strong>.<br><span class="text-danger fw-bold">Debe registrar el retorno antes de autorizar una nueva salida.</span>';
+            }
+        }
+        if (btnSave) {
+            btnSave.disabled = true;
+            btnSave.title = 'Unidad actualmente en ruta pendiente de retorno';
+        }
+        if (btnExp) {
+            btnExp.disabled = true;
+            btnExp.title = 'Unidad actualmente en ruta pendiente de retorno';
+        }
+    } else {
+        if (alertWrap) alertWrap.style.display = 'none';
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.title = '';
+        }
+        if (btnExp) {
+            btnExp.disabled = false;
+            btnExp.title = '';
+        }
     }
 };
 
@@ -1609,7 +1667,7 @@ function _sguRenderChecklist() {
 
     var html = '<div class="alert alert-info border-0 rounded-3 mb-3 d-flex align-items-center gap-2" style="background:#eff6ff;color:#0369a1;font-size:0.85rem;">' +
         '<i class="bi bi-info-circle-fill fs-5"></i>' +
-        '<div>Marque cada componente del vehículo y suba las fotos de evidencia al final. Utilice <span class="badge bg-danger">X</span> en caso de detectar anomalías o daños.</div>' +
+        '<div>Marque cada componente del vehículo y suba las fotos de evidencia al final. Utilice <span class="badge bg-danger">X</span> en caso de detectar anomalías o daños. Puede desmarcar haciendo clic nuevamente.</div>' +
     '</div>';
 
     // 1. Ítems del Checklist Técnico
@@ -1625,12 +1683,27 @@ function _sguRenderChecklist() {
 
         (cat.items || []).forEach(function(item) {
             var val = _sguChecklist[item.id] || '';
-            html += '<div class="sgu-chk-row" data-chk-item="' + item.id + '">' +
-                '<span class="sgu-chk-label-text">' + item.label + '</span>' +
-                '<div class="d-flex gap-1.5 align-items-center">' +
+            var hasCant = !!item.tiene_cantidad;
+            var cantVal = _sguChecklist[item.id + '_cant'] !== undefined ? _sguChecklist[item.id + '_cant'] : (item.default_cantidad || 1);
+
+            html += '<div class="sgu-chk-row d-flex align-items-center justify-content-between gap-2" data-chk-item="' + item.id + '">' +
+                '<div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">' +
+                    '<span class="sgu-chk-label-text text-truncate">' + item.label + '</span>' +
+                '</div>' +
+                '<div class="d-flex align-items-center gap-2 shrink-0">';
+
+            if (hasCant) {
+                html += '<div class="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded-3 border">' +
+                    '<span class="text-secondary fw-bold" style="font-size:0.75rem;">Cant:</span>' +
+                    '<input type="number" min="0" max="999" class="sgu-form-input-clean text-center fw-bold text-dark p-0" style="width:48px;height:26px;font-size:0.85rem;border-radius:6px;" value="' + cantVal + '" oninput="window._sguSetCheckCant(\'' + item.id + '\', this.value)" onclick="this.select()">' +
+                '</div>';
+            }
+
+            html += '<div class="d-flex gap-1.5 align-items-center">' +
                     '<div class="sgu-chk-btn-circle x ' + (val==='mal'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'mal\')" title="Observado / Dañado"><i class="bi bi-x-lg"></i></div>' +
                     '<div class="sgu-chk-btn-circle na ' + (val==='na'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'na\')" title="No Aplica">N/A</div>' +
                     '<div class="sgu-chk-btn-circle ok ' + (val==='ok'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'ok\')" title="Conforme"><i class="bi bi-check-lg"></i></div>' +
+                '</div>' +
                 '</div>' +
             '</div>';
         });
@@ -1688,15 +1761,29 @@ function _sguRenderChecklist() {
 }
 
 window._sguSetCheck = function(itemId, valor) {
-    _sguChecklist[itemId] = valor;
-    var row = document.querySelector('[data-chk-item="' + itemId + '"]');
-    if (row) {
-        var btns = row.querySelectorAll('.sgu-chk-btn-circle');
-        btns.forEach(function(b) { b.classList.remove('active'); });
-        var target = row.querySelector('.sgu-chk-btn-circle.' + valor);
-        if (target) target.classList.add('active');
+    if (_sguChecklist[itemId] === valor) {
+        // Toggle OFF (desmarcar al hacer clic de nuevo)
+        delete _sguChecklist[itemId];
+        var row = document.querySelector('[data-chk-item="' + itemId + '"]');
+        if (row) {
+            var btns = row.querySelectorAll('.sgu-chk-btn-circle');
+            btns.forEach(function(b) { b.classList.remove('active'); });
+        }
+    } else {
+        _sguChecklist[itemId] = valor;
+        var row = document.querySelector('[data-chk-item="' + itemId + '"]');
+        if (row) {
+            var btns = row.querySelectorAll('.sgu-chk-btn-circle');
+            btns.forEach(function(b) { b.classList.remove('active'); });
+            var target = row.querySelector('.sgu-chk-btn-circle.' + valor);
+            if (target) target.classList.add('active');
+        }
     }
     window._sguCheckFormReady();
+};
+
+window._sguSetCheckCant = function(itemId, val) {
+    _sguChecklist[itemId + '_cant'] = val;
 };
 
 window._sguSetCatCheck = function(catId) {
@@ -1840,6 +1927,18 @@ async function _sguRenderDetail(recordId) {
         html += '<input type="number" class="sgu-form-input-clean" id="sgu-det-km-retorno" placeholder="Ingrese odómetro actual" oninput="window._sguCheckReturnReady()">';
         html += '</div>';
 
+        // Conductor y Carreta de Retorno (por defecto los de salida, editables)
+        html += '<div class="row g-2 mb-3">';
+        html += '<div class="col-12 col-sm-6">';
+        html += '<label class="sgu-form-label"><i class="bi bi-person-fill text-primary me-1"></i> Conductor de Retorno</label>';
+        html += '<input type="text" class="sgu-form-input-clean" id="sgu-det-ret-conductor" value="' + (rec.conductor || '') + '" placeholder="Nombre del conductor">';
+        html += '</div>';
+        html += '<div class="col-12 col-sm-6">';
+        html += '<label class="sgu-form-label"><i class="bi bi-truck-flatbed text-warning me-1"></i> Semirremolque / Carreta</label>';
+        html += '<input type="text" class="sgu-form-input-clean text-uppercase" id="sgu-det-ret-carreta" value="' + (rec.placa_carreta || '') + '" placeholder="Placa carreta (opcional)">';
+        html += '</div>';
+        html += '</div>';
+
         // Verificación e Inspección (Checklist y Evidencias 2 en 1)
         html += '<div class="mb-3">';
         html += '<div class="d-flex align-items-center gap-2 mb-2">';
@@ -1908,6 +2007,16 @@ async function _sguRenderDetail(recordId) {
         var kmRecorrido = (rec.retorno_km && rec.salida_km) ? (Number(rec.retorno_km) - Number(rec.salida_km)) : null;
         html += '<div class="col-6"><span class="sgu-form-label">Km Total Recorrido</span><div class="fw-bold text-primary fs-6">' + (kmRecorrido !== null ? kmRecorrido + ' km' : '---') + '</div></div>';
         html += '</div>';
+
+        // Mostrar Conductor y Carreta de Retorno si difieren o para claridad
+        if (rec.retorno_conductor || rec.retorno_placa_carreta) {
+            var diffCond = rec.retorno_conductor && rec.retorno_conductor !== rec.conductor;
+            var diffCarreta = rec.retorno_placa_carreta && rec.retorno_placa_carreta !== rec.placa_carreta;
+            html += '<div class="row g-2 mb-2">';
+            html += '<div class="col-12 col-sm-6"><span class="sgu-form-label">Conductor Retorno</span><div class="fw-bold text-dark fs-6">' + (rec.retorno_conductor || rec.conductor || '---') + (diffCond ? ' <small class="text-muted fst-italic">(Salió con: ' + rec.conductor + ')</small>' : '') + '</div></div>';
+            html += '<div class="col-12 col-sm-6"><span class="sgu-form-label">Carreta Retorno</span><div class="fw-bold text-dark fs-6">' + (rec.retorno_placa_carreta || rec.placa_carreta || '---') + (diffCarreta ? ' <small class="text-muted fst-italic">(Salió con: ' + (rec.placa_carreta || 'Sin carreta') + ')</small>' : '') + '</div></div>';
+            html += '</div>';
+        }
 
         // Mostrar Observaciones si existen
         var obsSalida = (rec.salida_observaciones || '').trim();
@@ -2426,14 +2535,29 @@ window._sguSaveRecord = function() {
 };
 
 window._sguSaveReturn = function() {
-    var km = document.getElementById('sgu-det-km-retorno').value.trim();
+    var km = (document.getElementById('sgu-det-km-retorno') || {}).value || '';
+    km = km.trim();
     var obsRetorno = ((document.getElementById('sgu-det-observaciones') || {}).value || '').trim();
+    var retConductor = ((document.getElementById('sgu-det-ret-conductor') || {}).value || '').trim();
+    var retCarreta = ((document.getElementById('sgu-det-ret-carreta') || {}).value || '').toUpperCase().trim();
+
+    if (!km || isNaN(km) || Number(km) <= 0) {
+        _sguToast('El Kilometraje de Llegada es OBLIGATORIO', 'bi-exclamation-triangle');
+        var elKm = document.getElementById('sgu-det-km-retorno');
+        if (elKm) {
+            elKm.focus();
+            elKm.classList.add('border-danger');
+            setTimeout(function() { elKm.classList.remove('border-danger'); }, 3000);
+        }
+        return;
+    }
 
     // Auto-completar ítems del checklist que el usuario no haya marcado
     (_sguGlobalTemplate || []).forEach(function(cat) {
         (cat.items || []).forEach(function(item) {
-            if (!_sguChecklist[item]) {
-                _sguChecklist[item] = 'bueno';
+            var itemId = item.id || item;
+            if (!_sguChecklist[itemId]) {
+                _sguChecklist[itemId] = 'ok';
             }
         });
     });
@@ -2456,6 +2580,8 @@ window._sguSaveReturn = function() {
         retorno_fecha: ts.date,
         retorno_hora: ts.time,
         retorno_km: km,
+        retorno_conductor: retConductor || null,
+        retorno_placa_carreta: retCarreta || null,
         retorno_template_json: _sguGlobalTemplate,
         retorno_checklist_json: _sguChecklist,
         retorno_has_alert: hasAlert,
@@ -2524,10 +2650,13 @@ window._sguRenderSettings = function() {
         html += '</div>';
 
         (cat.items || []).forEach(function(item) {
-            html += '<div class="d-flex align-items-center justify-content-between gap-2 mb-2 ps-3">';
-            html += '<i class="bi bi-dot fs-4 text-secondary"></i>';
+            html += '<div class="d-flex align-items-center justify-content-between gap-2 mb-2 ps-2 ps-md-3 flex-wrap flex-sm-nowrap">';
+            html += '<i class="bi bi-dot fs-4 text-secondary d-none d-sm-inline"></i>';
             html += '<input type="text" class="sgu-form-input-clean flex-grow-1" style="font-size:0.85rem;" value="' + item.label + '" onchange="window._sguUpdateSettingsItemLabel(\'' + cat.id + '\',\'' + item.id + '\', this.value)" placeholder="Nombre de Subcategoría / Ítem">';
-            html += '<button class="btn btn-sm btn-light text-secondary border" onclick="window._sguDelSettingsItem(\'' + cat.id + '\',\'' + item.id + '\')"><i class="bi bi-x"></i></button>';
+            html += '<label class="d-inline-flex align-items-center gap-1.5 text-secondary small user-select-none mb-0 px-2 py-1 rounded bg-light border" style="font-size:0.75rem;cursor:pointer;white-space:nowrap;">';
+            html += '<input type="checkbox" class="form-check-input mt-0" ' + (item.tiene_cantidad ? 'checked' : '') + ' onchange="window._sguUpdateSettingsItemTieneCantidad(\'' + cat.id + '\',\'' + item.id + '\', this.checked)">';
+            html += '<span class="fw-semibold">Pedir Cantidad</span></label>';
+            html += '<button class="btn btn-sm btn-light text-secondary border" onclick="window._sguDelSettingsItem(\'' + cat.id + '\',\'' + item.id + '\')" title="Eliminar ítem"><i class="bi bi-x-lg"></i></button>';
             html += '</div>';
         });
 
@@ -2551,6 +2680,13 @@ window._sguUpdateSettingsItemLabel = function(catId, itemId, val) {
     if (item) item.label = val;
 };
 
+window._sguUpdateSettingsItemTieneCantidad = function(catId, itemId, checked) {
+    var cat = _sguEditingTemplate.find(function(c) { return c.id === catId; });
+    if (!cat) return;
+    var item = (cat.items || []).find(function(i) { return i.id === itemId; });
+    if (item) item.tiene_cantidad = !!checked;
+};
+
 window._sguAddSettingsCat = function() {
     _sguEditingTemplate.push({ id: 'cat_' + Date.now(), titulo: 'Nueva Categoría', items: [] });
     _sguRenderSettings();
@@ -2565,7 +2701,7 @@ window._sguAddSettingsItem = function(catId) {
     var cat = _sguEditingTemplate.find(function(c) { return c.id === catId; });
     if (!cat) return;
     cat.items = cat.items || [];
-    cat.items.push({ id: 'i_' + Date.now(), label: 'Nuevo Ítem de Revisión' });
+    cat.items.push({ id: 'i_' + Date.now(), label: 'Nuevo Ítem de Revisión', tiene_cantidad: false });
     _sguRenderSettings();
 };
 window._sguDelSettingsItem = function(catId, itemId) {
@@ -2669,8 +2805,9 @@ window._sguVerDetalles = function(tipo) {
                         else if (valor === 'mal') badge = '<span class="badge bg-danger">OBSERVADO</span>';
                         else badge = '<span class="badge bg-light text-dark border">-</span>';
 
+                        var cantInfo = checklist[item.id + '_cant'] ? ' <span class="badge bg-light text-dark border ms-1" style="font-size:0.75rem;">Cant: ' + checklist[item.id + '_cant'] + '</span>' : '';
                         html += '<div class="d-flex justify-content-between align-items-center py-2 border-bottom border-light" style="font-size:0.88rem;">';
-                        html += '<span class="fw-semibold text-secondary">' + item.label + '</span>';
+                        html += '<span class="fw-semibold text-secondary">' + item.label + cantInfo + '</span>';
                         html += '<div>' + badge + '</div>';
                         html += '</div>';
                     });
@@ -2711,6 +2848,9 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     var hora = tipo === 'salida' ? rec.salida_hora : rec.retorno_hora;
     var km = tipo === 'salida' ? rec.salida_km : rec.retorno_km;
     var hasAlert = tipo === 'salida' ? rec.salida_has_alert : rec.retorno_has_alert;
+
+    var conductorFmt = (tipo === 'retorno' && rec.retorno_conductor) ? rec.retorno_conductor : (rec.conductor || '---');
+    var carretaFmt = (tipo === 'retorno' && rec.retorno_placa_carreta) ? rec.retorno_placa_carreta : (rec.placa_carreta || '---');
 
     var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || '';
     var ts = _sguTimestamp();
@@ -2783,7 +2923,7 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     // Column 1
     h += '<div class="divide-y-[1.5px] divide-slate-900" style="border-right:1.5px solid #0F172A;">';
     h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Nº Expediente:</span><span class="font-mono font-bold text-[#0284C7] text-[11px]">' + rec.id + '</span></div>';
-    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Conductor:</span><span class="font-bold text-slate-900 text-[10.5px] truncate max-w-[145px]">' + (rec.conductor || '---') + '</span></div>';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Conductor:</span><span class="font-bold text-slate-900 text-[10.5px] truncate max-w-[145px]">' + conductorFmt + '</span></div>';
     h += '<div class="px-2 py-1 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Fecha / Hora:</span><span class="font-mono font-medium text-slate-900">' + (fecha || '--') + ' ' + (hora || '') + '</span></div>';
     h += '</div>';
 
@@ -2801,7 +2941,7 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     var estadoBg = hasAlert ? 'bg-rose-50/70' : 'bg-emerald-50/50';
 
     h += '<div class="divide-y-[1.5px] divide-slate-900">';
-    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Placa Carreta:</span><span class="font-mono font-bold text-slate-900 text-[11px]">' + (rec.placa_carreta || '---') + '</span></div>';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Placa Carreta:</span><span class="font-mono font-bold text-slate-900 text-[11px]">' + carretaFmt + '</span></div>';
     h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Destino:</span><span class="font-bold text-slate-900 truncate max-w-[130px]">' + (rec.destino || '---') + '</span></div>';
     h += '<div class="px-2 py-1 flex items-center justify-between ' + estadoBg + '"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Estado:</span>' + estadoBadge + '</div>';
     h += '</div>';
@@ -2861,10 +3001,10 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     h += '<div class="p-2 bg-white">';
     h += '<div class="flex items-center gap-1.5 mb-1.5 font-bold text-slate-900 text-[10.5px] uppercase">';
     h += '<svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>';
-    h += '<span>CARRETA / REMOLQUE (' + (rec.placa_carreta || '---') + ')</span>';
+    h += '<span>CARRETA / REMOLQUE (' + carretaFmt + ')</span>';
     h += '</div>';
 
-    if (rec.placa_carreta) {
+    if (rec.placa_carreta || (tipo === 'retorno' && rec.retorno_placa_carreta)) {
         var hasSoatCarreta = !!(docC && docC.soat && docC.soat.fechaFmt);
         var hasRtCarreta   = !!(docC && docC.rt && docC.rt.fechaFmt);
 
@@ -2946,20 +3086,21 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
                     var valor = (checklist[item.id] || '---').toUpperCase();
                     var isMal = valor === 'MAL' || valor === 'NO CONFORME' || valor === 'OBS';
                     var isOk = valor === 'OK' || valor === 'CONFORME';
+                    var cantLabel = checklist[item.id + '_cant'] ? ' (Cant: ' + checklist[item.id + '_cant'] + ')' : '';
 
                     if (isMal) {
                         colHtml += '<div class="px-3 py-0.5 flex justify-between items-center bg-red-50/90 border-l-[3px] border-red-600" style="background:#FEF2F2;border-left:3px solid #DC2626;">';
-                        colHtml += '<span class="text-red-900 font-bold text-[10px]">' + item.label + '</span>';
+                        colHtml += '<span class="text-red-900 font-bold text-[10px]">' + item.label + cantLabel + '</span>';
                         colHtml += '<span class="text-[9px] font-extrabold text-white bg-red-600 px-2 py-0.5 rounded-md" style="background:#DC2626;">MAL</span>';
                         colHtml += '</div>';
                     } else if (isOk) {
                         colHtml += '<div class="px-3 py-0.5 flex justify-between items-center hover:bg-slate-50">';
-                        colHtml += '<span class="text-slate-800 text-[10px]">' + item.label + '</span>';
+                        colHtml += '<span class="text-slate-800 text-[10px]">' + item.label + cantLabel + '</span>';
                         colHtml += '<span class="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.2 rounded-md" style="background:#D1FAE5;color:#047857;">OK</span>';
                         colHtml += '</div>';
                     } else {
                         colHtml += '<div class="px-3 py-0.5 flex justify-between items-center hover:bg-slate-50">';
-                        colHtml += '<span class="text-slate-500 text-[10px]">' + item.label + '</span>';
+                        colHtml += '<span class="text-slate-500 text-[10px]">' + item.label + cantLabel + '</span>';
                         colHtml += '<span class="text-[9px] font-medium text-slate-500 bg-slate-100 px-2 py-0.2 rounded-md">' + valor + '</span>';
                         colHtml += '</div>';
                     }
