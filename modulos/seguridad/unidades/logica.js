@@ -1450,10 +1450,10 @@ function _sguInitForm() {
 
         if (secViaje) secViaje.classList.add('d-none');
         if (colLeft) {
-            colLeft.className = 'col-12 col-lg-7';
+            colLeft.className = 'col-12 col-lg-8 mx-auto';
         }
-        if (colRight) colRight.classList.remove('d-none');
-        if (btnExpressWrap) btnExpressWrap.classList.add('d-none');
+        if (colRight) colRight.classList.add('d-none');
+        if (btnExpressWrap) btnExpressWrap.classList.remove('d-none');
 
         if (fDest) {
             fDest.value = 'COMPRAS LOCALES';
@@ -1478,15 +1478,15 @@ function _sguInitForm() {
             bannerBadge.style.background = '#7c3aed';
         }
         if (bannerTitle) bannerTitle.textContent = 'Salida a Taller Tercero / Externo';
-        if (bannerDesc) bannerDesc.textContent = 'Registro de traslado a taller o mantenimiento externo con evidencias fotográficas.';
+        if (bannerDesc) bannerDesc.textContent = 'Registro de traslado a taller o mantenimiento externo.';
         if (cardLeftTitle) cardLeftTitle.innerHTML = '<i class="bi bi-tools text-purple me-1" style="color:#7c3aed;"></i> Asignación de Unidad y Taller Tercero';
 
         if (secViaje) secViaje.classList.add('d-none');
         if (colLeft) {
-            colLeft.className = 'col-12 col-lg-7';
+            colLeft.className = 'col-12 col-lg-8 mx-auto';
         }
-        if (colRight) colRight.classList.remove('d-none');
-        if (btnExpressWrap) btnExpressWrap.classList.add('d-none');
+        if (colRight) colRight.classList.add('d-none');
+        if (btnExpressWrap) btnExpressWrap.classList.remove('d-none');
 
         if (fDest) {
             fDest.value = 'TALLER TERCERO / MANTENIMIENTO';
@@ -1828,6 +1828,7 @@ async function _sguRenderDetail(recordId) {
     if (condEl)  condEl.textContent = (rec.conductor || 'Sin conductor') + ' • Destino: ' + (rec.destino || '---');
 
     var tipoS = _sguGetTipoSalida(rec);
+    var esRuta = (tipoS === 'RUTA');
 
     if (badgeEl) {
         if (isEnRuta) {
@@ -1870,10 +1871,14 @@ async function _sguRenderDetail(recordId) {
     html += '<div class="row g-3">';
 
     // Columna Izquierda: Información de Salida
+    var tituloSalida = (tipoS === 'COMPRAS') ? 'Salida de Compras Locales (Ida)' : ((tipoS === 'TALLER') ? 'Salida a Taller Tercero (Ida)' : 'Inspección de Salida (Ida)');
+    var iconoSalida = (tipoS === 'COMPRAS') ? 'bi-cart3 text-warning' : ((tipoS === 'TALLER') ? 'bi-tools' : 'bi-arrow-right-circle-fill text-primary');
+    var styleIconoSalida = (tipoS === 'TALLER') ? 'style="color:#7c3aed;"' : '';
+
     html += '<div class="col-12 col-lg-6">';
     html += '<div class="sgu-form-card">';
     html += '<div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">';
-    html += '<h6 class="fw-bold text-dark m-0"><i class="bi bi-arrow-right-circle-fill text-primary me-1"></i> Inspección de Salida (Ida)</h6>';
+    html += '<h6 class="fw-bold text-dark m-0"><i class="bi ' + iconoSalida + ' me-1" ' + styleIconoSalida + '></i> ' + tituloSalida + '</h6>';
     html += '<span class="badge bg-light text-dark border">' + (rec.salida_fecha || '--') + ' ' + (rec.salida_hora || '') + '</span>';
     html += '</div>';
 
@@ -1901,9 +1906,16 @@ async function _sguRenderDetail(recordId) {
         html += '</div>';
     }
 
+    var hasSalidaChk = rec.salida_checklist_json && Object.keys(rec.salida_checklist_json).length > 0;
+    var numFotosSalida = (rec.fotos || []).filter(function(f){return f.tipo==='salida';}).length;
+
     html += '<div class="d-flex gap-2 flex-wrap">';
-    html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerDetalles(\'salida\')"><i class="bi bi-list-check"></i> Ver Checklist</button>';
-    html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerFotos(\'salida\')"><i class="bi bi-images"></i> Fotos (' + (rec.fotos || []).filter(function(f){return f.tipo==='salida';}).length + ')</button>';
+    if (hasSalidaChk) {
+        html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerDetalles(\'salida\')"><i class="bi bi-list-check"></i> Ver Checklist</button>';
+    }
+    if (numFotosSalida > 0) {
+        html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerFotos(\'salida\')"><i class="bi bi-images"></i> Fotos (' + numFotosSalida + ')</button>';
+    }
     html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguPrevisualizarPDF(\'salida\')"><i class="bi bi-eye text-primary"></i> Ver PDF</button>';
     html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDF(\'salida\')" title="Descargar directo"><i class="bi bi-download text-danger"></i> Descargar</button>';
     html += '<button class="sgu-btn-top sgu-btn-whatsapp flex-grow-1" onclick="window._sguCompartirWhatsApp(\'salida\')" title="Compartir PDF por WhatsApp"><i class="bi bi-whatsapp"></i> WhatsApp</button>';
@@ -1916,14 +1928,18 @@ async function _sguRenderDetail(recordId) {
     html += '<div class="col-12 col-lg-6">';
 
     if (isEnRuta) {
+        var tituloRetorno = (tipoS === 'COMPRAS') ? 'Registrar Retorno de Compras' : ((tipoS === 'TALLER') ? 'Registrar Retorno de Taller Tercero' : 'Registrar Llegada / Retorno');
+        var iconoRetorno = (tipoS === 'COMPRAS') ? 'bi-cart-check-fill text-warning' : ((tipoS === 'TALLER') ? 'bi-tools' : 'bi-arrow-left-circle-fill');
+        var styleIconoRetorno = (tipoS === 'TALLER') ? 'style="color:#7c3aed;"' : '';
+
         html += '<div class="sgu-form-card" style="border: 2px solid #bfdbfe; background: #ffffff;">';
         html += '<div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">';
-        html += '<h6 class="fw-bold text-primary m-0"><i class="bi bi-arrow-left-circle-fill me-1"></i> Registrar Llegada / Retorno</h6>';
+        html += '<h6 class="fw-bold text-primary m-0"><i class="bi ' + iconoRetorno + ' me-1" ' + styleIconoRetorno + '></i> ' + tituloRetorno + '</h6>';
         html += '<span class="badge bg-primary">EN CURSO</span>';
         html += '</div>';
 
         html += '<div class="mb-3">';
-        html += '<label class="sgu-form-label">Kilometraje de Llegada (Retorno)</label>';
+        html += '<label class="sgu-form-label">Kilometraje de Llegada (Retorno) <span class="text-danger">*</span></label>';
         html += '<input type="number" class="sgu-form-input-clean" id="sgu-det-km-retorno" placeholder="Ingrese odómetro actual" oninput="window._sguCheckReturnReady()">';
         html += '</div>';
 
@@ -1939,25 +1955,27 @@ async function _sguRenderDetail(recordId) {
         html += '</div>';
         html += '</div>';
 
-        // Verificación e Inspección (Checklist y Evidencias 2 en 1)
-        html += '<div class="mb-3">';
-        html += '<div class="d-flex align-items-center gap-2 mb-2">';
-        html += '<i class="bi bi-list-check text-primary"></i>';
-        html += '<span class="sgu-form-label m-0 fw-bold">Verificación e Inspección</span>';
-        html += '</div>';
-        html += '<div class="sgu-task-box mb-1" style="border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between;">';
-        html += '<div class="d-flex align-items-center gap-3">';
-        html += '<div class="sgu-task-icon-wrap" style="background:#eff6ff; color:#2563eb; width:38px; height:38px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">';
-        html += '<i class="bi bi-clipboard-check fs-5"></i>';
-        html += '</div>';
-        html += '<div>';
-        html += '<span class="fw-bold text-dark d-block" style="font-size:0.88rem;">Checklist y Evidencias</span>';
-        html += '<span class="text-secondary small" id="sgu-det-inspection-desc" style="font-size:0.75rem;">Ítems de seguridad + Fotos</span>';
-        html += '</div>';
-        html += '</div>';
-        html += '<button type="button" class="sgu-task-btn" id="sgu-det-btn-chk" onclick="window._sguOpenChecklist()">Llenar</button>';
-        html += '</div>';
-        html += '</div>';
+        // Verificación e Inspección (Checklist y Evidencias) SOLO en modo RUTA
+        if (esRuta) {
+            html += '<div class="mb-3">';
+            html += '<div class="d-flex align-items-center gap-2 mb-2">';
+            html += '<i class="bi bi-list-check text-primary"></i>';
+            html += '<span class="sgu-form-label m-0 fw-bold">Verificación e Inspección</span>';
+            html += '</div>';
+            html += '<div class="sgu-task-box mb-1" style="border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between;">';
+            html += '<div class="d-flex align-items-center gap-3">';
+            html += '<div class="sgu-task-icon-wrap" style="background:#eff6ff; color:#2563eb; width:38px; height:38px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">';
+            html += '<i class="bi bi-clipboard-check fs-5"></i>';
+            html += '</div>';
+            html += '<div>';
+            html += '<span class="fw-bold text-dark d-block" style="font-size:0.88rem;">Checklist y Evidencias</span>';
+            html += '<span class="text-secondary small" id="sgu-det-inspection-desc" style="font-size:0.75rem;">Ítems de seguridad + Fotos</span>';
+            html += '</div>';
+            html += '</div>';
+            html += '<button type="button" class="sgu-task-btn" id="sgu-det-btn-chk" onclick="window._sguOpenChecklist()">Llenar</button>';
+            html += '</div>';
+            html += '</div>';
+        }
 
         // Observaciones de Retorno
         html += '<div class="mb-3">';
@@ -1965,30 +1983,32 @@ async function _sguRenderDetail(recordId) {
         html += '<textarea class="sgu-form-input-clean" id="sgu-det-observaciones" rows="2" placeholder="Detalles de retorno o novedades (si no escribe nada saldrá \'SIN OBSERVACIONES\')..." style="min-height:50px; font-weight:500; font-size:0.86rem;"></textarea>';
         html += '</div>';
 
-        // Firmas de Retorno (Llegada)
-        html += '<div class="mt-3 pt-3 border-top mb-3">';
-        html += '<div class="d-flex align-items-center justify-content-between mb-2">';
-        html += '<span class="fw-bold text-dark small"><i class="bi bi-pen-fill text-success me-1"></i> Firmas de Llegada (Retorno)</span>';
-        html += '<span class="badge bg-light text-secondary border" style="font-size:0.68rem;">Conductor & Vigilancia</span>';
-        html += '</div>';
-        html += '<div class="row g-2">';
-        html += '<div class="col-12 col-sm-6">';
-        html += '<div class="p-2 rounded-3 border bg-light">';
-        html += '<div class="d-flex align-items-center justify-content-between mb-1">';
-        html += '<span class="text-secondary" style="font-size:0.72rem;font-weight:700;">Conductor (Retorno)</span>';
-        html += '<button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" style="font-size:0.7rem;" onclick="window._sguClearSignature(\'sgu-sig-retorno-conductor\')"><i class="bi bi-eraser-fill"></i> Borrar</button>';
-        html += '</div>';
-        html += '<canvas id="sgu-sig-retorno-conductor" class="sgu-sig-canvas w-100 rounded-2 bg-white border" height="100"></canvas>';
-        html += '</div></div>';
-        html += '<div class="col-12 col-sm-6">';
-        html += '<div class="p-2 rounded-3 border bg-light">';
-        html += '<div class="d-flex align-items-center justify-content-between mb-1">';
-        html += '<span class="text-secondary" style="font-size:0.72rem;font-weight:700;">Vigilancia (Retorno)</span>';
-        html += '<button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" style="font-size:0.7rem;" onclick="window._sguClearSignature(\'sgu-sig-retorno-vigilancia\')"><i class="bi bi-eraser-fill"></i> Borrar</button>';
-        html += '</div>';
-        html += '<canvas id="sgu-sig-retorno-vigilancia" class="sgu-sig-canvas w-100 rounded-2 bg-white border" height="100"></canvas>';
-        html += '</div></div>';
-        html += '</div></div>';
+        // Firmas de Retorno SOLO en modo RUTA
+        if (esRuta) {
+            html += '<div class="mt-3 pt-3 border-top mb-3">';
+            html += '<div class="d-flex align-items-center justify-content-between mb-2">';
+            html += '<span class="fw-bold text-dark small"><i class="bi bi-pen-fill text-success me-1"></i> Firmas de Llegada (Retorno)</span>';
+            html += '<span class="badge bg-light text-secondary border" style="font-size:0.68rem;">Conductor & Vigilancia</span>';
+            html += '</div>';
+            html += '<div class="row g-2">';
+            html += '<div class="col-12 col-sm-6">';
+            html += '<div class="p-2 rounded-3 border bg-light">';
+            html += '<div class="d-flex align-items-center justify-content-between mb-1">';
+            html += '<span class="text-secondary" style="font-size:0.72rem;font-weight:700;">Conductor (Retorno)</span>';
+            html += '<button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" style="font-size:0.7rem;" onclick="window._sguClearSignature(\'sgu-sig-retorno-conductor\')"><i class="bi bi-eraser-fill"></i> Borrar</button>';
+            html += '</div>';
+            html += '<canvas id="sgu-sig-retorno-conductor" class="sgu-sig-canvas w-100 rounded-2 bg-white border" height="100"></canvas>';
+            html += '</div></div>';
+            html += '<div class="col-12 col-sm-6">';
+            html += '<div class="p-2 rounded-3 border bg-light">';
+            html += '<div class="d-flex align-items-center justify-content-between mb-1">';
+            html += '<span class="text-secondary" style="font-size:0.72rem;font-weight:700;">Vigilancia (Retorno)</span>';
+            html += '<button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" style="font-size:0.7rem;" onclick="window._sguClearSignature(\'sgu-sig-retorno-vigilancia\')"><i class="bi bi-eraser-fill"></i> Borrar</button>';
+            html += '</div>';
+            html += '<canvas id="sgu-sig-retorno-vigilancia" class="sgu-sig-canvas w-100 rounded-2 bg-white border" height="100"></canvas>';
+            html += '</div></div>';
+            html += '</div></div>';
+        }
 
         html += '<button class="btn btn-primary w-100 py-2 fw-bold shadow-sm" id="sgu-det-btn-save" onclick="window._sguSaveReturn()" disabled>';
         html += '<i class="bi bi-check-circle-fill me-1"></i> Confirmar Retorno y Cerrar Expediente';
@@ -1996,9 +2016,12 @@ async function _sguRenderDetail(recordId) {
 
         html += '</div>';
     } else {
+        var tituloRetornoComp = (tipoS === 'COMPRAS') ? 'Retorno de Compras (Vuelta)' : ((tipoS === 'TALLER') ? 'Retorno de Taller Tercero (Vuelta)' : 'Inspección de Retorno (Vuelta)');
+        var iconoRetornoComp = (tipoS === 'COMPRAS') ? 'bi-cart-check-fill text-success' : ((tipoS === 'TALLER') ? 'bi-tools text-success' : 'bi-arrow-left-circle-fill text-success');
+
         html += '<div class="sgu-form-card">';
         html += '<div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">';
-        html += '<h6 class="fw-bold text-dark m-0"><i class="bi bi-arrow-left-circle-fill text-success me-1"></i> Inspección de Retorno (Vuelta)</h6>';
+        html += '<h6 class="fw-bold text-dark m-0"><i class="bi ' + iconoRetornoComp + ' me-1"></i> ' + tituloRetornoComp + '</h6>';
         html += '<span class="badge bg-light text-dark border">' + (rec.retorno_fecha || '--') + ' ' + (rec.retorno_hora || '') + '</span>';
         html += '</div>';
 
@@ -2047,9 +2070,16 @@ async function _sguRenderDetail(recordId) {
             html += '</div>';
         }
 
+        var hasRetornoChk = rec.retorno_checklist_json && Object.keys(rec.retorno_checklist_json).length > 0;
+        var numFotosRetorno = (rec.fotos || []).filter(function(f){return f.tipo==='retorno';}).length;
+
         html += '<div class="d-flex gap-2 flex-wrap">';
-        html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerDetalles(\'retorno\')"><i class="bi bi-list-check"></i> Ver Checklist</button>';
-        html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerFotos(\'retorno\')"><i class="bi bi-images"></i> Fotos (' + (rec.fotos || []).filter(function(f){return f.tipo==='retorno';}).length + ')</button>';
+        if (hasRetornoChk) {
+            html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerDetalles(\'retorno\')"><i class="bi bi-list-check"></i> Ver Checklist</button>';
+        }
+        if (numFotosRetorno > 0) {
+            html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguVerFotos(\'retorno\')"><i class="bi bi-images"></i> Fotos (' + numFotosRetorno + ')</button>';
+        }
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguPrevisualizarPDF(\'retorno\')"><i class="bi bi-eye text-primary"></i> Ver PDF</button>';
         html += '<button class="sgu-btn-top flex-grow-1" onclick="window._sguGenerarPDF(\'retorno\')" title="Descargar directo"><i class="bi bi-download text-danger"></i> Descargar</button>';
         html += '<button class="sgu-btn-top sgu-btn-whatsapp flex-grow-1" onclick="window._sguCompartirWhatsApp(\'retorno\')" title="Compartir PDF por WhatsApp"><i class="bi bi-whatsapp"></i> WhatsApp</button>';
@@ -2072,14 +2102,16 @@ async function _sguRenderDetail(recordId) {
 
     container.innerHTML = html;
     if (isEnRuta) {
-        window._sguCheckFormReady();
-        // Inicializar canvas de firmas de retorno
-        setTimeout(function() {
-            window._sguSetupSignatureCanvas('sgu-sig-retorno-conductor');
-            window._sguSetupSignatureCanvas('sgu-sig-retorno-vigilancia');
-            window._sguClearSignature('sgu-sig-retorno-conductor');
-            window._sguClearSignature('sgu-sig-retorno-vigilancia');
-        }, 120);
+        window._sguCheckReturnReady();
+        if (esRuta) {
+            // Inicializar canvas de firmas de retorno solo en ruta
+            setTimeout(function() {
+                window._sguSetupSignatureCanvas('sgu-sig-retorno-conductor');
+                window._sguSetupSignatureCanvas('sgu-sig-retorno-vigilancia');
+                window._sguClearSignature('sgu-sig-retorno-conductor');
+                window._sguClearSignature('sgu-sig-retorno-vigilancia');
+            }, 120);
+        }
     }
 
     // Async load docs info for Tracto and Carreta in Detail
@@ -2157,33 +2189,41 @@ async function _sguLoadDetailDocs(placaTracto, placaCarreta) {
 }
 
 window._sguCheckReturnReady = function() {
-    var photosList = _sguPhotos['retorno'] || [];
-    var chkCount = Object.keys(_sguChecklist).length;
-    var totalItems = 0;
-    (_sguGlobalTemplate || []).forEach(function(cat) { totalItems += (cat.items || []).length; });
+    var rec = window._sguCurrentRecord || (_sguRecords || []).find(function(r){ return String(r.id) === String(_sguDetailId); });
+    var tipoS = _sguGetTipoSalida(rec);
+    var esRuta = (tipoS === 'RUTA');
 
-    var btnChk = document.getElementById('sgu-det-btn-chk');
-    var descInsp = document.getElementById('sgu-det-inspection-desc');
+    if (esRuta) {
+        var photosList = _sguPhotos['retorno'] || [];
+        var chkCount = Object.keys(_sguChecklist).length;
+        var totalItems = 0;
+        (_sguGlobalTemplate || []).forEach(function(cat) { totalItems += (cat.items || []).length; });
 
-    if (btnChk) {
-        if (chkCount >= totalItems && totalItems > 0 && photosList.length > 0) {
-            btnChk.innerHTML = '<i class="bi bi-check-lg"></i> Listo (' + photosList.length + ' fotos)';
-            btnChk.classList.add('done');
-            if (descInsp) descInsp.textContent = 'Checklist OK & ' + photosList.length + ' foto(s) adjunta(s)';
-        } else if (chkCount > 0 || photosList.length > 0) {
-            btnChk.innerHTML = chkCount + ' ítems / ' + photosList.length + ' fotos';
-            btnChk.classList.add('done');
-            if (descInsp) descInsp.textContent = chkCount + ' ítems marcados & ' + photosList.length + ' foto(s)';
-        } else {
-            btnChk.innerHTML = 'Llenar';
-            btnChk.classList.remove('done');
-            if (descInsp) descInsp.textContent = 'Ítems de seguridad + Fotos';
+        var btnChk = document.getElementById('sgu-det-btn-chk');
+        var descInsp = document.getElementById('sgu-det-inspection-desc');
+
+        if (btnChk) {
+            if (chkCount >= totalItems && totalItems > 0 && photosList.length > 0) {
+                btnChk.innerHTML = '<i class="bi bi-check-lg"></i> Listo (' + photosList.length + ' fotos)';
+                btnChk.classList.add('done');
+                if (descInsp) descInsp.textContent = 'Checklist OK & ' + photosList.length + ' foto(s) adjunta(s)';
+            } else if (chkCount > 0 || photosList.length > 0) {
+                btnChk.innerHTML = chkCount + ' ítems / ' + photosList.length + ' fotos';
+                btnChk.classList.add('done');
+                if (descInsp) descInsp.textContent = chkCount + ' ítems marcados & ' + photosList.length + ' foto(s)';
+            } else {
+                btnChk.innerHTML = 'Llenar';
+                btnChk.classList.remove('done');
+                if (descInsp) descInsp.textContent = 'Ítems de seguridad + Fotos';
+            }
         }
     }
 
+    var kmEl = document.getElementById('sgu-det-km-retorno');
+    var kmVal = kmEl ? kmEl.value.trim() : '';
     var btnSave = document.getElementById('sgu-det-btn-save');
     if (btnSave) {
-        btnSave.disabled = false;
+        btnSave.disabled = !kmVal || isNaN(kmVal) || Number(kmVal) <= 0;
     }
 };
 
