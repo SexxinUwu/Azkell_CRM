@@ -343,6 +343,8 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-inventario',    vInv);
     safe('nav-entradas-inv',    vEnt);
     safe('mbnav-entradas-inv',  vEnt);
+    safe('nav-recepcion-compras', vEnt);
+    safe('mbnav-recepcion-compras', vEnt);
     safe('nav-salidas-inv',     vSal);
     safe('mbnav-salidas-inv',   vSal);
     safe('nav-kardex',          vKardex);
@@ -393,6 +395,8 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-op-urea-analisis',        vCombUrea);
     safe('nav-combustible-matriz',        vCombMatriz);
     safe('mbnav-op-combustible-matriz',   vCombMatriz);
+    safe('nav-combustible-estaciones',    vCombVales);
+    safe('mbnav-op-combustible-estaciones', vCombVales);
     safe('wrap-operaciones', showOp);
     safe('bnav-operaciones', showOp);
 
@@ -441,6 +445,8 @@ window.verificarSesionGuardada = function() {
     safe('bnav-gerencia', showGerencia);
     safe('nav-gerencia-aprobaciones-oc', showGerencia);
     safe('nav-gerencia-aprobaciones-caja', showGerencia);
+    safe('mbnav-gerencia-aprobaciones-oc', showGerencia);
+    safe('mbnav-gerencia-aprobaciones-caja', showGerencia);
     safe('mbnav-gerencia-aprobaciones', showGerencia);
 
     // TESORERÍA
@@ -595,6 +601,7 @@ window.verificarSesionGuardada = function() {
             } catch(e) {}
 
             const elBadgeOC = document.getElementById('badge-count-oc-pend');
+            const elBadgeOCMobile = document.getElementById('mbnav-badge-count-oc-pend');
             if (elBadgeOC) {
                 if (pendOC > 0) {
                     elBadgeOC.textContent = `${pendOC} Pend.`;
@@ -602,6 +609,15 @@ window.verificarSesionGuardada = function() {
                 } else {
                     elBadgeOC.textContent = '';
                     elBadgeOC.style.display = 'none';
+                }
+            }
+            if (elBadgeOCMobile) {
+                if (pendOC > 0) {
+                    elBadgeOCMobile.textContent = `${pendOC} Pend.`;
+                    elBadgeOCMobile.style.display = 'inline-block';
+                } else {
+                    elBadgeOCMobile.textContent = '';
+                    elBadgeOCMobile.style.display = 'none';
                 }
             }
 
@@ -620,6 +636,7 @@ window.verificarSesionGuardada = function() {
             } catch(e) {}
 
             const elBadgeCaja = document.getElementById('badge-count-caja-pend');
+            const elBadgeCajaMobile = document.getElementById('mbnav-badge-count-caja-pend');
             if (elBadgeCaja) {
                 if (pendCaja > 0) {
                     elBadgeCaja.textContent = `${pendCaja} Pend.`;
@@ -627,6 +644,15 @@ window.verificarSesionGuardada = function() {
                 } else {
                     elBadgeCaja.textContent = '';
                     elBadgeCaja.style.display = 'none';
+                }
+            }
+            if (elBadgeCajaMobile) {
+                if (pendCaja > 0) {
+                    elBadgeCajaMobile.textContent = `${pendCaja} Pend.`;
+                    elBadgeCajaMobile.style.display = 'inline-block';
+                } else {
+                    elBadgeCajaMobile.textContent = '';
+                    elBadgeCajaMobile.style.display = 'none';
                 }
             }
         } catch(err) {
@@ -829,7 +855,7 @@ window.verificarSesionGuardada = function() {
         'dashboard': 1, 'operaciones/programacion': 1, 'operaciones/ordenes-viaje': 1,
         'operaciones/ordenes-servicio': 1, 'operaciones/reporte-viajes': 1, 'operaciones/guias-remision': 1,
         'operaciones/combustible-vales': 1, 'operaciones/combustible-estaciones': 1, 'operaciones/combustible-analisis': 1,
-        'operaciones/urea-analisis': 1, 'operaciones/combustible-matriz': 1,
+        'operaciones/urea-analisis': 1, 'operaciones/combustible-matriz': 1, 'operaciones/conductor-portal': 1,
         'operaciones/marsisa-ordenes-viaje': 1, 'operaciones/marsisa-combustible-vales': 1,
         'operaciones/marsisa-combustible-matriz': 1, 'operaciones/marsisa-combustible-analisis': 1,
         'operaciones/marsisa-urea-analisis': 1,
@@ -842,7 +868,9 @@ window.verificarSesionGuardada = function() {
         'almacen/recepcion-compras': 1, 'almacen/salidas': 1, 'almacen/kardex': 1, 'almacen/proveedores': 1,
         'directorio/conductores': 1, 'directorio/clientes': 1,
         'rrhh/personal': 1, 'rrhh/asistencia': 1, 'rrhh/nomina': 1,
-        'tesoreria/caja': 1, 'tesoreria/cuentas': 1, 'tesoreria/bancos': 1, 'tesoreria/centros-costos': 1,
+        'tesoreria/caja': 1, 'tesoreria/liquidaciones': 1, 'tesoreria/cuentas': 1, 'tesoreria/bancos': 1, 'tesoreria/centros-costos': 1,
+        'gerencia/aprobaciones-oc': 1, 'gerencia/aprobaciones-caja': 1,
+        'seguridad/unidades': 1, 'seguridad/entrega-vehiculos': 1, 'seguridad/unidades-base': 1,
         'sistema/configuracion': 1, 'sistema/usuarios': 1, 'sistema/auditoria': 1
     };
 
@@ -3749,6 +3777,7 @@ function actualizarBottomNavActivo(ruta) {
     document.querySelectorAll('.bottom-nav-item').forEach(function(el) { el.classList.remove('active'); });
     var id = '';
     if (ruta === 'dashboard') id = 'bnav-dashboard';
+    else if (ruta.startsWith('gerencia/')) id = 'bnav-gerencia';
     else if (ruta === 'operaciones/conductor-portal' || ruta.startsWith('operaciones/conductor')) id = 'bnav-conductor';
     else if (ruta.startsWith('operaciones/')) id = 'bnav-operaciones';
     else if (ruta.startsWith('flota/')) id = 'bnav-flota';
@@ -3946,11 +3975,15 @@ const TITULOS_MODULOS = {
     'operaciones/marsisa-combustible-matriz': 'Matriz de Combustible (D2) (Marsisa)',
     'operaciones/marsisa-combustible-analisis': 'Análisis de Combustible (D2) (Marsisa)',
     'operaciones/marsisa-urea-analisis': 'Análisis de Urea (Marsisa)',
+    'almacen/recepcion-compras':   'Recepción de Compras',
     'tesoreria/caja':                   'Caja',
     'tesoreria/caja-chica':             'Caja',
+    'tesoreria/liquidaciones':          'Liquidación de Gastos',
     'tesoreria/cuentas':                'Cuentas por Cobrar y Pagar',
     'tesoreria/bancos':                 'Bancos',
     'tesoreria/centros-costos':         'Centros de Costos',
+    'operaciones/conductor-portal':     'Mi Viaje & Rendición',
+    'seguridad/entrega-vehiculos':      'CheckList Entrega de Vehículos',
 };
 
 const MENU_IDS = {
@@ -3996,6 +4029,7 @@ const MENU_IDS = {
     'almacen/dashboard-financiero': 'nav-finanzas-inv',
     'almacen/inventario':          'nav-inventario',
     'almacen/entradas':            'nav-entradas-inv',
+    'almacen/recepcion-compras':   'nav-recepcion-compras',
     'almacen/salidas':             'nav-salidas-inv',
     'almacen/proveedores':         'nav-proveedores-inv',
     'almacen/kardex':              'nav-kardex',
@@ -4019,9 +4053,12 @@ const MENU_IDS = {
     'seguridad/unidades-base':     'nav-seg-unidades-base',
     'tesoreria/caja':              'nav-tesoreria-caja',
     'tesoreria/caja-chica':        'nav-tesoreria-caja',
+    'tesoreria/liquidaciones':     'nav-tesoreria-liquidaciones',
     'tesoreria/cuentas':           'nav-tesoreria-cuentas',
     'tesoreria/bancos':            'nav-tesoreria-bancos',
     'tesoreria/centros-costos':    'nav-tesoreria-centros-costos',
+    'operaciones/conductor-portal': 'nav-conductor-portal',
+    'seguridad/entrega-vehiculos': 'nav-seg-entrega-vehiculos',
 };
 
 const MENU_SECTION = {
@@ -4033,6 +4070,7 @@ const MENU_SECTION = {
     'almacen/dashboard-financiero': 'almacen',
     'almacen/inventario':         'almacen',
     'almacen/entradas':           'almacen',
+    'almacen/recepcion-compras':  'almacen',
     'almacen/salidas':            'almacen',
     'almacen/proveedores':        'almacen',
     'almacen/kardex':             'almacen',
@@ -4085,18 +4123,25 @@ const MENU_SECTION = {
     'operaciones/marsisa-urea-analisis': 'operaciones-marsisa',
     'tesoreria/caja':              'tesoreria',
     'tesoreria/caja-chica':        'tesoreria',
+    'tesoreria/liquidaciones':     'tesoreria',
     'tesoreria/cuentas':           'tesoreria',
     'tesoreria/bancos':            'tesoreria',
     'tesoreria/centros-costos':    'tesoreria',
+    'operaciones/conductor-portal': 'conductor',
+    'seguridad/entrega-vehiculos': 'seguridad',
 };
 
 const BREADCRUMB_MAP = {
     'dashboard':                  [],
     'tesoreria/caja':             ['Tesorería','Caja'],
     'tesoreria/caja-chica':       ['Tesorería','Caja'],
+    'tesoreria/liquidaciones':    ['Tesorería','Liquidaciones'],
     'tesoreria/cuentas':          ['Tesorería','Cuentas por Cobrar/Pagar'],
     'tesoreria/bancos':           ['Tesorería','Bancos'],
     'tesoreria/centros-costos':   ['Tesorería','Centros de Costos'],
+    'operaciones/conductor-portal': ['Conductor','Mi Viaje & Rendición'],
+    'seguridad/entrega-vehiculos': ['Seguridad','Entrega de Vehículos'],
+    'almacen/recepcion-compras':  ['Almacén','Recepción de Compras'],
     'operaciones/programacion':    ['Operaciones','Programación'],
     'operaciones/ordenes-viaje':   ['Operaciones','Órdenes de Viaje'],
     'operaciones/ordenes-servicio': ['Operaciones','Órdenes de Servicio'],

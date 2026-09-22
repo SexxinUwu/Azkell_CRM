@@ -1125,6 +1125,14 @@
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
+                <div id="mbnav-recepcion-compras" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/recepcion-compras'); setBottomNavActive('bnav-almacen');">
+                    <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-box-arrow-in-down"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Recepción de Compras</p>
+                        <p class="bnav-row-desc">Ingreso físico y verificación de guías/facturas</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
                 <div id="mbnav-finanzas-inv" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/dashboard-financiero'); setBottomNavActive('bnav-almacen');">
                     <div class="bnav-row-icon" style="color: #8b5cf6;"><i class="bi bi-pie-chart"></i></div>
                     <div class="bnav-row-content">
@@ -1233,6 +1241,14 @@
                         <div class="bnav-row-content">
                             <p class="bnav-row-title">Análisis de Urea</p>
                             <p class="bnav-row-desc">Consumo y control de Urea</p>
+                        </div>
+                        <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                    </div>
+                    <div id="mbnav-op-combustible-estaciones" class="bnav-row-item" style="border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/combustible-estaciones'); setBottomNavActive('bnav-operaciones');">
+                        <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-geo-alt-fill"></i></div>
+                        <div class="bnav-row-content">
+                            <p class="bnav-row-title">Estaciones de proveedores</p>
+                            <p class="bnav-row-desc">Grifos autorizados y precios de combustible</p>
                         </div>
                         <i class="bi bi-chevron-right bnav-row-chevron"></i>
                     </div>
@@ -1378,12 +1394,22 @@
         </div>
         <div class="offcanvas-body px-3 pb-4">
             <div class="bnav-group-box">
-                <div id="mbnav-gerencia-aprobaciones" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetGerencia')).hide(); cargarModuloAislado('gerencia/aprobaciones-oc');">
+                <div id="mbnav-gerencia-aprobaciones-oc" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetGerencia')).hide(); cargarModuloAislado('gerencia/aprobaciones-oc'); setBottomNavActive('bnav-gerencia');">
                     <div class="bnav-row-icon" style="color: #0284c7;"><i class="bi bi-patch-check-fill"></i></div>
                     <div class="bnav-row-content">
                         <p class="bnav-row-title">Aprobación de Órdenes de Compra</p>
                         <p class="bnav-row-desc">Autorizaciones directivas y compras pendientes</p>
                     </div>
+                    <span class="nav-item-badge bg-warning text-dark fw-bold rounded-pill px-2 py-0 me-2" id="mbnav-badge-count-oc-pend" style="font-size:0.68rem; display:none;"></span>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
+                <div id="mbnav-gerencia-aprobaciones-caja" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetGerencia')).hide(); cargarModuloAislado('gerencia/aprobaciones-caja'); setBottomNavActive('bnav-gerencia');">
+                    <div class="bnav-row-icon" style="color: #10b981;"><i class="bi bi-cash-stack"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Aprobación de Caja</p>
+                        <p class="bnav-row-desc">Autorización de ingresos, egresos y rendiciones</p>
+                    </div>
+                    <span class="nav-item-badge bg-warning text-dark fw-bold rounded-pill px-2 py-0 me-2" id="mbnav-badge-count-caja-pend" style="font-size:0.68rem; display:none;"></span>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
             </div>
