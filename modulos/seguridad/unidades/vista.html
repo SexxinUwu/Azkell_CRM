@@ -1562,6 +1562,25 @@
                         <textarea class="sgu-form-input-clean" id="sgu-f-observaciones" rows="2" placeholder="Detalles de salida, novedades de unidad o conductor (si no escribe nada saldrá 'SIN OBSERVACIONES')..." style="min-height:55px; font-weight:500; font-size:0.86rem;"></textarea>
                     </div>
 
+                    <!-- Bloque de Evidencias Fotográficas para Compras / Taller -->
+                    <div id="sgu-express-photos-box" class="mt-3 pt-3 border-top d-none">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="sgu-form-label mb-0"><i class="bi bi-camera-fill text-primary me-1"></i> Evidencias Fotográficas (Opcional)</label>
+                            <span class="badge bg-light text-secondary border" id="sgu-express-photo-count">0 foto(s)</span>
+                        </div>
+                        <div class="d-flex gap-2 mb-2">
+                            <label class="btn btn-sm btn-outline-primary rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-1 cursor-pointer flex-grow-1 justify-content-center" style="font-size:0.82rem;">
+                                <i class="bi bi-camera-fill"></i> Tomar Foto (Cámara)
+                                <input type="file" accept="image/*" capture="environment" class="d-none" onchange="window._sguHandleDirectPhoto(this, 'salida')">
+                            </label>
+                            <label class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-1 cursor-pointer flex-grow-1 justify-content-center" style="font-size:0.82rem;">
+                                <i class="bi bi-images"></i> Galería
+                                <input type="file" accept="image/*" multiple class="d-none" onchange="window._sguHandleDirectPhoto(this, 'salida')">
+                            </label>
+                        </div>
+                        <div class="sgu-photo-grid" id="sgu-express-photos-grid"></div>
+                    </div>
+
                     <!-- Botón de Guardado Express (Visible solo en modo COMPRAS o TALLER) -->
                     <div id="sgu-btn-save-express-wrap" class="mt-4 pt-2 d-none">
                         <button class="btn btn-primary w-100 py-3 rounded-3 fw-bold shadow-sm" id="sgu-btn-save-express" onclick="window._sguSaveRecord()">
