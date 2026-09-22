@@ -992,35 +992,77 @@ window._abrirEscaner = function(callback, titulo) {
                 Html5QrcodeSupportedFormats.DATA_MATRIX
             ];
         }
-        var initCfg = formats.length ? { formatsToSupport: formats } : {};
+        var initCfg = {
+            formatsToSupport: formats,
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            },
+            verbose: false
+        };
         window._gscannerInstance = new Html5Qrcode('gscanner-reader', initCfg);
 
-        window._gscannerInstance.start(
-            { facingMode: 'environment' },
-            {
-                fps: 25,
-                qrbox: function(w, h) {
-                    return { width: Math.round(w * 0.85), height: Math.round(h * 0.72) };
-                },
-                videoConstraints: {
-                    facingMode: { ideal: 'environment' },
-                    width:      { ideal: 1920 },
-                    height:     { ideal: 1080 }
-                },
-                rememberLastUsedCamera: true,
-                showTorchButtonIfSupported: false
+        var scanConfig = {
+            fps: 30,
+            qrbox: function(viewfinderWidth, viewfinderHeight) {
+                var qrWidth = Math.round(Math.min(viewfinderWidth * 0.92, 700));
+                var qrHeight = Math.round(Math.min(viewfinderHeight * 0.85, 520));
+                return { width: qrWidth, height: qrHeight };
             },
-            function(decodedText) {
-                var cb = window._gscannerCB;   // guardar ANTES de cerrar
-                window._cerrarEscaner();
-                if (typeof cb === 'function') cb(decodedText.trim());
+            videoConstraints: {
+                facingMode: { ideal: 'environment' },
+                focusMode: { ideal: 'continuous' },
+                width: { ideal: 1920, min: 640 },
+                height: { ideal: 1080, min: 480 }
             },
-            function() { /* frame sin código — ignorar */ }
-        )
-        .catch(function(err) {
-            overlay.style.display = 'none';
-            alert('No se pudo acceder a la cámara: ' + (err.message || err));
-        });
+            rememberLastUsedCamera: true,
+            showTorchButtonIfSupported: false
+        };
+
+        var onScanSuccess = function(decodedText) {
+            var cb = window._gscannerCB;   // guardar ANTES de cerrar
+            window._cerrarEscaner();
+            if (typeof cb === 'function') cb(decodedText.trim());
+        };
+
+        var onScanError = function() { /* frame sin código — ignorar */ };
+
+        if (typeof Html5Qrcode.getCameras === 'function') {
+            Html5Qrcode.getCameras().then(function(devices) {
+                var selectedCamera = { facingMode: 'environment' };
+                if (devices && devices.length > 0) {
+                    var backCamera = devices.find(function(d) {
+                        var label = (d.label || '').toLowerCase();
+                        return (label.includes('back') || label.includes('trasera') || label.includes('rear')) && !label.includes('wide') && !label.includes('gran');
+                    }) || devices.find(function(d) {
+                        var label = (d.label || '').toLowerCase();
+                        return label.includes('back') || label.includes('trasera') || label.includes('rear');
+                    });
+                    if (backCamera) {
+                        selectedCamera = backCamera.id;
+                    }
+                }
+                window._gscannerInstance.start(selectedCamera, scanConfig, onScanSuccess, onScanError)
+                    .catch(function() {
+                        window._gscannerInstance.start({ facingMode: 'environment' }, scanConfig, onScanSuccess, onScanError)
+                            .catch(function(err) {
+                                overlay.style.display = 'none';
+                                alert('No se pudo acceder a la cámara: ' + (err.message || err));
+                            });
+                    });
+            }).catch(function() {
+                window._gscannerInstance.start({ facingMode: 'environment' }, scanConfig, onScanSuccess, onScanError)
+                    .catch(function(err) {
+                        overlay.style.display = 'none';
+                        alert('No se pudo acceder a la cámara: ' + (err.message || err));
+                    });
+            });
+        } else {
+            window._gscannerInstance.start({ facingMode: 'environment' }, scanConfig, onScanSuccess, onScanError)
+                .catch(function(err) {
+                    overlay.style.display = 'none';
+                    alert('No se pudo acceder a la cámara: ' + (err.message || err));
+                });
+        }
 
     } catch(e) {
         overlay.style.display = 'none';
