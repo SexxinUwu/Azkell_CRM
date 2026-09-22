@@ -2451,16 +2451,6 @@ window._sguSaveRecord = function() {
         return;
     }
 
-    // Auto-completar ítems del checklist que el usuario no haya marcado
-    (_sguGlobalTemplate || []).forEach(function(cat) {
-        (cat.items || []).forEach(function(item) {
-            var itemId = item.id || item;
-            if (!_sguChecklist[itemId]) {
-                _sguChecklist[itemId] = 'ok';
-            }
-        });
-    });
-
     var hasAlert = false;
     for (var key in _sguChecklist) { if (_sguChecklist[key] === 'mal') { hasAlert = true; break; } }
 
@@ -2551,16 +2541,6 @@ window._sguSaveReturn = function() {
         }
         return;
     }
-
-    // Auto-completar ítems del checklist que el usuario no haya marcado
-    (_sguGlobalTemplate || []).forEach(function(cat) {
-        (cat.items || []).forEach(function(item) {
-            var itemId = item.id || item;
-            if (!_sguChecklist[itemId]) {
-                _sguChecklist[itemId] = 'ok';
-            }
-        });
-    });
 
     var hasAlert = false;
     for (var key in _sguChecklist) { if (_sguChecklist[key] === 'mal') { hasAlert = true; break; } }
@@ -2777,6 +2757,7 @@ window._sguVerFotos = async function(tipo) {
 };
 
 // =========================================================
+// =========================================================
 // 📝 DETALLES DEL CHECKLIST (Bottom Drawer)
 // =========================================================
 window._sguVerDetalles = function(tipo) {
@@ -2803,12 +2784,15 @@ window._sguVerDetalles = function(tipo) {
                         if (valor === 'ok') badge = '<span class="badge bg-success">OK / CONFORME</span>';
                         else if (valor === 'na') badge = '<span class="badge bg-secondary">N/A</span>';
                         else if (valor === 'mal') badge = '<span class="badge bg-danger">OBSERVADO</span>';
-                        else badge = '<span class="badge bg-light text-dark border">-</span>';
+                        else badge = '<span class="badge bg-light text-muted border">-</span>';
 
-                        var cantInfo = checklist[item.id + '_cant'] ? ' <span class="badge bg-light text-dark border ms-1" style="font-size:0.75rem;">Cant: ' + checklist[item.id + '_cant'] + '</span>' : '';
+                        var cantVal = checklist[item.id + '_cant'];
+                        var cantBadge = (cantVal !== undefined && cantVal !== '' && cantVal !== null)
+                            ? '<span class="badge bg-light text-dark border px-2 py-1 me-2 fw-bold" style="font-size:0.75rem;">Cant: ' + cantVal + '</span>'
+                            : '';
                         html += '<div class="d-flex justify-content-between align-items-center py-2 border-bottom border-light" style="font-size:0.88rem;">';
-                        html += '<span class="fw-semibold text-secondary">' + item.label + cantInfo + '</span>';
-                        html += '<div>' + badge + '</div>';
+                        html += '<span class="fw-semibold text-secondary">' + item.label + '</span>';
+                        html += '<div class="d-flex align-items-center">' + cantBadge + badge + '</div>';
                         html += '</div>';
                     });
                 }
@@ -2839,7 +2823,7 @@ window._sguVerDetalles = function(tipo) {
 };
 
 // =========================================================
-// 📄 GENERAR PDF FORMATO OFICIAL SGC (1 SOLA HOJA A4)
+// 📄 GENERAR PDF FORMATO OFICIAL SGC (1 SOLA HOJA A4 INDIVIDUAL)
 // =========================================================
 function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     var checklist = tipo === 'salida' ? rec.salida_checklist_json : rec.retorno_checklist_json;
@@ -3052,7 +3036,7 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
         h += '</div>';
     }
 
-    // 4. DETALLE DE INSPECCIÓN TÉCNICA Y EQUIPAMIENTO
+    // 4. DETALLE DE INSPECCIÓN TÉCNICA Y EQUIPAMIENTO (3 COLUMNAS: COMPONENTE | CANT | ESTADO)
     h += '<section class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2.5" style="border:1.5px solid #0F172A;">';
     h += '<div class="px-3 py-1 bg-slate-900 text-white text-center" style="background:#0F172A;">';
     h += '<h2 class="text-[11px] font-extrabold uppercase tracking-widest text-white">Detalle de Inspección Técnica y Equipamiento</h2>';
@@ -3081,29 +3065,40 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
                 colHtml += (cat.titulo || 'CATEGORÍA');
                 colHtml += '</div>';
 
+                // Subheader
+                colHtml += '<div class="grid grid-cols-12 bg-slate-200/80 px-2 py-0.5 text-[8.5px] font-extrabold text-slate-700 uppercase border-b border-slate-300" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));background:#E2E8F0;">';
+                colHtml += '<div class="col-span-7" style="grid-column:span 7 / span 7;">Componente / Ítem</div>';
+                colHtml += '<div class="col-span-2 text-center" style="grid-column:span 2 / span 2;text-align:center;">Cant.</div>';
+                colHtml += '<div class="col-span-3 text-center" style="grid-column:span 3 / span 3;text-align:center;">Estado</div>';
+                colHtml += '</div>';
+
                 colHtml += '<div class="divide-y divide-slate-100">';
                 (cat.items || []).forEach(function(item) {
-                    var valor = (checklist[item.id] || '---').toUpperCase();
+                    var rawVal = checklist[item.id];
+                    var valor = rawVal ? String(rawVal).toUpperCase() : '';
                     var isMal = valor === 'MAL' || valor === 'NO CONFORME' || valor === 'OBS';
                     var isOk = valor === 'OK' || valor === 'CONFORME';
-                    var cantLabel = checklist[item.id + '_cant'] ? ' (Cant: ' + checklist[item.id + '_cant'] + ')' : '';
+                    var isNa = valor === 'NA' || valor === 'N/A';
+                    var cantVal = checklist[item.id + '_cant'] !== undefined && checklist[item.id + '_cant'] !== '' ? checklist[item.id + '_cant'] : '-';
 
+                    var bgRow = isMal ? 'bg-red-50/90' : '';
+                    var borderMal = isMal ? 'border-l-[3px] border-red-600' : '';
+
+                    colHtml += '<div class="grid grid-cols-12 items-center px-2 py-0.5 ' + bgRow + ' ' + borderMal + '" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));min-height:20px;">';
+                    colHtml += '<div class="col-span-7 font-medium text-slate-800 text-[9.5px] truncate" style="grid-column:span 7 / span 7;" title="' + item.label + '">' + item.label + '</div>';
+                    colHtml += '<div class="col-span-2 text-center font-bold text-slate-700 text-[9.5px]" style="grid-column:span 2 / span 2;text-align:center;">' + cantVal + '</div>';
+                    colHtml += '<div class="col-span-3 text-center" style="grid-column:span 3 / span 3;text-align:center;">';
                     if (isMal) {
-                        colHtml += '<div class="px-3 py-0.5 flex justify-between items-center bg-red-50/90 border-l-[3px] border-red-600" style="background:#FEF2F2;border-left:3px solid #DC2626;">';
-                        colHtml += '<span class="text-red-900 font-bold text-[10px]">' + item.label + cantLabel + '</span>';
-                        colHtml += '<span class="text-[9px] font-extrabold text-white bg-red-600 px-2 py-0.5 rounded-md" style="background:#DC2626;">MAL</span>';
-                        colHtml += '</div>';
+                        colHtml += '<span class="text-[8.5px] font-extrabold text-white bg-red-600 px-1.5 py-0.2 rounded inline-block" style="background:#DC2626;color:#fff;">MAL</span>';
                     } else if (isOk) {
-                        colHtml += '<div class="px-3 py-0.5 flex justify-between items-center hover:bg-slate-50">';
-                        colHtml += '<span class="text-slate-800 text-[10px]">' + item.label + cantLabel + '</span>';
-                        colHtml += '<span class="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.2 rounded-md" style="background:#D1FAE5;color:#047857;">OK</span>';
-                        colHtml += '</div>';
+                        colHtml += '<span class="text-[8.5px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded inline-block" style="background:#D1FAE5;color:#047857;">OK</span>';
+                    } else if (isNa) {
+                        colHtml += '<span class="text-[8.5px] font-semibold text-slate-600 bg-slate-200 px-1.5 py-0.2 rounded inline-block">N/A</span>';
                     } else {
-                        colHtml += '<div class="px-3 py-0.5 flex justify-between items-center hover:bg-slate-50">';
-                        colHtml += '<span class="text-slate-500 text-[10px]">' + item.label + cantLabel + '</span>';
-                        colHtml += '<span class="text-[9px] font-medium text-slate-500 bg-slate-100 px-2 py-0.2 rounded-md">' + valor + '</span>';
-                        colHtml += '</div>';
+                        colHtml += '<span class="text-[8.5px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded inline-block">-</span>';
                     }
+                    colHtml += '</div>';
+                    colHtml += '</div>';
                 });
                 colHtml += '</div>';
             });
@@ -3165,6 +3160,402 @@ function _sguBuildPageHtml(rec, tipo, pageLabel, docT, docC) {
     h += '<div class="w-full pt-1 border-t border-slate-200" style="border-top:1px solid #E2E8F0;">';
     h += '<span class="text-[10px] font-extrabold text-slate-900 block uppercase tracking-tight">Inspector de Seguridad / Vigilancia</span>';
     h += '<span class="text-[9px] text-slate-500 font-medium block">VoBo CONTROL ' + (tipo === 'salida' ? 'DESPACHO' : 'RECEPCIÓN') + '</span>';
+    h += '</div>';
+    h += '</div>';
+
+    h += '</div>';
+    h += '</footer>';
+
+    h += '</main>';
+    return h;
+}
+
+// =========================================================
+// 📄 GENERAR EXPEDIENTE COMPLETO CONSOLIDADO (MATCH / CONTRASTE IDA VS VUELTA)
+// =========================================================
+function _sguBuildPageHtmlCompleto(rec, docT, docC) {
+    var salidaChk = rec.salida_checklist_json || {};
+    var retornoChk = rec.retorno_checklist_json || {};
+    var template = rec.retorno_template_json || rec.salida_template_json || _sguGlobalTemplate || [];
+
+    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || '';
+    var ts = _sguTimestamp();
+
+    var condSalida = rec.conductor || '---';
+    var condRetorno = rec.retorno_conductor || rec.conductor || '---';
+    var carretaSalida = rec.placa_carreta || '---';
+    var carretaRetorno = rec.retorno_placa_carreta || rec.placa_carreta || '---';
+
+    var fechaEmision = rec.retorno_fecha || rec.salida_fecha || ts.date;
+    var kmRecorrido = (rec.retorno_km && rec.salida_km) ? (Number(rec.retorno_km) - Number(rec.salida_km)) : null;
+
+    var hasAlert = !!(rec.salida_has_alert || rec.retorno_has_alert);
+
+    // Observaciones
+    var obsSalida = (rec.salida_observaciones || '').trim();
+    var obsRetorno = (rec.retorno_observaciones || '').trim();
+
+    // Firmas
+    var fSalidaCond = rec.firma_salida_conductor;
+    var fSalidaVig = rec.firma_salida_vigilancia;
+    var fRetornoCond = rec.firma_retorno_conductor;
+    var fRetornoVig = rec.firma_retorno_vigilancia;
+
+    var h = '<main class="report-page w-full max-w-[840px] bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-4 sm:p-5 text-slate-900 mx-auto" style="box-sizing:border-box;font-family:\'Inter\',-apple-system,BlinkMacSystemFont,sans-serif;">';
+
+    // 1. ENCABEZADO INSTITUCIONAL OFICIAL
+    h += '<header class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2.5" style="border:1.5px solid #0F172A;">';
+    
+    // Top Row: Logo | Title | SGC Control Codes
+    h += '<div class="grid grid-cols-12 divide-x-[1.5px] divide-slate-900 border-b-[1.5px] border-slate-900" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));border-bottom:1.5px solid #0F172A;">';
+    
+    // Left: Marsisa Logo
+    h += '<div class="col-span-3 p-2 flex flex-col items-center justify-center bg-white text-center" style="grid-column:span 3 / span 3;border-right:1.5px solid #0F172A;">';
+    if (empLogoUrl) {
+        h += '<img src="' + empLogoUrl + '" style="max-height:36px;max-width:115px;object-fit:contain;" crossorigin="anonymous">';
+    } else {
+        h += '<div class="flex items-center gap-1.5 mb-0.5">';
+        h += '<svg class="w-6 h-6" viewBox="0 0 40 40" fill="none" style="width:24px;height:24px;"><path d="M10 32C10 20 18 10 20 8C20 16 14 26 10 32Z" fill="#15803D"/><path d="M18 32C18 18 26 8 28 6C28 15 22 25 18 32Z" fill="#22C55E"/><path d="M26 32C26 21 33 13 35 11C35 19 30 27 26 32Z" fill="#F97316"/></svg>';
+        h += '<span class="text-sm font-extrabold tracking-tight text-slate-900 leading-none">Marsisa</span>';
+        h += '</div>';
+    }
+    h += '<span class="text-[7.5px] font-semibold tracking-wider text-slate-500 uppercase">Transporte & Logística</span>';
+    h += '</div>';
+
+    // Center: Official Document Title
+    h += '<div class="col-span-6 p-2 flex flex-col items-center justify-center text-center bg-slate-50/50" style="grid-column:span 6 / span 6;border-right:1.5px solid #0F172A;">';
+    h += '<h1 class="text-xs sm:text-sm font-extrabold text-slate-900 tracking-tight uppercase leading-tight">Expediente Integral de Inspección Vehicular</h1>';
+    h += '<p class="text-[9.5px] font-semibold text-slate-600 tracking-normal mt-0.5 uppercase">Control de Seguridad y Contraste de Unidades (Ida y Vuelta)</p>';
+    h += '</div>';
+
+    // Right: Document Control SGC
+    h += '<div class="col-span-3 text-[9.5px] flex flex-col divide-y-[1.5px] divide-slate-900 bg-white" style="grid-column:span 3 / span 3;">';
+    h += '<div class="px-2 py-0.5 flex items-center justify-between" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-600 uppercase text-[9px]">Código:</span><span class="font-mono font-bold text-slate-900">F-SEG-002</span></div>';
+    h += '<div class="px-2 py-0.5 flex items-center justify-between" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-600 uppercase text-[9px]">Versión:</span><span class="font-mono font-bold text-slate-900">01</span></div>';
+    h += '<div class="px-2 py-0.5 flex items-center justify-between"><span class="font-bold text-slate-600 uppercase text-[9px]">F. Emisión:</span><span class="font-mono font-semibold text-slate-900">' + fechaEmision + '</span></div>';
+    h += '</div>';
+
+    h += '</div>';
+
+    // Bottom Metadata Matrix: 3 Columns x 3 Rows
+    h += '<div class="grid grid-cols-3 divide-x-[1.5px] divide-slate-900 text-[10.5px]" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));">';
+    
+    // Column 1: Unidades y Expediente
+    h += '<div class="divide-y-[1.5px] divide-slate-900" style="border-right:1.5px solid #0F172A;">';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Nº Expediente:</span><span class="font-mono font-bold text-[#0284C7] text-[11px]">' + rec.id + '</span></div>';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Placa Tracto:</span><span class="font-mono font-bold text-slate-900 text-[11px]">' + rec.placa_tracto + '</span></div>';
+    var carretaFull = carretaSalida === carretaRetorno ? carretaSalida : (carretaSalida + ' ➜ ' + carretaRetorno);
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Carreta (Ida / Vta):</span><span class="font-mono font-bold text-slate-900 text-[10.5px] truncate max-w-[130px]">' + carretaFull + '</span></div>';
+    h += '</div>';
+
+    // Column 2: Conductores y Destino
+    h += '<div class="divide-y-[1.5px] divide-slate-900" style="border-right:1.5px solid #0F172A;">';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Conductor Ida:</span><span class="font-bold text-slate-900 text-[10px] truncate max-w-[140px]">' + condSalida + '</span></div>';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Conductor Vuelta:</span><span class="font-bold text-slate-900 text-[10px] truncate max-w-[140px]">' + condRetorno + '</span></div>';
+    h += '<div class="px-2 py-1 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[9.5px] uppercase">Destino / Ruta:</span><span class="font-bold text-slate-900 truncate max-w-[130px]">' + (rec.destino || '---') + '</span></div>';
+    h += '</div>';
+
+    // Column 3: Tiempos, KM y Estado
+    var estadoBadge = hasAlert
+        ? '<span class="font-bold text-red-600 text-[10px] tracking-tight uppercase flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-600 inline-block"></span>Con Obs.</span>'
+        : '<span class="font-bold text-emerald-600 text-[10px] tracking-tight uppercase flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span>Conforme</span>';
+    var estadoBg = hasAlert ? 'bg-rose-50/70' : 'bg-emerald-50/50';
+
+    h += '<div class="divide-y-[1.5px] divide-slate-900">';
+    h += '<div class="px-2 py-0.5 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9px] uppercase">Salida (Ida):</span><span class="font-mono text-[9.5px] text-slate-900">' + (rec.salida_fecha || '--') + ' ' + (rec.salida_hora || '') + ' (' + (rec.salida_km ? Number(rec.salida_km).toLocaleString() + ' km' : '0') + ')</span></div>';
+    h += '<div class="px-2 py-0.5 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[9px] uppercase">Llegada (Vta):</span><span class="font-mono text-[9.5px] text-slate-900">' + (rec.retorno_fecha || '--') + ' ' + (rec.retorno_hora || '') + ' (' + (rec.retorno_km ? Number(rec.retorno_km).toLocaleString() + ' km' : '--') + ')</span></div>';
+    h += '<div class="px-2 py-0.5 flex items-center justify-between ' + estadoBg + '"><span class="font-bold text-slate-700 text-[9px] uppercase">Recorrido Total:</span><div class="flex items-center gap-1.5"><span class="font-mono font-bold text-slate-900">' + (kmRecorrido !== null ? kmRecorrido.toLocaleString() + ' KM' : '---') + '</span>' + estadoBadge + '</div></div>';
+    h += '</div>';
+
+    h += '</div>';
+    h += '</header>';
+
+    // 2. ESTADO DOCUMENTAL INFORMATIVO (SOAT & REVISIÓN TÉCNICA)
+    h += '<section class="mb-2.5 doc-grid-box rounded-lg overflow-hidden bg-white" style="border:1.5px solid #0F172A;">';
+    h += '<div class="px-3 py-1 bg-slate-900 text-white flex items-center justify-between" style="background:#0F172A;">';
+    h += '<div class="flex items-center gap-1.5">';
+    h += '<svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>';
+    h += '<h2 class="text-[10.5px] font-bold uppercase tracking-wider text-white">Estado Documental Informativo (SOAT & Revisión Técnica)</h2>';
+    h += '</div>';
+    h += '<span class="text-[8.5px] font-medium text-slate-300 font-mono">CONSULTA VIGENCIAS MTC</span>';
+    h += '</div>';
+
+    h += '<div class="grid grid-cols-2 divide-x-[1.5px] divide-slate-900 text-xs" style="display:grid;grid-template-columns:1fr 1fr;">';
+    
+    // Tracto
+    h += '<div class="p-2 bg-white" style="border-right:1.5px solid #0F172A;">';
+    h += '<div class="flex items-center gap-1.5 mb-1.5 font-bold text-slate-900 text-[10.5px] uppercase">';
+    h += '<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>';
+    h += '<span>TRACTO / CAMIÓN (' + rec.placa_tracto + ')</span>';
+    h += '</div>';
+    h += '<div class="space-y-1">';
+
+    var hasSoatTracto = !!(docT && docT.soat && docT.soat.fechaFmt);
+    var hasRtTracto   = !!(docT && docT.rt && docT.rt.fechaFmt);
+
+    if (hasSoatTracto) {
+        var sBg = docT.soat.pdfBg || '#15803D';
+        var sCol = docT.soat.pdfColor || '#FFFFFF';
+        h += '<div class="flex items-center justify-between p-1 rounded-md bg-slate-50 border border-slate-200">';
+        h += '<div class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✔</span><div class="leading-tight"><span class="font-bold text-slate-800 text-[10px] block">SOAT</span><span class="text-[9.5px] text-slate-500">Vence el <strong class="text-slate-800">' + docT.soat.fechaFmt + '</strong></span></div></div>';
+        h += '<span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold text-white" style="background:' + sBg + ';color:' + sCol + ';">' + docT.soat.estado + '</span>';
+        h += '</div>';
+    }
+
+    if (hasRtTracto) {
+        var rBg = docT.rt.pdfBg || '#15803D';
+        var rCol = docT.rt.pdfColor || '#FFFFFF';
+        h += '<div class="flex items-center justify-between p-1 rounded-md bg-slate-50 border border-slate-200">';
+        h += '<div class="flex items-center gap-1.5"><span class="text-sky-600 font-bold">📋</span><div class="leading-tight"><span class="font-bold text-slate-800 text-[10px] block">Revisión Técnica</span><span class="text-[9.5px] text-slate-500">Vence el <strong class="text-slate-800">' + docT.rt.fechaFmt + '</strong></span></div></div>';
+        h += '<span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold text-white" style="background:' + rBg + ';color:' + rCol + ';">' + docT.rt.estado + '</span>';
+        h += '</div>';
+    }
+
+    if (!hasSoatTracto && !hasRtTracto) {
+        h += '<div class="text-slate-400 italic text-[10px] py-2 text-center">Sin documentos registrados</div>';
+    }
+
+    h += '</div>';
+    h += '</div>';
+
+    // Carreta
+    h += '<div class="p-2 bg-white">';
+    h += '<div class="flex items-center gap-1.5 mb-1.5 font-bold text-slate-900 text-[10.5px] uppercase">';
+    h += '<svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>';
+    h += '<span>CARRETA / REMOLQUE (' + carretaFull + ')</span>';
+    h += '</div>';
+
+    if (rec.placa_carreta || rec.retorno_placa_carreta) {
+        var hasSoatCarreta = !!(docC && docC.soat && docC.soat.fechaFmt);
+        var hasRtCarreta   = !!(docC && docC.rt && docC.rt.fechaFmt);
+
+        h += '<div class="space-y-1">';
+        if (hasSoatCarreta) {
+            var scBg = docC.soat.pdfBg || '#15803D';
+            var scCol = docC.soat.pdfColor || '#FFFFFF';
+            h += '<div class="flex items-center justify-between p-1 rounded-md bg-slate-50 border border-slate-200">';
+            h += '<div class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✔</span><div class="leading-tight"><span class="font-bold text-slate-800 text-[10px] block">SOAT / Seguro</span><span class="text-[9.5px] text-slate-500">Vence el <strong class="text-slate-800">' + docC.soat.fechaFmt + '</strong></span></div></div>';
+            h += '<span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold text-white" style="background:' + scBg + ';color:' + scCol + ';">' + docC.soat.estado + '</span>';
+            h += '</div>';
+        }
+
+        if (hasRtCarreta) {
+            var rcBg = docC.rt.pdfBg || '#15803D';
+            var rcCol = docC.rt.pdfColor || '#FFFFFF';
+            h += '<div class="flex items-center justify-between p-1 rounded-md bg-slate-50 border border-slate-200">';
+            h += '<div class="flex items-center gap-1.5"><span class="text-sky-600 font-bold">📋</span><div class="leading-tight"><span class="font-bold text-slate-800 text-[10px] block">Revisión Técnica</span><span class="text-[9.5px] text-slate-500">Vence el <strong class="text-slate-800">' + docC.rt.fechaFmt + '</strong></span></div></div>';
+            h += '<span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold text-white" style="background:' + rcBg + ';color:' + rcCol + ';">' + docC.rt.estado + '</span>';
+            h += '</div>';
+        }
+
+        if (!hasSoatCarreta && !hasRtCarreta) {
+            h += '<div class="text-slate-400 italic text-[10px] py-2 text-center">Sin documentos registrados</div>';
+        }
+
+        h += '</div>';
+    } else {
+        h += '<div class="text-slate-400 italic text-[10px] py-3 text-center">No aplica / Sin semirremolque acoplado.</div>';
+    }
+    h += '</div>';
+
+    h += '</div>';
+    h += '</section>';
+
+    // 3. BANNER DE ATENCIÓN / ANOMALÍAS
+    if (hasAlert) {
+        h += '<div class="doc-grid-box rounded-lg bg-red-50/90 p-2 mb-2.5 flex items-start gap-2" style="border:1.5px solid #0F172A;background:#FEF2F2;">';
+        h += '<div class="w-4 h-4 rounded-md bg-red-600 text-white flex items-center justify-center shrink-0 mt-0.5" style="width:16px;height:16px;background:#DC2626;"><svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor" style="width:12px;height:12px;"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg></div>';
+        h += '<div>';
+        h += '<span class="text-[10.5px] font-extrabold text-red-700 block uppercase tracking-wide">Atención: Se reportaron anomalías u observaciones en la inspección</span>';
+        h += '<p class="text-[9.5px] text-red-600/90 font-medium leading-normal mt-0.5">Se detectaron ítems observados o novedades registradas durante la auditoría de salida o retorno de la unidad.</p>';
+        h += '</div>';
+        h += '</div>';
+    }
+
+    // 4. DETALLE DE INSPECCIÓN TÉCNICA Y CONTRASTE (5 COLUMNAS: COMPONENTE | CANT IDA | EST IDA | CANT VTA | EST VTA)
+    h += '<section class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2.5" style="border:1.5px solid #0F172A;">';
+    h += '<div class="px-3 py-1 bg-slate-900 text-white text-center" style="background:#0F172A;">';
+    h += '<h2 class="text-[11px] font-extrabold uppercase tracking-widest text-white">Detalle de Inspección Técnica y Contraste (Ida vs Vuelta)</h2>';
+    h += '</div>';
+
+    if (template && template.length) {
+        var totalItems = 0;
+        template.forEach(function(cat) { totalItems += (cat.items || []).length; });
+
+        var col1 = [], col2 = [];
+        var currentCount = 0;
+        template.forEach(function(cat) {
+            var catCount = (cat.items || []).length;
+            if (currentCount < totalItems / 2 || col1.length === 0) {
+                col1.push(cat);
+                currentCount += catCount;
+            } else {
+                col2.push(cat);
+            }
+        });
+
+        function renderTailwindColCompleto(cats, isRightCol) {
+            var colHtml = '<div class="divide-y divide-slate-200" style="' + (isRightCol ? '' : 'border-right:1.5px solid #0F172A;') + '">';
+            cats.forEach(function(cat, cIdx) {
+                colHtml += '<div class="bg-slate-100/90 px-2 py-0.5 font-extrabold text-slate-800 text-[9px] uppercase tracking-wider ' + (cIdx > 0 ? 'border-t border-slate-300' : '') + ' border-b border-slate-300" style="background:#F1F5F9;">';
+                colHtml += (cat.titulo || 'CATEGORÍA');
+                colHtml += '</div>';
+
+                // Subheader with 5 distinct columns: Componente | Cant. Ida | Est. Ida | Cant. Vta | Est. Vta
+                colHtml += '<div class="grid grid-cols-12 bg-slate-200/90 px-1.5 py-0.5 text-[8px] font-extrabold text-slate-700 uppercase border-b border-slate-300 text-center" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));background:#E2E8F0;">';
+                colHtml += '<div class="col-span-4 text-left" style="grid-column:span 4 / span 4;text-align:left;">Componente</div>';
+                colHtml += '<div class="col-span-2" style="grid-column:span 2 / span 2;">Cant. Ida</div>';
+                colHtml += '<div class="col-span-2" style="grid-column:span 2 / span 2;">Est. Ida</div>';
+                colHtml += '<div class="col-span-2" style="grid-column:span 2 / span 2;">Cant. Vta</div>';
+                colHtml += '<div class="col-span-2" style="grid-column:span 2 / span 2;">Est. Vta</div>';
+                colHtml += '</div>';
+
+                colHtml += '<div class="divide-y divide-slate-100">';
+                (cat.items || []).forEach(function(item) {
+                    var valIda = salidaChk[item.id] ? String(salidaChk[item.id]).toUpperCase() : '';
+                    var valVta = retornoChk[item.id] ? String(retornoChk[item.id]).toUpperCase() : '';
+
+                    var isMalIda = valIda === 'MAL' || valIda === 'NO CONFORME' || valIda === 'OBS';
+                    var isOkIda = valIda === 'OK' || valIda === 'CONFORME';
+                    var isNaIda = valIda === 'NA' || valIda === 'N/A';
+
+                    var isMalVta = valVta === 'MAL' || valVta === 'NO CONFORME' || valVta === 'OBS';
+                    var isOkVta = valVta === 'OK' || valVta === 'CONFORME';
+                    var isNaVta = valVta === 'NA' || valVta === 'N/A';
+
+                    var cantIda = salidaChk[item.id + '_cant'] !== undefined && salidaChk[item.id + '_cant'] !== '' ? salidaChk[item.id + '_cant'] : '-';
+                    var cantVta = retornoChk[item.id + '_cant'] !== undefined && retornoChk[item.id + '_cant'] !== '' ? retornoChk[item.id + '_cant'] : '-';
+
+                    var hasRowAlert = isMalIda || isMalVta;
+                    var bgRow = hasRowAlert ? 'bg-red-50/80' : '';
+                    var borderMal = hasRowAlert ? 'border-l-[3px] border-red-600' : '';
+
+                    colHtml += '<div class="grid grid-cols-12 items-center px-1.5 py-0.5 ' + bgRow + ' ' + borderMal + '" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));min-height:20px;">';
+                    colHtml += '<div class="col-span-4 font-medium text-slate-800 text-[9px] truncate" style="grid-column:span 4 / span 4;" title="' + item.label + '">' + item.label + '</div>';
+                    
+                    // Cant Ida
+                    colHtml += '<div class="col-span-2 text-center font-bold text-slate-700 text-[9px]" style="grid-column:span 2 / span 2;text-align:center;">' + cantIda + '</div>';
+                    
+                    // Est Ida
+                    colHtml += '<div class="col-span-2 text-center" style="grid-column:span 2 / span 2;text-align:center;">';
+                    if (isMalIda) {
+                        colHtml += '<span class="text-[8px] font-extrabold text-white bg-red-600 px-1 py-0.2 rounded inline-block" style="background:#DC2626;color:#fff;">MAL</span>';
+                    } else if (isOkIda) {
+                        colHtml += '<span class="text-[8px] font-bold text-emerald-700 bg-emerald-100 px-1 py-0.2 rounded inline-block" style="background:#D1FAE5;color:#047857;">OK</span>';
+                    } else if (isNaIda) {
+                        colHtml += '<span class="text-[8px] font-semibold text-slate-600 bg-slate-200 px-1 py-0.2 rounded inline-block">N/A</span>';
+                    } else {
+                        colHtml += '<span class="text-[8px] font-medium text-slate-400 bg-slate-100 px-1 py-0.2 rounded inline-block">-</span>';
+                    }
+                    colHtml += '</div>';
+
+                    // Cant Vta
+                    colHtml += '<div class="col-span-2 text-center font-bold text-slate-700 text-[9px]" style="grid-column:span 2 / span 2;text-align:center;">' + cantVta + '</div>';
+
+                    // Est Vta
+                    colHtml += '<div class="col-span-2 text-center" style="grid-column:span 2 / span 2;text-align:center;">';
+                    if (isMalVta) {
+                        colHtml += '<span class="text-[8px] font-extrabold text-white bg-red-600 px-1 py-0.2 rounded inline-block" style="background:#DC2626;color:#fff;">MAL</span>';
+                    } else if (isOkVta) {
+                        colHtml += '<span class="text-[8px] font-bold text-emerald-700 bg-emerald-100 px-1 py-0.2 rounded inline-block" style="background:#D1FAE5;color:#047857;">OK</span>';
+                    } else if (isNaVta) {
+                        colHtml += '<span class="text-[8px] font-semibold text-slate-600 bg-slate-200 px-1 py-0.2 rounded inline-block">N/A</span>';
+                    } else {
+                        colHtml += '<span class="text-[8px] font-medium text-slate-400 bg-slate-100 px-1 py-0.2 rounded inline-block">-</span>';
+                    }
+                    colHtml += '</div>';
+
+                    colHtml += '</div>';
+                });
+                colHtml += '</div>';
+            });
+            colHtml += '</div>';
+            return colHtml;
+        }
+
+        h += '<div class="grid grid-cols-2 divide-x-[1.5px] divide-slate-900 text-[10px]" style="display:grid;grid-template-columns:1fr 1fr;">';
+        h += renderTailwindColCompleto(col1, false);
+        h += renderTailwindColCompleto(col2, true);
+        h += '</div>';
+    } else {
+        h += '<div class="p-4 text-center text-slate-400 italic text-[10px]">No se registró detalle de checklist.</div>';
+    }
+    h += '</section>';
+
+    // 5. OBSERVACIONES CONSOLIDADAS
+    h += '<div class="doc-grid-box rounded-lg p-2 mb-2.5 bg-white text-[10px]" style="border:1.5px solid #0F172A;">';
+    h += '<div class="grid grid-cols-2 gap-2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    h += '<div><strong class="text-slate-800 uppercase text-[9.5px]">Obs. Salida:</strong> <span class="' + (obsSalida ? 'text-slate-900 font-semibold' : 'text-slate-500') + '">' + (obsSalida ? obsSalida.toUpperCase() : 'SIN OBSERVACIONES') + '</span></div>';
+    h += '<div><strong class="text-slate-800 uppercase text-[9.5px]">Obs. Retorno:</strong> <span class="' + (obsRetorno ? 'text-slate-900 font-semibold' : 'text-slate-500') + '">' + (obsRetorno ? obsRetorno.toUpperCase() : 'SIN OBSERVACIONES') + '</span></div>';
+    h += '</div>';
+    h += '</div>';
+
+    // 6. SECCIÓN DE 4 FIRMAS DIGITALES (2 SALIDA + 2 RETORNO)
+    h += '<footer class="doc-grid-box rounded-lg p-2.5 bg-white" style="border:1.5px solid #0F172A;">';
+    h += '<div class="flex items-center gap-1.5 mb-2 pb-1 border-b border-slate-200" style="border-bottom:1px solid #E2E8F0;">';
+    h += '<svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>';
+    h += '<span class="text-[9.5px] font-extrabold uppercase tracking-wider text-slate-700">Firmas Digitales de Conformidad (Despacho y Recepción)</span>';
+    h += '</div>';
+
+    h += '<div class="grid grid-cols-4 gap-2" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">';
+    
+    // 1. Conductor Salida
+    h += '<div class="p-1.5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col items-center justify-between text-center min-h-[70px]" style="border:1px solid #E2E8F0;background:#F8FAFC;">';
+    h += '<div class="h-7 flex items-center justify-center">';
+    if (fSalidaCond) {
+        h += '<img src="' + fSalidaCond + '" style="max-height:24px;max-width:95px;object-fit:contain;" crossorigin="anonymous">';
+    } else {
+        h += '<svg class="w-20 h-5 text-slate-800 stroke-current fill-none stroke-[1.8]" viewBox="0 0 140 40"><path d="M15 28 Q 35 4 55 18 T 95 24 T 125 12"/></svg>';
+    }
+    h += '</div>';
+    h += '<div class="w-full pt-1 border-t border-slate-200" style="border-top:1px solid #E2E8F0;">';
+    h += '<span class="text-[9px] font-extrabold text-slate-900 block uppercase tracking-tight">Cond. Salida</span>';
+    h += '<span class="text-[8px] text-slate-500 font-medium block truncate max-w-[100px] mx-auto">' + condSalida + '</span>';
+    h += '</div>';
+    h += '</div>';
+
+    // 2. Inspector Salida
+    h += '<div class="p-1.5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col items-center justify-between text-center min-h-[70px]" style="border:1px solid #E2E8F0;background:#F8FAFC;">';
+    h += '<div class="h-7 flex items-center justify-center">';
+    if (fSalidaVig) {
+        h += '<img src="' + fSalidaVig + '" style="max-height:24px;max-width:95px;object-fit:contain;" crossorigin="anonymous">';
+    } else {
+        h += '<svg class="w-20 h-5 text-slate-800 stroke-current fill-none stroke-[1.8]" viewBox="0 0 140 40"><path d="M20 30 Q 40 4 60 14 T 90 28 T 120 10"/></svg>';
+    }
+    h += '</div>';
+    h += '<div class="w-full pt-1 border-t border-slate-200" style="border-top:1px solid #E2E8F0;">';
+    h += '<span class="text-[9px] font-extrabold text-slate-900 block uppercase tracking-tight">Vig. Salida</span>';
+    h += '<span class="text-[8px] text-slate-500 font-medium block truncate max-w-[100px] mx-auto">' + (rec.creado_por || 'Vigilancia') + '</span>';
+    h += '</div>';
+    h += '</div>';
+
+    // 3. Conductor Retorno
+    h += '<div class="p-1.5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col items-center justify-between text-center min-h-[70px]" style="border:1px solid #E2E8F0;background:#F8FAFC;">';
+    h += '<div class="h-7 flex items-center justify-center">';
+    if (fRetornoCond) {
+        h += '<img src="' + fRetornoCond + '" style="max-height:24px;max-width:95px;object-fit:contain;" crossorigin="anonymous">';
+    } else {
+        h += '<svg class="w-20 h-5 text-slate-800 stroke-current fill-none stroke-[1.8]" viewBox="0 0 140 40"><path d="M15 28 Q 35 4 55 18 T 95 24 T 125 12"/></svg>';
+    }
+    h += '</div>';
+    h += '<div class="w-full pt-1 border-t border-slate-200" style="border-top:1px solid #E2E8F0;">';
+    h += '<span class="text-[9px] font-extrabold text-slate-900 block uppercase tracking-tight">Cond. Retorno</span>';
+    h += '<span class="text-[8px] text-slate-500 font-medium block truncate max-w-[100px] mx-auto">' + condRetorno + '</span>';
+    h += '</div>';
+    h += '</div>';
+
+    // 4. Inspector Retorno
+    h += '<div class="p-1.5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col items-center justify-between text-center min-h-[70px]" style="border:1px solid #E2E8F0;background:#F8FAFC;">';
+    h += '<div class="h-7 flex items-center justify-center">';
+    if (fRetornoVig) {
+        h += '<img src="' + fRetornoVig + '" style="max-height:24px;max-width:95px;object-fit:contain;" crossorigin="anonymous">';
+    } else {
+        h += '<svg class="w-20 h-5 text-slate-800 stroke-current fill-none stroke-[1.8]" viewBox="0 0 140 40"><path d="M20 30 Q 40 4 60 14 T 90 28 T 120 10"/></svg>';
+    }
+    h += '</div>';
+    h += '<div class="w-full pt-1 border-t border-slate-200" style="border-top:1px solid #E2E8F0;">';
+    h += '<span class="text-[9px] font-extrabold text-slate-900 block uppercase tracking-tight">Vig. Retorno</span>';
+    h += '<span class="text-[8px] text-slate-500 font-medium block truncate max-w-[100px] mx-auto">' + (rec.retorno_creado_por || rec.creado_por || 'Vigilancia') + '</span>';
     h += '</div>';
     h += '</div>';
 
@@ -3459,17 +3850,13 @@ window._sguPrevisualizarPDFCompleto = async function() {
     _sguToast('Preparando expediente completo con imágenes...', 'bi-eye');
 
     var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
-    var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+    var docC = (rec.placa_carreta || rec.retorno_placa_carreta) ? await _sguObtenerDocVehiculo(rec.retorno_placa_carreta || rec.placa_carreta) : null;
 
     var todasFotos = rec.fotos || [];
     var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
     var fotosRetorno = todasFotos.filter(function(f){ return f.tipo === 'retorno'; });
 
-    var htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
-
-    if (rec.retorno_fecha || rec.estado === 'completado') {
-        htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
-    }
+    var htmlFinal = _sguBuildPageHtmlCompleto(rec, docT, docC);
 
     if (fotosSalida.length > 0) {
         var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
@@ -3517,7 +3904,7 @@ window._sguGenerarPDFCompleto = async function() {
 
     try {
         var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
-        var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+        var docC = (rec.placa_carreta || rec.retorno_placa_carreta) ? await _sguObtenerDocVehiculo(rec.retorno_placa_carreta || rec.placa_carreta) : null;
 
         var todasFotos = rec.fotos || [];
         var fotosSalida = todasFotos.filter(function(f){ return f.tipo === 'salida'; });
@@ -3526,11 +3913,7 @@ window._sguGenerarPDFCompleto = async function() {
         var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
         var fotosRetornoB64 = await _sguConvertirFotosABase64(fotosRetorno);
 
-        var htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
-
-        if (rec.retorno_fecha || rec.estado === 'completado') {
-            htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
-        }
+        var htmlFinal = _sguBuildPageHtmlCompleto(rec, docT, docC);
 
         if (fotosSalidaB64.length > 0) {
             htmlFinal += _sguBuildPhotosPagesHtml(fotosSalidaB64, 'salida');
@@ -3555,7 +3938,7 @@ window._sguCompartirWhatsApp = async function(tipo) {
     _sguToast('Preparando PDF para WhatsApp...', 'bi-whatsapp');
     try {
         var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
-        var docC = rec.placa_carreta ? await _sguObtenerDocVehiculo(rec.placa_carreta) : null;
+        var docC = (rec.placa_carreta || rec.retorno_placa_carreta) ? await _sguObtenerDocVehiculo(rec.retorno_placa_carreta || rec.placa_carreta) : null;
 
         // Traer fotos con URLs firmadas vigentes para evitar cualquier 403 Forbidden
         var fotosFirmadas = [];
@@ -3577,10 +3960,7 @@ window._sguCompartirWhatsApp = async function(tipo) {
             var fotosSalidaB64 = await _sguConvertirFotosABase64(fotosSalida);
             var fotosRetornoB64 = await _sguConvertirFotosABase64(fotosRetorno);
 
-            htmlFinal = _sguBuildPageHtml(rec, 'salida', 'Página 1: Acta de Salida (Ida)', docT, docC);
-            if (rec.retorno_fecha || rec.estado === 'completado') {
-                htmlFinal += _sguBuildPageHtml(rec, 'retorno', 'Página 2: Acta de Retorno (Vuelta)', docT, docC);
-            }
+            htmlFinal = _sguBuildPageHtmlCompleto(rec, docT, docC);
             if (fotosSalidaB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosSalidaB64, 'salida');
             if (fotosRetornoB64.length > 0) htmlFinal += _sguBuildPhotosPagesHtml(fotosRetornoB64, 'retorno');
         } else {

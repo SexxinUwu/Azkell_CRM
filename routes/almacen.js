@@ -422,7 +422,7 @@ router.post('/inventario', (req, res) => {
              proveedor_id||null, marca||null, observaciones||null,
              codigo_item||null, marca_unidad||null, sistema||null, sub_sistema||null,
              tipo||null, sub_tipo||null, ubicacion||null,
-             anaquel!=null?parseFloat(anaquel):null, parseFloat(stock_min)||0, parseFloat(stock_max)||0,
+             (anaquel != null && String(anaquel).trim() !== '') ? String(anaquel).trim() : null, parseFloat(stock_min)||0, parseFloat(stock_max)||0,
              estado_art||'Activo', codigo_barras||null,
              stockReg, fechaReg],
             (err2) => {
@@ -463,7 +463,7 @@ router.put('/inventario/:id', (req, res) => {
          activo != null ? activo : 1,
          codigo_item||null, marca_unidad||null, sistema||null, sub_sistema||null,
          tipo||null, sub_tipo||null, ubicacion||null,
-         anaquel!=null?parseFloat(anaquel):null, parseFloat(stock_min)||0, parseFloat(stock_max)||0,
+         (anaquel != null && String(anaquel).trim() !== '') ? String(anaquel).trim() : null, parseFloat(stock_min)||0, parseFloat(stock_max)||0,
          estado_art||'Activo', codigo_barras||null, req.params.id],
         (err) => {
             if (err) { console.error('[PUT inventario]', err.message); return res.status(500).json({ error: err.message }); }
@@ -694,7 +694,7 @@ router.post('/inventario/importar', async (req, res) => {
                          f.marca||null, f.observaciones||null,
                          marcaUnidadJson, f.sistema||null, f.sub_sistema||null,
                          f.tipo||null, f.sub_tipo||null, f.ubicacion||null,
-                         f.anaquel!=null?parseFloat(f.anaquel):null,
+                         (f.anaquel != null && String(f.anaquel).trim() !== '') ? String(f.anaquel).trim() : null,
                          parseFloat(f.stock_min)||0, parseFloat(f.stock_max)||0,
                          f.estado_art||'Activo', f.codigo_barras||null,
                          stockReg, fechaReg],

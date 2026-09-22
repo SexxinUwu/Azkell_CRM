@@ -1254,9 +1254,16 @@ window.mostrarOfflineBadge = function(store, hora) {
 };
 
 window.mostrarToastSSE = function(modulo) {
+    if (typeof modulo === 'object' && modulo !== null) {
+        modulo = modulo.modulo || modulo.nombre || modulo.tabla || modulo.tipo || 'Sistema';
+    }
+    if (typeof modulo !== 'string' || String(modulo).indexOf('[object Object]') >= 0) {
+        modulo = 'Sistema';
+    }
     var nombres = { fleetrun:'Fleetrun', placas:'Placas', inspecciones:'Inspecciones',
-                    conductores:'Personal', status:'Status Flota', usuarios:'Usuarios' };
-    var nombre = nombres[modulo] || modulo;
+                    conductores:'Personal', status:'Status Flota', usuarios:'Usuarios',
+                    seguridad_unidades:'Control de Unidades', seg_unidades_base:'Unidades en Base' };
+    var nombre = nombres[modulo] || modulo || 'Módulo';
     var chip = document.createElement('div');
     chip.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--crm-accent);color:#fff;padding:6px 16px;border-radius:99px;font-size:0.78rem;font-weight:600;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;';
     chip.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>' + nombre + ' actualizado';
