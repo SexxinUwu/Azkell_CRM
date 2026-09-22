@@ -212,13 +212,17 @@
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 18px !important;
-    padding: 1rem 1.25rem !important;
+    padding: 0.85rem 1rem !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 82px !important;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
+    box-sizing: border-box !important;
 }
 .ck-kpi-card:hover {
     transform: translateY(-2px);
@@ -229,14 +233,28 @@
     box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
     background: #ffffff !important;
 }
+.ck-kpi-info {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    margin-right: 0.5rem !important;
+}
+.ck-kpi-label {
+    font-size: 0.67rem !important;
+    letter-spacing: 0.4px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+    line-height: 1.2 !important;
+}
 .ck-kpi-icon {
-    width: 46px !important;
-    height: 46px !important;
+    width: 44px !important;
+    height: 44px !important;
     border-radius: 14px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 1.3rem !important;
+    font-size: 1.25rem !important;
     flex-shrink: 0 !important;
 }
 
@@ -536,45 +554,45 @@
         </div>
 
         <!-- ── 2. BENTO KPIS ROW (IDÉNTICO A REPORTE DE FALLAS) ─────────── -->
-        <div class="row g-2 g-md-3 mb-3">
-            <div class="col-6 col-md-3">
+        <div class="row g-2 g-md-3 mb-3 align-items-stretch">
+            <div class="col-6 col-md-3 d-flex align-items-stretch">
                 <div class="ck-kpi-card" id="inv-kpi-total" onclick="window.filtrarInventarioPorKPI && window.filtrarInventarioPorKPI('total', this)" style="cursor:pointer;">
-                    <div>
-                        <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">TOTAL ARTÍCULOS</span>
-                        <h2 id="kpi-inv-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
+                    <div class="ck-kpi-info">
+                        <span class="text-secondary small fw-bold text-uppercase ck-kpi-label mb-1" title="TOTAL ARTÍCULOS">TOTAL ARTÍCULOS</span>
+                        <h2 id="kpi-inv-total" class="fw-bolder m-0 text-dark" style="font-size: 1.5rem;">0</h2>
                     </div>
                     <div class="ck-kpi-icon" style="background: #eff6ff; color: #2563eb;">
                         <i class="bi bi-boxes"></i>
                     </div>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-3 d-flex align-items-stretch">
                 <div class="ck-kpi-card" id="inv-kpi-optimo" onclick="window.filtrarInventarioPorKPI && window.filtrarInventarioPorKPI('optimo', this)" style="cursor:pointer;">
-                    <div>
-                        <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">STOCK ÓPTIMO</span>
-                        <h2 id="kpi-inv-optimo" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">0</h2>
+                    <div class="ck-kpi-info">
+                        <span class="text-secondary small fw-bold text-uppercase ck-kpi-label mb-1" title="STOCK ÓPTIMO">STOCK ÓPTIMO</span>
+                        <h2 id="kpi-inv-optimo" class="fw-bolder m-0 text-success" style="font-size: 1.5rem;">0</h2>
                     </div>
                     <div class="ck-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
                         <i class="bi bi-check2-circle"></i>
                     </div>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-3 d-flex align-items-stretch">
                 <div class="ck-kpi-card" id="inv-kpi-alerta" onclick="window.filtrarInventarioPorKPI && window.filtrarInventarioPorKPI('alerta', this)" style="cursor:pointer;">
-                    <div>
-                        <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">STOCK BAJO / ALERTA</span>
-                        <h2 id="kpi-inv-alerta" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem;">0</h2>
+                    <div class="ck-kpi-info">
+                        <span class="text-secondary small fw-bold text-uppercase ck-kpi-label mb-1" title="STOCK BAJO / ALERTA">STOCK BAJO / ALERTA</span>
+                        <h2 id="kpi-inv-alerta" class="fw-bolder m-0 text-warning" style="font-size: 1.5rem;">0</h2>
                     </div>
                     <div class="ck-kpi-icon" style="background: #fefce8; color: #ca8a04;">
                         <i class="bi bi-clock-history"></i>
                     </div>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-3 d-flex align-items-stretch">
                 <div class="ck-kpi-card" id="inv-kpi-quiebre" onclick="window.filtrarInventarioPorKPI && window.filtrarInventarioPorKPI('quiebre', this)" style="cursor:pointer;">
-                    <div>
-                        <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">SIN STOCK / QUIEBRE</span>
-                        <h2 id="kpi-inv-quiebre" class="fw-bolder m-0 text-danger" style="font-size: 1.6rem;">0</h2>
+                    <div class="ck-kpi-info">
+                        <span class="text-secondary small fw-bold text-uppercase ck-kpi-label mb-1" title="SIN STOCK / QUIEBRE">SIN STOCK / QUIEBRE</span>
+                        <h2 id="kpi-inv-quiebre" class="fw-bolder m-0 text-danger" style="font-size: 1.5rem;">0</h2>
                     </div>
                     <div class="ck-kpi-icon" style="background: #fef2f2; color: #dc2626;">
                         <i class="bi bi-exclamation-triangle"></i>
