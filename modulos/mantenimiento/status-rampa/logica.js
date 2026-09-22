@@ -425,21 +425,51 @@ window.srCalcularDiasInspeccion = function(placa) {
     var pClean = String(placa).replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     var list = (window.srInspeccionesData || window.dataGlobalInspecciones || (window.CACHE && window.CACHE['inspecciones']) || []);
     
-    // Buscar la última inspección de esa placa
-    var ultInsp = null;
-    for (var i = 0; i < list.length; i++) {
-        var insp = list[i];
-        var ip = String(insp.placa || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-        if (ip === pClean) {
-            if (!ultInsp) {
-                ultInsp = insp;
-            } else {
-                var d1 = new Date(insp.fecha_ingreso || insp.fecha || 0);
-                var d2 = new Date(ultInsp.fecha_ingreso || ultInsp.fecha || 0);
-                if (d1 > d2) ultInsp = insp;
-            }
+    var parseFechaVal = function(i) {
+        if (!i || !i.fecha_ingreso) return 0;
+        var fStr = String(i.fecha_ingreso).trim();
+        if (fStr.includes('/')) {
+            var p = fStr.split('/');
+            return new Date(parseInt(p[2], 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10)).getTime() || 0;
         }
+        var ds = fStr.split('T')[0].split('-');
+        if (ds.length === 3) {
+            return new Date(parseInt(ds[0], 10), parseInt(ds[1], 10) - 1, parseInt(ds[2], 10)).getTime() || 0;
+        }
+        return new Date(fStr).getTime() || 0;
+    };
+
+    var numId = function(id) {
+        if (!id) return 0;
+        var parts = String(id).split('-');
+        if (parts.length > 2 && parts[1].length === 4) {
+            return parseInt(parts[1] + parts[2] + (parts[3] || '0'), 10) || 0;
+        }
+        return parseInt(parts[1], 10) || 0;
+    };
+
+    // Filtrar inspecciones válidas de esa placa (no eliminadas y no 'Solo Frenos')
+    var inspsPlaca = list.filter(function(insp) {
+        var ip = String(insp.placa || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        return ip === pClean && insp.estado !== 'Eliminada' && insp.tipo_inspeccion !== 'Solo Frenos';
+    });
+
+    // Si no hay general, buscar cualquiera de la placa que no esté eliminada
+    if (!inspsPlaca.length) {
+        inspsPlaca = list.filter(function(insp) {
+            var ip = String(insp.placa || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            return ip === pClean && insp.estado !== 'Eliminada';
+        });
     }
+
+    // Ordenar de más reciente a más antigua exactamente igual que en Análisis de Inspecciones
+    inspsPlaca.sort(function(a, b) {
+        var fa = parseFechaVal(a), fb = parseFechaVal(b);
+        if (fb !== fa) return fb - fa;
+        return numId(b.id) - numId(a.id);
+    });
+
+    var ultInsp = inspsPlaca.length ? inspsPlaca[0] : null;
 
     if (!ultInsp || !ultInsp.fecha_ingreso) {
         return { 
@@ -453,15 +483,16 @@ window.srCalcularDiasInspeccion = function(placa) {
     }
 
     var fIngreso;
-    var fRaw = String(ultInsp.fecha_ingreso);
+    var fRaw = String(ultInsp.fecha_ingreso).trim();
     if (fRaw.includes('/')) {
-        var px = fRaw.split('/'); fIngreso = new Date(px[2], px[1] - 1, px[0]);
+        var px = fRaw.split('/');
+        fIngreso = new Date(parseInt(px[2], 10), parseInt(px[1], 10) - 1, parseInt(px[0], 10));
     } else {
-        var ds = fRaw.split('T')[0].split('-');
-        fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1]) - 1, parseInt(ds[2])) : new Date(fRaw);
+        var ds2 = fRaw.split('T')[0].split('-');
+        fIngreso = ds2.length === 3 ? new Date(parseInt(ds2[0], 10), parseInt(ds2[1], 10) - 1, parseInt(ds2[2], 10)) : new Date(fRaw);
     }
 
-    var dProp = parseInt(ultInsp.dias_propuestos) || 30;
+    var dProp = parseInt(ultInsp.dias_propuestos, 10) || 30;
     var fProx = new Date(fIngreso.getTime());
     fProx.setDate(fProx.getDate() + dProp);
     
@@ -474,17 +505,17 @@ window.srCalcularDiasInspeccion = function(placa) {
 
     var color, texto, badgeHtml;
     if (diasRestantes < 0) {
-        color = '#dc2626'; // Rojo
-        texto = (diasRestantes) + ' d';
+        color = '#dc2626'; // Rojo (vencido)
+        texto = diasRestantes + ' d';
         badgeHtml = '<span class="fw-bold" style="color:#dc2626 !important; font-size:0.85rem; letter-spacing:0.2px;">' + diasRestantes + ' d</span>';
     } else if (diasRestantes <= 7) {
-        color = '#d97706'; // Amarillo
+        color = '#d97706'; // Amarillo (alerta)
         texto = diasRestantes + ' d';
         badgeHtml = '<span class="fw-bold" style="color:#d97706 !important; font-size:0.85rem; letter-spacing:0.2px;">' + diasRestantes + ' d</span>';
     } else {
         color = '#16a34a'; // Verde (> 7 días)
-        texto = diasRestantes + ' d';
-        badgeHtml = '<span class="fw-bold" style="color:#16a34a !important; font-size:0.85rem; letter-spacing:0.2px;">' + diasRestantes + ' d</span>';
+        texto = '+' + diasRestantes + ' d';
+        badgeHtml = '<span class="fw-bold" style="color:#16a34a !important; font-size:0.85rem; letter-spacing:0.2px;">+' + diasRestantes + ' d</span>';
     }
 
     return {
@@ -641,9 +672,10 @@ function srRenderTabla() {
             });
         } else {
             entradas.forEach(function(e) {
-                var otsPlaca = window.srOtData.filter(function(o) {
-                    if (o.id_rampa) return String(o.id_rampa) === String(e._id);
-                    return (o.placa || '').toUpperCase() === (e.placa || '').toUpperCase();
+                var otsPlaca = (window.srOtData || []).filter(function(o) {
+                    if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
+                    if (e.ticket_entrada && (String(o.ticket_entrada) === String(e.ticket_entrada) || String(o.id_ot) === String(e.ticket_entrada))) return true;
+                    return false;
                 });
                 var otsTxt = otsPlaca.length
                     ? otsPlaca.slice(0,3).map(function(o) {
@@ -913,9 +945,10 @@ window.srAbrirDetalle = function(id) {
     var fOut = e.fechaSalida ? srFmtFecha(e.fechaSalida, true) : '—';
     var hOut = e.horaSalida ? e.horaSalida : '';
 
-    var otsPlaca = window.srOtData.filter(function(o) {
+    var otsPlaca = (window.srOtData || []).filter(function(o) {
         if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
-        return (o.placa || '').toUpperCase() === (e.placa || '').toUpperCase();
+        if (e.ticket_entrada && (String(o.ticket_entrada) === String(e.ticket_entrada) || String(o.id_ot) === String(e.ticket_entrada))) return true;
+        return false;
     });
 
     var choferNom = (e.conductor || e.chofer || e.reportado_por || '').trim();
@@ -1773,7 +1806,8 @@ window.srAbrirDetalleHistorial = function(id) {
 
     var ots = (window.srOtData || []).filter(function(o) {
         if (o.id_rampa) return String(o.id_rampa) === String(row.id);
-        return (o.placa || '').toUpperCase() === (row.placa || '').toUpperCase();
+        if (row.ticket_entrada && (String(o.ticket_entrada) === String(row.ticket_entrada) || String(o.id_ot) === String(row.ticket_entrada))) return true;
+        return false;
     });
 
     var parsedDetalle = window.srParsearTareasArray(row.obs || '');
@@ -3881,7 +3915,8 @@ window.srDescargarPlantillaParabrisas = function(id) {
     // Buscar todas las OTs vinculadas
     var otsPlaca = (window.srOtData || []).filter(function(o) {
         if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
-        return (o.placa || '').toUpperCase() === (e.placa || '').toUpperCase();
+        if (e.ticket_entrada && (String(o.ticket_entrada) === String(e.ticket_entrada) || String(o.id_ot) === String(e.ticket_entrada))) return true;
+        return false;
     });
     var linkedOt = otsPlaca && otsPlaca.length > 0 ? otsPlaca[0] : null;
     var otCodigos = otsPlaca.map(function(o) {
