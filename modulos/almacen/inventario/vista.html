@@ -1087,45 +1087,104 @@
   </div>
 </div>
 
-<!-- ═══ MODAL REGULARIZADOR DE STOCK ════════════════════════════════ -->
-<div class="modal fade" id="modal-inv-regularizar" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold"><i class="bi bi-sliders me-1 text-warning"></i>Regularizar Stock</h5>
+<!-- ═══ MODAL REGULARIZADOR DE STOCK (Diseño Circular Estético) ══════ -->
+<style>
+.inv-reg-dialog {
+  max-width: 380px !important;
+  width: 90% !important;
+  margin: 1.75rem auto !important;
+}
+.inv-reg-card {
+  background: #ffffff !important;
+  border-radius: 28px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12) !important;
+  overflow: hidden;
+}
+.inv-btn-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50% !important;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.45rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  outline: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+.inv-btn-circle:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+.inv-btn-circle:active {
+  transform: scale(0.95);
+}
+.inv-btn-cancel-circle {
+  background: #18181b !important;
+  color: #ffffff !important;
+}
+.inv-btn-cancel-circle:hover {
+  background: #09090b !important;
+  color: #ffffff !important;
+}
+.inv-btn-save-circle {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+}
+.inv-btn-save-circle:hover {
+  background: #d97706 !important;
+  color: #ffffff !important;
+}
+</style>
+
+<div class="modal fade" id="modal-inv-regularizar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered inv-reg-dialog">
+    <div class="modal-content inv-reg-card border-0">
+      <div class="modal-header border-0 pb-0 pt-4 px-4">
+        <h5 class="modal-title fw-bold text-dark" style="font-size: 1.15rem; letter-spacing: -0.2px;"><i class="bi bi-sliders me-2 text-warning"></i>Regularizar Stock</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="form-inv-regularizar" onsubmit="window.guardarRegularizacion(event)">
         <input type="hidden" id="reg-item-id">
-        <div class="modal-body">
-          <div class="alert alert-warning py-2 small mb-3">
-            <i class="bi bi-info-circle me-1"></i>
+        <div class="modal-body px-4 pt-3 pb-2">
+          <div class="alert alert-warning py-2.5 px-3 small mb-3 rounded-3 border-0" style="background:#fef3c7;color:#92400e;font-size:0.82rem;">
+            <i class="bi bi-info-circle me-1 fw-bold"></i>
             Establece el stock físico real. <strong>No afecta entradas/salidas anteriores.</strong>
             El nuevo stock base reemplaza al virtual desde hoy.
           </div>
           <div class="mb-3">
-            <label class="fw-semibold small">Artículo</label>
-            <p id="reg-item-desc" class="fw-bold mb-0 small text-truncate" style="max-width:100%;color:var(--text);"></p>
+            <label class="fw-semibold small text-secondary">Artículo</label>
+            <p id="reg-item-desc" class="fw-bold mb-0 small text-truncate" style="max-width:100%;color:var(--text);font-size:0.88rem;"></p>
           </div>
           <div class="mb-3">
-            <label class="fw-semibold small">Stock virtual actual</label>
+            <label class="fw-semibold small text-secondary">Stock virtual actual</label>
             <p id="reg-stock-virtual" class="fs-5 fw-bold mb-0" style="color:var(--text);"></p>
           </div>
           <div class="mb-3">
             <label class="fw-semibold small text-danger">Stock físico real <span class="text-danger">*</span></label>
-            <input type="number" class="form-control form-control-lg fw-bold" id="reg-stock-fisico"
+            <input type="number" class="form-control form-control-lg fw-bold rounded-3" id="reg-stock-fisico"
               min="0" step="0.0001" placeholder="0" required
-              style="font-size:1.4rem;text-align:center;">
-            <div class="form-text">Ingresa el conteo físico exacto de unidades en almacén.</div>
+              style="font-size:1.45rem;text-align:center;border:1.5px solid #cbd5e1;background:#f8fafc;">
+            <div class="form-text text-secondary" style="font-size:0.75rem;">Ingresa el conteo físico exacto de unidades en almacén.</div>
           </div>
           <div class="mb-1">
-            <label class="fw-semibold small">Motivo / Observación <span class="text-muted fw-normal">(opcional)</span></label>
-            <textarea class="form-control" id="reg-motivo" rows="2" placeholder="Ej: Conteo físico mayo 2025, descarte por vencimiento…"></textarea>
+            <label class="fw-semibold small text-secondary">Motivo / Observación <span class="text-muted fw-normal">(opcional)</span></label>
+            <textarea class="form-control rounded-3" id="reg-motivo" rows="2" placeholder="Ej: Conteo físico mayo 2025, descarte por vencimiento…" style="font-size:0.85rem;border:1.5px solid #cbd5e1;"></textarea>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-warning text-dark fw-semibold"><i class="bi bi-check-lg me-1"></i>Guardar Regularización</button>
+        <div class="modal-footer border-0 d-flex align-items-center justify-content-center gap-4 pt-3 pb-4">
+          <!-- Cancelar (X negro) -->
+          <button type="button" class="inv-btn-circle inv-btn-cancel-circle" data-bs-dismiss="modal" title="Cancelar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+
+          <!-- Guardar Regularización (Check amarillo) -->
+          <button type="submit" class="inv-btn-circle inv-btn-save-circle" title="Guardar Regularización">
+            <i class="bi bi-check-lg"></i>
+          </button>
         </div>
       </form>
     </div>
