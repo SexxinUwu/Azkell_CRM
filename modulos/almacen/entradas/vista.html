@@ -5,6 +5,48 @@
     padding: 0 !important;
 }
 
+/* ─── Entradas: Panel fullscreen (slide desde abajo) ────────── */
+.ent-panel-full {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    top: auto !important;
+    right: auto !important;
+    transform: translateX(-50%) translateY(100%) !important;
+    width: 100% !important;
+    max-width: 860px !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+    background: #f8fafc !important;
+    border-radius: 28px 28px 0 0 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-bottom: none !important;
+    box-shadow: 0 -16px 56px rgba(0, 0, 0, 0.35) !important;
+    z-index: 1089 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    transition: transform .28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    visibility: hidden !important;
+    margin: 0 !important;
+}
+.ent-panel-full.open {
+    transform: translateX(-50%) translateY(0) !important;
+    visibility: visible !important;
+}
+@media (max-width: 768px) {
+    .ent-panel-full {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        left: 0 !important;
+        transform: translateY(100%) !important;
+        border-radius: 24px 24px 0 0 !important;
+    }
+    .ent-panel-full.open {
+        transform: translateY(0) !important;
+    }
+}
+
 /* ── UI Tokens & Layout (Idéntico a Reporte de Fallas) ──── */
 .ent-app-container {
     width: 100% !important;
