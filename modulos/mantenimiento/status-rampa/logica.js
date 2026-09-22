@@ -30,6 +30,33 @@ window.srHistPageSize         = window.srHistPageSize         || 20;
 // srEntradas se carga desde BD — no se persiste en localStorage
 window.srEntradas             = [];
 
+// ── Función unificada para vincular OT con Rampa ──────────────────
+window.srMatchOT = function(o, e) {
+    if (!o || !e) return false;
+    var rId = String(e._id || e.id || '');
+    // 1. Coincidencia directa por id_rampa
+    if (o.id_rampa && String(o.id_rampa) === rId) return true;
+    
+    // 2. Coincidencia en detalles_json
+    var oDet = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
+    if (oDet.id_rampa && String(oDet.id_rampa) === rId) return true;
+
+    // 3. Coincidencia por ticket_entrada
+    if (e.ticket_entrada && (String(o.ticket_entrada) === String(e.ticket_entrada) || String(o.id_ot) === String(e.ticket_entrada))) return true;
+
+    // 4. Si la rampa está activa, vincular OTs abiertas/activas de la misma placa
+    var ePlaca = (e.placa || '').toUpperCase().trim();
+    var oPlaca = (o.placa || '').toUpperCase().trim();
+    if (ePlaca && oPlaca && ePlaca === oPlaca) {
+        var rampaActiva = e.situacion !== 'Finalizado' && e.estado !== 'Liberado';
+        var otActiva = o.estado !== 'Finalizado' && o.estado !== 'Anulado' && o.estado !== 'Cerrado';
+        if (rampaActiva && otActiva) {
+            if (!o.id_rampa || String(o.id_rampa) === rId) return true;
+        }
+    }
+    return false;
+};
+
 
 // ── Color Dinámico sincronizado con Apariencia del ERP ───────────
 window.srGetColorTema = function() {
@@ -673,9 +700,7 @@ function srRenderTabla() {
         } else {
             entradas.forEach(function(e) {
                 var otsPlaca = (window.srOtData || []).filter(function(o) {
-                    if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
-                    if (e.ticket_entrada && (String(o.ticket_entrada) === String(e.ticket_entrada) || String(o.id_ot) === String(e.ticket_entrada))) return true;
-                    return false;
+                    return window.srMatchOT(o, e);
                 });
                 var otsTxt = otsPlaca.length
                     ? otsPlaca.slice(0,3).map(function(o) {
@@ -946,9 +971,7 @@ window.srAbrirDetalle = function(id) {
     var hOut = e.horaSalida ? e.horaSalida : '';
 
     var otsPlaca = (window.srOtData || []).filter(function(o) {
-        if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
-        if (e.ticket_entrada && (String(o.ticket_entrada) === String(e.ticket_entrada) || String(o.id_ot) === String(e.ticket_entrada))) return true;
-        return false;
+        return window.srMatchOT(o, e);
     });
 
     var choferNom = (e.conductor || e.chofer || e.reportado_por || '').trim();
@@ -1805,9 +1828,7 @@ window.srAbrirDetalleHistorial = function(id) {
     var choferNom = (row.conductor || row.chofer || row.reportado_por || '').trim();
 
     var ots = (window.srOtData || []).filter(function(o) {
-        if (o.id_rampa) return String(o.id_rampa) === String(row.id);
-        if (row.ticket_entrada && (String(o.ticket_entrada) === String(row.ticket_entrada) || String(o.id_ot) === String(row.ticket_entrada))) return true;
-        return false;
+        return window.srMatchOT(o, row);
     });
 
     var parsedDetalle = window.srParsearTareasArray(row.obs || '');
@@ -3914,9 +3935,7 @@ window.srDescargarPlantillaParabrisas = function(id) {
 
     // Buscar todas las OTs vinculadas
     var otsPlaca = (window.srOtData || []).filter(function(o) {
-        if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
-        if (e.ticket_entrada && (String(o.ticket_entrada) === String(e.ticket_entrada) || String(o.id_ot) === String(e.ticket_entrada))) return true;
-        return false;
+        return window.srMatchOT(o, e);
     });
     var linkedOt = otsPlaca && otsPlaca.length > 0 ? otsPlaca[0] : null;
     var otCodigos = otsPlaca.map(function(o) {
@@ -4610,8 +4629,7 @@ window.srAbrirPDFStatus = function() {
         } else {
             entradas.forEach(function(e) {
                 var otsPlaca = (window.srOtData || []).filter(function(o) {
-                    if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
-                    return (o.placa || '').toUpperCase() === (e.placa || '').toUpperCase();
+                    return window.srMatchOT(o, e);
                 });
 
                 var obsTextoCol = (e.obs || '').trim();

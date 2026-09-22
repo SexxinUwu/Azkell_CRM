@@ -775,8 +775,9 @@ module.exports = function (db, broadcast, logAudit) {
                                 [placa]
                             );
 
+                            let rId = null;
                             if (existingRampa && existingRampa.length > 0) {
-                                const rId = existingRampa[0].id;
+                                rId = existingRampa[0].id;
                                 const oldObs = (existingRampa[0].obs || '').trim();
                                 let newObs = obsRampa;
                                 if (oldObs) {
@@ -791,10 +792,18 @@ module.exports = function (db, broadcast, logAudit) {
                                     [targetRampaVal, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, situacionVal, newObs, creado_por || 'Sistema', rId]
                                 );
                             } else {
-                                await tdb.promise().query(
+                                const [resIns] = await tdb.promise().query(
                                     `INSERT INTO taller_rampas (rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, estado)
                                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
                                     [targetRampaVal, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, situacionVal, obsRampa, creado_por || 'Sistema']
+                                );
+                                rId = resIns.insertId;
+                            }
+
+                            if (rId && idOt) {
+                                await tdb.promise().query(
+                                    "UPDATE ordenes_trabajo SET id_rampa = ? WHERE id_ot = ?",
+                                    [rId, idOt]
                                 );
                             }
                         } catch(eRampa) {
