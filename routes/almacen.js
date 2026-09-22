@@ -568,8 +568,9 @@ router.post('/inventario/regularizar-todo-cero', (req, res) => {
 router.post('/inventario/:id/imagen', _multerInv.single('imagen'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No se recibió imagen' });
     try {
-        const { uploadToS3, deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
-        db.query('SELECT imagen_url FROM inventario WHERE id=?', [req.params.id], async (err, rows) => {
+        const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl } = require('../utils/s3');
+        const targetDb = getDb(req);
+        targetDb.query('SELECT imagen_url FROM inventario WHERE id=?', [req.params.id], async (err, rows) => {
             if (!err && rows && rows.length > 0 && rows[0].imagen_url) {
                 const oldKey = s3KeyFromUrl(rows[0].imagen_url);
                 if (oldKey) await deleteFromS3(oldKey).catch(() => {});
@@ -579,10 +580,19 @@ router.post('/inventario/:id/imagen', _multerInv.single('imagen'), (req, res) =>
             const s3Key = `almacen/inventario/${req.params.id}/${Date.now()}.${ext}`;
             const url = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
             
-            db.query('UPDATE inventario SET imagen_url=? WHERE id=?', [url, req.params.id], (err) => {
-                if (err) return res.status(500).json({ error: err.message });
-                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); }
-                res.json({ ok: true, imagen_url: url });
+            targetDb.query('UPDATE inventario SET imagen_url=? WHERE id=?', [url, req.params.id], async (updateErr) => {
+                if (updateErr) return res.status(500).json({ error: updateErr.message });
+                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
+                    logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); 
+                }
+                
+                let presigned = url;
+                try {
+                    presigned = await getPresignedUrl(s3Key, 3600);
+                } catch(e) {
+                    console.warn('[Presign Error]', e.message);
+                }
+                res.json({ ok: true, imagen_url: presigned });
             });
         });
     } catch (error) {
