@@ -1376,7 +1376,9 @@ window._sguHandleDirectPhoto = function(input, tipo) {
     });
     input.value = '';
     _sguRenderChecklist();
+    window._sguUpdateExpressPhotoGrid();
     window._sguCheckFormReady();
+    if (_sguEditMode === 'retorno') window._sguCheckReturnReady();
     _sguToast('Foto adjuntada (' + _sguPhotos[tipo].length + ' en total)', 'bi-camera-fill');
 };
 
@@ -1384,7 +1386,55 @@ window._sguRemovePhoto = function(tipo, idx) {
     if (_sguPhotos[tipo] && _sguPhotos[tipo][idx]) {
         _sguPhotos[tipo].splice(idx, 1);
         _sguRenderChecklist();
+        window._sguUpdateExpressPhotoGrid();
         window._sguCheckFormReady();
+        if (_sguEditMode === 'retorno') window._sguCheckReturnReady();
+    }
+};
+
+window._sguUpdateExpressPhotoGrid = function() {
+    // 1. Grid en Salida Express
+    var gridSalida = document.getElementById('sgu-express-photos-grid');
+    var countSalida = document.getElementById('sgu-express-photo-count');
+    if (gridSalida) {
+        var sList = _sguPhotos['salida'] || [];
+        if (countSalida) countSalida.textContent = sList.length + ' foto(s)';
+        if (sList.length === 0) {
+            gridSalida.innerHTML = '<div class="text-muted small fst-italic py-2 text-center w-100" style="grid-column: 1 / -1;"><i class="bi bi-camera text-secondary me-1"></i> Sin fotos adjuntas. Tome una foto o suba desde la galería.</div>';
+        } else {
+            var sHtml = '';
+            sList.forEach(function(item, idx) {
+                sHtml += '<div class="sgu-photo-thumb-box">' +
+                    '<img src="' + item.url + '" class="sgu-photo-thumb-img" alt="Evidencia ' + (idx + 1) + '" onclick="window.open(\'' + item.url + '\')">' +
+                    '<button type="button" class="sgu-photo-thumb-del" onclick="window._sguRemovePhoto(\'salida\', ' + idx + ')" title="Eliminar foto">' +
+                        '<i class="bi bi-x-lg"></i>' +
+                    '</button>' +
+                '</div>';
+            });
+            gridSalida.innerHTML = sHtml;
+        }
+    }
+
+    // 2. Grid en Retorno Express
+    var gridRet = document.getElementById('sgu-ret-express-photos-grid');
+    var countRet = document.getElementById('sgu-ret-express-photo-count');
+    if (gridRet) {
+        var rList = _sguPhotos['retorno'] || [];
+        if (countRet) countRet.textContent = rList.length + ' foto(s)';
+        if (rList.length === 0) {
+            gridRet.innerHTML = '<div class="text-muted small fst-italic py-2 text-center w-100" style="grid-column: 1 / -1;"><i class="bi bi-camera text-secondary me-1"></i> Sin fotos adjuntas. Tome una foto o suba desde la galería.</div>';
+        } else {
+            var rHtml = '';
+            rList.forEach(function(item, idx) {
+                rHtml += '<div class="sgu-photo-thumb-box">' +
+                    '<img src="' + item.url + '" class="sgu-photo-thumb-img" alt="Evidencia ' + (idx + 1) + '" onclick="window.open(\'' + item.url + '\')">' +
+                    '<button type="button" class="sgu-photo-thumb-del" onclick="window._sguRemovePhoto(\'retorno\', ' + idx + ')" title="Eliminar foto">' +
+                        '<i class="bi bi-x-lg"></i>' +
+                    '</button>' +
+                '</div>';
+            });
+            gridRet.innerHTML = rHtml;
+        }
     }
 };
 
@@ -1395,6 +1445,7 @@ function _sguInitForm() {
     _sguPhotos = { salida: [], retorno: [] };
 
     window._sguLimpiarViajeVinculado(true);
+    window._sguUpdateExpressPhotoGrid();
 
     var fPlaca = document.getElementById('sgu-f-placa'); if (fPlaca) fPlaca.value = '';
     var fCarreta = document.getElementById('sgu-f-carreta'); if (fCarreta) fCarreta.value = '';
@@ -1454,6 +1505,9 @@ function _sguInitForm() {
         }
         if (colRight) colRight.classList.add('d-none');
         if (btnExpressWrap) btnExpressWrap.classList.remove('d-none');
+        var expBoxC = document.getElementById('sgu-express-photos-box');
+        if (expBoxC) expBoxC.classList.remove('d-none');
+        window._sguUpdateExpressPhotoGrid();
 
         if (fDest) {
             fDest.value = 'COMPRAS LOCALES';
@@ -1487,6 +1541,9 @@ function _sguInitForm() {
         }
         if (colRight) colRight.classList.add('d-none');
         if (btnExpressWrap) btnExpressWrap.classList.remove('d-none');
+        var expBoxT = document.getElementById('sgu-express-photos-box');
+        if (expBoxT) expBoxT.classList.remove('d-none');
+        window._sguUpdateExpressPhotoGrid();
 
         if (fDest) {
             fDest.value = 'TALLER TERCERO / MANTENIMIENTO';
@@ -1521,6 +1578,8 @@ function _sguInitForm() {
         }
         if (colRight) colRight.classList.remove('d-none');
         if (btnExpressWrap) btnExpressWrap.classList.add('d-none');
+        var expBoxR = document.getElementById('sgu-express-photos-box');
+        if (expBoxR) expBoxR.classList.add('d-none');
 
         if (fDest) {
             fDest.value = '';
@@ -1650,7 +1709,23 @@ window._sguCheckFormReady = function() {
 
 // ── OVERLAY: INSPECCIÓN (CHECKLIST + FOTOS 2 EN 1) ────────────────
 window._sguOpenChecklist = function() {
-    document.getElementById('sgu-chk-overlay-title').textContent = _sguEditMode === 'retorno' ? 'Checklist y Evidencias (Retorno)' : 'Checklist y Evidencias (Salida)';
+    var rec = window._sguCurrentRecord || (_sguRecords || []).find(function(r){ return String(r.id) === String(_sguDetailId); });
+    var activeType = 'RUTA';
+    if (_sguEditMode === 'retorno' && rec) {
+        activeType = _sguGetTipoSalida(rec);
+    } else {
+        activeType = _sguTipoSalida || 'RUTA';
+    }
+    var esRuta = (activeType === 'RUTA');
+    
+    var titleEl = document.getElementById('sgu-chk-overlay-title');
+    if (titleEl) {
+        if (!esRuta) {
+            titleEl.textContent = _sguEditMode === 'retorno' ? 'Evidencias Fotográficas (' + activeType + ' - Retorno)' : 'Evidencias Fotográficas (' + activeType + ' - Salida)';
+        } else {
+            titleEl.textContent = _sguEditMode === 'retorno' ? 'Checklist y Evidencias (Retorno)' : 'Checklist y Evidencias (Salida)';
+        }
+    }
     _sguRenderChecklist();
     _sguOpenDrawer('sgu-checklist-overlay');
 };
@@ -1660,66 +1735,86 @@ function _sguRenderChecklist() {
     var container = document.getElementById('sgu-checklist-container');
     if (!container) return;
 
-    if (!_sguGlobalTemplate || !_sguGlobalTemplate.length) {
-        container.innerHTML = '<div class="text-center py-4 text-secondary">No se ha configurado la plantilla de checklist.</div>';
-        return;
+    var rec = window._sguCurrentRecord || (_sguRecords || []).find(function(r){ return String(r.id) === String(_sguDetailId); });
+    var activeType = 'RUTA';
+    if (_sguEditMode === 'retorno' && rec) {
+        activeType = _sguGetTipoSalida(rec);
+    } else {
+        activeType = _sguTipoSalida || 'RUTA';
+    }
+    var esRuta = (activeType === 'RUTA');
+
+    var html = '';
+
+    if (esRuta) {
+        if (!_sguGlobalTemplate || !_sguGlobalTemplate.length) {
+            html += '<div class="text-center py-4 text-secondary">No se ha configurado la plantilla de checklist.</div>';
+        } else {
+            html += '<div class="alert alert-info border-0 rounded-3 mb-3 d-flex align-items-center gap-2" style="background:#eff6ff;color:#0369a1;font-size:0.85rem;">' +
+                '<i class="bi bi-info-circle-fill fs-5"></i>' +
+                '<div>Marque cada componente del vehículo y suba las fotos de evidencia al final. Utilice <span class="badge bg-danger">X</span> en caso de detectar anomalías o daños. Puede desmarcar haciendo clic nuevamente.</div>' +
+            '</div>';
+
+            // 1. Ítems del Checklist Técnico
+            _sguGlobalTemplate.forEach(function(cat) {
+                html += '<div class="sgu-chk-group">' +
+                    '<div class="sgu-chk-group-header">' +
+                        '<h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;"><i class="bi bi-check2-circle text-primary me-1"></i> ' + (cat.titulo || 'Categoría') + '</h6>' +
+                        '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" style="font-size:0.75rem;" onclick="window._sguSetCatCheck(\'' + cat.id + '\')">' +
+                            '<i class="bi bi-check2-all"></i> Todo OK' +
+                        '</button>' +
+                    '</div>' +
+                    '<div>';
+
+                (cat.items || []).forEach(function(item) {
+                    var val = _sguChecklist[item.id] || '';
+                    var hasCant = !!item.tiene_cantidad;
+                    var cantVal = _sguChecklist[item.id + '_cant'] !== undefined ? _sguChecklist[item.id + '_cant'] : (item.default_cantidad || 1);
+
+                    html += '<div class="sgu-chk-row d-flex align-items-center justify-content-between gap-2" data-chk-item="' + item.id + '">' +
+                        '<div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">' +
+                            '<span class="sgu-chk-label-text text-truncate">' + item.label + '</span>' +
+                        '</div>' +
+                        '<div class="d-flex align-items-center gap-2 shrink-0">';
+
+                    if (hasCant) {
+                        html += '<div class="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded-3 border">' +
+                            '<span class="text-secondary fw-bold" style="font-size:0.75rem;">Cant:</span>' +
+                            '<input type="number" min="0" max="999" class="sgu-form-input-clean text-center fw-bold text-dark p-0" style="width:48px;height:26px;font-size:0.85rem;border-radius:6px;" value="' + cantVal + '" oninput="window._sguSetCheckCant(\'' + item.id + '\', this.value)" onclick="this.select()">' +
+                        '</div>';
+                    }
+
+                    html += '<div class="d-flex gap-1.5 align-items-center">' +
+                            '<div class="sgu-chk-btn-circle x ' + (val==='mal'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'mal\')" title="Observado / Dañado"><i class="bi bi-x-lg"></i></div>' +
+                            '<div class="sgu-chk-btn-circle na ' + (val==='na'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'na\')" title="No Aplica">N/A</div>' +
+                            '<div class="sgu-chk-btn-circle ok ' + (val==='ok'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'ok\')" title="Conforme"><i class="bi bi-check-lg"></i></div>' +
+                        '</div>' +
+                        '</div>' +
+                    '</div>';
+                });
+
+                html += '</div></div>';
+            });
+        }
+    } else {
+        // En COMPRAS o TALLER: Mensaje claro sin checklist de componentes
+        var badgeColor = activeType === 'COMPRAS' ? '#d97706' : '#7c3aed';
+        var iconClass = activeType === 'COMPRAS' ? 'bi-cart3' : 'bi-tools';
+        html += '<div class="alert border-0 rounded-3 mb-3 d-flex align-items-center gap-2" style="background:#f8fafc;border-left:4px solid ' + badgeColor + ' !important;color:#334155;font-size:0.85rem;">' +
+            '<i class="bi ' + iconClass + ' fs-4" style="color:' + badgeColor + ';"></i>' +
+            '<div><strong>Modalidad ' + (activeType === 'COMPRAS' ? 'Compras Locales' : 'Taller Tercero') + ':</strong> Esta modalidad no requiere checklist técnico de componentes. Adjunte las fotos de odómetro, unidad o comprobantes aquí abajo.</div>' +
+        '</div>';
     }
 
-    var html = '<div class="alert alert-info border-0 rounded-3 mb-3 d-flex align-items-center gap-2" style="background:#eff6ff;color:#0369a1;font-size:0.85rem;">' +
-        '<i class="bi bi-info-circle-fill fs-5"></i>' +
-        '<div>Marque cada componente del vehículo y suba las fotos de evidencia al final. Utilice <span class="badge bg-danger">X</span> en caso de detectar anomalías o daños. Puede desmarcar haciendo clic nuevamente.</div>' +
-    '</div>';
-
-    // 1. Ítems del Checklist Técnico
-    _sguGlobalTemplate.forEach(function(cat) {
-        html += '<div class="sgu-chk-group">' +
-            '<div class="sgu-chk-group-header">' +
-                '<h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;"><i class="bi bi-check2-circle text-primary me-1"></i> ' + (cat.titulo || 'Categoría') + '</h6>' +
-                '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" style="font-size:0.75rem;" onclick="window._sguSetCatCheck(\'' + cat.id + '\')">' +
-                    '<i class="bi bi-check2-all"></i> Todo OK' +
-                '</button>' +
-            '</div>' +
-            '<div>';
-
-        (cat.items || []).forEach(function(item) {
-            var val = _sguChecklist[item.id] || '';
-            var hasCant = !!item.tiene_cantidad;
-            var cantVal = _sguChecklist[item.id + '_cant'] !== undefined ? _sguChecklist[item.id + '_cant'] : (item.default_cantidad || 1);
-
-            html += '<div class="sgu-chk-row d-flex align-items-center justify-content-between gap-2" data-chk-item="' + item.id + '">' +
-                '<div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">' +
-                    '<span class="sgu-chk-label-text text-truncate">' + item.label + '</span>' +
-                '</div>' +
-                '<div class="d-flex align-items-center gap-2 shrink-0">';
-
-            if (hasCant) {
-                html += '<div class="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded-3 border">' +
-                    '<span class="text-secondary fw-bold" style="font-size:0.75rem;">Cant:</span>' +
-                    '<input type="number" min="0" max="999" class="sgu-form-input-clean text-center fw-bold text-dark p-0" style="width:48px;height:26px;font-size:0.85rem;border-radius:6px;" value="' + cantVal + '" oninput="window._sguSetCheckCant(\'' + item.id + '\', this.value)" onclick="this.select()">' +
-                '</div>';
-            }
-
-            html += '<div class="d-flex gap-1.5 align-items-center">' +
-                    '<div class="sgu-chk-btn-circle x ' + (val==='mal'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'mal\')" title="Observado / Dañado"><i class="bi bi-x-lg"></i></div>' +
-                    '<div class="sgu-chk-btn-circle na ' + (val==='na'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'na\')" title="No Aplica">N/A</div>' +
-                    '<div class="sgu-chk-btn-circle ok ' + (val==='ok'?'active':'') + '" onclick="window._sguSetCheck(\''+item.id+'\',\'ok\')" title="Conforme"><i class="bi bi-check-lg"></i></div>' +
-                '</div>' +
-                '</div>' +
-            '</div>';
-        });
-
-        html += '</div></div>';
-    });
-
-    // 2. SECCIÓN INTEGRADA DE EVIDENCIAS FOTOGRÁFICAS (Abajo del checklist)
+    // 2. SECCIÓN INTEGRADA DE EVIDENCIAS FOTOGRÁFICAS
     var tipo = _sguEditMode || 'salida';
     var photosList = _sguPhotos[tipo] || [];
 
-    html += '<div class="sgu-drawer-photos-section mt-4 pt-3 border-top">' +
+    html += '<div class="sgu-drawer-photos-section ' + (esRuta ? 'mt-4 pt-3 border-top' : 'mt-2') + '">' +
         '<div class="d-flex align-items-center justify-content-between mb-2.5">' +
             '<div>' +
                 '<h6 class="fw-bold text-dark m-0" style="font-size:0.92rem;"><i class="bi bi-camera-fill text-primary me-1"></i> Evidencias Fotográficas</h6>' +
-                '<small class="text-muted" style="font-size:0.75rem;">Fotos de odómetro, carrocería o novedades</small>' +
+                '<small class="text-muted" style="font-size:0.75rem;">Fotos de odómetro, carrocería, comprobantes o novedades</small>' +
             '</div>' +
             '<span class="badge bg-light text-secondary border px-2 py-1" style="font-size:0.75rem;">' + photosList.length + ' foto(s)</span>' +
         '</div>' +
@@ -1753,7 +1848,7 @@ function _sguRenderChecklist() {
     // 3. Botón inferior para Guardar y Cerrar
     html += '<div class="mt-4 pt-2 mb-3">' +
         '<button type="button" class="btn btn-primary w-100 py-3 rounded-3 fw-bold shadow-sm" onclick="window._sguCloseAllDrawers(); window._sguCheckFormReady();">' +
-            '<i class="bi bi-check2-circle me-1"></i> Guardar Inspección y Continuar' +
+            '<i class="bi bi-check2-circle me-1"></i> Guardar Evidencias y Continuar' +
         '</button>' +
     '</div>';
 
@@ -1955,7 +2050,7 @@ async function _sguRenderDetail(recordId) {
         html += '</div>';
         html += '</div>';
 
-        // Verificación e Inspección (Checklist y Evidencias) SOLO en modo RUTA
+        // Verificación e Inspección (Checklist y Evidencias) o Fotos en Compras/Taller
         if (esRuta) {
             html += '<div class="mb-3">';
             html += '<div class="d-flex align-items-center gap-2 mb-2">';
@@ -1974,6 +2069,26 @@ async function _sguRenderDetail(recordId) {
             html += '</div>';
             html += '<button type="button" class="sgu-task-btn" id="sgu-det-btn-chk" onclick="window._sguOpenChecklist()">Llenar</button>';
             html += '</div>';
+            html += '</div>';
+        } else {
+            // En COMPRAS o TALLER: Sección de Evidencias Fotográficas de Retorno
+            var rColor = tipoS === 'COMPRAS' ? '#d97706' : '#7c3aed';
+            html += '<div class="mb-3 pt-2 border-top">';
+            html += '<div class="d-flex align-items-center justify-content-between mb-2">';
+            html += '<label class="sgu-form-label mb-0"><i class="bi bi-camera-fill me-1" style="color:' + rColor + ';"></i> Evidencias Fotográficas de Retorno (Opcional)</label>';
+            html += '<span class="badge bg-light text-secondary border" id="sgu-ret-express-photo-count">' + (_sguPhotos.retorno || []).length + ' foto(s)</span>';
+            html += '</div>';
+            html += '<div class="d-flex gap-2 mb-2">';
+            html += '<label class="btn btn-sm btn-outline-primary rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-1 cursor-pointer flex-grow-1 justify-content-center" style="font-size:0.82rem;">';
+            html += '<i class="bi bi-camera-fill"></i> Tomar Foto (Cámara)';
+            html += '<input type="file" accept="image/*" capture="environment" class="d-none" onchange="window._sguHandleDirectPhoto(this, \'retorno\')">';
+            html += '</label>';
+            html += '<label class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-2 fw-bold d-inline-flex align-items-center gap-1 cursor-pointer flex-grow-1 justify-content-center" style="font-size:0.82rem;">';
+            html += '<i class="bi bi-images"></i> Galería';
+            html += '<input type="file" accept="image/*" multiple class="d-none" onchange="window._sguHandleDirectPhoto(this, \'retorno\')">';
+            html += '</label>';
+            html += '</div>';
+            html += '<div class="sgu-photo-grid" id="sgu-ret-express-photos-grid"></div>';
             html += '</div>';
         }
 
