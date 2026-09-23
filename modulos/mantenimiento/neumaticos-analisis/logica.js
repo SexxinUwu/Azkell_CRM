@@ -192,26 +192,31 @@
                         <i class="bi bi-plus-lg me-1"></i>Inspeccionar
                     </button>
                 `;
-            } else if (dias > 5) {
-                vigBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill small"><i class="bi bi-check-circle-fill me-1"></i>Vigente (+${dias}d)</span>`;
-                btnAccion = `
-                    <button class="btn btn-outline-primary btn-sm py-1 px-3 rounded-pill fw-bold" style="font-size:0.72rem;" onclick="window.neuVerDetalleModal('${i.id_inspeccion}')">
-                        <i class="bi bi-eye-fill me-1"></i>Ver
-                    </button>
-                `;
-            } else if (dias >= 0) {
-                vigBadge = `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1 rounded-pill small"><i class="bi bi-clock-history me-1"></i>Por Vencer (${dias}d)</span>`;
-                btnAccion = `
-                    <button class="btn btn-outline-primary btn-sm py-1 px-3 rounded-pill fw-bold" style="font-size:0.72rem;" onclick="window.neuVerDetalleModal('${i.id_inspeccion}')">
-                        <i class="bi bi-eye-fill me-1"></i>Ver
-                    </button>
-                `;
             } else {
-                vigBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1 rounded-pill small"><i class="bi bi-x-circle-fill me-1"></i>Vencida (${dias}d)</span>`;
+                if (dias > 5) {
+                    vigBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill small"><i class="bi bi-check-circle-fill me-1"></i>Vigente (+${dias}d)</span>`;
+                } else if (dias >= 0) {
+                    vigBadge = `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1 rounded-pill small"><i class="bi bi-clock-history me-1"></i>Por Vencer (${dias}d)</span>`;
+                } else {
+                    vigBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1 rounded-pill small"><i class="bi bi-x-circle-fill me-1"></i>Vencida (${dias}d)</span>`;
+                }
+
                 btnAccion = `
-                    <button class="btn btn-outline-primary btn-sm py-1 px-3 rounded-pill fw-bold" style="font-size:0.72rem;" onclick="window.neuVerDetalleModal('${i.id_inspeccion}')">
-                        <i class="bi bi-eye-fill me-1"></i>Ver
-                    </button>
+                    <div class="d-inline-flex align-items-center gap-1">
+                        <button class="btn btn-outline-primary btn-sm py-1 px-2.5 rounded-3 fw-bold d-inline-flex align-items-center gap-1 shadow-2xs" style="font-size:0.75rem;" onclick="window.neuVerDetalleModal('${i.id_inspeccion}')" title="Ver Detalle">
+                            <i class="bi bi-eye-fill"></i><span>Ver</span>
+                        </button>
+                        <div class="dropdown d-inline-block">
+                            <button class="btn btn-sm btn-light border-0 rounded-circle p-1 d-inline-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 26px; height: 26px; color: #64748b;" title="Más opciones">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-1" style="font-size: 0.82rem; min-width: 140px; z-index: 1050;">
+                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="window.neuVerDetalleModal('${i.id_inspeccion}')"><i class="bi bi-eye text-primary"></i> Ver Detalle</a></li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="window.neuEliminarInspeccion('${i.id_inspeccion}')"><i class="bi bi-trash3"></i> Eliminar</a></li>
+                            </ul>
+                        </div>
+                    </div>
                 `;
             }
 
@@ -223,7 +228,7 @@
 
             return `
                 <tr class="${!i.fecha_inspeccion ? 'bg-light bg-opacity-50' : ''}">
-                    <td class="ps-3 fw-bold text-primary">${idInsp}</td>
+                    <td class="ps-3 fw-bold text-primary font-monospace">${idInsp}</td>
                     <td>${f}</td>
                     <td><span class="badge bg-dark text-white fw-bold px-2 py-1 font-monospace" style="cursor:pointer;" onclick="window.rotAbrirInspeccionNeumaticosWrapper('${i.placa}')" title="Registrar inspección de ${i.placa}">${i.placa}</span></td>
                     <td class="small text-muted">${i.dueno || '---'}</td>
@@ -532,9 +537,16 @@
                             <small class="text-muted d-block" style="font-size: 0.72rem;">Reporte integral de remanentes, presiones y estado de llantas</small>
                         </div>
                     </div>
-                    <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.neuCerrarDetalleModal()" style="color:var(--subtext);" title="Cerrar">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
+                    <div class="d-flex align-items-center gap-1.5">
+                        <button class="btn btn-sm btn-outline-danger border py-1 px-2.5 rounded-3 fw-bold d-inline-flex align-items-center gap-1 shadow-2xs" 
+                                onclick="window.neuEliminarInspeccion('${insp.id_inspeccion}'); window.neuCerrarDetalleModal();" 
+                                title="Eliminar Inspección">
+                            <i class="bi bi-trash3"></i> <span class="d-none d-sm-inline">Eliminar</span>
+                        </button>
+                        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.neuCerrarDetalleModal()" style="color:var(--subtext);" title="Cerrar">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- BODY SCROLL -->
@@ -631,6 +643,71 @@
             setTimeout(() => {
                 if (!backdrop.classList.contains('show')) backdrop.style.display = 'none';
             }, 210);
+        }
+    };
+
+    window.neuEliminarInspeccion = async function(idInsp) {
+        if (!idInsp) return;
+
+        let confirmResult = false;
+        if (typeof Swal !== 'undefined') {
+            const res = await Swal.fire({
+                title: '¿Eliminar Inspección de Neumáticos?',
+                html: `<span class="text-muted">Se eliminará permanentemente la inspección <b class="text-primary font-monospace">${idInsp}</b> y todos sus registros de llantas y presiones.</span>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            });
+            confirmResult = res.isConfirmed;
+        } else {
+            confirmResult = confirm(`¿Estás seguro de eliminar permanentemente la inspección de neumáticos ${idInsp}?`);
+        }
+
+        if (!confirmResult) return;
+
+        try {
+            if (typeof window.rotToast === 'function') window.rotToast("Eliminando inspección...", "bg-info");
+            const res = await fetch(`/api/neumaticos/inspecciones/${encodeURIComponent(idInsp)}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || 'Error al eliminar la inspección');
+
+            window.dataGlobalNeumaticos = null; // Invalidar caché global
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: '¡Eliminado!',
+                    text: `La inspección ${idInsp} fue eliminada correctamente.`,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else if (typeof window.rotToast === 'function') {
+                window.rotToast(`Inspección ${idInsp} eliminada`, "bg-success");
+            }
+
+            // Recargar datos en el módulo de neumáticos
+            if (typeof window.neuAnalisisCargar === 'function') {
+                window.neuAnalisisCargar();
+            }
+            // Recargar si estamos en módulo de inspecciones
+            if (typeof window.asegurarNeumaticosInspecciones === 'function') {
+                window.asegurarNeumaticosInspecciones(true).then(() => {
+                    if (typeof window.mostrarStatusInspecciones === 'function' && window.dataGlobalInspecciones) {
+                        window.mostrarStatusInspecciones(window.dataGlobalInspecciones);
+                    }
+                });
+            }
+        } catch (err) {
+            console.error("Error al eliminar inspección de neumáticos:", err);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Error', err.message || 'No se pudo eliminar la inspección', 'error');
+            } else {
+                alert('Error al eliminar: ' + err.message);
+            }
         }
     };
 

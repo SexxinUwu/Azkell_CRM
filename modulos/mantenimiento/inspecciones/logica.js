@@ -448,8 +448,8 @@ window.asegurarWialonCache = async function() {
     } catch(e) {}
 };
 
-window.asegurarNeumaticosInspecciones = async function() {
-    if (window.dataGlobalNeumaticos && window.dataGlobalNeumaticos.length > 0) return window.dataGlobalNeumaticos;
+window.asegurarNeumaticosInspecciones = async function(forceRefresh = false) {
+    if (!forceRefresh && window.dataGlobalNeumaticos && window.dataGlobalNeumaticos.length > 0) return window.dataGlobalNeumaticos;
     try {
         const r = await fetch('/api/neumaticos/inspecciones?limit=1000');
         const res = await r.json();
@@ -460,7 +460,93 @@ window.asegurarNeumaticosInspecciones = async function() {
     } catch(e) {
         console.warn("Error cargando inspecciones de neumáticos:", e);
     }
-    return [];
+    return window.dataGlobalNeumaticos || [];
+};
+
+// Fallback helper para abrir visor de detalle de neumáticos si aún no se abrió la pestaña
+window.neuVerDetalleModal = window.neuVerDetalleModal || async function(idInsp) {
+    if (!idInsp) return;
+    try {
+        if (!document.getElementById('neu-drawer-visor-detalle')) {
+            const resV = await fetch('/modulos/mantenimiento/neumaticos-analisis/vista.html');
+            const htmlV = await resV.text();
+            const div = document.createElement('div');
+            div.innerHTML = htmlV;
+            const drawer = div.querySelector('#neu-drawer-visor-detalle');
+            if (drawer) document.body.appendChild(drawer);
+        }
+        if (!window.neuAbrirVisorDetalleReal) {
+            const s = document.createElement('script');
+            s.src = '/modulos/mantenimiento/neumaticos-analisis/logica.js?v=' + Date.now();
+            document.body.appendChild(s);
+            await new Promise(r => setTimeout(r, 250));
+        }
+        if (typeof window.neuAbrirVisorDetalleReal === 'function') {
+            window.neuAbrirVisorDetalleReal(idInsp);
+        }
+    } catch(e) {
+        console.error("Error abriendo visor de detalle de neumáticos:", e);
+    }
+};
+
+// Helper de eliminación de inspección de neumáticos
+window.neuEliminarInspeccion = window.neuEliminarInspeccion || async function(idInsp) {
+    if (!idInsp) return;
+    let confirmResult = false;
+    if (typeof Swal !== 'undefined') {
+        const res = await Swal.fire({
+            title: '¿Eliminar Inspección de Neumáticos?',
+            html: `<span class="text-muted">Se eliminará permanentemente la inspección <b class="text-primary font-monospace">${idInsp}</b> y todos sus registros de llantas y presiones.</span>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        });
+        confirmResult = res.isConfirmed;
+    } else {
+        confirmResult = confirm(`¿Estás seguro de eliminar permanentemente la inspección de neumáticos ${idInsp}?`);
+    }
+
+    if (!confirmResult) return;
+
+    try {
+        if (typeof window.rotToast === 'function') window.rotToast("Eliminando inspección...", "bg-info");
+        const res = await fetch(`/api/neumaticos/inspecciones/${encodeURIComponent(idInsp)}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Error al eliminar la inspección');
+
+        window.dataGlobalNeumaticos = null; // Invalidar caché
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: '¡Eliminado!',
+                text: `La inspección ${idInsp} fue eliminada correctamente.`,
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } else if (typeof window.rotToast === 'function') {
+            window.rotToast(`Inspección ${idInsp} eliminada`, "bg-success");
+        }
+
+        await window.asegurarNeumaticosInspecciones(true);
+        if (typeof window.mostrarStatusInspecciones === 'function' && window.dataGlobalInspecciones) {
+            window.mostrarStatusInspecciones(window.dataGlobalInspecciones);
+        }
+        if (typeof window.neuAnalisisCargar === 'function') {
+            window.neuAnalisisCargar();
+        }
+    } catch (err) {
+        console.error("Error al eliminar inspección de neumáticos:", err);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Error', err.message || 'No se pudo eliminar la inspección', 'error');
+        } else {
+            alert('Error al eliminar: ' + err.message);
+        }
+    }
 };
 
 function obtenerUbicacionUnidad(placa) {
@@ -509,12 +595,14 @@ function mostrarStatusInspecciones(inspecciones) {
         return parseInt(parts[1]) || 0;
     };
     let parseFechaVal = (i) => {
-        if (!i || !i.fecha_ingreso) return 0;
-        if (i.fecha_ingreso.includes('/')) {
-            let p = i.fecha_ingreso.split('/');
+        if (!i) return 0;
+        let fStr = i.fecha_ingreso || i.fecha_inspeccion || i.fecha;
+        if (!fStr) return 0;
+        if (fStr.includes('/')) {
+            let p = fStr.split('/');
             return new Date(p[2], p[1]-1, p[0]).getTime() || 0;
         }
-        return new Date(i.fecha_ingreso).getTime() || 0;
+        return new Date(fStr).getTime() || 0;
     };
 
     let inspeccionesOrdenadas = [...inspecciones].sort((a, b) => {
@@ -535,24 +623,37 @@ function mostrarStatusInspecciones(inspecciones) {
     });
 
     let cleanPlaca = (str) => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let neuList = Array.isArray(window.dataGlobalNeumaticos) ? window.dataGlobalNeumaticos : [];
 
     if (!isHistorialStatus) {
         placasActivasEnUso.forEach(p => {
             let pClean = cleanPlaca(p[0]);
             let insp = inspeccionesGeneral.find(i => cleanPlaca(i.placa) === pClean);
-            dataFinal.push({ infoPlaca: p, insp: insp });
+            let neuInsp = neuList.find(n => cleanPlaca(n.placa) === pClean);
+            dataFinal.push({ infoPlaca: p, insp: insp || null, neuInsp: neuInsp || null });
         });
     } else {
         inspeccionesGeneral.forEach(insp => {
             let iClean = cleanPlaca(insp.placa);
             let p = (window.dataGlobalPlacas || []).find(pl => cleanPlaca(pl[0]) === iClean) || [insp.placa, "-", "-", "-", "-", (insp.tipo_vehiculo || "SIN TIPO"), "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"];
-            dataFinal.push({ infoPlaca: p, insp: insp });
+            let neuInsp = neuList.find(n => cleanPlaca(n.placa) === iClean);
+            dataFinal.push({ infoPlaca: p, insp: insp, neuInsp: neuInsp || null });
+        });
+        // Agregar registros que solo tienen inspección de neumáticos en vista historial
+        neuList.forEach(neu => {
+            let nClean = cleanPlaca(neu.placa);
+            let yaEsta = dataFinal.some(d => d.neuInsp && d.neuInsp.id_inspeccion === neu.id_inspeccion && !d.insp);
+            if (!yaEsta) {
+                let p = (window.dataGlobalPlacas || []).find(pl => cleanPlaca(pl[0]) === nClean) || [neu.placa, neu.cliente || "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"];
+                dataFinal.push({ infoPlaca: p, insp: null, neuInsp: neu });
+            }
         });
         placasActivasEnUso.forEach(p => {
             let pClean = cleanPlaca(p[0]);
-            let tieneInsp = inspeccionesGeneral.some(i => cleanPlaca(i.placa) === pClean);
-            if (!tieneInsp) {
-                dataFinal.push({ infoPlaca: p, insp: null });
+            let tiene = dataFinal.some(d => cleanPlaca(d.infoPlaca && d.infoPlaca[0]) === pClean);
+            if (!tiene) {
+                let neuInsp = neuList.find(n => cleanPlaca(n.placa) === pClean);
+                dataFinal.push({ infoPlaca: p, insp: null, neuInsp: neuInsp || null });
             }
         });
     }
@@ -609,28 +710,51 @@ window.aplicarOrdenDataInsp = function(list, col, asc) {
     if (!Array.isArray(list)) return;
     let hoy = new Date(); hoy.setHours(0, 0, 0, 0);
     let parseFechaVal = (i) => {
-        if (!i || !i.fecha_ingreso) return 0;
-        if (i.fecha_ingreso.includes('/')) {
-            let p = i.fecha_ingreso.split('/');
+        if (!i) return 0;
+        let fStr = i.fecha_ingreso || i.fecha_inspeccion || i.fecha;
+        if (!fStr) return 0;
+        if (fStr.includes('/')) {
+            let p = fStr.split('/');
             return new Date(p[2], p[1]-1, p[0]).getTime() || 0;
         }
-        return new Date(i.fecha_ingreso).getTime() || 0;
+        return new Date(fStr).getTime() || 0;
     };
-    let calcDias = (item) => {
-        if (!item || !item.insp || !item.insp.fecha_ingreso) return -99999;
-        let fIngreso;
-        if (item.insp.fecha_ingreso.includes('/')) {
-            let px = item.insp.fecha_ingreso.split('/');
-            fIngreso = new Date(px[2], px[1] - 1, px[0]);
-        } else {
-            let ds = item.insp.fecha_ingreso.split('T')[0].split('-');
-            fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1]) - 1, parseInt(ds[2])) : new Date(item.insp.fecha_ingreso);
+    let calcDiasItem = (item) => {
+        if (!item) return -99999;
+        let diasMec = null;
+        let diasNeu = null;
+
+        if (item.insp && item.insp.fecha_ingreso) {
+            let fIngreso;
+            if (item.insp.fecha_ingreso.includes('/')) {
+                let px = item.insp.fecha_ingreso.split('/');
+                fIngreso = new Date(px[2], px[1] - 1, px[0]);
+            } else {
+                let ds = item.insp.fecha_ingreso.split('T')[0].split('-');
+                fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1]) - 1, parseInt(ds[2])) : new Date(item.insp.fecha_ingreso);
+            }
+            let dProp = parseInt(item.insp.dias_propuestos) || 30;
+            let fProx = new Date(fIngreso.getTime());
+            fProx.setDate(fProx.getDate() + dProp);
+            diasMec = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
         }
-        let dProp = parseInt(item.insp.dias_propuestos) || 30;
-        let fProx = new Date(fIngreso.getTime());
-        fProx.setDate(fProx.getDate() + dProp);
-        return Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
+
+        if (item.neuInsp && (item.neuInsp.dias_restantes !== null && item.neuInsp.dias_restantes !== undefined)) {
+            diasNeu = parseInt(item.neuInsp.dias_restantes, 10);
+        } else if (item.neuInsp && item.neuInsp.fecha_proxima) {
+            let ds = String(item.neuInsp.fecha_proxima).split('T')[0].split('-');
+            if (ds.length === 3) {
+                let fProxN = new Date(parseInt(ds[0]), parseInt(ds[1]) - 1, parseInt(ds[2]));
+                diasNeu = Math.ceil((fProxN - hoy) / (1000 * 60 * 60 * 24));
+            }
+        }
+
+        if (diasMec !== null && diasNeu !== null) return Math.min(diasMec, diasNeu);
+        if (diasMec !== null) return diasMec;
+        if (diasNeu !== null) return diasNeu;
+        return -99999;
     };
+
     let cleanPlaca = (str) => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
     list.sort((a, b) => {
@@ -645,19 +769,19 @@ window.aplicarOrdenDataInsp = function(list, col, asc) {
                 vb = (b.infoPlaca && (b.infoPlaca[5] || b.infoPlaca[3])) || '';
                 return asc ? va.localeCompare(vb) : vb.localeCompare(va);
             case 'tecnico':
-                va = (a.insp && a.insp.tecnico) || '';
-                vb = (b.insp && b.insp.tecnico) || '';
+                va = (a.insp && a.insp.tecnico) || (a.neuInsp && (a.neuInsp.tecnico || a.neuInsp.usuario_nombre)) || '';
+                vb = (b.insp && b.insp.tecnico) || (b.neuInsp && (b.neuInsp.tecnico || b.neuInsp.usuario_nombre)) || '';
                 return asc ? va.localeCompare(vb) : vb.localeCompare(va);
             case 'fecha':
-                va = parseFechaVal(a.insp);
-                vb = parseFechaVal(b.insp);
+                va = Math.max(parseFechaVal(a.insp), parseFechaVal(a.neuInsp));
+                vb = Math.max(parseFechaVal(b.insp), parseFechaVal(b.neuInsp));
                 return asc ? va - vb : vb - va;
             case 'proxima':
-                va = calcDias(a);
-                vb = calcDias(b);
+                va = calcDiasItem(a);
+                vb = calcDiasItem(b);
                 return asc ? va - vb : vb - va;
             case 'semaforo': {
-                let da = calcDias(a), db = calcDias(b);
+                let da = calcDiasItem(a), db = calcDiasItem(b);
                 let score = (d) => {
                     if (d === -99999) return 0;
                     if (d < 0) return 1; // No vigente
@@ -670,9 +794,8 @@ window.aplicarOrdenDataInsp = function(list, col, asc) {
             }
             case 'evaluacion': {
                 let getEvalScore = (item) => {
-                    let plc = cleanPlaca(item.infoPlaca && item.infoPlaca[0]);
                     let tMec = Boolean(item.insp && item.insp.id);
-                    let tNeu = Array.isArray(window.dataGlobalNeumaticos) && window.dataGlobalNeumaticos.some(n => cleanPlaca(n.placa) === plc);
+                    let tNeu = Boolean(item.neuInsp && item.neuInsp.id_inspeccion);
                     if (tMec && tNeu) return 3;
                     if (tMec && !tNeu) return 2;
                     if (!tMec && tNeu) return 1;
@@ -687,8 +810,8 @@ window.aplicarOrdenDataInsp = function(list, col, asc) {
                 vb = (typeof obtenerUbicacionUnidad === 'function' && b.infoPlaca ? (obtenerUbicacionUnidad(b.infoPlaca[0]).texto || '') : '');
                 return asc ? va.localeCompare(vb) : vb.localeCompare(va);
             case 'km':
-                va = Number(a.insp ? (a.insp.km_tablero || a.insp.kilometraje || a.insp.km || 0) : 0);
-                vb = Number(b.insp ? (b.insp.km_tablero || b.insp.kilometraje || b.insp.km || 0) : 0);
+                va = Number(a.insp ? (a.insp.km_tablero || a.insp.kilometraje || a.insp.km || 0) : (a.neuInsp ? (a.neuInsp.km_vehiculo || 0) : 0));
+                vb = Number(b.insp ? (b.insp.km_tablero || b.insp.kilometraje || b.insp.km || 0) : (b.neuInsp ? (b.neuInsp.km_vehiculo || 0) : 0));
                 return asc ? va - vb : vb - va;
             default:
                 return 0;
@@ -723,11 +846,15 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
         dataFinal.forEach((item) => {
             let p = item.infoPlaca || [];
             let insp = item.insp;
-            let placa = p[0] || "-";
-            let cli = p[1] || "-";
+            let neuInsp = item.neuInsp;
+            let placa = p[0] || (insp && insp.placa) || (neuInsp && neuInsp.placa) || "-";
+            let cli = p[1] || (neuInsp && neuInsp.dueno) || "-";
             let mar = p[3] || "-";
-            let mod = p[5] || "-";
+            let mod = p[5] || (insp && insp.tipo_vehiculo) || "-";
             let motora = p[20] || p[11] || "-";
+
+            let tieneMec = Boolean(insp && insp.id);
+            let tieneNeu = Boolean(neuInsp && neuInsp.id_inspeccion);
 
             let esUltimaInsp = false;
             if (insp && insp.id && Array.isArray(inspeccionesGeneral)) {
@@ -740,14 +867,13 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
                 esUltimaInsp = true;
             }
 
+            // Fechas y días restantes calculados de mecánica y neumáticos
             let fIngresoBonita = "-";
-            let diasRestantes = -9999;
+            let diasMec = null;
+            let diasNeu = null;
             let tecnico = "-";
-            let colorFalta = "";
-            let txtEstado = "";
-            let estadoVigente2 = "";
 
-            if (insp && insp.fecha_ingreso) {
+            if (tieneMec && insp.fecha_ingreso) {
                 fIngresoBonita = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(insp.fecha_ingreso) : insp.fecha_ingreso;
                 tecnico = insp.tecnico || '-';
                 let fIngreso;
@@ -761,10 +887,40 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
                 let dProp = parseInt(insp.dias_propuestos) || 30;
                 let fProx = new Date(fIngreso.getTime());
                 fProx.setDate(fProx.getDate() + dProp);
-                diasRestantes = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
+                diasMec = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
             }
 
+            if (tieneNeu) {
+                if (neuInsp.dias_restantes !== null && neuInsp.dias_restantes !== undefined) {
+                    diasNeu = parseInt(neuInsp.dias_restantes, 10);
+                } else if (neuInsp.fecha_proxima) {
+                    let ds = String(neuInsp.fecha_proxima).split('T')[0].split('-');
+                    if (ds.length === 3) {
+                        let fProxN = new Date(parseInt(ds[0]), parseInt(ds[1]) - 1, parseInt(ds[2]));
+                        diasNeu = Math.ceil((fProxN - hoy) / (1000 * 60 * 60 * 24));
+                    }
+                }
+                if (!tieneMec) {
+                    let fN = neuInsp.fecha_inspeccion ? String(neuInsp.fecha_inspeccion).split('T')[0] : '';
+                    fIngresoBonita = fN && typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(fN) : (fN || '-');
+                    tecnico = neuInsp.tecnico || neuInsp.usuario_nombre || '-';
+                }
+            }
+
+            let diasRestantes = -9999;
+            if (diasMec !== null && diasNeu !== null) {
+                diasRestantes = Math.min(diasMec, diasNeu);
+            } else if (diasMec !== null) {
+                diasRestantes = diasMec;
+            } else if (diasNeu !== null) {
+                diasRestantes = diasNeu;
+            }
+
+            let colorFalta = "";
+            let txtEstado = "";
+            let estadoVigente2 = "";
             let textoBadgeProx = "";
+
             if (diasRestantes < 0 && diasRestantes !== -9999) {
                 colorFalta = "#dc2626"; txtEstado = "NO VIGENTE"; estadoVigente2 = "NO VIGENTE";
                 textoBadgeProx = `Vencido hace ${Math.abs(diasRestantes)} días`;
@@ -795,16 +951,13 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
             // Obtener ubicación (En Base vs Telemetría GPS)
             let ubicacionInfo = typeof obtenerUbicacionUnidad === 'function' ? obtenerUbicacionUnidad(placa) : { tipo: 'base', texto: 'En Base', badgeHtml: '<span class="badge bg-light text-secondary border">En Base</span>' };
 
-            // Obtener kilometraje del reporte de la inspección
-            let kmInspNum = insp ? (insp.km_tablero || insp.kilometraje || insp.km || '') : '';
+            // Obtener kilometraje del reporte de la inspección mecánica o de neumáticos
+            let kmInspNum = insp ? (insp.km_tablero || insp.kilometraje || insp.km || '') : (neuInsp ? (neuInsp.km_vehiculo || '') : '');
             let txtKmInsp = (kmInspNum !== '' && !isNaN(Number(kmInspNum))) 
                 ? `${Number(kmInspNum).toLocaleString()} km` 
                 : '—';
 
             // ── Cobertura Evaluación (Mecánica vs Neumáticos) ──
-            let tieneMec = Boolean(insp && insp.id);
-            let tieneNeu = Array.isArray(window.dataGlobalNeumaticos) && window.dataGlobalNeumaticos.some(n => cleanPlaca(n.placa) === cleanPlaca(placa));
-
             let badgeEvaluacion = '';
             if (tieneMec && tieneNeu) {
                 badgeEvaluacion = `<span class="badge rounded-pill fw-bold px-2.5 py-1 text-nowrap" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.73rem;"><i class="bi bi-shield-fill-check me-1 text-success"></i>Mecánica + Neumáticos</span>`;
@@ -817,7 +970,7 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
             }
 
             let daysOverdueHTML = '';
-            if (!insp || !insp.id) {
+            if (!tieneMec && !tieneNeu) {
                 daysOverdueHTML = `<span class="badge bg-light text-secondary border fw-bold" style="font-size: 0.72rem; border-radius: 6px;"><i class="bi bi-dash-circle me-1"></i> SIN REGISTRO</span>`;
             } else if (isHistorialStatus && !esUltimaInsp) {
                 daysOverdueHTML = `<span class="badge bg-light text-secondary border fw-bold" style="font-size: 0.72rem; border-radius: 6px;"><i class="bi bi-archive-fill me-1"></i> REGISTRADO</span>`;
@@ -838,7 +991,7 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
             }
 
             let badgeEstadoMobile = '';
-            if (!insp || !insp.id) {
+            if (!tieneMec && !tieneNeu) {
                 badgeEstadoMobile = `<span class="badge bg-secondary-subtle text-secondary fw-semibold" style="font-size:0.72rem; border-radius:6px;">SIN REGISTRO</span>`;
             } else if (isHistorialStatus && !esUltimaInsp) {
                 badgeEstadoMobile = `<span class="badge bg-light text-secondary border fw-semibold" style="font-size:0.72rem; border-radius:6px;">REGISTRADO</span>`;
@@ -850,9 +1003,46 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
                 badgeEstadoMobile = `<span class="badge bg-success-subtle text-success fw-semibold" style="font-size:0.72rem; border-radius:6px;">CONFORME</span>`;
             }
 
+            // Opciones de Dropdown dinámicas según lo registrado
+            let menuOpcionesHtml = '';
+            if (tieneMec && tieneNeu) {
+                menuOpcionesHtml = `
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Detalle Mecánica</a></li>
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.neuVerDetalleModal('${neuInsp.id_inspeccion}')"><i class="bi bi-disc text-warning"></i> Ver Detalle Neumáticos (${neuInsp.id_inspeccion})</a></li>
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-earmark-pdf text-danger"></i> Exportar PDF Mecánica</a></li>
+                    ${window.checkPerm && window.checkPerm('insp', 'e') ? `
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-secondary"></i> Editar Mecánica</a></li>` : ''}
+                    <li><hr class="dropdown-divider my-1"></li>
+                    ${window.checkPerm && window.checkPerm('insp', 'd') ? `
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.eliminarInspeccion('${insp.id}')"><i class="bi bi-trash3"></i> Eliminar Insp. Mecánica</a></li>` : ''}
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.neuEliminarInspeccion('${neuInsp.id_inspeccion}')"><i class="bi bi-trash3"></i> Eliminar Insp. Neumáticos</a></li>
+                `;
+            } else if (tieneMec && !tieneNeu) {
+                menuOpcionesHtml = `
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Detalle</a></li>
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-earmark-pdf text-danger"></i> Exportar PDF</a></li>
+                    ${window.checkPerm && window.checkPerm('insp', 'e') ? `
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-secondary"></i> Editar</a></li>` : ''}
+                    <li><hr class="dropdown-divider my-1"></li>
+                    ${window.checkPerm && window.checkPerm('insp', 'd') ? `
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.eliminarInspeccion('${insp.id}')"><i class="bi bi-trash3"></i> Eliminar</a></li>` : ''}
+                `;
+            } else if (!tieneMec && tieneNeu) {
+                menuOpcionesHtml = `
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.neuVerDetalleModal('${neuInsp.id_inspeccion}')"><i class="bi bi-disc text-warning"></i> Ver Detalle Neumáticos</a></li>
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-primary fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.abrirModalSeleccionarTipoInspeccion('${placa}', ${kmInspNum ? Number(kmInspNum) : 0})"><i class="bi bi-plus-lg"></i> Registrar Insp. Mecánica</a></li>
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.neuEliminarInspeccion('${neuInsp.id_inspeccion}')"><i class="bi bi-trash3"></i> Eliminar Insp. Neumáticos</a></li>
+                `;
+            } else {
+                menuOpcionesHtml = `
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-primary fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.abrirModalSeleccionarTipoInspeccion('${placa}', ${kmInspNum ? Number(kmInspNum) : 0})"><i class="bi bi-plus-lg"></i> Registrar Inspección</a></li>
+                `;
+            }
+
             // 1. Desktop Row
             htmlTable += `
-            <tr class="clickable-row data-row-status" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" data-ubicacion="${ubicacionInfo.tipo}">
+            <tr class="clickable-row data-row-status" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" data-ubicacion="${ubicacionInfo.tipo}" onclick="${tieneMec ? `window.verDetalleInspeccion('${insp.id}', false)` : (tieneNeu ? `window.neuVerDetalleModal('${neuInsp.id_inspeccion}')` : `window.abrirModalSeleccionarTipoInspeccion('${placa}', ${kmInspNum ? Number(kmInspNum) : 0})`)}">
                 <td class="ps-3 py-1.5 fw-bold text-dark">
                     <div class="d-flex align-items-center gap-1.5">
                         ${checkHtml}
@@ -876,21 +1066,11 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
                             <i class="bi bi-plus-lg"></i><span>Inspeccionar</span>
                         </button>
                         <div class="dropdown d-inline-block">
-                            <button class="btn btn-sm btn-light border-0 rounded-circle p-1 d-inline-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 28px; height: 28px; color: #64748b;" title="Más opciones">
+                            <button class="btn btn-sm btn-light border-0 rounded-circle p-1 d-inline-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 28px; height: 28px; color: #64748b;" title="Más opciones" onclick="event.stopPropagation();">
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-1" style="font-size: 0.82rem; min-width: 140px; z-index: 1050;">
-                                ${insp && insp.id ? `
-                                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Detalle</a></li>
-                                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-earmark-pdf text-danger"></i> Exportar PDF</a></li>
-                                    ${window.checkPerm && window.checkPerm('insp', 'e') ? `
-                                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-secondary"></i> Editar</a></li>` : ''}
-                                    <li><hr class="dropdown-divider my-1"></li>
-                                    ${window.checkPerm && window.checkPerm('insp', 'd') ? `
-                                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.eliminarInspeccion('${insp.id}')"><i class="bi bi-trash3"></i> Eliminar</a></li>` : ''}
-                                ` : `
-                                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-primary fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.abrirModalSeleccionarTipoInspeccion('${placa}', ${kmInspNum ? Number(kmInspNum) : 0})"><i class="bi bi-plus-lg"></i> Registrar Inspección</a></li>
-                                `}
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-1" style="font-size: 0.82rem; min-width: 160px; z-index: 1050;">
+                                ${menuOpcionesHtml}
                             </ul>
                         </div>
                     </div>
@@ -902,7 +1082,7 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
             <div class="ck-mobile-card data-card-insp" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" data-ubicacion="${ubicacionInfo.tipo}">
                 <div class="d-flex align-items-center justify-content-between mb-1.5">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bolder text-primary font-monospace" style="font-size:0.92rem;">${insp && insp.id ? insp.id : 'SIN REGISTRO'}</span>
+                        <span class="fw-bolder text-primary font-monospace" style="font-size:0.92rem;">${insp && insp.id ? insp.id : (neuInsp && neuInsp.id_inspeccion ? neuInsp.id_inspeccion : 'SIN REGISTRO')}</span>
                         <span class="text-muted small" style="font-size:0.73rem;">• ${fIngresoBonita}</span>
                     </div>
                     <div>${badgeEstadoMobile}</div>
@@ -933,50 +1113,24 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
                     <button type="button" class="btn btn-sm btn-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1.5 py-1.5 shadow-2xs" onclick="window.abrirModalSeleccionarTipoInspeccion('${placa}', ${kmInspNum ? Number(kmInspNum) : 0})" style="border-radius:8px; font-size:0.8rem; background: #0284c7; border-color: #0284c7;">
                         <i class="bi bi-plus-lg"></i> Inspeccionar
                     </button>
-                    ${insp && insp.id ? `
+                    ${tieneMec ? `
                         <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-2.5 py-1.5 d-flex align-items-center justify-content-center gap-1" onclick="window.verDetalleInspeccion('${insp.id}', false)" style="border-radius:8px; font-size:0.78rem;" title="Ver Detalle">
                             <i class="bi bi-eye"></i>
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-2.5 py-1.5 d-flex align-items-center gap-1" onclick="window.verDetalleInspeccion('${insp.id}', true)" title="PDF" style="border-radius:8px; font-size:0.78rem;">
                             <i class="bi bi-file-earmark-pdf"></i>
                         </button>
-                    ` : ''}
+                    ` : (tieneNeu ? `
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-2.5 py-1.5 d-flex align-items-center justify-content-center gap-1" onclick="window.neuVerDetalleModal('${neuInsp.id_inspeccion}')" style="border-radius:8px; font-size:0.78rem;" title="Ver Detalle Neumáticos">
+                            <i class="bi bi-disc"></i>
+                        </button>
+                    ` : '')}
                     <div class="dropdown">
                         <button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1.5" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="border-radius:8px;">
                             <i class="bi bi-three-dots-vertical"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
-                            ${insp && insp.id ? `
-                                <li>
-                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.verDetalleInspeccion('${insp.id}', false)">
-                                        <i class="bi bi-eye text-primary fs-6"></i> Ver Resumen
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.verDetalleInspeccion('${insp.id}', true)">
-                                        <i class="bi bi-file-pdf text-danger fs-6"></i> Exportar a PDF
-                                    </a>
-                                </li>
-                                ${window.checkPerm && window.checkPerm('insp', 'e') ? `
-                                <li>
-                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalEditarInspeccion('${insp.id}')">
-                                        <i class="bi bi-pencil text-secondary fs-6"></i> Editar / Re-firmar
-                                    </a>
-                                </li>` : ''}
-                                ${window.checkPerm && window.checkPerm('insp', 'd') ? `
-                                <li><hr class="dropdown-divider my-1"></li>
-                                <li>
-                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="window.eliminarInspeccion('${insp.id}')">
-                                        <i class="bi bi-trash3 fs-6"></i> Eliminar
-                                    </a>
-                                </li>` : ''}
-                            ` : `
-                                <li>
-                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 text-primary fw-bold" href="javascript:void(0)" onclick="window.abrirModalSeleccionarTipoInspeccion('${placa}', ${kmInspNum ? Number(kmInspNum) : 0})">
-                                        <i class="bi bi-plus-lg fs-6"></i> Registrar Inspección
-                                    </a>
-                                </li>
-                            `}
+                            ${menuOpcionesHtml}
                         </ul>
                     </div>
                 </div>
@@ -1118,6 +1272,12 @@ function filtrarStatusAvanzado() {
 }
 
 window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
+    if (typeof idBusqueda === 'string' && idBusqueda.startsWith('NEU-')) {
+        if (typeof window.neuVerDetalleModal === 'function') {
+            return window.neuVerDetalleModal(idBusqueda);
+        }
+    }
+
     if (!document.getElementById('modalResumenInspeccion')) {
         if (typeof window.rotToast === 'function') window.rotToast("Cargando visor de reportes...", "bg-info");
         try {
@@ -1271,8 +1431,54 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
         badgeSemaforo = `<span class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#fee2e2; color:#b91c1c; font-size:0.82rem;"><i class="bi bi-x-circle-fill me-1"></i> ${countFallas} FALLA(S)</span>`;
     }
 
+    // Buscar inspección de neumáticos asociada
+    let cleanPlaca = (str) => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let pClean = cleanPlaca(insp.placa);
+    let neuInsp = (window.dataGlobalNeumaticos || []).find(n => cleanPlaca(n.placa) === pClean);
+
+    let htmlBannerNeu = '';
+    if (neuInsp && neuInsp.id_inspeccion) {
+        let fNeu = neuInsp.fecha_inspeccion ? String(neuInsp.fecha_inspeccion).split('T')[0] : '-';
+        let diasNeu = neuInsp.dias_restantes !== null && neuInsp.dias_restantes !== undefined ? parseInt(neuInsp.dias_restantes, 10) : null;
+        let badgeNeuVig = '';
+        if (diasNeu !== null) {
+            if (diasNeu > 5) badgeNeuVig = `<span class="badge bg-success-subtle text-success fw-bold px-2 py-0.5 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i>Vigente (+${diasNeu}d)</span>`;
+            else if (diasNeu >= 0) badgeNeuVig = `<span class="badge bg-warning-subtle text-warning-emphasis fw-bold px-2 py-0.5 rounded-pill"><i class="bi bi-clock-history me-1"></i>Por Vencer (${diasNeu}d)</span>`;
+            else badgeNeuVig = `<span class="badge bg-danger-subtle text-danger fw-bold px-2 py-0.5 rounded-pill"><i class="bi bi-x-circle-fill me-1"></i>Vencida (${diasNeu}d)</span>`;
+        }
+
+        htmlBannerNeu = `
+            <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3" style="background: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%); border: 1px solid #bbf7d0 !important;">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <span class="p-2 rounded-3 text-white d-flex align-items-center justify-content-center shadow-2xs" style="background: #059669; width:38px; height:38px;">
+                            <i class="bi bi-disc fs-5"></i>
+                        </span>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h6 class="fw-bold text-dark m-0" style="font-size:0.95rem;">Inspección de Neumáticos Asociada</h6>
+                                <span class="badge bg-primary text-white font-monospace fw-bold px-2 py-0.5" style="font-size:0.75rem;">${neuInsp.id_inspeccion}</span>
+                                ${badgeNeuVig}
+                            </div>
+                            <small class="text-muted" style="font-size:0.76rem;">Fecha: <b>${fNeu}</b> • Total Llantas: <b>${neuInsp.total_llantas || 0}</b> • Críticas: <b class="${neuInsp.total_criticas > 0 ? 'text-danger' : 'text-success'}">${neuInsp.total_criticas || 0}</b></small>
+                        </div>
+                    </div>
+                    <div class="d-inline-flex align-items-center gap-1.5">
+                        <button type="button" class="btn btn-sm btn-primary fw-bold rounded-3 px-3 py-1.5 shadow-2xs d-inline-flex align-items-center gap-1.5" onclick="bootstrap.Modal.getInstance(document.getElementById('modalResumenInspeccion')).hide(); window.neuVerDetalleModal('${neuInsp.id_inspeccion}');" style="font-size: 0.8rem; background: #0284c7; border-color: #0284c7;">
+                            <i class="bi bi-eye-fill"></i> Ver Detalle Neumáticos
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger fw-bold rounded-3 px-2.5 py-1.5 d-inline-flex align-items-center gap-1" onclick="bootstrap.Modal.getInstance(document.getElementById('modalResumenInspeccion')).hide(); window.neuEliminarInspeccion('${neuInsp.id_inspeccion}');" title="Eliminar inspección de neumáticos" style="font-size: 0.8rem;">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     // ── 1. CARD: DATOS GENERALES (BENTO GRID) ──
     let htmlUI = `
+        ${htmlBannerNeu}
         <!-- 1. DATOS DE LA INSPECCIÓN -->
         <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-2 border-bottom">
