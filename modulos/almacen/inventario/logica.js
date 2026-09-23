@@ -1154,7 +1154,10 @@ window.abrirDetalleInv = function(id) {
     // Header del modal
     var elTitulo = document.getElementById('inv-det-modal-titulo');
     var elSub    = document.getElementById('inv-det-modal-sub');
-    if (elTitulo) elTitulo.textContent = item.descripcion || item.articulo || 'Detalle de Artículo';
+    if (elTitulo) {
+        elTitulo.textContent = item.descripcion || item.articulo || 'Detalle de Artículo';
+        elTitulo.title = item.descripcion || item.articulo || '';
+    }
     if (elSub)    elSub.textContent = (item.id || '') + (item.codigo_barras ? ' • CB: ' + item.codigo_barras : '');
 
     // Botones de acción en Header
@@ -1313,20 +1316,22 @@ window.abrirDetalleInv = function(id) {
     html += '  </h6>';
     html += '  <div class="row g-2">';
 
-    function techItem(colSize, label, val, isBadge, badgeColor) {
+    function techItem(colSize, label, val, isBadge, badgeColor, noTruncate) {
         if (!val || val === '—' || val === '' || val === 'undefined') return '';
         var displayVal = _invEsc(val);
         if (isBadge) {
             displayVal = '<span class="badge rounded-pill fw-bold" style="background:' + (badgeColor || '#e0f2fe') + '; color:' + (badgeColor ? '#fff' : '#0369a1') + '; font-size:0.72rem; padding:4px 10px;">' + displayVal + '</span>';
         }
+        var truncateCls = noTruncate ? '' : 'text-truncate';
         return '<div class="col-' + colSize + '">' +
                '  <div class="p-2.5 rounded-3 bg-light border border-light-subtle h-100">' +
                '    <span class="text-muted d-block fw-bold" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:2px;">' + label + '</span>' +
-               '    <div class="fw-bold text-dark text-truncate" style="font-size:0.86rem;">' + displayVal + '</div>' +
+               '    <div class="fw-bold text-dark ' + truncateCls + '" style="font-size:0.86rem; line-height:1.35; word-break:break-word;">' + displayVal + '</div>' +
                '  </div>' +
                '</div>';
     }
 
+    html += techItem('12', 'Nombre / Descripción del Artículo', item.descripcion || item.articulo, false, null, true);
     html += techItem('6 col-md-3', 'Código Interno', item.id);
     html += techItem('6 col-md-3', 'Código de Barra', item.codigo_barras || item.id);
     html += techItem('6 col-md-3', 'Familia', item.familia);
@@ -1340,7 +1345,7 @@ window.abrirDetalleInv = function(id) {
         html += techItem('6 col-md-3', 'Stock Mínimo', parseFloat(item.stock_min || 0) + ' ' + (item.unidad || ''));
         html += techItem('6 col-md-3', 'Stock Máximo', parseFloat(item.stock_max || 0) + ' ' + (item.unidad || ''));
         if (item.ultimo_proveedor) {
-            html += techItem('12 col-md-6', 'Último Proveedor (OC / Entrada)', item.ultimo_proveedor);
+            html += techItem('12 col-md-6', 'Último Proveedor (OC / Entrada)', item.ultimo_proveedor, false, null, true);
         }
     }
     
