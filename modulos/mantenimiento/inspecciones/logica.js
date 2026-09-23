@@ -3575,29 +3575,47 @@ window.seleccionarTipoInspeccion = function(tipo) {
     var placa = window._inspPlacaSeleccionada || '';
     var km = window._inspKmSeleccionado || 0;
 
-    var proceed = function() {
-        // Limpiar cualquier backdrop residual antes de abrir el nuevo modal
+    var cleanupAndOpen = function() {
+        // Forzar limpieza completa del estado del modal anterior
+        if (modalEl) {
+            var oldModal = bootstrap.Modal.getInstance(modalEl);
+            if (oldModal) {
+                try { oldModal.dispose(); } catch(e) {}
+            }
+            modalEl.classList.remove('show');
+            modalEl.removeAttribute('aria-modal');
+            modalEl.removeAttribute('role');
+            modalEl.setAttribute('aria-hidden', 'true');
+            modalEl.style.display = 'none';
+        }
+
+        // Limpiar cualquier backdrop residual y estados del body
         document.querySelectorAll('.modal-backdrop').forEach(function(b) { b.remove(); });
         document.body.classList.remove('modal-open');
         document.body.style.removeProperty('overflow');
         document.body.style.removeProperty('padding-right');
 
-        if (tipo === 'neumaticos') {
-            if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
-                window.rotAbrirInspeccionNeumaticos(placa, '', km);
-            } else {
-                var script = document.createElement('script');
-                script.src = '/modulos/mantenimiento/neumaticos/modal_inspeccion.js?v=' + Date.now();
-                script.onload = function() {
+        // Esperar un frame para que el DOM se estabilice antes de abrir el siguiente modal
+        requestAnimationFrame(function() {
+            setTimeout(function() {
+                if (tipo === 'neumaticos') {
                     if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
                         window.rotAbrirInspeccionNeumaticos(placa, '', km);
+                    } else {
+                        var script = document.createElement('script');
+                        script.src = '/modulos/mantenimiento/neumaticos/modal_inspeccion.js?v=' + Date.now();
+                        script.onload = function() {
+                            if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+                                window.rotAbrirInspeccionNeumaticos(placa, '', km);
+                            }
+                        };
+                        document.body.appendChild(script);
                     }
-                };
-                document.body.appendChild(script);
-            }
-        } else {
-            window.abrirModalNuevaInspeccion(placa, '', km);
-        }
+                } else {
+                    window.abrirModalNuevaInspeccion(placa, '', km);
+                }
+            }, 100);
+        });
     };
 
     if (modalEl) {
@@ -3608,16 +3626,23 @@ window.seleccionarTipoInspeccion = function(tipo) {
                 modalEl.removeEventListener('hidden.bs.modal', onHidden);
                 if (!executed) {
                     executed = true;
-                    proceed();
+                    cleanupAndOpen();
                 }
             };
             modalEl.addEventListener('hidden.bs.modal', onHidden);
             modal.hide();
-            setTimeout(onHidden, 350);
+            // Fallback: si hidden.bs.modal no se dispara en 500ms, forzar limpieza
+            setTimeout(function() {
+                if (!executed) {
+                    executed = true;
+                    modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                    cleanupAndOpen();
+                }
+            }, 500);
             return;
         }
     }
-    proceed();
+    cleanupAndOpen();
 };
 
 window._inspeccionIdAEliminar = null;
