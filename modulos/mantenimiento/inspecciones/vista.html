@@ -213,55 +213,216 @@
     }
 }
 
-/* ── Floating Drawer Modal & Form Styling (Idéntico a Reporte de Fallas) ──────────────────────── */
-#drawerInspeccion {
-    z-index: 1080 !important;
+/* ── Drawer Nativo de Inspección (Optimización Acelerada por Hardware - Estilo Reporte de Fallas) ── */
+#inspDrawerBackdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45) !important;
+    z-index: 1089 !important;
+    opacity: 0;
+    transition: opacity 0.18s cubic-bezier(0, 0, 0.2, 1);
 }
-.ck-floating-drawer-dialog,
-#drawerInspeccion .modal-dialog {
-    max-width: 760px !important;
-    width: 100% !important;
-    height: 94vh !important;
-    max-height: 94vh !important;
-    margin: 0 auto !important;
+#inspDrawerBackdrop.open {
+    display: block !important;
+    opacity: 1 !important;
+}
+
+.insp-drawer {
     position: fixed !important;
     bottom: 0 !important;
     left: 50% !important;
-    transform: translateX(-50%) !important;
     top: auto !important;
-}
-.ck-floating-drawer-content,
-#drawerInspeccion .modal-content {
-    height: 100% !important;
+    right: auto !important;
+    transform: translate3d(-50%, 100%, 0) !important;
+    width: 100% !important;
+    max-width: 860px !important;
+    height: 94vh !important;
     max-height: 94vh !important;
-    border-radius: 28px 28px 0 0 !important;
+    background: var(--surface, #ffffff) !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
     border-bottom: none !important;
-    box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.25) !important;
+    border-radius: 28px 28px 0 0 !important;
+    box-shadow: 0 -16px 56px rgba(0, 0, 0, 0.25) !important;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    z-index: 1090 !important;
+    display: flex !important;
+    flex-direction: column !important;
     overflow: hidden !important;
-    background: #f8fafc !important;
+    visibility: hidden !important;
+    margin: 0 !important;
 }
-@media (max-width: 768px) {
-    .ck-floating-drawer-dialog,
-    #drawerInspeccion .modal-dialog {
-        max-width: 100vw !important;
-        width: 100vw !important;
-        min-width: 100vw !important;
+.insp-drawer.open {
+    transform: translate3d(-50%, 0, 0) !important;
+    visibility: visible !important;
+    display: flex !important;
+}
+
+.insp-drawer-hd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #ffffff;
+    min-height: 56px;
+    flex-shrink: 0;
+}
+.insp-hd-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #e0f2fe;
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+}
+.insp-drawer-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #f8fafc;
+    padding: 1.25rem;
+}
+.insp-drawer-footer {
+    flex-shrink: 0;
+    padding: 0.8rem 1.25rem;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+@media (max-width: 767.98px) {
+    .insp-drawer {
+        max-width: 100% !important;
+        left: 0 !important;
+        transform: translateY(100%) !important;
+        border-radius: 24px 24px 0 0 !important;
         height: 96vh !important;
         max-height: 96vh !important;
-        left: 0 !important;
-        right: 0 !important;
-        transform: none !important;
-        border-radius: 24px 24px 0 0 !important;
     }
-    .ck-floating-drawer-content,
-    #drawerInspeccion .modal-content {
-        width: 100vw !important;
-        min-width: 100vw !important;
-        height: 100% !important;
-        max-height: 96vh !important;
-        border-radius: 24px 24px 0 0 !important;
-        border: none !important;
+    .insp-drawer.open {
+        transform: translateY(0) !important;
     }
+    .insp-drawer-body {
+        padding: 0.85rem;
+    }
+}
+
+/* ── Modal Selector Nativo de Tipo de Inspección ─────────────────── */
+.insp-type-modal {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -46%) scale(0.95) !important;
+    width: 92% !important;
+    max-width: 520px !important;
+    background: #ffffff !important;
+    border-radius: 28px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28) !important;
+    z-index: 1095 !important;
+    padding: 2.25rem 1.75rem 1.75rem !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease, visibility 0.18s ease !important;
+    margin: 0 !important;
+}
+.insp-type-modal.open {
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: translate(-50%, -50%) scale(1) !important;
+}
+
+/* ── Estilos Renovados para Botones OK / FALLA y Evidencias ───────── */
+.insp-btn-toggle {
+    border-radius: 12px;
+    padding: 9px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #ffffff;
+}
+.insp-btn-toggle-ok {
+    border-color: #cbd5e1;
+    color: #475569;
+}
+.insp-btn-toggle-ok:hover {
+    background: #ecfdf5;
+    border-color: #10b981;
+    color: #059669;
+}
+.insp-btn-toggle-ok.active {
+    background: #10b981 !important;
+    border-color: #10b981 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3) !important;
+}
+
+.insp-btn-toggle-fa {
+    border-color: #cbd5e1;
+    color: #475569;
+}
+.insp-btn-toggle-fa:hover {
+    background: #fef2f2;
+    border-color: #ef4444;
+    color: #dc2626;
+}
+.insp-btn-toggle-fa.active {
+    background: #ef4444 !important;
+    border-color: #ef4444 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3) !important;
+}
+
+.insp-falla-box {
+    margin-top: 10px;
+    padding: 14px;
+    background: #fff5f5;
+    border: 1px solid #fecaca;
+    border-radius: 14px;
+    display: none;
+    animation: fadeInSlide 0.2s ease-out;
+}
+@keyframes fadeInSlide {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.insp-photo-preview-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px dashed #f87171;
+}
+.insp-photo-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
 /* ── Config Drawer Modal & Detail Modal (80% de altura, 100% ancho de borde a borde, sube de abajo hacia arriba) ── */
@@ -429,6 +590,9 @@
     transform: scale(1.1);
 }
 </style>
+
+<!-- Backdrop nativo para Drawer y Modales de Inspecciones (idéntico a Reporte de Fallas) -->
+<div id="inspDrawerBackdrop" onclick="window.inspCerrarFormulario()"></div>
 
 <div class="ck-app-container d-flex flex-column" id="moduloStatus">
 
@@ -867,40 +1031,58 @@
 </div>
 
 <!-- ================================================================= -->
-<!-- 📝 MODAL FORMULARIO DE INSPECCIONES (FLOTANTE TIPO REPORTE DE FALLAS) -->
+<!-- 📝 DRAWER NATIVO FORMULARIO DE INSPECCIÓN (ESTILO REPORTE DE FALLAS) -->
 <!-- ================================================================= -->
-<div class="modal fade" id="drawerInspeccion" tabindex="-1" data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-scrollable ck-floating-drawer-dialog">
-    <div class="modal-content border-0 ck-floating-drawer-content">
-      
-      <!-- Modal Header -->
-      <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
-        <div>
-          <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2 m-0" style="font-size: 1.2rem;">
-            <i class="bi bi-clipboard2-check-fill text-primary" style="color: #0284c7;"></i>
-            <span id="lbl-insp-modal-titulo">Inspección Mecánica Integral</span>
-            <span class="text-muted fw-normal fs-6" id="insp-header-ot-lbl"></span>
-          </h5>
+<div class="insp-drawer" id="drawerInspeccion">
+  <!-- Header del Drawer -->
+  <div class="insp-drawer-hd">
+    <div class="d-flex align-items-center gap-2.5">
+      <div class="insp-hd-icon">
+        <i class="bi bi-clipboard2-check-fill"></i>
+      </div>
+      <div>
+        <h5 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.08rem; letter-spacing: -0.2px;" id="lbl-insp-modal-titulo">
+          Inspección Mecánica Integral
+        </h5>
+        <div class="d-flex align-items-center gap-2 text-muted" style="font-size: 0.76rem;" id="insp-header-subinfo">
+          <span id="insp-header-ot-lbl" class="fw-semibold text-primary"></span>
+          <span id="insp-header-folio-badge" class="badge bg-light text-secondary border"></span>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
+    </div>
+    <button type="button" class="btn btn-sm btn-light border-0 rounded-circle p-1 d-flex align-items-center justify-content-center" 
+            onclick="window.inspCerrarFormulario()" style="width: 32px; height: 32px; color: #64748b;" title="Cerrar">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
 
-      <!-- Modal Body -->
-      <div class="modal-body p-3 p-md-4 custom-scrollbar" style="font-family: inherit; background: #f8fafc;">
-        <form id="formNuevaInspeccion" class="d-flex flex-column h-100">
-          <div id="wizard-dynamic-tabs" style="flex-grow:1;">
-            <!-- Renderizado dinámico idéntico a Reporte de Fallas -->
-          </div>
-
-          <!-- Footer Buttons -->
-          <div class="d-flex align-items-center justify-content-end gap-2 pt-3 border-top mt-2">
-            <button type="button" class="btn btn-light fw-bold rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
-            <button type="button" class="btn btn-success fw-bold px-4 shadow-sm rounded-3" id="btnWizGuardar" onclick="procesarGuardadoInspeccion()">
-              <i class="bi bi-check-circle-fill me-1"></i> Guardar Inspección
-            </button>
-          </div>
-        </form>
+  <!-- Body del Drawer (Scrollable con diseño renovado) -->
+  <div class="insp-drawer-body custom-scrollbar" id="insp-drawer-body">
+    <form id="formNuevaInspeccion" class="d-flex flex-column h-100" onsubmit="event.preventDefault();">
+      <div id="wizard-dynamic-tabs" style="flex-grow:1;">
+        <!-- Renderizado dinámico renovado -->
       </div>
+    </form>
+  </div>
+
+  <!-- Footer del Drawer (Fijo con contadores dinámicos) -->
+  <div class="insp-drawer-footer">
+    <div class="d-flex align-items-center gap-2" id="insp-resumen-conteo">
+      <span class="badge bg-success bg-opacity-10 text-success fw-bold px-2.5 py-1.5 rounded-pill d-inline-flex align-items-center gap-1" style="font-size:0.75rem;" id="cnt-insp-ok">
+        <i class="bi bi-check-circle-fill"></i> <span id="cnt-val-ok">0</span> OK
+      </span>
+      <span class="badge bg-danger bg-opacity-10 text-danger fw-bold px-2.5 py-1.5 rounded-pill d-inline-flex align-items-center gap-1" style="font-size:0.75rem;" id="cnt-insp-falla">
+        <i class="bi bi-exclamation-triangle-fill"></i> <span id="cnt-val-falla">0</span> Fallas
+      </span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button type="button" class="btn btn-light border fw-bold rounded-3 px-3 py-2" onclick="window.inspCerrarFormulario()" style="font-size:0.82rem;">
+        Cancelar
+      </button>
+      <button type="button" class="btn btn-primary fw-bold rounded-3 px-4 py-2 shadow-sm d-flex align-items-center gap-2" id="btnWizGuardar" onclick="procesarGuardadoInspeccion()" style="font-size:0.82rem; background: #0284c7; border-color: #0284c7;">
+        <i class="bi bi-check-circle-fill"></i>
+        <span>Guardar Inspección</span>
+      </button>
     </div>
   </div>
 </div>
@@ -1028,63 +1210,58 @@
 
 <!-- ================================================================= -->
 <!-- ================================================================= -->
-<!-- 🔍 MODAL: SELECCIÓN DE TIPO DE INSPECCIÓN                         -->
 <!-- ================================================================= -->
-<div class="modal fade" id="modalTipoInspeccionSeleccion" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered ck-delete-dialog" style="max-width: 520px !important; width: 92% !important;">
-        <div class="modal-content border-0 ck-delete-card" style="padding: 2.25rem 1.75rem 1.75rem !important;">
-            
-            <!-- Icono Superior -->
-            <div class="d-flex justify-content-center">
-                <div class="ck-delete-badge-icon" style="background: #e0f2fe; color: #0284c7;">
-                    <i class="bi bi-shield-check"></i>
-                </div>
-            </div>
-
-            <!-- Título y Subtítulo -->
-            <h4 class="fw-bolder text-dark mb-1" style="font-size: 1.3rem; letter-spacing: -0.3px;">
-                Seleccionar Inspección
-            </h4>
-            <p class="text-secondary small mb-4 px-2" style="font-size: 0.84rem; line-height: 1.45; font-weight: 500;">
-                Elige el tipo de diagnóstico técnico que deseas realizar
-            </p>
-
-            <!-- 2 Opciones en Bento Cards -->
-            <div class="row g-3 text-start">
-                <!-- Opción 1: Inspección de Neumáticos -->
-                <div class="col-12 col-sm-6">
-                    <div class="insp-type-card" data-bs-dismiss="modal" onclick="window._inspTipoSeleccionado='neumaticos'">
-                        <div class="insp-type-icon" style="background: #e0f2fe; color: #0284c7;">
-                            <i class="bi bi-disc-fill"></i>
-                        </div>
-                        <h6 class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">Neumáticos</h6>
-                        <p class="text-muted small mb-0" style="font-size: 0.76rem; line-height: 1.35;">
-                            Medición de remanente (R1-R4), presión PSI, marcas y control de desgaste.
-                        </p>
-                    </div>
-                </div>
-                <!-- Opción 2: Inspección Mecánica Integral -->
-                <div class="col-12 col-sm-6">
-                    <div class="insp-type-card" data-bs-dismiss="modal" onclick="window._inspTipoSeleccionado='mecanica'">
-                        <div class="insp-type-icon" style="background: #fef3c7; color: #d97706;">
-                            <i class="bi bi-truck-front-fill"></i>
-                        </div>
-                        <h6 class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">Mecánica Integral</h6>
-                        <p class="text-muted small mb-0" style="font-size: 0.76rem; line-height: 1.35;">
-                            Checklist por sistemas: motor, frenos, luces, suspensión, chasis y cabina.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Botón Cancelar (X negro) -->
-            <div class="d-flex align-items-center justify-content-center mt-4">
-                <button type="button" class="ck-btn-circle ck-btn-cancel-circle shadow-sm" data-bs-dismiss="modal" title="Cancelar">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
-
+<!-- 🔍 SELECTOR NATIVO DE TIPO DE INSPECCIÓN                          -->
+<!-- ================================================================= -->
+<div class="insp-type-modal text-center" id="modalTipoInspeccionSeleccion">
+    <!-- Icono Superior -->
+    <div class="d-flex justify-content-center">
+        <div class="ck-delete-badge-icon" style="background: #e0f2fe; color: #0284c7;">
+            <i class="bi bi-shield-check"></i>
         </div>
+    </div>
+
+    <!-- Título y Subtítulo -->
+    <h4 class="fw-bolder text-dark mb-1" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+        Seleccionar Inspección
+    </h4>
+    <p class="text-secondary small mb-4 px-2" style="font-size: 0.84rem; line-height: 1.45; font-weight: 500;">
+        Elige el tipo de diagnóstico técnico que deseas realizar
+    </p>
+
+    <!-- 2 Opciones en Bento Cards -->
+    <div class="row g-3 text-start">
+        <!-- Opción 1: Inspección de Neumáticos -->
+        <div class="col-12 col-sm-6">
+            <div class="insp-type-card h-100" onclick="window.inspSeleccionarTipo('neumaticos')">
+                <div class="insp-type-icon" style="background: #e0f2fe; color: #0284c7;">
+                    <i class="bi bi-disc-fill"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">Neumáticos</h6>
+                <p class="text-muted small mb-0" style="font-size: 0.76rem; line-height: 1.35;">
+                    Medición de remanente (R1-R4), presión PSI, marcas y control de desgaste.
+                </p>
+            </div>
+        </div>
+        <!-- Opción 2: Inspección Mecánica Integral -->
+        <div class="col-12 col-sm-6">
+            <div class="insp-type-card h-100" onclick="window.inspSeleccionarTipo('mecanica')">
+                <div class="insp-type-icon" style="background: #fef3c7; color: #d97706;">
+                    <i class="bi bi-truck-front-fill"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">Mecánica Integral</h6>
+                <p class="text-muted small mb-0" style="font-size: 0.76rem; line-height: 1.35;">
+                    Checklist por sistemas: motor, frenos, luces, suspensión, chasis y cabina.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón Cancelar (X negro) -->
+    <div class="d-flex align-items-center justify-content-center mt-4">
+        <button type="button" class="ck-btn-circle ck-btn-cancel-circle shadow-sm" onclick="window.inspCerrarTipoSeleccion()" title="Cancelar">
+            <i class="bi bi-x-lg"></i>
+        </button>
     </div>
 </div>
 
