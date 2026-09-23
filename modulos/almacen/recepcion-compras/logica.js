@@ -373,25 +373,25 @@
                 return `
                 <tr>
                     <td>
-                        <div class="fw-bolder text-dark" style="font-size:0.86rem;">${_escHtml(it.descripcion || 'Artículo')}</div>
-                        ${it.inventario_id ? `<small class="text-primary font-monospace fw-semibold">${_escHtml(it.inventario_id)}</small>` : ''}
+                        <div class="fw-bolder text-dark" style="font-size:0.86rem; line-height: 1.25;">${_escHtml(it.descripcion || 'Artículo')}</div>
+                        ${it.inventario_id ? `<small class="text-primary font-monospace fw-semibold" style="font-size:0.75rem;">${_escHtml(it.inventario_id)}</small>` : ''}
                     </td>
-                    <td class="text-center text-secondary fw-semibold">${_escHtml(it.unidad || 'UND')}</td>
-                    <td class="text-center fw-bold text-dark">${ped.toFixed(2)}</td>
-                    <td class="text-center text-success fw-bold">${rec.toFixed(2)}</td>
-                    <td class="text-center">
+                    <td class="text-center text-secondary fw-semibold text-nowrap" style="font-size:0.8rem;">${_escHtml(it.unidad || 'UND')}</td>
+                    <td class="text-center fw-bold text-dark text-nowrap">${ped.toFixed(2)}</td>
+                    <td class="text-center text-success fw-bold text-nowrap">${rec.toFixed(2)}</td>
+                    <td class="text-center text-nowrap">
                         ${pend > 0 ? `<span class="badge bg-danger text-white fw-bold px-2 py-1" style="font-size:0.75rem;">${pend.toFixed(2)}</span>` : `<span class="badge bg-light text-muted border">0.00</span>`}
                     </td>
-                    <td class="text-center">
+                    <td class="text-center text-nowrap">
                         ${pend > 0 && !soloVer && !esCompleto ? `
-                            <div class="input-group input-group-sm mx-auto" style="max-width: 135px;">
+                            <div class="input-group input-group-sm flex-nowrap mx-auto" style="width: 125px; min-width: 125px;">
                                 <input type="number" step="any" min="0" max="${pend}" 
-                                       class="form-control text-center fw-bolder border-primary rec-item-cant-input" 
+                                       class="form-control text-center fw-bolder border-primary rec-item-cant-input px-1" 
                                        data-idx="${idx}" 
                                        data-pend="${pend}"
                                        value="${pend}" 
-                                       style="background:#f0f9ff; font-size:0.88rem; transition: background-color 0.3s ease;">
-                                <button class="btn btn-outline-primary btn-sm fw-bold px-2" type="button" onclick="window.autoCompletarFila(${idx}, ${pend})" title="Llenar con el saldo máximo (${pend})">
+                                       style="background:#f0f9ff; font-size:0.88rem; min-width: 55px; transition: background-color 0.3s ease;">
+                                <button class="btn btn-outline-primary btn-sm fw-bold px-2" type="button" onclick="window.autoCompletarFila(${idx}, ${pend})" title="Llenar con el saldo máximo (${pend})" style="font-size:0.72rem;">
                                     MAX
                                 </button>
                             </div>
@@ -399,9 +399,9 @@
                             <span class="badge bg-light text-success border"><i class="bi bi-check-all"></i> Completo</span>
                         `}
                     </td>
-                    <td>
+                    <td style="min-width: 140px;">
                         ${pend > 0 && !soloVer && !esCompleto ? `
-                            <select class="form-select form-select-sm fw-semibold rec-item-alm-select rounded-3 border" data-idx="${idx}" style="font-size:0.8rem;">
+                            <select class="form-select form-select-sm fw-semibold rec-item-alm-select rounded-3 border" data-idx="${idx}" style="font-size:0.8rem; min-width: 130px;">
                                 ${almacenesOpts}
                             </select>
                         ` : `
