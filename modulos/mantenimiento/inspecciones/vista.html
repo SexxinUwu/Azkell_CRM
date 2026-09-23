@@ -967,48 +967,63 @@
 </div>
 
 <!-- ================================================================= -->
+<!-- ================================================================= -->
 <!-- 🔍 MODAL: SELECCIÓN DE TIPO DE INSPECCIÓN                         -->
 <!-- ================================================================= -->
 <div class="modal fade" id="modalTipoInspeccionSeleccion" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width: 540px;">
-        <div class="modal-content rounded-4 border-0 shadow-lg p-3 p-md-4">
-            <div class="modal-header border-0 pb-0">
-                <div>
-                    <h5 class="modal-title fw-bolder text-dark m-0" style="font-size: 1.25rem;">
-                        <i class="bi bi-shield-check text-primary me-1"></i> Seleccionar Inspección
-                    </h5>
-                    <p class="text-muted small m-0 mt-1">Elige el tipo de diagnóstico técnico que deseas realizar</p>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body pt-4">
-                <div class="row g-3">
-                    <!-- Opción 1: Inspección de Neumáticos -->
-                    <div class="col-12 col-sm-6">
-                        <div class="insp-type-card" onclick="window.seleccionarTipoInspeccion('neumaticos')">
-                            <div class="insp-type-icon" style="background: #e0f2fe; color: #0284c7;">
-                                <i class="bi bi-disc-fill"></i>
-                            </div>
-                            <h6 class="fw-bold text-dark mb-1">Neumáticos</h6>
-                            <p class="text-muted small mb-0" style="font-size: 0.78rem; line-height: 1.35;">
-                                Medición de remanente (R1-R4), presión PSI, marcas y control de desgaste.
-                            </p>
-                        </div>
-                    </div>
-                    <!-- Opción 2: Inspección Mecánica Integral -->
-                    <div class="col-12 col-sm-6">
-                        <div class="insp-type-card" onclick="window.seleccionarTipoInspeccion('mecanica')">
-                            <div class="insp-type-icon" style="background: #fef3c7; color: #d97706;">
-                                <i class="bi bi-truck-front-fill"></i>
-                            </div>
-                            <h6 class="fw-bold text-dark mb-1">Mecánica Integral</h6>
-                            <p class="text-muted small mb-0" style="font-size: 0.78rem; line-height: 1.35;">
-                                Checklist por sistemas: motor, frenos, luces, suspensión, chasis y cabina.
-                            </p>
-                        </div>
-                    </div>
+    <div class="modal-dialog modal-dialog-centered ck-delete-dialog" style="max-width: 520px !important; width: 92% !important;">
+        <div class="modal-content border-0 ck-delete-card" style="padding: 2.25rem 1.75rem 1.75rem !important;">
+            
+            <!-- Icono Superior -->
+            <div class="d-flex justify-content-center">
+                <div class="ck-delete-badge-icon" style="background: #e0f2fe; color: #0284c7;">
+                    <i class="bi bi-shield-check"></i>
                 </div>
             </div>
+
+            <!-- Título y Subtítulo -->
+            <h4 class="fw-bolder text-dark mb-1" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+                Seleccionar Inspección
+            </h4>
+            <p class="text-secondary small mb-4 px-2" style="font-size: 0.84rem; line-height: 1.45; font-weight: 500;">
+                Elige el tipo de diagnóstico técnico que deseas realizar
+            </p>
+
+            <!-- 2 Opciones en Bento Cards -->
+            <div class="row g-3 text-start">
+                <!-- Opción 1: Inspección de Neumáticos -->
+                <div class="col-12 col-sm-6">
+                    <div class="insp-type-card" onclick="window.seleccionarTipoInspeccion('neumaticos')">
+                        <div class="insp-type-icon" style="background: #e0f2fe; color: #0284c7;">
+                            <i class="bi bi-disc-fill"></i>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">Neumáticos</h6>
+                        <p class="text-muted small mb-0" style="font-size: 0.76rem; line-height: 1.35;">
+                            Medición de remanente (R1-R4), presión PSI, marcas y control de desgaste.
+                        </p>
+                    </div>
+                </div>
+                <!-- Opción 2: Inspección Mecánica Integral -->
+                <div class="col-12 col-sm-6">
+                    <div class="insp-type-card" onclick="window.seleccionarTipoInspeccion('mecanica')">
+                        <div class="insp-type-icon" style="background: #fef3c7; color: #d97706;">
+                            <i class="bi bi-truck-front-fill"></i>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">Mecánica Integral</h6>
+                        <p class="text-muted small mb-0" style="font-size: 0.76rem; line-height: 1.35;">
+                            Checklist por sistemas: motor, frenos, luces, suspensión, chasis y cabina.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón Cancelar (X negro) -->
+            <div class="d-flex align-items-center justify-content-center mt-4">
+                <button type="button" class="ck-btn-circle ck-btn-cancel-circle shadow-sm" data-bs-dismiss="modal" title="Cancelar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
         </div>
     </div>
 </div>
