@@ -915,36 +915,47 @@ router.post('/:metodo', async (req, res) => {
     }
 
 
-    if (metodo === 'eliminarDocumento') {
-        const { id, ids, coleccion } = req.body;
+    if (metodo === 'eliminarDocumento' || metodo === 'eliminarRegistro') {
+        const reqDb = req.db || db;
+        let id = req.body.id;
+        let ids = req.body.ids;
+        let coleccion = req.body.coleccion;
+
+        if (Array.isArray(req.body.args) && req.body.args.length > 0) {
+            id = req.body.args[0];
+            if (req.body.args[1]) coleccion = req.body.args[1];
+        }
 
         const listaIds = ids && ids.length > 0 ? ids : (id ? [id] : []);
-        if (listaIds.length === 0) return res.json({ data: "No hay registros para procesar" });
+        if (listaIds.length === 0) return res.json({ ok: false, data: "No hay registros para procesar", message: "No hay registros para procesar" });
 
         let sql = '';
 
         if (coleccion === 'Placas') sql = 'DELETE FROM placas WHERE placa IN (?)';
-        else if (coleccion === 'Inspecciones') {
+        else if (coleccion === 'Inspecciones' || coleccion === 'statusMant') {
             sql = 'DELETE FROM inspecciones WHERE id IN (?)';
             _inspeccionesCache = null;
         }
-        else if (coleccion === 'Fleetrun') sql = 'DELETE FROM fleetrun WHERE idRegistro IN (?)';
+        else if (coleccion === 'Fleetrun' || coleccion === 'Mantenimientos') sql = 'DELETE FROM fleetrun WHERE idRegistro IN (?)';
         else if (coleccion === 'Usuarios') sql = 'DELETE FROM usuarios WHERE idUsuario IN (?)';
         else if (coleccion === 'VehiculosFlota') sql = 'DELETE FROM vehiculos_flota WHERE placa IN (?)';
 
-        if (!sql) return res.json({ data: "Colección no válida" });
+        if (!sql) return res.json({ ok: false, data: "Colección no válida", message: "Colección no válida" });
 
-        db.query(sql, [listaIds], (err) => {
-            if (err) { console.error("❌ Error en BD:", err); return res.json({ data: "Error al procesar registro" }); }
+        reqDb.query(sql, [listaIds], (err) => {
+            if (err) { 
+                console.error("❌ Error en BD al eliminar:", err); 
+                return res.json({ ok: false, data: "Error al procesar registro", message: err.message }); 
+            }
             console.log(`✅ Eliminados definitivamente ${listaIds.length} registros de ${coleccion}`);
-            const COLECCION_MODULO = { Placas:'placas', Inspecciones:'inspecciones', Fleetrun:'fleetrun', Usuarios:'usuarios' };
+            const COLECCION_MODULO = { Placas:'placas', Inspecciones:'inspecciones', statusMant:'inspecciones', Fleetrun:'fleetrun', Mantenimientos:'fleetrun', Usuarios:'usuarios', VehiculosFlota:'vehiculos_flota' };
             broadcast(COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'eliminar');
             const usuario = (req.body && req.body.usuario) || 'sistema';
             logAudit(usuario, COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'ELIMINÓ', `${listaIds.length} reg. de ${coleccion}`);
 
             // Al eliminar Fleetrun: revertir planes Completadas que referenciaban esos registros
-            if (coleccion === 'Fleetrun' && listaIds.length > 0) {
-                db.query(
+            if ((coleccion === 'Fleetrun' || coleccion === 'Mantenimientos') && listaIds.length > 0) {
+                reqDb.query(
                     `UPDATE planificacion
                      SET estado = 'Programada',
                          fleetrun_id_ejecutado = NULL,
@@ -959,7 +970,7 @@ router.post('/:metodo', async (req, res) => {
                 );
             }
 
-            return res.json({ data: "Éxito" });
+            return res.json({ ok: true, status: 'success', success: true, data: "Éxito" });
         });
         return;
     }
