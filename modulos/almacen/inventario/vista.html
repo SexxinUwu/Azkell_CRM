@@ -904,26 +904,23 @@
                   <i class="bi bi-image fs-1"></i><br><small>Sin imagen</small>
                 </div>
               </div>
-              <div class="d-flex gap-2">
-                <label class="btn btn-sm btn-outline-primary flex-grow-1" style="cursor:pointer; border-radius:10px;">
-                  <i class="bi bi-upload me-1"></i>Subir imagen
-                  <input type="file" id="inv-img-input" accept="image/*" style="display:none" onchange="window._invSubirImagen(event)">
+              <div class="d-flex flex-wrap gap-2">
+                <label class="btn btn-sm btn-outline-primary flex-grow-1 d-flex align-items-center justify-content-center gap-1.5 py-2 fw-semibold shadow-2xs" style="cursor:pointer; border-radius:10px;">
+                  <i class="bi bi-camera-fill"></i>
+                  <span>Tomar Foto</span>
+                  <input type="file" id="inv-img-camera" accept="image/*" capture="environment" style="display:none" onchange="window._invSubirImagen(event)">
                 </label>
-                <button type="button" id="inv-img-btn-quitar" class="btn btn-sm btn-outline-danger" onclick="window._invQuitarImagen()" style="display:none; border-radius:10px;"><i class="bi bi-trash"></i></button>
+                <label class="btn btn-sm btn-outline-secondary flex-grow-1 d-flex align-items-center justify-content-center gap-1.5 py-2 fw-semibold shadow-2xs" style="cursor:pointer; border-radius:10px;">
+                  <i class="bi bi-image-fill"></i>
+                  <span>Galería / Archivos</span>
+                  <input type="file" id="inv-img-gallery" accept="image/*" style="display:none" onchange="window._invSubirImagen(event)">
+                </label>
+                <button type="button" id="inv-img-btn-quitar" class="btn btn-sm btn-outline-danger px-3 shadow-2xs" onclick="window._invQuitarImagen()" style="display:none; border-radius:10px;" title="Eliminar imagen actual">
+                  <i class="bi bi-trash3-fill"></i>
+                </button>
               </div>
             </div>
 
-            <div class="text-center" style="margin-top:8px;">
-              <div class="ent-field-label">Código QR</div>
-              <div id="inv-qr-wrap" class="border rounded p-3 d-inline-flex flex-column align-items-center gap-2" style="display:none!important; border-color:#cbd5e1!important;">
-                <img id="inv-qr-img" src="" alt="QR" style="width:140px;height:140px;">
-                <small class="text-muted fw-bold" id="inv-qr-label" style="font-size:0.75rem;"></small>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window._invDescargarQR()" style="border-radius:10px;"><i class="bi bi-download me-1"></i>Descargar QR</button>
-              </div>
-              <div id="inv-qr-placeholder" class="text-muted small">
-                <i class="bi bi-qr-code fs-1 d-block mb-1"></i>El QR se genera al guardar
-              </div>
-            </div>
           </div>
 
         </div>

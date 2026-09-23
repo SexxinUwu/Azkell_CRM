@@ -1839,10 +1839,6 @@ function _invResetImageUI(item) {
     var preview = document.getElementById('inv-img-preview');
     var placeholder = document.getElementById('inv-img-placeholder');
     var btnQuitar = document.getElementById('inv-img-btn-quitar');
-    var qrWrap    = document.getElementById('inv-qr-wrap');
-    var qrPlaceholder = document.getElementById('inv-qr-placeholder');
-    var qrImg     = document.getElementById('inv-qr-img');
-    var qrLabel   = document.getElementById('inv-qr-label');
 
     if (!item) {
         // Nuevo artículo
@@ -1863,17 +1859,6 @@ function _invResetImageUI(item) {
         if (preview)     { preview.src = ''; preview.style.display = 'none'; }
         if (placeholder) { placeholder.style.display = ''; }
         if (btnQuitar)   { btnQuitar.style.display = 'none'; }
-    }
-
-    // QR
-    if (qrWrap && qrPlaceholder && item.id) {
-        qrWrap.style.display = '';
-        qrWrap.style.removeProperty('display');
-        qrWrap.removeAttribute('style');
-        qrWrap.style.display = 'inline-flex';
-        if (qrPlaceholder) qrPlaceholder.style.display = 'none';
-        if (qrImg) qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(item.id);
-        if (qrLabel) qrLabel.textContent = item.id;
     }
 }
 

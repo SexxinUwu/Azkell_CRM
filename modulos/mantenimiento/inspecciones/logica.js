@@ -259,6 +259,11 @@ window.cambiarInspTab = function(tab) {
     var toolsGen = document.getElementById('panelHerramientasStatus');
     var graficosPanel = document.getElementById('panelGraficosStatus');
 
+    var isFreOpen = paneFre && (paneFre.style.display === 'flex' || paneFre.classList.contains('show'));
+    if (!tab) {
+        tab = isFreOpen ? 'general' : 'frenos';
+    }
+
     if (tab === 'frenos') {
         if (btnFre) {
             btnFre.classList.add('active', 'border-danger', 'bg-danger-subtle', 'text-danger');
@@ -266,18 +271,18 @@ window.cambiarInspTab = function(tab) {
         }
         if (paneGen) {
             paneGen.classList.remove('show', 'active');
-            paneGen.style.display = 'none';
+            paneGen.style.setProperty('display', 'none', 'important');
         }
         if (paneFre) {
             paneFre.classList.add('show', 'active');
-            paneFre.style.display = 'flex';
+            paneFre.style.setProperty('display', 'flex', 'important');
         }
-        if (kpisGen) kpisGen.style.display = 'none';
-        if (toolsGen) toolsGen.style.display = 'none';
-        if (graficosPanel) graficosPanel.style.display = 'none';
+        if (kpisGen) kpisGen.style.setProperty('display', 'none', 'important');
+        if (toolsGen) toolsGen.style.setProperty('display', 'none', 'important');
+        if (graficosPanel) graficosPanel.style.setProperty('display', 'none', 'important');
 
         if (typeof window.renderTablaFrenos === 'function') {
-            window.renderTablaFrenos(dataGlobalInspecciones || window.dataGlobalInspecciones || []);
+            window.renderTablaFrenos(window.dataGlobalInspecciones || []);
         }
     } else {
         if (btnFre) {
@@ -286,14 +291,14 @@ window.cambiarInspTab = function(tab) {
         }
         if (paneFre) {
             paneFre.classList.remove('show', 'active');
-            paneFre.style.display = 'none';
+            paneFre.style.setProperty('display', 'none', 'important');
         }
         if (paneGen) {
             paneGen.classList.add('show', 'active');
-            paneGen.style.display = 'flex';
+            paneGen.style.setProperty('display', 'flex', 'important');
         }
-        if (kpisGen) kpisGen.style.display = '';
-        if (toolsGen) toolsGen.style.display = '';
+        if (kpisGen) kpisGen.style.removeProperty('display');
+        if (toolsGen) toolsGen.style.removeProperty('display');
     }
     if (typeof window.actualizarVistaGraficos === 'function') {
         window.actualizarVistaGraficos();
@@ -574,13 +579,13 @@ function obtenerUbicacionUnidad(placa) {
 
 function mostrarStatusInspecciones(inspecciones) {
     if (procesadorErroresCuota(inspecciones, 'cuerpoTablaStatus')) return;
-    dataGlobalInspecciones = inspecciones;
+    window.dataGlobalInspecciones = Array.isArray(inspecciones) ? inspecciones : [];
     
     // Asegurar carga asíncrona de neumáticos para cobertura panorámica
     if (!window.dataGlobalNeumaticos) {
         window.asegurarNeumaticosInspecciones().then(() => {
             if (window.dataFinalInspGlobal && window.dataFinalInspGlobal.length > 0) {
-                mostrarStatusInspecciones(dataGlobalInspecciones);
+                mostrarStatusInspecciones(window.dataGlobalInspecciones);
             }
         });
     }
@@ -681,8 +686,8 @@ function mostrarStatusInspecciones(inspecciones) {
     }
     
     // Renderizar tabla de frenos
-    if (typeof renderTablaFrenos === 'function') {
-        renderTablaFrenos(dataGlobalInspecciones);
+    if (typeof window.renderTablaFrenos === 'function') {
+        window.renderTablaFrenos(window.dataGlobalInspecciones || []);
     }
 }
 
@@ -832,6 +837,7 @@ function evaluarCicloUnidad(item) {
     }
 
     // ── Determinar Estado de Cobertura del Ciclo ──
+    // ── Determinar Estado de Cobertura y Días Restantes del Ciclo ──
     let tipoCobertura = "SIN_REGISTRO";
     let badgeEvaluacion = "";
     let diasRestantesGlobal = -9999;
@@ -839,48 +845,70 @@ function evaluarCicloUnidad(item) {
     let colorFalta = "#94a3b8";
     let textoBadgeProx = "Sin Registro";
 
-    if (esVigenteMec && esVigenteNeu) {
-        // Ambas están vigentes en el ciclo actual
-        tipoCobertura = "AMBAS_VIGENTES";
-        diasRestantesGlobal = Math.min(diasMec, diasNeu);
-        badgeEvaluacion = `<span class="badge rounded-pill fw-bold px-2.5 py-1 text-nowrap" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.73rem;"><i class="bi bi-shield-fill-check me-1 text-success"></i>Mecánica + Neumáticos</span>`;
-    } else if (esVigenteNeu && !esVigenteMec) {
-        // Se hizo neumáticos recientemente, pero la mecánica está vencida o pendiente
-        tipoCobertura = "SOLO_NEU_VIGENTE";
-        diasRestantesGlobal = (diasMec !== null && diasMec < 0) ? diasMec : -1;
-        badgeEvaluacion = `<span class="badge rounded-pill fw-semibold px-2.5 py-1 text-nowrap" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 0.73rem;" title="Neumáticos al día. Mecánica pendiente de renovación."><i class="bi bi-disc-fill me-1 text-warning"></i>Solo Neumáticos <span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">Falta Mecánica</span></span>`;
-    } else if (esVigenteMec && !esVigenteNeu) {
-        // Se hizo mecánica recientemente, pero neumáticos está vencido o pendiente
-        tipoCobertura = "SOLO_MEC_VIGENTE";
-        diasRestantesGlobal = (diasNeu !== null && diasNeu < 0) ? diasNeu : -1;
-        badgeEvaluacion = `<span class="badge rounded-pill fw-semibold px-2.5 py-1 text-nowrap" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.73rem;" title="Mecánica al día. Neumáticos pendientes de inspección."><i class="bi bi-wrench-adjustable me-1 text-primary"></i>Solo Mecánica <span class="badge bg-info text-dark ms-1" style="font-size:0.65rem;">Falta Neumáticos</span></span>`;
-    } else if (tieneMec || tieneNeu) {
-        // Existen registros pero ambos vencieron
-        tipoCobertura = "AMBAS_VENCIDAS";
-        diasRestantesGlobal = Math.min(diasMec !== null ? diasMec : -9999, diasNeu !== null ? diasNeu : -9999);
-        badgeEvaluacion = `<span class="badge rounded-pill fw-medium px-2 py-0.5 text-nowrap bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Ciclo Vencido</span>`;
+    if (tieneMec && tieneNeu) {
+        if (esVigenteMec && esVigenteNeu) {
+            tipoCobertura = "AMBAS_VIGENTES";
+            diasRestantesGlobal = Math.min(diasMec, diasNeu);
+            badgeEvaluacion = `<span class="badge rounded-pill fw-bold px-2.5 py-1 text-nowrap" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.73rem;"><i class="bi bi-shield-fill-check me-1 text-success"></i>Mecánica + Neumáticos</span>`;
+        } else if (esVigenteNeu && !esVigenteMec) {
+            tipoCobertura = "SOLO_NEU_VIGENTE";
+            diasRestantesGlobal = diasNeu;
+            badgeEvaluacion = `<span class="badge rounded-pill fw-semibold px-2.5 py-1 text-nowrap" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 0.73rem;" title="Neumáticos al día. Mecánica pendiente de renovación."><i class="bi bi-disc-fill me-1 text-warning"></i>Solo Neumáticos <span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">Falta Mecánica</span></span>`;
+        } else if (esVigenteMec && !esVigenteNeu) {
+            tipoCobertura = "SOLO_MEC_VIGENTE";
+            diasRestantesGlobal = diasMec;
+            badgeEvaluacion = `<span class="badge rounded-pill fw-semibold px-2.5 py-1 text-nowrap" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.73rem;" title="Mecánica al día. Neumáticos pendientes de inspección."><i class="bi bi-wrench-adjustable me-1 text-primary"></i>Solo Mecánica <span class="badge bg-info text-dark ms-1" style="font-size:0.65rem;">Falta Neumáticos</span></span>`;
+        } else {
+            // Ambas vencidas
+            tipoCobertura = "AMBAS_VENCIDAS";
+            diasRestantesGlobal = Math.max(diasMec !== null ? diasMec : -9999, diasNeu !== null ? diasNeu : -9999);
+            badgeEvaluacion = `<span class="badge rounded-pill fw-medium px-2 py-0.5 text-nowrap bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Ciclo Vencido</span>`;
+        }
+    } else if (tieneMec && !tieneNeu) {
+        if (esVigenteMec) {
+            tipoCobertura = "SOLO_MEC_VIGENTE";
+            diasRestantesGlobal = diasMec;
+            badgeEvaluacion = `<span class="badge rounded-pill fw-semibold px-2.5 py-1 text-nowrap" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.73rem;" title="Mecánica al día. Neumáticos pendientes de inspección."><i class="bi bi-wrench-adjustable me-1 text-primary"></i>Solo Mecánica <span class="badge bg-info text-dark ms-1" style="font-size:0.65rem;">Falta Neumáticos</span></span>`;
+        } else {
+            tipoCobertura = "AMBAS_VENCIDAS";
+            diasRestantesGlobal = diasMec !== null ? diasMec : -9999;
+            badgeEvaluacion = `<span class="badge rounded-pill fw-medium px-2 py-0.5 text-nowrap bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Ciclo Vencido</span>`;
+        }
+    } else if (!tieneMec && tieneNeu) {
+        if (esVigenteNeu) {
+            tipoCobertura = "SOLO_NEU_VIGENTE";
+            diasRestantesGlobal = diasNeu;
+            badgeEvaluacion = `<span class="badge rounded-pill fw-semibold px-2.5 py-1 text-nowrap" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 0.73rem;" title="Neumáticos al día. Mecánica pendiente de renovación."><i class="bi bi-disc-fill me-1 text-warning"></i>Solo Neumáticos <span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">Falta Mecánica</span></span>`;
+        } else {
+            tipoCobertura = "AMBAS_VENCIDAS";
+            diasRestantesGlobal = diasNeu !== null ? diasNeu : -9999;
+            badgeEvaluacion = `<span class="badge rounded-pill fw-medium px-2 py-0.5 text-nowrap bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Ciclo Vencido</span>`;
+        }
     } else {
         tipoCobertura = "SIN_REGISTRO";
         diasRestantesGlobal = -9999;
         badgeEvaluacion = `<span class="badge rounded-pill fw-medium px-2 py-0.5 text-nowrap bg-light text-secondary border" style="font-size: 0.72rem;"><i class="bi bi-dash-circle me-1"></i>Sin Registro</span>`;
     }
 
-    // Calcular Semáforo
-    if (diasRestantesGlobal < 0 && diasRestantesGlobal !== -9999) {
-        colorFalta = "#dc2626";
-        txtEstadoGlobal = "NO VIGENTE";
-        textoBadgeProx = `Vencido hace ${Math.abs(diasRestantesGlobal)} días`;
-    } else if (diasRestantesGlobal >= 0 && diasRestantesGlobal <= 7) {
-        colorFalta = "#eab308";
-        txtEstadoGlobal = "PRÓXIMO A VENCER";
-        textoBadgeProx = diasRestantesGlobal === 0 ? "Vence hoy" : `Faltan ${diasRestantesGlobal} días`;
-    } else if (diasRestantesGlobal > 7) {
-        colorFalta = "#16a34a";
-        txtEstadoGlobal = "VIGENTE";
-        textoBadgeProx = `Faltan ${diasRestantesGlobal} días`;
+    // Calcular Semáforo y texto del badge
+    if (diasRestantesGlobal !== -9999 && diasRestantesGlobal !== null) {
+        if (diasRestantesGlobal < 0) {
+            let cant = Math.abs(diasRestantesGlobal);
+            colorFalta = "#dc2626";
+            txtEstadoGlobal = "NO VIGENTE";
+            textoBadgeProx = cant === 1 ? "Vencido hace 1 día" : `Vencido hace ${cant} días`;
+        } else if (diasRestantesGlobal <= 7) {
+            colorFalta = "#eab308";
+            txtEstadoGlobal = "PRÓXIMO A VENCER";
+            textoBadgeProx = diasRestantesGlobal === 0 ? "Vence hoy" : (diasRestantesGlobal === 1 ? "Falta 1 día" : `Faltan ${diasRestantesGlobal} días`);
+        } else {
+            colorFalta = "#16a34a";
+            txtEstadoGlobal = "VIGENTE";
+            textoBadgeProx = diasRestantesGlobal === 1 ? "Falta 1 día" : `Faltan ${diasRestantesGlobal} días`;
+        }
     } else {
-        colorFalta = "#dc2626";
-        txtEstadoGlobal = "NO VIGENTE";
+        colorFalta = "#94a3b8";
+        txtEstadoGlobal = "SIN REGISTRO";
         textoBadgeProx = "Sin Registro";
     }
 
@@ -1057,11 +1085,14 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
                 badgeEstadoMobile = `<span class="badge bg-success-subtle text-success fw-semibold" style="font-size:0.72rem; border-radius:6px;">CONFORME</span>`;
             }
 
-            // Opciones de Dropdown dinámicas según lo registrado
+            // Opciones de Dropdown dinámicas según lo registrado y ciclo activo
             let menuOpcionesHtml = '';
-            if (ec.tieneMec && ec.tieneNeu) {
+            let rowClickAction = '';
+
+            if (ec.tipoCobertura === 'AMBAS_VIGENTES') {
+                rowClickAction = `window.verDetalleInspeccion('${insp.id}', false)`;
                 menuOpcionesHtml = `
-                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Detalle Mecánica</a></li>
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Detalle Mecánica (${insp.id})</a></li>
                     <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.neuVerDetalleModal('${neuInsp.id_inspeccion}')"><i class="bi bi-disc text-warning"></i> Ver Detalle Neumáticos (${neuInsp.id_inspeccion})</a></li>
                     <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-earmark-pdf text-danger"></i> Exportar PDF Mecánica</a></li>
                     ${window.checkPerm && window.checkPerm('insp', 'e') ? `
@@ -1071,9 +1102,21 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
                     <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.eliminarInspeccion('${insp.id}')"><i class="bi bi-trash3"></i> Eliminar Insp. Mecánica</a></li>` : ''}
                     <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.neuEliminarInspeccion('${neuInsp.id_inspeccion}')"><i class="bi bi-trash3"></i> Eliminar Insp. Neumáticos</a></li>
                 `;
-            } else if (ec.tieneMec && !ec.tieneNeu) {
+            } else if (ec.tipoCobertura === 'SOLO_NEU_VIGENTE') {
+                rowClickAction = `window.neuVerDetalleModal('${neuInsp.id_inspeccion}')`;
                 menuOpcionesHtml = `
-                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Detalle</a></li>
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.neuVerDetalleModal('${neuInsp.id_inspeccion}')"><i class="bi bi-disc text-warning"></i> Ver Detalle Neumáticos (${neuInsp.id_inspeccion})</a></li>
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-primary fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.abrirModalSeleccionarTipoInspeccion('${ec.placa}', ${ec.kmActivoNum ? Number(ec.kmActivoNum) : 0})"><i class="bi bi-plus-lg"></i> Registrar Insp. Mecánica</a></li>
+                    ${insp && insp.id ? `
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-secondary small" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-clock-history"></i> Histórico Mecánica Anterior (${insp.id})</a></li>` : ''}
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.neuEliminarInspeccion('${neuInsp.id_inspeccion}')"><i class="bi bi-trash3"></i> Eliminar Insp. Neumáticos</a></li>
+                `;
+            } else if (ec.tipoCobertura === 'SOLO_MEC_VIGENTE') {
+                rowClickAction = `window.verDetalleInspeccion('${insp.id}', false)`;
+                menuOpcionesHtml = `
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Detalle Mecánica (${insp.id})</a></li>
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-warning-emphasis fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); if(typeof window.neuAbrirModalNuevaInspeccion === 'function'){ window.neuAbrirModalNuevaInspeccion('${ec.placa}'); } else { window.abrirModalSeleccionarTipoInspeccion('${ec.placa}', ${ec.kmActivoNum ? Number(ec.kmActivoNum) : 0}); }"><i class="bi bi-plus-circle"></i> Registrar Insp. Neumáticos</a></li>
                     <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-earmark-pdf text-danger"></i> Exportar PDF</a></li>
                     ${window.checkPerm && window.checkPerm('insp', 'e') ? `
                     <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-secondary"></i> Editar</a></li>` : ''}
@@ -1081,14 +1124,26 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
                     ${window.checkPerm && window.checkPerm('insp', 'd') ? `
                     <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.eliminarInspeccion('${insp.id}')"><i class="bi bi-trash3"></i> Eliminar</a></li>` : ''}
                 `;
-            } else if (!ec.tieneMec && ec.tieneNeu) {
+            } else if (ec.tieneMec || ec.tieneNeu) {
+                // Ambas vencidas: abrir la más reciente al hacer clic
+                if (ec.fechaMasRecienteVal === (neuInsp && neuInsp.fecha_inspeccion ? new Date(neuInsp.fecha_inspeccion).getTime() : -1)) {
+                    rowClickAction = `window.neuVerDetalleModal('${neuInsp.id_inspeccion}')`;
+                } else if (insp && insp.id) {
+                    rowClickAction = `window.verDetalleInspeccion('${insp.id}', false)`;
+                } else {
+                    rowClickAction = `window.abrirModalSeleccionarTipoInspeccion('${ec.placa}', ${ec.kmActivoNum ? Number(ec.kmActivoNum) : 0})`;
+                }
+
                 menuOpcionesHtml = `
-                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.neuVerDetalleModal('${neuInsp.id_inspeccion}')"><i class="bi bi-disc text-warning"></i> Ver Detalle Neumáticos</a></li>
-                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-primary fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.abrirModalSeleccionarTipoInspeccion('${ec.placa}', ${ec.kmActivoNum ? Number(ec.kmActivoNum) : 0})"><i class="bi bi-plus-lg"></i> Registrar Insp. Mecánica</a></li>
+                    ${insp && insp.id ? `<li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Detalle Mecánica (${insp.id})</a></li>` : ''}
+                    ${neuInsp && neuInsp.id_inspeccion ? `<li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.neuVerDetalleModal('${neuInsp.id_inspeccion}')"><i class="bi bi-disc text-warning"></i> Ver Detalle Neumáticos (${neuInsp.id_inspeccion})</a></li>` : ''}
+                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-primary fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.abrirModalSeleccionarTipoInspeccion('${ec.placa}', ${ec.kmActivoNum ? Number(ec.kmActivoNum) : 0})"><i class="bi bi-plus-lg"></i> Iniciar Nueva Inspección</a></li>
                     <li><hr class="dropdown-divider my-1"></li>
-                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.neuEliminarInspeccion('${neuInsp.id_inspeccion}')"><i class="bi bi-trash3"></i> Eliminar Insp. Neumáticos</a></li>
+                    ${insp && insp.id && window.checkPerm && window.checkPerm('insp', 'd') ? `<li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.eliminarInspeccion('${insp.id}')"><i class="bi bi-trash3"></i> Eliminar Insp. Mecánica</a></li>` : ''}
+                    ${neuInsp && neuInsp.id_inspeccion ? `<li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.neuEliminarInspeccion('${neuInsp.id_inspeccion}')"><i class="bi bi-trash3"></i> Eliminar Insp. Neumáticos</a></li>` : ''}
                 `;
             } else {
+                rowClickAction = `window.abrirModalSeleccionarTipoInspeccion('${ec.placa}', ${ec.kmActivoNum ? Number(ec.kmActivoNum) : 0})`;
                 menuOpcionesHtml = `
                     <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-primary fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.cerrarTodosLosDropdowns(); window.abrirModalSeleccionarTipoInspeccion('${ec.placa}', ${ec.kmActivoNum ? Number(ec.kmActivoNum) : 0})"><i class="bi bi-plus-lg"></i> Registrar Inspección</a></li>
                 `;
@@ -1096,7 +1151,7 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
 
             // 1. Desktop Row
             htmlTable += `
-            <tr class="clickable-row data-row-status" data-cliente="${ec.cli}" data-marca="${ec.mar}" data-estado-v2="${ec.txtEstadoGlobal}" data-motor="${ec.motora}" data-dias="${ec.diasRestantesGlobal}" data-ubicacion="${ubicacionInfo.tipo}" onclick="${ec.tieneMec ? `window.verDetalleInspeccion('${insp.id}', false)` : (ec.tieneNeu ? `window.neuVerDetalleModal('${neuInsp.id_inspeccion}')` : `window.abrirModalSeleccionarTipoInspeccion('${ec.placa}', ${ec.kmActivoNum ? Number(ec.kmActivoNum) : 0})`)}">
+            <tr class="clickable-row data-row-status" data-cliente="${ec.cli}" data-marca="${ec.mar}" data-estado-v2="${ec.txtEstadoGlobal}" data-motor="${ec.motora}" data-dias="${ec.diasRestantesGlobal}" data-ubicacion="${ubicacionInfo.tipo}" onclick="${rowClickAction}">
                 <td class="ps-3 py-1.5 fw-bold text-dark">
                     <div class="d-flex align-items-center gap-1.5">
                         ${checkHtml}
@@ -1136,7 +1191,7 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
             <div class="ck-mobile-card data-card-insp" data-cliente="${ec.cli}" data-marca="${ec.mar}" data-estado-v2="${ec.txtEstadoGlobal}" data-motor="${ec.motora}" data-dias="${ec.diasRestantesGlobal}" data-ubicacion="${ubicacionInfo.tipo}">
                 <div class="d-flex align-items-center justify-content-between mb-1.5">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bolder text-primary font-monospace" style="font-size:0.92rem;">${insp && insp.id ? insp.id : (neuInsp && neuInsp.id_inspeccion ? neuInsp.id_inspeccion : 'SIN REGISTRO')}</span>
+                        <span class="fw-bolder text-primary font-monospace" style="font-size:0.92rem;">${ec.tipoCobertura === 'SOLO_NEU_VIGENTE' && neuInsp ? neuInsp.id_inspeccion : (insp && insp.id ? insp.id : (neuInsp && neuInsp.id_inspeccion ? neuInsp.id_inspeccion : 'SIN REGISTRO'))}</span>
                         <span class="text-muted small" style="font-size:0.73rem;">• ${ec.fechaMasRecienteBonita}</span>
                     </div>
                     <div>${badgeEstadoMobile}</div>
@@ -1167,7 +1222,11 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
                     <button type="button" class="btn btn-sm btn-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1.5 py-1.5 shadow-2xs" onclick="window.cerrarTodosLosDropdowns(); window.abrirModalSeleccionarTipoInspeccion('${ec.placa}', ${ec.kmActivoNum ? Number(ec.kmActivoNum) : 0})" style="border-radius:8px; font-size:0.8rem; background: #0284c7; border-color: #0284c7;">
                         <i class="bi bi-plus-lg"></i> Inspeccionar
                     </button>
-                    ${ec.tieneMec ? `
+                    ${ec.tipoCobertura === 'SOLO_NEU_VIGENTE' && neuInsp ? `
+                        <button type="button" class="btn btn-sm btn-outline-warning fw-bold px-2.5 py-1.5 d-flex align-items-center justify-content-center gap-1" onclick="window.cerrarTodosLosDropdowns(); window.neuVerDetalleModal('${neuInsp.id_inspeccion}')" style="border-radius:8px; font-size:0.78rem;" title="Ver Detalle Neumáticos">
+                            <i class="bi bi-disc"></i>
+                        </button>
+                    ` : (ec.tieneMec ? `
                         <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-2.5 py-1.5 d-flex align-items-center justify-content-center gap-1" onclick="window.cerrarTodosLosDropdowns(); window.verDetalleInspeccion('${insp.id}', false)" style="border-radius:8px; font-size:0.78rem;" title="Ver Detalle">
                             <i class="bi bi-eye"></i>
                         </button>
@@ -1175,10 +1234,20 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
                             <i class="bi bi-file-earmark-pdf"></i>
                         </button>
                     ` : (ec.tieneNeu ? `
-                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-2.5 py-1.5 d-flex align-items-center justify-content-center gap-1" onclick="window.cerrarTodosLosDropdowns(); window.neuVerDetalleModal('${neuInsp.id_inspeccion}')" style="border-radius:8px; font-size:0.78rem;" title="Ver Detalle Neumáticos">
+                        <button type="button" class="btn btn-sm btn-outline-warning fw-bold px-2.5 py-1.5 d-flex align-items-center justify-content-center gap-1" onclick="window.cerrarTodosLosDropdowns(); window.neuVerDetalleModal('${neuInsp.id_inspeccion}')" style="border-radius:8px; font-size:0.78rem;" title="Ver Detalle Neumáticos">
                             <i class="bi bi-disc"></i>
                         </button>
-                    ` : '')}
+                    ` : ''))}
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1.5" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="border-radius:8px;">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
+                            ${menuOpcionesHtml}
+                        </ul>
+                    </div>
+                </div>
+            </div>
                     <div class="dropdown">
                         <button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1.5" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="border-radius:8px;">
                             <i class="bi bi-three-dots-vertical"></i>
@@ -1485,10 +1554,29 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
         badgeSemaforo = `<span class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#fee2e2; color:#b91c1c; font-size:0.82rem;"><i class="bi bi-x-circle-fill me-1"></i> ${countFallas} FALLA(S)</span>`;
     }
 
-    // Buscar inspección de neumáticos asociada
+    // Buscar inspección de neumáticos asociada (solo si pertenece al mismo ciclo temporal <= 35 días)
     let cleanPlaca = (str) => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
     let pClean = cleanPlaca(insp.placa);
-    let neuInsp = (window.dataGlobalNeumaticos || []).find(n => cleanPlaca(n.placa) === pClean);
+    let parseFechaHelper = (str) => {
+        if (!str) return null;
+        if (str.includes('/')) {
+            let p = str.split('/');
+            return new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+        }
+        let ds = String(str).split('T')[0].split('-');
+        if (ds.length === 3) return new Date(parseInt(ds[0]), parseInt(ds[1])-1, parseInt(ds[2]));
+        return new Date(str);
+    };
+    let fMecObj = parseFechaHelper(insp.fecha_ingreso);
+    let neuInsp = (window.dataGlobalNeumaticos || []).find(n => {
+        if (cleanPlaca(n.placa) !== pClean) return false;
+        let fNeuObj = parseFechaHelper(n.fecha_inspeccion);
+        if (fNeuObj && fMecObj) {
+            let diffDays = Math.abs((fNeuObj - fMecObj) / (1000 * 60 * 60 * 24));
+            return diffDays <= 35; // Coherente con el mismo ciclo de mantenimiento
+        }
+        return true;
+    });
 
     let htmlBannerNeu = '';
     if (neuInsp && neuInsp.id_inspeccion) {
@@ -3719,10 +3807,10 @@ window.guardarRegistroFrenos = async function() {
             fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
                 .then(function(r) { return r.json(); })
                 .then(function(r) {
-                    dataGlobalInspecciones = r.data || [];
-                    window._dataGlobalInspeccionesRaw = dataGlobalInspecciones;
-                    if (typeof renderTablaFrenos === 'function') {
-                        renderTablaFrenos(dataGlobalInspecciones);
+                    window.dataGlobalInspecciones = r.data || [];
+                    window._dataGlobalInspeccionesRaw = window.dataGlobalInspecciones;
+                    if (typeof window.renderTablaFrenos === 'function') {
+                        window.renderTablaFrenos(window.dataGlobalInspecciones);
                     }
                 })
                 .catch(function(e) { console.error('Error recargando frenos:', e); });
@@ -3759,7 +3847,7 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
         } catch(e) {}
     }
 
-    let arrInspecciones = (todasLasInspecciones && todasLasInspecciones.length) ? todasLasInspecciones : (dataGlobalInspecciones || []);
+    let arrInspecciones = (todasLasInspecciones && todasLasInspecciones.length) ? todasLasInspecciones : (window.dataGlobalInspecciones || []);
 
     // Obtener la inspección más reciente de Frenos por placa (puede ser General con sección Frenos, o "Solo Frenos")
     let frenosMasRecientesPorPlaca = new Map();
