@@ -1193,6 +1193,11 @@ function rotModalCerrarOTConChecklist(idOT, onConfirm) {
         var limpio = t.trim().toLowerCase();
         if (limpio.length < 2) return false;
         if (statusExcluidos.indexOf(limpio) !== -1) return false;
+        // Excluir encabezados o códigos de reporte tipo [Reporte F-2026-0118], [Folio 123], F-2026-0118, etc.
+        if (/^\[[^\]]+\]$/.test(limpio)) return false;
+        if (/^(reporte|folio|checklist|incidencia|ticket)[\s\:\#\-]/i.test(limpio)) return false;
+        if (/^f-\d{4}-\d+$/i.test(limpio)) return false;
+        if (/^ot-\d{4}-\d+$/i.test(limpio)) return false;
         return true;
     }
 
@@ -1201,7 +1206,7 @@ function rotModalCerrarOTConChecklist(idOT, onConfirm) {
         var lineas = texto.split(/[\r\n]+|(?<=\.)\s+(?=[0-9]+\.)/);
         var res = [];
         lineas.forEach(function(l) {
-            var limp = l.replace(/^[\s•\-\*\d\.\)\:]+/g, '').trim();
+            var limp = l.replace(/^\[[^\]]+\]\s*[\:\-]?\s*/g, '').replace(/^[\s•\-\*\d\.\)\:]+/g, '').trim();
             if (esMotivoValido(limp) && res.indexOf(limp) === -1) {
                 res.push(limp);
             }
@@ -1209,14 +1214,15 @@ function rotModalCerrarOTConChecklist(idOT, onConfirm) {
         return res;
     }
 
-    fetch('/api/taller/ot-trabajos?id_ot=' + encodeURIComponent(idOT))
+    fetch('/api/ot-trabajos?id_ot=' + encodeURIComponent(idOT))
         .then(function(r) { return r.ok ? r.json() : []; })
         .catch(function() { return []; })
         .then(function(trabs) {
             var motivosList = [];
             if (Array.isArray(trabs) && trabs.length) {
                 trabs.forEach(function(t) {
-                    var txt = (t.trabajo_realizado || t.detalle_trabajo || '').replace(/^[\s•\-\*\d\.\)\:]+/g, '').trim();
+                    var rawTxt = t.trabajo_realizado || t.detalle_trabajo || '';
+                    var txt = rawTxt.replace(/^\[[^\]]+\]\s*[\:\-]?\s*/g, '').replace(/^[\s•\-\*\d\.\)\:]+/g, '').trim();
                     if (esMotivoValido(txt) && !motivosList.some(function(m) { return m.texto === txt; })) {
                         motivosList.push({ texto: txt, backlog_id: t.backlog_id || null });
                     }

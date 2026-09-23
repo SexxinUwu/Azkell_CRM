@@ -3531,7 +3531,12 @@ window.filtrarTablaFrenosPorKPI = function(estado, el) {
 };
 
 // ── 6. NUEVAS FUNCIONES: SELECTOR DE INSPECCIÓN Y MODAL DE ELIMINACIÓN ──
-window.abrirModalSeleccionarTipoInspeccion = function() {
+window._inspPlacaSeleccionada = '';
+window._inspKmSeleccionado = 0;
+
+window.abrirModalSeleccionarTipoInspeccion = function(placa, km) {
+    window._inspPlacaSeleccionada = placa || '';
+    window._inspKmSeleccionado = km || 0;
     var modalEl = document.getElementById('modalTipoInspeccionSeleccion');
     if (modalEl) {
         var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
@@ -3545,20 +3550,24 @@ window.seleccionarTipoInspeccion = function(tipo) {
         var modal = bootstrap.Modal.getInstance(modalEl);
         if (modal) modal.hide();
     }
+    var placa = window._inspPlacaSeleccionada || '';
+    var km = window._inspKmSeleccionado || 0;
+
     if (tipo === 'neumaticos') {
         if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
-            window.rotAbrirInspeccionNeumaticos();
-        } else if (typeof window.cargarModuloAislado === 'function') {
-            window.cargarModuloAislado('mantenimiento/neumaticos').then(function() {
-                setTimeout(function() {
-                    if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
-                        window.rotAbrirInspeccionNeumaticos();
-                    }
-                }, 400);
-            });
+            window.rotAbrirInspeccionNeumaticos(placa, '', km);
+        } else {
+            var script = document.createElement('script');
+            script.src = '/modulos/mantenimiento/neumaticos/modal_inspeccion.js?v=' + Date.now();
+            script.onload = function() {
+                if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+                    window.rotAbrirInspeccionNeumaticos(placa, '', km);
+                }
+            };
+            document.body.appendChild(script);
         }
     } else {
-        window.abrirModalNuevaInspeccion();
+        window.abrirModalNuevaInspeccion(placa);
     }
 };
 
