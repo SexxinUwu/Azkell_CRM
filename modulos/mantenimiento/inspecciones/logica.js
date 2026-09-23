@@ -558,25 +558,179 @@ function mostrarStatusInspecciones(inspecciones) {
     }
 
     window.dataFinalInspGlobal = dataFinal;
+    window._inspeccionesGeneralGlobal = inspeccionesGeneral;
 
+    if (window._inspOrdenSort && window._inspOrdenSort.col) {
+        window.aplicarOrdenDataInsp(dataFinal, window._inspOrdenSort.col, window._inspOrdenSort.asc);
+    }
+
+    window.renderizarTablaYCardsStatus(dataFinal, inspeccionesGeneral);
+
+    // Aplicar filtro pendiente desde navegación (ej: click en card del dashboard)
+    if (window._pendingInspFilter) {
+        var _pf = String(window._pendingInspFilter).toUpperCase();
+        window._pendingInspFilter = null;
+        var targetSem = 'total';
+        if (_pf.includes('VIGENTE') || _pf.includes('CONFORME') || _pf === 'VERDE') targetSem = 'verde';
+        else if (_pf.includes('PROXIMO') || _pf.includes('PRÓXIMO') || _pf.includes('ALERTA') || _pf === 'AMARILLO') targetSem = 'amarillo';
+        else if (_pf.includes('NO VIGENTE') || _pf.includes('VENCID') || _pf.includes('CRIT') || _pf === 'ROJO') targetSem = 'rojo';
+        else targetSem = 'total';
+
+        window.filtrarInspSemaforoSegment(targetSem);
+    }
+    
+    // Renderizar tabla de frenos
+    if (typeof renderTablaFrenos === 'function') {
+        renderTablaFrenos(dataGlobalInspecciones);
+    }
+}
+
+// ── Ordenamiento interactivo de columnas en Análisis de Inspecciones ───
+window._inspOrdenSort = null;
+
+window.ordenarInspColumna = function(colName) {
+    if (!window._inspOrdenSort) {
+        window._inspOrdenSort = { col: colName, asc: true };
+    } else if (window._inspOrdenSort.col === colName) {
+        window._inspOrdenSort.asc = !window._inspOrdenSort.asc;
+    } else {
+        window._inspOrdenSort.col = colName;
+        window._inspOrdenSort.asc = true;
+    }
+
+    if (window.dataFinalInspGlobal && window.dataFinalInspGlobal.length > 0) {
+        window.aplicarOrdenDataInsp(window.dataFinalInspGlobal, window._inspOrdenSort.col, window._inspOrdenSort.asc);
+        window.renderizarTablaYCardsStatus(window.dataFinalInspGlobal, window._inspeccionesGeneralGlobal || []);
+    }
+    window.actualizarIconosOrdenInsp();
+};
+
+window.aplicarOrdenDataInsp = function(list, col, asc) {
+    if (!Array.isArray(list)) return;
+    let hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    let parseFechaVal = (i) => {
+        if (!i || !i.fecha_ingreso) return 0;
+        if (i.fecha_ingreso.includes('/')) {
+            let p = i.fecha_ingreso.split('/');
+            return new Date(p[2], p[1]-1, p[0]).getTime() || 0;
+        }
+        return new Date(i.fecha_ingreso).getTime() || 0;
+    };
+    let calcDias = (item) => {
+        if (!item || !item.insp || !item.insp.fecha_ingreso) return -99999;
+        let fIngreso;
+        if (item.insp.fecha_ingreso.includes('/')) {
+            let px = item.insp.fecha_ingreso.split('/');
+            fIngreso = new Date(px[2], px[1] - 1, px[0]);
+        } else {
+            let ds = item.insp.fecha_ingreso.split('T')[0].split('-');
+            fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1]) - 1, parseInt(ds[2])) : new Date(item.insp.fecha_ingreso);
+        }
+        let dProp = parseInt(item.insp.dias_propuestos) || 30;
+        let fProx = new Date(fIngreso.getTime());
+        fProx.setDate(fProx.getDate() + dProp);
+        return Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
+    };
+    let cleanPlaca = (str) => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    list.sort((a, b) => {
+        let va, vb;
+        switch(col) {
+            case 'placa':
+                va = (a.infoPlaca && a.infoPlaca[0]) || '';
+                vb = (b.infoPlaca && b.infoPlaca[0]) || '';
+                return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+            case 'tipo':
+                va = (a.infoPlaca && (a.infoPlaca[5] || a.infoPlaca[3])) || '';
+                vb = (b.infoPlaca && (b.infoPlaca[5] || b.infoPlaca[3])) || '';
+                return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+            case 'tecnico':
+                va = (a.insp && a.insp.tecnico) || '';
+                vb = (b.insp && b.insp.tecnico) || '';
+                return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+            case 'fecha':
+                va = parseFechaVal(a.insp);
+                vb = parseFechaVal(b.insp);
+                return asc ? va - vb : vb - va;
+            case 'proxima':
+                va = calcDias(a);
+                vb = calcDias(b);
+                return asc ? va - vb : vb - va;
+            case 'semaforo': {
+                let da = calcDias(a), db = calcDias(b);
+                let score = (d) => {
+                    if (d === -99999) return 0;
+                    if (d < 0) return 1; // No vigente
+                    if (d <= 7) return 2; // Alerta / Próximo
+                    return 3; // Vigente
+                };
+                va = score(da);
+                vb = score(db);
+                return asc ? va - vb : vb - va;
+            }
+            case 'evaluacion': {
+                let getEvalScore = (item) => {
+                    let plc = cleanPlaca(item.infoPlaca && item.infoPlaca[0]);
+                    let tMec = Boolean(item.insp && item.insp.id);
+                    let tNeu = Array.isArray(window.dataGlobalNeumaticos) && window.dataGlobalNeumaticos.some(n => cleanPlaca(n.placa) === plc);
+                    if (tMec && tNeu) return 3;
+                    if (tMec && !tNeu) return 2;
+                    if (!tMec && tNeu) return 1;
+                    return 0;
+                };
+                va = getEvalScore(a);
+                vb = getEvalScore(b);
+                return asc ? va - vb : vb - va;
+            }
+            case 'ubicacion':
+                va = (typeof obtenerUbicacionUnidad === 'function' && a.infoPlaca ? (obtenerUbicacionUnidad(a.infoPlaca[0]).texto || '') : '');
+                vb = (typeof obtenerUbicacionUnidad === 'function' && b.infoPlaca ? (obtenerUbicacionUnidad(b.infoPlaca[0]).texto || '') : '');
+                return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+            case 'km':
+                va = Number(a.insp ? (a.insp.km_tablero || a.insp.kilometraje || a.insp.km || 0) : 0);
+                vb = Number(b.insp ? (b.insp.km_tablero || b.insp.kilometraje || b.insp.km || 0) : 0);
+                return asc ? va - vb : vb - va;
+            default:
+                return 0;
+        }
+    });
+};
+
+window.actualizarIconosOrdenInsp = function() {
+    const cols = ['placa', 'tipo', 'tecnico', 'fecha', 'proxima', 'semaforo', 'evaluacion', 'ubicacion', 'km'];
+    const cur = window._inspOrdenSort || { col: null, asc: true };
+    cols.forEach(c => {
+        const ico = document.getElementById(`sort-ico-insp-${c}`);
+        if (!ico) return;
+        if (cur.col === c) {
+            ico.className = `bi bi-arrow-${cur.asc ? 'down' : 'up'} sort-ico-insp ms-1 text-primary fw-bold`;
+        } else {
+            ico.className = 'bi bi-arrow-down-up sort-ico-insp ms-1 small text-muted opacity-50';
+        }
+    });
+};
+
+window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
     let htmlTable = '';
     let htmlCards = '';
+    let hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    let cleanPlaca = (str) => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-    if (dataFinal.length === 0) {
+    if (!dataFinal || dataFinal.length === 0) {
         htmlTable = '<tr><td colspan="10" class="text-center py-5 text-muted">No hay datos de inspecciones para mostrar.</td></tr>';
         htmlCards = '<div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>No hay registros disponibles.</div>';
     } else {
         dataFinal.forEach((item) => {
-            let p = item.infoPlaca;
+            let p = item.infoPlaca || [];
             let insp = item.insp;
-            let placa = p[0];
+            let placa = p[0] || "-";
             let cli = p[1] || "-";
             let mar = p[3] || "-";
             let mod = p[5] || "-";
             let motora = p[20] || p[11] || "-";
 
             let esUltimaInsp = false;
-            if (insp && insp.id) {
+            if (insp && insp.id && Array.isArray(inspeccionesGeneral)) {
                 let pClean = cleanPlaca(placa);
                 let ultimaInspPlaca = inspeccionesGeneral.find(i => cleanPlaca(i.placa) === pClean);
                 if (ultimaInspPlaca && ultimaInspPlaca.id === insp.id) {
@@ -594,7 +748,7 @@ function mostrarStatusInspecciones(inspecciones) {
             let estadoVigente2 = "";
 
             if (insp && insp.fecha_ingreso) {
-                fIngresoBonita = parseDateToDDMMYYYY(insp.fecha_ingreso);
+                fIngresoBonita = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(insp.fecha_ingreso) : insp.fecha_ingreso;
                 tecnico = insp.tecnico || '-';
                 let fIngreso;
                 if (insp.fecha_ingreso.includes('/')) {
@@ -639,7 +793,7 @@ function mostrarStatusInspecciones(inspecciones) {
                 : '';
 
             // Obtener ubicación (En Base vs Telemetría GPS)
-            let ubicacionInfo = obtenerUbicacionUnidad(placa);
+            let ubicacionInfo = typeof obtenerUbicacionUnidad === 'function' ? obtenerUbicacionUnidad(placa) : { tipo: 'base', texto: 'En Base', badgeHtml: '<span class="badge bg-light text-secondary border">En Base</span>' };
 
             // Obtener kilometraje del reporte de la inspección
             let kmInspNum = insp ? (insp.km_tablero || insp.kilometraje || insp.km || '') : '';
@@ -647,7 +801,7 @@ function mostrarStatusInspecciones(inspecciones) {
                 ? `${Number(kmInspNum).toLocaleString()} km` 
                 : '—';
 
-            // ── NUEVO: Panorama de Evaluación / Cobertura (Mecánica vs Neumáticos) ──
+            // ── Cobertura Evaluación (Mecánica vs Neumáticos) ──
             let tieneMec = Boolean(insp && insp.id);
             let tieneNeu = Array.isArray(window.dataGlobalNeumaticos) && window.dataGlobalNeumaticos.some(n => cleanPlaca(n.placa) === cleanPlaca(placa));
 
@@ -696,7 +850,7 @@ function mostrarStatusInspecciones(inspecciones) {
                 badgeEstadoMobile = `<span class="badge bg-success-subtle text-success fw-semibold" style="font-size:0.72rem; border-radius:6px;">CONFORME</span>`;
             }
 
-            // 1. Desktop Row (Compact, Modern & with Row-level + Inspeccionar Button)
+            // 1. Desktop Row
             htmlTable += `
             <tr class="clickable-row data-row-status" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" data-ubicacion="${ubicacionInfo.tipo}">
                 <td class="ps-3 py-1.5 fw-bold text-dark">
@@ -743,10 +897,9 @@ function mostrarStatusInspecciones(inspecciones) {
                 </td>
             </tr>`;
 
-            // 2. Mobile Native Card (1:1 Layout with Coverage Badge, Location and Quick Actions)
+            // 2. Mobile Native Card
             htmlCards += `
             <div class="ck-mobile-card data-card-insp" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" data-ubicacion="${ubicacionInfo.tipo}">
-                <!-- Header Card: Folio/ID + Fecha + Estado -->
                 <div class="d-flex align-items-center justify-content-between mb-1.5">
                     <div class="d-flex align-items-center gap-2">
                         <span class="fw-bolder text-primary font-monospace" style="font-size:0.92rem;">${insp && insp.id ? insp.id : 'SIN REGISTRO'}</span>
@@ -754,26 +907,20 @@ function mostrarStatusInspecciones(inspecciones) {
                     </div>
                     <div>${badgeEstadoMobile}</div>
                 </div>
-
-                <!-- Placa, Modelo y Cobertura Evaluación -->
                 <div class="d-flex flex-wrap align-items-center gap-1.5 mb-2">
                     <span class="badge bg-light text-dark border fw-bold px-2 py-0.5" style="font-size:0.78rem; border-radius:6px;">🚛 ${placa}</span>
                     ${mod && mod !== '-' ? `<span class="badge bg-light text-secondary border fw-medium px-2 py-0.5" style="font-size:0.75rem; border-radius:6px;">${mod}</span>` : ''}
                     <div>${badgeEvaluacion}</div>
                 </div>
-
-                <!-- Cliente/Técnico y Ubicación (Esquina Superior Derecha) -->
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <div>
                         <div class="fw-bold text-dark" style="font-size:0.85rem;">${cli !== '-' ? cli : 'Sin cliente asignado'}</div>
                         <div class="text-muted small" style="font-size:0.73rem;"><i class="bi bi-person-fill text-secondary me-1"></i>${tecnico !== '-' ? tecnico : 'Sin técnico asignado'}</div>
                     </div>
                     <div class="text-end flex-shrink-0 ms-2">
-                        ${ubicacionInfo.badgeMobile}
+                        ${ubicacionInfo.badgeMobile || ubicacionInfo.badgeHtml}
                     </div>
                 </div>
-
-                <!-- Semáforo / Días restantes & Kilometraje del Reporte (Esquina Inferior Derecha) -->
                 <div class="d-flex align-items-center justify-content-between pt-2 border-top mb-2.5">
                     <div>${daysOverdueHTML}</div>
                     <div class="text-end">
@@ -782,8 +929,6 @@ function mostrarStatusInspecciones(inspecciones) {
                         </span>
                     </div>
                 </div>
-
-                <!-- Botones de Acción Móvil -->
                 <div class="d-flex align-items-center justify-content-between gap-1.5 pt-2 border-top">
                     <button type="button" class="btn btn-sm btn-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1.5 py-1.5 shadow-2xs" onclick="window.abrirModalSeleccionarTipoInspeccion('${placa}', ${kmInspNum ? Number(kmInspNum) : 0})" style="border-radius:8px; font-size:0.8rem; background: #0284c7; border-color: #0284c7;">
                         <i class="bi bi-plus-lg"></i> Inspeccionar
@@ -846,25 +991,8 @@ function mostrarStatusInspecciones(inspecciones) {
     if (_cardCont) _cardCont.innerHTML = htmlCards;
 
     filtrarStatusAvanzado();
-
-    // Aplicar filtro pendiente desde navegación (ej: click en card del dashboard)
-    if (window._pendingInspFilter) {
-        var _pf = String(window._pendingInspFilter).toUpperCase();
-        window._pendingInspFilter = null;
-        var targetSem = 'total';
-        if (_pf.includes('VIGENTE') || _pf.includes('CONFORME') || _pf === 'VERDE') targetSem = 'verde';
-        else if (_pf.includes('PROXIMO') || _pf.includes('PRÓXIMO') || _pf.includes('ALERTA') || _pf === 'AMARILLO') targetSem = 'amarillo';
-        else if (_pf.includes('NO VIGENTE') || _pf.includes('VENCID') || _pf.includes('CRIT') || _pf === 'ROJO') targetSem = 'rojo';
-        else targetSem = 'total';
-
-        window.filtrarInspSemaforoSegment(targetSem);
-    }
-    
-    // Renderizar tabla de frenos
-    if (typeof renderTablaFrenos === 'function') {
-        renderTablaFrenos(dataGlobalInspecciones);
-    }
-}
+    window.actualizarIconosOrdenInsp();
+};
 
 function filtrarStatusAvanzado() {
     const txt = (document.getElementById('buscadorStatus')?.value || '').toLowerCase().trim();

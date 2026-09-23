@@ -129,6 +129,18 @@
     padding-right: 0.5rem !important;
     font-size: 0.72rem !important;
 }
+.sortable-th {
+    cursor: pointer !important;
+    user-select: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.sortable-th:hover {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+}
+.sortable-th:hover .sort-ico-insp {
+    opacity: 1 !important;
+}
 
 /* Action Capsule Buttons (Desktop) */
 .ck-action-btn {
@@ -744,15 +756,33 @@
           <table class="table table-hover align-middle m-0" id="tablaStatus" style="font-size: 0.84rem;">
             <thead class="bg-light sticky-top shadow-2xs border-bottom">
               <tr class="text-secondary" style="font-size: 0.72rem; letter-spacing: 0.5px;">
-                <th class="ps-3 py-2" style="min-width: 130px; white-space: nowrap;">PLACA / CLIENTE</th>
-                <th class="py-2" style="min-width: 85px; white-space: nowrap;">TIPO</th>
-                <th class="py-2" style="min-width: 100px; white-space: nowrap;">TÉCNICO</th>
-                <th class="py-2" style="min-width: 90px; white-space: nowrap;">FECHA INSP.</th>
-                <th class="py-2" style="min-width: 110px; white-space: nowrap;">PRÓXIMA INSP.</th>
-                <th class="py-2 text-center" style="min-width: 100px; white-space: nowrap;">SEMÁFORO</th>
-                <th class="py-2 text-center" style="min-width: 140px; white-space: nowrap;"><i class="bi bi-shield-check text-primary"></i> EVALUACIÓN</th>
-                <th class="py-2" style="min-width: 110px; white-space: nowrap;"><i class="bi bi-geo-alt-fill text-primary"></i> UBICACIÓN</th>
-                <th class="py-2 text-end" style="min-width: 95px; white-space: nowrap;"><i class="bi bi-speedometer2 text-secondary"></i> KM INSP.</th>
+                <th class="ps-3 py-2 sortable-th" style="min-width: 130px; white-space: nowrap;" onclick="window.ordenarInspColumna('placa')" title="Ordenar por Placa / Cliente">
+                  PLACA / CLIENTE <i class="bi bi-arrow-down-up sort-ico-insp ms-1 small text-muted opacity-50" id="sort-ico-insp-placa"></i>
+                </th>
+                <th class="py-2 sortable-th" style="min-width: 85px; white-space: nowrap;" onclick="window.ordenarInspColumna('tipo')" title="Ordenar por Tipo / Modelo">
+                  TIPO <i class="bi bi-arrow-down-up sort-ico-insp ms-1 small text-muted opacity-50" id="sort-ico-insp-tipo"></i>
+                </th>
+                <th class="py-2 sortable-th" style="min-width: 100px; white-space: nowrap;" onclick="window.ordenarInspColumna('tecnico')" title="Ordenar por Técnico">
+                  TÉCNICO <i class="bi bi-arrow-down-up sort-ico-insp ms-1 small text-muted opacity-50" id="sort-ico-insp-tecnico"></i>
+                </th>
+                <th class="py-2 sortable-th" style="min-width: 90px; white-space: nowrap;" onclick="window.ordenarInspColumna('fecha')" title="Ordenar por Fecha Inspección">
+                  FECHA INSP. <i class="bi bi-arrow-down-up sort-ico-insp ms-1 small text-muted opacity-50" id="sort-ico-insp-fecha"></i>
+                </th>
+                <th class="py-2 sortable-th" style="min-width: 110px; white-space: nowrap;" onclick="window.ordenarInspColumna('proxima')" title="Ordenar por Próxima Inspección">
+                  PRÓXIMA INSP. <i class="bi bi-arrow-down-up sort-ico-insp ms-1 small text-muted opacity-50" id="sort-ico-insp-proxima"></i>
+                </th>
+                <th class="py-2 text-center sortable-th" style="min-width: 100px; white-space: nowrap;" onclick="window.ordenarInspColumna('semaforo')" title="Ordenar por Semáforo">
+                  SEMÁFORO <i class="bi bi-arrow-down-up sort-ico-insp ms-1 small text-muted opacity-50" id="sort-ico-insp-semaforo"></i>
+                </th>
+                <th class="py-2 text-center sortable-th" style="min-width: 140px; white-space: nowrap;" onclick="window.ordenarInspColumna('evaluacion')" title="Ordenar por Evaluación">
+                  <i class="bi bi-shield-check text-primary"></i> EVALUACIÓN <i class="bi bi-arrow-down-up sort-ico-insp ms-1 small text-muted opacity-50" id="sort-ico-insp-evaluacion"></i>
+                </th>
+                <th class="py-2 sortable-th" style="min-width: 110px; white-space: nowrap;" onclick="window.ordenarInspColumna('ubicacion')" title="Ordenar por Ubicación">
+                  <i class="bi bi-geo-alt-fill text-primary"></i> UBICACIÓN <i class="bi bi-arrow-down-up sort-ico-insp ms-1 small text-muted opacity-50" id="sort-ico-insp-ubicacion"></i>
+                </th>
+                <th class="py-2 text-end sortable-th" style="min-width: 95px; white-space: nowrap;" onclick="window.ordenarInspColumna('km')" title="Ordenar por Kilometraje">
+                  <i class="bi bi-speedometer2 text-secondary"></i> KM INSP. <i class="bi bi-arrow-down-up sort-ico-insp ms-1 small text-muted opacity-50" id="sort-ico-insp-km"></i>
+                </th>
                 <th class="pe-3 py-2 text-end" style="min-width: 155px; white-space: nowrap;">ACCIONES</th>
               </tr>
             </thead>
