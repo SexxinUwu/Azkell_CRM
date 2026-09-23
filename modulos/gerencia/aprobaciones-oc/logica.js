@@ -111,7 +111,7 @@
                         fecha: fechaFmt,
                         fecha_raw: d.created_at || d.fecha,
                         usuario: nombreUsuario,
-                        solicitante: d.solicitante || d.creador_nombre || d.creado_por || 'Almacén / Mantenimiento',
+                        solicitante: d.solicitante || d.autoriza || d.creador_nombre || d.creado_por || 'Almacén / Mantenimiento',
                         centro_costo: d.centro_costo || 'CC-100',
                         sub_motivo: d.sub_motivo || '',
                         autoriza: d.autoriza || '',

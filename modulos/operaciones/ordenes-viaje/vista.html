@@ -146,27 +146,27 @@
 .ov-table-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
     overflow: hidden;
 }
 .ov-table thead th {
-    background: #fafbfc;
-    color: #475569;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    padding: 6px 8px;
-    border-bottom: 1px solid #e2e8f0;
-    white-space: nowrap;
+    background: #f8fafc !important;
+    color: #475569 !important;
+    font-size: 0.74rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 0.75rem 0.85rem !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    white-space: nowrap !important;
 }
 .ov-table tbody td {
-    padding: 5px 8px;
-    font-size: 0.78rem;
-    vertical-align: middle;
-    border-bottom: 1px solid #f1f5f9;
-    color: #0f172a;
+    padding: 0.65rem 0.85rem !important;
+    font-size: 0.82rem !important;
+    vertical-align: middle !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    color: #0f172a !important;
     white-space: nowrap !important;
 }
 .ov-table tbody tr:hover {
@@ -1177,22 +1177,78 @@ thead .ov-col-sticky-action {
 }
 </style>
 
-<div class="ov-container" id="modulo-ordenes-viaje">
+<div class="ov-container" id="modulo-ordenes-viaje" style="padding: 1rem 1.25rem 3rem 1.25rem !important;">
 
-    <!-- ── CABECERA PRINCIPAL ULTRA-COMPACTA ─────────────── -->
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-1 mb-2 pt-0.5">
+    <!-- ── 1. CABECERA PRINCIPAL (1:1 REPORTE DE FALLAS) ─────────────── -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
         <div class="d-flex align-items-center gap-2">
-            <span class="ov-header-badge"><i class="bi bi-diagram-3-fill"></i> Operaciones</span>
-            <h5 class="fw-bold text-dark m-0 ov-header-title" style="letter-spacing: -0.02em;">Órdenes de Viaje</h5>
-            <span class="badge bg-secondary-subtle text-secondary py-0.5 px-2" id="ov-lbl-total-badge" style="font-size:0.68rem;">0 viajes</span>
+            <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background: rgba(2, 132, 199, 0.12); color: #0284c7; width: 44px; height: 44px; border-radius: 14px !important;">
+                <i class="bi bi-truck fs-4"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Órdenes de Viaje</h4>
+                    <span class="badge bg-primary bg-opacity-10 text-primary border px-2.5 py-1 rounded-pill small fw-bold">Operaciones</span>
+                    <span class="badge bg-secondary-subtle text-secondary py-0.5 px-2 rounded-pill" id="ov-lbl-total-badge" style="font-size:0.68rem;">0 viajes</span>
+                </div>
+                <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">Control y despacho de unidades, asignación de rutas y liquidaciones</small>
+            </div>
         </div>
-        <div class="d-flex align-items-center gap-1.5 ms-auto">
-            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 fw-semibold d-flex align-items-center gap-1 ov-btn-top" style="font-size:0.75rem; height:29px;" onclick="window.ovCargarDatos()" title="Actualizar datos">
-                <i class="bi bi-arrow-clockwise"></i> <span class="d-none d-sm-inline">Actualizar</span>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button type="button" class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.ovCargarDatos()" title="Actualizar datos">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
             </button>
-            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold d-flex align-items-center gap-1 shadow-sm ov-btn-top" style="font-size:0.75rem; height:29px; background:#0284c7; border:none;" onclick="window.ovAbrirModalNuevoViaje()">
-                <i class="bi bi-plus-lg"></i> <span>Nuevo Viaje</span>
+            <button type="button" class="btn btn-primary shadow-sm px-3.5 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="window.ovAbrirModalNuevoViaje()" style="background:#0284c7; border-color:#0284c7;">
+                <i class="bi bi-plus-lg fs-6"></i> <span>Nuevo Viaje</span>
             </button>
+        </div>
+    </div>
+
+    <!-- ── 2. BENTO KPIS ROW (1:1 REPORTE DE FALLAS) ──────────────────── -->
+    <div class="row g-2 g-md-3 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" style="background:#fff; border:1px solid #e2e8f0; border-radius:18px; padding:1rem 1.25rem; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing:0.5px;">Total Viajes</span>
+                    <h2 id="ov-kpi-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
+                </div>
+                <div class="ck-kpi-icon" style="width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; background: #eff6ff; color: #2563eb;">
+                    <i class="bi bi-truck"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" style="background:#fff; border:1px solid #e2e8f0; border-radius:18px; padding:1rem 1.25rem; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing:0.5px;">Programados</span>
+                    <h2 id="ov-kpi-pendientes" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem;">0</h2>
+                </div>
+                <div class="ck-kpi-icon" style="width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; background: #fefce8; color: #ca8a04;">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" style="background:#fff; border:1px solid #e2e8f0; border-radius:18px; padding:1rem 1.25rem; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing:0.5px;">En Ruta</span>
+                    <h2 id="ov-kpi-en-ruta" class="fw-bolder m-0 text-primary" style="font-size: 1.6rem;">0</h2>
+                </div>
+                <div class="ck-kpi-icon" style="width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; background: #f0f9ff; color: #0284c7;">
+                    <i class="bi bi-geo-alt-fill"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="ck-kpi-card" style="background:#fff; border:1px solid #e2e8f0; border-radius:18px; padding:1rem 1.25rem; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing:0.5px;">Finalizados</span>
+                    <h2 id="ov-kpi-finalizados" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">0</h2>
+                </div>
+                <div class="ck-kpi-icon" style="width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; background: #f0fdf4; color: #16a34a;">
+                    <i class="bi bi-check2-circle"></i>
+                </div>
+            </div>
         </div>
     </div>
 

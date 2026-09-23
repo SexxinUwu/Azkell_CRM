@@ -1292,6 +1292,11 @@ router.put('/entradas/:id/estado', (req, res) => {
     if (aprobadorVal !== undefined) {
         setFields.push('aprobado_por=?');
         params.push(aprobadorVal);
+        if (esAprob) {
+            setFields.push('fecha_aprobacion=NOW()');
+        } else if (estado.toLowerCase() === 'registrado') {
+            setFields.push('fecha_aprobacion=NULL');
+        }
     }
 
     if (comentario && String(comentario).trim()) {

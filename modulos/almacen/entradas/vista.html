@@ -688,20 +688,14 @@
       <!-- ── SECCIÓN 2: SOLICITANTE, MOTIVO Y DESTINO ── -->
       <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 70; overflow: visible !important;">
         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3 border-bottom pb-2" style="font-size:0.92rem;">
-          <i class="bi bi-person-badge text-warning"></i> Solicitante, Destino y Motivo
+          <i class="bi bi-truck text-warning"></i> Destino, Vehículo y Motivo
         </h6>
         <div class="row g-2">
-          <!-- Solicitante con Autocompletado Histórico -->
-          <div class="col-12 col-md-6">
-            <label class="form-label fw-semibold text-secondary small mb-1">Solicitante</label>
-            <input type="text" id="ent-f-solicitante" list="ent-solicitantes-list" class="form-control form-control-sm border-secondary-subtle" placeholder="Nombre de solicitante...">
-            <datalist id="ent-solicitantes-list">
-              <!-- Se puebla dinámicamente con los nombres históricos guardados -->
-            </datalist>
-          </div>
+          <!-- Campo oculto de solicitante para sincronización automática con Autoriza -->
+          <input type="hidden" id="ent-f-solicitante">
 
           <!-- Placa / Vehículo (si es compra) -->
-          <div class="col-12 col-md-6" id="ent-placa-container">
+          <div class="col-12" id="ent-placa-container">
             <label class="form-label fw-semibold text-secondary small mb-1">Vehículo / Placa</label>
             <div class="position-relative" style="z-index: 75;">
               <input type="text" id="ent-f-placa-txt" class="form-control form-control-sm border-secondary-subtle fw-bold" placeholder="Seleccionar placa..." autocomplete="off" oninput="window._entCbFiltrar('ent-f-placa')" onfocus="window._entCbFiltrar('ent-f-placa')" onblur="window._cbHide('ent-f-placa')">
@@ -752,15 +746,15 @@
           <i class="bi bi-diagram-3-fill text-indigo" style="color: #6366f1;"></i> Concepto, Centro de Costos & Autorización
         </h6>
         <div class="row g-2">
-          <!-- Autoriza -->
+          <!-- Autoriza (Aprobador Directivo) -->
           <div class="col-12 col-md-6">
-            <label class="form-label fw-semibold text-secondary small mb-1">Autoriza (Aprobador) <span class="text-danger">*</span></label>
+            <label class="form-label fw-semibold text-secondary small mb-1">Autoriza / Solicitante (Aprobador) <span class="text-danger">*</span></label>
             <select id="ent-f-autoriza" class="form-select form-select-sm border-secondary-subtle fw-semibold text-dark">
-              <option value="">Seleccione aprobador directivo...</option>
-              <option value="JENRRY SAUL">JENRRY SAUL</option>
-              <option value="LEONEL ANDERSON">LEONEL ANDERSON</option>
-              <option value="SHARON SIVELY">SHARON SIVELY</option>
-              <option value="GERENCIA">GERENCIA GENERAL</option>
+              <option value="">Seleccione directivo autorizador...</option>
+              <option value="Marco Rosas">Marco Rosas</option>
+              <option value="Janina Rosas">Janina Rosas</option>
+              <option value="Leo Rosas">Leo Rosas</option>
+              <option value="Saul Rosas">Saul Rosas</option>
             </select>
           </div>
 

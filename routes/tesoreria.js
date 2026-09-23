@@ -2422,7 +2422,7 @@ module.exports = function (db, broadcast, logAudit) {
                     id: oc.id,
                     folio: oc.id,
                     fecha: oc.fecha,
-                    solicitante: oc.solicitante || '—',
+                    solicitante: oc.solicitante || oc.autoriza || '—',
                     centro_costo: oc.centro_costo || 'CC-100',
                     sub_motivo: oc.sub_motivo || '',
                     autoriza: oc.autoriza || '',
