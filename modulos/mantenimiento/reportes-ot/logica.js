@@ -1214,159 +1214,175 @@ function rotModalCerrarOTConChecklist(idOT, onConfirm) {
         return res;
     }
 
+    // 1. Extraer motivos iniciales directamente de memoria para mostrar el modal de inmediato (0ms lag)
+    var motivosList = [];
+    if (Array.isArray(detOT.trabajos_det)) {
+        detOT.trabajos_det.forEach(function(td) {
+            var rawTxt = typeof td === 'string' ? td : (td.trabajo || td.descripcion || '');
+            var txt = rawTxt.replace(/^\[[^\]]+\]\s*[\:\-]?\s*/g, '').replace(/^[\s•\-\*\d\.\)\:]+/g, '').trim();
+            if (esMotivoValido(txt) && !motivosList.some(function(m) { return m.texto === txt; })) {
+                motivosList.push({ texto: txt, backlog_id: td.backlog_id || null });
+            }
+        });
+    }
+
+    if (!motivosList.length && detOT.motivo) {
+        var pars = parsearLineasMotivo(detOT.motivo);
+        pars.forEach(function(p) {
+            if (!motivosList.some(function(m) { return m.texto === p; })) {
+                motivosList.push({ texto: p, backlog_id: null });
+            }
+        });
+    }
+
+    if (!motivosList.length && ot.observaciones) {
+        var parsObs = parsearLineasMotivo(ot.observaciones);
+        parsObs.forEach(function(p) {
+            if (!motivosList.some(function(m) { return m.texto === p; })) {
+                motivosList.push({ texto: p, backlog_id: null });
+            }
+        });
+    }
+
+    if (!motivosList.length) {
+        motivosList.push({ texto: 'Trabajos de mantenimiento según OT ' + idOT, backlog_id: null });
+    }
+
+    function renderizarItemsHtml(lista) {
+        return lista.map(function(m, idx) {
+            return '<div class="card p-2.5 mb-2 border rounded-3 bg-white shadow-2xs d-flex flex-row align-items-start gap-2.5" style="border:1px solid #e2e8f0!important; text-align:left;">'
+                 + '<input type="checkbox" class="form-check-input chk-motivo-cierre mt-1" id="chk_motivo_' + idx + '" data-idx="' + idx + '" checked style="transform:scale(1.2); cursor:pointer;">'
+                 + '<label class="form-check-label flex-grow-1" for="chk_motivo_' + idx + '" style="cursor:pointer; margin-bottom:0;">'
+                 + '<div class="d-flex align-items-center justify-content-between gap-2">'
+                 + '<span class="fw-bold text-dark small" style="font-size:0.85rem;">' + rotEscHtml(m.texto) + '</span>'
+                 + '<span class="badge bg-success-subtle text-success badge-status-motivo" id="lbl_status_motivo_' + idx + '" style="font-size:0.72rem; padding:4px 8px; border-radius:6px;">Realizado</span>'
+                 + '</div>'
+                 + '<div class="text-muted small mt-1 info-backlog-motivo" id="lbl_bk_info_' + idx + '" style="font-size:0.72rem; display:none; color:#d97706!important;">'
+                 + '<i class="bi bi-clock-history me-1"></i>Pasará automáticamente a <strong>Backlog de Taller</strong>'
+                 + '</div>'
+                 + '</label>'
+                 + '</div>';
+        }).join('');
+    }
+
+    var overlay = document.createElement('div');
+    overlay.id = 'rot-modal-cerrar-ot-checklist';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.68);opacity:0;transition:opacity 0.15s ease;padding:1rem;';
+
+    overlay.innerHTML =
+        '<div style="background:#ffffff;border-radius:28px;width:520px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,0.25);transform:scale(0.96);transition:transform 0.15s ease;overflow:hidden;padding:2.2rem 1.8rem 1.8rem 1.8rem;text-align:center;border:1px solid #e2e8f0;">'
+      + '<div class="ck-delete-badge-icon" style="font-size:3.2rem;color:#0284c7;line-height:1;margin-bottom:0.75rem;display:inline-block;">'
+      + '<i class="bi bi-clipboard2-check-fill"></i>'
+      + '</div>'
+      + '<h4 class="fw-bolder text-dark mb-1" style="font-size:1.3rem;letter-spacing:-0.3px;">Cierre de Orden de Trabajo</h4>'
+      + '<div class="mb-2"><span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill fw-semibold" style="font-size:0.8rem;">' + rotEscHtml(idOT) + ' • Placa: <strong>' + rotEscHtml(placaOT) + '</strong></span></div>'
+      + '<p class="text-secondary mb-3 px-2" style="font-size:0.84rem;line-height:1.45;font-weight:500;">Marca los trabajos realizados. Los no marcados pasarán automáticamente a <strong>Backlog</strong>.</p>'
+      + '<div style="max-height:42vh;overflow-y:auto;margin-bottom:1rem;padding-right:4px;" class="custom-scrollbar">'
+      + '<div id="rot-contenedor-motivos-cierre">' + renderizarItemsHtml(motivosList) + '</div>'
+      + '<div class="mt-3 text-start">'
+      + '<label class="form-label fw-bold text-secondary small text-uppercase mb-1" style="font-size:0.72rem;letter-spacing:0.5px;">Observaciones / Comentario de Cierre</label>'
+      + '<textarea id="rot-cierre-obs" rows="2" class="form-control" style="border-radius:12px;font-size:0.85rem;border:1px solid #cbd5e1;" placeholder="Escribe las observaciones de entrega y cierre…"></textarea>'
+      + '<div id="rot-cierre-err" style="display:none;color:#dc3545;font-size:0.75rem;margin-top:4px;">Las observaciones son obligatorias.</div>'
+      + '</div>'
+      + '</div>'
+      + '<div class="d-flex align-items-center justify-content-center gap-4 mt-3 pt-2">'
+      + '<button type="button" class="ck-btn-circle ck-btn-cancel-circle shadow-sm" id="rot-cierre-cancel" title="Cancelar" style="width:54px;height:54px;border-radius:50%!important;border:none;display:inline-flex;align-items:center;justify-content:center;font-size:1.35rem;cursor:pointer;background:#18181b;color:#fff;transition:transform 0.15s ease;"><i class="bi bi-x-lg"></i></button>'
+      + '<button type="button" class="ck-btn-circle shadow-sm" id="rot-cierre-ok" title="Confirmar Cierre de OT" style="width:54px;height:54px;border-radius:50%!important;border:none;display:inline-flex;align-items:center;justify-content:center;font-size:1.4rem;cursor:pointer;background:#0284c7;color:#fff;transition:transform 0.15s ease;"><i class="bi bi-check2-all"></i></button>'
+      + '</div>'
+      + '</div>';
+
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(function() {
+        overlay.style.opacity = '1';
+        if (overlay.firstChild) overlay.firstChild.style.transform = 'scale(1)';
+    });
+
+    function enlazarCheckboxes() {
+        overlay.querySelectorAll('.chk-motivo-cierre').forEach(function(chk) {
+            chk.addEventListener('change', function() {
+                var idx = this.getAttribute('data-idx');
+                var lblSt = document.getElementById('lbl_status_motivo_' + idx);
+                var lblBk = document.getElementById('lbl_bk_info_' + idx);
+                if (this.checked) {
+                    if (lblSt) {
+                        lblSt.className = 'badge bg-success-subtle text-success badge-status-motivo';
+                        lblSt.textContent = 'Realizado';
+                    }
+                    if (lblBk) lblBk.style.display = 'none';
+                } else {
+                    if (lblSt) {
+                        lblSt.className = 'badge bg-warning-subtle text-warning-emphasis badge-status-motivo';
+                        lblSt.textContent = 'Pendiente ➔ Backlog';
+                    }
+                    if (lblBk) lblBk.style.display = 'block';
+                }
+            });
+        });
+    }
+    enlazarCheckboxes();
+
+    // 2. En segundo plano consultar /api/ot-trabajos por si hay ítems registrados en base de datos
     fetch('/api/ot-trabajos?id_ot=' + encodeURIComponent(idOT))
         .then(function(r) { return r.ok ? r.json() : []; })
         .catch(function() { return []; })
         .then(function(trabs) {
-            var motivosList = [];
             if (Array.isArray(trabs) && trabs.length) {
+                var newList = [];
                 trabs.forEach(function(t) {
                     var rawTxt = t.trabajo_realizado || t.detalle_trabajo || '';
                     var txt = rawTxt.replace(/^\[[^\]]+\]\s*[\:\-]?\s*/g, '').replace(/^[\s•\-\*\d\.\)\:]+/g, '').trim();
-                    if (esMotivoValido(txt) && !motivosList.some(function(m) { return m.texto === txt; })) {
-                        motivosList.push({ texto: txt, backlog_id: t.backlog_id || null });
+                    if (esMotivoValido(txt) && !newList.some(function(m) { return m.texto === txt; })) {
+                        newList.push({ texto: txt, backlog_id: t.backlog_id || null });
                     }
                 });
-            }
-
-            if (!motivosList.length) {
-                if (Array.isArray(detOT.trabajos_det)) {
-                    detOT.trabajos_det.forEach(function(td) {
-                        var rawTxt = typeof td === 'string' ? td : (td.trabajo || td.descripcion || '');
-                        var txt = rawTxt.replace(/^[\s•\-\*\d\.\)\:]+/g, '').trim();
-                        if (esMotivoValido(txt) && !motivosList.some(function(m) { return m.texto === txt; })) {
-                            motivosList.push({ texto: txt, backlog_id: td.backlog_id || null });
-                        }
-                    });
+                if (newList.length) {
+                    motivosList = newList;
+                    var cont = document.getElementById('rot-contenedor-motivos-cierre');
+                    if (cont) {
+                        cont.innerHTML = renderizarItemsHtml(motivosList);
+                        enlazarCheckboxes();
+                    }
                 }
             }
-
-            if (!motivosList.length && detOT.motivo) {
-                var pars = parsearLineasMotivo(detOT.motivo);
-                pars.forEach(function(p) {
-                    if (!motivosList.some(function(m) { return m.texto === p; })) {
-                        motivosList.push({ texto: p, backlog_id: null });
-                    }
-                });
-            }
-
-            if (!motivosList.length && ot.observaciones) {
-                var parsObs = parsearLineasMotivo(ot.observaciones);
-                parsObs.forEach(function(p) {
-                    if (!motivosList.some(function(m) { return m.texto === p; })) {
-                        motivosList.push({ texto: p, backlog_id: null });
-                    }
-                });
-            }
-
-            if (!motivosList.length) {
-                motivosList.push({ texto: 'Trabajos de mantenimiento según OT ' + idOT, backlog_id: null });
-            }
-
-            var overlay = document.createElement('div');
-            overlay.id = 'rot-modal-cerrar-ot-checklist';
-            overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);opacity:0;transition:opacity 0.2s cubic-bezier(0.4,0,0.2,1);padding:1rem;';
-
-            var itemsHtml = motivosList.map(function(m, idx) {
-                return '<div class="card p-2.5 mb-2 border rounded-3 bg-white shadow-2xs d-flex flex-row align-items-start gap-2.5" style="border:1px solid #e2e8f0!important; text-align:left;">'
-                     + '<input type="checkbox" class="form-check-input chk-motivo-cierre mt-1" id="chk_motivo_' + idx + '" data-idx="' + idx + '" checked style="transform:scale(1.2); cursor:pointer;">'
-                     + '<label class="form-check-label flex-grow-1" for="chk_motivo_' + idx + '" style="cursor:pointer; margin-bottom:0;">'
-                     + '<div class="d-flex align-items-center justify-content-between gap-2">'
-                     + '<span class="fw-bold text-dark small" style="font-size:0.85rem;">' + rotEscHtml(m.texto) + '</span>'
-                     + '<span class="badge bg-success-subtle text-success badge-status-motivo" id="lbl_status_motivo_' + idx + '" style="font-size:0.72rem; padding:4px 8px; border-radius:6px;">Realizado</span>'
-                     + '</div>'
-                     + '<div class="text-muted small mt-1 info-backlog-motivo" id="lbl_bk_info_' + idx + '" style="font-size:0.72rem; display:none; color:#d97706!important;">'
-                     + '<i class="bi bi-clock-history me-1"></i>Pasará automáticamente a <strong>Backlog de Taller</strong>'
-                     + '</div>'
-                     + '</label>'
-                     + '</div>';
-            }).join('');
-
-            overlay.innerHTML =
-                '<div style="background:#ffffff;border-radius:28px;width:520px;max-width:94vw;box-shadow:0 16px 48px rgba(0,0,0,0.2);transform:scale(0.95);transition:transform 0.2s cubic-bezier(0.4,0,0.2,1);overflow:hidden;padding:2.2rem 1.8rem 1.8rem 1.8rem;text-align:center;border:1px solid #e2e8f0;">'
-              + '<div class="ck-delete-badge-icon" style="font-size:3.2rem;color:#0284c7;line-height:1;margin-bottom:0.75rem;display:inline-block;">'
-              + '<i class="bi bi-clipboard2-check-fill"></i>'
-              + '</div>'
-              + '<h4 class="fw-bolder text-dark mb-1" style="font-size:1.3rem;letter-spacing:-0.3px;">Cierre de Orden de Trabajo</h4>'
-              + '<div class="mb-2"><span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill fw-semibold" style="font-size:0.8rem;">' + rotEscHtml(idOT) + ' • Placa: <strong>' + rotEscHtml(placaOT) + '</strong></span></div>'
-              + '<p class="text-secondary mb-3 px-2" style="font-size:0.84rem;line-height:1.45;font-weight:500;">Marca los trabajos realizados. Los no marcados pasarán automáticamente a <strong>Backlog</strong>.</p>'
-              + '<div style="max-height:42vh;overflow-y:auto;margin-bottom:1rem;padding-right:4px;" class="custom-scrollbar">'
-              + '<div id="rot-contenedor-motivos-cierre">' + itemsHtml + '</div>'
-              + '<div class="mt-3 text-start">'
-              + '<label class="form-label fw-bold text-secondary small text-uppercase mb-1" style="font-size:0.72rem;letter-spacing:0.5px;">Observaciones / Comentario de Cierre</label>'
-              + '<textarea id="rot-cierre-obs" rows="2" class="form-control" style="border-radius:12px;font-size:0.85rem;border:1px solid #cbd5e1;" placeholder="Escribe las observaciones de entrega y cierre…"></textarea>'
-              + '<div id="rot-cierre-err" style="display:none;color:#dc3545;font-size:0.75rem;margin-top:4px;">Las observaciones son obligatorias.</div>'
-              + '</div>'
-              + '</div>'
-              + '<div class="d-flex align-items-center justify-content-center gap-4 mt-3 pt-2">'
-              + '<button type="button" class="ck-btn-circle ck-btn-cancel-circle shadow-sm" id="rot-cierre-cancel" title="Cancelar" style="width:54px;height:54px;border-radius:50%!important;border:none;display:inline-flex;align-items:center;justify-content:center;font-size:1.35rem;cursor:pointer;background:#18181b;color:#fff;transition:transform 0.15s ease;"><i class="bi bi-x-lg"></i></button>'
-              + '<button type="button" class="ck-btn-circle shadow-sm" id="rot-cierre-ok" title="Confirmar Cierre de OT" style="width:54px;height:54px;border-radius:50%!important;border:none;display:inline-flex;align-items:center;justify-content:center;font-size:1.4rem;cursor:pointer;background:#0284c7;color:#fff;transition:transform 0.15s ease;"><i class="bi bi-check2-all"></i></button>'
-              + '</div>'
-              + '</div>';
-
-            document.body.appendChild(overlay);
-
-            setTimeout(function() {
-                overlay.style.opacity = '1';
-                overlay.firstChild.style.transform = 'scale(1)';
-            }, 10);
-
-            overlay.querySelectorAll('.chk-motivo-cierre').forEach(function(chk) {
-                chk.addEventListener('change', function() {
-                    var idx = this.getAttribute('data-idx');
-                    var lblSt = document.getElementById('lbl_status_motivo_' + idx);
-                    var lblBk = document.getElementById('lbl_bk_info_' + idx);
-                    if (this.checked) {
-                        if (lblSt) {
-                            lblSt.className = 'badge bg-success-subtle text-success badge-status-motivo';
-                            lblSt.textContent = 'Realizado';
-                        }
-                        if (lblBk) lblBk.style.display = 'none';
-                    } else {
-                        if (lblSt) {
-                            lblSt.className = 'badge bg-warning-subtle text-warning-emphasis badge-status-motivo';
-                            lblSt.textContent = 'Pendiente ➔ Backlog';
-                        }
-                        if (lblBk) lblBk.style.display = 'block';
-                    }
-                });
-            });
-
-            var ta  = document.getElementById('rot-cierre-obs');
-            var err = document.getElementById('rot-cierre-err');
-            var ok  = document.getElementById('rot-cierre-ok');
-            var can = document.getElementById('rot-cierre-cancel');
-
-            function cerrar() {
-                overlay.style.opacity = '0';
-                overlay.firstChild.style.transform = 'scale(0.95)';
-                setTimeout(function(){ overlay.remove(); }, 200);
-            }
-
-            can.addEventListener('click', cerrar);
-
-            ok.addEventListener('click', function() {
-                var comentario = ta ? ta.value.trim() : '';
-                if (!comentario) {
-                    if (err) err.style.display = 'block';
-                    if (ta) ta.focus();
-                    return;
-                }
-
-                var motivosChecklist = motivosList.map(function(m, idx) {
-                    var chkEl = document.getElementById('chk_motivo_' + idx);
-                    var isRealizado = chkEl ? chkEl.checked : true;
-                    return {
-                        texto: m.texto,
-                        realizado: isRealizado,
-                        backlog_id: m.backlog_id || null
-                    };
-                });
-
-                cerrar();
-                onConfirm({ comentario: comentario, motivos_checklist: motivosChecklist });
-            });
         });
+
+    var ta  = document.getElementById('rot-cierre-obs');
+    var err = document.getElementById('rot-cierre-err');
+    var ok  = document.getElementById('rot-cierre-ok');
+    var can = document.getElementById('rot-cierre-cancel');
+
+    function cerrar() {
+        overlay.style.opacity = '0';
+        if (overlay.firstChild) overlay.firstChild.style.transform = 'scale(0.96)';
+        setTimeout(function(){ overlay.remove(); }, 150);
+    }
+
+    if (can) can.addEventListener('click', cerrar);
+
+    if (ok) {
+        ok.addEventListener('click', function() {
+            var comentario = ta ? ta.value.trim() : '';
+            if (!comentario) {
+                if (err) err.style.display = 'block';
+                if (ta) ta.focus();
+                return;
+            }
+
+            var motivosChecklist = motivosList.map(function(m, idx) {
+                var chkEl = document.getElementById('chk_motivo_' + idx);
+                var isRealizado = chkEl ? chkEl.checked : true;
+                return {
+                    texto: m.texto,
+                    realizado: isRealizado,
+                    backlog_id: m.backlog_id || null
+                };
+            });
+
+            cerrar();
+            onConfirm({ comentario: comentario, motivos_checklist: motivosChecklist });
+        });
+    }
 }
 
     if (accion === 'iniciar') {
